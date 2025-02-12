@@ -27,7 +27,7 @@ body: |
     %0 = PHI %8, %bb.0, %0, %bb.1, %2, %bb.2
     %9 = V_MOV_B32_e32 9, implicit $exec
     %10 = V_CMP_EQ_U32_e64 %7, %9, implicit $exec
-    %1 = SI_IF %10, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    %1 = SI_IF %10, 0, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
     S_BRANCH %bb.1
 
   bb.2:

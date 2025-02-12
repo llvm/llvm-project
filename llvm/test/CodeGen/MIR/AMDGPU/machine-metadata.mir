@@ -39,10 +39,10 @@
   declare void @llvm.memcpy.inline.p1.p1.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64 immarg, i1 immarg) #1
 
   ; Function Attrs: convergent nounwind willreturn
-  declare { i1, i32 } @llvm.amdgcn.if.i32(i1) #2
+  declare { i1, i32 } @llvm.amdgcn.if.i32(i1, i1) #2
 
   ; Function Attrs: convergent nounwind willreturn
-  declare { i1, i32 } @llvm.amdgcn.else.i32.i32(i32) #2
+  declare { i1, i32 } @llvm.amdgcn.else.i32.i32(i32, i1) #2
 
   ; Function Attrs: convergent nounwind readnone willreturn
   declare i32 @llvm.amdgcn.if.break.i32(i1, i32) #3

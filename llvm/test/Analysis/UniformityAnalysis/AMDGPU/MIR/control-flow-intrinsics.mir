@@ -10,7 +10,7 @@ body:             |
     ; CHECK-NOT: DIVERGENT: %1
     %1:sreg_64(s64) = G_IMPLICIT_DEF
     ; CHECK: DIVERGENT: {{.*}} SI_IF
-    %2:sreg_64 = SI_IF %1, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    %2:sreg_64 = SI_IF %1, 0, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
 
   bb.1:
     SI_RETURN
@@ -30,7 +30,7 @@ body:             |
     ; CHECK-NOT: DIVERGENT: %1
     %1:sreg_64(s64) = G_IMPLICIT_DEF
     ; CHECK: DIVERGENT: {{.*}} SI_ELSE
-    %2:sreg_64 = SI_ELSE %1, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    %2:sreg_64 = SI_ELSE %1, 0, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
 
   bb.1:
     SI_RETURN

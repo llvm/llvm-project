@@ -4,7 +4,7 @@
 # CHECK-LABEL:  phi-cf-test
 # CHECK: bb.0:
 # CHECK:     [[COND:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64
-# CHECK:     [[IF_SOURCE0:%[0-9]+]]:sreg_64 = SI_IF [[COND]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+# CHECK:     [[IF_SOURCE0:%[0-9]+]]:sreg_64 = SI_IF [[COND]], 0, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 # CHECK:     [[IF_INPUT_REG:%[0-9]+]]:sreg_64 = S_MOV_B64_term killed [[IF_SOURCE0]], implicit $exec
 
 # CHECK: bb.1:
@@ -12,7 +12,7 @@
 # CHECK:     SI_END_CF killed [[END_CF_ARG]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
 # CHECK: bb.2:
-# CHECK:     [[IF_SOURCE1:%[0-9]+]]:sreg_64 = SI_IF [[COND]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+# CHECK:     [[IF_SOURCE1:%[0-9]+]]:sreg_64 = SI_IF [[COND]], 0, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 # CHECK:     [[IF_INPUT_REG]]:sreg_64 = S_MOV_B64_term killed [[IF_SOURCE1]], implicit $exec
 
 
@@ -29,7 +29,7 @@ body:             |
     %5:vgpr_32(s32) = COPY $vgpr0
     %0:sreg_64 = V_CMP_EQ_U32_e64 0, %5(s32), implicit $exec
     %18:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %22:sreg_64 = SI_IF %0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %22:sreg_64 = SI_IF %0, 0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 
   bb.2:
@@ -49,7 +49,7 @@ body:             |
     %17:sgpr_128 = REG_SEQUENCE undef %14:sreg_32_xm0, %subreg.sub0, undef %12:sreg_32_xm0, %subreg.sub1, %16, %subreg.sub2, %15, %subreg.sub3
     BUFFER_STORE_DWORD_OFFSET %4, %17, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     %19:vgpr_32 = COPY %4
-    %20:sreg_64 = SI_IF %0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %20:sreg_64 = SI_IF %0, 0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 
 ...

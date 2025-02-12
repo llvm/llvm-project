@@ -84,7 +84,7 @@ body:             |
     %0:sgpr_64 = COPY $sgpr4_sgpr5
     %1:vgpr_32 = COPY $vgpr0
     %2:sreg_32 = V_CMP_NE_U32_e64 0, %1, implicit $exec
-    %3:sreg_32 = SI_IF killed %2, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_32 = SI_IF killed %2, 0, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.1:
@@ -119,7 +119,7 @@ body:             |
   bb.5:
     successors: %bb.1(0x40000000), %bb.7(0x40000000)
 
-    %14:sreg_32 = SI_ELSE %3, %bb.7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %14:sreg_32 = SI_ELSE %3, 0, %bb.7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
 
   bb.6:

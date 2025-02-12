@@ -16,7 +16,7 @@ define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
 ; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP6:%.*]], [[FLOW:%.*]] ], [ 0, [[LOOP_OUTER]] ]
 ; OPT-NEXT:    [[TMP45:%.*]] = phi i32 [ [[TMP43]], [[LOOP_OUTER]] ], [ [[TMP3]], [[FLOW]] ]
 ; OPT-NEXT:    [[TMP48:%.*]] = icmp slt i32 [[TMP45]], [[UB:%.*]]
-; OPT-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP48]])
+; OPT-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP48]], i1 false)
 ; OPT-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0
 ; OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
 ; OPT-NEXT:    br i1 [[TMP1]], label [[ENDIF:%.*]], label [[FLOW]]

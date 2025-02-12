@@ -33,7 +33,7 @@ body:             |
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_]], %bb.0, %16, %bb.5
   ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI [[COPY5]], %bb.0, %18, %bb.5
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[COPY4]]
-  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF [[COPY6]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF [[COPY6]], 0, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -53,7 +53,7 @@ body:             |
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[PHI3]]
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
-  ; CHECK-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32 = SI_IF [[COPY7]], %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32 = SI_IF [[COPY7]], 0, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
@@ -105,7 +105,7 @@ body:             |
     %15:sreg_32 = PHI %2, %bb.0, %16, %bb.5
     %17:vgpr_32 = PHI %12, %bb.0, %18, %bb.5
     %19:sreg_32 = COPY %11
-    %20:sreg_32 = SI_IF %19, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %20:sreg_32 = SI_IF %19, 0, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
@@ -126,7 +126,7 @@ body:             |
     %28:sreg_32 = COPY %25
     %29:vgpr_32 = COPY %27
     %30:vreg_1 = COPY %26, implicit $exec
-    %31:sreg_32 = SI_IF %28, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %31:sreg_32 = SI_IF %28, 0, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:
