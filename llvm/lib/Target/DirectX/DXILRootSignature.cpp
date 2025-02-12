@@ -1,4 +1,4 @@
-//===- DXILRootSignature.cpp - DXIL Root Signature helper objects ----===//
+//===- DXILRootSignature.cpp - DXIL Root Signature helper objects -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -68,8 +68,8 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
   case RootSignatureElementKind::RootFlags:
     return parseRootFlags(Ctx, MRS, Element);
   case RootSignatureElementKind::None:
-    return reportError(Ctx,
-                       "Invalid Root Element: " + ElementText->getString());
+    return reportError(Ctx, "Invalid Root Signature Element: " +
+                                ElementText->getString());
   }
 
   llvm_unreachable("Root signature element kind not expected.");
@@ -77,20 +77,6 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
 
 static bool parse(LLVMContext *Ctx, ModuleRootSignature &MRS, MDNode *Node) {
   bool HasError = false;
-
-  /** Root Signature are specified as following in the metadata:
-
-      !dx.rootsignatures = !{!2} ; list of function/root signature pairs
-      !2 = !{ ptr @main, !3 } ; function, root signature
-      !3 = !{ !4, !5, !6, !7 } ; list of root signature elements
-
-      So for each MDNode inside dx.rootsignatures NamedMDNode
-      (the Root parameter of this function), the parsing process needs
-      to loop through each of its operands and process the function,
-      signature pair.
-   */
-
-  // Get the Root Signature Description from the function signature pair.
 
   // Loop through the Root Elements of the root signature.
   for (const auto &Operand : Node->operands()) {
@@ -114,6 +100,18 @@ static bool validate(LLVMContext *Ctx, const ModuleRootSignature &MRS) {
 static SmallDenseMap<const Function *, ModuleRootSignature>
 analyzeModule(Module &M) {
 
+  /** Root Signature are specified as following in the metadata:
+
+    !dx.rootsignatures = !{!2} ; list of function/root signature pairs
+    !2 = !{ ptr @main, !3 } ; function, root signature
+    !3 = !{ !4, !5, !6, !7 } ; list of root signature elements
+
+    So for each MDNode inside dx.rootsignatures NamedMDNode
+    (the Root parameter of this function), the parsing process needs
+    to loop through each of its operands and process the function,
+    signature pair.
+ */
+
   LLVMContext *Ctx = &M.getContext();
 
   SmallDenseMap<const Function *, ModuleRootSignature> MRSMap;
@@ -129,22 +127,22 @@ analyzeModule(Module &M) {
       continue;
     }
 
+    // Function was pruned during compilation.
     const MDOperand &FunctionPointerMdNode = RSDefNode->getOperand(0);
     if (FunctionPointerMdNode == nullptr) {
-      // Function was pruned during compilation.
       continue;
     }
 
     ValueAsMetadata *VAM =
         llvm::dyn_cast<ValueAsMetadata>(FunctionPointerMdNode.get());
     if (VAM == nullptr) {
-      reportError(Ctx, "First element of root signature is not a value");
+      reportError(Ctx, "First element of root signature is not a Value");
       continue;
     }
 
     Function *F = dyn_cast<Function>(VAM->getValue());
     if (F == nullptr) {
-      reportError(Ctx, "First element of root signature is not a function");
+      reportError(Ctx, "First element of root signature is not a Function");
       continue;
     }
 
