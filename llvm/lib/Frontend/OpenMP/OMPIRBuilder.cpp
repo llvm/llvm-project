@@ -7024,9 +7024,9 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
   // StaleCI is the CallInst which is the call to the outlined
   // target kernel launch function. If there are local live-in values
   // that the outlined function uses then these are aggregated into a structure
-  // which is passed as the second argument. If there are no local live-in valluess
-  // or if all values used by the outlined kernel are global variables, then there's
-  // only one argument, the threadID. So, StaleCI can be
+  // which is passed as the second argument. If there are no local live-in
+  // vallues or if all values used by the outlined kernel are global variables,
+  // then there's only one argument, the threadID. So, StaleCI can be
   //
   // %structArg = alloca { ptr, ptr }, align 8
   // %gep_ = getelementptr { ptr, ptr }, ptr %structArg, i32 0, i32 0
