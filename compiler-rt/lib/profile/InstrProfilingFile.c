@@ -1385,6 +1385,17 @@ int __llvm_write_custom_profile(const char *Target,
     return 0;
   }
 
+  /* Check if there is llvm/runtime version mismatch.  */
+  if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
+    PROF_ERR("Runtime and instrumentation version mismatch : "
+             "expected %d, but get %d\n",
+             INSTR_PROF_RAW_VERSION,
+             (int)GET_VERSION(__llvm_profile_get_version()));
+    if (PDeathSig == 1)
+      lprofRestoreSigKill();
+    return -1;
+  }
+
   /* Get current filename */
   FilenameLength = getCurFilenameLength();
   FilenameBuf = (char *)COMPILER_RT_ALLOCA(FilenameLength + 1);
@@ -1419,17 +1430,6 @@ int __llvm_write_custom_profile(const char *Target,
   memcpy(TargetFilename + DirSize + 1 + TargetLength, Filename + DirSize,
          BaseSize);
   TargetFilename[FilenameLength + 1 + TargetLength] = 0;
-
-  /* Check if there is llvm/runtime version mismatch.  */
-  if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
-    PROF_ERR("Runtime and instrumentation version mismatch : "
-             "expected %d, but get %d\n",
-             INSTR_PROF_RAW_VERSION,
-             (int)GET_VERSION(__llvm_profile_get_version()));
-    if (PDeathSig == 1)
-      lprofRestoreSigKill();
-    return -1;
-  }
 
   /* Open and truncate target-specific PGO file */
   FILE *OutputFile = fopen(TargetFilename, "w");
