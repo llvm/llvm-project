@@ -3,6 +3,7 @@
 // RUN: FileCheck < %t %s -check-prefix=CHECK1
 // RUN: FileCheck < %t %s -check-prefix=CHECK2
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++17 -ast-dump %s | FileCheck --check-prefix=DUMP %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++20 -ast-dump -DCXX20=1 %s | FileCheck --check-prefix=DUMP-CPP20 %s
 
 // Test with serialization:
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++17 -emit-pch -o %t %s
@@ -100,6 +101,13 @@ void test() {
 // differently in this way.
 // CHECK1: {{^    }}template<> struct foo<1, 0 + 0L> {
 template struct foo<1, 0 + 0L>;
+
+#ifdef CXX20
+// DUMP-CPP20: TemplateArgument structural '1.{{.*}}'
+// DUMP-CPP20: TemplateArgument structural '-2.{{.*}}'
+template struct foo<1, 1.0f>;
+template struct foo<1, -2.0>;
+#endif // CXX20
 }
 
 namespace test5 {
@@ -294,22 +302,22 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "ClassTemplateDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 812,
+// JSON-NEXT:     "offset": 937,
 // JSON-NEXT:     "file": "{{.*}}",
-// JSON-NEXT:     "line": 15,
+// JSON-NEXT:     "line": 16,
 // JSON-NEXT:     "col": 8,
 // JSON-NEXT:     "tokLen": 3
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 765,
-// JSON-NEXT:      "line": 14,
+// JSON-NEXT:      "offset": 890,
+// JSON-NEXT:      "line": 15,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 8
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 879,
-// JSON-NEXT:      "line": 19,
+// JSON-NEXT:      "offset": 1004,
+// JSON-NEXT:      "line": 20,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -320,19 +328,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 779,
-// JSON-NEXT:       "line": 14,
+// JSON-NEXT:       "offset": 904,
+// JSON-NEXT:       "line": 15,
 // JSON-NEXT:       "col": 15,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 775,
+// JSON-NEXT:        "offset": 900,
 // JSON-NEXT:        "col": 11,
 // JSON-NEXT:        "tokLen": 3
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 779,
+// JSON-NEXT:        "offset": 904,
 // JSON-NEXT:        "col": 15,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -349,18 +357,18 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 791,
+// JSON-NEXT:       "offset": 916,
 // JSON-NEXT:       "col": 27,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 782,
+// JSON-NEXT:        "offset": 907,
 // JSON-NEXT:        "col": 18,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 791,
+// JSON-NEXT:        "offset": 916,
 // JSON-NEXT:        "col": 27,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -375,18 +383,18 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 798,
+// JSON-NEXT:       "offset": 923,
 // JSON-NEXT:       "col": 34,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 794,
+// JSON-NEXT:        "offset": 919,
 // JSON-NEXT:        "col": 30,
 // JSON-NEXT:        "tokLen": 3
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 802,
+// JSON-NEXT:        "offset": 927,
 // JSON-NEXT:        "col": 38,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -407,12 +415,12 @@ namespace test7 {
 // JSON-NEXT:        "kind": "TemplateArgument",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 802,
+// JSON-NEXT:          "offset": 927,
 // JSON-NEXT:          "col": 38,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 802,
+// JSON-NEXT:          "offset": 927,
 // JSON-NEXT:          "col": 38,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -424,12 +432,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "IntegerLiteral",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 802,
+// JSON-NEXT:            "offset": 927,
 // JSON-NEXT:            "col": 38,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 802,
+// JSON-NEXT:            "offset": 927,
 // JSON-NEXT:            "col": 38,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -448,20 +456,20 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "CXXRecordDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 812,
-// JSON-NEXT:       "line": 15,
+// JSON-NEXT:       "offset": 937,
+// JSON-NEXT:       "line": 16,
 // JSON-NEXT:       "col": 8,
 // JSON-NEXT:       "tokLen": 3
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 805,
+// JSON-NEXT:        "offset": 930,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 6
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 879,
-// JSON-NEXT:        "line": 19,
+// JSON-NEXT:        "offset": 1004,
+// JSON-NEXT:        "line": 20,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -517,19 +525,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 812,
-// JSON-NEXT:         "line": 15,
+// JSON-NEXT:         "offset": 937,
+// JSON-NEXT:         "line": 16,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 805,
+// JSON-NEXT:          "offset": 930,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -543,19 +551,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FieldDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 824,
-// JSON-NEXT:         "line": 16,
+// JSON-NEXT:         "offset": 949,
+// JSON-NEXT:         "line": 17,
 // JSON-NEXT:         "col": 7,
 // JSON-NEXT:         "tokLen": 8
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 820,
+// JSON-NEXT:          "offset": 945,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 824,
+// JSON-NEXT:          "offset": 949,
 // JSON-NEXT:          "col": 7,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         }
@@ -569,19 +577,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXConstructorDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 836,
-// JSON-NEXT:         "line": 17,
+// JSON-NEXT:         "offset": 961,
+// JSON-NEXT:         "line": 18,
 // JSON-NEXT:         "col": 3,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 836,
+// JSON-NEXT:          "offset": 961,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 843,
+// JSON-NEXT:          "offset": 968,
 // JSON-NEXT:          "col": 10,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -596,12 +604,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 842,
+// JSON-NEXT:            "offset": 967,
 // JSON-NEXT:            "col": 9,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 843,
+// JSON-NEXT:            "offset": 968,
 // JSON-NEXT:            "col": 10,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -613,19 +621,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXMethodDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 849,
-// JSON-NEXT:         "line": 18,
+// JSON-NEXT:         "offset": 974,
+// JSON-NEXT:         "line": 19,
 // JSON-NEXT:         "col": 5,
 // JSON-NEXT:         "tokLen": 6
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 847,
+// JSON-NEXT:          "offset": 972,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 877,
+// JSON-NEXT:          "offset": 1002,
 // JSON-NEXT:          "col": 33,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -640,12 +648,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 858,
+// JSON-NEXT:            "offset": 983,
 // JSON-NEXT:            "col": 14,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 877,
+// JSON-NEXT:            "offset": 1002,
 // JSON-NEXT:            "col": 33,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -656,12 +664,12 @@ namespace test7 {
 // JSON-NEXT:            "kind": "ReturnStmt",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 860,
+// JSON-NEXT:              "offset": 985,
 // JSON-NEXT:              "col": 16,
 // JSON-NEXT:              "tokLen": 6
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 874,
+// JSON-NEXT:              "offset": 999,
 // JSON-NEXT:              "col": 30,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -672,12 +680,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "CXXUnresolvedConstructExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 867,
+// JSON-NEXT:                "offset": 992,
 // JSON-NEXT:                "col": 23,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 874,
+// JSON-NEXT:                "offset": 999,
 // JSON-NEXT:                "col": 30,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -692,12 +700,12 @@ namespace test7 {
 // JSON-NEXT:                "kind": "BinaryOperator",
 // JSON-NEXT:                "range": {
 // JSON-NEXT:                 "begin": {
-// JSON-NEXT:                  "offset": 869,
+// JSON-NEXT:                  "offset": 994,
 // JSON-NEXT:                  "col": 25,
 // JSON-NEXT:                  "tokLen": 1
 // JSON-NEXT:                 },
 // JSON-NEXT:                 "end": {
-// JSON-NEXT:                  "offset": 873,
+// JSON-NEXT:                  "offset": 998,
 // JSON-NEXT:                  "col": 29,
 // JSON-NEXT:                  "tokLen": 1
 // JSON-NEXT:                 }
@@ -713,12 +721,12 @@ namespace test7 {
 // JSON-NEXT:                  "kind": "DeclRefExpr",
 // JSON-NEXT:                  "range": {
 // JSON-NEXT:                   "begin": {
-// JSON-NEXT:                    "offset": 869,
+// JSON-NEXT:                    "offset": 994,
 // JSON-NEXT:                    "col": 25,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   },
 // JSON-NEXT:                   "end": {
-// JSON-NEXT:                    "offset": 869,
+// JSON-NEXT:                    "offset": 994,
 // JSON-NEXT:                    "col": 25,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   }
@@ -741,12 +749,12 @@ namespace test7 {
 // JSON-NEXT:                  "kind": "DeclRefExpr",
 // JSON-NEXT:                  "range": {
 // JSON-NEXT:                   "begin": {
-// JSON-NEXT:                    "offset": 873,
+// JSON-NEXT:                    "offset": 998,
 // JSON-NEXT:                    "col": 29,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   },
 // JSON-NEXT:                   "end": {
-// JSON-NEXT:                    "offset": 873,
+// JSON-NEXT:                    "offset": 998,
 // JSON-NEXT:                    "col": 29,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   }
@@ -780,21 +788,21 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateSpecializationDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 812,
-// JSON-NEXT:       "line": 15,
+// JSON-NEXT:       "offset": 937,
+// JSON-NEXT:       "line": 16,
 // JSON-NEXT:       "col": 8,
 // JSON-NEXT:       "tokLen": 3
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 765,
-// JSON-NEXT:        "line": 14,
+// JSON-NEXT:        "offset": 890,
+// JSON-NEXT:        "line": 15,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 879,
-// JSON-NEXT:        "line": 19,
+// JSON-NEXT:        "offset": 1004,
+// JSON-NEXT:        "line": 20,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -871,19 +879,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 812,
-// JSON-NEXT:         "line": 15,
+// JSON-NEXT:         "offset": 937,
+// JSON-NEXT:         "line": 16,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 805,
+// JSON-NEXT:          "offset": 930,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -896,19 +904,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FieldDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 824,
-// JSON-NEXT:         "line": 16,
+// JSON-NEXT:         "offset": 949,
+// JSON-NEXT:         "line": 17,
 // JSON-NEXT:         "col": 7,
 // JSON-NEXT:         "tokLen": 8
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 820,
+// JSON-NEXT:          "offset": 945,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 824,
+// JSON-NEXT:          "offset": 949,
 // JSON-NEXT:          "col": 7,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         }
@@ -922,19 +930,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXConstructorDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 836,
-// JSON-NEXT:         "line": 17,
+// JSON-NEXT:         "offset": 961,
+// JSON-NEXT:         "line": 18,
 // JSON-NEXT:         "col": 3,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 836,
+// JSON-NEXT:          "offset": 961,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 843,
+// JSON-NEXT:          "offset": 968,
 // JSON-NEXT:          "col": 10,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -951,12 +959,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 842,
+// JSON-NEXT:            "offset": 967,
 // JSON-NEXT:            "col": 9,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 843,
+// JSON-NEXT:            "offset": 968,
 // JSON-NEXT:            "col": 10,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -968,19 +976,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXMethodDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 849,
-// JSON-NEXT:         "line": 18,
+// JSON-NEXT:         "offset": 974,
+// JSON-NEXT:         "line": 19,
 // JSON-NEXT:         "col": 5,
 // JSON-NEXT:         "tokLen": 6
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 847,
+// JSON-NEXT:          "offset": 972,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 877,
+// JSON-NEXT:          "offset": 1002,
 // JSON-NEXT:          "col": 33,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -997,12 +1005,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 858,
+// JSON-NEXT:            "offset": 983,
 // JSON-NEXT:            "col": 14,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 877,
+// JSON-NEXT:            "offset": 1002,
 // JSON-NEXT:            "col": 33,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -1013,12 +1021,12 @@ namespace test7 {
 // JSON-NEXT:            "kind": "ReturnStmt",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 860,
+// JSON-NEXT:              "offset": 985,
 // JSON-NEXT:              "col": 16,
 // JSON-NEXT:              "tokLen": 6
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 874,
+// JSON-NEXT:              "offset": 999,
 // JSON-NEXT:              "col": 30,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -1029,12 +1037,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "CXXFunctionalCastExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 867,
+// JSON-NEXT:                "offset": 992,
 // JSON-NEXT:                "col": 23,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 874,
+// JSON-NEXT:                "offset": 999,
 // JSON-NEXT:                "col": 30,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -1050,12 +1058,12 @@ namespace test7 {
 // JSON-NEXT:                "kind": "BinaryOperator",
 // JSON-NEXT:                "range": {
 // JSON-NEXT:                 "begin": {
-// JSON-NEXT:                  "offset": 869,
+// JSON-NEXT:                  "offset": 994,
 // JSON-NEXT:                  "col": 25,
 // JSON-NEXT:                  "tokLen": 1
 // JSON-NEXT:                 },
 // JSON-NEXT:                 "end": {
-// JSON-NEXT:                  "offset": 873,
+// JSON-NEXT:                  "offset": 998,
 // JSON-NEXT:                  "col": 29,
 // JSON-NEXT:                  "tokLen": 1
 // JSON-NEXT:                 }
@@ -1071,12 +1079,12 @@ namespace test7 {
 // JSON-NEXT:                  "kind": "SubstNonTypeTemplateParmExpr",
 // JSON-NEXT:                  "range": {
 // JSON-NEXT:                   "begin": {
-// JSON-NEXT:                    "offset": 869,
+// JSON-NEXT:                    "offset": 994,
 // JSON-NEXT:                    "col": 25,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   },
 // JSON-NEXT:                   "end": {
-// JSON-NEXT:                    "offset": 869,
+// JSON-NEXT:                    "offset": 994,
 // JSON-NEXT:                    "col": 25,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   }
@@ -1090,19 +1098,19 @@ namespace test7 {
 // JSON-NEXT:                    "id": "0x{{.*}}",
 // JSON-NEXT:                    "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:                    "loc": {
-// JSON-NEXT:                     "offset": 779,
-// JSON-NEXT:                     "line": 14,
+// JSON-NEXT:                     "offset": 904,
+// JSON-NEXT:                     "line": 15,
 // JSON-NEXT:                     "col": 15,
 // JSON-NEXT:                     "tokLen": 1
 // JSON-NEXT:                    },
 // JSON-NEXT:                    "range": {
 // JSON-NEXT:                     "begin": {
-// JSON-NEXT:                      "offset": 775,
+// JSON-NEXT:                      "offset": 900,
 // JSON-NEXT:                      "col": 11,
 // JSON-NEXT:                      "tokLen": 3
 // JSON-NEXT:                     },
 // JSON-NEXT:                     "end": {
-// JSON-NEXT:                      "offset": 779,
+// JSON-NEXT:                      "offset": 904,
 // JSON-NEXT:                      "col": 15,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     }
@@ -1120,13 +1128,13 @@ namespace test7 {
 // JSON-NEXT:                    "kind": "IntegerLiteral",
 // JSON-NEXT:                    "range": {
 // JSON-NEXT:                     "begin": {
-// JSON-NEXT:                      "offset": 869,
-// JSON-NEXT:                      "line": 18,
+// JSON-NEXT:                      "offset": 994,
+// JSON-NEXT:                      "line": 19,
 // JSON-NEXT:                      "col": 25,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     },
 // JSON-NEXT:                     "end": {
-// JSON-NEXT:                      "offset": 869,
+// JSON-NEXT:                      "offset": 994,
 // JSON-NEXT:                      "col": 25,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     }
@@ -1144,12 +1152,12 @@ namespace test7 {
 // JSON-NEXT:                  "kind": "SubstNonTypeTemplateParmExpr",
 // JSON-NEXT:                  "range": {
 // JSON-NEXT:                   "begin": {
-// JSON-NEXT:                    "offset": 873,
+// JSON-NEXT:                    "offset": 998,
 // JSON-NEXT:                    "col": 29,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   },
 // JSON-NEXT:                   "end": {
-// JSON-NEXT:                    "offset": 873,
+// JSON-NEXT:                    "offset": 998,
 // JSON-NEXT:                    "col": 29,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   }
@@ -1163,19 +1171,19 @@ namespace test7 {
 // JSON-NEXT:                    "id": "0x{{.*}}",
 // JSON-NEXT:                    "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:                    "loc": {
-// JSON-NEXT:                     "offset": 798,
-// JSON-NEXT:                     "line": 14,
+// JSON-NEXT:                     "offset": 923,
+// JSON-NEXT:                     "line": 15,
 // JSON-NEXT:                     "col": 34,
 // JSON-NEXT:                     "tokLen": 1
 // JSON-NEXT:                    },
 // JSON-NEXT:                    "range": {
 // JSON-NEXT:                     "begin": {
-// JSON-NEXT:                      "offset": 794,
+// JSON-NEXT:                      "offset": 919,
 // JSON-NEXT:                      "col": 30,
 // JSON-NEXT:                      "tokLen": 3
 // JSON-NEXT:                     },
 // JSON-NEXT:                     "end": {
-// JSON-NEXT:                      "offset": 802,
+// JSON-NEXT:                      "offset": 927,
 // JSON-NEXT:                      "col": 38,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     }
@@ -1196,12 +1204,12 @@ namespace test7 {
 // JSON-NEXT:                      "kind": "TemplateArgument",
 // JSON-NEXT:                      "range": {
 // JSON-NEXT:                       "begin": {
-// JSON-NEXT:                        "offset": 802,
+// JSON-NEXT:                        "offset": 927,
 // JSON-NEXT:                        "col": 38,
 // JSON-NEXT:                        "tokLen": 1
 // JSON-NEXT:                       },
 // JSON-NEXT:                       "end": {
-// JSON-NEXT:                        "offset": 802,
+// JSON-NEXT:                        "offset": 927,
 // JSON-NEXT:                        "col": 38,
 // JSON-NEXT:                        "tokLen": 1
 // JSON-NEXT:                       }
@@ -1213,12 +1221,12 @@ namespace test7 {
 // JSON-NEXT:                        "kind": "IntegerLiteral",
 // JSON-NEXT:                        "range": {
 // JSON-NEXT:                         "begin": {
-// JSON-NEXT:                          "offset": 802,
+// JSON-NEXT:                          "offset": 927,
 // JSON-NEXT:                          "col": 38,
 // JSON-NEXT:                          "tokLen": 1
 // JSON-NEXT:                         },
 // JSON-NEXT:                         "end": {
-// JSON-NEXT:                          "offset": 802,
+// JSON-NEXT:                          "offset": 927,
 // JSON-NEXT:                          "col": 38,
 // JSON-NEXT:                          "tokLen": 1
 // JSON-NEXT:                         }
@@ -1238,13 +1246,13 @@ namespace test7 {
 // JSON-NEXT:                    "kind": "IntegerLiteral",
 // JSON-NEXT:                    "range": {
 // JSON-NEXT:                     "begin": {
-// JSON-NEXT:                      "offset": 873,
-// JSON-NEXT:                      "line": 18,
+// JSON-NEXT:                      "offset": 998,
+// JSON-NEXT:                      "line": 19,
 // JSON-NEXT:                      "col": 29,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     },
 // JSON-NEXT:                     "end": {
-// JSON-NEXT:                      "offset": 873,
+// JSON-NEXT:                      "offset": 998,
 // JSON-NEXT:                      "col": 29,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     }
@@ -1271,19 +1279,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXConstructorDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 812,
-// JSON-NEXT:         "line": 15,
+// JSON-NEXT:         "offset": 937,
+// JSON-NEXT:         "line": 16,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -1302,18 +1310,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "ParmVarDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 812,
+// JSON-NEXT:           "offset": 937,
 // JSON-NEXT:           "col": 8,
 // JSON-NEXT:           "tokLen": 3
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 812,
+// JSON-NEXT:            "offset": 937,
 // JSON-NEXT:            "col": 8,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 812,
+// JSON-NEXT:            "offset": 937,
 // JSON-NEXT:            "col": 8,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           }
@@ -1328,18 +1336,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXConstructorDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 812,
+// JSON-NEXT:         "offset": 937,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -1358,18 +1366,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "ParmVarDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 812,
+// JSON-NEXT:           "offset": 937,
 // JSON-NEXT:           "col": 8,
 // JSON-NEXT:           "tokLen": 3
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 812,
+// JSON-NEXT:            "offset": 937,
 // JSON-NEXT:            "col": 8,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 812,
+// JSON-NEXT:            "offset": 937,
 // JSON-NEXT:            "col": 8,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           }
@@ -1384,18 +1392,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXDestructorDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 812,
+// JSON-NEXT:         "offset": 937,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -1416,20 +1424,20 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateSpecializationDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 812,
+// JSON-NEXT:       "offset": 937,
 // JSON-NEXT:       "col": 8,
 // JSON-NEXT:       "tokLen": 3
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 765,
-// JSON-NEXT:        "line": 14,
+// JSON-NEXT:        "offset": 890,
+// JSON-NEXT:        "line": 15,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 879,
-// JSON-NEXT:        "line": 19,
+// JSON-NEXT:        "offset": 1004,
+// JSON-NEXT:        "line": 20,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -1506,19 +1514,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 812,
-// JSON-NEXT:         "line": 15,
+// JSON-NEXT:         "offset": 937,
+// JSON-NEXT:         "line": 16,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 805,
+// JSON-NEXT:          "offset": 930,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -1531,19 +1539,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FieldDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 824,
-// JSON-NEXT:         "line": 16,
+// JSON-NEXT:         "offset": 949,
+// JSON-NEXT:         "line": 17,
 // JSON-NEXT:         "col": 7,
 // JSON-NEXT:         "tokLen": 8
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 820,
+// JSON-NEXT:          "offset": 945,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 824,
+// JSON-NEXT:          "offset": 949,
 // JSON-NEXT:          "col": 7,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         }
@@ -1557,19 +1565,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXConstructorDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 836,
-// JSON-NEXT:         "line": 17,
+// JSON-NEXT:         "offset": 961,
+// JSON-NEXT:         "line": 18,
 // JSON-NEXT:         "col": 3,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 836,
+// JSON-NEXT:          "offset": 961,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 843,
+// JSON-NEXT:          "offset": 968,
 // JSON-NEXT:          "col": 10,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -1586,12 +1594,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 842,
+// JSON-NEXT:            "offset": 967,
 // JSON-NEXT:            "col": 9,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 843,
+// JSON-NEXT:            "offset": 968,
 // JSON-NEXT:            "col": 10,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -1603,19 +1611,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXMethodDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 849,
-// JSON-NEXT:         "line": 18,
+// JSON-NEXT:         "offset": 974,
+// JSON-NEXT:         "line": 19,
 // JSON-NEXT:         "col": 5,
 // JSON-NEXT:         "tokLen": 6
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 847,
+// JSON-NEXT:          "offset": 972,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 877,
+// JSON-NEXT:          "offset": 1002,
 // JSON-NEXT:          "col": 33,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -1632,12 +1640,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 858,
+// JSON-NEXT:            "offset": 983,
 // JSON-NEXT:            "col": 14,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 877,
+// JSON-NEXT:            "offset": 1002,
 // JSON-NEXT:            "col": 33,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -1648,12 +1656,12 @@ namespace test7 {
 // JSON-NEXT:            "kind": "ReturnStmt",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 860,
+// JSON-NEXT:              "offset": 985,
 // JSON-NEXT:              "col": 16,
 // JSON-NEXT:              "tokLen": 6
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 874,
+// JSON-NEXT:              "offset": 999,
 // JSON-NEXT:              "col": 30,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -1664,12 +1672,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "CXXFunctionalCastExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 867,
+// JSON-NEXT:                "offset": 992,
 // JSON-NEXT:                "col": 23,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 874,
+// JSON-NEXT:                "offset": 999,
 // JSON-NEXT:                "col": 30,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -1685,12 +1693,12 @@ namespace test7 {
 // JSON-NEXT:                "kind": "ImplicitCastExpr",
 // JSON-NEXT:                "range": {
 // JSON-NEXT:                 "begin": {
-// JSON-NEXT:                  "offset": 869,
+// JSON-NEXT:                  "offset": 994,
 // JSON-NEXT:                  "col": 25,
 // JSON-NEXT:                  "tokLen": 1
 // JSON-NEXT:                 },
 // JSON-NEXT:                 "end": {
-// JSON-NEXT:                  "offset": 873,
+// JSON-NEXT:                  "offset": 998,
 // JSON-NEXT:                  "col": 29,
 // JSON-NEXT:                  "tokLen": 1
 // JSON-NEXT:                 }
@@ -1707,12 +1715,12 @@ namespace test7 {
 // JSON-NEXT:                  "kind": "BinaryOperator",
 // JSON-NEXT:                  "range": {
 // JSON-NEXT:                   "begin": {
-// JSON-NEXT:                    "offset": 869,
+// JSON-NEXT:                    "offset": 994,
 // JSON-NEXT:                    "col": 25,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   },
 // JSON-NEXT:                   "end": {
-// JSON-NEXT:                    "offset": 873,
+// JSON-NEXT:                    "offset": 998,
 // JSON-NEXT:                    "col": 29,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   }
@@ -1728,12 +1736,12 @@ namespace test7 {
 // JSON-NEXT:                    "kind": "SubstNonTypeTemplateParmExpr",
 // JSON-NEXT:                    "range": {
 // JSON-NEXT:                     "begin": {
-// JSON-NEXT:                      "offset": 869,
+// JSON-NEXT:                      "offset": 994,
 // JSON-NEXT:                      "col": 25,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     },
 // JSON-NEXT:                     "end": {
-// JSON-NEXT:                      "offset": 869,
+// JSON-NEXT:                      "offset": 994,
 // JSON-NEXT:                      "col": 25,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     }
@@ -1747,19 +1755,19 @@ namespace test7 {
 // JSON-NEXT:                      "id": "0x{{.*}}",
 // JSON-NEXT:                      "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:                      "loc": {
-// JSON-NEXT:                       "offset": 779,
-// JSON-NEXT:                       "line": 14,
+// JSON-NEXT:                       "offset": 904,
+// JSON-NEXT:                       "line": 15,
 // JSON-NEXT:                       "col": 15,
 // JSON-NEXT:                       "tokLen": 1
 // JSON-NEXT:                      },
 // JSON-NEXT:                      "range": {
 // JSON-NEXT:                       "begin": {
-// JSON-NEXT:                        "offset": 775,
+// JSON-NEXT:                        "offset": 900,
 // JSON-NEXT:                        "col": 11,
 // JSON-NEXT:                        "tokLen": 3
 // JSON-NEXT:                       },
 // JSON-NEXT:                       "end": {
-// JSON-NEXT:                        "offset": 779,
+// JSON-NEXT:                        "offset": 904,
 // JSON-NEXT:                        "col": 15,
 // JSON-NEXT:                        "tokLen": 1
 // JSON-NEXT:                       }
@@ -1777,13 +1785,13 @@ namespace test7 {
 // JSON-NEXT:                      "kind": "IntegerLiteral",
 // JSON-NEXT:                      "range": {
 // JSON-NEXT:                       "begin": {
-// JSON-NEXT:                        "offset": 869,
-// JSON-NEXT:                        "line": 18,
+// JSON-NEXT:                        "offset": 994,
+// JSON-NEXT:                        "line": 19,
 // JSON-NEXT:                        "col": 25,
 // JSON-NEXT:                        "tokLen": 1
 // JSON-NEXT:                       },
 // JSON-NEXT:                       "end": {
-// JSON-NEXT:                        "offset": 869,
+// JSON-NEXT:                        "offset": 994,
 // JSON-NEXT:                        "col": 25,
 // JSON-NEXT:                        "tokLen": 1
 // JSON-NEXT:                       }
@@ -1801,12 +1809,12 @@ namespace test7 {
 // JSON-NEXT:                    "kind": "SubstNonTypeTemplateParmExpr",
 // JSON-NEXT:                    "range": {
 // JSON-NEXT:                     "begin": {
-// JSON-NEXT:                      "offset": 873,
+// JSON-NEXT:                      "offset": 998,
 // JSON-NEXT:                      "col": 29,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     },
 // JSON-NEXT:                     "end": {
-// JSON-NEXT:                      "offset": 873,
+// JSON-NEXT:                      "offset": 998,
 // JSON-NEXT:                      "col": 29,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     }
@@ -1820,19 +1828,19 @@ namespace test7 {
 // JSON-NEXT:                      "id": "0x{{.*}}",
 // JSON-NEXT:                      "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:                      "loc": {
-// JSON-NEXT:                       "offset": 798,
-// JSON-NEXT:                       "line": 14,
+// JSON-NEXT:                       "offset": 923,
+// JSON-NEXT:                       "line": 15,
 // JSON-NEXT:                       "col": 34,
 // JSON-NEXT:                       "tokLen": 1
 // JSON-NEXT:                      },
 // JSON-NEXT:                      "range": {
 // JSON-NEXT:                       "begin": {
-// JSON-NEXT:                        "offset": 794,
+// JSON-NEXT:                        "offset": 919,
 // JSON-NEXT:                        "col": 30,
 // JSON-NEXT:                        "tokLen": 3
 // JSON-NEXT:                       },
 // JSON-NEXT:                       "end": {
-// JSON-NEXT:                        "offset": 802,
+// JSON-NEXT:                        "offset": 927,
 // JSON-NEXT:                        "col": 38,
 // JSON-NEXT:                        "tokLen": 1
 // JSON-NEXT:                       }
@@ -1853,12 +1861,12 @@ namespace test7 {
 // JSON-NEXT:                        "kind": "TemplateArgument",
 // JSON-NEXT:                        "range": {
 // JSON-NEXT:                         "begin": {
-// JSON-NEXT:                          "offset": 802,
+// JSON-NEXT:                          "offset": 927,
 // JSON-NEXT:                          "col": 38,
 // JSON-NEXT:                          "tokLen": 1
 // JSON-NEXT:                         },
 // JSON-NEXT:                         "end": {
-// JSON-NEXT:                          "offset": 802,
+// JSON-NEXT:                          "offset": 927,
 // JSON-NEXT:                          "col": 38,
 // JSON-NEXT:                          "tokLen": 1
 // JSON-NEXT:                         }
@@ -1870,12 +1878,12 @@ namespace test7 {
 // JSON-NEXT:                          "kind": "IntegerLiteral",
 // JSON-NEXT:                          "range": {
 // JSON-NEXT:                           "begin": {
-// JSON-NEXT:                            "offset": 802,
+// JSON-NEXT:                            "offset": 927,
 // JSON-NEXT:                            "col": 38,
 // JSON-NEXT:                            "tokLen": 1
 // JSON-NEXT:                           },
 // JSON-NEXT:                           "end": {
-// JSON-NEXT:                            "offset": 802,
+// JSON-NEXT:                            "offset": 927,
 // JSON-NEXT:                            "col": 38,
 // JSON-NEXT:                            "tokLen": 1
 // JSON-NEXT:                           }
@@ -1895,13 +1903,13 @@ namespace test7 {
 // JSON-NEXT:                      "kind": "IntegerLiteral",
 // JSON-NEXT:                      "range": {
 // JSON-NEXT:                       "begin": {
-// JSON-NEXT:                        "offset": 873,
-// JSON-NEXT:                        "line": 18,
+// JSON-NEXT:                        "offset": 998,
+// JSON-NEXT:                        "line": 19,
 // JSON-NEXT:                        "col": 29,
 // JSON-NEXT:                        "tokLen": 1
 // JSON-NEXT:                       },
 // JSON-NEXT:                       "end": {
-// JSON-NEXT:                        "offset": 873,
+// JSON-NEXT:                        "offset": 998,
 // JSON-NEXT:                        "col": 29,
 // JSON-NEXT:                        "tokLen": 1
 // JSON-NEXT:                       }
@@ -1930,19 +1938,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXConstructorDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 812,
-// JSON-NEXT:         "line": 15,
+// JSON-NEXT:         "offset": 937,
+// JSON-NEXT:         "line": 16,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -1961,18 +1969,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "ParmVarDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 812,
+// JSON-NEXT:           "offset": 937,
 // JSON-NEXT:           "col": 8,
 // JSON-NEXT:           "tokLen": 3
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 812,
+// JSON-NEXT:            "offset": 937,
 // JSON-NEXT:            "col": 8,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 812,
+// JSON-NEXT:            "offset": 937,
 // JSON-NEXT:            "col": 8,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           }
@@ -1987,18 +1995,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXConstructorDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 812,
+// JSON-NEXT:         "offset": 937,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -2017,18 +2025,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "ParmVarDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 812,
+// JSON-NEXT:           "offset": 937,
 // JSON-NEXT:           "col": 8,
 // JSON-NEXT:           "tokLen": 3
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 812,
+// JSON-NEXT:            "offset": 937,
 // JSON-NEXT:            "col": 8,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 812,
+// JSON-NEXT:            "offset": 937,
 // JSON-NEXT:            "col": 8,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           }
@@ -2043,18 +2051,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXDestructorDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 812,
+// JSON-NEXT:         "offset": 937,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 812,
+// JSON-NEXT:          "offset": 937,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -2077,21 +2085,21 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "FunctionTemplateDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 914,
-// JSON-NEXT:     "line": 22,
+// JSON-NEXT:     "offset": 1039,
+// JSON-NEXT:     "line": 23,
 // JSON-NEXT:     "col": 3,
 // JSON-NEXT:     "tokLen": 3
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 883,
-// JSON-NEXT:      "line": 21,
+// JSON-NEXT:      "offset": 1008,
+// JSON-NEXT:      "line": 22,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 8
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 937,
-// JSON-NEXT:      "line": 24,
+// JSON-NEXT:      "offset": 1062,
+// JSON-NEXT:      "line": 25,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -2102,19 +2110,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 897,
-// JSON-NEXT:       "line": 21,
+// JSON-NEXT:       "offset": 1022,
+// JSON-NEXT:       "line": 22,
 // JSON-NEXT:       "col": 15,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 893,
+// JSON-NEXT:        "offset": 1018,
 // JSON-NEXT:        "col": 11,
 // JSON-NEXT:        "tokLen": 3
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 897,
+// JSON-NEXT:        "offset": 1022,
 // JSON-NEXT:        "col": 15,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -2131,18 +2139,18 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 909,
+// JSON-NEXT:       "offset": 1034,
 // JSON-NEXT:       "col": 27,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 900,
+// JSON-NEXT:        "offset": 1025,
 // JSON-NEXT:        "col": 18,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 909,
+// JSON-NEXT:        "offset": 1034,
 // JSON-NEXT:        "col": 27,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -2157,20 +2165,20 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 914,
-// JSON-NEXT:       "line": 22,
+// JSON-NEXT:       "offset": 1039,
+// JSON-NEXT:       "line": 23,
 // JSON-NEXT:       "col": 3,
 // JSON-NEXT:       "tokLen": 3
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 912,
+// JSON-NEXT:        "offset": 1037,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 937,
-// JSON-NEXT:        "line": 24,
+// JSON-NEXT:        "offset": 1062,
+// JSON-NEXT:        "line": 25,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -2185,14 +2193,14 @@ namespace test7 {
 // JSON-NEXT:        "kind": "CompoundStmt",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 920,
-// JSON-NEXT:          "line": 22,
+// JSON-NEXT:          "offset": 1045,
+// JSON-NEXT:          "line": 23,
 // JSON-NEXT:          "col": 9,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 937,
-// JSON-NEXT:          "line": 24,
+// JSON-NEXT:          "offset": 1062,
+// JSON-NEXT:          "line": 25,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -2203,13 +2211,13 @@ namespace test7 {
 // JSON-NEXT:          "kind": "ReturnStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 924,
-// JSON-NEXT:            "line": 23,
+// JSON-NEXT:            "offset": 1049,
+// JSON-NEXT:            "line": 24,
 // JSON-NEXT:            "col": 3,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 934,
+// JSON-NEXT:            "offset": 1059,
 // JSON-NEXT:            "col": 13,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -2220,12 +2228,12 @@ namespace test7 {
 // JSON-NEXT:            "kind": "CXXUnresolvedConstructExpr",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 931,
+// JSON-NEXT:              "offset": 1056,
 // JSON-NEXT:              "col": 10,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 934,
+// JSON-NEXT:              "offset": 1059,
 // JSON-NEXT:              "col": 13,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -2240,12 +2248,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "DeclRefExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 933,
+// JSON-NEXT:                "offset": 1058,
 // JSON-NEXT:                "col": 12,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 933,
+// JSON-NEXT:                "offset": 1058,
 // JSON-NEXT:                "col": 12,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -2275,20 +2283,20 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 914,
-// JSON-NEXT:       "line": 22,
+// JSON-NEXT:       "offset": 1039,
+// JSON-NEXT:       "line": 23,
 // JSON-NEXT:       "col": 3,
 // JSON-NEXT:       "tokLen": 3
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 912,
+// JSON-NEXT:        "offset": 1037,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 937,
-// JSON-NEXT:        "line": 24,
+// JSON-NEXT:        "offset": 1062,
+// JSON-NEXT:        "line": 25,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -2324,14 +2332,14 @@ namespace test7 {
 // JSON-NEXT:        "kind": "CompoundStmt",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 920,
-// JSON-NEXT:          "line": 22,
+// JSON-NEXT:          "offset": 1045,
+// JSON-NEXT:          "line": 23,
 // JSON-NEXT:          "col": 9,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 937,
-// JSON-NEXT:          "line": 24,
+// JSON-NEXT:          "offset": 1062,
+// JSON-NEXT:          "line": 25,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -2342,13 +2350,13 @@ namespace test7 {
 // JSON-NEXT:          "kind": "ReturnStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 924,
-// JSON-NEXT:            "line": 23,
+// JSON-NEXT:            "offset": 1049,
+// JSON-NEXT:            "line": 24,
 // JSON-NEXT:            "col": 3,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 934,
+// JSON-NEXT:            "offset": 1059,
 // JSON-NEXT:            "col": 13,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -2359,12 +2367,12 @@ namespace test7 {
 // JSON-NEXT:            "kind": "CXXFunctionalCastExpr",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 931,
+// JSON-NEXT:              "offset": 1056,
 // JSON-NEXT:              "col": 10,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 934,
+// JSON-NEXT:              "offset": 1059,
 // JSON-NEXT:              "col": 13,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -2380,12 +2388,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "SubstNonTypeTemplateParmExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 933,
+// JSON-NEXT:                "offset": 1058,
 // JSON-NEXT:                "col": 12,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 933,
+// JSON-NEXT:                "offset": 1058,
 // JSON-NEXT:                "col": 12,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -2399,19 +2407,19 @@ namespace test7 {
 // JSON-NEXT:                "id": "0x{{.*}}",
 // JSON-NEXT:                "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:                "loc": {
-// JSON-NEXT:                 "offset": 897,
-// JSON-NEXT:                 "line": 21,
+// JSON-NEXT:                 "offset": 1022,
+// JSON-NEXT:                 "line": 22,
 // JSON-NEXT:                 "col": 15,
 // JSON-NEXT:                 "tokLen": 1
 // JSON-NEXT:                },
 // JSON-NEXT:                "range": {
 // JSON-NEXT:                 "begin": {
-// JSON-NEXT:                  "offset": 893,
+// JSON-NEXT:                  "offset": 1018,
 // JSON-NEXT:                  "col": 11,
 // JSON-NEXT:                  "tokLen": 3
 // JSON-NEXT:                 },
 // JSON-NEXT:                 "end": {
-// JSON-NEXT:                  "offset": 897,
+// JSON-NEXT:                  "offset": 1022,
 // JSON-NEXT:                  "col": 15,
 // JSON-NEXT:                  "tokLen": 1
 // JSON-NEXT:                 }
@@ -2429,13 +2437,13 @@ namespace test7 {
 // JSON-NEXT:                "kind": "IntegerLiteral",
 // JSON-NEXT:                "range": {
 // JSON-NEXT:                 "begin": {
-// JSON-NEXT:                  "offset": 933,
-// JSON-NEXT:                  "line": 23,
+// JSON-NEXT:                  "offset": 1058,
+// JSON-NEXT:                  "line": 24,
 // JSON-NEXT:                  "col": 12,
 // JSON-NEXT:                  "tokLen": 1
 // JSON-NEXT:                 },
 // JSON-NEXT:                 "end": {
-// JSON-NEXT:                  "offset": 933,
+// JSON-NEXT:                  "offset": 1058,
 // JSON-NEXT:                  "col": 12,
 // JSON-NEXT:                  "tokLen": 1
 // JSON-NEXT:                 }
@@ -2462,20 +2470,20 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "FunctionDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 945,
-// JSON-NEXT:     "line": 26,
+// JSON-NEXT:     "offset": 1070,
+// JSON-NEXT:     "line": 27,
 // JSON-NEXT:     "col": 6,
 // JSON-NEXT:     "tokLen": 3
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 940,
+// JSON-NEXT:      "offset": 1065,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 4
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 1055,
-// JSON-NEXT:      "line": 30,
+// JSON-NEXT:      "offset": 1180,
+// JSON-NEXT:      "line": 31,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -2491,14 +2499,14 @@ namespace test7 {
 // JSON-NEXT:      "kind": "CompoundStmt",
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 951,
-// JSON-NEXT:        "line": 26,
+// JSON-NEXT:        "offset": 1076,
+// JSON-NEXT:        "line": 27,
 // JSON-NEXT:        "col": 12,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 1055,
-// JSON-NEXT:        "line": 30,
+// JSON-NEXT:        "offset": 1180,
+// JSON-NEXT:        "line": 31,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -2509,13 +2517,13 @@ namespace test7 {
 // JSON-NEXT:        "kind": "DeclStmt",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 955,
-// JSON-NEXT:          "line": 27,
+// JSON-NEXT:          "offset": 1080,
+// JSON-NEXT:          "line": 28,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 976,
+// JSON-NEXT:          "offset": 1101,
 // JSON-NEXT:          "col": 24,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -2525,18 +2533,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "VarDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 959,
+// JSON-NEXT:           "offset": 1084,
 // JSON-NEXT:           "col": 7,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 955,
+// JSON-NEXT:            "offset": 1080,
 // JSON-NEXT:            "col": 3,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 975,
+// JSON-NEXT:            "offset": 1100,
 // JSON-NEXT:            "col": 23,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -2552,12 +2560,12 @@ namespace test7 {
 // JSON-NEXT:            "kind": "CallExpr",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 963,
+// JSON-NEXT:              "offset": 1088,
 // JSON-NEXT:              "col": 11,
 // JSON-NEXT:              "tokLen": 3
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 975,
+// JSON-NEXT:              "offset": 1100,
 // JSON-NEXT:              "col": 23,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -2572,12 +2580,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "ImplicitCastExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 963,
+// JSON-NEXT:                "offset": 1088,
 // JSON-NEXT:                "col": 11,
 // JSON-NEXT:                "tokLen": 3
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 973,
+// JSON-NEXT:                "offset": 1098,
 // JSON-NEXT:                "col": 21,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -2593,12 +2601,12 @@ namespace test7 {
 // JSON-NEXT:                "kind": "DeclRefExpr",
 // JSON-NEXT:                "range": {
 // JSON-NEXT:                 "begin": {
-// JSON-NEXT:                  "offset": 963,
+// JSON-NEXT:                  "offset": 1088,
 // JSON-NEXT:                  "col": 11,
 // JSON-NEXT:                  "tokLen": 3
 // JSON-NEXT:                 },
 // JSON-NEXT:                 "end": {
-// JSON-NEXT:                  "offset": 973,
+// JSON-NEXT:                  "offset": 1098,
 // JSON-NEXT:                  "col": 21,
 // JSON-NEXT:                  "tokLen": 1
 // JSON-NEXT:                 }
@@ -2634,13 +2642,13 @@ namespace test7 {
 // JSON-NEXT:        "kind": "DeclStmt",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 980,
-// JSON-NEXT:          "line": 28,
+// JSON-NEXT:          "offset": 1105,
+// JSON-NEXT:          "line": 29,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 1010,
+// JSON-NEXT:          "offset": 1135,
 // JSON-NEXT:          "col": 33,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -2650,18 +2658,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "VarDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 984,
+// JSON-NEXT:           "offset": 1109,
 // JSON-NEXT:           "col": 7,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 980,
+// JSON-NEXT:            "offset": 1105,
 // JSON-NEXT:            "col": 3,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 1009,
+// JSON-NEXT:            "offset": 1134,
 // JSON-NEXT:            "col": 32,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -2677,12 +2685,12 @@ namespace test7 {
 // JSON-NEXT:            "kind": "ExprWithCleanups",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 988,
+// JSON-NEXT:              "offset": 1113,
 // JSON-NEXT:              "col": 11,
 // JSON-NEXT:              "tokLen": 3
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 1009,
+// JSON-NEXT:              "offset": 1134,
 // JSON-NEXT:              "col": 32,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -2697,12 +2705,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "CXXMemberCallExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 988,
+// JSON-NEXT:                "offset": 1113,
 // JSON-NEXT:                "col": 11,
 // JSON-NEXT:                "tokLen": 3
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 1009,
+// JSON-NEXT:                "offset": 1134,
 // JSON-NEXT:                "col": 32,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -2717,12 +2725,12 @@ namespace test7 {
 // JSON-NEXT:                "kind": "MemberExpr",
 // JSON-NEXT:                "range": {
 // JSON-NEXT:                 "begin": {
-// JSON-NEXT:                  "offset": 988,
+// JSON-NEXT:                  "offset": 1113,
 // JSON-NEXT:                  "col": 11,
 // JSON-NEXT:                  "tokLen": 3
 // JSON-NEXT:                 },
 // JSON-NEXT:                 "end": {
-// JSON-NEXT:                  "offset": 1002,
+// JSON-NEXT:                  "offset": 1127,
 // JSON-NEXT:                  "col": 25,
 // JSON-NEXT:                  "tokLen": 6
 // JSON-NEXT:                 }
@@ -2740,12 +2748,12 @@ namespace test7 {
 // JSON-NEXT:                  "kind": "MaterializeTemporaryExpr",
 // JSON-NEXT:                  "range": {
 // JSON-NEXT:                   "begin": {
-// JSON-NEXT:                    "offset": 988,
+// JSON-NEXT:                    "offset": 1113,
 // JSON-NEXT:                    "col": 11,
 // JSON-NEXT:                    "tokLen": 3
 // JSON-NEXT:                   },
 // JSON-NEXT:                   "end": {
-// JSON-NEXT:                    "offset": 1000,
+// JSON-NEXT:                    "offset": 1125,
 // JSON-NEXT:                    "col": 23,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   }
@@ -2761,12 +2769,12 @@ namespace test7 {
 // JSON-NEXT:                    "kind": "CXXTemporaryObjectExpr",
 // JSON-NEXT:                    "range": {
 // JSON-NEXT:                     "begin": {
-// JSON-NEXT:                      "offset": 988,
+// JSON-NEXT:                      "offset": 1113,
 // JSON-NEXT:                      "col": 11,
 // JSON-NEXT:                      "tokLen": 3
 // JSON-NEXT:                     },
 // JSON-NEXT:                     "end": {
-// JSON-NEXT:                      "offset": 1000,
+// JSON-NEXT:                      "offset": 1125,
 // JSON-NEXT:                      "col": 23,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     }
@@ -2798,13 +2806,13 @@ namespace test7 {
 // JSON-NEXT:        "kind": "DeclStmt",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 1014,
-// JSON-NEXT:          "line": 29,
+// JSON-NEXT:          "offset": 1139,
+// JSON-NEXT:          "line": 30,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 1053,
+// JSON-NEXT:          "offset": 1178,
 // JSON-NEXT:          "col": 42,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -2814,18 +2822,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "VarDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 1021,
+// JSON-NEXT:           "offset": 1146,
 // JSON-NEXT:           "col": 10,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 1014,
+// JSON-NEXT:            "offset": 1139,
 // JSON-NEXT:            "col": 3,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 1052,
+// JSON-NEXT:            "offset": 1177,
 // JSON-NEXT:            "col": 41,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -2841,12 +2849,12 @@ namespace test7 {
 // JSON-NEXT:            "kind": "ExprWithCleanups",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 1025,
+// JSON-NEXT:              "offset": 1150,
 // JSON-NEXT:              "col": 14,
 // JSON-NEXT:              "tokLen": 3
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 1052,
+// JSON-NEXT:              "offset": 1177,
 // JSON-NEXT:              "col": 41,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -2861,12 +2869,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "CXXMemberCallExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 1025,
+// JSON-NEXT:                "offset": 1150,
 // JSON-NEXT:                "col": 14,
 // JSON-NEXT:                "tokLen": 3
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 1052,
+// JSON-NEXT:                "offset": 1177,
 // JSON-NEXT:                "col": 41,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -2881,12 +2889,12 @@ namespace test7 {
 // JSON-NEXT:                "kind": "MemberExpr",
 // JSON-NEXT:                "range": {
 // JSON-NEXT:                 "begin": {
-// JSON-NEXT:                  "offset": 1025,
+// JSON-NEXT:                  "offset": 1150,
 // JSON-NEXT:                  "col": 14,
 // JSON-NEXT:                  "tokLen": 3
 // JSON-NEXT:                 },
 // JSON-NEXT:                 "end": {
-// JSON-NEXT:                  "offset": 1045,
+// JSON-NEXT:                  "offset": 1170,
 // JSON-NEXT:                  "col": 34,
 // JSON-NEXT:                  "tokLen": 6
 // JSON-NEXT:                 }
@@ -2904,12 +2912,12 @@ namespace test7 {
 // JSON-NEXT:                  "kind": "MaterializeTemporaryExpr",
 // JSON-NEXT:                  "range": {
 // JSON-NEXT:                   "begin": {
-// JSON-NEXT:                    "offset": 1025,
+// JSON-NEXT:                    "offset": 1150,
 // JSON-NEXT:                    "col": 14,
 // JSON-NEXT:                    "tokLen": 3
 // JSON-NEXT:                   },
 // JSON-NEXT:                   "end": {
-// JSON-NEXT:                    "offset": 1043,
+// JSON-NEXT:                    "offset": 1168,
 // JSON-NEXT:                    "col": 32,
 // JSON-NEXT:                    "tokLen": 1
 // JSON-NEXT:                   }
@@ -2925,12 +2933,12 @@ namespace test7 {
 // JSON-NEXT:                    "kind": "CXXTemporaryObjectExpr",
 // JSON-NEXT:                    "range": {
 // JSON-NEXT:                     "begin": {
-// JSON-NEXT:                      "offset": 1025,
+// JSON-NEXT:                      "offset": 1150,
 // JSON-NEXT:                      "col": 14,
 // JSON-NEXT:                      "tokLen": 3
 // JSON-NEXT:                     },
 // JSON-NEXT:                     "end": {
-// JSON-NEXT:                      "offset": 1043,
+// JSON-NEXT:                      "offset": 1168,
 // JSON-NEXT:                      "col": 32,
 // JSON-NEXT:                      "tokLen": 1
 // JSON-NEXT:                     }
@@ -2965,20 +2973,20 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "ClassTemplateDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 1856,
-// JSON-NEXT:     "line": 52,
+// JSON-NEXT:     "offset": 1981,
+// JSON-NEXT:     "line": 53,
 // JSON-NEXT:     "col": 33,
 // JSON-NEXT:     "tokLen": 1
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 1824,
+// JSON-NEXT:      "offset": 1949,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 8
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 1896,
-// JSON-NEXT:      "line": 54,
+// JSON-NEXT:      "offset": 2021,
+// JSON-NEXT:      "line": 55,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -2989,19 +2997,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 1846,
-// JSON-NEXT:       "line": 52,
+// JSON-NEXT:       "offset": 1971,
+// JSON-NEXT:       "line": 53,
 // JSON-NEXT:       "col": 23,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 1834,
+// JSON-NEXT:        "offset": 1959,
 // JSON-NEXT:        "col": 11,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 1846,
+// JSON-NEXT:        "offset": 1971,
 // JSON-NEXT:        "col": 23,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -3017,19 +3025,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "CXXRecordDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 1856,
+// JSON-NEXT:       "offset": 1981,
 // JSON-NEXT:       "col": 33,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 1849,
+// JSON-NEXT:        "offset": 1974,
 // JSON-NEXT:        "col": 26,
 // JSON-NEXT:        "tokLen": 6
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 1896,
-// JSON-NEXT:        "line": 54,
+// JSON-NEXT:        "offset": 2021,
+// JSON-NEXT:        "line": 55,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -3092,19 +3100,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 1856,
-// JSON-NEXT:         "line": 52,
+// JSON-NEXT:         "offset": 1981,
+// JSON-NEXT:         "line": 53,
 // JSON-NEXT:         "col": 33,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 1849,
+// JSON-NEXT:          "offset": 1974,
 // JSON-NEXT:          "col": 26,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 1856,
+// JSON-NEXT:          "offset": 1981,
 // JSON-NEXT:          "col": 33,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -3117,19 +3125,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "ClassTemplateDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 1890,
-// JSON-NEXT:         "line": 53,
+// JSON-NEXT:         "offset": 2015,
+// JSON-NEXT:         "line": 54,
 // JSON-NEXT:         "col": 31,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 1862,
+// JSON-NEXT:          "offset": 1987,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 1893,
+// JSON-NEXT:          "offset": 2018,
 // JSON-NEXT:          "col": 34,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -3140,18 +3148,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 1877,
+// JSON-NEXT:           "offset": 2002,
 // JSON-NEXT:           "col": 18,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 1872,
+// JSON-NEXT:            "offset": 1997,
 // JSON-NEXT:            "col": 13,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 1880,
+// JSON-NEXT:            "offset": 2005,
 // JSON-NEXT:            "col": 21,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -3168,18 +3176,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXRecordDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 1890,
+// JSON-NEXT:           "offset": 2015,
 // JSON-NEXT:           "col": 31,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 1883,
+// JSON-NEXT:            "offset": 2008,
 // JSON-NEXT:            "col": 24,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 1893,
+// JSON-NEXT:            "offset": 2018,
 // JSON-NEXT:            "col": 34,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -3242,18 +3250,18 @@ namespace test7 {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "CXXRecordDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 1890,
+// JSON-NEXT:             "offset": 2015,
 // JSON-NEXT:             "col": 31,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 1883,
+// JSON-NEXT:              "offset": 2008,
 // JSON-NEXT:              "col": 24,
 // JSON-NEXT:              "tokLen": 6
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 1890,
+// JSON-NEXT:              "offset": 2015,
 // JSON-NEXT:              "col": 31,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -3274,20 +3282,20 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "FunctionTemplateDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 2016,
-// JSON-NEXT:     "line": 58,
+// JSON-NEXT:     "offset": 2141,
+// JSON-NEXT:     "line": 59,
 // JSON-NEXT:     "col": 31,
 // JSON-NEXT:     "tokLen": 1
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 1986,
+// JSON-NEXT:      "offset": 2111,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 8
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 2038,
-// JSON-NEXT:      "line": 60,
+// JSON-NEXT:      "offset": 2163,
+// JSON-NEXT:      "line": 61,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -3298,19 +3306,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2008,
-// JSON-NEXT:       "line": 58,
+// JSON-NEXT:       "offset": 2133,
+// JSON-NEXT:       "line": 59,
 // JSON-NEXT:       "col": 23,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 1996,
+// JSON-NEXT:        "offset": 2121,
 // JSON-NEXT:        "col": 11,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2008,
+// JSON-NEXT:        "offset": 2133,
 // JSON-NEXT:        "col": 23,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -3326,19 +3334,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2016,
+// JSON-NEXT:       "offset": 2141,
 // JSON-NEXT:       "col": 31,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 2011,
+// JSON-NEXT:        "offset": 2136,
 // JSON-NEXT:        "col": 26,
 // JSON-NEXT:        "tokLen": 4
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2038,
-// JSON-NEXT:        "line": 60,
+// JSON-NEXT:        "offset": 2163,
+// JSON-NEXT:        "line": 61,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -3353,14 +3361,14 @@ namespace test7 {
 // JSON-NEXT:        "kind": "CompoundStmt",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2020,
-// JSON-NEXT:          "line": 58,
+// JSON-NEXT:          "offset": 2145,
+// JSON-NEXT:          "line": 59,
 // JSON-NEXT:          "col": 35,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2038,
-// JSON-NEXT:          "line": 60,
+// JSON-NEXT:          "offset": 2163,
+// JSON-NEXT:          "line": 61,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -3371,13 +3379,13 @@ namespace test7 {
 // JSON-NEXT:          "kind": "DeclStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 2024,
-// JSON-NEXT:            "line": 59,
+// JSON-NEXT:            "offset": 2149,
+// JSON-NEXT:            "line": 60,
 // JSON-NEXT:            "col": 3,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 2036,
+// JSON-NEXT:            "offset": 2161,
 // JSON-NEXT:            "col": 15,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -3387,18 +3395,18 @@ namespace test7 {
 // JSON-NEXT:            "id": "0x{{.*}}",
 // JSON-NEXT:            "kind": "VarDecl",
 // JSON-NEXT:            "loc": {
-// JSON-NEXT:             "offset": 2035,
+// JSON-NEXT:             "offset": 2160,
 // JSON-NEXT:             "col": 14,
 // JSON-NEXT:             "tokLen": 1
 // JSON-NEXT:            },
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 2024,
+// JSON-NEXT:              "offset": 2149,
 // JSON-NEXT:              "col": 3,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 2035,
+// JSON-NEXT:              "offset": 2160,
 // JSON-NEXT:              "col": 14,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -3420,20 +3428,20 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 2051,
-// JSON-NEXT:     "line": 62,
+// JSON-NEXT:     "offset": 2176,
+// JSON-NEXT:     "line": 63,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 5
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 2041,
+// JSON-NEXT:      "offset": 2166,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 2240,
-// JSON-NEXT:      "line": 71,
+// JSON-NEXT:      "offset": 2365,
+// JSON-NEXT:      "line": 72,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -3444,19 +3452,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2064,
-// JSON-NEXT:       "line": 63,
+// JSON-NEXT:       "offset": 2189,
+// JSON-NEXT:       "line": 64,
 // JSON-NEXT:       "col": 6,
 // JSON-NEXT:       "tokLen": 4
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 2059,
+// JSON-NEXT:        "offset": 2184,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 4
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2072,
+// JSON-NEXT:        "offset": 2197,
 // JSON-NEXT:        "col": 14,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -3471,18 +3479,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "ParmVarDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2072,
+// JSON-NEXT:         "offset": 2197,
 // JSON-NEXT:         "col": 14,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2069,
+// JSON-NEXT:          "offset": 2194,
 // JSON-NEXT:          "col": 11,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2069,
+// JSON-NEXT:          "offset": 2194,
 // JSON-NEXT:          "col": 11,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -3497,19 +3505,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2080,
-// JSON-NEXT:       "line": 64,
+// JSON-NEXT:       "offset": 2205,
+// JSON-NEXT:       "line": 65,
 // JSON-NEXT:       "col": 6,
 // JSON-NEXT:       "tokLen": 4
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 2075,
+// JSON-NEXT:        "offset": 2200,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 4
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2090,
+// JSON-NEXT:        "offset": 2215,
 // JSON-NEXT:        "col": 16,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -3524,18 +3532,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "ParmVarDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2090,
+// JSON-NEXT:         "offset": 2215,
 // JSON-NEXT:         "col": 16,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2085,
+// JSON-NEXT:          "offset": 2210,
 // JSON-NEXT:          "col": 11,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2085,
+// JSON-NEXT:          "offset": 2210,
 // JSON-NEXT:          "col": 11,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         }
@@ -3550,21 +3558,21 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2119,
-// JSON-NEXT:       "line": 66,
+// JSON-NEXT:       "offset": 2244,
+// JSON-NEXT:       "line": 67,
 // JSON-NEXT:       "col": 6,
 // JSON-NEXT:       "tokLen": 4
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 2093,
-// JSON-NEXT:        "line": 65,
+// JSON-NEXT:        "offset": 2218,
+// JSON-NEXT:        "line": 66,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2141,
-// JSON-NEXT:        "line": 68,
+// JSON-NEXT:        "offset": 2266,
+// JSON-NEXT:        "line": 69,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -3575,19 +3583,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2111,
-// JSON-NEXT:         "line": 65,
+// JSON-NEXT:         "offset": 2236,
+// JSON-NEXT:         "line": 66,
 // JSON-NEXT:         "col": 19,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2102,
+// JSON-NEXT:          "offset": 2227,
 // JSON-NEXT:          "col": 10,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2111,
+// JSON-NEXT:          "offset": 2236,
 // JSON-NEXT:          "col": 19,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -3602,20 +3610,20 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FunctionDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2119,
-// JSON-NEXT:         "line": 66,
+// JSON-NEXT:         "offset": 2244,
+// JSON-NEXT:         "line": 67,
 // JSON-NEXT:         "col": 6,
 // JSON-NEXT:         "tokLen": 4
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2114,
+// JSON-NEXT:          "offset": 2239,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2141,
-// JSON-NEXT:          "line": 68,
+// JSON-NEXT:          "offset": 2266,
+// JSON-NEXT:          "line": 69,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -3630,14 +3638,14 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 2126,
-// JSON-NEXT:            "line": 66,
+// JSON-NEXT:            "offset": 2251,
+// JSON-NEXT:            "line": 67,
 // JSON-NEXT:            "col": 13,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 2141,
-// JSON-NEXT:            "line": 68,
+// JSON-NEXT:            "offset": 2266,
+// JSON-NEXT:            "line": 69,
 // JSON-NEXT:            "col": 1,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -3648,13 +3656,13 @@ namespace test7 {
 // JSON-NEXT:            "kind": "CallExpr",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 2130,
-// JSON-NEXT:              "line": 67,
+// JSON-NEXT:              "offset": 2255,
+// JSON-NEXT:              "line": 68,
 // JSON-NEXT:              "col": 3,
 // JSON-NEXT:              "tokLen": 4
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 2138,
+// JSON-NEXT:              "offset": 2263,
 // JSON-NEXT:              "col": 11,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -3669,12 +3677,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "UnresolvedLookupExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 2130,
+// JSON-NEXT:                "offset": 2255,
 // JSON-NEXT:                "col": 3,
 // JSON-NEXT:                "tokLen": 4
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 2130,
+// JSON-NEXT:                "offset": 2255,
 // JSON-NEXT:                "col": 3,
 // JSON-NEXT:                "tokLen": 4
 // JSON-NEXT:               }
@@ -3709,12 +3717,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "CXXUnresolvedConstructExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 2135,
+// JSON-NEXT:                "offset": 2260,
 // JSON-NEXT:                "col": 8,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 2137,
+// JSON-NEXT:                "offset": 2262,
 // JSON-NEXT:                "col": 10,
 // JSON-NEXT:                "tokLen": 1
 // JSON-NEXT:               }
@@ -3738,20 +3746,20 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 2253,
-// JSON-NEXT:     "line": 73,
+// JSON-NEXT:     "offset": 2378,
+// JSON-NEXT:     "line": 74,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 5
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 2243,
+// JSON-NEXT:      "offset": 2368,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 2387,
-// JSON-NEXT:      "line": 77,
+// JSON-NEXT:      "offset": 2512,
+// JSON-NEXT:      "line": 78,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -3762,19 +3770,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2291,
-// JSON-NEXT:       "line": 74,
+// JSON-NEXT:       "offset": 2416,
+// JSON-NEXT:       "line": 75,
 // JSON-NEXT:       "col": 31,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 2263,
+// JSON-NEXT:        "offset": 2388,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2294,
+// JSON-NEXT:        "offset": 2419,
 // JSON-NEXT:        "col": 34,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -3785,18 +3793,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2281,
+// JSON-NEXT:         "offset": 2406,
 // JSON-NEXT:         "col": 21,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2272,
+// JSON-NEXT:          "offset": 2397,
 // JSON-NEXT:          "col": 12,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2281,
+// JSON-NEXT:          "offset": 2406,
 // JSON-NEXT:          "col": 21,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -3810,18 +3818,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2291,
+// JSON-NEXT:         "offset": 2416,
 // JSON-NEXT:         "col": 31,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2284,
+// JSON-NEXT:          "offset": 2409,
 // JSON-NEXT:          "col": 24,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2294,
+// JSON-NEXT:          "offset": 2419,
 // JSON-NEXT:          "col": 34,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -3884,18 +3892,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXRecordDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 2291,
+// JSON-NEXT:           "offset": 2416,
 // JSON-NEXT:           "col": 31,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 2284,
+// JSON-NEXT:            "offset": 2409,
 // JSON-NEXT:            "col": 24,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 2291,
+// JSON-NEXT:            "offset": 2416,
 // JSON-NEXT:            "col": 31,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -3910,18 +3918,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "ClassTemplateSpecializationDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2291,
+// JSON-NEXT:         "offset": 2416,
 // JSON-NEXT:         "col": 31,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2263,
+// JSON-NEXT:          "offset": 2388,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2294,
+// JSON-NEXT:          "offset": 2419,
 // JSON-NEXT:          "col": 34,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -3952,18 +3960,18 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2291,
+// JSON-NEXT:       "offset": 2416,
 // JSON-NEXT:       "col": 31,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 2263,
+// JSON-NEXT:        "offset": 2388,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2291,
+// JSON-NEXT:        "offset": 2416,
 // JSON-NEXT:        "col": 31,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -3975,18 +3983,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2281,
+// JSON-NEXT:         "offset": 2406,
 // JSON-NEXT:         "col": 21,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2272,
+// JSON-NEXT:          "offset": 2397,
 // JSON-NEXT:          "col": 12,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2281,
+// JSON-NEXT:          "offset": 2406,
 // JSON-NEXT:          "col": 21,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4000,18 +4008,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXDeductionGuideDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2291,
+// JSON-NEXT:         "offset": 2416,
 // JSON-NEXT:         "col": 31,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2291,
+// JSON-NEXT:          "offset": 2416,
 // JSON-NEXT:          "col": 31,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2291,
+// JSON-NEXT:          "offset": 2416,
 // JSON-NEXT:          "col": 31,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4028,18 +4036,18 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2291,
+// JSON-NEXT:       "offset": 2416,
 // JSON-NEXT:       "col": 31,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 2263,
+// JSON-NEXT:        "offset": 2388,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2291,
+// JSON-NEXT:        "offset": 2416,
 // JSON-NEXT:        "col": 31,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -4051,18 +4059,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2281,
+// JSON-NEXT:         "offset": 2406,
 // JSON-NEXT:         "col": 21,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2272,
+// JSON-NEXT:          "offset": 2397,
 // JSON-NEXT:          "col": 12,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2281,
+// JSON-NEXT:          "offset": 2406,
 // JSON-NEXT:          "col": 21,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4076,18 +4084,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXDeductionGuideDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2291,
+// JSON-NEXT:         "offset": 2416,
 // JSON-NEXT:         "col": 31,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2291,
+// JSON-NEXT:          "offset": 2416,
 // JSON-NEXT:          "col": 31,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2291,
+// JSON-NEXT:          "offset": 2416,
 // JSON-NEXT:          "col": 31,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4102,18 +4110,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "ParmVarDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 2291,
+// JSON-NEXT:           "offset": 2416,
 // JSON-NEXT:           "col": 31,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 2291,
+// JSON-NEXT:            "offset": 2416,
 // JSON-NEXT:            "col": 31,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 2291,
+// JSON-NEXT:            "offset": 2416,
 // JSON-NEXT:            "col": 31,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -4130,19 +4138,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2320,
-// JSON-NEXT:       "line": 75,
+// JSON-NEXT:       "offset": 2445,
+// JSON-NEXT:       "line": 76,
 // JSON-NEXT:       "col": 24,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 2299,
+// JSON-NEXT:        "offset": 2424,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2333,
+// JSON-NEXT:        "offset": 2458,
 // JSON-NEXT:        "col": 37,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -4153,18 +4161,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2317,
+// JSON-NEXT:         "offset": 2442,
 // JSON-NEXT:         "col": 21,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2308,
+// JSON-NEXT:          "offset": 2433,
 // JSON-NEXT:          "col": 12,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2317,
+// JSON-NEXT:          "offset": 2442,
 // JSON-NEXT:          "col": 21,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4179,18 +4187,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXDeductionGuideDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2320,
+// JSON-NEXT:         "offset": 2445,
 // JSON-NEXT:         "col": 24,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2320,
+// JSON-NEXT:          "offset": 2445,
 // JSON-NEXT:          "col": 24,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2333,
+// JSON-NEXT:          "offset": 2458,
 // JSON-NEXT:          "col": 37,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4204,18 +4212,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "ParmVarDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 2323,
+// JSON-NEXT:           "offset": 2448,
 // JSON-NEXT:           "col": 27,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 2322,
+// JSON-NEXT:            "offset": 2447,
 // JSON-NEXT:            "col": 26,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 2322,
+// JSON-NEXT:            "offset": 2447,
 // JSON-NEXT:            "col": 26,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -4234,20 +4242,20 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 2400,
-// JSON-NEXT:     "line": 79,
+// JSON-NEXT:     "offset": 2525,
+// JSON-NEXT:     "line": 80,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 5
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 2390,
+// JSON-NEXT:      "offset": 2515,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 3297,
-// JSON-NEXT:      "line": 103,
+// JSON-NEXT:      "offset": 3621,
+// JSON-NEXT:      "line": 111,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -4258,21 +4266,21 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2445,
-// JSON-NEXT:       "line": 81,
+// JSON-NEXT:       "offset": 2570,
+// JSON-NEXT:       "line": 82,
 // JSON-NEXT:       "col": 8,
 // JSON-NEXT:       "tokLen": 3
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 2408,
-// JSON-NEXT:        "line": 80,
+// JSON-NEXT:        "offset": 2533,
+// JSON-NEXT:        "line": 81,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2471,
-// JSON-NEXT:        "line": 83,
+// JSON-NEXT:        "offset": 2596,
+// JSON-NEXT:        "line": 84,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -4283,19 +4291,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2427,
-// JSON-NEXT:         "line": 80,
+// JSON-NEXT:         "offset": 2552,
+// JSON-NEXT:         "line": 81,
 // JSON-NEXT:         "col": 20,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2418,
+// JSON-NEXT:          "offset": 2543,
 // JSON-NEXT:          "col": 11,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2427,
+// JSON-NEXT:          "offset": 2552,
 // JSON-NEXT:          "col": 20,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4311,18 +4319,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2435,
+// JSON-NEXT:         "offset": 2560,
 // JSON-NEXT:         "col": 28,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2430,
+// JSON-NEXT:          "offset": 2555,
 // JSON-NEXT:          "col": 23,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2435,
+// JSON-NEXT:          "offset": 2560,
 // JSON-NEXT:          "col": 28,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4338,20 +4346,20 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2445,
-// JSON-NEXT:         "line": 81,
+// JSON-NEXT:         "offset": 2570,
+// JSON-NEXT:         "line": 82,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2438,
+// JSON-NEXT:          "offset": 2563,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2471,
-// JSON-NEXT:          "line": 83,
+// JSON-NEXT:          "offset": 2596,
+// JSON-NEXT:          "line": 84,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4414,19 +4422,19 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXRecordDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 2445,
-// JSON-NEXT:           "line": 81,
+// JSON-NEXT:           "offset": 2570,
+// JSON-NEXT:           "line": 82,
 // JSON-NEXT:           "col": 8,
 // JSON-NEXT:           "tokLen": 3
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 2438,
+// JSON-NEXT:            "offset": 2563,
 // JSON-NEXT:            "col": 1,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 2445,
+// JSON-NEXT:            "offset": 2570,
 // JSON-NEXT:            "col": 8,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           }
@@ -4439,19 +4447,19 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXMethodDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 2465,
-// JSON-NEXT:           "line": 82,
+// JSON-NEXT:           "offset": 2590,
+// JSON-NEXT:           "line": 83,
 // JSON-NEXT:           "col": 15,
 // JSON-NEXT:           "tokLen": 2
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 2453,
+// JSON-NEXT:            "offset": 2578,
 // JSON-NEXT:            "col": 3,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 2468,
+// JSON-NEXT:            "offset": 2593,
 // JSON-NEXT:            "col": 18,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -4468,21 +4476,21 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "ClassTemplateSpecializationDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2445,
-// JSON-NEXT:         "line": 81,
+// JSON-NEXT:         "offset": 2570,
+// JSON-NEXT:         "line": 82,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2408,
-// JSON-NEXT:          "line": 80,
+// JSON-NEXT:          "offset": 2533,
+// JSON-NEXT:          "line": 81,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2471,
-// JSON-NEXT:          "line": 83,
+// JSON-NEXT:          "offset": 2596,
+// JSON-NEXT:          "line": 84,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4554,19 +4562,19 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXRecordDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 2445,
-// JSON-NEXT:           "line": 81,
+// JSON-NEXT:           "offset": 2570,
+// JSON-NEXT:           "line": 82,
 // JSON-NEXT:           "col": 8,
 // JSON-NEXT:           "tokLen": 3
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 2438,
+// JSON-NEXT:            "offset": 2563,
 // JSON-NEXT:            "col": 1,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 2445,
+// JSON-NEXT:            "offset": 2570,
 // JSON-NEXT:            "col": 8,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           }
@@ -4579,19 +4587,19 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXMethodDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 2465,
-// JSON-NEXT:           "line": 82,
+// JSON-NEXT:           "offset": 2590,
+// JSON-NEXT:           "line": 83,
 // JSON-NEXT:           "col": 15,
 // JSON-NEXT:           "tokLen": 2
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 2453,
+// JSON-NEXT:            "offset": 2578,
 // JSON-NEXT:            "col": 3,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 2468,
+// JSON-NEXT:            "offset": 2593,
 // JSON-NEXT:            "col": 18,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -4617,20 +4625,20 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 2846,
-// JSON-NEXT:       "line": 92,
+// JSON-NEXT:       "offset": 2971,
+// JSON-NEXT:       "line": 93,
 // JSON-NEXT:       "col": 6,
 // JSON-NEXT:       "tokLen": 4
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 2841,
+// JSON-NEXT:        "offset": 2966,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 4
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 2879,
-// JSON-NEXT:        "line": 94,
+// JSON-NEXT:        "offset": 3004,
+// JSON-NEXT:        "line": 95,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -4646,14 +4654,14 @@ namespace test7 {
 // JSON-NEXT:        "kind": "CompoundStmt",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2853,
-// JSON-NEXT:          "line": 92,
+// JSON-NEXT:          "offset": 2978,
+// JSON-NEXT:          "line": 93,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2879,
-// JSON-NEXT:          "line": 94,
+// JSON-NEXT:          "offset": 3004,
+// JSON-NEXT:          "line": 95,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4664,13 +4672,13 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CallExpr",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 2857,
-// JSON-NEXT:            "line": 93,
+// JSON-NEXT:            "offset": 2982,
+// JSON-NEXT:            "line": 94,
 // JSON-NEXT:            "col": 3,
 // JSON-NEXT:            "tokLen": 3
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 2876,
+// JSON-NEXT:            "offset": 3001,
 // JSON-NEXT:            "col": 22,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -4685,12 +4693,12 @@ namespace test7 {
 // JSON-NEXT:            "kind": "ImplicitCastExpr",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 2857,
+// JSON-NEXT:              "offset": 2982,
 // JSON-NEXT:              "col": 3,
 // JSON-NEXT:              "tokLen": 3
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 2873,
+// JSON-NEXT:              "offset": 2998,
 // JSON-NEXT:              "col": 19,
 // JSON-NEXT:              "tokLen": 2
 // JSON-NEXT:             }
@@ -4706,12 +4714,12 @@ namespace test7 {
 // JSON-NEXT:              "kind": "DeclRefExpr",
 // JSON-NEXT:              "range": {
 // JSON-NEXT:               "begin": {
-// JSON-NEXT:                "offset": 2857,
+// JSON-NEXT:                "offset": 2982,
 // JSON-NEXT:                "col": 3,
 // JSON-NEXT:                "tokLen": 3
 // JSON-NEXT:               },
 // JSON-NEXT:               "end": {
-// JSON-NEXT:                "offset": 2873,
+// JSON-NEXT:                "offset": 2998,
 // JSON-NEXT:                "col": 19,
 // JSON-NEXT:                "tokLen": 2
 // JSON-NEXT:               }
@@ -4741,19 +4749,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateSpecializationDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 3281,
-// JSON-NEXT:       "line": 102,
+// JSON-NEXT:       "offset": 3406,
+// JSON-NEXT:       "line": 103,
 // JSON-NEXT:       "col": 17,
 // JSON-NEXT:       "tokLen": 3
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 3265,
+// JSON-NEXT:        "offset": 3390,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 3294,
+// JSON-NEXT:        "offset": 3419,
 // JSON-NEXT:        "col": 30,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -4825,19 +4833,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2445,
-// JSON-NEXT:         "line": 81,
+// JSON-NEXT:         "offset": 2570,
+// JSON-NEXT:         "line": 82,
 // JSON-NEXT:         "col": 8,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2438,
+// JSON-NEXT:          "offset": 2563,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2445,
+// JSON-NEXT:          "offset": 2570,
 // JSON-NEXT:          "col": 8,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -4850,19 +4858,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXMethodDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 2465,
-// JSON-NEXT:         "line": 82,
+// JSON-NEXT:         "offset": 2590,
+// JSON-NEXT:         "line": 83,
 // JSON-NEXT:         "col": 15,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 2453,
+// JSON-NEXT:          "offset": 2578,
 // JSON-NEXT:          "col": 3,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 2468,
+// JSON-NEXT:          "offset": 2593,
 // JSON-NEXT:          "col": 18,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4882,20 +4890,20 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 3310,
-// JSON-NEXT:     "line": 105,
+// JSON-NEXT:     "offset": 3634,
+// JSON-NEXT:     "line": 113,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 5
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 3300,
+// JSON-NEXT:      "offset": 3624,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 3632,
-// JSON-NEXT:      "line": 114,
+// JSON-NEXT:      "offset": 3956,
+// JSON-NEXT:      "line": 122,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -4906,19 +4914,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 3338,
-// JSON-NEXT:       "line": 106,
+// JSON-NEXT:       "offset": 3662,
+// JSON-NEXT:       "line": 114,
 // JSON-NEXT:       "col": 21,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 3318,
+// JSON-NEXT:        "offset": 3642,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 3343,
+// JSON-NEXT:        "offset": 3667,
 // JSON-NEXT:        "col": 26,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -4929,18 +4937,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 3331,
+// JSON-NEXT:         "offset": 3655,
 // JSON-NEXT:         "col": 14,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3327,
+// JSON-NEXT:          "offset": 3651,
 // JSON-NEXT:          "col": 10,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3327,
+// JSON-NEXT:          "offset": 3651,
 // JSON-NEXT:          "col": 10,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         }
@@ -4955,18 +4963,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FunctionDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 3338,
+// JSON-NEXT:         "offset": 3662,
 // JSON-NEXT:         "col": 21,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3333,
+// JSON-NEXT:          "offset": 3657,
 // JSON-NEXT:          "col": 16,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3343,
+// JSON-NEXT:          "offset": 3667,
 // JSON-NEXT:          "col": 26,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -4981,12 +4989,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 3342,
+// JSON-NEXT:            "offset": 3666,
 // JSON-NEXT:            "col": 25,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 3343,
+// JSON-NEXT:            "offset": 3667,
 // JSON-NEXT:            "col": 26,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -4998,18 +5006,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FunctionDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 3338,
+// JSON-NEXT:         "offset": 3662,
 // JSON-NEXT:         "col": 21,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3333,
+// JSON-NEXT:          "offset": 3657,
 // JSON-NEXT:          "col": 16,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3343,
+// JSON-NEXT:          "offset": 3667,
 // JSON-NEXT:          "col": 26,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -5030,12 +5038,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 3342,
+// JSON-NEXT:            "offset": 3666,
 // JSON-NEXT:            "col": 25,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 3343,
+// JSON-NEXT:            "offset": 3667,
 // JSON-NEXT:            "col": 26,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -5049,19 +5057,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "VarDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 3352,
-// JSON-NEXT:       "line": 107,
+// JSON-NEXT:       "offset": 3676,
+// JSON-NEXT:       "line": 115,
 // JSON-NEXT:       "col": 8,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 3345,
+// JSON-NEXT:        "offset": 3669,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 4
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 3362,
+// JSON-NEXT:        "offset": 3686,
 // JSON-NEXT:        "col": 18,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -5078,12 +5086,12 @@ namespace test7 {
 // JSON-NEXT:        "kind": "ImplicitCastExpr",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3359,
+// JSON-NEXT:          "offset": 3683,
 // JSON-NEXT:          "col": 15,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3362,
+// JSON-NEXT:          "offset": 3686,
 // JSON-NEXT:          "col": 18,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -5099,12 +5107,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "DeclRefExpr",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 3359,
+// JSON-NEXT:            "offset": 3683,
 // JSON-NEXT:            "col": 15,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 3362,
+// JSON-NEXT:            "offset": 3686,
 // JSON-NEXT:            "col": 18,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -5135,19 +5143,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 3393,
-// JSON-NEXT:       "line": 108,
+// JSON-NEXT:       "offset": 3717,
+// JSON-NEXT:       "line": 116,
 // JSON-NEXT:       "col": 29,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 3365,
+// JSON-NEXT:        "offset": 3689,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 3398,
+// JSON-NEXT:        "offset": 3722,
 // JSON-NEXT:        "col": 34,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -5158,18 +5166,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 3383,
+// JSON-NEXT:         "offset": 3707,
 // JSON-NEXT:         "col": 19,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3374,
+// JSON-NEXT:          "offset": 3698,
 // JSON-NEXT:          "col": 10,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3385,
+// JSON-NEXT:          "offset": 3709,
 // JSON-NEXT:          "col": 21,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -5188,12 +5196,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "TemplateArgument",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 3385,
+// JSON-NEXT:            "offset": 3709,
 // JSON-NEXT:            "col": 21,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 3385,
+// JSON-NEXT:            "offset": 3709,
 // JSON-NEXT:            "col": 21,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -5205,12 +5213,12 @@ namespace test7 {
 // JSON-NEXT:            "kind": "IntegerLiteral",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 3385,
+// JSON-NEXT:              "offset": 3709,
 // JSON-NEXT:              "col": 21,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 3385,
+// JSON-NEXT:              "offset": 3709,
 // JSON-NEXT:              "col": 21,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -5229,18 +5237,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FunctionDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 3393,
+// JSON-NEXT:         "offset": 3717,
 // JSON-NEXT:         "col": 29,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3388,
+// JSON-NEXT:          "offset": 3712,
 // JSON-NEXT:          "col": 24,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3398,
+// JSON-NEXT:          "offset": 3722,
 // JSON-NEXT:          "col": 34,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -5255,12 +5263,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 3397,
+// JSON-NEXT:            "offset": 3721,
 // JSON-NEXT:            "col": 33,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 3398,
+// JSON-NEXT:            "offset": 3722,
 // JSON-NEXT:            "col": 34,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -5272,18 +5280,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FunctionDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 3393,
+// JSON-NEXT:         "offset": 3717,
 // JSON-NEXT:         "col": 29,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3388,
+// JSON-NEXT:          "offset": 3712,
 // JSON-NEXT:          "col": 24,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3398,
+// JSON-NEXT:          "offset": 3722,
 // JSON-NEXT:          "col": 34,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -5304,12 +5312,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 3397,
+// JSON-NEXT:            "offset": 3721,
 // JSON-NEXT:            "col": 33,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 3398,
+// JSON-NEXT:            "offset": 3722,
 // JSON-NEXT:            "col": 34,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -5323,19 +5331,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "VarDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 3407,
-// JSON-NEXT:       "line": 109,
+// JSON-NEXT:       "offset": 3731,
+// JSON-NEXT:       "line": 117,
 // JSON-NEXT:       "col": 8,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 3400,
+// JSON-NEXT:        "offset": 3724,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 4
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 3416,
+// JSON-NEXT:        "offset": 3740,
 // JSON-NEXT:        "col": 17,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -5352,12 +5360,12 @@ namespace test7 {
 // JSON-NEXT:        "kind": "ImplicitCastExpr",
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3414,
+// JSON-NEXT:          "offset": 3738,
 // JSON-NEXT:          "col": 15,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3416,
+// JSON-NEXT:          "offset": 3740,
 // JSON-NEXT:          "col": 17,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -5373,12 +5381,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "DeclRefExpr",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 3414,
+// JSON-NEXT:            "offset": 3738,
 // JSON-NEXT:            "col": 15,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 3416,
+// JSON-NEXT:            "offset": 3740,
 // JSON-NEXT:            "col": 17,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -5411,20 +5419,20 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 3645,
-// JSON-NEXT:     "line": 116,
+// JSON-NEXT:     "offset": 3969,
+// JSON-NEXT:     "line": 124,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 5
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 3635,
+// JSON-NEXT:      "offset": 3959,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 4000,
-// JSON-NEXT:      "line": 128,
+// JSON-NEXT:      "offset": 4324,
+// JSON-NEXT:      "line": 136,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -5435,21 +5443,21 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "VarTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 3687,
-// JSON-NEXT:       "line": 118,
+// JSON-NEXT:       "offset": 4011,
+// JSON-NEXT:       "line": 126,
 // JSON-NEXT:       "col": 16,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 3653,
-// JSON-NEXT:        "line": 117,
+// JSON-NEXT:        "offset": 3977,
+// JSON-NEXT:        "line": 125,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 3691,
-// JSON-NEXT:        "line": 118,
+// JSON-NEXT:        "offset": 4015,
+// JSON-NEXT:        "line": 126,
 // JSON-NEXT:        "col": 20,
 // JSON-NEXT:        "tokLen": 4
 // JSON-NEXT:       }
@@ -5460,19 +5468,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 3669,
-// JSON-NEXT:         "line": 117,
+// JSON-NEXT:         "offset": 3993,
+// JSON-NEXT:         "line": 125,
 // JSON-NEXT:         "col": 17,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3663,
+// JSON-NEXT:          "offset": 3987,
 // JSON-NEXT:          "col": 11,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3669,
+// JSON-NEXT:          "offset": 3993,
 // JSON-NEXT:          "col": 17,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -5486,19 +5494,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "VarDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 3687,
-// JSON-NEXT:         "line": 118,
+// JSON-NEXT:         "offset": 4011,
+// JSON-NEXT:         "line": 126,
 // JSON-NEXT:         "col": 16,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3672,
+// JSON-NEXT:          "offset": 3996,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 9
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3691,
+// JSON-NEXT:          "offset": 4015,
 // JSON-NEXT:          "col": 20,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         }
@@ -5515,12 +5523,12 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CXXBoolLiteralExpr",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 3691,
+// JSON-NEXT:            "offset": 4015,
 // JSON-NEXT:            "col": 20,
 // JSON-NEXT:            "tokLen": 4
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 3691,
+// JSON-NEXT:            "offset": 4015,
 // JSON-NEXT:            "col": 20,
 // JSON-NEXT:            "tokLen": 4
 // JSON-NEXT:           }
@@ -5539,21 +5547,21 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "FunctionTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 3724,
-// JSON-NEXT:       "line": 121,
+// JSON-NEXT:       "offset": 4048,
+// JSON-NEXT:       "line": 129,
 // JSON-NEXT:       "col": 6,
 // JSON-NEXT:       "tokLen": 4
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 3698,
-// JSON-NEXT:        "line": 120,
+// JSON-NEXT:        "offset": 4022,
+// JSON-NEXT:        "line": 128,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 3998,
-// JSON-NEXT:        "line": 127,
+// JSON-NEXT:        "offset": 4322,
+// JSON-NEXT:        "line": 135,
 // JSON-NEXT:        "col": 1,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -5564,19 +5572,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 3714,
-// JSON-NEXT:         "line": 120,
+// JSON-NEXT:         "offset": 4038,
+// JSON-NEXT:         "line": 128,
 // JSON-NEXT:         "col": 17,
 // JSON-NEXT:         "tokLen": 3
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3708,
+// JSON-NEXT:          "offset": 4032,
 // JSON-NEXT:          "col": 11,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3714,
+// JSON-NEXT:          "offset": 4038,
 // JSON-NEXT:          "col": 17,
 // JSON-NEXT:          "tokLen": 3
 // JSON-NEXT:         }
@@ -5591,20 +5599,20 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "FunctionDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 3724,
-// JSON-NEXT:         "line": 121,
+// JSON-NEXT:         "offset": 4048,
+// JSON-NEXT:         "line": 129,
 // JSON-NEXT:         "col": 6,
 // JSON-NEXT:         "tokLen": 4
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 3719,
+// JSON-NEXT:          "offset": 4043,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 4
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 3998,
-// JSON-NEXT:          "line": 127,
+// JSON-NEXT:          "offset": 4322,
+// JSON-NEXT:          "line": 135,
 // JSON-NEXT:          "col": 1,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -5619,14 +5627,14 @@ namespace test7 {
 // JSON-NEXT:          "kind": "CompoundStmt",
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 3731,
-// JSON-NEXT:            "line": 121,
+// JSON-NEXT:            "offset": 4055,
+// JSON-NEXT:            "line": 129,
 // JSON-NEXT:            "col": 13,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 3998,
-// JSON-NEXT:            "line": 127,
+// JSON-NEXT:            "offset": 4322,
+// JSON-NEXT:            "line": 135,
 // JSON-NEXT:            "col": 1,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -5637,13 +5645,13 @@ namespace test7 {
 // JSON-NEXT:            "kind": "UnresolvedLookupExpr",
 // JSON-NEXT:            "range": {
 // JSON-NEXT:             "begin": {
-// JSON-NEXT:              "offset": 3735,
-// JSON-NEXT:              "line": 122,
+// JSON-NEXT:              "offset": 4059,
+// JSON-NEXT:              "line": 130,
 // JSON-NEXT:              "col": 3,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             },
 // JSON-NEXT:             "end": {
-// JSON-NEXT:              "offset": 3740,
+// JSON-NEXT:              "offset": 4064,
 // JSON-NEXT:              "col": 8,
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
@@ -5700,20 +5708,20 @@ namespace test7 {
 // JSON-NEXT:    "id": "0x{{.*}}",
 // JSON-NEXT:    "kind": "NamespaceDecl",
 // JSON-NEXT:    "loc": {
-// JSON-NEXT:     "offset": 4013,
-// JSON-NEXT:     "line": 130,
+// JSON-NEXT:     "offset": 4337,
+// JSON-NEXT:     "line": 138,
 // JSON-NEXT:     "col": 11,
 // JSON-NEXT:     "tokLen": 5
 // JSON-NEXT:    },
 // JSON-NEXT:    "range": {
 // JSON-NEXT:     "begin": {
-// JSON-NEXT:      "offset": 4003,
+// JSON-NEXT:      "offset": 4327,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 4308,
-// JSON-NEXT:      "line": 136,
+// JSON-NEXT:      "offset": 4632,
+// JSON-NEXT:      "line": 144,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
 // JSON-NEXT:     }
@@ -5724,19 +5732,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 4066,
-// JSON-NEXT:       "line": 131,
+// JSON-NEXT:       "offset": 4390,
+// JSON-NEXT:       "line": 139,
 // JSON-NEXT:       "col": 46,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 4023,
+// JSON-NEXT:        "offset": 4347,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 4069,
+// JSON-NEXT:        "offset": 4393,
 // JSON-NEXT:        "col": 49,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -5747,18 +5755,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTemplateParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4055,
+// JSON-NEXT:         "offset": 4379,
 // JSON-NEXT:         "col": 35,
 // JSON-NEXT:         "tokLen": 2
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4033,
+// JSON-NEXT:          "offset": 4357,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 8
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4055,
+// JSON-NEXT:          "offset": 4379,
 // JSON-NEXT:          "col": 35,
 // JSON-NEXT:          "tokLen": 2
 // JSON-NEXT:         }
@@ -5771,18 +5779,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 4047,
+// JSON-NEXT:           "offset": 4371,
 // JSON-NEXT:           "col": 27,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 4042,
+// JSON-NEXT:            "offset": 4366,
 // JSON-NEXT:            "col": 22,
 // JSON-NEXT:            "tokLen": 5
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 4042,
+// JSON-NEXT:            "offset": 4366,
 // JSON-NEXT:            "col": 22,
 // JSON-NEXT:            "tokLen": 5
 // JSON-NEXT:           }
@@ -5797,18 +5805,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4066,
+// JSON-NEXT:         "offset": 4390,
 // JSON-NEXT:         "col": 46,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4059,
+// JSON-NEXT:          "offset": 4383,
 // JSON-NEXT:          "col": 39,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4069,
+// JSON-NEXT:          "offset": 4393,
 // JSON-NEXT:          "col": 49,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -5871,18 +5879,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXRecordDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 4066,
+// JSON-NEXT:           "offset": 4390,
 // JSON-NEXT:           "col": 46,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 4059,
+// JSON-NEXT:            "offset": 4383,
 // JSON-NEXT:            "col": 39,
 // JSON-NEXT:            "tokLen": 6
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 4066,
+// JSON-NEXT:            "offset": 4390,
 // JSON-NEXT:            "col": 46,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -5904,19 +5912,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 4100,
-// JSON-NEXT:       "line": 132,
+// JSON-NEXT:       "offset": 4424,
+// JSON-NEXT:       "line": 140,
 // JSON-NEXT:       "col": 29,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 4074,
+// JSON-NEXT:        "offset": 4398,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 4103,
+// JSON-NEXT:        "offset": 4427,
 // JSON-NEXT:        "col": 32,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -5927,18 +5935,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "TemplateTypeParmDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4092,
+// JSON-NEXT:         "offset": 4416,
 // JSON-NEXT:         "col": 21,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4084,
+// JSON-NEXT:          "offset": 4408,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4084,
+// JSON-NEXT:          "offset": 4408,
 // JSON-NEXT:          "col": 13,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         }
@@ -5952,18 +5960,18 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4100,
+// JSON-NEXT:         "offset": 4424,
 // JSON-NEXT:         "col": 29,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4094,
+// JSON-NEXT:          "offset": 4418,
 // JSON-NEXT:          "col": 23,
 // JSON-NEXT:          "tokLen": 5
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4103,
+// JSON-NEXT:          "offset": 4427,
 // JSON-NEXT:          "col": 32,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
@@ -6026,18 +6034,18 @@ namespace test7 {
 // JSON-NEXT:          "id": "0x{{.*}}",
 // JSON-NEXT:          "kind": "CXXRecordDecl",
 // JSON-NEXT:          "loc": {
-// JSON-NEXT:           "offset": 4100,
+// JSON-NEXT:           "offset": 4424,
 // JSON-NEXT:           "col": 29,
 // JSON-NEXT:           "tokLen": 1
 // JSON-NEXT:          },
 // JSON-NEXT:          "range": {
 // JSON-NEXT:           "begin": {
-// JSON-NEXT:            "offset": 4094,
+// JSON-NEXT:            "offset": 4418,
 // JSON-NEXT:            "col": 23,
 // JSON-NEXT:            "tokLen": 5
 // JSON-NEXT:           },
 // JSON-NEXT:           "end": {
-// JSON-NEXT:            "offset": 4100,
+// JSON-NEXT:            "offset": 4424,
 // JSON-NEXT:            "col": 29,
 // JSON-NEXT:            "tokLen": 1
 // JSON-NEXT:           }
@@ -6054,19 +6062,19 @@ namespace test7 {
 // JSON-NEXT:      "id": "0x{{.*}}",
 // JSON-NEXT:      "kind": "ClassTemplateSpecializationDecl",
 // JSON-NEXT:      "loc": {
-// JSON-NEXT:       "offset": 4124,
-// JSON-NEXT:       "line": 133,
+// JSON-NEXT:       "offset": 4448,
+// JSON-NEXT:       "line": 141,
 // JSON-NEXT:       "col": 19,
 // JSON-NEXT:       "tokLen": 1
 // JSON-NEXT:      },
 // JSON-NEXT:      "range": {
 // JSON-NEXT:       "begin": {
-// JSON-NEXT:        "offset": 4108,
+// JSON-NEXT:        "offset": 4432,
 // JSON-NEXT:        "col": 3,
 // JSON-NEXT:        "tokLen": 8
 // JSON-NEXT:       },
 // JSON-NEXT:       "end": {
-// JSON-NEXT:        "offset": 4127,
+// JSON-NEXT:        "offset": 4451,
 // JSON-NEXT:        "col": 22,
 // JSON-NEXT:        "tokLen": 1
 // JSON-NEXT:       }
@@ -6134,19 +6142,19 @@ namespace test7 {
 // JSON-NEXT:        "id": "0x{{.*}}",
 // JSON-NEXT:        "kind": "CXXRecordDecl",
 // JSON-NEXT:        "loc": {
-// JSON-NEXT:         "offset": 4066,
-// JSON-NEXT:         "line": 131,
+// JSON-NEXT:         "offset": 4390,
+// JSON-NEXT:         "line": 139,
 // JSON-NEXT:         "col": 46,
 // JSON-NEXT:         "tokLen": 1
 // JSON-NEXT:        },
 // JSON-NEXT:        "range": {
 // JSON-NEXT:         "begin": {
-// JSON-NEXT:          "offset": 4059,
+// JSON-NEXT:          "offset": 4383,
 // JSON-NEXT:          "col": 39,
 // JSON-NEXT:          "tokLen": 6
 // JSON-NEXT:         },
 // JSON-NEXT:         "end": {
-// JSON-NEXT:          "offset": 4066,
+// JSON-NEXT:          "offset": 4390,
 // JSON-NEXT:          "col": 46,
 // JSON-NEXT:          "tokLen": 1
 // JSON-NEXT:         }
