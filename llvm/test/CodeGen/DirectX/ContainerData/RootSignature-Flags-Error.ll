@@ -1,8 +1,8 @@
-; RUN: not llc %s --filetype=obj -o -
+; RUN: not llc %s --filetype=obj -o - 2>&1 | FileCheck %s
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; expected-error@-1: Invalid Root Element: NOTRootFlags
+; CHECK: error: Invalid Root Element: NOTRootFlags
 
 
 define void @main() #0 {
