@@ -134,5 +134,5 @@ void test4() {
 
 void test5() {
     FOO1 + 1; // expected-error {{'FOO1' is defined as an object-like macro; did you mean 'FOO1(...)'?}}
-    bar(FOO1); // expected-error {{'FOO1' is defined as an object-like macro; did you mean 'FOO1'(...)'?}}
+    bar(FOO1); // expected-error {{'FOO1' is defined as an object-like macro; did you mean 'FOO1(...)'?}}
 }
