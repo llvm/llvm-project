@@ -1119,16 +1119,21 @@ typedef __char32_t char32_t;
 
 // Optional attributes - these are useful for a better QoI, but not required to be available
 
+#  define _LIBCPP_NOALIAS __attribute__((__malloc__))
+#  define _LIBCPP_NODEBUG [[__gnu__::__nodebug__]]
+#  define _LIBCPP_NO_SANITIZE(...) __attribute__((__no_sanitize__(__VA_ARGS__)))
+#  define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
+#  define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index)                             \
+    __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
+#  define _LIBCPP_PACKED __attribute__((__packed__))
+
+// Use a function like macro to imply that it must be followed by a semicolon
+#  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
+
 #  if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
 #    define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
 #  else
 #    define _LIBCPP_NO_CFI
-#  endif
-
-#  if __has_attribute(__malloc__)
-#    define _LIBCPP_NOALIAS __attribute__((__malloc__))
-#  else
-#    define _LIBCPP_NOALIAS
 #  endif
 
 #  if __has_attribute(__using_if_exists__)
@@ -1149,15 +1154,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DIAGNOSE_WARNING(...)
 #  endif
 
-// Use a function like macro to imply that it must be followed by a semicolon
-#  if __has_cpp_attribute(fallthrough)
-#    define _LIBCPP_FALLTHROUGH() [[fallthrough]]
-#  elif __has_attribute(__fallthrough__)
-#    define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
-#  else
-#    define _LIBCPP_FALLTHROUGH() ((void)0)
-#  endif
-
 #  if __has_cpp_attribute(_Clang::__lifetimebound__)
 #    define _LIBCPP_LIFETIMEBOUND [[_Clang::__lifetimebound__]]
 #  else
@@ -1169,8 +1165,6 @@ typedef __char32_t char32_t;
 #  else
 #    define _LIBCPP_NOESCAPE
 #  endif
-
-#  define _LIBCPP_NODEBUG [[__gnu__::__nodebug__]]
 
 #  if __has_cpp_attribute(_Clang::__no_specializations__)
 #    define _LIBCPP_NO_SPECIALIZATIONS                                                                                 \
@@ -1189,33 +1183,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_PREFERRED_NAME(x) __attribute__((__preferred_name__(x)))
 #  else
 #    define _LIBCPP_PREFERRED_NAME(x)
-#  endif
-
-#  if __has_attribute(__no_sanitize__)
-#    define _LIBCPP_NO_SANITIZE(...) __attribute__((__no_sanitize__(__VA_ARGS__)))
-#  else
-#    define _LIBCPP_NO_SANITIZE(...)
-#  endif
-
-#  if __has_attribute(__init_priority__)
-#    define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
-#  else
-#    define _LIBCPP_INIT_PRIORITY_MAX
-#  endif
-
-#  if __has_attribute(__format__)
-// The attribute uses 1-based indices for ordinary and static member functions.
-// The attribute uses 2-based indices for non-static member functions.
-#    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index)                           \
-      __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
-#  else
-#    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) /* nothing */
-#  endif
-
-#  if __has_attribute(__packed__)
-#    define _LIBCPP_PACKED __attribute__((__packed__))
-#  else
-#    define _LIBCPP_PACKED
 #  endif
 
 #  if defined(_LIBCPP_ABI_MICROSOFT) && __has_declspec_attribute(empty_bases)
