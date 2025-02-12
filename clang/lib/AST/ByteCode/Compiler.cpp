@@ -194,12 +194,12 @@ private:
 template <class Emitter>
 bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   const Expr *SubExpr = CE->getSubExpr();
+
+  if (DiscardResult)
+    return this->delegate(SubExpr);
+
   switch (CE->getCastKind()) {
-
   case CK_LValueToRValue: {
-    if (DiscardResult)
-      return this->discard(SubExpr);
-
     std::optional<PrimType> SubExprT = classify(SubExpr->getType());
     // Prepare storage for the result.
     if (!Initializing && !SubExprT) {
@@ -253,9 +253,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
-    if (DiscardResult)
-      return this->discard(SubExpr);
-
     if (!this->delegate(SubExpr))
       return false;
 
@@ -285,9 +282,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_BaseToDerived: {
-    if (DiscardResult)
-      return this->discard(SubExpr);
-
     if (!this->delegate(SubExpr))
       return false;
 
@@ -302,8 +296,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!SubExpr->getType()->isFloatingType() ||
         !CE->getType()->isFloatingType())
       return false;
-    if (DiscardResult)
-      return this->discard(SubExpr);
     if (!this->visit(SubExpr))
       return false;
     const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
@@ -311,8 +303,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_IntegralToFloating: {
-    if (DiscardResult)
-      return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     if (!FromT)
       return false;
@@ -327,8 +317,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_FloatingToBoolean:
   case CK_FloatingToIntegral: {
-    if (DiscardResult)
-      return this->discard(SubExpr);
 
     std::optional<PrimType> ToT = classify(CE->getType());
 
@@ -352,9 +340,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NullToMemberPointer: {
     if (!this->discard(SubExpr))
       return false;
-    if (DiscardResult)
-      return true;
-
     const Descriptor *Desc = nullptr;
     const QualType PointeeType = CE->getType()->getPointeeType();
     if (!PointeeType.isNull()) {
@@ -371,9 +356,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_PointerToIntegral: {
-    if (DiscardResult)
-      return this->discard(SubExpr);
-
     if (!this->visit(SubExpr))
       return false;
 
@@ -399,8 +381,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     if (!this->emitArrayDecay(CE))
       return false;
-    if (DiscardResult)
-      return this->emitPopPtr(CE);
     return true;
   }
 
@@ -412,9 +392,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // FIXME: I think the discard is wrong since the int->ptr cast might cause a
     // diagnostic.
     PrimType T = classifyPrim(IntType);
-    if (DiscardResult)
-      return this->emitPop(T, CE);
-
     QualType PtrType = CE->getType();
     const Descriptor *Desc;
     if (std::optional<PrimType> T = classify(PtrType->getPointeeType()))
@@ -454,10 +431,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
         return false;
       return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, CE);
     }
-
-    if (DiscardResult)
-      return this->discard(SubExpr);
-
     QualType SubExprTy = SubExpr->getType();
     std::optional<PrimType> FromT = classify(SubExprTy);
     // Casts from integer/vector to vector.
@@ -493,8 +466,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_FixedPointToBoolean:
   case CK_BooleanToSignedIntegral:
   case CK_IntegralCast: {
-    if (DiscardResult)
-      return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     std::optional<PrimType> ToT = classify(CE->getType());
 
@@ -546,8 +517,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_IntegralComplexToBoolean:
   case CK_FloatingComplexToBoolean: {
-    if (DiscardResult)
-      return this->discard(SubExpr);
     if (!this->visit(SubExpr))
       return false;
     return this->emitComplexBoolCast(SubExpr);
@@ -585,9 +554,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_FloatingComplexToIntegralComplex: {
     assert(CE->getType()->isAnyComplexType());
     assert(SubExpr->getType()->isAnyComplexType());
-    if (DiscardResult)
-      return this->discard(SubExpr);
-
     if (!Initializing) {
       std::optional<unsigned> LocalIndex = allocateLocal(CE);
       if (!LocalIndex)
@@ -632,9 +598,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(!classify(CE->getType()));
     assert(classify(SubExpr->getType()));
     assert(CE->getType()->isVectorType());
-
-    if (DiscardResult)
-      return this->discard(SubExpr);
 
     if (!Initializing) {
       std::optional<unsigned> LocalIndex = allocateLocal(CE);

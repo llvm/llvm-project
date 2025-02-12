@@ -1159,6 +1159,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN,          MVT::v2f64, Custom);
 
     setOperationAction(ISD::LRINT, MVT::v4f32, Custom);
+    setOperationAction(ISD::LRINT, MVT::v2i32, Custom);
 
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SMAX, VT, VT == MVT::v8i16 ? Legal : Custom);
@@ -34052,6 +34053,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::LRINT:
+    if (N->getValueType(0) == MVT::v2i32) {
+      SDValue Src = N->getOperand(0);
+      if (Src.getValueType() == MVT::v2f64)
+        Results.push_back(DAG.getNode(X86ISD::CVTP2SI, dl, MVT::v4i32, Src));
+      return;
+    }
+    [[fallthrough]];
   case ISD::LLRINT: {
     if (SDValue V = LRINT_LLRINTHelper(N, DAG))
       Results.push_back(V);
@@ -58500,10 +58508,26 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
                       DAG.isSplatValue(InVec, /*AllowUndefs*/ false)))
     return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
 
-  // If we're extracting a broadcasted subvector, just use the lowest subvector.
-  if (IdxVal != 0 && InVec.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-      cast<MemIntrinsicSDNode>(InVec)->getMemoryVT() == VT)
-    return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
+  // Check if we're extracting a whole broadcasted subvector.
+  if (InVec.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) {
+    auto *MemIntr = cast<MemIntrinsicSDNode>(InVec);
+    EVT MemVT = MemIntr->getMemoryVT();
+    if (MemVT == VT) {
+      // Just use the lowest subvector.
+      if (IdxVal != 0)
+        return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
+      // If this is the only use, we can replace with a regular load (this may
+      // have been missed by SimplifyDemandedVectorElts due to extra uses of the
+      // memory chain).
+      if (InVec.hasOneUse()) {
+        SDValue Ld =
+            DAG.getLoad(MemVT, DL, MemIntr->getChain(), MemIntr->getBasePtr(),
+                        MemIntr->getMemOperand());
+        DAG.makeEquivalentMemoryOrdering(SDValue(MemIntr, 1), Ld.getValue(1));
+        return Ld;
+      }
+    }
+  }
 
   // Attempt to extract from the source of a shuffle vector.
   if ((InSizeInBits % SizeInBits) == 0 && (IdxVal % NumSubElts) == 0) {
