@@ -2708,11 +2708,16 @@ private:
   InserterTy Inserter;
 
 public:
-  IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter = InserterTy(),
+  IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter,
             MDNode *FPMathTag = nullptr,
             ArrayRef<OperandBundleDef> OpBundles = {})
       : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles),
         Folder(Folder), Inserter(Inserter) {}
+
+  IRBuilder(LLVMContext &C, FolderTy Folder, MDNode *FPMathTag = nullptr,
+            ArrayRef<OperandBundleDef> OpBundles = {})
+      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles),
+        Folder(Folder) {}
 
   explicit IRBuilder(LLVMContext &C, MDNode *FPMathTag = nullptr,
                      ArrayRef<OperandBundleDef> OpBundles = {})
