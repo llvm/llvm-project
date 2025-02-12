@@ -691,7 +691,7 @@ def CSR_AArch64_NoRegs : CalleeSavedRegs<(add)>;
 def CSR_AArch64_NoneRegs : CalleeSavedRegs<(add LR, FP)>;
 
 def CSR_AArch64_RT_MostRegs :  CalleeSavedRegs<(add CSR_AArch64_AAPCS,
-                                                (sequence "X%u", 9, 15))>;
+                                                (sequence "X%u", 10, 14))>;
 
 def CSR_AArch64_RT_AllRegs :  CalleeSavedRegs<(add CSR_AArch64_RT_MostRegs,
                                                 (sequence "Q%u", 8, 31))>;
