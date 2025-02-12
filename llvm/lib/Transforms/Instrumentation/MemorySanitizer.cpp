@@ -4869,6 +4869,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_saddlp:
     case Intrinsic::aarch64_neon_uaddlp: {
       handlePairwiseShadowOrIntrinsic(I);
+      break;
+    }
+
     // Floating-point Convert to integer, rounding to nearest with ties to Away
     case Intrinsic::aarch64_neon_fcvtas:
     case Intrinsic::aarch64_neon_fcvtau:
