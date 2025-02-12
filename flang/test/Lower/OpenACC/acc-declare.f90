@@ -59,8 +59,10 @@ module acc_declare
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"})
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_present>, uniq_name = "_QMacc_declareFacc_declare_presentEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
-! CHECK: acc.declare_enter dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
+! CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
 
   subroutine acc_declare_copyin()
     integer :: a(100), b(10), i

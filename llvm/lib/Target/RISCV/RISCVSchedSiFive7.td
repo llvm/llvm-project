@@ -159,7 +159,7 @@ class SiFive7GetReductionCycles<string mx, int sew> {
   );
 }
 
-/// Cycles for ordered reductions take approximatley 6*VL cycles
+/// Cycles for ordered reductions take approximately 6*VL cycles
 class SiFive7GetOrderedReductionCycles<string mx, int sew> {
   defvar VLEN = 512;
   // (VLEN * LMUL) / SEW
@@ -224,7 +224,7 @@ def SiFive7VS          : ProcResource<1>; // Store sequencer
 // vector unit is ready to dequeue them. The unit dequeues up to one instruction
 // per cycle, in order, as soon as the sequencer for that type of instruction is
 // available. This resource is meant to be used for 1 cycle by all vector
-// instructions, to model that only one vector instruction may be dequed at a
+// instructions, to model that only one vector instruction may be dequeued at a
 // time. The actual dequeueing into the sequencer is modeled by the VA, VL, and
 // VS sequencer resources below. Each of them will only accept a single
 // instruction at a time and remain busy for the number of cycles associated

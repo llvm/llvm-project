@@ -20,12 +20,6 @@ using namespace mlir::tosa;
 
 namespace {
 
-SmallVector<int64_t> convertFromMlirShape(ArrayRef<int64_t> shape) {
-  return to_vector(llvm::map_range(shape, [](int64_t dim) {
-    return ShapedType::isDynamic(dim) ? -1 : dim;
-  }));
-}
-
 struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
   explicit Conv2DIsFullyConnected(MLIRContext *context)
       : OpRewritePattern(context) {}
@@ -98,12 +92,13 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     llvm::SmallVector<int64_t, 2> revisedInputShape{combined, inputShape[3]};
     auto revisedInputShapeType =
         RankedTensorType::get(revisedInputShape, inputType.getElementType());
-    auto reshapedInput = rewriter
-                             .create<tosa::ReshapeOp>(
-                                 op.getLoc(), revisedInputShapeType, input,
-                                 rewriter.getDenseI64ArrayAttr(
-                                     convertFromMlirShape(revisedInputShape)))
-                             .getResult();
+    auto revisedInputShapeValue = getTosaConstShape(
+        rewriter, op.getLoc(), convertFromMlirShape(revisedInputShape));
+    auto reshapedInput =
+        rewriter
+            .create<tosa::ReshapeOp>(op.getLoc(), revisedInputShapeType, input,
+                                     revisedInputShapeValue)
+            .getResult();
 
     // Reshape kernel to [OC,KH,KW,IC] -> [OC, IC].
     llvm::SmallVector<int64_t, 2> revisedWeightShape{weightShape[0],
@@ -111,12 +106,13 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     auto revisedWeightShapeType = RankedTensorType::get(
         revisedWeightShape,
         dyn_cast<RankedTensorType>(weight.getType()).getElementType());
-    auto reshapedWeight = rewriter
-                              .create<tosa::ReshapeOp>(
-                                  op.getLoc(), revisedWeightShapeType, weight,
-                                  rewriter.getDenseI64ArrayAttr(
-                                      convertFromMlirShape(revisedWeightShape)))
-                              .getResult();
+    auto revisedWeightShapeValue = getTosaConstShape(
+        rewriter, op.getLoc(), convertFromMlirShape(revisedWeightShape));
+    auto reshapedWeight =
+        rewriter
+            .create<tosa::ReshapeOp>(op.getLoc(), revisedWeightShapeType,
+                                     weight, revisedWeightShapeValue)
+            .getResult();
 
     // Perform a fully connected network over the reshaped input and weight.
     llvm::SmallVector<int64_t, 2> fullyConnectedShape{combined, weightShape[0]};
@@ -149,9 +145,10 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     // Reshape output to [N, IH, IW, OC].
     llvm::SmallVector<int64_t, 4> outputShape{inputShape[0], inputShape[1],
                                               inputShape[2], weightShape[0]};
+    auto outputShapeValue = getTosaConstShape(
+        rewriter, op.getLoc(), convertFromMlirShape(outputShape));
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
-        op, resultType, fullyConnectedValue,
-        rewriter.getDenseI64ArrayAttr(convertFromMlirShape(outputShape)));
+        op, resultType, fullyConnectedValue, outputShapeValue);
     return success();
   }
 };
