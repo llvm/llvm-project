@@ -26,8 +26,8 @@ enum class RootSignatureElementKind { None = 0, RootFlags = 1 };
 
 struct ModuleRootSignature {
   uint32_t Flags = 0;
-  static std::optional<ModuleRootSignature>
-  analyzeModule(Module &M, ModuleMetadataInfo MMI);
+  static std::optional<ModuleRootSignature> analyzeModule(Module &M,
+                                                          const Function *F);
 };
 
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
