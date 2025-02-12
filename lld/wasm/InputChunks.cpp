@@ -361,12 +361,11 @@ uint64_t InputChunk::getVA(uint64_t offset) const {
 // Generate code to apply relocations to the data section at runtime.
 // This is only called when generating shared libraries (PIC) where address are
 // not known at static link time.
-bool InputChunk::generateRelocationCode(raw_ostream &os) const {
+void InputChunk::generateRelocationCode(std::vector<std::string> &funcs) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << name
                     << " count=" << relocations.size() << "\n");
 
   bool is64 = ctx.arg.is64.value_or(false);
-  bool generated = false;
   unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
                                    : WASM_OPCODE_I32_CONST;
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
@@ -384,6 +383,14 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     bool requiresRuntimeReloc = ctx.isPic || sym->hasGOTIndex();
     if (!requiresRuntimeReloc)
       continue;
+
+    if (funcs.empty() || funcs.back().size() >= 7654300) {
+      funcs.emplace_back(std::string());
+      raw_string_ostream os(funcs.back());
+      writeUleb128(os, 0, "num locals");
+    }
+
+    raw_string_ostream os(funcs.back());
 
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
                       << " addend=" << rel.Addend << " index=" << rel.Index
@@ -439,9 +446,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     writeU8(os, opcode_reloc_store, "I32_STORE");
     writeUleb128(os, 2, "align");
     writeUleb128(os, 0, "offset");
-    generated = true;
   }
-  return generated;
 }
 
 // Split WASM_SEG_FLAG_STRINGS section. Such a section is a sequence of

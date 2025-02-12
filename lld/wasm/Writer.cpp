@@ -1459,20 +1459,21 @@ void Writer::createStartFunction() {
 void Writer::createApplyDataRelocationsFunction() {
   LLVM_DEBUG(dbgs() << "createApplyDataRelocationsFunction\n");
   // First write the body's contents to a string.
-  std::string bodyContent;
+  std::vector<std::string> funcs;
   {
-    raw_string_ostream os(bodyContent);
-    writeUleb128(os, 0, "num locals");
-    bool generated = false;
     for (const OutputSegment *seg : segments)
       if (!ctx.arg.sharedMemory || !seg->isTLS())
         for (const InputChunk *inSeg : seg->inputSegments)
-          generated |= inSeg->generateRelocationCode(os);
+          inSeg->generateRelocationCode(funcs);
+  }
 
-    if (!generated) {
-      LLVM_DEBUG(dbgs() << "skipping empty __wasm_apply_data_relocs\n");
-      return;
-    }
+  if (funcs.empty()) {
+    LLVM_DEBUG(dbgs() << "skipping empty __wasm_apply_data_relocs\n");
+    return;
+  }
+
+  for (auto &func : funcs) {
+    raw_string_ostream os(func);
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
@@ -1485,24 +1486,67 @@ void Writer::createApplyDataRelocationsFunction() {
       make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
   def->markLive();
 
-  createFunction(def, bodyContent);
+  if (funcs.size() == 1) {
+    createFunction(def, funcs.back());
+    return;
+  }
+
+  std::string body;
+  {
+    raw_string_ostream os(body);
+    writeUleb128(os, 0, "num locals");
+
+    for (std::size_t i = 0; i < funcs.size(); ++i) {
+      auto &name =
+          *make<std::string>("__wasm_apply_data_relocs_" + std::to_string(i));
+      auto *func = make<SyntheticFunction>(nullSignature, name);
+      auto *def = symtab->addSyntheticFunction(
+          name, WASM_SYMBOL_VISIBILITY_HIDDEN, func);
+      def->markLive();
+      // Normally this shouldn't be called manually for a synthetic
+      // function, since the function indices in
+      // ctx.syntheticFunctions will be calculated later (check
+      // functionSec->addFunction call hierarchy for details).
+      // However, at this point we already need the correct index. The
+      // solution is to place the new synthetic function eagerly, and
+      // also making addFunction idempotent by skipping when there's
+      // already a function index.
+      out.functionSec->addFunction(func);
+      createFunction(def, funcs[i]);
+
+      writeU8(os, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(os, def->getFunctionIndex(), "function index");
+    }
+
+    writeU8(os, WASM_OPCODE_END, "END");
+  }
+  createFunction(def, body);
 }
 
 void Writer::createApplyTLSRelocationsFunction() {
   LLVM_DEBUG(dbgs() << "createApplyTLSRelocationsFunction\n");
-  std::string bodyContent;
+  std::vector<std::string> funcs;
   {
-    raw_string_ostream os(bodyContent);
-    writeUleb128(os, 0, "num locals");
     for (const OutputSegment *seg : segments)
       if (seg->isTLS())
         for (const InputChunk *inSeg : seg->inputSegments)
-          inSeg->generateRelocationCode(os);
+          inSeg->generateRelocationCode(funcs);
+  }
 
+  if (funcs.empty()) {
+    funcs.emplace_back(std::string());
+    raw_string_ostream os(funcs.back());
+    writeUleb128(os, 0, "num locals");
+  }
+
+  for (auto &func : funcs) {
+    raw_string_ostream os(func);
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
-  createFunction(WasmSym::applyTLSRelocs, bodyContent);
+  assert(funcs.size() == 1);
+
+  createFunction(WasmSym::applyTLSRelocs, funcs.back());
 }
 
 // Similar to createApplyDataRelocationsFunction but generates relocation code

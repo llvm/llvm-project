@@ -78,7 +78,7 @@ public:
 
   size_t getNumRelocations() const { return relocations.size(); }
   void writeRelocations(llvm::raw_ostream &os) const;
-  bool generateRelocationCode(raw_ostream &os) const;
+  void generateRelocationCode(std::vector<std::string> &funcs) const;
 
   bool isTLS() const { return flags & llvm::wasm::WASM_SEG_FLAG_TLS; }
   bool isRetained() const { return flags & llvm::wasm::WASM_SEG_FLAG_RETAIN; }
