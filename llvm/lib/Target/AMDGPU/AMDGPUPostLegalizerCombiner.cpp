@@ -226,20 +226,21 @@ bool AMDGPUPostLegalizerCombinerImpl::matchUCharToFloat(
 
 void AMDGPUPostLegalizerCombinerImpl::applyUCharToFloat(
     MachineInstr &MI) const {
-  const LLT S32 = LLT::scalar(32);
+  const LLT I32 = LLT::integer(32);
+  const LLT F32 = LLT::float32();
 
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   LLT Ty = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
-  if (SrcTy != S32)
-    SrcReg = B.buildAnyExtOrTrunc(S32, SrcReg).getReg(0);
+  if (!SrcTy.isInteger(32))
+    SrcReg = B.buildAnyExtOrTrunc(I32, SrcReg).getReg(0);
 
-  if (Ty == S32) {
+  if (Ty.isFloat(32)) {
     B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {DstReg}, {SrcReg},
                  MI.getFlags());
   } else {
-    auto Cvt0 = B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {S32}, {SrcReg},
+    auto Cvt0 = B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {F32}, {SrcReg},
                              MI.getFlags());
     B.buildFPTrunc(DstReg, Cvt0, MI.getFlags());
   }
