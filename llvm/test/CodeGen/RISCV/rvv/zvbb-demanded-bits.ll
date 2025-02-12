@@ -5,7 +5,7 @@
 define <vscale x 1 x i8> @vrol_vx_nxv1i8(<vscale x 1 x i8> %a, i8 %b) {
 ; CHECK-LABEL: vrol_vx_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    addiw a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vrol.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -19,7 +19,7 @@ define <vscale x 1 x i8> @vrol_vx_nxv1i8(<vscale x 1 x i8> %a, i8 %b) {
 define <vscale x 1 x i8> @vror_vx_nxv1i8(<vscale x 1 x i8> %a, i8 %b) {
 ; CHECK-LABEL: vror_vx_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    addiw a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vror.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -33,7 +33,7 @@ define <vscale x 1 x i8> @vror_vx_nxv1i8(<vscale x 1 x i8> %a, i8 %b) {
 define <vscale x 2 x i64> @vwsll_vx_i8_nxv2i64_zext(<vscale x 2 x i32> %a, i8 %b) {
 ; CHECK-LABEL: vwsll_vx_i8_nxv2i64_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    addiw a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vwsll.vx v10, v8, a0
 ; CHECK-NEXT:    vmv2r.v v8, v10
@@ -50,7 +50,7 @@ define <vscale x 2 x i64> @vwsll_vx_i8_nxv2i64_zext(<vscale x 2 x i32> %a, i8 %b
 define <vscale x 1 x i8> @vandn_vx_nxv1i8(i8 %x, <vscale x 1 x i8> %y) {
 ; CHECK-LABEL: vandn_vx_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    addiw a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vandn.vx v8, v8, a0
 ; CHECK-NEXT:    ret
