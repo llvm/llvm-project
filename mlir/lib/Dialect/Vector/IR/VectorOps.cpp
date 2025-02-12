@@ -2395,7 +2395,7 @@ computeBroadcastedUnitDims(ArrayRef<int64_t> srcShape,
   for (auto [s1, s2] :
        llvm::zip_equal(srcShape, dstShape.drop_front(rankDiff))) {
     if (s1 != s2) {
-      assert(s1 == 1 && "expected dim-1 broadcasting");
+      assert(s1 == 1 && "expected \"dim-1\" broadcasting");
       res.insert(dstDim);
     }
     ++dstDim;
@@ -2414,7 +2414,7 @@ llvm::SetVector<int64_t> BroadcastOp::computeBroadcastedUnitDims() {
 
 /// Broadcast `value` to a vector of `dstShape`, knowing that exactly the
 /// `broadcastedDims` dimensions in the dstShape are broadcasted.
-/// This requires (and asserts) that the broadcast is free of dim-1
+/// This requires (and asserts) that the broadcast is free of "dim-1"
 /// broadcasting.
 /// Since vector.broadcast only allows expanding leading dimensions, an extra
 /// vector.transpose may be inserted to make the broadcast possible.
@@ -2500,10 +2500,10 @@ Value BroadcastOp::createOrFoldBroadcastOp(
   // 3.c. Append the srcShape.
   llvm::append_range(broadcastShape, srcVectorType.getShape());
 
-  // Ensure there are no dim-1 broadcasts.
+  // Ensure there are no "dim-1" broadcasts.
   assert(::computeBroadcastedUnitDims(srcVectorType.getShape(), broadcastShape)
              .empty() &&
-         "unexpected dim-1 broadcast");
+         "unexpected \"dim-1\" broadcast");
 
   VectorType broadcastType = VectorType::get(broadcastShape, elementType);
   assert(vector::isBroadcastableTo(value.getType(), broadcastType) ==
