@@ -736,9 +736,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
 
-    setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
-    setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
-
     // Lower this to MOVMSK plus an AND.
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
     setOperationAction(ISD::FGETSIGN, MVT::i32, Custom);

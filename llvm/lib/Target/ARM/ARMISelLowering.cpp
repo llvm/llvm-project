@@ -767,6 +767,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setLibcallName(LC.Op, LC.Name);
       setLibcallCallingConv(LC.Op, LC.CC);
     }
+  } else if (!Subtarget->isTargetMachO()) {
+    setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
+    setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
   }
 
   if (Subtarget->isThumb1Only())

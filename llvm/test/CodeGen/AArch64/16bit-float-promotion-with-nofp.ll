@@ -7,7 +7,7 @@ define half @f2h(float %a) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
