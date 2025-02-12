@@ -222,8 +222,8 @@ define i32 @fcmp_one(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    flt.h a2, fa1, fa0
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    or a0, a2, a1
 ; CHECK-NEXT:    feq.h zero, fa1, fa0
+; CHECK-NEXT:    or a0, a2, a1
 ; CHECK-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: fcmp_one:
@@ -235,9 +235,8 @@ define i32 @fcmp_one(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    frflags a2
 ; CHECKIZHINX-NEXT:    flt.h a4, a1, a0
 ; CHECKIZHINX-NEXT:    fsflags a2
-; CHECKIZHINX-NEXT:    or a2, a4, a3
 ; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    or a0, a4, a3
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_one:
@@ -249,23 +248,23 @@ define i32 @fcmp_one(half %a, half %b) nounwind strictfp {
 ; CHECKIZFHMIN-NEXT:    frflags a0
 ; CHECKIZFHMIN-NEXT:    flt.h a2, fa1, fa0
 ; CHECKIZFHMIN-NEXT:    fsflags a0
-; CHECKIZFHMIN-NEXT:    or a0, a2, a1
 ; CHECKIZFHMIN-NEXT:    feq.h zero, fa1, fa0
+; CHECKIZFHMIN-NEXT:    or a0, a2, a1
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: fcmp_one:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a0
-; CHECKIZHINXMIN-NEXT:    frflags a0
-; CHECKIZHINXMIN-NEXT:    flt.s a3, a2, a1
-; CHECKIZHINXMIN-NEXT:    fsflags a0
-; CHECKIZHINXMIN-NEXT:    feq.s zero, a2, a1
-; CHECKIZHINXMIN-NEXT:    frflags a0
-; CHECKIZHINXMIN-NEXT:    flt.s a4, a1, a2
-; CHECKIZHINXMIN-NEXT:    fsflags a0
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    frflags a2
+; CHECKIZHINXMIN-NEXT:    flt.s a3, a0, a1
+; CHECKIZHINXMIN-NEXT:    fsflags a2
+; CHECKIZHINXMIN-NEXT:    feq.s zero, a0, a1
+; CHECKIZHINXMIN-NEXT:    frflags a2
+; CHECKIZHINXMIN-NEXT:    flt.s a4, a1, a0
+; CHECKIZHINXMIN-NEXT:    fsflags a2
+; CHECKIZHINXMIN-NEXT:    feq.s zero, a1, a0
 ; CHECKIZHINXMIN-NEXT:    or a0, a4, a3
-; CHECKIZHINXMIN-NEXT:    feq.s zero, a1, a2
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"one", metadata !"fpexcept.strict") strictfp
   %2 = zext i1 %1 to i32
@@ -319,9 +318,9 @@ define i32 @fcmp_ueq(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    flt.h a2, fa1, fa0
 ; CHECK-NEXT:    fsflags a0
+; CHECK-NEXT:    feq.h zero, fa1, fa0
 ; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    xori a0, a1, 1
-; CHECK-NEXT:    feq.h zero, fa1, fa0
 ; CHECK-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: fcmp_ueq:
@@ -333,10 +332,9 @@ define i32 @fcmp_ueq(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    frflags a2
 ; CHECKIZHINX-NEXT:    flt.h a4, a1, a0
 ; CHECKIZHINX-NEXT:    fsflags a2
-; CHECKIZHINX-NEXT:    or a3, a4, a3
-; CHECKIZHINX-NEXT:    xori a2, a3, 1
 ; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    or a3, a4, a3
+; CHECKIZHINX-NEXT:    xori a0, a3, 1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ueq:
@@ -348,25 +346,25 @@ define i32 @fcmp_ueq(half %a, half %b) nounwind strictfp {
 ; CHECKIZFHMIN-NEXT:    frflags a0
 ; CHECKIZFHMIN-NEXT:    flt.h a2, fa1, fa0
 ; CHECKIZFHMIN-NEXT:    fsflags a0
+; CHECKIZFHMIN-NEXT:    feq.h zero, fa1, fa0
 ; CHECKIZFHMIN-NEXT:    or a1, a2, a1
 ; CHECKIZFHMIN-NEXT:    xori a0, a1, 1
-; CHECKIZFHMIN-NEXT:    feq.h zero, fa1, fa0
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: fcmp_ueq:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a0
-; CHECKIZHINXMIN-NEXT:    frflags a0
-; CHECKIZHINXMIN-NEXT:    flt.s a3, a2, a1
-; CHECKIZHINXMIN-NEXT:    fsflags a0
-; CHECKIZHINXMIN-NEXT:    feq.s zero, a2, a1
-; CHECKIZHINXMIN-NEXT:    frflags a0
-; CHECKIZHINXMIN-NEXT:    flt.s a4, a1, a2
-; CHECKIZHINXMIN-NEXT:    fsflags a0
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    frflags a2
+; CHECKIZHINXMIN-NEXT:    flt.s a3, a0, a1
+; CHECKIZHINXMIN-NEXT:    fsflags a2
+; CHECKIZHINXMIN-NEXT:    feq.s zero, a0, a1
+; CHECKIZHINXMIN-NEXT:    frflags a2
+; CHECKIZHINXMIN-NEXT:    flt.s a4, a1, a0
+; CHECKIZHINXMIN-NEXT:    fsflags a2
+; CHECKIZHINXMIN-NEXT:    feq.s zero, a1, a0
 ; CHECKIZHINXMIN-NEXT:    or a3, a4, a3
 ; CHECKIZHINXMIN-NEXT:    xori a0, a3, 1
-; CHECKIZHINXMIN-NEXT:    feq.s zero, a1, a2
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ueq", metadata !"fpexcept.strict") strictfp
   %2 = zext i1 %1 to i32
@@ -379,8 +377,8 @@ define i32 @fcmp_ugt(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    fle.h a1, fa0, fa1
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    xori a0, a1, 1
 ; CHECK-NEXT:    feq.h zero, fa0, fa1
+; CHECK-NEXT:    xori a0, a1, 1
 ; CHECK-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: fcmp_ugt:
@@ -388,9 +386,8 @@ define i32 @fcmp_ugt(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    frflags a2
 ; CHECKIZHINX-NEXT:    fle.h a3, a0, a1
 ; CHECKIZHINX-NEXT:    fsflags a2
-; CHECKIZHINX-NEXT:    xori a2, a3, 1
 ; CHECKIZHINX-NEXT:    feq.h zero, a0, a1
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    xori a0, a3, 1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ugt:
@@ -398,19 +395,19 @@ define i32 @fcmp_ugt(half %a, half %b) nounwind strictfp {
 ; CHECKIZFHMIN-NEXT:    frflags a0
 ; CHECKIZFHMIN-NEXT:    fle.h a1, fa0, fa1
 ; CHECKIZFHMIN-NEXT:    fsflags a0
-; CHECKIZFHMIN-NEXT:    xori a0, a1, 1
 ; CHECKIZFHMIN-NEXT:    feq.h zero, fa0, fa1
+; CHECKIZFHMIN-NEXT:    xori a0, a1, 1
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: fcmp_ugt:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a0
-; CHECKIZHINXMIN-NEXT:    frflags a0
-; CHECKIZHINXMIN-NEXT:    fle.s a3, a2, a1
-; CHECKIZHINXMIN-NEXT:    fsflags a0
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    frflags a2
+; CHECKIZHINXMIN-NEXT:    fle.s a3, a0, a1
+; CHECKIZHINXMIN-NEXT:    fsflags a2
+; CHECKIZHINXMIN-NEXT:    feq.s zero, a0, a1
 ; CHECKIZHINXMIN-NEXT:    xori a0, a3, 1
-; CHECKIZHINXMIN-NEXT:    feq.s zero, a2, a1
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ugt", metadata !"fpexcept.strict") strictfp
   %2 = zext i1 %1 to i32
@@ -423,8 +420,8 @@ define i32 @fcmp_uge(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    flt.h a1, fa0, fa1
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    xori a0, a1, 1
 ; CHECK-NEXT:    feq.h zero, fa0, fa1
+; CHECK-NEXT:    xori a0, a1, 1
 ; CHECK-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: fcmp_uge:
@@ -432,9 +429,8 @@ define i32 @fcmp_uge(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    frflags a2
 ; CHECKIZHINX-NEXT:    flt.h a3, a0, a1
 ; CHECKIZHINX-NEXT:    fsflags a2
-; CHECKIZHINX-NEXT:    xori a2, a3, 1
 ; CHECKIZHINX-NEXT:    feq.h zero, a0, a1
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    xori a0, a3, 1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_uge:
@@ -442,19 +438,19 @@ define i32 @fcmp_uge(half %a, half %b) nounwind strictfp {
 ; CHECKIZFHMIN-NEXT:    frflags a0
 ; CHECKIZFHMIN-NEXT:    flt.h a1, fa0, fa1
 ; CHECKIZFHMIN-NEXT:    fsflags a0
-; CHECKIZFHMIN-NEXT:    xori a0, a1, 1
 ; CHECKIZFHMIN-NEXT:    feq.h zero, fa0, fa1
+; CHECKIZFHMIN-NEXT:    xori a0, a1, 1
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: fcmp_uge:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a0
-; CHECKIZHINXMIN-NEXT:    frflags a0
-; CHECKIZHINXMIN-NEXT:    flt.s a3, a2, a1
-; CHECKIZHINXMIN-NEXT:    fsflags a0
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    frflags a2
+; CHECKIZHINXMIN-NEXT:    flt.s a3, a0, a1
+; CHECKIZHINXMIN-NEXT:    fsflags a2
+; CHECKIZHINXMIN-NEXT:    feq.s zero, a0, a1
 ; CHECKIZHINXMIN-NEXT:    xori a0, a3, 1
-; CHECKIZHINXMIN-NEXT:    feq.s zero, a2, a1
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"uge", metadata !"fpexcept.strict") strictfp
   %2 = zext i1 %1 to i32
@@ -467,8 +463,8 @@ define i32 @fcmp_ult(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    fle.h a1, fa1, fa0
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    xori a0, a1, 1
 ; CHECK-NEXT:    feq.h zero, fa1, fa0
+; CHECK-NEXT:    xori a0, a1, 1
 ; CHECK-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: fcmp_ult:
@@ -476,9 +472,8 @@ define i32 @fcmp_ult(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    frflags a2
 ; CHECKIZHINX-NEXT:    fle.h a3, a1, a0
 ; CHECKIZHINX-NEXT:    fsflags a2
-; CHECKIZHINX-NEXT:    xori a2, a3, 1
 ; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    xori a0, a3, 1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ult:
@@ -486,19 +481,19 @@ define i32 @fcmp_ult(half %a, half %b) nounwind strictfp {
 ; CHECKIZFHMIN-NEXT:    frflags a0
 ; CHECKIZFHMIN-NEXT:    fle.h a1, fa1, fa0
 ; CHECKIZFHMIN-NEXT:    fsflags a0
-; CHECKIZFHMIN-NEXT:    xori a0, a1, 1
 ; CHECKIZFHMIN-NEXT:    feq.h zero, fa1, fa0
+; CHECKIZFHMIN-NEXT:    xori a0, a1, 1
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: fcmp_ult:
 ; CHECKIZHINXMIN:       # %bb.0:
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    frflags a0
-; CHECKIZHINXMIN-NEXT:    fle.s a3, a1, a2
-; CHECKIZHINXMIN-NEXT:    fsflags a0
+; CHECKIZHINXMIN-NEXT:    frflags a2
+; CHECKIZHINXMIN-NEXT:    fle.s a3, a1, a0
+; CHECKIZHINXMIN-NEXT:    fsflags a2
+; CHECKIZHINXMIN-NEXT:    feq.s zero, a1, a0
 ; CHECKIZHINXMIN-NEXT:    xori a0, a3, 1
-; CHECKIZHINXMIN-NEXT:    feq.s zero, a1, a2
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ult", metadata !"fpexcept.strict") strictfp
   %2 = zext i1 %1 to i32
@@ -511,8 +506,8 @@ define i32 @fcmp_ule(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    flt.h a1, fa1, fa0
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    xori a0, a1, 1
 ; CHECK-NEXT:    feq.h zero, fa1, fa0
+; CHECK-NEXT:    xori a0, a1, 1
 ; CHECK-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: fcmp_ule:
@@ -520,9 +515,8 @@ define i32 @fcmp_ule(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINX-NEXT:    frflags a2
 ; CHECKIZHINX-NEXT:    flt.h a3, a1, a0
 ; CHECKIZHINX-NEXT:    fsflags a2
-; CHECKIZHINX-NEXT:    xori a2, a3, 1
 ; CHECKIZHINX-NEXT:    feq.h zero, a1, a0
-; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    xori a0, a3, 1
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: fcmp_ule:
@@ -530,19 +524,19 @@ define i32 @fcmp_ule(half %a, half %b) nounwind strictfp {
 ; CHECKIZFHMIN-NEXT:    frflags a0
 ; CHECKIZFHMIN-NEXT:    flt.h a1, fa1, fa0
 ; CHECKIZFHMIN-NEXT:    fsflags a0
-; CHECKIZFHMIN-NEXT:    xori a0, a1, 1
 ; CHECKIZFHMIN-NEXT:    feq.h zero, fa1, fa0
+; CHECKIZFHMIN-NEXT:    xori a0, a1, 1
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: fcmp_ule:
 ; CHECKIZHINXMIN:       # %bb.0:
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    frflags a0
-; CHECKIZHINXMIN-NEXT:    flt.s a3, a1, a2
-; CHECKIZHINXMIN-NEXT:    fsflags a0
+; CHECKIZHINXMIN-NEXT:    frflags a2
+; CHECKIZHINXMIN-NEXT:    flt.s a3, a1, a0
+; CHECKIZHINXMIN-NEXT:    fsflags a2
+; CHECKIZHINXMIN-NEXT:    feq.s zero, a1, a0
 ; CHECKIZHINXMIN-NEXT:    xori a0, a3, 1
-; CHECKIZHINXMIN-NEXT:    feq.s zero, a1, a2
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ule", metadata !"fpexcept.strict") strictfp
   %2 = zext i1 %1 to i32

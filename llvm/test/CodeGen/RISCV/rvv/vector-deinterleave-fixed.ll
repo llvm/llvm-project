@@ -204,19 +204,19 @@ define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vector_deinterle
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v14, v8, 8
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a2, a1, a1
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v11, v10, a1
 ; CHECK-NEXT:    vslideup.vx v8, v12, a1
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    add a2, a0, a0
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v11, a0
-; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vmv1r.v v9, v14
-; CHECK-NEXT:    vs2r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v8, (a0)
+; CHECK-NEXT:    vs2r.v v8, (a1)
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vlseg5e16.v v8, (a1)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
@@ -576,19 +576,19 @@ define {<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>} @vector_dein
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v14, v8, 8
 ; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a2, a1, a1
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v11, v10, a1
 ; CHECK-NEXT:    vslideup.vx v8, v12, a1
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    add a2, a0, a0
+; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v11, a0
-; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vmv1r.v v9, v14
-; CHECK-NEXT:    vs2r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v8, (a0)
+; CHECK-NEXT:    vs2r.v v8, (a1)
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vlseg5e16.v v8, (a1)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0

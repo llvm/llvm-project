@@ -46,9 +46,11 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ; CHECK-NEXT:    vmadd.vx v14, a0, v12
 ; CHECK-NEXT:    li a0, 129
 ; CHECK-NEXT:    vmv.s.x v15, a0
-; CHECK-NEXT:    vmv.v.i v0, 12
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vcompress.vm v12, v8, v15
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 12
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vrgatherei16.vv v12, v10, v14, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1749,13 +1751,13 @@ define <8 x float> @buildvec_v8f32_zvl256(float %e0, float %e1, float %e2, float
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, mu
 ; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfmv.v.f v9, fa4
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa5
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa6
 ; CHECK-NEXT:    vfslide1down.vf v10, v8, fa3
 ; CHECK-NEXT:    vfslide1down.vf v8, v9, fa7
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; CHECK-NEXT:    ret
   %v0 = insertelement <8 x float> poison, float %e0, i64 0
@@ -1800,13 +1802,13 @@ define <8 x double> @buildvec_v8f64_zvl512(double %e0, double %e1, double %e2, d
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, mu
 ; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfmv.v.f v9, fa4
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa5
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa6
 ; CHECK-NEXT:    vfslide1down.vf v10, v8, fa3
 ; CHECK-NEXT:    vfslide1down.vf v8, v9, fa7
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; CHECK-NEXT:    ret
   %v0 = insertelement <8 x double> poison, double %e0, i64 0
