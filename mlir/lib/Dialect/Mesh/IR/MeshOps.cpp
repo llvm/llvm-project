@@ -334,7 +334,8 @@ void mlir::mesh::maybeInsertSourceShardingAnnotation(MeshSharding sharding,
   Operation *operandSrcOp = operandValue.getDefiningOp();
   bool isBlockArg = !operandSrcOp;
   {
-    auto opType = dyn_cast<mlir::RankedTensorType>(operandValue.getType());
+    [[maybe_unused]] auto opType =
+        dyn_cast<mlir::RankedTensorType>(operandValue.getType());
     assert(!opType || opType.getRank() > 0 || isFullReplication(sharding));
   }
   if (!isa<RankedTensorType>(operandValue.getType()) && operandSrcOp &&
