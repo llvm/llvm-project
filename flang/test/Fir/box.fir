@@ -1,7 +1,7 @@
 // RUN: tco -o - %s | FileCheck %s
 
 // Global box initialization (test must come first because llvm globals are emitted first).
-// CHECK-LABEL: @globalx = internal global { ptr, i64, i32, i8, i8, i8, i8 } { ptr null, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i32 20240719, i8 0, i8 9, i8 2, i8 0 }
+// CHECK-LABEL: @globalx = internal global { ptr, i64, i32, i8, i8, i8, i8 } { ptr null, i64 4, i32 20240719, i8 0, i8 9, i8 2, i8 0 }
 fir.global internal @globalx : !fir.box<!fir.heap<i32>> {
   %c0 = arith.constant 0 : index
   %0 = fir.convert %c0 : (index) -> !fir.heap<i32>
@@ -9,7 +9,7 @@ fir.global internal @globalx : !fir.box<!fir.heap<i32>> {
   fir.has_value %1 : !fir.box<!fir.heap<i32>>
 }
 
-// CHECK-LABEL: @globaly = internal global { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr null, i64 ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64), i32 20240719, i8 1, i8 27, i8 2, i8 0,{{.*}}[3 x i64] [i64 1, i64 0, i64 ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64)]
+// CHECK-LABEL: @globaly = internal global { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr null, i64 4, i32 20240719, i8 1, i8 27, i8 2, i8 0,{{.*}}[3 x i64] [i64 1, i64 0, i64 4]
 fir.global internal @globaly : !fir.box<!fir.heap<!fir.array<?xf32>>> {
   %c0 = arith.constant 0 : index
   %0 = fir.convert %c0 : (index) -> !fir.heap<!fir.array<?xf32>>
