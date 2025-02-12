@@ -6,7 +6,7 @@
 
 // p1.addr and p2.addr result from 2 different allocas
 // They cannot physically alias
-// T1: CHECK-DAG: p1.addr#0 <-> p2.addr#0: NoAlias
+// CHECK-DAG: p1.addr#0 <-> p2.addr#0: NoAlias
 
 // p1.addr is the address returned by an alloca.  It does not have a target
 // attribute, and it is not the address retrieved from a pointer.  It cannot
@@ -31,7 +31,7 @@
 // All arguments are either pointers or targets
 // The address *in* a local pointer may alias the address of a target
 // argument, but it does not alias the address *of* a pointer argument.
-// T2: CHECK-DAG: boxp1.addr#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: boxp1.addr#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: boxp1.addr#0 <-> func.region0#1: MayAlias
 // CHECK-DAG: boxp1.addr#0 <-> func.region0#2: NoAlias
 
@@ -57,7 +57,7 @@
 
 // The addresses stored in two different pointers can alias, even if one has no
 // box.  In this program, they happen to be the same address.
-// T4: 
+// T4 from <https://github.com/llvm/llvm-project/pull/117785#discussion_r1924348480>.
 // CHECK-DAG: p1.tgt#0 <-> boxp1.addr#0: MayAlias
 
 func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<f32> {fir.bindc_name = "v2", fir.target}, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> ) attributes {test.ptr = "func"} {
