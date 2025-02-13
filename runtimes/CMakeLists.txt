@@ -216,7 +216,7 @@ option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation.
 option(LLVM_ENABLE_SPHINX "Use Sphinx to generate the runtimes documentation." OFF)
 
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
-if(CMAKE_HOST_APPLE AND APPLE)
+if((CMAKE_HOST_APPLE OR CMAKE_LIBTOOL) AND APPLE)
   include(UseLibtool)
 endif()
 
