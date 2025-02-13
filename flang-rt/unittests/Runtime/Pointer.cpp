@@ -105,3 +105,47 @@ TEST(Pointer, AllocateSourceZeroSize) {
   EXPECT_EQ(p->GetDimension(0).UpperBound(), 0);
   p->Destroy();
 }
+
+TEST(Pointer, PointerAssociateRemapping) {
+  using Fortran::common::TypeCategory;
+  // REAL(4), POINTER :: p(:)
+  StaticDescriptor<Fortran::common::maxRank, true> staticDesc;
+  auto p{staticDesc.descriptor()};
+  SubscriptValue extent[1]{1};
+  p.Establish(TypeCode{Fortran::common::TypeCategory::Real, 4}, 4, nullptr, 1,
+      extent, CFI_attribute_pointer);
+  std::size_t descSize{p.SizeInBytes()};
+  EXPECT_LE(descSize, staticDesc.byteSize);
+  // REAL(4), CONTIGUOUS, POINTER :: t(:,:,:)
+  auto t{Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 4}, 4,
+      nullptr, 3, nullptr, CFI_attribute_pointer)};
+  RTNAME(PointerSetBounds)(*t, 0, 1, 1);
+  RTNAME(PointerSetBounds)(*t, 1, 1, 1);
+  RTNAME(PointerSetBounds)(*t, 2, 1, 1);
+  RTNAME(PointerAllocate)(
+      *t, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_TRUE(RTNAME(PointerIsAssociated)(*t));
+  // INTEGER(4) :: b(2,1) = [[1,1]]
+  auto b{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{2, 1}, std::vector<std::int32_t>{1, 1})};
+  // p(1:1) => t
+  RTNAME(PointerAssociateRemapping)(p, *t, *b, __FILE__, __LINE__);
+  EXPECT_TRUE(RTNAME(PointerIsAssociated)(p));
+  EXPECT_EQ(p.rank(), 1);
+  EXPECT_EQ(p.Elements(), 1u);
+
+  // Verify that the memory past the p's descriptor is not affected.
+  const char *addr = reinterpret_cast<const char *>(&staticDesc);
+  const char *ptr = addr + descSize;
+  const char *end = addr + staticDesc.byteSize;
+  while (ptr != end) {
+    if (*ptr != '\0') {
+      std::fprintf(stderr, "byte %zd after pointer descriptor was written\n",
+          ptr - addr);
+      EXPECT_EQ(*ptr, '\0');
+      break;
+    }
+    ++ptr;
+  }
+  p.Destroy();
+}
