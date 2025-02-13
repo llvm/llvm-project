@@ -63,6 +63,7 @@ UnwindInfoManager::~UnwindInfoManager() {
       dbgs() << "Failed call to " << RemoveFnName << ": error = " << Err
              << "\n";
     });
+    (void)Err;
   }
 }
 
