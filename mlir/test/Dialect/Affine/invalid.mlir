@@ -541,3 +541,25 @@ func.func @dynamic_dimension_index() {
   }) : () -> ()
   return
 }
+
+// -----
+
+#map = affine_map<() -> ()>
+#map1 = affine_map<() -> (1)>
+func.func @no_lower_bound() {
+  // expected-error@+1 {{'affine.for' op expected lower bound map to have at least one result}}
+  affine.for %i = max #map() to min #map1() {
+  }
+  return
+}
+
+// -----
+
+#map = affine_map<() -> ()>
+#map1 = affine_map<() -> (1)>
+func.func @no_upper_bound() {
+  // expected-error@+1 {{'affine.for' op expected upper bound map to have at least one result}}
+  affine.for %i = max #map1() to min #map() {
+  }
+  return
+}
