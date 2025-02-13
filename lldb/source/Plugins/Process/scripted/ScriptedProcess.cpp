@@ -165,7 +165,7 @@ Status ScriptedProcess::DoLoadCore() {
 Status ScriptedProcess::DoLaunch(Module *exe_module,
                                  ProcessLaunchInfo &launch_info) {
   LLDB_LOGF(GetLog(LLDBLog::Process), "ScriptedProcess::%s launching process", __FUNCTION__);
-  
+
   /* MARK: This doesn't reflect how lldb actually launches a process.
            In reality, it attaches to debugserver, then resume the process.
            That's not true in all cases.  If debugserver is remote, lldb
@@ -422,9 +422,11 @@ bool ScriptedProcess::GetProcessInfo(ProcessInstanceInfo &info) {
 lldb_private::StructuredData::ObjectSP
 ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
   Status error;
-  auto error_with_message = [&error](llvm::StringRef message) {
-    return ScriptedInterface::ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
-                                                     message.data(), error);
+  auto handle_error_with_message = [&error](llvm::StringRef message,
+                                            bool ignore_error) {
+    ScriptedInterface::ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
+                                              message.data(), error);
+    return ignore_error;
   };
 
   StructuredData::ArraySP loaded_images_sp = GetInterface().GetLoadedImages();
@@ -436,12 +438,13 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
   ModuleList module_list;
   Target &target = GetTarget();
 
-  auto reload_image = [&target, &module_list, &error_with_message](
+  auto reload_image = [&target, &module_list, &handle_error_with_message](
                           StructuredData::Object *obj) -> bool {
     StructuredData::Dictionary *dict = obj->GetAsDictionary();
 
     if (!dict)
-      return error_with_message("Couldn't cast image object into dictionary.");
+      return handle_error_with_message(
+          "Couldn't cast image object into dictionary.", false);
 
     ModuleSpec module_spec;
     llvm::StringRef value;
@@ -449,9 +452,11 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
     bool has_path = dict->HasKey("path");
     bool has_uuid = dict->HasKey("uuid");
     if (!has_path && !has_uuid)
-      return error_with_message("Dictionary should have key 'path' or 'uuid'");
+      return handle_error_with_message(
+          "Dictionary should have key 'path' or 'uuid'", false);
     if (!dict->HasKey("load_addr"))
-      return error_with_message("Dictionary is missing key 'load_addr'");
+      return handle_error_with_message("Dictionary is missing key 'load_addr'",
+                                       false);
 
     if (has_path) {
       dict->GetValueForKeyAsString("path", value);
@@ -467,16 +472,21 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
     ModuleSP module_sp =
         target.GetOrCreateModule(module_spec, true /* notify */);
 
+    bool ignore_module_load_error = false;
+    dict->GetValueForKeyAsBoolean("ignore_module_load_error",
+                                  ignore_module_load_error);
     if (!module_sp)
-      return error_with_message("Couldn't create or get module.");
+      return handle_error_with_message("Couldn't create or get module.",
+                                       ignore_module_load_error);
 
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     lldb::offset_t slide = LLDB_INVALID_OFFSET;
     dict->GetValueForKeyAsInteger("load_addr", load_addr);
     dict->GetValueForKeyAsInteger("slide", slide);
     if (load_addr == LLDB_INVALID_ADDRESS)
-      return error_with_message(
-          "Couldn't get valid load address or slide offset.");
+      return handle_error_with_message(
+          "Couldn't get valid load address or slide offset.",
+          ignore_module_load_error);
 
     if (slide != LLDB_INVALID_OFFSET)
       load_addr += slide;
@@ -486,13 +496,16 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
                               changed);
 
     if (!changed && !module_sp->GetObjectFile())
-      return error_with_message("Couldn't set the load address for module.");
+      return handle_error_with_message(
+          "Couldn't set the load address for module.",
+          ignore_module_load_error);
 
     dict->GetValueForKeyAsString("path", value);
     FileSpec objfile(value);
     module_sp->SetFileSpecAndObjectName(objfile, objfile.GetFilename());
 
-    return module_list.AppendIfNeeded(module_sp);
+    return ignore_module_load_error ? true
+                                    : module_list.AppendIfNeeded(module_sp);
   };
 
   if (!loaded_images_sp->ForEach(reload_image))
