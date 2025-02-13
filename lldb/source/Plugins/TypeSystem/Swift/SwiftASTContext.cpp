@@ -8469,15 +8469,9 @@ bool SwiftASTContext::DumpTypeValue(
     SwiftEnumDescriptor *cached_enum_info = GetCachedEnumInfo(type);
     if (cached_enum_info) {
       auto enum_elem_info = cached_enum_info->GetElementFromData(data, true);
-      if (enum_elem_info)
-        s.Printf("%s", enum_elem_info->name.GetCString());
-      else {
-        lldb::offset_t ptr = 0;
-        if (data.GetByteSize())
-          s.Printf("<invalid> (0x%" PRIx8 ")", data.GetU8(&ptr));
-        else
-          s.Printf("<empty>");
-      }
+      if (!enum_elem_info)
+        return false;
+      s.Printf("%s", enum_elem_info->name.GetCString());
       return true;
     } else
       s.Printf("<unknown type>");

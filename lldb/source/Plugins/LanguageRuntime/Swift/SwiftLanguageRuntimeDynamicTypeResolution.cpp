@@ -997,7 +997,7 @@ llvm::Expected<std::string> SwiftLanguageRuntime::GetEnumCaseName(
     return eti->getCases()[case_index].Name;
 
   // TODO: uncomment this after fixing projection for every type: rdar://138424904
-  // LogUnimplementedTypeKind(__FUNCTION__, type);
+  LogUnimplementedTypeKind(__FUNCTION__, type);
   return llvm::createStringError("unimplemented enum kind");
 }
 

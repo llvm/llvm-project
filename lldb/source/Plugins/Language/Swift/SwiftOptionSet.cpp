@@ -13,7 +13,7 @@
 #include "SwiftOptionSet.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -70,7 +70,7 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
 lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     SwiftOptionSetSummaryProvider(CompilerType clang_type)
     : TypeSummaryImpl(TypeSummaryImpl::Kind::eInternal,
-                      TypeSummaryImpl::Flags()),
+                      TypeSummaryImpl::Flags().SetDontShowValue(true)),
       m_type(clang_type), m_cases() {}
 
 void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
@@ -90,29 +90,8 @@ void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
   // information.
   auto ts = m_type.GetTypeSystem();
   TypeSystemSwift *tss = nullptr;
-  std::shared_ptr<SwiftASTContext> swift_ast_ctx;
-  if (auto trts =
-          ts.dyn_cast_or_null<TypeSystemSwiftTypeRef>()) {
+  if (auto trts = ts.dyn_cast_or_null<TypeSystemSwiftTypeRef>())
     tss = trts.get();
-    CompilerType ast_type = trts->ReconstructType(m_type, exe_ctx);
-    swift_ast_ctx =
-        ast_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>();
-    if (swift_ast_ctx) {
-      auto ast_decl_ts = GetAsEnumDecl(ast_type);
-      if (ast_decl_ts.first) {
-        tss = swift_ast_ctx.get();
-        enum_decl = ast_decl_ts.first;
-        m_type = ast_type;
-      } else {
-        LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-                 "Cannot get Clang type for {0}",
-                 m_type.GetMangledTypeName());
-      }
-    } else {
-      LLDB_LOG(GetLog(LLDBLog::DataFormatters), "Cannot reconstruct {0}",
-               m_type.GetMangledTypeName());
-    }
-  }
   if (!tss) {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters), "No typesystem");
     return;
@@ -149,43 +128,35 @@ std::string lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
   return sstr.GetString().str();
 }
 
-static bool ReadValueIfAny(ValueObject &valobj, llvm::APInt &value) {
-  ValueObjectSP most_qualified_sp(valobj.GetQualifiedRepresentationIfAvailable(
-      lldb::eDynamicDontRunTarget, true));
-
-  bool success;
-  value = llvm::APInt(64, most_qualified_sp->GetValueAsUnsigned(0, &success));
-  return success;
-}
-
-static ValueObjectSP GetRawValue(ValueObject *valobj) {
-  if (!valobj)
-    return nullptr;
-
-  static ConstString g_rawValue("rawValue");
-
-  auto rawValue_sp = valobj->GetChildMemberWithName(g_rawValue, true);
-
-  return rawValue_sp;
-}
-
 bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     FormatObject(ValueObject *valobj, std::string &dest,
                  const TypeSummaryOptions &options) {
-  auto rawValue_sp = GetRawValue(valobj);
-  if (!rawValue_sp)
-    return false;
+  StreamString ss;
+  DataExtractor data;
+  Status error;
 
-  llvm::APInt value;
-  if (!ReadValueIfAny(*rawValue_sp, value))
+  if (!valobj)
+    return false;
+  valobj->GetData(data, error);
+  if (error.Fail())
     return false;
 
   {
-    ExecutionContext exe_ctx = valobj->GetExecutionContextRef().Lock(false);
+    ExecutionContext exe_ctx(valobj->GetExecutionContextRef());
+    StreamString case_s;
+    if (valobj->GetCompilerType().DumpTypeValue(
+            &case_s, lldb::eFormatEnum, data, 0, data.GetByteSize(), 0, 0,
+            exe_ctx.GetBestExecutionContextScope(), false)) {
+      ss << '.' << case_s.GetData();
+      dest.assign(ss.GetData());
+      return true;
+    }
     FillCasesIfNeeded(&exe_ctx);
   }
 
-  StreamString ss;
+  offset_t data_offset = 0;
+  int64_t value = data.GetMaxS64(&data_offset, data.GetByteSize());
+
   bool first_match = true;
   bool any_match = false;
 
@@ -246,11 +217,5 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
 
 bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     DoesPrintChildren(ValueObject *valobj) const {
-  auto rawValue_sp = GetRawValue(valobj);
-  if (!rawValue_sp)
-    return false;
-
-  llvm::APInt value;
-  // only show children if you couldn't read the value of rawValue
-  return (false == ReadValueIfAny(*rawValue_sp, value));
+  return false;
 }
