@@ -33,9 +33,8 @@ public:
 
   // TelemetryManager interface
   llvm::Error dispatch(llvm::telemetry::TelemetryInfo *entry) override {
-    if (auto *fake_entry = llvm::dyn_cast<FakeTelemetryInfo>(entry)) {
+    if (auto *fake_entry = llvm::dyn_cast<FakeTelemetryInfo>(entry))
       fake_entry->msg = "In FakePlugin";
-    }
 
     return llvm::Error::success();
   }
