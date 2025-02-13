@@ -1092,7 +1092,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
           args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
         res.getLangOpts().OpenMPTargetDebug = 1;
     }
-    if (args.hasArg(clang::driver::options::OPT_nogpulib))
+    if (args.hasArg(clang::driver::options::OPT_no_offloadlib))
       res.getLangOpts().NoGPULib = 1;
   }
 

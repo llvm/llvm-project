@@ -709,7 +709,7 @@ static bool checkDependency(Instruction *Src, Instruction *Dst,
   //   (0,0,>=,*,*)
   // Now, the dependency is not necessarily non-negative anymore, i.e.
   // unroll-and-jam may violate correctness.
-  std::unique_ptr<Dependence> D = DI.depends(Src, Dst, true);
+  std::unique_ptr<Dependence> D = DI.depends(Src, Dst);
   if (!D)
     return true;
   assert(D->isOrdered() && "Expected an output, flow or anti dep.");

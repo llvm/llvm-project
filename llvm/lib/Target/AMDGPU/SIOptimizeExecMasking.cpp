@@ -619,7 +619,7 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
                          VCmp.getDebugLoc(), TII->get(NewOpcode));
 
   auto TryAddImmediateValueFromNamedOperand =
-      [&](unsigned OperandName) -> void {
+      [&](AMDGPU::OpName OperandName) -> void {
     if (auto *Mod = TII->getNamedOperand(VCmp, OperandName))
       Builder.addImm(Mod->getImm());
   };

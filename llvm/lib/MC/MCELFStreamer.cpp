@@ -616,10 +616,6 @@ void MCELFStreamer::finishImpl() {
   this->MCObjectStreamer::finishImpl();
 }
 
-void MCELFStreamer::emitThumbFunc(MCSymbol *Func) {
-  llvm_unreachable("Generic ELF doesn't support this directive");
-}
-
 void MCELFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("ELF doesn't support this directive");
 }

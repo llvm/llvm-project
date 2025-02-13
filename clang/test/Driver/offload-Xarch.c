@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*darwin.*}}
+
 // RUN: %clang --target=x86_64-unknown-linux-gnu -x cuda %s -Xarch_nvptx64 -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
 // RUN: %clang -x cuda %s -Xarch_device -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
 // RUN: %clang -x hip %s -Xarch_amdgcn -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
@@ -35,7 +37,7 @@
 
 // Make sure that `-Xarch_amdgcn` forwards libraries to the device linker.
 // RUN: %clang -fopenmp=libomp --offload-arch=gfx90a -nogpulib -nogpuinc \
-// RUN:   -Xarch_amdgcn -Wl,-lfoo -### %s 2>&1 \
+// RUN:   --target=x86_64-unknown-linux-gnu -Xarch_amdgcn -Wl,-lfoo -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=LIBS %s
 // RUN: %clang -fopenmp=libomp --offload-arch=gfx90a -nogpulib -nogpuinc \
 // RUN:   -Xoffload-linker-amdgcn-amd-amdhsa -lfoo -### %s 2>&1 \
