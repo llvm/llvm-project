@@ -4273,7 +4273,8 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
   if (!CountFD)
     return;
 
-  if (std::optional<int64_t> Diff = getOffsetDifferenceInBits(*this, CountFD, FD)) {
+  if (std::optional<int64_t> Diff =
+          getOffsetDifferenceInBits(*this, CountFD, FD)) {
     // FIXME: The 'static_cast' is necessary, otherwise the result turns into a
     // uint64_t, which messes things up if we have a negative offset difference.
     Diff = *Diff / static_cast<int64_t>(CGM.getContext().getCharWidth());
@@ -4283,9 +4284,9 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
     Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Int8PtrTy, Int8Ty);
 
     llvm::Type *CountTy = ConvertType(CountFD->getType());
-    llvm::Value *Res = Builder.CreateInBoundsGEP(
-        Int8Ty, Addr.emitRawPointer(*this),
-        Builder.getInt32(*Diff), ".counted_by.gep");
+    llvm::Value *Res =
+        Builder.CreateInBoundsGEP(Int8Ty, Addr.emitRawPointer(*this),
+                                  Builder.getInt32(*Diff), ".counted_by.gep");
     Res = Builder.CreateAlignedLoad(CountTy, Res, getIntAlign(),
                                     ".counted_by.load");
 
