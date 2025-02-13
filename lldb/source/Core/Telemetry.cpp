@@ -61,7 +61,7 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   // Do nothing for now.
   // In up-coming patch, this would be where the manager
   // attach the session_uuid to the entry.
-  return Error::success();
+  return llvm::Error::success();
 }
 
 } // namespace telemetry
