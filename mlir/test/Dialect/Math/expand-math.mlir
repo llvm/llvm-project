@@ -230,7 +230,6 @@ func.func @powf_func_one(%a: f64) -> f64{
   return %ret : f64
 }
 
-
 // CHECK-LABEL:   func @powf_func_negone
 // CHECK-SAME:    ([[ARG0:%.+]]: f64) -> f64
 func.func @powf_func_negone(%a: f64) -> f64{
