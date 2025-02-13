@@ -430,6 +430,18 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
         continue;
       }
     }
+    // Special case: an Objective-C method can override a parent class or
+    // protocol.
+    if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D)) {
+      llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
+      OMD->getOverriddenMethods(Overrides);
+      for (const auto *Override : Overrides)
+        AddResultDecl(Override);
+      if (!Overrides.empty())
+        LocateASTReferentMetric.record(1, "objc-overriden-method");
+      AddResultDecl(OMD);
+      continue;
+    }
 
     // Special case: the cursor is on an alias, prefer other results.
     // This targets "using ns::^Foo", where the target is more interesting.
@@ -1283,6 +1295,17 @@ std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
     } else if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
       IDs.insert(getSymbolID(RD));
       QueryKind = RelationKind::BaseOf;
+    } else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(ND)) {
+      IDs.insert(getSymbolID(OMD));
+      QueryKind = RelationKind::OverriddenBy;
+
+      llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
+      OMD->getOverriddenMethods(Overrides);
+      for (const auto *Override : Overrides)
+        IDs.insert(getSymbolID(Override));
+    } else if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(ND)) {
+      IDs.insert(getSymbolID(ID));
+      QueryKind = RelationKind::BaseOf;
     }
   }
   return findImplementors(std::move(IDs), QueryKind, Index, AST.tuPath());
@@ -1437,6 +1460,15 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
               OverriddenBy.Subjects.insert(ID);
             getOverriddenMethods(CMD, OverriddenMethods);
           }
+        }
+        // Special case: Objective-C methods can override a parent class or
+        // protocol, we should be sure to report references to those.
+        if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(ND)) {
+          OverriddenBy.Subjects.insert(getSymbolID(OMD));
+          llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
+          OMD->getOverriddenMethods(Overrides);
+          for (const auto *Override : Overrides)
+            OverriddenMethods.insert(getSymbolID(Override));
         }
       }
     }
