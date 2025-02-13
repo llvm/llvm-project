@@ -5078,7 +5078,8 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
       // At most one if clause without a directive-name-modifier can appear on
       // the directive.
       OpenMPDirectiveKind CurNM = IC->getNameModifier();
-      if (FoundNameModifiers[CurNM]) {
+      auto &FNM = FoundNameModifiers[CurNM];
+      if (FNM) {
         S.Diag(C->getBeginLoc(), diag::err_omp_more_one_clause)
             << getOpenMPDirectiveName(Kind) << getOpenMPClauseName(OMPC_if)
             << (CurNM != OMPD_unknown) << getOpenMPDirectiveName(CurNM);
@@ -5087,7 +5088,7 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
         NameModifierLoc.push_back(IC->getNameModifierLoc());
         ++NamedModifiersNumber;
       }
-      FoundNameModifiers[CurNM] = IC;
+      FNM = IC;
       if (CurNM == OMPD_unknown)
         continue;
       // Check if the specified name modifier is allowed for the current
@@ -6759,16 +6760,15 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
                     ->getCanonicalDecl() == CanonPVD) {
           // OpenMP  [2.8.1, simd construct, Restrictions]
           // A list-item cannot appear in more than one aligned clause.
-          if (AlignedArgs.count(CanonPVD) > 0) {
+          auto [It, Inserted] = AlignedArgs.try_emplace(CanonPVD, E);
+          if (!Inserted) {
             Diag(E->getExprLoc(), diag::err_omp_used_in_clause_twice)
                 << 1 << getOpenMPClauseName(OMPC_aligned)
                 << E->getSourceRange();
-            Diag(AlignedArgs[CanonPVD]->getExprLoc(),
-                 diag::note_omp_explicit_dsa)
+            Diag(It->second->getExprLoc(), diag::note_omp_explicit_dsa)
                 << getOpenMPClauseName(OMPC_aligned);
             continue;
           }
-          AlignedArgs[CanonPVD] = E;
           QualType QTy = PVD->getType()
                              .getNonReferenceType()
                              .getUnqualifiedType()

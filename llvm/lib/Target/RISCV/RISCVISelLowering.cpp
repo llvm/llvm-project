@@ -5338,13 +5338,17 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
 /// Is this mask local (i.e. elements only move within their local span), and
 /// repeating (that is, the same rearrangement is being done within each span)?
 static bool isLocalRepeatingShuffle(ArrayRef<int> Mask, int Span) {
-  // TODO: Could improve the case where undef elements exist in the first span.
+  SmallVector<int> LowSpan(Span, -1);
   for (auto [I, M] : enumerate(Mask)) {
     if (M == -1)
       continue;
-    int ChunkLo = I - (I % Span);
-    int ChunkHi = ChunkLo + Span;
-    if (M < ChunkLo || M >= ChunkHi || M - ChunkLo != Mask[I % Span])
+    if ((M / Span) != (int)(I / Span))
+      return false;
+    int SpanIdx = I % Span;
+    int Expected = M % Span;
+    if (LowSpan[SpanIdx] == -1)
+      LowSpan[SpanIdx] = Expected;
+    if (LowSpan[SpanIdx] != Expected)
       return false;
   }
   return true;
@@ -5739,12 +5743,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         convertToScalableVector(IndexContainerVT, LHSIndices, DAG, Subtarget);
 
     SDValue Gather;
-    // If we have a locally repeating mask, then we can reuse the first register
-    // in the index register group for all registers within the source register
-    // group.  TODO: This generalizes to m2, and m4.
-    const MVT M1VT = getLMUL1VT(ContainerVT);
-    auto VLMAX = RISCVTargetLowering::computeVLMAXBounds(M1VT, Subtarget).first;
-    if (ContainerVT.bitsGT(M1VT) && isLocalRepeatingShuffle(Mask, VLMAX)) {
+    if (NumElts > MinVLMAX && isLocalRepeatingShuffle(Mask, MinVLMAX)) {
+      // If we have a locally repeating mask, then we can reuse the first
+      // register in the index register group for all registers within the
+      // source register group.  TODO: This generalizes to m2, and m4.
+      const MVT M1VT = getLMUL1VT(ContainerVT);
       EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
       SDValue SubIndex =
           DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubIndexVT, LHSIndices,
@@ -5790,8 +5793,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // as a vselect + a single source vrgather.vv. Don't do this if we think the
   // operands may end up being lowered to something cheaper than a vrgather.vv.
   if (!DAG.isSplatValue(V2) && !DAG.isSplatValue(V1) &&
-      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskLHS.data(), VT) &&
-      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskRHS.data(), VT) &&
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskLHS) &&
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskRHS) &&
       !ShuffleVectorInst::isIdentityMask(ShuffleMaskLHS, NumElts) &&
       !ShuffleVectorInst::isIdentityMask(ShuffleMaskRHS, NumElts))
     if (SDValue V = lowerDisjointIndicesShuffle(SVN, DAG, Subtarget))
@@ -5834,7 +5837,7 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
     return false;
 
   // Support splats for any type. These should type legalize well.
-  if (ShuffleVectorSDNode::isSplatMask(M.data(), VT))
+  if (ShuffleVectorSDNode::isSplatMask(M))
     return true;
 
   const unsigned NumElts = M.size();

@@ -78,13 +78,13 @@ struct LoopFusion : public affine::impl::AffineLoopFusionBase<LoopFusion> {
 static bool canRemoveSrcNodeAfterFusion(
     unsigned srcId, unsigned dstId, const ComputationSliceState &fusionSlice,
     Operation *fusedLoopInsPoint, const DenseSet<Value> &escapingMemRefs,
-    MemRefDependenceGraph *mdg) {
+    const MemRefDependenceGraph &mdg) {
 
-  Operation *dstNodeOp = mdg->getNode(dstId)->op;
+  Operation *dstNodeOp = mdg.getNode(dstId)->op;
   bool hasOutDepsAfterFusion = false;
 
-  for (auto &outEdge : mdg->outEdges[srcId]) {
-    Operation *depNodeOp = mdg->getNode(outEdge.id)->op;
+  for (auto &outEdge : mdg.outEdges.lookup(srcId)) {
+    Operation *depNodeOp = mdg.getNode(outEdge.id)->op;
     // Skip dependence with dstOp since it will be removed after fusion.
     if (depNodeOp == dstNodeOp)
       continue;
@@ -134,22 +134,23 @@ static bool canRemoveSrcNodeAfterFusion(
 /// held if the 'mdg' is reused from a previous fusion step or if the node
 /// creation order changes in the future to support more advance cases.
 // TODO: Move this to a loop fusion utility once 'mdg' is also moved.
-static void getProducerCandidates(unsigned dstId, MemRefDependenceGraph *mdg,
+static void getProducerCandidates(unsigned dstId,
+                                  const MemRefDependenceGraph &mdg,
                                   SmallVectorImpl<unsigned> &srcIdCandidates) {
   // Skip if no input edges along which to fuse.
-  if (mdg->inEdges.count(dstId) == 0)
+  if (mdg.inEdges.count(dstId) == 0)
     return;
 
   // Gather memrefs from loads in 'dstId'.
-  auto *dstNode = mdg->getNode(dstId);
+  auto *dstNode = mdg.getNode(dstId);
   DenseSet<Value> consumedMemrefs;
   for (Operation *load : dstNode->loads)
     consumedMemrefs.insert(cast<AffineReadOpInterface>(load).getMemRef());
 
   // Traverse 'dstId' incoming edges and gather the nodes that contain a store
   // to one of the consumed memrefs.
-  for (auto &srcEdge : mdg->inEdges[dstId]) {
-    auto *srcNode = mdg->getNode(srcEdge.id);
+  for (const auto &srcEdge : mdg.inEdges.lookup(dstId)) {
+    const auto *srcNode = mdg.getNode(srcEdge.id);
     // Skip if 'srcNode' is not a loop nest.
     if (!isa<AffineForOp>(srcNode->op))
       continue;
@@ -169,10 +170,10 @@ static void getProducerCandidates(unsigned dstId, MemRefDependenceGraph *mdg,
 /// producer-consumer dependence between 'srcId' and 'dstId'.
 static void
 gatherProducerConsumerMemrefs(unsigned srcId, unsigned dstId,
-                              MemRefDependenceGraph *mdg,
+                              const MemRefDependenceGraph &mdg,
                               DenseSet<Value> &producerConsumerMemrefs) {
-  auto *dstNode = mdg->getNode(dstId);
-  auto *srcNode = mdg->getNode(srcId);
+  auto *dstNode = mdg.getNode(dstId);
+  auto *srcNode = mdg.getNode(srcId);
   gatherProducerConsumerMemrefs(srcNode->stores, dstNode->loads,
                                 producerConsumerMemrefs);
 }
@@ -214,14 +215,14 @@ static bool isEscapingMemref(Value memref, Block *block) {
 
 /// Returns in 'escapingMemRefs' the memrefs from affine store ops in node 'id'
 /// that escape the block or are accessed in a non-affine way.
-static void gatherEscapingMemrefs(unsigned id, MemRefDependenceGraph *mdg,
+static void gatherEscapingMemrefs(unsigned id, const MemRefDependenceGraph &mdg,
                                   DenseSet<Value> &escapingMemRefs) {
-  auto *node = mdg->getNode(id);
+  auto *node = mdg.getNode(id);
   for (Operation *storeOp : node->stores) {
     auto memref = cast<AffineWriteOpInterface>(storeOp).getMemRef();
     if (escapingMemRefs.count(memref))
       continue;
-    if (isEscapingMemref(memref, &mdg->block))
+    if (isEscapingMemref(memref, &mdg.block))
       escapingMemRefs.insert(memref);
   }
 }
@@ -826,7 +827,7 @@ public:
       // in 'srcIdCandidates'.
       dstNodeChanged = false;
       SmallVector<unsigned, 16> srcIdCandidates;
-      getProducerCandidates(dstId, mdg, srcIdCandidates);
+      getProducerCandidates(dstId, *mdg, srcIdCandidates);
 
       for (unsigned srcId : llvm::reverse(srcIdCandidates)) {
         // Get 'srcNode' from which to attempt fusion into 'dstNode'.
@@ -841,7 +842,7 @@ public:
           continue;
 
         DenseSet<Value> producerConsumerMemrefs;
-        gatherProducerConsumerMemrefs(srcId, dstId, mdg,
+        gatherProducerConsumerMemrefs(srcId, dstId, *mdg,
                                       producerConsumerMemrefs);
 
         // Skip if 'srcNode' out edge count on any memref is greater than
@@ -856,7 +857,7 @@ public:
         // block (e.g., memref block arguments, returned memrefs,
         // memrefs passed to function calls, etc.).
         DenseSet<Value> srcEscapingMemRefs;
-        gatherEscapingMemrefs(srcNode->id, mdg, srcEscapingMemRefs);
+        gatherEscapingMemrefs(srcNode->id, *mdg, srcEscapingMemRefs);
 
         // Compute an operation list insertion point for the fused loop
         // nest which preserves dependences.
@@ -950,7 +951,7 @@ public:
         // insertion point.
         bool removeSrcNode = canRemoveSrcNodeAfterFusion(
             srcId, dstId, bestSlice, fusedLoopInsPoint, srcEscapingMemRefs,
-            mdg);
+            *mdg);
 
         DenseSet<Value> privateMemrefs;
         for (Value memref : producerConsumerMemrefs) {

@@ -861,8 +861,14 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (!ProfOrErr)
       return ProfOrErr.takeError();
 
-    // TODO: write data to profiling file
-    ProfOrErr->dump();
+    // Dump out profdata
+    if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
+        uint32_t(DeviceDebugKind::PGODump))
+      ProfOrErr->dump();
+
+    // Write data to profiling file
+    if (auto Err = ProfOrErr->write())
+      return Err;
   }
 
   // Delete the memory manager before deinitializing the device. Otherwise,

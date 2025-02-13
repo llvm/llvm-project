@@ -1368,3 +1368,38 @@ define <16 x i32> @shuffle_m2_prefix(<16 x i32> %a) {
   %out = shufflevector <16 x i32> %a, <16 x i32> poison, <16 x i32> <i32 2, i32 3, i32 5, i32 2, i32 3, i32 5, i32 7, i32 4, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <16 x i32> %out
 }
+
+define <4 x i16> @vmerge_1(<4 x i16> %x) {
+; CHECK-LABEL: vmerge_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 6
+; CHECK-NEXT:    vmerge.vim v8, v8, 5, v0
+; CHECK-NEXT:    ret
+   %s = shufflevector <4 x i16> %x, <4 x i16> <i16 5, i16 5, i16 5, i16 5>, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+   ret <4 x i16> %s
+}
+
+define <4 x i16> @vmerge_2(<4 x i16> %x) {
+; CHECK-LABEL: vmerge_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 9
+; CHECK-NEXT:    vmv.v.i v9, 5
+; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    ret
+   %s = shufflevector <4 x i16> %x, <4 x i16> <i16 poison, i16 5, i16 5, i16 poison>, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+   ret <4 x i16> %s
+}
+
+define <4 x i16> @vmerge_3(<4 x i16> %x) {
+; CHECK-LABEL: vmerge_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.i v0, 6
+; CHECK-NEXT:    vmv.v.i v9, 5
+; CHECK-NEXT:    vrgather.vi v8, v9, 1, v0.t
+; CHECK-NEXT:    ret
+   %s = shufflevector <4 x i16> %x, <4 x i16> <i16 poison, i16 5, i16 poison, i16 poison>, <4 x i32> <i32 0, i32 5, i32 5, i32 3>
+   ret <4 x i16> %s
+}
