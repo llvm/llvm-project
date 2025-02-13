@@ -27,6 +27,8 @@ class TestCase(lldbtest.TestBase):
 
         while process.state == lldb.eStateStopped:
             thread = process.GetSelectedThread()
+            if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
+                break
             frame = thread.frames[0]
             # Spin up the compiler so it can answer the explicit modules question.
             self.expect("expression 1")
