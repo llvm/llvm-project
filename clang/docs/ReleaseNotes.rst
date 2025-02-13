@@ -252,7 +252,7 @@ clang-format
 libclang
 --------
 
-- Fixed a buffer overflow in ``CXString`` implementation. This fix may result in
+- Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
   increased memory allocation.
 
 Code Completion
