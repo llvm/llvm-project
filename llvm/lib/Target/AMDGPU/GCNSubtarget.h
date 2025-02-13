@@ -78,7 +78,7 @@ protected:
   bool BackOffBarrier = false;
   bool UnalignedScratchAccess = false;
   bool UnalignedAccessMode = false;
-  bool RequireNaturallyAlignedBufferAccess = false;
+  bool RelaxedBufferOOBMode = false;
   bool HasApertureRegs = false;
   bool SupportsXNACK = false;
   bool KernargPreload = false;
@@ -609,9 +609,7 @@ public:
     return UnalignedAccessMode;
   }
 
-  bool hasRequireNaturallyAlignedBufferAccess() const {
-    return RequireNaturallyAlignedBufferAccess;
-  }
+  bool hasRelaxedBufferOOBMode() const { return RelaxedBufferOOBMode; }
 
   bool hasApertureRegs() const {
     return HasApertureRegs;

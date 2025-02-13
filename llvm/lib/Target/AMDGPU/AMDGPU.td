@@ -119,10 +119,10 @@ def FeatureUnalignedDSAccess : SubtargetFeature<"unaligned-ds-access",
   "Hardware supports unaligned local and region loads and stores"
 >;
 
-def FeatureRequireNaturallyAlignedBufferAccess : SubtargetFeature<"require-naturally-aligned-buffer-access",
-  "RequireNaturallyAlignedBufferAccess",
-  "true",
-  "Requires natural alignment of buffer accesses to achieve robust out-of-bounds behavior, ensuring that accesses starting out-of-bounds remain distinct from those starting in-bounds"
+def FeatureRelaxedBufferOOBMode : SubtargetFeature<"relaxed-buffer-oob-mode",
+  "RelaxedBufferOOBMode",
+   "true",
+  "Enable relaxed out-of-bounds behavior for buffer accesses"
 >;
 
 def FeatureApertureRegs : SubtargetFeature<"aperture-regs",
