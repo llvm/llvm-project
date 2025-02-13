@@ -145,93 +145,8 @@ using MutexDescriptor =
     std::variant<FirstArgMutexDescriptor, MemberMutexDescriptor,
                  RAIIMutexDescriptor>;
 
-class NonBlockOpenVisitor : public BugReporterVisitor {
-private:
-  const VarRegion *VR;
-  const CallExpr *OpenCallExpr;
-  int O_NONBLOCKV;
-  bool Satisfied;
-  CallDescription OpenFunction{CDM::CLibrary, {"open"}, 2};
-
-public:
-  NonBlockOpenVisitor(const VarRegion *VR, int O_NONBLOCKV)
-      : VR(VR), OpenCallExpr(nullptr), O_NONBLOCKV(O_NONBLOCKV),
-        Satisfied(false) {}
-
-  static void *getTag() {
-    static int Tag = 0;
-    return static_cast<void *>(&Tag);
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override {
-    ID.AddPointer(getTag());
-    ID.AddPointer(VR);
-  }
-
-  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
-                                   BugReporterContext &BRC,
-                                   PathSensitiveBugReport &BR) override {
-    if (Satisfied)
-      return nullptr;
-
-    // check for open call's 2th argument
-    if (std::optional<StmtPoint> P = N->getLocationAs<StmtPoint>()) {
-      if (OpenCallExpr && OpenCallExpr == P->getStmtAs<CallExpr>()) {
-        Satisfied = true;
-        const auto *openFlagExpr = OpenCallExpr->getArg(1);
-        SVal flagSV = N->getSVal(openFlagExpr);
-        const llvm::APSInt *flagV = flagSV.getAsInteger();
-        if (!flagV)
-          return nullptr;
-
-        if ((*flagV & O_NONBLOCKV) != 0)
-          BR.markInvalid(getTag(), nullptr);
-
-        return nullptr;
-      }
-    }
-
-    const ExplodedNode *Pred = N->getFirstPred();
-    SVal presv = Pred->getState()->getSVal(VR);
-    SVal sv = N->getState()->getSVal(VR);
-
-    // check if file descirptor's SVal changed between nodes
-    if (sv == presv)
-      return nullptr;
-
-    std::optional<PostStore> P = N->getLocationAs<PostStore>();
-    if (!P)
-      return nullptr;
-
-    if (const auto *DS = P->getStmtAs<DeclStmt>()) {
-      // variable initialization
-      // int fd = open(...)
-      const VarDecl *VD = VR->getDecl();
-      if (DS->getSingleDecl() == VR->getDecl()) {
-        const auto *InitCall = dyn_cast_if_present<CallExpr>(VD->getInit());
-        if (!InitCall || !OpenFunction.matchesAsWritten(*InitCall))
-          return nullptr;
-
-        OpenCallExpr = InitCall;
-      }
-    } else if (const auto *BO = P->getStmtAs<BinaryOperator>()) {
-      // assignment
-      // fd = open(...)
-      const auto *DRE = dyn_cast<DeclRefExpr>(BO->getLHS());
-      if (DRE && DRE->getDecl() == VR->getDecl()) {
-        const auto *InitCall = dyn_cast<CallExpr>(BO->getRHS());
-        if (!InitCall || !OpenFunction.matchesAsWritten(*InitCall))
-          return nullptr;
-
-        OpenCallExpr = InitCall;
-      }
-    }
-
-    return nullptr;
-  }
-};
-
-class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
+class BlockInCriticalSectionChecker
+    : public Checker<check::PostCall, check::DeadSymbols> {
 private:
   const std::array<MutexDescriptor, 8> MutexDescriptors{
       // NOTE: There are standard library implementations where some methods
@@ -265,6 +180,8 @@ private:
                                              {CDM::CLibrary, {"read"}},
                                              {CDM::CLibrary, {"recv"}}};
 
+  const CallDescription OpenFunction{CDM::CLibrary, {"open"}, 2};
+
   const BugType BlockInCritSectionBugType{
       this, "Call to blocking function in critical section", "Blocking Error"};
 
@@ -283,6 +200,8 @@ private:
   void handleUnlock(const MutexDescriptor &Mutex, const CallEvent &Call,
                     CheckerContext &C) const;
 
+  void handleOpen(const CallEvent &Call, CheckerContext &C) const;
+
   [[nodiscard]] bool isBlockingInCritSection(const CallEvent &Call,
                                              CheckerContext &C) const;
 
@@ -291,11 +210,14 @@ public:
   /// Process lock.
   /// Process blocking functions (sleep, getc, fgets, read, recv)
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
+
+  void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 };
 
 } // end anonymous namespace
 
 REGISTER_LIST_WITH_PROGRAMSTATE(ActiveCritSections, CritSectionMarker)
+REGISTER_SET_WITH_PROGRAMSTATE(NonBlockFileDescriptor, SymbolRef)
 
 // Iterator traits for ImmutableList data structure
 // that enable the use of STL algorithms.
@@ -392,6 +314,25 @@ void BlockInCriticalSectionChecker::handleUnlock(
   C.addTransition(State);
 }
 
+void BlockInCriticalSectionChecker::handleOpen(const CallEvent &Call,
+                                               CheckerContext &C) const {
+  const auto *Flag = Call.getArgExpr(1);
+  static std::optional<int> ValueOfONonBlockVFlag =
+      tryExpandAsInteger("O_NONBLOCK", C.getBugReporter().getPreprocessor());
+  if (!ValueOfONonBlockVFlag)
+    return;
+
+  SVal FlagSV = C.getState()->getSVal(Flag, C.getLocationContext());
+  const llvm::APSInt *FlagV = FlagSV.getAsInteger();
+  if (!FlagV)
+    return;
+
+  if ((*FlagV & ValueOfONonBlockVFlag.value()) != 0)
+    if (SymbolRef SR = Call.getReturnValue().getAsSymbol()) {
+      C.addTransition(C.getState()->add<NonBlockFileDescriptor>(SR));
+    }
+}
+
 bool BlockInCriticalSectionChecker::isBlockingInCritSection(
     const CallEvent &Call, CheckerContext &C) const {
   return BlockingFunctions.contains(Call) &&
@@ -401,6 +342,27 @@ bool BlockInCriticalSectionChecker::isBlockingInCritSection(
 void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
                                                   CheckerContext &C) const {
   if (isBlockingInCritSection(Call, C)) {
+    // for 'read' and 'recv' call, check whether it's file descriptor(first
+    // argument) is
+    // created by 'open' API with O_NONBLOCK flag or is equal to -1, they will
+    // not cause block in these situations, don't report
+    StringRef FuncName = Call.getCalleeIdentifier()->getName();
+    if (FuncName == "read" || FuncName == "recv") {
+      const auto *Arg = Call.getArgExpr(0);
+      if (!Arg)
+        return;
+
+      SVal SV = C.getSVal(Arg);
+      if (const auto *IntValue = SV.getAsInteger()) {
+        if (*IntValue == -1)
+          return;
+      }
+
+      SymbolRef SR = C.getSVal(Arg).getAsSymbol();
+      if (SR && C.getState()->contains<NonBlockFileDescriptor>(SR)) {
+        return;
+      }
+    }
     reportBlockInCritSection(Call, C);
   } else if (std::optional<MutexDescriptor> LockDesc =
                  checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
@@ -408,7 +370,24 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
   } else if (std::optional<MutexDescriptor> UnlockDesc =
                  checkDescriptorMatch(Call, C, /*IsLock=*/false)) {
     handleUnlock(*UnlockDesc, Call, C);
+  } else if (OpenFunction.matches(Call)) {
+    handleOpen(Call, C);
   }
+}
+
+void BlockInCriticalSectionChecker::checkDeadSymbols(SymbolReaper &SymReaper,
+                                                     CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+
+  // Remove the dead symbols from the NonBlockFileDescriptor set.
+  NonBlockFileDescriptorTy Tracked = State->get<NonBlockFileDescriptor>();
+  for (SymbolRef SR : Tracked) {
+    if (SymReaper.isDead(SR)) {
+      State = State->remove<NonBlockFileDescriptor>(SR);
+    }
+  }
+
+  C.addTransition(State);
 }
 
 void BlockInCriticalSectionChecker::reportBlockInCritSection(
@@ -425,36 +404,6 @@ void BlockInCriticalSectionChecker::reportBlockInCritSection(
                                                     os.str(), ErrNode);
   R->addRange(Call.getSourceRange());
   R->markInteresting(Call.getReturnValue());
-  // for 'read' call, check whether it's file descriptor(first argument) is
-  // created by 'open' API with O_NONBLOCK flag and don't report for this
-  // situation.
-  if (Call.getCalleeIdentifier()->getName() == "read") {
-    do {
-      const auto *arg = Call.getArgExpr(0);
-      if (!arg)
-        break;
-
-      const auto *DRE = dyn_cast<DeclRefExpr>(arg->IgnoreImpCasts());
-      if (!DRE)
-        break;
-
-      const auto *VD = dyn_cast_if_present<VarDecl>(DRE->getDecl());
-      if (!VD)
-        break;
-
-      const VarRegion *VR = C.getState()->getRegion(VD, C.getLocationContext());
-      if (!VR)
-        break;
-
-      std::optional<int> O_NONBLOCKV = tryExpandAsInteger(
-          "O_NONBLOCK", C.getBugReporter().getPreprocessor());
-      if (!O_NONBLOCKV)
-        break;
-
-      R->addVisitor(
-          std::make_unique<NonBlockOpenVisitor>(VR, O_NONBLOCKV.value()));
-    } while (false);
-  }
   C.emitReport(std::move(R));
 }
 
