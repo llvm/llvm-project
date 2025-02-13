@@ -5,7 +5,9 @@ define void @h() {
 ; CHECK-LABEL: define void @h() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr null, i64 16
-; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr [[ARRAYIDX2]], align 2
+; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr i8, ptr null, i64 24
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[ARRAYIDX2]], align 2
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[ARRAYIDX18]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:

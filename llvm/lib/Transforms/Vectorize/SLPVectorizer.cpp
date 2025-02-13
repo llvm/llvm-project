@@ -810,6 +810,205 @@ static std::optional<unsigned> getExtractIndex(Instruction *E) {
 
 namespace {
 
+/// Base class for representing instructions that can be interchanged with other
+/// equivalent forms. For example, multiplication by a power of 2 can be
+/// interchanged with a left shift.
+///
+/// Derived classes implement specific interchange patterns by overriding the
+/// virtual methods to define their interchange logic.
+///
+/// The class maintains a reference to the main instruction (MainOp) and provides
+/// methods to:
+/// - Check if another instruction is interchangeable (isSame)
+/// - Get the opcode for the interchangeable form (getInterchangeableInstructionOpcode)
+/// - Get the operands for the interchangeable form (getInterchangeableInstructionOps)
+class InterchangeableInstruction {
+protected:
+  Instruction *const MainOp;
+
+  /// Return non nullptr if the right operand of I is ConstantInt.
+  static ConstantInt *isBinOpWithConstantInt(Instruction *I) {
+    Constant *C;
+    if (!match(I, m_BinOp(m_Value(), m_Constant(C))))
+      return nullptr;
+    if (auto *CI = dyn_cast<ConstantInt>(C)) {
+      return CI;
+    } else if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
+      if (auto *CI = dyn_cast_if_present<ConstantInt>(CDV->getSplatValue()))
+        return CI;
+    }
+    return nullptr;
+  }
+
+public:
+  InterchangeableInstruction(Instruction *MainOp) : MainOp(MainOp) {}
+  virtual bool isSame(Instruction *I) {
+    return MainOp->getOpcode() == I->getOpcode();
+  }
+  virtual unsigned getInterchangeableInstructionOpcode() {
+    return MainOp->getOpcode();
+  }
+  virtual SmallVector<Value *>
+  getInterchangeableInstructionOps(Instruction *I) {
+    assert(MainOp->getOpcode() == I->getOpcode());
+    return SmallVector<Value *>(MainOp->operands());
+  }
+  virtual ~InterchangeableInstruction() = default;
+};
+
+class BinOpIsNoOp final : public InterchangeableInstruction {
+  constexpr static std::initializer_list<unsigned> SupportedOp = {
+      Instruction::Add, Instruction::Sub,  Instruction::Mul,
+      Instruction::Shl, Instruction::AShr, Instruction::And};
+  SmallVector<unsigned> CandidateOp = SupportedOp;
+
+public:
+  using InterchangeableInstruction::InterchangeableInstruction;
+  bool isSame(Instruction *I) override {
+    unsigned Opcode = I->getOpcode();
+    if (!is_contained(SupportedOp, Opcode))
+      return false;
+    ConstantInt *CI = isBinOpWithConstantInt(I);
+    if (CI) {
+      switch (Opcode) {
+      case Instruction::Mul:
+        if (CI->getValue().isOne())
+          return true;
+        break;
+      case Instruction::And:
+        if (CI->getValue().isAllOnes())
+          return true;
+        break;
+      default:
+        if (CI->getValue().isZero())
+          return true;
+      }
+    }
+    if (is_contained(CandidateOp, Opcode)) {
+      CandidateOp = {Opcode};
+      return true;
+    }
+    return false;
+  }
+  unsigned getInterchangeableInstructionOpcode() override {
+    assert(!CandidateOp.empty() && "Cannot find interchangeable instruction.");
+    if (is_contained(CandidateOp, MainOp->getOpcode()))
+      return MainOp->getOpcode();
+    return CandidateOp[0];
+  }
+  SmallVector<Value *>
+  getInterchangeableInstructionOps(Instruction *I) override {
+    assert(is_contained(SupportedOp, I->getOpcode()));
+    return {MainOp->getOperand(0),
+            ConstantInt::get(MainOp->getOperand(1)->getType(),
+                             I->getOpcode() == Instruction::Mul)};
+  }
+};
+
+class MulAndShlWithConstantInt final : public InterchangeableInstruction {
+  constexpr static std::initializer_list<unsigned> SupportedOp = {
+      Instruction::Mul, Instruction::Shl};
+  SmallVector<unsigned> CandidateOp = SupportedOp;
+
+public:
+  using InterchangeableInstruction::InterchangeableInstruction;
+  bool isSame(Instruction *I) override {
+    unsigned Opcode = I->getOpcode();
+    if (!is_contained(SupportedOp, Opcode))
+      return false;
+    ConstantInt *CI = isBinOpWithConstantInt(I);
+    if (CI && (Opcode != Instruction::Mul || CI->getValue().isPowerOf2()))
+      return true;
+    if (is_contained(CandidateOp, Opcode)) {
+      CandidateOp = {Opcode};
+      return true;
+    }
+    return false;
+  }
+  unsigned getInterchangeableInstructionOpcode() override {
+    assert(!CandidateOp.empty() && "Cannot find interchangeable instruction.");
+    if (is_contained(CandidateOp, MainOp->getOpcode()))
+      return MainOp->getOpcode();
+    return CandidateOp[0];
+  }
+  SmallVector<Value *>
+  getInterchangeableInstructionOps(Instruction *I) override {
+    assert(is_contained(SupportedOp, I->getOpcode()));
+    if (MainOp->getOpcode() == I->getOpcode())
+      return SmallVector<Value *>(MainOp->operands());
+    const APInt &Op1Int = isBinOpWithConstantInt(MainOp)->getValue();
+    return {MainOp->getOperand(0),
+            ConstantInt::get(MainOp->getOperand(1)->getType(),
+                             I->getOpcode() == Instruction::Mul
+                                 ? (1 << Op1Int.getZExtValue())
+                                 : Op1Int.logBase2())};
+  }
+};
+
+static SmallVector<std::unique_ptr<InterchangeableInstruction>>
+getInterchangeableInstruction(Instruction *MainOp) {
+  SmallVector<std::unique_ptr<InterchangeableInstruction>> Candidate;
+  Candidate.push_back(std::make_unique<InterchangeableInstruction>(MainOp));
+  if (MainOp->isBinaryOp()) {
+    Candidate.push_back(std::make_unique<BinOpIsNoOp>(MainOp));
+    Candidate.push_back(std::make_unique<MulAndShlWithConstantInt>(MainOp));
+  }
+  return Candidate;
+}
+
+static bool getInterchangeableInstruction(
+    SmallVector<std::unique_ptr<InterchangeableInstruction>> &Candidate,
+    Instruction *I) {
+  auto Iter = std::stable_partition(
+      Candidate.begin(), Candidate.end(),
+      [&](const std::unique_ptr<InterchangeableInstruction> &C) {
+        return C->isSame(I);
+      });
+  if (Iter == Candidate.begin())
+    return false;
+  Candidate.erase(Iter, Candidate.end());
+  return true;
+}
+
+static bool isConvertible(Instruction *I, Instruction *MainOp,
+                          Instruction *AltOp) {
+  if (!I->isBinaryOp())
+    return I->getOpcode() == MainOp->getOpcode() ||
+           I->getOpcode() == AltOp->getOpcode();
+  assert(MainOp && "MainOp cannot be nullptr.");
+  SmallVector<std::unique_ptr<InterchangeableInstruction>> Candidate(
+      getInterchangeableInstruction(I));
+  for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
+    if (C->isSame(I) && C->isSame(MainOp))
+      return true;
+  Candidate = getInterchangeableInstruction(I);
+  assert(AltOp && "AltOp cannot be nullptr.");
+  for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
+    if (C->isSame(I) && C->isSame(AltOp))
+      return true;
+  return false;
+}
+
+static std::pair<Instruction *, SmallVector<Value *>>
+convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
+  assert(isConvertible(I, MainOp, AltOp) && "Cannot convert the instruction.");
+  if (!I->isBinaryOp())
+    return std::make_pair(I->getOpcode() == MainOp->getOpcode() ? MainOp
+                                                                : AltOp,
+                          SmallVector<Value *>(I->operands()));
+  SmallVector<std::unique_ptr<InterchangeableInstruction>> Candidate(
+      getInterchangeableInstruction(I));
+  for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
+    if (C->isSame(I) && C->isSame(MainOp))
+      return std::make_pair(MainOp,
+                            C->getInterchangeableInstructionOps(MainOp));
+  Candidate = getInterchangeableInstruction(I);
+  for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
+    if (C->isSame(I) && C->isSame(AltOp))
+      return std::make_pair(AltOp, C->getInterchangeableInstructionOps(AltOp));
+  llvm_unreachable("Cannot convert the instruction.");
+}
+
 /// Main data required for vectorization of instructions.
 class InstructionsState {
   /// The main/alternate instruction. MainOp is also VL0.
@@ -931,6 +1130,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   unsigned Opcode = MainOp->getOpcode();
   unsigned AltOpcode = Opcode;
 
+  SmallVector<std::unique_ptr<InterchangeableInstruction>>
+      InterchangeableInstructionCandidate(
+          getInterchangeableInstruction(MainOp));
+  SmallVector<std::unique_ptr<InterchangeableInstruction>>
+      AlternateInterchangeableInstructionCandidate;
   bool SwappedPredsCompatible = IsCmpOp && [&]() {
     SetVector<unsigned> UniquePreds, UniqueNonSwappedPreds;
     UniquePreds.insert(BasePred);
@@ -977,14 +1181,18 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       return InstructionsState::invalid();
     unsigned InstOpcode = I->getOpcode();
     if (IsBinOp && isa<BinaryOperator>(I)) {
-      if (InstOpcode == Opcode || InstOpcode == AltOpcode)
+      if (getInterchangeableInstruction(InterchangeableInstructionCandidate, I))
         continue;
-      if (Opcode == AltOpcode && isValidForAlternation(InstOpcode) &&
-          isValidForAlternation(Opcode)) {
-        AltOpcode = InstOpcode;
-        AltOp = I;
-        continue;
+      if (AlternateInterchangeableInstructionCandidate.empty()) {
+        if (!isValidForAlternation(Opcode) ||
+            !isValidForAlternation(InstOpcode))
+          return InstructionsState::invalid();
+        AlternateInterchangeableInstructionCandidate =
+            getInterchangeableInstruction(I);
       }
+      if (getInterchangeableInstruction(
+              AlternateInterchangeableInstructionCandidate, I))
+        continue;
     } else if (IsCastOp && isa<CastInst>(I)) {
       Value *Op0 = MainOp->getOperand(0);
       Type *Ty0 = Op0->getType();
@@ -1085,6 +1293,29 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     return InstructionsState::invalid();
   }
 
+  if (IsBinOp) {
+    auto FindOp =
+        [&](ArrayRef<std::unique_ptr<InterchangeableInstruction>> Candidate) {
+          for (const std::unique_ptr<InterchangeableInstruction> &I :
+               Candidate) {
+            unsigned InterchangeableInstructionOpcode =
+                I->getInterchangeableInstructionOpcode();
+            for (Value *V : VL) {
+              if (isa<PoisonValue>(V))
+                continue;
+              if (cast<Instruction>(V)->getOpcode() ==
+                  InterchangeableInstructionOpcode)
+                return cast<Instruction>(V);
+            }
+          }
+          llvm_unreachable(
+              "Cannot find the candidate instruction for InstructionsState.");
+        };
+    MainOp = FindOp(InterchangeableInstructionCandidate);
+    AltOp = AlternateInterchangeableInstructionCandidate.empty()
+                ? MainOp
+                : FindOp(AlternateInterchangeableInstructionCandidate);
+  }
   return InstructionsState(MainOp, AltOp);
 }
 
@@ -2447,29 +2678,28 @@ public:
       ArgSize = isa<IntrinsicInst>(MainOp) ? IntrinsicNumOperands : NumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
-      for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
+      for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx)
         OpsVec[OpIdx].resize(NumLanes);
-        for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
-          assert((isa<Instruction>(VL[Lane]) || isa<PoisonValue>(VL[Lane])) &&
-                 "Expected instruction or poison value");
-          // Our tree has just 3 nodes: the root and two operands.
-          // It is therefore trivial to get the APO. We only need to check the
-          // opcode of VL[Lane] and whether the operand at OpIdx is the LHS or
-          // RHS operand. The LHS operand of both add and sub is never attached
-          // to an inversese operation in the linearized form, therefore its APO
-          // is false. The RHS is true only if VL[Lane] is an inverse operation.
+      for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+        assert((isa<Instruction>(VL[Lane]) || isa<PoisonValue>(VL[Lane])) &&
+               "Expected instruction or poison value");
+        // Our tree has just 3 nodes: the root and two operands.
+        // It is therefore trivial to get the APO. We only need to check the
+        // opcode of VL[Lane] and whether the operand at OpIdx is the LHS or RHS
+        // operand. The LHS operand of both add and sub is never attached to an
+        // inversese operation in the linearized form, therefore its APO is
+        // false. The RHS is true only if VL[Lane] is an inverse operation.
 
-          // Since operand reordering is performed on groups of commutative
-          // operations or alternating sequences (e.g., +, -), we can safely
-          // tell the inverse operations by checking commutativity.
-          if (isa<PoisonValue>(VL[Lane])) {
-            if (auto *EI = dyn_cast<ExtractElementInst>(MainOp)) {
-              if (OpIdx == 0) {
+        // Since operand reordering is performed on groups of commutative
+        // operations or alternating sequences (e.g., +, -), we can safely tell
+        // the inverse operations by checking commutativity.
+        if (isa<PoisonValue>(VL[Lane])) {
+          for (unsigned OpIdx : seq<unsigned>(NumOperands)) {
+            if (OpIdx == 0) {
+              if (auto *EI = dyn_cast<ExtractElementInst>(MainOp)) {
                 OpsVec[OpIdx][Lane] = {EI->getVectorOperand(), true, false};
                 continue;
-              }
-            } else if (auto *EV = dyn_cast<ExtractValueInst>(MainOp)) {
-              if (OpIdx == 0) {
+              } else if (auto *EV = dyn_cast<ExtractValueInst>(MainOp)) {
                 OpsVec[OpIdx][Lane] = {EV->getAggregateOperand(), true, false};
                 continue;
               }
@@ -2477,12 +2707,15 @@ public:
             OpsVec[OpIdx][Lane] = {
                 PoisonValue::get(MainOp->getOperand(OpIdx)->getType()), true,
                 false};
-            continue;
           }
-          bool IsInverseOperation = !isCommutative(cast<Instruction>(VL[Lane]));
+          continue;
+        }
+        auto [SelectedOp, Ops] =
+            convertTo(cast<Instruction>(VL[Lane]), MainOp, S.getAltOp());
+        bool IsInverseOperation = !isCommutative(SelectedOp);
+        for (unsigned OpIdx : seq<unsigned>(NumOperands)) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][Lane] = {cast<Instruction>(VL[Lane])->getOperand(OpIdx),
-                                 APO, false};
+          OpsVec[OpIdx][Lane] = {Ops[OpIdx], APO, false};
         }
       }
     }
@@ -8501,8 +8734,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   BlockScheduling &BS = *BSRef;
 
+  SmallVector<Value *> MainOpIsTheFirst(UniqueValues);
+  auto MainOpIter = find(MainOpIsTheFirst, S.getMainOp());
+  std::rotate(MainOpIsTheFirst.begin(), MainOpIter, std::next(MainOpIter));
+
   std::optional<ScheduleData *> Bundle =
-      BS.tryScheduleBundle(UniqueValues, this, S);
+      BS.tryScheduleBundle(MainOpIsTheFirst, this, S);
 #ifdef EXPENSIVE_CHECKS
   // Make sure we didn't break any internal invariants
   BS.verify();
@@ -15889,7 +16126,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
-      propagateIRFlags(V, E->Scalars, VL0, It == MinBWs.end());
+      propagateIRFlags(V, E->Scalars, nullptr, It == MinBWs.end());
       if (auto *I = dyn_cast<Instruction>(V)) {
         V = ::propagateMetadata(I, E->Scalars);
         // Drop nuw flags for abs(sub(commutative), true).
@@ -17169,6 +17406,7 @@ BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL) {
 std::optional<BoUpSLP::ScheduleData *>
 BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S) {
+  assert(VL[0] == S.getMainOp() && "MainOp must be the first element of VL.");
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
   if (isa<PHINode>(S.getMainOp()) ||
