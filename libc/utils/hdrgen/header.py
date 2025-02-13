@@ -50,7 +50,8 @@ class HeaderFile:
         ] + [""]
 
         for macro in self.macros:
-            content.append(f"{macro}\n")
+            if str(macro):
+                content.append(f"{macro}\n")
 
         for type_ in self.types:
             content.append(f"{type_}")

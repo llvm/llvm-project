@@ -22,14 +22,6 @@
 
 #define MACRO_C
 
-#ifndef MACRO_D
-#error "MACRO_D should be defined by llvm-libc-macros/test_small-macros.h"
-#endif
-
-#ifndef MACRO_E
-#error "MACRO_E should be defined by llvm-libc-macros/test_more-macros.h"
-#endif
-
 #include <llvm-libc-types/type_a.h>
 #include <llvm-libc-types/type_b.h>
 

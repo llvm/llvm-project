@@ -15,9 +15,7 @@ class Macro:
 
     def __str__(self):
         if self.header != None:
-            return f"""#ifndef {self.name}
-#error "{self.name} should be defined by llvm-libc-macros/{self.header}"
-#endif"""
+            return ""
         if self.value != None:
             return f"#define {self.name} {self.value}"
         return f"#define {self.name}"
