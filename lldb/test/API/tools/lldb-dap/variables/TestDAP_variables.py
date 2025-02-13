@@ -688,7 +688,6 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         threads = self.dap_server.get_threads()
         for thread in threads:
             if thread.get("reason") == "breakpoint":
-                # We have a thread that
                 thread_id = thread["id"]
 
                 self.stepOut(threadId=thread_id)
