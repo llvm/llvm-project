@@ -5477,7 +5477,7 @@ void ARMBaseInstrInfo::insertNoop(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MI) const {
   DebugLoc DL;
   if (hasNOP()) {
-    BuildMI(MBB, MI, DL, get(ARM::HINT)).addImm(0).addImm(ARMCC::AL).addImm(0);
+    BuildMI(MBB, MI, DL, get(ARM::tHINT)).addImm(0).addImm(ARMCC::AL).addImm(0);
   } else {
     BuildMI(MBB, MI, DL, get(ARM::MOVr))
         .addReg(ARM::R0)

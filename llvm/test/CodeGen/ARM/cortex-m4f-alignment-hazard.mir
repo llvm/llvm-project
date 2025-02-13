@@ -17,10 +17,10 @@ body:             |
   ; DEFAULT-NEXT:   renamable $s2 = VLDRS renamable $r3, 4, 14 /* CC::al */, $noreg
   ; DEFAULT-NEXT:   renamable $r2 = t2LSRri renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
   ; DEFAULT-NEXT:   renamable $r1, dead $cpsr = tLSRri renamable $r2, 1, 14 /* CC::al */, $noreg
-  ; DEFAULT-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; DEFAULT-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; DEFAULT-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; DEFAULT-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
-  ; DEFAULT-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; DEFAULT-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; DEFAULT-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; DEFAULT-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
   ; DEFAULT-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
@@ -66,10 +66,10 @@ body:             |
   ; ANY-LOOPS-NEXT:   renamable $s2 = VLDRS renamable $r3, 4, 14 /* CC::al */, $noreg
   ; ANY-LOOPS-NEXT:   renamable $r2 = t2LSRri renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
   ; ANY-LOOPS-NEXT:   renamable $r1, dead $cpsr = tLSRri renamable $r2, 1, 14 /* CC::al */, $noreg
-  ; ANY-LOOPS-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; ANY-LOOPS-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; ANY-LOOPS-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; ANY-LOOPS-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
-  ; ANY-LOOPS-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; ANY-LOOPS-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; ANY-LOOPS-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; ANY-LOOPS-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
   ; ANY-LOOPS-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
@@ -83,10 +83,10 @@ body:             |
   ; ANY-LOOPS-NEXT:   renamable $s2 = VLDRS renamable $r3, 4, 14 /* CC::al */, $noreg
   ; ANY-LOOPS-NEXT:   renamable $r2 = t2LSRri renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
   ; ANY-LOOPS-NEXT:   renamable $r1, dead $cpsr = tLSRri renamable $r2, 1, 14 /* CC::al */, $noreg
-  ; ANY-LOOPS-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; ANY-LOOPS-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; ANY-LOOPS-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; ANY-LOOPS-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
-  ; ANY-LOOPS-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; ANY-LOOPS-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; ANY-LOOPS-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; ANY-LOOPS-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
   ; ANY-LOOPS-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
@@ -117,10 +117,10 @@ body:             |
   ; ANY-BLOCK-NEXT:   renamable $s2 = VLDRS renamable $r3, 4, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2 = t2LSRri renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r1, dead $cpsr = tLSRri renamable $r2, 1, 14 /* CC::al */, $noreg
-  ; ANY-BLOCK-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; ANY-BLOCK-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; ANY-BLOCK-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
-  ; ANY-BLOCK-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; ANY-BLOCK-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; ANY-BLOCK-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
@@ -134,10 +134,10 @@ body:             |
   ; ANY-BLOCK-NEXT:   renamable $s2 = VLDRS renamable $r3, 4, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2 = t2LSRri renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r1, dead $cpsr = tLSRri renamable $r2, 1, 14 /* CC::al */, $noreg
-  ; ANY-BLOCK-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; ANY-BLOCK-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; ANY-BLOCK-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
-  ; ANY-BLOCK-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; ANY-BLOCK-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; ANY-BLOCK-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
@@ -149,10 +149,10 @@ body:             |
   ; ANY-BLOCK-NEXT:   renamable $s2 = VLDRS renamable $r3, 4, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2 = t2LSRri renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r1, dead $cpsr = tLSRri renamable $r2, 1, 14 /* CC::al */, $noreg
-  ; ANY-BLOCK-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; ANY-BLOCK-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; ANY-BLOCK-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
-  ; ANY-BLOCK-NEXT:   HINT 0, 14 /* CC::al */, 0
+  ; ANY-BLOCK-NEXT:   tHINT 0, 14 /* CC::al */, 0
   ; ANY-BLOCK-NEXT:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
   ; ANY-BLOCK-NEXT:   renamable $r2, dead $cpsr = tLSRri renamable $r1, 1, 14 /* CC::al */, $noreg
