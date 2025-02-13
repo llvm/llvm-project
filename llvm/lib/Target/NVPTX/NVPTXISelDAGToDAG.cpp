@@ -1074,6 +1074,7 @@ static int getLdStRegType(EVT VT) {
     case MVT::bf16:
     case MVT::v2f16:
     case MVT::v2bf16:
+    case MVT::v2f32:
       return NVPTX::PTXLdStInstCode::Untyped;
     default:
       return NVPTX::PTXLdStInstCode::Float;
@@ -1113,24 +1114,27 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   // Float  : ISD::NON_EXTLOAD or ISD::EXTLOAD and the type is float
   MVT SimpleVT = LoadedVT.getSimpleVT();
   MVT ScalarVT = SimpleVT.getScalarType();
-  // Read at least 8 bits (predicates are stored as 8-bit values)
-  unsigned FromTypeWidth = std::max(8U, (unsigned)ScalarVT.getSizeInBits());
-  unsigned int FromType;
 
   // Vector Setting
   unsigned VecType = NVPTX::PTXLdStInstCode::Scalar;
   if (SimpleVT.isVector()) {
-    if (Isv2x16VT(LoadedVT) || LoadedVT == MVT::v4i8)
-      // v2f16/v2bf16/v2i16 is loaded using ld.b32
-      FromTypeWidth = 32;
-    else if (LoadedVT == MVT::v2f32)
-      // v2f32 is loaded using ld.b64
-      FromTypeWidth = 64;
-    else
-      llvm_unreachable("Unexpected vector type");
+    switch (LoadedVT.getSimpleVT().SimpleTy) {
+    case MVT::v2f16:
+    case MVT::v2bf16:
+    case MVT::v2i16:
+    case MVT::v4i8:
+    case MVT::v2f32:
+      ScalarVT = LoadedVT.getSimpleVT();
+      break;
+    default:
+      llvm_unreachable("Unsupported vector type for non-vector load");
+    }
   }
 
-  if (PlainLoad && (PlainLoad->getExtensionType() == ISD::SEXTLOAD))
+  // Read at least 8 bits (predicates are stored as 8-bit values)
+  unsigned FromTypeWidth = std::max(8U, (unsigned)ScalarVT.getSizeInBits());
+  unsigned int FromType;
+  if (PlainLoad && PlainLoad->getExtensionType() == ISD::SEXTLOAD)
     FromType = NVPTX::PTXLdStInstCode::Signed;
   else
     FromType = getLdStRegType(ScalarVT);
@@ -1438,18 +1442,21 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   // Type Setting: toType + toTypeWidth
   // - for integer type, always use 'u'
   MVT ScalarVT = SimpleVT.getScalarType();
-  unsigned ToTypeWidth = ScalarVT.getSizeInBits();
   if (SimpleVT.isVector()) {
-    if (Isv2x16VT(StoreVT) || StoreVT == MVT::v4i8)
-      // v2x16 is stored using st.b32
-      ToTypeWidth = 32;
-    else if (StoreVT == MVT::v2f32)
-      // v2f32 is stored using st.b64
-      ToTypeWidth = 64;
-    else
-      llvm_unreachable("Unexpected vector type");
+    switch (StoreVT.getSimpleVT().SimpleTy) {
+    case MVT::v2f16:
+    case MVT::v2bf16:
+    case MVT::v2i16:
+    case MVT::v4i8:
+    case MVT::v2f32:
+      ScalarVT = StoreVT.getSimpleVT();
+      break;
+    default:
+      llvm_unreachable("Unsupported vector type for non-vector store");
+    }
   }
 
+  unsigned ToTypeWidth = ScalarVT.getSizeInBits();
   unsigned int ToType = getLdStRegType(ScalarVT);
 
   // Create the machine instruction DAG
