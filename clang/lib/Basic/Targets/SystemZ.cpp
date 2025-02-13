@@ -103,6 +103,7 @@ bool SystemZTargetInfo::validateAsmConstraint(
     if (!StringRef("@cc").compare(Name)) {
       Name += 2;
       Info.setAllowsRegister();
+      Info.setFlagOutputCCUpperBound(4);
       return true;
     }
     return false;

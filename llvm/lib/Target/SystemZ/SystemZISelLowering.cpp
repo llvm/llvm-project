@@ -1482,6 +1482,14 @@ SystemZTargetLowering::getConstraintType(StringRef Constraint) const {
   return TargetLowering::getConstraintType(Constraint);
 }
 
+// Convert condition code in CCReg to an i32 value.
+static SDValue getCCResult(SelectionDAG &DAG, SDValue CCReg) {
+  SDLoc DL(CCReg);
+  SDValue IPM = DAG.getNode(SystemZISD::IPM, DL, MVT::i32, CCReg);
+  return DAG.getNode(ISD::SRL, DL, MVT::i32, IPM,
+                     DAG.getConstant(SystemZ::IPM_CC, DL, MVT::i32));
+}
+
 TargetLowering::ConstraintWeight SystemZTargetLowering::
 getSingleConstraintMatchWeight(AsmOperandInfo &info,
                                const char *constraint) const {
@@ -1717,12 +1725,7 @@ SDValue SystemZTargetLowering::LowerAsmOutputForConstraint(
     Chain = Glue.getValue(1);
   } else
     Glue = DAG.getCopyFromReg(Chain, DL, SystemZ::CC, MVT::i32);
-
-  SDValue IPM = DAG.getNode(SystemZISD::IPM, DL, MVT::i32, Glue);
-  SDValue CC = DAG.getNode(ISD::SRL, DL, MVT::i32, IPM,
-                           DAG.getConstant(SystemZ::IPM_CC, DL, MVT::i32));
-
-  return CC;
+  return getCCResult(DAG, Glue);
 }
 
 void SystemZTargetLowering::LowerAsmOperandForConstraint(
@@ -5227,14 +5230,6 @@ SDValue SystemZTargetLowering::lowerPREFETCH(SDValue Op,
                                  Node->getMemoryVT(), Node->getMemOperand());
 }
 
-// Convert condition code in CCReg to an i32 value.
-static SDValue getCCResult(SelectionDAG &DAG, SDValue CCReg) {
-  SDLoc DL(CCReg);
-  SDValue IPM = DAG.getNode(SystemZISD::IPM, DL, MVT::i32, CCReg);
-  return DAG.getNode(ISD::SRL, DL, MVT::i32, IPM,
-                     DAG.getConstant(SystemZ::IPM_CC, DL, MVT::i32));
-}
-
 SDValue
 SystemZTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
                                               SelectionDAG &DAG) const {
@@ -8082,7 +8077,7 @@ SDValue SystemZTargetLowering::combineBSWAP(
 }
 
 // Combine IPM sequence for flag output operands.
-static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
+static bool combineSRL_IPM_CCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
   // Convert CCVal to CCMask and update it along with  CCValid.
   const auto convertCCValToCCMask = [&CCMask, &CCValid](int CCVal) {
     bool Invert = false;
@@ -8121,6 +8116,8 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     if (!IPMOp0 || IPMOp0->getNumOperands() < 2)
       return false;
     auto *RN = dyn_cast<RegisterSDNode>(IPMOp0->getOperand(1));
+    // Check if operand 1 is SystemZ::CC. Also, it avoids srl/ipm/tbegin and
+    // srl/ipm/tend kind of sequences.
     if (!RN || !RN->getReg().isPhysical() || RN->getReg() != SystemZ::CC)
       return false;
     // Return the updated CCReg link.
@@ -8177,7 +8174,7 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
           return false;
         int CCValidVal = CCValid1->getZExtValue();
         int CCMaskVal = CCMask1->getZExtValue();
-        if (combineCCIPMMask(XORReg, CCValidVal, CCMaskVal)) {
+        if (combineSRL_IPM_CCMask(XORReg, CCValidVal, CCMaskVal)) {
           // CC == 0 || CC == 2 for bit 28 Test Under Mask.
           CCMask = SystemZ::CCMASK_CMP_GE;
           CCMask ^= CCMaskVal;
@@ -8217,7 +8214,7 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     int CCValidVal = CCValidNode->getZExtValue();
     int CCMaskVal = CCMaskNode->getZExtValue();
     SDValue CCRegOp = CCNode->getOperand(4);
-    if (combineCCIPMMask(CCRegOp, CCValidVal, CCMaskVal) ||
+    if (combineSRL_IPM_CCMask(CCRegOp, CCValidVal, CCMaskVal) ||
         isCCOperand(CCRegOp.getNode())) {
       CCMask = CCMaskVal;
       CCValid = SystemZ::CCMASK_ANY;
@@ -8252,8 +8249,8 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
       int CCMaskVal2 = CCMask2->getZExtValue();
       SDValue CCReg1 = XOROp1->getOperand(4);
       SDValue CCReg2 = XOROp2->getOperand(4);
-      if (!combineCCIPMMask(CCReg1, CCValidVal1, CCMaskVal1) ||
-          !combineCCIPMMask(CCReg2, CCValidVal2, CCMaskVal2))
+      if (!combineSRL_IPM_CCMask(CCReg1, CCValidVal1, CCMaskVal1) ||
+          !combineSRL_IPM_CCMask(CCReg2, CCValidVal2, CCMaskVal2))
         return false;
       CCMask = CCMaskVal1 ^ CCMaskVal2;
       CCReg = CCReg1;
@@ -8280,8 +8277,8 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     SDValue CmpOp2 = CCNode->getOperand(1);
     int CCValid1 = CCValid, CCValid2 = CCValid;
     int CCMask1 = CCMask, CCMask2 = CCMask;
-    bool IsOp1 = combineCCIPMMask(CmpOp1, CCValid1, CCMask1);
-    bool IsOp2 = combineCCIPMMask(CmpOp2, CCValid2, CCMask2);
+    bool IsOp1 = combineSRL_IPM_CCMask(CmpOp1, CCValid1, CCMask1);
+    bool IsOp2 = combineSRL_IPM_CCMask(CmpOp2, CCValid2, CCMask2);
     if (IsOp1 && IsOp2) {
       CCMask = CCMask1 ^ CCMask2;
       CCReg = CmpOp1;
@@ -8300,7 +8297,7 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     if (CCMask == SystemZ::CCMASK_CMP_NE)
       Invert = !Invert;
     SDValue NewCCReg = CCNode->getOperand(0);
-    if (combineCCIPMMask(NewCCReg, CCValid, CCMask)) {
+    if (combineSRL_IPM_CCMask(NewCCReg, CCValid, CCMask)) {
       CCMask |= Mask;
       if (Invert)
         CCMask ^= SystemZ::CCMASK_ANY;
@@ -8320,8 +8317,8 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     SDValue OrOp2 = LHS->getOperand(1);
     int NewCCMask1 = CCMask, NewCCMask2 = CCMask, NewCCMask = CCMask;
     if (!isa<ConstantSDNode>(OrOp1) && !isa<ConstantSDNode>(OrOp2)) {
-      bool IsOp1 = combineCCIPMMask(OrOp1, CCValid, NewCCMask1);
-      bool IsOp2 = combineCCIPMMask(OrOp2, CCValid, NewCCMask2);
+      bool IsOp1 = combineSRL_IPM_CCMask(OrOp1, CCValid, NewCCMask1);
+      bool IsOp2 = combineSRL_IPM_CCMask(OrOp2, CCValid, NewCCMask2);
       if (!IsOp1 && !IsOp2) {
         CCValid = RestoreCCValid;
         return false;
@@ -8364,8 +8361,8 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     int NewCCMask2 = CCMask;
     int NewCCMask;
     if (!isa<ConstantSDNode>(AndOp1) && !isa<ConstantSDNode>(AndOp2)) {
-      bool IsOp1 = combineCCIPMMask(AndOp1, CCValid, NewCCMask1);
-      bool IsOp2 = combineCCIPMMask(AndOp2, CCValid, NewCCMask2);
+      bool IsOp1 = combineSRL_IPM_CCMask(AndOp1, CCValid, NewCCMask1);
+      bool IsOp2 = combineSRL_IPM_CCMask(AndOp2, CCValid, NewCCMask2);
       if (!IsOp1 && !IsOp2) {
         CCValid = RestoreCCValid;
         return false;
@@ -8455,7 +8452,7 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     if (CCMask == SystemZ::CCMASK_CMP_NE)
       Invert = !Invert;
     // If both the operands are select_cc.
-    if (combineCCIPMMask(XORReg, CCValid, CCMask)) {
+    if (combineSRL_IPM_CCMask(XORReg, CCValid, CCMask)) {
       CCReg = XORReg;
       CCValid = SystemZ::CCMASK_ANY;
       return true;
@@ -8479,8 +8476,8 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
       SDValue XORReg1 = XOROp->getOperand(4);
       SDValue XORReg2 = LHS->getOperand(1);
       int CCMaskVal1 = CCMaskVal, CCMaskVal2 = CCMaskVal;
-      if (combineCCIPMMask(XORReg1, CCValidVal, CCMaskVal1) &&
-          combineCCIPMMask(XORReg2, CCValidVal, CCMaskVal2)) {
+      if (combineSRL_IPM_CCMask(XORReg1, CCValidVal, CCMaskVal1) &&
+          combineSRL_IPM_CCMask(XORReg2, CCValidVal, CCMaskVal2)) {
         CCMask = CCMaskVal1 ^ CCMaskVal2;
         CCReg = XORReg1;
         CCValid = SystemZ::CCMASK_ANY;
@@ -8493,6 +8490,17 @@ static bool combineCCIPMMask(SDValue &CCReg, int &CCValid, int &CCMask) {
 }
 
 static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
+  // combineSRL_IPM_CCMask tries to combine srl/ipm/cc sequence.
+  // This sequence here seems to be only for flag output operand.
+  // IPM operand has physical operand SystemZ::CC and CCValid is 15.
+  if (combineSRL_IPM_CCMask(CCReg, CCValid, CCMask))
+    return true;
+
+  // Code for SELECT_CCMASK does not seem to have ipm sequence.
+  // There is one case with sra/ipm that does not have SystemZ::CC as an
+  // operand. Test cases for sra/ipm are bcmp.ll, memcmp-01.ll and
+  // strcmp-01.ll. These tests have sra/sll/ipm/clc sequence.
+
   // We have a SELECT_CCMASK or BR_CCMASK comparing the condition code
   // set by the CCReg instruction using the CCValid / CCMask masks,
   // If the CCReg instruction is itself a ICMP testing the condition
@@ -8545,7 +8553,6 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     CCReg = CompareLHS->getOperand(4);
     return true;
   }
-
   // Optimize the case where CompareRHS is (SRA (SHL (IPM))).
   if (CompareLHS->getOpcode() == ISD::SRA) {
     auto *SRACount = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(1));
@@ -8575,7 +8582,6 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     CCReg = IPM->getOperand(0);
     return true;
   }
-
   return false;
 }
 
@@ -8642,7 +8648,7 @@ SystemZTargetLowering::combineSELECT_CC_CCIPMMask(SDNode *N,
   SDValue CCReg = N->getOperand(4);
   SDValue CCRegOp = CCOpNode->getOperand(4);
   // Combine current select_cc.
-  if (combineCCIPMMask(CCReg, CCValid, CCMask)) {
+  if (combineSRL_IPM_CCMask(CCReg, CCValid, CCMask)) {
     if (InvertOp1)
       CCMask ^= SystemZ::CCMASK_ANY;
     // There are two scenarios here.
@@ -8652,7 +8658,7 @@ SystemZTargetLowering::combineSELECT_CC_CCIPMMask(SDNode *N,
     // SELECT_CCMASK. Check for isCCOperand. In this case we will not know
     // original CCMask, but if only one bit is set in CCMaskValOp, that means
     // original CCMask was SystemZ::CCMASK_CMP_EQ.
-    if (!combineCCIPMMask(CCRegOp, CCValidValOp, CCMaskValOp) &&
+    if (!combineSRL_IPM_CCMask(CCRegOp, CCValidValOp, CCMaskValOp) &&
         !isCCOperand(CCRegOp.getNode()))
       return std::nullopt;
     // If outer SELECT_CCMASK is CCMASK_CMP_EQ or single bit is set in
@@ -8722,9 +8728,7 @@ SDValue SystemZTargetLowering::combineBR_CCMASK(
   SDValue Chain = N->getOperand(0);
   SDValue CCReg = N->getOperand(4);
 
-  // combineCCIPMMask tries to combine srl/ipm sequence for flag output operand.
-  if (combineCCIPMMask(CCReg, CCValidVal, CCMaskVal) ||
-      combineCCMask(CCReg, CCValidVal, CCMaskVal))
+  if (combineCCMask(CCReg, CCValidVal, CCMaskVal))
     return DAG.getNode(SystemZISD::BR_CCMASK, SDLoc(N), N->getValueType(0),
                        Chain,
                        DAG.getTargetConstant(CCValidVal, SDLoc(N), MVT::i32),
@@ -8753,9 +8757,7 @@ SDValue SystemZTargetLowering::combineSELECT_CCMASK(
   int CCMaskVal = CCMask->getZExtValue();
   SDValue CCReg = N->getOperand(4);
 
-  // combineCCIPMMask tries to combine srl/ipm sequence for flag output operand.
-  if (combineCCIPMMask(CCReg, CCValidVal, CCMaskVal) ||
-      combineCCMask(CCReg, CCValidVal, CCMaskVal))
+  if (combineCCMask(CCReg, CCValidVal, CCMaskVal))
     return DAG.getNode(SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0),
                        N->getOperand(0), N->getOperand(1),
                        DAG.getTargetConstant(CCValidVal, SDLoc(N), MVT::i32),

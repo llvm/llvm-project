@@ -2624,8 +2624,18 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
       // Lowering 'Tmp' as - 'icmp ult %Tmp , CCUpperBound'. On some targets
       // CCUpperBound is not binary. CCUpperBound is 4 for SystemZ,
       // interval [0, 4). With this range known, llvm.assume intrinsic guides
-      // optimizer to generate more optimized IR. Verified it for SystemZ.
-      unsigned CCUpperBound = CGF.getTarget().getFlagOutputCCUpperBound();
+      // optimizer to generate more optimized IR in most of the cases as
+      // observed for select_cc on SystemZ unit tests for flag output operands.
+      // For some cases for br_cc, generated IR was weird. e.g. switch table
+      // for simple simple comparison terms for br_cc.
+      StringRef Name;
+      if (const GCCAsmStmt *GAS = dyn_cast<GCCAsmStmt>(&S))
+        Name = GAS->getOutputName(i);
+      TargetInfo::ConstraintInfo Info(S.getOutputConstraint(i), Name);
+      bool IsValid = CGF.getTarget().validateOutputConstraint(Info);
+      (void)IsValid;
+      assert(IsValid && "Failed to parse flag output operand constraint");
+      unsigned CCUpperBound = Info.getFlagOutputCCUpperBound();
       llvm::Constant *CCUpperBoundConst =
           llvm::ConstantInt::get(Tmp->getType(), CCUpperBound);
       llvm::Value *IsBooleanValue =

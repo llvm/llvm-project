@@ -2838,11 +2838,6 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
     else if (match(BOp, m_LogicalOr(m_Value(BOp0), m_Value(BOp1))))
       Opcode = Instruction::Or;
     auto &TLI = DAG.getTargetLoweringInfo();
-    bool BrSrlIPM = FuncInfo.MF->getTarget().getTargetTriple().getArch() ==
-                    Triple::ArchType::systemz;
-    // For Flag output operands SRL/IPM sequence, we want to avoid
-    // creating switch case, as it creates Basic Block and inhibits
-    // optimization in DAGCombiner for flag output operands.
     const auto checkSRLIPM = [&TLI](const SDValue &Op) {
       if (!Op.getNumOperands())
         return false;
@@ -2859,13 +2854,15 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
       }
       return false;
     };
-    if (BrSrlIPM) {
-      if (NodeMap.count(BOp0) && NodeMap[BOp0].getNode()) {
-        BrSrlIPM &= checkSRLIPM(getValue(BOp0));
-        if (NodeMap.count(BOp1) && NodeMap[BOp1].getNode())
-          BrSrlIPM &= checkSRLIPM(getValue(BOp1));
-      } else
-        BrSrlIPM = false;
+    // Incoming IR here is straight line code, FindMergedConditions splits
+    // condition code sequence across Basic Block. DAGCombiner can't combine
+    // across Basic Block. Identify SRL/IPM/CC sequence for SystemZ and avoid
+    // transformation in FindMergedConditions.
+    bool BrSrlIPM = false;
+    if (NodeMap.count(BOp0) && NodeMap[BOp0].getNode()) {
+      BrSrlIPM |= checkSRLIPM(getValue(BOp0));
+      if (NodeMap.count(BOp1) && NodeMap[BOp1].getNode())
+        BrSrlIPM &= checkSRLIPM(getValue(BOp1));
     }
     if (Opcode && !BrSrlIPM &&
         !(match(BOp0, m_ExtractElt(m_Value(Vec), m_Value())) &&
@@ -12141,20 +12138,15 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
       const APInt &SmallValue = Small.Low->getValue();
       const APInt &BigValue = Big.Low->getValue();
 
-      // Creating switch cases optimizing tranformation inhibits DAGCombiner
-      // for SystemZ for flag output operands. DAGCobiner compute cumulative
-      // CCMask for flag output operands SRL/IPM sequence, we want to avoid
-      // creating switch case, as it creates Basic Block and inhibits
-      // optimization in DAGCombiner for flag output operands.
-      // cases like (CC == 0) || (CC == 2) || (CC == 3), or
+      // Incoming IR is switch table.Identify SRL/IPM/CC sequence for SystemZ
+      // and we want to avoid splitting condition code sequence across basic
+      // block for cases like (CC == 0) || (CC == 2) || (CC == 3), or
       // (CC == 0) || (CC == 1) ^ (CC == 3), there could potentially be
       // more cases like this.
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       bool IsSrlIPM = false;
       if (NodeMap.count(Cond) && NodeMap[Cond].getNode())
-        IsSrlIPM = CurMF->getTarget().getTargetTriple().getArch() ==
-                       Triple::ArchType::systemz &&
-                   TLI.canLowerSRL_IPM_Switch(getValue(Cond));
+        IsSrlIPM = TLI.canLowerSRL_IPM_Switch(getValue(Cond));
       // Check that there is only one bit different.
       APInt CommonBit = BigValue ^ SmallValue;
       if (CommonBit.isPowerOf2() || IsSrlIPM) {

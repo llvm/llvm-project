@@ -115,16 +115,13 @@ public:
     return RegName == "r15";
   }
 
-  // CC has interval [0, 4).
-  unsigned getFlagOutputCCUpperBound() const override { return 4; }
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 
   std::string convertConstraint(const char *&Constraint) const override {
-    if (llvm::StringRef(Constraint).starts_with("@cc")) {
+    if (llvm::StringRef(Constraint) == "@cc") {
       auto Len = llvm::StringRef("@cc").size();
-      std::string Converted =
-          std::string("{") + std::string(Constraint, Len) + std::string("}");
+      std::string Converted = std::string("{@cc}");
       Constraint += Len - 1;
       return Converted;
     }
