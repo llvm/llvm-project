@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
-#define LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
+#ifndef LLVM_CLANG_LEX_LEXHLSLROOTSIGNATURE_H
+#define LLVM_CLANG_LEX_LEXHLSLROOTSIGNATURE_H
 
 #include "clang/Basic/SourceLocation.h"
 
@@ -83,4 +83,4 @@ private:
 } // namespace hlsl
 } // namespace clang
 
-#endif // LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
+#endif // LLVM_CLANG_LEX_PARSEHLSLROOTSIGNATURE_H
