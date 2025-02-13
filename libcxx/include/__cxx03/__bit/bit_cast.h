@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_BIT_CAST_H
-#define _LIBCPP___BIT_BIT_CAST_H
+#ifndef _LIBCPP___CXX03___BIT_BIT_CAST_H
+#define _LIBCPP___CXX03___BIT_BIT_CAST_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_trivially_copyable.h>
@@ -41,4 +41,4 @@ template <class _ToType, class _FromType>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_BIT_CAST_H
+#endif // _LIBCPP___CXX03___BIT_BIT_CAST_H

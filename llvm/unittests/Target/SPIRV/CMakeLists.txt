@@ -11,10 +11,12 @@ set(LLVM_LINK_COMPONENTS
   SPIRVCodeGen
   SPIRVAnalysis
   Support
+  TargetParser
   )
 
 add_llvm_target_unittest(SPIRVTests
   SPIRVConvergenceRegionAnalysisTests.cpp
+  SPIRVSortBlocksTests.cpp
+  SPIRVPartialOrderingVisitorTests.cpp
   SPIRVAPITest.cpp
-  )
-
+)

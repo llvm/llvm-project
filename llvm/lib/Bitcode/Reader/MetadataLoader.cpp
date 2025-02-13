@@ -1600,7 +1600,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPOSITE_TYPE: {
-    if (Record.size() < 16 || Record.size() > 23)
+    if (Record.size() < 16 || Record.size() > 25)
       return error("Invalid record");
 
     // If we have a UUID and this is not a forward declaration, lookup the
@@ -1622,6 +1622,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
     Metadata *Elements = nullptr;
     unsigned RuntimeLang = Record[12];
+    std::optional<uint32_t> EnumKind;
+
     Metadata *VTableHolder = nullptr;
     Metadata *TemplateParams = nullptr;
     Metadata *Discriminator = nullptr;
@@ -1630,6 +1632,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Allocated = nullptr;
     Metadata *Rank = nullptr;
     Metadata *Annotations = nullptr;
+    Metadata *Specification = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
     // into another module, composite types only need to be imported as
@@ -1678,23 +1681,32 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       if (Record.size() > 21) {
         Annotations = getMDOrNull(Record[21]);
       }
+      if (Record.size() > 23) {
+        Specification = getMDOrNull(Record[23]);
+      }
     }
+
+    if (Record.size() > 25 && Record[25] != dwarf::DW_APPLE_ENUM_KIND_invalid)
+      EnumKind = Record[25];
+
     DICompositeType *CT = nullptr;
     if (Identifier)
       CT = DICompositeType::buildODRType(
           Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
-          SizeInBits, AlignInBits, OffsetInBits, NumExtraInhabitants, Flags,
-          Elements, RuntimeLang, VTableHolder, TemplateParams, Discriminator,
-          DataLocation, Associated, Allocated, Rank, Annotations);
+          SizeInBits, AlignInBits, OffsetInBits, Specification,
+          NumExtraInhabitants, Flags, Elements, RuntimeLang, EnumKind,
+          VTableHolder, TemplateParams, Discriminator, DataLocation, Associated,
+          Allocated, Rank, Annotations);
 
     // Create a node if we didn't get a lazy ODR type.
     if (!CT)
       CT = GET_OR_DISTINCT(DICompositeType,
                            (Context, Tag, Name, File, Line, Scope, BaseType,
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
-                            Elements, RuntimeLang, VTableHolder, TemplateParams,
-                            Identifier, Discriminator, DataLocation, Associated,
-                            Allocated, Rank, Annotations, NumExtraInhabitants));
+                            Elements, RuntimeLang, EnumKind, VTableHolder,
+                            TemplateParams, Identifier, Discriminator,
+                            DataLocation, Associated, Allocated, Rank,
+                            Annotations, Specification, NumExtraInhabitants));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 

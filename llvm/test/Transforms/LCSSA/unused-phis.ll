@@ -12,19 +12,19 @@
 
 declare void @printf(i32 %i)
 
-define i32 @unused_phis() nounwind {
+define i32 @unused_phis(i1 %arg) nounwind {
 entry:
   br label %loop
 
 loop:
   %i = phi i32 [0, %entry], [1, %then2]
-  br i1 undef, label %exit1, label %then1
+  br i1 %arg, label %exit1, label %then1
 
 then1:
-  br i1 undef, label %exit2, label %then2
+  br i1 %arg, label %exit2, label %then2
 
 then2:
-  br i1 undef, label %exit3, label %loop
+  br i1 %arg, label %exit3, label %loop
 
 exit1:
   call void @printf(i32 %i)

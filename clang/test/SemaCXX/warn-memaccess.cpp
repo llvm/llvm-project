@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wnontrivial-memaccess %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wnontrivial-memcall %s
 
 extern "C" void *bzero(void *, unsigned);
 extern "C" void *memset(void *, int, unsigned);

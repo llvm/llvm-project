@@ -317,6 +317,7 @@ protected:
   int cmpNumbers(uint64_t L, uint64_t R) const;
   int cmpAligns(Align L, Align R) const;
   int cmpAPInts(const APInt &L, const APInt &R) const;
+  int cmpConstantRanges(const ConstantRange &L, const ConstantRange &R) const;
   int cmpAPFloats(const APFloat &L, const APFloat &R) const;
   int cmpMem(StringRef L, StringRef R) const;
 

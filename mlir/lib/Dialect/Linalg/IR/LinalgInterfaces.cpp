@@ -54,7 +54,8 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
     // if the op has no loops.
     return linalgOp.getNumLoops() == 0;
   }
-  return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
+  return inversePermutation(concatAffineMaps(
+             indexingMaps, linalgOp.getContext())) != AffineMap();
 }
 
 //===----------------------------------------------------------------------===//
@@ -146,7 +147,7 @@ linalg::isaBroadcastOpInterface(GenericOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// TranposeOpInterface implementation
+// TransposeOpInterface implementation
 //===----------------------------------------------------------------------===//
 std::optional<SmallVector<int64_t>>
 linalg::isaTransposeOpInterface(GenericOp op) {

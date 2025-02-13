@@ -440,6 +440,9 @@ public:
   StmtResult ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                                       Stmt *AStmt, SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  StmtResult ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
+                                        Stmt *AStmt, SourceLocation StartLoc,
+                                        SourceLocation EndLoc);
   /// Called on well-formed '#pragma omp unroll' after parsing of its clauses
   /// and the associated statement.
   StmtResult ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
@@ -849,6 +852,9 @@ public:
       ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
       SourceLocation AppendArgsLoc, SourceRange SR);
 
+  /// Called on device_num selector in context selectors.
+  void ActOnOpenMPDeviceNum(Expr *DeviceNumExpr);
+
   OMPClause *ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
@@ -1148,7 +1154,12 @@ public:
     SourceLocation OmpAllMemoryLoc;
     SourceLocation
         StepModifierLoc; /// 'step' modifier location for linear clause
-    OpenMPAllocateClauseModifier AllocClauseModifier = OMPC_ALLOCATE_unknown;
+    SmallVector<OpenMPAllocateClauseModifier,
+                NumberOfOMPAllocateClauseModifiers>
+        AllocClauseModifiers;
+    SmallVector<SourceLocation, NumberOfOMPAllocateClauseModifiers>
+        AllocClauseModifiersLoc;
+    Expr *AllocateAlignment = nullptr;
   };
 
   OMPClause *ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
@@ -1166,10 +1177,15 @@ public:
                                         SourceLocation LParenLoc,
                                         SourceLocation EndLoc);
   /// Called on well-formed 'allocate' clause.
-  OMPClause *ActOnOpenMPAllocateClause(
-      Expr *Allocator, OpenMPAllocateClauseModifier ACModifier,
-      ArrayRef<Expr *> VarList, SourceLocation StartLoc,
-      SourceLocation ColonLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
+  OMPClause *
+  ActOnOpenMPAllocateClause(Expr *Allocator, Expr *Alignment,
+                            OpenMPAllocateClauseModifier FirstModifier,
+                            SourceLocation FirstModifierLoc,
+                            OpenMPAllocateClauseModifier SecondModifier,
+                            SourceLocation SecondModifierLoc,
+                            ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+                            SourceLocation ColonLoc, SourceLocation LParenLoc,
+                            SourceLocation EndLoc);
   /// Called on well-formed 'private' clause.
   OMPClause *ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
                                       SourceLocation StartLoc,
@@ -1400,6 +1416,13 @@ public:
 
   void handleOMPAssumeAttr(Decl *D, const ParsedAttr &AL);
 
+  /// Setter and getter functions for device_num.
+  void setOpenMPDeviceNum(int Num);
+
+  int getOpenMPDeviceNum() const;
+
+  void setOpenMPDeviceNumID(StringRef ID);
+
 private:
   void *VarDataSharingAttributesStack;
 
@@ -1470,6 +1493,12 @@ private:
 
   /// All `omp assumes` we encountered so far.
   SmallVector<OMPAssumeAttr *, 4> OMPAssumeGlobal;
+
+  /// Device number specified by the context selector.
+  int DeviceNum = -1;
+
+  /// Device number identifier specified by the context selector.
+  StringRef DeviceNumID;
 };
 
 } // namespace clang

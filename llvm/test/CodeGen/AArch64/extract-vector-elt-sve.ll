@@ -2,6 +2,13 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+sve -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -mattr=+sve -aarch64-enable-gisel-sve=1 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:       warning: Instruction selection used fallback path for insert_vscale_8_i16_zero
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for insert_vscale_8_i16
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for insert_vscale_16_i8_zero
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for insert_vscale_16_i8
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_vscale_16_i8
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_vscale_16_i8_zero
+
 define <vscale x 2 x i64> @insert_vscale_2_i64_zero(<vscale x 2 x i64> %vec, i64 %elt) {
 ; CHECK-SD-LABEL: insert_vscale_2_i64_zero:
 ; CHECK-SD:       // %bb.0: // %entry

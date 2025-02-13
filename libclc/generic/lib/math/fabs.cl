@@ -4,4 +4,4 @@
 
 #undef __CLC_FUNCTION
 #define __CLC_FUNCTION fabs
-#include "unary_builtin.inc"
+#include <clc/math/unary_builtin.inc>

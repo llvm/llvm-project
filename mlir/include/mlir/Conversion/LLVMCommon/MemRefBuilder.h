@@ -34,9 +34,9 @@ class MemRefDescriptor : public StructBuilder {
 public:
   /// Construct a helper for the given descriptor value.
   explicit MemRefDescriptor(Value descriptor);
-  /// Builds IR creating an `undef` value of the descriptor type.
-  static MemRefDescriptor undef(OpBuilder &builder, Location loc,
-                                Type descriptorType);
+  /// Builds IR creating a `poison` value of the descriptor type.
+  static MemRefDescriptor poison(OpBuilder &builder, Location loc,
+                                 Type descriptorType);
   /// Builds IR creating a MemRef descriptor that represents `type` and
   /// populates it with static shape and stride information extracted from the
   /// type.
@@ -104,7 +104,7 @@ public:
   /// - aligned pointer;
   /// - offset;
   /// - <rank> sizes;
-  /// - <rank> shapes;
+  /// - <rank> strides;
   /// where <rank> is the MemRef rank as provided in `type`.
   static Value pack(OpBuilder &builder, Location loc,
                     const LLVMTypeConverter &converter, MemRefType type,
@@ -160,8 +160,8 @@ public:
   /// Construct a helper for the given descriptor value.
   explicit UnrankedMemRefDescriptor(Value descriptor);
   /// Builds IR creating an `undef` value of the descriptor type.
-  static UnrankedMemRefDescriptor undef(OpBuilder &builder, Location loc,
-                                        Type descriptorType);
+  static UnrankedMemRefDescriptor poison(OpBuilder &builder, Location loc,
+                                         Type descriptorType);
 
   /// Builds IR extracting the rank from the descriptor
   Value rank(OpBuilder &builder, Location loc) const;

@@ -21,7 +21,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -49,7 +48,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -279,8 +277,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   if (MDTWrapper) {
     MDT = &MDTWrapper->getDomTree();
   } else {
-    OwnedMDT = std::make_unique<MachineDominatorTree>();
-    OwnedMDT->getBase().recalculate(MF);
+    OwnedMDT = std::make_unique<MachineDominatorTree>(MF);
     MDT = OwnedMDT.get();
   }
 

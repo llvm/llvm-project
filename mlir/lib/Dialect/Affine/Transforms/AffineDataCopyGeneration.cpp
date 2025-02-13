@@ -239,5 +239,5 @@ void AffineDataCopyGeneration::runOnOperation() {
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
   GreedyRewriteConfig config;
   config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
-  (void)applyOpPatternsAndFold(copyOps, frozenPatterns, config);
+  (void)applyOpPatternsGreedily(copyOps, frozenPatterns, config);
 }

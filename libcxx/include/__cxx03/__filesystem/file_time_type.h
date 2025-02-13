@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_FILE_TIME_TYPE_H
-#define _LIBCPP___FILESYSTEM_FILE_TIME_TYPE_H
+#ifndef _LIBCPP___CXX03___FILESYSTEM_FILE_TIME_TYPE_H
+#define _LIBCPP___CXX03___FILESYSTEM_FILE_TIME_TYPE_H
 
 #include <__cxx03/__chrono/file_clock.h>
 #include <__cxx03/__chrono/time_point.h>
@@ -28,4 +28,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FILESYSTEM_FILE_TIME_TYPE_H
+#endif // _LIBCPP___CXX03___FILESYSTEM_FILE_TIME_TYPE_H

@@ -288,24 +288,35 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   if (!Cmp->getOperand(0)->getType()->isIntOrIntVectorTy())
     return false;
 
-  if (!Cmp->isSigned())
+  if (!Cmp->isSigned() && (!Cmp->isUnsigned() || Cmp->hasSameSign()))
     return false;
 
-  ICmpInst::Predicate UnsignedPred =
-      ConstantRange::getEquivalentPredWithFlippedSignedness(
-          Cmp->getPredicate(),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
-                                     /*UndefAllowed*/ true),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
-                                     /*UndefAllowed*/ true));
+  bool Changed = false;
 
-  if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
-    return false;
+  ConstantRange CR1 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
+                                                 /*UndefAllowed=*/false),
+                CR2 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
+                                                 /*UndefAllowed=*/false);
 
-  ++NumSICmps;
-  Cmp->setPredicate(UnsignedPred);
+  if (Cmp->isSigned()) {
+    ICmpInst::Predicate UnsignedPred =
+        ConstantRange::getEquivalentPredWithFlippedSignedness(
+            Cmp->getPredicate(), CR1, CR2);
 
-  return true;
+    if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
+      return false;
+
+    ++NumSICmps;
+    Cmp->setPredicate(UnsignedPred);
+    Changed = true;
+  }
+
+  if (ConstantRange::areInsensitiveToSignednessOfICmpPredicate(CR1, CR2)) {
+    Cmp->setSameSign();
+    Changed = true;
+  }
+
+  return Changed;
 }
 
 /// See if LazyValueInfo's ability to exploit edge conditions or range

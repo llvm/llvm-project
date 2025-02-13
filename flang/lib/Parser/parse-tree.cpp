@@ -253,20 +253,52 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
 
-OmpTaskDependenceType::Type OmpDependClause::GetDepType() const {
-  return common::visit(
+OmpDependenceType::Value OmpDoacross::GetDepType() const {
+  return common::visit( //
       common::visitors{
-          [&](const parser::OmpDependClause::Source &) {
-            return parser::OmpTaskDependenceType::Type::Source;
+          [](const OmpDoacross::Sink &) {
+            return OmpDependenceType::Value::Sink;
           },
-          [&](const parser::OmpDependClause::Sink &) {
-            return parser::OmpTaskDependenceType::Type::Sink;
-          },
-          [&](const parser::OmpDependClause::InOut &y) {
-            return std::get<parser::OmpTaskDependenceType>(y.t).v;
+          [](const OmpDoacross::Source &) {
+            return OmpDependenceType::Value::Source;
           },
       },
       u);
+}
+
+OmpTaskDependenceType::Value OmpDependClause::TaskDep::GetTaskDepType() const {
+  using Modifier = OmpDependClause::TaskDep::Modifier;
+  auto &modifiers{std::get<std::optional<std::list<Modifier>>>(t)};
+  if (modifiers) {
+    for (auto &m : *modifiers) {
+      if (auto *dep{std::get_if<OmpTaskDependenceType>(&m.u)}) {
+        return dep->v;
+      }
+    }
+    llvm_unreachable("expecting OmpTaskDependenceType in TaskDep");
+  } else {
+    llvm_unreachable("expecting modifiers on OmpDependClause::TaskDep");
+  }
+}
+
+std::string OmpTraitSelectorName::ToString() const {
+  return common::visit( //
+      common::visitors{
+          [&](Value v) { //
+            return std::string(EnumToString(v));
+          },
+          [&](llvm::omp::Directive d) {
+            return llvm::omp::getOpenMPDirectiveName(d).str();
+          },
+          [&](const std::string &s) { //
+            return s;
+          },
+      },
+      u);
+}
+
+std::string OmpTraitSetSelectorName::ToString() const {
+  return std::string(EnumToString(v));
 }
 
 } // namespace Fortran::parser

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STD_MBSTATE_T_H
-#define _LIBCPP___STD_MBSTATE_T_H
+#ifndef _LIBCPP___CXX03___STD_MBSTATE_T_H
+#define _LIBCPP___CXX03___STD_MBSTATE_T_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__mbstate_t.h>
@@ -26,4 +26,4 @@ using ::mbstate_t _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___STD_MBSTATE_T_H
+#endif // _LIBCPP___CXX03___STD_MBSTATE_T_H

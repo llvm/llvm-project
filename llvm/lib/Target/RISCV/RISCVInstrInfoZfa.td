@@ -30,6 +30,7 @@ def LoadFPImmOperand : AsmOperandClass {
   let ParserMethod = "parseFPImm";
   let RenderMethod = "addFPImmOperands";
   let DiagnosticType = "InvalidLoadFPImm";
+  let DiagnosticString = "operand must be a valid floating-point constant";
 }
 
 def loadfpimm : Operand<XLenVT> {
@@ -43,6 +44,7 @@ def RTZArg : AsmOperandClass {
   let Name = "RTZArg";
   let RenderMethod = "addFRMArgOperands";
   let DiagnosticType = "InvalidRTZArg";
+  let DiagnosticString = "operand must be 'rtz' floating-point rounding mode";
   let ParserMethod = "parseFRMArg";
 }
 
@@ -215,6 +217,7 @@ def: Pat<(any_frint FPR32:$rs1), (FROUNDNX_S FPR32:$rs1, FRM_DYN)>;
 def: Pat<(any_fnearbyint FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_DYN)>;
 
 def: Pat<(any_fround FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RMM)>;
+def: Pat<(any_froundeven FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RNE)>;
 def: Pat<(any_ffloor FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RDN)>;
 def: Pat<(any_fceil FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RUP)>;
 def: Pat<(any_ftrunc FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RTZ)>;

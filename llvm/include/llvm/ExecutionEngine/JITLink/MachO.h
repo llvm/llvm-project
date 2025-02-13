@@ -25,7 +25,8 @@ namespace jitlink {
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer);
+createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer,
+                               std::shared_ptr<orc::SymbolStringPool> SSP);
 
 /// jit-link the given ObjBuffer, which must be a MachO object file.
 ///
@@ -53,6 +54,9 @@ inline Section &getMachODefaultTextSection(LinkGraph &G) {
   return G.createSection(orc::MachOTextTextSectionName,
                          orc::MemProt::Read | orc::MemProt::Exec);
 }
+
+/// Gets or creates a MachO header for the current LinkGraph.
+Expected<Symbol &> getOrCreateLocalMachOHeader(LinkGraph &G);
 
 } // end namespace jitlink
 } // end namespace llvm

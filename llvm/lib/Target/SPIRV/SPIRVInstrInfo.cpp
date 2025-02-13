@@ -47,6 +47,19 @@ bool SPIRVInstrInfo::isConstantInstr(const MachineInstr &MI) const {
   }
 }
 
+bool SPIRVInstrInfo::isSpecConstantInstr(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case SPIRV::OpSpecConstantTrue:
+  case SPIRV::OpSpecConstantFalse:
+  case SPIRV::OpSpecConstant:
+  case SPIRV::OpSpecConstantComposite:
+  case SPIRV::OpSpecConstantOp:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SPIRVInstrInfo::isInlineAsmDefInstr(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case SPIRV::OpAsmTargetINTEL:

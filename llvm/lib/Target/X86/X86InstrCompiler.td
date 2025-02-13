@@ -74,8 +74,7 @@ def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                               (outs),
                               (ins GR8:$al, i8mem:$regsavefi, variable_ops),
                               "#VASTART_SAVE_XMM_REGS $al, $regsavefi",
-                              [(X86vastart_save_xmm_regs GR8:$al, addr:$regsavefi),
-                               (implicit EFLAGS)]>;
+                              [(X86vastart_save_xmm_regs GR8:$al, addr:$regsavefi)]>;
 }
 
 let usesCustomInserter = 1, Defs = [EFLAGS] in {
@@ -87,15 +86,15 @@ def VAARG_64 : I<0, Pseudo,
                  (ins i8mem:$ap, i32imm:$size, i8imm:$mode, i32imm:$align),
                  "#VAARG_64 $dst, $ap, $size, $mode, $align",
                  [(set GR64:$dst,
-                    (X86vaarg64 addr:$ap, timm:$size, timm:$mode, timm:$align)),
-                  (implicit EFLAGS)]>, Requires<[In64BitMode, IsLP64]>;
+                    (X86vaarg64 addr:$ap, timm:$size, timm:$mode, timm:$align))]>,
+               Requires<[In64BitMode, IsLP64]>;
 def VAARG_X32 : I<0, Pseudo,
                  (outs GR32:$dst),
                  (ins i8mem:$ap, i32imm:$size, i8imm:$mode, i32imm:$align),
                  "#VAARG_X32 $dst, $ap, $size, $mode, $align",
                  [(set GR32:$dst,
-                    (X86vaargx32 addr:$ap, timm:$size, timm:$mode, timm:$align)),
-                  (implicit EFLAGS)]>, Requires<[In64BitMode, NotLP64]>;
+                    (X86vaargx32 addr:$ap, timm:$size, timm:$mode, timm:$align))]>,
+                Requires<[In64BitMode, NotLP64]>;
 }
 
 // When using segmented stacks these are lowered into instructions which first
@@ -263,8 +262,10 @@ let isPseudo = 1, isMeta = 1, isNotDuplicable = 1, SchedRW = [WriteSystem] in {
 
 // Epilog instructions:
 let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
-  def SEH_Epilogue : I<0, Pseudo, (outs), (ins),
-                            "#SEH_Epilogue", []>;
+  def SEH_BeginEpilogue : I<0, Pseudo, (outs), (ins),
+                            "#SEH_BeginEpilogue", []>;
+  def SEH_EndEpilogue : I<0, Pseudo, (outs), (ins),
+                            "#SEH_EndEpilogue", []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2185,6 +2186,18 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
 defm : EFLAGSDefiningPats<"", NoNDD>;
 defm : EFLAGSDefiningPats<"_ND", HasNDD>;
 
+let Predicates = [HasZU] in {
+  // zext (mul reg/mem, imm) -> imulzu
+  def : Pat<(i32 (zext (i16 (mul GR16:$src1, imm:$src2)))),
+            (SUBREG_TO_REG (i32 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
+  def : Pat<(i32 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
+            (SUBREG_TO_REG (i32 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+  def : Pat<(i64 (zext (i16 (mul GR16:$src1, imm:$src2)))),
+            (SUBREG_TO_REG (i64 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
+  def : Pat<(i64 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
+            (SUBREG_TO_REG (i64 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+}
+  
 // mul reg, imm
 def : Pat<(mul GR16:$src1, imm:$src2),
           (IMUL16rri GR16:$src1, imm:$src2)>;
@@ -2202,12 +2215,12 @@ def : Pat<(mul (loadi64 addr:$src1), i64immSExt32:$src2),
           (IMUL64rmi32 addr:$src1, i64immSExt32:$src2)>;
 
 // Bit scan instruction patterns to match explicit zero-undef behavior.
-def : Pat<(cttz_zero_undef GR16:$src), (BSF16rr GR16:$src)>;
-def : Pat<(cttz_zero_undef GR32:$src), (BSF32rr GR32:$src)>;
-def : Pat<(cttz_zero_undef GR64:$src), (BSF64rr GR64:$src)>;
-def : Pat<(cttz_zero_undef (loadi16 addr:$src)), (BSF16rm addr:$src)>;
-def : Pat<(cttz_zero_undef (loadi32 addr:$src)), (BSF32rm addr:$src)>;
-def : Pat<(cttz_zero_undef (loadi64 addr:$src)), (BSF64rm addr:$src)>;
+def : Pat<(cttz_zero_undef GR16:$src), (BSF16rr (i16 (IMPLICIT_DEF)), GR16:$src)>;
+def : Pat<(cttz_zero_undef GR32:$src), (BSF32rr (i32 (IMPLICIT_DEF)), GR32:$src)>;
+def : Pat<(cttz_zero_undef GR64:$src), (BSF64rr (i64 (IMPLICIT_DEF)), GR64:$src)>;
+def : Pat<(cttz_zero_undef (loadi16 addr:$src)), (BSF16rm (i16 (IMPLICIT_DEF)), addr:$src)>;
+def : Pat<(cttz_zero_undef (loadi32 addr:$src)), (BSF32rm (i32 (IMPLICIT_DEF)), addr:$src)>;
+def : Pat<(cttz_zero_undef (loadi64 addr:$src)), (BSF64rm (i64 (IMPLICIT_DEF)), addr:$src)>;
 
 // When HasMOVBE is enabled it is possible to get a non-legalized
 // register-register 16 bit bswap. This maps it to a ROL instruction.

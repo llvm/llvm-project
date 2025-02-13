@@ -10,8 +10,4 @@
 
 #include "src/complex/cimagf128.h"
 
-#if defined(LIBC_TYPES_HAS_CFLOAT128)
-
 LIST_CIMAG_TESTS(cfloat128, float128, LIBC_NAMESPACE::cimagf128)
-
-#endif // LIBC_TYPES_HAS_CFLOAT128

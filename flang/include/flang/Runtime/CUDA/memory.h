@@ -9,7 +9,7 @@
 #ifndef FORTRAN_RUNTIME_CUDA_MEMORY_H_
 #define FORTRAN_RUNTIME_CUDA_MEMORY_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 #include <cstddef>
 
@@ -42,6 +42,10 @@ void RTDECL(CUFDataTransferPtrDesc)(void *dst, Descriptor *src,
 
 /// Data transfer from a descriptor to a descriptor.
 void RTDECL(CUFDataTransferDescDesc)(Descriptor *dst, Descriptor *src,
+    unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
+
+/// Data transfer from a scalar descriptor to a descriptor.
+void RTDECL(CUFDataTransferCstDesc)(Descriptor *dst, Descriptor *src,
     unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
 
 /// Data transfer from a descriptor to a descriptor.

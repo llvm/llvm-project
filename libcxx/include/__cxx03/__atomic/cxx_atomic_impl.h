@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_CXX_ATOMIC_IMPL_H
-#define _LIBCPP___ATOMIC_CXX_ATOMIC_IMPL_H
+#ifndef _LIBCPP___CXX03___ATOMIC_CXX_ATOMIC_IMPL_H
+#define _LIBCPP___CXX03___ATOMIC_CXX_ATOMIC_IMPL_H
 
 #include <__cxx03/__atomic/memory_order.h>
 #include <__cxx03/__atomic/to_gcc_order.h>
@@ -507,4 +507,4 @@ struct __cxx_atomic_impl : public _Base {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_CXX_ATOMIC_IMPL_H
+#endif // _LIBCPP___CXX03___ATOMIC_CXX_ATOMIC_IMPL_H

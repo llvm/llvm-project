@@ -20,6 +20,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <mlir/Dialect/OpenMP/OpenMPDialect.h>
 #include <optional>
 
 // Return explicit extents. If the base is a fir.box, this won't read it to
@@ -217,6 +218,25 @@ bool hlfir::Entity::mayHaveNonDefaultLowerBounds() const {
     return hlfir::Entity{convert.getValue()}.mayHaveNonDefaultLowerBounds();
   // TODO: Embox and Rebox do not have hlfir variable interface, but are
   // easy to reason about.
+  return true;
+}
+
+mlir::Operation *traverseConverts(mlir::Operation *op) {
+  while (auto convert = llvm::dyn_cast_or_null<fir::ConvertOp>(op))
+    op = convert.getValue().getDefiningOp();
+  return op;
+}
+
+bool hlfir::Entity::mayBeOptional() const {
+  if (!isVariable())
+    return false;
+  // TODO: introduce a fir type to better identify optionals.
+  if (mlir::Operation *op = traverseConverts(getDefiningOp())) {
+    if (auto varIface = llvm::dyn_cast<fir::FortranVariableOpInterface>(op))
+      return varIface.isOptional();
+    return !llvm::isa<fir::AllocaOp, fir::AllocMemOp, fir::ReboxOp,
+                      fir::EmboxOp, fir::LoadOp>(op);
+  }
   return true;
 }
 
@@ -534,6 +554,8 @@ static mlir::Value tryRetrievingShapeOrShift(hlfir::Entity entity) {
   if (mlir::isa<hlfir::ExprType>(entity.getType())) {
     if (auto elemental = entity.getDefiningOp<hlfir::ElementalOp>())
       return elemental.getShape();
+    if (auto evalInMem = entity.getDefiningOp<hlfir::EvaluateInMemoryOp>())
+      return evalInMem.getShape();
     return mlir::Value{};
   }
   if (auto varIface = entity.getIfVariableInterface())
@@ -640,6 +662,11 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
     } else if (auto elemental = expr.getDefiningOp<hlfir::ElementalOp>()) {
       result.append(elemental.getTypeparams().begin(),
                     elemental.getTypeparams().end());
+      return;
+    } else if (auto evalInMem =
+                   expr.getDefiningOp<hlfir::EvaluateInMemoryOp>()) {
+      result.append(evalInMem.getTypeparams().begin(),
+                    evalInMem.getTypeparams().end());
       return;
     } else if (auto apply = expr.getDefiningOp<hlfir::ApplyOp>()) {
       result.append(apply.getTypeparams().begin(), apply.getTypeparams().end());
@@ -855,32 +882,169 @@ mlir::Value hlfir::inlineElementalOp(
 
 hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
                                    fir::FirOpBuilder &builder,
-                                   mlir::ValueRange extents, bool isUnordered) {
+                                   mlir::ValueRange extents, bool isUnordered,
+                                   bool emitWorkshareLoop) {
+  emitWorkshareLoop = emitWorkshareLoop && isUnordered;
   hlfir::LoopNest loopNest;
   assert(!extents.empty() && "must have at least one extent");
-  auto insPt = builder.saveInsertionPoint();
+  mlir::OpBuilder::InsertionGuard guard(builder);
   loopNest.oneBasedIndices.assign(extents.size(), mlir::Value{});
   // Build loop nest from column to row.
   auto one = builder.create<mlir::arith::ConstantIndexOp>(loc, 1);
   mlir::Type indexType = builder.getIndexType();
+  if (emitWorkshareLoop) {
+    auto wslw = builder.create<mlir::omp::WorkshareLoopWrapperOp>(loc);
+    loopNest.outerOp = wslw;
+    builder.createBlock(&wslw.getRegion());
+    mlir::omp::LoopNestOperands lnops;
+    lnops.loopInclusive = builder.getUnitAttr();
+    for (auto extent : llvm::reverse(extents)) {
+      lnops.loopLowerBounds.push_back(one);
+      lnops.loopUpperBounds.push_back(extent);
+      lnops.loopSteps.push_back(one);
+    }
+    auto lnOp = builder.create<mlir::omp::LoopNestOp>(loc, lnops);
+    mlir::Block *block = builder.createBlock(&lnOp.getRegion());
+    for (auto extent : llvm::reverse(extents))
+      block->addArgument(extent.getType(), extent.getLoc());
+    loopNest.body = block;
+    builder.create<mlir::omp::YieldOp>(loc);
+    for (unsigned dim = 0; dim < extents.size(); dim++)
+      loopNest.oneBasedIndices[extents.size() - dim - 1] =
+          lnOp.getRegion().front().getArgument(dim);
+  } else {
+    unsigned dim = extents.size() - 1;
+    for (auto extent : llvm::reverse(extents)) {
+      auto ub = builder.createConvert(loc, indexType, extent);
+      auto doLoop =
+          builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered);
+      loopNest.body = doLoop.getBody();
+      builder.setInsertionPointToStart(loopNest.body);
+      // Reverse the indices so they are in column-major order.
+      loopNest.oneBasedIndices[dim--] = doLoop.getInductionVar();
+      if (!loopNest.outerOp)
+        loopNest.outerOp = doLoop;
+    }
+  }
+  return loopNest;
+}
+
+llvm::SmallVector<mlir::Value> hlfir::genLoopNestWithReductions(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::ValueRange extents,
+    mlir::ValueRange reductionInits, const ReductionLoopBodyGenerator &genBody,
+    bool isUnordered) {
+  assert(!extents.empty() && "must have at least one extent");
+  // Build loop nest from column to row.
+  auto one = builder.create<mlir::arith::ConstantIndexOp>(loc, 1);
+  mlir::Type indexType = builder.getIndexType();
   unsigned dim = extents.size() - 1;
+  fir::DoLoopOp outerLoop = nullptr;
+  fir::DoLoopOp parentLoop = nullptr;
+  llvm::SmallVector<mlir::Value> oneBasedIndices;
+  oneBasedIndices.resize(dim + 1);
   for (auto extent : llvm::reverse(extents)) {
     auto ub = builder.createConvert(loc, indexType, extent);
-    loopNest.innerLoop =
-        builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered);
-    builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+
+    // The outermost loop takes reductionInits as the initial
+    // values of its iter-args.
+    // A child loop takes its iter-args from the region iter-args
+    // of its parent loop.
+    fir::DoLoopOp doLoop;
+    if (!parentLoop) {
+      doLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered,
+                                             /*finalCountValue=*/false,
+                                             reductionInits);
+    } else {
+      doLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered,
+                                             /*finalCountValue=*/false,
+                                             parentLoop.getRegionIterArgs());
+      if (!reductionInits.empty()) {
+        // Return the results of the child loop from its parent loop.
+        builder.create<fir::ResultOp>(loc, doLoop.getResults());
+      }
+    }
+
+    builder.setInsertionPointToStart(doLoop.getBody());
     // Reverse the indices so they are in column-major order.
-    loopNest.oneBasedIndices[dim--] = loopNest.innerLoop.getInductionVar();
-    if (!loopNest.outerLoop)
-      loopNest.outerLoop = loopNest.innerLoop;
+    oneBasedIndices[dim--] = doLoop.getInductionVar();
+    if (!outerLoop)
+      outerLoop = doLoop;
+    parentLoop = doLoop;
   }
-  builder.restoreInsertionPoint(insPt);
-  return loopNest;
+
+  llvm::SmallVector<mlir::Value> reductionValues;
+  reductionValues =
+      genBody(loc, builder, oneBasedIndices, parentLoop.getRegionIterArgs());
+  builder.setInsertionPointToEnd(parentLoop.getBody());
+  if (!reductionValues.empty())
+    builder.create<fir::ResultOp>(loc, reductionValues);
+  builder.setInsertionPointAfter(outerLoop);
+  return outerLoop->getResults();
+}
+
+template <typename Lambda>
+static fir::ExtendedValue
+conditionallyEvaluate(mlir::Location loc, fir::FirOpBuilder &builder,
+                      mlir::Value condition, const Lambda &genIfTrue) {
+  mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
+
+  // Evaluate in some region that will be moved into the actual ifOp (the actual
+  // ifOp can only be created when the result types are known).
+  auto badIfOp = builder.create<fir::IfOp>(loc, condition.getType(), condition,
+                                           /*withElseRegion=*/false);
+  mlir::Block *preparationBlock = &badIfOp.getThenRegion().front();
+  builder.setInsertionPointToStart(preparationBlock);
+  fir::ExtendedValue result = genIfTrue();
+  fir::ResultOp resultOp = result.match(
+      [&](const fir::CharBoxValue &box) -> fir::ResultOp {
+        return builder.create<fir::ResultOp>(
+            loc, mlir::ValueRange{box.getAddr(), box.getLen()});
+      },
+      [&](const mlir::Value &addr) -> fir::ResultOp {
+        return builder.create<fir::ResultOp>(loc, addr);
+      },
+      [&](const auto &) -> fir::ResultOp {
+        TODO(loc, "unboxing non scalar optional fir.box");
+      });
+  builder.restoreInsertionPoint(insertPt);
+
+  // Create actual fir.if operation.
+  auto ifOp =
+      builder.create<fir::IfOp>(loc, resultOp->getOperandTypes(), condition,
+                                /*withElseRegion=*/true);
+  // Move evaluation into Then block,
+  preparationBlock->moveBefore(&ifOp.getThenRegion().back());
+  ifOp.getThenRegion().back().erase();
+  // Create absent result in the Else block.
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  llvm::SmallVector<mlir::Value> absentValues;
+  for (mlir::Type resTy : ifOp->getResultTypes()) {
+    if (fir::isa_ref_type(resTy) || fir::isa_box_type(resTy))
+      absentValues.emplace_back(builder.create<fir::AbsentOp>(loc, resTy));
+    else
+      absentValues.emplace_back(builder.create<fir::ZeroOp>(loc, resTy));
+  }
+  builder.create<fir::ResultOp>(loc, absentValues);
+  badIfOp->erase();
+
+  // Build fir::ExtendedValue from the result values.
+  builder.setInsertionPointAfter(ifOp);
+  return result.match(
+      [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
+        return fir::CharBoxValue{ifOp.getResult(0), ifOp.getResult(1)};
+      },
+      [&](const mlir::Value &) -> fir::ExtendedValue {
+        return ifOp.getResult(0);
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        TODO(loc, "unboxing non scalar optional fir.box");
+      });
 }
 
 static fir::ExtendedValue translateVariableToExtendedValue(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity variable,
-    bool forceHlfirBase = false, bool contiguousHint = false) {
+    bool forceHlfirBase = false, bool contiguousHint = false,
+    bool keepScalarOptionalBoxed = false) {
   assert(variable.isVariable() && "must be a variable");
   // When going towards FIR, use the original base value to avoid
   // introducing descriptors at runtime when they are not required.
@@ -899,11 +1063,30 @@ static fir::ExtendedValue translateVariableToExtendedValue(
     const bool contiguous = variable.isSimplyContiguous() || contiguousHint;
     const bool isAssumedRank = variable.isAssumedRank();
     if (!contiguous || variable.isPolymorphic() ||
-        variable.isDerivedWithLengthParameters() || variable.isOptional() ||
-        isAssumedRank) {
+        variable.isDerivedWithLengthParameters() || isAssumedRank) {
       llvm::SmallVector<mlir::Value> nonDefaultLbounds;
       if (!isAssumedRank)
         nonDefaultLbounds = getNonDefaultLowerBounds(loc, builder, variable);
+      return fir::BoxValue(base, nonDefaultLbounds,
+                           getExplicitTypeParams(variable));
+    }
+    if (variable.mayBeOptional()) {
+      if (!keepScalarOptionalBoxed && variable.isScalar()) {
+        mlir::Value isPresent = builder.create<fir::IsPresentOp>(
+            loc, builder.getI1Type(), variable);
+        return conditionallyEvaluate(
+            loc, builder, isPresent, [&]() -> fir::ExtendedValue {
+              mlir::Value base = genVariableRawAddress(loc, builder, variable);
+              if (variable.isCharacter()) {
+                mlir::Value len =
+                    genCharacterVariableLength(loc, builder, variable);
+                return fir::CharBoxValue{base, len};
+              }
+              return base;
+            });
+      }
+      llvm::SmallVector<mlir::Value> nonDefaultLbounds =
+          getNonDefaultLowerBounds(loc, builder, variable);
       return fir::BoxValue(base, nonDefaultLbounds,
                            getExplicitTypeParams(variable));
     }
@@ -950,10 +1133,12 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                                hlfir::Entity entity, bool contiguousHint) {
+                                hlfir::Entity entity, bool contiguousHint,
+                                bool keepScalarOptionalBoxed) {
   if (entity.isVariable())
     return {translateVariableToExtendedValue(loc, builder, entity, false,
-                                             contiguousHint),
+                                             contiguousHint,
+                                             keepScalarOptionalBoxed),
             std::nullopt};
 
   if (entity.isProcedure()) {
@@ -1009,7 +1194,9 @@ hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
   if (entity.isProcedurePointer())
     entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
 
-  auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
+  auto [exv, cleanup] =
+      translateToExtendedValue(loc, builder, entity, /*contiguousHint=*/false,
+                               /*keepScalarOptionalBoxed=*/true);
   // Procedure entities should not go through createBoxValue that embox
   // object entities. Return the fir.boxproc directly.
   if (entity.isProcedure())
@@ -1287,4 +1474,64 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
     bldr->create<hlfir::DestroyOp>(loc, convertedRhs);
   };
   return {hlfir::Entity{convertedRhs}, cleanup};
+}
+
+std::pair<hlfir::Entity, bool> hlfir::computeEvaluateOpInNewTemp(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    hlfir::EvaluateInMemoryOp evalInMem, mlir::Value shape,
+    mlir::ValueRange typeParams) {
+  llvm::StringRef tmpName{".tmp.expr_result"};
+  llvm::SmallVector<mlir::Value> extents =
+      hlfir::getIndexExtents(loc, builder, shape);
+  mlir::Type baseType =
+      hlfir::getFortranElementOrSequenceType(evalInMem.getType());
+  bool heapAllocated = fir::hasDynamicSize(baseType);
+  // Note: temporaries are stack allocated here when possible (do not require
+  // stack save/restore) because flang has always stack allocated function
+  // results.
+  mlir::Value temp = heapAllocated
+                         ? builder.createHeapTemporary(loc, baseType, tmpName,
+                                                       extents, typeParams)
+                         : builder.createTemporary(loc, baseType, tmpName,
+                                                   extents, typeParams);
+  mlir::Value innerMemory = evalInMem.getMemory();
+  temp = builder.createConvert(loc, innerMemory.getType(), temp);
+  auto declareOp = builder.create<hlfir::DeclareOp>(
+      loc, temp, tmpName, shape, typeParams,
+      /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+  computeEvaluateOpIn(loc, builder, evalInMem, declareOp.getOriginalBase());
+  return {hlfir::Entity{declareOp.getBase()}, /*heapAllocated=*/heapAllocated};
+}
+
+void hlfir::computeEvaluateOpIn(mlir::Location loc, fir::FirOpBuilder &builder,
+                                hlfir::EvaluateInMemoryOp evalInMem,
+                                mlir::Value storage) {
+  mlir::Value innerMemory = evalInMem.getMemory();
+  mlir::Value storageCast =
+      builder.createConvert(loc, innerMemory.getType(), storage);
+  mlir::IRMapping mapper;
+  mapper.map(innerMemory, storageCast);
+  for (auto &op : evalInMem.getBody().front().without_terminator())
+    builder.clone(op, mapper);
+  return;
+}
+
+hlfir::Entity hlfir::loadElementAt(mlir::Location loc,
+                                   fir::FirOpBuilder &builder,
+                                   hlfir::Entity entity,
+                                   mlir::ValueRange oneBasedIndices) {
+  return loadTrivialScalar(loc, builder,
+                           getElementAt(loc, builder, entity, oneBasedIndices));
+}
+
+llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
+hlfir::genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder,
+                        hlfir::Entity entity) {
+  entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
+  mlir::Value shape = hlfir::genShape(loc, builder, entity);
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> extents =
+      hlfir::getExplicitExtentsFromShape(shape, builder);
+  if (shape.getUses().empty())
+    shape.getDefiningOp()->erase();
+  return extents;
 }

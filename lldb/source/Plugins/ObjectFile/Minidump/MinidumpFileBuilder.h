@@ -120,6 +120,7 @@ public:
   void DeleteFile() noexcept;
 
 private:
+  lldb_private::Status AddLLDBGeneratedStream();
   // Add data to the end of the buffer, if the buffer exceeds the flush level,
   // trigger a flush.
   lldb_private::Status AddData(const void *data, uint64_t size);

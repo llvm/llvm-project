@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_TGMATH_H
-#define _LIBCPP_TGMATH_H
+#ifndef _LIBCPP___CXX03_TGMATH_H
+#define _LIBCPP___CXX03_TGMATH_H
 
 /*
     tgmath.h synopsis
@@ -31,4 +31,4 @@
 #  endif
 #endif
 
-#endif // _LIBCPP_TGMATH_H
+#endif // _LIBCPP___CXX03_TGMATH_H

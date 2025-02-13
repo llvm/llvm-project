@@ -17,7 +17,6 @@
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
-#include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -170,6 +169,13 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
 
   const MCInstrDesc &Desc = MI->getDesc();
   unsigned NumVariadicDefs = MI->getNumExplicitDefs() - Desc.getNumDefs();
+  const MachineFunction *MF = MI->getMF();
+  const auto &TLI =
+      *MF->getSubtarget<WebAssemblySubtarget>().getTargetLowering();
+  wasm::ValType PtrTy = TLI.getPointerTy(MF->getDataLayout()) == MVT::i32
+                            ? wasm::ValType::I32
+                            : wasm::ValType::I64;
+
   for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I) {
     const MachineOperand &MO = MI->getOperand(I);
 
@@ -235,12 +241,12 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
             //    return type of the parent function.
             // 2. (catch_ref ...) clause in try_table instruction. Currently all
             //    tags we support (cpp_exception and c_longjmp) throws a single
-            //    i32, so the multivalue signature for this case will be (i32,
-            //    exnref). Having MO_CATCH_BLOCK_SIG target flags means this is
-            //    a destination of a catch_ref.
-            if (MO.getTargetFlags() == WebAssemblyII::MO_CATCH_BLOCK_SIG)
-              Returns = {wasm::ValType::I32, wasm::ValType::EXNREF};
-            else
+            //    pointer, so the multivalue signature for this case will be
+            //    (ptr, exnref). Having MO_CATCH_BLOCK_SIG target flags means
+            //    this is a destination of a catch_ref.
+            if (MO.getTargetFlags() == WebAssemblyII::MO_CATCH_BLOCK_SIG) {
+              Returns = {PtrTy, wasm::ValType::EXNREF};
+            } else
               getFunctionReturns(MI, Returns);
             MCOp = lowerTypeIndexOperand(std::move(Returns),
                                          SmallVector<wasm::ValType, 4>());

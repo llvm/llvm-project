@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Debug.h"
@@ -91,6 +92,7 @@ class SubtargetEmitter {
   void emitSubtargetInfoMacroCalls(raw_ostream &OS);
   unsigned featureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
   unsigned cpuKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
+  unsigned cpuNames(raw_ostream &OS);
   void formItineraryStageString(const std::string &Names,
                                 const Record *ItinData, std::string &ItinString,
                                 unsigned &NStages);
@@ -295,6 +297,40 @@ unsigned SubtargetEmitter::featureKeyValues(raw_ostream &OS,
   OS << "};\n";
 
   return FeatureList.size();
+}
+
+unsigned SubtargetEmitter::cpuNames(raw_ostream &OS) {
+  // Begin processor name table.
+  OS << "// Sorted array of names of CPU subtypes, including aliases.\n"
+     << "extern const llvm::StringRef " << Target << "Names[] = {\n";
+
+  std::vector<const Record *> ProcessorList =
+      Records.getAllDerivedDefinitions("Processor");
+
+  std::vector<const Record *> ProcessorAliasList =
+      Records.getAllDerivedDefinitionsIfDefined("ProcessorAlias");
+
+  SmallVector<StringRef> Names;
+  Names.reserve(ProcessorList.size() + ProcessorAliasList.size());
+
+  for (const Record *Processor : ProcessorList) {
+    StringRef Name = Processor->getValueAsString("Name");
+    Names.push_back(Name);
+  }
+
+  for (const Record *Rec : ProcessorAliasList) {
+    auto Name = Rec->getValueAsString("Name");
+    Names.push_back(Name);
+  }
+
+  llvm::sort(Names);
+  llvm::interleave(
+      Names, OS, [&](StringRef Name) { OS << '"' << Name << '"'; }, ",\n");
+
+  // End processor name table.
+  OS << "};\n";
+
+  return Names.size();
 }
 
 //
@@ -907,24 +943,23 @@ SubtargetEmitter::findWriteResources(const CodeGenSchedRW &SchedWrite,
 
   // Check this processor's list of write resources.
   const Record *ResDef = nullptr;
-  for (const Record *WR : ProcModel.WriteResDefs) {
-    if (!WR->isSubClassOf("WriteRes"))
-      continue;
-    const Record *WRDef = WR->getValueAsDef("WriteType");
-    if (AliasDef == WRDef || SchedWrite.TheDef == WRDef) {
-      if (ResDef) {
-        PrintFatalError(WR->getLoc(), "Resources are defined for both "
-                                      "SchedWrite and its alias on processor " +
-                                          ProcModel.ModelName);
-      }
-      ResDef = WR;
-      // If there is no AliasDef and we find a match, we can early exit since
-      // there is no need to verify whether there are resources defined for both
-      // SchedWrite and its alias.
-      if (!AliasDef)
-        break;
+
+  auto I = ProcModel.WriteResMap.find(SchedWrite.TheDef);
+  if (I != ProcModel.WriteResMap.end())
+    ResDef = I->second;
+
+  if (AliasDef) {
+    I = ProcModel.WriteResMap.find(AliasDef);
+    if (I != ProcModel.WriteResMap.end()) {
+      if (ResDef)
+        PrintFatalError(I->second->getLoc(),
+                        "Resources are defined for both SchedWrite and its "
+                        "alias on processor " +
+                            ProcModel.ModelName);
+      ResDef = I->second;
     }
   }
+
   // TODO: If ProcModel has a base model (previous generation processor),
   // then call FindWriteResources recursively with that model here.
   if (!ResDef) {
@@ -967,24 +1002,24 @@ SubtargetEmitter::findReadAdvance(const CodeGenSchedRW &SchedRead,
 
   // Check this processor's ReadAdvanceList.
   const Record *ResDef = nullptr;
-  for (const Record *RA : ProcModel.ReadAdvanceDefs) {
-    if (!RA->isSubClassOf("ReadAdvance"))
-      continue;
-    const Record *RADef = RA->getValueAsDef("ReadType");
-    if (AliasDef == RADef || SchedRead.TheDef == RADef) {
-      if (ResDef) {
-        PrintFatalError(RA->getLoc(), "Resources are defined for both "
-                                      "SchedRead and its alias on processor " +
-                                          ProcModel.ModelName);
-      }
-      ResDef = RA;
-      // If there is no AliasDef and we find a match, we can early exit since
-      // there is no need to verify whether there are resources defined for both
-      // SchedRead and its alias.
-      if (!AliasDef)
-        break;
+
+  auto I = ProcModel.ReadAdvanceMap.find(SchedRead.TheDef);
+  if (I != ProcModel.ReadAdvanceMap.end())
+    ResDef = I->second;
+
+  if (AliasDef) {
+    I = ProcModel.ReadAdvanceMap.find(AliasDef);
+    if (I != ProcModel.ReadAdvanceMap.end()) {
+      if (ResDef)
+        PrintFatalError(
+            I->second->getLoc(),
+            "Resources are defined for both SchedRead and its alias on "
+            "processor " +
+                ProcModel.ModelName);
+      ResDef = I->second;
     }
   }
+
   // TODO: If ProcModel has a base model (previous generation processor),
   // then call FindReadAdvance recursively with that model here.
   if (!ResDef && SchedRead.TheDef->getName() != "ReadDefault") {
@@ -1068,8 +1103,7 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
 
     // A Variant SchedClass has no resources of its own.
     bool HasVariants = false;
-    for (const CodeGenSchedTransition &CGT :
-         make_range(SC.Transitions.begin(), SC.Transitions.end())) {
+    for (const CodeGenSchedTransition &CGT : SC.Transitions) {
       if (CGT.ProcIndex == ProcModel.Index) {
         HasVariants = true;
         break;
@@ -1926,13 +1960,14 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "GenMCSubtargetInfo : public MCSubtargetInfo {\n";
   OS << "  " << Target << "GenMCSubtargetInfo(const Triple &TT,\n"
      << "    StringRef CPU, StringRef TuneCPU, StringRef FS,\n"
+     << "    ArrayRef<StringRef> PN,\n"
      << "    ArrayRef<SubtargetFeatureKV> PF,\n"
      << "    ArrayRef<SubtargetSubTypeKV> PD,\n"
      << "    const MCWriteProcResEntry *WPR,\n"
      << "    const MCWriteLatencyEntry *WL,\n"
      << "    const MCReadAdvanceEntry *RA, const InstrStage *IS,\n"
      << "    const unsigned *OC, const unsigned *FP) :\n"
-     << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PF, PD,\n"
+     << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
@@ -2001,6 +2036,8 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "\n";
   unsigned NumProcs = cpuKeyValues(OS, FeatureMap);
   OS << "\n";
+  unsigned NumNames = cpuNames(OS);
+  OS << "\n";
 
   // MCInstrInfo initialization routine.
   emitGenMCSubtargetInfo(OS);
@@ -2013,6 +2050,10 @@ void SubtargetEmitter::run(raw_ostream &OS) {
        << "  TuneCPU = AArch64::resolveCPUAlias(TuneCPU);\n";
   OS << "  return new " << Target
      << "GenMCSubtargetInfo(TT, CPU, TuneCPU, FS, ";
+  if (NumNames)
+    OS << Target << "Names, ";
+  else
+    OS << "{}, ";
   if (NumFeatures)
     OS << Target << "FeatureKV, ";
   else
@@ -2041,6 +2082,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "\n#ifdef GET_SUBTARGETINFO_TARGET_DESC\n";
   OS << "#undef GET_SUBTARGETINFO_TARGET_DESC\n\n";
 
+  OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
   OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/raw_ostream.h\"\n\n";
   if (Target == "AArch64")
@@ -2072,7 +2114,26 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " unsigned CPUID) const override;\n"
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
      << " const;\n";
-  if (TGT.getHwModes().getNumModeIds() > 1) {
+
+  const CodeGenHwModes &CGH = TGT.getHwModes();
+  if (CGH.getNumModeIds() > 1) {
+    OS << "  enum class " << Target << "HwModeBits : unsigned {\n";
+    for (unsigned M = 0, NumModes = CGH.getNumModeIds(); M != NumModes; ++M) {
+      StringRef ModeName = CGH.getModeName(M, /*IncludeDefault=*/true);
+      OS << "    " << ModeName << " = ";
+      if (M == 0)
+        OS << "0";
+      else
+        OS << "(1 << " << (M - 1) << ")";
+      OS << ",\n";
+      if (M == NumModes - 1) {
+        OS << "\n";
+        OS << "    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/" << ModeName
+           << "),\n";
+      }
+    }
+    OS << "  };\n";
+
     OS << "  unsigned getHwModeSet() const override;\n";
     OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
           "override;\n";
@@ -2096,6 +2157,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 
   OS << "#include \"llvm/CodeGen/TargetSchedule.h\"\n\n";
   OS << "namespace llvm {\n";
+  OS << "extern const llvm::StringRef " << Target << "Names[];\n";
   OS << "extern const llvm::SubtargetFeatureKV " << Target << "FeatureKV[];\n";
   OS << "extern const llvm::SubtargetSubTypeKV " << Target << "SubTypeKV[];\n";
   OS << "extern const llvm::MCWriteProcResEntry " << Target
@@ -2119,6 +2181,10 @@ void SubtargetEmitter::run(raw_ostream &OS) {
        << "                        AArch64::resolveCPUAlias(TuneCPU), FS, ";
   else
     OS << "  : TargetSubtargetInfo(TT, CPU, TuneCPU, FS, ";
+  if (NumNames)
+    OS << "ArrayRef(" << Target << "Names, " << NumNames << "), ";
+  else
+    OS << "{}, ";
   if (NumFeatures)
     OS << "ArrayRef(" << Target << "FeatureKV, " << NumFeatures << "), ";
   else

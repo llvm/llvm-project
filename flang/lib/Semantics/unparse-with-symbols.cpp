@@ -53,6 +53,14 @@ public:
   void Post(const parser::OpenMPThreadprivate &) { currStmt_ = std::nullopt; }
   void Post(const parser::Name &name);
 
+  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OpenMPDeclareMapperConstruct &) {
+    currStmt_ = std::nullopt;
+  }
+
 private:
   std::optional<SourceName> currStmt_; // current statement we are processing
   std::multimap<const char *, const Symbol *> symbols_; // location to symbol

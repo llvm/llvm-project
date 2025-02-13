@@ -8,11 +8,11 @@
 
 #include "gtest/gtest.h"
 #include "../../../runtime/terminator.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/allocator-registry.h"
+#include "flang/Support/Fortran.h"
 
 #include "cuda_runtime.h"
 
@@ -66,7 +66,7 @@ TEST(AllocatableCUFTest, DescriptorAllocationTest) {
   // REAL(4), DEVICE, ALLOCATABLE :: a(:)
   auto a{createAllocatable(TypeCategory::Real, 4)};
   Descriptor *desc = nullptr;
-  desc = RTNAME(CUFAllocDesciptor)(a->SizeInBytes());
+  desc = RTNAME(CUFAllocDescriptor)(a->SizeInBytes());
   EXPECT_TRUE(desc != nullptr);
-  RTNAME(CUFFreeDesciptor)(desc);
+  RTNAME(CUFFreeDescriptor)(desc);
 }

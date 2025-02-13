@@ -4,10 +4,10 @@
 
 ; The test checks that require-naturally-aligned-buffer-access target feature prevents merging loads if the target load would not be naturally aligned.
 
-define amdgpu_kernel void @merge_align_4(ptr addrspace(7) nocapture %p) #0 {
+define amdgpu_kernel void @merge_align_4(ptr addrspace(7) captures(none) %p) #0 {
 ;
 ; ALIGNED-LABEL: define amdgpu_kernel void @merge_align_4(
-; ALIGNED-SAME: ptr addrspace(7) nocapture [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; ALIGNED-SAME: ptr addrspace(7) captures(none) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ALIGNED-NEXT:  [[ENTRY:.*:]]
 ; ALIGNED-NEXT:    [[GEP_M8:%.*]] = getelementptr i8, ptr addrspace(7) [[P]], i32 -8
 ; ALIGNED-NEXT:    [[LD_M8:%.*]] = load i32, ptr addrspace(7) [[GEP_M8]], align 4
@@ -20,7 +20,7 @@ define amdgpu_kernel void @merge_align_4(ptr addrspace(7) nocapture %p) #0 {
 ; ALIGNED-NEXT:    ret void
 ;
 ; UNALIGNED-LABEL: define amdgpu_kernel void @merge_align_4(
-; UNALIGNED-SAME: ptr addrspace(7) nocapture [[P:%.*]]) {
+; UNALIGNED-SAME: ptr addrspace(7) captures(none) [[P:%.*]]) {
 ; UNALIGNED-NEXT:  [[ENTRY:.*:]]
 ; UNALIGNED-NEXT:    [[GEP_M8:%.*]] = getelementptr i8, ptr addrspace(7) [[P]], i32 -8
 ; UNALIGNED-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(7) [[GEP_M8]], align 4
@@ -44,9 +44,9 @@ entry:
 
 ; The test checks that require-naturally-aligned-buffer-access target feature does not prevent merging loads if the target load would be naturally aligned.
 
-define amdgpu_kernel void @merge_align_16(ptr addrspace(7) nocapture %p) #0 {
+define amdgpu_kernel void @merge_align_16(ptr addrspace(7) captures(none) %p) #0 {
 ; ALIGNED-LABEL: define amdgpu_kernel void @merge_align_16(
-; ALIGNED-SAME: ptr addrspace(7) nocapture [[P:%.*]]) #[[ATTR0]] {
+; ALIGNED-SAME: ptr addrspace(7) captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; ALIGNED-NEXT:  [[ENTRY:.*:]]
 ; ALIGNED-NEXT:    [[GEP_M8:%.*]] = getelementptr i8, ptr addrspace(7) [[P]], i32 -8
 ; ALIGNED-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(7) [[GEP_M8]], align 16
@@ -57,7 +57,7 @@ define amdgpu_kernel void @merge_align_16(ptr addrspace(7) nocapture %p) #0 {
 ; ALIGNED-NEXT:    ret void
 ;
 ; UNALIGNED-LABEL: define amdgpu_kernel void @merge_align_16(
-; UNALIGNED-SAME: ptr addrspace(7) nocapture [[P:%.*]]) {
+; UNALIGNED-SAME: ptr addrspace(7) captures(none) [[P:%.*]]) {
 ; UNALIGNED-NEXT:  [[ENTRY:.*:]]
 ; UNALIGNED-NEXT:    [[GEP_M8:%.*]] = getelementptr i8, ptr addrspace(7) [[P]], i32 -8
 ; UNALIGNED-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(7) [[GEP_M8]], align 16

@@ -134,6 +134,8 @@ Clang static analyzer
 | Gábor Horváth
 | xazax.hun\@gmail.com (email), xazax.hun (Phabricator), Xazax-hun (GitHub)
 
+| Balázs Benics
+| benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
 
 Compiler options
 ~~~~~~~~~~~~~~~~
@@ -166,6 +168,21 @@ Constant Expressions
 ~~~~~~~~~~~~~~~~~~~~
 | Mariya Podchishchaeva
 | mariya.podchishchaeva\@intel.com (email), Fznamznon (GitHub), fznamznon (Discord), Fznamznon (Discourse)
+
+
+Thread Safety Analysis
+~~~~~~~~~~~~~~~~~~~~~~
+| Aaron Puchert
+| aaron.puchert\@sap.com (email), aaronpuchert (GitHub), aaronpuchert (Discourse)
+
+
+Function Effect Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~
+| Doug Wyatt
+| dwyatt\@apple.com (email), dougsonos (GitHub), dougsonos (Discourse)
+
+| Sirraide
+| aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 
 Tools
@@ -303,8 +320,8 @@ OpenMP conformance
 
 OpenCL conformance
 ~~~~~~~~~~~~~~~~~~
-| Anastasia Stulova
-| anastasia\@compiler-experts.com (email), Anastasia (Phabricator), AnastasiaStulova (GitHub)
+| Sven van Haastregt
+| sven.vanhaastregt\@arm.com (email), svenvh (GitHub)
 
 
 OpenACC
@@ -348,6 +365,7 @@ Emeritus Lead Maintainers
 
 Inactive component maintainers
 ------------------------------
+| Anastasia Stulova (stulovaa\@gmail.com) -- OpenCL, C++ for OpenCL
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers

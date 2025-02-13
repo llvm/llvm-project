@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_PAIR_H
-#define _LIBCPP___UTILITY_PAIR_H
+#ifndef _LIBCPP___CXX03___UTILITY_PAIR_H
+#define _LIBCPP___CXX03___UTILITY_PAIR_H
 
 #include <__cxx03/__compare/common_comparison_category.h>
 #include <__cxx03/__compare/synth_three_way.h>
@@ -715,4 +715,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___UTILITY_PAIR_H
+#endif // _LIBCPP___CXX03___UTILITY_PAIR_H

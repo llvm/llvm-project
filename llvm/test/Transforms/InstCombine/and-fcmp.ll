@@ -5042,6 +5042,58 @@ define i1 @isnormal_logical_select_0_fmf1(half %x) {
   ret i1 %and
 }
 
+define i1 @and_fcmp_reassoc1(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %cmp, %x
+  %retval = and i1 %and, %cmp1
+  ret i1 %retval
+}
+
+define i1 @and_fcmp_reassoc2(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %x, %cmp
+  %retval = and i1 %and, %cmp1
+  ret i1 %retval
+}
+
+define i1 @and_fcmp_reassoc3(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc3(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %cmp, %x
+  %retval = and i1 %cmp1, %and
+  ret i1 %retval
+}
+
+define i1 @and_fcmp_reassoc4(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc4(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %x, %cmp
+  %retval = and i1 %cmp1, %and
+  ret i1 %retval
+}
+
 declare half @llvm.fabs.f16(half)
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>)
 declare half @llvm.copysign.f16(half, half)

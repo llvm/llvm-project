@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXT_HASH
-#define _LIBCPP_EXT_HASH
+#ifndef _LIBCPP___CXX03_EXT_HASH
+#define _LIBCPP___CXX03_EXT_HASH
 
 #pragma GCC system_header
 
@@ -82,4 +82,4 @@ struct _LIBCPP_TEMPLATE_VIS hash<unsigned long> : public std::__unary_function<u
 };
 } // namespace __gnu_cxx
 
-#endif // _LIBCPP_EXT_HASH
+#endif // _LIBCPP___CXX03_EXT_HASH

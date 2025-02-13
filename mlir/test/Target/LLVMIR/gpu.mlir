@@ -101,3 +101,11 @@ module attributes {gpu.container_module} {
     llvm.return
   }
 }
+
+// -----
+
+// Checking that ELF section is populated
+module attributes {gpu.container_module} {
+  // CHECK: @cuda_device_mod_bin_cst = internal constant [4 x i8] c"BLOB", section "__nv_rel_fatbin", align 8
+  gpu.binary @cuda_device_mod  [#gpu.object<#nvvm.target, properties = {section = "__nv_rel_fatbin"}, "BLOB">]
+}

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CHRONO
-#define _LIBCPP_CHRONO
+#ifndef _LIBCPP___CXX03_CHRONO
+#define _LIBCPP___CXX03_CHRONO
 
 // clang-format off
 
@@ -1019,4 +1019,4 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #  endif
 #endif
 
-#endif // _LIBCPP_CHRONO
+#endif // _LIBCPP___CXX03_CHRONO

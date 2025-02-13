@@ -75,6 +75,16 @@ constexpr llvm::StringRef getOptionalAttrName() { return "fir.optional"; }
 /// Attribute to mark Fortran entities with the TARGET attribute.
 static constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
 
+/// Attribute to mark Fortran entities with the ASYNCHRONOUS attribute.
+static constexpr llvm::StringRef getAsynchronousAttrName() {
+  return "fir.asynchronous";
+}
+
+/// Attribute to mark Fortran entities with the VOLATILE attribute.
+static constexpr llvm::StringRef getVolatileAttrName() {
+  return "fir.volatile";
+}
+
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
 static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {

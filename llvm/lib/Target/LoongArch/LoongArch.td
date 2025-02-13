@@ -118,6 +118,29 @@ def FeatureLAM_BH
                         "Support amswap[_db].{b/h} and amadd[_db].{b/h} instructions.">;
 def HasLAM_BH : Predicate<"Subtarget->hasLAM_BH()">;
 
+// Atomic memory compare and swap instructions for byte, half word, word and double word
+def FeatureLAMCAS
+    : SubtargetFeature<"lamcas", "HasLAMCAS", "true",
+                        "Support amcas[_db].{b/h/w/d}.">;
+def HasLAMCAS : Predicate<"Subtarget->hasLAMCAS()">;
+
+def FeatureLD_SEQ_SA
+    : SubtargetFeature<"ld-seq-sa", "HasLD_SEQ_SA", "true",
+                        "Don't use load-load barrier (dbar 0x700).">;
+def HasLD_SEQ_SA : Predicate<"Subtarget->hasLD_SEQ_SA()">;
+
+// Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended.
+def FeatureDiv32
+    : SubtargetFeature<"div32", "HasDiv32", "true",
+                        "Assume div.w[u] and mod.w[u] can handle inputs that are not sign-extended">;
+def HasDiv32 : Predicate<"Subtarget->hasDiv32()">;
+
+// Support SC.Q instruction
+def FeatureSCQ
+    : SubtargetFeature<"scq", "HasSCQ", "true",
+                        "Support sc.q instruction">;
+def HasSCQ : Predicate<"Subtarget->hasSCQ()">;
+
 def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
@@ -160,7 +183,11 @@ def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
                                              FeatureExtLVZ,
                                              FeatureExtLBT,
                                              FeatureFrecipe,
-                                             FeatureLAM_BH]>;
+                                             FeatureLAM_BH,
+                                             FeatureLAMCAS,
+                                             FeatureLD_SEQ_SA,
+                                             FeatureDiv32,
+                                             FeatureSCQ]>;
 
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.

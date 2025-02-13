@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_BARRIER
-#define _LIBCPP_BARRIER
+#ifndef _LIBCPP___CXX03_BARRIER
+#define _LIBCPP___CXX03_BARRIER
 
 /*
     barrier synopsis
@@ -305,4 +305,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/variant>
 #endif
 
-#endif //_LIBCPP_BARRIER
+#endif //_LIBCPP___CXX03_BARRIER

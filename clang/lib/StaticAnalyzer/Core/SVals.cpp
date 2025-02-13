@@ -111,9 +111,9 @@ SymbolRef SVal::getAsSymbol(bool IncludeBaseRegions) const {
 
 const llvm::APSInt *SVal::getAsInteger() const {
   if (auto CI = getAs<nonloc::ConcreteInt>())
-    return &CI->getValue();
+    return CI->getValue().get();
   if (auto CI = getAs<loc::ConcreteInt>())
-    return &CI->getValue();
+    return CI->getValue().get();
   return nullptr;
 }
 
@@ -205,10 +205,10 @@ const NamedDecl *nonloc::PointerToMember::getDecl() const {
     return nullptr;
 
   const NamedDecl *ND = nullptr;
-  if (PTMD.is<const NamedDecl *>())
-    ND = PTMD.get<const NamedDecl *>();
+  if (const auto *NDP = dyn_cast<const NamedDecl *>(PTMD))
+    ND = NDP;
   else
-    ND = PTMD.get<const PointerToMemberData *>()->getDeclaratorDecl();
+    ND = cast<const PointerToMemberData *>(PTMD)->getDeclaratorDecl();
 
   return ND;
 }
@@ -227,16 +227,16 @@ nonloc::CompoundVal::iterator nonloc::CompoundVal::end() const {
 
 nonloc::PointerToMember::iterator nonloc::PointerToMember::begin() const {
   const PTMDataType PTMD = getPTMData();
-  if (PTMD.is<const NamedDecl *>())
+  if (isa<const NamedDecl *>(PTMD))
     return {};
-  return PTMD.get<const PointerToMemberData *>()->begin();
+  return cast<const PointerToMemberData *>(PTMD)->begin();
 }
 
 nonloc::PointerToMember::iterator nonloc::PointerToMember::end() const {
   const PTMDataType PTMD = getPTMData();
-  if (PTMD.is<const NamedDecl *>())
+  if (isa<const NamedDecl *>(PTMD))
     return {};
-  return PTMD.get<const PointerToMemberData *>()->end();
+  return cast<const PointerToMemberData *>(PTMD)->end();
 }
 
 //===----------------------------------------------------------------------===//
@@ -249,9 +249,9 @@ bool SVal::isConstant() const {
 
 bool SVal::isConstant(int I) const {
   if (std::optional<loc::ConcreteInt> LV = getAs<loc::ConcreteInt>())
-    return LV->getValue() == I;
+    return *LV->getValue().get() == I;
   if (std::optional<nonloc::ConcreteInt> NV = getAs<nonloc::ConcreteInt>())
-    return NV->getValue() == I;
+    return *NV->getValue().get() == I;
   return false;
 }
 
@@ -314,9 +314,9 @@ void SVal::dumpToStream(raw_ostream &os) const {
 void NonLoc::dumpToStream(raw_ostream &os) const {
   switch (getKind()) {
   case nonloc::ConcreteIntKind: {
-    const auto &Value = castAs<nonloc::ConcreteInt>().getValue();
-    os << Value << ' ' << (Value.isSigned() ? 'S' : 'U') << Value.getBitWidth()
-       << 'b';
+    APSIntPtr Value = castAs<nonloc::ConcreteInt>().getValue();
+    os << Value << ' ' << (Value->isSigned() ? 'S' : 'U')
+       << Value->getBitWidth() << 'b';
     break;
   }
     case nonloc::SymbolValKind:
@@ -380,7 +380,7 @@ void NonLoc::dumpToStream(raw_ostream &os) const {
 void Loc::dumpToStream(raw_ostream &os) const {
   switch (getKind()) {
   case loc::ConcreteIntKind:
-    os << castAs<loc::ConcreteInt>().getValue().getZExtValue() << " (Loc)";
+    os << castAs<loc::ConcreteInt>().getValue()->getZExtValue() << " (Loc)";
     break;
   case loc::GotoLabelKind:
     os << "&&" << castAs<loc::GotoLabel>().getLabel()->getName();

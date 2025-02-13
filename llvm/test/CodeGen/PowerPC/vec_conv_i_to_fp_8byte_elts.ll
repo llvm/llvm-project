@@ -37,8 +37,8 @@ define void @test4elt(ptr noalias nocapture sret(<4 x double>) %agg.result, ptr 
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    xvcvuxddp vs1, vs1
 ; CHECK-P8-NEXT:    xvcvuxddp vs0, vs0
-; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
 ; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test4elt:
@@ -251,8 +251,8 @@ define void @test4elt_signed(ptr noalias nocapture sret(<4 x double>) %agg.resul
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    xvcvsxddp vs1, vs1
 ; CHECK-P8-NEXT:    xvcvsxddp vs0, vs0
-; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
 ; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test4elt_signed:

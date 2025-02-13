@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_VOID_H
-#define _LIBCPP___TYPE_TRAITS_IS_VOID_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_VOID_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_VOID_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -28,4 +28,4 @@ inline constexpr bool is_void_v = __is_same(__remove_cv(_Tp), void);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_VOID_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_VOID_H

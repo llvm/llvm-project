@@ -344,7 +344,7 @@ public:
 };
 
 /// The region containing globals which can be modified by calls to
-/// "internally" defined functions - (for now just) functions other then system
+/// "internally" defined functions - (for now just) functions other than system
 /// calls.
 class GlobalInternalSpaceRegion : public NonStaticGlobalSpaceRegion {
   friend class MemRegionManager;
@@ -1021,7 +1021,7 @@ public:
   }
 };
 
-/// ParamVarRegion - Represents a region for paremters. Only parameters of the
+/// ParamVarRegion - Represents a region for parameters. Only parameters of the
 /// function in the current stack frame are represented as `ParamVarRegion`s.
 /// Parameters of top-level analyzed functions as well as captured paremeters
 /// by lambdas and blocks are repesented as `VarRegion`s.
@@ -1206,7 +1206,7 @@ class ElementRegion : public TypedValueRegion {
       : TypedValueRegion(sReg, ElementRegionKind), ElementType(elementType),
         Index(Idx) {
     assert((!isa<nonloc::ConcreteInt>(Idx) ||
-            Idx.castAs<nonloc::ConcreteInt>().getValue().isSigned()) &&
+            Idx.castAs<nonloc::ConcreteInt>().getValue()->isSigned()) &&
            "The index must be signed");
     assert(!elementType.isNull() && !elementType->isVoidType() &&
            "Invalid region type!");

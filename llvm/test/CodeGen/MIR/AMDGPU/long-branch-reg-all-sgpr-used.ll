@@ -29,6 +29,7 @@
 ; CHECK-NEXT:     workItemIDX:     { reg: '$vgpr0' }
 ; CHECK-NEXT:   psInputAddr:     0
 ; CHECK-NEXT:   psInputEnable:   0
+; CHECK-NEXT:   maxMemoryClusterDWords: 8
 ; CHECK-NEXT:   mode:
 ; CHECK-NEXT:     ieee:            true
 ; CHECK-NEXT:     dx10-clamp:      true
@@ -295,6 +296,7 @@
 ; CHECK-NEXT:     workItemIDX:     { reg: '$vgpr0' }
 ; CHECK-NEXT:   psInputAddr:     0
 ; CHECK-NEXT:   psInputEnable:   0
+; CHECK-NEXT:   maxMemoryClusterDWords: 8
 ; CHECK-NEXT:   mode:
 ; CHECK-NEXT:     ieee:            true
 ; CHECK-NEXT:     dx10-clamp:      true

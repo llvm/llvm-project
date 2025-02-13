@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_RATIO
-#define _LIBCPP_RATIO
+#ifndef _LIBCPP___CXX03_RATIO
+#define _LIBCPP___CXX03_RATIO
 
 /*
     ratio synopsis
@@ -514,4 +514,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_RATIO
+#endif // _LIBCPP___CXX03_RATIO

@@ -8,14 +8,11 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 
-#include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include <cstdint>
 #include <mutex>
-#include <utility>
 
 #define DEBUG_TYPE "orc"
 

@@ -29,6 +29,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <utility>
@@ -67,9 +68,10 @@ private:
             isa<ObjCIvarRegion, CXXDerivedObjectRegion>(r)) &&
            "Not a base");
   }
-public:
 
+public:
   bool isDirect() const { return P.getInt() & Direct; }
+  bool isDefault() const { return !isDirect(); }
   bool hasSymbolicOffset() const { return P.getInt() & Symbolic; }
 
   const MemRegion *getRegion() const { return P.getPointer(); }
@@ -111,6 +113,13 @@ public:
 
   LLVM_DUMP_METHOD void dump() const;
 };
+
+std::string locDescr(Loc L) {
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  L.dumpToStream(OS);
+  return OS.str();
+}
 } // end anonymous namespace
 
 BindingKey BindingKey::Make(const MemRegion *R, Kind k) {
@@ -232,27 +241,86 @@ public:
 
   void printJson(raw_ostream &Out, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const {
-    for (iterator I = begin(), E = end(); I != E; ++I) {
-      // TODO: We might need a .printJson for I.getKey() as well.
+    using namespace llvm;
+    DenseMap<const MemRegion *, std::string> StringifyCache;
+    auto ToString = [&StringifyCache](const MemRegion *R) {
+      auto [Place, Inserted] = StringifyCache.try_emplace(R);
+      if (!Inserted)
+        return Place->second;
+      std::string Res;
+      raw_string_ostream OS(Res);
+      OS << R;
+      Place->second = Res;
+      return Res;
+    };
+
+    using Cluster =
+        std::pair<const MemRegion *, ImmutableMap<BindingKey, SVal>>;
+    using Binding = std::pair<BindingKey, SVal>;
+
+    const auto MemSpaceBeforeRegionName = [&ToString](const Cluster *L,
+                                                      const Cluster *R) {
+      if (isa<MemSpaceRegion>(L->first) && !isa<MemSpaceRegion>(R->first))
+        return true;
+      if (!isa<MemSpaceRegion>(L->first) && isa<MemSpaceRegion>(R->first))
+        return false;
+      return ToString(L->first) < ToString(R->first);
+    };
+
+    const auto SymbolicBeforeOffset = [&ToString](const BindingKey &L,
+                                                  const BindingKey &R) {
+      if (L.hasSymbolicOffset() && !R.hasSymbolicOffset())
+        return true;
+      if (!L.hasSymbolicOffset() && R.hasSymbolicOffset())
+        return false;
+      if (L.hasSymbolicOffset() && R.hasSymbolicOffset())
+        return ToString(L.getRegion()) < ToString(R.getRegion());
+      return L.getOffset() < R.getOffset();
+    };
+
+    const auto DefaultBindingBeforeDirectBindings =
+        [&SymbolicBeforeOffset](const Binding *LPtr, const Binding *RPtr) {
+          const BindingKey &L = LPtr->first;
+          const BindingKey &R = RPtr->first;
+          if (L.isDefault() && !R.isDefault())
+            return true;
+          if (!L.isDefault() && R.isDefault())
+            return false;
+          assert(L.isDefault() == R.isDefault());
+          return SymbolicBeforeOffset(L, R);
+        };
+
+    const auto AddrOf = [](const auto &Item) { return &Item; };
+
+    std::vector<const Cluster *> SortedClusters;
+    SortedClusters.reserve(std::distance(begin(), end()));
+    append_range(SortedClusters, map_range(*this, AddrOf));
+    llvm::sort(SortedClusters, MemSpaceBeforeRegionName);
+
+    for (auto [Idx, C] : llvm::enumerate(SortedClusters)) {
+      const auto &[BaseRegion, Bindings] = *C;
       Indent(Out, Space, IsDot)
-          << "{ \"cluster\": \"" << I.getKey() << "\", \"pointer\": \""
-          << (const void *)I.getKey() << "\", \"items\": [" << NL;
+          << "{ \"cluster\": \"" << BaseRegion << "\", \"pointer\": \""
+          << (const void *)BaseRegion << "\", \"items\": [" << NL;
+
+      std::vector<const Binding *> SortedBindings;
+      SortedBindings.reserve(std::distance(Bindings.begin(), Bindings.end()));
+      append_range(SortedBindings, map_range(Bindings, AddrOf));
+      llvm::sort(SortedBindings, DefaultBindingBeforeDirectBindings);
 
       ++Space;
-      const ClusterBindings &CB = I.getData();
-      for (ClusterBindings::iterator CI = CB.begin(), CE = CB.end(); CI != CE;
-           ++CI) {
-        Indent(Out, Space, IsDot) << "{ " << CI.getKey() << ", \"value\": ";
-        CI.getData().printJson(Out, /*AddQuotes=*/true);
+      for (auto [Idx, B] : llvm::enumerate(SortedBindings)) {
+        const auto &[Key, Value] = *B;
+        Indent(Out, Space, IsDot) << "{ " << Key << ", \"value\": ";
+        Value.printJson(Out, /*AddQuotes=*/true);
         Out << " }";
-        if (std::next(CI) != CE)
+        if (Idx != SortedBindings.size() - 1)
           Out << ',';
         Out << NL;
       }
-
       --Space;
       Indent(Out, Space, IsDot) << "]}";
-      if (std::next(I) != E)
+      if (Idx != SortedClusters.size() - 1)
         Out << ',';
       Out << NL;
     }
@@ -547,6 +615,11 @@ public: // Part of public interface to class.
   SVal getBinding(Store S, Loc L, QualType T) override {
     return getBinding(getRegionBindings(S), L, T);
   }
+
+  std::optional<SVal> getUniqueDefaultBinding(RegionBindingsConstRef B,
+                                              const TypedValueRegion *R) const;
+  std::optional<SVal>
+  getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const;
 
   std::optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
     RegionBindingsRef B = getRegionBindings(S);
@@ -866,7 +939,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
     Length = ExtentInt.getLimitedValue() * SVB.getContext().getCharWidth();
   } else if (const FieldRegion *FR = dyn_cast<FieldRegion>(Top)) {
     if (FR->getDecl()->isBitField())
-      Length = FR->getDecl()->getBitWidthValue(SVB.getContext());
+      Length = FR->getDecl()->getBitWidthValue();
   }
 
   for (const auto &StoreEntry : Cluster) {
@@ -2276,20 +2349,21 @@ NonLoc RegionStoreManager::createLazyBinding(RegionBindingsConstRef B,
   return svalBuilder.makeLazyCompoundVal(StoreRef(B.asStore(), *this), R);
 }
 
-static bool isRecordEmpty(const RecordDecl *RD) {
-  if (!RD->field_empty())
-    return false;
-  if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD))
-    return CRD->getNumBases() == 0;
-  return true;
-}
-
 SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
                                              const TypedValueRegion *R) {
   const RecordDecl *RD = R->getValueType()->castAs<RecordType>()->getDecl();
-  if (!RD->getDefinition() || isRecordEmpty(RD))
+  if (!RD->getDefinition())
     return UnknownVal();
 
+  // We also create a LCV for copying empty structs because then the store
+  // behavior doesn't depend on the struct layout.
+  // This way even an empty struct can carry taint, no matter if creduce drops
+  // the last field member or not.
+
+  // Try to avoid creating a LCV if it would anyways just refer to a single
+  // default binding.
+  if (std::optional<SVal> Val = getUniqueDefaultBinding(B, R))
+    return *Val;
   return createLazyBinding(B, R);
 }
 
@@ -2342,6 +2416,8 @@ StoreRef RegionStoreManager::killBinding(Store ST, Loc L) {
 
 RegionBindingsRef
 RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bind",
+                                 [&L]() { return locDescr(L); });
   // We only care about region locations.
   auto MemRegVal = L.getAs<loc::MemRegionVal>();
   if (!MemRegVal)
@@ -2448,6 +2524,8 @@ RegionBindingsRef
 RegionStoreManager::bindArray(RegionBindingsConstRef B,
                               const TypedValueRegion* R,
                               SVal Init) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindArray",
+                                 [R]() { return R->getDescriptiveName(); });
 
   const ArrayType *AT =cast<ArrayType>(Ctx.getCanonicalType(R->getValueType()));
   QualType ElementTy = AT->getElementType();
@@ -2512,6 +2590,8 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
 RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
                                                  const TypedValueRegion* R,
                                                  SVal V) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindVector",
+                                 [R]() { return R->getDescriptiveName(); });
   QualType T = R->getValueType();
   const VectorType *VT = T->castAs<VectorType>(); // Use castAs for typedefs.
 
@@ -2549,9 +2629,47 @@ RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
   return NewB;
 }
 
+std::optional<SVal>
+RegionStoreManager::getUniqueDefaultBinding(RegionBindingsConstRef B,
+                                            const TypedValueRegion *R) const {
+  if (R != R->getBaseRegion())
+    return std::nullopt;
+
+  const auto *Cluster = B.lookup(R);
+  if (!Cluster || !llvm::hasSingleElement(*Cluster))
+    return std::nullopt;
+
+  const auto [Key, Value] = *Cluster->begin();
+  return Key.isDirect() ? std::optional<SVal>{} : Value;
+}
+
+std::optional<SVal>
+RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
+  RegionBindingsConstRef B = getRegionBindings(LCV.getStore());
+  return getUniqueDefaultBinding(B, LCV.getRegion());
+}
+
 std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
     RegionBindingsConstRef B, const TypedValueRegion *R, const RecordDecl *RD,
     nonloc::LazyCompoundVal LCV) {
+  // If we try to copy a Conjured value representing the value of the whole
+  // struct, don't try to element-wise copy each field.
+  // That would unnecessarily bind Derived symbols slicing off the subregion for
+  // the field from the whole Conjured symbol.
+  //
+  //   struct Window { int width; int height; };
+  //   Window getWindow(); <-- opaque fn.
+  //   Window w = getWindow(); <-- conjures a new Window.
+  //   Window w2 = w; <-- trivial copy "w", calling "tryBindSmallStruct"
+  //
+  // We should not end up with a new Store for "w2" like this:
+  //   Direct [ 0..31]: Derived{Conj{}, w.width}
+  //   Direct [32..63]: Derived{Conj{}, w.height}
+  // Instead, we should just bind that Conjured value instead.
+  if (std::optional<SVal> Val = getUniqueDefaultBinding(LCV)) {
+    return B.addBinding(BindingKey::Make(R, BindingKey::Default), Val.value());
+  }
+
   FieldVector Fields;
 
   if (const CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(RD))
@@ -2596,6 +2714,8 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
 RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
                                                  const TypedValueRegion *R,
                                                  SVal V) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindStruct",
+                                 [R]() { return R->getDescriptiveName(); });
   QualType T = R->getValueType();
   assert(T->isStructureOrClassType());
 
@@ -2714,6 +2834,8 @@ RegionBindingsRef
 RegionStoreManager::bindAggregate(RegionBindingsConstRef B,
                                   const TypedRegion *R,
                                   SVal Val) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindAggregate",
+                                 [R]() { return R->getDescriptiveName(); });
   // Remove the old bindings, using 'R' as the root of all regions
   // we will invalidate. Then add the new binding.
   return removeSubRegionBindings(B, R).addBinding(R, BindingKey::Default, Val);

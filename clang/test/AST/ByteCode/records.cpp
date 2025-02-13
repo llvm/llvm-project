@@ -1015,11 +1015,13 @@ namespace ParenInit {
   };
 
   /// Not constexpr!
-  O o1(0);
+  O o1(0); // both-warning {{temporary whose address is used as value of}}
+  // FIXME: the secondary warning message is bogus, would be nice to suppress it.
   constinit O o2(0); // both-error {{variable does not have a constant initializer}} \
                      // both-note {{required by 'constinit' specifier}} \
                      // both-note {{reference to temporary is not a constant expression}} \
-                     // both-note {{temporary created here}}
+                     // both-note {{temporary created here}} \
+                     // both-warning {{temporary whose address is used as value}}
 
 
   /// Initializing an array.
@@ -1675,4 +1677,25 @@ namespace NonConst {
     const S<10> s{a};
     static_assert(s.getSize() == 10, "");
   }
+}
+
+namespace ExplicitThisInTemporary {
+  struct B { B *p = this; };
+  constexpr bool g(B b) { return &b == b.p; }
+  static_assert(g({}), "");
+}
+
+namespace IgnoredMemberExpr {
+  class A {
+  public:
+    int a;
+  };
+  class B : public A {
+  public:
+    constexpr int foo() {
+      a; // both-warning {{expression result unused}}
+      return 0;
+    }
+  };
+  static_assert(B{}.foo() == 0, "");
 }

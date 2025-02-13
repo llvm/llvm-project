@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXECUTION
-#define _LIBCPP_EXECUTION
+#ifndef _LIBCPP___CXX03_EXECUTION
+#define _LIBCPP___CXX03_EXECUTION
 
 /*
 namespace std::execution {
@@ -146,4 +146,4 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <__cxx03/cstddef>
 #endif
 
-#endif // _LIBCPP_EXECUTION
+#endif // _LIBCPP___CXX03_EXECUTION

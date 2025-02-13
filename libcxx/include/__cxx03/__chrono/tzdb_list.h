@@ -9,8 +9,8 @@
 
 // For information see https://libcxx.llvm.org/DesignDocs/TimeZone.html
 
-#ifndef _LIBCPP___CHRONO_TZDB_LIST_H
-#define _LIBCPP___CHRONO_TZDB_LIST_H
+#ifndef _LIBCPP___CXX03___CHRONO_TZDB_LIST_H
+#define _LIBCPP___CXX03___CHRONO_TZDB_LIST_H
 
 #include <__cxx03/version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
@@ -105,4 +105,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
-#endif // _LIBCPP___CHRONO_TZDB_LIST_H
+#endif // _LIBCPP___CXX03___CHRONO_TZDB_LIST_H

@@ -6,21 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir-c/Dialect/Quant.h"
-#include "mlir-c/IR.h"
-#include "mlir/Bindings/Python/PybindAdaptors.h"
 #include <cstdint>
-#include <pybind11/cast.h>
-#include <pybind11/detail/common.h>
-#include <pybind11/pybind11.h>
 #include <vector>
 
-namespace py = pybind11;
+#include "mlir-c/Dialect/Quant.h"
+#include "mlir-c/IR.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/Nanobind.h"
+
+namespace nb = nanobind;
 using namespace llvm;
 using namespace mlir;
-using namespace mlir::python::adaptors;
+using namespace mlir::python::nanobind_adaptors;
 
-static void populateDialectQuantSubmodule(const py::module &m) {
+static void populateDialectQuantSubmodule(const nb::module_ &m) {
   //===-------------------------------------------------------------------===//
   // QuantizedType
   //===-------------------------------------------------------------------===//
@@ -35,7 +34,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
       },
       "Default minimum value for the integer with the specified signedness and "
       "bit width.",
-      py::arg("is_signed"), py::arg("integral_width"));
+      nb::arg("is_signed"), nb::arg("integral_width"));
   quantizedType.def_staticmethod(
       "default_maximum_for_integer",
       [](bool isSigned, unsigned integralWidth) {
@@ -44,7 +43,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
       },
       "Default maximum value for the integer with the specified signedness and "
       "bit width.",
-      py::arg("is_signed"), py::arg("integral_width"));
+      nb::arg("is_signed"), nb::arg("integral_width"));
   quantizedType.def_property_readonly(
       "expressed_type",
       [](MlirType type) { return mlirQuantizedTypeGetExpressedType(type); },
@@ -82,7 +81,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
       },
       "Checks whether the candidate type can be expressed by this quantized "
       "type.",
-      py::arg("candidate"));
+      nb::arg("candidate"));
   quantizedType.def_property_readonly(
       "quantized_element_type",
       [](MlirType type) {
@@ -96,24 +95,24 @@ static void populateDialectQuantSubmodule(const py::module &m) {
             mlirQuantizedTypeCastFromStorageType(type, candidate);
         if (!mlirTypeIsNull(castResult))
           return castResult;
-        throw py::type_error("Invalid cast.");
+        throw nb::type_error("Invalid cast.");
       },
       "Casts from a type based on the storage type of this quantized type to a "
       "corresponding type based on the quantized type. Raises TypeError if the "
       "cast is not valid.",
-      py::arg("candidate"));
+      nb::arg("candidate"));
   quantizedType.def_staticmethod(
       "cast_to_storage_type",
       [](MlirType type) {
         MlirType castResult = mlirQuantizedTypeCastToStorageType(type);
         if (!mlirTypeIsNull(castResult))
           return castResult;
-        throw py::type_error("Invalid cast.");
+        throw nb::type_error("Invalid cast.");
       },
       "Casts from a type based on a quantized type to a corresponding type "
       "based on the storage type of this quantized type. Raises TypeError if "
       "the cast is not valid.",
-      py::arg("type"));
+      nb::arg("type"));
   quantizedType.def(
       "cast_from_expressed_type",
       [](MlirType type, MlirType candidate) {
@@ -121,24 +120,24 @@ static void populateDialectQuantSubmodule(const py::module &m) {
             mlirQuantizedTypeCastFromExpressedType(type, candidate);
         if (!mlirTypeIsNull(castResult))
           return castResult;
-        throw py::type_error("Invalid cast.");
+        throw nb::type_error("Invalid cast.");
       },
       "Casts from a type based on the expressed type of this quantized type to "
       "a corresponding type based on the quantized type. Raises TypeError if "
       "the cast is not valid.",
-      py::arg("candidate"));
+      nb::arg("candidate"));
   quantizedType.def_staticmethod(
       "cast_to_expressed_type",
       [](MlirType type) {
         MlirType castResult = mlirQuantizedTypeCastToExpressedType(type);
         if (!mlirTypeIsNull(castResult))
           return castResult;
-        throw py::type_error("Invalid cast.");
+        throw nb::type_error("Invalid cast.");
       },
       "Casts from a type based on a quantized type to a corresponding type "
       "based on the expressed type of this quantized type. Raises TypeError if "
       "the cast is not valid.",
-      py::arg("type"));
+      nb::arg("type"));
   quantizedType.def(
       "cast_expressed_to_storage_type",
       [](MlirType type, MlirType candidate) {
@@ -146,12 +145,12 @@ static void populateDialectQuantSubmodule(const py::module &m) {
             mlirQuantizedTypeCastExpressedToStorageType(type, candidate);
         if (!mlirTypeIsNull(castResult))
           return castResult;
-        throw py::type_error("Invalid cast.");
+        throw nb::type_error("Invalid cast.");
       },
       "Casts from a type based on the expressed type of this quantized type to "
       "a corresponding type based on the storage type. Raises TypeError if the "
       "cast is not valid.",
-      py::arg("candidate"));
+      nb::arg("candidate"));
 
   quantizedType.get_class().attr("FLAG_SIGNED") =
       mlirQuantizedTypeGetSignedFlag();
@@ -165,7 +164,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
                          quantizedType.get_class());
   anyQuantizedType.def_classmethod(
       "get",
-      [](py::object cls, unsigned flags, MlirType storageType,
+      [](nb::object cls, unsigned flags, MlirType storageType,
          MlirType expressedType, int64_t storageTypeMin,
          int64_t storageTypeMax) {
         return cls(mlirAnyQuantizedTypeGet(flags, storageType, expressedType,
@@ -173,9 +172,9 @@ static void populateDialectQuantSubmodule(const py::module &m) {
       },
       "Gets an instance of AnyQuantizedType in the same context as the "
       "provided storage type.",
-      py::arg("cls"), py::arg("flags"), py::arg("storage_type"),
-      py::arg("expressed_type"), py::arg("storage_type_min"),
-      py::arg("storage_type_max"));
+      nb::arg("cls"), nb::arg("flags"), nb::arg("storage_type"),
+      nb::arg("expressed_type"), nb::arg("storage_type_min"),
+      nb::arg("storage_type_max"));
 
   //===-------------------------------------------------------------------===//
   // UniformQuantizedType
@@ -186,7 +185,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
       quantizedType.get_class());
   uniformQuantizedType.def_classmethod(
       "get",
-      [](py::object cls, unsigned flags, MlirType storageType,
+      [](nb::object cls, unsigned flags, MlirType storageType,
          MlirType expressedType, double scale, int64_t zeroPoint,
          int64_t storageTypeMin, int64_t storageTypeMax) {
         return cls(mlirUniformQuantizedTypeGet(flags, storageType,
@@ -195,9 +194,9 @@ static void populateDialectQuantSubmodule(const py::module &m) {
       },
       "Gets an instance of UniformQuantizedType in the same context as the "
       "provided storage type.",
-      py::arg("cls"), py::arg("flags"), py::arg("storage_type"),
-      py::arg("expressed_type"), py::arg("scale"), py::arg("zero_point"),
-      py::arg("storage_type_min"), py::arg("storage_type_max"));
+      nb::arg("cls"), nb::arg("flags"), nb::arg("storage_type"),
+      nb::arg("expressed_type"), nb::arg("scale"), nb::arg("zero_point"),
+      nb::arg("storage_type_min"), nb::arg("storage_type_max"));
   uniformQuantizedType.def_property_readonly(
       "scale",
       [](MlirType type) { return mlirUniformQuantizedTypeGetScale(type); },
@@ -221,12 +220,12 @@ static void populateDialectQuantSubmodule(const py::module &m) {
       quantizedType.get_class());
   uniformQuantizedPerAxisType.def_classmethod(
       "get",
-      [](py::object cls, unsigned flags, MlirType storageType,
+      [](nb::object cls, unsigned flags, MlirType storageType,
          MlirType expressedType, std::vector<double> scales,
          std::vector<int64_t> zeroPoints, int32_t quantizedDimension,
          int64_t storageTypeMin, int64_t storageTypeMax) {
         if (scales.size() != zeroPoints.size())
-          throw py::value_error(
+          throw nb::value_error(
               "Mismatching number of scales and zero points.");
         auto nDims = static_cast<intptr_t>(scales.size());
         return cls(mlirUniformQuantizedPerAxisTypeGet(
@@ -236,10 +235,10 @@ static void populateDialectQuantSubmodule(const py::module &m) {
       },
       "Gets an instance of UniformQuantizedPerAxisType in the same context as "
       "the provided storage type.",
-      py::arg("cls"), py::arg("flags"), py::arg("storage_type"),
-      py::arg("expressed_type"), py::arg("scales"), py::arg("zero_points"),
-      py::arg("quantized_dimension"), py::arg("storage_type_min"),
-      py::arg("storage_type_max"));
+      nb::arg("cls"), nb::arg("flags"), nb::arg("storage_type"),
+      nb::arg("expressed_type"), nb::arg("scales"), nb::arg("zero_points"),
+      nb::arg("quantized_dimension"), nb::arg("storage_type_min"),
+      nb::arg("storage_type_max"));
   uniformQuantizedPerAxisType.def_property_readonly(
       "scales",
       [](MlirType type) {
@@ -250,6 +249,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
           double scale = mlirUniformQuantizedPerAxisTypeGetScale(type, i);
           scales.push_back(scale);
         }
+        return scales;
       },
       "The scales designate the difference between the real values "
       "corresponding to consecutive quantized values differing by 1. The ith "
@@ -265,6 +265,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
               mlirUniformQuantizedPerAxisTypeGetZeroPoint(type, i);
           zeroPoints.push_back(zeroPoint);
         }
+        return zeroPoints;
       },
       "the storage values corresponding to the real value 0 in the affine "
       "equation. The ith zero point corresponds to the ith slice in the "
@@ -292,13 +293,13 @@ static void populateDialectQuantSubmodule(const py::module &m) {
       quantizedType.get_class());
   calibratedQuantizedType.def_classmethod(
       "get",
-      [](py::object cls, MlirType expressedType, double min, double max) {
+      [](nb::object cls, MlirType expressedType, double min, double max) {
         return cls(mlirCalibratedQuantizedTypeGet(expressedType, min, max));
       },
       "Gets an instance of CalibratedQuantizedType in the same context as the "
       "provided expressed type.",
-      py::arg("cls"), py::arg("expressed_type"), py::arg("min"),
-      py::arg("max"));
+      nb::arg("cls"), nb::arg("expressed_type"), nb::arg("min"),
+      nb::arg("max"));
   calibratedQuantizedType.def_property_readonly("min", [](MlirType type) {
     return mlirCalibratedQuantizedTypeGetMin(type);
   });
@@ -307,7 +308,7 @@ static void populateDialectQuantSubmodule(const py::module &m) {
   });
 }
 
-PYBIND11_MODULE(_mlirDialectsQuant, m) {
+NB_MODULE(_mlirDialectsQuant, m) {
   m.doc() = "MLIR Quantization dialect";
 
   populateDialectQuantSubmodule(m);

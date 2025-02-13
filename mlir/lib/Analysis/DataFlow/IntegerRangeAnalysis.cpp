@@ -43,7 +43,7 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
   // If the integer range can be narrowed to a constant, update the constant
   // value of the SSA value.
   std::optional<APInt> constant = getValue().getValue().getConstantValue();
-  auto value = anchor.get<Value>();
+  auto value = cast<Value>(anchor);
   auto *cv = solver->getOrCreateState<Lattice<ConstantValue>>(value);
   if (!constant)
     return solver->propagateIfChanged(
@@ -152,16 +152,15 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
   /// on a LoopLikeInterface return the lower/upper bound for that result if
   /// possible.
   auto getLoopBoundFromFold = [&](std::optional<OpFoldResult> loopBound,
-                                  Type boundType, bool getUpper) {
+                                  Type boundType, Block *block, bool getUpper) {
     unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
     if (loopBound.has_value()) {
-      if (loopBound->is<Attribute>()) {
-        if (auto bound =
-                dyn_cast_or_null<IntegerAttr>(loopBound->get<Attribute>()))
+      if (auto attr = dyn_cast<Attribute>(*loopBound)) {
+        if (auto bound = dyn_cast_or_null<IntegerAttr>(attr))
           return bound.getValue();
       } else if (auto value = llvm::dyn_cast_if_present<Value>(*loopBound)) {
         const IntegerValueRangeLattice *lattice =
-            getLatticeElementFor(getProgramPointAfter(op), value);
+            getLatticeElementFor(getProgramPointBefore(block), value);
         if (lattice != nullptr && !lattice->getValue().isUninitialized())
           return getUpper ? lattice->getValue().getValue().smax()
                           : lattice->getValue().getValue().smin();
@@ -181,16 +180,17 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       return SparseForwardDataFlowAnalysis ::visitNonControlFlowArguments(
           op, successor, argLattices, firstIndex);
     }
+    Block *block = iv->getParentBlock();
     std::optional<OpFoldResult> lowerBound = loop.getSingleLowerBound();
     std::optional<OpFoldResult> upperBound = loop.getSingleUpperBound();
     std::optional<OpFoldResult> step = loop.getSingleStep();
-    APInt min = getLoopBoundFromFold(lowerBound, iv->getType(),
+    APInt min = getLoopBoundFromFold(lowerBound, iv->getType(), block,
                                      /*getUpper=*/false);
-    APInt max = getLoopBoundFromFold(upperBound, iv->getType(),
+    APInt max = getLoopBoundFromFold(upperBound, iv->getType(), block,
                                      /*getUpper=*/true);
     // Assume positivity for uniscoverable steps by way of getUpper = true.
     APInt stepVal =
-        getLoopBoundFromFold(step, iv->getType(), /*getUpper=*/true);
+        getLoopBoundFromFold(step, iv->getType(), block, /*getUpper=*/true);
 
     if (stepVal.isNegative()) {
       std::swap(min, max);
