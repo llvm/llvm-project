@@ -464,16 +464,13 @@ public:
     // Create the compiler's actual diagnostics engine.
     if (!DiagGenerationAsCompilation)
       sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
+    assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
     ScanInstance.createDiagnostics(DriverFileMgr->getVirtualFileSystem(),
                                    DiagConsumer, /*ShouldOwnClient=*/false);
     if (!ScanInstance.hasDiagnostics())
       return false;
     if (VerboseOS)
       ScanInstance.setVerboseOutputStream(*VerboseOS);
-
-    // Some DiagnosticConsumers require that finish() is called.
-    auto DiagConsumerFinisher =
-        llvm::make_scope_exit([DiagConsumer]() { DiagConsumer->finish(); });
 
     ScanInstance.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
         true;
@@ -640,8 +637,9 @@ public:
     if (ScanInstance.getDiagnostics().hasErrorOccurred())
       return false;
 
-    // Each action is responsible for calling finish.
-    DiagConsumerFinisher.release();
+    // ExecuteAction is responsible for calling finish.
+    DiagConsumerFinished = true;
+
     if (!ScanInstance.ExecuteAction(*Action))
       return false;
 
@@ -669,6 +667,7 @@ public:
   }
 
   bool hasScanned() const { return Scanned; }
+  bool hasDiagConsumerFinished() const { return DiagConsumerFinished; }
 
   /// Take the cc1 arguments corresponding to the most recent invocation used
   /// with this action. Any modifications implied by the discovered dependencies
@@ -717,6 +716,7 @@ private:
   std::vector<std::string> LastCC1Arguments;
   std::optional<std::string> LastCC1CacheKey;
   bool Scanned = false;
+  bool DiagConsumerFinished = false;
   raw_ostream *VerboseOS;
 };
 
@@ -939,6 +939,11 @@ bool DependencyScanningWorker::scanDependencies(
   if (Success && !Action.hasScanned())
     Diags->Report(diag::err_fe_expected_compiler_job)
         << llvm::join(CommandLine, " ");
+
+  // Ensure finish() is called even if we never reached ExecuteAction().
+  if (!Action.hasDiagConsumerFinished())
+    DC.finish();
+
   return Success && Action.hasScanned();
 }
 
