@@ -118,6 +118,7 @@ store:
 ; KERNEL-NEXT:         .amdhsa_workgroup_processor_mode 1
 ; KERNEL-NEXT:         .amdhsa_memory_ordered 1
 ; KERNEL-NEXT:         .amdhsa_forward_progress 0
+; KERNEL-NEXT:         .amdhsa_inst_pref_size 0
 ; KERNEL-NEXT:         .amdhsa_round_robin_scheduling 0
 
 ; KERNEL:      {{^}}amdhsa.kernels:
