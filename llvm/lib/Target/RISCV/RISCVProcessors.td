@@ -88,15 +88,6 @@ class RISCVTuneProcessorModel<string n,
 
 defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore];
 
-// Adjust the default cost model to enable all heuristics, not just latency
-// In particular, this enables register pressure heustics which are very
-// important for high LMUL vector code, and have little negative impact
-// on other configurations,
-def GenericModel : SchedMachineModel {
-  let MicroOpBufferSize = 1;
-  let CompleteModel = 0;
-}
-
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        GenericModel,
                                        [Feature32Bit,
