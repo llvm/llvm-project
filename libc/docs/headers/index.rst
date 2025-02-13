@@ -8,7 +8,9 @@ Implementation Status
    arpa/inet
    assert
    complex
+   cpio
    ctype
+   endian
    errno
    fenv
    float

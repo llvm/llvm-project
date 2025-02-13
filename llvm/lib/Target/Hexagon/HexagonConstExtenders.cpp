@@ -253,7 +253,7 @@ namespace {
                           /*Kill*/false, /*Dead*/false, /*Undef*/false,
                           /*EarlyClobber*/false, Sub);
         if (Reg.isStack()) {
-          int FI = llvm::Register::stackSlot2Index(Reg);
+          int FI = Reg.stackSlotIndex();
           return MachineOperand::CreateFI(FI);
         }
         llvm_unreachable("Cannot create MachineOperand");
@@ -1148,8 +1148,8 @@ void HCE::recordExtender(MachineInstr &MI, unsigned OpNum) {
   bool IsStore = MI.mayStore();
 
   // Fixed stack slots have negative indexes, and they cannot be used
-  // with TRI::stackSlot2Index and TRI::index2StackSlot. This is somewhat
-  // unfortunate, but should not be a frequent thing.
+  // with Register::stackSlotIndex and Register::index2StackSlot. This is
+  // somewhat unfortunate, but should not be a frequent thing.
   for (MachineOperand &Op : MI.operands())
     if (Op.isFI() && Op.getIndex() < 0)
       return;

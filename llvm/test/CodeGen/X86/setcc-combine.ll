@@ -262,8 +262,8 @@ define void @test_i1_uge(ptr%A2) {
 define i64 @PR40657(i8 %var2, i8 %var9) {
 ; CHECK-LABEL: PR40657:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addb %sil, %dil
-; CHECK-NEXT:    incb %dil
+; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    notb %dil
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
@@ -283,12 +283,7 @@ define i64 @PR40657(i8 %var2, i8 %var9) {
 define i64 @PR40657_commute(i8 %var7, i8 %var8, i8 %var9) {
 ; CHECK-LABEL: PR40657_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subb %dil, %sil
-; CHECK-NEXT:    subb %sil, %dl
-; CHECK-NEXT:    subb %dl, %sil
-; CHECK-NEXT:    xorb %dl, %sil
-; CHECK-NEXT:    subb %sil, %dl
-; CHECK-NEXT:    movzbl %dl, %eax
+; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %var4 = trunc i8 %var9 to i1

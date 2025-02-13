@@ -536,8 +536,8 @@ Example of BBAddrMap with PGO data:
    .uleb128  0                            # BB_3 successors count (only enabled with branch probabilities)
 
 ``SHT_LLVM_FUNC_MAP`` Section (function address map)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This section stores the mapping from the binary address of function to its
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section stores the mapping from the binary address of functions to their
 related metadata features. It is used to emit function-level analysis data and
 can be enabled through ``--func-map`` option. The fields are encoded in the
 following format:
@@ -550,10 +550,11 @@ following format:
 Example:
 
 .. code-block:: gas
+
   .section  ".llvm_func_map","",@llvm_func_map
   .byte     1                             # version number
   .quad     .Lfunc_begin1                 # function address
-  .uleb128  333                           # dynamic instruction count
+  .quad     1000                          # dynamic instruction count
 
 ``SHT_LLVM_OFFLOADING`` Section (offloading data)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1560,7 +1560,8 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     }
     CBA.write<uintX_t>(E.Address, ELFT::Endianness);
     SHeader.sh_size += sizeof(uintX_t);
-    SHeader.sh_size += CBA.writeULEB128(E.DynamicInstCount);
+    CBA.write<uint64_t>(E.DynamicInstCount, ELFT::Endianness);
+    SHeader.sh_size += 8;
   }
 }
 

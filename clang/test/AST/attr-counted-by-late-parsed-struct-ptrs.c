@@ -31,7 +31,7 @@ struct on_pointer_anon_count {
 // CHECK-NEXT:  | `-FieldDecl {{.*}} count 'int'
 // CHECK-NEXT:  |-FieldDecl {{.*}} implicit 'struct on_pointer_anon_count::(anonymous at {{.*}})'
 // CHECK-NEXT:  `-IndirectFieldDecl {{.*}} implicit referenced count 'int'
-// CHECK-NEXT:    |-Field {{.*}} '' 'struct on_pointer_anon_count::(anonymous at {{.*}})'
+// CHECK-NEXT:    |-Field {{.*}} field_index 1 'struct on_pointer_anon_count::(anonymous at {{.*}})'
 // CHECK-NEXT:    `-Field {{.*}} 'count' 'int'
 
 //==============================================================================

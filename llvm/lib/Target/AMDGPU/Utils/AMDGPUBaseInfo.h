@@ -976,8 +976,7 @@ struct Waitcnt {
   Waitcnt() = default;
   // Pre-gfx12 constructor.
   Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
-      : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt),
-        SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u) {}
+      : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt) {}
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
@@ -1168,6 +1167,12 @@ unsigned decodeFieldVmVsrc(unsigned Encoded);
 /// \returns Decoded SaSdst from given immediate \p Encoded.
 unsigned decodeFieldSaSdst(unsigned Encoded);
 
+/// \returns Decoded VaSdst from given immediate \p Encoded.
+unsigned decodeFieldVaSdst(unsigned Encoded);
+
+/// \returns Decoded VaVcc from given immediate \p Encoded.
+unsigned decodeFieldVaVcc(unsigned Encoded);
+
 /// \returns \p VmVsrc as an encoded Depctr immediate.
 unsigned encodeFieldVmVsrc(unsigned VmVsrc);
 
@@ -1185,6 +1190,18 @@ unsigned encodeFieldSaSdst(unsigned SaSdst);
 
 /// \returns \p Encoded combined with encoded \p SaSdst.
 unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst);
+
+/// \returns \p VaSdst as an encoded Depctr immediate.
+unsigned encodeFieldVaSdst(unsigned VaSdst);
+
+/// \returns \p Encoded combined with encoded \p VaSdst.
+unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst);
+
+/// \returns \p VaVcc as an encoded Depctr immediate.
+unsigned encodeFieldVaVcc(unsigned VaVcc);
+
+/// \returns \p Encoded combined with encoded \p VaVcc.
+unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
 
 } // namespace DepCtr
 

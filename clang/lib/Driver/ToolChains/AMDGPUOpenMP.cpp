@@ -9,7 +9,7 @@
 #include "AMDGPUOpenMP.h"
 #include "AMDGPU.h"
 #include "CommonArgs.h"
-#include "ToolChains/ROCm.h"
+#include "ROCm.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -37,6 +37,8 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
   // Lookup binaries into the driver directory, this is used to
   // discover the 'amdgpu-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);
+  // Diagnose unsupported sanitizer options only once.
+  diagnoseUnsupportedSanitizers(Args);
 }
 
 void AMDGPUOpenMPToolChain::addClangTargetOptions(
@@ -71,34 +73,10 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   const OptTable &Opts = getDriver().getOpts();
 
-  if (DeviceOffloadKind == Action::OFK_OpenMP) {
-    for (Arg *A : Args)
-      if (!llvm::is_contained(*DAL, A))
-        DAL->append(A);
-
-    if (!DAL->hasArg(options::OPT_march_EQ)) {
-      StringRef Arch = BoundArch;
-      if (Arch.empty()) {
-        auto ArchsOrErr = getSystemGPUArchs(Args);
-        if (!ArchsOrErr) {
-          std::string ErrMsg =
-              llvm::formatv("{0}", llvm::fmt_consume(ArchsOrErr.takeError()));
-          getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-              << llvm::Triple::getArchTypeName(getArch()) << ErrMsg << "-march";
-          Arch = OffloadArchToString(OffloadArch::HIPDefault);
-        } else {
-          Arch = Args.MakeArgString(ArchsOrErr->front());
-        }
-      }
-      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
-    }
-
-    return DAL;
-  }
-
-  for (Arg *A : Args) {
-    DAL->append(A);
-  }
+  for (Arg *A : Args)
+    if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
+        !llvm::is_contained(*DAL, A))
+      DAL->append(A);
 
   if (!BoundArch.empty()) {
     DAL->eraseArg(options::OPT_march_EQ);
@@ -158,11 +136,6 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 AMDGPUOpenMPToolChain::getDeviceLibs(const llvm::opt::ArgList &Args) const {
   if (Args.hasArg(options::OPT_nogpulib))
     return {};
-
-  if (!RocmInstallation->hasDeviceLibrary()) {
-    getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
-    return {};
-  }
 
   StringRef GpuArch = getProcessorFromTargetID(
       getTriple(), Args.getLastArgValue(options::OPT_march_EQ));

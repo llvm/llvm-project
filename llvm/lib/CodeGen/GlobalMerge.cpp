@@ -271,8 +271,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
 
   // If we want to just blindly group all globals together, do so.
   if (!GlobalMergeGroupByUse || (Opt.MergeConstAggressive && isConst)) {
-    BitVector AllGlobals(Globals.size());
-    AllGlobals.set();
+    BitVector AllGlobals(Globals.size(), true);
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
   }
 
@@ -437,13 +436,15 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
   }
 
-  // Now we found a bunch of sets of globals used together. We accumulated
+  // Now we found a bunch of sets of globals used together.  We accumulated
   // the number of times we encountered the sets (i.e., the number of functions
-  // that use that exact set of globals). Multiply that by the size of the set
-  // to give us a crude profitability metric.
+  // that use that exact set of globals).
+  //
+  // Multiply that by the size of the set to give us a crude profitability
+  // metric.
   llvm::stable_sort(UsedGlobalSets,
                     [](const UsedGlobalSet &UGS1, const UsedGlobalSet &UGS2) {
-                      return UGS1.Globals.count() * UGS1.UsageCount >=
+                      return UGS1.Globals.count() * UGS1.UsageCount <
                              UGS2.Globals.count() * UGS2.UsageCount;
                     });
 
@@ -456,7 +457,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
   BitVector PickedGlobals(Globals.size());
   bool Changed = false;
 
-  for (const UsedGlobalSet &UGS : UsedGlobalSets) {
+  for (const UsedGlobalSet &UGS : llvm::reverse(UsedGlobalSets)) {
     if (UGS.UsageCount == 0)
       continue;
     if (PickedGlobals.anyCommon(UGS.Globals))
@@ -727,7 +728,8 @@ bool GlobalMergeImpl::run(Module &M) {
 
     Type *Ty = GV.getValueType();
     TypeSize AllocSize = DL.getTypeAllocSize(Ty);
-    if (AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize) {
+    bool CanMerge = AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize;
+    if (CanMerge) {
       if (TM &&
           TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
         BSSGlobals[{AddressSpace, Section}].push_back(&GV);
@@ -736,11 +738,8 @@ bool GlobalMergeImpl::run(Module &M) {
       else
         Globals[{AddressSpace, Section}].push_back(&GV);
     }
-    LLVM_DEBUG(dbgs() << "GV "
-                      << ((DL.getTypeAllocSize(Ty) < Opt.MaxOffset)
-                              ? "to merge: "
-                              : "not to merge: ")
-                      << GV << "\n");
+    LLVM_DEBUG(dbgs() << "GV " << (CanMerge ? "" : "not ") << "to merge: " << GV
+                      << "\n");
   }
 
   for (auto &P : Globals)

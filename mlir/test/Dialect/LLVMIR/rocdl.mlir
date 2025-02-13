@@ -258,6 +258,93 @@ func.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
   llvm.return
 }
 
+
+llvm.func @rocdl.smfmac(%arg0 : i32,
+                   %arg1 : vector<4 x f16>,
+                   %arg2 : vector<8 x f16>,
+                   %arg3 : vector<4 x f32>,
+                   %arg4 : vector<16 x f32>,
+                   %arg5 : vector<4 x i16>,
+                   %arg6 : vector<8 x i16>,
+                   %arg7 : vector<2xi32>,
+                   %arg8 : vector<4xi32>,
+                   %arg9 : vector<16xi32>) -> vector<4 x f32> {
+  %csti32 = llvm.mlir.constant(42 : i32) : i32
+
+  // CHECK-LABEL: rocdl.smfmac
+  // CHECK: rocdl.smfmac.f32.16x16x32.f16 %{{.*}} : (vector<4xf16>, vector<8xf16>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
+  %r0 = rocdl.smfmac.f32.16x16x32.f16 %arg1, %arg2, %arg3, %csti32, %csti32, %csti32 :
+                                (vector<4xf16>, vector<8xf16>, vector<4xf32>,
+                                 i32, i32, i32) -> vector<4xf32>
+
+  // CHECK: rocdl.smfmac.f32.32x32x16.f16 %{{.*}} : (vector<4xf16>, vector<8xf16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
+  %r1 = rocdl.smfmac.f32.32x32x16.f16 %arg1, %arg2, %arg4, %csti32, %csti32, %csti32 :
+                                (vector<4xf16>, vector<8xf16>, vector<16xf32>,
+                                 i32, i32, i32) -> vector<16xf32>
+
+  // CHECK: rocdl.smfmac.f32.16x16x32.bf16 %{{.*}} : (vector<4xi16>, vector<8xi16>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
+  %r2 = rocdl.smfmac.f32.16x16x32.bf16 %arg5, %arg6, %arg3, %csti32, %csti32, %csti32 :
+                                (vector<4xi16>, vector<8xi16>, vector<4xf32>,
+                                 i32, i32, i32) -> vector<4xf32>
+
+  // CHECK: rocdl.smfmac.f32.32x32x16.bf16 %{{.*}} : (vector<4xi16>, vector<8xi16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
+  %r3 = rocdl.smfmac.f32.32x32x16.bf16 %arg5, %arg6, %arg4, %csti32, %csti32, %csti32 :
+                                (vector<4xi16>, vector<8xi16>, vector<16xf32>,
+                                 i32, i32, i32) -> vector<16xf32>
+
+  // CHECK: rocdl.smfmac.i32.16x16x64.i8 %{{.*}} : (vector<2xi32>, vector<4xi32>, vector<4xi32>, i32, i32, i32) -> vector<4xi32>
+  %r4 = rocdl.smfmac.i32.16x16x64.i8 %arg7, %arg8, %arg8, %csti32, %csti32, %csti32 :
+                                (vector<2xi32>, vector<4xi32>, vector<4xi32>,
+                                 i32, i32, i32) -> vector<4xi32>
+
+  // CHECK: rocdl.smfmac.i32.32x32x32.i8 %{{.*}} : (vector<2xi32>, vector<4xi32>, vector<16xi32>, i32, i32, i32) -> vector<16xi32>
+  %r5 = rocdl.smfmac.i32.32x32x32.i8 %arg7, %arg8, %arg9, %csti32, %csti32, %csti32 :
+                                (vector<2xi32>, vector<4xi32>, vector<16xi32>,
+                                 i32, i32, i32) -> vector<16xi32>
+
+  // CHECK: rocdl.smfmac.f32.16x16x64.bf8.bf8 %{{.*}} : (vector<2xi32>, vector<4xi32>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
+  %r6 = rocdl.smfmac.f32.16x16x64.bf8.bf8 %arg7, %arg8, %arg3, %csti32, %csti32, %csti32 :
+                                (vector<2xi32>, vector<4xi32>, vector<4xf32>,
+                                 i32, i32, i32) -> vector<4xf32>
+
+  // CHECK: rocdl.smfmac.f32.16x16x64.bf8.fp8 %{{.*}} : (vector<2xi32>, vector<4xi32>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
+  %r7 = rocdl.smfmac.f32.16x16x64.bf8.fp8 %arg7, %arg8, %arg3, %csti32, %csti32, %csti32 :
+                                (vector<2xi32>, vector<4xi32>, vector<4xf32>,
+                                 i32, i32, i32) -> vector<4xf32>
+
+  // CHECK: rocdl.smfmac.f32.16x16x64.fp8.bf8 %{{.*}} : (vector<2xi32>, vector<4xi32>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
+  %r8 = rocdl.smfmac.f32.16x16x64.fp8.bf8 %arg7, %arg8, %arg3, %csti32, %csti32, %csti32 :
+                                (vector<2xi32>, vector<4xi32>, vector<4xf32>,
+                                 i32, i32, i32) -> vector<4xf32>
+
+  // CHECK: rocdl.smfmac.f32.16x16x64.fp8.fp8 %{{.*}} : (vector<2xi32>, vector<4xi32>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
+  %r9 = rocdl.smfmac.f32.16x16x64.fp8.fp8 %arg7, %arg8, %arg3, %csti32, %csti32, %csti32 :
+                                (vector<2xi32>, vector<4xi32>, vector<4xf32>,
+                                 i32, i32, i32) -> vector<4xf32>
+
+  // CHECK: rocdl.smfmac.f32.32x32x32.bf8.bf8 %{{.*}} : (vector<2xi32>, vector<4xi32>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
+  %r10 = rocdl.smfmac.f32.32x32x32.bf8.bf8 %arg7, %arg8, %arg4, %csti32, %csti32, %csti32 :
+                                (vector<2xi32>, vector<4xi32>, vector<16xf32>,
+                                 i32, i32, i32) -> vector<16xf32>
+
+  // CHECK: rocdl.smfmac.f32.32x32x32.bf8.fp8 %{{.*}} : (vector<2xi32>, vector<4xi32>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
+  %r11 = rocdl.smfmac.f32.32x32x32.bf8.fp8 %arg7, %arg8, %arg4, %csti32, %csti32, %csti32 :
+                                (vector<2xi32>, vector<4xi32>, vector<16xf32>,
+                                 i32, i32, i32) -> vector<16xf32>
+
+  // CHECK: rocdl.smfmac.f32.32x32x32.fp8.bf8 %{{.*}} : (vector<2xi32>, vector<4xi32>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
+  %r12 = rocdl.smfmac.f32.32x32x32.fp8.bf8 %arg7, %arg8, %arg4, %csti32, %csti32, %csti32 :
+                                (vector<2xi32>, vector<4xi32>, vector<16xf32>,
+                                 i32, i32, i32) -> vector<16xf32>
+
+  // CHECK: rocdl.smfmac.f32.32x32x32.fp8.fp8 %{{.*}} : (vector<2xi32>, vector<4xi32>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
+  %r13 = rocdl.smfmac.f32.32x32x32.fp8.fp8 %arg7, %arg8, %arg4, %csti32, %csti32, %csti32 :
+                                (vector<2xi32>, vector<4xi32>, vector<16xf32>,
+                                 i32, i32, i32) -> vector<16xf32>
+
+  llvm.return %r0 : vector<4 x f32>
+}
+
 llvm.func @rocdl.mfma.scale.f32.32x32x64.f8f6f4(%arg0 : i32,
                    %arg1 : vector<16 x f32>, %arg2 : vector<8xi32>,
                    %arg3 : vector<6xi32>, %arg4 : vector<4xi32>) {
@@ -667,27 +754,52 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
 // CHECK-LABEL: @rocdl_8bit_floats
 // CHECK: rocdl.cvt.f32.bf8
 // CHECK: rocdl.cvt.f32.fp8
+// CHECK: rocdl.cvt.scalef32.f32.bf8
+// CHECK: rocdl.cvt.scalef32.f32.fp8
 // CHECK: rocdl.cvt.pk.bf8.f32
 // CHECK: rocdl.cvt.pk.fp8.f32
 // CHECK: rocdl.cvt.sr.bf8.f32
 // CHECK: rocdl.cvt.sr.fp8.f32
+// CHECK: rocdl.cvt.scalef32.sr.fp8.f32
+// CHECK: rocdl.cvt.sr.bf8.f32
+// CHECK: rocdl.cvt.scalef32.sr.bf8.f32
+// CHECK: rocdl.cvt.scalef32.pk.f32.fp8
+// CHECK: rocdl.cvt.scalef32.pk.f32.bf8
   %c0 = llvm.mlir.constant(0 : i32) : i32
   %c2 = llvm.mlir.constant(2 : i32) : i32
   %c3 = llvm.mlir.constant(3 : i32) : i32
+  %c4 = llvm.mlir.constant(1.0 : f32) : f32
   %false = llvm.mlir.constant(false) : i1
   %v1 = rocdl.cvt.f32.bf8 %source[%c0] : f32
   %v2 = rocdl.cvt.f32.fp8 %source[%c0] : f32
+  %v1_scaled = rocdl.cvt.scalef32.f32.bf8 %source[%c0], %c4 : f32
+  %v2_scaled = rocdl.cvt.scalef32.f32.fp8 %source[%c0], %c4 : f32
   %source2 = rocdl.cvt.pk.bf8.f32 %v1, %v2 -> %source[%false] : i32
   %source3 = rocdl.cvt.pk.fp8.f32 %v1, %v2 -> %source2[%false] : i32
   %source4 = rocdl.cvt.sr.bf8.f32 %v1, %stoch -> %source3[%c2] : i32
   %source5 = rocdl.cvt.sr.fp8.f32 %v2, %stoch -> %source4[%c3] : i32
+  %source5_scaled = rocdl.cvt.scalef32.sr.fp8.f32 %v2, %stoch, %c4 -> %source4[%c3] : i32
+  %source6 = rocdl.cvt.sr.bf8.f32 %v1, %stoch -> %source3[%c3] : i32
+  %source6_scaled  = rocdl.cvt.scalef32.sr.bf8.f32 %v2, %stoch, %c4 -> %source3[%c3] : i32
+  %source7_scaled = rocdl.cvt.scalef32.pk.f32.fp8 %source[%false], %c4 : f32
+  %source8_scaled = rocdl.cvt.scalef32.pk.f32.bf8 %source[%false], %c4 : f32
   llvm.return %source5 : i32
 }
 
-llvm.func @rocdl.waitcnt() {
-  // CHECK-LABEL: rocdl.waitcnt
-  // CHECK: rocdl.waitcnt 0
-  rocdl.waitcnt 0
+llvm.func @rocdl_8bit_packed_v2i16(%sourceA: f32, %sourceB: f32, %old: vector<2xi16>) -> vector<2xi16> {
+// CHECK-LABEL: @rocdl_8bit_packed_v2i16
+// CHECK: rocdl.cvt.scalef32.pk.fp8.f32
+  %c0 = llvm.mlir.constant(1.0 : f32) : f32
+  %false = llvm.mlir.constant(false) : i1
+  %source_scaled = rocdl.cvt.scalef32.pk.fp8.f32 %sourceA, %sourceB, %c0 -> %old[%false] : vector<2xi16>
+  %source2_scaled = rocdl.cvt.scalef32.pk.bf8.f32 %sourceA, %sourceB, %c0 -> %old[%false] : vector<2xi16>
+  llvm.return %source_scaled : vector<2xi16>
+}
+
+llvm.func @rocdl.s.waitcnt() {
+  // CHECK-LABEL: rocdl.s.waitcnt
+  // CHECK: rocdl.s.waitcnt 0
+  rocdl.s.waitcnt 0
   llvm.return
 }
 

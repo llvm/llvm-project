@@ -270,6 +270,7 @@ set(files
   __chrono/steady_clock.h
   __chrono/sys_info.h
   __chrono/system_clock.h
+  __chrono/tai_clock.h
   __chrono/time_point.h
   __chrono/time_zone.h
   __chrono/time_zone_link.h
@@ -362,8 +363,11 @@ set(files
   __filesystem/space_info.h
   __filesystem/u8path.h
   __flat_map/flat_map.h
+  __flat_map/flat_multimap.h
   __flat_map/key_value_iterator.h
+  __flat_map/sorted_equivalent.h
   __flat_map/sorted_unique.h
+  __flat_map/utils.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h

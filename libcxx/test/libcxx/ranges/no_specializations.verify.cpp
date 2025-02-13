@@ -13,7 +13,9 @@
 
 #include <ranges>
 
-#if !__has_warning("-Winvalid-specialization")
+#include "test_macros.h"
+
+#if !__has_warning("-Winvalid-specialization") || TEST_STD_VER <= 20
 // expected-no-diagnostics
 #else
 struct S {};

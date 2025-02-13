@@ -37,9 +37,16 @@ struct MemRefAccess;
 // was encountered in the loop nest.
 struct LoopNestStateCollector {
   SmallVector<AffineForOp, 4> forOps;
+  // Affine loads.
   SmallVector<Operation *, 4> loadOpInsts;
+  // Affine stores.
   SmallVector<Operation *, 4> storeOpInsts;
-  bool hasNonAffineRegionOp = false;
+  // Non-affine loads.
+  SmallVector<Operation *, 4> memrefLoads;
+  // Non-affine stores.
+  SmallVector<Operation *, 4> memrefStores;
+  // Free operations.
+  SmallVector<Operation *, 4> memrefFrees;
 
   // Collects load and store operations, and whether or not a region holding op
   // other than ForOp and IfOp was encountered in the loop nest.
@@ -47,9 +54,11 @@ struct LoopNestStateCollector {
 };
 
 // MemRefDependenceGraph is a graph data structure where graph nodes are
-// top-level operations in a `Block` which contain load/store ops, and edges
-// are memref dependences between the nodes.
-// TODO: Add a more flexible dependence graph representation.
+// top-level operations in a `Block` and edges are memref dependences or SSA
+// dependences (on memrefs) between the nodes. Nodes are created for all
+// top-level operations except in certain cases (see `init` method). Edges are
+// created between nodes with a dependence (see `Edge` documentation). Edges
+// aren't created from/to nodes that have no memory effects.
 struct MemRefDependenceGraph {
 public:
   // Node represents a node in the graph. A Node is either an entire loop nest
@@ -60,10 +69,18 @@ public:
     unsigned id;
     // The top-level statement which is (or contains) a load/store.
     Operation *op;
-    // List of load operations.
+    // List of affine loads.
     SmallVector<Operation *, 4> loads;
-    // List of store op insts.
+    // List of non-affine loads.
+    SmallVector<Operation *, 4> memrefLoads;
+    // List of affine store ops.
     SmallVector<Operation *, 4> stores;
+    // List of non-affine stores.
+    SmallVector<Operation *, 4> memrefStores;
+    // List of free operations.
+    SmallVector<Operation *, 4> memrefFrees;
+    // Set of private memrefs used in this node.
+    DenseSet<Value> privateMemrefs;
 
     Node(unsigned id, Operation *op) : id(id), op(op) {}
 
@@ -72,6 +89,13 @@ public:
 
     // Returns the store op count for 'memref'.
     unsigned getStoreOpCount(Value memref) const;
+
+    /// Returns true if there exists an operation with a write memory effect to
+    /// `memref` in this node.
+    unsigned hasStore(Value memref) const;
+
+    // Returns true if the node has a free op on `memref`.
+    unsigned hasFree(Value memref) const;
 
     // Returns all store ops in 'storeOps' which access 'memref'.
     void getStoreOpsForMemref(Value memref,
@@ -86,7 +110,16 @@ public:
     void getLoadAndStoreMemrefSet(DenseSet<Value> *loadAndStoreMemrefSet) const;
   };
 
-  // Edge represents a data dependence between nodes in the graph.
+  // Edge represents a data dependence between nodes in the graph. It can either
+  // be a memory dependence or an SSA dependence. In the former case, it
+  // corresponds to a pair of memory accesses to the same memref or aliasing
+  // memrefs where at least one of them has a write or free memory effect. The
+  // memory accesses need not be affine load/store operations. Operations are
+  // checked for read/write effects and edges may be added conservatively. Edges
+  // are not created to/from nodes that have no memory effect. An exception to
+  // this are SSA dependences between operations that define memrefs (like
+  // alloc's, view-like ops) and their memory-effecting users that are enclosed
+  // in loops.
   struct Edge {
     // The id of the node at the other end of the edge.
     // If this edge is stored in Edge = Node.inEdges[i], then
@@ -182,9 +215,12 @@ public:
   // of sibling node 'sibId' into node 'dstId'.
   void updateEdges(unsigned sibId, unsigned dstId);
 
-  // Adds ops in 'loads' and 'stores' to node at 'id'.
-  void addToNode(unsigned id, const SmallVectorImpl<Operation *> &loads,
-                 const SmallVectorImpl<Operation *> &stores);
+  // Adds the specified ops to lists of node at 'id'.
+  void addToNode(unsigned id, ArrayRef<Operation *> loads,
+                 ArrayRef<Operation *> stores,
+                 ArrayRef<Operation *> memrefLoads,
+                 ArrayRef<Operation *> memrefStores,
+                 ArrayRef<Operation *> memrefFrees);
 
   void clearNodeLoadAndStores(unsigned id);
 
