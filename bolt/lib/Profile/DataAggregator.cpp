@@ -1255,11 +1255,10 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
   while (checkAndConsumeFS()) {
   }
-  ErrorOr<int64_t> FrequencyOrErr =
+  ErrorOr<int64_t> Frequency =
       parseNumberField(FieldSeparator, Type != AggregatedLBREntry::BRANCH);
-  if (std::error_code EC = FrequencyOrErr.getError())
+  if (std::error_code EC = Frequency.getError())
     return EC;
-  uint64_t Frequency = static_cast<uint64_t>(FrequencyOrErr.get());
 
   uint64_t Mispreds = 0;
   if (Type == AggregatedLBREntry::BRANCH) {
@@ -1283,7 +1282,9 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     if (BF)
       BF->setHasProfileAvailable();
 
-  AggregatedLBRs.emplace_back(From.get(), To.get(), Frequency, Mispreds, Type);
+  AggregatedLBRs.emplace_back(AggregatedLBREntry{
+      From.get(), To.get(), static_cast<uint64_t>(Frequency.get()), Mispreds,
+      Type});
 
   return std::error_code();
 }
