@@ -2800,7 +2800,7 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
           SrcExpr.get()->getValueKind(), nullptr, CCK);
-    Kind = CK_HLSLSplatCast;
+    Kind = CK_HLSLAggregateSplatCast;
     return;
   }
 

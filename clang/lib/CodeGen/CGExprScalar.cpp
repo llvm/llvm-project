@@ -2795,7 +2795,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
   }
-  case CK_HLSLSplatCast: {
+  case CK_HLSLAggregateSplatCast: {
     // This cast should only handle splatting from vectors of length 1.
     // But in Sema a cast should have been inserted to convert the vec1 to a
     // scalar
@@ -2804,7 +2804,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     QualType SrcTy = E->getType();
     SourceLocation Loc = CE->getExprLoc();
     Value *V = Visit(const_cast<Expr *>(E));
-    assert(SrcTy->isBuiltinType() && "Invalid HLSL splat cast.");
+    assert(SrcTy->isBuiltinType() && "Invalid HLSL Aggregate splat cast.");
 
     Value *Cast =
         EmitScalarConversion(V, SrcTy, DestVecTy->getElementType(), Loc);
@@ -2816,7 +2816,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     SourceLocation Loc = CE->getExprLoc();
     QualType SrcTy = E->getType();
 
-    assert(RV.isAggregate() && "Not a valid HLSL Flat Cast.");
+    assert(RV.isAggregate() && "Not a valid HLSL Elementwise Cast.");
     // RHS is an aggregate
     Address SrcVal = RV.getAggregateAddress();
     return EmitHLSLElementwiseCast(CGF, SrcVal, SrcTy, DestTy, Loc);

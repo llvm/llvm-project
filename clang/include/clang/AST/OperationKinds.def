@@ -371,7 +371,7 @@ CAST_OPERATION(HLSLArrayRValue)
 CAST_OPERATION(HLSLElementwiseCast)
 
 // Splat cast for Aggregates (HLSL only).
-CAST_OPERATION(HLSLSplatCast)
+CAST_OPERATION(HLSLAggregateSplatCast)
 
 //===- Binary Operations  -------------------------------------------------===//
 // Operators listed in order of precedence.

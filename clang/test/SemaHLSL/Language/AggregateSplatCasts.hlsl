@@ -2,7 +2,7 @@
 
 // splat from vec1 to vec
 // CHECK-LABEL: call1
-// CHECK: CStyleCastExpr {{.*}} 'int3':'vector<int, 3>' <HLSLSplatCast>
+// CHECK: CStyleCastExpr {{.*}} 'int3':'vector<int, 3>' <HLSLAggregateSplatCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' lvalue <HLSLVectorTruncation> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float1':'vector<float, 1>' lvalue Var {{.*}} 'A' 'float1':'vector<float, 1>'
 export void call1() {
@@ -19,7 +19,7 @@ struct S {
 
 // splat from scalar to aggregate
 // CHECK-LABEL: call2
-// CHECK: CStyleCastExpr {{.*}} 'S' <HLSLSplatCast>
+// CHECK: CStyleCastExpr {{.*}} 'S' <HLSLAggregateSplatCast>
 // CHECK-NEXt: IntegerLiteral {{.*}} 'int' 5
 export void call2() {
   S s = (S)5; 

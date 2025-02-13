@@ -491,9 +491,9 @@ static bool isTrivialFiller(Expr *E) {
   return false;
 }
 
-static void EmitHLSLSplatCast(CodeGenFunction &CGF, Address DestVal,
-                              QualType DestTy, llvm::Value *SrcVal,
-                              QualType SrcTy, SourceLocation Loc) {
+static void EmitHLSLAggregateSplatCast(CodeGenFunction &CGF, Address DestVal,
+                                       QualType DestTy, llvm::Value *SrcVal,
+                                       QualType SrcTy, SourceLocation Loc) {
   // Flatten our destination
   SmallVector<QualType> DestTypes; // Flattened type
   SmallVector<std::pair<Address, llvm::Value *>, 16> StoreGEPList;
@@ -988,7 +988,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_HLSLArrayRValue:
     Visit(E->getSubExpr());
     break;
-  case CK_HLSLSplatCast: {
+  case CK_HLSLAggregateSplatCast: {
     Expr *Src = E->getSubExpr();
     QualType SrcTy = Src->getType();
     RValue RV = CGF.EmitAnyExpr(Src);
@@ -998,7 +998,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
 
     assert(RV.isScalar() && "RHS of HLSL splat cast must be a scalar.");
     llvm::Value *SrcVal = RV.getScalarVal();
-    EmitHLSLSplatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
+    EmitHLSLAggregateSplatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
     break;
   }
   case CK_HLSLElementwiseCast: {
@@ -1591,7 +1591,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_AtomicToNonAtomic:
   case CK_HLSLVectorTruncation:
   case CK_HLSLElementwiseCast:
-  case CK_HLSLSplatCast:
+  case CK_HLSLAggregateSplatCast:
     return true;
 
   case CK_BaseToDerivedMemberPointer:
