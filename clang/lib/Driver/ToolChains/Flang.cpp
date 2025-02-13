@@ -261,11 +261,18 @@ void Flang::AddPPCTargetArgs(const ArgList &Args,
 
 void Flang::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
   const llvm::Triple &Triple = getToolChain().getTriple();
+
+  StringRef ABIName = riscv::getRISCVABI(Args, Triple);
+  if (ABIName == "lp64" || ABIName == "lp64f" || ABIName == "lp64d")
+    CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
+  else
+    D.Diag(diag::err_drv_unsupported_option_argument) << "-mabi=" << ABIName;
+
   // Handle -mrvv-vector-bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_mrvv_vector_bits_EQ)) {
     StringRef Val = A->getValue();
-    const Driver &D = getToolChain().getDriver();
 
     // Get minimum VLen from march.
     unsigned MinVLen = 0;
