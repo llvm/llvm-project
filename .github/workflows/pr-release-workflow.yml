@@ -11,6 +11,7 @@ on:
 
 jobs:
   backport-commit:
+    runs-on: ubuntu-22.04
     if: >-
       github.event.pull_request.merged &&
       contains(github.event.pull_request.milestone.title, "Release")
