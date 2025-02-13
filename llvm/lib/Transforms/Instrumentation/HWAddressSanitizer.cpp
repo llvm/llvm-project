@@ -199,7 +199,8 @@ static cl::opt<float>
                      cl::desc("Probability value in the range [0.0, 1.0] "
                               "to keep instrumentation of a function. "
                               "Note: instrumentation can be skipped randomly "
-                              "OR because of the hot percentile cutoff."));
+                              "OR because of the hot percentile cutoff, if "
+                              "both are supplied."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
