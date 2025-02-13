@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_AFFINE_PASSES_H
 #define MLIR_DIALECT_AFFINE_PASSES_H
 
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include <limits>
 
@@ -93,7 +94,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLoopTilingPass();
 /// factors supplied through other means. If -1 is passed as the unrollFactor
 /// and no callback is provided, anything passed from the command-line (if at
 /// all) or the default unroll factor is used (LoopUnroll:kDefaultUnrollFactor).
-std::unique_ptr<OperationPass<func::FuncOp>> createLoopUnrollPass(
+std::unique_ptr<InterfacePass<FunctionOpInterface>> createLoopUnrollPass(
     int unrollFactor = -1, bool unrollUpToFactor = false,
     bool unrollFull = false,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr);
