@@ -112,7 +112,7 @@ enum TokenKey : unsigned {
   KEYHLSL = 0x8000000,
   KEYFIXEDPOINT = 0x10000000,
   KEYACLE = 0x20000000, // Enable Arm Neon vector type keywords
-  KEYMAX = KEYACLE, // The maximum key
+  KEYMAX = KEYACLE,     // The maximum key
   KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
   KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL &
            ~KEYNOZOS // KEYNOMS18, KEYNOOPENCL, KEYNOZOS are excluded.

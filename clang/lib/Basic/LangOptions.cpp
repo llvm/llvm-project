@@ -207,7 +207,6 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
     Opts.ACLE = true;
   }
 
-
   // OpenCL, C++ and C23 have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus || Opts.C23;
 
