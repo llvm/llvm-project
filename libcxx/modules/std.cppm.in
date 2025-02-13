@@ -101,6 +101,8 @@ module;
 #include <source_location>
 #include <span>
 #  include <spanstream>
+#endif
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <sstream>
 #include <stack>
 #include <stdexcept>
