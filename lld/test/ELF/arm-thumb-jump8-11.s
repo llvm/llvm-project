@@ -1,3 +1,5 @@
+# REQUIRES: arm
+
 # RUN: llvm-mc -triple thumbv6m-arm-eabi --filetype=obj %s -o %t.obj
 # RUN: ld.lld %t.obj -o %t.linked
 # RUN: llvm-objdump -d %t.linked | FileCheck %s --check-prefixes=CHECK,CHECK-LE
