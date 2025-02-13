@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// skip if no MPI C header was found
+#ifdef FOUND_MPI_C_HEADER
+
 // This must go first (MPI gets confused otherwise)
 #include "MPIImplTraits.h"
 
@@ -330,3 +333,15 @@ void mlir::mpi::registerConvertMPIToLLVMInterface(DialectRegistry &registry) {
     dialect->addInterfaces<FuncToLLVMDialectInterface>();
   });
 }
+
+#else // FOUND_MPI_C_HEADER
+
+#include "mlir/Conversion/MPIToLLVM/MPIToLLVM.h"
+using namespace mlir;
+
+void mlir::mpi::populateMPIToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {}
+
+void mlir::mpi::registerConvertMPIToLLVMInterface(DialectRegistry &registry) {}
+
+#endif // FOUND_MPI_C_HEADER
