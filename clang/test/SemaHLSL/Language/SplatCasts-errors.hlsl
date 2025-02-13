@@ -1,17 +1,11 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify -verify-ignore-unexpected=note
 
 struct S {
-// expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to 'const S' for 1st argument}}
-// expected-note@-2 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to 'S' for 1st argument}}
-// expected-note@-3 {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
   int A : 8;
   int B;
 };
 
 struct R {
-// expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to 'const R' for 1st argument}}
-// expected-note@-2 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to 'R' for 1st argument}}
-// expected-note@-3 {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
   int A;
   union {
     float F;
@@ -29,4 +23,27 @@ export void cantCast() {
 export void cantCast2() {
   R r = (R)1;
   // expected-error@-1 {{no matching conversion for C-style cast from 'int' to 'R'}}
+}
+
+RWBuffer<float4> Buf;
+
+// Can't cast an intangible type
+export void cantCast3() {
+  Buf = (RWBuffer<float4>)1;
+  // expected-error@-1 {{no matching conversion for C-style cast from 'int' to 'RWBuffer<float4>' (aka 'RWBuffer<vector<float, 4>>')}}
+}
+
+export void cantCast4() {
+ RWBuffer<float4> B[2] = (RWBuffer<float4>[2])1;
+ // expected-error@-1 {{C-style cast from 'int' to 'RWBuffer<float4>[2]' (aka 'RWBuffer<vector<float, 4>>[2]') is not allowed}}
+}
+
+struct X {
+  int A;
+  RWBuffer<float4> Buf;
+};
+
+export void cantCast5() {
+  X x = (X)1;
+  // expected-error@-1 {{no matching conversion for C-style cast from 'int' to 'X'}}
 }

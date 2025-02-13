@@ -2710,6 +2710,9 @@ bool SemaHLSL::CheckCompatibleParameterABI(FunctionDecl *New,
 // clarity of what types are supported
 bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
 
+  if (!SrcTy->isScalarType() || !DestTy->isScalarType())
+    return false;
+
   if (SemaRef.getASTContext().hasSameUnqualifiedType(SrcTy, DestTy))
     return true;
 
