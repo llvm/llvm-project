@@ -332,12 +332,12 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
       rewriter.replaceOp(op, one);
       return success();
     }
-    if (valueB.compare(APFloat::getOne(sem)) == APFloat::cmpEqual) {
+    if (valueB.isExactlyValue(1.0)) {
       // a^1 -> a
       rewriter.replaceOp(op, operandA);
       return success();
     }
-    if (valueB.compare(-APFloat::getOne(sem)) == APFloat::cmpEqual) {
+    if (valueB.isExactlyValue(-1.0)) {
       // a^(-1) -> 1 / a
       Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
       Value div = b.create<arith::DivFOp>(one, operandA);
