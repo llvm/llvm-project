@@ -179,6 +179,13 @@ static bool argHasNVVMAnnotation(const Value &Val,
   return false;
 }
 
+static std::optional<unsigned> getFnAttrParsedInt(const Function &F,
+                                                  StringRef Attr) {
+  return F.hasFnAttribute(Attr)
+             ? std::optional(F.getFnAttributeAsParsedInteger(Attr))
+             : std::nullopt;
+}
+
 bool isParamGridConstant(const Value &V) {
   if (const Argument *Arg = dyn_cast<Argument>(&V)) {
     // "grid_constant" counts argument indices starting from 1
@@ -277,7 +284,7 @@ std::optional<unsigned> getClusterDimz(const Function &F) {
 }
 
 std::optional<unsigned> getMaxClusterRank(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxclusterrank");
+  return getFnAttrParsedInt(F, "nvvm.maxclusterrank");
 }
 
 std::optional<unsigned> getReqNTIDx(const Function &F) {
@@ -303,11 +310,11 @@ std::optional<unsigned> getReqNTID(const Function &F) {
 }
 
 std::optional<unsigned> getMinCTASm(const Function &F) {
-  return findOneNVVMAnnotation(&F, "minctasm");
+  return getFnAttrParsedInt(F, "nvvm.minctasm");
 }
 
 std::optional<unsigned> getMaxNReg(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxnreg");
+  return getFnAttrParsedInt(F, "nvvm.maxnreg");
 }
 
 MaybeAlign getAlign(const Function &F, unsigned Index) {

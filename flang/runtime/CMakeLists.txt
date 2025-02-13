@@ -123,6 +123,15 @@ else()
   set(NO_LTO_FLAGS "")
 endif()
 
+# based on AddLLVM.cmake
+if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(NO_RTTI_FLAGS "-fno-exceptions -fno-rtti")
+elseif (MSVC)
+  set(NO_RTTI_FLAGS "/EHs-c- /GR-")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set(NO_RTTI_FLAGS "-qnoeh -qnortti")
+endif ()
+
 configure_file("${FLANG_RT_SOURCE_DIR}/cmake/config.h.cmake.in" config.h)
 # include_directories is used here instead of target_include_directories
 # because add_flang_library creates multiple objects (STATIC/SHARED, OBJECT)
@@ -131,6 +140,7 @@ include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR})
 
 append(${NO_LTO_FLAGS} CMAKE_C_FLAGS)
 append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
+append(${NO_RTTI_FLAGS} CMAKE_CXX_FLAGS)
 
 # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build,
 # to avoid an unwanted dependency on libstdc++/libc++.so.
@@ -213,6 +223,8 @@ include(AddFlangOffloadRuntime)
 
 # List of files that are buildable for all devices.
 set(supported_files
+  ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
+  ${FLANG_SOURCE_DIR}/lib/Decimal/decimal-to-binary.cpp
   ISO_Fortran_binding.cpp
   allocatable.cpp
   allocator-registry.cpp
