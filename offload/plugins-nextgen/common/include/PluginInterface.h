@@ -344,6 +344,26 @@ struct GenericKernelTy {
     return AchievedOccupancy;
   }
 
+  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
+  bool isGenericSPMDMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC_SPMD;
+  }
+  bool isGenericMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
+  }
+  bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
+
+  /// AMD-only execution modes
+  bool isBigJumpLoopMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP;
+  }
+  bool isNoLoopMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  }
+  bool isXTeamReductionsMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
+  }
+
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
@@ -430,26 +450,6 @@ protected:
 
   /// The maximum number of threads which the kernel could leverage.
   uint32_t MaxNumThreads;
-
-  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
-  bool isGenericSPMDMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC_SPMD;
-  }
-  bool isGenericMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
-  }
-  bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
-
-  /// AMD-only execution modes
-  bool isBigJumpLoopMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP;
-  }
-  bool isNoLoopMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
-  }
-  bool isXTeamReductionsMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
-  }
 
   /// The kernel environment, including execution flags.
   KernelEnvironmentTy KernelEnvironment;
