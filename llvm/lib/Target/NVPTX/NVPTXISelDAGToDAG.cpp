@@ -24,7 +24,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 
 using namespace llvm;
 

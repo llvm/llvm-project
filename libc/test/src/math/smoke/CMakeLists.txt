@@ -3958,6 +3958,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.asinf16  
+)
+
+add_fp_unittest(
   acosf_test
   SUITE
     libc-math-smoke-tests
