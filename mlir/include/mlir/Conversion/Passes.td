@@ -274,6 +274,17 @@ def ConvertBufferizationToMemRef : Pass<"convert-bufferization-to-memref"> {
 def ConvertComplexToLLVMPass : Pass<"convert-complex-to-llvm"> {
   let summary = "Convert Complex dialect to LLVM dialect";
   let dependentDialects = ["LLVM::LLVMDialect"];
+
+  let options = [
+    Option<"complexRange", "complex-range", "::mlir::complex::ComplexRangeFlags",
+      /*default=*/"::mlir::complex::ComplexRangeFlags::basic",
+      "Control the intermediate calculation of complex number division",
+      [{::llvm::cl::values(
+        clEnumValN(::mlir::complex::ComplexRangeFlags::improved, "improved", "improved"),
+        clEnumValN(::mlir::complex::ComplexRangeFlags::basic, "basic", "basic (default)"),
+        clEnumValN(::mlir::complex::ComplexRangeFlags::none, "none", "none")
+      )}]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -308,6 +319,17 @@ def ConvertComplexToStandard : Pass<"convert-complex-to-standard"> {
   let summary = "Convert Complex dialect to standard dialect";
   let constructor = "mlir::createConvertComplexToStandardPass()";
   let dependentDialects = ["math::MathDialect"];
+
+  let options = [
+    Option<"complexRange", "complex-range", "::mlir::complex::ComplexRangeFlags",
+      /*default=*/"::mlir::complex::ComplexRangeFlags::improved",
+      "Control the intermediate calculation of complex number division",
+      [{::llvm::cl::values(
+        clEnumValN(::mlir::complex::ComplexRangeFlags::improved, "improved", "improved (default)"),
+        clEnumValN(::mlir::complex::ComplexRangeFlags::basic, "basic", "basic"),
+        clEnumValN(::mlir::complex::ComplexRangeFlags::none, "none", "none")
+      )}]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
