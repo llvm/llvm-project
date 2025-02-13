@@ -54,7 +54,8 @@
 
 // clang-format on
 
-#if __cplusplus > 201103L
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#else
 
 #  include <__config>
 
@@ -463,6 +464,6 @@ _LIBCPP_POP_MACROS
 #    include <type_traits>
 #  endif
 
-#endif // __cplusplus > 201103L
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SPANSTREAM
