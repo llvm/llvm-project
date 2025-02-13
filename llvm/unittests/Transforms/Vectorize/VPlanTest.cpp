@@ -694,6 +694,7 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
     IntegerType *Int32 = IntegerType::get(C, 32);
     VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     WidenPhi->addOperand(Val);
+    WidenPhi->addOperand(Val);
     VPBB2->appendRecipe(WidenPhi);
 
     VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");

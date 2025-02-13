@@ -3612,7 +3612,9 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 VPBasicBlock *VPWidenPHIRecipe::getIncomingBlock(unsigned I) {
   VPBasicBlock *Parent = getParent();
   VPBlockBase *Pred = nullptr;
-  if (Parent->getNumPredecessors() == 0) {
+  if (Parent->getNumPredecessors() > 0) {
+    Pred = Parent->getPredecessors()[I];
+  } else {
     auto *Region = Parent->getParent();
     assert(Region && !Region->isReplicator() && Region->getEntry() == Parent &&
            "must be in the entry block of a non-replicate region");
@@ -3623,8 +3625,6 @@ VPBasicBlock *VPWidenPHIRecipe::getIncomingBlock(unsigned I) {
     // I ==  0 selects the predecessor of the region, I == 1 selects the region
     // itself whose exiting block feeds the phi across the backedge.
     Pred = I == 0 ? Region->getSinglePredecessor() : Region;
-  } else {
-    Pred = Parent->getPredecessors()[I];
   }
 
   return Pred->getExitingBasicBlock();

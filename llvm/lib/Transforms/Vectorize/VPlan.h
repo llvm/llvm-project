@@ -1959,9 +1959,9 @@ public:
 };
 
 /// A recipe for widened phis. Incoming values are operands of the recipe and
-/// their operand index corresponds to the incoming predeocessor block. If the
+/// their operand index corresponds to the incoming predecessor block. If the
 /// recipe is placed in an entry block to a (non-replicate) region, it must have
-/// exactly 2 incoming values, the first from the predecessors of the region and
+/// exactly 2 incoming values, the first from the predecessor of the region and
 /// the second from the exiting block of the region.
 class VPWidenPHIRecipe : public VPSingleDefRecipe {
 public:
