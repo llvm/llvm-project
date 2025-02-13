@@ -2,6 +2,8 @@
 ; RUN: opt -S -passes=function-attrs < %s | FileCheck --check-prefixes=COMMON,FNATTRS %s
 ; RUN: opt -S -passes=attributor-light < %s | FileCheck --check-prefixes=COMMON,ATTRIBUTOR %s
 
+; Make sure norecurse is inferred on the calling functions
+
 define internal void @sendmsg_is_norecurse() {
 ; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define internal void @sendmsg_is_norecurse(
@@ -12,7 +14,7 @@ define internal void @sendmsg_is_norecurse() {
 ; ATTRIBUTOR: Function Attrs: mustprogress norecurse nounwind willreturn
 ; ATTRIBUTOR-LABEL: define internal void @sendmsg_is_norecurse(
 ; ATTRIBUTOR-SAME: ) #[[ATTR0:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @llvm.amdgcn.s.sendmsg(i32 1, i32 0) #[[ATTR7:[0-9]+]]
+; ATTRIBUTOR-NEXT:    call void @llvm.amdgcn.s.sendmsg(i32 1, i32 0) #[[ATTR4:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @llvm.amdgcn.s.sendmsg(i32 1, i32 0)
@@ -37,10 +39,10 @@ define internal i32 @sendmsg_rtn_is_norecurse() {
 ; FNATTRS-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 1)
 ; FNATTRS-NEXT:    ret i32 [[RES]]
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nounwind willreturn
+; ATTRIBUTOR: Function Attrs: mustprogress norecurse nounwind willreturn
 ; ATTRIBUTOR-LABEL: define internal i32 @sendmsg_rtn_is_norecurse(
-; ATTRIBUTOR-SAME: ) #[[ATTR2:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 1) #[[ATTR7]]
+; ATTRIBUTOR-SAME: ) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 1) #[[ATTR4]]
 ; ATTRIBUTOR-NEXT:    ret i32 [[RES]]
 ;
   %res = call i32 @llvm.amdgcn.s.sendmsg.rtn(i32 1)
@@ -54,12 +56,12 @@ define void @user() {
 ; FNATTRS-NEXT:    call void @sendmsg_rtn_is_norecurse()
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: nounwind
+; ATTRIBUTOR: Function Attrs: norecurse nounwind
 ; ATTRIBUTOR-LABEL: define void @user(
-; ATTRIBUTOR-SAME: ) #[[ATTR3:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @sendmsg_is_norecurse() #[[ATTR8:[0-9]+]]
-; ATTRIBUTOR-NEXT:    call void @sendmsghalt_is_norecurse() #[[ATTR3]]
-; ATTRIBUTOR-NEXT:    call void @sendmsg_rtn_is_norecurse() #[[ATTR3]]
+; ATTRIBUTOR-SAME: ) #[[ATTR1]] {
+; ATTRIBUTOR-NEXT:    call void @sendmsg_is_norecurse() #[[ATTR5:[0-9]+]]
+; ATTRIBUTOR-NEXT:    call void @sendmsghalt_is_norecurse() #[[ATTR6:[0-9]+]]
+; ATTRIBUTOR-NEXT:    call void @sendmsg_rtn_is_norecurse() #[[ATTR6]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @sendmsg_is_norecurse()
@@ -71,16 +73,13 @@ define void @user() {
 ; FNATTRS: attributes #[[ATTR0]] = { mustprogress norecurse nounwind willreturn }
 ; FNATTRS: attributes #[[ATTR1]] = { norecurse nounwind }
 ; FNATTRS: attributes #[[ATTR2:[0-9]+]] = { nocallback nounwind willreturn }
-; FNATTRS: attributes #[[ATTR3:[0-9]+]] = { norecurse nounwind willreturn }
-; FNATTRS: attributes #[[ATTR4:[0-9]+]] = { nocallback nounwind }
+; FNATTRS: attributes #[[ATTR3:[0-9]+]] = { nocallback nounwind }
 ;.
 ; ATTRIBUTOR: attributes #[[ATTR0]] = { mustprogress norecurse nounwind willreturn }
 ; ATTRIBUTOR: attributes #[[ATTR1]] = { norecurse nounwind }
-; ATTRIBUTOR: attributes #[[ATTR2]] = { mustprogress nounwind willreturn }
-; ATTRIBUTOR: attributes #[[ATTR3]] = { nounwind }
-; ATTRIBUTOR: attributes #[[ATTR4:[0-9]+]] = { nocallback nounwind willreturn }
-; ATTRIBUTOR: attributes #[[ATTR5:[0-9]+]] = { norecurse nounwind willreturn }
-; ATTRIBUTOR: attributes #[[ATTR6:[0-9]+]] = { nocallback nounwind }
-; ATTRIBUTOR: attributes #[[ATTR7]] = { willreturn }
-; ATTRIBUTOR: attributes #[[ATTR8]] = { nounwind willreturn }
+; ATTRIBUTOR: attributes #[[ATTR2:[0-9]+]] = { nocallback nounwind willreturn }
+; ATTRIBUTOR: attributes #[[ATTR3:[0-9]+]] = { nocallback nounwind }
+; ATTRIBUTOR: attributes #[[ATTR4]] = { willreturn }
+; ATTRIBUTOR: attributes #[[ATTR5]] = { nounwind willreturn }
+; ATTRIBUTOR: attributes #[[ATTR6]] = { nounwind }
 ;.
