@@ -1196,7 +1196,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       // for e.g., [n{0}] { }; <-- if no <initializer_list> is included.
       // FIXME: we should create the init capture variable and mark it invalid
       // in this case.
-      if (C->InitCaptureType.get().isNull() && !C->Init.isUsable()) {
+      if (C->InitCaptureType.get().isNull() ) {
         Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type); // 
         continue; // 
       }
