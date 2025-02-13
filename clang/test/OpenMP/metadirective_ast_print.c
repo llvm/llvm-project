@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -verify -fopenmp -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -verify -fopenmp-simd -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefixes=CHECK-AMDGCN
+// RUN: %clang_cc1 -verify -fopenmp -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=CHECK-AMDGCN
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefixes=CHECK-AMDGCN
+// RUN: %clang_cc1 -verify -fopenmp-simd -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=CHECK-AMDGCN
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -87,6 +87,14 @@ void foo(void) {
   for (int i=0; i<10; i++)
     ;
 
+#pragma omp metadirective when(user = {condition(1)}	\
+			       : parallel for) otherwise()
+  for (int i=0; i<10; i++)
+    ;
+#pragma omp metadirective when(user = {condition(1)}	\
+			       : parallel for)
+  for (int i=0; i<10; i++)
+    ;
 }
 
 // CHECK: void bar(void);
