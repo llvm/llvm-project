@@ -34,7 +34,7 @@ using ispanstream = basic_ispanstream<char>;
 using ospanstream = basic_ospanstream<char>;
 using spanstream  = basic_spanstream<char>;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 using wspanbuf     = basic_spanbuf<wchar_t>;
 using wispanstream = basic_ispanstream<wchar_t>;
 using wospanstream = basic_ospanstream<wchar_t>;
