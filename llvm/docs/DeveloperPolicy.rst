@@ -539,11 +539,13 @@ What are the expectations around a revert?
 Obtaining Commit Access
 -----------------------
 
-We grant commit access to contributors that can provide a valid justification.
-If you would like commit access, please use this `link <https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20Access%20For%20%3Cuser%3E&body=%23%23%23%20Why%20Are%20you%20requesting%20commit%20access%20?>`_ to file
+Once you have 3 or more merged pull requests, you may use this
+link <https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20Access%20For%20%3Cuser%3E&body=%23%23%23%20Why%20Are%20you%20requesting%20commit%20access%20?>`_ to file
 an issue and request commit access. Replace the <user> string in the title
 with your github username, and explain why you are requesting commit access in
-the issue description. If approved, a GitHub invitation will be sent to your
+the issue description.  Once the issue is created, you will need to get two
+current contributors to ack your requests before commit access will be granted.
+If approved, a GitHub invitation will be sent to your
 GitHub account. In case you don't get notification from GitHub, go to
 `Invitation Link <https://github.com/orgs/llvm/invitation>`_ directly. Once
 you accept the invitation, you'll get commit access.
