@@ -389,8 +389,8 @@ struct LookupResult {
 
   bool isEmpty() const {
       bool IsEmpty = Flags.IsContained == 0
-              & Flags.ExtendsBefore == 0
-              & Flags.ExtendsAfter == 0;
+              && Flags.ExtendsBefore == 0
+              && Flags.ExtendsAfter == 0;
       return IsEmpty;
   }
 };

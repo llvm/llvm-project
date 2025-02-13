@@ -1197,66 +1197,85 @@ public:
   }
 };
 
+/// Try to determine if kernel argument is unused. This method
+/// takes a conservative approach, i.e. it may return false
+/// negatives but it should never return a false positive.
+static bool isArgUnused(tgt_map_type ArgType) {
+    bool IsArgUnused = ArgType == OMP_TGT_MAPTYPE_NONE
+                       || ArgType == OMP_TGT_MAPTYPE_FROM
+                       || ArgType == OMP_TGT_MAPTYPE_TO
+                       || ArgType == (OMP_TGT_MAPTYPE_FROM | OMP_TGT_MAPTYPE_TO);
+    return IsArgUnused;
+}
+
 /// Try to find redundant mappings associated with a kernel launch,
 /// and provide a masked version of the kernel argument types that
-/// avoid redundant to data transfers between the host and device.
+/// avoid redundant data transfers between the host and the device.
 static std::unique_ptr<int64_t[]> maskRedundantTransfers(DeviceTy &Device, int32_t ArgNum,
                                                          int64_t *ArgTypes, int64_t *ArgSizes,
                                                          map_var_info_t *ArgNames, void **ArgPtrs,
                                                          void **ArgMappers) {
     std::unique_ptr<int64_t[]> ArgTypesOverride = std::make_unique<int64_t[]>(ArgNum);
 
-    MappingInfoTy &MappingInfo = Device.getMappingInfo();
-    MappingInfoTy::HDTTMapAccessorTy HDTTMap = MappingInfo
-            .HostDataToTargetMap.getExclusiveAccessor();
-
-    int64_t UnusedArgs = 0;
+    bool AllArgsUnused = true;
 
     for (int32_t I = 0; I < ArgNum; ++I) {
-        tgt_map_type ArgType = (tgt_map_type) ArgTypes[I];
-
-        // Check for unused implicit mappings
-        bool IsArgUnused = ArgType == OMP_TGT_MAPTYPE_NONE;
-
-        // Check for unused `map(buf[0:size])` mappings
-        IsArgUnused |= ArgType == OMP_TGT_MAPTYPE_FROM
-                || ArgType == OMP_TGT_MAPTYPE_TO
-                || ArgType == (OMP_TGT_MAPTYPE_FROM | OMP_TGT_MAPTYPE_TO);
-
-        // Check for unused `map(wrapper.buf[0:size])` mappings
-        IsArgUnused |= UnusedArgs == ArgNum - 1 && ArgType & OMP_TGT_MAPTYPE_MEMBER_OF
-                && ((ArgType & ~OMP_TGT_MAPTYPE_MEMBER_OF) == OMP_TGT_MAPTYPE_PTR_AND_OBJ
-                || (ArgType & ~OMP_TGT_MAPTYPE_MEMBER_OF) == (OMP_TGT_MAPTYPE_PTR_AND_OBJ | OMP_TGT_MAPTYPE_TO)
-                || (ArgType & ~OMP_TGT_MAPTYPE_MEMBER_OF) == (OMP_TGT_MAPTYPE_PTR_AND_OBJ | OMP_TGT_MAPTYPE_FROM | OMP_TGT_MAPTYPE_TO));
-
-        bool IsExistingMapping = !MappingInfo.lookupMapping(HDTTMap, ArgPtrs[I], ArgSizes[I]).isEmpty();
-
         bool IsCustomMapped = ArgMappers && ArgMappers[I];
 
-        if (IsExistingMapping | IsCustomMapped | !IsArgUnused) {
+        if (IsCustomMapped) {
+          ArgTypesOverride[I] = ArgTypes[I];
+          AllArgsUnused = false;
+          continue;
+        }
+
+        tgt_map_type ArgType = (tgt_map_type) ArgTypes[I];
+
+        bool IsArgUnused = true;
+
+        // Check for unused `map(buf[0:size])` mappings
+        IsArgUnused |= isArgUnused(ArgType);
+
+        bool IsArgMemberPtr = ArgType & OMP_TGT_MAPTYPE_MEMBER_OF
+                && ArgType & OMP_TGT_MAPTYPE_PTR_AND_OBJ;
+
+        tgt_map_type ArgTypeMemberPtrMasked = (tgt_map_type) (ArgType & ~(OMP_TGT_MAPTYPE_MEMBER_OF | OMP_TGT_MAPTYPE_PTR_AND_OBJ));
+
+        // Check for unused `map(wrapper.buf[0:size])` mappings
+        IsArgUnused |= AllArgsUnused && IsArgMemberPtr && isArgUnused(ArgTypeMemberPtrMasked);
+
+        if (!IsArgUnused) {
             ArgTypesOverride[I] = ArgTypes[I];
+            AllArgsUnused = false;
             continue;
         }
 
-        const std::string Name = ArgNames && ArgNames[I] ?
+        MappingInfoTy &MappingInfo = Device.getMappingInfo();
+        MappingInfoTy::HDTTMapAccessorTy HDTTMap = MappingInfo
+                .HostDataToTargetMap.getExclusiveAccessor();
+
+        bool IsExistingMapping = !MappingInfo.lookupMapping(HDTTMap, ArgPtrs[I], ArgSizes[I]).isEmpty();
+
+        if (IsExistingMapping) {
+            ArgTypesOverride[I] = ArgTypes[I];
+            AllArgsUnused = false;
+            continue;
+        }
+
+        [[maybe_unused]] const std::string Name = ArgNames && ArgNames[I] ?
                                  getNameFromMapping(ArgNames[I]) : std::string("unknown");
 
         bool IsArgFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
         bool IsArgTo = ArgType & OMP_TGT_MAPTYPE_TO;
 
-        const char *Type = IsArgFrom && IsArgTo ? "tofrom"
+        [[maybe_unused]] const char *Type = IsArgFrom && IsArgTo ? "tofrom"
                                : IsArgFrom ? "from"
                                : IsArgTo ? "to"
                                : "unknown";
 
-        // Optimisation:
-        // A new mapping is not used by the kernel.
-        // Change the type such that no data is transferred to and/or from the device.
         INFO(OMP_INFOTYPE_REDUNDANT_TRANSFER, Device.DeviceID, "%s(%s)[%" PRId64 "] %s\n", Type,
              Name.c_str(), ArgSizes[I], "is not used and will not be copied");
 
-        ArgTypesOverride[I] = ArgTypes[I] & ~(OMP_TGT_MAPTYPE_TO | OMP_TGT_MAPTYPE_FROM);
-        UnusedArgs++;
+        ArgTypesOverride[I] = ArgType & ~(OMP_TGT_MAPTYPE_TO | OMP_TGT_MAPTYPE_FROM);
     }
 
     return ArgTypesOverride;
