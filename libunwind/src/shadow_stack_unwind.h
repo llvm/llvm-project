@@ -21,7 +21,7 @@
 #include <cet.h>
 #include <immintrin.h>
 
-#define _LIBUNWIND_POP_SS_SSP(x)                                               \
+#define _LIBUNWIND_POP_SHSTK_SSP(x)                                            \
   do {                                                                         \
     unsigned long ssp = _get_ssp();                                            \
     if (ssp != 0) {                                                            \
@@ -46,7 +46,7 @@
 #define _LIBUNWIND_USE_GCS 1
 #endif
 
-#define _LIBUNWIND_POP_SS_SSP(x)                                               \
+#define _LIBUNWIND_POP_SHSTK_SSP(x)                                            \
   do {                                                                         \
     if (__chkfeat(_CHKFEAT_GCS)) {                                             \
       unsigned tmp = (x);                                                      \
@@ -57,7 +57,7 @@
 
 #endif
 
-extern void *__libunwind_ss_get_registers(unw_cursor_t *);
-extern void *__libunwind_ss_get_jump_target(void);
+extern void *__libunwind_shstk_get_registers(unw_cursor_t *);
+extern void *__libunwind_shstk_get_jump_target(void);
 
 #endif

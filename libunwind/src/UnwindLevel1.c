@@ -42,7 +42,7 @@
 // target is not tempered with. When unwinding, we're skipping the normal return
 // procedure for multiple frames and thus need to pop the return addresses of
 // the skipped frames from shadow stack to avoid triggering an exception (using
-// `_LIBUNWIND_POP_SS_SSP()`). Also, some architectures, like the x86-family
+// `_LIBUNWIND_POP_SHSTK_SSP()`). Also, some architectures, like the x86-family
 // CET, push the return adddresses onto shadow stack with common call
 // instructions, so for these architectures, normal function calls should be
 // avoided when invoking the `jumpto()` function. To do this, we use inline
@@ -54,38 +54,38 @@
     __unw_resume((cursor));                                                    \
   } while (0)
 #elif defined(_LIBUNWIND_TARGET_I386)
-#define __shadow_stack_step_size (4)
+#define __shstk_step_size (4)
 #define __unw_phase2_resume(cursor, fn)                                        \
   do {                                                                         \
-    _LIBUNWIND_POP_SS_SSP((fn));                                               \
-    void *ssRegContext = __libunwind_ss_get_registers((cursor));               \
-    void *ssJumpAddress = __libunwind_ss_get_jump_target();                    \
+    _LIBUNWIND_POP_SHSTK_SSP((fn));                                            \
+    void *shstkRegContext = __libunwind_shstk_get_registers((cursor));         \
+    void *shstkJumpAddress = __libunwind_shstk_get_jump_target();              \
     __asm__ volatile("push %%edi\n\t"                                          \
                      "sub $4, %%esp\n\t"                                       \
-                     "jmp *%%edx\n\t" ::"D"(ssRegContext),                     \
-                     "d"(ssJumpAddress));                                      \
+                     "jmp *%%edx\n\t" ::"D"(shstkRegContext),                  \
+                     "d"(shstkJumpAddress));                                   \
   } while (0)
 #elif defined(_LIBUNWIND_TARGET_X86_64)
-#define __shadow_stack_step_size (8)
+#define __shstk_step_size (8)
 #define __unw_phase2_resume(cursor, fn)                                        \
   do {                                                                         \
-    _LIBUNWIND_POP_SS_SSP((fn));                                               \
-    void *ssRegContext = __libunwind_ss_get_registers((cursor));               \
-    void *ssJumpAddress = __libunwind_ss_get_jump_target();                    \
-    __asm__ volatile("jmpq *%%rdx\n\t" ::"D"(ssRegContext),                    \
-                     "d"(ssJumpAddress));                                      \
+    _LIBUNWIND_POP_SHSTK_SSP((fn));                                            \
+    void *shstkRegContext = __libunwind_shstk_get_registers((cursor));         \
+    void *shstkJumpAddress = __libunwind_shstk_get_jump_target();              \
+    __asm__ volatile("jmpq *%%rdx\n\t" ::"D"(shstkRegContext),                 \
+                     "d"(shstkJumpAddress));                                   \
   } while (0)
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
-#define __shadow_stack_step_size (8)
+#define __shstk_step_size (8)
 #define __unw_phase2_resume(cursor, fn)                                        \
   do {                                                                         \
-    _LIBUNWIND_POP_SS_SSP((fn));                                               \
-    void *ssRegContext = __libunwind_ss_get_registers((cursor));               \
-    void *ssJumpAddress = __libunwind_ss_get_jump_target();                    \
+    _LIBUNWIND_POP_SHSTK_SSP((fn));                                            \
+    void *shstkRegContext = __libunwind_shstk_get_registers((cursor));         \
+    void *shstkJumpAddress = __libunwind_shstk_get_jump_target();              \
     __asm__ volatile("mov x0, %0\n\t"                                          \
                      "br %1\n\t"                                               \
                      :                                                         \
-                     : "r"(ssRegContext), "r"(ssJumpAddress)                   \
+                     : "r"(shstkRegContext), "r"(shstkJumpAddress)             \
                      : "x0");                                                  \
   } while (0)
 #endif
@@ -267,8 +267,7 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
       unw_word_t retInNormalStack;
       __unw_get_reg(cursor, UNW_REG_IP, &retInNormalStack);
       unsigned long retInShadowStack =
-          *(unsigned long *)(shadowStackTop +
-                             __shadow_stack_step_size * framesWalked);
+          *(unsigned long *)(shadowStackTop + __shstk_step_size * framesWalked);
       if (retInNormalStack != retInShadowStack)
         return _URC_FATAL_PHASE2_ERROR;
     }
