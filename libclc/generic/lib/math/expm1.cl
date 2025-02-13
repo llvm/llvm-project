@@ -1,8 +1,7 @@
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
-
-#include "math.h"
-#include "tables.h"
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
 
 /* Refer to the exp routine for the underlying algorithm */
 

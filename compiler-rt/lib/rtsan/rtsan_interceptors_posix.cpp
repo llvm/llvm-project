@@ -47,6 +47,7 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #include <stdarg.h>
 #include <stdio.h>
 #if SANITIZER_LINUX
+#include <linux/mman.h>
 #include <sys/inotify.h>
 #endif
 #include <sys/select.h>
@@ -243,6 +244,18 @@ INTERCEPTOR(int, close, int filedes) {
   return REAL(close)(filedes);
 }
 
+INTERCEPTOR(int, chdir, const char *path) {
+  __rtsan_notify_intercepted_call("chdir");
+  return REAL(chdir)(path);
+}
+
+INTERCEPTOR(int, fchdir, int fd) {
+  __rtsan_notify_intercepted_call("fchdir");
+  return REAL(fchdir)(fd);
+}
+
+// Streams
+
 INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
   __rtsan_notify_intercepted_call("fopen");
   return REAL(fopen)(path, mode);
@@ -252,8 +265,6 @@ INTERCEPTOR(FILE *, freopen, const char *path, const char *mode, FILE *stream) {
   __rtsan_notify_intercepted_call("freopen");
   return REAL(freopen)(path, mode, stream);
 }
-
-// Streams
 
 #if SANITIZER_INTERCEPT_FOPEN64
 INTERCEPTOR(FILE *, fopen64, const char *path, const char *mode) {
@@ -740,6 +751,26 @@ INTERCEPTOR(int, sched_yield, void) {
   return REAL(sched_yield)();
 }
 
+#if SANITIZER_LINUX
+INTERCEPTOR(int, sched_getaffinity, pid_t pid, size_t len, cpu_set_t *set) {
+  __rtsan_notify_intercepted_call("sched_getaffinity");
+  return REAL(sched_getaffinity)(pid, len, set);
+}
+
+INTERCEPTOR(int, sched_setaffinity, pid_t pid, size_t len,
+            const cpu_set_t *set) {
+  __rtsan_notify_intercepted_call("sched_setaffinity");
+  return REAL(sched_setaffinity)(pid, len, set);
+}
+#define RTSAN_MAYBE_INTERCEPT_SCHED_GETAFFINITY                                \
+  INTERCEPT_FUNCTION(sched_getaffinity)
+#define RTSAN_MAYBE_INTERCEPT_SCHED_SETAFFINITY                                \
+  INTERCEPT_FUNCTION(sched_setaffinity)
+#else
+#define RTSAN_MAYBE_INTERCEPT_SCHED_GETAFFINITY
+#define RTSAN_MAYBE_INTERCEPT_SCHED_SETAFFINITY
+#endif
+
 // Memory
 
 INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
@@ -849,6 +880,32 @@ INTERCEPTOR(void *, mmap64, void *addr, size_t length, int prot, int flags,
 #else
 #define RTSAN_MAYBE_INTERCEPT_MMAP64
 #endif // SANITIZER_INTERCEPT_MMAP64
+
+#if SANITIZER_LINUX
+// Note that even if rtsan is ported to netbsd, it has a slighty different
+// and non-variadic signature
+INTERCEPTOR(void *, mremap, void *oaddr, size_t olength, size_t nlength,
+            int flags, ...) {
+  __rtsan_notify_intercepted_call("mremap");
+
+  // the last optional argument is only used in this case
+  // as the new page region will be assigned to. Is ignored otherwise.
+  if (flags & MREMAP_FIXED) {
+    va_list args;
+
+    va_start(args, flags);
+    void *naddr = va_arg(args, void *);
+    va_end(args);
+
+    return REAL(mremap)(oaddr, olength, nlength, flags, naddr);
+  }
+
+  return REAL(mremap)(oaddr, olength, nlength, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_MREMAP INTERCEPT_FUNCTION(mremap)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MREMAP
+#endif
 
 INTERCEPTOR(int, munmap, void *addr, size_t length) {
   __rtsan_notify_intercepted_call("munmap");
@@ -1067,6 +1124,11 @@ INTERCEPTOR(int, setsockopt, int socket, int level, int option,
 #define RTSAN_MAYBE_INTERCEPT_GETSOCKOPT
 #define RTSAN_MAYBE_INTERCEPT_SETSOCKOPT
 #endif
+
+INTERCEPTOR(int, socketpair, int domain, int type, int protocol, int pair[2]) {
+  __rtsan_notify_intercepted_call("socketpair");
+  return REAL(socketpair)(domain, type, protocol, pair);
+}
 
 // I/O Multiplexing
 
@@ -1321,6 +1383,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(posix_memalign);
   INTERCEPT_FUNCTION(mmap);
   RTSAN_MAYBE_INTERCEPT_MMAP64;
+  RTSAN_MAYBE_INTERCEPT_MREMAP;
   INTERCEPT_FUNCTION(munmap);
   RTSAN_MAYBE_INTERCEPT_MADVISE;
   RTSAN_MAYBE_INTERCEPT_POSIX_MADVISE;
@@ -1337,6 +1400,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(openat);
   RTSAN_MAYBE_INTERCEPT_OPENAT64;
   INTERCEPT_FUNCTION(close);
+  INTERCEPT_FUNCTION(chdir);
+  INTERCEPT_FUNCTION(fchdir);
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
   RTSAN_MAYBE_INTERCEPT_FREOPEN64;
@@ -1415,6 +1480,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(usleep);
   INTERCEPT_FUNCTION(nanosleep);
   INTERCEPT_FUNCTION(sched_yield);
+  RTSAN_MAYBE_INTERCEPT_SCHED_GETAFFINITY;
+  RTSAN_MAYBE_INTERCEPT_SCHED_SETAFFINITY;
 
   INTERCEPT_FUNCTION(accept);
   INTERCEPT_FUNCTION(bind);
@@ -1437,6 +1504,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_GETPEERNAME;
   RTSAN_MAYBE_INTERCEPT_GETSOCKOPT;
   RTSAN_MAYBE_INTERCEPT_SETSOCKOPT;
+  INTERCEPT_FUNCTION(socketpair);
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);

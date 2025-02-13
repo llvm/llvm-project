@@ -659,8 +659,8 @@ private:
   void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
   void visitVectorReverse(const CallInst &I);
   void visitVectorSplice(const CallInst &I);
-  void visitVectorInterleave(const CallInst &I);
-  void visitVectorDeinterleave(const CallInst &I);
+  void visitVectorInterleave(const CallInst &I, unsigned Factor);
+  void visitVectorDeinterleave(const CallInst &I, unsigned Factor);
   void visitStepVector(const CallInst &I);
 
   void visitUserOp1(const Instruction &I) {

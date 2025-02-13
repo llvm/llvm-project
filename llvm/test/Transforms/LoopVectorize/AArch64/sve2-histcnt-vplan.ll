@@ -1,4 +1,4 @@
-; RUN: opt < %s -mattr=+sve2 -passes=loop-vectorize,instcombine -enable-histogram-loop-vectorization -sve-gather-overhead=2 -sve-scatter-overhead=2 -force-vector-interleave=1 -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -mattr=+sve2 -passes=loop-vectorize,instcombine -enable-histogram-loop-vectorization -sve-gather-overhead=2 -sve-scatter-overhead=2 -force-vector-interleave=1 -debug-only=loop-vectorize --disable-output -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 target triple = "aarch64-unknown-linux-gnu"

@@ -171,6 +171,83 @@ func.func @test_prefetch_vc_2(%src: ui64) {
 }
 
 // -----
+func.func @test_create_tdesc_sg_map_1(%src: ui64) {
+  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  // expected-error@+1 {{Detected a conflict between SG map's work-item layout and TensorDesc shape. Check the index of `subgroup_size` in WI layout map}}
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4xf32, #xegpu.scatter_tdesc_attr<>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  return
+}
+
+// -----
+func.func @test_create_tdesc_sg_map_2(%src: ui64) {
+  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  // expected-error@+1 {{TensorDesc's SG map only supports multiple elements contiguous along rows}}
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [1, 4], wi_data = [2, 1]>>
+  return
+}
+
+// -----
+func.func @test_create_tdesc_sg_map_3(%src: ui64) {
+  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  // expected-error@+1 {{TensorDesc's chunkSize must match WI's data mapping}}
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x3xf32, #xegpu.scatter_tdesc_attr<chunk_size = 3>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @test_load_gather_sg_map_1(%src: ui64) {
+  %0 = arith.constant dense<1>: vector<4xi1>
+  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
+  // expected-error@+1 {{Unexpected result shape(Expected shape: [2, 1], Given shape: [1, 2])}}
+  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>, vector<4xi1> -> vector<1x2xf32>
+  return
+}
+
+// -----
+func.func @test_load_gather_sg_map_2(%src: ui64) {
+  %0 = arith.constant dense<1>: vector<4xi1>
+  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
+  // expected-error@+1 {{Unexpected result shape(Expected shape: [2, 1], Given shape: [2])}}
+  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>, vector<4xi1> -> vector<2xf32>
+  return
+}
+
+// -----
+func.func @test_load_gather_sg_map_3(%src: ui64) {
+  %0 = arith.constant dense<1>: vector<4xi1>
+  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
+  // expected-error@+1 {{Chunk size, vector size and wi_data must match}}
+  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>, vector<4xi1> -> vector<1xf32>
+  return
+}
+
+
+// -----
+func.func @test_store_scatter_sg_map_1(%src: ui64) {
+  %0 = arith.constant dense<1>: vector<4xi1>
+  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %val = arith.constant dense<2.9>: vector<1x2xf32>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
+  // expected-error@+1 {{Unexpected value shape(Expected shape: [2, 1], Given shape: [1, 2])}}
+  xegpu.store %val, %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : vector<1x2xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>, vector<4xi1>
+  return
+}
+
+// -----
+func.func @test_store_scatter_sg_map_2(%src: ui64) {
+  %0 = arith.constant dense<1>: vector<4xi1>
+  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %val = arith.constant dense<2.9>: vector<2xf32>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
+  // expected-error@+1 {{Unexpected value shape(Expected shape: [2, 1], Given shape: [2])}}
+  xegpu.store %val, %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : vector<2xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>, vector<4xi1>
+  return
+}
+
+// -----
 func.func @test_load_gather_vc_1(%src: memref<24x32xf16>) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<4x2xf16>

@@ -21,6 +21,7 @@
 namespace llvm {
 
 struct Align;
+struct MachineJumpTableEntry;
 class Constant;
 class DataLayout;
 class Function;
@@ -135,6 +136,10 @@ public:
 
   virtual MCSection *getSectionForJumpTable(const Function &F,
                                             const TargetMachine &TM) const;
+  virtual MCSection *
+  getSectionForJumpTable(const Function &F, const TargetMachine &TM,
+                         const MachineJumpTableEntry *JTE) const;
+
   virtual MCSection *getSectionForLSDA(const Function &, const MCSymbol &,
                                        const TargetMachine &) const {
     return LSDASection;

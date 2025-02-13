@@ -2239,18 +2239,18 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
   Cleanup.mergeFrom(LambdaCleanup);
 
-  LambdaExpr *Lambda = LambdaExpr::Create(Context, Class, IntroducerRange,
-                                          CaptureDefault, CaptureDefaultLoc,
-                                          ExplicitParams, ExplicitResultType,
-                                          CaptureInits, EndLoc,
-                                          ContainsUnexpandedParameterPack);
+  LambdaExpr *Lambda =
+      LambdaExpr::Create(Context, Class, IntroducerRange, CaptureDefault,
+                         CaptureDefaultLoc, ExplicitParams, ExplicitResultType,
+                         CaptureInits, EndLoc, ContainsUnexpandedParameterPack);
+
   // If the lambda expression's call operator is not explicitly marked constexpr
-  // and we are not in a dependent context, analyze the call operator to infer
+  // and is not dependent, analyze the call operator to infer
   // its constexpr-ness, suppressing diagnostics while doing so.
   if (getLangOpts().CPlusPlus17 && !CallOperator->isInvalidDecl() &&
       !CallOperator->isConstexpr() &&
       !isa<CoroutineBodyStmt>(CallOperator->getBody()) &&
-      !Class->getDeclContext()->isDependentContext()) {
+      !Class->isDependentContext()) {
     CallOperator->setConstexprKind(
         CheckConstexprFunctionDefinition(CallOperator,
                                          CheckConstexprKind::CheckValid)

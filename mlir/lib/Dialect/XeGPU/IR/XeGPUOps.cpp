@@ -454,7 +454,22 @@ LogicalResult CreateDescOp::verify() {
   if (shape != tdescShape)
     return emitOpError("Incorrect TensorDesc shape. ")
            << "Expected is " << makeString(shape) << "\n";
-
+  if (auto sgMap = tdescTy.getSGMapAttr()) {
+    // A work-item's slice of the TensorDesc with shape [sg_size] or
+    // [sg_size, chunk_size] will be [1] or [1, chunks_size] respectively,
+    // the mapping should reflect that.
+    if (sgMap.getWiData()[0] > 1)
+      return emitOpError("TensorDesc's SG map only supports multiple elements "
+                         "contiguous along rows.");
+    if (chunkSize != static_cast<int>(sgMap.getWiData()[1]))
+      return emitOpError(
+          "TensorDesc's chunkSize must match WI's data mapping.");
+    if (int rank = tdescTy.getRank();
+        (sgMap.getWiLayout()[2 - rank] != tdescShape[0]))
+      return emitOpError("Detected a conflict between SG map's work-item "
+                         "layout and TensorDesc shape. Check the index of "
+                         "`subgroup_size` in WI layout map.");
+  }
   return success();
 }
 
@@ -513,8 +528,21 @@ LogicalResult LoadGatherOp::verify() {
 
   if (tdescTy.getRank() == 2) {
     if (!getTransposeAttr())
-      return emitOpError("load_gather has to be transposed.");
+      return emitOpError("load of rank-2 tensor has to be transposed.");
     transpose({1, 0}, tdescShape);
+  }
+
+  if (auto sgMap = tdescTy.getSGMapAttr()) {
+    auto valueVecTy = cast<VectorType>(valueTy);
+    const int32_t wiData =
+        sgMap.getWiData()[0] > 1 ? sgMap.getWiData()[0] : sgMap.getWiData()[1];
+    // All represent the same concept: a number of row elements to store.
+    if (valueVecTy.getNumElements() != wiData ||
+        valueVecTy.getNumElements() != tdescTy.getChunkSize()) {
+      return emitOpError("Chunk size, vector size and wi_data must match.");
+    }
+    // Work-item's slice (i.e., vector shape to load) is [1] or [1, chunk_size].
+    tdescShape[tdescTy.getRank() - 1] = 1;
   }
 
   if (valueShape != tdescShape)
@@ -552,8 +580,21 @@ LogicalResult StoreScatterOp::verify() {
 
   if (tdescTy.getRank() == 2) {
     if (!getTransposeAttr())
-      return emitOpError("load_gather has to be transposed.");
+      return emitOpError("Store of a rank-2 tensor has to be transposed.");
     transpose({1, 0}, tdescShape);
+  }
+
+  if (auto sgMap = tdescTy.getSGMapAttr()) {
+    auto valueVecTy = cast<VectorType>(valueTy);
+    const int32_t wiData =
+        sgMap.getWiData()[0] > 1 ? sgMap.getWiData()[0] : sgMap.getWiData()[1];
+    // All represent the same concept: a number of row elements to store.
+    if (valueVecTy.getNumElements() != wiData ||
+        valueVecTy.getNumElements() != tdescTy.getChunkSize()) {
+      return emitOpError("Chunk size, vector size and wi_data must match.");
+    }
+    // Work-item's slice (i.e., vector to store) is [1] or [1, chunk_size].
+    tdescShape[tdescTy.getRank() - 1] = 1;
   }
 
   if (valueShape != tdescShape)

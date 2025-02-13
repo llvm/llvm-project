@@ -343,51 +343,6 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   return newMemRef;
 }
 
-/// Returns true if there are any non-affine uses of `memref` in any of
-/// the operations between `start` and `end` (both exclusive). Any other
-/// than affine read/write are treated as non-affine uses of `memref`.
-static bool hasNonAffineUsersOnPath(Operation *start, Operation *end,
-                                    Value memref) {
-  assert(start->getBlock() == end->getBlock());
-  assert(start->isBeforeInBlock(end) && "start expected to be before end");
-  Block *block = start->getBlock();
-  // Check if there is a non-affine memref user in any op between `start` and
-  // `end`.
-  return llvm::any_of(memref.getUsers(), [&](Operation *user) {
-    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(user))
-      return false;
-    Operation *ancestor = block->findAncestorOpInBlock(*user);
-    return ancestor && start->isBeforeInBlock(ancestor) &&
-           ancestor->isBeforeInBlock(end);
-  });
-}
-
-/// Check whether a memref value used in any operation of 'src' has a
-/// non-affine operation that is between `src` and `end` (exclusive of `src`
-/// and `end`)  where `src` and `end` are expected to be in the same Block.
-/// Any other than affine read/write are treated as non-affine uses of memref.
-static bool hasNonAffineUsersOnPath(Operation *src, Operation *end) {
-  assert(src->getBlock() == end->getBlock() && "same block expected");
-
-  // Trivial case. `src` and `end` are exclusive.
-  if (src == end || end->isBeforeInBlock(src))
-    return false;
-
-  // Collect relevant memref values.
-  llvm::SmallDenseSet<Value, 2> memRefValues;
-  src->walk([&](Operation *op) {
-    for (Value v : op->getOperands())
-      // Collect memref values only.
-      if (isa<MemRefType>(v.getType()))
-        memRefValues.insert(v);
-    return WalkResult::advance();
-  });
-  // Look for non-affine users between `src` and `end`.
-  return llvm::any_of(memRefValues, [&](Value memref) {
-    return hasNonAffineUsersOnPath(src, end, memref);
-  });
-}
-
 // Checks the profitability of fusing a backwards slice of the loop nest
 // surrounding 'srcOpInst' into the loop nest surrounding 'dstLoadOpInsts'.
 // The argument 'srcStoreOpInst' is used to calculate the storage reduction on
@@ -864,19 +819,6 @@ public:
         DenseSet<Value> srcEscapingMemRefs;
         gatherEscapingMemrefs(srcNode->id, mdg, srcEscapingMemRefs);
 
-        // Skip if there are non-affine operations in between the 'srcNode'
-        // and 'dstNode' using their memrefs. If so, we wouldn't be able to
-        // compute a legal insertion point for now. 'srcNode' and 'dstNode'
-        // memrefs with non-affine operation users would be considered
-        // escaping memrefs so we can limit this check to only scenarios with
-        // escaping memrefs.
-        if (!srcEscapingMemRefs.empty() &&
-            hasNonAffineUsersOnPath(srcNode->op, dstNode->op)) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "Can't fuse: non-affine users in between the loops\n");
-          continue;
-        }
-
         // Compute an operation list insertion point for the fused loop
         // nest which preserves dependences.
         Operation *fusedLoopInsPoint =
@@ -1039,8 +981,10 @@ public:
 
         // Clear and add back loads and stores.
         mdg->clearNodeLoadAndStores(dstNode->id);
-        mdg->addToNode(dstId, dstLoopCollector.loadOpInsts,
-                       dstLoopCollector.storeOpInsts);
+        mdg->addToNode(
+            dstId, dstLoopCollector.loadOpInsts, dstLoopCollector.storeOpInsts,
+            dstLoopCollector.memrefLoads, dstLoopCollector.memrefStores,
+            dstLoopCollector.memrefFrees);
 
         if (removeSrcNode) {
           LLVM_DEBUG(llvm::dbgs()
@@ -1229,15 +1173,7 @@ public:
         storeMemrefs.insert(
             cast<AffineWriteOpInterface>(storeOpInst).getMemRef());
       }
-      if (storeMemrefs.size() > 1)
-        return false;
-
-      // Skip if a memref value in one node is used by a non-affine memref
-      // access that lies between 'dstNode' and 'sibNode'.
-      if (hasNonAffineUsersOnPath(dstNode->op, sibNode->op) ||
-          hasNonAffineUsersOnPath(sibNode->op, dstNode->op))
-        return false;
-      return true;
+      return storeMemrefs.size() <= 1;
     };
 
     // Search for siblings which load the same memref block argument.
@@ -1339,7 +1275,8 @@ public:
     // Clear and add back loads and stores
     mdg->clearNodeLoadAndStores(dstNode->id);
     mdg->addToNode(dstNode->id, dstLoopCollector.loadOpInsts,
-                   dstLoopCollector.storeOpInsts);
+                   dstLoopCollector.storeOpInsts, dstLoopCollector.memrefLoads,
+                   dstLoopCollector.memrefStores, dstLoopCollector.memrefFrees);
     // Remove old sibling loop nest if it no longer has outgoing dependence
     // edges, and it does not write to a memref which escapes the block.
     if (mdg->getOutEdgeCount(sibNode->id) == 0) {
