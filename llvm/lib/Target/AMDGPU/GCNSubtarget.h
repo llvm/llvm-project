@@ -1789,6 +1789,9 @@ public:
   }
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
+
+  /// \returns true if the subtarget supports clusters of workgroups.
+  bool hasClusters() const { return GFX1250Insts; }
 };
 
 class GCNUserSGPRUsageInfo {

@@ -4396,9 +4396,66 @@ void AMDGPULegalizerInfo::buildLoadInputValue(Register DstReg,
   }
 }
 
+bool AMDGPULegalizerInfo::loadGlobalWorkGroupId(
+    Register DstReg, MachineIRBuilder &B,
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const {
+  // WorkGroupIdXYZ = ClusterId == 0 ?
+  //   ClusterIdXYZ :
+  //   ClusterIdXYZ * (ClusterMaxIdXYZ + 1) + ClusterWorkGroupIdXYZ
+  MachineRegisterInfo &MRI = *B.getMRI();
+  const LLT S32 = LLT::scalar(32);
+  Register ClusterIdXYZ = MRI.createGenericVirtualRegister(S32);
+  Register ClusterMaxIdXYZ = MRI.createGenericVirtualRegister(S32);
+  Register ClusterWorkGroupIdXYZ = MRI.createGenericVirtualRegister(S32);
+  if (!loadInputValue(ClusterIdXYZ, B, ClusterIdPV) ||
+      !loadInputValue(ClusterWorkGroupIdXYZ, B, ClusterWorkGroupIdPV) ||
+      !loadInputValue(ClusterMaxIdXYZ, B, ClusterMaxIdPV))
+    return false;
+
+  using namespace AMDGPU::Hwreg;
+  unsigned ClusterIdField = HwregEncoding::encode(ID_IB_STS2, 6, 4);
+  Register ClusterId = MRI.createGenericVirtualRegister(S32);
+  MRI.setRegClass(ClusterId, &AMDGPU::SReg_32RegClass);
+  B.buildInstr(AMDGPU::S_GETREG_B32).addDef(ClusterId).addImm(ClusterIdField);
+  auto One = B.buildConstant(S32, 1);
+  auto ClusterSizeXYZ = B.buildAdd(S32, ClusterMaxIdXYZ, One);
+  auto GlobalIdXYZ = B.buildAdd(S32, ClusterWorkGroupIdXYZ,
+                                B.buildMul(S32, ClusterIdXYZ, ClusterSizeXYZ));
+  auto Zero = B.buildConstant(S32, 0);
+  auto NoClusters =
+      B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), ClusterId, Zero);
+  B.buildSelect(DstReg, NoClusters, ClusterIdXYZ, GlobalIdXYZ);
+  return true;
+}
+
 bool AMDGPULegalizerInfo::loadInputValue(
     Register DstReg, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
+  // Return the global position in the grid where clusters are supported.
+  if (ST.hasClusters()) {
+    switch (ArgType) {
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
+      return loadGlobalWorkGroupId(
+          DstReg, B, AMDGPUFunctionArgInfo::CLUSTER_ID_X,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
+      return loadGlobalWorkGroupId(
+          DstReg, B, AMDGPUFunctionArgInfo::CLUSTER_ID_Y,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
+      return loadGlobalWorkGroupId(
+          DstReg, B, AMDGPUFunctionArgInfo::CLUSTER_ID_Z,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
+    default:
+      break;
+    }
+  }
+
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
   const ArgDescriptor *Arg = nullptr;
   const TargetRegisterClass *ArgRC;
@@ -4432,19 +4489,19 @@ bool AMDGPULegalizerInfo::loadInputValue(
   if (ST.hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (ArgType) {
-    case AMDGPUFunctionArgInfo::CLUSTER_ID_Z:
+    case AMDGPUFunctionArgInfo::CLUSTER_ID_X:
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Arg = &WorkGroupIDX;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
-    case AMDGPUFunctionArgInfo::CLUSTER_ID_X:
+    case AMDGPUFunctionArgInfo::CLUSTER_ID_Y:
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
       Arg = &WorkGroupIDY;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
-    case AMDGPUFunctionArgInfo::CLUSTER_ID_Y:
+    case AMDGPUFunctionArgInfo::CLUSTER_ID_Z:
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
       Arg = &WorkGroupIDZ;
       ArgRC = &AMDGPU::SReg_32RegClass;
