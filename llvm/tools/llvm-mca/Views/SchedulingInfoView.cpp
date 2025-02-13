@@ -154,8 +154,12 @@ void SchedulingInfoView::collectData(
     IIVDEntry.OpcodeName = (std::string)MCII.getName(Inst.getOpcode());
     IIVDEntry.NumMicroOpcodes = SCDesc.NumMicroOps;
     IIVDEntry.Latency = MCSchedModel::computeInstrLatency(STI, SCDesc);
+    // Add extra latency due to delays in the forwarding data paths.
+    IIVDEntry.Latency += MCSchedModel::getForwardingDelayCycles(
+        STI.getReadAdvanceEntries(SCDesc));
+    // Get latency with bypass
     IIVDEntry.Bypass =
-        IIVDEntry.Latency - MCSchedModel::getForwardingDelayCycles(STI, SCDesc);
+        IIVDEntry.Latency - MCSchedModel::getBypassDelayCycles(STI, SCDesc);
     IIVDEntry.Throughput =
         1.0 / MCSchedModel::getReciprocalThroughput(STI, SCDesc);
     raw_string_ostream TempStream(IIVDEntry.Resources);
@@ -168,10 +172,12 @@ void SchedulingInfoView::collectData(
         continue;
       const MCProcResourceDesc *MCProc =
           SM.getProcResource(Index->ProcResourceIdx);
-      if (Index->ReleaseAtCycle != 1) {
+      if (Index->ReleaseAtCycle > 1) {
         // Output ReleaseAtCycle between [] if not 1 (default)
-        TempStream << sep
-                   << format("%s[%d]", MCProc->Name, Index->ReleaseAtCycle);
+	// This is to be able to evaluate throughput.
+	// See getReciprocalThroughput in MCSchedule.cpp
+	// TODO: report AcquireAtCycle to check this scheduling info.
+        TempStream << sep << format("%s[%d]", MCProc->Name, Index->ReleaseAtCycle);
       } else {
         TempStream << sep << format("%s", MCProc->Name);
       }

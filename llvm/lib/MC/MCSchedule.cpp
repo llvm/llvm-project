@@ -175,16 +175,15 @@ MCSchedModel::getForwardingDelayCycles(ArrayRef<MCReadAdvanceEntry> Entries,
   return std::abs(DelayCycles);
 }
 
-unsigned
-MCSchedModel::getForwardingDelayCycles(const MCSubtargetInfo &STI,
-                                       const MCSchedClassDesc &SCDesc) {
+unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
+                                            const MCSchedClassDesc &SCDesc) {
 
   ArrayRef<MCReadAdvanceEntry> Entries = STI.getReadAdvanceEntries(SCDesc);
   if (Entries.empty())
     return 0;
 
   unsigned Latency = 0;
-  unsigned maxLatency = 0;
+  unsigned MaxLatency = 0;
   unsigned WriteResourceID = 0;
   unsigned DefEnd = SCDesc.NumWriteLatencyEntries;
 
@@ -192,21 +191,20 @@ MCSchedModel::getForwardingDelayCycles(const MCSubtargetInfo &STI,
     // Lookup the definition's write latency in SubtargetInfo.
     const MCWriteLatencyEntry *WLEntry =
         STI.getWriteLatencyEntry(&SCDesc, DefIdx);
-    // Early exit if we found an invalid latency.
-    // Consider no bypass
+    unsigned Cycles = (unsigned)WLEntry->Cycles;
+    // Invalid latency. Consider 0 cycle latency
     if (WLEntry->Cycles < 0)
-      return 0;
-    maxLatency = std::max(Latency, static_cast<unsigned>(WLEntry->Cycles));
-    if (maxLatency > Latency) {
+      Cycles = 0;
+    if (Cycles > Latency) {
+      MaxLatency = Cycles;
       WriteResourceID = WLEntry->WriteResourceID;
     }
-    Latency = maxLatency;
+    Latency = MaxLatency;
   }
 
   for (const MCReadAdvanceEntry &E : Entries) {
-    if (E.WriteResourceID == WriteResourceID) {
+    if (E.WriteResourceID == WriteResourceID)
       return E.Cycles;
-    }
   }
 
   llvm_unreachable("WriteResourceID not found in MCReadAdvanceEntry entries");
