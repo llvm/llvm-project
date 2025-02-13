@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck --check-prefix=ASM %s
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=obj < %s > %t
-// RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-objdump -s -j .amdhsa.kd %t | FileCheck --check-prefix=OBJDUMP %s
 
 // OBJDUMP:       0000 00000000 0f000000 00000000 00000000
 

@@ -51,7 +51,7 @@
 ; OSABI-AMDHSA-ELF: .text   PROGBITS {{[0-9]+}} {{[0-9]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
 ; OSABI-AMDHSA-ELF: .rodata PROGBITS {{[0-9]+}} {{[0-9]+}} {{[0-9a-f]+}} {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64
 
-; OSABI-AMDHSA-ELF: Relocation section '.rela.rodata' at offset
+; OSABI-AMDHSA-ELF: Relocation section '.rela.amdhsa.kd' at offset
 ; OSABI-AMDHSA-ELF: R_AMDGPU_REL64 0000000000000000 fadd + 10
 ; OSABI-AMDHSA-ELF: R_AMDGPU_REL64 0000000000000100 fsub + 10
 ; OSABI-AMDHSA-ELF: R_AMDGPU_REL64 0000000000000200 empty + 10

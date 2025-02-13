@@ -1,18 +1,19 @@
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
-// RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-objdump -s -j .amdhsa.kd %t | FileCheck --check-prefix=OBJDUMP %s
 
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 --amdhsa-code-object-version=6 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 --amdhsa-code-object-version=6 -mattr=+xnack -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
-// RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-objdump -s -j .amdhsa.kd %t | FileCheck --check-prefix=OBJDUMP %s
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
-// READOBJ: .rodata PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}}        000100 {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64
+// READOBJ: .rodata PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}}        000000 {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64
+// READOBJ: .amdhsa.kd PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}}        000100 {{[0-9]+}}  AR {{[0-9]+}} {{[0-9]+}} 8
 
-// READOBJ: Relocation section '.rela.rodata' at offset
+// READOBJ: Relocation section '.rela.amdhsa.kd' at offset
 // READOBJ: 0000000000000010 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 10
 // READOBJ: 0000000000000050 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 110
 // READOBJ: 0000000000000090 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 210
@@ -23,12 +24,12 @@
 // READOBJ-NEXT: 0000000000000100  0 FUNC    LOCAL  PROTECTED 2 complete
 // READOBJ-NEXT: 0000000000000200  0 FUNC    LOCAL  PROTECTED 2 special_sgpr
 // READOBJ-NEXT: 0000000000000300  0 FUNC    LOCAL  PROTECTED 2 disabled_user_sgpr
-// READOBJ-NEXT: 0000000000000000 64 OBJECT  LOCAL  DEFAULT   3 minimal.kd
-// READOBJ-NEXT: 0000000000000040 64 OBJECT  LOCAL  DEFAULT   3 complete.kd
-// READOBJ-NEXT: 0000000000000080 64 OBJECT  LOCAL  DEFAULT   3 special_sgpr.kd
-// READOBJ-NEXT: 00000000000000c0 64 OBJECT  LOCAL  DEFAULT   3 disabled_user_sgpr.kd
+// READOBJ-NEXT: 0000000000000000 64 OBJECT LOCAL DEFAULT 4 minimal.kd 
+// READOBJ-NEXT: 0000000000000040 64 OBJECT LOCAL DEFAULT 4 complete.kd 
+// READOBJ-NEXT: 0000000000000080 64 OBJECT LOCAL DEFAULT 4 special_sgpr.kd 
+// READOBJ-NEXT: 00000000000000c0 64 OBJECT LOCAL DEFAULT 4 disabled_user_sgpr.kd 
 
-// OBJDUMP: Contents of section .rodata
+// OBJDUMP: Contents of section .amdhsa.kd
 // Note, relocation for KERNEL_CODE_ENTRY_BYTE_OFFSET is not resolved here.
 // minimal
 // OBJDUMP-NEXT: 0000 00000000 00000000 00000000 00000000

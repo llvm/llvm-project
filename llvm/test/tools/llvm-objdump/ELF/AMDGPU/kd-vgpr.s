@@ -5,7 +5,7 @@
 ;--- 1.s
 ; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -mattr=-xnack -filetype=obj -mcpu=gfx908 < 1.s > 1.o
 ; RUN: echo '.amdhsa_code_object_version 5' > 1-disasm.s
-; RUN: llvm-objdump --disassemble-symbols=kernel.kd 1.o | tail -n +7 | tee -a 1-disasm.s | FileCheck 1.s
+; RUN: llvm-objdump --section=.amdhsa.kd --disassemble-symbols=kernel.kd 1.o | tail -n +7 | tee -a 1-disasm.s | FileCheck 1.s
 ; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -mattr=-xnack -filetype=obj -mcpu=gfx908 < 1-disasm.s > 1-disasm.o
 ; RUN: cmp 1.o 1-disasm.o
 ; CHECK: .amdhsa_kernel kernel
@@ -55,7 +55,7 @@
 ;--- 2.s
 ; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -mattr=-xnack -filetype=obj -mcpu=gfx908 < 2.s > 2.o
 ; RUN: echo '.amdhsa_code_object_version 5' > 2-disasm.s
-; RUN: llvm-objdump --disassemble-symbols=kernel.kd 2.o | tail -n +7 | tee -a 2-disasm.s | FileCheck 2.s
+; RUN: llvm-objdump --section=.amdhsa.kd --disassemble-symbols=kernel.kd 2.o | tail -n +7 | tee -a 2-disasm.s | FileCheck 2.s
 ; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -mattr=-xnack -filetype=obj -mcpu=gfx908 < 2-disasm.s > 2-disasm.o
 ; RUN: cmp 2.o 2-disasm.o
 ; CHECK: .amdhsa_kernel kernel
@@ -105,7 +105,7 @@
 ;--- 3.s
 ; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -mattr=-xnack -filetype=obj -mcpu=gfx908 < 3.s > 3.o
 ; RUN: echo '.amdhsa_code_object_version 5' > 3-disasm.s
-; RUN: llvm-objdump --disassemble-symbols=kernel.kd 3.o | tail -n +7 | tee -a 3-disasm.s | FileCheck 3.s
+; RUN: llvm-objdump --section=.amdhsa.kd --disassemble-symbols=kernel.kd 3.o | tail -n +7 | tee -a 3-disasm.s | FileCheck 3.s
 ; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -mattr=-xnack -filetype=obj -mcpu=gfx908 < 3-disasm.s > 3-disasm.o
 ; RUN: cmp 3.o 3-disasm.o
 ; CHECK: .amdhsa_kernel kernel
