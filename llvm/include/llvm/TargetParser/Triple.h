@@ -1109,7 +1109,7 @@ public:
            Env == llvm::Triple::EABIHF;
   }
 
-  /// Tests if the target represents a GPU which can be offloaded to.
+  /// Tests if the target represents a device which can be offloaded to.
   bool isOffloadingTarget() const {
     return isAMDGPU() || isNVPTX() || isSPIRV();
   }
