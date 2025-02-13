@@ -1230,7 +1230,7 @@ static std::unique_ptr<int64_t[]> maskRedundantTransfers(DeviceTy &Device, int32
 
         tgt_map_type ArgType = (tgt_map_type) ArgTypes[I];
 
-        bool IsArgUnused = true;
+        bool IsArgUnused = false;
 
         // Check for unused `map(buf[0:size])` mappings
         IsArgUnused |= isArgUnused(ArgType);
