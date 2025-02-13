@@ -119,9 +119,9 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-SMALL-NEXT:    addi sp, sp, -16
 ; RV32I-SMALL-NEXT:    lui a1, %hi(.Ltmp0)
 ; RV32I-SMALL-NEXT:    addi a1, a1, %lo(.Ltmp0)
+; RV32I-SMALL-NEXT:    li a2, 101
 ; RV32I-SMALL-NEXT:    sw a1, 8(sp)
-; RV32I-SMALL-NEXT:    li a1, 101
-; RV32I-SMALL-NEXT:    blt a0, a1, .LBB2_3
+; RV32I-SMALL-NEXT:    blt a0, a2, .LBB2_3
 ; RV32I-SMALL-NEXT:  # %bb.1: # %if.then
 ; RV32I-SMALL-NEXT:    lw a0, 8(sp)
 ; RV32I-SMALL-NEXT:    jr a0
@@ -141,9 +141,9 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi2:
 ; RV32I-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.Ltmp0)
 ; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi2)
+; RV32I-MEDIUM-NEXT:    li a2, 101
 ; RV32I-MEDIUM-NEXT:    sw a1, 8(sp)
-; RV32I-MEDIUM-NEXT:    li a1, 101
-; RV32I-MEDIUM-NEXT:    blt a0, a1, .LBB2_3
+; RV32I-MEDIUM-NEXT:    blt a0, a2, .LBB2_3
 ; RV32I-MEDIUM-NEXT:  # %bb.1: # %if.then
 ; RV32I-MEDIUM-NEXT:    lw a0, 8(sp)
 ; RV32I-MEDIUM-NEXT:    jr a0
@@ -162,9 +162,9 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV64I-SMALL-NEXT:    addi sp, sp, -16
 ; RV64I-SMALL-NEXT:    lui a1, %hi(.Ltmp0)
 ; RV64I-SMALL-NEXT:    addi a1, a1, %lo(.Ltmp0)
+; RV64I-SMALL-NEXT:    li a2, 101
 ; RV64I-SMALL-NEXT:    sd a1, 8(sp)
-; RV64I-SMALL-NEXT:    li a1, 101
-; RV64I-SMALL-NEXT:    blt a0, a1, .LBB2_3
+; RV64I-SMALL-NEXT:    blt a0, a2, .LBB2_3
 ; RV64I-SMALL-NEXT:  # %bb.1: # %if.then
 ; RV64I-SMALL-NEXT:    ld a0, 8(sp)
 ; RV64I-SMALL-NEXT:    jr a0
@@ -184,9 +184,9 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi2:
 ; RV64I-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.Ltmp0)
 ; RV64I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi2)
+; RV64I-MEDIUM-NEXT:    li a2, 101
 ; RV64I-MEDIUM-NEXT:    sd a1, 8(sp)
-; RV64I-MEDIUM-NEXT:    li a1, 101
-; RV64I-MEDIUM-NEXT:    blt a0, a1, .LBB2_3
+; RV64I-MEDIUM-NEXT:    blt a0, a2, .LBB2_3
 ; RV64I-MEDIUM-NEXT:  # %bb.1: # %if.then
 ; RV64I-MEDIUM-NEXT:    ld a0, 8(sp)
 ; RV64I-MEDIUM-NEXT:    jr a0
@@ -206,9 +206,9 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi2:
 ; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.Ltmp0)
 ; RV64I-LARGE-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi2)
+; RV64I-LARGE-NEXT:    li a2, 101
 ; RV64I-LARGE-NEXT:    sd a1, 8(sp)
-; RV64I-LARGE-NEXT:    li a1, 101
-; RV64I-LARGE-NEXT:    blt a0, a1, .LBB2_3
+; RV64I-LARGE-NEXT:    blt a0, a2, .LBB2_3
 ; RV64I-LARGE-NEXT:  # %bb.1: # %if.then
 ; RV64I-LARGE-NEXT:    ld a0, 8(sp)
 ; RV64I-LARGE-NEXT:    jr a0

@@ -47,8 +47,8 @@ define i32 @h(i1 %0, i32 %1, ptr %2) {
 ; CHECK-NEXT:    addiw a3, a3, -2047
 ; CHECK-NEXT:    srai a0, a0, 63
 ; CHECK-NEXT:    mul a1, a1, a3
-; CHECK-NEXT:    sw a1, 0(a2)
 ; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    sw a1, 0(a2)
 ; CHECK-NEXT:    ret
 BB:
   %I = select i1 %0, i32 -1, i32 0
@@ -66,8 +66,8 @@ define i32 @i(i1 %0, i32 %1, ptr %2) {
 ; CHECK-NEXT:    addiw a3, a3, -2047
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    mul a1, a1, a3
-; CHECK-NEXT:    sw a1, 0(a2)
 ; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    sw a1, 0(a2)
 ; CHECK-NEXT:    ret
 BB:
   %I = select i1 %0, i32 0, i32 -1

@@ -12,22 +12,22 @@
 define signext i32 @select_of_or(i1 zeroext %a, i1 zeroext %b, i32 signext %c, i32 signext %d) nounwind {
 ; RV32I-LABEL: select_of_or:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    bnez a0, .LBB0_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a2, a3
-; RV32I-NEXT:  .LBB0_2:
+; RV32I-NEXT:    or a1, a0, a1
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bnez a1, .LBB0_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a0, a3
+; RV32I-NEXT:  .LBB0_2:
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: select_of_or:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    bnez a0, .LBB0_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a2, a3
-; RV64I-NEXT:  .LBB0_2:
+; RV64I-NEXT:    or a1, a0, a1
 ; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    bnez a1, .LBB0_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a0, a3
+; RV64I-NEXT:  .LBB0_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-CCMOV-LABEL: select_of_or:
