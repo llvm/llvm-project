@@ -875,6 +875,18 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.ukbits
     libc.src.stdfix.lkbits
     libc.src.stdfix.ulkbits
+    libc.src.stdfix.countlshr
+    libc.src.stdfix.countlsr
+    libc.src.stdfix.countlslr
+    libc.src.stdfix.countlshk
+    libc.src.stdfix.countlsk
+    libc.src.stdfix.countlslk
+    libc.src.stdfix.countlsuhr
+    libc.src.stdfix.countlsur
+    libc.src.stdfix.countlsulr
+    libc.src.stdfix.countlsuhk
+    libc.src.stdfix.countlsuk
+    libc.src.stdfix.countlsulk
   )
 endif()
 
