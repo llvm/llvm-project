@@ -338,6 +338,10 @@ ARMCortexM4AlignmentHazardRecognizer::getHazardTypeAssumingOffset(
     return HazardType::NoHazard;
   }
 
+  const Function &F = MI->getParent()->getParent()->getFunction();
+  if (F.hasMinSize())
+    return HazardType::NoHazard;
+
   if (AssumedOffset % 4 == 0)
     return HazardType::NoHazard;
 
