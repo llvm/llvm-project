@@ -51,7 +51,10 @@ public:
   enum class ParseResult {
     success,
     retry_fresh_context,
-    retry_no_bind_generic_params,
+    retry_bind_generic_params,
+    // Retry by binding the generic parameters because the generic expression
+    // evaluator does not support running this expression.
+    retry_bind_generic_params_not_supported,
     unrecoverable_error
   };
   //------------------------------------------------------------------

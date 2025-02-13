@@ -878,7 +878,7 @@ swift::FuncDecl *SwiftASTManipulator::GetFunctionToInjectVariableInto(
   // When not binding generic type parameters, we want to inject the metadata
   // pointers in the wrapper, so we can pass them as opaque pointers in the
   // trampoline function later on.
-  if (m_bind_generic_types == lldb::eDontBind &&
+  if (!ShouldBindGenericTypes(m_bind_generic_types) &&
       (variable.IsMetadataPointer() || variable.IsPackCount() ||
        variable.IsUnboundPack()))
     return m_entrypoint_decl;
@@ -896,7 +896,8 @@ llvm::Expected<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
 
   // When injecting a value pack or pack count into the outer
   // lldb_expr function, treat it as an opaque raw pointer.
-  if (m_bind_generic_types == lldb::eDontBind && variable.IsUnboundPack()) {
+  if (!ShouldBindGenericTypes(m_bind_generic_types) &&
+      variable.IsUnboundPack()) {
     auto swift_ast_ctx = type_system_swift->GetSwiftASTContext(m_sc);
     if (!swift_ast_ctx)
       return llvm::createStringError("no typesystem for variable " +

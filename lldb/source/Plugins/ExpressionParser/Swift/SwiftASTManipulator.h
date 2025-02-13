@@ -284,6 +284,12 @@ public:
                                const EvaluateExpressionOptions &options,
                                std::string &expr_source_path);
 
+  // By default expression evaluation should not try to bind the generic types.
+  static bool
+  ShouldBindGenericTypes(lldb::BindGenericTypes bind_generic_types) {
+    return bind_generic_types == lldb::eBind;
+  }
+
   swift::FuncDecl *GetEntrypointDecl() const {
     return m_entrypoint_decl;
   }

@@ -1563,7 +1563,8 @@ bool SwiftLanguageRuntime::IsSelf(Variable &variable) {
     return false;
   node_ptr = node_ptr->getFirstChild();
   return node_ptr->getKind() == swift::Demangle::Node::Kind::Constructor ||
-         node_ptr->getKind() == swift::Demangle::Node::Kind::Allocator;
+         node_ptr->getKind() == swift::Demangle::Node::Kind::Allocator ||
+         node_ptr->getKind() == swift::Demangle::Node::Kind::ExplicitClosure;
 }
 
 static swift::Demangle::NodePointer
@@ -2347,6 +2348,7 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
 
   NodePointer canonical = TypeSystemSwiftTypeRef::GetStaticSelfType(
       dem, dem.demangleSymbol(mangled_name.GetStringRef()));
+  canonical = ts.DesugarNode(dem, canonical);
 
   // Build the list of type substitutions.
   swift::reflection::GenericArgumentMap substitutions;
