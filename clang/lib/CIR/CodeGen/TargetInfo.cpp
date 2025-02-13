@@ -301,6 +301,10 @@ class SPIRVTargetCIRGenInfo : public CommonSPIRTargetCIRGenInfo {
 public:
   SPIRVTargetCIRGenInfo(CIRGenTypes &CGT)
       : CommonSPIRTargetCIRGenInfo(std::make_unique<SPIRVABIInfo>(CGT)) {}
+
+  void setCUDAKernelCallingConvention(const FunctionType *&ft) const override {
+    llvm_unreachable("NYI");
+  }
 };
 
 } // namespace
@@ -349,6 +353,10 @@ class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
   AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
+
+  void setCUDAKernelCallingConvention(const FunctionType *&ft) const override {
+    llvm_unreachable("NYI");
+  }
 };
 
 } // namespace

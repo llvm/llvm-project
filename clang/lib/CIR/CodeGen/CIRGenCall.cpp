@@ -1531,7 +1531,9 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeFreeFunctionCall(
 static void setCUDAKernelCallingConvention(CanQualType &FTy, CIRGenModule &CGM,
                                            const FunctionDecl *FD) {
   if (FD->hasAttr<CUDAGlobalAttr>()) {
-    llvm_unreachable("NYI");
+    const FunctionType *FT = FTy->getAs<FunctionType>();
+    CGM.getTargetCIRGenInfo().setCUDAKernelCallingConvention(FT);
+    FTy = FT->getCanonicalTypeUnqualified();
   }
 }
 

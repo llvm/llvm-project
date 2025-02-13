@@ -113,6 +113,12 @@ public:
     return cir::CallingConv::SpirKernel;
   }
 
+  // Set calling convention for CUDA Kernels.
+  // Some targets, such as AMD GPU or SPIRV, treat CUDA kernels as OpenCL
+  // kernels. They should reset the calling convention to OpenCLKernel,
+  // which will be further resolved by getOpenCLKernelCallingConv().
+  virtual void setCUDAKernelCallingConvention(const FunctionType *&ft) const {}
+
   virtual ~TargetCIRGenInfo() {}
 };
 
