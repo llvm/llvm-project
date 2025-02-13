@@ -810,7 +810,8 @@ define i1 @pr126974(i8 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i8 [[X:%.*]], -2
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;
