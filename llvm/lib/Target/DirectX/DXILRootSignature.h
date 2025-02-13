@@ -17,18 +17,14 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
+#include <optional>
 
 namespace llvm {
 namespace dxil {
 
-enum class RootSignatureElementKind { None = 0, RootFlags = 1 };
-
-struct ModuleRootSignature {
-  ModuleRootSignature() = default;
-  uint32_t Flags = 0;
-};
-
+enum class RootSignatureElementKind { Error = 0, RootFlags = 1 };
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
   friend AnalysisInfoMixin<RootSignatureAnalysis>;
   static AnalysisKey Key;
@@ -36,9 +32,9 @@ class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
 public:
   RootSignatureAnalysis() = default;
 
-  using Result = SmallDenseMap<const Function *, ModuleRootSignature>;
+  using Result = SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>;
 
-  SmallDenseMap<const Function *, ModuleRootSignature>
+  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>
   run(Module &M, ModuleAnalysisManager &AM);
 };
 
@@ -48,18 +44,18 @@ public:
 /// passes which run through the legacy pass manager.
 class RootSignatureAnalysisWrapper : public ModulePass {
 private:
-  SmallDenseMap<const Function *, ModuleRootSignature> MRS;
+  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> FuncToRsMap;
 
 public:
   static char ID;
 
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
-  bool hasForFunction(const Function *F) { return MRS.find(F) != MRS.end(); }
-
-  ModuleRootSignature getForFunction(const Function *F) {
-    assert(hasForFunction(F));
-    return MRS[F];
+  std::optional<mcdxbc::RootSignatureDesc> getForFunction(const Function *F) {
+    auto Lookup = FuncToRsMap.find(F);
+    if (Lookup == FuncToRsMap.end())
+      return std::nullopt;
+    return Lookup->second;
   }
 
   bool runOnModule(Module &M) override;
