@@ -358,11 +358,21 @@ ARMCortexM4AlignmentHazardRecognizer::getHazardTypeAssumingOffset(
   const MCInstrDesc &MCID = MI->getDesc();
   unsigned Domain = MCID.TSFlags & ARMII::DomainMask;
 
+  // https://developer.arm.com/documentation/ka006138/latest
+  //
+  // "A long sequence of T32 single-cycle floating-point instructions aligned on
+  // odd halfword boundaries will experience a performance drop. Specifically,
+  // one stall cycle is inserted for every three instructions executed."
   bool SingleCycleFP =
       Latency == 1 && (Domain & (ARMII::DomainNEON | ARMII::DomainVFP));
   if (SingleCycleFP)
     return HazardType::NoopHazard;
 
+  // https://documentation-service.arm.com/static/5fce431be167456a35b36ade
+  //
+  // "Neighboring load and store single instructions can pipeline their address
+  // and data phases but in some cases, such as 32- bit opcodes aligned on odd
+  // halfword boundaries, they might not pipeline optimally."
   if (MCID.getSize() == 4 && (MI->mayLoad() || MI->mayStore()))
     return HazardType::NoopHazard;
 
