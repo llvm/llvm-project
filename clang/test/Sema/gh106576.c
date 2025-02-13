@@ -2,8 +2,6 @@
 
 typedef _Atomic char atomic_char;
 
-typedef _Atomic char atomic_char;
-
 atomic_char counter;
 
 char load_plus_one(void) {
