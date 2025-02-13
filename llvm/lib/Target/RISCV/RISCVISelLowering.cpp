@@ -5072,21 +5072,17 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
   return Res;
 }
 
-static bool isLegalBitRotate(ShuffleVectorSDNode *SVN,
-                             SelectionDAG &DAG,
+static bool isLegalBitRotate(ArrayRef<int> Mask, EVT VT,
                              const RISCVSubtarget &Subtarget,
                              MVT &RotateVT, unsigned &RotateAmt) {
-  SDLoc DL(SVN);
-
-  EVT VT = SVN->getValueType(0);
   unsigned NumElts = VT.getVectorNumElements();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   unsigned NumSubElts;
-  if (!ShuffleVectorInst::isBitRotateMask(SVN->getMask(), EltSizeInBits, 2,
+  if (!ShuffleVectorInst::isBitRotateMask(Mask, EltSizeInBits, 2,
                                           NumElts, NumSubElts, RotateAmt))
     return false;
   RotateVT = MVT::getVectorVT(MVT::getIntegerVT(EltSizeInBits * NumSubElts),
-                                  NumElts / NumSubElts);
+                              NumElts / NumSubElts);
 
   // We might have a RotateVT that isn't legal, e.g. v4i64 on zve32x.
   return Subtarget.getTargetLowering()->isTypeLegal(RotateVT);
@@ -5103,7 +5099,7 @@ static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
   EVT VT = SVN->getValueType(0);
   unsigned RotateAmt;
   MVT RotateVT;
-  if (!isLegalBitRotate(SVN, DAG, Subtarget, RotateVT, RotateAmt))
+  if (!isLegalBitRotate(SVN->getMask(), VT, Subtarget, RotateVT, RotateAmt))
     return SDValue();
 
   SDValue Op = DAG.getBitcast(RotateVT, SVN->getOperand(0));
@@ -5142,7 +5138,7 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
   // expansion for.
   unsigned RotateAmt;
   MVT RotateVT;
-  if (isLegalBitRotate(SVN, DAG, Subtarget, RotateVT, RotateAmt))
+  if (isLegalBitRotate(Mask, VT, Subtarget, RotateVT, RotateAmt))
     return SDValue();
 
   MVT ElemVT = VT.getVectorElementType();
