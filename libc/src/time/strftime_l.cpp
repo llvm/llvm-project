@@ -1,4 +1,4 @@
-//===-- Implementation of strftime function -------------------------------===//
+//===-- Implementation of strftime_l function -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/time/strftime.h"
+#include "src/time/strftime_l.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_tm.h"
+#include "include/llvm-libc-types/locale_t.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/writer.h"
@@ -16,9 +17,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(size_t, strftime,
+// TODO: Add support for locales.
+LLVM_LIBC_FUNCTION(size_t, strftime_l,
                    (char *__restrict buffer, size_t buffsz,
-                    const char *__restrict format, const tm *timeptr)) {
+                    const char *__restrict format,
+                    const struct tm *__restrict tp, locale_t)) {
   printf_core::WriteBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
   printf_core::Writer writer(&wb);
   int ret = strftime_core::strftime_main(&writer, format, timeptr);
