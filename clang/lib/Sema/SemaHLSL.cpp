@@ -2804,14 +2804,14 @@ bool SemaHLSL::ContainsBitField(QualType BaseTy) {
   return false;
 }
 
-// Can perform an HLSL splat cast if the Dest is an aggregate and the
+// Can perform an HLSL Aggregate splat cast if the Dest is an aggregate and the
 // Src is a scalar or a vector of length 1
 // Or if Dest is a vector and Src is a vector of length 1
-bool SemaHLSL::CanPerformSplatCast(Expr *Src, QualType DestTy) {
+bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
 
   QualType SrcTy = Src->getType();
-  // Not a valid HLSL Splat cast if Dest is a scalar or if this is going to
-  // be a vector splat from a scalar.
+  // Not a valid HLSL Aggregate Splat cast if Dest is a scalar or if this is
+  // going to be a vector splat from a scalar.
   if ((SrcTy->isScalarType() && DestTy->isVectorType()) ||
       DestTy->isScalarType())
     return false;
@@ -2831,7 +2831,7 @@ bool SemaHLSL::CanPerformSplatCast(Expr *Src, QualType DestTy) {
   llvm::SmallVector<QualType> DestTypes;
   BuildFlattenedTypeList(DestTy, DestTypes);
 
-  for (unsigned I = 0, Size = DestTypes.size(); I < Size; I++) {
+  for (unsigned I = 0, Size = DestTypes.size(); I < Size; ++I) {
     if (DestTypes[I]->isUnionType())
       return false;
     if (!CanPerformScalarCast(SrcTy, DestTypes[I]))

@@ -500,8 +500,8 @@ static void EmitHLSLAggregateSplatCast(CodeGenFunction &CGF, Address DestVal,
   // ^^ Flattened accesses to DestVal we want to store into
   CGF.FlattenAccessAndType(DestVal, DestTy, StoreGEPList, DestTypes);
 
-  assert(SrcTy->isScalarType() && "Invalid HLSL splat cast.");
-  for (unsigned I = 0, Size = StoreGEPList.size(); I < Size; I++) {
+  assert(SrcTy->isScalarType() && "Invalid HLSL Aggregate splat cast.");
+  for (unsigned I = 0, Size = StoreGEPList.size(); I < Size; ++I) {
     llvm::Value *Cast =
         CGF.EmitScalarConversion(SrcVal, SrcTy, DestTypes[I], Loc);
 

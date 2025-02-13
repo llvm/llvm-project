@@ -52,7 +52,7 @@ struct S {
   float Y;
 };
 
-// struct splats?
+// struct splats
 // CHECK-LABEL: define void {{.*}}call3
 // CHECK: [[A:%.*]] = alloca <1 x i32>, align 4
 // CHECK: [[s:%.*]] = alloca %struct.S, align 4
