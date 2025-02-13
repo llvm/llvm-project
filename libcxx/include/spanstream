@@ -56,34 +56,34 @@
 
 #if __cplusplus > 201103L
 
-#include <__config>
+#  include <__config>
 
-#if _LIBCPP_HAS_LOCALIZATION
+#  if _LIBCPP_HAS_LOCALIZATION
 
-#  include <__concepts/convertible_to.h>
-#  include <__fwd/spanstream.h>
-#  include <__memory/addressof.h>
-#  include <__ranges/concepts.h>
-#  include <__utility/cmp.h>
-#  include <__utility/forward.h>
-#  include <__utility/move.h>
-#  include <__utility/swap.h>
-#  include <ios>
-#  include <iostream>
-#  include <span>
-#  include <streambuf>
-#  include <version>
+#    include <__concepts/convertible_to.h>
+#    include <__fwd/spanstream.h>
+#    include <__memory/addressof.h>
+#    include <__ranges/concepts.h>
+#    include <__utility/cmp.h>
+#    include <__utility/forward.h>
+#    include <__utility/move.h>
+#    include <__utility/swap.h>
+#    include <ios>
+#    include <iostream>
+#    include <span>
+#    include <streambuf>
+#    include <version>
 
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
+#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#      pragma GCC system_header
+#    endif
 
 _LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+#    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#  if _LIBCPP_STD_VER >= 23
+#    if _LIBCPP_STD_VER >= 23
 
 // Class template basic_spanbuf [spanbuf]
 
@@ -245,9 +245,9 @@ _LIBCPP_HIDE_FROM_ABI void swap(basic_spanbuf<_CharT, _Traits>& __x, basic_spanb
 }
 
 using std::spanbuf;
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#      ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 using std::wspanbuf;
-#    endif
+#      endif
 
 // Class template basic_ispanstream [ispanstream]
 
@@ -323,9 +323,9 @@ _LIBCPP_HIDE_FROM_ABI void swap(basic_ispanstream<_CharT, _Traits>& __x, basic_i
 }
 
 using std::ispanstream;
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#      ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 using std::wispanstream;
-#    endif
+#      endif
 
 // Class template basic_ospanstream [ospanstream]
 
@@ -386,9 +386,9 @@ _LIBCPP_HIDE_FROM_ABI void swap(basic_ospanstream<_CharT, _Traits>& __x, basic_o
 }
 
 using std::ospanstream;
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#      ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 using std::wospanstream;
-#    endif
+#      endif
 
 template <class _CharT, class _Traits>
 class _LIBCPP_TEMPLATE_VIS basic_spanstream : public basic_iostream<_CharT, _Traits> {
@@ -447,21 +447,21 @@ _LIBCPP_HIDE_FROM_ABI void swap(basic_spanstream<_CharT, _Traits>& __x, basic_sp
 }
 
 using std::spanstream;
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#      ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 using std::wspanstream;
-#    endif
+#      endif
 
-#  endif // _LIBCPP_STD_VER >= 23
+#    endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_HAS_LOCALIZATION
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
-#if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
-#  include <type_traits>
-#endif
+#  if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
+#    include <type_traits>
+#  endif
 
 #endif // __cplusplus > 201103L
 
