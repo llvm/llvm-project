@@ -23,6 +23,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !6 = !{ !7 } ; list of root signature elements
 !7 = !{ !"RootFlags", i32 2 } ; 1 = allow_input_assembler_input_layout
 
+<<<<<<< HEAD
 ; CHECK-LABEL:Root Signature Definitions
 ; CHECK: Definition for 'anotherMain':
 ; CHECK-NEXT:   Flags: 0x000002
@@ -32,9 +33,24 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ; CHECK-NEXT:   NumStaticSamplers: 0
 ; CHECK-NEXT:   StaticSamplersOffset: 0
 ; CHECK-NEXT: Definition for 'main':
+=======
+
+; CHECK-LABEL: Definition for 'main':
+>>>>>>> 1ff5f328d982 ([DXIL] Add support for root signature flag element in DXContainer (#123147))
 ; CHECK-NEXT:   Flags: 0x000001
 ; CHECK-NEXT:   Version: 2
 ; CHECK-NEXT:   NumParameters: 0
 ; CHECK-NEXT:   RootParametersOffset: 0
 ; CHECK-NEXT:   NumStaticSamplers: 0
 ; CHECK-NEXT:   StaticSamplersOffset: 0
+<<<<<<< HEAD
+=======
+
+; CHECK-LABEL: Definition for 'anotherMain':
+; CHECK-NEXT:   Flags: 0x000002
+; CHECK-NEXT:   Version: 2
+; CHECK-NEXT:   NumParameters: 0
+; CHECK-NEXT:   RootParametersOffset: 0
+; CHECK-NEXT:   NumStaticSamplers: 0
+; CHECK-NEXT:   StaticSamplersOffset: 0
+>>>>>>> 1ff5f328d982 ([DXIL] Add support for root signature flag element in DXContainer (#123147))
