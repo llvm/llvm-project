@@ -189,18 +189,26 @@ def relpath():
     return fp
 
 
+def generate_store_opt_test(featname, ordering, op, alignval):
+  if featname != 'lsfe' or op == 'fsub' or alignval == 1:
+    return False
+  if ordering not in [AtomicOrder.monotonic, AtomicOrder.release]:
+    return False
+  return True;
+
+
 def align(val, aligned: bool) -> int:
     return val if aligned else 1
 
 
-def all_atomicrmw(f, datatype, atomicrmw_ops):
+def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
+    instr = "atomicrmw"
     for op in atomicrmw_ops:
         for aligned in Aligned:
             for ty, val in datatype:
                 alignval = align(val, aligned)
                 for ordering in ATOMICRMW_ORDERS:
                     name = f"atomicrmw_{op}_{ty}_{aligned}_{ordering}"
-                    instr = "atomicrmw"
                     f.write(
                         textwrap.dedent(
                             f"""
@@ -211,6 +219,18 @@ def all_atomicrmw(f, datatype, atomicrmw_ops):
                     """
                         )
                     )
+                    if generate_store_opt_test(featname, ordering, op, alignval):
+                        name = f"atomicrmw_{op}_{ty}_{aligned}_{ordering}_to_store"
+                        f.write(
+                           textwrap.dedent(
+                               f"""
+                           define dso_local void @{name}(ptr %ptr, {ty} %value) {{
+                               %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
+                               ret void
+                           }}
+                        """
+                           )
+                        )
 
 
 def all_load(f):
@@ -340,7 +360,7 @@ def write_lit_tests(feature, datatypes, ops):
             with open(f"{triple}-atomicrmw-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
                 header(f, triple, [feat], filter_args)
-                all_atomicrmw(f, datatypes, ops)
+                all_atomicrmw(f, datatypes, ops, feat.name)
 
             # Floating point atomics only supported for atomicrmw currently
             if feature.test_scope() == "atomicrmw":
