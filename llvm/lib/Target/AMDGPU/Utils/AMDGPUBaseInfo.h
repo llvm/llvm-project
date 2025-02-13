@@ -19,6 +19,10 @@
 #include <functional>
 #include <utility>
 
+// Pull in OpName enum definition and getNamedOperandIdx() declaration.
+#define GET_INSTRINFO_OPERAND_ENUM
+#include "AMDGPUGenInstrInfo.inc"
+
 struct amd_kernel_code_t;
 
 namespace llvm {
@@ -400,10 +404,7 @@ template <typename... Fields> struct EncodingFields {
 };
 
 LLVM_READONLY
-int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
-
-LLVM_READONLY
-inline bool hasNamedOperand(uint64_t Opcode, uint64_t NamedIdx) {
+inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
   return getNamedOperandIdx(Opcode, NamedIdx) != -1;
 }
 
@@ -1710,8 +1711,8 @@ MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
 // Returns a table for the opcode with a given \p Desc to map the VGPR MSB
 // set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2
 // maps, one for X and one for Y component.
-std::pair<const unsigned *, const unsigned *>
-getVGPRLoweringOperandTables(const MCInstrDesc& Desc);
+std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
+getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
 
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);

@@ -369,20 +369,20 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(FoldCandidate &Fold) const {
 
   // Refer to op_sel/op_sel_hi and check if we can change the immediate and
   // op_sel in a way that allows an inline constant.
-  int ModIdx = -1;
+  AMDGPU::OpName ModName = AMDGPU::OpName::NUM_OPERAND_NAMES;
   unsigned SrcIdx = ~0;
   if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0)) {
-    ModIdx = AMDGPU::OpName::src0_modifiers;
+    ModName = AMDGPU::OpName::src0_modifiers;
     SrcIdx = 0;
   } else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1)) {
-    ModIdx = AMDGPU::OpName::src1_modifiers;
+    ModName = AMDGPU::OpName::src1_modifiers;
     SrcIdx = 1;
   } else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2)) {
-    ModIdx = AMDGPU::OpName::src2_modifiers;
+    ModName = AMDGPU::OpName::src2_modifiers;
     SrcIdx = 2;
   }
-  assert(ModIdx != -1);
-  ModIdx = AMDGPU::getNamedOperandIdx(Opcode, ModIdx);
+  assert(ModName != AMDGPU::OpName::NUM_OPERAND_NAMES);
+  int ModIdx = AMDGPU::getNamedOperandIdx(Opcode, ModName);
   MachineOperand &Mod = MI->getOperand(ModIdx);
   unsigned ModVal = Mod.getImm();
 

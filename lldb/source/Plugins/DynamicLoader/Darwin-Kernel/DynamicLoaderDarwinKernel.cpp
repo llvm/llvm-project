@@ -738,9 +738,9 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
   }
 
   if (IsKernel() && m_uuid.IsValid()) {
-    Stream &s = target.GetDebugger().GetOutputStream();
-    s.Printf("Kernel UUID: %s\n", m_uuid.GetAsString().c_str());
-    s.Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
+    lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
+    s->Printf("Kernel UUID: %s\n", m_uuid.GetAsString().c_str());
+    s->Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
 
     // Start of a kernel debug session, we have the UUID of the kernel.
     // Go through the target's list of modules and if there are any kernel
@@ -830,12 +830,12 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       }
 
       if (IsKernel() && !m_module_sp) {
-        Stream &s = target.GetDebugger().GetErrorStream();
-        s.Printf("WARNING: Unable to locate kernel binary on the debugger "
-                 "system.\n");
+        lldb::StreamSP s = target.GetDebugger().GetAsyncErrorStream();
+        s->Printf("WARNING: Unable to locate kernel binary on the debugger "
+                  "system.\n");
         if (kernel_search_error.Fail() && kernel_search_error.AsCString("") &&
             kernel_search_error.AsCString("")[0] != '\0') {
-          s << kernel_search_error.AsCString();
+          *s << kernel_search_error.AsCString();
         }
       }
     }
@@ -974,22 +974,19 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
   bool is_loaded = IsLoaded();
 
   if (is_loaded && m_module_sp && IsKernel()) {
-    Stream &s = target.GetDebugger().GetOutputStream();
+    lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
     ObjectFile *kernel_object_file = m_module_sp->GetObjectFile();
     if (kernel_object_file) {
       addr_t file_address =
           kernel_object_file->GetBaseAddress().GetFileAddress();
       if (m_load_address != LLDB_INVALID_ADDRESS &&
           file_address != LLDB_INVALID_ADDRESS) {
-        s.Printf("Kernel slid 0x%" PRIx64 " in memory.\n",
-                 m_load_address - file_address);
+        s->Printf("Kernel slid 0x%" PRIx64 " in memory.\n",
+                  m_load_address - file_address);
       }
     }
-    {
-      s.Printf("Loaded kernel file %s\n",
-               m_module_sp->GetFileSpec().GetPath().c_str());
-    }
-    s.Flush();
+    s->Printf("Loaded kernel file %s\n",
+              m_module_sp->GetFileSpec().GetPath().c_str());
   }
 
   // Notify the target about the module being added;
@@ -1195,10 +1192,11 @@ bool DynamicLoaderDarwinKernel::ReadKextSummaryHeader() {
           lldb::offset_t offset = 0;
           m_kext_summary_header.version = data.GetU32(&offset);
           if (m_kext_summary_header.version > 128) {
-            Stream &s = m_process->GetTarget().GetDebugger().GetOutputStream();
-            s.Printf("WARNING: Unable to read kext summary header, got "
-                     "improbable version number %u\n",
-                     m_kext_summary_header.version);
+            lldb::StreamSP s =
+                m_process->GetTarget().GetDebugger().GetOutputStreamSP();
+            s->Printf("WARNING: Unable to read kext summary header, got "
+                      "improbable version number %u\n",
+                      m_kext_summary_header.version);
             // If we get an improbably large version number, we're probably
             // getting bad memory.
             m_kext_summary_header_addr.Clear();
@@ -1209,11 +1207,11 @@ bool DynamicLoaderDarwinKernel::ReadKextSummaryHeader() {
             if (m_kext_summary_header.entry_size > 4096) {
               // If we get an improbably large entry_size, we're probably
               // getting bad memory.
-              Stream &s =
-                  m_process->GetTarget().GetDebugger().GetOutputStream();
-              s.Printf("WARNING: Unable to read kext summary header, got "
-                       "improbable entry_size %u\n",
-                       m_kext_summary_header.entry_size);
+              lldb::StreamSP s =
+                  m_process->GetTarget().GetDebugger().GetOutputStreamSP();
+              s->Printf("WARNING: Unable to read kext summary header, got "
+                        "improbable entry_size %u\n",
+                        m_kext_summary_header.entry_size);
               m_kext_summary_header_addr.Clear();
               return false;
             }
@@ -1227,10 +1225,11 @@ bool DynamicLoaderDarwinKernel::ReadKextSummaryHeader() {
           if (m_kext_summary_header.entry_count > 10000) {
             // If we get an improbably large number of kexts, we're probably
             // getting bad memory.
-            Stream &s = m_process->GetTarget().GetDebugger().GetOutputStream();
-            s.Printf("WARNING: Unable to read kext summary header, got "
-                     "improbable number of kexts %u\n",
-                     m_kext_summary_header.entry_count);
+            lldb::StreamSP s =
+                m_process->GetTarget().GetDebugger().GetOutputStreamSP();
+            s->Printf("WARNING: Unable to read kext summary header, got "
+                      "improbable number of kexts %u\n",
+                      m_kext_summary_header.entry_count);
             m_kext_summary_header_addr.Clear();
             return false;
           }
@@ -1331,17 +1330,18 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
       number_of_old_kexts_being_removed == 0)
     return true;
 
-  Stream &s = m_process->GetTarget().GetDebugger().GetOutputStream();
+  lldb::StreamSP s = m_process->GetTarget().GetDebugger().GetOutputStreamSP();
   if (load_kexts) {
     if (number_of_new_kexts_being_added > 0 &&
         number_of_old_kexts_being_removed > 0) {
-      s.Printf("Loading %d kext modules and unloading %d kext modules ",
-               number_of_new_kexts_being_added,
-               number_of_old_kexts_being_removed);
+      s->Printf("Loading %d kext modules and unloading %d kext modules ",
+                number_of_new_kexts_being_added,
+                number_of_old_kexts_being_removed);
     } else if (number_of_new_kexts_being_added > 0) {
-      s.Printf("Loading %d kext modules ", number_of_new_kexts_being_added);
+      s->Printf("Loading %d kext modules ", number_of_new_kexts_being_added);
     } else if (number_of_old_kexts_being_removed > 0) {
-      s.Printf("Unloading %d kext modules ", number_of_old_kexts_being_removed);
+      s->Printf("Unloading %d kext modules ",
+                number_of_old_kexts_being_removed);
     }
   }
 
@@ -1405,7 +1405,7 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
           if (image_info.GetModule()) {
             unloaded_module_list.AppendIfNeeded(image_info.GetModule());
           }
-          s.Printf(".");
+          s->Printf(".");
           image_info.Clear();
           // should pull it out of the KextImageInfos vector but that would
           // mutate the list and invalidate the to_be_removed bool vector;
@@ -1417,11 +1417,11 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
   }
 
   if (load_kexts) {
-    s.Printf(" done.\n");
+    s->Printf(" done.\n");
     if (kexts_failed_to_load.size() > 0 && number_of_new_kexts_being_added > 0) {
-      s.Printf("Failed to load %d of %d kexts:\n",
-               (int)kexts_failed_to_load.size(),
-               number_of_new_kexts_being_added);
+      s->Printf("Failed to load %d of %d kexts:\n",
+                (int)kexts_failed_to_load.size(),
+                number_of_new_kexts_being_added);
       // print a sorted list of <kext-name, uuid> kexts which failed to load
       unsigned longest_name = 0;
       std::sort(kexts_failed_to_load.begin(), kexts_failed_to_load.end());
@@ -1433,10 +1433,9 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
         std::string uuid;
         if (ku.second.IsValid())
           uuid = ku.second.GetAsString();
-        s.Printf(" %-*s %s\n", longest_name, ku.first.c_str(), uuid.c_str());
+        s->Printf(" %-*s %s\n", longest_name, ku.first.c_str(), uuid.c_str());
       }
     }
-    s.Flush();
   }
 
   return true;

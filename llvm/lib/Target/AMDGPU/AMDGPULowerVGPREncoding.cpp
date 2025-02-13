@@ -131,7 +131,8 @@ private:
   /// If provided and an operand from \p Ops is not a VGPR, then \p Ops2
   /// is checked.
   void computeMode(ModeTy &NewMode, ModeTy &Mask, MachineInstr &MI,
-                   const unsigned Ops[OpNum], const unsigned *Ops2 = nullptr);
+                   const AMDGPU::OpName Ops[OpNum],
+                   const AMDGPU::OpName *Ops2 = nullptr);
 
   /// Check if an instruction \p I is within a clause and returns a suitable
   /// iterator to insert mode change. It may also modify the S_CLAUSE
@@ -187,8 +188,8 @@ AMDGPULowerVGPREncoding::getMSBs(const MachineOperand &MO) const {
 
 void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, ModeTy &Mask,
                                           MachineInstr &MI,
-                                          const unsigned Ops[OpNum],
-                                          const unsigned *Ops2) {
+                                          const AMDGPU::OpName Ops[OpNum],
+                                          const AMDGPU::OpName *Ops2) {
   NewMode = {};
   Mask = {};
 
