@@ -18467,8 +18467,8 @@ void BoUpSLP::computeMinimumValueSizes() {
           any_of(
               VectorizableTree[NodeIdx]->UserTreeIndices,
               [&](const EdgeInfo &EI) {
-                return (EI.UserTE->hasState() &&
-                        EI.UserTE->getOpcode() == Instruction::ICmp) &&
+                return EI.UserTE && EI.UserTE->hasState() &&
+                       EI.UserTE->getOpcode() == Instruction::ICmp &&
                        any_of(EI.UserTE->Scalars, [&](Value *V) {
                          auto *IC = dyn_cast<ICmpInst>(V);
                          return IC &&
