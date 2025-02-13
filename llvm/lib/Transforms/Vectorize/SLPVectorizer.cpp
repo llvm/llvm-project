@@ -858,8 +858,8 @@ public:
 
 class BinOpIsNoOp final : public InterchangeableInstruction {
   constexpr static std::initializer_list<unsigned> SupportedOp = {
-      Instruction::Add, Instruction::Sub,  Instruction::Mul,
-      Instruction::Shl, Instruction::AShr, Instruction::And};
+      Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
+      Instruction::AShr, Instruction::And, Instruction::Or};
   SmallVector<unsigned> CandidateOp = SupportedOp;
 
 public:
