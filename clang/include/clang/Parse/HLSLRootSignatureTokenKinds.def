@@ -50,7 +50,6 @@
 #endif
 
 // General Tokens:
-TOK(error)
 TOK(invalid)
 TOK(end_of_stream)
 TOK(int_literal)

@@ -6,20 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Lex/Lexer.h"
-#include "clang/Lex/ModuleLoader.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/PreprocessorOptions.h"
-
 #include "clang/Parse/ParseHLSLRootSignature.h"
 #include "gtest/gtest.h"
 
@@ -27,98 +13,30 @@ using namespace clang;
 
 namespace {
 
-// Diagnostic helper for helper tests
-class ExpectedDiagConsumer : public DiagnosticConsumer {
-  virtual void anchor() {}
-
-  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                        const Diagnostic &Info) override {
-    if (!FirstDiag || !ExpectedDiagID.has_value()) {
-      Satisfied = false;
-      return;
-    }
-    FirstDiag = false;
-
-    Satisfied = ExpectedDiagID.value() == Info.getID();
-  }
-
-  bool FirstDiag = true;
-  bool Satisfied = false;
-  std::optional<unsigned> ExpectedDiagID;
-
-public:
-  void SetNoDiag() {
-    Satisfied = true;
-    ExpectedDiagID = std::nullopt;
-  }
-
-  void SetExpected(unsigned DiagID) {
-    Satisfied = false;
-    ExpectedDiagID = DiagID;
-  }
-
-  bool IsSatisfied() { return Satisfied; }
-};
-
 // The test fixture.
 class ParseHLSLRootSignatureTest : public ::testing::Test {
 protected:
-  ParseHLSLRootSignatureTest()
-      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Consumer(new ExpectedDiagConsumer()),
-        Diags(DiagID, new DiagnosticOptions, Consumer),
-        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
-    // This is an arbitrarily chosen target triple to create the target info.
-    TargetOpts->Triple = "dxil";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
-  }
-
-  std::unique_ptr<Preprocessor> CreatePP(StringRef Source,
-                                         TrivialModuleLoader &ModLoader) {
-    std::unique_ptr<llvm::MemoryBuffer> Buf =
-        llvm::MemoryBuffer::getMemBuffer(Source);
-    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
-
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, Target.get());
-    std::unique_ptr<Preprocessor> PP = std::make_unique<Preprocessor>(
-        std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
-        HeaderInfo, ModLoader,
-        /*IILookup =*/nullptr,
-        /*OwnsHeaderSearch =*/false);
-    PP->Initialize(*Target);
-    PP->EnterMainSourceFile();
-    return PP;
-  }
+  ParseHLSLRootSignatureTest() {}
 
   void CheckTokens(hlsl::RootSignatureLexer &Lexer,
                    SmallVector<hlsl::RootSignatureToken> &Computed,
                    SmallVector<hlsl::TokenKind> &Expected) {
     for (unsigned I = 0, E = Expected.size(); I != E; ++I) {
-      if (Expected[I] == hlsl::TokenKind::error ||
-          Expected[I] == hlsl::TokenKind::invalid ||
+      // Skip these to help with the macro generated test
+      if (Expected[I] == hlsl::TokenKind::invalid ||
           Expected[I] == hlsl::TokenKind::end_of_stream)
         continue;
-      ASSERT_FALSE(Lexer.ConsumeToken());
-      hlsl::RootSignatureToken Result = Lexer.GetCurToken();
+      hlsl::RootSignatureToken Result = Lexer.ConsumeToken();
       ASSERT_EQ(Result.Kind, Expected[I]);
       Computed.push_back(Result);
     }
+    hlsl::RootSignatureToken EndOfStream = Lexer.ConsumeToken();
+    ASSERT_EQ(EndOfStream.Kind, hlsl::TokenKind::end_of_stream);
     ASSERT_TRUE(Lexer.EndOfBuffer());
   }
-
-  FileSystemOptions FileMgrOpts;
-  FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
-  ExpectedDiagConsumer *Consumer;
-  DiagnosticsEngine Diags;
-  SourceManager SourceMgr;
-  LangOptions LangOpts;
-  std::shared_ptr<TargetOptions> TargetOpts;
-  IntrusiveRefCntPtr<TargetInfo> Target;
 };
 
-// Valid Lexing Tests
+// Lexing Tests
 
 TEST_F(ParseHLSLRootSignatureTest, ValidLexNumbersTest) {
   // This test will check that we can lex different number tokens
@@ -126,14 +44,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexNumbersTest) {
     -42 42 +42 +2147483648
   )cc";
 
-  TrivialModuleLoader ModLoader;
-  auto PP = CreatePP(Source, ModLoader);
   auto TokLoc = SourceLocation();
 
-  // Test no diagnostics produced
-  Consumer->SetNoDiag();
-
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
   SmallVector<hlsl::TokenKind> Expected = {
@@ -143,28 +56,23 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexNumbersTest) {
       hlsl::TokenKind::int_literal,
   };
   CheckTokens(Lexer, Tokens, Expected);
-  ASSERT_TRUE(Consumer->IsSatisfied());
 
-  // // Sample negative: int component
+  // Sample negative: int component
   hlsl::RootSignatureToken IntToken = Tokens[1];
-  ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
-  ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 42);
+  ASSERT_EQ(IntToken.NumSpelling, "42");
 
   // Sample unsigned int
   IntToken = Tokens[2];
-  ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
-  ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 42);
+  ASSERT_EQ(IntToken.NumSpelling, "42");
 
   // Sample positive: int component
   IntToken = Tokens[4];
-  ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
-  ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 42);
+  ASSERT_EQ(IntToken.NumSpelling, "42");
 
   // Sample positive int that would overflow the signed representation but
   // is treated as an unsigned integer instead
   IntToken = Tokens[6];
-  ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
-  ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 2147483648);
+  ASSERT_EQ(IntToken.NumSpelling, "2147483648");
 }
 
 TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
@@ -200,15 +108,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
     shader_visibility_amplification
     shader_visibility_mesh
   )cc";
-
-  TrivialModuleLoader ModLoader;
-  auto PP = CreatePP(Source, ModLoader);
   auto TokLoc = SourceLocation();
-
-  // Test no diagnostics produced
-  Consumer->SetNoDiag();
-
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
   SmallVector<hlsl::TokenKind> Expected = {
@@ -217,7 +118,6 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
   };
 
   CheckTokens(Lexer, Tokens, Expected);
-  ASSERT_TRUE(Consumer->IsSatisfied());
 }
 
 TEST_F(ParseHLSLRootSignatureTest, ValidLexPeekTest) {
@@ -225,91 +125,31 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexPeekTest) {
   const llvm::StringLiteral Source = R"cc(
     )1
   )cc";
-
-  TrivialModuleLoader ModLoader;
-  auto PP = CreatePP(Source, ModLoader);
   auto TokLoc = SourceLocation();
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
 
-  // Test no diagnostics produced
-  Consumer->SetNoDiag();
-
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
   // Test basic peek
-  auto Res = Lexer.PeekNextToken();
-  ASSERT_TRUE(Res.has_value());
-  ASSERT_EQ(Res->Kind, hlsl::TokenKind::pu_r_paren);
+  hlsl::RootSignatureToken Res = Lexer.PeekNextToken();
+  ASSERT_EQ(Res.Kind, hlsl::TokenKind::pu_r_paren);
 
   // Ensure it doesn't peek past one element
   Res = Lexer.PeekNextToken();
-  ASSERT_TRUE(Res.has_value());
-  ASSERT_EQ(Res->Kind, hlsl::TokenKind::pu_r_paren);
+  ASSERT_EQ(Res.Kind, hlsl::TokenKind::pu_r_paren);
 
-  ASSERT_FALSE(Lexer.ConsumeToken());
+  Res = Lexer.ConsumeToken();
+  ASSERT_EQ(Res.Kind, hlsl::TokenKind::pu_r_paren);
 
   // Invoke after reseting the NextToken
   Res = Lexer.PeekNextToken();
-  ASSERT_TRUE(Res.has_value());
-  ASSERT_EQ(Res->Kind, hlsl::TokenKind::int_literal);
+  ASSERT_EQ(Res.Kind, hlsl::TokenKind::int_literal);
 
   // Ensure we can still consume the second token
-  ASSERT_FALSE(Lexer.ConsumeToken());
+  Res = Lexer.ConsumeToken();
+  ASSERT_EQ(Res.Kind, hlsl::TokenKind::int_literal);
 
-  // Ensure no error raised when peeking past end of stream
+  // Ensure end of stream token
   Res = Lexer.PeekNextToken();
-  ASSERT_TRUE(Res.has_value());
-  ASSERT_EQ(Res->Kind, hlsl::TokenKind::end_of_stream);
-
-  // Ensure no error raised when consuming past end of stream
-  ASSERT_FALSE(Lexer.ConsumeToken());
-  ASSERT_EQ(Lexer.GetCurToken().Kind, hlsl::TokenKind::end_of_stream);
-
-  ASSERT_TRUE(Consumer->IsSatisfied());
-}
-
-// Invalid Lexing Tests
-
-TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
-  // This test will check that the lexing fails due to an integer overflow
-  const llvm::StringLiteral Source = R"cc(
-    4294967296
-  )cc";
-
-  TrivialModuleLoader ModLoader;
-  auto PP = CreatePP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
-
-  // Test correct diagnostic produced
-  Consumer->SetExpected(diag::err_hlsl_number_literal_overflow);
-
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
-
-  // We will also test that the error can be produced during peek and the Lexer
-  // will correctly just return true on the next ConsumeToken without
-  // reporting another error
-  auto Result = Lexer.PeekNextToken();
-  ASSERT_EQ(std::nullopt, Result);
-  ASSERT_TRUE(Lexer.ConsumeToken());
-  ASSERT_TRUE(Consumer->IsSatisfied());
-}
-
-TEST_F(ParseHLSLRootSignatureTest, InvalidLexRegNumberTest) {
-  // This test will check that the lexing fails due to no integer being provided
-  const llvm::StringLiteral Source = R"cc(
-    b32.4
-  )cc";
-
-  TrivialModuleLoader ModLoader;
-  auto PP = CreatePP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
-
-  // Test correct diagnostic produced
-  Consumer->SetExpected(diag::err_hlsl_invalid_register_literal);
-
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
-
-  ASSERT_TRUE(Lexer.ConsumeToken());
-  // FIXME(#126565): This should be TRUE once we can lex a float
-  ASSERT_FALSE(Consumer->IsSatisfied());
+  ASSERT_EQ(Res.Kind, hlsl::TokenKind::end_of_stream);
 }
 
 } // anonymous namespace

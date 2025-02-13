@@ -31,15 +31,15 @@ struct RootSignatureToken {
 #include "clang/Parse/HLSLRootSignatureTokenKinds.def"
   };
 
-  Kind Kind = Kind::error;
+  Kind Kind = Kind::invalid;
 
   // Retain the SouceLocation of the token for diagnostics
   clang::SourceLocation TokLoc;
 
-  APValue NumLiteral = APValue();
+  // Retain spelling of an numeric constant to be parsed later
+  StringRef NumSpelling;
 
   // Constructors
-  RootSignatureToken() : TokLoc(SourceLocation()) {}
   RootSignatureToken(clang::SourceLocation TokLoc) : TokLoc(TokLoc) {}
   RootSignatureToken(enum Kind Kind, clang::SourceLocation TokLoc)
       : Kind(Kind), TokLoc(TokLoc) {}
@@ -48,23 +48,15 @@ using TokenKind = enum RootSignatureToken::Kind;
 
 class RootSignatureLexer {
 public:
-  RootSignatureLexer(StringRef Signature, clang::SourceLocation SourceLoc,
-                     clang::Preprocessor &PP)
-      : Buffer(Signature), SourceLoc(SourceLoc), PP(PP) {}
+  RootSignatureLexer(StringRef Signature, clang::SourceLocation SourceLoc)
+      : Buffer(Signature), SourceLoc(SourceLoc) {}
 
-  /// Updates CurToken to the next token. Either it will take the previously
-  /// lexed NextToken, or it will lex a token.
-  ///
-  /// The return value denotes if there was a failure.
-  bool ConsumeToken();
+  /// Consumes and returns the next token.
+  RootSignatureToken ConsumeToken();
 
-  /// Returns the token that comes after CurToken or std::nullopt if an
-  /// error is encountered during lexing of the next token.
-  std::optional<RootSignatureToken> PeekNextToken();
+  /// Returns the token that proceeds CurToken
+  RootSignatureToken PeekNextToken();
 
-  RootSignatureToken GetCurToken() { return CurToken; }
-
-  /// Check if we have reached the end of input
   bool EndOfBuffer() {
     AdvanceBuffer(Buffer.take_while(isspace).size());
     return Buffer.empty();
@@ -74,19 +66,17 @@ private:
   // Internal buffer to iterate over
   StringRef Buffer;
 
-  // Current Token state
-  RootSignatureToken CurToken;
+  // Current peek state
   std::optional<RootSignatureToken> NextToken = std::nullopt;
 
   // Passed down parameters from Sema
   clang::SourceLocation SourceLoc;
-  clang::Preprocessor &PP;
 
-  bool LexNumber(RootSignatureToken &Result);
-  bool LexToken(RootSignatureToken &Result);
+  /// Consumes the buffer and returns the lexed token.
+  RootSignatureToken LexToken();
 
-  // Advance the buffer by the specified number of characters. Updates the
-  // SourceLocation appropriately.
+  /// Advance the buffer by the specified number of characters.
+  /// Updates the SourceLocation appropriately.
   void AdvanceBuffer(unsigned NumCharacters = 1) {
     Buffer = Buffer.drop_front(NumCharacters);
     SourceLoc = SourceLoc.getLocWithOffset(NumCharacters);
