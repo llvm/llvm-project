@@ -117,7 +117,7 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
 
   // Initialize ltoObj.
   lto::ThinBackend backend;
-  if (!ctx.config.DTLTODistributor.empty()) {
+  if (!ctx.config.dtltoDistributor.empty()) {
     StringRef version = getenv("LLD_VERSION"); // For testing only.
     if (version.empty())
       version = ctx.saver.save(getLLDVersion());
@@ -126,7 +126,7 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
         /*OnWrite=*/nullptr,
         /*ShouldEmitIndexFiles=*/false,
         /*ShouldEmitImportFiles=*/false, ctx.config.outputFile, version,
-        ctx.config.DTLTORemoteOptTool, ctx.config.DTLTODistributor,
+        ctx.config.dtltoRemoteOptTool, ctx.config.dtltoDistributor,
         !ctx.config.saveTempsArgs.empty());
   } else if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };

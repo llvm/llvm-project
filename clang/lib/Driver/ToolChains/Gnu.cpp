@@ -540,7 +540,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // do LTO or not dependent upon whether there are any bitcode input files in
   // the link.
   if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
-    A->claim();
     CmdArgs.push_back(
         Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
     CmdArgs.push_back(

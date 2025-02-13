@@ -4092,7 +4092,7 @@ def fno_finite_loops: Flag<["-"], "fno-finite-loops">, Group<f_Group>,
   HelpText<"Do not assume that any loop is finite.">,
   Visibility<[ClangOption, CC1Option]>;
 def fthinlto_distributor_EQ : Joined<["-"], "fthinlto-distributor=">, Group<f_Group>,
-  HelpText<"Specifies the <path> to the distributor process executable.">, MetaVarName<"<path>">,
+  HelpText<"Specifies the <path> to the distributor process executable">, MetaVarName<"<path>">,
   Visibility<[ClangOption, CLOption]>;
 def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
   HelpText<"Process trigraph sequences">, Visibility<[ClangOption, CC1Option]>;

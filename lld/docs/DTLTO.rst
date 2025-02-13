@@ -15,11 +15,11 @@ ELF LLD
 
 The command line interface for DTLTO is:
 
-- `--thinlto-distributor=<path>`
+- ``--thinlto-distributor=<path>``
   Specifies the file to execute as a distributor process.
   If specified, ThinLTO backend compilations will be distributed.
 
-- `--thinlto-remote-opt-tool=<path>`
+- ``--thinlto-remote-opt-tool=<path>``
   Specifies the path to the tool that the distributor process will use for
   backend compilations.
 
@@ -30,10 +30,10 @@ The command line interface for DTLTO is:
   This may occur in the future, at which point a different set of constraints
   will apply.
 
-- `-mllvm -thinlto-distributor-arg=<arg>`  
+- ``-mllvm -thinlto-distributor-arg=<arg>``
   Specifies `<arg>` on the command line when invoking the distributor.  
 
-- `-mllvm -thinlto-remote-opt-tool-arg=<arg>`  
+- ``-mllvm -thinlto-remote-opt-tool-arg=<arg>``
   Specifies `<arg>` on the command line to the remote optimisation tool. These
   arguments are appended to the end of the command line for the remote 
   optimisation tool.
@@ -44,10 +44,10 @@ properties of the distribution system (as such additional input/output files may
 not be pushed to or fetched from distribution system nodes correctly). If such 
 options are required, then the distributor can be modified to accept switches 
 that specify additional input/output dependencies, and 
-`-Xdist`/`-thinlto-distributor-arg=` can be used to pass such options through 
+``-Xdist``/``-thinlto-distributor-arg=`` can be used to pass such options through 
 to the distributor.
 
-Some LLD LTO options (e.g., `--lto-sample-profile=<file>`) are supported. 
+Some LLD LTO options (e.g., ``--lto-sample-profile=<file>``) are supported. 
 Currently, other options are silently accepted but do not have the desired 
 effect. Support for such options will be expanded in the future.
 
@@ -56,5 +56,5 @@ COFF LLD
 
 The command line interface for COFF LLD is generally the same as for ELF LLD.
 
-Currently, there is no DTLTO command line interface supplied for `Clang-cl`, as
+Currently, there is no DTLTO command line interface supplied for ``Clang-cl``, as
 users are expected to invoke LLD directly.

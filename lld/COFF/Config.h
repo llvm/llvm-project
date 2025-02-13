@@ -193,9 +193,9 @@ struct Configuration {
   llvm::CachePruningPolicy ltoCachePolicy;
 
   // Used for --thinlto-distributor=
-  StringRef DTLTODistributor;
+  StringRef dtltoDistributor;
   // Used for --thinlto-remote-opt-tool=
-  StringRef DTLTORemoteOptTool;
+  StringRef dtltoRemoteOptTool;
 
   // Used for /opt:[no]ltodebugpassmanager
   bool ltoDebugPassManager = false;

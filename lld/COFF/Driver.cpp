@@ -1519,7 +1519,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->mllvmOpts.emplace_back(arg->getValue());
   }
 
-  if (!ctx.config.DTLTODistributor.empty())
+  if (!ctx.config.dtltoDistributor.empty())
     for (auto o : {"-thinlto-remote-opt-tool-arg=-fdiagnostics-format",
                    "-thinlto-remote-opt-tool-arg=msvc"}) {
       v.push_back(o);
@@ -2090,8 +2090,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   // Handle DTLTO options.
-  config->DTLTODistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
-  config->DTLTORemoteOptTool =
+  config->dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
+  config->dtltoRemoteOptTool =
       args.getLastArgValue(OPT_thinlto_remote_opt_tool_eq);
 
   // Handle /dwodir

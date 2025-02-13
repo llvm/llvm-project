@@ -187,7 +187,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
         std::string(ctx.arg.thinLTOPrefixReplaceNew),
         std::string(ctx.arg.thinLTOPrefixReplaceNativeObject),
         ctx.arg.thinLTOEmitImportsFiles, indexFile.get(), onIndexWrite);
-  } else if (!ctx.arg.DTLTODistributor.empty() && !ctx.bitcodeFiles.empty()) {
+  } else if (!ctx.arg.dtltoDistributor.empty() && !ctx.bitcodeFiles.empty()) {
     StringRef version = getenv("LLD_VERSION"); // For testing only.
     if (version.empty())
       version = ctx.saver.save(getLLDVersion());
@@ -195,7 +195,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
         llvm::heavyweight_hardware_concurrency(ctx.arg.thinLTOJobs),
         onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
         ctx.arg.thinLTOEmitImportsFiles, ctx.arg.outputFile, version,
-        ctx.arg.DTLTORemoteOptTool, ctx.arg.DTLTODistributor,
+        ctx.arg.dtltoRemoteOptTool, ctx.arg.dtltoDistributor,
         !ctx.arg.saveTempsArgs.empty());
   } else {
     backend = lto::createInProcessThinBackend(

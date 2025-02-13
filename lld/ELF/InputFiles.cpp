@@ -1703,9 +1703,8 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
-namespace dtlto {
 // Check if an archive file is a thin archive.
-bool isThinArchive(Ctx &ctx, StringRef archiveFilePath) {
+static bool isThinArchive(Ctx &ctx, StringRef archiveFilePath) {
   const size_t thinArchiveMagicLen = sizeof(ThinArchiveMagic) - 1;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> memBufferOrError =
@@ -1720,8 +1719,9 @@ bool isThinArchive(Ctx &ctx, StringRef archiveFilePath) {
 }
 
 // Compute a thin archive member full file path.
-std::string computeFullThinArchiveMemberPath(const StringRef modulePath,
-                                             const StringRef archiveName) {
+static std::string
+computeThinArchiveMemberFullPath(const StringRef modulePath,
+                                 const StringRef archiveName) {
   assert(!archiveName.empty());
   SmallString<64> archiveMemberPath;
   if (path::is_relative(modulePath)) {
@@ -1733,7 +1733,6 @@ std::string computeFullThinArchiveMemberPath(const StringRef modulePath,
   path::remove_dots(archiveMemberPath, /*remove_dot_dot=*/true);
   return archiveMemberPath.c_str();
 }
-} // namespace dtlto
 
 BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
@@ -1746,11 +1745,11 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
     path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
 
   // For DTLTO the name needs to be a valid path to a bitcode file.
-  bool dtltoThinArchiveHandling = !ctx.arg.DTLTODistributor.empty() &&
+  bool dtltoThinArchiveHandling = !ctx.arg.dtltoDistributor.empty() &&
                                   !archiveName.empty() &&
-                                  dtlto::isThinArchive(ctx, archiveName);
+                                  isThinArchive(ctx, archiveName);
   if (dtltoThinArchiveHandling)
-    path = dtlto::computeFullThinArchiveMemberPath(path, archiveName);
+    path = computeThinArchiveMemberFullPath(path, archiveName);
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this
