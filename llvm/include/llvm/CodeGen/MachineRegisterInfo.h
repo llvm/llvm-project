@@ -1020,7 +1020,7 @@ public:
     return LiveIns;
   }
 
-  bool isLiveIn(Register Reg, bool CheckForSubreg = false) const;
+  bool isLiveIn(Register Reg) const;
 
   /// getLiveInPhysReg - If VReg is a live-in virtual register, return the
   /// corresponding live-in physical register.

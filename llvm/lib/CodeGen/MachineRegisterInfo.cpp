@@ -447,21 +447,19 @@ void MachineRegisterInfo::clearKillFlags(Register Reg) const {
     MO.setIsKill(false);
 }
 
-bool MachineRegisterInfo::isLiveIn(Register Reg, bool CheckForSubreg) const {
+bool MachineRegisterInfo::isLiveIn(Register Reg) const {
   for (const std::pair<MCRegister, Register> &LI : liveins()) {
     if ((Register)LI.first == Reg || LI.second == Reg)
       return true;
 
     // Check if Reg is a subreg of live-in register
-    if (CheckForSubreg) {
-      MCRegister PhysReg = LI.first;
-      if (!PhysReg.isValid())
-        continue;
+    MCRegister PhysReg = LI.first;
+    if (!PhysReg.isValid())
+      continue;
 
-      for (MCPhysReg SubReg : getTargetRegisterInfo()->subregs(PhysReg))
-        if (SubReg == Reg)
-          return true;
-    }
+    for (MCPhysReg SubReg : getTargetRegisterInfo()->subregs(PhysReg))
+      if (SubReg == Reg)
+        return true;
   }
   return false;
 }
