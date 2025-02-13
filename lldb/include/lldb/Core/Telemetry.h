@@ -66,18 +66,16 @@ public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
   // Plugin interface
-  llvm::StringRef GetPluginName() override { return "TelemetryManager"; }
-
   static TelemetryManager *getInstance();
 
 protected:
   TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config);
 
-  static std::unique_ptr<TelemetryManager> g_instance;
   static void setInstance(std::unique_ptr<TelemetryManager> manger);
 
 private:
   std::unique_ptr<llvm::telemetry::Config> m_config;
+  static std::unique_ptr<TelemetryManager> g_instance;
 };
 
 } // namespace telemetry
