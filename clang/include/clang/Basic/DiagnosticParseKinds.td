@@ -1818,4 +1818,6 @@ def ext_hlsl_access_specifiers : ExtWarn<
 def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
 def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
 
+// HLSL Root Signature Parser Diagnostics
+def err_hlsl_rootsig_unexpected_token_kind : Error<"got %1 but expected %select{|one of}0 the following token kind%select{|s}0: %2">;
 } // end of Parser diagnostics
