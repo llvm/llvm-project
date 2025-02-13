@@ -79,6 +79,5 @@ int main() {
   foo<> f2;
   baz<qux> b1;
   baz<> b2;
-
   return 0;
 }
