@@ -5163,7 +5163,7 @@ insertNewDbgInst(DIBuilder &DIB, DbgDeclareInst *Orig, AllocaInst *NewAddr,
     return;
 
   DIB.insertDeclare(NewAddr, Orig->getVariable(), NewAddrExpr,
-                    Orig->getDebugLoc(), BeforeInst);
+                    Orig->getDebugLoc(), BeforeInst->getIterator());
 }
 
 /// Insert a new dbg.assign.
