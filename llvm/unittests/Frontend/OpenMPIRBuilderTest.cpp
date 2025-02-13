@@ -7653,4 +7653,20 @@ TEST_F(OpenMPIRBuilderTest, createGPUOffloadEntry) {
   EXPECT_TRUE(Fn->hasFnAttribute(Attribute::MustProgress));
 }
 
+TEST_F(OpenMPIRBuilderTest, splitBB) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = false;
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  Builder.SetCurrentDebugLocation(DL);
+  AllocaInst *alloc = Builder.CreateAlloca(Builder.getInt32Ty());
+  EXPECT_TRUE(DL == alloc->getStableDebugLoc());
+  BasicBlock *AllocaBB = Builder.GetInsertBlock();
+  splitBB(Builder, /*CreateBranch=*/true, "test");
+  if (AllocaBB->getTerminator())
+    EXPECT_TRUE(DL == AllocaBB->getTerminator()->getStableDebugLoc());
+}
+
 } // namespace

@@ -9691,7 +9691,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold (not (add X, -1)) -> (neg X)
-  if (isAllOnesConstant(N1) && N0.getOpcode() == ISD::ADD &&
+  if (N0.getOpcode() == ISD::ADD && N0.hasOneUse() && isAllOnesConstant(N1) &&
       isAllOnesOrAllOnesSplat(N0.getOperand(1))) {
     return DAG.getNegative(N0.getOperand(0), DL, VT);
   }
@@ -23188,7 +23188,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     auto *VecLoad = dyn_cast<LoadSDNode>(VecOp);
     if (VecLoad && VecLoad->isSimple()) {
       if (SDValue Scalarized = TLI.scalarizeExtractedVectorLoad(
-              ExtVT, SDLoc(N), VecVT, Index, VecLoad, DAG)) {
+              ScalarVT, SDLoc(N), VecVT, Index, VecLoad, DAG)) {
         ++OpsNarrowed;
         return Scalarized;
       }

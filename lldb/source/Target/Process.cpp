@@ -1664,7 +1664,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
       Address symbol_address = symbol->GetAddress();
       load_addr = ResolveIndirectFunction(&symbol_address, error);
       if (!error.Success() && show_error) {
-        GetTarget().GetDebugger().GetErrorStream().Printf(
+        GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
             "warning: failed to resolve indirect function at 0x%" PRIx64
             " for breakpoint %i.%i: %s\n",
             symbol->GetLoadAddress(&GetTarget()),
@@ -1703,7 +1703,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
         } else {
           if (show_error || use_hardware) {
             // Report error for setting breakpoint...
-            GetTarget().GetDebugger().GetErrorStream().Printf(
+            GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
                 "warning: failed to set breakpoint site at 0x%" PRIx64
                 " for breakpoint %i.%i: %s\n",
                 load_addr, constituent->GetBreakpoint().GetID(),

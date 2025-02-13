@@ -1004,7 +1004,7 @@ void JSONNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *RD) {
   VisitRecordDecl(RD);
 
   if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
-    if (CTSD->hasMatchedPackOnParmToNonPackOnArg())
+    if (CTSD->hasStrictPackMatch())
       JOS.attribute("strict-pack-match", true);
   }
 
@@ -1704,6 +1704,10 @@ void JSONNodeDumper::VisitNullPtrTemplateArgument(const TemplateArgument &TA) {
 }
 void JSONNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
   JOS.attribute("value", TA.getAsIntegral().getSExtValue());
+}
+void JSONNodeDumper::VisitStructuralValueTemplateArgument(
+    const TemplateArgument &TA) {
+  Visit(TA.getAsStructuralValue(), TA.getStructuralValueType());
 }
 void JSONNodeDumper::VisitTemplateTemplateArgument(const TemplateArgument &TA) {
   // FIXME: cannot just call dump() on the argument, as that doesn't specify

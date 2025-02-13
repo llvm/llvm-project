@@ -22,11 +22,11 @@
 #include "integer.h"
 #include "logical.h"
 #include "real.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/real.h"
 #include "flang/Common/template.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <cinttypes>
 #include <optional>
 #include <string>

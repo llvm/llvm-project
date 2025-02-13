@@ -32,6 +32,7 @@
 
 (require 'cl-lib)
 (require 'xml)
+(require 'vc-git)
 
 (defgroup clang-format nil
   "Format code using clang-format."

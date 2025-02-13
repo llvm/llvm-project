@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/FrontendActions.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
@@ -34,6 +33,7 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 
 #include "mlir/IR/Dialect.h"
@@ -261,12 +261,12 @@ bool CodeGenAction::beginSourceFileAction() {
   }
 
   // Load the MLIR dialects required by Flang
-  mlir::DialectRegistry registry;
-  mlirCtx = std::make_unique<mlir::MLIRContext>(registry);
-  fir::support::registerNonCodegenDialects(registry);
-  fir::support::loadNonCodegenDialects(*mlirCtx);
+  mlirCtx = std::make_unique<mlir::MLIRContext>();
   fir::support::loadDialects(*mlirCtx);
   fir::support::registerLLVMTranslation(*mlirCtx);
+  mlir::DialectRegistry registry;
+  fir::acc::registerOpenACCExtensions(registry);
+  mlirCtx->appendDialectRegistry(registry);
 
   const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 

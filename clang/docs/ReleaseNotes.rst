@@ -42,6 +42,10 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
+- The type trait builtin ``__is_referenceable`` has been removed, since it has
+  very few users and all the type traits that could benefit from it in the
+  standard library already have their own bespoke builtins.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -49,6 +53,8 @@ ABI Changes in This Version
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
+
+- Added support for dumping template arguments of structural value kinds.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -100,6 +106,10 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- New option ``-fprofile-continuous`` added to enable continuous profile syncing to file (#GH124353, `docs <https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous>`_).
+  The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
+  for a while and this is just a user facing option.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -113,6 +123,7 @@ Attribute Changes in Clang
 --------------------------
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+- Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -123,6 +134,9 @@ Improvements to Clang's diagnostics
 - The ``-Wunique-object-duplication`` warning has been added to warn about objects
   which are supposed to only exist once per program, but may get duplicated when
   built into a shared library.
+- Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
+- A statement attribute applied to a ``case`` label no longer suppresses
+  'bypassing variable initialization' diagnostics (#84072).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -132,6 +146,9 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+
+- Clang now outputs correct values when #embed data contains bytes with negative
+  signed char values (#GH102798).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -144,6 +161,10 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+- The initialization kind of elements of structured bindings
+  direct-list-initialized from an array is corrected to direct-initialization.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -229,8 +250,15 @@ AST Matchers
 clang-format
 ------------
 
+- Adds ``BreakBeforeTemplateCloser`` option.
+- Adds ``BinPackLongBracedList`` option to override bin packing options in
+  long (20 item or more) braced list initializer lists.
+
 libclang
 --------
+
+- Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
+  increased memory allocation.
 
 Code Completion
 ---------------
@@ -241,6 +269,11 @@ Static Analyzer
 New features
 ^^^^^^^^^^^^
 
+A new flag - `-static-libclosure` was introduced to support statically linking
+the runtime for the Blocks extension on Windows. This flag currently only
+changes the code generation, and even then, only on Windows. This does not
+impact the linker behaviour like the other `-static-*` flags.
+
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
@@ -249,6 +282,11 @@ Improvements
 
 Moved checkers
 ^^^^^^^^^^^^^^
+
+- After lots of improvements, the checker ``alpha.security.ArrayBoundV2`` is
+  renamed to ``security.ArrayBound``. As this checker is stable now, the old
+  checker ``alpha.security.ArrayBound`` (which was searching for the same kind
+  of bugs with an different, simpler and less accurate algorithm) is removed.
 
 .. _release-notes-sanitizers:
 
@@ -260,6 +298,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support 'no_openmp_constructs' assumption clause.
 
 Improvements
 ^^^^^^^^^^^^

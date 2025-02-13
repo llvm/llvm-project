@@ -5511,6 +5511,15 @@ multiclass IntegerToFPSIMDScalar<bits<2> rmode, bits<3> opcode, string asm, SDPa
     let Inst{31} = 1; // 64-bit FPR flag
     let Inst{23-22} = 0b00; // 32-bit FPR flag
   }
+
+  def : Pat<(f16 (node (i32 (extractelt (v4i32 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # HSr) (EXTRACT_SUBREG $Rn, ssub))>;
+  def : Pat<(f64 (node (i32 (extractelt (v4i32 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # DSr) (EXTRACT_SUBREG $Rn, ssub))>;
+  def : Pat<(f16 (node (i64 (extractelt (v2i64 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # HDr) (EXTRACT_SUBREG $Rn, dsub))>;
+  def : Pat<(f32 (node (i64 (extractelt (v2i64 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # SDr) (EXTRACT_SUBREG $Rn, dsub))>;
 }
 
 //---
@@ -12529,26 +12538,19 @@ multiclass STOPregister<string asm, string instr> {
                     !cast<Instruction>(instr # "X")>;
 }
 
+let Predicates = [HasLSUI] in
 class BaseSTOPregisterLSUI<string asm, RegisterClass OP, Register Reg,
                         Instruction inst> :
-      InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn)>;
+      InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn), 0>;
 
 multiclass STOPregisterLSUI<string asm, string instr> {
-  def : BaseSTOPregisterLSUI<asm # "a",        GPR32, WZR,
+  def : BaseSTOPregisterLSUI<asm # "l", GPR32, WZR,
+                    !cast<Instruction>(instr # "LW")>;
+  def : BaseSTOPregisterLSUI<asm # "l", GPR64, XZR,
+                    !cast<Instruction>(instr # "LX")>;
+  def : BaseSTOPregisterLSUI<asm, GPR32, WZR,
                     !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm # "a",        GPR64, XZR,
-                    !cast<Instruction>(instr # "X")>;
-  def : BaseSTOPregisterLSUI<asm # "l",        GPR32, WZR,
-                    !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm # "l",        GPR64, XZR,
-                    !cast<Instruction>(instr # "X")>;
-  def : BaseSTOPregisterLSUI<asm # "al",        GPR32, WZR,
-                    !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm # "al",        GPR64, XZR,
-                    !cast<Instruction>(instr # "X")>;
-  def : BaseSTOPregisterLSUI<asm,        GPR32, WZR,
-                    !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm,        GPR64, XZR,
+  def : BaseSTOPregisterLSUI<asm, GPR64, XZR,
                     !cast<Instruction>(instr # "X")>;
 }
 
@@ -13319,4 +13321,3 @@ multiclass SIMDThreeSameVectorFP8MatrixMul<string asm>{
       let Predicates = [HasNEON, HasF8F32MM];
     }
 }
-

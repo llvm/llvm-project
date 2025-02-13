@@ -824,7 +824,6 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_pointer);
     REVERTIBLE_TYPE_TRAIT(__is_polymorphic);
     REVERTIBLE_TYPE_TRAIT(__is_reference);
-    REVERTIBLE_TYPE_TRAIT(__is_referenceable);
     REVERTIBLE_TYPE_TRAIT(__is_rvalue_expr);
     REVERTIBLE_TYPE_TRAIT(__is_rvalue_reference);
     REVERTIBLE_TYPE_TRAIT(__is_same);
