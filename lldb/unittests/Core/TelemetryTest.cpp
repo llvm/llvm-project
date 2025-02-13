@@ -28,19 +28,20 @@ struct FakeTelemetryInfo : public llvm::telemetry::TelemetryInfo {
 };
 
 class TestDestination : public llvm::telemetry::Destination {
- public:
-  TestDestination(std::vector<const llvm::telemetry::TelemetryInfo*>* entries):
-      received_entries(entries) {}
+public:
+  TestDestination(std::vector<const llvm::telemetry::TelemetryInfo *> *entries)
+      : received_entries(entries) {}
 
-  llvm::Error receiveEntry(const llvm::telemetry::TelemetryInfo *entry) override {
+  llvm::Error
+  receiveEntry(const llvm::telemetry::TelemetryInfo *entry) override {
     received_entries->push_back(entry);
     return llvm::Error::success();
   }
 
-  llvm::StringLiteral name() const override { return "TestDestination";}
+  llvm::StringLiteral name() const override { return "TestDestination"; }
 
- private:
-  std::vector<const llvm::telemetry::TelemetryInfo*>* received_entries;
+private:
+  std::vector<const llvm::telemetry::TelemetryInfo *> *received_entries;
 };
 
 class FakePlugin : public telemetry::TelemetryManager {
@@ -77,15 +78,18 @@ TEST(TelemetryTest, PluginTest) {
   auto *ins = lldb_private::telemetry::TelemetryManager::getInstance();
   ASSERT_NE(ins, nullptr);
 
-  std::vector<const ::llvm::telemetry::TelemetryInfo*> expected_entries;
-  ins->addDestination(std::make_unique<lldb_private::TestDestination>(&expected_entries));
+  std::vector<const ::llvm::telemetry::TelemetryInfo *> expected_entries;
+  ins->addDestination(
+      std::make_unique<lldb_private::TestDestination>(&expected_entries));
 
   lldb_private::FakeTelemetryInfo entry;
   entry.msg = "";
 
   ASSERT_THAT_ERROR(ins->dispatch(&entry), ::llvm::Succeeded());
   ASSERT_EQ(1, expected_entries.size());
-  EXPECT_EQ("In FakePlugin", llvm::dyn_cast<lldb_private::FakeTelemetryInfo>(expected_entries[0])->msg);
+  EXPECT_EQ("In FakePlugin",
+            llvm::dyn_cast<lldb_private::FakeTelemetryInfo>(expected_entries[0])
+                ->msg);
 
   ASSERT_EQ("FakeTelemetryPlugin", ins->GetPluginName());
 }
