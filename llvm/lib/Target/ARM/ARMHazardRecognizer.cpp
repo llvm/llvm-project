@@ -338,10 +338,6 @@ ARMCortexM4AlignmentHazardRecognizer::getHazardTypeAssumingOffset(
     return HazardType::NoHazard;
   }
 
-  const Function &F = MI->getParent()->getParent()->getFunction();
-  if (F.hasMinSize())
-    return HazardType::NoHazard;
-
   if (AssumedOffset % 4 == 0)
     return HazardType::NoHazard;
 
@@ -395,6 +391,10 @@ unsigned ARMCortexM4AlignmentHazardRecognizer::PreEmitNoops(SUnit *SU) {
 
 unsigned ARMCortexM4AlignmentHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   const MachineBasicBlock *Parent = MI->getParent();
+  const Function &F = Parent->getParent()->getFunction();
+  if (F.hasMinSize())
+    return 0;
+
   if (Parent != MBB) {
     Offset = 0;
     MBB = Parent;
