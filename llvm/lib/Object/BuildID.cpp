@@ -40,8 +40,7 @@ template <typename ELFT> BuildIDRef getBuildID(const ELFFile<ELFT> &Obj) {
     for (const auto &S : Sections) {
       if (S.sh_type != ELF::SHT_NOTE)
         continue;
-      auto ShdrRes = findBuildID(S, S.sh_addralign);
-      if (ShdrRes)
+      if (std::optional<BuildIDRef> ShdrRes = findBuildID(S, S.sh_addralign))
         return ShdrRes.value();
     }
   }
@@ -53,8 +52,7 @@ template <typename ELFT> BuildIDRef getBuildID(const ELFFile<ELFT> &Obj) {
   for (const auto &P : *PhdrsOrErr) {
     if (P.p_type != ELF::PT_NOTE)
       continue;
-    auto PhdrRes = findBuildID(P, P.p_align);
-    if (PhdrRes)
+    if (std::optional<BuildIDRef> PhdrRes = findBuildID(P, P.p_align))
       return PhdrRes.value();
   }
   return {};
