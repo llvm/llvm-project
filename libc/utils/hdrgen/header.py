@@ -50,6 +50,8 @@ class HeaderFile:
         ] + [""]
 
         for macro in self.macros:
+            # When there is nothing to define, the Macro object converts to str
+            # as an empty string.  Don't emit a blank line for those cases.
             if str(macro):
                 content.append(f"{macro}\n")
 
