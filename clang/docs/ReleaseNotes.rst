@@ -54,6 +54,8 @@ ABI Changes in This Version
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+- Added support for dumping template arguments of structural value kinds.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
@@ -144,6 +146,9 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+
+- Clang now outputs correct values when #embed data contains bytes with negative
+  signed char values (#GH102798).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -251,6 +256,9 @@ clang-format
 
 libclang
 --------
+
+- Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
+  increased memory allocation.
 
 Code Completion
 ---------------

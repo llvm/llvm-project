@@ -11,7 +11,7 @@
 
 define void @test(i8* noalias nonnull align 1 %start, i8* %end) unnamed_addr {
 ; NOROTATION-LABEL: define void @test(
-; NOROTATION-SAME: ptr noalias nonnull writeonly align 1 [[START:%.*]], ptr readnone [[END:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] {
+; NOROTATION-SAME: ptr noalias nonnull writeonly align 1 captures(address) [[START:%.*]], ptr readnone captures(address) [[END:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] {
 ; NOROTATION-NEXT:  entry:
 ; NOROTATION-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; NOROTATION:       loop.header:
@@ -26,7 +26,7 @@ define void @test(i8* noalias nonnull align 1 %start, i8* %end) unnamed_addr {
 ; NOROTATION-NEXT:    ret void
 ;
 ; ROTATION-LABEL: define void @test(
-; ROTATION-SAME: ptr noalias nonnull writeonly align 1 [[START:%.*]], ptr readnone [[END:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] {
+; ROTATION-SAME: ptr noalias nonnull writeonly align 1 captures(address) [[START:%.*]], ptr readnone captures(address) [[END:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] {
 ; ROTATION-NEXT:  entry:
 ; ROTATION-NEXT:    [[_12_I1:%.*]] = icmp eq ptr [[START]], [[END]]
 ; ROTATION-NEXT:    br i1 [[_12_I1]], label [[EXIT:%.*]], label [[LOOP_LATCH_PREHEADER:%.*]]
