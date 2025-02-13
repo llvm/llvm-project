@@ -101,6 +101,7 @@ namespace clang {
 
 #define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)         \
     TST_##Name,
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                          \

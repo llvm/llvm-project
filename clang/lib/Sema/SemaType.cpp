@@ -1370,6 +1370,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_##Name:                                                   \
     Result = Context.getVectorType(Context.BaseType, ElBits, VectorKind);      \
     break;
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \

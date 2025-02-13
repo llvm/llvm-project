@@ -1807,6 +1807,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::annot_pack_indexing_type:
 #define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
   case tok::kw_##Name:
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -1938,6 +1939,7 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   case tok::kw__Sat:
 #define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
   case tok::kw_##Name:
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"

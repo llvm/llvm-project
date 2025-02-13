@@ -1440,18 +1440,18 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   if (Target.hasAArch64SVETypes() ||
       (AuxTarget && AuxTarget->hasAArch64SVETypes())) {
-  #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId) \
-    InitBuiltinType(SingletonId, BuiltinType::Id);
-  #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId) \
-    InitBuiltinType(SingletonId, BuiltinType::Id);
-  #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId) \
-    InitBuiltinType(SingletonId, BuiltinType::Id);
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                    \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#define SVE_TYPE(Name, MangledName, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
   }
 
-  if (LangOpts.ACLE) {
+  if (LangOpts.ACLE)
     InitBuiltinType(MFloat8Ty, BuiltinType::MFloat8);
-  }
 
   if (Target.getTriple().isPPC64()) {
 #define PPC_VECTOR_MMA_TYPE(Name, Id, Size) \
@@ -4437,6 +4437,7 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
@@ -4507,6 +4508,7 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);

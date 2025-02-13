@@ -57,10 +57,6 @@
 //  - IsBF true for vector of brain float elements.
 //===----------------------------------------------------------------------===//
 
-#ifndef SVE_TYPE
-#define SVE_TYPE(Name, Id, SingletonId)
-#endif
-
 #ifndef SVE_SCALAR_TYPE
 #define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits) \
   SVE_TYPE(Name, Id, SingletonId)
@@ -205,6 +201,9 @@ SVE_OPAQUE_TYPE(__SVCount_t, __SVCount_t, SveCount, SveCountTy)
 
 SVE_SCALAR_TYPE(__mfp8, __mfp8, MFloat8, MFloat8Ty, 8)
 
+// Unlike the SVE types above, the Neon vector types are parsed as keywords and
+// mapped to the equivalent __attribute__(neon_vector_type(...)) vector type.
+// They are not builtin types.
 #ifndef NEON_VECTOR_TYPE
 #define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)
 #endif

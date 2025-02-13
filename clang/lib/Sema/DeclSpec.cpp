@@ -376,6 +376,7 @@ bool Declarator::isDeclarationOfFunction() const {
 #include "clang/Basic/OpenCLImageTypes.def"
 #define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
   case TST_##Name:
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case TST_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -613,6 +614,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
 #define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
   case DeclSpec::TST_##Name:                                                   \
     return #Name;
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case DeclSpec::TST_##Name:                                                   \
