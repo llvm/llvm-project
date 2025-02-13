@@ -40,7 +40,7 @@ union stream_data {
 
 #ifdef _LIBCPP_ABI_MICROSOFT
 #  define STREAM(StreamT, BufferT, CharT, var)                                                                         \
-    constinit stream_data<StreamT<CharT>, BufferT<CharT>> var __asm__(                                                           \
+    constinit stream_data<StreamT<CharT>, BufferT<CharT>> var __asm__(                                                 \
         "?" #var "@" ABI_NAMESPACE_STR "@std@@3V?$" #StreamT                                                           \
         "@" CHAR_MANGLING(CharT) "U?$char_traits@" CHAR_MANGLING(CharT) "@" ABI_NAMESPACE_STR "@std@@@12@A")
 #else
