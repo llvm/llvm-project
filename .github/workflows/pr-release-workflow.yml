@@ -1,0 +1,29 @@
+name: PR Release Workflow
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types:
+      - milestoned
+      - closed
+
+jobs:
+  backport-commit:
+    runs-on: ubuntu-22.04
+    if: >-
+      github.repository == 'llvm/llvm-project' &&
+      github.event.pull_request.merged &&
+      contains(github.event.pull_request.milestone.title, 'Release')
+    steps:
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
+        with:
+          github-token: ${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+               issue_number: context.issue.number,
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               body: `/cherry-pick ${context.sha}`
+            });
