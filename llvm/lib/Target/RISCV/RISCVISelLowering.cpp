@@ -4512,7 +4512,8 @@ static SDValue getSingleShuffleSrc(MVT VT, MVT ContainerVT, SDValue V1,
 
   // Src needs to have twice the number of elements.
   unsigned NumElts = VT.getVectorNumElements();
-  if (Src.getValueType().getVectorNumElements() != (NumElts * 2))
+  if (!Src.getValueType().isFixedLengthVector() ||
+      Src.getValueType().getVectorNumElements() != (NumElts * 2))
     return SDValue();
 
   // The extracts must extract the two halves of the source.
@@ -5214,17 +5215,21 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
     SmallDenseMap<unsigned, SDValue, 4> Values;
     for (unsigned I : seq<unsigned>(Data.size())) {
       const auto &[Idx1, Idx2, _] = Data[I];
-      if (Values.contains(Idx1)) {
-        assert(Idx2 != UINT_MAX && Values.contains(Idx2) &&
-               "Expected both indices to be extracted already.");
-        break;
+      // If the shuffle contains permutation of odd number of elements,
+      // Idx1 might be used already in the first iteration.
+      //
+      // Idx1 = shuffle Idx1, Idx2
+      // Idx1 = shuffle Idx1, Idx3
+      SDValue &V = Values.try_emplace(Idx1).first->getSecond();
+      if (!V)
+        V = ExtractValue(Idx1 >= NumOfSrcRegs ? V2 : V1,
+                         (Idx1 % NumOfSrcRegs) * NumOpElts);
+      if (Idx2 != UINT_MAX) {
+        SDValue &V = Values.try_emplace(Idx2).first->getSecond();
+        if (!V)
+          V = ExtractValue(Idx2 >= NumOfSrcRegs ? V2 : V1,
+                           (Idx2 % NumOfSrcRegs) * NumOpElts);
       }
-      SDValue V = ExtractValue(Idx1 >= NumOfSrcRegs ? V2 : V1,
-                               (Idx1 % NumOfSrcRegs) * NumOpElts);
-      Values[Idx1] = V;
-      if (Idx2 != UINT_MAX)
-        Values[Idx2] = ExtractValue(Idx2 >= NumOfSrcRegs ? V2 : V1,
-                                    (Idx2 % NumOfSrcRegs) * NumOpElts);
     }
     SDValue V;
     for (const auto &[Idx1, Idx2, Mask] : Data) {

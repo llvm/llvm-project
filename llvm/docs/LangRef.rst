@@ -1725,6 +1725,10 @@ Currently, only the following parameter attributes are defined:
     and negative values are allowed in case the argument points partway into
     an allocation. An empty list is not allowed.
 
+    On a ``byval`` argument, ``initializes`` refers to the given parts of the
+    callee copy being overwritten. A ``byval`` callee can never initialize the
+    original caller memory passed to the ``byval`` argument.
+
 ``dead_on_unwind``
     At a high level, this attribute indicates that the pointer argument is dead
     if the call unwinds, in the sense that the caller will not depend on the

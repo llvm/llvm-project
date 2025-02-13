@@ -1469,6 +1469,7 @@ public:
   /// specification
   virtual bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                         BranchProtectionInfo &BPI,
+                                        const LangOptions &LO,
                                         StringRef &Err) const {
     Err = "";
     return false;

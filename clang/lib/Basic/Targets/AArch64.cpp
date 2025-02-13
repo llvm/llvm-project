@@ -253,9 +253,17 @@ bool AArch64TargetInfo::validateGlobalRegisterVariable(
 
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
+                                                 const LangOptions &LO,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
   if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, HasPAuthLR))
+    return false;
+
+  // GCS is currently untested with ptrauth-returns, but enabling this could be
+  // allowed in future after testing with a suitable system.
+  if (LO.PointerAuthReturns &&
+      (PBP.Scope != "none" || PBP.BranchProtectionPAuthLR ||
+       PBP.GuardedControlStack))
     return false;
 
   BPI.SignReturnAddr =

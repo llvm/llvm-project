@@ -912,6 +912,8 @@ Bug Fixes to Compiler Builtins
 
 - Fix ``__builtin_source_location`` incorrectly returning wrong column for method chains. (#GH119129)
 
+- The behvaiour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1198,6 +1200,11 @@ Arm and AArch64 Support
 
 - Runtime detection of depended-on Function Multi Versioning features has been added
   in accordance with the Arm C Language Extensions (ACLE).
+
+- The ARM calling convention for empty structs in C++ mode was changed to pass
+  them as if they have a size of 1 byte, matching the AAPCS32 specification and
+  GCC's implementation. The previous behaviour of ignoring the argument can be
+  restored using the -fclang-abi-compat=19 (or earlier) option.
 
 Android Support
 ^^^^^^^^^^^^^^^
