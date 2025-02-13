@@ -46,20 +46,11 @@ def _get_uploaders(release_version):
         )
     # llvm 19 and beyond, only the release managers, bot and a much smaller
     # number of community members.
-    elif release_version == 19:
+    elif release_version >= 19:
         return set(
             [
                 "zmodem",
                 "omjavaid",
-                "tru",
-                "tstellar",
-                "github-actions[bot]",
-            ]
-        )
-    else:
-        return set(
-            [
-                "zmodem",
                 "tru",
                 "tstellar",
                 "github-actions[bot]",
