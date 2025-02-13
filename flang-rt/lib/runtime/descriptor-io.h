@@ -284,7 +284,7 @@ static RT_API_ATTRS bool DefaultComponentwiseFormattedIO(IoStatementState &io,
   SubscriptValue at[maxRank];
   compArray.GetLowerBounds(at);
   for (std::size_t k{0}; k < numComponents;
-       ++k, compArray.IncrementSubscripts(at)) {
+      ++k, compArray.IncrementSubscripts(at)) {
     const typeInfo::Component &component{
         *compArray.Element<typeInfo::Component>(at)};
     if (!DefaultComponentIO<DIR>(
@@ -311,11 +311,11 @@ static RT_API_ATTRS bool DefaultComponentwiseUnformattedIO(IoStatementState &io,
   SubscriptValue subscripts[maxRank];
   descriptor.GetLowerBounds(subscripts);
   for (std::size_t j{0}; j < numElements;
-       ++j, descriptor.IncrementSubscripts(subscripts)) {
+      ++j, descriptor.IncrementSubscripts(subscripts)) {
     SubscriptValue at[maxRank];
     compArray.GetLowerBounds(at);
     for (std::size_t k{0}; k < numComponents;
-         ++k, compArray.IncrementSubscripts(at)) {
+        ++k, compArray.IncrementSubscripts(at)) {
       const typeInfo::Component &component{
           *compArray.Element<typeInfo::Component>(at)};
       if (!DefaultComponentIO<DIR>(
@@ -370,7 +370,7 @@ static RT_API_ATTRS bool FormattedDerivedTypeIO(IoStatementState &io,
   descriptor.GetLowerBounds(subscripts);
   std::size_t numElements{descriptor.Elements()};
   for (std::size_t j{0}; j < numElements;
-       ++j, descriptor.IncrementSubscripts(subscripts)) {
+      ++j, descriptor.IncrementSubscripts(subscripts)) {
     Fortran::common::optional<bool> result;
     if (special) {
       result = DefinedFormattedIo(io, descriptor, *type, *special, subscripts);

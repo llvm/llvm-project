@@ -233,14 +233,14 @@ static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
         elemDesc.raw().rank = 0;
         auto *p{special->GetProc<void (*)(const Descriptor &)>()};
         for (std::size_t j{0}; j++ < elements;
-             descriptor.IncrementSubscripts(at)) {
+            descriptor.IncrementSubscripts(at)) {
           elemDesc.set_base_addr(descriptor.Element<char>(at));
           p(elemDesc);
         }
       } else {
         auto *p{special->GetProc<void (*)(char *)>()};
         for (std::size_t j{0}; j++ < elements;
-             descriptor.IncrementSubscripts(at)) {
+            descriptor.IncrementSubscripts(at)) {
           p(descriptor.Element<char>(at));
         }
       }
@@ -300,7 +300,7 @@ RT_API_ATTRS void Finalize(const Descriptor &descriptor,
   for (auto k{recurse ? std::size_t{1}
                       /* skip first component, it's the parent */
                       : 0};
-       k < myComponents; ++k) {
+      k < myComponents; ++k) {
     const auto &comp{
         *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
     SubscriptValue at[maxRank];
@@ -310,7 +310,7 @@ RT_API_ATTRS void Finalize(const Descriptor &descriptor,
       // Component may be polymorphic or unlimited polymorphic. Need to use the
       // dynamic type to check whether finalization is needed.
       for (std::size_t j{0}; j++ < elements;
-           descriptor.IncrementSubscripts(at)) {
+          descriptor.IncrementSubscripts(at)) {
         const Descriptor &compDesc{
             *descriptor.ElementComponent<Descriptor>(at, comp.offset())};
         if (compDesc.IsAllocated()) {
@@ -329,7 +329,7 @@ RT_API_ATTRS void Finalize(const Descriptor &descriptor,
       if (const typeInfo::DerivedType * compType{comp.derivedType()}) {
         if (!compType->noFinalizationNeeded()) {
           for (std::size_t j{0}; j++ < elements;
-               descriptor.IncrementSubscripts(at)) {
+              descriptor.IncrementSubscripts(at)) {
             const Descriptor &compDesc{
                 *descriptor.ElementComponent<Descriptor>(at, comp.offset())};
             if (compDesc.IsAllocated()) {
@@ -346,7 +346,7 @@ RT_API_ATTRS void Finalize(const Descriptor &descriptor,
       Descriptor &compDesc{staticDescriptor.descriptor()};
       const typeInfo::DerivedType &compType{*comp.derivedType()};
       for (std::size_t j{0}; j++ < elements;
-           descriptor.IncrementSubscripts(at)) {
+          descriptor.IncrementSubscripts(at)) {
         compDesc.Establish(compType,
             descriptor.ElementComponent<char>(at, comp.offset()), comp.rank(),
             extents);
@@ -408,7 +408,7 @@ RT_API_ATTRS void Destroy(const Descriptor &descriptor, bool finalize,
       Descriptor &compDesc{staticDescriptor.descriptor()};
       const typeInfo::DerivedType &compType{*comp.derivedType()};
       for (std::size_t j{0}; j++ < elements;
-           descriptor.IncrementSubscripts(at)) {
+          descriptor.IncrementSubscripts(at)) {
         compDesc.Establish(compType,
             descriptor.ElementComponent<char>(at, comp.offset()), comp.rank(),
             extents);

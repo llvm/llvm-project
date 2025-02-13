@@ -352,8 +352,8 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
     // NaN or infinity - convert to upper case
     // Subtle: a blank field of digits could be followed by 'E' or 'D',
     for (; next &&
-         ((*next >= 'a' && *next <= 'z') || (*next >= 'A' && *next <= 'Z'));
-         next = io.NextInField(remaining, edit)) {
+        ((*next >= 'a' && *next <= 'z') || (*next >= 'A' && *next <= 'Z'));
+        next = io.NextInField(remaining, edit)) {
       if (*next >= 'a' && *next <= 'z') {
         Put(*next - 'a' + 'A');
       } else {

@@ -202,7 +202,7 @@ static RT_API_ATTRS void DoElementalDefinedAssignment(const Descriptor &to,
   fromElementDesc.Establish(
       derived, nullptr, 0, nullptr, CFI_attribute_pointer);
   for (std::size_t toElements{to.Elements()}; toElements-- > 0;
-       to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+      to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     toElementDesc.set_base_addr(to.Element<char>(toAt));
     fromElementDesc.set_base_addr(from.Element<char>(fromAt));
     DoScalarDefinedAssignment(toElementDesc, fromElementDesc, special);
@@ -217,7 +217,7 @@ static RT_API_ATTRS void BlankPadCharacterAssignment(Descriptor &to,
   std::size_t padding{(toElementBytes - fromElementBytes) / sizeof(CHAR)};
   std::size_t copiedCharacters{fromElementBytes / sizeof(CHAR)};
   for (; elements-- > 0;
-       to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+      to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     CHAR *p{to.Element<CHAR>(toAt)};
     Fortran::runtime::memmove(
         p, from.Element<std::add_const_t<CHAR>>(fromAt), fromElementBytes);
@@ -385,7 +385,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
     const Descriptor &componentDesc{updatedToDerived->component()};
     std::size_t numComponents{componentDesc.Elements()};
     for (std::size_t j{0}; j < toElements;
-         ++j, to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+        ++j, to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
       for (std::size_t k{0}; k < numComponents; ++k) {
         const auto &comp{
             *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(
@@ -493,7 +493,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       }
     } else { // elemental copies, possibly with character truncation
       for (std::size_t n{toElements}; n-- > 0;
-           to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+          to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
         memmoveFct(to.Element<char>(toAt), from.Element<const char>(fromAt),
             toElementBytes);
       }
@@ -520,14 +520,14 @@ RT_API_ATTRS void DoFromSourceAssign(Descriptor &alloc,
     alloc.GetLowerBounds(allocAt);
     if (allocDerived) {
       for (std::size_t n{alloc.Elements()}; n-- > 0;
-           alloc.IncrementSubscripts(allocAt)) {
+          alloc.IncrementSubscripts(allocAt)) {
         Descriptor allocElement{*Descriptor::Create(*allocDerived,
             reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0)};
         Assign(allocElement, source, terminator, NoAssignFlags, memmoveFct);
       }
     } else { // intrinsic type
       for (std::size_t n{alloc.Elements()}; n-- > 0;
-           alloc.IncrementSubscripts(allocAt)) {
+          alloc.IncrementSubscripts(allocAt)) {
         memmoveFct(alloc.Element<char>(allocAt), source.raw().base_addr,
             alloc.ElementBytes());
       }

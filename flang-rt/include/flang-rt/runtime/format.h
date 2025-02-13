@@ -35,8 +35,7 @@ enum EditingFlags {
 
 struct MutableModes {
   std::uint8_t editingFlags{0}; // BN, DP, SS
-  enum decimal::FortranRounding round{
-      executionEnvironment
+  enum decimal::FortranRounding round{executionEnvironment
           .defaultOutputRoundingMode}; // RP/ROUND='PROCESSOR_DEFAULT'
   bool pad{true}; // PAD= mode on READ
   char delim{'\0'}; // DELIM=

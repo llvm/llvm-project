@@ -154,7 +154,7 @@ bool RTDEF(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
     // true if and only if the dynamic type of A is an extension type of the
     // dynamic type of MOLD.
     for (const typeInfo::DerivedType *derivedTypeA{GetDerivedType(a)};
-         derivedTypeA; derivedTypeA = derivedTypeA->GetParentType()) {
+        derivedTypeA; derivedTypeA = derivedTypeA->GetParentType()) {
       if (CompareDerivedType(derivedTypeA, derivedTypeMold)) {
         return true;
       }

@@ -57,7 +57,7 @@ inline RT_API_ATTRS void DoTotalReduction(const Descriptor &x, int dim,
       SubscriptValue maskAt[maxRank];
       mask->GetLowerBounds(maskAt);
       for (auto elements{x.Elements()}; elements--;
-           x.IncrementSubscripts(xAt), mask->IncrementSubscripts(maskAt)) {
+          x.IncrementSubscripts(xAt), mask->IncrementSubscripts(maskAt)) {
         if (IsLogicalElementTrue(*mask, maskAt)) {
           if (!accumulator.template AccumulateAt<TYPE>(xAt)) {
             break;
@@ -161,7 +161,7 @@ inline RT_API_ATTRS void ReduceDimMaskToScalar(const Descriptor &x,
   const auto &maskDim{mask.GetDimension(zeroBasedDim)};
   SubscriptValue maskPos{maskDim.LowerBound()};
   for (auto n{x.GetDimension(zeroBasedDim).Extent()}; n-- > 0;
-       ++xPos, ++maskPos) {
+      ++xPos, ++maskPos) {
     maskAt[zeroBasedDim] = maskPos;
     if (IsLogicalElementTrue(mask, maskAt)) {
       xAt[zeroBasedDim] = xPos;

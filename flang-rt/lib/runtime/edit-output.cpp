@@ -644,8 +644,8 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditListDirectedOutput(
 // follows that precedent so as to avoid a gratuitous incompatibility.
 template <int KIND>
 RT_API_ATTRS auto RealOutputEditing<KIND>::ConvertToHexadecimal(
-    int significantDigits, enum decimal::FortranRounding rounding,
-    int flags) -> ConvertToHexadecimalResult {
+    int significantDigits, enum decimal::FortranRounding rounding, int flags)
+    -> ConvertToHexadecimalResult {
   if (x_.IsNaN() || x_.IsInfinite()) {
     auto converted{ConvertToDecimal(significantDigits, rounding, flags)};
     return {converted.str, static_cast<int>(converted.length), 0};

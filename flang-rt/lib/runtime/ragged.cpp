@@ -55,7 +55,7 @@ RT_API_ATTRS void RaggedArrayDeallocate(RaggedArrayHeader *raggedArrayHeader) {
       if (isIndirection(raggedArrayHeader)) {
         std::size_t linearExtent{1u};
         for (std::size_t counter{0u}; counter < end && linearExtent > 0;
-             ++counter) {
+            ++counter) {
           linearExtent *= raggedArrayHeader->extentPointer[counter];
         }
         for (std::size_t counter{0u}; counter < linearExtent; ++counter) {

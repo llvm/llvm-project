@@ -861,7 +861,7 @@ void RTDEF(Transpose)(Descriptor &result, const Descriptor &matrix,
   SubscriptValue matrixLB[2];
   matrix.GetLowerBounds(matrixLB);
   for (std::size_t n{result.Elements()}; n-- > 0;
-       result.IncrementSubscripts(resultAt)) {
+      result.IncrementSubscripts(resultAt)) {
     SubscriptValue matrixAt[2]{
         matrixLB[0] + resultAt[1] - 1, matrixLB[1] + resultAt[0] - 1};
     CopyElement(result, resultAt, matrix, matrixAt, terminator);

@@ -123,7 +123,7 @@ static RT_API_ATTRS void Compare(Descriptor &result, const Descriptor &x,
   std::size_t xChars{x.ElementBytes() >> shift<CHAR>};
   std::size_t yChars{y.ElementBytes() >> shift<char>};
   for (SubscriptValue resultAt{0}; elements-- > 0;
-       ++resultAt, x.IncrementSubscripts(xAt), y.IncrementSubscripts(yAt)) {
+      ++resultAt, x.IncrementSubscripts(xAt), y.IncrementSubscripts(yAt)) {
     *result.OffsetElement<char>(resultAt) = CharacterScalarCompare<CHAR>(
         x.Element<CHAR>(xAt), y.Element<CHAR>(yAt), xChars, yChars);
   }
@@ -176,7 +176,7 @@ static RT_API_ATTRS void AdjustLRHelper(Descriptor &result,
     terminator.Crash("ADJUSTL/R: could not allocate storage for result");
   }
   for (SubscriptValue resultAt{0}; elements-- > 0;
-       resultAt += elementBytes, string.IncrementSubscripts(stringAt)) {
+      resultAt += elementBytes, string.IncrementSubscripts(stringAt)) {
     Adjust<CHAR, ADJUSTR>(result.OffsetElement<CHAR>(resultAt),
         string.Element<const CHAR>(stringAt), elementBytes >> shift<CHAR>);
   }
@@ -231,7 +231,7 @@ static RT_API_ATTRS void LenTrim(Descriptor &result, const Descriptor &string,
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
   for (SubscriptValue resultAt{0}; elements-- > 0;
-       resultAt += sizeof(INT), string.IncrementSubscripts(stringAt)) {
+      resultAt += sizeof(INT), string.IncrementSubscripts(stringAt)) {
     *result.OffsetElement<INT>(resultAt) =
         LenTrim(string.Element<CHAR>(stringAt), stringElementChars);
   }
@@ -414,8 +414,8 @@ static RT_API_ATTRS void GeneralCharFunc(Descriptor &result,
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
   std::size_t argElementChars{arg.ElementBytes() >> shift<CHAR>};
   for (SubscriptValue resultAt{0}; elements-- > 0; resultAt += sizeof(INT),
-       string.IncrementSubscripts(stringAt), arg.IncrementSubscripts(argAt),
-       back && back->IncrementSubscripts(backAt)) {
+      string.IncrementSubscripts(stringAt), arg.IncrementSubscripts(argAt),
+      back && back->IncrementSubscripts(backAt)) {
     if constexpr (FUNC == CharFunc::Index) {
       *result.OffsetElement<INT>(resultAt) =
           Index<CHAR>(string.Element<CHAR>(stringAt), stringElementChars,
@@ -514,7 +514,7 @@ static RT_API_ATTRS void MaxMinHelper(Descriptor &accumulator,
     RUNTIME_CHECK(terminator, accumulator.Allocate() == CFI_SUCCESS);
   }
   for (CHAR *result{accumulator.OffsetElement<CHAR>()}; elements-- > 0;
-       accumData += accumChars, result += chars, x.IncrementSubscripts(xAt)) {
+      accumData += accumChars, result += chars, x.IncrementSubscripts(xAt)) {
     const CHAR *xData{x.Element<CHAR>(xAt)};
     int cmp{CharacterScalarCompare(accumData, xData, accumChars, xChars)};
     if constexpr (ISMIN) {
@@ -595,7 +595,7 @@ void RTDEF(CharacterConcatenate)(Descriptor &accumulator,
   char *to{static_cast<char *>(accumulator.raw().base_addr)};
   from.GetLowerBounds(fromAt);
   for (; elements-- > 0;
-       to += newBytes, p += oldBytes, from.IncrementSubscripts(fromAt)) {
+      to += newBytes, p += oldBytes, from.IncrementSubscripts(fromAt)) {
     std::memcpy(to, p, oldBytes);
     std::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
   }

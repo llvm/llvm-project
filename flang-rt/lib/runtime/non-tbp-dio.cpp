@@ -19,7 +19,7 @@ const NonTbpDefinedIo *NonTbpDefinedIoTable::Find(
       return p;
     } else if (p->isDtvArgPolymorphic) {
       for (const typeInfo::DerivedType *t{type.GetParentType()}; t;
-           t = t->GetParentType()) {
+          t = t->GetParentType()) {
         if (&p->derivedType == t && p->definedIo == definedIo) {
           return p;
         }

@@ -22,8 +22,8 @@ static inline RT_API_ATTRS Cookie NoopUnit(const Terminator &terminator,
     int unitNumber, enum Iostat iostat = IostatOk) {
   Cookie cookie{&New<NoopStatementState>{terminator}(
       terminator.sourceFileName(), terminator.sourceLine(), unitNumber)
-                     .release()
-                     ->ioStatementState()};
+          .release()
+          ->ioStatementState()};
   if (iostat != IostatOk) {
     cookie->GetIoErrorHandler().SetPendingError(iostat);
   }

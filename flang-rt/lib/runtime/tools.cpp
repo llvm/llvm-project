@@ -121,7 +121,7 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
   from.GetLowerBounds(fromAt);
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
-       to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+      to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     std::memcpy(
         to.Element<char>(toAt), from.Element<char>(fromAt), elementBytes);
   }
@@ -134,7 +134,7 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
   from.GetLowerBounds(fromAt);
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
-       toAt += elementBytes, from.IncrementSubscripts(fromAt)) {
+      toAt += elementBytes, from.IncrementSubscripts(fromAt)) {
     std::memcpy(toAt, from.Element<char>(fromAt), elementBytes);
   }
 }
@@ -146,7 +146,7 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
   char *fromAt{from.OffsetElement()};
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
-       to.IncrementSubscripts(toAt), fromAt += elementBytes) {
+      to.IncrementSubscripts(toAt), fromAt += elementBytes) {
     std::memcpy(to.Element<char>(toAt), fromAt, elementBytes);
   }
 }

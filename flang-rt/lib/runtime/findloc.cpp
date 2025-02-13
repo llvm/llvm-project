@@ -149,8 +149,8 @@ struct TotalNumericFindlocHelper {
 };
 
 template <TypeCategory CAT,
-    template <TypeCategory XCAT, int XKIND, TypeCategory TARGET_CAT>
-    class HELPER>
+    template <TypeCategory XCAT, int XKIND,
+        TypeCategory TARGET_CAT> class HELPER>
 struct NumericFindlocHelper {
   template <int KIND> struct Functor {
     RT_API_ATTRS void operator()(TypeCategory targetCat, int targetKind,

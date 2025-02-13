@@ -39,7 +39,7 @@ struct ExecutionEnvironment {
   // FIXME: https://github.com/llvm/llvm-project/issues/84942
   constexpr
 #endif
-      ExecutionEnvironment(){};
+      ExecutionEnvironment() {};
   void Configure(int argc, const char *argv[], const char *envp[],
       const EnvironmentDefaultList *envDefaults);
   const char *GetEnv(
