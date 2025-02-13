@@ -3689,7 +3689,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (pseudoToMCOpcode(NewOpc) == -1)
         return false;
 
-      // V_FMAK_F16_t16 takes VGPR_16_Lo128 operands while V_FMAAK_F16_fake16
+      // V_FMAAK_F16_t16 takes VGPR_16_Lo128 operands while V_FMAAK_F16_fake16
       // takes VGPR_32_Lo128 operands, so the rewrite would also require
       // restricting their register classes. For now just bail out.
       if (NewOpc == AMDGPU::V_FMAAK_F16_t16 ||
