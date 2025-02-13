@@ -145,7 +145,8 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
                             cleanUpUnroll);
 }
 
-std::unique_ptr<Pass> mlir::affine::createLoopUnrollPass(
+std::unique_ptr<InterfacePass<FunctionOpInterface>>
+mlir::affine::createLoopUnrollPass(
     int unrollFactor, bool unrollUpToFactor, bool unrollFull,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor) {
   return std::make_unique<LoopUnroll>(
