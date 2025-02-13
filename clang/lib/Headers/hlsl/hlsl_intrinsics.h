@@ -254,16 +254,17 @@ bool all(double4);
 //===----------------------------------------------------------------------===//
 
 // \fn bool and(bool x, bool y)
-// \brief Logically ands two boolean vectors elementwise and produces a bool vector output.
+// \brief Logically ands two boolean vectors elementwise and produces a bool
+// vector output.
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
-bool and(bool x, bool y);
+bool and (bool x, bool y);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
-bool2 and(bool2 x, bool2 y);
+bool2 and (bool2 x, bool2 y);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
-bool3 and(bool3 x, bool3 y);
+bool3 and (bool3 x, bool3 y);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
-bool4 and(bool4 x, bool4 y);
+bool4 and (bool4 x, bool4 y);
 
 //===----------------------------------------------------------------------===//
 // any builtins
