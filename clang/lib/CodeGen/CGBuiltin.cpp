@@ -20212,6 +20212,59 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Env = EmitScalarExpr(E->getArg(0));
     return Builder.CreateCall(F, {Env});
   }
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_add_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_uadd_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_usub_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_umin_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_umax_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_and_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_or_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_i32: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_add_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_add;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_uadd_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_uadd;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_sub;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_usub_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_usub;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_min;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_umin_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_umin;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_max;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_umax_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_umax;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_and_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_and;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_or_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_or;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_i32:
+      IID = Intrinsic::amdgcn_wave_reduce_xor;
+      break;
+    }
+    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
+    llvm::Function *F = CGM.getIntrinsic(IID, {Src0->getType()});
+    llvm::Value *Strategy =
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(getLLVMContext()), 0);
+    return Builder.CreateCall(F, {Src0, Strategy});
+  }
   case AMDGPU::BI__builtin_amdgcn_read_exec:
     return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, false);
   case AMDGPU::BI__builtin_amdgcn_read_exec_lo:

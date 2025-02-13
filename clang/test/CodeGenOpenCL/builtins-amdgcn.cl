@@ -398,6 +398,83 @@ void test_s_sendmsghalt_var(int in)
   __builtin_amdgcn_s_sendmsghalt(1, in);
 }
 
+// CHECK-LABEL: @test_wave_reduce_add_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.add.i32(
+void test_wave_reduce_add_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_add_i32(in);
+}
+
+// CHECK-LABEL: @test_wave_reduce_uadd_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.uadd.i32(
+void test_wave_reduce_uadd_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_uadd_i32(in);
+}
+
+// CHECK-LABEL: @test_wave_reduce_sub_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.sub.i32(
+void test_wave_reduce_sub_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_sub_i32(in);
+}
+
+// CHECK-LABEL: @test_wave_reduce_usub_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.usub.i32(
+void test_wave_reduce_usub_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_usub_i32(in);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.min.i32(
+void test_wave_reduce_min_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_i32(in);
+}
+
+// CHECK-LABEL: @test_wave_reduce_umin_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.umin.i32(
+void test_wave_reduce_umin_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_umin_i32(in);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.max.i32(
+void test_wave_reduce_max_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_i32(in);
+}
+
+// CHECK-LABEL: @test_wave_reduce_umax_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.umax.i32(
+void test_wave_reduce_umax_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_umax_i32(in);
+}
+
+// CHECK-LABEL: @test_wave_reduce_and_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.and.i32(
+void test_wave_reduce_and_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_and_i32(in);
+}
+
+// CHECK-LABEL: @test_wave_reduce_or_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.or.i32(
+void test_wave_reduce_or_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_or_i32(in);
+}
+
+// CHECK-LABEL: @test_wave_reduce_xor_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.xor.i32(
+void test_wave_reduce_xor_i32(global int* out, int in)
+{
+  *out = __builtin_amdgcn_wave_reduce_xor_i32(in);
+}
+
 // CHECK-LABEL: @test_s_barrier
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.barrier(
 void test_s_barrier()
