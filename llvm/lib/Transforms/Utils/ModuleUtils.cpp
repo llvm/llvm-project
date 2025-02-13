@@ -29,7 +29,6 @@ using namespace llvm;
 static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
                                 int Priority, Constant *Data) {
   IRBuilder<> IRB(M.getContext());
-  FunctionType *FnTy = FunctionType::get(IRB.getVoidTy(), false);
 
   // Get the current set of static global constructors and add the new ctor
   // to the list.
@@ -45,9 +44,9 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
     }
     GVCtor->eraseFromParent();
   } else {
-    EltTy = StructType::get(IRB.getInt32Ty(),
-                            PointerType::get(FnTy, F->getAddressSpace()),
-                            IRB.getPtrTy());
+    EltTy = StructType::get(
+        IRB.getInt32Ty(),
+        PointerType::get(M.getContext(), F->getAddressSpace()), IRB.getPtrTy());
   }
 
   // Build a 3 field global_ctor entry.  We don't take a comdat key.
@@ -268,7 +267,7 @@ std::pair<Function *, FunctionCallee> llvm::createSanitizerCtorAndInitFunctions(
         BasicBlock::Create(M.getContext(), "callfunc", Ctor, RetBB);
     auto *InitFn = cast<Function>(InitFunction.getCallee());
     auto *InitFnPtr =
-        PointerType::get(InitFn->getType(), InitFn->getAddressSpace());
+        PointerType::get(M.getContext(), InitFn->getAddressSpace());
     IRB.SetInsertPoint(EntryBB);
     Value *InitNotNull =
         IRB.CreateICmpNE(InitFn, ConstantPointerNull::get(InitFnPtr));

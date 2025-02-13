@@ -529,7 +529,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }
@@ -971,8 +971,8 @@ LogicalResult emitc::ArrayType::verify(
     return emitError() << "shape must not be empty";
 
   for (int64_t dim : shape) {
-    if (dim <= 0)
-      return emitError() << "dimensions must have positive size";
+    if (dim < 0)
+      return emitError() << "dimensions must have non-negative size";
   }
 
   if (!elementType)

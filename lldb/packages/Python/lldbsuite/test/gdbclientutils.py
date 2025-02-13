@@ -126,6 +126,9 @@ class MockGDBServerResponder:
         if packet[0] == "m":
             addr, length = [int(x, 16) for x in packet[1:].split(",")]
             return self.readMemory(addr, length)
+        if packet[0] == "x":
+            addr, length = [int(x, 16) for x in packet[1:].split(",")]
+            return self.x(addr, length)
         if packet[0] == "M":
             location, encoded_data = packet[1:].split(":")
             addr, length = [int(x, 16) for x in location.split(",")]
@@ -266,6 +269,9 @@ class MockGDBServerResponder:
 
     def readMemory(self, addr, length):
         return "00" * length
+
+    def x(self, addr, length):
+        return ""
 
     def writeMemory(self, addr, data_hex):
         return "OK"

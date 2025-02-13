@@ -13,7 +13,10 @@
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/ProfileData/CtxInstrContextNode.h"
-#include "llvm/Support/JSON.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::ctx_profile;
@@ -85,22 +88,24 @@ void PGOCtxProfileWriter::write(const ContextNode &RootNode) {
 }
 
 namespace {
-// A structural representation of the JSON input.
-struct DeserializableCtx {
+
+/// Representation of the context node suitable for yaml serialization /
+/// deserialization.
+struct SerializableCtxRepresentation {
   ctx_profile::GUID Guid = 0;
   std::vector<uint64_t> Counters;
-  std::vector<std::vector<DeserializableCtx>> Callsites;
+  std::vector<std::vector<SerializableCtxRepresentation>> Callsites;
 };
 
 ctx_profile::ContextNode *
 createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
-           const std::vector<DeserializableCtx> &DCList);
+           const std::vector<SerializableCtxRepresentation> &DCList);
 
 // Convert a DeserializableCtx into a ContextNode, potentially linking it to
 // its sibling (e.g. callee at same callsite) "Next".
 ctx_profile::ContextNode *
 createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
-           const DeserializableCtx &DC,
+           const SerializableCtxRepresentation &DC,
            ctx_profile::ContextNode *Next = nullptr) {
   auto AllocSize = ctx_profile::ContextNode::getAllocSize(DC.Counters.size(),
                                                           DC.Callsites.size());
@@ -115,10 +120,11 @@ createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
   return Ret;
 }
 
-// Convert a list of DeserializableCtx into a linked list of ContextNodes.
+// Convert a list of SerializableCtxRepresentation into a linked list of
+// ContextNodes.
 ctx_profile::ContextNode *
 createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
-           const std::vector<DeserializableCtx> &DCList) {
+           const std::vector<SerializableCtxRepresentation> &DCList) {
   ctx_profile::ContextNode *List = nullptr;
   for (const auto &DC : DCList)
     List = createNode(Nodes, DC, List);
@@ -126,27 +132,22 @@ createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
 }
 } // namespace
 
-namespace llvm {
-namespace json {
-bool fromJSON(const Value &E, DeserializableCtx &R, Path P) {
-  json::ObjectMapper Mapper(E, P);
-  return Mapper && Mapper.map("Guid", R.Guid) &&
-         Mapper.map("Counters", R.Counters) &&
-         Mapper.mapOptional("Callsites", R.Callsites);
-}
-} // namespace json
-} // namespace llvm
+LLVM_YAML_IS_SEQUENCE_VECTOR(SerializableCtxRepresentation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(std::vector<SerializableCtxRepresentation>)
+template <> struct yaml::MappingTraits<SerializableCtxRepresentation> {
+  static void mapping(yaml::IO &IO, SerializableCtxRepresentation &SCR) {
+    IO.mapRequired("Guid", SCR.Guid);
+    IO.mapRequired("Counters", SCR.Counters);
+    IO.mapOptional("Callsites", SCR.Callsites);
+  }
+};
 
-Error llvm::createCtxProfFromJSON(StringRef Profile, raw_ostream &Out) {
-  auto P = json::parse(Profile);
-  if (!P)
-    return P.takeError();
-
-  json::Path::Root R("");
-  std::vector<DeserializableCtx> DCList;
-  if (!fromJSON(*P, DCList, R))
-    return R.getError();
-  // Nodes provides memory backing for the ContextualNodes.
+Error llvm::createCtxProfFromYAML(StringRef Profile, raw_ostream &Out) {
+  yaml::Input In(Profile);
+  std::vector<SerializableCtxRepresentation> DCList;
+  In >> DCList;
+  if (In.error())
+    return createStringError(In.error(), "incorrect yaml content");
   std::vector<std::unique_ptr<char[]>> Nodes;
   std::error_code EC;
   if (EC)

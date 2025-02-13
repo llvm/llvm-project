@@ -26,15 +26,11 @@ for header in public_headers:
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
 
-// Clang 17 has false positives.
-// UNSUPPORTED: clang-17
-
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
 // TODO: run clang-tidy with modules enabled once they are supported
-// RUN: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --checks='-*,libcpp-*' --load=%{{test-tools-dir}}/clang_tidy_checks/libcxx-tidy.plugin -- %{{compile_flags}} -fno-modules
-// RUN: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --config-file=%{{libcxx-dir}}/.clang-tidy -- -Wweak-vtables %{{compile_flags}} -fno-modules
+// RUN: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --config-file=%{{libcxx-dir}}/.clang-tidy --load=%{{test-tools-dir}}/clang_tidy_checks/libcxx-tidy.plugin -- -Wweak-vtables %{{compile_flags}} -fno-modules
 
 #include <{header}>
 """)

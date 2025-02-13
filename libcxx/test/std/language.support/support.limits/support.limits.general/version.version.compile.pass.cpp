@@ -88,6 +88,8 @@
                                                             201902L [C++20]
     __cpp_lib_expected                                      202211L [C++23]
     __cpp_lib_filesystem                                    201703L [C++17]
+    __cpp_lib_flat_map                                      202207L [C++23]
+    __cpp_lib_flat_set                                      202207L [C++23]
     __cpp_lib_format                                        202110L [C++20]
     __cpp_lib_format_path                                   202403L [C++26]
     __cpp_lib_format_ranges                                 202207L [C++23]
@@ -156,6 +158,7 @@
     __cpp_lib_node_extract                                  201606L [C++17]
     __cpp_lib_nonmember_container_access                    201411L [C++17]
     __cpp_lib_not_fn                                        201603L [C++17]
+                                                            202306L [C++26]
     __cpp_lib_null_iterators                                201304L [C++14]
     __cpp_lib_optional                                      201606L [C++17]
                                                             202106L [C++20]
@@ -525,6 +528,14 @@
 
 # ifdef __cpp_lib_filesystem
 #   error "__cpp_lib_filesystem should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_format
@@ -1396,6 +1407,14 @@
 
 # ifdef __cpp_lib_filesystem
 #   error "__cpp_lib_filesystem should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_format
@@ -2387,6 +2406,14 @@
 #   ifdef __cpp_lib_filesystem
 #     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_format
@@ -3650,6 +3677,14 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
+# endif
+
 # ifndef __cpp_lib_format
 #   error "__cpp_lib_format should be defined in c++20"
 # endif
@@ -4433,7 +4468,7 @@
 #   error "__cpp_lib_submdspan should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++20"
 #   endif
@@ -4442,7 +4477,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 
@@ -5088,6 +5123,26 @@
 # else
 #   ifdef __cpp_lib_filesystem
 #     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should be defined in c++23"
+# endif
+# if __cpp_lib_flat_map != 202207L
+#   error "__cpp_lib_flat_map should have the value 202207L in c++23"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should be defined in c++23"
+#   endif
+#   if __cpp_lib_flat_set != 202207L
+#     error "__cpp_lib_flat_set should have the value 202207L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 
@@ -6039,7 +6094,7 @@
 #   error "__cpp_lib_submdspan should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++23"
 #   endif
@@ -6048,7 +6103,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 
@@ -6778,6 +6833,26 @@
 #   endif
 # endif
 
+# ifndef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should be defined in c++26"
+# endif
+# if __cpp_lib_flat_map != 202207L
+#   error "__cpp_lib_flat_map should have the value 202207L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should be defined in c++26"
+#   endif
+#   if __cpp_lib_flat_set != 202207L
+#     error "__cpp_lib_flat_set should have the value 202207L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_format
 #   error "__cpp_lib_format should be defined in c++26"
 # endif
@@ -7405,8 +7480,8 @@
 # ifndef __cpp_lib_not_fn
 #   error "__cpp_lib_not_fn should be defined in c++26"
 # endif
-# if __cpp_lib_not_fn != 201603L
-#   error "__cpp_lib_not_fn should have the value 201603L in c++26"
+# if __cpp_lib_not_fn != 202306L
+#   error "__cpp_lib_not_fn should have the value 202306L in c++26"
 # endif
 
 # ifndef __cpp_lib_null_iterators
@@ -7960,7 +8035,7 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++26"
 #   endif
@@ -7969,7 +8044,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 

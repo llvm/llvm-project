@@ -167,6 +167,10 @@ public:
 
   void addSInt(DIELoc &Die, std::optional<dwarf::Form> Form, int64_t Integer);
 
+  /// Add an integer attribute data and value; value may be any width.
+  void addInt(DIE &Die, dwarf::Attribute Attribute, const APInt &Integer,
+	      bool Unsigned);
+
   /// Add a string attribute data and value.
   ///
   /// We always emit a reference to the string pool instead of immediate
@@ -315,6 +319,11 @@ public:
   /// Get context owner's DIE.
   DIE *createTypeDIE(const DICompositeType *Ty);
 
+  /// If this is a named finished type then include it in the list of types for
+  /// the accelerator tables.
+  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
+                               const DIE &TyDIE);
+
 protected:
   ~DwarfUnit();
 
@@ -329,6 +338,10 @@ protected:
   void emitCommonHeader(bool UseOffsets, dwarf::UnitType UT);
 
 private:
+  /// A helper to add a wide integer constant to a DIE using a block
+  /// form.
+  void addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val);
+
   void constructTypeDIE(DIE &Buffer, const DIBasicType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIStringType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy);
@@ -356,11 +369,6 @@ private:
   void setIndexTyDie(DIE *D) { IndexTyDie = D; }
 
   virtual void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) = 0;
-
-  /// If this is a named finished type then include it in the list of types for
-  /// the accelerator tables.
-  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
-                               const DIE &TyDIE);
 
   virtual bool isDwoUnit() const = 0;
   const MCSymbol *getCrossSectionRelativeBaseAddress() const override;

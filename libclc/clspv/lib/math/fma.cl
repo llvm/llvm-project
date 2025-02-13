@@ -24,9 +24,9 @@
 // (__clc_sw_fma), but avoids the use of ulong in favor of uint2. The logic has
 // been updated as appropriate.
 
-#include "../../../generic/lib/math/math.h"
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
+#include <clc/math/math.h>
 
 struct fp {
   uint2 mantissa;

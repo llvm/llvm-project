@@ -92,7 +92,12 @@ namespace MipsII {
     MO_CALL_LO16,
 
     /// Helper operand used to generate R_MIPS_JALR
-    MO_JALR
+    MO_JALR,
+
+    /// MO_DLLIMPORT - On a symbol operand "FOO", this indicates that the
+    /// reference is actually to the "__imp_FOO" symbol.  This is used for
+    /// dllimport linkage on windows.
+    MO_DLLIMPORT = 0x20,
   };
 
   enum {

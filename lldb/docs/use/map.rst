@@ -235,6 +235,38 @@ Do a source level single step in the currently selected thread
   (lldb) step
   (lldb) s
 
+Ignore a function when doing a source level single step in
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: shell
+
+  (gdb) skip abc
+  Function abc will be skipped when stepping.
+
+.. code-block:: shell
+
+  (lldb) settings show target.process.thread.step-avoid-regexp
+  target.process.thread.step-avoid-regexp (regex) = ^std::
+  (lldb) settings set target.process.thread.step-avoid-regexp ^std::|^abc
+
+You can ignore a function once using:
+
+.. code-block:: shell
+
+  (lldb) thread step-in -r ^abc
+
+Or you can do the opposite, only step into functions matching a certain name:
+
+.. code-block:: shell
+
+  # Step in if abc is a substring of the function name.
+  (lldb) sif abc
+  # Which is equivalent to:
+  (lldb) thread step-in -t abc
+
+``thread step-in`` has more options which cover some of ``skip``'s other
+features. See ``help thread step-in`` for details.
+
 Do a source level single step over in the currently selected thread
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

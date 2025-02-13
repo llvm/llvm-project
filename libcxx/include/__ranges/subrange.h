@@ -82,7 +82,7 @@ private:
   struct _Empty {
     _LIBCPP_HIDE_FROM_ABI constexpr _Empty(auto) noexcept {}
   };
-  using _Size = conditional_t<_StoreSize, make_unsigned_t<iter_difference_t<_Iter>>, _Empty>;
+  using _Size _LIBCPP_NODEBUG = conditional_t<_StoreSize, make_unsigned_t<iter_difference_t<_Iter>>, _Empty>;
   _LIBCPP_NO_UNIQUE_ADDRESS _Iter __begin_ = _Iter();
   _LIBCPP_NO_UNIQUE_ADDRESS _Sent __end_   = _Sent();
   _LIBCPP_NO_UNIQUE_ADDRESS _Size __size_  = 0;

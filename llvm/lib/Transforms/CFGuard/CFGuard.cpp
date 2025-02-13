@@ -247,7 +247,7 @@ bool CFGuardImpl::doInitialization(Module &M) {
   GuardFnType =
       FunctionType::get(Type::getVoidTy(M.getContext()),
                         {PointerType::getUnqual(M.getContext())}, false);
-  GuardFnPtrType = PointerType::get(GuardFnType, 0);
+  GuardFnPtrType = PointerType::get(M.getContext(), 0);
 
   GuardFnGlobal = M.getOrInsertGlobal(GuardFnName, GuardFnPtrType, [&] {
     auto *Var = new GlobalVariable(M, GuardFnPtrType, false,

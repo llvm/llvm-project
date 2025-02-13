@@ -140,7 +140,7 @@ public:
 class CtxProfAnalysisPrinterPass
     : public PassInfoMixin<CtxProfAnalysisPrinterPass> {
 public:
-  enum class PrintMode { Everything, JSON };
+  enum class PrintMode { Everything, YAML };
   explicit CtxProfAnalysisPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
