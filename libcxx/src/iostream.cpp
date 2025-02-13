@@ -18,8 +18,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class StreamT, class BufferT>
 union stream_data {
-  stream_data() {}
-  ~stream_data() {}
+  constexpr stream_data() {}
+  constexpr ~stream_data() {}
   struct {
     // The stream has to be the first element, since that's referenced by the stream declarations in <iostream>
     StreamT stream;

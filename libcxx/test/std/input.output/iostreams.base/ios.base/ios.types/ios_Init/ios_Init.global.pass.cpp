@@ -8,20 +8,12 @@
 
 #include <iostream>
 
-extern "C" const char *__asan_default_options() {
-  return "check_initialization_order=true:strict_init_order=true";
-}
+extern "C" const char* __asan_default_options() { return "check_initialization_order=true:strict_init_order=true"; }
 
-// Test that ios used from globals constructors doesn't trigger
-// Asan initialization-order-fiasco.
+// Test that ios used from globals constructors doesn't trigger Asan initialization-order-fiasco.
 
 struct Global {
-  Global() {
-    std::cout << "Hello!";
-  }
+  Global() { std::cout << "Hello!"; }
 } global;
 
-int main(int, char**)
-{
-    return 0;
-}
+int main(int, char**) { return 0; }
