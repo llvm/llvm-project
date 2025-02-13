@@ -2973,7 +2973,7 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
       Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
                               CM);
-    } else if (Triple.isOffloadingTargetGPU()) {
+    } else if (Triple.isOffloadingTarget()) {
       // Offloading GPU targets do not care about the code model and will accept
       // whatever works for the host.
       Ok = true;

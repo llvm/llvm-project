@@ -1110,7 +1110,7 @@ public:
   }
 
   /// Tests if the target represents a GPU which can be offloaded to.
-  bool isOffloadingTargetGPU() const {
+  bool isOffloadingTarget() const {
     return isAMDGPU() || isNVPTX() || isSPIRV();
   }
 
