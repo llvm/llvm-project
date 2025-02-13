@@ -3,47 +3,47 @@
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fno-rtti -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,NOMALLOC %s
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -include cmath \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fno-rtti -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck %s  -check-prefixes=AMD_BOOL_RETURN
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -include cmath \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fno-rtti -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ -DUSE_ISNAN_WITH_INT_RETURN | FileCheck %s -check-prefixes=AMD_INT_RETURN
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fno-rtti -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ -std=c++14 | FileCheck -check-prefixes=CHECK,CXX14 %s
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fno-rtti -fcuda-is-device -o - \
 // RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
 // RUN:   -D__HIPCC_RTC__ -disable-llvm-passes | FileCheck -check-prefixes=MALLOC %s
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fno-rtti -fcuda-is-device -o - \
 // RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
 // RUN:   -disable-llvm-passes | FileCheck -check-prefixes=MALLOC %s
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fno-rtti -fcuda-is-device -o - \
 // RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
 // RUN:   -fsanitize=address -disable-llvm-passes -D__HIPCC_RTC__ \
 // RUN:   | FileCheck -check-prefixes=MALLOC-ASAN %s

@@ -3,7 +3,7 @@
 // RUN: cat %t | FileCheck --check-prefixes=CHECK,HOST %s
 // RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -target-cpu gfx1100 \
 // RUN:   -emit-llvm -fdump-record-layouts -aux-triple x86_64-pc-windows-msvc \
-// RUN:   -o %t -xhip %s | FileCheck %s --check-prefix=AST
+// RUN:   -fno-rtti -o %t -xhip %s | FileCheck %s --check-prefix=AST
 // RUN: cat %t | FileCheck --check-prefixes=CHECK,DEV %s
 
 #include "Inputs/cuda.h"
