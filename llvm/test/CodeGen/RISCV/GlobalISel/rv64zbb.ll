@@ -68,8 +68,8 @@ define signext i32 @log2_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    li s0, 31
 ; RV64I-NEXT:    sext.w a1, a0
+; RV64I-NEXT:    li s0, 31
 ; RV64I-NEXT:    beqz a1, .LBB1_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    srliw a1, a0, 1

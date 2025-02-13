@@ -87,14 +87,14 @@ define fastcc <128 x i32> @ret_split_v128i32(ptr %x) {
 ; CHECK-NEXT:    addi a2, a1, 256
 ; CHECK-NEXT:    vle32.v v16, (a2)
 ; CHECK-NEXT:    addi a2, a1, 384
-; CHECK-NEXT:    vle32.v v24, (a2)
-; CHECK-NEXT:    addi a2, a0, 384
-; CHECK-NEXT:    vle32.v v0, (a1)
-; CHECK-NEXT:    addi a1, a0, 256
-; CHECK-NEXT:    vse32.v v0, (a0)
+; CHECK-NEXT:    vle32.v v24, (a1)
+; CHECK-NEXT:    addi a1, a0, 384
+; CHECK-NEXT:    vle32.v v0, (a2)
+; CHECK-NEXT:    addi a2, a0, 256
+; CHECK-NEXT:    vse32.v v24, (a0)
 ; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vse32.v v24, (a2)
-; CHECK-NEXT:    vse32.v v16, (a1)
+; CHECK-NEXT:    vse32.v v0, (a1)
+; CHECK-NEXT:    vse32.v v16, (a2)
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = load <128 x i32>, ptr %x
@@ -207,15 +207,14 @@ define fastcc <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x
 ; CHECK-NEXT:    addi s0, sp, 256
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    andi sp, sp, -128
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    mv a0, sp
-; CHECK-NEXT:    vse32.v v24, (a0)
+; CHECK-NEXT:    vle32.v v24, (a0)
+; CHECK-NEXT:    mv a3, sp
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    li a2, 42
+; CHECK-NEXT:    vse32.v v8, (a3)
+; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    call ext3
 ; CHECK-NEXT:    addi sp, s0, -256
 ; CHECK-NEXT:    .cfi_def_cfa sp, 256
@@ -270,8 +269,8 @@ define fastcc <32 x i32> @pass_vector_arg_indirect_stack(<32 x i32> %x, <32 x i3
 ; CHECK-NEXT:    mv t3, sp
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (t0)
 ; CHECK-NEXT:    li t4, 8
+; CHECK-NEXT:    vse32.v v8, (t0)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    call vector_arg_indirect_stack
@@ -308,15 +307,17 @@ define fastcc <32 x i32> @vector_arg_direct_stack(i32 %0, i32 %1, i32 %2, i32 %3
 define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32> %y, <32 x i32> %z) {
 ; CHECK-LABEL: pass_vector_arg_direct_stack:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -160
-; CHECK-NEXT:    .cfi_def_cfa_offset 160
-; CHECK-NEXT:    sd ra, 152(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -176
+; CHECK-NEXT:    .cfi_def_cfa_offset 176
+; CHECK-NEXT:    sd ra, 168(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 160(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    addi t0, sp, 16
 ; CHECK-NEXT:    li t1, 1
 ; CHECK-NEXT:    li t2, 13
-; CHECK-NEXT:    li t5, 12
+; CHECK-NEXT:    li s0, 12
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    li a3, 3
@@ -325,21 +326,23 @@ define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32>
 ; CHECK-NEXT:    li a6, 6
 ; CHECK-NEXT:    li a7, 7
 ; CHECK-NEXT:    li t3, 8
-; CHECK-NEXT:    sd t1, 144(sp)
-; CHECK-NEXT:    li t4, 9
-; CHECK-NEXT:    sd t5, 0(sp)
-; CHECK-NEXT:    sd t2, 8(sp)
-; CHECK-NEXT:    li t5, 10
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse32.v v8, (t0)
+; CHECK-NEXT:    li t4, 9
+; CHECK-NEXT:    li t5, 10
+; CHECK-NEXT:    sd t1, 144(sp)
 ; CHECK-NEXT:    li t6, 11
+; CHECK-NEXT:    sd s0, 0(sp)
+; CHECK-NEXT:    sd t2, 8(sp)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    call vector_arg_direct_stack
-; CHECK-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 168(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 160(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
-; CHECK-NEXT:    addi sp, sp, 160
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    addi sp, sp, 176
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %s = call fastcc <32 x i32> @vector_arg_direct_stack(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, i32 1)

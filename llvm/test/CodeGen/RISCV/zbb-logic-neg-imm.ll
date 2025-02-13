@@ -137,13 +137,13 @@ define void @orarray100(ptr %a) {
 ; RV32-NEXT:    addi a1, a1, 1
 ; RV32-NEXT:    add a4, a0, a4
 ; RV32-NEXT:    lw a5, 0(a4)
+; RV32-NEXT:    seqz a6, a1
+; RV32-NEXT:    add a2, a2, a6
+; RV32-NEXT:    xori a6, a1, 100
 ; RV32-NEXT:    orn a5, a5, a3
+; RV32-NEXT:    or a6, a6, a2
 ; RV32-NEXT:    sw a5, 0(a4)
-; RV32-NEXT:    seqz a4, a1
-; RV32-NEXT:    xori a5, a1, 100
-; RV32-NEXT:    add a2, a2, a4
-; RV32-NEXT:    or a5, a5, a2
-; RV32-NEXT:    bnez a5, .LBB8_1
+; RV32-NEXT:    bnez a6, .LBB8_1
 ; RV32-NEXT:  # %bb.2: # %for.cond.cleanup
 ; RV32-NEXT:    ret
 ;
@@ -180,16 +180,16 @@ for.body:
 define void @orarray3(ptr %a) {
 ; CHECK-LABEL: orarray3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 1048560
-; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    lw a3, 4(a0)
-; CHECK-NEXT:    lw a4, 8(a0)
-; CHECK-NEXT:    orn a2, a2, a1
-; CHECK-NEXT:    orn a3, a3, a1
-; CHECK-NEXT:    orn a1, a4, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    sw a3, 4(a0)
-; CHECK-NEXT:    sw a1, 8(a0)
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    lw a2, 4(a0)
+; CHECK-NEXT:    lw a3, 8(a0)
+; CHECK-NEXT:    lui a4, 1048560
+; CHECK-NEXT:    orn a1, a1, a4
+; CHECK-NEXT:    orn a2, a2, a4
+; CHECK-NEXT:    orn a3, a3, a4
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    sw a2, 4(a0)
+; CHECK-NEXT:    sw a3, 8(a0)
 ; CHECK-NEXT:    ret
   %1 = load i32, ptr %a, align 4
   %or = or i32 %1, 65535

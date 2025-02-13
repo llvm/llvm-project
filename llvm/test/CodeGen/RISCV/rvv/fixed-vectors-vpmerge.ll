@@ -1360,22 +1360,22 @@ define <32 x double> @vpmerge_vv_v32f64(<32 x double> %va, <32 x double> %vb, <3
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    addi a1, a0, 128
-; CHECK-NEXT:    li a3, 16
 ; CHECK-NEXT:    vle64.v v24, (a1)
-; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    bltu a2, a3, .LBB83_2
-; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    bltu a2, a1, .LBB83_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:  .LBB83_2:
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v16, v0
 ; CHECK-NEXT:    addi a0, a2, -16
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
@@ -1406,9 +1406,9 @@ define <32 x double> @vpmerge_vf_v32f64(double %a, <32 x double> %vb, <32 x i1> 
 ; CHECK-NEXT:    addi a1, a0, -16
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v16, v16, fa0, v0
 ; CHECK-NEXT:    ret

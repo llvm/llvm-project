@@ -111,8 +111,8 @@ define i32 @caller_float_on_stack() nounwind {
 ; RV32I-FPELIM-NEXT:    li a0, 1
 ; RV32I-FPELIM-NEXT:    li a2, 2
 ; RV32I-FPELIM-NEXT:    li a4, 3
-; RV32I-FPELIM-NEXT:    sw a1, 0(sp)
 ; RV32I-FPELIM-NEXT:    li a6, 4
+; RV32I-FPELIM-NEXT:    sw a1, 0(sp)
 ; RV32I-FPELIM-NEXT:    li a1, 0
 ; RV32I-FPELIM-NEXT:    li a3, 0
 ; RV32I-FPELIM-NEXT:    li a5, 0
@@ -132,8 +132,8 @@ define i32 @caller_float_on_stack() nounwind {
 ; RV32I-WITHFP-NEXT:    li a0, 1
 ; RV32I-WITHFP-NEXT:    li a2, 2
 ; RV32I-WITHFP-NEXT:    li a4, 3
-; RV32I-WITHFP-NEXT:    sw a1, 0(sp)
 ; RV32I-WITHFP-NEXT:    li a6, 4
+; RV32I-WITHFP-NEXT:    sw a1, 0(sp)
 ; RV32I-WITHFP-NEXT:    li a1, 0
 ; RV32I-WITHFP-NEXT:    li a3, 0
 ; RV32I-WITHFP-NEXT:    li a5, 0
