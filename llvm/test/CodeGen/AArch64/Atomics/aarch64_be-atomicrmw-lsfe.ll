@@ -12,7 +12,7 @@ define dso_local half @atomicrmw_fadd_half_aligned_monotonic(ptr %ptr, half %val
 
 define dso_local void @atomicrmw_fadd_half_aligned_monotonic_to_store(ptr %ptr, half %value) {
 ; CHECK-LABEL: atomicrmw_fadd_half_aligned_monotonic_to_store:
-; CHECK:    ldfadd h0, h0, [x0]
+; CHECK:    stfadd h0, [x0]
     %r = atomicrmw fadd ptr %ptr, half %value monotonic, align 2
     ret void
 }
@@ -33,7 +33,7 @@ define dso_local half @atomicrmw_fadd_half_aligned_release(ptr %ptr, half %value
 
 define dso_local void @atomicrmw_fadd_half_aligned_release_to_store(ptr %ptr, half %value) {
 ; CHECK-LABEL: atomicrmw_fadd_half_aligned_release_to_store:
-; CHECK:    ldfaddl h0, h0, [x0]
+; CHECK:    stfaddl h0, [x0]
     %r = atomicrmw fadd ptr %ptr, half %value release, align 2
     ret void
 }
@@ -61,7 +61,7 @@ define dso_local bfloat @atomicrmw_fadd_bfloat_aligned_monotonic(ptr %ptr, bfloa
 
 define dso_local void @atomicrmw_fadd_bfloat_aligned_monotonic_to_store(ptr %ptr, bfloat %value) {
 ; CHECK-LABEL: atomicrmw_fadd_bfloat_aligned_monotonic_to_store:
-; CHECK:    ldbfadd h0, h0, [x0]
+; CHECK:    stbfadd h0, [x0]
     %r = atomicrmw fadd ptr %ptr, bfloat %value monotonic, align 2
     ret void
 }
@@ -82,7 +82,7 @@ define dso_local bfloat @atomicrmw_fadd_bfloat_aligned_release(ptr %ptr, bfloat 
 
 define dso_local void @atomicrmw_fadd_bfloat_aligned_release_to_store(ptr %ptr, bfloat %value) {
 ; CHECK-LABEL: atomicrmw_fadd_bfloat_aligned_release_to_store:
-; CHECK:    ldbfaddl h0, h0, [x0]
+; CHECK:    stbfaddl h0, [x0]
     %r = atomicrmw fadd ptr %ptr, bfloat %value release, align 2
     ret void
 }
@@ -110,7 +110,7 @@ define dso_local float @atomicrmw_fadd_float_aligned_monotonic(ptr %ptr, float %
 
 define dso_local void @atomicrmw_fadd_float_aligned_monotonic_to_store(ptr %ptr, float %value) {
 ; CHECK-LABEL: atomicrmw_fadd_float_aligned_monotonic_to_store:
-; CHECK:    ldfadd s0, s0, [x0]
+; CHECK:    stfadd s0, [x0]
     %r = atomicrmw fadd ptr %ptr, float %value monotonic, align 4
     ret void
 }
@@ -131,7 +131,7 @@ define dso_local float @atomicrmw_fadd_float_aligned_release(ptr %ptr, float %va
 
 define dso_local void @atomicrmw_fadd_float_aligned_release_to_store(ptr %ptr, float %value) {
 ; CHECK-LABEL: atomicrmw_fadd_float_aligned_release_to_store:
-; CHECK:    ldfaddl s0, s0, [x0]
+; CHECK:    stfaddl s0, [x0]
     %r = atomicrmw fadd ptr %ptr, float %value release, align 4
     ret void
 }
@@ -159,7 +159,7 @@ define dso_local double @atomicrmw_fadd_double_aligned_monotonic(ptr %ptr, doubl
 
 define dso_local void @atomicrmw_fadd_double_aligned_monotonic_to_store(ptr %ptr, double %value) {
 ; CHECK-LABEL: atomicrmw_fadd_double_aligned_monotonic_to_store:
-; CHECK:    ldfadd d0, d0, [x0]
+; CHECK:    stfadd d0, [x0]
     %r = atomicrmw fadd ptr %ptr, double %value monotonic, align 8
     ret void
 }
@@ -180,7 +180,7 @@ define dso_local double @atomicrmw_fadd_double_aligned_release(ptr %ptr, double 
 
 define dso_local void @atomicrmw_fadd_double_aligned_release_to_store(ptr %ptr, double %value) {
 ; CHECK-LABEL: atomicrmw_fadd_double_aligned_release_to_store:
-; CHECK:    ldfaddl d0, d0, [x0]
+; CHECK:    stfaddl d0, [x0]
     %r = atomicrmw fadd ptr %ptr, double %value release, align 8
     ret void
 }
@@ -878,7 +878,7 @@ define dso_local half @atomicrmw_fmax_half_aligned_monotonic(ptr %ptr, half %val
 
 define dso_local void @atomicrmw_fmax_half_aligned_monotonic_to_store(ptr %ptr, half %value) {
 ; CHECK-LABEL: atomicrmw_fmax_half_aligned_monotonic_to_store:
-; CHECK:    ldfmaxnm h0, h0, [x0]
+; CHECK:    stfmaxnm h0, [x0]
     %r = atomicrmw fmax ptr %ptr, half %value monotonic, align 2
     ret void
 }
@@ -899,7 +899,7 @@ define dso_local half @atomicrmw_fmax_half_aligned_release(ptr %ptr, half %value
 
 define dso_local void @atomicrmw_fmax_half_aligned_release_to_store(ptr %ptr, half %value) {
 ; CHECK-LABEL: atomicrmw_fmax_half_aligned_release_to_store:
-; CHECK:    ldfmaxnml h0, h0, [x0]
+; CHECK:    stfmaxnml h0, [x0]
     %r = atomicrmw fmax ptr %ptr, half %value release, align 2
     ret void
 }
@@ -927,7 +927,7 @@ define dso_local bfloat @atomicrmw_fmax_bfloat_aligned_monotonic(ptr %ptr, bfloa
 
 define dso_local void @atomicrmw_fmax_bfloat_aligned_monotonic_to_store(ptr %ptr, bfloat %value) {
 ; CHECK-LABEL: atomicrmw_fmax_bfloat_aligned_monotonic_to_store:
-; CHECK:    ldbfmaxnm h0, h0, [x0]
+; CHECK:    stbfmaxnm h0, [x0]
     %r = atomicrmw fmax ptr %ptr, bfloat %value monotonic, align 2
     ret void
 }
@@ -948,7 +948,7 @@ define dso_local bfloat @atomicrmw_fmax_bfloat_aligned_release(ptr %ptr, bfloat 
 
 define dso_local void @atomicrmw_fmax_bfloat_aligned_release_to_store(ptr %ptr, bfloat %value) {
 ; CHECK-LABEL: atomicrmw_fmax_bfloat_aligned_release_to_store:
-; CHECK:    ldbfmaxnml h0, h0, [x0]
+; CHECK:    stbfmaxnml h0, [x0]
     %r = atomicrmw fmax ptr %ptr, bfloat %value release, align 2
     ret void
 }
@@ -976,7 +976,7 @@ define dso_local float @atomicrmw_fmax_float_aligned_monotonic(ptr %ptr, float %
 
 define dso_local void @atomicrmw_fmax_float_aligned_monotonic_to_store(ptr %ptr, float %value) {
 ; CHECK-LABEL: atomicrmw_fmax_float_aligned_monotonic_to_store:
-; CHECK:    ldfmaxnm s0, s0, [x0]
+; CHECK:    stfmaxnm s0, [x0]
     %r = atomicrmw fmax ptr %ptr, float %value monotonic, align 4
     ret void
 }
@@ -997,7 +997,7 @@ define dso_local float @atomicrmw_fmax_float_aligned_release(ptr %ptr, float %va
 
 define dso_local void @atomicrmw_fmax_float_aligned_release_to_store(ptr %ptr, float %value) {
 ; CHECK-LABEL: atomicrmw_fmax_float_aligned_release_to_store:
-; CHECK:    ldfmaxnml s0, s0, [x0]
+; CHECK:    stfmaxnml s0, [x0]
     %r = atomicrmw fmax ptr %ptr, float %value release, align 4
     ret void
 }
@@ -1025,7 +1025,7 @@ define dso_local double @atomicrmw_fmax_double_aligned_monotonic(ptr %ptr, doubl
 
 define dso_local void @atomicrmw_fmax_double_aligned_monotonic_to_store(ptr %ptr, double %value) {
 ; CHECK-LABEL: atomicrmw_fmax_double_aligned_monotonic_to_store:
-; CHECK:    ldfmaxnm d0, d0, [x0]
+; CHECK:    stfmaxnm d0, [x0]
     %r = atomicrmw fmax ptr %ptr, double %value monotonic, align 8
     ret void
 }
@@ -1046,7 +1046,7 @@ define dso_local double @atomicrmw_fmax_double_aligned_release(ptr %ptr, double 
 
 define dso_local void @atomicrmw_fmax_double_aligned_release_to_store(ptr %ptr, double %value) {
 ; CHECK-LABEL: atomicrmw_fmax_double_aligned_release_to_store:
-; CHECK:    ldfmaxnml d0, d0, [x0]
+; CHECK:    stfmaxnml d0, [x0]
     %r = atomicrmw fmax ptr %ptr, double %value release, align 8
     ret void
 }
@@ -1249,7 +1249,7 @@ define dso_local half @atomicrmw_fmin_half_aligned_monotonic(ptr %ptr, half %val
 
 define dso_local void @atomicrmw_fmin_half_aligned_monotonic_to_store(ptr %ptr, half %value) {
 ; CHECK-LABEL: atomicrmw_fmin_half_aligned_monotonic_to_store:
-; CHECK:    ldfminnm h0, h0, [x0]
+; CHECK:    stfminnm h0, [x0]
     %r = atomicrmw fmin ptr %ptr, half %value monotonic, align 2
     ret void
 }
@@ -1270,7 +1270,7 @@ define dso_local half @atomicrmw_fmin_half_aligned_release(ptr %ptr, half %value
 
 define dso_local void @atomicrmw_fmin_half_aligned_release_to_store(ptr %ptr, half %value) {
 ; CHECK-LABEL: atomicrmw_fmin_half_aligned_release_to_store:
-; CHECK:    ldfminnml h0, h0, [x0]
+; CHECK:    stfminnml h0, [x0]
     %r = atomicrmw fmin ptr %ptr, half %value release, align 2
     ret void
 }
@@ -1298,7 +1298,7 @@ define dso_local bfloat @atomicrmw_fmin_bfloat_aligned_monotonic(ptr %ptr, bfloa
 
 define dso_local void @atomicrmw_fmin_bfloat_aligned_monotonic_to_store(ptr %ptr, bfloat %value) {
 ; CHECK-LABEL: atomicrmw_fmin_bfloat_aligned_monotonic_to_store:
-; CHECK:    ldbfminnm h0, h0, [x0]
+; CHECK:    stbfminnm h0, [x0]
     %r = atomicrmw fmin ptr %ptr, bfloat %value monotonic, align 2
     ret void
 }
@@ -1319,7 +1319,7 @@ define dso_local bfloat @atomicrmw_fmin_bfloat_aligned_release(ptr %ptr, bfloat 
 
 define dso_local void @atomicrmw_fmin_bfloat_aligned_release_to_store(ptr %ptr, bfloat %value) {
 ; CHECK-LABEL: atomicrmw_fmin_bfloat_aligned_release_to_store:
-; CHECK:    ldbfminnml h0, h0, [x0]
+; CHECK:    stbfminnml h0, [x0]
     %r = atomicrmw fmin ptr %ptr, bfloat %value release, align 2
     ret void
 }
@@ -1347,7 +1347,7 @@ define dso_local float @atomicrmw_fmin_float_aligned_monotonic(ptr %ptr, float %
 
 define dso_local void @atomicrmw_fmin_float_aligned_monotonic_to_store(ptr %ptr, float %value) {
 ; CHECK-LABEL: atomicrmw_fmin_float_aligned_monotonic_to_store:
-; CHECK:    ldfminnm s0, s0, [x0]
+; CHECK:    stfminnm s0, [x0]
     %r = atomicrmw fmin ptr %ptr, float %value monotonic, align 4
     ret void
 }
@@ -1368,7 +1368,7 @@ define dso_local float @atomicrmw_fmin_float_aligned_release(ptr %ptr, float %va
 
 define dso_local void @atomicrmw_fmin_float_aligned_release_to_store(ptr %ptr, float %value) {
 ; CHECK-LABEL: atomicrmw_fmin_float_aligned_release_to_store:
-; CHECK:    ldfminnml s0, s0, [x0]
+; CHECK:    stfminnml s0, [x0]
     %r = atomicrmw fmin ptr %ptr, float %value release, align 4
     ret void
 }
@@ -1396,7 +1396,7 @@ define dso_local double @atomicrmw_fmin_double_aligned_monotonic(ptr %ptr, doubl
 
 define dso_local void @atomicrmw_fmin_double_aligned_monotonic_to_store(ptr %ptr, double %value) {
 ; CHECK-LABEL: atomicrmw_fmin_double_aligned_monotonic_to_store:
-; CHECK:    ldfminnm d0, d0, [x0]
+; CHECK:    stfminnm d0, [x0]
     %r = atomicrmw fmin ptr %ptr, double %value monotonic, align 8
     ret void
 }
@@ -1417,7 +1417,7 @@ define dso_local double @atomicrmw_fmin_double_aligned_release(ptr %ptr, double 
 
 define dso_local void @atomicrmw_fmin_double_aligned_release_to_store(ptr %ptr, double %value) {
 ; CHECK-LABEL: atomicrmw_fmin_double_aligned_release_to_store:
-; CHECK:    ldfminnml d0, d0, [x0]
+; CHECK:    stfminnml d0, [x0]
     %r = atomicrmw fmin ptr %ptr, double %value release, align 8
     ret void
 }
