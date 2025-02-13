@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Telemetry/Telemetry.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -62,7 +63,7 @@ TEST(TelemetryTest, PluginTest) {
   lldb_private::FakeTelemetryInfo entry;
   entry.msg = "";
 
-  ASSERT_THAT_ERROR(ins->dispatch(&entry), llvm::Succeeded());
+  ASSERT_THAT_ERROR(ins->dispatch(&entry), ::llvm::Succeeded());
   ASSERT_EQ("In FakePlugin", entry.msg);
 
   ASSERT_EQ("FakeTelemetryPlugin", ins->GetPluginName());
