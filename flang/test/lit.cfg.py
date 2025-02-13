@@ -170,7 +170,7 @@ if config.flang_include_runtime:
 # the C++ runtime libraries. For this we need a C compiler. If for some reason
 # we don't have one, we can just disable the test.
 if config.flang_include_runtime and config.cc:
-    libruntime = os.path.join(config.flang_lib_dir, "libFortranRuntime.a")
+    libruntime = os.path.join(config.flang_lib_dir, "libflang_rt.runtime.a")
     include = os.path.join(config.flang_src_dir, "include")
 
     if (

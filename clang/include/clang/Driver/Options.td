@@ -1795,6 +1795,11 @@ def fprofile_update_EQ : Joined<["-"], "fprofile-update=">,
     Values<"atomic,prefer-atomic,single">,
     MetaVarName<"<method>">, HelpText<"Set update method of profile counters">,
     MarshallingInfoFlag<CodeGenOpts<"AtomicProfileUpdate">>;
+def fprofile_continuous : Flag<["-"], "fprofile-continuous">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Enable continuous instrumentation profiling mode">,
+    MarshallingInfoFlag<CodeGenOpts<"ContinuousProfileSync">>;
+
 defm pseudo_probe_for_profiling : BoolFOption<"pseudo-probe-for-profiling",
   CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Emit">,
@@ -3392,7 +3397,7 @@ def fno_objc_weak : Flag<["-"], "fno-objc-weak">, Group<f_Group>,
 def fno_omit_frame_pointer : Flag<["-"], "fno-omit-frame-pointer">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>;
 defm operator_names : BoolFOption<"operator-names",
-  LangOpts<"CXXOperatorNames">, Default<cplusplus.KeyPath>,
+  LangOpts<"CXXOperatorNames">, Default<!strconcat(cplusplus.KeyPath, " && !",hlsl.KeyPath)>,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Do not treat C++ operator name keywords as synonyms for operators">,
   PosFlag<SetTrue>>;
@@ -3416,8 +3421,6 @@ def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,
 def fstruct_path_tbaa : Flag<["-"], "fstruct-path-tbaa">, Group<f_Group>;
 def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
-def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>,
-  Visibility<[ClangOption, FlangOption]>;
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [FlangOption, FC1Option],
           "Zero initialize globals without default initialization (default)">,
@@ -3929,7 +3932,9 @@ defm strict_vtable_pointers : BoolFOption<"strict-vtable-pointers",
             " overwriting polymorphic C++ objects">,
   NegFlag<SetFalse>>;
 def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>,
-  Visibility<[ClangOption, FlangOption]>;
+  Visibility<[ClangOption, CLOption, FlangOption]>;
+def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, FlangOption]>;
 def fpointer_tbaa : Flag<["-"], "fpointer-tbaa">, Group<f_Group>;
 def fdriver_only : Flag<["-"], "fdriver-only">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
@@ -5613,10 +5618,18 @@ def nogpuinc : Flag<["-"], "nogpuinc">, Group<IncludePath_Group>,
 def nohipwrapperinc : Flag<["-"], "nohipwrapperinc">, Group<IncludePath_Group>,
   HelpText<"Do not include the default HIP wrapper headers and include paths">;
 def : Flag<["-"], "nocudainc">, Alias<nogpuinc>;
-def nogpulib : Flag<["-"], "nogpulib">, MarshallingInfoFlag<LangOpts<"NoGPULib">>,
-  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  HelpText<"Do not link device library for CUDA/HIP device compilation">;
-def : Flag<["-"], "nocudalib">, Alias<nogpulib>;
+def no_offloadlib
+    : Flag<["--"], "no-offloadlib">,
+      MarshallingInfoFlag<LangOpts<"NoGPULib">>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+      HelpText<"Do not link device library for CUDA/HIP device compilation">;
+def offloadlib : Flag<["--"], "offloadlib">,
+                 Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+                 HelpText<"Link device libraries for GPU device compilation">;
+def : Flag<["-"], "nogpulib">,
+      Alias<no_offloadlib>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def : Flag<["-"], "nocudalib">, Alias<no_offloadlib>;
 def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Link the LLVM C Library for GPUs">;
 def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;

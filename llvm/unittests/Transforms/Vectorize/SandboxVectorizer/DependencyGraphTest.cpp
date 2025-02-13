@@ -1013,3 +1013,42 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %arg) {
   EXPECT_EQ(S2N->getNextNode(), S1N);
   EXPECT_EQ(S1N->getNextNode(), nullptr);
 }
+
+// Extending an "Old" interval with no mem instructions.
+TEST_F(DependencyGraphTest, ExtendDAGWithNoMem) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v, i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
+  store i8 %v0, ptr %ptr
+  store i8 %v1, ptr %ptr
+  %zext1 = zext i8 %v to i32
+  %zext2 = zext i8 %v to i32
+  store i8 %v2, ptr %ptr
+  store i8 %v3, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Z1 = cast<sandboxir::CastInst>(&*It++);
+  auto *Z2 = cast<sandboxir::CastInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  // Create a non-empty DAG that contains no memory instructions.
+  DAG.extend({Z1, Z2});
+  // Now extend it downwards.
+  DAG.extend({S2, S3});
+  EXPECT_TRUE(memDependency(DAG.getNode(S2), DAG.getNode(S3)));
+
+  // Same but upwards.
+  DAG.clear();
+  DAG.extend({Z1, Z2});
+  DAG.extend({S0, S1});
+  EXPECT_TRUE(memDependency(DAG.getNode(S0), DAG.getNode(S1)));
+}

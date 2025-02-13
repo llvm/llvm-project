@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -5041,6 +5042,21 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
       return false;
     cast<Function>(GV)->addAttributeAtIndex(
         Idx, Attribute::getWithStackAlignment(GV->getContext(), StackAlign));
+    return true;
+  }
+  if (K == "maxclusterrank" || K == "cluster_max_blocks") {
+    const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
+    cast<Function>(GV)->addFnAttr("nvvm.maxclusterrank", llvm::utostr(CV));
+    return true;
+  }
+  if (K == "minctasm") {
+    const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
+    cast<Function>(GV)->addFnAttr("nvvm.minctasm", llvm::utostr(CV));
+    return true;
+  }
+  if (K == "maxnreg") {
+    const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
+    cast<Function>(GV)->addFnAttr("nvvm.maxnreg", llvm::utostr(CV));
     return true;
   }
 

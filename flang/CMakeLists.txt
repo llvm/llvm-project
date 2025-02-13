@@ -79,6 +79,8 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "flang isn't supported on 32 bit CPUs")
 endif()
 
+set(MLIR_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../mlir" CACHE PATH "Path to MLIR source tree")
+
 if (FLANG_STANDALONE_BUILD)
   set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -240,10 +242,9 @@ else()
     set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   endif()
 
-  set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir ) # --src-root
-  set(MLIR_INCLUDE_DIR ${MLIR_MAIN_SRC_DIR}/include ) # --includedir
+  set(MLIR_INCLUDE_DIRS ${MLIR_MAIN_SRC_DIR}/include ) # --includedir
   set(MLIR_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/mlir/include)
-  include_directories(SYSTEM ${MLIR_INCLUDE_DIR})
+  include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
   include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
 endif()
 
@@ -301,7 +302,7 @@ set(FLANG_DEFAULT_LINKER "" CACHE STRING
   "Default linker to use (linker name or absolute path, empty for platform default)")
 
 set(FLANG_DEFAULT_RTLIB "" CACHE STRING
-   "Default Fortran runtime library to use (\"libFortranRuntime\"), leave empty for platform default.")
+   "Default Fortran runtime library to use (\"libflang_rt.runtime\"), leave empty for platform default.")
 
 if (NOT(FLANG_DEFAULT_RTLIB STREQUAL ""))
   message(WARNING "Resetting Flang's default runtime library to use platform default.")
