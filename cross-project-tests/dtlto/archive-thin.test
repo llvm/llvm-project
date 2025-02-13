@@ -2,11 +2,11 @@
 ## correctly when thin archives are present.
 
 # RUN: rm -rf %t.dir && split-file %s %t.dir && cd %t.dir
-# RUN: %clang -target x86_64-linux-gnu -c foo.c -o foo.o
-# RUN: %clang -target x86_64-linux-gnu -c -flto=thin bar.c -o bar.o
-# RUN: %clang -target x86_64-linux-gnu -c -flto=thin dog.c -o dog.o
-# RUN: %clang -target x86_64-linux-gnu -c -flto=thin cat.c -o cat.o
-# RUN: %clang -target x86_64-linux-gnu -c -flto=thin _start.c -o _start.o
+# RUN: %clang --target=x86_64-linux-gnu -c foo.c -o foo.o
+# RUN: %clang --target=x86_64-linux-gnu -c -flto=thin bar.c -o bar.o
+# RUN: %clang --target=x86_64-linux-gnu -c -flto=thin dog.c -o dog.o
+# RUN: %clang --target=x86_64-linux-gnu -c -flto=thin cat.c -o cat.o
+# RUN: %clang --target=x86_64-linux-gnu -c -flto=thin _start.c -o _start.o
 
 # RUN: llvm-ar rcs foo.a foo.o --thin
 ## Create this bitcode thin archive in a sub-directory to test the expansion of
@@ -22,7 +22,7 @@
 
 # RUN: mkdir %t.dir/out && cd %t.dir/out
 
-# RUN: %clang -target x86_64-linux-gnu \
+# RUN: %clang --target=x86_64-linux-gnu \
 # RUN:   %t.dir/foo.a %t.dir/lib/bar.a ../_start.a %t.dir/cat.a -Wl,--whole-archive,../dog.a \
 # RUN:   -flto=thin \
 # RUN:   -fthinlto-distributor=%python \

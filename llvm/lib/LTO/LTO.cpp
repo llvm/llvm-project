@@ -2388,8 +2388,7 @@ public:
 
           // Reference to Job::SummaryIndexPath.
           JOS.value(Array{"summary_index", "-fthinlto-index=", 0});
-          JOS.value("-target");
-          JOS.value(Jobs.front().Triple);
+          JOS.value(Saver.save("--target=" + Twine(Jobs.front().Triple)));
         });
       });
       JOS.attributeArray("jobs", [&]() {
@@ -2426,6 +2425,12 @@ public:
   }
 
   Error wait() override {
+    // Wait for the information on the required backend compilations to be
+    // gathered.
+    BackendThreadPool.wait();
+    if (Err)
+      return std::move(*Err);
+
     auto CleanPerJobFiles = llvm::make_scope_exit([&] {
       if (!SaveTemps)
         for (auto &Job : Jobs) {
@@ -2447,12 +2452,6 @@ public:
                                      inconvertibleErrorCode());
 
     buildCommonRemoteOptToolOptions();
-
-    // Wait for the information on the required backend compilations to be
-    // gathered.
-    BackendThreadPool.wait();
-    if (Err)
-      return std::move(*Err);
 
     SString JsonFile = sys::path::parent_path(LinkerOutputFile);
     sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." + UID +

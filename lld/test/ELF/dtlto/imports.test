@@ -2,7 +2,7 @@
 
 ## Check that DTLTO handles imports files correctly.
 
-# RUN: rm -rf %t.dir && split-file %s %t.dir && cd %t.dir
+# RUN: rm -rf %t && split-file %s %t && cd %t
 
 ## Compile bitcode.
 # RUN: opt -module-summary 0.ll -o 0.o -O2

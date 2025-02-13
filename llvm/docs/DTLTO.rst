@@ -147,7 +147,7 @@ Below is an example of a JSON job file for backend compilation of the module
                 "-o", ["primary_output", 0],
                 "-c", "-x", "ir", ["primary_input", 0],
                 ["summary_index", "-fthinlto-index=", 0],
-                "-target", "x86_64-sie-ps5"
+                "--target=x86_64-sie-ps5"
             ]
         },
         "jobs": [
@@ -194,7 +194,7 @@ The example above generates the following backend compilation command for
 
     /usr/local/clang -O3 -fprofile-sample-use=my.profdata \
         -o dtlto.1.51232.native.o -c -x ir dtlto.o \
-        -fthinlto-index=dtlto.1.51232.native.o.thinlto.bc -target x86_64-sie-ps5
+        -fthinlto-index=dtlto.1.51232.native.o.thinlto.bc --target=x86_64-sie-ps5
 
 This expansion scheme allows the remote optimization tool to be changed without
 updating the distributors. For example, if the "args" field in the above example

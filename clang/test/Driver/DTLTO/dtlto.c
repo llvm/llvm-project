@@ -2,7 +2,7 @@
 
 // REQUIRES: lld
 
-// RUN: echo "-target x86_64-linux-gnu \
+// RUN: echo "--target=x86_64-linux-gnu \
 // RUN:   -Xdist distarg1 \
 // RUN:   -Xdist distarg2 \
 // RUN:   -fuse-ld=lld" > %t.rsp
@@ -36,8 +36,9 @@
 
 /// Check the expected arguments are forwarded by default with only
 /// --thinlto-distributor=.
-// RUN: %clang -### -target x86_64-linux-gnu -fthinlto-distributor=dist.exe -fuse-ld=lld %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefixes=DEFAULT,NOMORE --implicit-check-not=warning
+// RUN: %clang --target=x86_64-linux-gnu -fthinlto-distributor=dist.exe \
+// RUN:   -fuse-ld=lld -Werror -### %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefixes=DEFAULT,NOMORE
 
 // DEFAULT: ld.lld
 // DEFAULT-SAME: "--thinlto-distributor=dist.exe"
