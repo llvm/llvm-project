@@ -1645,11 +1645,22 @@ SourceLocation CallExpr::getBeginLoc() const {
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
     return OCE->getBeginLoc();
 
-  if (const auto *Method =
-          dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
-      Method && Method->isExplicitObjectMemberFunction()) {
-    assert(getNumArgs() > 0 && getArg(0));
-    return getArg(0)->getBeginLoc();
+  // A non-dependent call to a member function with an explicit object parameter
+  // is modelled with the object expression being the first argument, e.g. in
+  // `o.f(x)`, the callee will be just `f`, and `o` will be the first argument.
+  // Since the first argument is written before the callee, the expression's
+  // begin location should come from the first argument.
+  // This does not apply to dependent calls, which are modelled with `o.f`
+  // being the callee.
+  if (!isTypeDependent()) {
+    if (const auto *Method =
+            dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
+        Method && Method->isExplicitObjectMemberFunction()) {
+      bool HasFirstArg = getNumArgs() > 0 && getArg(0);
+      assert(HasFirstArg);
+      if (HasFirstArg)
+        return getArg(0)->getBeginLoc();
+    }
   }
 
   SourceLocation begin = getCallee()->getBeginLoc();
