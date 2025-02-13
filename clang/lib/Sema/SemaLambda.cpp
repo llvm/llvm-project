@@ -27,6 +27,8 @@
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/AST/Type.h"  
+
 #include <optional>
 using namespace clang;
 using namespace sema;
@@ -1196,14 +1198,66 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       // for e.g., [n{0}] { }; <-- if no <initializer_list> is included.
       // FIXME: we should create the init capture variable and mark it invalid
       // in this case.
-      if (C->InitCaptureType.get().isNull() ) {
-        Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type); // 
-        continue; // 
+// Ensure the initialization is valid before proceeding
+
+
+if (!C->InitCaptureType || C->InitCaptureType.get().isNull()) {
+  if (!C->Init.isUsable()) {
+      Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);
+      continue;
+  }
+
+  if (!C->Init.get()) {
+      continue;
+  }
+
+  ASTContext &Ctx = this->Context;
+  QualType DeducedType = C->Init.get()->getType();
+
+  if (DeducedType.isNull()) {
+      continue;
+  }
+
+  if (DeducedType->isVoidType()) {
+      if (!DeducedType->isDependentType()) {
+          C->InitCaptureType = ParsedType::make(Ctx.DependentTy);
+      } else {
+          Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);
+      }
+      continue;
+  }
+
+  if (isa<InitListExpr>(C->Init.get())) {
+      IdentifierInfo *DummyID = &Ctx.Idents.get("lambda_tmp_var");
+      QualType DummyType = Ctx.UnknownAnyTy;
+
+      auto *TempVarDecl = VarDecl::Create(
+          Ctx, nullptr, C->Loc, C->Loc,
+          DummyID, DummyType, nullptr, SC_None
+      );
+
+      if (!TempVarDecl) {
+          continue;
       }
 
-      if (C->Init.get()->containsUnexpandedParameterPack() &&
-          !C->InitCaptureType.get()->getAs<PackExpansionType>())
-        DiagnoseUnexpandedParameterPack(C->Init.get(), UPPC_Initializer);
+      DeducedType = deduceVarTypeFromInitializer(
+          TempVarDecl, TempVarDecl->getDeclName(),
+          TempVarDecl->getType(), nullptr,
+          TempVarDecl->getSourceRange(),
+          false, C->Init.get()
+      );
+
+      if (DeducedType.isNull()) {
+          Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);
+          C->InitCaptureType = ParsedType::make(Ctx.DependentTy);
+          continue;
+      }
+  }
+
+  if (!DeducedType.isNull()) {
+      C->InitCaptureType = ParsedType::make(DeducedType);
+  }
+}
 
       unsigned InitStyle;
       switch (C->InitKind) {
