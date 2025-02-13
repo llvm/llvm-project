@@ -197,6 +197,10 @@ private:
 
   BoltAddressTranslation *BAT{nullptr};
 
+  /// Whether pre-aggregated profile needs to convert branch profile into call
+  /// to continuation fallthrough profile.
+  bool NeedsConvertRetProfileToCallCont{false};
+
   /// Update function execution profile with a recorded trace.
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
@@ -268,8 +272,7 @@ private:
                      uint64_t Mispreds);
 
   /// Register a \p Branch.
-  bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds,
-                bool IsPreagg);
+  bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
 
   /// Register a trace between two LBR entries supplied in execution order.
   bool doTrace(const LBREntry &First, const LBREntry &Second,
@@ -298,7 +301,7 @@ private:
   ErrorOr<PerfMemSample> parseMemSample();
 
   /// Parse pre-aggregated LBR samples created by an external tool
-  ErrorOr<AggregatedLBREntry> parseAggregatedLBREntry();
+  std::error_code parseAggregatedLBREntry();
 
   /// Parse either buildid:offset or just offset, representing a location in the
   /// binary. Used exclusively for pre-aggregated LBR samples.

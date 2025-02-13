@@ -711,7 +711,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 }
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
-                              uint64_t Mispreds, bool IsPreagg) {
+                              uint64_t Mispreds) {
   // Returns whether \p Offset in \p Func contains a return instruction.
   auto checkReturn = [&](const BinaryFunction &Func, const uint64_t Offset) {
     auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
@@ -772,7 +772,8 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
     return false;
 
   // Record call to continuation trace.
-  if (IsPreagg && FromFunc != ToFunc && (IsReturn || IsCallCont)) {
+  if (NeedsConvertRetProfileToCallCont && FromFunc != ToFunc &&
+      (IsReturn || IsCallCont)) {
     LBREntry First{ToOrig - 1, ToOrig - 1, false};
     LBREntry Second{ToOrig, ToOrig, false};
     return doTrace(First, Second, Count);
@@ -1216,20 +1217,24 @@ ErrorOr<Location> DataAggregator::parseLocationOrOffset() {
   return Location(true, BuildID.get(), Offset.get());
 }
 
-ErrorOr<DataAggregator::AggregatedLBREntry>
-DataAggregator::parseAggregatedLBREntry() {
+std::error_code DataAggregator::parseAggregatedLBREntry() {
   while (checkAndConsumeFS()) {
   }
 
   ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
   if (std::error_code EC = TypeOrErr.getError())
     return EC;
+  // Pre-aggregated profile with branches and fallthroughs needs to convert
+  // return profile into call to continuation fall-through.
   auto Type = AggregatedLBREntry::BRANCH;
   if (TypeOrErr.get() == "B") {
+    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::BRANCH;
   } else if (TypeOrErr.get() == "F") {
+    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::FT;
   } else if (TypeOrErr.get() == "f") {
+    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::FT_EXTERNAL_ORIGIN;
   } else {
     reportError("expected B, F or f");
@@ -1250,10 +1255,11 @@ DataAggregator::parseAggregatedLBREntry() {
 
   while (checkAndConsumeFS()) {
   }
-  ErrorOr<int64_t> Frequency =
+  ErrorOr<int64_t> FrequencyOrErr =
       parseNumberField(FieldSeparator, Type != AggregatedLBREntry::BRANCH);
-  if (std::error_code EC = Frequency.getError())
+  if (std::error_code EC = FrequencyOrErr.getError())
     return EC;
+  uint64_t Frequency = static_cast<uint64_t>(FrequencyOrErr.get());
 
   uint64_t Mispreds = 0;
   if (Type == AggregatedLBREntry::BRANCH) {
@@ -1270,9 +1276,16 @@ DataAggregator::parseAggregatedLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  return AggregatedLBREntry{From.get(), To.get(),
-                            static_cast<uint64_t>(Frequency.get()), Mispreds,
-                            Type};
+  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From->Offset);
+  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To->Offset);
+
+  for (BinaryFunction *BF : {FromFunc, ToFunc})
+    if (BF)
+      BF->setHasProfileAvailable();
+
+  AggregatedLBRs.emplace_back(From.get(), To.get(), Frequency, Mispreds, Type);
+
+  return std::error_code();
 }
 
 bool DataAggregator::ignoreKernelInterrupt(LBREntry &LBR) const {
@@ -1585,8 +1598,7 @@ void DataAggregator::processBranchEvents() {
   for (const auto &AggrLBR : BranchLBRs) {
     const Trace &Loc = AggrLBR.first;
     const TakenBranchInfo &Info = AggrLBR.second;
-    doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount,
-             /*IsPreagg*/ false);
+    doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount);
   }
 }
 
@@ -1722,17 +1734,9 @@ std::error_code DataAggregator::parsePreAggregatedLBRSamples() {
   outs() << "PERF2BOLT: parsing pre-aggregated profile...\n";
   NamedRegionTimer T("parseAggregated", "Parsing aggregated branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
-  while (hasData()) {
-    ErrorOr<AggregatedLBREntry> AggrEntry = parseAggregatedLBREntry();
-    if (std::error_code EC = AggrEntry.getError())
+  while (hasData())
+    if (std::error_code EC = parseAggregatedLBREntry())
       return EC;
-
-    for (const uint64_t Addr : {AggrEntry->From.Offset, AggrEntry->To.Offset})
-      if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Addr))
-        BF->setHasProfileAvailable();
-
-    AggregatedLBRs.emplace_back(std::move(AggrEntry.get()));
-  }
 
   return std::error_code();
 }
@@ -1747,7 +1751,7 @@ void DataAggregator::processPreAggregated() {
     switch (AggrEntry.EntryType) {
     case AggregatedLBREntry::BRANCH:
       doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
-               AggrEntry.Mispreds, /*IsPreagg*/ true);
+               AggrEntry.Mispreds);
       break;
     case AggregatedLBREntry::FT:
     case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {
