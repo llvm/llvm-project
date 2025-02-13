@@ -488,7 +488,7 @@ class FLAT_SWC<string opName, bit HasVdst, bit HasAddr> : FLAT_Pseudo<
   !if(HasVdst, (outs VGPR_32:$vdst), (outs)),
   !con(!if(HasAddr, !if(HasVdst, (ins VReg_64:$vaddr), (ins VGPR_32:$vaddr)), (ins)), (ins CPol:$cpol)),
   !if(HasVdst, " $vdst", "")#!if(HasAddr, ", $vaddr", "")#"$cpol">{
-
+  let VM_CNT = 0;
   let hasSideEffects = 1;
   let is_flat_global = 1;
   let has_offset = 0;

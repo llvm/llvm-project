@@ -135,6 +135,11 @@ unsigned getXcntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
   return VersionMajor == 12 && VersionMinor == 1 ? 5 : 0;
 }
 
+/// \returns Swccnt bit width.
+unsigned getSwccntBitWidth(unsigned VersionMajor) {
+  return VersionMajor >= 13 ? 2 : 0;
+}
+
 /// \returns shift for Loadcnt/Storecnt in combined S_WAIT instructions.
 unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 8 : 0;
@@ -1709,6 +1714,10 @@ unsigned getKmcntBitMask(const IsaVersion &Version) {
 
 unsigned getXcntBitMask(const IsaVersion &Version) {
   return (1 << getXcntBitWidth(Version.Major, Version.Minor)) - 1;
+}
+
+unsigned getSwccntBitMask(const IsaVersion &Version) {
+  return (1 << getSwccntBitWidth(Version.Major)) - 1;
 }
 
 unsigned getStorecntBitMask(const IsaVersion &Version) {
