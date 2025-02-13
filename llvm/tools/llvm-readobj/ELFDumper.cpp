@@ -4112,7 +4112,7 @@ static void printSectionDescription(formatted_raw_ostream &OS,
 
   if (EMachine == EM_X86_64)
     OS << ", l (large)";
-  else if (EMachine == EM_ARM)
+  else if (EMachine == EM_ARM || EMachine == EM_AARCH64)
     OS << ", y (purecode)";
 
   OS << ", p (processor specific)\n";
