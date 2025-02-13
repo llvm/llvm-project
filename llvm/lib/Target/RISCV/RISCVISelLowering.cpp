@@ -5356,8 +5356,7 @@ static bool isLocalRepeatingShuffle(ArrayRef<int> Mask, int Span) {
 
 /// Is this mask only using elements from the first span of the input?
 static bool isLowSourceShuffle(ArrayRef<int> Mask, int Span) {
-  return all_of(Mask,
-                [&](const auto &Idx) { return Idx == -1 || Idx < Span; });
+  return all_of(Mask, [&](const auto &Idx) { return Idx == -1 || Idx < Span; });
 }
 
 /// Return true for a mask which performs an arbitrary shuffle within the first
@@ -5807,15 +5806,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       int N = ContainerVT.getVectorMinNumElements() /
               M1VT.getVectorMinNumElements();
       assert(isPowerOf2_32(N) && N <= 8);
-      SDValue SubV1 =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1,
-                      DAG.getVectorIdxConstant(0, DL));
+      SDValue SubV1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1,
+                                  DAG.getVectorIdxConstant(0, DL));
       SDValue SubIndex =
-        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubIndexVT, LHSIndices,
-                    DAG.getVectorIdxConstant(0, DL));
-      SDValue SubVec =
-        DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
-                    DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubIndexVT, LHSIndices,
+                      DAG.getVectorIdxConstant(0, DL));
+      SDValue SubVec = DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
+                                   DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
       Gather = DAG.getUNDEF(ContainerVT);
       for (int i = 0; i < N; i++) {
         SDValue SubIdx =
