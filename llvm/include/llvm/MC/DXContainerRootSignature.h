@@ -15,10 +15,7 @@ namespace llvm {
 class raw_ostream;
 
 namespace mcdxbc {
-
-
-
-struct RootSignatureHeader {
+struct RootSignatureDesc {
   uint32_t Version = 2;
   uint32_t NumParameters = 0;
   uint32_t RootParametersOffset = 0;
@@ -26,7 +23,7 @@ struct RootSignatureHeader {
   uint32_t StaticSamplersOffset = 0;
   uint32_t Flags = 0;
 
-  void write(raw_ostream &OS);
+  void write(raw_ostream &OS) const;
 };
 
 struct RootConstants {

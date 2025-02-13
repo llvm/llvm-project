@@ -24,11 +24,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
-#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -156,25 +156,23 @@ void DXContainerGlobals::addRootSignature(Module &M,
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  // Root Signature in Library shaders are different,
-  // since they don't use DXContainer to share it.
+  // Root Signature in Library don't compile to DXContainer.
   if (MMI.ShaderProfile == llvm::Triple::Library)
     return;
 
   assert(MMI.EntryPropertyVec.size() == 1);
 
   auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
-  const Function *&EntryFunction = MMI.EntryPropertyVec[0].Entry;
+  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
+  const std::optional<RootSignatureDesc> &MaybeRS =
+      RSA.getForFunction(EntryFunction);
 
-  if (!RSA.hasForFunction(EntryFunction))
+  if (!MaybeRS.has_value())
     return;
 
-  const ModuleRootSignature &MRS = RSA.getForFunction(EntryFunction);
+  const RootSignatureDesc &RSH = MaybeRS.value();
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
-
-  RootSignatureHeader RSH;
-  RSH.Flags = MRS.Flags;
 
   RSH.write(OS);
 
