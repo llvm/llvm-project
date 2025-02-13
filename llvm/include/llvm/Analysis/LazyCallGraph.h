@@ -1091,7 +1091,7 @@ public:
   /// functions. Spurious/missing ref edges are allowed. The new functions
   /// are considered to be a RefSCC. If any new function references the
   /// original function they are all considered to be part of the original
-  /// functions RefSCC.
+  /// function's RefSCC.
   void addSplitRefRecursiveFunctions(Function &OriginalFunction,
                                      ArrayRef<Function *> NewFunctions);
 
