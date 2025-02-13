@@ -122,6 +122,8 @@ MemDGNodeIntervalBuilder::getBotMemDGNode(const Interval<Instruction> &Intvl,
 Interval<MemDGNode>
 MemDGNodeIntervalBuilder::make(const Interval<Instruction> &Instrs,
                                DependencyGraph &DAG) {
+  if (Instrs.empty())
+    return {};
   auto *TopMemN = getTopMemDGNode(Instrs, DAG);
   // If we couldn't find a mem node in range TopN - BotN then it's empty.
   if (TopMemN == nullptr)
@@ -529,8 +531,8 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
       }
     }
   };
-  if (DAGInterval.empty()) {
-    assert(NewInterval == InstrsInterval && "Expected empty DAGInterval!");
+  auto MemDAGInterval = MemDGNodeIntervalBuilder::make(DAGInterval, *this);
+  if (MemDAGInterval.empty()) {
     FullScan(NewInterval);
   }
   // 2. The new section is below the old section.
@@ -550,8 +552,7 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
   // range including both NewInterval and DAGInterval until DstN, for each DstN.
   else if (DAGInterval.bottom()->comesBefore(NewInterval.top())) {
     auto DstRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
-    auto SrcRangeFull = MemDGNodeIntervalBuilder::make(
-        DAGInterval.getUnionInterval(NewInterval), *this);
+    auto SrcRangeFull = MemDAGInterval.getUnionInterval(DstRange);
     for (MemDGNode &DstN : DstRange) {
       auto SrcRange =
           Interval<MemDGNode>(SrcRangeFull.top(), DstN.getPrevNode());
@@ -589,7 +590,7 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
     // When scanning for deps with destination in DAGInterval we need to
     // consider sources from the NewInterval only, because all intra-DAGInterval
     // dependencies have already been created.
-    auto DstRangeOld = MemDGNodeIntervalBuilder::make(DAGInterval, *this);
+    auto DstRangeOld = MemDAGInterval;
     auto SrcRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
     for (MemDGNode &DstN : DstRangeOld)
       scanAndAddDeps(DstN, SrcRange);
