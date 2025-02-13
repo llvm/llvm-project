@@ -148,7 +148,7 @@ static void trap() {
   asm volatile("udf #254");
 #elif defined(__powerpc__)
   asm volatile("trap");
-#elif __has_builtin(__builtin_debugtrap())
+#elif __has_builtin(__builtin_debugtrap)
   __builtin_debugtrap();
 #else
 #warning Don't know how to generate a trap. Some tests may fail.
