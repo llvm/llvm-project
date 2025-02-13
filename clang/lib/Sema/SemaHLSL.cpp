@@ -3219,9 +3219,18 @@ bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
   BuildFlattenedTypeList(InitTy, DestTypes);
 
   llvm::SmallVector<Expr *, 16> ArgExprs;
-  for (Expr *Arg : Init->inits())
-    if (!BuildInitializerList(SemaRef, Ctx, Arg, ArgExprs, DestTypes))
+  for (unsigned I = 0; I < Init->getNumInits(); ++I) {
+    Expr *E = Init->getInit(I);
+    if (E->HasSideEffects(Ctx)) {
+      QualType Ty = E->getType();
+      if (auto *RTy = Ty->getAs<RecordType>())
+        E = new (Ctx) MaterializeTemporaryExpr(Ty, E, E->isLValue());
+      E = new (Ctx) OpaqueValueExpr(E->getBeginLoc(), Ty, E->getValueKind());
+      Init->setInit(I, E);
+    }
+    if (!BuildInitializerList(SemaRef, Ctx, E, ArgExprs, DestTypes))
       return false;
+  }
 
   if (DestTypes.size() != ArgExprs.size()) {
     int TooManyOrFew = ArgExprs.size() > DestTypes.size() ? 1 : 0;
