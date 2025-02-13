@@ -630,15 +630,15 @@ entry:
   br label %for.body
 
 for.body:
-  %indvars = phi i64 [ 0, %entry ], [ %indvars.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %for1 = phi i32 [ 33, %entry ], [ %0, %for.body ]
-  %arrayidx = getelementptr inbounds nuw i32, ptr %A, i64 %indvars
+  %arrayidx = getelementptr inbounds nuw i32, ptr %A, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %for1, %0
-  %arrayidx2 = getelementptr inbounds nuw i32, ptr %B, i64 %indvars
+  %arrayidx2 = getelementptr inbounds nuw i32, ptr %B, i64 %iv
   store i32 %add, ptr %arrayidx2, align 4
-  %indvars.next = add nuw nsw i64 %indvars, 1
-  %exitcond.not = icmp eq i64 %indvars.next, %TC
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %TC
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
 for.end:
