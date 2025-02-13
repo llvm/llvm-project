@@ -339,14 +339,14 @@ static Value createPrivateMemRef(AffineForOp forOp,
   auto eltSize = getMemRefIntOrFloatEltSizeInBytes(oldMemRefType);
   assert(eltSize && "memrefs with size elt types expected");
   uint64_t bufSize = *eltSize * *numElements;
-  unsigned newMemSpace;
+  Attribute newMemSpace;
   if (bufSize <= localBufSizeThreshold && fastMemorySpace.has_value()) {
-    newMemSpace = *fastMemorySpace;
+    newMemSpace = b.getI64IntegerAttr(*fastMemorySpace);
   } else {
-    newMemSpace = oldMemRefType.getMemorySpaceAsInt();
+    newMemSpace = oldMemRefType.getMemorySpace();
   }
   auto newMemRefType = MemRefType::get(newShape, oldMemRefType.getElementType(),
-                                       {}, newMemSpace);
+                                       /*map=*/AffineMap(), newMemSpace);
 
   // Create new private memref for fused loop 'forOp'. 'newShape' is always
   // a constant shape.
