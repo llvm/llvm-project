@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" %s -verify-diagnostics -o - | FileCheck %s
+// RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" %s -o -| FileCheck %s
 
 // CHECK-LABEL: @unary_resize_nearest_fp32
 func.func @unary_resize_nearest_fp32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
@@ -60,11 +60,19 @@ func.func @unary_resize_nearest_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x1x1x7
 
 // -----
 
+// CHECK-LABEL: @broadcast_resize_nearest_f32
 func.func @broadcast_resize_nearest_f32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x5x7xf32> {
+  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
+  // CHECK-NEXT{literal}: [[0], [1, 2, 3]] : tensor<3x1x1x7xf32> into tensor<3x7xf32>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x1x5x7xf32>
+  // CHECK: %[[GENERIC:.+]] = linalg.generic
+  // CHECK-SAME: indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xf32>) outs(%[[EMPTY]] : tensor<3x1x5x7xf32>)
+  // CHECK: ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
+  // CHECK:   linalg.yield %[[IN]] : f32
   %scale = tosa.const_shape { value = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
   %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  // expected-error @+1 {{'tosa.resize' op calculated output width did not match expected: calculated=1, expected=5}}
   %resize = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<3x1x1x7xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x1x5x7xf32>
 
   return %resize : tensor<3x1x5x7xf32>
@@ -72,11 +80,36 @@ func.func @broadcast_resize_nearest_f32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3
 
 // -----
 
+// CHECK-LABEL: @broadcast_resize_bilinear_i8
 func.func @broadcast_resize_bilinear_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x4x5x7xi32> {
+  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
+  // CHECK-SAME{literal}: [[0], [1, 2, 3]] : tensor<3x1x1x7xi8> into tensor<3x7xi8>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x7xi32>
+  // CHECK: %[[RESIZE:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel"]}
+  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi8>) outs(%[[EMPTY]] : tensor<3x7xi32>)
+  // CHECK: ^bb0(%[[IN:.+]]: i8, %[[OUT:.+]]: i32):
+  // CHECK:   %[[EXT:.+]] = arith.extsi %[[IN]] : i8 to i32
+  // CHECK-DAG:   %[[C2:.+]] = arith.constant 2 : i32
+  // CHECK:   %[[MUL:.+]] = arith.muli %[[EXT]], %[[C2]] : i32
+  // CHECK-DAG:   %[[C3:.+]] = arith.constant 3 : i32
+  // CHECK:   %[[OUT:.+]] = arith.muli %[[MUL]], %[[C3]] : i32
+  // CHECK:   linalg.yield %[[OUT]] : i32
+  // CHECK: } -> tensor<3x7xi32>
+  // CHECK: %[[EXPAND:.+]] = tensor.expand_shape %[[RESIZE]]
+  // CHECK-SAME{literal}: [[0], [1, 2, 3]] output_shape [3, 1, 1, 7] :
+  // CHECK-SAME: tensor<3x7xi32> into tensor<3x1x1x7xi32>
+  // CHECK: %[[COLLAPSE_0:.+]] = tensor.collapse_shape %[[EXPAND]]
+  // CHECK-SAME{literal}:[[0], [1, 2, 3]] : tensor<3x1x1x7xi32> into tensor<3x7xi32>
+  // CHECK: %[[EMPTY_0:.+]] = tensor.empty() : tensor<3x4x5x7xi32>
+  // CHECK: %[[BROADCAST:.+]] = linalg.generic
+  // CHECK-SAME: indexing_maps = [#map1, #map2], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%[[COLLAPSE_0]] : tensor<3x7xi32>) outs(%[[EMPTY_0]] : tensor<3x4x5x7xi32>) {
+  // CHECK: ^bb0(%[[IN:.+]]: i32, %[[OUT:.+]]: i32):
+  // CHECK:   linalg.yield %[[IN]] : i32
   %scale = tosa.const_shape { value = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
   %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  // expected-error @+1 {{'tosa.resize' op calculated output height did not match expected: calculated=1, expected=4}}
   %resize = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} : (tensor<3x1x1x7xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x4x5x7xi32>
 
   return %resize : tensor<3x4x5x7xi32>

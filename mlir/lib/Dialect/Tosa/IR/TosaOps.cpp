@@ -1759,7 +1759,11 @@ LogicalResult tosa::ResizeOp::verify() {
     return lhs / rhs;
   };
 
-  if (ih != ShapedType::kDynamic) {
+  // Don't check with input height that could be broadcast (ih != 1)
+  // since Linalg, a consumer of TOSA, expects broadcasting support
+  // in resize to be available. Taking the cautious approach for now,
+  // we can consider removing support for broadcasting later.
+  if (ih != ShapedType::kDynamic && ih != 1) {
     const std::optional<int64_t> calculatedOutHeightMinusOne =
         idivCheck((ih - 1) * scaleYN - offsetY + borderY, scaleYD);
     if (!calculatedOutHeightMinusOne.has_value())
@@ -1774,7 +1778,11 @@ LogicalResult tosa::ResizeOp::verify() {
              << "calculated=" << calculatedOutHeight << ", expected=" << oh;
   }
 
-  if (iw != ShapedType::kDynamic) {
+  // Don't check with input width that could be broadcast (iw != 1)
+  // since Linalg, a consumer of TOSA, expects broadcasting support
+  // in resize to be available. Taking the cautious approach for now,
+  // we can consider removing support for broadcasting later.
+  if (iw != ShapedType::kDynamic && iw != 1) {
     const int64_t scaledInWidth = (iw - 1) * scaleXN - offsetX + borderX;
     const std::optional<int64_t> calculatedOutWidthMinusOne =
         idivCheck(scaledInWidth, scaleXD);
