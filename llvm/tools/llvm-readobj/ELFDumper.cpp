@@ -7961,10 +7961,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFuncMaps() {
       continue;
     }
     for (const auto &AM : *FuncMapOrErr) {
-      // Do not print dead entry where the functon address is zero.
-      if (!AM.getFunctionAddress())
-        continue;
-
       DictScope D(W, "Function");
       W.printHex("At", AM.getFunctionAddress());
       SmallVector<uint32_t> FuncSymIndex =
