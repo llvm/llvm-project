@@ -21,7 +21,6 @@ if (ANDROID OR CYGWIN OR CMAKE_SYSTEM_NAME MATCHES "AIX|DragonFly|FreeBSD|Haiku|
   set(HAVE_MACH_MACH_H 0)
   set(HAVE_MALLOC_MALLOC_H 0)
   set(HAVE_PTHREAD_H 1)
-  set(HAVE_SYS_AUXV_H 1)
   set(HAVE_SYS_MMAN_H 1)
   set(HAVE_SYSEXITS_H 1)
   set(HAVE_UNISTD_H 1)
@@ -53,7 +52,6 @@ else()
   check_include_file(mach/mach.h HAVE_MACH_MACH_H)
   check_include_file(malloc/malloc.h HAVE_MALLOC_MALLOC_H)
   check_include_file(pthread.h HAVE_PTHREAD_H)
-  check_include_file(sys/auxv.h HAVE_SYS_AUXV_H)
   check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
   check_include_file(sysexits.h HAVE_SYSEXITS_H)
   check_include_file(unistd.h HAVE_UNISTD_H)
@@ -321,6 +319,7 @@ check_symbol_exists(getrusage sys/resource.h HAVE_GETRUSAGE)
 check_symbol_exists(isatty unistd.h HAVE_ISATTY)
 check_symbol_exists(futimens sys/stat.h HAVE_FUTIMENS)
 check_symbol_exists(futimes sys/time.h HAVE_FUTIMES)
+check_symbol_exists(getauxval sys/auxv.h HAVE_GETAUXVAL)
 # AddressSanitizer conflicts with lib/Support/Unix/Signals.inc
 # Avoid sigaltstack on Apple platforms, where backtrace() cannot handle it
 # (rdar://7089625) and _Unwind_Backtrace is unusable because it cannot unwind
