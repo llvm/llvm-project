@@ -1,4 +1,4 @@
-//===--- ParseHLSLRootSignature.h -------------------------------*- C++ -*-===//
+//===--- LexHLSLRootSignature.h ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the ParseHLSLRootSignature interface.
+//  This file defines the LexHLSLRootSignature interface.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 #define LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 
-#include "clang/AST/APValue.h"
-#include "clang/Basic/DiagnosticLex.h"
-#include "clang/Lex/LiteralSupport.h"
-#include "clang/Lex/Preprocessor.h"
+#include "clang/Basic/SourceLocation.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -28,7 +25,7 @@ namespace hlsl {
 struct RootSignatureToken {
   enum Kind {
 #define TOK(X) X,
-#include "clang/Parse/HLSLRootSignatureTokenKinds.def"
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
   Kind Kind = Kind::invalid;

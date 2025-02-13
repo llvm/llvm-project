@@ -1,4 +1,4 @@
-#include "clang/Parse/ParseHLSLRootSignature.h"
+#include "clang/Lex/LexHLSLRootSignature.h"
 
 namespace clang {
 namespace hlsl {
@@ -30,7 +30,7 @@ RootSignatureToken RootSignatureLexer::LexToken() {
     AdvanceBuffer();                                                           \
     return Result;                                                             \
   }
-#include "clang/Parse/HLSLRootSignatureTokenKinds.def"
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
     break;
   }
@@ -89,7 +89,7 @@ RootSignatureToken RootSignatureLexer::LexToken() {
   auto Switch = llvm::StringSwitch<TokenKind>(TokSpelling);
 #define KEYWORD(NAME) Switch.Case(#NAME, TokenKind::kw_##NAME);
 #define ENUM(NAME, LIT) Switch.CaseLower(LIT, TokenKind::en_##NAME);
-#include "clang/Parse/HLSLRootSignatureTokenKinds.def"
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
 
   // Then attempt to retreive a string from it
   Result.Kind = Switch.Default(TokenKind::invalid);

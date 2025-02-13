@@ -1,4 +1,4 @@
-//=== ParseHLSLRootSignatureTest.cpp - Parse Root Signature tests ---------===//
+//=== LexHLSLRootSignatureTest.cpp - Lex Root Signature tests -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Parse/ParseHLSLRootSignature.h"
+#include "clang/Lex/LexHLSLRootSignature.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -14,9 +14,9 @@ using namespace clang;
 namespace {
 
 // The test fixture.
-class ParseHLSLRootSignatureTest : public ::testing::Test {
+class LexHLSLRootSignatureTest : public ::testing::Test {
 protected:
-  ParseHLSLRootSignatureTest() {}
+  LexHLSLRootSignatureTest() {}
 
   void CheckTokens(hlsl::RootSignatureLexer &Lexer,
                    SmallVector<hlsl::RootSignatureToken> &Computed,
@@ -38,7 +38,7 @@ protected:
 
 // Lexing Tests
 
-TEST_F(ParseHLSLRootSignatureTest, ValidLexNumbersTest) {
+TEST_F(LexHLSLRootSignatureTest, ValidLexNumbersTest) {
   // This test will check that we can lex different number tokens
   const llvm::StringLiteral Source = R"cc(
     -42 42 +42 +2147483648
@@ -75,7 +75,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexNumbersTest) {
   ASSERT_EQ(IntToken.NumSpelling, "2147483648");
 }
 
-TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
+TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
   // This test will check that we can lex all defined tokens as defined in
   // HLSLRootSignatureTokenKinds.def, plus some additional integer variations
   const llvm::StringLiteral Source = R"cc(
@@ -114,13 +114,13 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
   SmallVector<hlsl::RootSignatureToken> Tokens;
   SmallVector<hlsl::TokenKind> Expected = {
 #define TOK(NAME) hlsl::TokenKind::NAME,
-#include "clang/Parse/HLSLRootSignatureTokenKinds.def"
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
   CheckTokens(Lexer, Tokens, Expected);
 }
 
-TEST_F(ParseHLSLRootSignatureTest, ValidLexPeekTest) {
+TEST_F(LexHLSLRootSignatureTest, ValidLexPeekTest) {
   // This test will check that we the peek api is correctly used
   const llvm::StringLiteral Source = R"cc(
     )1
