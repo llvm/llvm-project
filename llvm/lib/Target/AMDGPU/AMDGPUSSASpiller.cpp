@@ -40,12 +40,9 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   unsigned NumSpillSlots;
 
   DenseMap<VRegMaskPair, unsigned> Virt2StackSlotMap;
+  DenseMap<VRegMaskPair, MachineInstr *> SpillPoints;
 
-  // TODO: HOW TO MAP VREG + LANEMASK TO SPILL SLOT ???
-
-  // IF IT EVEN POSSIBLE TO SPILL REG.SUBREG ?
-
-  // CREATE NEW PSEUDOS SI_SPILL_XXX_SAVE/RESTORE_WITH_SUBREG ???
+  LLVM_ATTRIBUTE_NOINLINE void dumpRegSet(SetVector<VRegMaskPair> VMPs);
 
   unsigned createSpillSlot(const TargetRegisterClass *RC) {
     unsigned Size = TRI->getSpillSize(*RC);
@@ -665,16 +662,24 @@ void AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
   // then this, reloaded here.
   SmallVector<MachineOperand*> ToUpdate;
   for (auto &U : MRI->use_nodbg_operands(VMP.VReg)) {
-    MachineInstr *UseMI = U.getParent();
-    if (MDT.dominates(&ReloadMI, UseMI)) {
-      ToUpdate.push_back(&U);
-    } else if (UseMI->isPHI()) {
-      unsigned OpNo = U.getOperandNo();
-      MachineOperand MBBOp = UseMI->getOperand(++OpNo);
-      assert(MBBOp.isMBB() && "Not PHI instruction or malformed PHI!");
-      MachineBasicBlock *SourceMBB = MBBOp.getMBB();
-      if (SourceMBB == &MBB)
-        ToUpdate.push_back(&U);
+    // MachineInstr *UseMI = U.getParent();
+    // if (MDT.dominates(&ReloadMI, UseMI)) {
+    //   ToUpdate.push_back(&U);
+    // } else if (UseMI->isPHI()) {
+    //   unsigned OpNo = U.getOperandNo();
+    //   MachineOperand MBBOp = UseMI->getOperand(++OpNo);
+    //   assert(MBBOp.isMBB() && "Not PHI instruction or malformed PHI!");
+    //   MachineBasicBlock *SourceMBB = MBBOp.getMBB();
+    //   if (SourceMBB == &MBB)
+    //     ToUpdate.push_back(&U);
+    // }
+
+    
+    if (SpillPoints.contains(VMP)) {
+        MachineInstr *UseMI = U.getParent();
+        MachineInstr *Spill = SpillPoints[VMP];
+        if (UseMI != Spill && MDT.dominates(Spill, UseMI))
+          ToUpdate.push_back(&U);
     }
   }
   for (auto U : ToUpdate) {
@@ -719,6 +724,7 @@ void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
       }
     }
   }
+  SpillPoints[VMP] = &Spill;
 }
 
 unsigned AMDGPUSSASpiller::getLoopMaxRP(MachineLoop *L) {
