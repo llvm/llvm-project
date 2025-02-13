@@ -54,9 +54,11 @@
 
 // clang-format on
 
+#if __cplusplus > 201103L
+
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__concepts/convertible_to.h>
 #  include <__fwd/spanstream.h>
@@ -455,10 +457,12 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !_LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <type_traits>
 #endif
+
+#endif // __cplusplus > 201103L
 
 #endif // _LIBCPP_SPANSTREAM
