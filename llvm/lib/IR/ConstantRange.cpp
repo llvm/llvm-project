@@ -97,11 +97,11 @@ KnownBits ConstantRange::toKnownBits() const {
 
 std::pair<ConstantRange, ConstantRange> ConstantRange::splitPosNeg() const {
   uint32_t BW = getBitWidth();
-  APInt Zero = APInt::getZero(BW);
+  APInt Zero = APInt::getZero(BW), One = APInt(BW, 1);
   APInt SignedMin = APInt::getSignedMinValue(BW);
   // There are no positive 1-bit values. The 1 would get interpreted as -1.
   ConstantRange PosFilter =
-      BW == 1 ? getEmpty() : ConstantRange(APInt(BW, 1), SignedMin);
+      BW == 1 ? getEmpty() : ConstantRange(One, SignedMin);
   ConstantRange NegFilter(SignedMin, Zero);
   return {intersectWith(PosFilter), intersectWith(NegFilter)};
 }
