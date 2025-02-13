@@ -222,6 +222,27 @@ struct LowerGpuOpsToROCDLOpsPass
     gpu::GPUModuleOp m = getOperation();
     MLIRContext *ctx = m.getContext();
 
+    if (chipset == "infer") {
+      ArrayAttr targets = m.getTargetsAttr();
+      if (!targets) {
+        m->emitError("there are no target attributes to infer");
+        return signalPassFailure();
+      }
+      if (targets.size() != 1) {
+        m->emitError("expected a single target attribute");
+        return signalPassFailure();
+      }
+      ROCDL::ROCDLTargetAttr targetAttr =
+          dyn_cast<ROCDL::ROCDLTargetAttr>(targets[0]);
+      chipset = targetAttr.getChip().str();
+    }
+
+    FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
+    if (failed(maybeChipset)) {
+      m->emitError("invalid chipset name: " + chipset);
+      return signalPassFailure();
+    }
+
     auto llvmDataLayout = m->getAttrOfType<StringAttr>(
         LLVM::LLVMDialect::getDataLayoutAttrName());
     if (!llvmDataLayout) {
@@ -232,12 +253,6 @@ struct LowerGpuOpsToROCDLOpsPass
     for (auto func : m.getOps<func::FuncOp>()) {
       func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
                     UnitAttr::get(ctx));
-    }
-
-    FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
-    if (failed(maybeChipset)) {
-      emitError(UnknownLoc::get(ctx), "Invalid chipset name: " + chipset);
-      return signalPassFailure();
     }
 
     /// Customize the bitwidth used for the device side index computations.

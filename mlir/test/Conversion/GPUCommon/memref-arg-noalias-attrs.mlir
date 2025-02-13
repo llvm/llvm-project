@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -convert-gpu-to-rocdl='use-bare-ptr-memref-call-conv=1' | FileCheck %s --check-prefixes=CHECK,ROCDL
+// RUN: mlir-opt %s -split-input-file -convert-gpu-to-rocdl='chipset=gfx900 use-bare-ptr-memref-call-conv=1' | FileCheck %s --check-prefixes=CHECK,ROCDL
 // RUN: mlir-opt %s -split-input-file -convert-gpu-to-nvvm='use-bare-ptr-memref-call-conv=1' | FileCheck %s --check-prefixes=CHECK,NVVM
 
 gpu.module @kernel {

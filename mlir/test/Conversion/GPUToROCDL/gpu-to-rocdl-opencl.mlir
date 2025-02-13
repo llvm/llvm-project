@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='runtime=OpenCL' | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx900 runtime=OpenCL' | FileCheck %s
 
 gpu.module @test_module {
   // CHECK: llvm.mlir.global internal constant @[[$PRINT_GLOBAL:[A-Za-z0-9_]+]]("Hello: %d\0A\00")  {addr_space = 4 : i32}
