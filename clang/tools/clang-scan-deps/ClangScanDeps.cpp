@@ -308,8 +308,7 @@ public:
       return "";
     StringRef Output = OutputBuf.get()->getBuffer().rtrim('\n');
 
-    Cache[ClangBinaryPath] = Output.str();
-    return Cache[ClangBinaryPath];
+    return Cache[ClangBinaryPath] = Output.str();
   }
 
 private:
