@@ -2612,8 +2612,14 @@ public:
           thisT()->getArithmeticInstrCost(BinaryOperator::Shl, RetTy, CostKind);
       Cost += thisT()->getArithmeticInstrCost(BinaryOperator::LShr, RetTy,
                                               CostKind);
-      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::URem, RetTy,
-                                              CostKind);
+      // Non-constant shift amounts requires a modulo. If the typesize is a
+      // power-2 then this will be converted to an and, otherwise it will use a
+      // urem.
+      Cost += thisT()->getArithmeticInstrCost(
+          isPowerOf2_32(RetTy->getScalarSizeInBits()) ? BinaryOperator::And
+                                                      : BinaryOperator::URem,
+          RetTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
       // Shift-by-zero handling.
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
                                           CmpInst::ICMP_EQ, CostKind);
