@@ -3997,23 +3997,29 @@ private:
       return Sum;
     }
 
-    void dump(raw_ostream &os) const {
-      if (!isSchedulingEntity()) {
-        os << "/ " << *Inst;
-      } else if (NextInBundle) {
-        os << '[' << *Inst;
+    void dump(raw_ostream &OS) const {
+      if (isPartOfBundle()) {
+        if (!isSchedulingEntity()) {
+          OS << "/ " << *Inst << ", part of ";
+          FirstInBundle->dump(OS);
+          return;
+        }
+        OS << '[' << *Inst;
         ScheduleData *SD = NextInBundle;
         while (SD) {
-          os << ';' << *SD->Inst;
+          OS << ';' << *SD->Inst;
           SD = SD->NextInBundle;
         }
-        os << ']';
+        OS << ']';
       } else {
-        os << *Inst;
+        OS << *Inst;
       }
     }
 
-    LLVM_DUMP_METHOD void dump() const { dump(dbgs()); }
+    LLVM_DUMP_METHOD void dump() const {
+      dump(dbgs());
+      dbgs() << '\n';
+    }
 
     Instruction *Inst = nullptr;
 
@@ -5596,6 +5602,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         ::getNumberOfParts(*TTI, getWidenedType(TE.Scalars.front()->getType(),
                                                 2 * TE.getVectorFactor())) == 1)
       return std::nullopt;
+    if (TE.ReuseShuffleIndices.size() % Sz != 0)
+      return std::nullopt;
     if (!ShuffleVectorInst::isOneUseSingleSourceMask(TE.ReuseShuffleIndices,
                                                      Sz)) {
       SmallVector<int> ReorderMask(Sz, PoisonMaskElem);
@@ -5626,7 +5634,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         UsedVals.set(Val);
         for (unsigned K = 0; K < NumParts; ++K) {
           unsigned Idx = Val + Sz * K;
-          if (Idx < VF)
+          if (Idx < VF && I + K < VF)
             ResOrder[Idx] = I + K;
         }
       }
