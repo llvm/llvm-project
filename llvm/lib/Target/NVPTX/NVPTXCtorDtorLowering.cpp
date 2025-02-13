@@ -70,18 +70,13 @@ static void addKernelMetadata(Module &M, Function *F) {
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
 
-  llvm::Metadata *BlockMDVals[] = {
-      llvm::ConstantAsMetadata::get(F),
-      llvm::MDString::get(Ctx, "maxclusterrank"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
+  F->addFnAttr("nvvm.maxclusterrank", "1");
+  F->setCallingConv(CallingConv::PTX_Kernel);
 
   // Append metadata to nvvm.annotations.
-  F->setCallingConv(CallingConv::PTX_Kernel);
   MD->addOperand(llvm::MDNode::get(Ctx, ThreadXMDVals));
   MD->addOperand(llvm::MDNode::get(Ctx, ThreadYMDVals));
   MD->addOperand(llvm::MDNode::get(Ctx, ThreadZMDVals));
-  MD->addOperand(llvm::MDNode::get(Ctx, BlockMDVals));
 }
 
 static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
