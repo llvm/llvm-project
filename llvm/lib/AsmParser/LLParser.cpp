@@ -4299,6 +4299,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return error(ID.Loc, "ashr constexprs are no longer supported");
   case lltok::kw_shl:
     return error(ID.Loc, "shl constexprs are no longer supported");
+  case lltok::kw_mul:
+    return error(ID.Loc, "mul constexprs are no longer supported");
   case lltok::kw_fneg:
     return error(ID.Loc, "fneg constexprs are no longer supported");
   case lltok::kw_select:
@@ -4327,7 +4329,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   // Binary Operators.
   case lltok::kw_add:
   case lltok::kw_sub:
-  case lltok::kw_mul:
   case lltok::kw_xor: {
     bool NUW = false;
     bool NSW = false;
