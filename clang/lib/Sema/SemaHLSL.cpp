@@ -3225,7 +3225,8 @@ bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
       QualType Ty = E->getType();
       if (auto *RTy = Ty->getAs<RecordType>())
         E = new (Ctx) MaterializeTemporaryExpr(Ty, E, E->isLValue());
-      E = new (Ctx) OpaqueValueExpr(E->getBeginLoc(), Ty, E->getValueKind());
+      E = new (Ctx) OpaqueValueExpr(E->getBeginLoc(), Ty, E->getValueKind(),
+                                    E->getObjectKind(), E);
       Init->setInit(I, E);
     }
     if (!BuildInitializerList(SemaRef, Ctx, E, ArgExprs, DestTypes))
