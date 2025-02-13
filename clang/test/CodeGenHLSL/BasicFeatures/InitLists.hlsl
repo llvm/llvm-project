@@ -901,3 +901,63 @@ TwoFloats case15(SlicyBits SB) {
   TwoFloats TI = {SB};
   return TI;
 }
+
+// Case 16: Side-effecting initialization list arguments. The important thing
+// here is that case16 only has _one_ call to makeTwo.
+// CHECK-LABEL: define void @_Z7makeTwoRf(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noalias noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    [[X1:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[TMP0]], align 4
+// CHECK-NEXT:    store float [[TMP1]], ptr [[X1]], align 4
+// CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP2]], align 4
+// CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[TMP3]], 1.500000e+00
+// CHECK-NEXT:    store float [[MUL]], ptr [[Y]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP4]], align 4
+// CHECK-NEXT:    [[MUL2:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[TMP5]], 2.000000e+00
+// CHECK-NEXT:    store float [[MUL2]], ptr [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+TwoFloats makeTwo(inout float X) {
+    TwoFloats TF = {X, X*1.5};
+    X *= 2;
+    return TF;
+}
+
+// CHECK-LABEL: define void @_Z6case16v(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 4 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[X:%.*]] = alloca float, align 4
+// CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_TWOFLOATS:%.*]], align 4
+// CHECK-NEXT:    [[TMP:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[X]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[X]], align 4
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP]], align 4
+// CHECK-NEXT:    call void @_Z7makeTwoRf(ptr dead_on_unwind writable sret([[STRUCT_TWOFLOATS]]) align 4 [[REF_TMP]], ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[TMP]], align 4
+// CHECK-NEXT:    store float [[TMP1]], ptr [[X]], align 4
+// CHECK-NEXT:    [[X1:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
+// CHECK-NEXT:    store float 0.000000e+00, ptr [[X1]], align 4
+// CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-NEXT:    [[X2:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[X2]], align 4
+// CHECK-NEXT:    store float [[TMP2]], ptr [[Y]], align 4
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_FOURFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
+// CHECK-NEXT:    [[Y3:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[Y3]], align 4
+// CHECK-NEXT:    store float [[TMP3]], ptr [[Z]], align 4
+// CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_FOURFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 2
+// CHECK-NEXT:    store float 3.000000e+00, ptr [[W]], align 4
+// CHECK-NEXT:    ret void
+//
+FourFloats case16() {
+    float X = 0;
+    FourFloats FF = {0, makeTwo(X), 3};
+    return FF;
+}
