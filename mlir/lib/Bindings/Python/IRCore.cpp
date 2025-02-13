@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <optional>
+#include <system_error>
 #include <utility>
 
 #include "Globals.h"
@@ -20,8 +21,10 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+#include "nanobind/nanobind.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -1329,26 +1332,45 @@ void PyOperationBase::print(PyAsmState &state, nb::object fileObject,
                               accum.getUserData());
 }
 
-void PyOperationBase::writeBytecode(const nb::object &fileObject,
-                                    std::optional<int64_t> bytecodeVersion) {
-  PyOperation &operation = getOperation();
-  operation.checkValid();
-  PyFileAccumulator accum(fileObject, /*binary=*/true);
-
+template <typename T>
+static void
+writeBytecodeForOperation(T &accumulator, MlirOperation operation,
+                          const std::optional<int64_t> &bytecodeVersion) {
   if (!bytecodeVersion.has_value())
-    return mlirOperationWriteBytecode(operation, accum.getCallback(),
-                                      accum.getUserData());
+    return mlirOperationWriteBytecode(operation, accumulator.getCallback(),
+                                      accumulator.getUserData());
 
   MlirBytecodeWriterConfig config = mlirBytecodeWriterConfigCreate();
   mlirBytecodeWriterConfigDesiredEmitVersion(config, *bytecodeVersion);
   MlirLogicalResult res = mlirOperationWriteBytecodeWithConfig(
-      operation, config, accum.getCallback(), accum.getUserData());
+      operation, config, accumulator.getCallback(), accumulator.getUserData());
   mlirBytecodeWriterConfigDestroy(config);
   if (mlirLogicalResultIsFailure(res))
     throw nb::value_error((Twine("Unable to honor desired bytecode version ") +
                            Twine(*bytecodeVersion))
                               .str()
                               .c_str());
+}
+
+void PyOperationBase::writeBytecode(const nb::object &fileObject,
+                                    std::optional<int64_t> bytecodeVersion) {
+  PyOperation &operation = getOperation();
+  operation.checkValid();
+
+  std::string filePath;
+  if (nb::try_cast<std::string>(fileObject, filePath)) {
+    std::error_code ec;
+    llvm::raw_fd_ostream ostream(filePath, ec);
+    if (ec) {
+      throw nb::value_error("Unable to open file for writing");
+    }
+
+    OstreamAccumulator accum(ostream);
+    writeBytecodeForOperation(accum, operation, bytecodeVersion);
+  } else {
+    PyFileAccumulator accum(fileObject, /*binary=*/true);
+    writeBytecodeForOperation(accum, operation, bytecodeVersion);
+  }
 }
 
 void PyOperationBase::walk(

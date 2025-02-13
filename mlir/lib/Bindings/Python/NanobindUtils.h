@@ -13,8 +13,10 @@
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/raw_ostream.h"
 
 template <>
 struct std::iterator_traits<nanobind::detail::fast_iterator> {
@@ -128,7 +130,7 @@ struct PyPrintAccumulator {
   }
 };
 
-/// Accumulates int a python file-like object, either writing text (default)
+/// Accumulates into a python file-like object, either writing text (default)
 /// or binary.
 class PyFileAccumulator {
 public:
@@ -156,6 +158,24 @@ public:
 private:
   nanobind::object pyWriteFunction;
   bool binary;
+};
+
+/// Accumulates into a LLVM ostream.
+class OstreamAccumulator {
+public:
+  OstreamAccumulator(llvm::raw_ostream &ostream) : ostream(ostream) {}
+
+  void *getUserData() { return this; }
+
+  MlirStringCallback getCallback() {
+    return [](MlirStringRef part, void *userData) {
+      OstreamAccumulator *accum = static_cast<OstreamAccumulator *>(userData);
+      accum->ostream << llvm::StringRef(part.data, part.length);
+    };
+  }
+
+private:
+  llvm::raw_ostream &ostream;
 };
 
 /// Accumulates into a python string from a method that is expected to make
