@@ -30,10 +30,6 @@ using DeallocHelperMap = llvm::DenseMap<Operation *, func::FuncOp>;
 #define GEN_PASS_DECL
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 
-/// Creates an instance of the BufferDeallocation pass to free all allocated
-/// buffers.
-std::unique_ptr<Pass> createBufferDeallocationPass();
-
 /// Creates an instance of the OwnershipBasedBufferDeallocation pass to free all
 /// allocated buffers.
 std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass(
@@ -140,9 +136,6 @@ void populateBufferizationDeallocLoweringPattern(
 /// ```
 func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
                                               SymbolTable &symbolTable);
-
-/// Run buffer deallocation.
-LogicalResult deallocateBuffers(Operation *op);
 
 /// Run the ownership-based buffer deallocation.
 LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,
