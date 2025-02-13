@@ -56,11 +56,6 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &Ref) {
   llvm_unreachable("");
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const GeneralDiagnostic &Diag) {
-  OS << "diag<'" << Diag.Text << "'>";
-  return OS;
-}
-
 namespace NonPacProtectedRetAnalysis {
 
 // The security property that is checked is:
@@ -198,11 +193,13 @@ protected:
   SmallPtrSet<const MCInst *, 4> &lastWritingInsts(State &S,
                                                    MCPhysReg Reg) const {
     assert(Reg < Reg2StateIdx.size());
+    assert(isTrackingReg(Reg));
     return S.LastInstWritingReg[Reg2StateIdx[Reg]];
   }
   const SmallPtrSet<const MCInst *, 4> &lastWritingInsts(const State &S,
                                                          MCPhysReg Reg) const {
     assert(Reg < Reg2StateIdx.size());
+    assert(isTrackingReg(Reg));
     return S.LastInstWritingReg[Reg2StateIdx[Reg]];
   }
 
@@ -412,8 +409,8 @@ void Analysis::runOnFunction(BinaryFunction &BF,
   }
 }
 
-void printBB(const BinaryContext &BC, const BinaryBasicBlock *BB,
-             size_t StartIndex = 0, size_t EndIndex = -1) {
+static void printBB(const BinaryContext &BC, const BinaryBasicBlock *BB,
+                    size_t StartIndex = 0, size_t EndIndex = -1) {
   if (EndIndex == (size_t)-1)
     EndIndex = BB->size() - 1;
   const BinaryFunction *BF = BB->getFunction();
@@ -445,16 +442,9 @@ static void reportFoundGadgetInSingleBBSingleOverwInst(
 }
 
 void Gadget::generateReport(raw_ostream &OS, const BinaryContext &BC) const {
-  BinaryFunction *BF = RetInst.getFunction();
-  BinaryBasicBlock *BB = RetInst.getBasicBlock();
+  GenDiag(RetInst, "non-protected ret found").generateReport(OS, BC);
 
-  OS << "\nGS-PACRET: " << "non-protected ret found in function "
-     << BF->getPrintName();
-  if (BB)
-    OS << ", basic block " << BB->getName();
-  OS << ", at address " << llvm::format("%x", RetInst.getAddress()) << "\n";
-  OS << "  The return instruction is ";
-  BC.printInstruction(OS, RetInst, RetInst.getAddress(), BF);
+  BinaryFunction *BF = RetInst.getFunction();
   OS << "  The " << OverwritingRetRegInst.size()
      << " instructions that write to the return register after any "
         "authentication are:\n";
@@ -485,7 +475,7 @@ void GenDiag::generateReport(raw_ostream &OS, const BinaryContext &BC) const {
   BinaryFunction *BF = RetInst.getFunction();
   BinaryBasicBlock *BB = RetInst.getBasicBlock();
 
-  OS << "\nGS-PACRET: " << "" << Diag.Text;
+  OS << "\nGS-PACRET: " << Diag.Text;
   OS << " in function " << BF->getPrintName();
   if (BB)
     OS << ", basic block " << BB->getName();
@@ -501,7 +491,7 @@ Error Analysis::runOnFunctions(BinaryContext &BC) {
       };
 
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
-    return false; // BF.shouldPreserveNops();
+    return false;
   };
 
   ParallelUtilities::runOnEachFunctionWithUniqueAllocId(

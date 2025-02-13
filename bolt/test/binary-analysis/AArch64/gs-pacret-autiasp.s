@@ -192,7 +192,7 @@ f_detect_clobbered_x30_passed_to_other:
 // performs a tail call, that x30 might be attacker-controlled.
 // CHECK-NOT: function f_detect_clobbered_x30_passed_to_other
         b   f_tail_called
-        .size f_callclobbered_x30, .-f_callclobbered_x30
+        .size f_detect_clobbered_x30_passed_to_other, .-f_detect_clobbered_x30_passed_to_other
 
         .globl  f_tail_called
         .type   f_tail_called,@function
