@@ -28446,7 +28446,6 @@ TEST_F(FormatTest, ShortNamespacesOption) {
                "class bar;\n"
                "}",
                Style);
-
   verifyFormat("namespace foo\n"
                "{\n"
                "namespace bar\n"

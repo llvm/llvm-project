@@ -637,13 +637,13 @@ private:
     const auto BraceOpenLine = I + OpenBraceWrapped;
 
     assert(*BraceOpenLine);
-    if ((*BraceOpenLine)->Last->isNot(tok::l_brace))
+    if (BraceOpenLine[0]->Last->isNot(TT_NamespaceLBrace))
       return 0;
 
     if (std::distance(BraceOpenLine, E) <= 2)
       return 0;
 
-    if (BraceOpenLine[0]->Last->is(TT_LineComment))
+    if (BraceOpenLine[0]->Last->is(tok::comment))
       return 0;
 
     assert(BraceOpenLine[1]);
@@ -682,7 +682,8 @@ private:
         return 0;
       // Check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line.
-      if (I[N]->First->is(tok::r_brace) && !I[N]->First->MustBreakBefore &&
+      if (I[N]->First->is(TT_NamespaceRBrace) &&
+          !I[N]->First->MustBreakBefore &&
           BraceOpenLine[MergedLines + 1]->Last->isNot(tok::comment) &&
           nextNLinesFitInto(I, I + N + 1, Limit)) {
         return N;
@@ -698,7 +699,7 @@ private:
       return 0;
 
     // Last, check that the third line starts with a closing brace.
-    if (L2.First->isNot(tok::r_brace) || L2.First->MustBreakBefore)
+    if (L2.First->isNot(TT_NamespaceRBrace) || L2.First->MustBreakBefore)
       return 0;
 
     // If so, merge all lines.
