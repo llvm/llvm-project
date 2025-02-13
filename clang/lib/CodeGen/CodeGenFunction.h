@@ -3809,6 +3809,7 @@ public:
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
   void EmitOMPTileDirective(const OMPTileDirective &S);
+  void EmitOMPStripeDirective(const OMPStripeDirective &S);
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
