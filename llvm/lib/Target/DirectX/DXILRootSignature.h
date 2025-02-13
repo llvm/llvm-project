@@ -51,12 +51,12 @@ public:
 
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
-  std::optional<mcdxbc::RootSignatureDesc> getForFunction(const Function *F) {
-    auto Lookup = FuncToRsMap.find(F);
-    if (Lookup == FuncToRsMap.end())
-      return std::nullopt;
-    return Lookup->second;
-  }
+  using iterator =
+      SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>::iterator;
+
+  iterator find(const Function *F) { return FuncToRsMap.find(F); }
+
+  iterator end() { return FuncToRsMap.end(); }
 
   bool runOnModule(Module &M) override;
 
