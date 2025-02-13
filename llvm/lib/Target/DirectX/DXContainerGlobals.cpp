@@ -169,7 +169,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
   if (FuncRs == RSA.end())
     return;
 
-  const RootSignatureDesc &RS = FuncRs->getSecond();
+  const RootSignatureDesc &RS = FuncRs->second;
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
 

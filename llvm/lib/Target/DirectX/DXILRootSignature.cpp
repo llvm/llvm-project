@@ -132,6 +132,8 @@ analyzeModule(Module &M) {
     // Function was pruned during compilation.
     const MDOperand &FunctionPointerMdNode = RSDefNode->getOperand(0);
     if (FunctionPointerMdNode == nullptr) {
+      reportError(
+          Ctx, "Function associated with Root Signature definition is null.");
       continue;
     }
 
