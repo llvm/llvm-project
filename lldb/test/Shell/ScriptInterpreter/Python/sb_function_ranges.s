@@ -15,6 +15,8 @@
 # CHECK-NEXT: input.o[0x14]: callq  0x19
 # CHECK-NEXT: input.o[0x19]: jmp    0x1b
 # CHECK-NEXT: input.o[0x1b]: retq
+## Testing the GetRangeIndexForBlockAddress API. "ffffffff" indicates that
+## the address does not belong to any range.
 # CHECK-NEXT: offset 0x00 => index 0
 # CHECK-NEXT: offset 0x0c => index 0
 # CHECK-NEXT: offset 0x0e => index ffffffff
