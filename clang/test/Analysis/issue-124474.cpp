@@ -47,3 +47,4 @@ void foo()
     read(fd, buffer, 199); // no-warning: fd is a non-block file descriptor
     close(fd);
 }
+
