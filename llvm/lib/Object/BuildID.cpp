@@ -36,13 +36,11 @@ template <typename ELFT> BuildIDRef getBuildID(const ELFFile<ELFT> &Obj) {
   };
 
   auto Sections = cantFail(Obj.sections());
-  if (!Sections.empty()) {
-    for (const auto &S : Sections) {
-      if (S.sh_type != ELF::SHT_NOTE)
-        continue;
-      if (std::optional<BuildIDRef> ShdrRes = findBuildID(S, S.sh_addralign))
-        return ShdrRes.value();
-    }
+  for (const auto &S : Sections) {
+    if (S.sh_type != ELF::SHT_NOTE)
+      continue;
+    if (std::optional<BuildIDRef> ShdrRes = findBuildID(S, S.sh_addralign))
+      return ShdrRes.value();
   }
   auto PhdrsOrErr = Obj.program_headers();
   if (!PhdrsOrErr) {
