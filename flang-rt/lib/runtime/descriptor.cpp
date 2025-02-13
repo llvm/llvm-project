@@ -141,9 +141,10 @@ RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(
 
 RT_API_ATTRS std::size_t Descriptor::SizeInBytes() const {
   const DescriptorAddendum *addendum{Addendum()};
-  std::size_t bytes{ sizeof *this - sizeof(Dimension) + raw_.rank * sizeof(Dimension) +
-      (addendum ? addendum->SizeInBytes() : 0)};
-  assert (bytes <= MaxDescriptorSizeInBytes(raw_.rank,addendum) && "Descriptor must fit compiler-allocated space");
+  std::size_t bytes{sizeof *this - sizeof(Dimension) +
+      raw_.rank * sizeof(Dimension) + (addendum ? addendum->SizeInBytes() : 0)};
+  assert(bytes <= MaxDescriptorSizeInBytes(raw_.rank, addendum) &&
+      "Descriptor must fit compiler-allocated space");
   return bytes;
 }
 

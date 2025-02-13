@@ -86,7 +86,7 @@ RT_API_ATTRS std::size_t Component::SizeInBytes(
   } else if (category() == TypeCategory::Derived) {
     const DerivedType *type{derivedType()};
     return Descriptor::SizeInBytes(
-         rank_, true, type ? type->LenParameters() : 0);
+        rank_, true, type ? type->LenParameters() : 0);
   } else {
     return Descriptor::SizeInBytes(rank_);
   }

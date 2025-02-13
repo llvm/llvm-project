@@ -370,8 +370,8 @@ int NoUnitIoStatementState::EndIoStatement() {
 template <Direction DIR>
 ExternalIoStatementState<DIR>::ExternalIoStatementState(
     ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
-    : ExternalIoStatementBase{unit, sourceFile, sourceLine}, mutableModes_{
-                                                                 unit.modes} {
+    : ExternalIoStatementBase{unit, sourceFile, sourceLine},
+      mutableModes_{unit.modes} {
   if constexpr (DIR == Direction::Output) {
     // If the last statement was a non-advancing IO input statement, the unit
     // furthestPositionInRecord was not advanced, but the positionInRecord may
@@ -990,9 +990,8 @@ ChildFormattedIoStatementState<DIR, CHAR>::ChildFormattedIoStatementState(
     ChildIo &child, const CHAR *format, std::size_t formatLength,
     const Descriptor *formatDescriptor, const char *sourceFile, int sourceLine)
     : ChildIoStatementState<DIR>{child, sourceFile, sourceLine},
-      mutableModes_{child.parent().mutableModes()}, format_{*this, format,
-                                                        formatLength,
-                                                        formatDescriptor} {}
+      mutableModes_{child.parent().mutableModes()},
+      format_{*this, format, formatLength, formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void ChildFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
@@ -1448,8 +1447,8 @@ bool InquireNoUnitState::Inquire(
 
 InquireUnconnectedFileState::InquireUnconnectedFileState(
     OwningPtr<char> &&path, const char *sourceFile, int sourceLine)
-    : NoUnitIoStatementState{*this, sourceFile, sourceLine}, path_{std::move(
-                                                                 path)} {}
+    : NoUnitIoStatementState{*this, sourceFile, sourceLine},
+      path_{std::move(path)} {}
 
 bool InquireUnconnectedFileState::Inquire(
     InquiryKeywordHash inquiry, char *result, std::size_t length) {

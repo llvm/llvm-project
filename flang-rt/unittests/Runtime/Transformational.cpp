@@ -26,8 +26,8 @@ using BesselX0FuncType =
     std::function<void(Descriptor &, int32_t, int32_t, const char *, int)>;
 
 template <int KIND>
-constexpr CppTypeFor<TypeCategory::Real, KIND>
-    besselEpsilon = CppTypeFor<TypeCategory::Real, KIND>(1e-4);
+constexpr CppTypeFor<TypeCategory::Real, KIND> besselEpsilon =
+    CppTypeFor<TypeCategory::Real, KIND>(1e-4);
 
 template <int KIND>
 static void testBesselJn(BesselFuncType<KIND> rtFunc, int32_t n1, int32_t n2,
