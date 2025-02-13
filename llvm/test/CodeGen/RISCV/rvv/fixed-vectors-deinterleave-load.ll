@@ -22,10 +22,10 @@ define {<16 x i1>, <16 x i1>} @vector_deinterleave_load_v16i1_v32i1(ptr %p) {
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vadd.vi v12, v11, -16
+; CHECK-NEXT:    vadd.vi v11, v11, -15
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vadd.vi v11, v11, -15
 ; CHECK-NEXT:    vmerge.vim v13, v10, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0

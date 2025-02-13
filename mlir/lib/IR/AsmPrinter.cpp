@@ -182,7 +182,7 @@ struct AsmPrinterOptions {
   llvm::cl::opt<bool> printLocalScopeOpt{
       "mlir-print-local-scope", llvm::cl::init(false),
       llvm::cl::desc("Print with local scope and inline information (eliding "
-                     "aliases for attributes, types, and locations")};
+                     "aliases for attributes, types, and locations)")};
 
   llvm::cl::opt<bool> skipRegionsOpt{
       "mlir-print-skip-regions", llvm::cl::init(false),
