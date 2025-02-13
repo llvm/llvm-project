@@ -23,7 +23,7 @@ using namespace sampleprof;
 #define DEBUG_TYPE "sample-profile-matcher"
 
 static cl::opt<unsigned> FuncProfileSimilarityThreshold(
-    "func-profile-similarity-threshold", cl::Hidden, cl::init(70),
+    "func-profile-similarity-threshold", cl::Hidden, cl::init(80),
     cl::desc("Consider a profile matches a function if the similarity of their "
              "callee sequences is above the specified percentile."));
 
