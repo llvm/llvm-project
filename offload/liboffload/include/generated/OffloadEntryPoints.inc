@@ -441,6 +441,43 @@ ol_result_t olGetDeviceInfoSizeWithCodeLoc(ol_device_handle_t Device,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olGetHostDevice_val(ol_device_handle_t *Device) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Device) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olGetHostDevice_impl(Device);
+}
+OL_APIEXPORT ol_result_t OL_APICALL
+olGetHostDevice(ol_device_handle_t *Device) {
+  if (offloadConfig().TracingEnabled) {
+    std::cerr << "---> olGetHostDevice";
+  }
+
+  ol_result_t Result = olGetHostDevice_val(Device);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_get_host_device_params_t Params = {&Device};
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olGetHostDeviceWithCodeLoc(ol_device_handle_t *Device,
+                                       ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olGetHostDevice(Device);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 ol_impl_result_t olMemAlloc_val(ol_device_handle_t Device, ol_alloc_type_t Type,
                                 size_t Size, void **AllocationOut) {
   if (true /*enableParameterValidation*/) {
@@ -794,9 +831,79 @@ ol_result_t olWaitEventWithCodeLoc(ol_event_handle_t Event,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olEnqueueDataWrite_val(ol_queue_handle_t Queue, void *DstPtr,
-                                        void *SrcPtr, size_t Size,
-                                        ol_event_handle_t *EventOut) {
+ol_impl_result_t olEnqueueMemcpy_val(ol_queue_handle_t Queue, void *DstPtr,
+                                     ol_device_handle_t DstDevice, void *SrcPtr,
+                                     ol_device_handle_t SrcDevice, size_t Size,
+                                     ol_event_handle_t *EventOut) {
+  if (true /*enableParameterValidation*/) {
+    if (Size == 0) {
+      return OL_ERRC_INVALID_SIZE;
+    }
+
+    if (NULL == Queue) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == DstDevice) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == SrcDevice) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == DstPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+
+    if (NULL == SrcPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olEnqueueMemcpy_impl(Queue, DstPtr, DstDevice, SrcPtr, SrcDevice, Size,
+                              EventOut);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpy(
+    ol_queue_handle_t Queue, void *DstPtr, ol_device_handle_t DstDevice,
+    void *SrcPtr, ol_device_handle_t SrcDevice, size_t Size,
+    ol_event_handle_t *EventOut) {
+  if (offloadConfig().TracingEnabled) {
+    std::cerr << "---> olEnqueueMemcpy";
+  }
+
+  ol_result_t Result = olEnqueueMemcpy_val(Queue, DstPtr, DstDevice, SrcPtr,
+                                           SrcDevice, Size, EventOut);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_enqueue_memcpy_params_t Params = {
+        &Queue, &DstPtr, &DstDevice, &SrcPtr, &SrcDevice, &Size, &EventOut};
+    std::cerr << "(" << &Params << ")";
+    std::cerr << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cerr << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olEnqueueMemcpyWithCodeLoc(ol_queue_handle_t Queue, void *DstPtr,
+                                       ol_device_handle_t DstDevice,
+                                       void *SrcPtr,
+                                       ol_device_handle_t SrcDevice,
+                                       size_t Size, ol_event_handle_t *EventOut,
+                                       ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olEnqueueMemcpy(Queue, DstPtr, DstDevice, SrcPtr,
+                                       SrcDevice, Size, EventOut);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olEnqueueMemcpyHtoD_val(ol_queue_handle_t Queue, void *DstPtr,
+                                         void *SrcPtr, size_t Size,
+                                         ol_event_handle_t *EventOut) {
   if (true /*enableParameterValidation*/) {
     if (Size == 0) {
       return OL_ERRC_INVALID_SIZE;
@@ -815,21 +922,21 @@ ol_impl_result_t olEnqueueDataWrite_val(ol_queue_handle_t Queue, void *DstPtr,
     }
   }
 
-  return olEnqueueDataWrite_impl(Queue, DstPtr, SrcPtr, Size, EventOut);
+  return olEnqueueMemcpyHtoD_impl(Queue, DstPtr, SrcPtr, Size, EventOut);
 }
 OL_APIEXPORT ol_result_t OL_APICALL
-olEnqueueDataWrite(ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr,
-                   size_t Size, ol_event_handle_t *EventOut) {
+olEnqueueMemcpyHtoD(ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr,
+                    size_t Size, ol_event_handle_t *EventOut) {
   if (offloadConfig().TracingEnabled) {
-    std::cerr << "---> olEnqueueDataWrite";
+    std::cerr << "---> olEnqueueMemcpyHtoD";
   }
 
   ol_result_t Result =
-      olEnqueueDataWrite_val(Queue, DstPtr, SrcPtr, Size, EventOut);
+      olEnqueueMemcpyHtoD_val(Queue, DstPtr, SrcPtr, Size, EventOut);
 
   if (offloadConfig().TracingEnabled) {
-    ol_enqueue_data_write_params_t Params = {&Queue, &DstPtr, &SrcPtr, &Size,
-                                             &EventOut};
+    ol_enqueue_memcpy_hto_d_params_t Params = {&Queue, &DstPtr, &SrcPtr, &Size,
+                                               &EventOut};
     std::cerr << "(" << &Params << ")";
     std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -838,22 +945,23 @@ olEnqueueDataWrite(ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr,
   }
   return Result;
 }
-ol_result_t olEnqueueDataWriteWithCodeLoc(ol_queue_handle_t Queue, void *DstPtr,
-                                          void *SrcPtr, size_t Size,
-                                          ol_event_handle_t *EventOut,
-                                          ol_code_location_t *CodeLocation) {
+ol_result_t olEnqueueMemcpyHtoDWithCodeLoc(ol_queue_handle_t Queue,
+                                           void *DstPtr, void *SrcPtr,
+                                           size_t Size,
+                                           ol_event_handle_t *EventOut,
+                                           ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
   ol_result_t Result =
-      olEnqueueDataWrite(Queue, DstPtr, SrcPtr, Size, EventOut);
+      olEnqueueMemcpyHtoD(Queue, DstPtr, SrcPtr, Size, EventOut);
 
   currentCodeLocation() = nullptr;
   return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olEnqueueDataRead_val(ol_queue_handle_t Queue, void *DstPtr,
-                                       void *SrcPtr, size_t Size,
-                                       ol_event_handle_t *EventOut) {
+ol_impl_result_t olEnqueueMemcpyDtoH_val(ol_queue_handle_t Queue, void *DstPtr,
+                                         void *SrcPtr, size_t Size,
+                                         ol_event_handle_t *EventOut) {
   if (true /*enableParameterValidation*/) {
     if (NULL == Queue) {
       return OL_ERRC_INVALID_NULL_HANDLE;
@@ -868,21 +976,21 @@ ol_impl_result_t olEnqueueDataRead_val(ol_queue_handle_t Queue, void *DstPtr,
     }
   }
 
-  return olEnqueueDataRead_impl(Queue, DstPtr, SrcPtr, Size, EventOut);
+  return olEnqueueMemcpyDtoH_impl(Queue, DstPtr, SrcPtr, Size, EventOut);
 }
 OL_APIEXPORT ol_result_t OL_APICALL
-olEnqueueDataRead(ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr,
-                  size_t Size, ol_event_handle_t *EventOut) {
+olEnqueueMemcpyDtoH(ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr,
+                    size_t Size, ol_event_handle_t *EventOut) {
   if (offloadConfig().TracingEnabled) {
-    std::cerr << "---> olEnqueueDataRead";
+    std::cerr << "---> olEnqueueMemcpyDtoH";
   }
 
   ol_result_t Result =
-      olEnqueueDataRead_val(Queue, DstPtr, SrcPtr, Size, EventOut);
+      olEnqueueMemcpyDtoH_val(Queue, DstPtr, SrcPtr, Size, EventOut);
 
   if (offloadConfig().TracingEnabled) {
-    ol_enqueue_data_read_params_t Params = {&Queue, &DstPtr, &SrcPtr, &Size,
-                                            &EventOut};
+    ol_enqueue_memcpy_dto_h_params_t Params = {&Queue, &DstPtr, &SrcPtr, &Size,
+                                               &EventOut};
     std::cerr << "(" << &Params << ")";
     std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -891,22 +999,25 @@ olEnqueueDataRead(ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr,
   }
   return Result;
 }
-ol_result_t olEnqueueDataReadWithCodeLoc(ol_queue_handle_t Queue, void *DstPtr,
-                                         void *SrcPtr, size_t Size,
-                                         ol_event_handle_t *EventOut,
-                                         ol_code_location_t *CodeLocation) {
+ol_result_t olEnqueueMemcpyDtoHWithCodeLoc(ol_queue_handle_t Queue,
+                                           void *DstPtr, void *SrcPtr,
+                                           size_t Size,
+                                           ol_event_handle_t *EventOut,
+                                           ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = olEnqueueDataRead(Queue, DstPtr, SrcPtr, Size, EventOut);
+  ol_result_t Result =
+      olEnqueueMemcpyDtoH(Queue, DstPtr, SrcPtr, Size, EventOut);
 
   currentCodeLocation() = nullptr;
   return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olEnqueueDataCopy_val(ol_queue_handle_t Queue,
-                                       ol_device_handle_t DstDevice,
-                                       void *DstPtr, void *SrcPtr, size_t Size,
-                                       ol_event_handle_t *EventOut) {
+ol_impl_result_t olEnqueueMemcpyDtoD_val(ol_queue_handle_t Queue,
+                                         ol_device_handle_t DstDevice,
+                                         void *DstPtr, void *SrcPtr,
+                                         size_t Size,
+                                         ol_event_handle_t *EventOut) {
   if (true /*enableParameterValidation*/) {
     if (NULL == Queue) {
       return OL_ERRC_INVALID_NULL_HANDLE;
@@ -925,22 +1036,22 @@ ol_impl_result_t olEnqueueDataCopy_val(ol_queue_handle_t Queue,
     }
   }
 
-  return olEnqueueDataCopy_impl(Queue, DstDevice, DstPtr, SrcPtr, Size,
-                                EventOut);
+  return olEnqueueMemcpyDtoD_impl(Queue, DstDevice, DstPtr, SrcPtr, Size,
+                                  EventOut);
 }
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopy(
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpyDtoD(
     ol_queue_handle_t Queue, ol_device_handle_t DstDevice, void *DstPtr,
     void *SrcPtr, size_t Size, ol_event_handle_t *EventOut) {
   if (offloadConfig().TracingEnabled) {
-    std::cerr << "---> olEnqueueDataCopy";
+    std::cerr << "---> olEnqueueMemcpyDtoD";
   }
 
   ol_result_t Result =
-      olEnqueueDataCopy_val(Queue, DstDevice, DstPtr, SrcPtr, Size, EventOut);
+      olEnqueueMemcpyDtoD_val(Queue, DstDevice, DstPtr, SrcPtr, Size, EventOut);
 
   if (offloadConfig().TracingEnabled) {
-    ol_enqueue_data_copy_params_t Params = {&Queue,  &DstDevice, &DstPtr,
-                                            &SrcPtr, &Size,      &EventOut};
+    ol_enqueue_memcpy_dto_d_params_t Params = {&Queue,  &DstDevice, &DstPtr,
+                                               &SrcPtr, &Size,      &EventOut};
     std::cerr << "(" << &Params << ")";
     std::cerr << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -949,15 +1060,15 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopy(
   }
   return Result;
 }
-ol_result_t olEnqueueDataCopyWithCodeLoc(ol_queue_handle_t Queue,
-                                         ol_device_handle_t DstDevice,
-                                         void *DstPtr, void *SrcPtr,
-                                         size_t Size,
-                                         ol_event_handle_t *EventOut,
-                                         ol_code_location_t *CodeLocation) {
+ol_result_t olEnqueueMemcpyDtoDWithCodeLoc(ol_queue_handle_t Queue,
+                                           ol_device_handle_t DstDevice,
+                                           void *DstPtr, void *SrcPtr,
+                                           size_t Size,
+                                           ol_event_handle_t *EventOut,
+                                           ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
   ol_result_t Result =
-      olEnqueueDataCopy(Queue, DstDevice, DstPtr, SrcPtr, Size, EventOut);
+      olEnqueueMemcpyDtoD(Queue, DstDevice, DstPtr, SrcPtr, Size, EventOut);
 
   currentCodeLocation() = nullptr;
   return Result;

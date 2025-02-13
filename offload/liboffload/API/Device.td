@@ -104,3 +104,15 @@ def : Function {
     Return<"OL_ERRC_INVALID_DEVICE">
   ];
 }
+
+def : Function {
+  let name = "olGetHostDevice";
+  let desc = "Return the special host device used to represent the host in memory transfer operations";
+  let details = [
+    "The host device does not support queues"
+  ];
+  let params = [
+    Param<"ol_device_handle_t*", "Device", "Output pointer for the device">
+  ]; // TODO: Take a platform?
+  let returns = [];
+}

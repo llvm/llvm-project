@@ -27,7 +27,7 @@ using namespace llvm::omp::target::plugin;
 // interface.
 struct ol_device_impl_t {
   int DeviceNum;
-  GenericDeviceTy &Device;
+  GenericDeviceTy *Device;
   ol_platform_handle_t Platform;
 };
 
@@ -45,7 +45,6 @@ struct ol_queue_impl_t {
 struct ol_event_impl_t {
   void *EventInfo;
   ol_queue_handle_t Queue;
-  ol_device_handle_t Device;
   std::atomic_uint32_t RefCount;
 };
 
@@ -107,6 +106,11 @@ PlatformVecT &Platforms() {
   return Platforms;
 }
 
+ol_device_handle_t HostDevice() {
+  static ol_device_impl_t HostDeviceImpl{-1, nullptr, nullptr};
+  return &HostDeviceImpl;
+}
+
 // TODO: Some plugins expect to be linked into libomptarget which defines these
 // symbols to implement ompt callbacks. The least invasive workaround here is to
 // define them in libLLVMOffload as false/null so they are never used. In future
@@ -144,7 +148,7 @@ void initPlugins() {
          DevNum++) {
       if (Platform.Plugin->init_device(DevNum) == OFFLOAD_SUCCESS) {
         Platform.Devices.emplace_back(ol_device_impl_t{
-            DevNum, Platform.Plugin->getDevice(DevNum), &Platform});
+            DevNum, &Platform.Plugin->getDevice(DevNum), &Platform});
       }
     }
   }
@@ -260,7 +264,7 @@ ol_impl_result_t olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
   InfoQueueTy DevInfo;
-  if (auto Err = Device->Device.obtainInfoImpl(DevInfo))
+  if (auto Err = Device->Device->obtainInfoImpl(DevInfo))
     return OL_ERRC_OUT_OF_RESOURCES;
 
   // Find the info if it exists under any of the given names
@@ -312,6 +316,11 @@ ol_impl_result_t olGetDeviceInfoSize_impl(ol_device_handle_t Device,
   return olGetDeviceInfoImplDetail(Device, PropName, 0, nullptr, PropSizeRet);
 }
 
+ol_impl_result_t olGetHostDevice_impl(ol_device_handle_t *Device) {
+  *Device = HostDevice();
+  return OL_SUCCESS;
+}
+
 TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
   switch (Type) {
   case OL_ALLOC_TYPE_DEVICE:
@@ -328,7 +337,7 @@ ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
                                  ol_alloc_type_t Type, size_t Size,
                                  void **AllocationOut) {
   auto Alloc =
-      Device->Device.dataAlloc(Size, nullptr, convertOlToPluginAllocTy(Type));
+      Device->Device->dataAlloc(Size, nullptr, convertOlToPluginAllocTy(Type));
   if (!Alloc)
     return {OL_ERRC_OUT_OF_RESOURCES,
             formatv("Could not create allocation on device {0}", Device).str()};
@@ -339,7 +348,8 @@ ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
 
 ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                                 void *Address) {
-  auto Res = Device->Device.dataDelete(Address, convertOlToPluginAllocTy(Type));
+  auto Res =
+      Device->Device->dataDelete(Address, convertOlToPluginAllocTy(Type));
   if (Res)
     return {OL_ERRC_OUT_OF_RESOURCES, "Could not free allocation"};
 
@@ -349,7 +359,7 @@ ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
 ol_impl_result_t olCreateQueue_impl(ol_device_handle_t Device,
                                     ol_queue_handle_t *Queue) {
   auto CreatedQueue = std::make_unique<ol_queue_impl_t>();
-  auto Err = Device->Device.initAsyncInfo(&(CreatedQueue->AsyncInfo));
+  auto Err = Device->Device->initAsyncInfo(&(CreatedQueue->AsyncInfo));
   if (Err)
     return {OL_ERRC_UNKNOWN, "Could not initialize stream resource"};
 
@@ -375,7 +385,7 @@ ol_impl_result_t olFinishQueue_impl(ol_queue_handle_t Queue) {
   // Host plugin doesn't have a queue set so it's not safe to call synchronize
   // on it, but we have nothing to synchronize in that situation anyway.
   if (Queue->AsyncInfo->Queue) {
-    auto Err = Queue->Device->Device.synchronize(Queue->AsyncInfo);
+    auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo);
     if (Err)
       return {OL_ERRC_INVALID_QUEUE, "The queue failed to synchronize"};
   }
@@ -383,7 +393,7 @@ ol_impl_result_t olFinishQueue_impl(ol_queue_handle_t Queue) {
   // Recreate the stream resource so the queue can be reused
   // TODO: Would be easier for the synchronization to (optionally) not release
   // it to begin with.
-  auto Res = Queue->Device->Device.initAsyncInfo(&Queue->AsyncInfo);
+  auto Res = Queue->Device->Device->initAsyncInfo(&Queue->AsyncInfo);
   if (Res)
     return {OL_ERRC_UNKNOWN, "Could not reinitialize the stream resource"};
 
@@ -391,7 +401,7 @@ ol_impl_result_t olFinishQueue_impl(ol_queue_handle_t Queue) {
 }
 
 ol_impl_result_t olWaitEvent_impl(ol_event_handle_t Event) {
-  auto Res = Event->Device->Device.syncEvent(Event->EventInfo);
+  auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo);
   if (Res)
     return {OL_ERRC_INVALID_EVENT, "The event failed to synchronize"};
 
@@ -413,24 +423,59 @@ ol_impl_result_t olReleaseEvent_impl(ol_event_handle_t Event) {
 ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
   auto EventImpl = std::make_unique<ol_event_impl_t>();
   EventImpl->Queue = Queue;
-  auto Res = Queue->Device->Device.createEvent(&EventImpl->EventInfo);
+  auto Res = Queue->Device->Device->createEvent(&EventImpl->EventInfo);
   if (Res)
     return nullptr;
 
-  Res =
-      Queue->Device->Device.recordEvent(EventImpl->EventInfo, Queue->AsyncInfo);
+  Res = Queue->Device->Device->recordEvent(EventImpl->EventInfo,
+                                           Queue->AsyncInfo);
   if (Res)
     return nullptr;
 
   return EventImpl.release();
 }
 
-ol_impl_result_t olEnqueueDataWrite_impl(ol_queue_handle_t Queue, void *DstPtr,
-                                         void *SrcPtr, size_t Size,
-                                         ol_event_handle_t *EventOut) {
-  auto &DeviceImpl = Queue->Device->Device;
+ol_impl_result_t olEnqueueMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                      ol_device_handle_t DstDevice,
+                                      void *SrcPtr,
+                                      ol_device_handle_t SrcDevice, size_t Size,
+                                      ol_event_handle_t *EventOut) {
+  if (DstDevice == HostDevice() && SrcDevice == HostDevice()) {
+    // TODO: We could actually handle this with a plain memcpy but we currently
+    // have no way of synchronizing this with the queue
+    return {OL_ERRC_INVALID_ARGUMENT,
+            "One of DstDevice and SrcDevice must be a non-host device"};
+  }
 
-  auto Res = DeviceImpl.dataSubmit(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
+  if (DstDevice == HostDevice()) {
+    auto Res =
+        SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
+    if (Res)
+      return {OL_ERRC_UNKNOWN, "The data retrieve operation failed"};
+  } else if (SrcDevice == HostDevice()) {
+    auto Res =
+        DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
+    if (Res)
+      return {OL_ERRC_UNKNOWN, "The data submit operation failed"};
+  } else {
+    auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
+                                               DstPtr, Size, Queue->AsyncInfo);
+    if (Res)
+      return {OL_ERRC_UNKNOWN, "The data exchange operation failed"};
+  }
+
+  if (EventOut)
+    *EventOut = makeEvent(Queue);
+
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olEnqueueMemcpyHtoD_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                          void *SrcPtr, size_t Size,
+                                          ol_event_handle_t *EventOut) {
+  auto *DeviceImpl = Queue->Device->Device;
+
+  auto Res = DeviceImpl->dataSubmit(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
 
   if (Res)
     return {OL_ERRC_UNKNOWN, "The data submit operation failed"};
@@ -441,12 +486,12 @@ ol_impl_result_t olEnqueueDataWrite_impl(ol_queue_handle_t Queue, void *DstPtr,
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olEnqueueDataRead_impl(ol_queue_handle_t Queue, void *DstPtr,
-                                        void *SrcPtr, size_t Size,
-                                        ol_event_handle_t *EventOut) {
-  auto &DeviceImpl = Queue->Device->Device;
+ol_impl_result_t olEnqueueMemcpyDtoH_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                          void *SrcPtr, size_t Size,
+                                          ol_event_handle_t *EventOut) {
+  auto *DeviceImpl = Queue->Device->Device;
 
-  auto Res = DeviceImpl.dataRetrieve(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
+  auto Res = DeviceImpl->dataRetrieve(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
 
   if (Res)
     return {OL_ERRC_UNKNOWN, "The data retrieve operation failed"};
@@ -457,14 +502,15 @@ ol_impl_result_t olEnqueueDataRead_impl(ol_queue_handle_t Queue, void *DstPtr,
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue,
-                                        ol_device_handle_t DstDevice,
-                                        void *DstPtr, void *SrcPtr, size_t Size,
-                                        ol_event_handle_t *EventOut) {
-  auto &DeviceImpl = Queue->Device->Device;
+ol_impl_result_t olEnqueueMemcpyDtoD_impl(ol_queue_handle_t Queue,
+                                          ol_device_handle_t DstDevice,
+                                          void *DstPtr, void *SrcPtr,
+                                          size_t Size,
+                                          ol_event_handle_t *EventOut) {
+  auto *DeviceImpl = Queue->Device->Device;
 
-  auto Res = DeviceImpl.dataExchange(SrcPtr, DstDevice->Device, DstPtr, Size,
-                                     Queue->AsyncInfo);
+  auto Res = DeviceImpl->dataExchange(SrcPtr, *DstDevice->Device, DstPtr, Size,
+                                      Queue->AsyncInfo);
 
   if (Res)
     return {OL_ERRC_UNKNOWN, "The data exchange operation failed"};
@@ -489,7 +535,7 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
 
   ol_program_handle_t Prog = new ol_program_impl_t();
 
-  auto Res = Device->Device.loadBinary(Device->Device.Plugin, &DeviceImage);
+  auto Res = Device->Device->loadBinary(Device->Device->Plugin, &DeviceImage);
   if (!Res)
     return OL_ERRC_INVALID_VALUE;
 
@@ -559,9 +605,9 @@ ol_impl_result_t
 olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
                            const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                            ol_event_handle_t *EventOut) {
-  auto &DeviceImpl = Queue->Device->Device;
+  auto *DeviceImpl = Queue->Device->Device;
 
-  AsyncInfoWrapperTy AsyncInfoWrapper(DeviceImpl, Queue->AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, Queue->AsyncInfo);
 
   KernelArgsTy LaunchArgs{};
   LaunchArgs.NumArgs = Kernel->Args.getPointers().size();
@@ -578,7 +624,7 @@ olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
   // No offsets needed, arguments are real pointers
   auto ArgOffsets = std::vector<ptrdiff_t>(LaunchArgs.NumArgs, 0ul);
 
-  auto Err = Kernel->KernelImpl->launch(DeviceImpl, LaunchArgs.ArgPtrs,
+  auto Err = Kernel->KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs,
                                         ArgOffsets.data(), LaunchArgs,
                                         AsyncInfoWrapper);
 

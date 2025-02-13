@@ -11,7 +11,28 @@
 //===----------------------------------------------------------------------===//
 
 def : Function {
-    let name = "olEnqueueDataWrite";
+    let name = "olEnqueueMemcpy";
+    let desc = "Enqueue a memcpy operation.";
+    let details = [
+        "For host pointers, use the device returned by olGetHostDevice",
+        "At least one device must be a non-host device"
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+        Param<"void*", "DstPtr", "pointer to copy to", PARAM_IN>,
+        Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to", PARAM_IN>,
+        Param<"void*", "SrcPtr", "pointer to copy from", PARAM_IN>,
+        Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to", PARAM_IN>,
+        Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
+        Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
+    ];
+    let returns = [
+        Return<"OL_ERRC_INVALID_SIZE", ["`Size == 0`"]>
+    ];
+}
+
+def : Function {
+    let name = "olEnqueueMemcpyHtoD";
     let desc = "Enqueue a write operation from host to device memory";
     let details = [];
     let params = [
@@ -27,7 +48,7 @@ def : Function {
 }
 
 def : Function {
-    let name = "olEnqueueDataRead";
+    let name = "olEnqueueMemcpyDtoH";
     let desc = "Enqueue a read operation from device to host memory";
     let details = [];
     let params = [
@@ -41,7 +62,7 @@ def : Function {
 }
 
 def : Function {
-    let name = "olEnqueueDataCopy";
+    let name = "olEnqueueMemcpyDtoD";
     let desc = "Enqueue a write operation between device allocations";
     let details = [];
     let params = [

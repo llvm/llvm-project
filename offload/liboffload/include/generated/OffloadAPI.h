@@ -475,6 +475,24 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSize(
     size_t *PropSizeRet);
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Return the special host device used to represent the host in memory
+/// transfer operations
+///
+/// @details
+///    - The host device does not support queues
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == Device`
+OL_APIEXPORT ol_result_t OL_APICALL olGetHostDevice(
+    //  Output pointer for the device
+    ol_device_handle_t *Device);
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Represents the type of allocation made with olMemAlloc
 typedef enum ol_alloc_type_t {
   /// Host allocation
@@ -654,6 +672,42 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitEvent(
     ol_event_handle_t Event);
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Enqueue a memcpy operation.
+///
+/// @details
+///    - For host pointers, use the device returned by olGetHostDevice
+///    - At least one device must be a non-host device
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_SIZE
+///         + `Size == 0`
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Queue`
+///         + `NULL == DstDevice`
+///         + `NULL == SrcDevice`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == DstPtr`
+///         + `NULL == SrcPtr`
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpy(
+    // [in] handle of the queue
+    ol_queue_handle_t Queue,
+    // [in] pointer to copy to
+    void *DstPtr,
+    // [in] device that DstPtr belongs to
+    ol_device_handle_t DstDevice,
+    // [in] pointer to copy from
+    void *SrcPtr,
+    // [in] device that SrcPtr belongs to
+    ol_device_handle_t SrcDevice,
+    // [in] size in bytes of data to copy
+    size_t Size,
+    // [out][optional] optional recorded event for the enqueued operation
+    ol_event_handle_t *EventOut);
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Enqueue a write operation from host to device memory
 ///
 /// @details
@@ -669,7 +723,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitEvent(
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == DstPtr`
 ///         + `NULL == SrcPtr`
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataWrite(
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpyHtoD(
     // [in] handle of the queue
     ol_queue_handle_t Queue,
     // [in] device pointer to copy to
@@ -695,7 +749,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataWrite(
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == DstPtr`
 ///         + `NULL == SrcPtr`
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataRead(
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpyDtoH(
     // [in] handle of the queue
     ol_queue_handle_t Queue,
     // [in] host pointer to copy to
@@ -722,7 +776,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataRead(
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == DstPtr`
 ///         + `NULL == SrcPtr`
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopy(
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpyDtoD(
     // [in] handle of the queue
     ol_queue_handle_t Queue,
     // [in] device that the destination pointer is resident on
@@ -1009,6 +1063,13 @@ typedef struct ol_get_device_info_size_params_t {
 } ol_get_device_info_size_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olGetHostDevice
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_get_host_device_params_t {
+  ol_device_handle_t **pDevice;
+} ol_get_host_device_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olMemAlloc
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_mem_alloc_params_t {
@@ -1078,38 +1139,51 @@ typedef struct ol_wait_event_params_t {
 } ol_wait_event_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olEnqueueDataWrite
+/// @brief Function parameters for olEnqueueMemcpy
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_enqueue_data_write_params_t {
+typedef struct ol_enqueue_memcpy_params_t {
+  ol_queue_handle_t *pQueue;
+  void **pDstPtr;
+  ol_device_handle_t *pDstDevice;
+  void **pSrcPtr;
+  ol_device_handle_t *pSrcDevice;
+  size_t *pSize;
+  ol_event_handle_t **pEventOut;
+} ol_enqueue_memcpy_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olEnqueueMemcpyHtoD
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_enqueue_memcpy_hto_d_params_t {
   ol_queue_handle_t *pQueue;
   void **pDstPtr;
   void **pSrcPtr;
   size_t *pSize;
   ol_event_handle_t **pEventOut;
-} ol_enqueue_data_write_params_t;
+} ol_enqueue_memcpy_hto_d_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olEnqueueDataRead
+/// @brief Function parameters for olEnqueueMemcpyDtoH
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_enqueue_data_read_params_t {
+typedef struct ol_enqueue_memcpy_dto_h_params_t {
   ol_queue_handle_t *pQueue;
   void **pDstPtr;
   void **pSrcPtr;
   size_t *pSize;
   ol_event_handle_t **pEventOut;
-} ol_enqueue_data_read_params_t;
+} ol_enqueue_memcpy_dto_h_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olEnqueueDataCopy
+/// @brief Function parameters for olEnqueueMemcpyDtoD
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_enqueue_data_copy_params_t {
+typedef struct ol_enqueue_memcpy_dto_d_params_t {
   ol_queue_handle_t *pQueue;
   ol_device_handle_t *pDstDevice;
   void **pDstPtr;
   void **pSrcPtr;
   size_t *pSize;
   ol_event_handle_t **pEventOut;
-} ol_enqueue_data_copy_params_t;
+} ol_enqueue_memcpy_dto_d_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olEnqueueKernelLaunch
@@ -1263,6 +1337,13 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSizeWithCodeLoc(
     ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olGetHostDevice that also sets source code location
+/// information
+/// @details See also ::olGetHostDevice
+OL_APIEXPORT ol_result_t OL_APICALL olGetHostDeviceWithCodeLoc(
+    ol_device_handle_t *Device, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olMemAlloc that also sets source code location information
 /// @details See also ::olMemAlloc
 OL_APIEXPORT ol_result_t OL_APICALL olMemAllocWithCodeLoc(
@@ -1327,26 +1408,35 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitEventWithCodeLoc(
     ol_event_handle_t Event, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olEnqueueDataWrite that also sets source code location
+/// @brief Variant of olEnqueueMemcpy that also sets source code location
 /// information
-/// @details See also ::olEnqueueDataWrite
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataWriteWithCodeLoc(
+/// @details See also ::olEnqueueMemcpy
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpyWithCodeLoc(
+    ol_queue_handle_t Queue, void *DstPtr, ol_device_handle_t DstDevice,
+    void *SrcPtr, ol_device_handle_t SrcDevice, size_t Size,
+    ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olEnqueueMemcpyHtoD that also sets source code location
+/// information
+/// @details See also ::olEnqueueMemcpyHtoD
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpyHtoDWithCodeLoc(
     ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr, size_t Size,
     ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olEnqueueDataRead that also sets source code location
+/// @brief Variant of olEnqueueMemcpyDtoH that also sets source code location
 /// information
-/// @details See also ::olEnqueueDataRead
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataReadWithCodeLoc(
+/// @details See also ::olEnqueueMemcpyDtoH
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpyDtoHWithCodeLoc(
     ol_queue_handle_t Queue, void *DstPtr, void *SrcPtr, size_t Size,
     ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olEnqueueDataCopy that also sets source code location
+/// @brief Variant of olEnqueueMemcpyDtoD that also sets source code location
 /// information
-/// @details See also ::olEnqueueDataCopy
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopyWithCodeLoc(
+/// @details See also ::olEnqueueMemcpyDtoD
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpyDtoDWithCodeLoc(
     ol_queue_handle_t Queue, ol_device_handle_t DstDevice, void *DstPtr,
     void *SrcPtr, size_t Size, ol_event_handle_t *EventOut,
     ol_code_location_t *CodeLocation);

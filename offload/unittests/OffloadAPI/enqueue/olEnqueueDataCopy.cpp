@@ -1,4 +1,4 @@
-//===------- Offload API tests - olEnqueueDataCopy ------------------------===//
+//===------- Offload API tests - olEnqueueMemcpyDtoD ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,9 +10,9 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olEnqueueDataCopyTest = offloadQueueTest;
+using olEnqueueMemcpyDtoDTest = offloadQueueTest;
 
-TEST_F(olEnqueueDataCopyTest, Success) {
+TEST_F(olEnqueueMemcpyDtoDTest, Success) {
   constexpr size_t Size = 1024;
   void *AllocA;
   void *AllocB;
@@ -22,11 +22,11 @@ TEST_F(olEnqueueDataCopyTest, Success) {
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &AllocA));
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &AllocB));
   ASSERT_SUCCESS(
-      olEnqueueDataWrite(Queue, AllocA, Input.data(), Size, nullptr));
+      olEnqueueMemcpyHtoD(Queue, AllocA, Input.data(), Size, nullptr));
   ASSERT_SUCCESS(
-      olEnqueueDataCopy(Queue, Device, AllocB, AllocA, Size, nullptr));
+      olEnqueueMemcpyDtoD(Queue, Device, AllocB, AllocA, Size, nullptr));
   ASSERT_SUCCESS(
-      olEnqueueDataRead(Queue, Output.data(), AllocB, Size, nullptr));
+      olEnqueueMemcpyDtoH(Queue, Output.data(), AllocB, Size, nullptr));
   ASSERT_SUCCESS(olFinishQueue(Queue));
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);

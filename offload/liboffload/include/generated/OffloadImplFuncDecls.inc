@@ -37,6 +37,8 @@ ol_impl_result_t olGetDeviceInfoSize_impl(ol_device_handle_t Device,
                                           ol_device_info_t PropName,
                                           size_t *PropSizeRet);
 
+ol_impl_result_t olGetHostDevice_impl(ol_device_handle_t *Device);
+
 ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
                                  ol_alloc_type_t Type, size_t Size,
                                  void **AllocationOut);
@@ -59,18 +61,25 @@ ol_impl_result_t olReleaseEvent_impl(ol_event_handle_t Event);
 
 ol_impl_result_t olWaitEvent_impl(ol_event_handle_t Event);
 
-ol_impl_result_t olEnqueueDataWrite_impl(ol_queue_handle_t Queue, void *DstPtr,
-                                         void *SrcPtr, size_t Size,
-                                         ol_event_handle_t *EventOut);
+ol_impl_result_t olEnqueueMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                      ol_device_handle_t DstDevice,
+                                      void *SrcPtr,
+                                      ol_device_handle_t SrcDevice, size_t Size,
+                                      ol_event_handle_t *EventOut);
 
-ol_impl_result_t olEnqueueDataRead_impl(ol_queue_handle_t Queue, void *DstPtr,
-                                        void *SrcPtr, size_t Size,
-                                        ol_event_handle_t *EventOut);
+ol_impl_result_t olEnqueueMemcpyHtoD_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                          void *SrcPtr, size_t Size,
+                                          ol_event_handle_t *EventOut);
 
-ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue,
-                                        ol_device_handle_t DstDevice,
-                                        void *DstPtr, void *SrcPtr, size_t Size,
-                                        ol_event_handle_t *EventOut);
+ol_impl_result_t olEnqueueMemcpyDtoH_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                          void *SrcPtr, size_t Size,
+                                          ol_event_handle_t *EventOut);
+
+ol_impl_result_t olEnqueueMemcpyDtoD_impl(ol_queue_handle_t Queue,
+                                          ol_device_handle_t DstDevice,
+                                          void *DstPtr, void *SrcPtr,
+                                          size_t Size,
+                                          ol_event_handle_t *EventOut);
 
 ol_impl_result_t
 olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,

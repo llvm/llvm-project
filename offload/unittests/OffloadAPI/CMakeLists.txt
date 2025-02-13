@@ -20,6 +20,7 @@ add_libompt_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olEnqueueDataWrite.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olEnqueueDataRead.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olEnqueueDataCopy.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olEnqueueMemcpy.cpp
     )
 add_dependencies("offload.unittests" ${PLUGINS_TEST_COMMON})
 target_link_libraries("offload.unittests" PRIVATE ${PLUGINS_TEST_COMMON})

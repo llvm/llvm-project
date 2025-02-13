@@ -475,6 +475,13 @@ operator<<(std::ostream &os,
   return os;
 }
 
+inline std::ostream &
+operator<<(std::ostream &os, const struct ol_get_host_device_params_t *params) {
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  return os;
+}
+
 inline std::ostream &operator<<(std::ostream &os,
                                 const struct ol_mem_alloc_params_t *params) {
   os << ".Device = ";
@@ -557,8 +564,33 @@ inline std::ostream &operator<<(std::ostream &os,
 }
 
 inline std::ostream &
+operator<<(std::ostream &os, const struct ol_enqueue_memcpy_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  os << ", ";
+  os << ".DstPtr = ";
+  printPtr(os, *params->pDstPtr);
+  os << ", ";
+  os << ".DstDevice = ";
+  printPtr(os, *params->pDstDevice);
+  os << ", ";
+  os << ".SrcPtr = ";
+  printPtr(os, *params->pSrcPtr);
+  os << ", ";
+  os << ".SrcDevice = ";
+  printPtr(os, *params->pSrcDevice);
+  os << ", ";
+  os << ".Size = ";
+  os << *params->pSize;
+  os << ", ";
+  os << ".EventOut = ";
+  printPtr(os, *params->pEventOut);
+  return os;
+}
+
+inline std::ostream &
 operator<<(std::ostream &os,
-           const struct ol_enqueue_data_write_params_t *params) {
+           const struct ol_enqueue_memcpy_hto_d_params_t *params) {
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   os << ", ";
@@ -578,7 +610,7 @@ operator<<(std::ostream &os,
 
 inline std::ostream &
 operator<<(std::ostream &os,
-           const struct ol_enqueue_data_read_params_t *params) {
+           const struct ol_enqueue_memcpy_dto_h_params_t *params) {
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   os << ", ";
@@ -598,7 +630,7 @@ operator<<(std::ostream &os,
 
 inline std::ostream &
 operator<<(std::ostream &os,
-           const struct ol_enqueue_data_copy_params_t *params) {
+           const struct ol_enqueue_memcpy_dto_d_params_t *params) {
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   os << ", ";
