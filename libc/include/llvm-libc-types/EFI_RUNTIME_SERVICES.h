@@ -10,6 +10,7 @@
 #define LLVM_LIBC_TYPES_EFI_RUNTIME_SERVICES_H
 
 #include "../llvm-libc-macros/EFIAPI-macros.h"
+#include "../llvm-libc-macros/stdint-macros.h"
 #include "EFI_CAPSULE.h"
 #include "EFI_MEMORY_DESCRIPTOR.h"
 #include "EFI_PHYSICAL_ADDRESS.h"
@@ -17,6 +18,7 @@
 #include "EFI_TABLE_HEADER.h"
 #include "EFI_TIME.h"
 #include "char16_t.h"
+#include "size_t.h"
 
 #define EFI_RUNTIME_SERVICES_SIGNATURE 0x56524553544e5552
 #define EFI_RUNTIME_SERVICES_REVISION EFI_SPECIFICATION_VERSION
@@ -46,6 +48,7 @@ typedef enum {
 typedef struct {
   uint8_t Type;
   uint32_t IdSize;
+  // Value is defined as:
   // uint8_t Id[IdSize];
 } EFI_VARIABLE_AUTHENTICATION_3_CERT_ID;
 

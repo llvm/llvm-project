@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_EFI_SYSTEM_TABLE_H
 #define LLVM_LIBC_TYPES_EFI_SYSTEM_TABLE_H
 
+#include "../llvm-libc-macros/stdint-macros.h"
 #include "EFI_BOOT_SERVICES.h"
 #include "EFI_CONFIGURATION_TABLE.h"
 #include "EFI_HANDLE.h"
@@ -19,6 +20,7 @@
 #include "EFI_TABLE_HEADER.h"
 
 #include "char16_t.h"
+#include "size_t.h"
 
 #define EFI_SYSTEM_TABLE_SIGNATURE 0x5453595320494249
 #define EFI_2_100_SYSTEM_TABLE_REVISION ((2 << 16) | (100))
