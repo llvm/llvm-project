@@ -202,7 +202,6 @@ CollectDescr
 LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
   SmallVector<CollectDescr::ExtractElementDescr, 4> Vec;
   Vec.reserve(Bndl.size());
-  uint32_t LaneAccum;
   for (auto [Elm, V] : enumerate(Bndl)) {
     uint32_t VLanes = VecUtils::getNumLanes(V);
     if (auto *VecOp = IMaps.getVectorForOrig(V)) {
@@ -210,12 +209,11 @@ LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
       std::optional<int> ExtractIdxOpt = IMaps.getOrigLane(VecOp, V);
       // This could be a vector, like <2 x float> in which case the mask needs
       // to enumerate all lanes.
-      for (int Ln = 0; Ln != VLanes; ++Ln)
+      for (unsigned Ln = 0; Ln != VLanes; ++Ln)
         Vec.emplace_back(VecOp, ExtractIdxOpt ? *ExtractIdxOpt + Ln : -1);
     } else {
       Vec.emplace_back(V);
     }
-    LaneAccum += VLanes;
   }
   return CollectDescr(std::move(Vec));
 }
