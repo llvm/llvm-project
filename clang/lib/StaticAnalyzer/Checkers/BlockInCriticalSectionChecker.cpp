@@ -145,7 +145,8 @@ using MutexDescriptor =
     std::variant<FirstArgMutexDescriptor, MemberMutexDescriptor,
                  RAIIMutexDescriptor>;
 
-class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
+class BlockInCriticalSectionChecker
+    : public Checker<check::PostCall, check::DeadSymbols> {
 private:
   const std::array<MutexDescriptor, 8> MutexDescriptors{
       // NOTE: There are standard library implementations where some methods
@@ -179,6 +180,8 @@ private:
                                              {CDM::CLibrary, {"read"}},
                                              {CDM::CLibrary, {"recv"}}};
 
+  const CallDescription OpenFunction{CDM::CLibrary, {"open"}, 2};
+
   const BugType BlockInCritSectionBugType{
       this, "Call to blocking function in critical section", "Blocking Error"};
 
@@ -197,6 +200,8 @@ private:
   void handleUnlock(const MutexDescriptor &Mutex, const CallEvent &Call,
                     CheckerContext &C) const;
 
+  void handleOpen(const CallEvent &Call, CheckerContext &C) const;
+
   [[nodiscard]] bool isBlockingInCritSection(const CallEvent &Call,
                                              CheckerContext &C) const;
 
@@ -205,11 +210,14 @@ public:
   /// Process lock.
   /// Process blocking functions (sleep, getc, fgets, read, recv)
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
+
+  void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 };
 
 } // end anonymous namespace
 
 REGISTER_LIST_WITH_PROGRAMSTATE(ActiveCritSections, CritSectionMarker)
+REGISTER_SET_WITH_PROGRAMSTATE(NonBlockFileDescriptor, SymbolRef)
 
 // Iterator traits for ImmutableList data structure
 // that enable the use of STL algorithms.
@@ -306,6 +314,25 @@ void BlockInCriticalSectionChecker::handleUnlock(
   C.addTransition(State);
 }
 
+void BlockInCriticalSectionChecker::handleOpen(const CallEvent &Call,
+                                               CheckerContext &C) const {
+  const auto *Flag = Call.getArgExpr(1);
+  static std::optional<int> ValueOfONonBlockVFlag =
+      tryExpandAsInteger("O_NONBLOCK", C.getBugReporter().getPreprocessor());
+  if (!ValueOfONonBlockVFlag)
+    return;
+
+  SVal FlagSV = C.getState()->getSVal(Flag, C.getLocationContext());
+  const llvm::APSInt *FlagV = FlagSV.getAsInteger();
+  if (!FlagV)
+    return;
+
+  if ((*FlagV & ValueOfONonBlockVFlag.value()) != 0)
+    if (SymbolRef SR = Call.getReturnValue().getAsSymbol()) {
+      C.addTransition(C.getState()->add<NonBlockFileDescriptor>(SR));
+    }
+}
+
 bool BlockInCriticalSectionChecker::isBlockingInCritSection(
     const CallEvent &Call, CheckerContext &C) const {
   return BlockingFunctions.contains(Call) &&
@@ -315,6 +342,27 @@ bool BlockInCriticalSectionChecker::isBlockingInCritSection(
 void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
                                                   CheckerContext &C) const {
   if (isBlockingInCritSection(Call, C)) {
+    // for 'read' and 'recv' call, check whether it's file descriptor(first
+    // argument) is
+    // created by 'open' API with O_NONBLOCK flag or is equal to -1, they will
+    // not cause block in these situations, don't report
+    StringRef FuncName = Call.getCalleeIdentifier()->getName();
+    if (FuncName == "read" || FuncName == "recv") {
+      const auto *Arg = Call.getArgExpr(0);
+      if (!Arg)
+        return;
+
+      SVal SV = C.getSVal(Arg);
+      if (const auto *IntValue = SV.getAsInteger()) {
+        if (*IntValue == -1)
+          return;
+      }
+
+      SymbolRef SR = C.getSVal(Arg).getAsSymbol();
+      if (SR && C.getState()->contains<NonBlockFileDescriptor>(SR)) {
+        return;
+      }
+    }
     reportBlockInCritSection(Call, C);
   } else if (std::optional<MutexDescriptor> LockDesc =
                  checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
@@ -322,7 +370,24 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
   } else if (std::optional<MutexDescriptor> UnlockDesc =
                  checkDescriptorMatch(Call, C, /*IsLock=*/false)) {
     handleUnlock(*UnlockDesc, Call, C);
+  } else if (OpenFunction.matches(Call)) {
+    handleOpen(Call, C);
   }
+}
+
+void BlockInCriticalSectionChecker::checkDeadSymbols(SymbolReaper &SymReaper,
+                                                     CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+
+  // Remove the dead symbols from the NonBlockFileDescriptor set.
+  NonBlockFileDescriptorTy Tracked = State->get<NonBlockFileDescriptor>();
+  for (SymbolRef SR : Tracked) {
+    if (SymReaper.isDead(SR)) {
+      State = State->remove<NonBlockFileDescriptor>(SR);
+    }
+  }
+
+  C.addTransition(State);
 }
 
 void BlockInCriticalSectionChecker::reportBlockInCritSection(
