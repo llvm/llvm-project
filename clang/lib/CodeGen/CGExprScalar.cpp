@@ -2643,6 +2643,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
   }
+    // CK_HLSLAggregateSplatCast only handles splatting to vectors from a vec1
+    // Casts were inserted in Sema to Cast the Src Expr to a Scalar and
+    // To perform any necessary Scalar Cast, so this Cast can be handled
+    // by the regular Vector Splat cast code.
+  case CK_HLSLAggregateSplatCast:
   case CK_VectorSplat: {
     llvm::Type *DstTy = ConvertType(DestTy);
     Value *Elt = Visit(const_cast<Expr *>(E));
@@ -2794,22 +2799,6 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     }
     llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
-  }
-  case CK_HLSLAggregateSplatCast: {
-    // This cast should only handle splatting from vectors of length 1.
-    // But in Sema a cast should have been inserted to convert the vec1 to a
-    // scalar
-    assert(DestTy->isVectorType() && "Destination type must be a vector.");
-    auto *DestVecTy = DestTy->getAs<VectorType>();
-    QualType SrcTy = E->getType();
-    SourceLocation Loc = CE->getExprLoc();
-    Value *V = Visit(const_cast<Expr *>(E));
-    assert(SrcTy->isBuiltinType() && "Invalid HLSL Aggregate splat cast.");
-
-    Value *Cast =
-        EmitScalarConversion(V, SrcTy, DestVecTy->getElementType(), Loc);
-    return Builder.CreateVectorSplat(DestVecTy->getNumElements(), Cast,
-                                     "splat");
   }
   case CK_HLSLElementwiseCast: {
     RValue RV = CGF.EmitAnyExpr(E);
