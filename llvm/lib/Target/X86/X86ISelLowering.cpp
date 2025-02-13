@@ -53629,9 +53629,9 @@ static SDValue combinei64TruncSrlAdd(SDValue N, EVT VT, SelectionDAG &DAG,
   SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
 
   APInt CleanupSizeConstVal = (SrlConst - 32).zextOrTrunc(VT.getSizeInBits());
-  SDValue CleanupSizeConst = DAG.getConstant(CleanupSizeConstVal, DL, VT);
-  SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, NewAddNode, CleanupSizeConst);
-  return DAG.getNode(ISD::SRL, DL, VT, Shl, CleanupSizeConst);
+  EVT CleanUpVT = EVT::getIntegerVT(*DAG.getContext(), CleanupSizeConstVal.getZExtValue());
+  SDValue CleanUp = DAG.getAnyExtOrTrunc(NewAddNode, DL, CleanUpVT);
+  return DAG.getAnyExtOrTrunc(CleanUp, DL, VT);
 }
 
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify
