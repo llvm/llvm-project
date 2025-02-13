@@ -64,8 +64,7 @@ TEST(TelemetryTest, PluginTest) {
   lldb_private::FakeTelemetryInfo entry;
   entry.msg = "";
 
-  auto stat = ins->dispatch(&entry);
-  ASSERT_FALSE(stat);
+  ASSERT_THAT_ERROR(ins->dispatch(&entry), llvm::Succeeded());
   ASSERT_EQ("In FakePlugin", entry.msg);
 
   ASSERT_EQ("FakeTelemetryPlugin", ins->GetPluginName());
