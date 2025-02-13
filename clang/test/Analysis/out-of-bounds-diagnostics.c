@@ -231,7 +231,16 @@ int arrayOfStructsArrow(void) {
   // expected-note@-2 {{Access of 'itemArray' at index 35, while it holds only 20 'struct item' elements}}
 }
 
+char convertedScalar(long long var) {
+  char *p = ((char*)&var);
+  (void) p[3]; // no-warning
+  return p[13];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'var'}}
+  // expected-note@-2 {{Access of 'var' at index 13, while it holds only 8 'char' elements}}
+}
+
 short convertedArray(void) {
+  (void) ((short*)TenElements)[17]; // no-warning
   return ((short*)TenElements)[47];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at index 47, while it holds only 20 'short' elements}}
@@ -268,14 +277,32 @@ int intFromStringDivisible(void) {
 
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t size);
+void free(void *mem);
 
 int *mallocRegion(void) {
   int *mem = (int*)malloc(2*sizeof(int));
+
+  mem[1] = 48; // no-warning
 
   mem[3] = -2;
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of the heap area at index 3, while it holds only 2 'int' elements}}
   return mem;
+}
+
+typedef struct { size_t len; int data[0]; } vec_t;
+
+void mallocFlexibleArray(void) {
+  vec_t *v = malloc(sizeof(vec_t) + 10 * sizeof(int));
+  v->len = 10;
+  v->data[1] = 5; // no-warning
+  v->data[11] = 99;
+  // TODO: Here ideally we would expect
+  //     {{Out of bound access to memory after the end of the heap area}}
+  //     {{Access of the heap area at index 11, while it holds only 10 'int' elements}}
+  // but the analyzer cannot (yet) deduce the size of the flexible array member
+  // from the size of the whole allocated area.
+  free(v);
 }
 
 int *custom_calloc(size_t a, size_t b) {
@@ -284,7 +311,7 @@ int *custom_calloc(size_t a, size_t b) {
   return __builtin_mul_overflow(a, b, &res) ? 0 : malloc(res);
 }
 
-int *mallocRegionOverflow(void) {
+int *mallocMulOverflow(void) {
   int *mem = (int*)custom_calloc(10, sizeof(int));
 
   mem[20] = 10;

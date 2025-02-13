@@ -55,6 +55,18 @@ ScatterTensorDescAttr::get(mlir::MLIRContext *context,
   return Base::get(context, scopeAttr, chunkSizeAttr);
 }
 
+LogicalResult ScatterTensorDescAttr::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    MemorySpaceAttr memory_space, IntegerAttr chunk_size) {
+  int64_t chunkSize = chunk_size.getInt();
+  SmallVector<int64_t> supportedChunkSizes = {1,  2,  3,  4,   8,
+                                              16, 32, 64, 128, 256};
+  if (!llvm::is_contained(supportedChunkSizes, chunkSize))
+    return emitError() << "invalid chunk size";
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_SGMapAttr
 //===----------------------------------------------------------------------===//
@@ -166,8 +178,6 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
         continue;
       }
     }
-    parser.emitError(parser.getCurrentLocation(),
-                     "Failed to parse the attribute.\n");
     return {};
   }
 
@@ -237,8 +247,7 @@ LogicalResult TensorDescType::verify(
     // Expected tensor ranks for scattered data:
     //   - 1D tensor for fully non-contiguous elements (chunk size == 1)
     //   - 2D tensor for scattered blocks (chunk size > 1)
-    IntegerAttr chunkAttr = scatterAttr.getChunkSize();
-    unsigned chunkSize = chunkAttr ? chunkAttr.getInt() : 1;
+    unsigned chunkSize = scatterAttr.getChunkSize().getInt();
     if (rank == 1 && chunkSize != 1)
       return emitError() << "expected non-contiguous elements for 1D tensor";
     if (rank == 2 && chunkSize < 2)
@@ -273,8 +282,7 @@ LogicalResult TensorDescType::verify(
         return emitError()
                << "cannot map over non-contiguous scattered row elements";
 
-      IntegerAttr chunkAttr = scatterAttr.getChunkSize();
-      unsigned chunkSize = chunkAttr ? chunkAttr.getInt() : 1;
+      unsigned chunkSize = scatterAttr.getChunkSize().getInt();
       if (wiData[1] != chunkSize)
         return emitError() << "work item data mapping must match the number of "
                               "contiguous elements";
