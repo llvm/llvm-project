@@ -724,6 +724,19 @@ add_header_macro(
     .llvm-libc-macros.poll-macros
   )
 
+# UEFI spec references "Uefi.h" so we use that name for compatibility
+add_header_macro(
+  uefi
+  ../libc/include/Uefi.yaml
+  Uefi.h.def
+  Uefi.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.EFI_GUID
+    .llvm-libc-types.EFI_STATUS
+    .llvm-libc-types.EFI_SYSTEM_TABLE
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.
   return()
