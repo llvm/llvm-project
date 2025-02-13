@@ -2527,7 +2527,7 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
 }
 
 bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
-  if ((!getLangOpts().HLSL && T->isArrayType()) || T->isFunctionType()) {
+  if (T->isArrayType() || T->isFunctionType()) {
     Diag(Loc, diag::err_func_returning_array_function)
       << T->isFunctionType() << T;
     return true;
@@ -4931,9 +4931,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // C99 6.7.5.3p1: The return type may not be a function or array type.
       // For conversion functions, we'll diagnose this particular error later.
-      if (!D.isInvalidType() &&
-          ((!S.getLangOpts().HLSL && T->isArrayType()) ||
-           T->isFunctionType()) &&
+      if (!D.isInvalidType() && (T->isArrayType() || T->isFunctionType()) &&
           (D.getName().getKind() !=
            UnqualifiedIdKind::IK_ConversionFunctionId)) {
         unsigned diagID = diag::err_func_returning_array_function;
