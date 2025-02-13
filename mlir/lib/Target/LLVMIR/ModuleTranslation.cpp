@@ -2143,7 +2143,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
 
   ModuleTranslation translator(module, std::move(llvmModule));
   llvm::IRBuilder<llvm::TargetFolder> llvmBuilder(
-      llvmContext, llvm::TargetFolder(llvmModule->getDataLayout()));
+      llvmContext,
+      llvm::TargetFolder(translator.getLLVMModule()->getDataLayout()));
 
   // Convert module before functions and operations inside, so dialect
   // attributes can be used to change dialect-specific global configurations via
