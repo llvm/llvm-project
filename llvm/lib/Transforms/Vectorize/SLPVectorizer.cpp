@@ -18630,15 +18630,16 @@ void BoUpSLP::computeMinimumValueSizes() {
           VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->hasState() &&
           VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->getOpcode() ==
               Instruction::ICmp &&
-          any_of(VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->Scalars,
-                 [&](Value *V) {
-                   auto *IC = dyn_cast<ICmpInst>(V);
-                   return IC && (IC->isSigned() ||
-                                 !isKnownNonNegative(IC->getOperand(0),
-                                                     SimplifyQuery(*DL)) ||
-                                 !isKnownNonNegative(IC->getOperand(1),
-                                                     SimplifyQuery(*DL)));
-                 });
+          any_of(
+              VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->Scalars,
+              [&](Value *V) {
+                auto *IC = dyn_cast<ICmpInst>(V);
+                return IC && (IC->isSigned() ||
+                              !isKnownNonNegative(IC->getOperand(0),
+                                                  SimplifyQuery(*DL)) ||
+                              !isKnownNonNegative(IC->getOperand(1),
+                                                  SimplifyQuery(*DL)));
+              });
     }
 
     // If the maximum bit width we compute is less than the width of the roots'
