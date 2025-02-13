@@ -1,4 +1,4 @@
-# RUN: llvm-mca -mtriple=amdgcn -mcpu=gfx940 --timeline --iterations=1 --timeline-max-cycles=0 < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=amdgcn -mcpu=gfx942 --timeline --iterations=1 --timeline-max-cycles=0 < %s | FileCheck %s
 
 # CHECK: Iterations:        1
 # CHECK: Instructions:      78
