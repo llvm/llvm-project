@@ -17,7 +17,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Telemetry/Telemetry.h"
 #include "gtest/gtest.h"
-
 #include <memory>
 
 namespace lldb_private {
