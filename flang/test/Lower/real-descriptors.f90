@@ -78,12 +78,12 @@ subroutine test_kind16(x16, c16)
   complex(kind=kind16) :: c16
 
   read(in,*) x16
-  ! CHECK-KIND16:  insertvalue { ptr, i64, i32, i8, i8, i8, i8 } { ptr undef, i64 ptrtoint (ptr getelementptr (fp128, ptr null, i32 1) to i64), i32 {{[0-9]*}}, i8 0, i8 31, i8 0, i8 0 }, ptr %{{[0-9]*}}, 0
+  ! CHECK-KIND16:  insertvalue { ptr, i64, i32, i8, i8, i8, i8 } { ptr undef, i64 16, i32 {{[0-9]*}}, i8 0, i8 31, i8 0, i8 0 }, ptr %{{[0-9]*}}, 0
   ! CHECK-KIND16:  call i1 @_FortranAioOutputDescriptor(ptr %{{[0-9]*}}, ptr %{{[0-9]*}})
   print "(z32)", x16
 
   read(in,*) c16
-  ! CHECK-KIND16:  insertvalue { ptr, i64, i32, i8, i8, i8, i8 } { ptr undef, i64 ptrtoint (ptr getelementptr ({ fp128, fp128 }, ptr null, i32 1) to i64), i32 {{[0-9]*}}, i8 0, i8 38, i8 0, i8 0 }, ptr %{{[0-9]*}}, 0
+  ! CHECK-KIND16:  insertvalue { ptr, i64, i32, i8, i8, i8, i8 } { ptr undef, i64 32, i32 {{[0-9]*}}, i8 0, i8 38, i8 0, i8 0 }, ptr %{{[0-9]*}}, 0
   ! CHECK-KIND16:  call i1 @_FortranAioOutputDescriptor(ptr %{{[0-9]*}}, ptr %{{[0-9]*}})
   print "(z32,' ',z32)", c16
 end subroutine
