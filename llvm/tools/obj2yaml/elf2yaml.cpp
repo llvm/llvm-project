@@ -1022,7 +1022,7 @@ ELFDumper<ELFT>::dumpFuncMapSection(const Elf_Shdr *Shdr) {
                                      Twine(static_cast<int>(Version)));
     }
     Address = Data.getAddress(Cur);
-    uint64_t DynamicInstCount = Data.getULEB128(Cur);
+    uint64_t DynamicInstCount = Data.getU64(Cur);
     Entries.push_back({Version, Address, DynamicInstCount});
   }
 

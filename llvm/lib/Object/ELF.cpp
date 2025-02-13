@@ -947,7 +947,7 @@ ELFFile<ELFT>::decodeFuncMap(const Elf_Shdr &Sec,
   bool IsRelocatable = this->getHeader().e_type == ELF::ET_REL;
 
   // This DenseMap maps the offset of each function (the location of the
-  // reference to the function in the SHT_LLVM_FUNC_ADDR_MAP section) to the
+  // reference to the function in the SHT_LLVM_FUNC_MAP section) to the
   // addend (the location of the function in the text section).
   llvm::DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations;
   if (IsRelocatable && RelaSec) {
@@ -982,7 +982,6 @@ ELFFile<ELFT>::decodeFuncMap(const Elf_Shdr &Sec,
   std::vector<FuncMap> FunctionEntries;
 
   DataExtractor::Cursor Cur(0);
-  Error ULEBSizeErr = Error::success();
 
   // Helper lampda to extract the (possiblly relocatable) address stored at Cur.
   auto ExtractAddress = [&]() -> Expected<typename ELFFile<ELFT>::uintX_t> {
@@ -1002,7 +1001,7 @@ ELFFile<ELFT>::decodeFuncMap(const Elf_Shdr &Sec,
   };
 
   uint8_t Version = 0;
-  while (!ULEBSizeErr && Cur && Cur.tell() < Content.size()) {
+  while (Cur && Cur.tell() < Content.size()) {
     if (Sec.sh_type == ELF::SHT_LLVM_FUNC_MAP) {
       Version = Data.getU8(Cur);
       if (!Cur)
@@ -1016,13 +1015,14 @@ ELFFile<ELFT>::decodeFuncMap(const Elf_Shdr &Sec,
     if (!AddressOrErr)
       return AddressOrErr.takeError();
     FunctionAddress = *AddressOrErr;
-    uint64_t DynamicInstCount = readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr);
+    uint64_t DynamicInstCount = Data.getU64(Cur);
+    if (!Cur)
+      break;
     FunctionEntries.push_back({FunctionAddress, DynamicInstCount});
   }
-  // Either Cur is in the error state, or we have an error in ULEBSizeErr, but
-  // we join all errors here to be safe.
-  if (!Cur || ULEBSizeErr)
-    return joinErrors(Cur.takeError(), std::move(ULEBSizeErr));
+
+  if (!Cur)
+    return Cur.takeError();
   return FunctionEntries;
 }
 

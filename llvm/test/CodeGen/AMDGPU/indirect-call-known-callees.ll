@@ -46,19 +46,15 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX12-NEXT:    s_getpc_b64 s[6:7]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_sext_i32_i16 s7, s7
-; GFX12-NEXT:    s_add_co_u32 s6, s6, snork@gotpcrel32@lo+12
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_add_co_ci_u32 s7, s7, snork@gotpcrel32@hi+24
+; GFX12-NEXT:    s_add_co_u32 s6, s6, snork@gotpcrel32@lo+8
+; GFX12-NEXT:    s_add_co_ci_u32 s7, s7, snork@gotpcrel32@hi+16
 ; GFX12-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX12-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX12-NEXT:    s_getpc_b64 s[12:13]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_sext_i32_i16 s13, s13
-; GFX12-NEXT:    s_add_co_u32 s12, s12, wobble@gotpcrel32@lo+12
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_add_co_ci_u32 s13, s13, wobble@gotpcrel32@hi+24
+; GFX12-NEXT:    s_add_co_u32 s12, s12, wobble@gotpcrel32@lo+8
+; GFX12-NEXT:    s_add_co_ci_u32 s13, s13, wobble@gotpcrel32@hi+16
 ; GFX12-NEXT:    s_load_u8 s14, s[4:5], 0x0
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[6:7], 0x0
 ; GFX12-NEXT:    s_load_b64 s[6:7], s[12:13], 0x0
@@ -67,13 +63,12 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; GFX12-NEXT:    s_mov_b32 s32, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_and_b32 s12, 1, s14
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s12, 1
 ; GFX12-NEXT:    s_cselect_b32 s13, s7, s5
 ; GFX12-NEXT:    s_cselect_b32 s12, s6, s4
 ; GFX12-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX12-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-NEXT:    s_endpgm
 

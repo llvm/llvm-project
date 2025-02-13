@@ -107,7 +107,7 @@ public:
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
     if (!dl) {
       mlir::emitError(mod.getLoc(),
                       "module operation must carry a data layout attribute "
@@ -518,6 +518,7 @@ public:
     newOpers.insert(newOpers.end(), trailingOpers.begin(), trailingOpers.end());
 
     llvm::SmallVector<mlir::Value, 1> newCallResults;
+    // TODO propagate/update call argument and result attributes.
     if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>) {
       auto newCall = rewriter->create<A>(
           loc, callOp.getKernel(), callOp.getGridSizeOperandValues(),
@@ -557,6 +558,7 @@ public:
           loc, newResTys, rewriter->getStringAttr(callOp.getMethod()),
           callOp.getOperands()[0], newOpers,
           rewriter->getI32IntegerAttr(*callOp.getPassArgPos() + passArgShift),
+          /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
           callOp.getProcedureAttrsAttr());
       if (wrap)
         newCallResults.push_back((*wrap)(dispatchOp.getOperation()));

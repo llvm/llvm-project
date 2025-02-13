@@ -4906,19 +4906,19 @@ entry:
 define amdgpu_kernel void @idot4_acc32_hilo(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot4_acc32_hilo:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
-; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
-; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    s_mov_b32 s7, s3
+; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
+; GFX7-NEXT:    s_mov_b32 s7, 0xf000
+; GFX7-NEXT:    s_mov_b32 s10, 0
+; GFX7-NEXT:    s_mov_b32 s11, s7
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b64 s[4:5], s[10:11]
-; GFX7-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; GFX7-NEXT:    buffer_load_dword v2, v[0:1], s[8:11], 0 addr64 offset:4
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
-; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; GFX7-NEXT:    s_mov_b64 s[2:3], s[10:11]
+; GFX7-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 offset:4
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
+; GFX7-NEXT:    s_mov_b32 s6, -1
 ; GFX7-NEXT:    s_waitcnt vmcnt(1)
 ; GFX7-NEXT:    v_bfe_u32 v4, v2, 8, 8
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -4933,7 +4933,7 @@ define amdgpu_kernel void @idot4_acc32_hilo(ptr addrspace(1) %src1,
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 24, v0
 ; GFX7-NEXT:    v_mad_u32_u24 v1, v6, v7, v1
 ; GFX7-NEXT:    v_mad_u32_u24 v0, v2, v0, v1
-; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX7-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: idot4_acc32_hilo:

@@ -8,7 +8,7 @@
 ; CHECK:	.section .llvm_func_map,"o",@llvm_func_map,.text.foo{{$}}
 ; CHECK-NEXT:  .byte 1			            # version
 ; CHECK-NEXT:  .quad [[FOO_BEGIN]]	    # function address
-; CHECK-NEXT:  .ascii  "\252\001"       # dynamic instruction count
+; CHECK-NEXT:  .quad 170                # dynamic instruction count
 
 
 ; CHECK:  .section .text.main,"ax",@progbits
@@ -17,7 +17,7 @@
 ; CHECK:  .section .llvm_func_map,"o",@llvm_func_map,.text.main{{$}}
 ; CHECK-NEXT:  .byte 1			            # version
 ; CHECK-NEXT:  .quad [[MAIN_BEGIN]]	    # function address
-; CHECK-NEXT:  .ascii  "\265\003"       # dynamic instruction count
+; CHECK-NEXT:  .quad 437                # dynamic instruction count
 
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"

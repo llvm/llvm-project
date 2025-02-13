@@ -17,8 +17,6 @@
 
 using namespace ompx;
 
-#pragma omp begin declare target device_type(nohost)
-
 // Weak definitions will be overridden by CGOpenmpRuntimeGPU if enabled.
 [[gnu::weak]] extern const uint32_t __omp_rtl_debug_kind = 0;
 [[gnu::weak]] extern const uint32_t __omp_rtl_assume_no_thread_state = 0;
@@ -27,7 +25,7 @@ using namespace ompx;
     0;
 [[gnu::weak]] extern const uint32_t __omp_rtl_assume_teams_oversubscription = 0;
 
-// This variable should be visibile to the plugin so we override the default
+// This variable should be visible to the plugin so we override the default
 // hidden visibility.
 [[gnu::used, gnu::retain, gnu::weak,
   gnu::visibility("protected")]] DeviceEnvironmentTy
@@ -85,5 +83,3 @@ bool config::mayUseNestedParallelism() {
     return false;
   return state::getKernelEnvironment().Configuration.MayUseNestedParallelism;
 }
-
-#pragma omp end declare target

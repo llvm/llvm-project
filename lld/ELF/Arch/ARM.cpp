@@ -1536,8 +1536,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   }
 
   if (auto e = buffer->commit())
-    Fatal(ctx) << "failed to write output '" << buffer->getPath()
-               << "': " << std::move(e);
+    Err(ctx) << "failed to write output '" << buffer->getPath()
+             << "': " << std::move(e);
 }
 
 void elf::setARMTargetInfo(Ctx &ctx) { ctx.target.reset(new ARM(ctx)); }

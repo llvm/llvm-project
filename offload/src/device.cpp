@@ -196,7 +196,7 @@ int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
      DPxPTR(HstPtr), Size);
 
   if (RTL->data_notify_mapped(RTLDeviceID, HstPtr, Size)) {
-    REPORT("Notifiying about data mapping failed.\n");
+    REPORT("Notifying about data mapping failed.\n");
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
@@ -206,7 +206,7 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
   DP("Notifying about an unmapping: HstPtr=" DPxMOD "\n", DPxPTR(HstPtr));
 
   if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
-    REPORT("Notifiying about data unmapping failed.\n");
+    REPORT("Notifying about data unmapping failed.\n");
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;

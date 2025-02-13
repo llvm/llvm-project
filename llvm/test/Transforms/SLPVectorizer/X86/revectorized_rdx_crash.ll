@@ -15,10 +15,10 @@
 define void @test(i1 %arg, ptr %p) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %arg, label [[IF_END:%.*]], label [[FOR_COND_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_END:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
-; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 2
-; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 3
+; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [100 x i32], ptr [[P:%.*]], i64 0, i64 2
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [100 x i32], ptr [[P]], i64 0, i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[I]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i32 [[TMP1]], 0

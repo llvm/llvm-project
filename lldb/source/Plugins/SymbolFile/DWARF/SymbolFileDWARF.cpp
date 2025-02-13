@@ -2455,18 +2455,12 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   }
   assert(die && die.Tag() == DW_TAG_subprogram);
   if (GetFunction(die, sc)) {
-    Address addr;
     // Parse all blocks if needed
     if (inlined_die) {
       Block &function_block = sc.function->GetBlock(true);
       sc.block = function_block.FindBlockByID(inlined_die.GetID());
       if (sc.block == nullptr)
         sc.block = function_block.FindBlockByID(inlined_die.GetOffset());
-      if (sc.block == nullptr || !sc.block->GetStartAddress(addr))
-        addr.Clear();
-    } else {
-      sc.block = nullptr;
-      addr = sc.function->GetAddressRange().GetBaseAddress();
     }
 
     sc_list.Append(sc);

@@ -153,8 +153,8 @@ MCTargetStreamer *llvm::createAArch64NullTargetStreamer(MCStreamer &S) {
 }
 
 void AArch64TargetStreamer::emitAtributesSubsection(
-    StringRef VendorName, AArch64BuildAttributes::SubsectionOptional IsOptional,
-    AArch64BuildAttributes::SubsectionType ParameterType) {
+    StringRef VendorName, AArch64BuildAttrs::SubsectionOptional IsOptional,
+    AArch64BuildAttrs::SubsectionType ParameterType) {
 
   // If exists, return.
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {

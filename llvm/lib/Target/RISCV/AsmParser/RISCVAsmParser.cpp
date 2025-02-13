@@ -130,7 +130,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   void emitToStreamer(MCStreamer &S, const MCInst &Inst);
 
   // Helper to emit a combination of LUI, ADDI(W), and SLLI instructions that
-  // synthesize the desired immedate value into the destination register.
+  // synthesize the desired immediate value into the destination register.
   void emitLoadImm(MCRegister DestReg, int64_t Value, MCStreamer &Out);
 
   // Helper to emit a combination of AUIPC and SecondOpcode. Used to implement
@@ -874,6 +874,16 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isShiftedUInt<5, 2>(Imm) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isUImm7Lsb000() const {
+    if (!isImm())
+      return false;
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isShiftedUInt<4, 3>(Imm) &&
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
@@ -1680,6 +1690,10 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidVMaskRegister: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be v0.t");
+  }
+  case Match_InvalidVMaskCarryInRegister: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be v0");
   }
   case Match_InvalidSImm5Plus1: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4) + 1,
@@ -2612,7 +2626,7 @@ ParseStatus RISCVAsmParser::parseZeroOffsetMemOp(OperandVector &Operands) {
   std::unique_ptr<RISCVOperand> OptionalImmOp;
 
   if (getLexer().isNot(AsmToken::LParen)) {
-    // Parse an Integer token. We do not accept arbritrary constant expressions
+    // Parse an Integer token. We do not accept arbitrary constant expressions
     // in the offset field (because they may include parens, which complicates
     // parsing a lot).
     int64_t ImmVal;
