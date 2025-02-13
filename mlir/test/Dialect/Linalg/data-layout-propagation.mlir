@@ -62,7 +62,7 @@ func.func @dynamic_elem_pack_padding_value(%arg0: tensor<?x?xf32>, %dest: tensor
       %4 = arith.addf %arg3, %arg3 : f32
       linalg.yield %4 : f32
   } -> tensor<?x?xf32>
-  %4 = tensor.pack %3 padding_value(%cst : f32)
+  %4 = linalg.pack %3 padding_value(%cst : f32)
     inner_dims_pos = [0, 1]
     inner_tiles = [8, 2]
     into %dest : tensor<?x?xf32> -> tensor<?x?x8x2xf32>
@@ -70,7 +70,7 @@ func.func @dynamic_elem_pack_padding_value(%arg0: tensor<?x?xf32>, %dest: tensor
 }
 // CHECK-LABEL:  func.func @dynamic_elem_pack_padding_value
 // CHECK:          %[[GENERIC:.+]] = linalg.generic
-// CHECK:          tensor.pack %[[GENERIC]]
+// CHECK:          linalg.pack %[[GENERIC]]
 
 // -----
 
