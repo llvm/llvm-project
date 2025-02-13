@@ -1474,7 +1474,9 @@ Currently, only the following parameter attributes are defined:
     ``null_pointer_is_valid`` function attribute is present.
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
-    implies ``noundef``.
+    implies ``noundef``. When used in an assume operand bundle, more restricted
+    semantics apply. See  :ref:`assume operand bundles <assume_opbundles>` for
+    more details.
 
 ``dereferenceable_or_null(<n>)``
     This indicates that the parameter or return value isn't both
@@ -2928,6 +2930,11 @@ the behavior is undefined, unless one of the following exceptions applies:
 * ``"align"`` operand bundles may specify a non-power-of-two alignment
   (including a zero alignment). If this is the case, then the pointer value
   must be a null pointer, otherwise the behavior is undefined.
+
+* ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
+    dereferenceable at the point of the assumption. The pointer may not be
+    dereferenceable at later pointers, e.g. because it could have been
+    freed.
 
 In addition to allowing operand bundles encoding function and parameter
 attributes, an assume operand bundle my also encode a ``separate_storage``
