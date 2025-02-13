@@ -1901,7 +1901,7 @@ LogicalResult AffineForOp::verifyRegions() {
   if (getUpperBoundMap().getNumInputs() > 0)
     if (failed(verifyDimAndSymbolIdentifiers(*this, getUpperBoundOperands(),
                                              getUpperBoundMap().getNumDims())))
-      return failure();    
+      return failure();
   // Verify that the bound maps produce at least one result.
   /// Lower bound.
   if (getLowerBoundMap().getNumResults() < 1)
