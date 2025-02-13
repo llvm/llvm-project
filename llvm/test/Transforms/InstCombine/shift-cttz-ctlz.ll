@@ -110,11 +110,11 @@ define i64 @fold_cttz_64() vscale_range(1,16) {
 ; CHECK-NEXT:    ret i64 4
 ;
 entry:
-  %0 = tail call i64 @llvm.vscale.i64()
-  %1 = shl nuw nsw i64 %0, 4
-  %2 = shl nuw nsw i64 %0, 2
-  %3 = tail call range(i64 2, 65) i64 @llvm.cttz.i64(i64 %2, i1 true)
-  %div1 = lshr i64 %1, %3
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %shl0 = shl nuw nsw i64 %vscale, 4
+  %shl1 = shl nuw nsw i64 %vscale, 2
+  %cttz = tail call range(i64 2, 65) i64 @llvm.cttz.i64(i64 %shl1, i1 true)
+  %div1 = lshr i64 %shl0, %cttz
   ret i64 %div1
 }
 
@@ -125,16 +125,12 @@ define i32 @fold_cttz_32() vscale_range(1,16) {
 ; CHECK-NEXT:    ret i32 4
 ;
 entry:
-  %0 = tail call i32 @llvm.vscale.i32()
-  %1 = shl nuw nsw i32 %0, 4
-  %2 = shl nuw nsw i32 %0, 2
-  %3 = tail call range(i32 2, 65) i32 @llvm.cttz.i32(i32 %2, i1 true)
-  %div1 = lshr i32 %1, %3
+  %vscale = tail call i32 @llvm.vscale.i32()
+  %shl0 = shl nuw nsw i32 %vscale, 4
+  %shl1 = shl nuw nsw i32 %vscale, 2
+  %cttz = tail call range(i32 2, 65) i32 @llvm.cttz.i32(i32 %shl1, i1 true)
+  %div1 = lshr i32 %shl0, %cttz
   ret i32 %div1
 }
 
-declare i64 @llvm.vscale.i64()
-declare i64 @llvm.cttz.i64(i64, i1 immarg)
-declare i32 @llvm.vscale.i32()
-declare i32 @llvm.cttz.i32(i32, i1 immarg)
 declare void @use(i32)

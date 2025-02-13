@@ -1614,18 +1614,19 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     return Overflow;
 
   // Transform ((pow2 << x) >> cttz(pow2 << y)) -> ((1 << x) >> y)
-  Value *Shl0_Op0, *Shl0_Op1, *Shl1_Op0, *Shl1_Op1;
+  Value *Shl0_Op0, *Shl0_Op1, *Shl1_Op1;
   BinaryOperator *Shl1;
   if (match(Op0, m_Shl(m_Value(Shl0_Op0), m_Value(Shl0_Op1))) &&
       match(Op1, m_Intrinsic<Intrinsic::cttz>(m_BinOp(Shl1))) &&
-      match(Shl1, m_Shl(m_Value(Shl1_Op0), m_Value(Shl1_Op1))) &&
-      isKnownToBeAPowerOfTwo(Shl1, false, 0, SQ.getWithInstruction(&I).CxtI) &&
-      Shl0_Op0 == Shl1_Op0) {
+      match(Shl1, m_Shl(m_Specific(Shl0_Op0), m_Value(Shl1_Op1))) &&
+      isKnownToBeAPowerOfTwo(Shl0_Op0, /*OrZero=*/true, 0, &I)) {
     auto *Shl0 = cast<BinaryOperator>(Op0);
-    if ((Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap()) ||
-        (Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap())) {
-      Value *NewShl =
-          Builder.CreateShl(ConstantInt::get(Shl1->getType(), 1), Shl0_Op1);
+    bool HasNUW = Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap();
+    bool HasNSW = Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap();
+    if (HasNUW || HasNSW) {
+      Value *NewShl = Builder.CreateShl(ConstantInt::get(Shl1->getType(), 1),
+                                        Shl0_Op1, "", HasNUW, HasNSW);
+      Builder.CreateShl(ConstantInt::get(Shl1->getType(), 1), Shl0_Op1);
       return BinaryOperator::CreateLShr(NewShl, Shl1_Op1);
     }
   }
