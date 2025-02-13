@@ -503,7 +503,7 @@ public:
     return true;
   }
 
-  bool VisitOffsetOfExpr(const OffsetOfExpr* OE) {
+  bool VisitOffsetOfExpr(const OffsetOfExpr *OE) {
     // offsetof(T, D) is considered trivial.
     return true;
   }
