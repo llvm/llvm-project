@@ -711,7 +711,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 }
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
-                              uint64_t Mispreds, bool IsPreagg) {
+                              uint64_t Mispreds) {
   // Returns whether \p Offset in \p Func contains a return instruction.
   auto checkReturn = [&](const BinaryFunction &Func, const uint64_t Offset) {
     auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
@@ -772,7 +772,8 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
     return false;
 
   // Record call to continuation trace.
-  if (IsPreagg && FromFunc != ToFunc && (IsReturn || IsCallCont)) {
+  if (NeedsConvertRetProfileToCallCont && FromFunc != ToFunc &&
+      (IsReturn || IsCallCont)) {
     LBREntry First{ToOrig - 1, ToOrig - 1, false};
     LBREntry Second{ToOrig, ToOrig, false};
     return doTrace(First, Second, Count);
@@ -1224,12 +1225,17 @@ DataAggregator::parseAggregatedLBREntry() {
   ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
   if (std::error_code EC = TypeOrErr.getError())
     return EC;
+  // Pre-aggregated profile with branches and fallthroughs needs to convert
+  // return profile into call to continuation fall-through.
   auto Type = AggregatedLBREntry::BRANCH;
   if (TypeOrErr.get() == "B") {
+    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::BRANCH;
   } else if (TypeOrErr.get() == "F") {
+    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::FT;
   } else if (TypeOrErr.get() == "f") {
+    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::FT_EXTERNAL_ORIGIN;
   } else {
     reportError("expected B, F or f");
@@ -1585,8 +1591,7 @@ void DataAggregator::processBranchEvents() {
   for (const auto &AggrLBR : BranchLBRs) {
     const Trace &Loc = AggrLBR.first;
     const TakenBranchInfo &Info = AggrLBR.second;
-    doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount,
-             /*IsPreagg*/ false);
+    doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount);
   }
 }
 
@@ -1747,7 +1752,7 @@ void DataAggregator::processPreAggregated() {
     switch (AggrEntry.EntryType) {
     case AggregatedLBREntry::BRANCH:
       doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
-               AggrEntry.Mispreds, /*IsPreagg*/ true);
+               AggrEntry.Mispreds);
       break;
     case AggregatedLBREntry::FT:
     case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {
