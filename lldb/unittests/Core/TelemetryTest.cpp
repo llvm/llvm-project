@@ -57,7 +57,7 @@ TEST(TelemetryTest, PluginTest) {
   // For tests, we just call it directly.
   lldb_private::FakePlugin::Initialize();
 
-  auto ins = lldb_private::telemetry::TelemetryManager::getInstance();
+  auto *ins = lldb_private::telemetry::TelemetryManager::getInstance();
 
   ASSERT_NE(ins, nullptr);
   lldb_private::FakeTelemetryInfo entry;
