@@ -20,6 +20,10 @@ static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
 }
 
+static Error validationFailed(const Twine &Msg) {
+  return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
+}
+
 template <typename T>
 static Error readStruct(StringRef Buffer, const char *Src, T &Struct) {
   // Don't read before the beginning or past the end of the file
@@ -254,11 +258,10 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  Expected<uint32_t> MaybeVersion =
-      dxbc::RootSignatureValidations::validateVersion(VValue);
-  if (Error E = MaybeVersion.takeError())
-    return E;
-  Version = MaybeVersion.get();
+  if (!dxbc::RootSignatureValidations::isValidVersion(VValue))
+    return validationFailed("unsupported root signature version read: " +
+                            llvm::Twine(VValue));
+  Version = VValue;
 
   NumParameters =
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
@@ -280,11 +283,10 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  Expected<uint32_t> MaybeFlag =
-      dxbc::RootSignatureValidations::validateRootFlag(FValue);
-  if (Error E = MaybeFlag.takeError())
-    return E;
-  Flags = MaybeFlag.get();
+  if (!dxbc::RootSignatureValidations::isValidRootFlag(FValue))
+    return validationFailed("unsupported root signature flag value read: " +
+                            llvm::Twine(FValue));
+  Flags = FValue;
 
   return Error::success();
 }
