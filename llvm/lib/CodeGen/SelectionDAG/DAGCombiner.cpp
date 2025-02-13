@@ -545,6 +545,7 @@ namespace {
     SDValue visitMGATHER(SDNode *N);
     SDValue visitMSCATTER(SDNode *N);
     SDValue visitMHISTOGRAM(SDNode *N);
+    SDValue visitPARTIAL_REDUCE_MLA(SDNode *N);
     SDValue visitVPGATHER(SDNode *N);
     SDValue visitVPSCATTER(SDNode *N);
     SDValue visitVP_STRIDED_LOAD(SDNode *N);
@@ -1972,6 +1973,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::MSCATTER:           return visitMSCATTER(N);
   case ISD::MSTORE:             return visitMSTORE(N);
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM: return visitMHISTOGRAM(N);
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_UMLA:
+                                return visitPARTIAL_REDUCE_MLA(N);
   case ISD::VECTOR_COMPRESS:    return visitVECTOR_COMPRESS(N);
   case ISD::LIFETIME_END:       return visitLIFETIME_END(N);
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
@@ -12495,6 +12499,50 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
     return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL, Ops,
                                   MMO, IndexType);
   return SDValue();
+}
+
+SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
+  // Makes PARTIAL_REDUCE_MLA(Acc, MUL(EXT(MulOpLHS), EXT(MulOpRHS)), Splat(1))
+  // into PARTIAL_REDUCE_MLA(Acc, MulOpLHS, MulOpRHS)
+  SDLoc DL(N);
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Op2 = N->getOperand(2);
+
+  if (Op1->getOpcode() != ISD::MUL)
+    return SDValue();
+
+  SDValue ExtMulOpLHS = Op1->getOperand(0);
+  SDValue ExtMulOpRHS = Op1->getOperand(1);
+  unsigned ExtMulOpLHSOpcode = ExtMulOpLHS->getOpcode();
+  unsigned ExtMulOpRHSOpcode = ExtMulOpRHS->getOpcode();
+  if (!ISD::isExtOpcode(ExtMulOpLHSOpcode) ||
+      !ISD::isExtOpcode(ExtMulOpRHSOpcode))
+    return SDValue();
+
+  SDValue MulOpLHS = ExtMulOpLHS->getOperand(0);
+  SDValue MulOpRHS = ExtMulOpRHS->getOperand(0);
+  EVT MulOpLHSVT = MulOpLHS.getValueType();
+  if (MulOpLHSVT != MulOpRHS.getValueType())
+    return SDValue();
+
+  if (!TLI.isTypeLegal(MulOpLHSVT) || !TLI.isTypeLegal(N->getValueType(0)))
+    return SDValue();
+
+  APInt ConstantOne;
+  if (!ISD::isConstantSplatVector(Op2.getNode(), ConstantOne) ||
+      !ConstantOne.isOne())
+    return SDValue();
+
+  bool LHSIsSigned = ExtMulOpLHSOpcode == ISD::SIGN_EXTEND;
+  bool RHSIsSigned = ExtMulOpRHSOpcode == ISD::SIGN_EXTEND;
+  if (LHSIsSigned != RHSIsSigned)
+    return SDValue();
+
+  unsigned NewOpcode =
+      LHSIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+  return DAG.getNode(NewOpcode, DL, Op0->getValueType(0), Op0, MulOpLHS,
+                     MulOpRHS);
 }
 
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
