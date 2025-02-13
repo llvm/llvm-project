@@ -402,11 +402,57 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   EXPECT_FALSE(verifyModule(*M));
 }
 
+// Check call creation in strictfp function if the builder object does not
+// specify default values for rounding and exception behavior.
+TEST_F(IRBuilderTest, StrictFPCallDefault) {
+  F->addFnAttr(Attribute::StrictFP);
+
+  IRBuilder<> Builder(BB);
+  Builder.setIsFPConstrained(true);
+
+  GlobalVariable *GVDouble = new GlobalVariable(
+      *M, Type::getDoubleTy(Ctx), true, GlobalValue::ExternalLinkage, nullptr);
+  Value *FnArg = Builder.CreateLoad(GVDouble->getValueType(), GVDouble);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::trunc,
+                                                   {Type::getDoubleTy(Ctx)});
+
+  // Function call without explicit bundles. By default it has strict exception
+  // behavior.
+  CallInst *CI = Builder.CreateCall(Fn, {FnArg});
+  EXPECT_EQ(Intrinsic::trunc, CI->getIntrinsicID());
+  EXPECT_FALSE(CI->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+  EXPECT_TRUE(CI->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+  std::optional<RoundingMode> RM = CI->getRoundingMode();
+  EXPECT_FALSE(RM.has_value());
+  std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+  EXPECT_TRUE(EB.has_value());
+  EXPECT_EQ(fp::ebStrict, *EB);
+  EXPECT_TRUE(CI->getMemoryEffects().doesAccessInaccessibleMem());
+
+  // Function call with explicit bundles.
+  SmallVector<OperandBundleDef, 2> OpBundles;
+  Builder.createFPExceptionBundle(OpBundles, fp::ebIgnore);
+  CI = Builder.CreateCall(Fn, {FnArg}, OpBundles);
+  EXPECT_EQ(Intrinsic::trunc, CI->getIntrinsicID());
+  EXPECT_FALSE(CI->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+  EXPECT_TRUE(CI->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+  RM = CI->getRoundingMode();
+  EXPECT_FALSE(RM.has_value());
+  RoundingMode Rounding = CI->getRoundingMode().value_or(RoundingMode::Dynamic);
+  EXPECT_EQ(RoundingMode::Dynamic, Rounding);
+  EB = CI->getExceptionBehavior();
+  EXPECT_TRUE(EB.has_value());
+  EXPECT_EQ(fp::ebIgnore, *EB);
+  EXPECT_TRUE(CI->getMemoryEffects().doesAccessInaccessibleMem());
+}
+
+// Check call creation in strictfp function if the builder object specifies
+// default values for rounding and exception behavior.
 TEST_F(IRBuilderTest, StrictFPCall) {
   F->addFnAttr(Attribute::StrictFP);
 
   IRBuilder<> Builder(BB);
-  Builder.setDefaultConstrainedExcept(fp::ebStrict);
+  Builder.setDefaultConstrainedExcept(fp::ebIgnore);
   Builder.setDefaultConstrainedRounding(RoundingMode::TowardZero);
   Builder.setIsFPConstrained(true);
 
@@ -416,7 +462,33 @@ TEST_F(IRBuilderTest, StrictFPCall) {
 
   // Function calls, that may depend on FP options, gets fp bundles in strictfp
   // environment.
-  Function *Fn = Intrinsic::getOrInsertDeclaration(
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::trunc,
+                                                   {Type::getDoubleTy(Ctx)});
+  CallInst *CI = Builder.CreateCall(Fn, {FnArg});
+  EXPECT_EQ(Intrinsic::trunc, CI->getIntrinsicID());
+  EXPECT_FALSE(CI->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+  EXPECT_TRUE(CI->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+  std::optional<RoundingMode> RM = CI->getRoundingMode();
+  EXPECT_FALSE(RM.has_value());
+  std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+  EXPECT_TRUE(EB.has_value());
+  EXPECT_EQ(fp::ebIgnore, *EB);
+  EXPECT_TRUE(CI->getMemoryEffects().doesAccessInaccessibleMem());
+
+  // Explicit bundle arguments override builder default values.
+  SmallVector<OperandBundleDef, 2> OpBundles;
+  Builder.createFPExceptionBundle(OpBundles, fp::ebIgnore);
+  CI = Builder.CreateCall(Fn, {FnArg}, OpBundles);
+  EXPECT_EQ(Intrinsic::trunc, CI->getIntrinsicID());
+  EXPECT_FALSE(CI->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+  EXPECT_TRUE(CI->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+  EB = CI->getExceptionBehavior();
+  EXPECT_TRUE(EB.has_value());
+  EXPECT_EQ(fp::ebIgnore, *EB);
+  EXPECT_TRUE(CI->getMemoryEffects().doesAccessInaccessibleMem());
+
+  // Legacy constrained intrinsic call.
+  Fn = Intrinsic::getOrInsertDeclaration(
       M.get(), Intrinsic::experimental_constrained_roundeven,
       {Type::getDoubleTy(Ctx)});
   Value *V = Builder.CreateConstrainedFPCall(Fn, {FnArg});
@@ -424,7 +496,7 @@ TEST_F(IRBuilderTest, StrictFPCall) {
   EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
   EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
   EXPECT_EQ(Intrinsic::experimental_constrained_roundeven, I->getIntrinsicID());
-  EXPECT_EQ(fp::ebStrict, I->getExceptionBehavior());
+  EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
   MemoryEffects ME = I->getMemoryEffects();
   EXPECT_TRUE(ME.doesAccessInaccessibleMem());
 
@@ -432,12 +504,28 @@ TEST_F(IRBuilderTest, StrictFPCall) {
   // fp bundles.
   Fn = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::fabs,
                                          {Type::getDoubleTy(Ctx)});
-  V = Builder.CreateCall(Fn, {FnArg});
-  I = cast<IntrinsicInst>(V);
-  EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
-  EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
-  ME = I->getMemoryEffects();
-  EXPECT_FALSE(ME.doesAccessInaccessibleMem());
+  CI = Builder.CreateCall(Fn, {FnArg});
+  EXPECT_FALSE(CI->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+  EXPECT_FALSE(CI->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+  EXPECT_FALSE(CI->getMemoryEffects().doesAccessInaccessibleMem());
+}
+
+TEST_F(IRBuilderTest, FPMemoryEffects) {
+  IRBuilder<> Builder(BB);
+  GlobalVariable *GVDouble = new GlobalVariable(
+      *M, Type::getDoubleTy(Ctx), true, GlobalValue::ExternalLinkage, nullptr);
+  Value *FnArg = Builder.CreateLoad(GVDouble->getValueType(), GVDouble);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::trunc,
+                                                   {Type::getDoubleTy(Ctx)});
+
+  CallInst *CI = Builder.CreateCall(Fn, {FnArg});
+  EXPECT_EQ(Intrinsic::trunc, CI->getIntrinsicID());
+  EXPECT_FALSE(CI->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+  EXPECT_FALSE(CI->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+  EXPECT_TRUE(CI->getMemoryEffects().doesNotAccessMemory());
+
+  F->addFnAttr(Attribute::StrictFP);
+  EXPECT_TRUE(CI->getMemoryEffects().doesAccessInaccessibleMem());
 }
 
 TEST_F(IRBuilderTest, ConstrainedFPIntrinsics) {
