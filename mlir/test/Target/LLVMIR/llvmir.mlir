@@ -84,7 +84,7 @@ llvm.mlir.global external @explicit_undef() : i32 {
   llvm.return %0 : i32
 }
 
-// CHECK: @int_gep = internal constant ptr getelementptr (i32, ptr @i32_global, i32 2)
+// CHECK: @int_gep = internal constant ptr getelementptr (i8, ptr @i32_global, i64 8)
 llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   %addr = llvm.mlir.addressof @i32_global : !llvm.ptr
   %_c0 = llvm.mlir.constant(2: i32) : i32
