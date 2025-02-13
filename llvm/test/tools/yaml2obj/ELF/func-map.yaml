@@ -36,7 +36,8 @@
 # Case 4: Specify Entries.
 # CHECK:        Name: .llvm_func_map (1)
 # CHECK:        SectionData (
-# CHECK-NEXT:     0000: 01222202 00000000 0010
+# CHECK-NEXT:     0000: 01222202 00000000 00100000 00000000
+# CHECK-NEXT:     0010: 00
 # CHECK-NEXT:   )
 
 

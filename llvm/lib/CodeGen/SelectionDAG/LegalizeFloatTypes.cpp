@@ -2766,10 +2766,10 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FLDEXP:     R = PromoteFloatRes_ExpOp(N); break;
     case ISD::FFREXP:     R = PromoteFloatRes_FFREXP(N); break;
 
+    case ISD::FMODF:
     case ISD::FSINCOS:
       R = PromoteFloatRes_UnaryWithTwoFPResults(N);
       break;
-
     case ISD::FP_ROUND:   R = PromoteFloatRes_FP_ROUND(N); break;
     case ISD::STRICT_FP_ROUND:
       R = PromoteFloatRes_STRICT_FP_ROUND(N);
@@ -3228,6 +3228,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
 
   case ISD::FFREXP:      R = SoftPromoteHalfRes_FFREXP(N); break;
 
+  case ISD::FMODF:
   case ISD::FSINCOS:
     R = SoftPromoteHalfRes_UnaryWithTwoFPResults(N);
     break;

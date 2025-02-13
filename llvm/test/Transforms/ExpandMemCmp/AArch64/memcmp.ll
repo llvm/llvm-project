@@ -6,7 +6,7 @@ declare i32 @memcmp(ptr nocapture, ptr nocapture, i64)
 
 define i32 @cmp2(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp2(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP1]])
@@ -22,7 +22,7 @@ define i32 @cmp2(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp2_align2(ptr nocapture readonly align 2 %x, ptr nocapture readonly align 2 %y)  {
 ; CHECK-LABEL: define i32 @cmp2_align2(
-; CHECK-SAME: ptr nocapture readonly align 2 [[X:%.*]], ptr nocapture readonly align 2 [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly align 2 captures(none) [[X:%.*]], ptr readonly align 2 captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[Y]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP1]])
@@ -38,7 +38,7 @@ define i32 @cmp2_align2(ptr nocapture readonly align 2 %x, ptr nocapture readonl
 
 define i32 @cmp3(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp3(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i24, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i24, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i24 [[TMP1]] to i32
@@ -54,7 +54,7 @@ define i32 @cmp3(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp4(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp4(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP1]])
@@ -68,7 +68,7 @@ define i32 @cmp4(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp5(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp5(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i40, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i40, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i40 [[TMP1]] to i64
@@ -84,7 +84,7 @@ define i32 @cmp5(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp6(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp6(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i48, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i48, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i48 [[TMP1]] to i64
@@ -100,7 +100,7 @@ define i32 @cmp6(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp7(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp7(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP5:%.*]], [[LOADBB]] ], [ [[TMP12:%.*]], [[LOADBB1:%.*]] ]
@@ -134,7 +134,7 @@ define i32 @cmp7(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp8(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp8(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
@@ -148,7 +148,7 @@ define i32 @cmp8(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp9(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp9(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP5:%.*]], [[TMP6:%.*]]
@@ -180,7 +180,7 @@ define i32 @cmp9(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp10(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp10(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP5:%.*]], [[LOADBB]] ], [ [[TMP14:%.*]], [[LOADBB1:%.*]] ]
@@ -216,7 +216,7 @@ define i32 @cmp10(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp11(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp11(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP5:%.*]], [[LOADBB]] ], [ [[TMP12:%.*]], [[LOADBB1:%.*]] ]
@@ -250,7 +250,7 @@ define i32 @cmp11(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp12(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp12(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP5:%.*]], [[LOADBB]] ], [ [[TMP14:%.*]], [[LOADBB1:%.*]] ]
@@ -286,7 +286,7 @@ define i32 @cmp12(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp13(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp13(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP5:%.*]], [[LOADBB]] ], [ [[TMP12:%.*]], [[LOADBB1:%.*]] ]
@@ -320,7 +320,7 @@ define i32 @cmp13(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp14(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp14(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP5:%.*]], [[LOADBB]] ], [ [[TMP12:%.*]], [[LOADBB1:%.*]] ]
@@ -354,7 +354,7 @@ define i32 @cmp14(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp15(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp15(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP5:%.*]], [[LOADBB]] ], [ [[TMP12:%.*]], [[LOADBB1:%.*]] ]
@@ -388,7 +388,7 @@ define i32 @cmp15(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp16(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp16(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP5:%.*]], [[LOADBB]] ], [ [[TMP12:%.*]], [[LOADBB1:%.*]] ]
@@ -422,7 +422,7 @@ define i32 @cmp16(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq2(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq2(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i16 [[TMP1]], [[TMP2]]
@@ -439,7 +439,7 @@ define i32 @cmp_eq2(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq3(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq3(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -469,7 +469,7 @@ define i32 @cmp_eq3(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq4(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq4(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1]], [[TMP2]]
@@ -486,7 +486,7 @@ define i32 @cmp_eq4(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq5(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq5(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -516,7 +516,7 @@ define i32 @cmp_eq5(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq6(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq6(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -546,7 +546,7 @@ define i32 @cmp_eq6(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq6_align4(ptr nocapture readonly align 4 %x, ptr nocapture readonly align 4 %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq6_align4(
-; CHECK-SAME: ptr nocapture readonly align 4 [[X:%.*]], ptr nocapture readonly align 4 [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly align 4 captures(none) [[X:%.*]], ptr readonly align 4 captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -576,7 +576,7 @@ define i32 @cmp_eq6_align4(ptr nocapture readonly align 4 %x, ptr nocapture read
 
 define i32 @cmp_eq7(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq7(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -606,7 +606,7 @@ define i32 @cmp_eq7(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq8(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq8(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP1]], [[TMP2]]
@@ -623,7 +623,7 @@ define i32 @cmp_eq8(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq9(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq9(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -653,7 +653,7 @@ define i32 @cmp_eq9(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq10(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq10(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -683,7 +683,7 @@ define i32 @cmp_eq10(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq11(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq11(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -713,7 +713,7 @@ define i32 @cmp_eq11(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq12(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq12(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -743,7 +743,7 @@ define i32 @cmp_eq12(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq13(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq13(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -773,7 +773,7 @@ define i32 @cmp_eq13(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq14(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq14(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -803,7 +803,7 @@ define i32 @cmp_eq14(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq15(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq15(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]
@@ -833,7 +833,7 @@ define i32 @cmp_eq15(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 
 define i32 @cmp_eq16(ptr nocapture readonly %x, ptr nocapture readonly %y)  {
 ; CHECK-LABEL: define i32 @cmp_eq16(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], ptr nocapture readonly [[Y:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]]) {
 ; CHECK-NEXT:    br label [[LOADBB:%.*]]
 ; CHECK:       res_block:
 ; CHECK-NEXT:    br label [[ENDBLOCK:%.*]]

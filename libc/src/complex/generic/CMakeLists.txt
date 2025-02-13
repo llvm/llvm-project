@@ -7,7 +7,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.complex_type
+    libc.src.__support.complex_basic_ops
 )
 
 add_entrypoint_object(
@@ -19,7 +19,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.complex_type
+    libc.src.__support.complex_basic_ops
 )
 
 add_entrypoint_object(
@@ -31,7 +31,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.complex_type
+    libc.src.__support.complex_basic_ops
 )
 
 add_entrypoint_object(
@@ -43,7 +43,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.complex_type
+    libc.src.__support.complex_basic_ops
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.complex_types
 )
@@ -57,7 +57,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.complex_type
+    libc.src.__support.complex_basic_ops
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.complex_types
 )
@@ -71,7 +71,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.complex_type
+    libc.src.__support.complex_basic_ops
 )
 
 add_entrypoint_object(
@@ -83,7 +83,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.complex_type
+    libc.src.__support.complex_basic_ops
 )
 
 add_entrypoint_object(
@@ -95,7 +95,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.complex_type
+    libc.src.__support.complex_basic_ops
 )
 
 add_entrypoint_object(
@@ -107,7 +107,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.complex_type
+    libc.src.__support.complex_basic_ops
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.complex_types
 )
@@ -121,7 +121,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
   DEPENDS
-    libc.src.__support.complex_type
+    libc.src.__support.complex_basic_ops
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.properties.complex_types
 )

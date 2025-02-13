@@ -427,3 +427,57 @@ func.func @test_upoly_expr_assignment(%arg0: !fir.class<!fir.array<?xnone>> {fir
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+func.func @test_scalar_box(%arg0: f32, %arg1: !fir.box<!fir.ptr<f32>>) {
+  %x = fir.declare %arg1 {uniq_name = "x"} : (!fir.box<!fir.ptr<f32>>) -> !fir.box<!fir.ptr<f32>>
+  hlfir.assign %arg0 to %x : f32, !fir.box<!fir.ptr<f32>>
+  return
+}
+// CHECK-LABEL:   func.func @test_scalar_box(
+// CHECK-SAME:                               %[[VAL_0:.*]]: f32,
+// CHECK-SAME:                               %[[VAL_1:.*]]: !fir.box<!fir.ptr<f32>>) {
+// CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "x"} : (!fir.box<!fir.ptr<f32>>) -> !fir.box<!fir.ptr<f32>>
+// CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
+// CHECK:           fir.store %[[VAL_0]] to %[[VAL_3]] : !fir.ptr<f32>
+
+func.func @test_scalar_opt_box(%arg0: f32, %arg1: !fir.box<!fir.ptr<f32>>) {
+  %x = fir.declare %arg1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "x"} : (!fir.box<!fir.ptr<f32>>) -> !fir.box<!fir.ptr<f32>>
+  hlfir.assign %arg0 to %x : f32, !fir.box<!fir.ptr<f32>>
+  return
+}
+// CHECK-LABEL:   func.func @test_scalar_opt_box(
+// CHECK-SAME:                                   %[[VAL_0:.*]]: f32,
+// CHECK-SAME:                                   %[[VAL_1:.*]]: !fir.box<!fir.ptr<f32>>) {
+// CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "x"} : (!fir.box<!fir.ptr<f32>>) -> !fir.box<!fir.ptr<f32>>
+// CHECK:           %[[VAL_3:.*]] = fir.is_present %[[VAL_2]] : (!fir.box<!fir.ptr<f32>>) -> i1
+// CHECK:           %[[VAL_4:.*]] = fir.if %[[VAL_3]] -> (!fir.ptr<f32>) {
+// CHECK:             %[[VAL_5:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
+// CHECK:             fir.result %[[VAL_5]] : !fir.ptr<f32>
+// CHECK:           } else {
+// CHECK:             %[[VAL_6:.*]] = fir.absent !fir.ptr<f32>
+// CHECK:             fir.result %[[VAL_6]] : !fir.ptr<f32>
+// CHECK:           }
+// CHECK:           fir.store %[[VAL_0]] to %[[VAL_4]] : !fir.ptr<f32>
+
+func.func @test_scalar_opt_char_box(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.box<!fir.char<1,?>>) {
+  %x = fir.declare %arg1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "x"} : (!fir.box<!fir.char<1,?>>) -> !fir.box<!fir.char<1,?>>
+  hlfir.assign %arg0 to %x : !fir.ref<!fir.char<1,10>>, !fir.box<!fir.char<1,?>>
+  return
+}
+// CHECK-LABEL:   func.func @test_scalar_opt_char_box(
+// CHECK-SAME:                                        %[[VAL_0:.*]]: !fir.ref<!fir.char<1,10>>,
+// CHECK-SAME:                                        %[[VAL_1:.*]]: !fir.box<!fir.char<1,?>>) {
+// CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "x"} : (!fir.box<!fir.char<1,?>>) -> !fir.box<!fir.char<1,?>>
+// CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_4:.*]] = fir.is_present %[[VAL_2]] : (!fir.box<!fir.char<1,?>>) -> i1
+// CHECK:           %[[VAL_5:.*]]:2 = fir.if %[[VAL_4]] -> (!fir.ref<!fir.char<1,?>>, index) {
+// CHECK:             %[[VAL_6:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
+// CHECK:             %[[VAL_7:.*]] = fir.box_elesize %[[VAL_2]] : (!fir.box<!fir.char<1,?>>) -> index
+// CHECK:             fir.result %[[VAL_6]], %[[VAL_7]] : !fir.ref<!fir.char<1,?>>, index
+// CHECK:           } else {
+// CHECK:             %[[VAL_8:.*]] = fir.absent !fir.ref<!fir.char<1,?>>
+// CHECK:             %[[VAL_9:.*]] = fir.zero_bits index
+// CHECK:             fir.result %[[VAL_8]], %[[VAL_9]] : !fir.ref<!fir.char<1,?>>, index
+// CHECK:           }
+// ...
+// CHECK:           fir.call @llvm.memmove.p0.p0.i64(

@@ -399,6 +399,10 @@ def ixlenimm_li_restricted : Operand<XLenVT> {
 
 // Standalone (codegen-only) immleaf patterns.
 
+// A 12-bit signed immediate plus one where the imm range will be -2047~2048.
+def simm12_plus1 : ImmLeaf<XLenVT,
+  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
   return isUInt<6>(Imm) && Imm > 32;
@@ -1945,15 +1949,19 @@ class binop_allhusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
               (XLenVT (operator node:$lhs, node:$rhs)), [{
   return hasAllHUsers(Node);
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return hasAllHUsers(MI); }];
+}
 
 // PatFrag to allow ADDW/SUBW/MULW/SLLW to be selected from i64 add/sub/mul/shl
 // if only the lower 32 bits of their result is used.
 class binop_allwusers<SDPatternOperator operator>
-    : PatFrag<(ops node:$lhs, node:$rhs),
-              (i64 (operator node:$lhs, node:$rhs)), [{
+    : PatFrag<(ops node:$lhs, node:$rhs), (i64 (operator node:$lhs, node:$rhs)),
+              [{
   return hasAllWUsers(Node);
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return hasAllWUsers(MI); }];
+}
 
 def sexti32_allwusers : PatFrag<(ops node:$src),
                                 (sext_inreg node:$src, i32), [{
@@ -2133,6 +2141,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXMips.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

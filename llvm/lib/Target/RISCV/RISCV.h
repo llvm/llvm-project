@@ -84,6 +84,8 @@ void initializeRISCVMoveMergePass(PassRegistry &);
 
 FunctionPass *createRISCVPushPopOptimizationPass();
 void initializeRISCVPushPopOptPass(PassRegistry &);
+FunctionPass *createRISCVLoadStoreOptPass();
+void initializeRISCVLoadStoreOptPass(PassRegistry &);
 
 FunctionPass *createRISCVZacasABIFixPass();
 void initializeRISCVZacasABIFixPass(PassRegistry &);

@@ -95,20 +95,11 @@ STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
 STATISTIC(NumGlobalArraysPadded,
           "Number of global arrays padded to alignment boundary");
 
-// FIXME:
-// Optimizing non-FMV callers is causing a regression in the llvm test suite,
-// specifically a 'predres' version is unexpectedly trapping on GravitonG4.
-// My explanation is that when the caller in not a versioned function, the
-// compiler exclusively relies on the command line option, or target attribute
-// to deduce whether a feature is available. However, there is no guarantee
-// that in reality the host supports those implied features, which arguably
-// is a user error. This option allows disabling the optimization as a short
-// term workaround to keep the bots green.
 static cl::opt<bool>
     OptimizeNonFMVCallers("optimize-non-fmv-callers",
                           cl::desc("Statically resolve calls to versioned "
                                    "functions from non-versioned callers."),
-                          cl::init(false), cl::Hidden);
+                          cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",

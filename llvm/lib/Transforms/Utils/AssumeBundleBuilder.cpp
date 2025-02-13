@@ -474,9 +474,9 @@ struct AssumeSimplify {
     AssumeBuilderState Builder(F.getParent());
 
     /// For now it is initialized to the best value it could have
-    Instruction *InsertPt = BB->getFirstNonPHI();
+    BasicBlock::iterator InsertPt = BB->getFirstNonPHIIt();
     if (isa<LandingPadInst>(InsertPt))
-      InsertPt = InsertPt->getNextNode();
+      InsertPt = std::next(InsertPt);
     for (IntrinsicInst *I : make_range(Begin, End)) {
       CleanupToDo.insert(I);
       for (CallInst::BundleOpInfo &BOI : I->bundle_op_infos()) {
@@ -487,8 +487,8 @@ struct AssumeSimplify {
         Builder.addKnowledge(RK);
         if (auto *I = dyn_cast_or_null<Instruction>(RK.WasOn))
           if (I->getParent() == InsertPt->getParent() &&
-              (InsertPt->comesBefore(I) || InsertPt == I))
-            InsertPt = I->getNextNode();
+              (InsertPt->comesBefore(I) || &*InsertPt == I))
+            InsertPt = I->getNextNode()->getIterator();
       }
     }
 
@@ -498,7 +498,7 @@ struct AssumeSimplify {
       for (auto It = (*Begin)->getIterator(), E = InsertPt->getIterator();
            It != E; --It)
         if (!isGuaranteedToTransferExecutionToSuccessor(&*It)) {
-          InsertPt = It->getNextNode();
+          InsertPt = std::next(It);
           break;
         }
     auto *MergedAssume = Builder.build();
