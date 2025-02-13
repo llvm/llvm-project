@@ -2046,8 +2046,8 @@ For example:
     This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (``none``,
     ``read``, ``write``, or ``readwrite``) for the possible memory location
-    kinds (``argmem``, ``inaccessiblemem``, as well as a default). It is best
-    understood by example:
+    kinds (``argmem``, ``inaccessiblemem``, ``errnomem``, as well as a default).
+    It is best understood by example:
 
     - ``memory(none)``: Does not access any memory.
     - ``memory(read)``: May read (but not write) any memory.
@@ -2056,6 +2056,8 @@ For example:
     - ``memory(argmem: read)``: May only read argument memory.
     - ``memory(argmem: read, inaccessiblemem: write)``: May only read argument
       memory and only write inaccessible memory.
+    - ``memory(argmem: read, errnomem: write)``: May only read argument memory
+      and only write errno.
     - ``memory(read, argmem: readwrite)``: May read any memory (default mode)
       and additionally write argument memory.
     - ``memory(readwrite, argmem: none)``: May access any memory apart from
@@ -2085,6 +2087,7 @@ For example:
       allocator function may return newly accessible memory while only
       accessing inaccessible memory itself). Inaccessible memory is often used
       to model control dependencies of intrinsics.
+    - ``errnomem``: This refers to accesses to the ``errno`` variable.
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
       don't currently have a dedicated location kind (e.g. accesses to globals
