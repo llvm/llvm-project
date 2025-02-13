@@ -122,6 +122,8 @@ module;
 #include <span>
 #if _LIBCPP_HAS_LOCALIZATION
 #  include <spanstream>
+#endif
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <sstream>
 #endif
 #include <stack>
