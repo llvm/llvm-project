@@ -51891,12 +51891,14 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   APInt MaskConst,ShlConst;
   SDValue A, B;
   if(sd_match(N,m_Or(m_Shl(m_Value(B),m_ConstInt(ShlConst)),m_And(m_Value(A),m_ConstInt(MaskConst))))){
-    uint64_t shiftValue = ShlConst.getZExtValue();
-    if(MaskConst.isMask(shiftValue)){
-      unsigned numbits = B.getScalarValueSizeInBits();
-      unsigned newshift=numbits-shiftValue;
-      SDValue newSHL = DAG.getNode(ISD::SHL,dl,VT,A,DAG.getConstant(newshift, dl, MVT::i8));
-      SDValue R = DAG.getNode(ISD::FSHR,dl,VT,B,newSHL,DAG.getConstant(newshift, dl, MVT::i8));
+    uint64_t ShiftValue = ShlConst.getZExtValue();
+    if (MaskConst.isMask(ShiftValue)) {
+      unsigned NumBits = B.getScalarValueSizeInBits();
+      unsigned NewShift = NumBits - ShiftValue;
+      SDValue NewSHL = DAG.getNode(
+          ISD::SHL, dl, VT, A, DAG.getShiftAmountConstant(NewShift, VT, dl));
+      SDValue R = DAG.getNode(ISD::FSHR, dl, VT, B, NewSHL,
+                              DAG.getShiftAmountConstant(NewShift, VT, dl));
       return R;
     }
   }
