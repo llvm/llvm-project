@@ -2055,8 +2055,9 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 
 bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     const IntrinsicInst *I) const {
-  if (I->getIntrinsicID() != Intrinsic::experimental_vector_partial_reduce_add)
-    return true;
+  assert(I->getIntrinsicID() ==
+             Intrinsic::experimental_vector_partial_reduce_add &&
+         "Unexpected intrinsic!");
   if (EnablePartialReduceNodes)
     return true;
 
@@ -16895,7 +16896,9 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     if (SrcWidth * 4 <= DstWidth && I->hasOneUser()) {
       auto *SingleUser = cast<Instruction>(*I->user_begin());
       if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))) ||
-          (isa<IntrinsicInst>(SingleUser) &&
+          (match(SingleUser,
+                 m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
+                     m_Value(), m_Specific(I))) &&
            !shouldExpandPartialReductionIntrinsic(
                cast<IntrinsicInst>(SingleUser))))
         return false;
