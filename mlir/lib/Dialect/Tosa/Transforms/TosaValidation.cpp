@@ -620,6 +620,66 @@ bool checkErrorIfResize(Operation *op) {
     return false;
   }
 
+  // The following section of code is mostly duplicated with ResizeOp::verify().
+  //
+  // In TOSA specification, we do not support broadcast behavior.
+  // However, there is a rewrite pattern to materialize broadcast ResizeOp.
+  // It makes invalid TOSA ResizeOp into valid one. To avoid breaking
+  // existing code, we keep the rewrite pattern untouched. So, we need
+  // loose the checking in ResizeOp::verify() to support broadcast ResizeOp.
+  //
+  // Here is a strict checking to conform TOSA specification.
+  // FIXME: Remove the duplicated checkings when broadcast ResizeOp is removed.
+  auto idivCheck = [](const int64_t lhs,
+                      const int64_t rhs) -> std::optional<int64_t> {
+    if (lhs % rhs != 0)
+      return std::nullopt;
+    return lhs / rhs;
+  };
+
+  const int64_t oh = outputType.getDimSize(1);
+  const int64_t ow = outputType.getDimSize(2);
+  const int64_t ih = inputType.getDimSize(1);
+  const int64_t iw = inputType.getDimSize(2);
+
+  if (ih != ShapedType::kDynamic) {
+    const std::optional<int64_t> calculatedOutHeightMinusOne =
+        idivCheck((ih - 1) * scaleYN - offsetY + borderY, scaleYD);
+    if (!calculatedOutHeightMinusOne.has_value()) {
+      op->emitOpError("expected (input_height - 1) * scale_y_n - offset_y + "
+                      "border_y ")
+          << "to be wholly divisible by scale_y_d, got ((" << ih << " - 1) * "
+          << scaleYN << " - " << offsetY << " + " << borderY << ") / "
+          << scaleYD;
+      return false;
+    }
+    const int64_t calculatedOutHeight = calculatedOutHeightMinusOne.value() + 1;
+    if (oh != ShapedType::kDynamic && calculatedOutHeight != oh) {
+      op->emitOpError("calculated output height did not match expected: ")
+          << "calculated=" << calculatedOutHeight << ", expected=" << oh;
+      return false;
+    }
+  }
+
+  if (iw != ShapedType::kDynamic) {
+    const std::optional<int64_t> calculatedOutWidthMinusOne =
+        idivCheck((iw - 1) * scaleXN - offsetX + borderX, scaleXD);
+    if (!calculatedOutWidthMinusOne.has_value()) {
+      op->emitOpError("expected (input_width - 1) * scale_x_n - offset_x + "
+                      "border_x ")
+          << "to be wholly divisible by scale_x_d, got ((" << iw << " - 1) * "
+          << scaleXN << " - " << offsetX << " + " << borderX << ") / "
+          << scaleXD;
+      return false;
+    }
+    const int64_t calculatedOutWidth = calculatedOutWidthMinusOne.value() + 1;
+    if (ow != ShapedType::kDynamic && calculatedOutWidth != ow) {
+      op->emitOpError("calculated output width did not match expected: ")
+          << "calculated=" << calculatedOutWidth << ", expected=" << ow;
+      return false;
+    }
+  }
+
   return true;
 }
 
