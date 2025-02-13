@@ -868,10 +868,11 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE,
     return true;
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
-  if (Assume && !AR)
+  if (!AR) {
+    if (!Assume)
+      return false;
     AR = PSE.getAsAddRec(Ptr);
-  if (!AR)
-    return false;
+  }
 
   // The address calculation must not wrap. Otherwise, a dependence could be
   // inverted.
@@ -887,15 +888,15 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE,
       GEP && GEP->hasNoUnsignedSignedWrap())
     return true;
 
-  // If the null pointer is undefined, then a access sequence which would
-  // otherwise access it can be assumed not to unsigned wrap.  Note that this
-  // assumes the object in memory is aligned to the natural alignment.
   if (!Stride)
     Stride = getStrideFromAddRec(AR, L, AccessTy, Ptr, PSE);
   if (Stride) {
+    // If the null pointer is undefined, then a access sequence which would
+    // otherwise access it can be assumed not to unsigned wrap.  Note that this
+    // assumes the object in memory is aligned to the natural alignment.
     unsigned AddrSpace = Ptr->getType()->getPointerAddressSpace();
     if (!NullPointerIsDefined(L->getHeader()->getParent(), AddrSpace) &&
-        (*Stride == 1 || *Stride == -1))
+        (Stride == 1 || Stride == -1))
       return true;
   }
 
