@@ -2339,14 +2339,14 @@ define <vscale x 16 x i64> @vp_cttz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; RV32-NEXT:    add a4, sp, a4
 ; RV32-NEXT:    addi a4, a4, 16
 ; RV32-NEXT:    vs8r.v v8, (a4) # Unknown-size Folded Spill
-; RV32-NEXT:    vsrl.vi v16, v16, 2, v0.t
+; RV32-NEXT:    vsrl.vi v8, v16, 2, v0.t
 ; RV32-NEXT:    csrr a4, vlenb
 ; RV32-NEXT:    li a5, 48
 ; RV32-NEXT:    mul a4, a4, a5
 ; RV32-NEXT:    add a4, sp, a4
 ; RV32-NEXT:    addi a4, a4, 16
-; RV32-NEXT:    vl8r.v v8, (a4) # Unknown-size Folded Reload
-; RV32-NEXT:    vand.vv v16, v16, v8, v0.t
+; RV32-NEXT:    vl8r.v v16, (a4) # Unknown-size Folded Reload
+; RV32-NEXT:    vand.vv v16, v8, v16, v0.t
 ; RV32-NEXT:    csrr a4, vlenb
 ; RV32-NEXT:    li a5, 24
 ; RV32-NEXT:    mul a4, a4, a5
