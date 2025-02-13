@@ -403,6 +403,12 @@ void OutputSection::addContributingPartialSection(PartialSection *sec) {
   contribSections.push_back(sec);
 }
 
+void OutputSection::splitECChunks() {
+  llvm::stable_sort(chunks, [=](const Chunk *a, const Chunk *b) {
+    return (a->getMachine() != ARM64) < (b->getMachine() != ARM64);
+  });
+}
+
 // Check whether the target address S is in range from a relocation
 // of type relType at address P.
 bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
@@ -1154,6 +1160,11 @@ void Writer::createSections() {
       sec->addChunk(c);
 
     sec->addContributingPartialSection(pSec);
+  }
+
+  if (ctx.hybridSymtab) {
+    if (OutputSection *sec = findSection(".CRT"))
+      sec->splitECChunks();
   }
 
   // Finally, move some output sections to the end.
