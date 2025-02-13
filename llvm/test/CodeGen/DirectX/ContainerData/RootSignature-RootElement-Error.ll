@@ -3,7 +3,7 @@
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
 ; CHECK: error: Missing Root Element Metadata Node.
-; CHECK-NO: Root Signature Definitions
+; CHECK-NOT: Root Signature Definitions
 
 
 define void @main() #0 {
