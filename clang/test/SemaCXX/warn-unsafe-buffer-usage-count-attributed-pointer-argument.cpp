@@ -72,7 +72,7 @@ void cb_cchar_42(const char *__counted_by(42) s);
 // expected-note@+1 19{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
 void cb_int(int *__counted_by(count) p, size_t count);
 
-// expected-note@+1 33{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
+// expected-note@+1 34{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
 void cb_cint(const int *__counted_by(count) p, size_t count);
 
 // expected-note@+1 10{{consider using 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
@@ -81,7 +81,7 @@ void cb_cint_42(const int *__counted_by(42) p);
 // expected-note@+1 6{{consider using 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
 void cb_cint_multi(const int *__counted_by((a + b) * (c - d)) p, int a, int b, int c, int d);
 
-// expected-note@+1 11{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'size' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
+// expected-note@+1 13{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'size' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
 void sb_cvoid(const void *__sized_by(size) p, size_t size);
 
 // expected-note@+1 {{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'size' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
@@ -90,7 +90,7 @@ void sb_cchar(const char *__sized_by(size) p, size_t size);
 // expected-note@+1 5{{consider using 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
 void sb_cvoid_42(const void *__sized_by(42) p);
 
-// expected-note@+1 5{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'size' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
+// expected-note@+1 6{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'size' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
 void sb_cint(const int *__sized_by(size) p, size_t size);
 
 // expected-note@+1 3{{consider using 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
@@ -161,6 +161,54 @@ void pointers_of_diff_type(std::array<int, 42> &a, std::string &s,
   sb_cvoid(sp_char.data(), sp_char.size());
   sb_cvoid(sp_char.data(), sp_char.size_bytes());
 }
+
+template <typename IntT, typename CharT>
+void pointers_of_diff_type_uninstantiated(std::array<IntT, 42> &a, std::string &s,
+                                         std::span<IntT> sp_int, std::span<CharT> sp_char) {
+  cb_cint(a.data(), a.size());
+  sb_cvoid(a.data(), a.size());
+
+  cb_cchar(s.data(), s.size());
+  sb_cvoid(s.data(), s.size());
+
+  cb_cint(sp_int.data(), sp_int.size());
+  cb_cint(sp_int.data(), sp_int.size_bytes());
+  sb_cvoid(sp_int.data(), sp_int.size());
+  sb_cvoid(sp_int.data(), sp_int.size_bytes());
+  sb_cint(sp_int.data(), sp_int.size());
+  sb_cint(sp_int.data(), sp_int.size_bytes());
+
+  cb_cchar(sp_char.data(), sp_char.size());
+  cb_cchar(sp_char.data(), sp_char.size_bytes());
+  sb_cvoid(sp_char.data(), sp_char.size());
+  sb_cvoid(sp_char.data(), sp_char.size_bytes());
+}
+
+template <typename IntT, typename CharT>
+void pointers_of_diff_type_instantiated(std::array<IntT, 42> &a, std::string &s,
+                                    std::span<IntT> sp_int, std::span<CharT> sp_char) {
+  cb_cint(a.data(), a.size());
+  sb_cvoid(a.data(), a.size()); // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+
+  cb_cchar(s.data(), s.size());
+  sb_cvoid(s.data(), s.size());
+
+  cb_cint(sp_int.data(), sp_int.size());
+  cb_cint(sp_int.data(), sp_int.size_bytes()); // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  sb_cvoid(sp_int.data(), sp_int.size());      // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  sb_cvoid(sp_int.data(), sp_int.size_bytes());
+  sb_cint(sp_int.data(), sp_int.size());      // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  sb_cint(sp_int.data(), sp_int.size_bytes());
+
+  cb_cchar(sp_char.data(), sp_char.size());
+  cb_cchar(sp_char.data(), sp_char.size_bytes());
+  sb_cvoid(sp_char.data(), sp_char.size());
+  sb_cvoid(sp_char.data(), sp_char.size_bytes());
+}
+
+// explicitly instantiate the templated function to trigger processing of bounds safety attributes
+template void pointers_of_diff_type_instantiated<int, char>(std::array<int, 42> &a, std::string &s,
+                                                        std::span<int> sp_int, std::span<char> sp_char);
 
 // Check if passing to __counted_by(const) uses a subview.
 

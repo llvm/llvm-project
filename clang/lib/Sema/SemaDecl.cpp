@@ -17764,6 +17764,11 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FD)
     CheckImmediateEscalatingFunctionDefinition(FD, getCurFunction());
 
+  /*TO_UPSTREAM(BoundsSafety) ON*/
+  if (LangOpts.BoundsSafety)
+    DynamicCountPointerAssignmentAnalysis(*this, dcl).run();
+  /*TO_UPSTREAM(BoundsSafety) OFF*/
+
   if (!IsInstantiation)
     PopDeclContext();
 
@@ -17785,11 +17790,6 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
-
-  /*TO_UPSTREAM(BoundsSafety) ON*/
-  if (LangOpts.BoundsSafety)
-    DynamicCountPointerAssignmentAnalysis(*this, dcl).run();
-  /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   return dcl;
 }

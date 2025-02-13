@@ -1594,6 +1594,10 @@ void UnsafeOperationVisitor::
       Current = PE->getSubExpr();
       continue;
     }
+    if (const auto *BCE = dyn_cast<BoundsCheckExpr>(Current)) {
+      Current = BCE->getGuardedExpr();
+      continue;
+    }
     if (const auto *CE = dyn_cast<CastExpr>(Current)) {
       if (CE->getCastKind() == clang::CK_BoundsSafetyPointerCast) {
         // Found a cast we might want to warn about.

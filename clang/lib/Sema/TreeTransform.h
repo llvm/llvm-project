@@ -7704,7 +7704,7 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
       Result = SemaRef.BuildCountAttributedType(
           InnerTy, NewCount, OldTy->isCountInBytes(), OldTy->isOrNull());
     } else {
-    /* TO_UPSTREAM(BoundsSafety) OFF */
+      /* TO_UPSTREAM(BoundsSafety) OFF */
       // Currently, CountAttributedType can only wrap incomplete array types.
       Result = SemaRef.BuildCountAttributedArrayOrPointerType(
           InnerTy, NewCount, OldTy->isCountInBytes(), OldTy->isOrNull());

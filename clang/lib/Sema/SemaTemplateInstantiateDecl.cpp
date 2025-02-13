@@ -674,6 +674,59 @@ static void instantiateDependentSYCLKernelAttr(
   New->addAttr(Attr.clone(S.getASTContext()));
 }
 
+static void
+instantiateBoundsSafetyAttr(Sema &S,
+                            const MultiLevelTemplateArgumentList &TemplateArgs,
+                            const Attr *AL, Decl *New) {
+  int Level;
+  Expr *ArgExpr;
+  std::string Spelling;
+  if (const auto *A = dyn_cast<SizedByAttr>(AL)) {
+    Level = A->getNestedLevel();
+    ArgExpr = A->getSize();
+    Spelling = A->getSpelling();
+  } else if (const auto *A = dyn_cast<SizedByOrNullAttr>(AL)) {
+    Level = A->getNestedLevel();
+    ArgExpr = A->getSize();
+    Spelling = A->getSpelling();
+  } else if (const auto *A = dyn_cast<CountedByAttr>(AL)) {
+    Level = A->getNestedLevel();
+    ArgExpr = A->getCount();
+    Spelling = A->getSpelling();
+  } else if (const auto *A = dyn_cast<CountedByOrNullAttr>(AL)) {
+    Level = A->getNestedLevel();
+    ArgExpr = A->getCount();
+    Spelling = A->getSpelling();
+  } else if (const auto *A = dyn_cast<PtrEndedByAttr>(AL)) {
+    Level = A->getNestedLevel();
+    ArgExpr = A->getEndPtr();
+    Spelling = A->getSpelling();
+  } else
+    llvm_unreachable("unexpected late instantiated bounds safety attribute");
+
+  DeclContext *DC;
+  if (auto *FD = dyn_cast<FunctionDecl>(New)) {
+    DC = FD; // make sure we can refer to parameters in attribute
+  } else {
+    DC = New->getDeclContext();
+  }
+  Sema::ContextRAII SetContext(S, DC);
+  if (auto *RD = dyn_cast<CXXRecordDecl>(DC)) {
+    // Set `this` type as if we were in a decl scope lambda
+    // It's reset along with CurContext when SetContext goes out of scope
+    QualType ClassTy = S.Context.getTypeDeclType(RD);
+    S.CXXThisTypeOverride = S.Context.getPointerType(ClassTy);
+  }
+
+  ExprResult InstantiatedArgExpr = S.SubstExpr(ArgExpr, TemplateArgs);
+  if (InstantiatedArgExpr.isInvalid())
+    return;
+  S.applyPtrCountedByEndedByAttr(
+      New, Level, AL->getParsedKind(), InstantiatedArgExpr.get(), AL->getLoc(),
+      AL->getRange(), "\'" + Spelling + "\'", /*from API notes*/ false,
+      /*in template instantiation*/ true);
+}
+
 /// Determine whether the attribute A might be relevant to the declaration D.
 /// If not, we can skip instantiating it. The attribute may or may not have
 /// been instantiated yet.
@@ -922,6 +975,14 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
         New->addAttr(A->clone(Context));
       continue;
     }
+
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    if (isa<SizedByAttr, SizedByOrNullAttr, CountedByAttr, CountedByOrNullAttr,
+            PtrEndedByAttr>(TmplAttr)) {
+      instantiateBoundsSafetyAttr(*this, TemplateArgs, TmplAttr, New);
+      continue;
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
 
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {

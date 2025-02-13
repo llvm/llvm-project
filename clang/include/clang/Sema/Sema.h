@@ -2792,7 +2792,8 @@ public:
                                     AttributeCommonInfo::Kind Kind,
                                     Expr *AttrArg, SourceLocation Loc,
                                     SourceRange Range, StringRef DiagName,
-                                    bool OriginatesInAPINotes = false);
+                                    bool OriginatesInAPINotes = false,
+                                    bool InInstantiatedTemplate = false);
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
 
