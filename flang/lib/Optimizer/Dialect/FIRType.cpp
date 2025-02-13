@@ -1370,23 +1370,12 @@ void FIROpsDialect::registerTypes() {
            TypeDescType, fir::VectorType, fir::DummyScopeType>();
   fir::ReferenceType::attachInterface<
       OpenMPPointerLikeModel<fir::ReferenceType>>(*getContext());
-  fir::ReferenceType::attachInterface<
-      OpenACCPointerLikeModel<fir::ReferenceType>>(*getContext());
-
   fir::PointerType::attachInterface<OpenMPPointerLikeModel<fir::PointerType>>(
       *getContext());
-  fir::PointerType::attachInterface<OpenACCPointerLikeModel<fir::PointerType>>(
-      *getContext());
-
   fir::HeapType::attachInterface<OpenMPPointerLikeModel<fir::HeapType>>(
       *getContext());
-  fir::HeapType::attachInterface<OpenACCPointerLikeModel<fir::HeapType>>(
-      *getContext());
-
   fir::LLVMPointerType::attachInterface<
       OpenMPPointerLikeModel<fir::LLVMPointerType>>(*getContext());
-  fir::LLVMPointerType::attachInterface<
-      OpenACCPointerLikeModel<fir::LLVMPointerType>>(*getContext());
 }
 
 std::optional<std::pair<uint64_t, unsigned short>>
