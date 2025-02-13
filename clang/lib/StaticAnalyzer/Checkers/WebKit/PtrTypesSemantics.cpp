@@ -504,8 +504,8 @@ public:
   }
 
   bool VisitOffsetOfExpr(const OffsetOfExpr* OE) {
-      // offsetof(T) is considered trivial.
-      return true;
+    // offsetof(T, D) is considered trivial.
+    return true;
   }
 
   bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
