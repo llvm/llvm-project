@@ -4718,9 +4718,13 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
 
     // Store the vector to memory (because LValue wants an address).
     Address VecMem = CreateMemTemp(E->getBase()->getType());
+    // To be consistent need to zero extend an hlsl boolean vector to store it back
+    // to memory
+    QualType Ty = E->getBase()->getType();
+    if (Ty->isExtVectorBoolType() && getLangOpts().HLSL)
+      Vec = Builder.CreateZExt(Vec, convertTypeForLoadStore(Ty, Vec->getType()));
     Builder.CreateStore(Vec, VecMem);
-    Base = MakeAddrLValue(VecMem, E->getBase()->getType(),
-                          AlignmentSource::Decl);
+    Base = MakeAddrLValue(VecMem, Ty, AlignmentSource::Decl);
   }
 
   QualType type =
