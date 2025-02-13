@@ -557,7 +557,13 @@ include(GetClangResourceDir)
 get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 configure_file(
   ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
-  ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h)
+  ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h COPYONLY)
+
+# llvm-test-suite explicitly searches for this header file
+# (`ISO_FORTRAN_C_HEADER`), cannot hide it in Clang's resource dir.
+configure_file(
+  ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
+  ${LLVM_RUNTIME_OUTPUT_INTDIR}/../include/flang/ISO_Fortran_binding.h COPYONLY)
 
 # And also install it into the install area
 get_clang_resource_dir(HEADER_INSTALL_DIR SUBDIR include)
