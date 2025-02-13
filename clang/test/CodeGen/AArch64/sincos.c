@@ -88,3 +88,45 @@ void sincos_f128(long double x, long double* ldp0, long double* ldp1) {
 void sincos_builtin_f128(long double x, long double* ldp0, long double* ldp1) {
   __builtin_sincosl(x, ldp0, ldp1);
 }
+
+// NO-MATH-ERRNO-LABEL: @sincospi_f32
+//      NO-MATH-ERRNO:    [[SINCOSPI:%.*]] = tail call { float, float } @llvm.sincospi.f32(float {{.*}})
+// NO-MATH-ERRNO-NEXT:    [[SINPI:%.*]] = extractvalue { float, float } [[SINCOSPI]], 0
+// NO-MATH-ERRNO-NEXT:    [[COSPI:%.*]] = extractvalue { float, float } [[SINCOSPI]], 1
+// NO-MATH-ERRNO-NEXT:    store float [[SINPI]], ptr {{.*}}, align 4, !alias.scope [[SINCOSPI_ALIAS_SCOPE:![0-9]+]]
+// NO-MATH-ERRNO-NEXT:    store float [[COSPI]], ptr {{.*}}, align 4, !noalias [[SINCOSPI_ALIAS_SCOPE]]
+//
+// MATH-ERRNO-LABEL: @sincospi_f32
+//      MATH-ERRNO:    call void @sincospif(
+//
+void sincospi_f32(float x, float* fp0, float* fp1) {
+  __builtin_sincospif(x, fp0, fp1);
+}
+
+// NO-MATH-ERRNO-LABEL: @sincospi_f64
+//      NO-MATH-ERRNO:    [[SINCOSPI:%.*]] = tail call { double, double } @llvm.sincospi.f64(double {{.*}})
+// NO-MATH-ERRNO-NEXT:    [[SINPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 0
+// NO-MATH-ERRNO-NEXT:    [[COSPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 1
+// NO-MATH-ERRNO-NEXT:    store double [[SINPI]], ptr {{.*}}, align 8, !alias.scope [[SINCOSPI_ALIAS_SCOPE:![0-9]+]]
+// NO-MATH-ERRNO-NEXT:    store double [[COSPI]], ptr {{.*}}, align 8, !noalias [[SINCOSPI_ALIAS_SCOPE]]
+//
+// MATH-ERRNO-LABEL: @sincospi_f64
+//      MATH-ERRNO:    call void @sincospi(
+//
+void sincospi_f64(double x, double* dp0, double* dp1) {
+  __builtin_sincospi(x, dp0, dp1);
+}
+
+// NO-MATH-ERRNO-LABEL: @sincospi_f128
+//      NO-MATH-ERRNO:    [[SINCOSPI:%.*]] = tail call { fp128, fp128 } @llvm.sincospi.f128(fp128 {{.*}})
+// NO-MATH-ERRNO-NEXT:    [[SINPI:%.*]] = extractvalue { fp128, fp128 } [[SINCOSPI]], 0
+// NO-MATH-ERRNO-NEXT:    [[COSPI:%.*]] = extractvalue { fp128, fp128 } [[SINCOSPI]], 1
+// NO-MATH-ERRNO-NEXT:    store fp128 [[SINPI]], ptr {{.*}}, align 16, !alias.scope [[SINCOSPI_ALIAS_SCOPE:![0-9]+]]
+// NO-MATH-ERRNO-NEXT:    store fp128 [[COSPI]], ptr {{.*}}, align 16, !noalias [[SINCOSPI_ALIAS_SCOPE]]
+//
+// MATH-ERRNO-LABEL: @sincospi_f128
+//      MATH-ERRNO:    call void @sincospil(
+//
+void sincospi_f128(long double x, long double* ldp0, long double* ldp1) {
+  __builtin_sincospil(x, ldp0, ldp1);
+}
