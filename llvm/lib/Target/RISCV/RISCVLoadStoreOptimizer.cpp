@@ -6,25 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass implements two key optimizations for RISC-V memory accesses:
-//   1. Load/Store Pairing: It identifies pairs of load or store instructions
-//      operating on consecutive memory locations and merges them into a single
-//      paired instruction, taking advantage of hardware support for paired
-//      accesses. Much of the pairing logic is adapted from the
-//      AArch64LoadStoreOpt pass.
-//   2. Load/Store Bonding: When direct pairing cannot be applied, the pass
-//   bonds related memory instructions together into a bundle. This preserves
-//   their proximity and prevents reordering that might violate memory
-//   semantics. This technique benefits certain targets (e.g. MIPS P8700) by
-//   ensuring that paired or bonded memory operations remain contiguous.
+// Load/Store Pairing: It identifies pairs of load or store instructions
+// operating on consecutive memory locations and merges them into a single
+// paired instruction, leveraging hardware support for paired memory accesses.
+// Much of the pairing logic is adapted from the AArch64LoadStoreOpt pass.
 //
 // NOTE: The AArch64LoadStoreOpt pass performs additional optimizations such as
-//       merging zero store instructions, promoting loads that read directly
-//       from a preceding store, and merging base register updates with
-//       load/store instructions (via pre-/post-indexed addressing). These
-//       advanced transformations are not yet implemented in the RISC-V pass but
-//       represent potential future enhancements, as similar benefits could be
-//       achieved on RISC-V architectures.
+// merging zero store instructions, promoting loads that read directly from a
+// preceding store, and merging base register updates with load/store
+// instructions (via pre-/post-indexed addressing). These advanced
+// transformations are not yet implemented in the RISC-V pass but represent
+// potential future enhancements for further optimizing RISC-V memory
+// operations.
 //
 //===----------------------------------------------------------------------===//
 
@@ -90,7 +83,6 @@ private:
   const RISCVRegisterInfo *TRI;
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
   bool EnableLoadStorePairs = false;
-  bool EnableLoadStoreBonding = false;
 };
 } // end anonymous namespace
 
@@ -103,8 +95,7 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     return false;
   const RISCVSubtarget &Subtarget = Fn.getSubtarget<RISCVSubtarget>();
   EnableLoadStorePairs = Subtarget.useLoadStorePairs();
-  EnableLoadStoreBonding = Subtarget.useMIPSLoadStoreBonding();
-  if (!EnableLoadStorePairs && !EnableLoadStoreBonding)
+  if (!EnableLoadStorePairs)
     return false;
 
   bool MadeChange = false;
@@ -379,18 +370,8 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     First = InsertionPoint;
   }
 
-  // It may pair them or creaate bundles. The instructions may still be bundled
-  // together, preserving their proximity and the intent of keeping related
-  // memory accesses together. This bundling can help subsequent passes maintain
-  // any implicit ordering or avoid reordering that might violate memory
-  // semantics. For exmaple, MIPS P8700 benefits from it.
   if (EnableLoadStorePairs && tryConvertToLdStPair(First, Second)) {
     LLVM_DEBUG(dbgs() << "Pairing load/store:\n    ");
-    LLVM_DEBUG(prev_nodbg(NextI, MBB.begin())->print(dbgs()));
-  } else if (EnableLoadStoreBonding) {
-    finalizeBundle(MBB, First.getInstrIterator(),
-                   std::next(Second).getInstrIterator());
-    LLVM_DEBUG(dbgs() << "Bonding load/store:\n    ");
     LLVM_DEBUG(prev_nodbg(NextI, MBB.begin())->print(dbgs()));
   }
 

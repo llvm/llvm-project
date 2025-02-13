@@ -8,15 +8,15 @@
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 ; RUN: llc -mtriple=riscv64 -target-abi lp64d -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64D
-; RUN: llc -mtriple=riscv32 -mattr=+Xmipslsp -mips-riscv-load-store-pairs=1 -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+Xmipslsp -riscv-mips-load-store-pairs=1 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I_PAIR
-; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=+d,+Xmipslsp -mips-riscv-load-store-pairs=1 -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=+d,+Xmipslsp -riscv-mips-load-store-pairs=1 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32D_PAIR
-; RUN: llc -mtriple=riscv64 -mattr=+Xmipslsp -mips-riscv-load-store-pairs=1 -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+Xmipslsp -riscv-mips-load-store-pairs=1 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I_PAIR
-; RUN: llc -mtriple=riscv64 -mcpu mips-p8700 -mattr=+Xmipslsp -mips-riscv-load-store-pairs=1 -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mcpu mips-p8700 -mattr=+Xmipslsp -riscv-mips-load-store-pairs=1 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64P_8700
-; RUN: llc -mtriple=riscv64 -target-abi lp64d -mattr=+d,+Xmipslsp -mips-riscv-load-store-pairs=1 -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -target-abi lp64d -mattr=+d,+Xmipslsp -riscv-mips-load-store-pairs=1 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64D_PAIR
 ; RUN: llc -mtriple=riscv64 -target-abi lp64d -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64D_8700
