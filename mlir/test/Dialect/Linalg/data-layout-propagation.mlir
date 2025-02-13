@@ -47,6 +47,34 @@ func.func @dynamic_elem_pack(%arg0: tensor<?x?xf32>, %dest: tensor<?x?x8x2xf32>)
 // -----
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
+func.func @dynamic_elem_pack_padding_value(%arg0: tensor<?x?xf32>, %dest: tensor<?x?x8x2xf32>) -> tensor<?x?x8x2xf32>
+{
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 3.000000e+00 : f32
+  %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+  %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
+  %2 = tensor.empty(%0, %1) : tensor<?x?xf32>
+  %3 = linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel", "parallel"]}
+      ins(%arg0 : tensor<?x?xf32>)
+      outs(%2 : tensor<?x?xf32>) {
+    ^bb0(%arg3: f32, %arg4: f32):
+      %4 = arith.addf %arg3, %arg3 : f32
+      linalg.yield %4 : f32
+  } -> tensor<?x?xf32>
+  %4 = tensor.pack %3 padding_value(%cst : f32)
+    inner_dims_pos = [0, 1]
+    inner_tiles = [8, 2]
+    into %dest : tensor<?x?xf32> -> tensor<?x?x8x2xf32>
+  return %4 : tensor<?x?x8x2xf32>
+}
+// CHECK-LABEL:  func.func @dynamic_elem_pack_padding_value
+// CHECK:          %[[GENERIC:.+]] = linalg.generic
+// CHECK:          tensor.pack %[[GENERIC]]
+
+// -----
+
+#map0 = affine_map<(d0, d1) -> (d0, d1)>
 func.func @elem_pack_transpose_inner_dims(%arg0: tensor<128x256xi32>, %dest: tensor<4x16x16x32xi32>) -> tensor<4x16x16x32xi32>{
   %init = tensor.empty() : tensor<128x256xi32>
   %elem = linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel", "parallel"]}
