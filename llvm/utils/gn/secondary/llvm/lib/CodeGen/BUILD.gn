@@ -50,6 +50,7 @@ static_library("CodeGen") {
     "DFAPacketizer.cpp",
     "DeadMachineInstructionElim.cpp",
     "DetectDeadLanes.cpp",
+    "DroppedVariableStatsMIR.cpp",
     "DwarfEHPrepare.cpp",
     "EHContGuardCatchret.cpp",
     "EarlyIfConversion.cpp",
