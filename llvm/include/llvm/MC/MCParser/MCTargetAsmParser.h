@@ -193,8 +193,7 @@ public:
 // below which collects *all* possible diagnostics. This alternative
 // is optional and fully backward compatible with existing
 // PredicateMethods that return a 'bool' (match or near match).
-class DiagnosticPredicate {
-public:
+struct DiagnosticPredicate {
   enum PredicateTy {
     Match,     // Matches
     NearMatch, // Close Match: use Specific Diagnostic
