@@ -1,3 +1,6 @@
+// Disabling this flaky test, see https://github.com/llvm/llvm-project/pull/126913#issuecomment-2655850766
+// UNSUPPORTED: true
+
 // RUN: %clang_analyze_cc1 -w -analyzer-checker=debug.DumpLiveExprs %s 2>&1\
 // RUN:   | FileCheck %s
 
