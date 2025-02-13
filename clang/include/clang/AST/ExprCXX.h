@@ -2847,8 +2847,8 @@ public:
 ///
 /// Example:
 /// \code
-///   __array_rank(int[10][20]) == 2
-///   __array_extent(int, 1)    == 20
+///   __array_rank(int[10][20])      == 2
+///   __array_extent(int[10][20], 1) == 20
 /// \endcode
 class ArrayTypeTraitExpr : public Expr {
   /// The trait. An ArrayTypeTrait enum in MSVC compat unsigned.
@@ -4326,8 +4326,6 @@ public:
   /// Retrieve the parameter pack.
   NamedDecl *getPack() const { return Pack; }
 
-  void setPack(NamedDecl *NewPack) { Pack = NewPack; }
-
   /// Retrieve the length of the parameter pack.
   ///
   /// This routine may only be invoked when the expression is not
@@ -5026,11 +5024,11 @@ public:
   void setArrayFiller(Expr *E) { ArrayFillerOrUnionFieldInit = E; }
 
   Expr *getArrayFiller() {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<Expr *>();
+    return dyn_cast_if_present<Expr *>(ArrayFillerOrUnionFieldInit);
   }
 
   const Expr *getArrayFiller() const {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<Expr *>();
+    return dyn_cast_if_present<Expr *>(ArrayFillerOrUnionFieldInit);
   }
 
   void setInitializedFieldInUnion(FieldDecl *FD) {
@@ -5038,11 +5036,11 @@ public:
   }
 
   FieldDecl *getInitializedFieldInUnion() {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<FieldDecl *>();
+    return dyn_cast_if_present<FieldDecl *>(ArrayFillerOrUnionFieldInit);
   }
 
   const FieldDecl *getInitializedFieldInUnion() const {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<FieldDecl *>();
+    return dyn_cast_if_present<FieldDecl *>(ArrayFillerOrUnionFieldInit);
   }
 
   child_range children() {
@@ -5318,6 +5316,59 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BuiltinBitCastExprClass;
+  }
+};
+
+// Represents an unexpanded pack where the list of expressions are
+// known. These are used when structured bindings introduce a pack.
+class ResolvedUnexpandedPackExpr final
+    : public Expr,
+      private llvm::TrailingObjects<ResolvedUnexpandedPackExpr, Expr *> {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+  friend TrailingObjects;
+
+  SourceLocation BeginLoc;
+  unsigned NumExprs;
+
+  ResolvedUnexpandedPackExpr(SourceLocation BL, QualType QT, unsigned NumExprs);
+
+public:
+  static ResolvedUnexpandedPackExpr *CreateDeserialized(ASTContext &C,
+                                                        unsigned NumExprs);
+  static ResolvedUnexpandedPackExpr *
+  Create(ASTContext &C, SourceLocation BeginLoc, QualType T, unsigned NumExprs);
+  static ResolvedUnexpandedPackExpr *Create(ASTContext &C,
+                                            SourceLocation BeginLoc, QualType T,
+                                            llvm::ArrayRef<Expr *> Exprs);
+
+  unsigned getNumExprs() const { return NumExprs; }
+
+  llvm::MutableArrayRef<Expr *> getExprs() {
+    return {getTrailingObjects<Expr *>(), NumExprs};
+  }
+
+  llvm::ArrayRef<Expr *> getExprs() const {
+    return {getTrailingObjects<Expr *>(), NumExprs};
+  }
+
+  Expr *getExpansion(unsigned Idx) { return getExprs()[Idx]; }
+  Expr *getExpansion(unsigned Idx) const { return getExprs()[Idx]; }
+
+  // Iterators
+  child_range children() {
+    return child_range((Stmt **)getTrailingObjects<Expr *>(),
+                       (Stmt **)getTrailingObjects<Expr *>() + getNumExprs());
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return BeginLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return BeginLoc; }
+
+  // Returns the resolved pack of a decl or nullptr
+  static ResolvedUnexpandedPackExpr *getFromDecl(Decl *);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ResolvedUnexpandedPackExprClass;
   }
 };
 

@@ -130,34 +130,6 @@ def get_per_workflow_metrics(
         workflow_jobs = workflow_run.jobs()
         if workflow_jobs.totalCount == 0:
             continue
-        if workflow_jobs.totalCount > 1:
-            raise ValueError(
-                f"Encountered an unexpected number of jobs: {workflow_jobs.totalCount}"
-            )
-
-        created_at = workflow_jobs[0].created_at
-        started_at = workflow_jobs[0].started_at
-        completed_at = workflow_jobs[0].completed_at
-
-        job_result = int(workflow_jobs[0].conclusion == "success")
-        if job_result:
-            # We still might want to mark the job as a failure if one of the steps
-            # failed. This is required due to use setting continue-on-error in
-            # the premerge pipeline to prevent sending emails while we are
-            # testing the infrastructure.
-            # TODO(boomanaiden154): Remove this once the premerge pipeline is no
-            # longer in a testing state and we can directly assert the workflow
-            # result.
-            for step in workflow_jobs[0].steps:
-                if step.conclusion != "success":
-                    job_result = 0
-                    break
-
-        queue_time = started_at - created_at
-        run_time = completed_at - started_at
-
-        if run_time.seconds == 0:
-            continue
 
         if (
             workflows_to_track[workflow_run.name] is None
@@ -170,20 +142,45 @@ def get_per_workflow_metrics(
         ):
             break
 
-        # The timestamp associated with the event is expected by Grafana to be
-        # in nanoseconds.
-        created_at_ns = int(created_at.timestamp()) * 10**9
+        for workflow_job in workflow_jobs:
+            created_at = workflow_job.created_at
+            started_at = workflow_job.started_at
+            completed_at = workflow_job.completed_at
 
-        workflow_metrics.append(
-            JobMetrics(
-                workflow_run.name,
-                queue_time.seconds,
-                run_time.seconds,
-                job_result,
-                created_at_ns,
-                workflow_run.id,
+            job_result = int(workflow_job.conclusion == "success")
+            if job_result:
+                # We still might want to mark the job as a failure if one of the steps
+                # failed. This is required due to use setting continue-on-error in
+                # the premerge pipeline to prevent sending emails while we are
+                # testing the infrastructure.
+                # TODO(boomanaiden154): Remove this once the premerge pipeline is no
+                # longer in a testing state and we can directly assert the workflow
+                # result.
+                for step in workflow_job.steps:
+                    if step.conclusion != "success":
+                        job_result = 0
+                        break
+
+            queue_time = started_at - created_at
+            run_time = completed_at - started_at
+
+            if run_time.seconds == 0:
+                continue
+
+            # The timestamp associated with the event is expected by Grafana to be
+            # in nanoseconds.
+            created_at_ns = int(created_at.timestamp()) * 10**9
+
+            workflow_metrics.append(
+                JobMetrics(
+                    workflow_run.name + "-" + workflow_job.name,
+                    queue_time.seconds,
+                    run_time.seconds,
+                    job_result,
+                    created_at_ns,
+                    workflow_run.id,
+                )
             )
-        )
 
     return workflow_metrics
 

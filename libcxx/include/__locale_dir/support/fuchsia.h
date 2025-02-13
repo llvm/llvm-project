@@ -40,7 +40,17 @@ struct __locale_guard {
 //
 // Locale management
 //
+#define _LIBCPP_COLLATE_MASK LC_COLLATE_MASK
+#define _LIBCPP_CTYPE_MASK LC_CTYPE_MASK
+#define _LIBCPP_MONETARY_MASK LC_MONETARY_MASK
+#define _LIBCPP_NUMERIC_MASK LC_NUMERIC_MASK
+#define _LIBCPP_TIME_MASK LC_TIME_MASK
+#define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
+#define _LIBCPP_ALL_MASK LC_ALL_MASK
+#define _LIBCPP_LC_ALL LC_ALL
+
 using __locale_t = locale_t;
+using __lconv_t  = std::lconv;
 
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __name, __locale_t __loc) {
   return ::newlocale(__category_mask, __name, __loc);
@@ -48,7 +58,11 @@ inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const c
 
 inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { ::freelocale(__loc); }
 
-inline _LIBCPP_HIDE_FROM_ABI lconv* __localeconv(__locale_t& __loc) {
+inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, char const* __locale) {
+  return ::setlocale(__category, __locale);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) {
   __locale_guard __current(__loc);
   return std::localeconv();
 }

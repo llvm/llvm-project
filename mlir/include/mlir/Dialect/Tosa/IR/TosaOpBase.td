@@ -231,7 +231,7 @@ def TosaResolvableShapeOperands : NativeOpTrait<"TosaResolvableShapeOperands"> {
 //===----------------------------------------------------------------------===//
 
 class Tosa_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface, 
+    Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface,
     TosaResolvableShapeOperands])> {
 }
 
@@ -241,6 +241,7 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
                                         ["inferReturnTypeComponents"]>,
               ResultsBroadcastableShape,
               TosaElementwiseOperator,
+              SameOperandsAndResultRank,
               Pure])> {
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
@@ -261,6 +262,13 @@ class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor, Pure])> {
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
+}
+
+// The "SameVariadicOperandSize" trait allows us to pass optional arguments
+// for multiple zero points in convolution ops.
+class Tosa_ConvOp<string mnemonic, list<Trait> traits = []>
+    : Tosa_InferShapedTypeOp<mnemonic, !listconcat(traits,
+      [SameVariadicOperandSize])> {
 }
 
 #endif // TOSA_OP_BASE

@@ -54,14 +54,8 @@
    don't. */
 #cmakedefine01 HAVE_DECL_STRERROR_S
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#cmakedefine HAVE_DLFCN_H ${HAVE_DLFCN_H}
-
 /* Define if dlopen() is available on this platform. */
 #cmakedefine HAVE_DLOPEN ${HAVE_DLOPEN}
-
-/* Define if dladdr() is available on this platform. */
-#cmakedefine HAVE_DLADDR ${HAVE_DLADDR}
 
 /* Define to 1 if we can register EH frames on this platform. */
 #cmakedefine HAVE_REGISTER_FRAME ${HAVE_REGISTER_FRAME}
@@ -89,9 +83,6 @@
 
 /* Define to 1 if you have the `getpagesize' function. */
 #cmakedefine HAVE_GETPAGESIZE ${HAVE_GETPAGESIZE}
-
-/* Define to 1 if you have the `getrlimit' function. */
-#cmakedefine HAVE_GETRLIMIT ${HAVE_GETRLIMIT}
 
 /* Define to 1 if you have the `getrusage' function. */
 #cmakedefine HAVE_GETRUSAGE ${HAVE_GETRUSAGE}
@@ -165,14 +156,8 @@
 /* Define to 1 if you have the `setenv' function. */
 #cmakedefine HAVE_SETENV ${HAVE_SETENV}
 
-/* Define to 1 if you have the `setrlimit' function. */
-#cmakedefine HAVE_SETRLIMIT ${HAVE_SETRLIMIT}
-
 /* Define to 1 if you have the `sigaltstack' function. */
 #cmakedefine HAVE_SIGALTSTACK ${HAVE_SIGALTSTACK}
-
-/* Define to 1 if you have the <signal.h> header file. */
-#cmakedefine HAVE_SIGNAL_H ${HAVE_SIGNAL_H}
 
 /* Define to 1 if you have the `strerror_r' function. */
 #cmakedefine HAVE_STRERROR_R ${HAVE_STRERROR_R}
@@ -180,26 +165,14 @@
 /* Define to 1 if you have the `sysconf' function. */
 #cmakedefine HAVE_SYSCONF ${HAVE_SYSCONF}
 
-/* Define to 1 if you have the <sys/ioctl.h> header file. */
-#cmakedefine HAVE_SYS_IOCTL_H ${HAVE_SYS_IOCTL_H}
-
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #cmakedefine HAVE_SYS_MMAN_H ${HAVE_SYS_MMAN_H}
-
-/* Define to 1 if you have the <sys/resource.h> header file. */
-#cmakedefine HAVE_SYS_RESOURCE_H ${HAVE_SYS_RESOURCE_H}
-
-/* Define to 1 if you have the <sys/time.h> header file. */
-#cmakedefine HAVE_SYS_TIME_H ${HAVE_SYS_TIME_H}
 
 /* Define to 1 if stat struct has st_mtimespec member .*/
 #cmakedefine HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC ${HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC}
 
 /* Define to 1 if stat struct has st_mtim member. */
 #cmakedefine HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC ${HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC}
-
-/* Define to 1 if you have the <termios.h> header file. */
-#cmakedefine HAVE_TERMIOS_H ${HAVE_TERMIOS_H}
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
@@ -321,5 +294,7 @@
 #cmakedefine HAVE_PROC_PID_RUSAGE 1
 
 #cmakedefine HAVE_BUILTIN_THREAD_POINTER ${HAVE_BUILTIN_THREAD_POINTER}
+
+#cmakedefine HAVE_GETAUXVAL ${HAVE_GETAUXVAL}
 
 #endif

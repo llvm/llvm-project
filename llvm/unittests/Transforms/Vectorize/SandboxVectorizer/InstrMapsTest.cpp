@@ -53,7 +53,7 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2, i8 %v3, <2 x i8> %vec) {
   auto *VAdd0 = cast<sandboxir::BinaryOperator>(&*It++);
   [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::InstrMaps IMaps;
+  sandboxir::InstrMaps IMaps(Ctx);
   // Check with empty IMaps.
   EXPECT_EQ(IMaps.getVectorForOrig(Add0), nullptr);
   EXPECT_EQ(IMaps.getVectorForOrig(Add1), nullptr);
@@ -75,4 +75,40 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2, i8 %v3, <2 x i8> %vec) {
 #ifndef NDEBUG
   EXPECT_DEATH(IMaps.registerVector({Add1, Add0}, VAdd0), ".*exists.*");
 #endif // NDEBUG
+  // Check callbacks: erase original instr.
+  Add0->eraseFromParent();
+  EXPECT_FALSE(IMaps.getOrigLane(VAdd0, Add0));
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add1), 1U);
+  EXPECT_EQ(IMaps.getVectorForOrig(Add0), nullptr);
+  // Check callbacks: erase vector instr.
+  VAdd0->eraseFromParent();
+  EXPECT_FALSE(IMaps.getOrigLane(VAdd0, Add1));
+  EXPECT_EQ(IMaps.getVectorForOrig(Add1), nullptr);
+}
+
+TEST_F(InstrMapsTest, VectorLanes) {
+  parseIR(C, R"IR(
+define void @foo(<2 x i8> %v0, <2 x i8> %v1, <4 x i8> %v2, <4 x i8> %v3) {
+  %vadd0 = add <2 x i8> %v0, %v1
+  %vadd1 = add <2 x i8> %v0, %v1
+  %vadd2 = add <4 x i8> %v2, %v3
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+
+  auto *VAdd0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *VAdd1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *VAdd2 = cast<sandboxir::BinaryOperator>(&*It++);
+
+  sandboxir::InstrMaps IMaps(Ctx);
+
+  // Check that the vector lanes are calculated correctly.
+  IMaps.registerVector({VAdd0, VAdd1}, VAdd2);
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd2, VAdd0), 0U);
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd2, VAdd1), 2U);
 }

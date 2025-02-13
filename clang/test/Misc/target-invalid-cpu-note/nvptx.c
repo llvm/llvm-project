@@ -27,6 +27,7 @@
 // CHECK-SAME: {{^}}, sm_90
 // CHECK-SAME: {{^}}, sm_90a
 // CHECK-SAME: {{^}}, sm_100
+// CHECK-SAME: {{^}}, sm_100a
 // CHECK-SAME: {{^}}, gfx600
 // CHECK-SAME: {{^}}, gfx601
 // CHECK-SAME: {{^}}, gfx602

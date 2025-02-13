@@ -24,7 +24,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if __has_builtin(__is_nothrow_destructible)
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_destructible : integral_constant<bool, __is_nothrow_destructible(_Tp)> {};
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_nothrow_destructible
+    : integral_constant<bool, __is_nothrow_destructible(_Tp)> {};
 
 #else
 
@@ -55,7 +56,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_destructible<_Tp&&> : public true_type {}
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_nothrow_destructible_v = is_nothrow_destructible<_Tp>::value;
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_destructible_v = is_nothrow_destructible<_Tp>::value;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

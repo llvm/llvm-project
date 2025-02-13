@@ -363,7 +363,7 @@ Symbol *SymbolTable::addSharedFunction(StringRef name, uint32_t flags,
     replaceSymbol<SharedFunctionSymbol>(sym, name, flags, file, sig);
   };
 
-  if (wasInserted) {
+  if (wasInserted || s->isLazy()) {
     replaceSym(s);
     return s;
   }
@@ -408,10 +408,18 @@ Symbol *SymbolTable::addSharedData(StringRef name, uint32_t flags,
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name, file);
 
-  if (wasInserted || s->isUndefined()) {
+  if (wasInserted || s->isLazy()) {
     replaceSymbol<SharedData>(s, name, flags, file);
+    return s;
   }
 
+  // Shared symbols should never replace locally-defined ones
+  if (s->isDefined()) {
+    return s;
+  }
+
+  checkDataType(s, file);
+  replaceSymbol<SharedData>(s, name, flags, file);
   return s;
 }
 
