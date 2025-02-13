@@ -1239,6 +1239,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("Instruction cannot use a vector result type", MI);
 
     if (MI->getOpcode() == TargetOpcode::G_CONSTANT) {
+      if (!DstTy.isInteger() && !DstTy.isPointer()) {
+        report("G_CONSTANT must have an integer/pointer result type", MI);
+        break;
+      }
       if (!MI->getOperand(1).isCImm()) {
         report("G_CONSTANT operand must be cimm", MI);
         break;
@@ -1248,15 +1252,26 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       if (CI->getBitWidth() != DstTy.getSizeInBits())
         report("inconsistent constant size", MI);
     } else {
+      if (!DstTy.isFloat()) {
+        report("G_FCONSTANT must have a float result type", MI);
+        break;
+      }
       if (!MI->getOperand(1).isFPImm()) {
         report("G_FCONSTANT operand must be fpimm", MI);
         break;
       }
       const ConstantFP *CF = MI->getOperand(1).getFPImm();
 
-      if (APFloat::getSizeInBits(CF->getValueAPF().getSemantics()) !=
-          DstTy.getSizeInBits()) {
+      const fltSemantics &CSem = CF->getValueAPF().getSemantics();
+
+      if (APFloat::getSizeInBits(CSem) != DstTy.getSizeInBits()) {
         report("inconsistent constant size", MI);
+      }
+
+      const fltSemantics &DstSem = getFltSemanticForLLT(DstTy);
+
+      if (&CSem != &DstSem) {
+        report("inconsistent floating point semantics", MI);
       }
     }
 
@@ -1280,6 +1295,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       const MachineMemOperand &MMO = **MI->memoperands_begin();
       if (MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
           MI->getOpcode() == TargetOpcode::G_SEXTLOAD) {
+        if (ValTy.isFloat() || ValTy.isFloatVector()) {
+          report("Generic extload must have an integer result type", MI);
+          break;
+        }
         if (TypeSize::isKnownGE(MMO.getSizeInBits().getValue(),
                                 ValTy.getSizeInBits()))
           report("Generic extload must have a narrower memory type", MI);
@@ -1291,7 +1310,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         if (MMO.getRanges()) {
           ConstantInt *i =
               mdconst::extract<ConstantInt>(MMO.getRanges()->getOperand(0));
-          const LLT RangeTy = LLT::scalar(i->getIntegerType()->getBitWidth());
+          const LLT RangeTy = LLT::integer(i->getIntegerType()->getBitWidth());
           const LLT MemTy = MMO.getMemoryType();
           if (MemTy.getScalarType() != RangeTy ||
               ValTy.isScalar() != MemTy.isScalar() ||
@@ -1370,13 +1389,13 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (MI->getOpcode() == TargetOpcode::G_INTTOPTR) {
       if (!DstTy.isPointer())
         report("inttoptr result type must be a pointer", MI);
-      if (SrcTy.isPointer())
-        report("inttoptr source type must not be a pointer", MI);
+      if (!SrcTy.isInteger())
+        report("inttoptr source type must be an integer", MI);
     } else if (MI->getOpcode() == TargetOpcode::G_PTRTOINT) {
       if (!SrcTy.isPointer())
         report("ptrtoint source type must be a pointer", MI);
-      if (DstTy.isPointer())
-        report("ptrtoint result type must not be a pointer", MI);
+      if (!DstTy.isInteger())
+        report("ptrtoint result type must be an integer", MI);
     } else {
       assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST);
       if (!SrcTy.isPointer() || !DstTy.isPointer())
@@ -1399,8 +1418,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!PtrTy.isPointerOrPointerVector())
       report("gep first operand must be a pointer", MI);
 
-    if (OffsetTy.isPointerOrPointerVector())
-      report("gep offset operand must not be a pointer", MI);
+    if (!OffsetTy.isInteger() && !OffsetTy.isIntegerVector())
+      report("gep offset operand must be an integer", MI);
 
     if (PtrTy.isPointerOrPointerVector()) {
       const DataLayout &DL = MF->getDataLayout();
@@ -1467,6 +1486,36 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
                MI);
       break;
     }
+
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+    case TargetOpcode::G_TRUNC: {
+      if (DstTy.isFloat() || DstTy.isFloatVector()) {
+        report("generic ext/trunc result type must not be a float", MI);
+        break;
+      }
+
+      if (SrcTy.isFloat() || SrcTy.isFloatVector())
+        report("generic ext/trunc source type must not be a float", MI);
+
+      break;
+    }
+    case TargetOpcode::G_FPEXT:
+    case TargetOpcode::G_FPTRUNC: {
+      if (!DstTy.isFloat() && !DstTy.isFloatVector()) {
+        report("generic fpext/fptrunc result type must be float", MI);
+        break;
+      }
+
+      if (!SrcTy.isFloat() && !SrcTy.isFloatVector())
+        report("generic fpext/fptrunc source type must be a float", MI);
+
+      break;
+    }
+    }
+
     break;
   }
   case TargetOpcode::G_SELECT: {
@@ -1493,10 +1542,15 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     const unsigned NumOps = MI->getNumOperands();
     if (DstTy.getSizeInBits() != SrcTy.getSizeInBits() * (NumOps - 1))
       report("G_MERGE_VALUES result size is inconsistent", MI);
+    if (DstTy.isFloat())
+      report("G_MERGE_VALUES float result types are not allowed", MI);
 
     for (unsigned I = 2; I != NumOps; ++I) {
-      if (MRI->getType(MI->getOperand(I).getReg()) != SrcTy)
+      LLT OpTy = MRI->getType(MI->getOperand(I).getReg());
+      if (OpTy != SrcTy)
         report("G_MERGE_VALUES source types do not match", MI);
+      if (OpTy.isFloat())
+        report("G_MERGE_VALUES float source types are not allowed", MI);
     }
 
     break;
@@ -1526,17 +1580,37 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       // This case is the converse of G_BUILD_VECTOR, but relaxed to allow
       // mismatched types as long as the total size matches:
       //   %0:_(s64), %1:_(s64) = G_UNMERGE_VALUES %2:_(<4 x s32>)
-      if (SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits())
+      if (SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits()) {
         report("G_UNMERGE_VALUES vector source operand does not match scalar "
                "destination operands",
                MI);
+        break;
+      }
+      if (DstTy.isFloat()) {
+        if (!SrcTy.isFloatVector()) {
+          report("G_UNMERGE_VALUES source vector element type does not match "
+                 "scalar destination type",
+                 MI);
+          break;
+        }
+        if (NumDsts != SrcTy.getNumElements()) {
+          report("G_UNMERGE_VALUES number of destination operands has to match "
+                 "the number of vector elements for float vectors",
+                 MI);
+          break;
+        }
+      }
     } else {
       // This case is the converse of G_MERGE_VALUES.
       if (SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits()) {
         report("G_UNMERGE_VALUES scalar source operand does not match scalar "
                "destination operands",
                MI);
+        break;
       }
+      if (SrcTy.isFloat() || DstTy.isFloat())
+        report("G_UNMERGE_VALUES is not supported for scalar float operands",
+               MI);
     }
     break;
   }
@@ -1578,6 +1652,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("G_BUILD_VECTOR_TRUNC source operand types are not larger than "
              "dest elt type",
              MI);
+    if (DstTy.isFloatVector() || SrcEltTy.isFloat()) {
+      report("G_BUILD_VECTOR_TRUNC source operand types cannot be float", MI);
+    }
     break;
   }
   case TargetOpcode::G_CONCAT_VECTORS: {
@@ -1609,6 +1686,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         (DstTy.isVector() &&
          DstTy.getElementCount() != SrcTy.getElementCount()))
       report("Generic vector icmp/fcmp must preserve number of lanes", MI);
+
+    if (MI->getOpcode() == TargetOpcode::G_ICMP) {
+      if (SrcTy.isFloat() || SrcTy.isFloatVector()) {
+        report("G_ICMP cannot operate on float operands", MI);
+      }
+    } else if (MI->getOpcode() == TargetOpcode::G_FCMP) {
+      if (!SrcTy.isFloat() && !SrcTy.isFloatVector()) {
+        report("G_FCMP can only operate on float operands", MI);
+      }
+    }
 
     break;
   }
@@ -1654,13 +1741,22 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    unsigned DstSize = MRI->getType(MI->getOperand(0).getReg()).getSizeInBits();
-    unsigned SrcSize = MRI->getType(SrcOp.getReg()).getSizeInBits();
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(SrcOp.getReg());
+    unsigned DstSize = DstTy.getSizeInBits();
+    unsigned SrcSize = SrcTy.getSizeInBits();
     if (SrcSize == DstSize)
       report("extract source must be larger than result", MI);
 
     if (DstSize + OffsetOp.getImm() > SrcSize)
       report("extract reads past end of register", MI);
+
+    if (SrcTy.isFloat() || SrcTy.isFloatVector())
+      report("extract source must not be a float", MI);
+
+    if (DstTy.isFloat() || DstTy.isFloatVector())
+      report("extract result must not be a float", MI);
+
     break;
   }
   case TargetOpcode::G_INSERT: {
@@ -1676,14 +1772,22 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    unsigned DstSize = MRI->getType(MI->getOperand(0).getReg()).getSizeInBits();
-    unsigned SrcSize = MRI->getType(SrcOp.getReg()).getSizeInBits();
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(SrcOp.getReg());
+    unsigned DstSize = DstTy.getSizeInBits();
+    unsigned SrcSize = SrcTy.getSizeInBits();
 
     if (DstSize <= SrcSize)
       report("inserted size must be smaller than total register", MI);
 
     if (SrcSize + OffsetOp.getImm() > DstSize)
       report("insert writes past end of register", MI);
+
+    if (SrcTy.isFloat() || SrcTy.isFloatVector())
+      report("insert source must not be a float", MI);
+
+    if (DstTy.isFloat() || DstTy.isFloatVector())
+      report("insert result must not be a float", MI);
 
     break;
   }
@@ -1738,6 +1842,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("G_SEXT_INREG size must be >= 1", MI);
     if (Imm >= SrcTy.getScalarSizeInBits())
       report("G_SEXT_INREG size must be less than source bit width", MI);
+    if (SrcTy.isFloat() || SrcTy.isFloatVector())
+      report("G_SEXT_INREG source must not be float", MI);
     break;
   }
   case TargetOpcode::G_BSWAP: {
@@ -2134,12 +2240,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT Src1Ty = MRI->getType(MI->getOperand(1).getReg());
     LLT Src2Ty = MRI->getType(MI->getOperand(2).getReg());
-    if (!DstTy.isScalar())
-      report("Vector reduction requires a scalar destination type", MI);
-    if (!Src1Ty.isScalar())
-      report("Sequential FADD/FMUL vector reduction requires a scalar 1st operand", MI);
-    if (!Src2Ty.isVector())
-      report("Sequential FADD/FMUL vector reduction must have a vector 2nd operand", MI);
+    if (!DstTy.isFloat())
+      report("Vector reduction requires a float destination type", MI);
+    if (!Src1Ty.isFloat())
+      report(
+          "Sequential FADD/FMUL vector reduction requires a float 1st operand",
+          MI);
+    if (!Src2Ty.isFloatVector())
+      report("Sequential FADD/FMUL vector reduction must have a float vector "
+             "2nd operand",
+             MI);
     break;
   }
   case TargetOpcode::G_VECREDUCE_FADD:
@@ -2158,8 +2268,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_VECREDUCE_UMAX:
   case TargetOpcode::G_VECREDUCE_UMIN: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
-    if (!DstTy.isScalar())
-      report("Vector reduction requires a scalar destination type", MI);
+    if (!DstTy.isFloat())
+      report("Vector reduction requires a float destination type", MI);
     break;
   }
 
@@ -2184,6 +2294,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
              "all vectors",
              MI);
       break;
+    }
+    if (Src1Ty.isFloat() || Src1Ty.isFloatVector() || Src2Ty.isFloat() ||
+        Src2Ty.isFloatVector()) {
+      report("Shifts and rotates require operands to be integers", MI);
     }
     break;
   }
@@ -2214,8 +2328,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
     LLT SrcEltTy = SrcTy.getScalarType();
-    if (!SrcEltTy.isScalar()) {
-      report("Source must be a scalar or vector of scalars", MI);
+    if (!SrcEltTy.isFloat()) {
+      report("Source must be a float or vector of floats", MI);
       break;
     }
     if (!verifyVectorElementMatch(DestTy, SrcTy, MI))

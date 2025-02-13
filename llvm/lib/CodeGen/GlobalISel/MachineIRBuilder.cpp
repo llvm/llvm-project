@@ -194,7 +194,7 @@ void MachineIRBuilder::validateBinaryOp(const LLT Res, const LLT Op0,
 
 void MachineIRBuilder::validateShiftOp(const LLT Res, const LLT Op0,
                                        const LLT Op1) {
-  assert((Res.isScalar() || Res.isVector()) && "invalid operand type");
+  assert((Res.isInteger() || Res.isIntegerVector()) && "invalid operand type");
   assert((Res == Op0) && "type mismatch");
 }
 
@@ -203,7 +203,8 @@ MachineIRBuilder::buildPtrAdd(const DstOp &Res, const SrcOp &Op0,
                               const SrcOp &Op1, std::optional<unsigned> Flags) {
   assert(Res.getLLTTy(*getMRI()).isPointerOrPointerVector() &&
          Res.getLLTTy(*getMRI()) == Op0.getLLTTy(*getMRI()) && "type mismatch");
-  assert(Op1.getLLTTy(*getMRI()).getScalarType().isScalar() && "invalid offset type");
+  assert(Op1.getLLTTy(*getMRI()).getScalarType().isInteger() &&
+         "invalid offset type");
 
   return buildInstr(TargetOpcode::G_PTR_ADD, {Res}, {Op0, Op1}, Flags);
 }
@@ -228,7 +229,7 @@ MachineInstrBuilder MachineIRBuilder::buildMaskLowPtrBits(const DstOp &Res,
                                                           const SrcOp &Op0,
                                                           uint32_t NumBits) {
   LLT PtrTy = Res.getLLTTy(*getMRI());
-  LLT MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+  LLT MaskTy = LLT::integer(PtrTy.getSizeInBits());
   Register MaskReg = getMRI()->createGenericVirtualRegister(MaskTy);
   buildConstant(MaskReg, maskTrailingZeros<uint64_t>(NumBits));
   return buildPtrMask(Res, Op0, MaskReg);
@@ -355,7 +356,7 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
          == EltTy.getSizeInBits() &&
          "creating fconstant with the wrong size");
 
-  assert(!Ty.isPointer() && "invalid operand type");
+  assert((Ty.isFloat() || Ty.isFloatVector()) && "invalid operand type");
 
   assert(!Ty.isScalableVector() &&
          "unexpected scalable vector in buildFConstant");
@@ -412,7 +413,7 @@ MachineIRBuilder::buildConstantPtrAuth(const DstOp &Res,
 
 MachineInstrBuilder MachineIRBuilder::buildBrCond(const SrcOp &Tst,
                                                   MachineBasicBlock &Dest) {
-  assert(Tst.getLLTTy(*getMRI()).isScalar() && "invalid operand type");
+  assert(Tst.getLLTTy(*getMRI()).isInteger() && "invalid operand type");
 
   auto MIB = buildInstr(TargetOpcode::G_BRCOND);
   Tst.addSrcToMIB(MIB);
@@ -459,7 +460,7 @@ MachineInstrBuilder MachineIRBuilder::buildLoadFromOffset(
     return buildLoad(Dst, BasePtr, *OffsetMMO);
 
   LLT PtrTy = BasePtr.getLLTTy(*getMRI());
-  LLT OffsetTy = LLT::scalar(PtrTy.getSizeInBits());
+  LLT OffsetTy = LLT::integer(PtrTy.getSizeInBits());
   auto ConstOffset = buildConstant(OffsetTy, Offset);
   auto Ptr = buildPtrAdd(PtrTy, BasePtr, ConstOffset);
   return buildLoad(Dst, Ptr, *OffsetMMO);
@@ -550,10 +551,10 @@ MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
   assert((TargetOpcode::G_ANYEXT == ExtOpc || TargetOpcode::G_ZEXT == ExtOpc ||
           TargetOpcode::G_SEXT == ExtOpc) &&
          "Expecting Extending Opc");
-  assert(Res.getLLTTy(*getMRI()).isScalar() ||
-         Res.getLLTTy(*getMRI()).isVector());
-  assert(Res.getLLTTy(*getMRI()).isScalar() ==
-         Op.getLLTTy(*getMRI()).isScalar());
+  assert(Res.getLLTTy(*getMRI()).isInteger() ||
+         Res.getLLTTy(*getMRI()).isIntegerVector());
+  assert(Res.getLLTTy(*getMRI()).isInteger() ==
+         Op.getLLTTy(*getMRI()).isInteger());
 
   unsigned Opcode = TargetOpcode::COPY;
   if (Res.getLLTTy(*getMRI()).getSizeInBits() >
@@ -1208,8 +1209,11 @@ MachineIRBuilder::buildBlockAddress(Register Res, const BlockAddress *BA) {
 }
 
 void MachineIRBuilder::validateTruncExt(const LLT DstTy, const LLT SrcTy,
-                                        bool IsExtend) {
+                                        unsigned Opc) {
 #ifndef NDEBUG
+  bool IsExtend = Opc == TargetOpcode::G_SEXT || Opc == TargetOpcode::G_ZEXT ||
+                  Opc == TargetOpcode::G_ANYEXT || Opc == TargetOpcode::G_FPEXT;
+  bool IsFP = Opc == TargetOpcode::G_FPEXT || Opc == TargetOpcode::G_FPTRUNC;
   if (DstTy.isVector()) {
     assert(SrcTy.isVector() && "mismatched cast between vector and non-vector");
     assert(SrcTy.getElementCount() == DstTy.getElementCount() &&
@@ -1223,6 +1227,18 @@ void MachineIRBuilder::validateTruncExt(const LLT DstTy, const LLT SrcTy,
   else
     assert(TypeSize::isKnownLT(DstTy.getSizeInBits(), SrcTy.getSizeInBits()) &&
            "invalid widening trunc");
+
+  if (IsFP) {
+    assert(DstTy.getScalarType().isFloat() &&
+           "fpext/fptrunc destinaton type must be float");
+    assert(SrcTy.getScalarType().isFloat() &&
+           "fpext/fptrunc source type must be float");
+  } else {
+    assert(!DstTy.getScalarType().isFloat() &&
+           "ext/trunc destinaton type must not be float");
+    assert(!SrcTy.getScalarType().isFloat() &&
+           "ext/trunc source type must not be float");
+  }
 #endif
 }
 
@@ -1284,11 +1300,16 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
   case TargetOpcode::G_USUBSAT:
   case TargetOpcode::G_SSUBSAT: {
     // All these are binary ops.
+    LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    LLT Src1Ty = SrcOps[0].getLLTTy(*getMRI());
+    LLT Src2Ty = SrcOps[1].getLLTTy(*getMRI());
+    assert(DstTy.getScalarType().isInteger() && "Invalid destination type");
+    assert((Src1Ty.getScalarType().isInteger() ||
+            Src2Ty.getScalarType().isIntegerVector()) &&
+           "Invalid source type");
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 2 && "Invalid Srcs");
-    validateBinaryOp(DstOps[0].getLLTTy(*getMRI()),
-                     SrcOps[0].getLLTTy(*getMRI()),
-                     SrcOps[1].getLLTTy(*getMRI()));
+    validateBinaryOp(DstTy, Src1Ty, Src2Ty);
     break;
   }
   case TargetOpcode::G_SHL:
@@ -1306,17 +1327,13 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT:
-    assert(DstOps.size() == 1 && "Invalid Dst");
-    assert(SrcOps.size() == 1 && "Invalid Srcs");
-    validateTruncExt(DstOps[0].getLLTTy(*getMRI()),
-                     SrcOps[0].getLLTTy(*getMRI()), true);
-    break;
+  case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_FPTRUNC: {
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 1 && "Invalid Srcs");
     validateTruncExt(DstOps[0].getLLTTy(*getMRI()),
-                     SrcOps[0].getLLTTy(*getMRI()), false);
+                     SrcOps[0].getLLTTy(*getMRI()), Opc);
     break;
   }
   case TargetOpcode::G_BITCAST: {
@@ -1346,47 +1363,88 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
     }() && "Invalid predicate");
     assert(SrcOps[1].getLLTTy(*getMRI()) == SrcOps[2].getLLTTy(*getMRI()) &&
            "Type mismatch");
+    LLT Op0Ty = SrcOps[1].getLLTTy(*getMRI());
+    LLT Op1Ty = SrcOps[2].getLLTTy(*getMRI());
+    LLT DstTy = DstOps[0].getLLTTy(*getMRI());
     assert([&]() -> bool {
-      LLT Op0Ty = SrcOps[1].getLLTTy(*getMRI());
-      LLT DstTy = DstOps[0].getLLTTy(*getMRI());
       if (Op0Ty.isScalar() || Op0Ty.isPointer())
         return DstTy.isScalar();
       else
         return DstTy.isVector() &&
                DstTy.getElementCount() == Op0Ty.getElementCount();
     }() && "Type Mismatch");
+
+    if (Opc == TargetOpcode::G_ICMP) {
+      assert(!Op0Ty.getScalarType().isFloat() &&
+             !Op1Ty.getScalarType().isFloat() &&
+             "G_ICMP operands cannot be float");
+    } else {
+      assert(Op0Ty.getScalarType().isFloat() &&
+             Op1Ty.getScalarType().isFloat() &&
+             "G_FCMP operands must be float");
+    }
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
     assert(!DstOps.empty() && "Invalid trivial sequence");
     assert(SrcOps.size() == 1 && "Invalid src for Unmerge");
+
+    LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    LLT SrcTy = SrcOps[0].getLLTTy(*getMRI());
+    unsigned NumDsts = DstOps.size();
     assert(llvm::all_of(DstOps,
                         [&, this](const DstOp &Op) {
-                          return Op.getLLTTy(*getMRI()) ==
-                                 DstOps[0].getLLTTy(*getMRI());
+                          return Op.getLLTTy(*getMRI()) == DstTy;
                         }) &&
            "type mismatch in output list");
-    assert((TypeSize::ScalarTy)DstOps.size() *
-                   DstOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
-               SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
+    assert(NumDsts * DstTy.getSizeInBits() == SrcTy.getSizeInBits() &&
            "input operands do not cover output register");
+
+    if (DstTy.isVector()) {
+      assert(SrcTy.isVector() && "G_UNMERGE_VALUES source operand does not "
+                                 "match vector destination operands");
+      assert(SrcTy.getScalarType() == DstTy.getScalarType() ||
+             SrcTy.isPointerVector() ||
+             SrcTy.getSizeInBits() == NumDsts * DstTy.getSizeInBits() &&
+                 "G_UNMERGE_VALUES source operand does "
+                 "not match vector destination operands");
+    } else if (SrcTy.isFloatVector()) {
+      assert(DstTy.isFloat() &&
+             "G_UNMERGE_VALUES source vector element type does not match "
+             "scalar destination type");
+
+      assert(NumDsts == SrcTy.getNumElements() &&
+             "G_UNMERGE_VALUES number of destination operands has to match "
+             "the number of vector elements for float vectors");
+    } else {
+      assert(!SrcTy.isFloat() && !DstTy.isFloat() &&
+             "G_UNMERGE_VALUES is not supported for scalar float operands");
+    }
+
     break;
   }
   case TargetOpcode::G_MERGE_VALUES: {
     assert(SrcOps.size() >= 2 && "invalid trivial sequence");
     assert(DstOps.size() == 1 && "Invalid Dst");
+    unsigned NumSrcs = SrcOps.size();
+    LLT SrcTy = SrcOps[0].getLLTTy(*getMRI());
     assert(llvm::all_of(SrcOps,
                         [&, this](const SrcOp &Op) {
-                          return Op.getLLTTy(*getMRI()) ==
-                                 SrcOps[0].getLLTTy(*getMRI());
+                          return Op.getLLTTy(*getMRI()) == SrcTy;
                         }) &&
            "type mismatch in input list");
-    assert((TypeSize::ScalarTy)SrcOps.size() *
-                   SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
-               DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
+    assert(llvm::all_of(SrcOps,
+                        [&, this](const SrcOp &Op) {
+                          return !Op.getLLTTy(*getMRI()).isFloat();
+                        }) &&
+           "float types are not alowed in input list");
+    LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    assert(NumSrcs * SrcTy.getSizeInBits() == DstTy.getSizeInBits() &&
            "input operands do not cover output register");
-    assert(!DstOps[0].getLLTTy(*getMRI()).isVector() &&
+    assert(!DstTy.isVector() &&
            "vectors should be built with G_CONCAT_VECTOR or G_BUILD_VECTOR");
+    assert(!DstTy.isFloat() &&
+           "G_MERGE_VALUES float result types are not allowed");
     break;
   }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
@@ -1438,8 +1496,10 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
     assert((!SrcOps.empty() || SrcOps.size() < 2) &&
            "Must have at least 2 operands");
     assert(DstOps.size() == 1 && "Invalid DstOps");
-    assert(DstOps[0].getLLTTy(*getMRI()).isVector() &&
-           "Res type must be a vector");
+    assert(DstOps[0].getLLTTy(*getMRI()).isIntegerVector() &&
+           "Res type must be a vector of integers");
+    assert(SrcOps[0].getLLTTy(*getMRI()).isInteger() &&
+           "Src type must be an integer");
     assert(llvm::all_of(SrcOps,
                         [&, this](const SrcOp &Op) {
                           return Op.getLLTTy(*getMRI()) ==

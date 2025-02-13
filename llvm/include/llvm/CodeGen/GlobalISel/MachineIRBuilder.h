@@ -239,7 +239,7 @@ class MachineIRBuilder {
   unsigned getOpcodeForMerge(const DstOp &DstOp, ArrayRef<SrcOp> SrcOps) const;
 
 protected:
-  void validateTruncExt(const LLT Dst, const LLT Src, bool IsExtend);
+  void validateTruncExt(const LLT Dst, const LLT Src, unsigned Opc);
 
   void validateUnaryOp(const LLT Res, const LLT Op0);
   void validateBinaryOp(const LLT Res, const LLT Op0, const LLT Op1);
