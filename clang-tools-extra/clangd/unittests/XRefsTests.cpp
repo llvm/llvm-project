@@ -426,9 +426,10 @@ TEST(LocateSymbol, FindOverridesObjC) {
   TestTU TU = TestTU::withCode(Code.code());
   TU.ExtraArgs.push_back("-xobjective-c++");
   auto AST = TU.build();
-  EXPECT_THAT(locateSymbolAt(AST, Code.point(), TU.index().get()),
-              UnorderedElementsAre(sym("foo", Code.range("1"), std::nullopt),
-                                   sym("foo", Code.range("2"), Code.range("2"))));
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point(), TU.index().get()),
+      UnorderedElementsAre(sym("foo", Code.range("1"), std::nullopt),
+                           sym("foo", Code.range("2"), Code.range("2"))));
 }
 
 TEST(LocateSymbol, WithIndexPreferredLocation) {
@@ -1878,15 +1879,15 @@ TEST(FindImplementations, InheritanceObjC) {
   TU.ExtraArgs.push_back("-xobjective-c++");
   auto AST = TU.build();
   auto Index = TU.index();
-  EXPECT_THAT(
-    findImplementations(AST, Code.point("base"), Index.get()),
-    UnorderedElementsAre(sym("Child", Code.range("ChildDecl"), Code.range("ChildDef"))));
-  EXPECT_THAT(
-    findImplementations(AST, Code.point("foo"), Index.get()),
-    UnorderedElementsAre(sym("foo", Code.range("fooDecl"), Code.range("fooDef"))));
-  EXPECT_THAT(
-    findImplementations(AST, Code.point("protocol"), Index.get()),
-    UnorderedElementsAre(sym("protocol", Code.range("protocolDef"), Code.range("protocolDef"))));
+  EXPECT_THAT(findImplementations(AST, Code.point("base"), Index.get()),
+              UnorderedElementsAre(sym("Child", Code.range("ChildDecl"),
+                                       Code.range("ChildDef"))));
+  EXPECT_THAT(findImplementations(AST, Code.point("foo"), Index.get()),
+              UnorderedElementsAre(
+                  sym("foo", Code.range("fooDecl"), Code.range("fooDef"))));
+  EXPECT_THAT(findImplementations(AST, Code.point("protocol"), Index.get()),
+              UnorderedElementsAre(sym("protocol", Code.range("protocolDef"),
+                                       Code.range("protocolDef"))));
 }
 
 TEST(FindImplementations, CaptureDefinition) {
