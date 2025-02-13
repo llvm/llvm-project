@@ -69,7 +69,7 @@ Error OutputRedirector::RedirectTo(std::function<void(StringRef)> callback) {
       if (data.empty())
         break;
 
-      callback(StringRef(buffer, bytes_count));
+      callback(data);
     }
     ::close(read_fd);
   });
