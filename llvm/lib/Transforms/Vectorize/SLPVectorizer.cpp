@@ -13181,8 +13181,16 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
         // If the user instruction is used for some reason in different
         // vectorized nodes - make it depend on index.
+        // If any vector node is PHI node, this dependency might not work
+        // because of cycle dependencies, so disable it.
         if (TEUseEI.UserTE != UseEI.UserTE &&
-            TEUseEI.UserTE->Idx < UseEI.UserTE->Idx)
+            (TEUseEI.UserTE->Idx < UseEI.UserTE->Idx ||
+             any_of(
+                 VectorizableTree,
+                 [](const std::unique_ptr<TreeEntry> &TE) {
+                   return TE->State == TreeEntry::Vectorize &&
+                          TE->getOpcode() == Instruction::PHI;
+                 })))
           continue;
       }
 
