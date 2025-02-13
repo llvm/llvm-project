@@ -229,11 +229,11 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    v_readlane_b32 s34, v43, 2
 ; GFX9-NEXT:    v_readlane_b32 s31, v43, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v43, 0
+; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v43, 5
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_mov_b64 exec, s[6:7]
-; GFX9-NEXT:    s_addk_i32 s32, 0xf800
 ; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]

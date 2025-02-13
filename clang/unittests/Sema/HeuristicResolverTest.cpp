@@ -155,6 +155,66 @@ TEST(HeuristicResolver, MemberExpr_SmartPointer_Qualified) {
       cxxMethodDecl(hasName("find"), isConst()).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_Static_Qualified) {
+  std::string Code = R"cpp(
+    template <typename T>
+    struct Waldo {
+      static void find();
+    };
+    template <typename T>
+    void foo(const Waldo<T>& t) {
+      t.find();
+    }
+  )cpp";
+  // Test resolution of "find" in "t.find()".
+  // The object being `const` should have no bearing on a call to a static
+  // method.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("find")).bind("input"),
+      cxxMethodDecl(hasName("find")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_AutoTypeDeduction1) {
+  std::string Code = R"cpp(
+    template <typename T>
+    struct A {
+      int waldo;
+    };
+    template <typename T>
+    void foo(A<T> a) {
+      auto copy = a;
+      copy.waldo;
+    }
+  )cpp";
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_AutoTypeDeduction2) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+
+    template <typename T>
+    struct A {
+      B b;
+    };
+    template <typename T>
+    void foo(A<T> a) {
+      auto b = a.b;
+      b.waldo;
+    }
+  )cpp";
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
 TEST(HeuristicResolver, MemberExpr_Chained) {
   std::string Code = R"cpp(
     struct A { void foo() {} };
@@ -171,6 +231,48 @@ TEST(HeuristicResolver, MemberExpr_Chained) {
       Code, &HeuristicResolver::resolveMemberExpr,
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
       cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_ReferenceType) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+    template <typename T>
+    struct A {
+      B &b;
+    };
+    template <typename T>
+    void foo(A<T> &a) {
+      a.b.waldo;
+    }
+  )cpp";
+  // Test resolution of "waldo" in "a.b.waldo".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_PointerType) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+    template <typename T>
+    struct A {
+      B *b;
+    };
+    template <typename T>
+    void foo(A<T> &a) {
+      a.b->waldo;
+    }
+  )cpp";
+  // Test resolution of "waldo" in "a.b->waldo".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
 }
 
 TEST(HeuristicResolver, MemberExpr_TemplateArgs) {
@@ -255,6 +357,25 @@ TEST(HeuristicResolver, MemberExpr_Metafunction) {
       cxxMethodDecl(hasName("find")).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_Metafunction_Enumerator) {
+  std::string Code = R"cpp(
+    enum class State { Hidden };
+    template <typename T>
+    struct Meta {
+      using Type = State;
+    };
+    template <typename T>
+    void foo(typename Meta<T>::Type t) {
+      t.Hidden;
+    }
+  )cpp";
+  // Test resolution of "Hidden" in "t.Hidden".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("Hidden")).bind("input"),
+      enumConstantDecl(hasName("Hidden")).bind("output"));
+}
+
 TEST(HeuristicResolver, MemberExpr_DeducedNonTypeTemplateParameter) {
   std::string Code = R"cpp(
     template <int N>
@@ -271,6 +392,22 @@ TEST(HeuristicResolver, MemberExpr_DeducedNonTypeTemplateParameter) {
       Code, &HeuristicResolver::resolveMemberExpr,
       cxxDependentScopeMemberExpr(hasMemberName("found")).bind("input"),
       fieldDecl(hasName("found")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_HangIssue126536) {
+  std::string Code = R"cpp(
+    template <class T>
+    void foo() {
+      T bar;
+      auto baz = (bar, bar);
+      baz.foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "baz.foo()".
+  // Here, we are testing that we do not get into an infinite loop.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"));
 }
 
 TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {
@@ -343,6 +480,27 @@ TEST(HeuristicResolver, DeclRefExpr_RespectScope) {
   expectResolution(
       Code, &HeuristicResolver::resolveDeclRefExpr,
       dependentScopeDeclRefExpr(hasDependentName("getPointer")).bind("input"));
+}
+
+TEST(HeuristicResolver, DeclRefExpr_Nested) {
+  std::string Code = R"cpp(
+    struct S {
+      static int Waldo;
+    };
+    template <typename T>
+    struct Meta {
+      using Type = S;
+    };
+    template <typename T>
+    void foo() {
+      Meta<T>::Type::Waldo;
+    }
+  )cpp";
+  // Test resolution of "Waldo" in "Meta<T>::Type::Waldo".
+  expectResolution(
+      Code, &HeuristicResolver::resolveDeclRefExpr,
+      dependentScopeDeclRefExpr(hasDependentName("Waldo")).bind("input"),
+      varDecl(hasName("Waldo")).bind("output"));
 }
 
 TEST(HeuristicResolver, DependentNameType) {

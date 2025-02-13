@@ -54,10 +54,6 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   auto *DXILValMD = M.getOrInsertNamedMetadata(DXILValKey);
   DXILValMD->addOperand(Val);
 }
-void addDisableOptimizations(llvm::Module &M) {
-  StringRef Key = "dx.disable_optimizations";
-  M.addModuleFlag(llvm::Module::ModFlagBehavior::Override, Key, 1);
-}
 // cbuffer will be translated into global variable in special address space.
 // If translate into C,
 // cbuffer A {
@@ -100,22 +96,6 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
       llvm::formatv("{0}{1}", Buf.Name, Buf.IsCBuffer ? ".cb." : ".tb."),
       GlobalValue::NotThreadLocal);
 
-  IRBuilder<> B(CBGV->getContext());
-  Value *ZeroIdx = B.getInt32(0);
-  // Replace Const use with CB use.
-  for (auto &[GV, Offset] : Buf.Constants) {
-    Value *GEP =
-        B.CreateGEP(Buf.LayoutStruct, CBGV, {ZeroIdx, B.getInt32(Offset)});
-
-    assert(Buf.LayoutStruct->getElementType(Offset) == GV->getValueType() &&
-           "constant type mismatch");
-
-    // Replace.
-    GV->replaceAllUsesWith(GEP);
-    // Erase GV.
-    GV->removeDeadConstantUsers();
-    GV->eraseFromParent();
-  }
   return CBGV;
 }
 
@@ -144,6 +124,7 @@ void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
   }
 
   auto *GV = cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(D));
+  GV->setExternallyInitialized(true);
   // Add debug info for constVal.
   if (CGDebugInfo *DI = CGM.getModuleDebugInfo())
     if (CGM.getCodeGenOpts().getDebugInfo() >=
@@ -186,8 +167,6 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
 
   generateGlobalCtorDtorCalls();
-  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-    addDisableOptimizations(M);
 
   const DataLayout &DL = M.getDataLayout();
 
@@ -360,6 +339,13 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
                 WaveSizeAttr->getPreferred());
     Fn->addFnAttr(WaveSizeKindStr, WaveSizeStr);
   }
+  // HLSL entry functions are materialized for module functions with
+  // HLSLShaderAttr attribute. SetLLVMFunctionAttributesForDefinition called
+  // later in the compiler-flow for such module functions is not aware of and
+  // hence not able to set attributes of the newly materialized entry functions.
+  // So, set attributes of entry function here, as appropriate.
+  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+    Fn->addFnAttr(llvm::Attribute::OptimizeNone);
   Fn->addFnAttr(llvm::Attribute::NoInline);
 }
 

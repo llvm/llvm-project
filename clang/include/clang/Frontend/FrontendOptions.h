@@ -141,9 +141,6 @@ enum ActionKind {
   /// Dump template instantiations
   TemplightDump,
 
-  /// Run migrator.
-  MigrateSource,
-
   /// Just lex, no output.
   RunPreprocessorOnly,
 
@@ -330,10 +327,6 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned FixToTemporaries : 1;
 
-  /// Emit ARC errors even if the migrator can fix them.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned ARCMTMigrateEmitARCErrors : 1;
-
   /// Skip over function bodies to speed up parsing in cases you do not need
   /// them (e.g. with code completion).
   LLVM_PREFERRED_TYPE(bool)
@@ -423,72 +416,6 @@ public:
 
   /// Specifies the output format of the AST.
   ASTDumpOutputFormat ASTDumpFormat = ADOF_Default;
-
-  enum {
-    ARCMT_None,
-    ARCMT_Check,
-    ARCMT_Modify,
-    ARCMT_Migrate
-  } ARCMTAction = ARCMT_None;
-
-  enum {
-    ObjCMT_None = 0,
-
-    /// Enable migration to modern ObjC literals.
-    ObjCMT_Literals = 0x1,
-
-    /// Enable migration to modern ObjC subscripting.
-    ObjCMT_Subscripting = 0x2,
-
-    /// Enable migration to modern ObjC readonly property.
-    ObjCMT_ReadonlyProperty = 0x4,
-
-    /// Enable migration to modern ObjC readwrite property.
-    ObjCMT_ReadwriteProperty = 0x8,
-
-    /// Enable migration to modern ObjC property.
-    ObjCMT_Property = (ObjCMT_ReadonlyProperty | ObjCMT_ReadwriteProperty),
-
-    /// Enable annotation of ObjCMethods of all kinds.
-    ObjCMT_Annotation = 0x10,
-
-    /// Enable migration of ObjC methods to 'instancetype'.
-    ObjCMT_Instancetype = 0x20,
-
-    /// Enable migration to NS_ENUM/NS_OPTIONS macros.
-    ObjCMT_NsMacros = 0x40,
-
-    /// Enable migration to add conforming protocols.
-    ObjCMT_ProtocolConformance = 0x80,
-
-    /// prefer 'atomic' property over 'nonatomic'.
-    ObjCMT_AtomicProperty = 0x100,
-
-    /// annotate property with NS_RETURNS_INNER_POINTER
-    ObjCMT_ReturnsInnerPointerProperty = 0x200,
-
-    /// use NS_NONATOMIC_IOSONLY for property 'atomic' attribute
-    ObjCMT_NsAtomicIOSOnlyProperty = 0x400,
-
-    /// Enable inferring NS_DESIGNATED_INITIALIZER for ObjC methods.
-    ObjCMT_DesignatedInitializer = 0x800,
-
-    /// Enable converting setter/getter expressions to property-dot syntx.
-    ObjCMT_PropertyDotSyntax = 0x1000,
-
-    ObjCMT_MigrateDecls = (ObjCMT_ReadonlyProperty | ObjCMT_ReadwriteProperty |
-                           ObjCMT_Annotation | ObjCMT_Instancetype |
-                           ObjCMT_NsMacros | ObjCMT_ProtocolConformance |
-                           ObjCMT_NsAtomicIOSOnlyProperty |
-                           ObjCMT_DesignatedInitializer),
-    ObjCMT_MigrateAll = (ObjCMT_Literals | ObjCMT_Subscripting |
-                         ObjCMT_MigrateDecls | ObjCMT_PropertyDotSyntax)
-  };
-  unsigned ObjCMTAction = ObjCMT_None;
-  std::string ObjCMTAllowListPath;
-
-  std::string MTMigrateDir;
-  std::string ARCMTMigrateReportOut;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.
@@ -596,14 +523,14 @@ public:
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
         ShowStats(false), AppendStats(false), ShowVersion(false),
         FixWhatYouCan(false), FixOnlyWarnings(false), FixAndRecompile(false),
-        FixToTemporaries(false), ARCMTMigrateEmitARCErrors(false),
-        SkipFunctionBodies(false), UseGlobalModuleIndex(true),
-        GenerateGlobalModuleIndex(true), ASTDumpDecls(false),
-        ASTDumpLookups(false), BuildingImplicitModule(false),
-        BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
-        IncludeTimestamps(true), UseTemporary(true),
-        AllowPCMWithCompilerErrors(false), ModulesShareFileManager(true),
-        EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
+        FixToTemporaries(false), SkipFunctionBodies(false),
+        UseGlobalModuleIndex(true), GenerateGlobalModuleIndex(true),
+        ASTDumpDecls(false), ASTDumpLookups(false),
+        BuildingImplicitModule(false), BuildingImplicitModuleUsesLock(true),
+        ModulesEmbedAllFiles(false), IncludeTimestamps(true),
+        UseTemporary(true), AllowPCMWithCompilerErrors(false),
+        ModulesShareFileManager(true), EmitSymbolGraph(false),
+        EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), TimeTraceGranularity(500),

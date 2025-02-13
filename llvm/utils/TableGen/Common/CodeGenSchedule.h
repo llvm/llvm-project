@@ -480,11 +480,8 @@ public:
   iterator_range<const_class_iterator> classes() const {
     return make_range(classes_begin(), classes_end());
   }
-  iterator_range<class_iterator> explicit_classes() {
-    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
-  }
-  iterator_range<const_class_iterator> explicit_classes() const {
-    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
+  ArrayRef<CodeGenSchedClass> explicit_classes() const {
+    return ArrayRef(SchedClasses).take_front(NumInstrSchedClasses);
   }
 
   const Record *getModelOrItinDef(const Record *ProcDef) const {

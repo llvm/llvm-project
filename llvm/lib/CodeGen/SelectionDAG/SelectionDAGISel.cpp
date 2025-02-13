@@ -98,7 +98,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -698,7 +697,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         Def->getParent()->insert(std::next(InsertPos), MI);
       } else
         LLVM_DEBUG(dbgs() << "Dropping debug info for dead vreg"
-                          << Register::virtReg2Index(Reg) << "\n");
+                          << printReg(Reg) << '\n');
     }
 
     // Don't try and extend through copies in instruction referencing mode.
@@ -1421,7 +1420,7 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
   // Catchpads have one live-in register, which typically holds the exception
   // pointer or code.
   if (isFuncletEHPersonality(Pers)) {
-    if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHI())) {
+    if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHIIt())) {
       if (hasExceptionPointerOrCodeUser(CPI)) {
         // Get or create the virtual register to hold the pointer or code.  Mark
         // the live in physreg and copy into the vreg.
@@ -1452,7 +1451,7 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
     MF->getRegInfo().addPhysRegsUsedFromRegMask(RegMask);
 
   if (Pers == EHPersonality::Wasm_CXX) {
-    if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHI()))
+    if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHIIt()))
       mapWasmLandingPadIndex(MBB, CPI);
   } else {
     // Assign the call site to the landing pad's begin label.
@@ -1721,13 +1720,12 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     // use anything def'd by or after the tail call.
     {
       BasicBlock::iterator BBStart =
-          const_cast<BasicBlock *>(LLVMBB)->getFirstNonPHI()->getIterator();
+          const_cast<BasicBlock *>(LLVMBB)->getFirstNonPHIIt();
       BasicBlock::iterator BBEnd = const_cast<BasicBlock *>(LLVMBB)->end();
       preserveFakeUses(BBStart, BBEnd);
     }
 
-    BasicBlock::const_iterator const Begin =
-        LLVMBB->getFirstNonPHI()->getIterator();
+    BasicBlock::const_iterator const Begin = LLVMBB->getFirstNonPHIIt();
     BasicBlock::const_iterator const End = LLVMBB->end();
     BasicBlock::const_iterator BI = End;
 
@@ -4425,8 +4423,6 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
     unsigned iid = N->getConstantOperandVal(HasInputChain);
     if (iid < Intrinsic::num_intrinsics)
       Msg << "intrinsic %" << Intrinsic::getBaseName((Intrinsic::ID)iid);
-    else if (const TargetIntrinsicInfo *TII = TM.getIntrinsicInfo())
-      Msg << "target intrinsic %" << TII->getName(iid);
     else
       Msg << "unknown intrinsic #" << iid;
   }

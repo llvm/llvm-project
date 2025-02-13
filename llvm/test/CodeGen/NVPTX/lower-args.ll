@@ -87,12 +87,12 @@ define ptx_kernel void @ptr_generic(ptr %out, ptr %in) {
 }
 
 ; COMMON-LABEL: ptr_nongeneric
-define ptx_kernel void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(4) %in) {
+define ptx_kernel void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(3) %in) {
 ; IR-NOT: addrspacecast
 ; PTX-NOT: cvta.to.global
-; PTX:  ld.const.u32
+; PTX:  ld.shared.u32
 ; PTX   st.global.u32
-  %v = load i32, ptr addrspace(4) %in, align 4
+  %v = load i32, ptr addrspace(3) %in, align 4
   store i32 %v, ptr addrspace(1) %out, align 4
   ret void
 }

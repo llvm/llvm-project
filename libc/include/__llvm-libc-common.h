@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_COMMON_H
 #define LLVM_LIBC_COMMON_H
 
+#define __LLVM_LIBC__ 1
+
 #ifdef __cplusplus
 
 #undef __BEGIN_C_DECLS
@@ -79,6 +81,9 @@
 #else
 #define __NOEXCEPT
 #endif
+
+#undef _Returns_twice
+#define _Returns_twice __attribute__((returns_twice))
 
 #endif // __cplusplus
 

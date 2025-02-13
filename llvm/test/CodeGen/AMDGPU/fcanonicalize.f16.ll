@@ -2,7 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16 %s
 
 declare half @llvm.fabs.f16(half) #0
 declare half @llvm.canonicalize.f16(half) #0
@@ -96,16 +97,27 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: v_test_canonicalize_var_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1]
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: v_test_canonicalize_var_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: v_test_canonicalize_var_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    global_load_u16 v0, v0, s[0:1]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX11-FAKE16-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %canonicalized = call half @llvm.canonicalize.f16(half %val)
   store half %canonicalized, ptr addrspace(1) undef
@@ -147,16 +159,29 @@ define amdgpu_kernel void @s_test_canonicalize_var_f16(ptr addrspace(1) %out, i1
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: s_test_canonicalize_var_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_max_f16_e64 v1, s2, s2
-; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: s_test_canonicalize_var_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_clause 0x1
+; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: s_test_canonicalize_var_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_clause 0x1
+; GFX11-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e64 v1, s2, s2
+; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-FAKE16-NEXT:    s_endpgm
   %val = bitcast i16 %val.arg to half
   %canonicalized = call half @llvm.canonicalize.f16(half %val)
   store half %canonicalized, ptr addrspace(1) %out
@@ -239,16 +264,27 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %ou
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: v_test_canonicalize_fabs_var_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v1, v0, s[0:1]
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
-; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: v_test_canonicalize_fabs_var_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v1, s[0:1]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e64 v0.l, |v0.l|, |v0.l|
+; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: v_test_canonicalize_fabs_var_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[0:1]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e64 v1, |v1|, |v1|
+; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-FAKE16-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %val.fabs = call half @llvm.fabs.f16(half %val)
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fabs)
@@ -293,16 +329,27 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: v_test_canonicalize_fneg_fabs_var_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v1, v0, s[0:1]
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_max_f16_e64 v1, -|v1|, -|v1|
-; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: v_test_canonicalize_fneg_fabs_var_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v1, s[0:1]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e64 v0.l, -|v0.l|, -|v0.l|
+; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: v_test_canonicalize_fneg_fabs_var_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[0:1]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e64 v1, -|v1|, -|v1|
+; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-FAKE16-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %val.fabs = call half @llvm.fabs.f16(half %val)
   %val.fabs.fneg = fneg half %val.fabs
@@ -348,16 +395,27 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %ou
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: v_test_canonicalize_fneg_var_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v1, v0, s[0:1]
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_max_f16_e64 v1, -v1, -v1
-; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: v_test_canonicalize_fneg_var_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v1, s[0:1]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e64 v0.l, -v0.l, -v0.l
+; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: v_test_canonicalize_fneg_var_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[0:1]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e64 v1, -v1, -v1
+; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-FAKE16-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %val.fneg = fneg half %val
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fneg)
@@ -402,16 +460,27 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr add
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: v_test_no_denormals_canonicalize_fneg_var_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v1, v0, s[0:1]
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_max_f16_e64 v1, -v1, -v1
-; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: v_test_no_denormals_canonicalize_fneg_var_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v1, s[0:1]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e64 v0.l, -v0.l, -v0.l
+; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: v_test_no_denormals_canonicalize_fneg_var_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[0:1]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e64 v1, -v1, -v1
+; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-FAKE16-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %val.fneg = fneg half %val
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fneg)
@@ -456,16 +525,27 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(pt
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v1, v0, s[0:1]
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_max_f16_e64 v1, -|v1|, -|v1|
-; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v1, s[0:1]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e64 v0.l, -|v0.l|, -|v0.l|
+; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[0:1]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e64 v1, -|v1|, -|v1|
+; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-FAKE16-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %val.fabs = call half @llvm.fabs.f16(half %val)
   %val.fabs.fneg = fneg half %val.fabs
@@ -2325,13 +2405,21 @@ define <2 x half> @v_test_canonicalize_reg_undef_v2f16(half %val) #1 {
 ; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_test_canonicalize_reg_undef_v2f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_pack_b32_f16 v0, v0, 0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: v_test_canonicalize_reg_undef_v2f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, 0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_test_canonicalize_reg_undef_v2f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <2 x half> undef, half %val, i32 0
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
@@ -2358,13 +2446,21 @@ define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) #1 {
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_test_canonicalize_undef_reg_v2f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: v_test_canonicalize_undef_reg_v2f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_test_canonicalize_undef_reg_v2f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <2 x half> undef, half %val, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
@@ -2513,13 +2609,21 @@ define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) #1 {
 ; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_test_canonicalize_reg_k_v2f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_pack_b32_f16 v0, v0, 2.0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: v_test_canonicalize_reg_k_v2f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, 2.0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_test_canonicalize_reg_k_v2f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 2.0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = insertelement <2 x half> undef, half %val, i32 0
   %vec1 = insertelement <2 x half> %vec0, half 2.0, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec1)
@@ -2549,13 +2653,21 @@ define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
 ; CI-NEXT:    v_mov_b32_e32 v0, 2.0
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_test_canonicalize_k_reg_v2f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_pack_b32_f16 v0, 2.0, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: v_test_canonicalize_k_reg_v2f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, 2.0, v0.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_test_canonicalize_k_reg_v2f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, 2.0, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = insertelement <2 x half> undef, half 2.0, i32 0
   %vec1 = insertelement <2 x half> %vec0, half %val, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec1)
@@ -2635,14 +2747,23 @@ define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1
 ; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_pack_b32_f16 v0, v0, 0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, 0
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <4 x half> undef, half %val, i32 0
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec)
   ret <4 x half> %canonicalized
@@ -2725,15 +2846,25 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 ; CI-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-NEXT:    v_perm_b32 v1, v2, v1, 0x5040100
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_pack_b32_f16 v0, v0, 0
-; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v2, v1, 0x5040100
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, 0
+; GFX11-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v2, v1, 0x5040100
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
+; GFX11-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = insertelement <4 x half> undef, half %val0, i32 0
   %vec1 = insertelement <4 x half> %vec0, half %val1, i32 2
   %vec2 = insertelement <4 x half> %vec1, half %val2, i32 3

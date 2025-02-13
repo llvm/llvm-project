@@ -1604,6 +1604,10 @@ namespace llvm {
         LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
         unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
+    bool functionArgumentNeedsConsecutiveRegisters(
+        Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+        const DataLayout &DL) const override;
+
     bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
     bool supportSwiftError() const override;

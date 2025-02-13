@@ -64,7 +64,7 @@ namespace {
 
 class ObjCARCContract {
   bool Changed;
-  bool CFGChanged;
+  bool CFGChanged = false;
   AAResults *AA;
   DominatorTree *DT;
   ProvenanceAnalysis PA;
@@ -627,7 +627,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
             // block with a catchswitch has no insertion point. Keep going up
             // the dominator tree until we find a non-catchswitch.
             BasicBlock *InsertBB = IncomingBB;
-            while (isa<CatchSwitchInst>(InsertBB->getFirstNonPHI())) {
+            while (isa<CatchSwitchInst>(InsertBB->getFirstNonPHIIt())) {
               InsertBB = DT->getNode(InsertBB)->getIDom()->getBlock();
             }
 

@@ -117,7 +117,7 @@ extern "C" {
 
 //===----------------------------------------------------------------------===//
 //
-// Wrappers intended for mlir-cpu-runner. Uses of GPU dialect operations get
+// Wrappers intended for mlir-runner. Uses of GPU dialect operations get
 // lowered to calls to these functions by GPUToLLVMConversionPass.
 //
 //===----------------------------------------------------------------------===//

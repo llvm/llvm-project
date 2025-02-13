@@ -146,7 +146,7 @@ if( NOT PURE_WINDOWS )
     endif()
   endif()
   check_library_exists(dl dlopen "" HAVE_LIBDL)
-  check_library_exists(rt clock_gettime "" HAVE_LIBRT)
+  check_library_exists(rt shm_open "" HAVE_LIBRT)
 endif()
 
 # Check for libpfm.
@@ -319,6 +319,7 @@ check_symbol_exists(getrusage sys/resource.h HAVE_GETRUSAGE)
 check_symbol_exists(isatty unistd.h HAVE_ISATTY)
 check_symbol_exists(futimens sys/stat.h HAVE_FUTIMENS)
 check_symbol_exists(futimes sys/time.h HAVE_FUTIMES)
+check_symbol_exists(getauxval sys/auxv.h HAVE_GETAUXVAL)
 # AddressSanitizer conflicts with lib/Support/Unix/Signals.inc
 # Avoid sigaltstack on Apple platforms, where backtrace() cannot handle it
 # (rdar://7089625) and _Unwind_Backtrace is unusable because it cannot unwind

@@ -51,6 +51,10 @@ public:
   SBProgress(const char *title, const char *details, uint64_t total_units,
              SBDebugger &debugger);
 
+#ifndef SWIG
+  SBProgress(SBProgress &&rhs);
+#endif
+
   ~SBProgress();
 
   void Increment(uint64_t amount, const char *description = nullptr);
@@ -59,6 +63,9 @@ protected:
   lldb_private::Progress &ref() const;
 
 private:
+  SBProgress(const SBProgress &rhs) = delete;
+  const SBProgress &operator=(const SBProgress &rhs) = delete;
+
   std::unique_ptr<lldb_private::Progress> m_opaque_up;
 }; // SBProgress
 } // namespace lldb

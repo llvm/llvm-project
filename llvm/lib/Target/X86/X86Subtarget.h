@@ -324,7 +324,11 @@ public:
 
   bool isTargetCygMing() const { return TargetTriple.isOSCygMing(); }
 
+  bool isUEFI() const { return TargetTriple.isUEFI(); }
+
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
+
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 

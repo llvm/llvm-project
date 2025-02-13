@@ -43,8 +43,11 @@ def DefaultMode : HwMode<"", []>;
 // "Objects", which is a list of the same length as the list of modes.
 // The n-th element on the Objects list will be associated with the n-th
 // element on the Modes list.
-class HwModeSelect<list<HwMode> Ms> {
+class HwModeSelect<list<HwMode> Ms, int ObjectsLength> {
   list<HwMode> Modes = Ms;
+
+  assert !eq(ObjectsLength, !size(Modes)),
+     "The Objects and Modes lists must be the same length";
 }
 
 // A common class that implements a counterpart of ValueType, which is
@@ -53,7 +56,7 @@ class HwModeSelect<list<HwMode> Ms> {
 // objects could be used. This is specifically applicable to selection
 // patterns.
 class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
-    : HwModeSelect<Ms>, ValueType<0, 0> {
+    : HwModeSelect<Ms, !size(Ts)>, ValueType<0, 0> {
   // The length of this list must be the same as the length of Ms.
   list<ValueType> Objects = Ts;
 }
@@ -64,7 +67,9 @@ class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
 // or ValueType could be used. This is specifically applicable to selection
 // patterns.
 class PtrValueTypeByHwMode<ValueTypeByHwMode scalar, int addrspace>
-    : HwModeSelect<scalar.Modes>, PtrValueType<ValueType<0, 0>, addrspace> {
+    : HwModeSelect<scalar.Modes, !size(scalar.Objects)>,
+      PtrValueType<ValueType<0, 0>, addrspace> {
+  // The length of this list must be the same as the length of Ms.
   list<ValueType> Objects = scalar.Objects;
 }
 
@@ -78,7 +83,7 @@ class RegInfo<int RS, int SS, int SA> {
 
 // The register size/alignment information, parameterized by a HW mode.
 class RegInfoByHwMode<list<HwMode> Ms = [], list<RegInfo> Ts = []>
-    : HwModeSelect<Ms> {
+    : HwModeSelect<Ms, !size(Ts)> {
   // The length of this list must be the same as the length of Ms.
   list<RegInfo> Objects = Ts;
 }
@@ -89,7 +94,7 @@ class SubRegRange<int size, int offset = 0> {
 }
 
 class SubRegRangeByHwMode<list<HwMode> Ms = [], list<SubRegRange> Ts = []>
-    : HwModeSelect<Ms> {
+    : HwModeSelect<Ms, !size(Ts)> {
   // The length of this list must be the same as the length of Ms.
   list<SubRegRange> Objects = Ts;
 }
@@ -574,7 +579,7 @@ class InstructionEncoding {
 // an EncodingByHwMode, its Inst and Size members are ignored and Ts are used
 // to encode and decode based on HwMode.
 class EncodingByHwMode<list<HwMode> Ms = [], list<InstructionEncoding> Ts = []>
-    : HwModeSelect<Ms> {
+    : HwModeSelect<Ms, !size(Ts)> {
   // The length of this list must be the same as the length of Ms.
   list<InstructionEncoding> Objects = Ts;
 }

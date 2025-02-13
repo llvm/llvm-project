@@ -115,7 +115,10 @@ def get_op_results_or_values(
         _cext.ir.Operation,
         _Sequence[_Union[_cext.ir.OpView, _cext.ir.Operation, _cext.ir.Value]],
     ]
-) -> _Union[_Sequence[_cext.ir.Value], _cext.ir.OpResultList]:
+) -> _Union[
+    _Sequence[_Union[_cext.ir.OpView, _cext.ir.Operation, _cext.ir.Value]],
+    _cext.ir.OpResultList,
+]:
     """Returns the given sequence of values or the results of the given op.
 
     This is useful to implement op constructors so that they can take other ops as
@@ -127,7 +130,7 @@ def get_op_results_or_values(
     elif isinstance(arg, _cext.ir.Operation):
         return arg.results
     else:
-        return [get_op_result_or_value(element) for element in arg]
+        return arg
 
 
 def get_op_result_or_op_results(

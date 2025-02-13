@@ -27,6 +27,10 @@ on:
         required: true
         default: false
         type: boolean
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
 
   pull_request:
     types:
@@ -83,6 +87,7 @@ jobs:
       matrix:
         runs-on:
           - ubuntu-22.04
+          - ubuntu-22.04-arm
           - macos-13
           - macos-14
 

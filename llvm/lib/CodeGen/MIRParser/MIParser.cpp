@@ -66,7 +66,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cctype>
@@ -485,7 +484,7 @@ public:
   bool parseDILocation(MDNode *&Expr);
   bool parseMetadataOperand(MachineOperand &Dest);
   bool parseCFIOffset(int &Offset);
-  bool parseCFIRegister(Register &Reg);
+  bool parseCFIRegister(unsigned &Reg);
   bool parseCFIAddressSpace(unsigned &AddressSpace);
   bool parseCFIEscapeValues(std::string& Values);
   bool parseCFIOperand(MachineOperand &Dest);
@@ -2446,7 +2445,7 @@ bool MIParser::parseCFIOffset(int &Offset) {
   return false;
 }
 
-bool MIParser::parseCFIRegister(Register &Reg) {
+bool MIParser::parseCFIRegister(unsigned &Reg) {
   if (Token.isNot(MIToken::NamedRegister))
     return error("expected a cfi register");
   Register LLVMReg;
@@ -2491,7 +2490,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   auto Kind = Token.kind();
   lex();
   int Offset;
-  Register Reg;
+  unsigned Reg;
   unsigned AddressSpace;
   unsigned CFIIndex;
   switch (Kind) {
@@ -2564,7 +2563,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createUndefined(nullptr, Reg));
     break;
   case MIToken::kw_cfi_register: {
-    Register Reg2;
+    unsigned Reg2;
     if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
         parseCFIRegister(Reg2))
       return true;
@@ -2669,13 +2668,8 @@ bool MIParser::parseIntrinsicOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::rparen))
     return error("expected ')' to terminate intrinsic name");
 
-  // Find out what intrinsic we're dealing with, first try the global namespace
-  // and then the target's private intrinsics if that fails.
-  const TargetIntrinsicInfo *TII = MF.getTarget().getIntrinsicInfo();
+  // Find out what intrinsic we're dealing with.
   Intrinsic::ID ID = Intrinsic::lookupIntrinsicID(Name);
-  if (ID == Intrinsic::not_intrinsic && TII)
-    ID = static_cast<Intrinsic::ID>(TII->lookupName(Name));
-
   if (ID == Intrinsic::not_intrinsic)
     return error("unknown intrinsic name");
   Dest = MachineOperand::CreateIntrinsicID(ID);

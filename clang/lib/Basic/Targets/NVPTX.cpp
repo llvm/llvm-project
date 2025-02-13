@@ -20,15 +20,19 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsNVPTX.def"
+static constexpr int NumBuiltins =
+    clang::NVPTX::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsNVPTX.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsNVPTX.inc"
+#undef GET_BUILTIN_INFOS
 };
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
 
 const char *const NVPTXTargetInfo::GCCRegNames[] = {"r0"};
 
@@ -66,12 +70,13 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   HasFloat16 = true;
 
   if (TargetPointerWidth == 32)
-    resetDataLayout("e-p:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
-  else if (Opts.NVPTXUseShortPointers)
     resetDataLayout(
-        "e-p3:32:32-p4:32:32-p5:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+        "e-p:32:32-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+  else if (Opts.NVPTXUseShortPointers)
+    resetDataLayout("e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-i64:64-i128:128-v16:"
+                    "16-v32:32-n16:32:64");
   else
-    resetDataLayout("e-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+    resetDataLayout("e-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
 
   // If possible, get a TargetInfo for our host triple, so we can match its
   // types.
@@ -298,7 +303,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-ArrayRef<Builtin::Info> NVPTXTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::NVPTX::LastTSBuiltin - Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+NVPTXTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }

@@ -698,6 +698,10 @@ public:
     return const_cast<ValueDecl *>(this)->getPotentiallyDecomposedVarDecl();
   }
 
+  /// Determine whether this value is actually a function parameter pack,
+  /// init-capture pack, or structured binding pack
+  bool isParameterPack() const;
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstValue && K <= lastValue; }
@@ -1527,10 +1531,6 @@ public:
     NonParmVarDeclBits.IsInitCapture = IC;
   }
 
-  /// Determine whether this variable is actually a function parameter pack or
-  /// init-capture pack.
-  bool isParameterPack() const;
-
   /// Whether this local extern variable declaration's previous declaration
   /// was declared in the same block scope. Only correct in C++.
   bool isPreviousDeclInSameBlockScope() const {
@@ -2296,6 +2296,13 @@ public:
   /// State that this templated function will be late parsed.
   void setLateTemplateParsed(bool ILT = true) {
     FunctionDeclBits.IsLateTemplateParsed = ILT;
+  }
+
+  bool isInstantiatedFromMemberTemplate() const {
+    return FunctionDeclBits.IsInstantiatedFromMemberTemplate;
+  }
+  void setInstantiatedFromMemberTemplate(bool Val = true) {
+    FunctionDeclBits.IsInstantiatedFromMemberTemplate = Val;
   }
 
   /// Whether this function is "trivial" in some specialized C++ senses.
@@ -4035,7 +4042,7 @@ public:
   /// Return the type source info for the underlying integer type,
   /// if no type source info exists, return 0.
   TypeSourceInfo *getIntegerTypeSourceInfo() const {
-    return IntegerType.dyn_cast<TypeSourceInfo*>();
+    return dyn_cast_if_present<TypeSourceInfo *>(IntegerType);
   }
 
   /// Retrieve the source range that covers the underlying type if
@@ -5138,6 +5145,12 @@ static constexpr StringRef getOpenMPVariantManglingSeparatorStr() {
 /// attribute.
 bool IsArmStreamingFunction(const FunctionDecl *FD,
                             bool IncludeLocallyStreaming);
+
+/// Returns whether the given FunctionDecl has Arm ZA state.
+bool hasArmZAState(const FunctionDecl *FD);
+
+/// Returns whether the given FunctionDecl has Arm ZT0 state.
+bool hasArmZT0State(const FunctionDecl *FD);
 
 } // namespace clang
 
