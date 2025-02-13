@@ -1035,8 +1035,7 @@ public:
   bool isAltShuffle() const { return getMainOp() != getAltOp(); }
 
   bool isOpcodeOrAlt(Instruction *I) const {
-    unsigned CheckedOpcode = I->getOpcode();
-    return getOpcode() == CheckedOpcode || getAltOpcode() == CheckedOpcode;
+    return isConvertible(I, MainOp, AltOp);
   }
 
   /// Checks if the current state is valid, i.e. has non-null MainOp

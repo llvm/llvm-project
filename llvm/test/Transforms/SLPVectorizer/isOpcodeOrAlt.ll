@@ -2,6 +2,17 @@
 ; RUN: opt -passes=slp-vectorizer -S -slp-max-reg-size=1024 %s | FileCheck %s
 
 define void @test(ptr %a, ptr %b) {
+; CHECK-LABEL: @test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 0
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[TMP0]], <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP0]], <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[GEP4]], align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   %gep0 = getelementptr inbounds i32, ptr %a, i64 0
   %gep1 = getelementptr inbounds i32, ptr %a, i64 1
