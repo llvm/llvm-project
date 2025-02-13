@@ -100,12 +100,55 @@ bool RootSignatureParser::ParseDescriptorTable() {
     return true;
 
   // Empty case:
-  if (!ConsumeExpectedToken(TokenKind::pu_r_paren)) {
+  if (TryConsumeExpectedToken(TokenKind::pu_r_paren)) {
     Elements.push_back(Table);
     return false;
   }
 
-  return true;
+  // Iterate through all the defined clauses
+  do {
+    if (ParseDescriptorTableClause())
+      return true;
+    Table.NumClauses++;
+  } while (TryConsumeExpectedToken(TokenKind::pu_comma));
+
+  if (ConsumeExpectedToken(TokenKind::pu_r_paren))
+    return true;
+
+  Elements.push_back(Table);
+  return false;
+}
+
+bool RootSignatureParser::ParseDescriptorTableClause() {
+  if (ConsumeExpectedToken({TokenKind::kw_CBV, TokenKind::kw_SRV,
+                            TokenKind::kw_UAV, TokenKind::kw_Sampler}))
+    return true;
+
+  DescriptorTableClause Clause;
+  switch (CurToken.Kind) {
+  case TokenKind::kw_CBV:
+    Clause.Type = ClauseType::CBuffer;
+    break;
+  case TokenKind::kw_SRV:
+    Clause.Type = ClauseType::SRV;
+    break;
+  case TokenKind::kw_UAV:
+    Clause.Type = ClauseType::UAV;
+    break;
+  case TokenKind::kw_Sampler:
+    Clause.Type = ClauseType::Sampler;
+    break;
+  default:
+    llvm_unreachable("Switch for an expected token was not provided");
+  }
+  if (ConsumeExpectedToken(TokenKind::pu_l_paren))
+    return true;
+
+  if (ConsumeExpectedToken(TokenKind::pu_r_paren))
+    return true;
+
+  Elements.push_back(Clause);
+  return false;
 }
 
 // Is given token one of the expected kinds
@@ -114,6 +157,15 @@ static bool IsExpectedToken(TokenKind Kind, ArrayRef<TokenKind> AnyExpected) {
     if (Kind == Expected)
       return true;
   return false;
+}
+
+bool RootSignatureParser::PeekExpectedToken(TokenKind Expected) {
+  return PeekExpectedToken(ArrayRef{Expected});
+}
+
+bool RootSignatureParser::PeekExpectedToken(ArrayRef<TokenKind> AnyExpected) {
+  RootSignatureToken Result = Lexer.PeekNextToken();
+  return IsExpectedToken(Result.Kind, AnyExpected);
 }
 
 bool RootSignatureParser::ConsumeExpectedToken(TokenKind Expected) {
@@ -131,6 +183,19 @@ bool RootSignatureParser::ConsumeExpectedToken(
       << (unsigned)(AnyExpected.size() != 1)
       << FormatTokenKinds({CurToken.Kind})
       << FormatTokenKinds(AnyExpected);
+  return true;
+}
+
+bool RootSignatureParser::TryConsumeExpectedToken(TokenKind Expected) {
+  return TryConsumeExpectedToken(ArrayRef{Expected});
+}
+
+bool RootSignatureParser::TryConsumeExpectedToken(
+    ArrayRef<TokenKind> AnyExpected) {
+  // If not the expected token just return
+  if (!PeekExpectedToken(AnyExpected))
+    return false;
+  ConsumeNextToken();
   return true;
 }
 

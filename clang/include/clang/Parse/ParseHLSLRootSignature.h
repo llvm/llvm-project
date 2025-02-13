@@ -43,9 +43,14 @@ private:
   // Root Element helpers
   bool ParseRootElement();
   bool ParseDescriptorTable();
+  bool ParseDescriptorTableClause();
 
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void ConsumeNextToken() { CurToken = Lexer.ConsumeToken(); }
+
+  /// Return true if the next token one of the expected kinds
+  bool PeekExpectedToken(TokenKind Expected);
+  bool PeekExpectedToken(ArrayRef<TokenKind> AnyExpected);
 
   /// Consumes the next token and report an error if it is not of the expected
   /// kind.
@@ -53,6 +58,14 @@ private:
   /// Returns true if there was an error reported.
   bool ConsumeExpectedToken(TokenKind Expected);
   bool ConsumeExpectedToken(ArrayRef<TokenKind> AnyExpected);
+
+  /// Peek if the next token is of the expected kind and if it is then consume
+  /// it.
+  ///
+  /// Returns true if it successfully matches the expected kind and the token
+  /// was consumed.
+  bool TryConsumeExpectedToken(TokenKind Expected);
+  bool TryConsumeExpectedToken(ArrayRef<TokenKind> Expected);
 
 private:
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
