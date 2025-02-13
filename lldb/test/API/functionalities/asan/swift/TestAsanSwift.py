@@ -74,12 +74,14 @@ class AsanSwiftTestCase(lldbtest.TestBase):
             # interceptors.
             self.runCmd("continue")
 
+        self.runCmd("expr let $targetptr = ptr")
+
         # the stop reason of the thread should be breakpoint.
         self.expect("thread list", lldbtest.STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped', 'stop reason = breakpoint'])
 
         self.expect(
-            "memory history `ptr`",
+            "memory history $targetptr",
             substrs=[
                 'Memory allocated by Thread 1',
                 'main.swift'])
@@ -105,7 +107,7 @@ class AsanSwiftTestCase(lldbtest.TestBase):
                 break
 
         self.expect(
-            "memory history `ptr`",
+            "memory history $targetptr",
             substrs=[
                 'Memory allocated by Thread 1',
                 'main.swift'])
