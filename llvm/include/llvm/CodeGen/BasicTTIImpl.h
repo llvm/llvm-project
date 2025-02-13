@@ -1891,10 +1891,6 @@ public:
       const TTI::OperandValueInfo OpInfoX = TTI::getOperandInfo(X);
       const TTI::OperandValueInfo OpInfoY = TTI::getOperandInfo(Y);
       const TTI::OperandValueInfo OpInfoZ = TTI::getOperandInfo(Z);
-      const TTI::OperandValueInfo OpInfoBW =
-        {TTI::OK_UniformConstantValue,
-         isPowerOf2_32(RetTy->getScalarSizeInBits()) ? TTI::OP_PowerOf2
-         : TTI::OP_None};
 
       // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
       // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
@@ -1910,9 +1906,15 @@ public:
           BinaryOperator::LShr, RetTy, CostKind, OpInfoY,
           {OpInfoZ.Kind, TTI::OP_None});
       // Non-constant shift amounts requires a modulo.
-      if (!OpInfoZ.isConstant())
-        Cost += thisT()->getArithmeticInstrCost(BinaryOperator::URem, RetTy,
-                                                CostKind, OpInfoZ, OpInfoBW);
+      if (!OpInfoZ.isConstant()) {
+        Cost += isPowerOf2_32(RetTy->getScalarSizeInBits())
+                    ? thisT()->getArithmeticInstrCost(
+                          BinaryOperator::And, RetTy, CostKind, OpInfoZ,
+                          {TTI::OK_UniformConstantValue, TTI::OP_None})
+                    : thisT()->getArithmeticInstrCost(
+                          BinaryOperator::URem, RetTy, CostKind, OpInfoZ,
+                          {TTI::OK_UniformConstantValue, TTI::OP_None});
+      }
       // For non-rotates (X != Y) we must add shift-by-zero handling costs.
       if (X != Y) {
         Type *CondTy = RetTy->getWithNewBitWidth(1);
