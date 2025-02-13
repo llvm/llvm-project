@@ -200,7 +200,6 @@ def apply_fixes(
 ) -> None:
     """Calls clang-apply-fixes on a given directory."""
     invocation = [clang_apply_replacements_binary]
-    invocation.append("-ignore-insert-conflict")
     if args.format:
         invocation.append("-format")
     if args.style:
