@@ -621,7 +621,9 @@ def testOperationPrint():
     with NamedTemporaryFile() as tmpfile:
         module.operation.write_bytecode(str(tmpfile.name), desired_version=1)
         tmpfile.seek(0)
-        assert tmpfile.read().startswith(b"ML\xefR"), "Expected bytecode to start with MLïR"
+        assert tmpfile.read().startswith(
+            b"ML\xefR"
+        ), "Expected bytecode to start with MLïR"
     ctx2 = Context()
     module_roundtrip = Module.parse(bytecode, ctx2)
     f = io.StringIO()
