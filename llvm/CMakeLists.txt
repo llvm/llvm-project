@@ -2,6 +2,21 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
+message("Directory listing:")
+if (WIN32)
+execute_process(
+  COMMAND_ECHO STDERR
+  COMMAND cmd /k dir /S
+  COMMAND ls -haltrR
+)
+else ()
+execute_process(
+  COMMAND_ECHO STDERR
+  COMMAND ls -haltrR
+)
+endif ()
+message("END Directory listing")
+
 include(CMakeDependentOption)
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
