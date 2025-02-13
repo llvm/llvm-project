@@ -1,11 +1,9 @@
 # RUN: llc -run-pass=machine-combiner -mtriple=arm64-unknown-unknown %s -o - | FileCheck %s
-# RUN: llc -run-pass=machine-combiner -mtriple=arm64-unknown-unknown -acc-max-width=2   %s -o -   | FileCheck %s  --check-prefix=NARROW-TREE
-# RUN: llc -run-pass=machine-combiner -mtriple=arm64-unknown-unknown -acc-min-depth=100  %s -o -  | FileCheck %s  --check-prefix=NO-TREE
 
-# A chain of UABAL instructions that can be reassociated for better ILP.
-# Before the optimization, we accumulate in a single long chain.
-# CHECK-LABEL:   uabal_accumulation
-# CHECK:          [[START1:%.*]]:fpr128 = UABDLv4i16_v4i32
+# In this test case we don't perform the reassociation because we don't recognize the
+# instruction at the top of the chain.
+# CHECK-LABEL:   uabal_accumulation_negative
+# CHECK:          [[START1:%.*]]:fpr128 = ADDv4i32
 # CHECK:          [[START2:%.*]]:fpr128 = UABDLv4i16_v4i32
 # CHECK:          [[START3:%.*]]:fpr128 = UABDLv4i16_v4i32
 # CHECK:          [[A1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START1]] 
@@ -18,31 +16,8 @@
 # CHECK:          [[TOTAL_SUM:%.*]]:fpr128 = ADDv4i32 killed [[PARTIAL_SUM]], killed [[C2]]
 # CHECK:          [[END:%.*]]:fpr32 = ADDVv4i32v killed [[TOTAL_SUM]]
 
-# NARROW-TREE:    [[START1:%.*]]:fpr128 = UABDLv4i16_v4i32
-# NARROW-TREE:    [[START2:%.*]]:fpr128 = UABDLv4i16_v4i32          
-# NARROW-TREE:    [[A1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START1]]
-# NARROW-TREE:    [[B1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START2]]
-# NARROW-TREE:    [[A2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A1]]              
-# NARROW-TREE:    [[B2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[B1]]
-# NARROW-TREE:    [[A3:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A2]]
-# NARROW-TREE:    [[B3:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[B2]]
-# NARROW-TREE:    [[A4:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A3]]
-# NARROW-TREE:    [[PARTIAL_SUM:%.*]]:fpr128 = ADDv4i32 killed [[B3]], killed [[A4]]
-# NARROW-TREE:    [[END:%.*]]:fpr32 = ADDVv4i32v killed [[PARTIAL_SUM]]  
-
-# NO-TREE:        [[START1:%.*]]:fpr128 = UABDLv4i16_v4i32
-# NO-TREE:        [[A1:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[START1]]
-# NO-TREE:        [[A2:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A1]]
-# NO-TREE:        [[A3:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A2]]
-# NO-TREE:        [[A4:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A3]]              
-# NO-TREE:        [[A5:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A4]]
-# NO-TREE:        [[A6:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A5]]
-# NO-TREE:        [[A7:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A6]]
-# NO-TREE:        [[A8:%.*]]:fpr128 = UABALv4i16_v4i32 killed [[A7]]
-# NO-TREE:        [[END:%.*]]:fpr32 = ADDVv4i32v killed [[A8]]
-
 ---
-name:            uabal_accumulation
+name:            uabal_accumulation_negative
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2, $x3
@@ -55,9 +30,9 @@ body:             |
     %5:fpr64 = LDRDui %2, 0 :: (load (s64))
     %6:gpr64common = ADDXrr %0, %1
     %7:gpr64common = ADDXrr %2, %3
-    %8:fpr64 = LDRDui %6, 0 :: (load (s64))
-    %9:fpr64 = LDRDui %7, 0 :: (load (s64))
-    %10:fpr128 = UABDLv4i16_v4i32 killed %8, killed %9
+    %8:fpr128 = LDRQui %6, 0 :: (load (s128))
+    %9:fpr128 = LDRQui %7, 0 :: (load (s128))
+    %10:fpr128 = ADDv4i32 killed %8, killed %9
     %11:fpr128 = UABALv4i16_v4i32 killed %10, killed %4, killed %5
     %12:gpr64common = ADDXrr %6, %1
     %13:gpr64common = ADDXrr %7, %3
