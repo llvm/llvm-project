@@ -1,4 +1,4 @@
-//===-- RISCVSchedGenericOOO.td - Generic O3 Processor -----*- tablegen -*-===//
+//===-- RISCVSchedGenericOOO.td - Generic OOO Processor ----*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,19 +13,18 @@
 //   * IXU (Integer ALU Unit): 4 units, only one can execute mul/div.
 //   * FXU (Floating-point Unit): 2 units.
 //   * LSU (Load/Store Unit): 2 units.
-//   * VXU (Vector Unit): 1 unit.
 // * Latency:
 //   * Integer instructions: 1 cycle.
 //   * Multiplication instructions: 4 cycles.
 //   * Division instructions: 13-21 cycles.
 //   * Floating-point instructions: 2-6 cycles.
 //   * Floating-point fdiv/fsqrt instructions: 9-21 cycles.
-//   * Vector instructions: 2-6 cycles.
 //   * Load/Store:
 //     * IXU: 4 cycles.
 //     * FXU: 4 cycles.
-//     * VXU: 6 cycles.
 // * Integer/floating-point/vector div/rem/sqrt/... are non-pipelined.
+//
+// TODO: Add vector scheduling.
 //===----------------------------------------------------------------------===//
 
 def GenericOOOModel : SchedMachineModel {
@@ -49,8 +48,6 @@ def GenericOOOLSU : ProcResource<2>;
 def GenericOOOFMulDiv : ProcResource<1>;
 def GenericOOOFloat : ProcResource<1>;
 def GenericOOOFPU : ProcResGroup<[GenericOOOFMulDiv, GenericOOOFloat]>;
-// TODO: Add vector scheduling.
-// def GenericOOOVXU : ProcResource<1>;
 
 //===----------------------------------------------------------------------===//
 // Branches
@@ -318,10 +315,10 @@ let Latency = 2 in {
 
 // Other than Zfhmin
 let Latency = 2 in {
-  def : WriteRes<WriteFCvtI64ToF16, []>;
-  def : WriteRes<WriteFCvtI32ToF16, []>;
-  def : WriteRes<WriteFCvtF16ToI64, []>;
-  def : WriteRes<WriteFCvtF16ToI32, []>;
+  def : WriteRes<WriteFCvtI64ToF16, [GenericOOOFPU]>;
+  def : WriteRes<WriteFCvtI32ToF16, [GenericOOOFPU]>;
+  def : WriteRes<WriteFCvtF16ToI64, [GenericOOOFPU]>;
+  def : WriteRes<WriteFCvtF16ToI32, [GenericOOOFPU]>;
 }
 
 // Arithmetic and logic
