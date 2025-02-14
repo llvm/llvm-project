@@ -104,15 +104,19 @@ bool SymbolContext::DumpStopContext(
 
     if (addr_t file_addr = addr.GetFileAddress();
         file_addr != LLDB_INVALID_ADDRESS) {
-      const addr_t function_offset =
-          file_addr - function->GetAddress().GetFileAddress();
+      // Avoiding signed arithmetic due to UB in -INT_MAX.
+      const char sign =
+          file_addr >= function->GetAddress().GetFileAddress() ? '+' : '-';
+      addr_t offset = file_addr - function->GetAddress().GetFileAddress();
+      if (sign == '-')
+        offset = -offset;
       if (!show_function_name) {
         // Print +offset even if offset is 0
         dumped_something = true;
-        s->Printf("+%" PRIu64 ">", function_offset);
-      } else if (function_offset) {
+        s->Format("{0}{1}>", sign, offset);
+      } else if (offset) {
         dumped_something = true;
-        s->Printf(" + %" PRIu64, function_offset);
+        s->Format(" {0} {1}", sign, offset);
       }
     }
 
