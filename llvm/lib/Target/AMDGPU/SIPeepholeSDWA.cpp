@@ -98,15 +98,13 @@ std::optional<SdwaSel> combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
   if (Sel == SdwaSel::DWORD)
     return OperandSel;
 
-  if (OperandSel == SdwaSel::DWORD)
+  if (Sel == OperandSel ||
+      OperandSel == SdwaSel::DWORD)
     return Sel;
 
   if (Sel == SdwaSel::WORD_1 || Sel == SdwaSel::BYTE_2 ||
       Sel == SdwaSel::BYTE_3)
     return {};
-
-  if (Sel == OperandSel)
-    return Sel;
 
   if (OperandSel == SdwaSel::WORD_0)
     return Sel;

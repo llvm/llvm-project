@@ -418,7 +418,7 @@ body:             |
     ; CHECK-LABEL: name: op_select_byte_2_instr_select_byte_2
     ; CHECK: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, $vgpr0, 0, $vgpr0, 0, 1, 0, 5, 0, implicit $exec
     ; CHECK-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[V_LSHRREV_B32_sdwa]], 16, 8, implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[V_LSHRREV_B32_sdwa]], 0, [[V_BFE_I32_e64_]], 0, 1, 0, 6, 2, implicit $exec
+    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[V_LSHRREV_B32_sdwa]], 1, [[V_LSHRREV_B32_sdwa]], 0, 1, 0, 6, 2, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %3:vgpr_32 = V_LSHRREV_B32_sdwa 0, $vgpr0, 0, $vgpr0, 0, 1, 0, 5, 0, implicit $exec
     %8:vgpr_32 = V_BFE_I32_e64  %3, 16, 8,  implicit $exec /* Select BYTE_2 */
@@ -514,7 +514,7 @@ body:             |
     ; CHECK-LABEL: name: op_select_byte_3_instr_select_byte_3
     ; CHECK: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, $vgpr0, 0, $vgpr0, 0, 1, 0, 5, 0, implicit $exec
     ; CHECK-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[V_LSHRREV_B32_sdwa]], 24, 8, implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[V_LSHRREV_B32_sdwa]], 0, [[V_BFE_I32_e64_]], 0, 1, 0, 6, 3, implicit $exec
+    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[V_LSHRREV_B32_sdwa]], 1, [[V_LSHRREV_B32_sdwa]], 0, 1, 0, 6, 3, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %3:vgpr_32 = V_LSHRREV_B32_sdwa 0, $vgpr0, 0, $vgpr0, 0, 1, 0, 5, 0, implicit $exec
     %8:vgpr_32 = V_BFE_I32_e64  %3, 24, 8,  implicit $exec /* Select BYTE_3 */
@@ -594,7 +594,7 @@ body:             |
     ; CHECK-LABEL: name: op_select_word_1_instr_select_word_1
     ; CHECK: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, $vgpr0, 0, $vgpr0, 0, 1, 0, 5, 0, implicit $exec
     ; CHECK-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[V_LSHRREV_B32_sdwa]], 16, 16, implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[V_LSHRREV_B32_sdwa]], 0, [[V_BFE_I32_e64_]], 0, 1, 0, 6, 5, implicit $exec
+    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[V_LSHRREV_B32_sdwa]], 1, [[V_LSHRREV_B32_sdwa]], 0, 1, 0, 6, 5, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %3:vgpr_32 = V_LSHRREV_B32_sdwa 0, $vgpr0, 0, $vgpr0, 0, 1, 0, 5, 0, implicit $exec
     %8:vgpr_32 = V_BFE_I32_e64  %3, 16, 16,  implicit $exec /* Select WORD_1 */
