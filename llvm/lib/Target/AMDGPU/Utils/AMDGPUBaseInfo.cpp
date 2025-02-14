@@ -3413,8 +3413,8 @@ const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
-#define GET_Gfx10BufferFormat_IMPL
-#define GET_Gfx11PlusBufferFormat_IMPL
+#define GET_Gfx10Gfx13PlusBufferFormat_IMPL
+#define GET_Gfx11Gfx12BufferFormat_IMPL
 
 #include "AMDGPUGenSearchableTables.inc"
 
@@ -3432,20 +3432,21 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
                                                   uint8_t NumFormat,
                                                   const MCSubtargetInfo &STI) {
-  return isGFX11Plus(STI)
-             ? getGfx11PlusBufferFormatInfo(BitsPerComp, NumComponents,
-                                            NumFormat)
-             : isGFX10(STI) ? getGfx10BufferFormatInfo(BitsPerComp,
-                                                       NumComponents, NumFormat)
-                            : getGfx9BufferFormatInfo(BitsPerComp,
-                                                      NumComponents, NumFormat);
+  return isGFX13Plus(STI) || isGFX10(STI)
+             ? getGfx10Gfx13PlusBufferFormatInfo(BitsPerComp, NumComponents,
+                                                 NumFormat)
+         : isGFX11Plus(STI)
+             ? getGfx11Gfx12BufferFormatInfo(BitsPerComp, NumComponents,
+                                             NumFormat)
+             : getGfx9BufferFormatInfo(BitsPerComp, NumComponents, NumFormat);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI) {
-  return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
-                          : isGFX10(STI) ? getGfx10BufferFormatInfo(Format)
-                                         : getGfx9BufferFormatInfo(Format);
+  return isGFX13Plus(STI) || isGFX10(STI)
+             ? getGfx10Gfx13PlusBufferFormatInfo(Format)
+         : isGFX11Plus(STI) ? getGfx11Gfx12BufferFormatInfo(Format)
+                            : getGfx9BufferFormatInfo(Format);
 }
 
 const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
