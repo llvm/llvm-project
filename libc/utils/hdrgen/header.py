@@ -6,6 +6,7 @@
 #
 # ==-------------------------------------------------------------------------==#
 
+import re
 from functools import reduce
 from pathlib import PurePosixPath
 
@@ -30,6 +31,37 @@ COMPILER_HEADER_TYPES = {
 COMPILER_HEADER_TYPES.update({f"int{size}_t": "<stdint.h>" for size in STDINT_SIZES})
 COMPILER_HEADER_TYPES.update({f"uint{size}_t": "<stdint.h>" for size in STDINT_SIZES})
 
+NONIDENTIFIER = re.compile("[^a-zA-Z0-9_]+")
+
+COMMON_HEADER = PurePosixPath("__llvm-libc-common.h")
+
+# All the canonical identifiers are in lowercase for easy maintenance.
+# This maps them to the pretty descriptions to generate in header comments.
+LIBRARY_DESCRIPTIONS = {
+    "stdc": "Standard C",
+    "posix": "POSIX",
+    "bsd": "BSD",
+    "gnu": "GNU",
+    "linux": "Linux",
+}
+
+HEADER_TEMPLATE = """\
+//===-- {library} header <{header}> --===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===---------------------------------------------------------------------===//
+
+#ifndef {guard}
+#define {guard}
+
+%%public_api()
+
+#endif // {guard}
+"""
+
 
 class HeaderFile:
     def __init__(self, name):
@@ -40,6 +72,7 @@ class HeaderFile:
         self.enumerations = []
         self.objects = []
         self.functions = []
+        self.standards = []
 
     def add_macro(self, macro):
         self.macros.append(macro)
@@ -63,6 +96,13 @@ class HeaderFile:
             set(self.types),
         )
 
+    def all_standards(self):
+        # FIXME: Only functions have the "standard" field, but all the entity
+        # types should have one too.
+        return set(self.standards).union(
+            *(filter(None, (f.standards for f in self.functions)))
+        )
+
     def includes(self):
         return {
             PurePosixPath("llvm-libc-macros") / macro.header
@@ -75,6 +115,45 @@ class HeaderFile:
             for typ in self.all_types()
         }
 
+    def header_guard(self):
+        return "LLVM_LIBC_" + "_".join(
+            word.upper() for word in NONIDENTIFIER.split(self.name) if word
+        )
+
+    def library_description(self):
+        # If the header itself is in standard C, just call it that.
+        if "stdc" in self.standards:
+            return LIBRARY_DESCRIPTIONS["stdc"]
+        # If the header itself is in POSIX, just call it that.
+        if "posix" in self.standards:
+            return LIBRARY_DESCRIPTIONS["posix"]
+        # Otherwise, consider the standards for each symbol as well.
+        standards = self.all_standards()
+        # Otherwise, it's described by all those that apply, but ignoring
+        # "stdc" and "posix" since this is not a "stdc" or "posix" header.
+        return " / ".join(
+            sorted(
+                LIBRARY_DESCRIPTIONS[standard]
+                for standard in standards
+                if standard not in {"stdc", "posix"}
+            )
+        )
+
+    def template(self, dir, files_read):
+        if self.template_file is not None:
+            # There's a custom template file, so just read it in and record
+            # that it was read as an input file.
+            template_path = dir / self.template_file
+            files_read.add(template_path)
+            return template_path.read_text()
+
+        # Generate the default template.
+        return HEADER_TEMPLATE.format(
+            library=self.library_description(),
+            header=self.name,
+            guard=self.header_guard(),
+        )
+
     def public_api(self):
         # Python 3.12 has .relative_to(dir, walk_up=True) for this.
         path_prefix = PurePosixPath("../" * (len(PurePosixPath(self.name).parents) - 1))
@@ -82,7 +161,16 @@ class HeaderFile:
         def relpath(file):
             return path_prefix / file
 
-        content = [
+        content = []
+
+        if self.template_file is None:
+            # This always goes before all the other includes, which are sorted.
+            # It's implicitly emitted here when using the default template so
+            # it can get the right relative path.  Custom template files should
+            # all have it explicitly with their right particular relative path.
+            content.append('#include "{file!s}"'.format(file=relpath(COMMON_HEADER)))
+
+        content += [
             f"#include {file}"
             for file in sorted(
                 file if isinstance(file, str) else f'"{relpath(file)!s}"'

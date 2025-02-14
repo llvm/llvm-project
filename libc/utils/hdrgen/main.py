@@ -65,16 +65,10 @@ def main():
 
     header = load_yaml_file(yaml_file, HeaderFile, args.entry_point)
 
-    if not header.template_file:
-        print(f"{yaml_file}: Missing header_template", sys.stderr)
-        return 2
-
     # The header_template path is relative to the containing YAML file.
-    template_path = yaml_file.parent / header.template_file
+    template = header.template(yaml_file.parent, files_read)
 
-    files_read.add(template_path)
-    with open(template_path) as template:
-        contents = fill_public_api(header.public_api(), template.read())
+    contents = fill_public_api(header.public_api(), template)
 
     write_depfile()
 

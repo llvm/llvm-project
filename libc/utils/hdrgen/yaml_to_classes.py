@@ -36,6 +36,7 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
     header_name = yaml_data.get("header")
     header = header_class(header_name)
     header.template_file = yaml_data.get("header_template")
+    header.standards = yaml_data.get("standards", [])
 
     for macro_data in yaml_data.get("macros", []):
         header.add_macro(
