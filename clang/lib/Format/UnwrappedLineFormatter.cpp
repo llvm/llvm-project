@@ -1610,7 +1610,7 @@ static auto computeNewlines(const AnnotatedLine &Line,
     if (Line.startsWith(TT_NamespaceRBrace)) {
       if (Style.WrapNamespaceBodyWithEmptyLines == FormatStyle::WNBWELS_Never)
         Newlines = 1;
-      else if (PreviousLine && !PreviousLine->startsWith(TT_NamespaceRBrace))
+      else if (!PreviousLine->startsWith(TT_NamespaceRBrace))
         Newlines = std::max(Newlines, 2u);
     }
   }
