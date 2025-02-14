@@ -9,10 +9,6 @@ Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpA
 contact: Selehov
 b2659ca44 [InstCombine] Propagate flags in `foldSelectICmpAndBinOp` (#127437)
 ---
-breaks devicelibs
-6e0b0038 [clang][OpenCL][CodeGen][AMDGPU] Do not use `private` as the default AS for when `generic` is available (#112442)
-AlexV and MarkS
----
 breaks build of hipRuntime
 51ad2901ca54 [Clang] Improve diagnostic on `[[nodiscard]]` attribute (#112521)
 Ron, Maneesh

@@ -297,18 +297,25 @@ void AggExprEmitter::withReturnValueSlot(
                  (RequiresDestruction && Dest.isIgnored());
 
   Address RetAddr = Address::invalid();
-  RawAddress RetAllocaAddr = RawAddress::invalid();
 
   EHScopeStack::stable_iterator LifetimeEndBlock;
   llvm::Value *LifetimeSizePtr = nullptr;
   llvm::IntrinsicInst *LifetimeStartInst = nullptr;
   if (!UseTemp) {
-    RetAddr = Dest.getAddress();
+    // It is possible for the existing slot we are using directly to have been
+    // allocated in the correct AS for an indirect return, and then cast to
+    // the default AS (this is the behaviour of CreateMemTemp), however we know
+    // that the return address is expected to point to the uncasted AS, hence we
+    // strip possible pointer casts here.
+    if (Dest.getAddress().isValid())
+      RetAddr = Dest.getAddress().withPointer(
+          Dest.getAddress().getBasePointer()->stripPointerCasts(),
+          Dest.getAddress().isKnownNonNull());
   } else {
-    RetAddr = CGF.CreateMemTemp(RetTy, "tmp", &RetAllocaAddr);
+    RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
     llvm::TypeSize Size =
         CGF.CGM.getDataLayout().getTypeAllocSize(CGF.ConvertTypeForMem(RetTy));
-    LifetimeSizePtr = CGF.EmitLifetimeStart(Size, RetAllocaAddr.getPointer());
+    LifetimeSizePtr = CGF.EmitLifetimeStart(Size, RetAddr.getBasePointer());
     if (LifetimeSizePtr) {
       LifetimeStartInst =
           cast<llvm::IntrinsicInst>(std::prev(Builder.GetInsertPoint()));
@@ -317,7 +324,7 @@ void AggExprEmitter::withReturnValueSlot(
              "Last insertion wasn't a lifetime.start?");
 
       CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
-          NormalEHLifetimeMarker, RetAllocaAddr, LifetimeSizePtr);
+          NormalEHLifetimeMarker, RetAddr, LifetimeSizePtr);
       LifetimeEndBlock = CGF.EHStack.stable_begin();
     }
   }
@@ -338,7 +345,7 @@ void AggExprEmitter::withReturnValueSlot(
     // Since we're not guaranteed to be in an ExprWithCleanups, clean up
     // eagerly.
     CGF.DeactivateCleanupBlock(LifetimeEndBlock, LifetimeStartInst);
-    CGF.EmitLifetimeEnd(LifetimeSizePtr, RetAllocaAddr.getPointer());
+    CGF.EmitLifetimeEnd(LifetimeSizePtr, RetAddr.getBasePointer());
   }
 }
 

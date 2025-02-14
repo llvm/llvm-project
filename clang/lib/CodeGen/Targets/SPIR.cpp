@@ -158,8 +158,10 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
       // copied to be valid on the device.
       // This behavior follows the CUDA spec
       // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
-      // and matches the NVPTX implementation.
-      return getNaturalAlignIndirect(Ty, /* byval */ true);
+      // and matches the NVPTX implementation. TODO: hardcoding to 0 should be
+      // revisited if HIPSPV / byval starts making use of the AS of an indirect
+      // arg.
+      return getNaturalAlignIndirect(Ty, /*AddrSpace=*/0, /*byval=*/true);
     }
   }
   return classifyArgumentType(Ty);
@@ -174,7 +176,8 @@ ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
   // Records with non-trivial destructors/copy-constructors should not be
   // passed by value.
   if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
     const RecordDecl *RD = RT->getDecl();
