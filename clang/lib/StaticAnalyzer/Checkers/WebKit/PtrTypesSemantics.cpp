@@ -503,6 +503,11 @@ public:
     return true;
   }
 
+  bool VisitOffsetOfExpr(const OffsetOfExpr *OE) {
+    // offsetof(T, D) is considered trivial.
+    return true;
+  }
+
   bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
     if (!checkArguments(MCE))
       return false;
