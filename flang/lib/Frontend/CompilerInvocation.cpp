@@ -932,10 +932,24 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     for (const auto &wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
+      } else if (wArg == "unused-dummy-argument") {
+        res.getFrontendOpts().features.Enable(
+            Fortran::common::LanguageFeature::UnusedDummyArgument);
+      } else if (wArg == "no-unused-dummy-argument") {
+        res.getFrontendOpts().features.Enable(
+            Fortran::common::LanguageFeature::UnusedDummyArgument, false);
+      } else if (wArg == "unused-variable") {
+        res.getFrontendOpts().features.Enable(
+            Fortran::common::LanguageFeature::UnusedVariable);
+      } else if (wArg == "no-unused-variable") {
+        res.getFrontendOpts().features.Enable(
+            Fortran::common::LanguageFeature::UnusedVariable, false);
       } else {
-        const unsigned diagID =
-            diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-                                  "Only `-Werror` is supported currently.");
+        const unsigned diagID = diags.getCustomDiagID(
+            clang::DiagnosticsEngine::Error,
+            "Only `-Werror`, `-W[no]unused-dummy-argument` "
+            "and `-W[no]unused-variable` are supported "
+            "currently.");
         diags.Report(diagID);
       }
     }
