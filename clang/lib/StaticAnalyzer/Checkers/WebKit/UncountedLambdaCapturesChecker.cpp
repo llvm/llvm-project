@@ -121,7 +121,8 @@ public:
             if (auto *L = findLambdaInArg(Arg)) {
               LambdasToIgnore.insert(L);
               if (!Param->hasAttr<NoEscapeAttr>())
-                Checker->visitLambdaExpr(L, shouldCheckThis());
+                Checker->visitLambdaExpr(L, shouldCheckThis() &&
+                                                !hasProtectedThis(L));
             }
             ++ArgIndex;
           }
@@ -173,8 +174,10 @@ public:
         }
         if (auto *TempExpr = dyn_cast<CXXBindTemporaryExpr>(CtorArg)) {
           E = TempExpr->getSubExpr()->IgnoreParenCasts();
-          if (auto *Lambda = dyn_cast<LambdaExpr>(E))
+          if (auto *Lambda = dyn_cast<LambdaExpr>(E)) {
+            ConstructToIgnore.insert(CE);
             return Lambda;
+          }
         }
         auto *DRE = dyn_cast<DeclRefExpr>(CtorArg);
         if (!DRE)
