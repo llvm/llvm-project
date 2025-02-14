@@ -860,8 +860,23 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
         DepFile = getDependencyFileName(Args, Inputs);
         C.addFailureResultFile(DepFile, &JA);
       }
-      CmdArgs.push_back("-dependency-file");
-      CmdArgs.push_back(DepFile);
+      // for host compile, we changed the dep file name to *.d.CUID.host
+      // so it will not overide kernel dep file,
+      // and merge it with *.d (kernel dep) file in DependencyFile.cpp
+      // for example, abc.d -> abc.d.2282B80C.host
+      auto AT = getToolChain().getAuxTriple();
+      if (AT && std::string(DepFile) != "-") {
+        SmallString<128> NewDepFile(DepFile);
+        NewDepFile.append(
+            "." + llvm::utohexstr(llvm::sys::Process::GetRandomNumber()) +
+            ".host");
+        CmdArgs.push_back("-dependency-file");
+        CmdArgs.push_back(Args.MakeArgString(NewDepFile));
+        // else keep the original dep file name
+      } else {
+        CmdArgs.push_back("-dependency-file");
+        CmdArgs.push_back(DepFile);
+      }
     }
     // Cmake generates dependency files using all compilation options specified
     // by users. Claim those not used for dependency files.
