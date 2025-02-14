@@ -21,7 +21,9 @@ define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; WINDOWS-NEXT:    xorl %ecx, %ecx
 ; WINDOWS-NEXT:    xorl %edx, %edx
 ; WINDOWS-NEXT:    xorl %r8d, %r8d
+; WINDOWS-NEXT:    .seh_startepilogue
 ; WINDOWS-NEXT:    addq $56, %rsp
+; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    jmp h # TAILCALL
 ; WINDOWS-NEXT:  .LBB0_1:
 ; WINDOWS-NEXT:    callq __security_check_cookie
@@ -68,7 +70,9 @@ define void @tailcall_unrelated_frame() sspreq {
 ; WINDOWS-NEXT:    cmpq __security_cookie(%rip), %rcx
 ; WINDOWS-NEXT:    jne .LBB1_1
 ; WINDOWS-NEXT:  # %bb.2:
+; WINDOWS-NEXT:    .seh_startepilogue
 ; WINDOWS-NEXT:    addq $40, %rsp
+; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    jmp bar # TAILCALL
 ; WINDOWS-NEXT:  .LBB1_1:
 ; WINDOWS-NEXT:    callq __security_check_cookie

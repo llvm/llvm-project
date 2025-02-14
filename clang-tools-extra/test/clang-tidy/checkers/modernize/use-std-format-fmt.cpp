@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s modernize-use-std-format %t -- \
 // RUN:   -config="{CheckOptions: { \
-// RUN:              StrictMode: true, \
+// RUN:              modernize-use-std-format.StrictMode: true, \
 // RUN:              modernize-use-std-format.StrFormatLikeFunctions: 'fmt::sprintf', \
 // RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
 // RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \

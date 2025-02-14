@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_THREAD
-#define _LIBCPP_THREAD
+#ifndef _LIBCPP___CXX03_THREAD
+#define _LIBCPP___CXX03_THREAD
 
 /*
 
@@ -86,21 +86,21 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 
-#  include <__thread/formatter.h>
-#  include <__thread/jthread.h>
-#  include <__thread/support.h>
-#  include <__thread/this_thread.h>
-#  include <__thread/thread.h>
-#  include <version>
+#  include <__cxx03/__thread/formatter.h>
+#  include <__cxx03/__thread/jthread.h>
+#  include <__cxx03/__thread/support.h>
+#  include <__cxx03/__thread/this_thread.h>
+#  include <__cxx03/__thread/thread.h>
+#  include <__cxx03/version>
 
 // standard-mandated includes
 
 // [thread.syn]
-#  include <compare>
+#  include <__cxx03/compare>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -109,22 +109,22 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #endif // !defined(_LIBCPP_HAS_NO_THREADS)
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
-#  include <cstddef>
-#  include <ctime>
-#  include <iosfwd>
-#  include <ratio>
+#  include <__cxx03/cstddef>
+#  include <__cxx03/ctime>
+#  include <__cxx03/iosfwd>
+#  include <__cxx03/ratio>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-#  include <chrono>
+#  include <__cxx03/chrono>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <cstring>
-#  include <functional>
-#  include <new>
-#  include <system_error>
-#  include <type_traits>
+#  include <__cxx03/cstring>
+#  include <__cxx03/functional>
+#  include <__cxx03/new>
+#  include <__cxx03/system_error>
+#  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_THREAD
+#endif // _LIBCPP___CXX03_THREAD

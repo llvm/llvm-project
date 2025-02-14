@@ -51,8 +51,7 @@
 [0x23,0x14,0x1d,0xd5]
 [0xa3,0x14,0x18,0xd5]
 
-# CHECK:      	.text
-# CHECK-NEXT: 	mrs	x3, SCTLRMASK_EL1
+# CHECK:      	mrs	x3, SCTLRMASK_EL1
 # CHECK-NEXT: 	mrs	x3, SCTLRMASK_EL2
 # CHECK-NEXT: 	mrs	x3, SCTLRMASK_EL12
 # CHECK-NEXT: 	mrs	x3, CPACRMASK_EL1

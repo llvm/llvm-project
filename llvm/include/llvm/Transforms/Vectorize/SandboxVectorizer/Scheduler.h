@@ -30,8 +30,23 @@ namespace llvm::sandboxir {
 class PriorityCmp {
 public:
   bool operator()(const DGNode *N1, const DGNode *N2) {
-    // TODO: This should be a hierarchical comparator.
-    return N1->getInstruction()->comesBefore(N2->getInstruction());
+    // Given that the DAG does not model dependencies such that PHIs are always
+    // at the top, or terminators always at the bottom, we need to force the
+    // priority here in the comparator of the ready list container.
+    auto *I1 = N1->getInstruction();
+    auto *I2 = N2->getInstruction();
+    bool IsTerm1 = I1->isTerminator();
+    bool IsTerm2 = I2->isTerminator();
+    if (IsTerm1 != IsTerm2)
+      // Terminators have the lowest priority.
+      return IsTerm1 > IsTerm2;
+    bool IsPHI1 = isa<PHINode>(I1);
+    bool IsPHI2 = isa<PHINode>(I2);
+    if (IsPHI1 != IsPHI2)
+      // PHIs have the highest priority.
+      return IsPHI1 < IsPHI2;
+    // Otherwise rely on the instruction order.
+    return I2->comesBefore(I1);
   }
 };
 
@@ -53,6 +68,23 @@ public:
     return Back;
   }
   bool empty() const { return List.empty(); }
+  void clear() { List = {}; }
+  /// \Removes \p N if found in the ready list.
+  void remove(DGNode *N) {
+    // TODO: Use a more efficient data-structure for the ready list because the
+    // priority queue does not support fast removals.
+    SmallVector<DGNode *, 8> Keep;
+    Keep.reserve(List.size());
+    while (!List.empty()) {
+      auto *Top = List.top();
+      List.pop();
+      if (Top == N)
+        break;
+      Keep.push_back(Top);
+    }
+    for (auto *KeepN : Keep)
+      List.push(KeepN);
+  }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
@@ -68,9 +100,26 @@ public:
 private:
   ContainerTy Nodes;
 
+  /// Called by the DGNode destructor to avoid accessing freed memory.
+  void eraseFromBundle(DGNode *N) { Nodes.erase(find(Nodes, N)); }
+  friend DGNode::~DGNode(); // For eraseFromBundle().
+
 public:
   SchedBundle() = default;
-  SchedBundle(ContainerTy &&Nodes) : Nodes(std::move(Nodes)) {}
+  SchedBundle(ContainerTy &&Nodes) : Nodes(std::move(Nodes)) {
+    for (auto *N : this->Nodes)
+      N->setSchedBundle(*this);
+  }
+  /// Copy CTOR (unimplemented).
+  SchedBundle(const SchedBundle &Other) = delete;
+  /// Copy Assignment (unimplemented).
+  SchedBundle &operator=(const SchedBundle &Other) = delete;
+  ~SchedBundle() {
+    for (auto *N : this->Nodes)
+      N->clearSchedBundle();
+  }
+  bool empty() const { return Nodes.empty(); }
+  DGNode *back() const { return Nodes.back(); }
   using iterator = ContainerTy::iterator;
   using const_iterator = ContainerTy::const_iterator;
   iterator begin() { return Nodes.begin(); }
@@ -91,34 +140,98 @@ public:
 
 /// The list scheduler.
 class Scheduler {
+  /// This is a list-scheduler and this is the list containing the instructions
+  /// that are ready, meaning that all their dependency successors have already
+  /// been scheduled.
   ReadyListContainer ReadyList;
+  /// The dependency graph is used by the scheduler to determine the legal
+  /// ordering of instructions.
   DependencyGraph DAG;
+  friend class SchedulerInternalsAttorney; // For DAG.
+  Context &Ctx;
+  /// This is the top of the schedule, i.e. the location where the scheduler
+  /// is about to place the scheduled instructions. It gets updated as we
+  /// schedule.
   std::optional<BasicBlock::iterator> ScheduleTopItOpt;
-  SmallVector<std::unique_ptr<SchedBundle>> Bndls;
+  // TODO: This is wasting memory in exchange for fast removal using a raw ptr.
+  DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
+  /// The BB that we are currently scheduling.
+  BasicBlock *ScheduledBB = nullptr;
+  /// The ID of the callback we register with Sandbox IR.
+  std::optional<Context::CallbackID> CreateInstrCB;
+  /// Called by Sandbox IR's callback system, after \p I has been created.
+  /// NOTE: This should run after DAG's callback has run.
+  // TODO: Perhaps call DAG's notify function from within this one?
+  void notifyCreateInstr(Instruction *I);
 
   /// \Returns a scheduling bundle containing \p Instrs.
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
+  void eraseBundle(SchedBundle *SB);
   /// Schedule nodes until we can schedule \p Instrs back-to-back.
   bool tryScheduleUntil(ArrayRef<Instruction *> Instrs);
   /// Schedules all nodes in \p Bndl, marks them as scheduled, updates the
   /// UnscheduledSuccs counter of all dependency predecessors, and adds any of
   /// them that become ready to the ready list.
   void scheduleAndUpdateReadyList(SchedBundle &Bndl);
-
+  /// The scheduling state of the instructions in the bundle.
+  enum class BndlSchedState {
+    NoneScheduled, ///> No instruction in the bundle was previously scheduled.
+    PartiallyOrDifferentlyScheduled, ///> Only some of the instrs in the bundle
+                                     /// were previously scheduled, or all of
+                                     /// them were but not in the same
+                                     /// SchedBundle.
+    FullyScheduled, ///> All instrs in the bundle were previously scheduled and
+                    /// were in the same SchedBundle.
+  };
+  /// \Returns whether none/some/all of \p Instrs have been scheduled.
+  BndlSchedState getBndlSchedState(ArrayRef<Instruction *> Instrs) const;
+  /// Destroy the top-most part of the schedule that includes \p Instrs.
+  void trimSchedule(ArrayRef<Instruction *> Instrs);
   /// Disable copies.
   Scheduler(const Scheduler &) = delete;
   Scheduler &operator=(const Scheduler &) = delete;
 
 public:
-  Scheduler(AAResults &AA) : DAG(AA) {}
-  ~Scheduler() {}
-
+  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx), Ctx(Ctx) {
+    // NOTE: The scheduler's callback depends on the DAG's callback running
+    // before it and updating the DAG accordingly.
+    CreateInstrCB = Ctx.registerCreateInstrCallback(
+        [this](Instruction *I) { notifyCreateInstr(I); });
+  }
+  ~Scheduler() {
+    if (CreateInstrCB)
+      Ctx.unregisterCreateInstrCallback(*CreateInstrCB);
+  }
+  /// Tries to build a schedule that includes all of \p Instrs scheduled at the
+  /// same scheduling cycle. This essentially checks that there are no
+  /// dependencies among \p Instrs. This function may involve scheduling
+  /// intermediate instructions or canceling and re-scheduling if needed.
+  /// \Returns true on success, false otherwise.
   bool trySchedule(ArrayRef<Instruction *> Instrs);
+  /// Clear the scheduler's state, including the DAG.
+  void clear() {
+    Bndls.clear();
+    // TODO: clear view once it lands.
+    DAG.clear();
+    ReadyList.clear();
+    ScheduleTopItOpt = std::nullopt;
+    ScheduledBB = nullptr;
+    assert(Bndls.empty() && DAG.empty() && ReadyList.empty() &&
+           !ScheduleTopItOpt && ScheduledBB == nullptr &&
+           "Expected empty state!");
+  }
 
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif
+};
+
+/// A client-attorney class for accessing the Scheduler's internals (used for
+/// unit tests).
+class SchedulerInternalsAttorney {
+public:
+  static DependencyGraph &getDAG(Scheduler &Sched) { return Sched.DAG; }
 };
 
 } // namespace llvm::sandboxir

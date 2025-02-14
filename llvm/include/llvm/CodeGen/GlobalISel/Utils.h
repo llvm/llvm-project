@@ -171,6 +171,10 @@ void reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
                         MachineOptimizationRemarkEmitter &MORE,
                         MachineOptimizationRemarkMissed &R);
 
+/// Returns the inverse opcode of \p MinMaxOpc, which is a generic min/max
+/// opcode like G_SMIN.
+unsigned getInverseGMinMaxOpcode(unsigned MinMaxOpc);
+
 /// If \p VReg is defined by a G_CONSTANT, return the corresponding value.
 std::optional<APInt> getIConstantVRegVal(Register VReg,
                                          const MachineRegisterInfo &MRI);
@@ -180,7 +184,7 @@ std::optional<int64_t> getIConstantVRegSExtVal(Register VReg,
                                                const MachineRegisterInfo &MRI);
 
 /// \p VReg is defined by a G_CONSTANT, return the corresponding value.
-APInt getIConstantFromReg(Register VReg, const MachineRegisterInfo &MRI);
+const APInt &getIConstantFromReg(Register VReg, const MachineRegisterInfo &MRI);
 
 /// Simple struct used to hold a constant integer value and a virtual
 /// register.
@@ -522,6 +526,13 @@ std::optional<APInt>
 isConstantOrConstantSplatVector(MachineInstr &MI,
                                 const MachineRegisterInfo &MRI);
 
+/// Determines if \p MI defines a float constant integer or a splat vector of
+/// float constant integers.
+/// \returns the float constant or std::nullopt.
+std::optional<APFloat>
+isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+                                  const MachineRegisterInfo &MRI);
+
 /// Attempt to match a unary predicate against a scalar/splat constant or every
 /// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source
 /// value was undef.
@@ -541,10 +552,6 @@ bool isConstFalseVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
 /// Returns an integer representing true, as defined by the
 /// TargetBooleanContents.
 int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector, bool IsFP);
-
-/// Returns true if the given block should be optimized for size.
-bool shouldOptForSize(const MachineBasicBlock &MBB, ProfileSummaryInfo *PSI,
-                      BlockFrequencyInfo *BFI);
 
 using SmallInstListTy = GISelWorkList<4>;
 void saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,

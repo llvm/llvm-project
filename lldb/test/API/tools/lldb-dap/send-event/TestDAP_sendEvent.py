@@ -38,12 +38,12 @@ class TestDAP_sendEvent(lldbdap_testcase.DAPTestCaseBase):
         custom_event = self.dap_server.wait_for_event(
             filter=["my-custom-event-no-body"]
         )
-        self.assertEquals(custom_event["event"], "my-custom-event-no-body")
+        self.assertEqual(custom_event["event"], "my-custom-event-no-body")
         self.assertIsNone(custom_event.get("body", None))
 
         custom_event = self.dap_server.wait_for_event(filter=["my-custom-event"])
-        self.assertEquals(custom_event["event"], "my-custom-event")
-        self.assertEquals(custom_event["body"], custom_event_body)
+        self.assertEqual(custom_event["event"], "my-custom-event")
+        self.assertEqual(custom_event["body"], custom_event_body)
 
     def test_send_internal_event(self):
         """

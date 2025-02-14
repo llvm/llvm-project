@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_TRANSFORM_H
-#define _LIBCPP___ALGORITHM_TRANSFORM_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_TRANSFORM_H
+#define _LIBCPP___CXX03___ALGORITHM_TRANSFORM_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -39,4 +39,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator trans
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_TRANSFORM_H
+#endif // _LIBCPP___CXX03___ALGORITHM_TRANSFORM_H

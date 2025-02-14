@@ -4,6 +4,20 @@
 
 mesh.mesh @mesh_1d(shape = 2)
 
+// CHECK-LABEL: func @return_sharding
+func.func @return_sharding(
+  // CHECK-SAME: [[ARG:%.*]]: tensor<1xf32>
+  %arg0: tensor<2xf32>
+// CHECK-SAME: ) -> (tensor<1xf32>, !mesh.sharding) {
+) -> (tensor<2xf32>, !mesh.sharding) {
+  %ssharding_annotated = mesh.sharding @mesh_1d split_axes = [[0]] : !mesh.sharding
+  %sharding_annotated = mesh.shard %arg0 to %ssharding_annotated  : tensor<2xf32>
+  // CHECK-NEXT: [[vsharding:%.*]] = mesh.sharding @mesh_1d split_axes = {{\[\[}}0]] : !mesh.sharding
+  %r = mesh.get_sharding %sharding_annotated : tensor<2xf32> -> !mesh.sharding
+  // CHECK-NEXT: return [[ARG]], [[vsharding]] : tensor<1xf32>, !mesh.sharding
+  return %sharding_annotated, %r : tensor<2xf32>, !mesh.sharding
+}
+
 // CHECK-LABEL: func @full_replication
 func.func @full_replication(
   // CHECK-SAME: %[[ARG:.*]]: tensor<2xi8>
@@ -218,4 +232,35 @@ func.func @ew_chain_with_halo(
   %sharding_annotated_6 = mesh.shard %sharding_annotated_5 to %ssharding_annotated_6  annotate_for_users : tensor<8x16xf32>
   // CHECK-NEXT: return %[[TMP3]] : tensor<5x16xf32>
   return %sharding_annotated_6 : tensor<8x16xf32>
+}
+
+// CHECK-LABEL: func @test_shard_update_halo
+// CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<300x1200xi64>
+func.func @test_shard_update_halo(%arg0: tensor<1200x1200xi64>) -> tensor<1200x1200xi64> {
+  %sharding = mesh.sharding @mesh_1d_4 split_axes = [[0]] : !mesh.sharding
+  // CHECK: %[[T:.*]] = tensor.empty() : tensor<304x1200xi64>
+  // CHECK: %[[inserted_slice:.*]] = tensor.insert_slice %[[IN1]] into %[[T]][2, 0] [300, 1200] [1, 1] : tensor<300x1200xi64> into tensor<304x1200xi64>
+  // CHECK: %[[UH:.*]] = mesh.update_halo %[[inserted_slice]] on @mesh_1d_4 split_axes = {{\[\[0]]}} halo_sizes = [2, 2] : tensor<304x1200xi64>
+  %sharding_annotated = mesh.shard %arg0 to %sharding : tensor<1200x1200xi64>
+  %sharding_0 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 2] : !mesh.sharding
+  %sharding_annotated_1 = mesh.shard %sharding_annotated to %sharding_0 : tensor<1200x1200xi64>
+  %sharding_annotated_3 = mesh.shard %sharding_annotated_1 to %sharding_0 annotate_for_users : tensor<1200x1200xi64>
+  // CHECK: return %[[UH]] : tensor<304x1200xi64>
+  return %sharding_annotated_3 : tensor<1200x1200xi64>
+}
+
+mesh.mesh @mesh4x4(shape = 4x4)
+// CHECK-LABEL: func @test_shard_update_halo2d
+// CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<300x300xi64>
+func.func @test_shard_update_halo2d(%arg0: tensor<1200x1200xi64>) -> tensor<1200x1200xi64> {
+  %sharding = mesh.sharding @mesh4x4 split_axes = [[0], [1]] : !mesh.sharding
+  // CHECK: %[[T:.*]] = tensor.empty() : tensor<303x307xi64>
+  // CHECK: %[[inserted_slice:.*]] = tensor.insert_slice %[[IN1]] into %[[T]][1, 3] [300, 300] [1, 1] : tensor<300x300xi64> into tensor<303x307xi64>
+  // CHECK: %[[UH:.*]] = mesh.update_halo %[[inserted_slice]] on @mesh4x4 split_axes = {{\[\[}}0], [1]] halo_sizes = [1, 2, 3, 4] : tensor<303x307xi64>
+  %sharding_annotated = mesh.shard %arg0 to %sharding : tensor<1200x1200xi64>
+  %sharding_0 = mesh.sharding @mesh4x4 split_axes = [[0], [1]] halo_sizes = [1, 2, 3, 4] : !mesh.sharding
+  %sharding_annotated_1 = mesh.shard %sharding_annotated to %sharding_0 : tensor<1200x1200xi64>
+  %sharding_annotated_3 = mesh.shard %sharding_annotated_1 to %sharding_0 annotate_for_users : tensor<1200x1200xi64>
+  // CHECK: return %[[UH]] : tensor<303x307xi64>
+  return %sharding_annotated_3 : tensor<1200x1200xi64>
 }

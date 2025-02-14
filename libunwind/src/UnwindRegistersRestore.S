@@ -658,7 +658,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x26,x27, [x0, #0x0D0]
   ldp    x28,x29, [x0, #0x0E0]
   ldr    x30,     [x0, #0x100]  // restore pc into lr
-
+#if defined(__ARM_FP) && __ARM_FP != 0
   ldp    d0, d1,  [x0, #0x110]
   ldp    d2, d3,  [x0, #0x120]
   ldp    d4, d5,  [x0, #0x130]
@@ -676,7 +676,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    d28,d29, [x0, #0x1F0]
   ldr    d30,     [x0, #0x200]
   ldr    d31,     [x0, #0x208]
-
+#endif
   // Finally, restore sp. This must be done after the last read from the
   // context struct, because it is allocated on the stack, and an exception
   // could clobber the de-allocated portion of the stack after sp has been

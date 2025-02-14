@@ -15,6 +15,7 @@
 #include "IncrementalExecutor.h"
 #include "IncrementalParser.h"
 #include "InterpreterUtils.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #ifdef __EMSCRIPTEN__
 #include "Wasm.h"
 #endif // __EMSCRIPTEN__
@@ -50,6 +51,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Transforms/Utils/Cloning.h" // for CloneModule
+
+#define DEBUG_TYPE "clang-repl"
 
 using namespace clang;
 // FIXME: Figure out how to unify with namespace init_convenience from
@@ -103,7 +107,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
         CompilerInvocation::GetResourcesPath(Argv[0], nullptr);
 
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics();
+  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
   if (!Clang->hasDiagnostics())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Initialization failed. "
@@ -196,8 +200,7 @@ IncrementalCompilerBuilder::CreateCpp() {
 #ifdef __EMSCRIPTEN__
   Argv.push_back("-target");
   Argv.push_back("wasm32-unknown-emscripten");
-  Argv.push_back("-pie");
-  Argv.push_back("-shared");
+  Argv.push_back("-fvisibility=default");
 #endif
   Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
 
@@ -339,19 +342,8 @@ public:
   }
 
   void ExecuteAction() override {
-    CompilerInstance &CI = getCompilerInstance();
-    assert(CI.hasPreprocessor() && "No PP!");
-
-    // Use a code completion consumer?
-    CodeCompleteConsumer *CompletionConsumer = nullptr;
-    if (CI.hasCodeCompletionConsumer())
-      CompletionConsumer = &CI.getCodeCompletionConsumer();
-
-    Preprocessor &PP = CI.getPreprocessor();
-    PP.EnterMainSourceFile();
-
-    if (!CI.hasSema())
-      CI.createSema(getTranslationUnitKind(), CompletionConsumer);
+    WrapperFrontendAction::ExecuteAction();
+    getCompilerInstance().getSema().CurContext = nullptr;
   }
 
   // Do not terminate after processing the input. This allows us to keep various
@@ -385,8 +377,6 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
     return;
   CI->ExecuteAction(*Act);
 
-  ASTContext &C = CI->getASTContext();
-
   IncrParser = std::make_unique<IncrementalParser>(*CI, ErrOut);
 
   if (ErrOut)
@@ -394,17 +384,21 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 
   if (getCodeGen()) {
     CachedInCodeGenModule = GenModule();
+    // The initial PTU is filled by `-include` or by CUDA includes
+    // automatically.
+    if (!CI->getPreprocessorOpts().Includes.empty()) {
+      // We can't really directly pass the CachedInCodeGenModule to the Jit
+      // because it will steal it, causing dangling references as explained in
+      // Interpreter::Execute
+      auto M = llvm::CloneModule(*CachedInCodeGenModule);
+      ASTContext &C = CI->getASTContext();
+      RegisterPTU(C.getTranslationUnitDecl(), std::move(M));
+    }
     if (llvm::Error Err = CreateExecutor()) {
       ErrOut = joinErrors(std::move(ErrOut), std::move(Err));
       return;
     }
   }
-
-  // The initial PTU is filled by `-include` or by CUDA includes automatically.
-  RegisterPTU(C.getTranslationUnitDecl());
-
-  // Prepare the IncrParser for input.
-  llvm::cantFail(Parse(""));
 
   // Not all frontends support code-generation, e.g. ast-dump actions don't
   if (getCodeGen()) {
@@ -535,14 +529,25 @@ size_t Interpreter::getEffectivePTUSize() const {
   return PTUs.size() - InitPTUSize;
 }
 
-PartialTranslationUnit &Interpreter::RegisterPTU(TranslationUnitDecl *TU) {
+PartialTranslationUnit &
+Interpreter::RegisterPTU(TranslationUnitDecl *TU,
+                         std::unique_ptr<llvm::Module> M /*={}*/) {
   PTUs.emplace_back(PartialTranslationUnit());
   PartialTranslationUnit &LastPTU = PTUs.back();
   LastPTU.TUPart = TU;
 
-  if (std::unique_ptr<llvm::Module> M = GenModule())
-    LastPTU.TheModule = std::move(M);
+  if (!M)
+    M = GenModule();
 
+  assert((!getCodeGen() || M) && "Must have a llvm::Module at this point");
+
+  LastPTU.TheModule = std::move(M);
+  LLVM_DEBUG(llvm::dbgs() << "compile-ptu " << PTUs.size() - 1
+                          << ": [TU=" << LastPTU.TUPart);
+  if (LastPTU.TheModule)
+    LLVM_DEBUG(llvm::dbgs() << ", M=" << LastPTU.TheModule.get() << " ("
+                            << LastPTU.TheModule->getName() << ")");
+  LLVM_DEBUG(llvm::dbgs() << "]\n");
   return LastPTU;
 }
 
@@ -615,6 +620,14 @@ void Interpreter::ResetExecutor() { IncrExecutor.reset(); }
 
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
+  LLVM_DEBUG(llvm::dbgs()
+             << "execute-ptu "
+             << ((std::find(PTUs.begin(), PTUs.end(), T) != PTUs.end())
+                     ? std::distance(PTUs.begin(),
+                                     std::find(PTUs.begin(), PTUs.end(), T))
+                     : -1)
+             << ": [TU=" << T.TUPart << ", M=" << T.TheModule.get() << " ("
+             << T.TheModule->getName() << ")]\n");
   if (!IncrExecutor) {
     auto Err = CreateExecutor();
     if (Err)
@@ -723,10 +736,12 @@ std::unique_ptr<llvm::Module> Interpreter::GenModule() {
     // of the module which does not map well to CodeGen's design. To work this
     // around we created an empty module to make CodeGen happy. We should make
     // sure it always stays empty.
-    assert((!CachedInCodeGenModule || (CachedInCodeGenModule->empty() &&
-                                       CachedInCodeGenModule->global_empty() &&
-                                       CachedInCodeGenModule->alias_empty() &&
-                                       CachedInCodeGenModule->ifunc_empty())) &&
+    assert(((!CachedInCodeGenModule ||
+             !getCompilerInstance()->getPreprocessorOpts().Includes.empty()) ||
+            (CachedInCodeGenModule->empty() &&
+             CachedInCodeGenModule->global_empty() &&
+             CachedInCodeGenModule->alias_empty() &&
+             CachedInCodeGenModule->ifunc_empty())) &&
            "CodeGen wrote to a readonly module");
     std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
     CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());

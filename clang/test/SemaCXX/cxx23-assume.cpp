@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected
 // RUN: %clang_cc1 -std=c++23  -x c++ %s -verify -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++26  -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++26  -x c++ %s -verify -fexperimental-new-constant-interpreter
 
 struct A{};
 struct B{ explicit operator bool() { return true; } };
@@ -167,3 +169,29 @@ int foo () {
     __attribute__((assume (a < b)));
 }
 }
+
+namespace GH114787 {
+
+// FIXME: Correct the C++26 value
+#if __cplusplus >= 202400L
+
+constexpr int test(auto... xs) {
+  // FIXME: Investigate why addresses of PackIndexingExprs are printed for the next
+  // 'in call to' note.
+  return [&]<int I>() { // expected-note {{in call to}}
+    [[assume(
+      xs...[I] == 2
+    )]];
+    [[assume(
+      xs...[I + 1] == 0 // expected-note {{assumption evaluated to false}}
+    )]];
+    return xs...[I];
+  }.template operator()<1>();
+}
+
+static_assert(test(1, 2, 3, 5, 6) == 2); // expected-error {{not an integral constant expression}} \
+                                         // expected-note {{in call to}}
+
+#endif
+
+} // namespace GH114787

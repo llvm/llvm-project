@@ -152,6 +152,11 @@ enum class FeatureFlags : uint64_t {
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
+#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
+enum class RootElementFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
 PartType parsePartType(StringRef S);
 
 struct VertexPSVInfo {
@@ -540,6 +545,15 @@ struct ProgramSignatureElement {
 
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
+
+struct RootSignatureValidations {
+
+  static bool isValidRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
+
+  static bool isValidVersion(uint32_t Version) {
+    return (Version == 1 || Version == 2);
+  }
+};
 
 } // namespace dxbc
 } // namespace llvm

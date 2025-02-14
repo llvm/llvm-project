@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_NON_PROPAGATING_CACHE_H
-#define _LIBCPP___RANGES_NON_PROPAGATING_CACHE_H
+#ifndef _LIBCPP___CXX03___RANGES_NON_PROPAGATING_CACHE_H
+#define _LIBCPP___CXX03___RANGES_NON_PROPAGATING_CACHE_H
 
-#include <__config>
-#include <__iterator/concepts.h>        // indirectly_readable
-#include <__iterator/iterator_traits.h> // iter_reference_t
-#include <__memory/addressof.h>
-#include <__utility/forward.h>
-#include <optional>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/concepts.h>        // indirectly_readable
+#include <__cxx03/__iterator/iterator_traits.h> // iter_reference_t
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -100,4 +100,4 @@ struct __empty_cache {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_NON_PROPAGATING_CACHE_H
+#endif // _LIBCPP___CXX03___RANGES_NON_PROPAGATING_CACHE_H

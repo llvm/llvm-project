@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_MONTH_WEEKDAY_H
-#define _LIBCPP___CHRONO_MONTH_WEEKDAY_H
+#ifndef _LIBCPP___CXX03___CHRONO_MONTH_WEEKDAY_H
+#define _LIBCPP___CXX03___CHRONO_MONTH_WEEKDAY_H
 
-#include <__chrono/month.h>
-#include <__chrono/weekday.h>
-#include <__config>
+#include <__cxx03/__chrono/month.h>
+#include <__cxx03/__chrono/weekday.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -102,4 +102,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___CHRONO_MONTH_WEEKDAY_H
+#endif // _LIBCPP___CXX03___CHRONO_MONTH_WEEKDAY_H

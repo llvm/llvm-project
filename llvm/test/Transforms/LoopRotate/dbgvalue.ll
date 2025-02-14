@@ -113,7 +113,7 @@ return:                                           ; preds = %if.end
 
 ; Check that the dbg.values move up to being immediately below the PHIs,
 ; using their Values. However once we exit the loop, the x and y values
-; become irrelevant and undef, only z gets an LCSSA PHI to preserve it.
+; become irrelevant and poison, only z gets an LCSSA PHI to preserve it.
 ;
 ; Note that while the icmp is initially undominated by any dbg.value and thus
 ; shouldn't get a variable location, the first iteration is peeled off into the
@@ -138,8 +138,8 @@ define i32 @tak2(i32 %x, i32 %y, i32 %z) nounwind ssp !dbg !21 {
 ; CHECK:      tail call i32 @tak(i32
 ; CHECK: if.end:
 ; CHECK-NEXT: z.tr.lcssa = phi i32
-; CHECK-NEXT: #dbg_value(i32 undef
-; CHECK-NEXT: #dbg_value(i32 undef
+; CHECK-NEXT: #dbg_value(i32 poison
+; CHECK-NEXT: #dbg_value(i32 poison
 ; CHECK-NEXT: #dbg_value(i32 %z.tr.lcssa
 entry:
   br label %tailrecurse

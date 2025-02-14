@@ -106,7 +106,7 @@ static std::vector<object::SectionRef>
 getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
                             ArrayRef<std::string> Sections) {
   std::vector<object::SectionRef> Ret;
-  std::map<std::string, bool> SecNames;
+  std::map<std::string, bool, std::less<>> SecNames;
   std::map<unsigned, bool> SecIndices;
   unsigned SecIndex;
   for (StringRef Section : Sections) {
@@ -119,7 +119,7 @@ getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
   SecIndex = Obj.isELF() ? 0 : 1;
   for (object::SectionRef SecRef : Obj.sections()) {
     StringRef SecName = unwrapOrError(Obj.getFileName(), SecRef.getName());
-    auto NameIt = SecNames.find(std::string(SecName));
+    auto NameIt = SecNames.find(SecName);
     if (NameIt != SecNames.end())
       NameIt->second = true;
     auto IndexIt = SecIndices.find(SecIndex);

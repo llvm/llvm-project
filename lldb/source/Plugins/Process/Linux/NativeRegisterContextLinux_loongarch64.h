@@ -12,6 +12,7 @@
 #define lldb_NativeRegisterContextLinux_loongarch64_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
+#include "Plugins/Process/Utility/NativeRegisterContextDBReg_loongarch.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
 
 #include <asm/ptrace.h>
@@ -22,7 +23,8 @@ namespace process_linux {
 class NativeProcessLinux;
 
 class NativeRegisterContextLinux_loongarch64
-    : public NativeRegisterContextLinux {
+    : public NativeRegisterContextLinux,
+      public NativeRegisterContextDBReg_loongarch {
 public:
   NativeRegisterContextLinux_loongarch64(
       const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
@@ -60,6 +62,14 @@ protected:
 
   Status WriteFPR() override;
 
+  Status ReadLSX();
+
+  Status WriteLSX();
+
+  Status ReadLASX();
+
+  Status WriteLASX();
+
   void *GetGPRBuffer() override { return &m_gpr; }
 
   void *GetFPRBuffer() override { return &m_fpr; }
@@ -71,18 +81,34 @@ protected:
 private:
   bool m_gpr_is_valid;
   bool m_fpu_is_valid;
+  bool m_lsx_is_valid;
+  bool m_lasx_is_valid;
+  bool m_refresh_hwdebug_info;
 
   RegisterInfoPOSIX_loongarch64::GPR m_gpr;
-
   RegisterInfoPOSIX_loongarch64::FPR m_fpr;
+  RegisterInfoPOSIX_loongarch64::LSX m_lsx;
+  RegisterInfoPOSIX_loongarch64::LASX m_lasx;
 
   bool IsGPR(unsigned reg) const;
 
   bool IsFPR(unsigned reg) const;
 
+  bool IsLSX(unsigned reg) const;
+
+  bool IsLASX(unsigned reg) const;
+
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 
+  uint32_t CalculateLsxOffset(const RegisterInfo *reg_info) const;
+
+  uint32_t CalculateLasxOffset(const RegisterInfo *reg_info) const;
+
   const RegisterInfoPOSIX_loongarch64 &GetRegisterInfo() const;
+
+  llvm::Error ReadHardwareDebugInfo() override;
+
+  llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 };
 
 } // namespace process_linux

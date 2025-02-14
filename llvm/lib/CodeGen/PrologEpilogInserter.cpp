@@ -48,10 +48,8 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
@@ -63,7 +61,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <functional>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -211,8 +208,8 @@ static void stashEntryDbgValues(MachineBasicBlock &MBB,
   }
 
   // Remove stashed debug values from the block.
-  if (EntryDbgValues.count(&MBB))
-    for (auto *MI : EntryDbgValues[&MBB])
+  if (auto It = EntryDbgValues.find(&MBB); It != EntryDbgValues.end())
+    for (auto *MI : It->second)
       MI->removeFromParent();
 }
 
@@ -1243,9 +1240,9 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
             continue;
 
           MCRegister Reg = MO.getReg();
-          if (AllocatableSet[Reg] && !MO.isImplicit() &&
+          if (AllocatableSet[Reg.id()] && !MO.isImplicit() &&
               (MO.isDef() || MO.isUse()))
-            UsedRegs.set(Reg);
+            UsedRegs.set(Reg.id());
         }
       }
 
@@ -1265,20 +1262,20 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
       continue;
 
     // Want only used registers.
-    if (OnlyUsed && !UsedRegs[Reg])
+    if (OnlyUsed && !UsedRegs[Reg.id()])
       continue;
 
     // Want only registers used for arguments.
     if (OnlyArg) {
       if (OnlyUsed) {
-        if (!LiveIns[Reg])
+        if (!LiveIns[Reg.id()])
           continue;
       } else if (!TRI.isArgumentRegister(MF, Reg)) {
         continue;
       }
     }
 
-    RegsToZero.set(Reg);
+    RegsToZero.set(Reg.id());
   }
 
   // Don't clear registers that are live when leaving the function.
@@ -1331,7 +1328,7 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
   for (const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
        MCPhysReg CSReg = *CSRegs; ++CSRegs)
     for (MCRegister Reg : TRI.sub_and_superregs_inclusive(CSReg))
-      RegsToZero.reset(Reg);
+      RegsToZero.reset(Reg.id());
 
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
   for (MachineBasicBlock &MBB : MF)

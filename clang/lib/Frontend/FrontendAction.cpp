@@ -534,7 +534,6 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
     }
     if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
                                   CI.getSourceManager().getMainFileID())) {
-      M->IsInferred = true;
       auto FileCharacter =
           M->IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
       FileID OriginalModuleMapFID = CI.getSourceManager().getOrCreateFileID(
@@ -1070,12 +1069,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
 llvm::Error FrontendAction::Execute() {
   CompilerInstance &CI = getCompilerInstance();
-
-  if (CI.hasFrontendTimer()) {
-    llvm::TimeRegion Timer(CI.getFrontendTimer());
-    ExecuteAction();
-  }
-  else ExecuteAction();
+  ExecuteAction();
 
   // If we are supposed to rebuild the global module index, do so now unless
   // there were any module-build failures.

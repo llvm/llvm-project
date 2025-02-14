@@ -143,7 +143,8 @@ add_llvm_component_library(LLVMSupport
   APFloat.cpp
   APInt.cpp
   APSInt.cpp
-  ARMBuildAttrs.cpp
+  ARMBuildAttributes.cpp
+  AArch64BuildAttributes.cpp
   ARMAttributeParser.cpp
   ARMWinEH.cpp
   Allocator.cpp
@@ -256,6 +257,7 @@ add_llvm_component_library(LLVMSupport
   TimeProfiler.cpp
   Timer.cpp
   ToolOutputFile.cpp
+  TrieRawHashMap.cpp
   Twine.cpp
   TypeSize.cpp
   Unicode.cpp

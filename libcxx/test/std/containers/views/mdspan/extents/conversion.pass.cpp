@@ -28,14 +28,12 @@
 //          (((Extents != dynamic_extent) && (OtherExtents == dynamic_extent)) || ... ) ||
 //          (numeric_limits<index_type>::max() < numeric_limits<OtherIndexType>::max())
 
-#include <mdspan>
 #include <cassert>
-#include <concepts>
+#include <cstddef>
 #include <limits>
+#include <mdspan>
 #include <span> // dynamic_extent
 #include <type_traits>
-
-#include "test_macros.h"
 
 template <class To, class From>
 constexpr void test_implicit_conversion(To dest, From src) {

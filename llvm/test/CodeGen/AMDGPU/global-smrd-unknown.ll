@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji  -memdep-block-scan-limit=1 -amdgpu-scalarize-global-loads -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji  -memdep-block-scan-limit=1 -amdgpu-scalarize-global-loads < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}unknown_memdep_analysis:
 ; GCN: flat_load_dword

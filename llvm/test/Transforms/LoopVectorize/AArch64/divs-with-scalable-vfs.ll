@@ -125,16 +125,13 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = add <vscale x 2 x i64> [[TMP15]], zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = mul <vscale x 2 x i64> [[TMP16]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP17:%.*]] = mul <vscale x 2 x i64> [[TMP15]], splat (i64 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP17]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 1, [[TMP9]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP20]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[M]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[CONV6]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -143,9 +140,9 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp ule <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP22]], <vscale x 2 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = select <vscale x 2 x i1> [[TMP23]], <vscale x 2 x i64> [[BROADCAST_SPLAT2]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP25:%.*]] = sdiv <vscale x 2 x i64> [[BROADCAST_SPLAT]], [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <vscale x 2 x i64> [[TMP25]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 2 x i1> [[TMP23]], i32 0
+; CHECK-NEXT:    [[TMP25:%.*]] = select i1 [[TMP24]], i64 [[CONV6]], i64 1
+; CHECK-NEXT:    [[TMP26:%.*]] = sdiv i64 [[M]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP26]] to i32
 ; CHECK-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP26]], [[CONV61]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = sub i64 [[TMP21]], [[TMP28]]
@@ -158,7 +155,7 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> zeroinitializer, ptr [[TMP35]], i32 8, <vscale x 2 x i1> [[TMP23]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP14]])
-; CHECK-NEXT:    [[TMP36:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP36:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <vscale x 2 x i1> [[TMP36]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP37]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -252,8 +249,7 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = add <vscale x 2 x i64> [[TMP15]], zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = mul <vscale x 2 x i64> [[TMP16]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP17:%.*]] = mul <vscale x 2 x i64> [[TMP15]], splat (i64 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP17]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 1, [[TMP9]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP20]], i64 0
@@ -286,7 +282,7 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP23]], ptr [[TMP39]], i32 4, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP14]])
-; CHECK-NEXT:    [[TMP47:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP47:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <vscale x 2 x i1> [[TMP47]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP48]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]

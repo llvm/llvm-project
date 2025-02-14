@@ -686,6 +686,21 @@ value llvm_label_type(value Context) {
   return to_val(LLVMLabelTypeInContext(Context_val(Context)));
 }
 
+/* llcontext -> lltype */
+value llvm_x86_amx_type(value Context) {
+  return to_val(LLVMX86AMXTypeInContext(Context_val(Context)));
+}
+
+/* llcontext -> lltype */
+value llvm_token_type(value Context) {
+  return to_val(LLVMTokenTypeInContext(Context_val(Context)));
+}
+
+/* llcontext -> lltype */
+value llvm_metadata_type(value Context) {
+  return to_val(LLVMMetadataTypeInContext(Context_val(Context)));
+}
+
 /* llmodule -> string -> lltype option */
 value llvm_type_by_name(value M, value Name) {
   return ptr_to_option(LLVMGetTypeByName(Module_val(M), String_val(Name)));
@@ -1192,24 +1207,6 @@ value llvm_const_nsw_sub(value LHS, value RHS) {
 /* llvalue -> llvalue -> llvalue */
 value llvm_const_nuw_sub(value LHS, value RHS) {
   LLVMValueRef Value = LLVMConstNUWSub(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nsw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNSWMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nuw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNUWMul(Value_val(LHS), Value_val(RHS));
   return to_val(Value);
 }
 

@@ -11,13 +11,13 @@
 #define _LIBCPP___FORMAT_FORMATTER_POINTER_H
 
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__format/concepts.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

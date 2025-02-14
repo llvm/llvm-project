@@ -41,8 +41,8 @@ define void @can_sink_after_store(i32 %x, ptr %ptr, i64 %tc) local_unnamed_addr 
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1997, [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1997, [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR:%.*]]
 ; CHECK:       for:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[PRE_NEXT:%.*]], [[FOR]] ]
@@ -121,8 +121,8 @@ define void @sink_sdiv(i32 %x, ptr %ptr, i64 %tc) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1997, [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1997, [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR:%.*]]
 ; CHECK:       for:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[PRE_NEXT:%.*]], [[FOR]] ]
@@ -202,8 +202,8 @@ define void @can_sink_with_additional_user(i32 %x, ptr %ptr, i64 %tc) {
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1997, [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1997, [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR:%.*]]
 ; CHECK:       for:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[PRE_NEXT:%.*]], [[FOR]] ]
@@ -387,9 +387,9 @@ define void @instruction_with_2_FOR_operands(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[BB74:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ [[TMP4]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[BB]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ [[TMP4]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[BB:%.*]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT4:%.*]] = phi float [ [[TMP2]], [[MIDDLE_BLOCK]] ], [ 1.000000e+00, [[BB]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; CHECK-NEXT:    br label [[BB13:%.*]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi float [ [[TMP60:%.*]], [[BB13]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
@@ -445,9 +445,9 @@ define void @instruction_with_2_FOR_operands_and_multiple_other_uses(ptr noalias
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT2]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[VECTOR_RECUR]], <4 x float> [[BROADCAST_SPLAT3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP4]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP4]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[TMP4]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[TMP4]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[DST_1:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[TMP9]], align 4
@@ -463,9 +463,9 @@ define void @instruction_with_2_FOR_operands_and_multiple_other_uses(ptr noalias
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[BB]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[BB:%.*]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT4:%.*]] = phi float [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[BB]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi float [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
@@ -535,10 +535,10 @@ define void @instruction_with_2_FOR_operands_and_multiple_other_uses_chain(ptr n
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT2]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[VECTOR_RECUR]], <4 x float> [[BROADCAST_SPLAT3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP4]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP5]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP4]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP5]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <4 x float> [[TMP6]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP4]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP4]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[DST_1:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[TMP10]], align 4
@@ -554,9 +554,9 @@ define void @instruction_with_2_FOR_operands_and_multiple_other_uses_chain(ptr n
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[BB]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[BB:%.*]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT4:%.*]] = phi float [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[BB]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[BB]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi float [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
@@ -696,8 +696,8 @@ define i16 @multiple_exit(ptr %p, i32 %n) {
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -772,8 +772,8 @@ define i16 @multiple_exit2(ptr %p, i32 %n) {
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -841,8 +841,8 @@ define void @sink_dominance(ptr %ptr, i32 %N) {
 ; CHECK-NEXT:    [[TMP5]] = zext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i64> [[TMP6]] to <4 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <4 x i32> [[TMP7]], <i32 213, i32 213, i32 213, i32 213>
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP7]], <4 x i32> <i32 22, i32 22, i32 22, i32 22>
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <4 x i32> [[TMP7]], splat (i32 213)
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP7]], <4 x i32> splat (i32 22)
 ; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -852,8 +852,8 @@ define void @sink_dominance(ptr %ptr, i32 %N) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[UMAX1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_NEXT:%.*]], [[LOOP]] ]
@@ -922,9 +922,9 @@ define void @sink_dominance_2(ptr %ptr, i32 %N) {
 ; CHECK-NEXT:    [[TMP5]] = zext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i64> [[TMP6]] to <4 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP8]], <i32 99, i32 99, i32 99, i32 99>
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt <4 x i32> [[TMP7]], <i32 213, i32 213, i32 213, i32 213>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], splat (i32 2)
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP8]], splat (i32 99)
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt <4 x i32> [[TMP7]], splat (i32 213)
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[TMP7]], <4 x i32> [[TMP9]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -935,8 +935,8 @@ define void @sink_dominance_2(ptr %ptr, i32 %N) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[UMAX1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_NEXT:%.*]], [[LOOP]] ]
@@ -1045,7 +1045,7 @@ define void @test_for_sink_instruction_after_same_incoming_1(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR1]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x double> <double 1.000000e+01, double 1.000000e+01, double 1.000000e+01, double 1.000000e+01>, [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x double> splat (double 1.000000e+01), [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x double> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    store <4 x double> [[TMP6]], ptr [[TMP2]], align 8
@@ -1057,9 +1057,9 @@ define void @test_for_sink_instruction_after_same_incoming_1(ptr %ptr) {
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 997, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1.000000e+01, [[ENTRY]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1.000000e+01, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT3:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT2]], [[MIDDLE_BLOCK]] ], [ 2.000000e+01, [[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 997, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi double [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
@@ -1114,7 +1114,7 @@ define void @test_for_sink_instruction_after_same_incoming_2(ptr %ptr) {
 ; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR1]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> <double 1.000000e+01, double 1.000000e+01, double 1.000000e+01, double 1.000000e+01>, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> splat (double 1.000000e+01), [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x double> [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    store <4 x double> [[TMP6]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -1125,9 +1125,9 @@ define void @test_for_sink_instruction_after_same_incoming_2(ptr %ptr) {
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 997, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 2.000000e+01, [[ENTRY]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 2.000000e+01, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT3:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT2]], [[MIDDLE_BLOCK]] ], [ 1.000000e+01, [[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 997, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi double [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]

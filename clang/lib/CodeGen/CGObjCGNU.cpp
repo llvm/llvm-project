@@ -26,7 +26,6 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtObjC.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/SmallVector.h"
@@ -774,7 +773,9 @@ class CGObjCGNUstep : public CGObjCGNU {
 
       // The lookup function is guaranteed not to capture the receiver pointer.
       if (auto *LookupFn2 = dyn_cast<llvm::Function>(LookupFn.getCallee()))
-        LookupFn2->addParamAttr(0, llvm::Attribute::NoCapture);
+        LookupFn2->addParamAttr(
+            0, llvm::Attribute::getWithCaptureInfo(CGF.getLLVMContext(),
+                                                   llvm::CaptureInfo::none()));
 
       llvm::Value *args[] = {
           EnforceType(Builder, ReceiverPtr.getPointer(), PtrToIdTy),
@@ -1509,8 +1510,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   GetSectionBounds(StringRef Section) {
     if (CGM.getTriple().isOSBinFormatCOFF()) {
       if (emptyStruct == nullptr) {
-        emptyStruct = llvm::StructType::create(VMContext, ".objc_section_sentinel");
-        emptyStruct->setBody({}, /*isPacked*/true);
+        emptyStruct = llvm::StructType::create(
+            VMContext, {}, ".objc_section_sentinel", /*isPacked=*/true);
       }
       auto ZeroInit = llvm::Constant::getNullValue(emptyStruct);
       auto Sym = [&](StringRef Prefix, StringRef SecSuffix) {

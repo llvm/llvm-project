@@ -150,9 +150,11 @@ Mat4X4 __attribute__((noinline)) foo(Mat3X3 in) {
 // AMDGCN20-NEXT:    [[IN_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN20-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN20-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_MAT4X4:%.*]], align 4, addrspace(5)
-// AMDGCN20-NEXT:    store ptr addrspace(1) [[IN]], ptr addrspace(5) [[IN_ADDR]], align 8
-// AMDGCN20-NEXT:    store ptr addrspace(1) [[OUT]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// AMDGCN20-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// AMDGCN20-NEXT:    [[IN_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[IN_ADDR]] to ptr
+// AMDGCN20-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// AMDGCN20-NEXT:    store ptr addrspace(1) [[IN]], ptr [[IN_ADDR_ASCAST]], align 8
+// AMDGCN20-NEXT:    store ptr addrspace(1) [[OUT]], ptr [[OUT_ADDR_ASCAST]], align 8
+// AMDGCN20-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // AMDGCN20-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_MAT4X4]], ptr addrspace(1) [[TMP0]], i64 0
 // AMDGCN20-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[IN_ADDR]], align 8
 // AMDGCN20-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_MAT3X3:%.*]], ptr addrspace(1) [[TMP1]], i64 1
@@ -319,9 +321,11 @@ Mat64X64 __attribute__((noinline)) foo_large(Mat32X32 in) {
 // AMDGCN20-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN20-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_MAT64X64:%.*]], align 4, addrspace(5)
 // AMDGCN20-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[STRUCT_MAT32X32:%.*]], align 4, addrspace(5)
-// AMDGCN20-NEXT:    store ptr addrspace(1) [[IN]], ptr addrspace(5) [[IN_ADDR]], align 8
-// AMDGCN20-NEXT:    store ptr addrspace(1) [[OUT]], ptr addrspace(5) [[OUT_ADDR]], align 8
-// AMDGCN20-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// AMDGCN20-NEXT:    [[IN_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[IN_ADDR]] to ptr
+// AMDGCN20-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// AMDGCN20-NEXT:    store ptr addrspace(1) [[IN]], ptr [[IN_ADDR_ASCAST]], align 8
+// AMDGCN20-NEXT:    store ptr addrspace(1) [[OUT]], ptr [[OUT_ADDR_ASCAST]], align 8
+// AMDGCN20-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // AMDGCN20-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_MAT64X64]], ptr addrspace(1) [[TMP0]], i64 0
 // AMDGCN20-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[IN_ADDR]], align 8
 // AMDGCN20-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_MAT32X32]], ptr addrspace(1) [[TMP1]], i64 1

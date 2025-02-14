@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_COMPARE_THREE_WAY_RESULT_H
-#define _LIBCPP___COMPARE_COMPARE_THREE_WAY_RESULT_H
+#ifndef _LIBCPP___CXX03___COMPARE_COMPARE_THREE_WAY_RESULT_H
+#define _LIBCPP___CXX03___COMPARE_COMPARE_THREE_WAY_RESULT_H
 
-#include <__config>
-#include <__type_traits/make_const_lvalue_ref.h>
-#include <__utility/declval.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/make_const_lvalue_ref.h>
+#include <__cxx03/__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,4 +42,4 @@ using compare_three_way_result_t = typename compare_three_way_result<_Tp, _Up>::
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_COMPARE_THREE_WAY_RESULT_H
+#endif // _LIBCPP___CXX03___COMPARE_COMPARE_THREE_WAY_RESULT_H

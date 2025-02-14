@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s  \
+# RUN: llc -run-pass=livedebugvalues -o - %s  \
 # RUN:  -experimental-debug-variable-locations=false \
 # RUN: | FileCheck %s --check-prefixes=CHECK,VARLOCLDV
 #

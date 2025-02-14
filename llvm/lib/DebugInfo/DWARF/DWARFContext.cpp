@@ -48,11 +48,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstdint>
 #include <deque>
 #include <map>
@@ -1871,7 +1869,7 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
           LineTable->getFileLineInfoForAddress(
               {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
               CU->getCompilationDir(), Spec.FLIKind, Frame);
-      } else {
+      } else if (CallLine != 0) {
         // Otherwise, use call file, call line and call column from
         // previous DIE in inlined chain.
         if (LineTable)

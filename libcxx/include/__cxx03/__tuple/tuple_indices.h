@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_MAKE_TUPLE_INDICES_H
-#define _LIBCPP___TUPLE_MAKE_TUPLE_INDICES_H
+#ifndef _LIBCPP___CXX03___TUPLE_MAKE_TUPLE_INDICES_H
+#define _LIBCPP___CXX03___TUPLE_MAKE_TUPLE_INDICES_H
 
-#include <__config>
-#include <__utility/integer_sequence.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/integer_sequence.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -34,4 +34,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_CXX03_LANG
 
-#endif // _LIBCPP___TUPLE_MAKE_TUPLE_INDICES_H
+#endif // _LIBCPP___CXX03___TUPLE_MAKE_TUPLE_INDICES_H

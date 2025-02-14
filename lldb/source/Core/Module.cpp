@@ -919,9 +919,8 @@ void Module::FindFunctions(const RegularExpression &regex,
               const SymbolContext &sc = sc_list[i];
               if (sc.block)
                 continue;
-              file_addr_to_index[sc.function->GetAddressRange()
-                                     .GetBaseAddress()
-                                     .GetFileAddress()] = i;
+              file_addr_to_index[sc.function->GetAddress().GetFileAddress()] =
+                  i;
             }
 
             FileAddrToIndexMap::const_iterator end = file_addr_to_index.end();
@@ -1607,6 +1606,14 @@ bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
   // SetArchitecture() is a no-op if m_arch is already valid.
   m_arch = ArchSpec();
   return SetArchitecture(merged_arch);
+}
+
+void Module::ResetStatistics() {
+  m_symtab_parse_time.reset();
+  m_symtab_index_time.reset();
+  SymbolFile *sym_file = GetSymbolFile();
+  if (sym_file)
+    sym_file->ResetStatistics();
 }
 
 llvm::VersionTuple Module::GetVersion() {

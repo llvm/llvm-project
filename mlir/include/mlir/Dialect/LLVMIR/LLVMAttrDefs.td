@@ -722,6 +722,22 @@ def LLVM_DICommonBlockAttr : LLVM_Attr<"DICommonBlock", "di_common_block",
 }
 
 //===----------------------------------------------------------------------===//
+// DIGenericSubrangeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIGenericSubrangeAttr : LLVM_Attr<"DIGenericSubrange",
+                                           "di_generic_subrange", /*traits=*/[],
+                                           "DINodeAttr"> {
+  let parameters = (ins
+    OptionalParameter<"::mlir::Attribute">:$count,
+    "::mlir::Attribute":$lowerBound,
+    OptionalParameter<"::mlir::Attribute">:$upperBound,
+    "::mlir::Attribute":$stride
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DISubroutineTypeAttr
 //===----------------------------------------------------------------------===//
 
@@ -809,7 +825,7 @@ def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
 def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
                                           "alias_scope_domain"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    "Attribute":$id,
     OptionalParameter<"StringAttr">:$description
   );
 
@@ -837,7 +853,7 @@ def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
 
 def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    "Attribute":$id,
     "AliasScopeDomainAttr":$domain,
     OptionalParameter<"StringAttr">:$description
   );
@@ -875,6 +891,8 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
     }
     ```
 
+    The first attribute can either be a DistinctAttr or a StringAttr.
+
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
   }];
@@ -882,6 +900,8 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
   let summary = "LLVM dialect alias scope";
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  let genVerifyDecl = 1;
 }
 
 def LLVM_AliasScopeArrayAttr

@@ -19,7 +19,6 @@
 #include "src/signal/raise.h"
 #include "src/signal/sigaction.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 #include <linux/time_types.h>
 #include <sys/syscall.h>

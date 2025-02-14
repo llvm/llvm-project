@@ -73,6 +73,43 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
          kind == CachePolicy::WRITE_BACK || kind == CachePolicy::WRITE_THROUGH;
 }
 
+// Validations for nd instruction arguments is successful if any of these are
+// true:
+// - tensor descriptor and the output vector shapes exactly match.
+// - tensor descriptor has a sg_map attribute and the distributed vector shape
+//   matches the tensor descriptor shape when scaled using sg_map factors on
+//   each dimension.
+static bool isArgShapesValid(ArrayRef<int64_t> descShape,
+                             ArrayRef<int64_t> valShape, SGMapAttr sgMap) {
+  // Equal shapes with no distribution - no further verification needed.
+  if (descShape == valShape && !sgMap)
+    return true;
+
+  // Unknown distribution - cannot perform operation on partial shape.
+  if (!sgMap)
+    return false;
+
+  // Invalid rank or mixed rank usage.
+  size_t descRank = descShape.size();
+  if (descRank > 2 || valShape.size() != descRank)
+    return false;
+
+  // For 1D, SG map is guaranteed to be unit size in the outer dimension.
+  // Only take the distribution over the innermost dimension for validation.
+  ArrayRef<uint32_t> wiLayout = sgMap.getWiLayout();
+  SmallVector<uint32_t> mapLayout(wiLayout.begin(), wiLayout.end());
+  if (descRank == 1)
+    mapLayout = {wiLayout.back()};
+
+  for (const auto &[factor, dim, expected] :
+       llvm::zip_equal(mapLayout, valShape, descShape)) {
+    if (factor * dim != expected)
+      return false;
+  }
+
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
@@ -91,6 +128,33 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
         ValueRange({}) /* empty dynamic strides */,
         staticOffsets /* const offsets */, {} /* empty const shape*/,
         {} /* empty const strides*/);
+}
+
+void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+                           Type tdesc, TypedValue<MemRefType> source,
+                           llvm::ArrayRef<OpFoldResult> offsets,
+                           llvm::ArrayRef<OpFoldResult> shape,
+                           llvm::ArrayRef<OpFoldResult> strides) {
+  assert(shape.size() && offsets.size() && strides.size() &&
+         shape.size() == strides.size() && shape.size() == offsets.size());
+
+  llvm::SmallVector<int64_t> staticOffsets;
+  llvm::SmallVector<int64_t> staticShape;
+  llvm::SmallVector<int64_t> staticStrides;
+  llvm::SmallVector<Value> dynamicOffsets;
+  llvm::SmallVector<Value> dynamicShape;
+  llvm::SmallVector<Value> dynamicStrides;
+
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
+  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
+
+  build(builder, state, tdesc, source, dynamicOffsets, dynamicShape,
+        dynamicStrides, staticOffsetsAttr, staticShapeAttr, staticStridesAttr);
 }
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
@@ -167,10 +231,6 @@ LogicalResult CreateNdDescOp::verify() {
   if (getType().isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
-  if (getType().getRank() == 2 &&
-      tdescMemorySpace == static_cast<unsigned>(MemorySpace::SLM))
-    return emitOpError("SLM is not supported for 2D Block TensorDesc.\n");
-
   return success();
 }
 
@@ -183,13 +243,13 @@ LogicalResult PrefetchNdOp::verify() {
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   return success();
 }
@@ -211,13 +271,13 @@ LogicalResult LoadNdOp::verify() {
     return emitOpError("Invalid result, it should be a VectorType.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto array_len = tdescTy.getArrayLength();
   auto tdescShape = getShapeOf(tdescTy);
@@ -234,7 +294,7 @@ LogicalResult LoadNdOp::verify() {
     if (valid)
       transpose(trans, tdescShape);
     else
-      emitWarning("Invalid transpose attr. It is ignored.");
+      mlir::emitWarning(getLoc()) << "Invalid transpose attr. It is ignored.";
   }
 
   if (getPacked()) {
@@ -244,8 +304,9 @@ LogicalResult LoadNdOp::verify() {
       tdescShape[axis] /= vnni_factor;
       tdescShape.push_back(vnni_factor);
     } else {
-      emitWarning("Invalid Packed Attr. It is ignored (available for 2D "
-                  "TensorDesc only).");
+      mlir::emitWarning(getLoc())
+          << "Invalid Packed Attr. It is ignored (available for 2D "
+             "TensorDesc only).";
     }
   }
 
@@ -253,8 +314,9 @@ LogicalResult LoadNdOp::verify() {
     auto it = tdescShape.begin();
     tdescShape.insert(it, array_len);
   }
+  auto sgMap = tdescTy.getSGMapAttr();
 
-  if (tdescShape != valueShape)
+  if (!isArgShapesValid(tdescShape, valueShape, sgMap))
     return emitOpError() << "Result shape doesn't match TensorDesc shape."
                          << "The expected shape is " << makeString(tdescShape)
                          << ". But the given shape is "
@@ -276,17 +338,26 @@ LogicalResult StoreNdOp::verify() {
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!valTy)
-    return emitOpError("Exepcting a VectorType result.\n");
+    return emitOpError("Expecting a VectorType result.\n");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isWriteHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isWriteHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
+  auto tdescShape = getShapeOf(dstTy);
+  auto valueShape = getShapeOf(valTy);
+  auto sgMap = dstTy.getSGMapAttr();
+
+  if (!isArgShapesValid(tdescShape, valueShape, sgMap))
+    return emitOpError() << "Result shape doesn't match TensorDesc shape."
+                         << "The expected shape is " << makeString(tdescShape)
+                         << ". But the given shape is "
+                         << makeString(valueShape) << ".\n";
   return success();
 }
 
@@ -348,16 +419,8 @@ LogicalResult CreateDescOp::verify() {
            << " Source: " << srcMemorySpace
            << ", TensorDesc: " << tdescMemorySpace;
 
-  auto chunkSize = tdescTy.getChunkSize();
-
-  // check chunk_size
-  llvm::SmallVector<int64_t> supportedChunkSizes = {1,  2,  3,  4,   8,
-                                                    16, 32, 64, 128, 256};
-  if (!llvm::is_contained(supportedChunkSizes, chunkSize))
-    return emitOpError("Invalid chunk_size. Supported values are 1, 2, 3, 4, "
-                       "8, 16, 32, 64, 128, or 256.");
-
   // check total size
+  auto chunkSize = tdescTy.getChunkSize();
   auto elemBits = tdescTy.getElementType().getIntOrFloatBitWidth();
   auto bitsPerLane = elemBits * chunkSize;
   if (chunkSize > 1 && bitsPerLane % 32) {
@@ -396,13 +459,13 @@ LogicalResult PrefetchOp::verify() {
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   return success();
 }
@@ -419,13 +482,13 @@ LogicalResult LoadGatherOp::verify() {
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto tdescElemTy = tdescTy.getElementType();
   auto valueElemTy = getElementType();
@@ -442,8 +505,21 @@ LogicalResult LoadGatherOp::verify() {
 
   if (tdescTy.getRank() == 2) {
     if (!getTransposeAttr())
-      return emitOpError("load_gather has to be transposed.");
+      return emitOpError("load of rank-2 tensor has to be transposed.");
     transpose({1, 0}, tdescShape);
+  }
+
+  if (auto sgMap = tdescTy.getSGMapAttr()) {
+    auto valueVecTy = cast<VectorType>(valueTy);
+    const int32_t wiData =
+        sgMap.getWiData()[0] > 1 ? sgMap.getWiData()[0] : sgMap.getWiData()[1];
+    // All represent the same concept: a number of row elements to store.
+    if (valueVecTy.getNumElements() != wiData ||
+        valueVecTy.getNumElements() != tdescTy.getChunkSize()) {
+      return emitOpError("Chunk size, vector size and wi_data must match.");
+    }
+    // Work-item's slice (i.e., vector shape to load) is [1] or [1, chunk_size].
+    tdescShape[tdescTy.getRank() - 1] = 1;
   }
 
   if (valueShape != tdescShape)
@@ -463,13 +539,13 @@ LogicalResult StoreScatterOp::verify() {
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isWriteHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isWriteHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
@@ -481,8 +557,21 @@ LogicalResult StoreScatterOp::verify() {
 
   if (tdescTy.getRank() == 2) {
     if (!getTransposeAttr())
-      return emitOpError("load_gather has to be transposed.");
+      return emitOpError("Store of a rank-2 tensor has to be transposed.");
     transpose({1, 0}, tdescShape);
+  }
+
+  if (auto sgMap = tdescTy.getSGMapAttr()) {
+    auto valueVecTy = cast<VectorType>(valueTy);
+    const int32_t wiData =
+        sgMap.getWiData()[0] > 1 ? sgMap.getWiData()[0] : sgMap.getWiData()[1];
+    // All represent the same concept: a number of row elements to store.
+    if (valueVecTy.getNumElements() != wiData ||
+        valueVecTy.getNumElements() != tdescTy.getChunkSize()) {
+      return emitOpError("Chunk size, vector size and wi_data must match.");
+    }
+    // Work-item's slice (i.e., vector to store) is [1] or [1, chunk_size].
+    tdescShape[tdescTy.getRank() - 1] = 1;
   }
 
   if (valueShape != tdescShape)

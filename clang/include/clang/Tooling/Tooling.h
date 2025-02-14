@@ -223,7 +223,11 @@ buildASTFromCode(StringRef Code, StringRef FileName = "input.cc",
 /// \param PCHContainerOps The PCHContainerOperations for loading and creating
 /// clang modules.
 ///
-/// \param Adjuster A function to filter the command line arguments as specified.
+/// \param Adjuster A function to filter the command line arguments as
+/// specified.
+///
+/// \param BaseFS FileSystem for managing and looking up files.
+/// VirtualMappedFiles takes precedence.
 ///
 /// \return The resulting AST or null if an error occurred.
 std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
@@ -233,7 +237,9 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
         std::make_shared<PCHContainerOperations>(),
     ArgumentsAdjuster Adjuster = getClangStripDependencyFileAdjuster(),
     const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
-    DiagnosticConsumer *DiagConsumer = nullptr);
+    DiagnosticConsumer *DiagConsumer = nullptr,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
+        llvm::vfs::getRealFileSystem());
 
 /// Utility to run a FrontendAction in a single clang invocation.
 class ToolInvocation {

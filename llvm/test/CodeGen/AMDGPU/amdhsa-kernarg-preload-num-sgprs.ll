@@ -1,18 +1,18 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 < %s | FileCheck --check-prefix=ASM %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck --check-prefix=ASM %s
 
 ; OBJDUMP: Contents of section .rodata:
 ; OBJDUMP-NEXT: 0000 00000000 00000000 10010000 00000000  ................
 ; OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000  ................
 ; OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000000  ................
 ; OBJDUMP-NOT:  0030 0000af00 94130000 1a000400 00000000  ................
-; OBJDUMP-NEXT: 0030 4000af00 94130000 1a000400 00000000  @...............
+; OBJDUMP-NEXT: 0030 8000af00 98130000 1e000400 00000000  ................
 
 ; ASM-LABEL: amdhsa_kernarg_preload_4_implicit_6:
-; ASM: .amdhsa_user_sgpr_count 10
-; ASM: .amdhsa_next_free_sgpr 10
-; ASM: ; TotalNumSgprs: 16
-; ASM: ; NumSGPRsForWavesPerEU: 16
+; ASM: .amdhsa_user_sgpr_count 12
+; ASM: .amdhsa_next_free_sgpr 12
+; ASM: ; TotalNumSgprs: 18
+; ASM: ; NumSGPRsForWavesPerEU: 18
 
 ; Test that we include preloaded SGPRs in the GRANULATED_WAVEFRONT_SGPR_COUNT
 ; feild that are not explicitly referenced in the kernel. This test has 6 implicit

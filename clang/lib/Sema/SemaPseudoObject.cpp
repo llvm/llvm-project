@@ -36,9 +36,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
-#include "llvm/ADT/SmallString.h"
 
 using namespace clang;
 using namespace sema;

@@ -20,7 +20,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -52,7 +51,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <optional>
@@ -920,9 +918,9 @@ void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
         for (auto *NewMI : NewMIs)
           MBB.insert(MI.getIterator(), NewMI);
 
-        // Update the call site info.
-        if (MI.isCandidateForCallSiteEntry())
-          MF.eraseCallSiteInfo(&MI);
+        // Update the call info.
+        if (MI.isCandidateForAdditionalCallInfo())
+          MF.eraseAdditionalCallInfo(&MI);
 
         MI.eraseFromParent();
         LLVM_DEBUG({

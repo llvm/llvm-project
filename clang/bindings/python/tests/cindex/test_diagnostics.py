@@ -1,14 +1,13 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import Config, Diagnostic
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
-from clang.cindex import *
-from .util import get_tu
-
 import unittest
 
+from .util import get_tu
 
 # FIXME: We need support for invalid translation units to test better.
 

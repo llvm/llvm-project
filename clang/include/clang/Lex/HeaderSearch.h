@@ -108,16 +108,6 @@ struct HeaderFileInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned Resolved : 1;
 
-  /// Whether this is a header inside a framework that is currently
-  /// being built.
-  ///
-  /// When a framework is being built, the headers have not yet been placed
-  /// into the appropriate framework subdirectories, and therefore are
-  /// provided via a header map. This bit indicates when this is one of
-  /// those framework headers.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IndexHeaderMapHeader : 1;
-
   /// Whether this file has been looked up as a header.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;
@@ -132,15 +122,11 @@ struct HeaderFileInfo {
   /// external storage.
   LazyIdentifierInfoPtr LazyControllingMacro;
 
-  /// If this header came from a framework include, this is the name
-  /// of the framework.
-  StringRef Framework;
-
   HeaderFileInfo()
       : IsLocallyIncluded(false), isImport(false), isPragmaOnce(false),
         DirInfo(SrcMgr::C_User), External(false), isModuleHeader(false),
         isTextualModuleHeader(false), isCompilingModuleHeader(false),
-        Resolved(false), IndexHeaderMapHeader(false), IsValid(false) {}
+        Resolved(false), IsValid(false) {}
 
   /// Retrieve the controlling macro for this header file, if
   /// any.
@@ -153,6 +139,8 @@ struct HeaderFileInfo {
   /// isTextualModuleHeader will be set or cleared based on the role update.
   void mergeModuleMembership(ModuleMap::ModuleHeaderRole Role);
 };
+
+static_assert(sizeof(HeaderFileInfo) <= 16);
 
 /// An external source of header file information, which may supply
 /// information about header files already included.

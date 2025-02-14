@@ -14,6 +14,27 @@
 
 namespace mlir {
 
+//===----------------------------------------------------------------------===//
+// Helper Functions
+//===----------------------------------------------------------------------===//
+
+/// Find or create an external function declaration in the given module.
+LLVM::LLVMFuncOp getOrDefineFunction(gpu::GPUModuleOp moduleOp, Location loc,
+                                     OpBuilder &b, StringRef name,
+                                     LLVM::LLVMFunctionType type);
+
+/// Create a global that contains the given string. If a global with the same
+/// string already exists in the module, return that global.
+LLVM::GlobalOp getOrCreateStringConstant(OpBuilder &b, Location loc,
+                                         gpu::GPUModuleOp moduleOp, Type llvmI8,
+                                         StringRef namePrefix, StringRef str,
+                                         uint64_t alignment = 0,
+                                         unsigned addrSpace = 0);
+
+//===----------------------------------------------------------------------===//
+// Lowering Patterns
+//===----------------------------------------------------------------------===//
+
 /// Lowering for gpu.dynamic.shared.memory to LLVM dialect. The pattern first
 /// create a 0-sized global array symbol similar as LLVM expects. It constructs
 /// a memref descriptor with these values and return it.

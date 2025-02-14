@@ -6,27 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_ROTATE_H
-#define _LIBCPP___ALGORITHM_RANGES_ROTATE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_ROTATE_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_ROTATE_H
 
-#include <__algorithm/iterator_operations.h>
-#include <__algorithm/ranges_iterator_concept.h>
-#include <__algorithm/rotate.h>
-#include <__config>
-#include <__iterator/concepts.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/permutable.h>
-#include <__ranges/access.h>
-#include <__ranges/concepts.h>
-#include <__ranges/subrange.h>
-#include <__utility/move.h>
+#include <__cxx03/__algorithm/iterator_operations.h>
+#include <__cxx03/__algorithm/ranges_iterator_concept.h>
+#include <__cxx03/__algorithm/rotate.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__iterator/permutable.h>
+#include <__cxx03/__ranges/access.h>
+#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__ranges/subrange.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 20
 
@@ -68,4 +68,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_ROTATE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_ROTATE_H

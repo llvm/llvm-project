@@ -451,7 +451,7 @@ static std::optional<Value> allocateSubviewGPUMemoryInAddressSpace(
     shape.push_back(value.getSExtValue());
   }
 
-  builder.setInsertionPoint(&funcOp.front(), funcOp.front().begin());
+  builder.setInsertionPointToStart(&funcOp.front());
   auto type = MemRefType::get(
       shape, subview.getType().getElementType(), MemRefLayoutAttrInterface{},
       gpu::AddressSpaceAttr::get(builder.getContext(), addressSpace));

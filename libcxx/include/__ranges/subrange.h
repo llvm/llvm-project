@@ -17,6 +17,7 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/different_from.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/subrange.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
@@ -40,7 +41,6 @@
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -82,7 +82,7 @@ private:
   struct _Empty {
     _LIBCPP_HIDE_FROM_ABI constexpr _Empty(auto) noexcept {}
   };
-  using _Size = conditional_t<_StoreSize, make_unsigned_t<iter_difference_t<_Iter>>, _Empty>;
+  using _Size _LIBCPP_NODEBUG = conditional_t<_StoreSize, make_unsigned_t<iter_difference_t<_Iter>>, _Empty>;
   _LIBCPP_NO_UNIQUE_ADDRESS _Iter __begin_ = _Iter();
   _LIBCPP_NO_UNIQUE_ADDRESS _Sent __end_   = _Sent();
   _LIBCPP_NO_UNIQUE_ADDRESS _Size __size_  = 0;

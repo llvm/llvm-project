@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_AFFINE_PASSES_H
 #define MLIR_DIALECT_AFFINE_PASSES_H
 
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include <limits>
 
@@ -43,10 +44,6 @@ createSimplifyAffineStructuresPass();
 /// operations out of affine loops.
 std::unique_ptr<OperationPass<func::FuncOp>>
 createAffineLoopInvariantCodeMotionPass();
-
-/// Creates a pass to convert all parallel affine.for's into 1-d affine.parallel
-/// ops.
-std::unique_ptr<OperationPass<func::FuncOp>> createAffineParallelizePass();
 
 /// Apply normalization transformations to affine loop-like ops. If
 /// `promoteSingleIter` is true, single iteration loops are promoted (i.e., the
@@ -97,7 +94,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLoopTilingPass();
 /// factors supplied through other means. If -1 is passed as the unrollFactor
 /// and no callback is provided, anything passed from the command-line (if at
 /// all) or the default unroll factor is used (LoopUnroll:kDefaultUnrollFactor).
-std::unique_ptr<OperationPass<func::FuncOp>> createLoopUnrollPass(
+std::unique_ptr<InterfacePass<FunctionOpInterface>> createLoopUnrollPass(
     int unrollFactor = -1, bool unrollUpToFactor = false,
     bool unrollFull = false,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr);
@@ -115,6 +112,10 @@ std::unique_ptr<OperationPass<func::FuncOp>> createPipelineDataTransferPass();
 /// Creates a pass to expand affine index operations into more fundamental
 /// operations (not necessarily restricted to Affine dialect).
 std::unique_ptr<Pass> createAffineExpandIndexOpsPass();
+
+/// Creates a pass to expand affine index operations into affine.apply
+/// operations.
+std::unique_ptr<Pass> createAffineExpandIndexOpsAsAffinePass();
 
 //===----------------------------------------------------------------------===//
 // Registration

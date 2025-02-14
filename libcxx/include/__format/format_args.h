@@ -11,10 +11,10 @@
 #define _LIBCPP___FORMAT_FORMAT_ARGS_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
 #include <__fwd/format.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

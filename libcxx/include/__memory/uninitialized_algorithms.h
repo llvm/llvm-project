@@ -15,16 +15,19 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/unwrap_range.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
+#include <__memory/destroy.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_relocatable.h>
@@ -35,7 +38,6 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -375,7 +377,7 @@ __allocator_destroy_multidimensional(_Alloc& __alloc, _BidirIter __first, _Bidir
     return;
 
   if constexpr (is_array_v<_ValueType>) {
-    static_assert(!__libcpp_is_unbounded_array<_ValueType>::value,
+    static_assert(!__is_unbounded_array_v<_ValueType>,
                   "arrays of unbounded arrays don't exist, but if they did we would mess up here");
 
     using _Element = remove_extent_t<_ValueType>;
@@ -510,14 +512,6 @@ __uninitialized_allocator_value_construct_n_multidimensional(_Alloc& __alloc, _B
 
 #endif // _LIBCPP_STD_VER >= 17
 
-// Destroy all elements in [__first, __last) from left to right using allocator destruction.
-template <class _Alloc, class _Iter, class _Sent>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-__allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
-  for (; __first != __last; ++__first)
-    allocator_traits<_Alloc>::destroy(__alloc, std::__to_address(__first));
-}
-
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {
 public:
@@ -584,9 +578,9 @@ __uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* 
 template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
 __uninitialized_allocator_copy(_Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
-  auto __unwrapped_range = std::__unwrap_range(__first1, __last1);
+  auto __unwrapped_range = std::__unwrap_range(std::move(__first1), std::move(__last1));
   auto __result          = std::__uninitialized_allocator_copy_impl(
-      __alloc, __unwrapped_range.first, __unwrapped_range.second, std::__unwrap_iter(__first2));
+      __alloc, std::move(__unwrapped_range.first), std::move(__unwrapped_range.second), std::__unwrap_iter(__first2));
   return std::__rewrap_iter(__first2, __result);
 }
 
@@ -611,26 +605,28 @@ struct __allocator_has_trivial_destroy<allocator<_Tp>, _Up> : true_type {};
 //                 [__first, __last) doesn't contain any objects
 //
 // The strong exception guarantee is provided if any of the following are true:
-// - is_nothrow_move_constructible<_Tp>
-// - is_copy_constructible<_Tp>
-// - __libcpp_is_trivially_relocatable<_Tp>
-template <class _Alloc, class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__uninitialized_allocator_relocate(_Alloc& __alloc, _Tp* __first, _Tp* __last, _Tp* __result) {
+// - is_nothrow_move_constructible<_ValueType>
+// - is_copy_constructible<_ValueType>
+// - __libcpp_is_trivially_relocatable<_ValueType>
+template <class _Alloc, class _ContiguousIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocator_relocate(
+    _Alloc& __alloc, _ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
+  static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
+  using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
   static_assert(__is_cpp17_move_insertable<_Alloc>::value,
                 "The specified type does not meet the requirements of Cpp17MoveInsertable");
-  if (__libcpp_is_constant_evaluated() || !__libcpp_is_trivially_relocatable<_Tp>::value ||
-      !__allocator_has_trivial_move_construct<_Alloc, _Tp>::value ||
-      !__allocator_has_trivial_destroy<_Alloc, _Tp>::value) {
+  if (__libcpp_is_constant_evaluated() || !__libcpp_is_trivially_relocatable<_ValueType>::value ||
+      !__allocator_has_trivial_move_construct<_Alloc, _ValueType>::value ||
+      !__allocator_has_trivial_destroy<_Alloc, _ValueType>::value) {
     auto __destruct_first = __result;
-    auto __guard =
-        std::__make_exception_guard(_AllocatorDestroyRangeReverse<_Alloc, _Tp*>(__alloc, __destruct_first, __result));
+    auto __guard          = std::__make_exception_guard(
+        _AllocatorDestroyRangeReverse<_Alloc, _ContiguousIterator>(__alloc, __destruct_first, __result));
     auto __iter = __first;
     while (__iter != __last) {
 #if _LIBCPP_HAS_EXCEPTIONS
-      allocator_traits<_Alloc>::construct(__alloc, __result, std::move_if_noexcept(*__iter));
+      allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move_if_noexcept(*__iter));
 #else
-      allocator_traits<_Alloc>::construct(__alloc, __result, std::move(*__iter));
+      allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move(*__iter));
 #endif
       ++__iter;
       ++__result;
@@ -638,7 +634,10 @@ __uninitialized_allocator_relocate(_Alloc& __alloc, _Tp* __first, _Tp* __last, _
     __guard.__complete();
     std::__allocator_destroy(__alloc, __first, __last);
   } else {
-    __builtin_memcpy(__result, __first, sizeof(_Tp) * (__last - __first));
+    // Casting to void* to suppress clang complaining that this is technically UB.
+    __builtin_memcpy(static_cast<void*>(std::__to_address(__result)),
+                     std::__to_address(__first),
+                     sizeof(_ValueType) * (__last - __first));
   }
 }
 

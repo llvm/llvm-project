@@ -22,7 +22,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -268,12 +267,6 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     // Skip implicit registers (this includes our scratch registers)
     if (MOI->isImplicit())
       return ++MOI;
-
-    if (MOI->isUndef()) {
-      // Record `undef` register as constant. Use same value as ISel uses.
-      Locs.emplace_back(Location::Constant, sizeof(int64_t), 0, 0xFEFEFEFE);
-      return ++MOI;
-    }
 
     assert(MOI->getReg().isPhysical() &&
            "Virtreg operands should have been rewritten before now.");

@@ -363,9 +363,3 @@ void fir::populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
   patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
       patterns.getContext(), forceLoopToExecuteOnce, setNSW);
 }
-
-std::unique_ptr<mlir::Pass> fir::createCFGConversionPassWithoutNSW() {
-  fir::CFGConversionOptions options;
-  options.setNSW = false;
-  return fir::createCFGConversion(options);
-}

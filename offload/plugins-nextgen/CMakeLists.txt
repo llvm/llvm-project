@@ -12,6 +12,7 @@ function(add_target_library target_name lib_name)
       CodeGen
       Core
       Extensions
+      FrontendOffloading
       InstCombine
       Instrumentation
       IPO
@@ -20,6 +21,7 @@ function(add_target_library target_name lib_name)
       MC
       Object
       Passes
+      ProfileData
       Remarks
       ScalarOpts
       Support

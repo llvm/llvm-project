@@ -66,7 +66,7 @@ define <2 x i32> @and_xor_common_op_commute3(<2 x i32> %pa, <2 x i32> %pb) {
 ; CHECK-SAME: (<2 x i32> [[PA:%.*]], <2 x i32> [[PB:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = udiv <2 x i32> <i32 42, i32 43>, [[PA]]
 ; CHECK-NEXT:    [[B:%.*]] = udiv <2 x i32> <i32 43, i32 42>, [[PB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[B]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[B]], splat (i32 -1)
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -83,7 +83,7 @@ define <2 x i32> @and_xor_common_op_commute3(<2 x i32> %pa, <2 x i32> %pb) {
 define <4 x i32> @and_xor_common_op_constant(<4 x i32> %A) {
 ; CHECK-LABEL: define {{[^@]+}}@and_xor_common_op_constant
 ; CHECK-SAME: (<4 x i32> [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -388,10 +388,9 @@ define i8 @xor_shl(i8 %x, i8 %y, i8 %zarg, i8 %shamt) {
 ; CHECK-LABEL: define {{[^@]+}}@xor_shl
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[ZARG:%.*]], i8 [[SHAMT:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = sdiv i8 42, [[ZARG]]
-; CHECK-NEXT:    [[SX:%.*]] = shl i8 [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[SY:%.*]] = shl i8 [[Y]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = xor i8 [[Z]], [[SX]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], [[SY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP2]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %z = sdiv i8 42, %zarg ; thwart complexity-based canonicalization
@@ -406,10 +405,9 @@ define i8 @and_lshr(i8 %x, i8 %y, i8 %zarg, i8 %shamt) {
 ; CHECK-LABEL: define {{[^@]+}}@and_lshr
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[ZARG:%.*]], i8 [[SHAMT:%.*]]) {
 ; CHECK-NEXT:    [[Z:%.*]] = sdiv i8 42, [[ZARG]]
-; CHECK-NEXT:    [[SX:%.*]] = lshr i8 [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[SY:%.*]] = lshr i8 [[Y]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[Z]], [[SX]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[SY]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP2]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %z = sdiv i8 42, %zarg ; thwart complexity-based canonicalization
@@ -432,6 +430,51 @@ define i8 @or_lshr(i8 %x, i8 %y, i8 %z, i8 %shamt) {
   %sy = lshr i8 %y, %shamt
   %a = or i8 %sx, %z
   %r = or i8 %sy, %a
+  ret i8 %r
+}
+
+define i8 @or_lshr_commuted1(i8 %x, i8 %y, i8 %z, i8 %shamt) {
+; CHECK-LABEL: define {{[^@]+}}@or_lshr_commuted1
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[TMP2]], [[Z]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = lshr i8 %x, %shamt
+  %sy = lshr i8 %y, %shamt
+  %a = or i8 %z, %sx
+  %r = or i8 %sy, %a
+  ret i8 %r
+}
+
+define i8 @or_lshr_commuted2(i8 %x, i8 %y, i8 %z, i8 %shamt) {
+; CHECK-LABEL: define {{[^@]+}}@or_lshr_commuted2
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[TMP2]], [[Z]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = lshr i8 %x, %shamt
+  %sy = lshr i8 %y, %shamt
+  %a = or i8 %z, %sx
+  %r = or i8 %a, %sy
+  ret i8 %r
+}
+
+define i8 @or_lshr_commuted3(i8 %x, i8 %y, i8 %z, i8 %shamt) {
+; CHECK-LABEL: define {{[^@]+}}@or_lshr_commuted3
+; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[TMP2]], [[Z]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sx = lshr i8 %x, %shamt
+  %sy = lshr i8 %y, %shamt
+  %a = or i8 %sx, %z
+  %r = or i8 %a, %sy
   ret i8 %r
 }
 
@@ -740,9 +783,9 @@ define i32 @not_and_and_not(i32 %a0, i32 %b, i32 %c) {
 define <4 x i64> @not_and_and_not_4i64(<4 x i64> %a0, <4 x i64> %b, <4 x i64> %c) {
 ; CHECK-LABEL: define {{[^@]+}}@not_and_and_not_4i64
 ; CHECK-SAME: (<4 x i64> [[A0:%.*]], <4 x i64> [[B:%.*]], <4 x i64> [[C:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = sdiv <4 x i64> <i64 42, i64 42, i64 42, i64 42>, [[A0]]
+; CHECK-NEXT:    [[A:%.*]] = sdiv <4 x i64> splat (i64 42), [[A0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i64> [[B]], [[C]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i64> [[TMP1]], <i64 -1, i64 -1, i64 -1, i64 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i64> [[TMP1]], splat (i64 -1)
 ; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i64> [[A]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i64> [[AND2]]
 ;
@@ -835,9 +878,9 @@ define i32 @not_or_or_not(i32 %a0, i32 %b, i32 %c) {
 define <2 x i6> @not_or_or_not_2i6(<2 x i6> %a0, <2 x i6> %b, <2 x i6> %c) {
 ; CHECK-LABEL: define {{[^@]+}}@not_or_or_not_2i6
 ; CHECK-SAME: (<2 x i6> [[A0:%.*]], <2 x i6> [[B:%.*]], <2 x i6> [[C:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = sdiv <2 x i6> <i6 3, i6 3>, [[A0]]
+; CHECK-NEXT:    [[A:%.*]] = sdiv <2 x i6> splat (i6 3), [[A0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i6> [[B]], [[C]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i6> [[TMP1]], <i6 -1, i6 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i6> [[TMP1]], splat (i6 -1)
 ; CHECK-NEXT:    [[OR2:%.*]] = or <2 x i6> [[A]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i6> [[OR2]]
 ;
@@ -4013,7 +4056,7 @@ define i4 @and_orn_xor(i4 %a, i4 %b) {
 define <2 x i4> @and_orn_xor_commute1(<2 x i4> %a, <2 x i4> %b) {
 ; CHECK-LABEL: define {{[^@]+}}@and_orn_xor_commute1
 ; CHECK-SAME: (<2 x i4> [[A:%.*]], <2 x i4> [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[A]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[A]], splat (i4 -1)
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i4> [[B]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
@@ -4392,8 +4435,8 @@ define i32 @canonicalize_logic_first_or0_nswnuw(i32 %x) {
 define <2 x i32> @canonicalize_logic_first_or_vector0(<2 x i32> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or_vector0
 ; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 15, i32 15>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], <i32 112, i32 112>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], splat (i32 15)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], splat (i32 112)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = add <2 x i32> <i32 112, i32 112>, %x ; <0x00000070, 0x00000070>
@@ -4404,8 +4447,8 @@ define <2 x i32> @canonicalize_logic_first_or_vector0(<2 x i32> %x) {
 define <2 x i32> @canonicalize_logic_first_or_vector0_nsw(<2 x i32> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or_vector0_nsw
 ; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 15, i32 15>
-; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 112, i32 112>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], splat (i32 15)
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[TMP1]], splat (i32 112)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = add nsw <2 x i32> <i32 112, i32 112>, %x ; <0x00000070, 0x00000070>
@@ -4416,8 +4459,8 @@ define <2 x i32> @canonicalize_logic_first_or_vector0_nsw(<2 x i32> %x) {
 define <2 x i32> @canonicalize_logic_first_or_vector0_nswnuw(<2 x i32> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or_vector0_nswnuw
 ; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 15, i32 15>
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i32> [[TMP1]], <i32 112, i32 112>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], splat (i32 15)
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i32> [[TMP1]], splat (i32 112)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = add nsw nuw <2 x i32> <i32 112, i32 112>, %x ; <0x00000070, 0x00000070>
@@ -4538,8 +4581,8 @@ define i8 @canonicalize_logic_first_and0_nswnuw(i8 %x) {
 define <2 x i8> @canonicalize_logic_first_and_vector0(<2 x i8> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_vector0
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], <i8 -10, i8 -10>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], <i8 48, i8 48>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], splat (i8 -10)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], splat (i8 48)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> <i8 48, i8 48>, %x
@@ -4550,8 +4593,8 @@ define <2 x i8> @canonicalize_logic_first_and_vector0(<2 x i8> %x) {
 define <2 x i8> @canonicalize_logic_first_and_vector0_nsw(<2 x i8> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_vector0_nsw
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], <i8 -10, i8 -10>
-; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[TMP1]], <i8 48, i8 48>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], splat (i8 -10)
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[TMP1]], splat (i8 48)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add nsw <2 x i8> <i8 48, i8 48>, %x
@@ -4562,8 +4605,8 @@ define <2 x i8> @canonicalize_logic_first_and_vector0_nsw(<2 x i8> %x) {
 define <2 x i8> @canonicalize_logic_first_and_vector0_nswnuw(<2 x i8> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_vector0_nswnuw
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], <i8 -10, i8 -10>
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i8> [[TMP1]], <i8 48, i8 48>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], splat (i8 -10)
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i8> [[TMP1]], splat (i8 48)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add nsw nuw <2 x i8> <i8 48, i8 48>, %x
@@ -4589,7 +4632,7 @@ define <2 x i8> @canonicalize_logic_first_and_vector1(<2 x i8> %x) {
 define <2 x i32> @canonicalize_logic_first_and_vector2(<2 x i32> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_vector2
 ; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], <i32 612368384, i32 612368384>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], splat (i32 612368384)
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[A]], <i32 -65536, i32 -32768>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -4675,8 +4718,8 @@ define i8 @canonicalize_logic_first_xor_0_nswnuw(i8 %x) {
 define <2 x i32> @canonicalize_logic_first_xor_vector0(<2 x i32> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_vector0
 ; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X]], <i32 32783, i32 32783>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], <i32 -8388608, i32 -8388608>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X]], splat (i32 32783)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], splat (i32 -8388608)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = add <2 x i32> <i32 -8388608, i32 -8388608>, %x ; <0xFF800000, 0xFF800000>
@@ -4687,8 +4730,8 @@ define <2 x i32> @canonicalize_logic_first_xor_vector0(<2 x i32> %x) {
 define <2 x i32> @canonicalize_logic_first_xor_vector0_nsw(<2 x i32> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_vector0_nsw
 ; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X]], <i32 32783, i32 32783>
-; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 -8388608, i32 -8388608>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X]], splat (i32 32783)
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[TMP1]], splat (i32 -8388608)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = add nsw <2 x i32> <i32 -8388608, i32 -8388608>, %x ; <0xFF800000, 0xFF800000>
@@ -4699,8 +4742,8 @@ define <2 x i32> @canonicalize_logic_first_xor_vector0_nsw(<2 x i32> %x) {
 define <2 x i32> @canonicalize_logic_first_xor_vector0_nswnuw(<2 x i32> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_vector0_nswnuw
 ; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X]], <i32 32783, i32 32783>
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i32> [[TMP1]], <i32 -8388608, i32 -8388608>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X]], splat (i32 32783)
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i32> [[TMP1]], splat (i32 -8388608)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = add nsw nuw <2 x i32> <i32 -8388608, i32 -8388608>, %x ; <0xFF800000, 0xFF800000>

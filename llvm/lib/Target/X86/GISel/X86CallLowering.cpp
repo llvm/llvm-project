@@ -43,7 +43,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include <cassert>
 #include <cstdint>
 

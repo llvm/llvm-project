@@ -59,7 +59,7 @@ define void @inv_val_store_to_inv_address_conditional_diff_values_ic(ptr %a, i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[I1]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I2]], [[K]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[I1]], align 4
@@ -134,12 +134,12 @@ define void @inv_val_store_to_inv_address_conditional_inv(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX2]], 9223372036854775804
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i1> poison, i1 [[CMP]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[NTRUNC]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i1> poison, i1 [[CMP]], i64 3
-; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = insertelement <4 x i32> poison, i32 [[K]], i64 3
+; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = insertelement <4 x i32> poison, i32 [[K]], i64 0
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[BROADCAST_SPLAT]], <4 x i32> [[BROADCAST_SPLAT6]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -157,7 +157,7 @@ define void @inv_val_store_to_inv_address_conditional_inv(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[I1]], align 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_STORE:%.*]], label [[COND_STORE_K:%.*]]
 ; CHECK:       cond_store:
@@ -247,7 +247,7 @@ define i32 @variant_val_store_to_inv_address(ptr %a, i64 %n, ptr %b, i32 %k) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[I0:%.*]] = phi i32 [ [[I3:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[I1]], align 8
 ; CHECK-NEXT:    store i32 [[I2]], ptr [[A]], align 4
 ; CHECK-NEXT:    [[I3]] = add i32 [[I0]], [[I2]]

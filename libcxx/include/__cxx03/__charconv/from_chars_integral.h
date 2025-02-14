@@ -7,29 +7,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_FROM_CHARS_INTEGRAL_H
-#define _LIBCPP___CHARCONV_FROM_CHARS_INTEGRAL_H
+#ifndef _LIBCPP___CXX03___CHARCONV_FROM_CHARS_INTEGRAL_H
+#define _LIBCPP___CXX03___CHARCONV_FROM_CHARS_INTEGRAL_H
 
-#include <__algorithm/copy_n.h>
-#include <__assert>
-#include <__charconv/from_chars_result.h>
-#include <__charconv/traits.h>
-#include <__config>
-#include <__memory/addressof.h>
-#include <__system_error/errc.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_unsigned.h>
-#include <__type_traits/make_unsigned.h>
-#include <limits>
+#include <__cxx03/__algorithm/copy_n.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__charconv/from_chars_result.h>
+#include <__cxx03/__charconv/traits.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__system_error/errc.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/is_unsigned.h>
+#include <__cxx03/__type_traits/make_unsigned.h>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -155,9 +155,9 @@ __from_chars_atoi(const char* __first, const char* __last, _Tp& __value) {
 
 /*
 // Code used to generate __from_chars_log2f_lut.
-#include <cmath>
-#include <format>
-#include <iostream>
+#include <__cxx03/cmath>
+#include <__cxx03/format>
+#include <__cxx03/iostream>
 
 int main() {
   for (int i = 2; i <= 36; ++i)
@@ -237,4 +237,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHARCONV_FROM_CHARS_INTEGRAL_H
+#endif // _LIBCPP___CXX03___CHARCONV_FROM_CHARS_INTEGRAL_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CTYPE_H
-#define _LIBCPP_CTYPE_H
+#ifndef _LIBCPP___CXX03_CTYPE_H
+#define _LIBCPP___CXX03_CTYPE_H
 
 /*
     ctype.h synopsis
@@ -29,7 +29,7 @@ int tolower(int c);
 int toupper(int c);
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -58,4 +58,4 @@ int toupper(int c);
 
 #endif
 
-#endif // _LIBCPP_CTYPE_H
+#endif // _LIBCPP___CXX03_CTYPE_H

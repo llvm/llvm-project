@@ -61,8 +61,8 @@ define i32 @test_debug_loc_on_branch_in_loop(ptr noalias %src, ptr noalias %dst)
 ; CHECK-LABEL: define i32 @test_debug_loc_on_branch_in_loop(
 ; CHECK-LABEL: vector.body:
 ; CHECK:        [[LOAD:%.+]] = load <2 x i32>, ptr {{.+}}, align 4
-; CHECK-NEXT:   [[CMP:%.+]] = icmp eq <2 x i32> [[LOAD]], <i32 10, i32 10>
-; CHECK-NEXT:   [[XOR:%.+]] = xor <2 x i1> [[CMP:%.+]], <i1 true, i1 true>, !dbg [[LOC3:!.+]]
+; CHECK-NEXT:   [[CMP:%.+]] = icmp eq <2 x i32> [[LOAD]], splat (i32 10)
+; CHECK-NEXT:   [[XOR:%.+]] = xor <2 x i1> [[CMP:%.+]], splat (i1 true), !dbg [[LOC3:!.+]]
 ; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[XOR]], i32 0, !dbg [[LOC3]]
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue
 ; CHECK-NOT:  !dbg
@@ -101,8 +101,8 @@ define i32 @test_different_debug_loc_on_replicate_recipe(ptr noalias %src, ptr n
 ; CHECK-LABEL: define i32 @test_different_debug_loc_on_replicate_recipe(
 ; CHECK-LABEL: vector.body:
 ; CHECK:        [[LOAD:%.+]] = load <2 x i32>, ptr {{.+}}, align 4
-; CHECK-NEXT:   [[CMP:%.+]] = icmp eq <2 x i32> [[LOAD]], <i32 10, i32 10>
-; CHECK-NEXT:   [[XOR:%.+]] = xor <2 x i1> [[CMP:%.+]], <i1 true, i1 true>, !dbg [[LOC4:!.+]]
+; CHECK-NEXT:   [[CMP:%.+]] = icmp eq <2 x i32> [[LOAD]], splat (i32 10)
+; CHECK-NEXT:   [[XOR:%.+]] = xor <2 x i1> [[CMP:%.+]], splat (i1 true), !dbg [[LOC4:!.+]]
 ; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[XOR]], i32 0, !dbg [[LOC4]]
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue
 ; CHECK-NOT:  !dbg
@@ -146,7 +146,7 @@ define void @test_misc(ptr nocapture %a, ptr noalias %b, i64 %size) !dbg !35 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr %b, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <2 x i32> [[WIDE_LOAD]], <i32 10, i32 10>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <2 x i32> [[WIDE_LOAD]], splat (i32 10)
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[WIDE_LOAD]], <2 x i32> zeroinitializer, !dbg [[LOC6:![0-9]+]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0, !dbg [[LOC7:![0-9]+]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[TMP6]], align 4, !dbg [[LOC7]]

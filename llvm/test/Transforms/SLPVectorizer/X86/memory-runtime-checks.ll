@@ -116,7 +116,7 @@ then:
 %struct.wombat.0 = type { %struct.bar }
 %struct.bar = type { [3 x double], [3 x double], double, double, i16, ptr, i32, [3 x double] }
 
-define double @preserve_loop_info(ptr %arg) {
+define double @preserve_loop_info(ptr %arg, i1 %arg2) {
 ; CHECK-LABEL: @preserve_loop_info(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [3 x double], align 16
@@ -124,15 +124,15 @@ define double @preserve_loop_info(ptr %arg) {
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
-; CHECK-NEXT:    br i1 undef, label [[OUTER_LATCH:%.*]], label [[INNER]]
+; CHECK-NEXT:    br i1 %arg2, label [[OUTER_LATCH:%.*]], label [[INNER]]
 ; CHECK:       outer.latch:
-; CHECK-NEXT:    br i1 undef, label [[BB:%.*]], label [[OUTER_HEADER]]
+; CHECK-NEXT:    br i1 %arg2, label [[BB:%.*]], label [[OUTER_HEADER]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [3 x double], ptr [[TMP]], i64 0, i64 1
 ; CHECK-NEXT:    br label [[LOOP_3HEADER:%.*]]
 ; CHECK:       loop.3header:
-; CHECK-NEXT:    br i1 undef, label [[LOOP_3LATCH:%.*]], label [[BB9:%.*]]
+; CHECK-NEXT:    br i1 %arg2, label [[LOOP_3LATCH:%.*]], label [[BB9:%.*]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [3 x double], ptr [[TMP5]], i64 undef, i64 1
 ; CHECK-NEXT:    store double undef, ptr [[TMP]], align 16
@@ -140,7 +140,7 @@ define double @preserve_loop_info(ptr %arg) {
 ; CHECK-NEXT:    store double [[TMP12]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    br label [[LOOP_3LATCH]]
 ; CHECK:       loop.3latch:
-; CHECK-NEXT:    br i1 undef, label [[BB14:%.*]], label [[LOOP_3HEADER]]
+; CHECK-NEXT:    br i1 %arg2, label [[BB14:%.*]], label [[LOOP_3HEADER]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call double undef(ptr [[TMP]], ptr [[ARG:%.*]])
 ; CHECK-NEXT:    ret double undef
@@ -153,10 +153,10 @@ outer.header:                                              ; preds = %bb3, %bb
   br label %inner
 
 inner:
-  br i1 undef, label %outer.latch, label %inner
+  br i1 %arg2, label %outer.latch, label %inner
 
 outer.latch:                                              ; preds = %bb16
-  br i1 undef, label %bb, label %outer.header
+  br i1 %arg2, label %bb, label %outer.header
 
 bb:                                              ; preds = %bb3
   %tmp5 = load ptr, ptr undef, align 8
@@ -164,7 +164,7 @@ bb:                                              ; preds = %bb3
   br label %loop.3header
 
 loop.3header:                                              ; preds = %bb13, %bb4
-  br i1 undef, label %loop.3latch, label %bb9
+  br i1 %arg2, label %loop.3latch, label %bb9
 
 bb9:                                              ; preds = %bb8
   %tmp10 = getelementptr inbounds [3 x double], ptr %tmp5, i64 undef, i64 1
@@ -174,7 +174,7 @@ bb9:                                              ; preds = %bb8
   br label %loop.3latch
 
 loop.3latch:                                             ; preds = %bb11, %bb8
-  br i1 undef, label %bb14, label %loop.3header
+  br i1 %arg2, label %bb14, label %loop.3header
 
 bb14:                                             ; preds = %bb13
   %tmp15 = call double undef(ptr %tmp, ptr %arg)

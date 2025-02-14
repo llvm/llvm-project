@@ -261,7 +261,7 @@ define i32 @zero_x86_avx2_pmovmskb() {
 
 define i32 @fold_x86_mmx_pmovmskb() {
 ; CHECK-LABEL: @fold_x86_mmx_pmovmskb(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.mmx.pmovmskb(<1 x i64> <i64 18084223940296448>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.mmx.pmovmskb(<1 x i64> splat (i64 18084223940296448))
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = bitcast <8 x i8> <i8 0, i8 255, i8 -1, i8 127, i8 -127, i8 63, i8 64, i8 256> to <1 x i64>

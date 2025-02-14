@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_HH_MM_SS_H
-#define _LIBCPP___CHRONO_HH_MM_SS_H
+#ifndef _LIBCPP___CXX03___CHRONO_HH_MM_SS_H
+#define _LIBCPP___CXX03___CHRONO_HH_MM_SS_H
 
-#include <__chrono/duration.h>
-#include <__chrono/time_point.h>
-#include <__config>
-#include <__type_traits/common_type.h>
-#include <ratio>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__chrono/time_point.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/common_type.h>
+#include <__cxx03/ratio>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -109,4 +109,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___CHRONO_HH_MM_SS_H
+#endif // _LIBCPP___CXX03___CHRONO_HH_MM_SS_H

@@ -32,7 +32,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Unicode.h"
@@ -528,7 +527,7 @@ bool Lexer::getRawToken(SourceLocation Loc, Token &Result,
 
   const char *StrData = Buffer.data()+LocInfo.second;
 
-  if (!IgnoreWhiteSpace && isWhitespace(StrData[0]))
+  if (!IgnoreWhiteSpace && isWhitespace(SkipEscapedNewLines(StrData)[0]))
     return true;
 
   // Create a lexer starting at the beginning of this token.
@@ -1324,7 +1323,8 @@ const char *Lexer::SkipEscapedNewLines(const char *P) {
 
 std::optional<Token> Lexer::findNextToken(SourceLocation Loc,
                                           const SourceManager &SM,
-                                          const LangOptions &LangOpts) {
+                                          const LangOptions &LangOpts,
+                                          bool IncludeComments) {
   if (Loc.isMacroID()) {
     if (!Lexer::isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
       return std::nullopt;
@@ -1345,10 +1345,32 @@ std::optional<Token> Lexer::findNextToken(SourceLocation Loc,
   // Lex from the start of the given location.
   Lexer lexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
                                       TokenBegin, File.end());
+  lexer.SetCommentRetentionState(IncludeComments);
   // Find the token.
   Token Tok;
   lexer.LexFromRawLexer(Tok);
   return Tok;
+}
+
+std::optional<Token> Lexer::findPreviousToken(SourceLocation Loc,
+                                              const SourceManager &SM,
+                                              const LangOptions &LangOpts,
+                                              bool IncludeComments) {
+  const auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Loc));
+  while (Loc != StartOfFile) {
+    Loc = Loc.getLocWithOffset(-1);
+    if (Loc.isInvalid())
+      return std::nullopt;
+
+    Loc = GetBeginningOfToken(Loc, SM, LangOpts);
+    Token Tok;
+    if (getRawToken(Loc, Tok, SM, LangOpts))
+      continue; // Not a token, go to prev location.
+    if (!Tok.is(tok::comment) || IncludeComments) {
+      return Tok;
+    }
+  }
+  return std::nullopt;
 }
 
 /// Checks that the given token is the first token that occurs after the

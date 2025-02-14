@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_PARSER_STD_FORMAT_SPEC_H
-#define _LIBCPP___FORMAT_PARSER_STD_FORMAT_SPEC_H
+#ifndef _LIBCPP___CXX03___FORMAT_PARSER_STD_FORMAT_SPEC_H
+#define _LIBCPP___CXX03___FORMAT_PARSER_STD_FORMAT_SPEC_H
 
 /// \file Contains the std-format-spec parser.
 ///
@@ -16,35 +16,35 @@
 /// This header has some support for the chrono-format-spec since it doesn't
 /// affect the std-format-spec.
 
-#include <__algorithm/copy_n.h>
-#include <__algorithm/min.h>
-#include <__assert>
-#include <__concepts/arithmetic.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__format/format_arg.h>
-#include <__format/format_error.h>
-#include <__format/format_parse_context.h>
-#include <__format/format_string.h>
-#include <__format/unicode.h>
-#include <__format/width_estimation_table.h>
-#include <__iterator/concepts.h>
-#include <__iterator/iterator_traits.h> // iter_value_t
-#include <__memory/addressof.h>
-#include <__type_traits/common_type.h>
-#include <__type_traits/is_constant_evaluated.h>
-#include <__type_traits/is_trivially_copyable.h>
-#include <__variant/monostate.h>
-#include <cstdint>
-#include <string>
-#include <string_view>
+#include <__cxx03/__algorithm/copy_n.h>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__format/format_arg.h>
+#include <__cxx03/__format/format_error.h>
+#include <__cxx03/__format/format_parse_context.h>
+#include <__cxx03/__format/format_string.h>
+#include <__cxx03/__format/unicode.h>
+#include <__cxx03/__format/width_estimation_table.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/iterator_traits.h> // iter_value_t
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__type_traits/common_type.h>
+#include <__cxx03/__type_traits/is_constant_evaluated.h>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
+#include <__cxx03/__variant/monostate.h>
+#include <__cxx03/cstdint>
+#include <__cxx03/string>
+#include <__cxx03/string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -1169,4 +1169,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_PARSER_STD_FORMAT_SPEC_H
+#endif // _LIBCPP___CXX03___FORMAT_PARSER_STD_FORMAT_SPEC_H

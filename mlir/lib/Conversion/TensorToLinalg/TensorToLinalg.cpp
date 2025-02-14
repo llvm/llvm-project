@@ -25,5 +25,7 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 void mlir::populateTensorToLinalgPatterns(RewritePatternSet &patterns) {
-  patterns.add<mlir::linalg::GeneralizePadOpPattern>(patterns.getContext());
+  // TODO: Add the remaining patterns, e.g. to decompose Pack/Unpack Ops.
+  // Alternatively, delete this file.
+  patterns.add<mlir::linalg::DecomposePadOpPattern>(patterns.getContext());
 }

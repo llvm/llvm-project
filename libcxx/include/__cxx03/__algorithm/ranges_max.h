@@ -6,23 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_MAX_H
-#define _LIBCPP___ALGORITHM_RANGES_MAX_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_MAX_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_MAX_H
 
-#include <__algorithm/ranges_min_element.h>
-#include <__assert>
-#include <__concepts/copyable.h>
-#include <__config>
-#include <__functional/identity.h>
-#include <__functional/invoke.h>
-#include <__functional/ranges_operations.h>
-#include <__iterator/concepts.h>
-#include <__iterator/projected.h>
-#include <__ranges/access.h>
-#include <__ranges/concepts.h>
-#include <__type_traits/is_trivially_copyable.h>
-#include <__utility/move.h>
-#include <initializer_list>
+#include <__cxx03/__algorithm/ranges_min_element.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__concepts/copyable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__functional/ranges_operations.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/projected.h>
+#include <__cxx03/__ranges/access.h>
+#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,7 +31,7 @@
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+#  include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -100,4 +100,4 @@ _LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___ALGORITHM_RANGES_MAX_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_MAX_H

@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_TUPLE_LIKE_H
-#define _LIBCPP___TUPLE_TUPLE_LIKE_H
+#ifndef _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_H
+#define _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_H
 
-#include <__config>
-#include <__fwd/subrange.h>
-#include <__tuple/tuple_like_no_subrange.h>
-#include <__tuple/tuple_size.h>
-#include <__type_traits/remove_cvref.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/subrange.h>
+#include <__cxx03/__tuple/tuple_like_no_subrange.h>
+#include <__cxx03/__tuple/tuple_size.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -39,4 +39,4 @@ concept __tuple_like = __tuple_like_no_subrange<_Tp> || __is_ranges_subrange_v<r
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TUPLE_TUPLE_LIKE_H
+#endif // _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_H

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass amode-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass amode-opt %s -o - | FileCheck %s
 
 # This testcase used to crash.
 # CHECK: S2_storerb_io killed $r0, @var_i8, killed $r2

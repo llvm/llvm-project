@@ -4,7 +4,8 @@
 // Compile the MLIR file to LLVM:
 // RUN: mlir-opt %t/input.mlir \
 // RUN:  -lower-affine  -convert-scf-to-cf  -finalize-memref-to-llvm \
-// RUN:  -convert-func-to-llvm -reconcile-unrealized-casts \
+// RUN:  -convert-func-to-llvm -convert-arith-to-llvm -convert-cf-to-llvm \
+// RUN:  -reconcile-unrealized-casts \
 // RUN: | mlir-translate --mlir-to-llvmir -o %t.ll
 
 // Generate an object file for the MLIR code

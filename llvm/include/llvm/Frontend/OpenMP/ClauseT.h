@@ -238,8 +238,11 @@ struct MapperT {
 // When used as arguments for other clauses, e.g. `fail`.
 ENUM(MemoryOrder, AcqRel, Acquire, Relaxed, Release, SeqCst);
 ENUM(MotionExpectation, Present);
+// Union of `dependence-type` and `task-depenence-type`.
 // V5.2: [15.9.1] `task-dependence-type` modifier
-ENUM(TaskDependenceType, In, Out, Inout, Mutexinoutset, Inoutset, Depobj);
+ENUM(DependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
+     Source);
+ENUM(Prescriptiveness, Strict);
 
 template <typename I, typename E> //
 struct LoopIterationT {
@@ -382,15 +385,13 @@ struct AllocatorT;
 // V5.2: [6.6] `allocate` clause
 template <typename T, typename I, typename E> //
 struct AllocateT {
-  using AllocatorSimpleModifier = E;
+  // AllocatorSimpleModifier is same as AllocatorComplexModifier.
   using AllocatorComplexModifier = AllocatorT<T, I, E>;
   using AlignModifier = AlignT<T, I, E>;
   using List = ObjectListT<I, E>;
 
   using TupleTrait = std::true_type;
-  std::tuple<OPT(AllocatorSimpleModifier), OPT(AllocatorComplexModifier),
-             OPT(AlignModifier), List>
-      t;
+  std::tuple<OPT(AllocatorComplexModifier), OPT(AlignModifier), List> t;
 };
 
 // V5.2: [6.4] `allocator` clause
@@ -488,7 +489,7 @@ template <typename T, typename I, typename E> //
 struct DefaultmapT {
   ENUM(ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default,
        Present);
-  ENUM(VariableCategory, Scalar, Aggregate, Pointer, Allocatable);
+  ENUM(VariableCategory, All, Scalar, Aggregate, Pointer, Allocatable);
   using TupleTrait = std::true_type;
   std::tuple<ImplicitBehavior, OPT(VariableCategory)> t;
 };
@@ -501,17 +502,17 @@ template <typename T, typename I, typename E> //
 struct DependT {
   using Iterator = type::IteratorT<T, I, E>;
   using LocatorList = ObjectListT<I, E>;
-  using TaskDependenceType = tomp::type::TaskDependenceType;
+  using DependenceType = tomp::type::DependenceType;
 
-  struct WithLocators { // Modern form
+  struct TaskDep { // The form with task dependence type.
     using TupleTrait = std::true_type;
     // Empty LocatorList means "omp_all_memory".
-    std::tuple<TaskDependenceType, OPT(Iterator), LocatorList> t;
+    std::tuple<DependenceType, OPT(Iterator), LocatorList> t;
   };
 
   using Doacross = DoacrossT<T, I, E>;
   using UnionTrait = std::true_type;
-  std::variant<Doacross, WithLocators> u; // Doacross form is legacy
+  std::variant<Doacross, TaskDep> u; // Doacross form is legacy
 };
 
 // V5.2: [3.5] `destroy` clause
@@ -561,7 +562,7 @@ struct DistScheduleT {
 template <typename T, typename I, typename E> //
 struct DoacrossT {
   using Vector = ListT<type::LoopIterationT<I, E>>;
-  ENUM(DependenceType, Source, Sink);
+  using DependenceType = tomp::type::DependenceType;
   using TupleTrait = std::true_type;
   // Empty Vector means "omp_cur_iteration"
   std::tuple<DependenceType, Vector> t;
@@ -643,7 +644,7 @@ struct FullT {
 // V5.2: [12.6.1] `grainsize` clause
 template <typename T, typename I, typename E> //
 struct GrainsizeT {
-  ENUM(Prescriptiveness, Strict);
+  using Prescriptiveness = type::Prescriptiveness;
   using GrainSize = E;
   using TupleTrait = std::true_type;
   std::tuple<OPT(Prescriptiveness), GrainSize> t;
@@ -757,15 +758,13 @@ template <typename T, typename I, typename E> //
 struct LinearT {
   // std::get<type> won't work here due to duplicate types in the tuple.
   using List = ObjectListT<I, E>;
-  using StepSimpleModifier = E;
+  // StepSimpleModifier is same as StepComplexModifier.
   using StepComplexModifier = E;
   ENUM(LinearModifier, Ref, Val, Uval);
 
   using TupleTrait = std::true_type;
   // Step == nullopt means 1.
-  std::tuple<OPT(StepSimpleModifier), OPT(StepComplexModifier),
-             OPT(LinearModifier), List>
-      t;
+  std::tuple<OPT(StepComplexModifier), OPT(LinearModifier), List> t;
 };
 
 // V5.2: [5.8.5] `link` clause
@@ -847,6 +846,12 @@ struct NoOpenmpRoutinesT {
   using EmptyTrait = std::true_type;
 };
 
+// V6.0: [10.6.1] `assumption` clauses
+template <typename T, typename I, typename E> //
+struct NoOpenmpConstructsT {
+  using EmptyTrait = std::true_type;
+};
+
 // V5.2: [8.3.1] `assumption` clauses
 template <typename T, typename I, typename E> //
 struct NoParallelismT {
@@ -876,8 +881,8 @@ struct NowaitT {
 // V5.2: [12.6.2] `num_tasks` clause
 template <typename T, typename I, typename E> //
 struct NumTasksT {
+  using Prescriptiveness = type::Prescriptiveness;
   using NumTasks = E;
-  ENUM(Prescriptiveness, Strict);
   using TupleTrait = std::true_type;
   std::tuple<OPT(Prescriptiveness), NumTasks> t;
 };
@@ -1161,9 +1166,9 @@ struct UntiedT {
 // V5.2: [15.9.3] `update` clause
 template <typename T, typename I, typename E> //
 struct UpdateT {
-  using TaskDependenceType = tomp::type::TaskDependenceType;
+  using DependenceType = tomp::type::DependenceType;
   using WrapperTrait = std::true_type;
-  OPT(TaskDependenceType) v;
+  OPT(DependenceType) v;
 };
 
 // V5.2: [14.1.3] `use` clause
@@ -1240,7 +1245,7 @@ using EmptyClausesT = std::variant<
     ReverseOffloadT<T, I, E>, SeqCstT<T, I, E>, SimdT<T, I, E>,
     ThreadsT<T, I, E>, UnifiedAddressT<T, I, E>, UnifiedSharedMemoryT<T, I, E>,
     UnknownT<T, I, E>, UntiedT<T, I, E>, UseT<T, I, E>, WeakT<T, I, E>,
-    WriteT<T, I, E>>;
+    WriteT<T, I, E>, NoOpenmpConstructsT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using IncompleteClausesT =

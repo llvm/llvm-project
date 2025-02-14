@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_PREDICATE_H
-#define _LIBCPP___CONCEPTS_PREDICATE_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_PREDICATE_H
+#define _LIBCPP___CXX03___CONCEPTS_PREDICATE_H
 
-#include <__concepts/boolean_testable.h>
-#include <__concepts/invocable.h>
-#include <__config>
-#include <__functional/invoke.h>
+#include <__cxx03/__concepts/boolean_testable.h>
+#include <__cxx03/__concepts/invocable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/invoke.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,4 +31,4 @@ concept predicate = regular_invocable<_Fn, _Args...> && __boolean_testable<invok
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_PREDICATE_H
+#endif // _LIBCPP___CXX03___CONCEPTS_PREDICATE_H

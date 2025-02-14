@@ -8,7 +8,6 @@
 
 #include "ByteCodeEmitter.h"
 #include "Context.h"
-#include "FixedPoint.h"
 #include "Floating.h"
 #include "IntegralAP.h"
 #include "Opcode.h"
@@ -16,7 +15,6 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/Basic/Builtins.h"
 #include <type_traits>
 
 using namespace clang;
@@ -137,11 +135,9 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
   if (!Func) {
-    unsigned BuiltinID = FuncDecl->getBuiltinID();
-    Func =
-        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                         std::move(ParamDescriptors), std::move(ParamOffsets),
-                         HasThisPointer, HasRVO, BuiltinID);
+    Func = P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                            std::move(ParamDescriptors),
+                            std::move(ParamOffsets), HasThisPointer, HasRVO);
   }
 
   assert(Func);
@@ -214,8 +210,7 @@ Function *ByteCodeEmitter::compileObjCBlock(const BlockExpr *BE) {
   Function *Func =
       P.createFunction(BE, ParamOffset, std::move(ParamTypes),
                        std::move(ParamDescriptors), std::move(ParamOffsets),
-                       /*HasThisPointer=*/false, /*HasRVO=*/false,
-                       /*IsUnevaluatedBuiltin=*/false);
+                       /*HasThisPointer=*/false, /*HasRVO=*/false);
 
   assert(Func);
   Func->setDefined(true);
@@ -330,6 +325,12 @@ void emit(Program &P, std::vector<std::byte> &Code,
 
 template <>
 void emit(Program &P, std::vector<std::byte> &Code, const IntegralAP<true> &Val,
+          bool &Success) {
+  emitSerialized(Code, Val, Success);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const FixedPoint &Val,
           bool &Success) {
   emitSerialized(Code, Val, Success);
 }

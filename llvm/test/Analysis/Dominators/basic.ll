@@ -1,6 +1,6 @@
 ; RUN: opt < %s -disable-output -passes='print<domtree>' 2>&1 | FileCheck %s
 
-define void @test1() {
+define void @test1(i1 %arg) {
 ; CHECK-LABEL: DominatorTree for function: test1
 ; CHECK:      [1] %entry
 ; CHECK-NEXT:   [2] %a
@@ -10,7 +10,7 @@ define void @test1() {
 ; CHECK-NEXT:   [2] %b
 
 entry:
-  br i1 undef, label %a, label %b
+  br i1 %arg, label %a, label %b
 
 a:
   br label %c
@@ -19,7 +19,7 @@ b:
   br label %c
 
 c:
-  br i1 undef, label %d, label %e
+  br i1 %arg, label %d, label %e
 
 d:
   ret void
@@ -28,7 +28,7 @@ e:
   ret void
 }
 
-define void @test2() {
+define void @test2(i1 %arg) {
 ; CHECK-LABEL: DominatorTree for function: test2
 ; CHECK:      [1] %entry
 ; CHECK-NEXT:   [2] %a
@@ -44,13 +44,13 @@ a:
   br label %b
 
 b:
-  br i1 undef, label %a, label %c
+  br i1 %arg, label %a, label %c
 
 c:
-  br i1 undef, label %d, label %ret
+  br i1 %arg, label %d, label %ret
 
 d:
-  br i1 undef, label %a, label %ret
+  br i1 %arg, label %a, label %ret
 
 ret:
   ret void

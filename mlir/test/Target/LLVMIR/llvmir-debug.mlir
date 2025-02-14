@@ -115,6 +115,9 @@ llvm.func @func_with_debug(%arg: i64) {
   // CHECK: call void @func_no_debug(), !dbg ![[FILE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc("foo.mlir":1:2)
 
+  // CHECK: call void @func_no_debug(), !dbg ![[FILE_LOC:[0-9]+]]
+  llvm.call @func_no_debug() : () -> () loc("foo.mlir":1:2 to 5:6)
+
   // CHECK: call void @func_no_debug(), !dbg ![[NAMED_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc("named"("foo.mlir":10:10))
 
@@ -591,28 +594,40 @@ llvm.func @fn_with_composite() {
 
 // -----
 
-// Test that Subrange works with expression and variables.
+// Test that Subrange/generic_subrange works with expression and variables.
 
 #bt = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
 #file = #llvm.di_file<"debug-info.ll" in "/">
 #cu = #llvm.di_compile_unit<id = distinct[1]<>,
  sourceLanguage = DW_LANG_Fortran95, file = #file, isOptimized = false,
  emissionKind = Full>
+#exp1 =  #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16),
+ DW_OP_deref]>
 #comp_ty1 = #llvm.di_composite_type<tag = DW_TAG_array_type,
  name = "expr_elements", baseType = #bt, flags = Vector,
- elements = #llvm.di_subrange<count = #llvm.di_expression<
- [DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>>>
-#srty = #llvm.di_subroutine_type<types = #bt, #comp_ty1>
+ elements = #llvm.di_subrange<count = #exp1>>
+#exp2 =  #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(24),
+ DW_OP_deref]>
+#exp3 =  #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(32),
+ DW_OP_deref]>
+#comp_ty2 = #llvm.di_composite_type<tag = DW_TAG_array_type,
+ name = "expr_elements2", baseType = #bt, elements =
+ #llvm.di_generic_subrange<count = #exp1, lowerBound = #exp2, stride = #exp3>>
+#srty = #llvm.di_subroutine_type<types = #bt, #comp_ty1, #comp_ty2>
 #sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "subranges",
   file = #file, subprogramFlags = Definition, type = #srty>
 #lvar = #llvm.di_local_variable<scope = #sp, name = "size">
 #gv = #llvm.di_global_variable<scope = #cu, name = "gv", file = #file,
  line = 3, type = #bt>
 #gve = #llvm.di_global_variable_expression<var = #gv, expr = <>>
-#comp_ty2 = #llvm.di_composite_type<tag = DW_TAG_array_type,
+#comp_ty3 = #llvm.di_composite_type<tag = DW_TAG_array_type,
  name = "var_elements", baseType = #bt, flags = Vector,
  elements = #llvm.di_subrange<count = #lvar, stride = #gv>>
-#lvar2 = #llvm.di_local_variable<scope = #sp, name = "var", type = #comp_ty2>
+#comp_ty4 = #llvm.di_composite_type<tag = DW_TAG_array_type,
+ name = "var_elements2", baseType = #bt, elements =
+ #llvm.di_generic_subrange<count = #lvar, lowerBound = #gv, stride = #gv>>
+#lvar2 = #llvm.di_local_variable<scope = #sp, name = "var", type = #comp_ty3>
+#lvar3 = #llvm.di_local_variable<scope = #sp, name = "var1", type = #comp_ty4>
 #loc1 = loc("test.f90": 1:1)
 #loc2 = loc(fused<#sp>[#loc1])
 
@@ -620,6 +635,7 @@ llvm.mlir.global external @gv() {dbg_exprs = [#gve]} : i64
 
 llvm.func @subranges(%arg: !llvm.ptr) {
   llvm.intr.dbg.declare #lvar2 = %arg : !llvm.ptr
+  llvm.intr.dbg.declare #lvar3 = %arg : !llvm.ptr
   llvm.return
 } loc(#loc2)
 
@@ -628,11 +644,19 @@ llvm.func @subranges(%arg: !llvm.ptr) {
 // CHECK: !DICompositeType(tag: DW_TAG_array_type, name: "expr_elements"{{.*}}elements: ![[ELEMENTS1:[0-9]+]])
 // CHECK: ![[ELEMENTS1]] = !{![[ELEMENT1:[0-9]+]]}
 // CHECK: ![[ELEMENT1]] = !DISubrange(count: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 16, DW_OP_deref))
+// CHECK: !DICompositeType(tag: DW_TAG_array_type, name: "expr_elements2"{{.*}}elements: ![[GSR_ELEMS:[0-9]+]])
+// CHECK: ![[GSR_ELEMS]] = !{![[GSR_ELEM:[0-9]+]]}
+// CHECK: ![[GSR_ELEM]] = !DIGenericSubrange(count: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 16, DW_OP_deref)
+// CHECK-SAME: lowerBound: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 24, DW_OP_deref)
+// CHECK-SAME: stride: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 32, DW_OP_deref)
 
 // CHECK: !DICompositeType(tag: DW_TAG_array_type, name: "var_elements"{{.*}}elements: ![[ELEMENTS2:[0-9]+]])
 // CHECK: ![[ELEMENTS2]] = !{![[ELEMENT2:[0-9]+]]}
-// CHECK: ![[ELEMENT2]] = !DISubrange(count: ![[LV:[0-9]+]], stride: ![[GV:[0-9]+]])
+// CHECK: ![[ELEMENT2]] = !DISubrange(count: ![[LV:[0-9]+]], stride: ![[GV]])
 // CHECK: ![[LV]] = !DILocalVariable(name: "size"{{.*}})
+// CHECK: !DICompositeType(tag: DW_TAG_array_type, name: "var_elements2", baseType: !{{.*}}, elements: ![[GSR_ELEMS2:[0-9]+]])
+// CHECK: ![[GSR_ELEMS2]] = !{![[GSR_ELEM2:[0-9]+]]}
+// CHECK: ![[GSR_ELEM2]] = !DIGenericSubrange(count: ![[LV]], lowerBound: ![[GV]], stride: ![[GV]])
 
 // -----
 

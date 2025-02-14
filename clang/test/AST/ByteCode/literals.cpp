@@ -194,7 +194,7 @@ namespace PointerComparison {
   constexpr void *qv = (void*)&s.b;
   constexpr bool v1 = null < (int*)0;
   constexpr bool v2 = null < pv; // both-error {{must be initialized by a constant expression}} \
-                                 // both-note {{comparison between 'nullptr' and '&s.a' has unspecified value}}
+                                 // both-note {{comparison between pointers to unrelated objects 'nullptr' and '&s.a' has unspecified value}}
 
   constexpr bool v3 = null == pv; // ok
   constexpr bool v4 = qv == pv; // ok
@@ -202,7 +202,7 @@ namespace PointerComparison {
   constexpr bool v5 = qv >= pv;
   constexpr bool v8 = qv > (void*)&s.a;
   constexpr bool v6 = qv > null; // both-error {{must be initialized by a constant expression}} \
-                                 // both-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
+                                 // both-note {{comparison between pointers to unrelated objects '&s.b' and 'nullptr' has unspecified value}}
 
   constexpr bool v7 = qv <= (void*)&s.b; // ok
 
@@ -261,31 +261,26 @@ namespace SizeOf {
   }
 
 #if __cplusplus >= 201402L
-  constexpr int IgnoredRejected() { // ref-error {{never produces a constant expression}}
+  constexpr int IgnoredRejected() { // both-error {{never produces a constant expression}}
     int n = 0;
     sizeof(int[n++]); // both-warning {{expression result unused}} \
-                      // ref-note 2{{subexpression not valid in a constant expression}}
+                      // both-note 2{{subexpression not valid in a constant expression}}
     return n;
   }
-  /// FIXME: This is rejected because the parameter so sizeof() is not constant.
-  ///   produce a proper diagnostic.
   static_assert(IgnoredRejected() == 0, ""); // both-error {{not an integral constant expression}} \
-                                             // ref-note {{in call to 'IgnoredRejected()'}}
+                                             // both-note {{in call to 'IgnoredRejected()'}}
 #endif
 
 
 #if __cplusplus >= 202002L
   /// FIXME: The following code should be accepted.
-  consteval int foo(int n) { // ref-error {{consteval function never produces a constant expression}}
-    return sizeof(int[n]); // ref-note 3{{not valid in a constant expression}}
+  consteval int foo(int n) { // both-error {{consteval function never produces a constant expression}}
+    return sizeof(int[n]); // both-note 3{{not valid in a constant expression}}
   }
-  constinit int var = foo(5); // ref-error {{not a constant expression}} \
-                              // ref-note 2{{in call to}} \
-                              // ref-error {{does not have a constant initializer}} \
-                              // ref-note {{required by 'constinit' specifier}} \
-                              // expected-error  {{is not a constant expression}} \
-                              // expected-error {{does not have a constant initializer}} \
-                              // expected-note {{required by 'constinit' specifier}} \
+  constinit int var = foo(5); // both-error {{not a constant expression}} \
+                              // both-note 2{{in call to}} \
+                              // both-error {{does not have a constant initializer}} \
+                              // both-note {{required by 'constinit' specifier}}
 
 #endif
 };
@@ -919,12 +914,18 @@ namespace TypeTraits {
 }
 
 #if __cplusplus >= 201402L
+namespace SomeNS {
+  using MyInt = int;
+}
+
 constexpr int ignoredDecls() {
   static_assert(true, "");
   struct F { int a; };
   enum E { b };
   using A = int;
   typedef int Z;
+  namespace NewNS = SomeNS;
+  using NewNS::MyInt;
 
   return F{12}.a;
 }
@@ -980,6 +981,8 @@ namespace DiscardExprs {
     __uuidof(number); // both-error {{cannot call operator __uuidof on a type with no GUID}}
 
     requires{false;};
+    constexpr int *p = nullptr;
+    p - p;
 
     return 0;
   }
@@ -1318,3 +1321,12 @@ namespace {
   }
 }
 #endif
+
+void localConstexpr() {
+  constexpr int a = 1/0; // both-error {{must be initialized by a constant expression}} \
+                         // both-note {{division by zero}} \
+                         // both-warning {{division by zero is undefined}} \
+                         // both-note {{declared here}}
+  static_assert(a == 0, ""); // both-error {{not an integral constant expression}} \
+                             // both-note {{initializer of 'a' is not a constant expression}}
+}

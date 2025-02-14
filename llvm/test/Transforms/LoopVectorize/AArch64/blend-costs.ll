@@ -27,7 +27,7 @@ define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <16 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <16 x i1> [[TMP6]], <16 x i1> zeroinitializer, <16 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <16 x i1> [[TMP6]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP8:%.*]] = xor <16 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <16 x i1> [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP7]], <16 x ptr> [[BROADCAST_SPLAT]], <16 x ptr> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i1> [[TMP9]], i32 0
@@ -209,6 +209,7 @@ define void @test_blend_feeding_replicated_store_2(ptr noalias %src, ptr %dst, i
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[C_0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <16 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE30:.*]] ]
@@ -217,11 +218,10 @@ define void @test_blend_feeding_replicated_store_2(ptr noalias %src, ptr %dst, i
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[GEP_SRC]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <16 x i1> [[TMP3]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <16 x i1> [[BROADCAST_SPLAT]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <16 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <16 x i1> [[TMP4]], <16 x i1> [[TMP5]], <16 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i1> [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> zeroinitializer, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> zeroinitializer, <16 x i8> splat (i8 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[TMP7]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:

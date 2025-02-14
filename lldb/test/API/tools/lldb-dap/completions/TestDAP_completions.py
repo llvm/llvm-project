@@ -32,6 +32,9 @@ variable_var_completion = {
 variable_var1_completion = {"text": "var1", "label": "var1 -- int &"}
 variable_var2_completion = {"text": "var2", "label": "var2 -- int &"}
 
+# Older version of libcxx produce slightly different typename strings for
+# templates like vector.
+@skipIf(compiler="clang", compiler_version=["<", "16.0"])
 class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
     def verify_completions(self, actual_list, expected_list, not_expected_list=[]):
         for expected_item in expected_list:

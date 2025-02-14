@@ -366,6 +366,13 @@ public:
   void trivial65() {
     __libcpp_verbose_abort("%s", "aborting");
   }
+  RefPtr<RefCounted> trivial66() { return children[0]; }
+  Ref<RefCounted> trivial67() { return *children[0]; }
+  struct point {
+    double x;
+    double y;
+  };
+  void trivial68() { point pt = { 1.0 }; }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -550,6 +557,9 @@ public:
     getFieldTrivial().trivial63(); // no-warning
     getFieldTrivial().trivial64(); // no-warning
     getFieldTrivial().trivial65(); // no-warning
+    getFieldTrivial().trivial66()->trivial6(); // no-warning
+    getFieldTrivial().trivial67()->trivial6(); // no-warning
+    getFieldTrivial().trivial68(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning

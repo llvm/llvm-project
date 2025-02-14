@@ -107,6 +107,18 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
   bool Src1IsHigh = SystemZ::isHighReg(Src1Reg);
   bool Src2IsHigh = SystemZ::isHighReg(Src2Reg);
 
+  // In rare cases both sources are the same register (after
+  // machine-cse). This must be handled as it may lead to wrong-code (after
+  // machine-cp) if the kill flag on Src1 isn't cleared (with
+  // expandCondMove()).
+  if (Src1Reg == Src2Reg) {
+    BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
+            TII->get(SystemZ::COPY), DestReg)
+        .addReg(MBBI->getOperand(1).getReg(), getRegState(MBBI->getOperand(1)));
+    MBBI->eraseFromParent();
+    return;
+  }
+
   // If sources and destination aren't all high or all low, we may be able to
   // simplify the operation by moving one of the sources to the destination
   // first.  But only if this doesn't clobber the other source.

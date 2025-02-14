@@ -173,7 +173,7 @@ define ghccc void @test5() {
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    jmp tail@PLT # TAILCALL
 entry:
-  br i1 undef, label %then, label %else
+  br i1 poison, label %then, label %else
 
 then:
   store i64 0, ptr undef
@@ -186,4 +186,3 @@ else:
 exit:
   ret void
 }
-

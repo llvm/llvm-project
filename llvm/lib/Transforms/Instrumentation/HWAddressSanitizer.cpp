@@ -34,7 +34,6 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -193,12 +192,15 @@ static cl::opt<bool>
                    cl::Hidden);
 
 static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
-                                          cl::desc("Hot percentile cuttoff."));
+                                          cl::desc("Hot percentile cutoff."));
 
 static cl::opt<float>
-    ClRandomSkipRate("hwasan-random-rate",
+    ClRandomKeepRate("hwasan-random-rate",
                      cl::desc("Probability value in the range [0.0, 1.0] "
-                              "to keep instrumentation of a function."));
+                              "to keep instrumentation of a function. "
+                              "Note: instrumentation can be skipped randomly "
+                              "OR because of the hot percentile cutoff, if "
+                              "both are supplied."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -302,7 +304,7 @@ public:
       : M(M), SSI(SSI) {
     this->Recover = optOr(ClRecover, Recover);
     this->CompileKernel = optOr(ClEnableKhwasan, CompileKernel);
-    this->Rng = ClRandomSkipRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
+    this->Rng = ClRandomKeepRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
                                                      : nullptr;
 
     initializeModule();
@@ -349,7 +351,7 @@ private:
   bool ignoreMemIntrinsic(OptimizationRemarkEmitter &ORE, MemIntrinsic *MI);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   bool instrumentMemAccess(InterestingMemoryOperand &O, DomTreeUpdater &DTU,
-                           LoopInfo *LI);
+                           LoopInfo *LI, const DataLayout &DL);
   bool ignoreAccessWithoutRemark(Instruction *Inst, Value *Ptr);
   bool ignoreAccess(OptimizationRemarkEmitter &ORE, Instruction *Inst,
                     Value *Ptr);
@@ -1164,11 +1166,22 @@ void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
 }
 
 bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O,
-                                             DomTreeUpdater &DTU,
-                                             LoopInfo *LI) {
+                                             DomTreeUpdater &DTU, LoopInfo *LI,
+                                             const DataLayout &DL) {
   Value *Addr = O.getPtr();
 
   LLVM_DEBUG(dbgs() << "Instrumenting: " << O.getInsn() << "\n");
+
+  // If the pointer is statically known to be zero, the tag check will pass
+  // since:
+  // 1) it has a zero tag
+  // 2) the shadow memory corresponding to address 0 is initialized to zero and
+  //    never updated.
+  // We can therefore elide the tag check.
+  llvm::KnownBits Known(DL.getPointerTypeSizeInBits(Addr->getType()));
+  llvm::computeKnownBits(Addr, Known, DL);
+  if (Known.isZero())
+    return false;
 
   if (O.MaybeMask)
     return false; // FIXME
@@ -1508,8 +1521,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 
     AI->replaceUsesWithIf(Replacement, [AICast, AILong](const Use &U) {
       auto *User = U.getUser();
-      return User != AILong && User != AICast &&
-             !memtag::isLifetimeIntrinsic(User);
+      return User != AILong && User != AICast && !isa<LifetimeIntrinsic>(User);
     });
 
     memtag::annotateDebugRecords(Info, retagMask(N));
@@ -1590,9 +1602,9 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
   };
 
   auto SkipRandom = [&]() {
-    if (!ClRandomSkipRate.getNumOccurrences())
+    if (!ClRandomKeepRate.getNumOccurrences())
       return false;
-    std::bernoulli_distribution D(ClRandomSkipRate);
+    std::bernoulli_distribution D(ClRandomKeepRate);
     return !D(*Rng);
   };
 
@@ -1702,8 +1714,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   PostDominatorTree *PDT = FAM.getCachedResult<PostDominatorTreeAnalysis>(F);
   LoopInfo *LI = FAM.getCachedResult<LoopAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
+  const DataLayout &DL = F.getDataLayout();
   for (auto &Operand : OperandsToInstrument)
-    instrumentMemAccess(Operand, DTU, LI);
+    instrumentMemAccess(Operand, DTU, LI, DL);
   DTU.flush();
 
   if (ClInstrumentMemIntrinsics && !IntrinToInstrument.empty()) {

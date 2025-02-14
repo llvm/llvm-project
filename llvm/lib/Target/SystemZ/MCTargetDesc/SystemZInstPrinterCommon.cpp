@@ -57,8 +57,7 @@ void SystemZInstPrinterCommon::printOperand(const MCOperand &MO,
     llvm_unreachable("Invalid operand");
 }
 
-void SystemZInstPrinterCommon::printRegName(raw_ostream &O,
-                                            MCRegister Reg) const {
+void SystemZInstPrinterCommon::printRegName(raw_ostream &O, MCRegister Reg) {
   printFormattedRegName(&MAI, Reg, O);
 }
 
@@ -231,6 +230,12 @@ void SystemZInstPrinterCommon::printBDRAddrOperand(const MCInst *MI, int OpNum,
 
 void SystemZInstPrinterCommon::printBDVAddrOperand(const MCInst *MI, int OpNum,
                                                    raw_ostream &O) {
+  printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
+               MI->getOperand(OpNum + 2).getReg(), O);
+}
+
+void SystemZInstPrinterCommon::printLXAAddrOperand(const MCInst *MI, int OpNum,
+                                             raw_ostream &O) {
   printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
                MI->getOperand(OpNum + 2).getReg(), O);
 }
