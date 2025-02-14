@@ -123,6 +123,15 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
       !Subtarget.hasX87())
     return MVT::i32;
 
+  if (isTypeLegal(MVT::f16)) {
+    if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+      return getRegisterTypeForCallingConv(
+          Context, CC, VT.changeVectorElementType(MVT::f16));
+
+    if (VT == MVT::bf16)
+      return MVT::f16;
+  }
+
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
