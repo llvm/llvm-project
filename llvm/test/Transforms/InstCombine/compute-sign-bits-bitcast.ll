@@ -23,8 +23,7 @@ define <4 x i2> @test_sext_bitcast(<1 x i8> %a0, <1 x i8> %a1) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <1 x i8> [[A0]], [[A1]]
 ; CHECK-NEXT:    [[EXT:%.*]] = sext <1 x i1> [[CMP]] to <1 x i8>
 ; CHECK-NEXT:    [[SUB:%.*]] = bitcast <1 x i8> [[EXT]] to <4 x i2>
-; CHECK-NEXT:    [[RESULT:%.*]] = ashr <4 x i2> [[SUB]], splat (i2 1)
-; CHECK-NEXT:    ret <4 x i2> [[RESULT]]
+; CHECK-NEXT:    ret <4 x i2> [[SUB]]
 ;
 entry:
   %cmp = icmp sgt <1 x i8> %a0, %a1
