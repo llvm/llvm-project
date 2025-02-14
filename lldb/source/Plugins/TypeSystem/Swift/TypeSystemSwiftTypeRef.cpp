@@ -1652,20 +1652,45 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetDemangleTreeForPrinting(
   return GetNodeForPrintingImpl(dem, node, flavor, resolve_objc_module);
 }
 
-/// Determine wether this demangle tree contains a node of kind \c kind.
+/// Determine wether this demangle tree contains a node of kind \c kind and with
+/// text \c text (if provided).
 static bool Contains(swift::Demangle::NodePointer node,
-                     swift::Demangle::Node::Kind kind) {
+                     swift::Demangle::Node::Kind kind,
+                     llvm::StringRef text = "") {
   if (!node)
     return false;
 
-  if (node->getKind() == kind)
-    return true;
+  if (node->getKind() == kind) {
+    if (text.empty())
+      return true;
+    if (!node->hasText())
+      return false;
+    return node->getText() == text;
+  }
 
   for (swift::Demangle::NodePointer child : *node)
-    if (Contains(child, kind))
+    if (Contains(child, kind, text))
       return true;
 
   return false;
+}
+
+static bool ProtocolCompositionContainsSingleObjcProtocol(
+    swift::Demangle::NodePointer node) {
+  // Kind=ProtocolList
+  // Kind=TypeList
+  //   Kind=Type
+  //     Kind=Protocol
+  //       Kind=Module, text="__C"
+  //       Kind=Identifier, text="SomeIdentifier"
+  if (node->getKind() != Node::Kind::ProtocolList)
+    return false;
+  NodePointer type_list = node->getFirstChild();
+  if (type_list->getKind() != Node::Kind::TypeList ||
+      type_list->getNumChildren() != 1)
+    return false;
+  NodePointer type = type_list->getFirstChild();
+  return Contains(type, Node::Kind::Module, swift::MANGLING_MODULE_OBJC);
 }
 
 /// Determine wether this demangle tree contains a generic type parameter.
@@ -1854,6 +1879,8 @@ uint32_t TypeSystemSwiftTypeRef::CollectTypeInfo(
       swift_flags |= eTypeIsProtocol;
       // Bug-for-bug-compatibility.
       swift_flags |= eTypeHasChildren | eTypeIsStructUnion;
+      if (ProtocolCompositionContainsSingleObjcProtocol(node))
+        swift_flags |= eTypeIsObjC | eTypeHasValue;
       break;
 
     case Node::Kind::ExistentialMetatype:
