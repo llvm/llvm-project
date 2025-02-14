@@ -1761,7 +1761,8 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
   let arguments = (ins
     AnyRefOrBox:$ref,
     Variadic<AnyCoordinateType>:$coor,
-    TypeAttr:$baseType
+    TypeAttr:$baseType,
+    OptionalAttr<DenseI32ArrayAttr>:$field_indices
   );
 
   let results = (outs RefOrLLVMPtr);
@@ -1771,10 +1772,12 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$resultType,
-      "mlir::Value":$ref, "mlir::ValueRange":$coor),
-    [{ return build($_builder, $_state, resultType, ref, coor,
-           mlir::TypeAttr::get(ref.getType())); }]>,
+      "mlir::Value":$ref, "mlir::ValueRange":$coor)>
   ];
+  let extraClassDeclaration = [{
+    constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
+    CoordinateIndicesAdaptor getIndices();
+  }];
 }
 
 def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoMemoryEffect]> {
