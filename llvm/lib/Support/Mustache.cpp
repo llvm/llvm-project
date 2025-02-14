@@ -485,9 +485,10 @@ ASTNode *Parser::parse(llvm::BumpPtrAllocator &RenderAlloc,
   Tokens = tokenize(TemplateStr);
   CurrentPtr = 0;
   void *Root = ASTAllocator.Allocate(sizeof(ASTNode), alignof(ASTNode));
-  ASTNode *RootNode =
-      createRootNode(Root, RenderAlloc, Partials, Lambdas, SectionLambdas, Escapes);
-  parseMustache(RootNode, RenderAlloc, Partials, Lambdas, SectionLambdas, Escapes);
+  ASTNode *RootNode = createRootNode(Root, RenderAlloc, Partials, Lambdas,
+                                     SectionLambdas, Escapes);
+  parseMustache(RootNode, RenderAlloc, Partials, Lambdas, SectionLambdas,
+                Escapes);
   return RootNode;
 }
 
@@ -786,11 +787,9 @@ Template::Template(StringRef TemplateStr) {
 }
 
 Template::Template(Template &&Other) noexcept
-    : Partials(std::move(Other.Partials)),
-      Lambdas(std::move(Other.Lambdas)),
+    : Partials(std::move(Other.Partials)), Lambdas(std::move(Other.Lambdas)),
       SectionLambdas(std::move(Other.SectionLambdas)),
-      Escapes(std::move(Other.Escapes)),
-      Tree(Other.Tree),
+      Escapes(std::move(Other.Escapes)), Tree(Other.Tree),
       AstAllocator(std::move(Other.AstAllocator)),
       RenderAllocator(std::move(Other.RenderAllocator)) {
   Other.Tree = nullptr;
@@ -798,7 +797,6 @@ Template::Template(Template &&Other) noexcept
 
 Template &Template::operator=(Template &&Other) noexcept {
   if (this != &Other) {
-    // Move assign all members
     Partials = std::move(Other.Partials);
     Lambdas = std::move(Other.Lambdas);
     SectionLambdas = std::move(Other.SectionLambdas);

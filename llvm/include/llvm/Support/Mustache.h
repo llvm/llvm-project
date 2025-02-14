@@ -88,10 +88,13 @@ class ASTNode;
 class Template {
 public:
   Template(StringRef TemplateStr);
-  
+
   Template(const Template &) = delete;
+
   Template &operator=(const Template &) = delete;
+
   Template(Template &&Other) noexcept;
+
   Template &operator=(Template &&Other) noexcept;
 
   void render(const llvm::json::Value &Data, llvm::raw_ostream &OS);
