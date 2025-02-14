@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include <cstdint>
 #include <map>
+#include <mutex>
 #include <set>
 
 namespace llvm {
@@ -32,7 +33,9 @@ struct DWARFSection;
 
 class OutputCategoryAggregator {
 private:
+  std::mutex WriteMutex;
   std::map<std::string, unsigned> Aggregation;
+  unsigned NumErrors = 0;
   bool IncludeDetail;
 
 public:
@@ -42,6 +45,8 @@ public:
   size_t GetNumCategories() const { return Aggregation.size(); }
   void Report(StringRef s, std::function<void()> detailCallback);
   void EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
+  /// Return the number of errors that have been reported.
+  unsigned GetNumErrors() const { return NumErrors; }
 };
 
 /// A class that verifies DWARF debug information given a DWARF Context.
@@ -104,6 +109,7 @@ private:
   bool IsObjectFile;
   bool IsMachOObject;
   using ReferenceMap = std::map<uint64_t, std::set<uint64_t>>;
+  std::mutex AccessMutex;
 
   raw_ostream &error() const;
   raw_ostream &warn() const;
@@ -264,21 +270,22 @@ private:
   /// \param SectionName the name of the table we're verifying
   ///
   /// \returns The number of errors occurred during verification
-  unsigned verifyAppleAccelTable(const DWARFSection *AccelSection,
-                                 DataExtractor *StrData,
-                                 const char *SectionName);
+  void verifyAppleAccelTable(const DWARFSection *AccelSection,
+                             DataExtractor *StrData, const char *SectionName);
 
-  unsigned verifyDebugNamesCULists(const DWARFDebugNames &AccelTable);
-  unsigned verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
-                                  const DataExtractor &StrData);
-  unsigned verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI);
-  unsigned verifyNameIndexAttribute(const DWARFDebugNames::NameIndex &NI,
-                                    const DWARFDebugNames::Abbrev &Abbr,
-                                    DWARFDebugNames::AttributeEncoding AttrEnc);
-  unsigned verifyNameIndexEntries(const DWARFDebugNames::NameIndex &NI,
-                                  const DWARFDebugNames::NameTableEntry &NTE);
-  unsigned verifyNameIndexCompleteness(const DWARFDie &Die,
-                                       const DWARFDebugNames::NameIndex &NI);
+  void verifyDebugNamesCULists(const DWARFDebugNames &AccelTable);
+  void verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
+                              const DataExtractor &StrData);
+  void verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI);
+  void verifyNameIndexAttribute(const DWARFDebugNames::NameIndex &NI,
+                                const DWARFDebugNames::Abbrev &Abbr,
+                                DWARFDebugNames::AttributeEncoding AttrEnc);
+  void verifyNameIndexEntries(
+      const DWARFDebugNames::NameIndex &NI,
+      const DWARFDebugNames::NameTableEntry &NTE,
+      const DenseMap<uint64_t, DWARFUnit *> &CUOffsetsToDUMap);
+  void verifyNameIndexCompleteness(const DWARFDie &Die,
+                                   const DWARFDebugNames::NameIndex &NI);
 
   /// Verify that the DWARF v5 accelerator table is valid.
   ///
@@ -297,8 +304,8 @@ private:
   /// \param StrData string section
   ///
   /// \returns The number of errors occurred during verification
-  unsigned verifyDebugNames(const DWARFSection &AccelSection,
-                            const DataExtractor &StrData);
+  void verifyDebugNames(const DWARFSection &AccelSection,
+                        const DataExtractor &StrData);
 
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D,
