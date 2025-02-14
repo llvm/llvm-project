@@ -4,8 +4,10 @@
 define i8 @test() {
 ; CHECK-LABEL: define i8 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i12 @llvm.ctpop.i12(i12 256)
-; CHECK-NEXT:    [[OP_RDX:%.*]] = trunc i12 [[TMP0]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.ctpop.i8(i8 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i4 @llvm.ctpop.i4(i4 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i4 [[TMP1]] to i8
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i8 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[OP_RDX]]
 ;
 entry:
