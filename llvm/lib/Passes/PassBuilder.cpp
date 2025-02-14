@@ -1417,13 +1417,13 @@ parseBoundsCheckingOptions(StringRef Params) {
 
 Expected<RAGreedyPass::Options>
 parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
-  if (Params.empty() || Params == "all") {
+  if (Params.empty() || Params == "all")
     return RAGreedyPass::Options();
-  }
+
   std::optional<RegAllocFilterFunc> Filter = PB.parseRegAllocFilter(Params);
-  if (Filter) {
+  if (Filter)
     return RAGreedyPass::Options{*Filter, Params};
-  }
+
   return make_error<StringError>(
       formatv("invalid regallocgreedy register filter '{0}' ", Params).str(),
       inconvertibleErrorCode());
