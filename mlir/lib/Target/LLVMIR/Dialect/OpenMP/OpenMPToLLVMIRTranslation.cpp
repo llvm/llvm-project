@@ -75,6 +75,19 @@ public:
   llvm::OpenMPIRBuilder::InsertPointTy allocaInsertPoint;
 };
 
+/// Stack frame to hold a \see llvm::CanonicalLoopInfo representing the
+/// collapsed canonical loop information corresponding to an \c omp.loop_nest
+/// operation.
+class OpenMPLoopInfoStackFrame
+    : public LLVM::ModuleTranslation::StackFrameBase<OpenMPLoopInfoStackFrame> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPLoopInfoStackFrame)
+
+  explicit OpenMPLoopInfoStackFrame(llvm::CanonicalLoopInfo *loopInfo)
+      : loopInfo(loopInfo) {}
+  llvm::CanonicalLoopInfo *loopInfo;
+};
+
 /// Custom error class to signal translation errors that don't need reporting,
 /// since encountering them will have already triggered relevant error messages.
 ///
@@ -372,6 +385,20 @@ findAllocaInsertPoint(llvm::IRBuilderBase &builder,
       &funcEntryBlock, funcEntryBlock.getFirstInsertionPt());
 }
 
+/// Find the loop information structure for the loop nest being translated. It
+/// will not return a value unless called from the translation function for
+/// a loop wrapper operation after successfully translating its body.
+static std::optional<llvm::CanonicalLoopInfo *>
+findCurrentLoopInfo(LLVM::ModuleTranslation &moduleTranslation) {
+  std::optional<llvm::CanonicalLoopInfo *> loopInfo;
+  moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
+      [&](const OpenMPLoopInfoStackFrame &frame) {
+        loopInfo = frame.loopInfo;
+        return WalkResult::interrupt();
+      });
+  return loopInfo;
+}
+
 /// Converts the given region that appears within an OpenMP dialect operation to
 /// LLVM IR, creating a branch from the `sourceBlock` to the entry block of the
 /// region, and a branch from any block with an successor-less OpenMP terminator
@@ -522,7 +549,7 @@ static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
 /// This must be called after block arguments of parent wrappers have already
 /// been mapped to LLVM IR values.
 static LogicalResult
-convertIgnoredWrapper(omp::LoopWrapperInterface &opInst,
+convertIgnoredWrapper(omp::LoopWrapperInterface opInst,
                       LLVM::ModuleTranslation &moduleTranslation) {
   // Map block arguments directly to the LLVM value associated to the
   // corresponding operand. This is semantically equivalent to this wrapper not
@@ -544,32 +571,8 @@ convertIgnoredWrapper(omp::LoopWrapperInterface &opInst,
         return success();
       })
       .Default([&](Operation *op) {
-        return op->emitError() << "cannot ignore nested wrapper";
+        return op->emitError() << "cannot ignore wrapper";
       });
-}
-
-/// Helper function to call \c convertIgnoredWrapper() for all wrappers of the
-/// given \c loopOp nested inside of \c parentOp. This has the effect of mapping
-/// entry block arguments defined by these operations to outside values.
-///
-/// It must be called after block arguments of \c parentOp have already been
-/// mapped themselves.
-static LogicalResult
-convertIgnoredWrappers(omp::LoopNestOp loopOp,
-                       omp::LoopWrapperInterface parentOp,
-                       LLVM::ModuleTranslation &moduleTranslation) {
-  SmallVector<omp::LoopWrapperInterface> wrappers;
-  loopOp.gatherWrappers(wrappers);
-
-  // Process wrappers nested inside of `parentOp` from outermost to innermost.
-  for (auto it =
-           std::next(std::find(wrappers.rbegin(), wrappers.rend(), parentOp));
-       it != wrappers.rend(); ++it) {
-    if (failed(convertIgnoredWrapper(*it, moduleTranslation)))
-      return failure();
-  }
-
-  return success();
 }
 
 /// Converts an OpenMP 'masked' operation into LLVM IR using OpenMPIRBuilder.
@@ -1889,6 +1892,7 @@ convertOmpTaskwaitOp(omp::TaskwaitOp twOp, llvm::IRBuilderBase &builder,
 static LogicalResult
 convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto wsloopOp = cast<omp::WsloopOp>(opInst);
   if (failed(checkImplementationStatus(opInst)))
     return failure();
@@ -1969,102 +1973,31 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                reductionVariableMap, isByRef, deferredStores)))
     return failure();
 
-  // TODO: Replace this with proper composite translation support.
-  // Currently, all nested wrappers are ignored, so 'do/for simd' will be
-  // treated the same as a standalone 'do/for'. This is allowed by the spec,
-  // since it's equivalent to always using a SIMD length of 1.
-  if (failed(convertIgnoredWrappers(loopOp, wsloopOp, moduleTranslation)))
-    return failure();
-
-  // Set up the source location value for OpenMP runtime.
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-
-  // Generator of the canonical loop body.
-  SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
-  SmallVector<llvm::OpenMPIRBuilder::InsertPointTy> bodyInsertPoints;
-  auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip,
-                     llvm::Value *iv) -> llvm::Error {
-    // Make sure further conversions know about the induction variable.
-    moduleTranslation.mapValue(
-        loopOp.getRegion().front().getArgument(loopInfos.size()), iv);
-
-    // Capture the body insertion point for use in nested loops. BodyIP of the
-    // CanonicalLoopInfo always points to the beginning of the entry block of
-    // the body.
-    bodyInsertPoints.push_back(ip);
-
-    if (loopInfos.size() != loopOp.getNumLoops() - 1)
-      return llvm::Error::success();
-
-    // Convert the body of the loop.
-    builder.restoreIP(ip);
-    return convertOmpOpRegions(loopOp.getRegion(), "omp.wsloop.region", builder,
-                               moduleTranslation)
-        .takeError();
-  };
-
-  // Delegate actual loop construction to the OpenMP IRBuilder.
-  // TODO: this currently assumes omp.loop_nest is semantically similar to SCF
-  // loop, i.e. it has a positive step, uses signed integer semantics.
-  // Reconsider this code when the nested loop operation clearly supports more
-  // cases.
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  for (unsigned i = 0, e = loopOp.getNumLoops(); i < e; ++i) {
-    llvm::Value *lowerBound =
-        moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[i]);
-    llvm::Value *upperBound =
-        moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[i]);
-    llvm::Value *step = moduleTranslation.lookupValue(loopOp.getLoopSteps()[i]);
-
-    // Make sure loop trip count are emitted in the preheader of the outermost
-    // loop at the latest so that they are all available for the new collapsed
-    // loop will be created below.
-    llvm::OpenMPIRBuilder::LocationDescription loc = ompLoc;
-    llvm::OpenMPIRBuilder::InsertPointTy computeIP = ompLoc.IP;
-    if (i != 0) {
-      loc = llvm::OpenMPIRBuilder::LocationDescription(bodyInsertPoints.back());
-      computeIP = loopInfos.front()->getPreheaderIP();
-    }
-
-    llvm::Expected<llvm::CanonicalLoopInfo *> loopResult =
-        ompBuilder->createCanonicalLoop(
-            loc, bodyGen, lowerBound, upperBound, step,
-            /*IsSigned=*/true, loopOp.getLoopInclusive(), computeIP);
-
-    if (failed(handleError(loopResult, *loopOp)))
-      return failure();
-
-    loopInfos.push_back(*loopResult);
-  }
-
-  // Collapse loops. Store the insertion point because LoopInfos may get
-  // invalidated.
-  llvm::IRBuilderBase::InsertPoint afterIP = loopInfos.front()->getAfterIP();
-  llvm::CanonicalLoopInfo *loopInfo =
-      ompBuilder->collapseLoops(ompLoc.DL, loopInfos, {});
-
-  allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
-
   // TODO: Handle doacross loops when the ordered clause has a parameter.
   bool isOrdered = wsloopOp.getOrdered().has_value();
   std::optional<omp::ScheduleModifier> scheduleMod = wsloopOp.getScheduleMod();
   bool isSimd = wsloopOp.getScheduleSimd();
+  bool loopNeedsBarrier = !wsloopOp.getNowait();
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
+      wsloopOp.getRegion(), "omp.wsloop.region", builder, moduleTranslation);
+
+  if (failed(handleError(regionBlock, opInst)))
+    return failure();
+
+  builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
+  llvm::CanonicalLoopInfo *loopInfo = *findCurrentLoopInfo(moduleTranslation);
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
       ompBuilder->applyWorkshareLoop(
-          ompLoc.DL, loopInfo, allocaIP, !wsloopOp.getNowait(),
+          ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
           convertToScheduleKind(schedule), chunk, isSimd,
           scheduleMod == omp::ScheduleModifier::monotonic,
           scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered);
 
   if (failed(handleError(wsloopIP, opInst)))
     return failure();
-
-  // Continue building IR after the loop. Note that the LoopInfo returned by
-  // `collapseLoops` points inside the outermost loop and is intended for
-  // potential further loop transformations. Use the insertion point stored
-  // before collapsing loops instead.
-  builder.restoreIP(afterIP);
 
   // Process the reductions if required.
   if (failed(createReductionsAndCleanup(wsloopOp, builder, moduleTranslation,
@@ -2274,8 +2207,20 @@ convertOrderKind(std::optional<omp::ClauseOrderKind> o) {
 static LogicalResult
 convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto simdOp = cast<omp::SimdOp>(opInst);
-  auto loopOp = cast<omp::LoopNestOp>(simdOp.getWrappedLoop());
+
+  // TODO: Replace this with proper composite translation support.
+  // Currently, simd information on composite constructs is ignored, so e.g.
+  // 'do/for simd' will be treated the same as a standalone 'do/for'. This is
+  // allowed by the spec, since it's equivalent to using a SIMD length of 1.
+  if (simdOp.isComposite()) {
+    if (failed(convertIgnoredWrapper(simdOp, moduleTranslation)))
+      return failure();
+
+    return inlineConvertOmpRegions(simdOp.getRegion(), "omp.simd.region",
+                                   builder, moduleTranslation);
+  }
 
   if (failed(checkImplementationStatus(opInst)))
     return failure();
@@ -2308,72 +2253,6 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
           .failed())
     return failure();
 
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-
-  // Generator of the canonical loop body.
-  SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
-  SmallVector<llvm::OpenMPIRBuilder::InsertPointTy> bodyInsertPoints;
-  auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip,
-                     llvm::Value *iv) -> llvm::Error {
-    // Make sure further conversions know about the induction variable.
-    moduleTranslation.mapValue(
-        loopOp.getRegion().front().getArgument(loopInfos.size()), iv);
-
-    // Capture the body insertion point for use in nested loops. BodyIP of the
-    // CanonicalLoopInfo always points to the beginning of the entry block of
-    // the body.
-    bodyInsertPoints.push_back(ip);
-
-    if (loopInfos.size() != loopOp.getNumLoops() - 1)
-      return llvm::Error::success();
-
-    // Convert the body of the loop.
-    builder.restoreIP(ip);
-    return convertOmpOpRegions(loopOp.getRegion(), "omp.simd.region", builder,
-                               moduleTranslation)
-        .takeError();
-  };
-
-  // Delegate actual loop construction to the OpenMP IRBuilder.
-  // TODO: this currently assumes omp.loop_nest is semantically similar to SCF
-  // loop, i.e. it has a positive step, uses signed integer semantics.
-  // Reconsider this code when the nested loop operation clearly supports more
-  // cases.
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  for (unsigned i = 0, e = loopOp.getNumLoops(); i < e; ++i) {
-    llvm::Value *lowerBound =
-        moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[i]);
-    llvm::Value *upperBound =
-        moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[i]);
-    llvm::Value *step = moduleTranslation.lookupValue(loopOp.getLoopSteps()[i]);
-
-    // Make sure loop trip count are emitted in the preheader of the outermost
-    // loop at the latest so that they are all available for the new collapsed
-    // loop will be created below.
-    llvm::OpenMPIRBuilder::LocationDescription loc = ompLoc;
-    llvm::OpenMPIRBuilder::InsertPointTy computeIP = ompLoc.IP;
-    if (i != 0) {
-      loc = llvm::OpenMPIRBuilder::LocationDescription(bodyInsertPoints.back(),
-                                                       ompLoc.DL);
-      computeIP = loopInfos.front()->getPreheaderIP();
-    }
-
-    llvm::Expected<llvm::CanonicalLoopInfo *> loopResult =
-        ompBuilder->createCanonicalLoop(
-            loc, bodyGen, lowerBound, upperBound, step,
-            /*IsSigned=*/true, /*InclusiveStop=*/true, computeIP);
-
-    if (failed(handleError(loopResult, *loopOp)))
-      return failure();
-
-    loopInfos.push_back(*loopResult);
-  }
-
-  // Collapse loops.
-  llvm::IRBuilderBase::InsertPoint afterIP = loopInfos.front()->getAfterIP();
-  llvm::CanonicalLoopInfo *loopInfo =
-      ompBuilder->collapseLoops(ompLoc.DL, loopInfos, {});
-
   llvm::ConstantInt *simdlen = nullptr;
   if (std::optional<uint64_t> simdlenVar = simdOp.getSimdlen())
     simdlen = builder.getInt64(simdlenVar.value());
@@ -2396,22 +2275,120 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
       assert(ty->isPointerTy() && "Invalid type for aligned variable");
       assert(alignment && "Invalid alignment value");
       auto curInsert = builder.saveIP();
-      builder.SetInsertPoint(sourceBlock->getTerminator());
+      builder.SetInsertPoint(sourceBlock);
       llvmVal = builder.CreateLoad(ty, llvmVal);
       builder.restoreIP(curInsert);
       alignedVars[llvmVal] = alignment;
     }
   }
+
+  llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
+      simdOp.getRegion(), "omp.simd.region", builder, moduleTranslation);
+
+  if (failed(handleError(regionBlock, opInst)))
+    return failure();
+
+  builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
+  llvm::CanonicalLoopInfo *loopInfo = *findCurrentLoopInfo(moduleTranslation);
   ompBuilder->applySimd(loopInfo, alignedVars,
                         simdOp.getIfExpr()
                             ? moduleTranslation.lookupValue(simdOp.getIfExpr())
                             : nullptr,
                         order, simdlen, safelen);
 
-  builder.restoreIP(afterIP);
-
   return cleanupPrivateVars(builder, moduleTranslation, simdOp.getLoc(),
                             llvmPrivateVars, privateDecls);
+}
+
+/// Converts an OpenMP loop nest into LLVM IR using OpenMPIRBuilder.
+static LogicalResult
+convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  auto loopOp = cast<omp::LoopNestOp>(opInst);
+
+  // Set up the source location value for OpenMP runtime.
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+
+  // Generator of the canonical loop body.
+  SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
+  SmallVector<llvm::OpenMPIRBuilder::InsertPointTy> bodyInsertPoints;
+  auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip,
+                     llvm::Value *iv) -> llvm::Error {
+    // Make sure further conversions know about the induction variable.
+    moduleTranslation.mapValue(
+        loopOp.getRegion().front().getArgument(loopInfos.size()), iv);
+
+    // Capture the body insertion point for use in nested loops. BodyIP of the
+    // CanonicalLoopInfo always points to the beginning of the entry block of
+    // the body.
+    bodyInsertPoints.push_back(ip);
+
+    if (loopInfos.size() != loopOp.getNumLoops() - 1)
+      return llvm::Error::success();
+
+    // Convert the body of the loop.
+    builder.restoreIP(ip);
+    llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
+        loopOp.getRegion(), "omp.loop_nest.region", builder, moduleTranslation);
+    if (!regionBlock)
+      return regionBlock.takeError();
+
+    builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
+    return llvm::Error::success();
+  };
+
+  // Delegate actual loop construction to the OpenMP IRBuilder.
+  // TODO: this currently assumes omp.loop_nest is semantically similar to SCF
+  // loop, i.e. it has a positive step, uses signed integer semantics.
+  // Reconsider this code when the nested loop operation clearly supports more
+  // cases.
+  for (unsigned i = 0, e = loopOp.getNumLoops(); i < e; ++i) {
+    llvm::Value *lowerBound =
+        moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[i]);
+    llvm::Value *upperBound =
+        moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[i]);
+    llvm::Value *step = moduleTranslation.lookupValue(loopOp.getLoopSteps()[i]);
+
+    // Make sure loop trip count are emitted in the preheader of the outermost
+    // loop at the latest so that they are all available for the new collapsed
+    // loop will be created below.
+    llvm::OpenMPIRBuilder::LocationDescription loc = ompLoc;
+    llvm::OpenMPIRBuilder::InsertPointTy computeIP = ompLoc.IP;
+    if (i != 0) {
+      loc = llvm::OpenMPIRBuilder::LocationDescription(bodyInsertPoints.back(),
+                                                       ompLoc.DL);
+      computeIP = loopInfos.front()->getPreheaderIP();
+    }
+
+    llvm::Expected<llvm::CanonicalLoopInfo *> loopResult =
+        ompBuilder->createCanonicalLoop(
+            loc, bodyGen, lowerBound, upperBound, step,
+            /*IsSigned=*/true, loopOp.getLoopInclusive(), computeIP);
+
+    if (failed(handleError(loopResult, *loopOp)))
+      return failure();
+
+    loopInfos.push_back(*loopResult);
+  }
+
+  // Collapse loops. Store the insertion point because LoopInfos may get
+  // invalidated.
+  llvm::OpenMPIRBuilder::InsertPointTy afterIP =
+      loopInfos.front()->getAfterIP();
+
+  // Add a stack frame holding information about the resulting loop after
+  // applying transformations, to be further transformed by parent loop
+  // wrappers.
+  moduleTranslation.stackPush<OpenMPLoopInfoStackFrame>(
+      ompBuilder->collapseLoops(ompLoc.DL, loopInfos, {}));
+
+  // Continue building IR after the loop. Note that the LoopInfo returned by
+  // `collapseLoops` points inside the outermost loop and is intended for
+  // potential further loop transformations. Use the insertion point stored
+  // before collapsing loops instead.
+  builder.restoreIP(afterIP);
+  return success();
 }
 
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
@@ -4592,132 +4569,153 @@ static bool isTargetDeviceOp(Operation *op) {
   return false;
 }
 
-/// Given an OpenMP MLIR operation, create the corresponding LLVM IR
-/// (including OpenMP runtime calls).
+/// Given an OpenMP MLIR operation, create the corresponding LLVM IR (including
+/// OpenMP runtime calls).
 static LogicalResult
 convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
                              LLVM::ModuleTranslation &moduleTranslation) {
-
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
-  return llvm::TypeSwitch<Operation *, LogicalResult>(op)
-      .Case([&](omp::BarrierOp op) -> LogicalResult {
-        if (failed(checkImplementationStatus(*op)))
-          return failure();
+  auto result =
+      llvm::TypeSwitch<Operation *, LogicalResult>(op)
+          .Case([&](omp::BarrierOp op) -> LogicalResult {
+            if (failed(checkImplementationStatus(*op)))
+              return failure();
 
-        llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-            ompBuilder->createBarrier(builder.saveIP(),
-                                      llvm::omp::OMPD_barrier);
-        return handleError(afterIP, *op);
-      })
-      .Case([&](omp::TaskyieldOp op) {
-        if (failed(checkImplementationStatus(*op)))
-          return failure();
+            llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+                ompBuilder->createBarrier(builder.saveIP(),
+                                          llvm::omp::OMPD_barrier);
+            return handleError(afterIP, *op);
+          })
+          .Case([&](omp::TaskyieldOp op) {
+            if (failed(checkImplementationStatus(*op)))
+              return failure();
 
-        ompBuilder->createTaskyield(builder.saveIP());
-        return success();
-      })
-      .Case([&](omp::FlushOp op) {
-        if (failed(checkImplementationStatus(*op)))
-          return failure();
-
-        // No support in Openmp runtime function (__kmpc_flush) to accept
-        // the argument list.
-        // OpenMP standard states the following:
-        //  "An implementation may implement a flush with a list by ignoring
-        //   the list, and treating it the same as a flush without a list."
-        //
-        // The argument list is discarded so that, flush with a list is treated
-        // same as a flush without a list.
-        ompBuilder->createFlush(builder.saveIP());
-        return success();
-      })
-      .Case([&](omp::ParallelOp op) {
-        return convertOmpParallel(op, builder, moduleTranslation);
-      })
-      .Case([&](omp::MaskedOp) {
-        return convertOmpMasked(*op, builder, moduleTranslation);
-      })
-      .Case([&](omp::MasterOp) {
-        return convertOmpMaster(*op, builder, moduleTranslation);
-      })
-      .Case([&](omp::CriticalOp) {
-        return convertOmpCritical(*op, builder, moduleTranslation);
-      })
-      .Case([&](omp::OrderedRegionOp) {
-        return convertOmpOrderedRegion(*op, builder, moduleTranslation);
-      })
-      .Case([&](omp::OrderedOp) {
-        return convertOmpOrdered(*op, builder, moduleTranslation);
-      })
-      .Case([&](omp::WsloopOp) {
-        return convertOmpWsloop(*op, builder, moduleTranslation);
-      })
-      .Case([&](omp::SimdOp) {
-        return convertOmpSimd(*op, builder, moduleTranslation);
-      })
-      .Case([&](omp::AtomicReadOp) {
-        return convertOmpAtomicRead(*op, builder, moduleTranslation);
-      })
-      .Case([&](omp::AtomicWriteOp) {
-        return convertOmpAtomicWrite(*op, builder, moduleTranslation);
-      })
-      .Case([&](omp::AtomicUpdateOp op) {
-        return convertOmpAtomicUpdate(op, builder, moduleTranslation);
-      })
-      .Case([&](omp::AtomicCaptureOp op) {
-        return convertOmpAtomicCapture(op, builder, moduleTranslation);
-      })
-      .Case([&](omp::SectionsOp) {
-        return convertOmpSections(*op, builder, moduleTranslation);
-      })
-      .Case([&](omp::SingleOp op) {
-        return convertOmpSingle(op, builder, moduleTranslation);
-      })
-      .Case([&](omp::TeamsOp op) {
-        return convertOmpTeams(op, builder, moduleTranslation);
-      })
-      .Case([&](omp::TaskOp op) {
-        return convertOmpTaskOp(op, builder, moduleTranslation);
-      })
-      .Case([&](omp::TaskgroupOp op) {
-        return convertOmpTaskgroupOp(op, builder, moduleTranslation);
-      })
-      .Case([&](omp::TaskwaitOp op) {
-        return convertOmpTaskwaitOp(op, builder, moduleTranslation);
-      })
-      .Case<omp::YieldOp, omp::TerminatorOp, omp::DeclareReductionOp,
-            omp::CriticalDeclareOp>([](auto op) {
-        // `yield` and `terminator` can be just omitted. The block structure
-        // was created in the region that handles their parent operation.
-        // `declare_reduction` will be used by reductions and is not
-        // converted directly, skip it.
-        // `critical.declare` is only used to declare names of critical
-        // sections which will be used by `critical` ops and hence can be
-        // ignored for lowering. The OpenMP IRBuilder will create unique
-        // name for critical section names.
-        return success();
-      })
-      .Case([&](omp::ThreadprivateOp) {
-        return convertOmpThreadprivate(*op, builder, moduleTranslation);
-      })
-      .Case<omp::TargetDataOp, omp::TargetEnterDataOp, omp::TargetExitDataOp,
-            omp::TargetUpdateOp>([&](auto op) {
-        return convertOmpTargetData(op, builder, moduleTranslation);
-      })
-      .Case([&](omp::TargetOp) {
-        return convertOmpTarget(*op, builder, moduleTranslation);
-      })
-      .Case<omp::MapInfoOp, omp::MapBoundsOp, omp::PrivateClauseOp>(
-          [&](auto op) {
-            // No-op, should be handled by relevant owning operations e.g.
-            // TargetOp, TargetEnterDataOp, TargetExitDataOp, TargetDataOp etc.
-            // and then discarded
+            ompBuilder->createTaskyield(builder.saveIP());
             return success();
           })
-      .Default([&](Operation *inst) {
-        return inst->emitError() << "not yet implemented: " << inst->getName();
-      });
+          .Case([&](omp::FlushOp op) {
+            if (failed(checkImplementationStatus(*op)))
+              return failure();
+
+            // No support in Openmp runtime function (__kmpc_flush) to accept
+            // the argument list.
+            // OpenMP standard states the following:
+            //  "An implementation may implement a flush with a list by ignoring
+            //   the list, and treating it the same as a flush without a list."
+            //
+            // The argument list is discarded so that, flush with a list is
+            // treated same as a flush without a list.
+            ompBuilder->createFlush(builder.saveIP());
+            return success();
+          })
+          .Case([&](omp::ParallelOp op) {
+            return convertOmpParallel(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::MaskedOp) {
+            return convertOmpMasked(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::MasterOp) {
+            return convertOmpMaster(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::CriticalOp) {
+            return convertOmpCritical(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::OrderedRegionOp) {
+            return convertOmpOrderedRegion(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::OrderedOp) {
+            return convertOmpOrdered(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::WsloopOp) {
+            return convertOmpWsloop(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::SimdOp) {
+            return convertOmpSimd(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::AtomicReadOp) {
+            return convertOmpAtomicRead(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::AtomicWriteOp) {
+            return convertOmpAtomicWrite(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::AtomicUpdateOp op) {
+            return convertOmpAtomicUpdate(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::AtomicCaptureOp op) {
+            return convertOmpAtomicCapture(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::SectionsOp) {
+            return convertOmpSections(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::SingleOp op) {
+            return convertOmpSingle(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TeamsOp op) {
+            return convertOmpTeams(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TaskOp op) {
+            return convertOmpTaskOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TaskgroupOp op) {
+            return convertOmpTaskgroupOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TaskwaitOp op) {
+            return convertOmpTaskwaitOp(op, builder, moduleTranslation);
+          })
+          .Case<omp::YieldOp, omp::TerminatorOp, omp::DeclareReductionOp,
+                omp::CriticalDeclareOp>([](auto op) {
+            // `yield` and `terminator` can be just omitted. The block structure
+            // was created in the region that handles their parent operation.
+            // `declare_reduction` will be used by reductions and is not
+            // converted directly, skip it.
+            // `critical.declare` is only used to declare names of critical
+            // sections which will be used by `critical` ops and hence can be
+            // ignored for lowering. The OpenMP IRBuilder will create unique
+            // name for critical section names.
+            return success();
+          })
+          .Case([&](omp::ThreadprivateOp) {
+            return convertOmpThreadprivate(*op, builder, moduleTranslation);
+          })
+          .Case<omp::TargetDataOp, omp::TargetEnterDataOp,
+                omp::TargetExitDataOp, omp::TargetUpdateOp>([&](auto op) {
+            return convertOmpTargetData(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TargetOp) {
+            return convertOmpTarget(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::LoopNestOp) {
+            return convertOmpLoopNest(*op, builder, moduleTranslation);
+          })
+          .Case<omp::MapInfoOp, omp::MapBoundsOp, omp::PrivateClauseOp>(
+              [&](auto op) {
+                // No-op, should be handled by relevant owning operations e.g.
+                // TargetOp, TargetEnterDataOp, TargetExitDataOp, TargetDataOp
+                // etc. and then discarded
+                return success();
+              })
+          .Default([&](Operation *inst) {
+            return inst->emitError()
+                   << "not yet implemented: " << inst->getName();
+          });
+
+  // When translating an omp.loop_nest, one stack frame was pushed to hold that
+  // loop's information. The code below ensures that this stack frame is removed
+  // when encountering the outermost loop wrapper associated to that loop. This
+  // approach allows all loop wrappers have access to that loop's information
+  // (to e.g. apply transformations to it) after their associated omp.loop_nest
+  // operation has been translated.
+  bool isOutermostLoopWrapper =
+      isa_and_present<omp::LoopWrapperInterface>(op) &&
+      !dyn_cast_if_present<omp::LoopWrapperInterface>(op->getParentOp());
+
+  // We need to check that a loop info is present as well, in case translation
+  // of the loop failed before it was created.
+  if (isOutermostLoopWrapper && findCurrentLoopInfo(moduleTranslation))
+    moduleTranslation.stackPop();
+
+  return result;
 }
 
 static LogicalResult
