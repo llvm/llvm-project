@@ -30,6 +30,7 @@ enum class DeviceDebugKind : uint32_t {
   FunctionTracing = 1U << 1,
   CommonIssues = 1U << 2,
   AllocationTracker = 1U << 3,
+  PGODump = 1U << 4,
 };
 
 struct DeviceEnvironmentTy {

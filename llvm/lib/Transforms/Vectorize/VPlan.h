@@ -3709,18 +3709,16 @@ public:
   ///  yet) for \p V.
   VPValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPValue of a null Value");
-    if (!Value2VPValue.count(V)) {
+    auto [It, Inserted] = Value2VPValue.try_emplace(V);
+    if (Inserted) {
       VPValue *VPV = new VPValue(V);
       VPLiveInsToFree.push_back(VPV);
       assert(VPV->isLiveIn() && "VPV must be a live-in.");
-      assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
-      Value2VPValue[V] = VPV;
+      It->second = VPV;
     }
 
-    assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
-    assert(Value2VPValue[V]->isLiveIn() &&
-           "Only live-ins should be in mapping");
-    return Value2VPValue[V];
+    assert(It->second->isLiveIn() && "Only live-ins should be in mapping");
+    return It->second;
   }
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.

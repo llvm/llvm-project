@@ -7,8 +7,8 @@ define void @pow2(ptr %ptr, float %val) {
 ; POW2-SAME: ptr [[PTR:%.*]], float [[VAL:%.*]]) {
 ; POW2-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
 ; POW2-NEXT:    [[PTR2:%.*]] = getelementptr float, ptr [[PTR]], i32 2
-; POW2-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
 ; POW2-NEXT:    [[LD2:%.*]] = load float, ptr [[PTR2]], align 4
+; POW2-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
 ; POW2-NEXT:    store <2 x float> [[VECL]], ptr [[PTR0]], align 4
 ; POW2-NEXT:    store float [[LD2]], ptr [[PTR2]], align 4
 ; POW2-NEXT:    ret void
