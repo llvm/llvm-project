@@ -9,6 +9,7 @@ attributes(global) subroutine devsub()
   real(8) :: ad
   integer(4) :: ai
   integer(8) :: al
+  integer(8) :: time
 
   call syncthreads()
   call syncwarp(1)
@@ -43,6 +44,8 @@ attributes(global) subroutine devsub()
   ai = atomicor(ai, 1_4)
   ai = atomicinc(ai, 1_4)
   ai = atomicdec(ai, 1_4)
+
+  time = clock64()
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
@@ -78,6 +81,8 @@ end
 ! CHECK: %{{.*}} = llvm.atomicrmw _or  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw uinc_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw udec_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+
+! CHECK: fir.call @llvm.nvvm.read.ptx.sreg.clock64()
 
 subroutine host1()
   integer, device :: a(32)

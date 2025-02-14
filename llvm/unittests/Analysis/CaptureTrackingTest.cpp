@@ -77,9 +77,9 @@ TEST(CaptureTracking, MaxUsesToExplore) {
 struct CollectingCaptureTracker : public CaptureTracker {
   SmallVector<const Use *, 4> Captures;
   void tooManyUses() override { }
-  Action captured(const Use *U, UseCaptureInfo CI) override {
+  bool captured(const Use *U) override {
     Captures.push_back(U);
-    return Continue;
+    return false;
   }
 };
 

@@ -257,9 +257,6 @@ clang-format
 libclang
 --------
 
-- Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
-  increased memory allocation.
-
 Code Completion
 ---------------
 
@@ -299,6 +296,7 @@ Python Binding Changes
 OpenMP Support
 --------------
 - Added support 'no_openmp_constructs' assumption clause.
+- Added support for 'omp stripe' directive.
 
 Improvements
 ^^^^^^^^^^^^
