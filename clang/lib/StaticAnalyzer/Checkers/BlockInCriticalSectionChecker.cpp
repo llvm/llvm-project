@@ -185,6 +185,9 @@ private:
   const BugType BlockInCritSectionBugType{
       this, "Call to blocking function in critical section", "Blocking Error"};
 
+  using O_NONBLOCKValueTy = std::optional<int>;
+  mutable std::optional<O_NONBLOCKValueTy> O_NONBLOCKValue;
+
   void reportBlockInCritSection(const CallEvent &call, CheckerContext &C) const;
 
   [[nodiscard]] const NoteTag *createCritSectionNote(CritSectionMarker M,
@@ -317,17 +320,16 @@ void BlockInCriticalSectionChecker::handleUnlock(
 void BlockInCriticalSectionChecker::handleOpen(const CallEvent &Call,
                                                CheckerContext &C) const {
   const auto *Flag = Call.getArgExpr(1);
-  static std::optional<int> ValueOfONonBlockVFlag =
-      tryExpandAsInteger("O_NONBLOCK", C.getBugReporter().getPreprocessor());
-  if (!ValueOfONonBlockVFlag)
-    return;
-
   SVal FlagSV = C.getState()->getSVal(Flag, C.getLocationContext());
   const llvm::APSInt *FlagV = FlagSV.getAsInteger();
   if (!FlagV)
     return;
 
-  if ((*FlagV & ValueOfONonBlockVFlag.value()) != 0)
+  if (!O_NONBLOCKValue)
+    O_NONBLOCKValue =
+        tryExpandAsInteger("O_NONBLOCK", C.getBugReporter().getPreprocessor());
+
+  if (*O_NONBLOCKValue && ((*FlagV & **O_NONBLOCKValue) != 0))
     if (SymbolRef SR = Call.getReturnValue().getAsSymbol()) {
       C.addTransition(C.getState()->add<NonBlockFileDescriptor>(SR));
     }
@@ -348,18 +350,16 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
     // not cause block in these situations, don't report
     StringRef FuncName = Call.getCalleeIdentifier()->getName();
     if (FuncName == "read" || FuncName == "recv") {
-      const auto *Arg = Call.getArgExpr(0);
-      if (!Arg)
+      SVal SV = Call.getArgSVal(0);
+      SValBuilder &SVB = C.getSValBuilder();
+      ProgramStateRef state = C.getState();
+      ConditionTruthVal CTV =
+          state->areEqual(SV, SVB.makeIntVal(-1, C.getASTContext().IntTy));
+      if (CTV.isConstrainedTrue())
         return;
 
-      SVal SV = C.getSVal(Arg);
-      if (const auto *IntValue = SV.getAsInteger()) {
-        if (*IntValue == -1)
-          return;
-      }
-
-      SymbolRef SR = C.getSVal(Arg).getAsSymbol();
-      if (SR && C.getState()->contains<NonBlockFileDescriptor>(SR)) {
+      SymbolRef SR = SV.getAsSymbol();
+      if (SR && state->contains<NonBlockFileDescriptor>(SR)) {
         return;
       }
     }
