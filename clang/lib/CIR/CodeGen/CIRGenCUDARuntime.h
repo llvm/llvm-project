@@ -23,6 +23,8 @@ namespace clang::CIRGen {
 class CIRGenFunction;
 class CIRGenModule;
 class FunctionArgList;
+class RValue;
+class ReturnValueSlot;
 
 class CIRGenCUDARuntime {
 protected:
@@ -40,6 +42,10 @@ public:
 
   virtual void emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
                               FunctionArgList &args);
+
+  virtual RValue emitCUDAKernelCallExpr(CIRGenFunction &cgf,
+                                        const CUDAKernelCallExpr *expr,
+                                        ReturnValueSlot retValue);
 };
 
 } // namespace clang::CIRGen

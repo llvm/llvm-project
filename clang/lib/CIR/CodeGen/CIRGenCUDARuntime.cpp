@@ -169,3 +169,23 @@ void CIRGenCUDARuntime::emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
   else
     emitDeviceStubBodyLegacy(cgf, fn, args);
 }
+
+RValue CIRGenCUDARuntime::emitCUDAKernelCallExpr(CIRGenFunction &cgf,
+                                                 const CUDAKernelCallExpr *expr,
+                                                 ReturnValueSlot retValue) {
+  auto builder = cgm.getBuilder();
+  mlir::Location loc =
+      cgf.currSrcLoc ? cgf.currSrcLoc.value() : builder.getUnknownLoc();
+
+  cgf.emitIfOnBoolExpr(
+      expr->getConfig(),
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        CIRGenCallee callee = cgf.emitCallee(expr->getCallee());
+        cgf.emitCall(expr->getCallee()->getType(), callee, expr, retValue);
+        b.create<cir::YieldOp>(loc);
+      },
+      loc, [](mlir::OpBuilder &b, mlir::Location l) {},
+      std::optional<mlir::Location>());
+
+  return RValue::get(nullptr);
+}

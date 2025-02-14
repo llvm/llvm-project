@@ -530,7 +530,10 @@ static CIRGenCallee emitDirectCallee(CIRGenModule &CGM, GlobalDecl GD) {
 
   auto CalleePtr = emitFunctionDeclPointer(CGM, GD);
 
-  assert(!CGM.getLangOpts().CUDA && "NYI");
+  // For HIP, the device stub should be converted to handle.
+  if (CGM.getLangOpts().HIP && !CGM.getLangOpts().CUDAIsDevice &&
+      FD->hasAttr<CUDAGlobalAttr>())
+    llvm_unreachable("NYI");
 
   return CIRGenCallee::forDirect(CalleePtr, GD);
 }
@@ -1405,7 +1408,9 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *E,
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
     return emitCXXMemberCallExpr(CE, ReturnValue);
 
-  assert(!dyn_cast<CUDAKernelCallExpr>(E) && "CUDA NYI");
+  if (const auto *CE = dyn_cast<CUDAKernelCallExpr>(E))
+    return CGM.getCUDARuntime().emitCUDAKernelCallExpr(*this, CE, ReturnValue);
+
   if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E))
     if (const CXXMethodDecl *MD =
             dyn_cast_or_null<CXXMethodDecl>(CE->getCalleeDecl()))
