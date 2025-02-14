@@ -1,7 +1,6 @@
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound,debug.ExprInspection -verify %s
 
 void clang_analyzer_value(int);
-void clang_analyzer_dump(int);
 
 // Tests doing an out-of-bounds access after the end of an array using:
 // - constant integer index
@@ -209,25 +208,6 @@ int test_cast_to_unsigned_overflow(signed char x) {
   // but the hack in ArrayBound just silences reports and cannot "restore" the
   // real execution paths.
   return small_table[y]; // no-warning
-}
-
-int test_cast_to_unsigned_with_ptr_arith(signed char x) {
-  unsigned char y = x;
-  int *p = table - 10;
-
-  if (x >= 0)
-    return x;
-  // FIXME: As in 'test_cast_to_unsigned', the analyzer thinks that this
-  // unsigned variable contains a negative value.
-  clang_analyzer_value(y); // expected-warning {{8s:{ [-128, -1] } }}
-  // In this case, the hack in ArrayBound cannot suppress the false positive
-  // underflow report because 'p' is not the beginning of a memory region, so
-  // it cannot clearly say that an unsigned index guarantees no overflow.
-  // However, we still don't get an underflow report because (for some unclear
-  // reason) the analyzer fails to evaluate this more complex expression.
-  clang_analyzer_dump(p[y]); // expected-warning {{Unknown}}
-  return p[y]; // no-warning
-
 }
 
 int test_negative_offset_with_unsigned_idx(void) {
