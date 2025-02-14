@@ -168,7 +168,6 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                          Instruction mix_inst,
                          Instruction mixlo_inst,
                          Instruction mixhi_inst,
-                         bit HasFP32Denormals,
                          ValueType VT = f16,
                          ValueType vecVT = v2f16> {
   defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
@@ -176,7 +175,6 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
   // At least one of the operands needs to be an fpextend of an f16
   // for this to be worthwhile, so we need three patterns here.
   // TODO: Could we use a predicate to inspect src1/2/3 instead?
-  let OtherPredicates = !if(HasFP32Denormals, [TruePredicate], [NoFP32Denormals]) in {
   def : GCNPat <
     (f32 (fma_like (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
                    (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_mods)),
@@ -245,13 +243,12 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                 DSTCLAMP.NONE,
                 (i32 (IMPLICIT_DEF)))
   >;
-  } // End OtherPredicates
 
   // FIXME: Special case handling for maxhi (especially for clamp)
   // because dealing with the write to high half of the register is
   // difficult.
   foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-  let OtherPredicates = !if(HasFP32Denormals, [TruePredicate], [NoFP32Denormals]), True16Predicate = p in {
+  let True16Predicate = p in {
 
   def : GCNPat <
     (build_vector VT:$elt0, (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
@@ -277,9 +274,9 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                        VGPR_32:$elt0))
   >;
 
-  } // end OtherPredicates
+  } // end True16Predicate
 
-  let OtherPredicates = !if(HasFP32Denormals, [TruePredicate], [NoFP32Denormals]), True16Predicate = UseRealTrue16Insts in {
+  let True16Predicate = UseRealTrue16Insts in {
   def : GCNPat <
     (build_vector (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
                            (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
@@ -314,7 +311,7 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                        DSTCLAMP.ENABLE,
                        (REG_SEQUENCE VGPR_32, $elt0, lo16, (VT (IMPLICIT_DEF)), hi16)))
   >;
-  } // end OtherPredicates
+  } // end True16Predicate
 }
 
 class MinimumMaximumByMinimum3Maximum3VOP3P<SDPatternOperator node,
@@ -347,9 +344,9 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 }
 } // End FPDPRounding = 1
 }
-} // OtherPredicates = [NoFP32Denormals]
 
-defm : MadFmaMixPats<fmad, V_MAD_MIX_F32, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16, 0 /*HasFP32Denormals*/>;
+defm : MadFmaMixPats<fmad, V_MAD_MIX_F32, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
+} // OtherPredicates = [NoFP32Denormals]
 } // End SubtargetPredicate = HasMadMixInsts
 
 
@@ -370,7 +367,7 @@ defm V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 } // End FPDPRounding = 1
 }
 
-defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16, 1 /*HasPF32Denormals*/>;
+defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
 }
 
 let SubtargetPredicate = HasFmaMixBF16Insts in {
@@ -388,7 +385,7 @@ defm V_FMA_MIXHI_BF16 : VOP3_VOP3PInst<"v_fma_mixhi_bf16", VOP3P_Mix_Profile<VOP
 } // End FPDPRounding = 1
 } // End isCommutable = 1
 
-defm : MadFmaMixPats<fma, V_FMA_MIX_F32_BF16, V_FMA_MIXLO_BF16, V_FMA_MIXHI_BF16, 1 /*HasPF32Denormals*/, bf16, v2bf16>;
+defm : MadFmaMixPats<fma, V_FMA_MIX_F32_BF16, V_FMA_MIXLO_BF16, V_FMA_MIXHI_BF16, bf16, v2bf16>;
 } // End SubtargetPredicate = HasFmaMixBF16Insts
 
 def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {

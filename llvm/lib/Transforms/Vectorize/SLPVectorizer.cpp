@@ -9956,12 +9956,16 @@ void BoUpSLP::transformNodes() {
         };
         for (auto [Cnt, Sz] : Slices) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, Sz);
-          // If any instruction is vectorized already - do not try again.
-          if (TreeEntry *SE = getSameValuesTreeEntry(Slice.front(), Slice,
-                                                     /*SameVF=*/true)) {
-            SE->UserTreeIndices.emplace_back(&E, UINT_MAX);
-            AddCombinedNode(SE->Idx, Cnt, Sz);
-            continue;
+          if (const auto *It = find_if(Slice, IsaPred<Instruction>);
+              It != Slice.end()) {
+            // If any instruction is vectorized already - do not try again.
+            if (TreeEntry *SE = getSameValuesTreeEntry(*It, Slice)) {
+              if (SE->getVectorFactor() != Sz)
+                continue;
+              SE->UserTreeIndices.emplace_back(&E, UINT_MAX);
+              AddCombinedNode(SE->Idx, Cnt, Sz);
+              continue;
+            }
           }
           unsigned PrevSize = VectorizableTree.size();
           [[maybe_unused]] unsigned PrevEntriesSize =
