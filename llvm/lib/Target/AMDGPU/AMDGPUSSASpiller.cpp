@@ -145,9 +145,9 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
                    MachineBasicBlock::iterator InsertBefore, VRegMaskPair VMP);
 
   unsigned getLoopMaxRP(MachineLoop *L);
-  void limit(MachineBasicBlock &MBB, RegisterSet &Active, RegisterSet &Spilled,
-             MachineBasicBlock::iterator I, unsigned Limit,
-             RegisterSet &ToSpill);
+  // Returns number of spilled VRegs
+  unsigned limit(MachineBasicBlock &MBB, RegisterSet &Active, RegisterSet &Spilled,
+             MachineBasicBlock::iterator I, unsigned Limit);
 
   unsigned getSizeInRegs(const VRegMaskPair VMP);
   unsigned getSizeInRegs(const RegisterSet VRegs);
@@ -175,6 +175,11 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
     SmallVector<VRegMaskPair> Tmp(VRegs.takeVector());
     sort(Tmp, SortByDist);
     VRegs.insert(Tmp.begin(), Tmp.end());
+    LLVM_DEBUG(dbgs() << "\nActive set sorted at " << *I;
+    for (auto P : VRegs) {
+      printVRegMaskPair(P);
+      dbgs() << " : " << M[P] << "\n";
+    });
   }
 
   unsigned fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
@@ -225,9 +230,9 @@ AMDGPUSSASpiller::printVRegMaskPair(const VRegMaskPair P) {
   dbgs() << "Vreg: [";
   if (HasSubReg)
     for (auto i : Idxs)
-      dbgs() << printReg(P.VReg, TRI, i, MRI) << "]\n";
+      dbgs() << printReg(P.VReg, TRI, i, MRI) << "] ";
   else
-    dbgs() << printReg(P.VReg) << "]\n";
+    dbgs() << printReg(P.VReg) << "] ";
 }
 
 AMDGPUSSASpiller::SpillInfo &
@@ -274,7 +279,8 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
   RegisterSet &Active = Entry.ActiveSet;
   RegisterSet &Spilled = Entry.SpillSet;
   
-  for (MachineBasicBlock::iterator I : MBB) {
+  // for (MachineBasicBlock::iterator I : MBB) {
+  for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); I++) {
     RegisterSet Reloads;
     // T4->startTimer();
     for (auto &U : I->uses()) {
@@ -286,12 +292,11 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
       if (!takeReg(VReg))
         continue;
 
-
       VRegMaskPair VMP(U, *TRI);
 
       // We don't need to make room for the PHI uses as they operands must
-      // already present in the corresponding predecessor Active set! Just make
-      // sure they really are.
+      // already present in the corresponding predecessor Active set! Just
+      // make sure they really are.
       if (I->isPHI()) {
         auto OpNo = U.getOperandNo();
         auto B = I->getOperand(++OpNo);
@@ -317,10 +322,10 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
 
     if (I->isPHI()) {
       // We don't need to make room for the PHI-defined values as they will be
-      // lowered to the copies at the end of the corresponding predecessors and
-      // occupies the same register with the corresponding PHI input value.
-      // Nevertheless, we must add them to the Active to indicate their values
-      // are available.
+      // lowered to the copies at the end of the corresponding predecessors
+      // and occupies the same register with the corresponding PHI input
+      // value. Nevertheless, we must add them to the Active to indicate their
+      // values are available.
       for (auto D : I->defs()) {
         Register R = D.getReg();
         if (takeReg(R)) {
@@ -352,22 +357,23 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     LLVM_DEBUG(dbgs() << "\nActive set with uses reloaded:\n";
                dumpRegSet(Active));
 
-    RegisterSet ToSpill;
-    limit(MBB, Active, Spilled, I, NumAvailableRegs, ToSpill);
-    limit(MBB, Active, Spilled, std::next(I),
-          NumAvailableRegs - getSizeInRegs(Defs), ToSpill);
+    
+    limit(MBB, Active, Spilled, I, NumAvailableRegs);
+    unsigned NSpills = limit(MBB, Active, Spilled, std::next(I),
+           NumAvailableRegs - getSizeInRegs(Defs));
+
     // T4->startTimer();
 
-    for (auto R : ToSpill) {
-      spillBefore(MBB, I, R);
-      Spilled.insert(R);
-      // FIXME: We'd want update LIS is we could!
-    }
+
     Active.insert(Defs.begin(), Defs.end());
     // Add reloads for VRegs in Reloads before I
-    dumpRegSet(Reloads);
-    for (auto R : Reloads)
+    for (auto R : Reloads) {
+      LLVM_DEBUG(dbgs() << "\nReloading "; printVRegMaskPair(R);
+                 dbgs() << "\n");
       reloadBefore(MBB, I, R);
+    }
+
+    std::advance(I, NSpills);
     // T4->stopTimer();
   }
   // Now, clear dead registers. We generally take care of trimming deads at the
@@ -487,13 +493,9 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
       // We're about to insert N reloads at the end of the predecessor block.
       // Make sure we have enough registers for N definitions or spill to make
       // room for them.
-      RegisterSet ToSpill;
-      limit(*Pred, PE.ActiveSet, PE.SpillSet, Pred->end(),
-            NumAvailableRegs - getSizeInRegs(ReloadInPred), ToSpill);
-      for (auto R : ToSpill) {
-        spillBefore(*Pred, Pred->end(), R);
-        PE.SpillSet.insert(R);
-      }
+      limit(*Pred, PE.ActiveSet, PE.SpillSet, Pred->getFirstTerminator(),
+            NumAvailableRegs - getSizeInRegs(ReloadInPred));
+
       for (auto R : ReloadInPred) {
         reloadAtEnd(*Pred, R);
         // FIXME: Do we need to update sets?
@@ -649,8 +651,7 @@ void AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
   const TargetRegisterClass *RC = getRegClassForVregMaskPair(VMP, SubRegIdx);
   int FI = getStackSlot(VMP);
   Register NewVReg = MRI->createVirtualRegister(RC);
-  TII->loadRegFromStackSlot(MBB, InsertBefore, NewVReg, FI, RC, TRI, NewVReg,
-                            SubRegIdx);
+  TII->loadRegFromStackSlot(MBB, InsertBefore, NewVReg, FI, RC, TRI, NewVReg);
   // FIXME: dirty hack! To avoid further changing the TargetInstrInfo interface.
   MachineInstr &ReloadMI = *(--InsertBefore);
   LIS.InsertMachineInstrInMaps(ReloadMI);
@@ -662,24 +663,15 @@ void AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
   // then this, reloaded here.
   SmallVector<MachineOperand*> ToUpdate;
   for (auto &U : MRI->use_nodbg_operands(VMP.VReg)) {
-    // MachineInstr *UseMI = U.getParent();
-    // if (MDT.dominates(&ReloadMI, UseMI)) {
-    //   ToUpdate.push_back(&U);
-    // } else if (UseMI->isPHI()) {
-    //   unsigned OpNo = U.getOperandNo();
-    //   MachineOperand MBBOp = UseMI->getOperand(++OpNo);
-    //   assert(MBBOp.isMBB() && "Not PHI instruction or malformed PHI!");
-    //   MachineBasicBlock *SourceMBB = MBBOp.getMBB();
-    //   if (SourceMBB == &MBB)
-    //     ToUpdate.push_back(&U);
-    // }
-
-    
     if (SpillPoints.contains(VMP)) {
         MachineInstr *UseMI = U.getParent();
         MachineInstr *Spill = SpillPoints[VMP];
-        if (UseMI != Spill && MDT.dominates(Spill, UseMI))
+        VRegMaskPair UseVMP(U, *TRI);
+        if (UseMI != Spill && MDT.dominates(Spill, UseMI) && UseVMP == VMP)
           ToUpdate.push_back(&U);
+    } else {
+      llvm::report_fatal_error(
+          "We're going to reload VReg which has not been spilled!");
     }
   }
   for (auto U : ToUpdate) {
@@ -713,16 +705,19 @@ void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
   LIS.InsertMachineInstrInMaps(Spill);
 
   if (LIS.hasInterval(VMP.VReg)) {
-    LiveInterval &LI = LIS.getInterval(VMP.VReg);
-    SlotIndex KillIdx = LIS.getInstructionIndex(Spill);
-    auto LR = LI.find(KillIdx);
-    if (LR != LI.end()) {
-      SlotIndex Start = LR->start;
-      SlotIndex End = LR->end;
-      if (Start < KillIdx) {
-        LI.removeSegment(KillIdx, End);
-      }
-    }
+    
+    LIS.removeInterval(VMP.VReg);
+
+    // LiveInterval &LI = LIS.getInterval(VMP.VReg);
+    // SlotIndex KillIdx = LIS.getInstructionIndex(Spill);
+    // auto LR = LI.find(KillIdx);
+    // if (LR != LI.end()) {
+    //   SlotIndex Start = LR->start;
+    //   SlotIndex End = LR->end;
+    //   if (Start < KillIdx) {
+    //     LI.removeSegment(KillIdx, End);
+    //   }
+    // }
   }
   SpillPoints[VMP] = &Spill;
 }
@@ -744,12 +739,14 @@ unsigned AMDGPUSSASpiller::getLoopMaxRP(MachineLoop *L) {
   return MaxRP;
 }
 
-void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
-                             RegisterSet &Spilled,
-                             MachineBasicBlock::iterator I, unsigned Limit,
-                             RegisterSet &ToSpill) {
+unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
+                                 RegisterSet &Spilled,
+                                 MachineBasicBlock::iterator I,
+                                 unsigned Limit) {
 
   // T2->startTimer();
+  unsigned NumSpills = 0;
+
   LLVM_DEBUG(dbgs() << "\nIn \"limit\" with Limit = " << Limit << "\n");
 
   Active.remove_if([&](VRegMaskPair P) { return NU.isDead(MBB, I, P); });
@@ -760,12 +757,13 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
   unsigned CurRP = getSizeInRegs(Active);
   if (CurRP <= Limit) {
     // T2->stopTimer();
-    return;
+    return NumSpills;
   }
 
+  
   sortRegSetAt(MBB, I, Active);
 
-  LLVM_DEBUG(dbgs() << "\nActive set sorted at" << *I; dumpRegSet(Active));
+  RegisterSet ToSpill;
 
   while (CurRP > Limit) {
     auto P = Active.pop_back_val();
@@ -801,7 +799,14 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
   }
   LLVM_DEBUG(dbgs() << "\nActive set after at the end of the \"limit\":\n";
              dumpRegSet(Active));
+  for (auto R : ToSpill) {
+    LLVM_DEBUG(dbgs() << "\nSpilling "; printVRegMaskPair(R));
+    spillBefore(MBB, I, R);
+    NumSpills++;
+    Spilled.insert(R);
+  }
   // T2->stopTimer();
+  return NumSpills;
 }
 
 unsigned AMDGPUSSASpiller::getSizeInRegs(const VRegMaskPair VMP) {
