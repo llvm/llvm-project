@@ -17,12 +17,12 @@
 # RUN: llvm-objdump -dr %t.64.norelax | FileCheck %s --check-prefix=NORELAX
 
 # RELAX:      00010000 <_start>:
-# RELAX-NEXT:   pcaddi    $a0, 0
+# RELAX-NEXT:   pcaddi $a0, 0
 # RELAX-NEXT:     R_LARCH_RELAX _start
 # RELAX-NEXT:     R_LARCH_RELAX *ABS*
 # RELAX-NEXT:     R_LARCH_PCREL20_S2 _start
 # RELAX-NEXT:     R_LARCH_RELAX *ABS*
-# RELAX-NEXT:   pcaddi    $a0, -1
+# RELAX-NEXT:   pcaddi $a0, -1
 # RELAX-NEXT:     R_LARCH_RELAX _start
 # RELAX-NEXT:     R_LARCH_RELAX *ABS*
 # RELAX-NEXT:     R_LARCH_PCREL20_S2 _start
@@ -191,7 +191,6 @@ addi.w \dst, \src1, \src2
 _start:
   la.pcrel $a0, _start
   la.got   $a0, _start
-
 .ifdef ELF64
   call36 _start
   tail36 $a0, _start
