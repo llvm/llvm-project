@@ -2873,7 +2873,9 @@ InstructionCost RISCVTargetLowering::getLMULCost(MVT VT) const {
 /// operand (index and possibly mask) are handled separately.
 InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
   auto LMULCost = getLMULCost(VT);
-  if (Subtarget.hasFastVRGather() && LMULCost.isValid()) {
+  bool Log2CostModel =
+      Subtarget.getVRGatherCostModel() == llvm::RISCVSubtarget::NLog2N;
+  if (Log2CostModel && LMULCost.isValid()) {
     unsigned Log = Log2_64(*LMULCost.getValue());
     if (Log > 0)
       return LMULCost * Log;
@@ -4258,7 +4260,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // Cap the cost at a value linear to the number of elements in the vector.
   // The default lowering is to use the stack.  The vector store + scalar loads
   // is linear in VL.  However, at high lmuls vslide1down and vslidedown end up
-  // being (at least) linear in LMUL.  As a result, using the vslidedown
+  // being (at least) linear in LMUL.  As a resultdedown
   // lowering for every element ends up being VL*LMUL..
   // TODO: Should we be directly costing the stack alternative?  Doing so might
   // give us a more accurate upper bound.

@@ -494,7 +494,7 @@ def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
                                                   FeatureUnalignedScalarMem,
                                                   FeatureUnalignedVectorMem]),
                                                  [TuneNoDefaultUnroll,
-                                                  TuneFastVRGather,
+                                                  TuneNLogNVRGather,
                                                   TuneOptimizedZeroStrideLoad,
                                                   TunePostRAScheduler]>;
 
