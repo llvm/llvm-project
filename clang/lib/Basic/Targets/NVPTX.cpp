@@ -292,6 +292,9 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_100:
       case OffloadArch::SM_100a:
         return "1000";
+      case OffloadArch::SM_101:
+      case OffloadArch::SM_101a:
+         return "1010";
       }
       llvm_unreachable("unhandled OffloadArch");
     }();
@@ -300,6 +303,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__CUDA_ARCH_FEAT_SM90_ALL", "1");
     if (GPU == OffloadArch::SM_100a)
       Builder.defineMacro("__CUDA_ARCH_FEAT_SM100_ALL", "1");
+    if (GPU == OffloadArch::SM_101a)
+      Builder.defineMacro("__CUDA_ARCH_FEAT_SM101_ALL", "1");
   }
 }
 
