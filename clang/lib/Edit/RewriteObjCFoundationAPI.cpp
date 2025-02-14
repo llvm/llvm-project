@@ -1091,6 +1091,7 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
 
     case CK_HLSLVectorTruncation:
     case CK_HLSLElementwiseCast:
+    case CK_HLSLAggregateSplatCast:
       llvm_unreachable("HLSL-specific cast in Objective-C?");
       break;
 
