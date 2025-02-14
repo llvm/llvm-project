@@ -441,6 +441,13 @@ public:
   GetManglingFlavor(ExecutionContext *exe_ctx = nullptr);
 
 protected:
+  /// Determine whether the fallback is enabled via setting.
+  bool UseSwiftASTContextFallback(const char *func_name,
+                                  lldb::opaque_compiler_type_t type);
+  /// Print a warning that a fallback was necessary.
+  bool DiagnoseSwiftASTContextFallback(const char *func_name,
+                                       lldb::opaque_compiler_type_t type);
+
   /// Helper that creates an AST type from \p type.
   ///
   /// FIXME: This API is dangerous, it would be better to return a
@@ -556,6 +563,7 @@ protected:
     unsigned char retry_count = 0;
   };
 
+  std::once_flag m_fallback_warning;
   mutable std::mutex m_swift_ast_context_lock;
   /// The "precise" SwiftASTContexts managed by this scratch context. There
   /// exists one per Swift module. The keys in this map are module names.

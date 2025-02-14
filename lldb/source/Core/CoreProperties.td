@@ -28,6 +28,11 @@ let Definition = "modulelist" in {
   def SwiftValidateTypeSystem: Property<"swift-validate-typesystem", "Boolean">,
     DefaultFalse,
     Desc<"Validate all Swift typesystem queries. Used for testing an asserts-enabled LLDB only.">;
+  def SwiftTypeSystemFallback
+      : Property<"swift-typesystem-compiler-fallback", "Boolean">,
+        DefaultTrue,
+        Desc<"If a query against reflection metadata / debug info fails, retry "
+             "using Swift modules.">;
   def SwiftLoadConformances: Property<"swift-load-conformances", "Boolean">,
     DefaultFalse,
     Desc<"Resolve type alias via the conformance section. Disabled for performance reasons">;
