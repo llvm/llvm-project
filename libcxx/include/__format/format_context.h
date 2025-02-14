@@ -65,9 +65,13 @@ __format_context_create(_OutIt __out_it, basic_format_args<basic_format_context<
 }
 #  endif
 
-using format_context = basic_format_context<back_insert_iterator<__format::__output_buffer<char>>, char>;
+template <class _CharT>
+using __format_context _LIBCPP_NODEBUG =
+    basic_format_context<back_insert_iterator<__format::__output_buffer<_CharT>>, _CharT>;
+
+using format_context = __format_context<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-using wformat_context = basic_format_context< back_insert_iterator<__format::__output_buffer<wchar_t>>, wchar_t>;
+using wformat_context = __format_context<wchar_t>;
 #  endif
 
 template <class _OutIt, class _CharT>

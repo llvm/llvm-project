@@ -219,7 +219,7 @@ public:
           __format_([](basic_format_parse_context<_CharT>& __parse_ctx, _Context& __ctx, const void* __ptr) {
             using _Dp = remove_const_t<_Tp>;
             using _Qp = conditional_t<__formattable_with<const _Dp, _Context>, const _Dp, _Dp>;
-            static_assert(__formattable_with<_Qp, _Context>, "Mandated by [format.arg]/10");
+            static_assert(__formattable_with<_Qp, _Context>, "Mandated by [format.arg]/12");
 
             typename _Context::template formatter_type<_Dp> __f;
             __parse_ctx.advance_to(__f.parse(__parse_ctx));
@@ -334,21 +334,16 @@ public:
 private:
   using char_type = typename _Context::char_type;
 
-  // TODO FMT Implement constrain [format.arg]/4
-  // Constraints: The template specialization
-  //   typename Context::template formatter_type<T>
-  // meets the Formatter requirements ([formatter.requirements]).  The extent
-  // to which an implementation determines that the specialization meets the
-  // Formatter requirements is unspecified, except that as a minimum the
-  // expression
-  //   typename Context::template formatter_type<T>()
-  //    .format(declval<const T&>(), declval<Context&>())
-  // shall be well-formed when treated as an unevaluated operand.
-
 public:
   __basic_format_arg_value<_Context> __value_;
   __format::__arg_t __type_;
 
+  // This constructor is used for the exposition only constructor.
+  // Per [format.arg]/4
+  //   template<class T> explicit basic_format_arg(T& v) noexcept;
+  //     Constraints: T satisfies formattable-with<Context>.
+  //
+  // This constraint is implemented in __create_format_arg
   _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(__format::__arg_t __type,
                                                   __basic_format_arg_value<_Context> __value) noexcept
       : __value_(__value), __type_(__type) {}
