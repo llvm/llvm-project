@@ -556,6 +556,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FCEIL, VT, Legal);
         setOperationAction(ISD::FTRUNC, VT, Legal);
         setOperationAction(ISD::FROUND, VT, Legal);
+        setOperationAction(ISD::FROUNDEVEN, VT, Legal);
       }
 
       // No special instructions for these.
@@ -582,8 +583,9 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::STRICT_FNEARBYINT, VT, Legal);
         setOperationAction(ISD::STRICT_FFLOOR, VT, Legal);
         setOperationAction(ISD::STRICT_FCEIL, VT, Legal);
-        setOperationAction(ISD::STRICT_FROUND, VT, Legal);
         setOperationAction(ISD::STRICT_FTRUNC, VT, Legal);
+        setOperationAction(ISD::STRICT_FROUND, VT, Legal);
+        setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
       }
     }
   }
@@ -616,6 +618,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v2f64, Legal);
     setOperationAction(ISD::FTRUNC, MVT::v2f64, Legal);
     setOperationAction(ISD::FROUND, MVT::v2f64, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v2f64, Legal);
 
     // Handle constrained floating-point operations.
     setOperationAction(ISD::STRICT_FADD, MVT::v2f64, Legal);
@@ -630,6 +633,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FCEIL, MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FTRUNC, MVT::v2f64, Legal);
     setOperationAction(ISD::STRICT_FROUND, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::v2f64, Legal);
 
     setOperationAction(ISD::SETCC, MVT::v2f64, Custom);
     setOperationAction(ISD::SETCC, MVT::v4f32, Custom);
@@ -657,6 +661,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCEIL, MVT::v4f32, Legal);
     setOperationAction(ISD::FTRUNC, MVT::v4f32, Legal);
     setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::v4f32, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::f64, Legal);
@@ -694,8 +699,9 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FFLOOR, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FCEIL, MVT::v4f32, Legal);
-    setOperationAction(ISD::STRICT_FROUND, MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FTRUNC, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FROUND, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::v4f32, Legal);
     for (auto VT : { MVT::f32, MVT::f64, MVT::f128,
                      MVT::v4f32, MVT::v2f64 }) {
       setOperationAction(ISD::STRICT_FMAXNUM, VT, Legal);

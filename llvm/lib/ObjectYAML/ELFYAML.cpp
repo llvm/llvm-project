@@ -806,6 +806,9 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
     break;
   }
   switch (Object->getMachine()) {
+  case ELF::EM_AARCH64:
+    BCase(SHF_AARCH64_PURECODE);
+    break;
   case ELF::EM_ARM:
     BCase(SHF_ARM_PURECODE);
     break;
