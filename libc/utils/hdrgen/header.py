@@ -41,7 +41,10 @@ class HeaderFile:
                 for macro in self.macros
                 if macro.header is not None
             }
-            | {PurePosixPath("llvm-libc-types") / f"{typ.type_name}.h" for typ in self.types}
+            | {
+                PurePosixPath("llvm-libc-types") / f"{typ.type_name}.h"
+                for typ in self.types
+            }
         )
 
     def public_api(self):
@@ -53,10 +56,7 @@ class HeaderFile:
 
         content = [
             f"#include {file}"
-            for file in sorted(
-                f'"{relpath(file)!s}"'
-                for file in self.includes()
-            )
+            for file in sorted(f'"{relpath(file)!s}"' for file in self.includes())
         ]
 
         for macro in self.macros:
