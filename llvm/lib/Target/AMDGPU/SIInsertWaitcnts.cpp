@@ -859,6 +859,16 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
   assert(MI->hasOneMemOperand());
   const MachineMemOperand *MMO = *(MI->memoperands_begin());
   bool IsLaneShared = MMO->getAddrSpace() == AMDGPUAS::LANE_SHARED;
+#ifndef NDEBUG
+  // Do not allow vector registers as implicit operands of v_load/store_idx
+  // on laneshared because it is not clear whether those registers are
+  // laneshared or wave-private.
+  if (IsLaneShared) {
+    for (auto Opnd : MI->implicit_operands())
+      assert(!Opnd.isReg() || !TRI->isVectorRegister(*MRI, Opnd.getReg()));
+  }
+#endif
+
   Result.first = IsLaneShared ? 0 : Encoding.LaneSharedSize;
   auto MaxNumVGPRs = Encoding.VGPRL - Encoding.VGPR0 + 1;
   if (GprIdxImmedVals[Idx].has_value()) {
@@ -868,12 +878,11 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
     Result.first += GprIdxImmedVals[Idx].value() + Offset;
     assert(MI->hasOneMemOperand() && "V_LOAD/STORE_IDX must have one MMO");
     MachineMemOperand *MMO = *MI->memoperands_begin();
-    auto Size = MMO->getSizeInBits().getValue();
-    Result.second = Result.first + divideCeil(Size, 32);
     // Handle the case where the range is out of bound.
     Result.first = Result.first % MaxNumVGPRs;
-    Result.second = Result.second % MaxNumVGPRs;
-    if (Result.first >= Result.second) {
+    auto Size = MMO->getSizeInBits().getValue();
+    Result.second = Result.first + divideCeil(Size, 32);
+    if (Result.second > MaxNumVGPRs) {
       Result.first = 0;
       Result.second = MaxNumVGPRs;
     }
@@ -884,7 +893,8 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
     // get more accurate result in this case.
     Result.second = Encoding.LaneSharedSize;
   } else {
-    // TODO-GFX13: we may have more accurate range info for
+    // TODO-GFX13: we expect to scan implicit defs/uses on VGPRs
+    // that should provide more accurate interval for private objects.
     // v_load/store_idx on private vgpr?
     Result.second = MaxNumVGPRs;
   }
