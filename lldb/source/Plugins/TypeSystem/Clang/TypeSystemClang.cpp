@@ -1468,6 +1468,9 @@ static bool TemplateParameterAllowsValue(NamedDecl *param,
                  llvm::dyn_cast<NonTypeTemplateParmDecl>(param)) {
     // Compare the argument kind, i.e. ensure that <typename> != <int>.
     QualType value_param_type = GetValueParamType(value);
+    if (value_param_type.isNull())
+      return false;
+
     // Compare the integral type, i.e. ensure that <int> != <char>.
     if (type_param->getType() != value_param_type)
       return false;
