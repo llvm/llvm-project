@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "lldb/lldb-private.h"
+#include "clang/AST/APValue.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Casting.h"
 
@@ -544,7 +545,7 @@ bool operator==(const CompilerType &lhs, const CompilerType &rhs);
 bool operator!=(const CompilerType &lhs, const CompilerType &rhs);
 
 struct CompilerType::IntegralTemplateArgument {
-  llvm::APSInt value;
+  clang::APValue value;
   CompilerType type;
 };
 

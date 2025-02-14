@@ -1973,6 +1973,27 @@ private:
   ClangASTMetadata m_metadata;
 };
 
+static clang::APValue MakeAPValue(CompilerType clang_type, uint64_t bit_width,
+                                  uint64_t value) {
+  bool is_signed = false;
+  const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed);
+
+  llvm::APSInt apint(bit_width, !is_signed);
+  apint = value;
+
+  if (is_integral)
+    return clang::APValue(apint);
+
+  uint32_t count;
+  bool is_complex;
+  assert(clang_type.IsFloatingPointType(count, is_complex));
+
+  if (bit_width == 32)
+    return clang::APValue(llvm::APFloat(apint.bitsToFloat()));
+
+  return clang::APValue(llvm::APFloat(apint.bitsToDouble()));
+}
+
 bool DWARFASTParserClang::ParseTemplateDIE(
     const DWARFDIE &die,
     TypeSystemClang::TemplateParameterInfos &template_param_infos) {
@@ -2050,9 +2071,6 @@ bool DWARFASTParserClang::ParseTemplateDIE(
       clang_type = m_ast.GetBasicType(eBasicTypeVoid);
 
     if (!is_template_template_argument) {
-      bool is_signed = false;
-      // Get the signed value for any integer or enumeration if available
-      clang_type.IsIntegerOrEnumerationType(is_signed);
 
       if (name && !name[0])
         name = nullptr;
@@ -2061,11 +2079,12 @@ bool DWARFASTParserClang::ParseTemplateDIE(
         std::optional<uint64_t> size = clang_type.GetBitSize(nullptr);
         if (!size)
           return false;
-        llvm::APInt apint(*size, uval64, is_signed);
+
         template_param_infos.InsertArg(
-            name, clang::TemplateArgument(ast, llvm::APSInt(apint, !is_signed),
-                                          ClangUtil::GetQualType(clang_type),
-                                          is_default_template_arg));
+            name,
+            clang::TemplateArgument(ast, ClangUtil::GetQualType(clang_type),
+                                    MakeAPValue(clang_type, *size, uval64),
+                                    is_default_template_arg));
       } else {
         template_param_infos.InsertArg(
             name, clang::TemplateArgument(ClangUtil::GetQualType(clang_type),
