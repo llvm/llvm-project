@@ -100,6 +100,12 @@ struct ELFHeader {
   ///    The byte order of this ELF file as described by the header.
   lldb::ByteOrder GetByteOrder() const;
 
+  /// Get the size in bytes of the section header data.
+  ///
+  /// \return
+  ///   The byte size of the section header data.
+  uint64_t GetSectionHeaderByteSize() const { return e_shnum * e_shentsize; }
+
   /// The jump slot relocation type of this ELF.
   unsigned GetRelocationJumpSlotType() const;
 
