@@ -55,7 +55,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
   std::string Serialized = clang::tidy::utils::options::serializeStringList(
       SubscriptExcludedClasses);
 
-  Options.store(Opts, "SubscriptExcludeClasses",
+  Options.store(Opts, "ExcludeClasses",
                 Serialized.substr(0, Serialized.size() - DefaultsStringLength));
 }
 
