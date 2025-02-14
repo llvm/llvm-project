@@ -2001,9 +2001,7 @@ bool MemRefAccess::operator==(const MemRefAccess &rhs) const {
   AffineValueMap diff, thisMap, rhsMap;
   getAccessMap(&thisMap);
   rhs.getAccessMap(&rhsMap);
-  AffineValueMap::difference(thisMap, rhsMap, &diff);
-  return llvm::all_of(diff.getAffineMap().getResults(),
-                      [](AffineExpr e) { return e == 0; });
+  return thisMap == rhsMap;
 }
 
 void mlir::affine::getAffineIVs(Operation &op, SmallVectorImpl<Value> &ivs) {
