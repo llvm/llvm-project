@@ -52,6 +52,9 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   DoubleTy = cir::DoubleType::get(&getMLIRContext());
   FP80Ty = cir::FP80Type::get(&getMLIRContext());
   FP128Ty = cir::FP128Type::get(&getMLIRContext());
+
+  theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
+                     builder.getStringAttr(getTriple().str()));
 }
 
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {

@@ -21,7 +21,9 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 class ASTContext;
@@ -87,6 +89,8 @@ public:
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
+
+  const llvm::Triple &getTriple() const { return target.getTriple(); }
 
   /// Helpers to emit "not yet implemented" error diagnostics
   DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef);
