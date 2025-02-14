@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 allowed-dialects=func,arith,cf' -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 use-bare-ptr-memref-call-conv=1' -split-input-file | FileCheck %s --check-prefix=CHECK-BARE
 // RUN: mlir-opt %s -transform-interpreter | FileCheck %s
 
@@ -569,7 +570,7 @@ gpu.module @test_module_27 {
   // CHECK-LABEL: func @gpu_unroll
   func.func @gpu_unroll(%arg0 : vector<4xf32>) -> vector<4xf32> {
     %result = math.exp %arg0 : vector<4xf32>
-    // CHECK: %[[V0:.+]] = llvm.mlir.undef : vector<4xf32>
+    // CHECK: %[[V0:.+]] = llvm.mlir.poison : vector<4xf32>
     // CHECK: %[[CL:.+]] = llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
     // CHECK: %[[V1:.+]] = llvm.insertelement %[[CL]], %[[V0]]
     // CHECK: %[[CL:.+]] = llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
@@ -729,13 +730,13 @@ gpu.module @test_module_33 {
 gpu.module @test_module_34 {
   // CHECK-LABEL: llvm.func @memref_signature(
   //  CHECK-SAME:     %{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: f32) -> !llvm.struct<(struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, f32)>
-  //       CHECK:   llvm.mlir.undef
+  //       CHECK:   llvm.mlir.poison
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.insertvalue
-  //       CHECK:   llvm.mlir.undef
+  //       CHECK:   llvm.mlir.poison
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.return

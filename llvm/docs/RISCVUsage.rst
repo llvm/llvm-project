@@ -459,6 +459,12 @@ The current vendor extensions supported are:
 ``experimental-Xqcisls``
   LLVM implements `version 0.2 of the Qualcomm uC Scaled Load Store extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
+``Xmipscmove``
+  LLVM implements conditional move for the `p8700 processor <https://mips.com/products/hardware/p8700/>` by MIPS.
+
+``Xmipslsp``
+  LLVM implements load/store pair instructions for the `p8700 processor <https://mips.com/products/hardware/p8700/>` by MIPS.
+
 Experimental C Intrinsics
 =========================
 

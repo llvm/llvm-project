@@ -475,7 +475,7 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
-      auto *E = DetailRecord.dyn_cast<Expr *>();
+      auto *E = dyn_cast<Expr *>(DetailRecord);
       Record.push_back(/* IsDiagnostic */ E == nullptr);
       if (E)
         Record.AddStmt(E);
@@ -2210,6 +2210,16 @@ void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   Code = serialization::EXPR_PACK_INDEXING;
 }
 
+void ASTStmtWriter::VisitResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumExprs());
+  Record.AddSourceLocation(E->getBeginLoc());
+  for (Expr *Sub : E->getExprs())
+    Record.AddStmt(Sub);
+  Code = serialization::EXPR_RESOLVED_UNEXPANDED_PACK;
+}
+
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
@@ -2447,6 +2457,11 @@ void ASTStmtWriter::VisitOMPLoopTransformationDirective(
 void ASTStmtWriter::VisitOMPTileDirective(OMPTileDirective *D) {
   VisitOMPLoopTransformationDirective(D);
   Code = serialization::STMT_OMP_TILE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPStripeDirective(OMPStripeDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+  Code = serialization::STMP_OMP_STRIPE_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
@@ -2995,6 +3010,17 @@ void ASTStmtWriter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
     Record.AddStmt(E);
 
   Code = serialization::STMT_OPENACC_WAIT_CONSTRUCT;
+}
+
+void ASTStmtWriter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
+  VisitStmt(S);
+  Record.writeEnum(S->Kind);
+  Record.AddSourceRange(S->Range);
+  Record.AddSourceLocation(S->DirectiveLoc);
+  Record.writeEnum(S->getAtomicKind());
+  Record.AddStmt(S->getAssociatedStmt());
+
+  Code = serialization::STMT_OPENACC_ATOMIC_CONSTRUCT;
 }
 
 //===----------------------------------------------------------------------===//

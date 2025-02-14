@@ -87,16 +87,23 @@ public:
 //  |    |
 //  |Rgn3| -> Transform1 ->  ... -> TransformN -> Check Cost
 //  +----+
+//
+// The region can also hold an ordered sequence of "auxiliary" instructions.
+// This can be used to pass auxiliary information across region passes, like for
+// example the initial seed slice used by the bottom-up vectorizer.
 
 class Region {
   /// All the instructions in the Region. Only new instructions generated during
   /// vectorization are part of the Region.
   SetVector<Instruction *> Insts;
+  /// An auxiliary sequence of Instruction-Index pairs.
+  SmallVector<Instruction *> Aux;
 
   /// MDNode that we'll use to mark instructions as being part of the region.
   MDNode *RegionMDN;
   static constexpr const char *MDKind = "sandboxvec";
   static constexpr const char *RegionStr = "sandboxregion";
+  static constexpr const char *AuxMDKind = "sandboxaux";
 
   Context &Ctx;
   /// Keeps track of cost of instructions added and removed.
@@ -109,6 +116,10 @@ class Region {
 
   // TODO: Add cost modeling.
   // TODO: Add a way to encode/decode region info to/from metadata.
+
+  /// Set \p I as the \p Idx'th element in the auxiliary vector.
+  /// NOTE: This is for internal use, it does not set the metadata.
+  void setAux(unsigned Idx, Instruction *I);
 
 public:
   Region(Context &Ctx, TargetTransformInfo &TTI);
@@ -124,6 +135,12 @@ public:
   bool contains(Instruction *I) const { return Insts.contains(I); }
   /// Returns true if the Region has no instructions.
   bool empty() const { return Insts.empty(); }
+  /// Set the auxiliary vector.
+  void setAux(ArrayRef<Instruction *> Aux);
+  /// \Returns the auxiliary vector.
+  const SmallVector<Instruction *> &getAux() const { return Aux; }
+  /// Clears all auxiliary data.
+  void clearAux();
 
   using iterator = decltype(Insts.begin());
   iterator begin() { return Insts.begin(); }

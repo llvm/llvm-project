@@ -957,18 +957,17 @@ FunctionTemplateSpecializationInfo *FunctionTemplateSpecializationInfo::Create(
 // ClassTemplateSpecializationDecl Implementation
 //===----------------------------------------------------------------------===//
 
-ClassTemplateSpecializationDecl::
-ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
-                                DeclContext *DC, SourceLocation StartLoc,
-                                SourceLocation IdLoc,
-                                ClassTemplateDecl *SpecializedTemplate,
-                                ArrayRef<TemplateArgument> Args,
-                                ClassTemplateSpecializationDecl *PrevDecl)
+ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(
+    ASTContext &Context, Kind DK, TagKind TK, DeclContext *DC,
+    SourceLocation StartLoc, SourceLocation IdLoc,
+    ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
+    bool StrictPackMatch, ClassTemplateSpecializationDecl *PrevDecl)
     : CXXRecordDecl(DK, TK, Context, DC, StartLoc, IdLoc,
                     SpecializedTemplate->getIdentifier(), PrevDecl),
-    SpecializedTemplate(SpecializedTemplate),
-    TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
-    SpecializationKind(TSK_Undeclared) {
+      SpecializedTemplate(SpecializedTemplate),
+      TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
+      SpecializationKind(TSK_Undeclared), StrictPackMatch(StrictPackMatch) {
+  assert(DK == Kind::ClassTemplateSpecialization || StrictPackMatch == false);
 }
 
 ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
@@ -977,18 +976,14 @@ ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
                     SourceLocation(), nullptr, nullptr),
       SpecializationKind(TSK_Undeclared) {}
 
-ClassTemplateSpecializationDecl *
-ClassTemplateSpecializationDecl::Create(ASTContext &Context, TagKind TK,
-                                        DeclContext *DC,
-                                        SourceLocation StartLoc,
-                                        SourceLocation IdLoc,
-                                        ClassTemplateDecl *SpecializedTemplate,
-                                        ArrayRef<TemplateArgument> Args,
-                                   ClassTemplateSpecializationDecl *PrevDecl) {
-  auto *Result =
-      new (Context, DC) ClassTemplateSpecializationDecl(
-          Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
-          SpecializedTemplate, Args, PrevDecl);
+ClassTemplateSpecializationDecl *ClassTemplateSpecializationDecl::Create(
+    ASTContext &Context, TagKind TK, DeclContext *DC, SourceLocation StartLoc,
+    SourceLocation IdLoc, ClassTemplateDecl *SpecializedTemplate,
+    ArrayRef<TemplateArgument> Args, bool StrictPackMatch,
+    ClassTemplateSpecializationDecl *PrevDecl) {
+  auto *Result = new (Context, DC) ClassTemplateSpecializationDecl(
+      Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
+      SpecializedTemplate, Args, StrictPackMatch, PrevDecl);
   Result->setMayHaveOutOfDateDef(false);
 
   // If the template decl is incomplete, copy the external lexical storage from
@@ -1175,7 +1170,9 @@ ClassTemplatePartialSpecializationDecl::ClassTemplatePartialSpecializationDecl(
     ClassTemplatePartialSpecializationDecl *PrevDecl)
     : ClassTemplateSpecializationDecl(
           Context, ClassTemplatePartialSpecialization, TK, DC, StartLoc, IdLoc,
-          SpecializedTemplate, Args, PrevDecl),
+          // Tracking StrictPackMatch for Partial
+          // Specializations is not needed.
+          SpecializedTemplate, Args, /*StrictPackMatch=*/false, PrevDecl),
       TemplateParams(Params), InstantiatedFromMember(nullptr, false) {
   if (AdoptTemplateParameterList(Params, this))
     setInvalidDecl();
@@ -1496,7 +1493,7 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
 }
 
 void VarTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
-  auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>();
+  auto *Info = dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo);
   if (!Info) {
     // Don't allocate if the location is invalid.
     if (Loc.isInvalid())
@@ -1509,7 +1506,7 @@ void VarTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
 }
 
 void VarTemplateSpecializationDecl::setTemplateKeywordLoc(SourceLocation Loc) {
-  auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>();
+  auto *Info = dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo);
   if (!Info) {
     // Don't allocate if the location is invalid.
     if (Loc.isInvalid())

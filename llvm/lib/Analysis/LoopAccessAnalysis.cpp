@@ -813,6 +813,48 @@ static bool hasComputableBounds(PredicatedScalarEvolution &PSE, Value *Ptr,
   return AR->isAffine();
 }
 
+/// Try to compute the stride for \p AR. Used by getPtrStride.
+static std::optional<int64_t>
+getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
+                    Value *Ptr, PredicatedScalarEvolution &PSE) {
+  // The access function must stride over the innermost loop.
+  if (Lp != AR->getLoop()) {
+    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not striding over innermost loop "
+                      << *Ptr << " SCEV: " << *AR << "\n");
+    return std::nullopt;
+  }
+
+  // Check the step is constant.
+  const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
+
+  // Calculate the pointer stride and check if it is constant.
+  const SCEVConstant *C = dyn_cast<SCEVConstant>(Step);
+  if (!C) {
+    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not a constant strided " << *Ptr
+                      << " SCEV: " << *AR << "\n");
+    return std::nullopt;
+  }
+
+  const auto &DL = Lp->getHeader()->getDataLayout();
+  TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
+  int64_t Size = AllocSize.getFixedValue();
+  const APInt &APStepVal = C->getAPInt();
+
+  // Huge step value - give up.
+  if (APStepVal.getBitWidth() > 64)
+    return std::nullopt;
+
+  int64_t StepVal = APStepVal.getSExtValue();
+
+  // Strided access.
+  int64_t Stride = StepVal / Size;
+  int64_t Rem = StepVal % Size;
+  if (Rem)
+    return std::nullopt;
+
+  return Stride;
+}
+
 /// Check whether a pointer address cannot wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE,
                      const DenseMap<Value *, const SCEV *> &Strides, Value *Ptr,
@@ -1458,42 +1500,9 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
     return std::nullopt;
   }
 
-  // The access function must stride over the innermost loop.
-  if (Lp != AR->getLoop()) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not striding over innermost loop "
-                      << *Ptr << " SCEV: " << *AR << "\n");
-    return std::nullopt;
-  }
-
-  // Check the step is constant.
-  const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
-
-  // Calculate the pointer stride and check if it is constant.
-  const SCEVConstant *C = dyn_cast<SCEVConstant>(Step);
-  if (!C) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not a constant strided " << *Ptr
-                      << " SCEV: " << *AR << "\n");
-    return std::nullopt;
-  }
-
-  const auto &DL = Lp->getHeader()->getDataLayout();
-  TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
-  int64_t Size = AllocSize.getFixedValue();
-  const APInt &APStepVal = C->getAPInt();
-
-  // Huge step value - give up.
-  if (APStepVal.getBitWidth() > 64)
-    return std::nullopt;
-
-  int64_t StepVal = APStepVal.getSExtValue();
-
-  // Strided access.
-  int64_t Stride = StepVal / Size;
-  int64_t Rem = StepVal % Size;
-  if (Rem)
-    return std::nullopt;
-
-  if (!ShouldCheckWrap)
+  std::optional<int64_t> Stride =
+      getStrideFromAddRec(AR, Lp, AccessTy, Ptr, PSE);
+  if (!ShouldCheckWrap || !Stride)
     return Stride;
 
   // The address calculation must not wrap. Otherwise, a dependence could be
@@ -2859,7 +2868,7 @@ static Value *stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
 /// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
 static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
   auto *PtrTy = dyn_cast<PointerType>(Ptr->getType());
-  if (!PtrTy || PtrTy->isAggregateType())
+  if (!PtrTy)
     return nullptr;
 
   // Try to remove a gep instruction to make the pointer (actually index at this
@@ -2867,18 +2876,15 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   // pointer, otherwise, we are analyzing the index.
   Value *OrigPtr = Ptr;
 
-  // The size of the pointer access.
-  int64_t PtrAccessSize = 1;
-
   Ptr = stripGetElementPtr(Ptr, SE, Lp);
   const SCEV *V = SE->getSCEV(Ptr);
 
   if (Ptr != OrigPtr)
     // Strip off casts.
-    while (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(V))
+    while (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
       V = C->getOperand();
 
-  const SCEVAddRecExpr *S = dyn_cast<SCEVAddRecExpr>(V);
+  auto *S = dyn_cast<SCEVAddRecExpr>(V);
   if (!S)
     return nullptr;
 
@@ -2888,25 +2894,20 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
     return nullptr;
 
   V = S->getStepRecurrence(*SE);
-  if (!V)
-    return nullptr;
 
   // Strip off the size of access multiplication if we are still analyzing the
   // pointer.
   if (OrigPtr == Ptr) {
-    if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(V)) {
-      if (M->getOperand(0)->getSCEVType() != scConstant)
+    if (auto *M = dyn_cast<SCEVMulExpr>(V)) {
+      auto *StepConst = dyn_cast<SCEVConstant>(M->getOperand(0));
+      if (!StepConst)
         return nullptr;
 
-      const APInt &APStepVal = cast<SCEVConstant>(M->getOperand(0))->getAPInt();
-
-      // Huge step value - give up.
-      if (APStepVal.getBitWidth() > 64)
+      auto StepVal = StepConst->getAPInt().trySExtValue();
+      // Bail out on a non-unit pointer access size.
+      if (!StepVal || StepVal != 1)
         return nullptr;
 
-      int64_t StepVal = APStepVal.getSExtValue();
-      if (PtrAccessSize != StepVal)
-        return nullptr;
       V = M->getOperand(1);
     }
   }
@@ -2920,7 +2921,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   if (isa<SCEVUnknown>(V))
     return V;
 
-  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
+  if (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
     if (isa<SCEVUnknown>(C->getOperand()))
       return V;
 
@@ -3007,20 +3008,12 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
       PtrRtChecking(nullptr), TheLoop(L) {
   unsigned MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
-  if (TTI) {
-    TypeSize FixedWidth =
-        TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
-    if (FixedWidth.isNonZero()) {
-      // Scale the vector width by 2 as rough estimate to also consider
-      // interleaving.
-      MaxTargetVectorWidthInBits = FixedWidth.getFixedValue() * 2;
-    }
+  if (TTI && !TTI->enableScalableVectorization())
+    // Scale the vector width by 2 as rough estimate to also consider
+    // interleaving.
+    MaxTargetVectorWidthInBits =
+        TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector) * 2;
 
-    TypeSize ScalableWidth =
-        TTI->getRegisterBitWidth(TargetTransformInfo::RGK_ScalableVector);
-    if (ScalableWidth.isNonZero())
-      MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
-  }
   DepChecker = std::make_unique<MemoryDepChecker>(*PSE, L, SymbolicStrides,
                                                   MaxTargetVectorWidthInBits);
   PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
@@ -3086,7 +3079,6 @@ const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
   return *It->second;
 }
 void LoopAccessInfoManager::clear() {
-  SmallVector<Loop *> ToRemove;
   // Collect LoopAccessInfo entries that may keep references to IR outside the
   // analyzed loop or SCEVs that may have been modified or invalidated. At the
   // moment, that is loops requiring memory or SCEV runtime checks, as those cache
@@ -3095,11 +3087,8 @@ void LoopAccessInfoManager::clear() {
     if (LAI->getRuntimePointerChecking()->getChecks().empty() &&
         LAI->getPSE().getPredicate().isAlwaysTrue())
       continue;
-    ToRemove.push_back(L);
-  }
-
-  for (Loop *L : ToRemove)
     LoopAccessInfoMap.erase(L);
+  }
 }
 
 bool LoopAccessInfoManager::invalidate(

@@ -40,35 +40,6 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ToSPIRV
-//===----------------------------------------------------------------------===//
-
-def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
-  let summary = "Convert to SPIR-V";
-  let description = [{
-    This is a generic pass to convert to SPIR-V.
-  }];
-  let dependentDialects = [
-    "spirv::SPIRVDialect",
-    "vector::VectorDialect",
-  ];
-  let options = [
-    Option<"runSignatureConversion", "run-signature-conversion", "bool",
-    /*default=*/"true",
-    "Run function signature conversion to convert vector types">,
-    Option<"runVectorUnrolling", "run-vector-unrolling", "bool",
-    /*default=*/"true",
-    "Run vector unrolling to convert vector types in function bodies">,
-    Option<"convertGPUModules", "convert-gpu-modules", "bool",
-    /*default=*/"false",
-    "Clone and convert GPU modules">,
-    Option<"nestInGPUModule", "nest-in-gpu-module", "bool",
-    /*default=*/"false",
-    "Put converted SPIR-V module inside the gpu.module instead of alongside it.">,
-  ];
-}
-
-//===----------------------------------------------------------------------===//
 // AffineToStandard
 //===----------------------------------------------------------------------===//
 
@@ -303,6 +274,17 @@ def ConvertBufferizationToMemRef : Pass<"convert-bufferization-to-memref"> {
 def ConvertComplexToLLVMPass : Pass<"convert-complex-to-llvm"> {
   let summary = "Convert Complex dialect to LLVM dialect";
   let dependentDialects = ["LLVM::LLVMDialect"];
+
+  let options = [
+    Option<"complexRange", "complex-range", "::mlir::complex::ComplexRangeFlags",
+      /*default=*/"::mlir::complex::ComplexRangeFlags::basic",
+      "Control the intermediate calculation of complex number division",
+      [{::llvm::cl::values(
+        clEnumValN(::mlir::complex::ComplexRangeFlags::improved, "improved", "improved"),
+        clEnumValN(::mlir::complex::ComplexRangeFlags::basic, "basic", "basic (default)"),
+        clEnumValN(::mlir::complex::ComplexRangeFlags::none, "none", "none")
+      )}]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -337,6 +319,17 @@ def ConvertComplexToStandard : Pass<"convert-complex-to-standard"> {
   let summary = "Convert Complex dialect to standard dialect";
   let constructor = "mlir::createConvertComplexToStandardPass()";
   let dependentDialects = ["math::MathDialect"];
+
+  let options = [
+    Option<"complexRange", "complex-range", "::mlir::complex::ComplexRangeFlags",
+      /*default=*/"::mlir::complex::ComplexRangeFlags::improved",
+      "Control the intermediate calculation of complex number division",
+      [{::llvm::cl::values(
+        clEnumValN(::mlir::complex::ComplexRangeFlags::improved, "improved", "improved (default)"),
+        clEnumValN(::mlir::complex::ComplexRangeFlags::basic, "basic", "basic"),
+        clEnumValN(::mlir::complex::ComplexRangeFlags::none, "none", "none")
+      )}]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -579,14 +572,16 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   ];
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
-           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/ "0",
            "Bitwidth of the index type, 0 to use size of machine word">,
     Option<"hasRedux", "has-redux", "bool", /*default=*/"false",
            "Target gpu supports redux">,
     Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
            /*default=*/"false",
            "Replace memref arguments in GPU functions with bare pointers. "
-           "All memrefs must have static shape.">
+           "All memrefs must have static shape.">,
+    ListOption<"allowedDialects", "allowed-dialects", "std::string",
+               "Run conversion patterns of only the specified dialects">,
   ];
 }
 
@@ -607,20 +602,24 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
            /*default=*/"\"gfx000\"",
            "Chipset that these operations will run on">,
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
-           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/ "0",
            "Bitwidth of the index type, 0 to use size of machine word">,
     Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
            /*default=*/"false",
            "Replace memref arguments in GPU functions with bare pointers."
            "All memrefs must have static shape">,
     Option<"runtime", "runtime", "::mlir::gpu::amd::Runtime",
-          "::mlir::gpu::amd::Runtime::Unknown",
-          "Runtime code will be run on (default is Unknown, can also use HIP or OpenCl)",
-          [{::llvm::cl::values(
-            clEnumValN(::mlir::gpu::amd::Runtime::Unknown, "unknown", "Unknown (default)"),
-            clEnumValN(::mlir::gpu::amd::Runtime::HIP, "HIP", "HIP"),
-            clEnumValN(::mlir::gpu::amd::Runtime::OpenCL, "OpenCL", "OpenCL")
-          )}]>
+           "::mlir::gpu::amd::Runtime::Unknown",
+           "Runtime code will be run on (default is Unknown, can also use HIP "
+           "or OpenCL)",
+           [{::llvm::cl::values(
+               clEnumValN(::mlir::gpu::amd::Runtime::Unknown, "unknown",
+                          "Unknown (default)"),
+               clEnumValN(::mlir::gpu::amd::Runtime::HIP, "HIP", "HIP"),
+               clEnumValN(::mlir::gpu::amd::Runtime::OpenCL, "OpenCL",
+                          "OpenCL"))}]>,
+    ListOption<"allowedDialects", "allowed-dialects", "std::string",
+               "Run conversion patterns of only the specified dialects">,
   ];
 }
 
@@ -1454,7 +1453,10 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
 def ConvertVectorToSPIRV : Pass<"convert-vector-to-spirv"> {
   let summary = "Convert Vector dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertVectorToSPIRVPass()";
-  let dependentDialects = ["spirv::SPIRVDialect"];
+  let dependentDialects = [
+    "spirv::SPIRVDialect",
+    "ub::UBDialect"
+  ];
 }
 
 //===----------------------------------------------------------------------===//

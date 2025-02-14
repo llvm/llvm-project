@@ -432,6 +432,23 @@ bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   }
 }
 
+bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
+                                   bool AllowUndefOrPoison) const {
+  assert(getArgOperand(ArgNo)->getType()->isPointerTy() &&
+         "Argument must be a pointer");
+  if (paramHasAttr(ArgNo, Attribute::NonNull) &&
+      (AllowUndefOrPoison || paramHasAttr(ArgNo, Attribute::NoUndef)))
+    return true;
+
+  if (getParamDereferenceableBytes(ArgNo) > 0 &&
+      !NullPointerIsDefined(
+          getCaller(),
+          getArgOperand(ArgNo)->getType()->getPointerAddressSpace()))
+    return true;
+
+  return false;
+}
+
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
   if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
@@ -673,6 +690,25 @@ bool CallBase::onlyAccessesInaccessibleMemOrArgMem() const {
 void CallBase::setOnlyAccessesInaccessibleMemOrArgMem() {
   setMemoryEffects(getMemoryEffects() &
                    MemoryEffects::inaccessibleOrArgMemOnly());
+}
+
+CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {
+  if (OpNo < arg_size()) {
+    // If the argument is passed byval, the callee does not have access to the
+    // original pointer and thus cannot capture it.
+    if (isByValArgument(OpNo))
+      return CaptureInfo::none();
+
+    CaptureInfo CI = getParamAttributes(OpNo).getCaptureInfo();
+    if (auto *Fn = dyn_cast<Function>(getCalledOperand()))
+      CI &= Fn->getAttributes().getParamAttrs(OpNo).getCaptureInfo();
+    return CI;
+  }
+
+  // deopt operand bundles are captures(none)
+  auto &BOI = getBundleOpInfoForOperand(OpNo);
+  auto OBU = operandBundleFromBundleOpInfo(BOI);
+  return OBU.isDeoptOperandBundle() ? CaptureInfo::none() : CaptureInfo::all();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2666,8 +2702,7 @@ BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
 
 // Exchange the two operands to this instruction. This instruction is safe to
 // use on any binary instruction and does not modify the semantics of the
-// instruction. If the instruction is order-dependent (SetLT f.e.), the opcode
-// is changed.
+// instruction.
 bool BinaryOperator::swapOperands() {
   if (!isCommutative())
     return true; // Can't commute operands

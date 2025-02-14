@@ -11,14 +11,12 @@ on:
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
-      - '.github/workflows/llvm-project-tests.yml'
   pull_request:
     branches:
       - 'release/**'
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
-      - '.github/workflows/llvm-project-tests.yml'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -27,14 +25,6 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  check-all:
-    if: github.repository_owner == 'llvm'
-    name: Build and Test
-    uses: ./.github/workflows/llvm-project-tests.yml
-    with:
-      build_target: check-all
-      projects: clang;lld;libclc;lldb
-
   abi-dump-setup:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-latest

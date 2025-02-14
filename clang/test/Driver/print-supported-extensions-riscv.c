@@ -157,6 +157,8 @@
 // CHECK-NEXT:     xcvmac               1.0       'XCVmac' (CORE-V Multiply-Accumulate)
 // CHECK-NEXT:     xcvmem               1.0       'XCVmem' (CORE-V Post-incrementing Load & Store)
 // CHECK-NEXT:     xcvsimd              1.0       'XCVsimd' (CORE-V SIMD ALU)
+// CHECK-NEXT:     xmipscmove           1.0       'XMIPSCMove' (MIPS conditional move instruction(s) (ccmov))
+// CHECK-NEXT:     xmipslsp             1.0       'XMIPSLSP' (MIPS optimization for hardware load-store bonding)
 // CHECK-NEXT:     xsfcease             1.0       'XSfcease' (SiFive sf.cease Instruction)
 // CHECK-NEXT:     xsfvcp               1.0       'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)
 // CHECK-NEXT:     xsfvfnrclipxfqf      1.0       'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)

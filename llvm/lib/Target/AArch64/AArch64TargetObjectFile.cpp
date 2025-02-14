@@ -148,3 +148,29 @@ MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
   return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, MachOMMI, RawSym,
                                     Key, Discriminator);
 }
+
+static bool isExecuteOnlyFunction(const GlobalObject *GO, SectionKind Kind,
+                                  const TargetMachine &TM) {
+  if (const Function *F = dyn_cast<Function>(GO))
+    if (TM.getSubtarget<AArch64Subtarget>(*F).genExecuteOnly() && Kind.isText())
+      return true;
+  return false;
+}
+
+MCSection *AArch64_ELFTargetObjectFile::getExplicitSectionGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  // Set execute-only access for the explicit section
+  if (isExecuteOnlyFunction(GO, Kind, TM))
+    Kind = SectionKind::getExecuteOnly();
+
+  return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GO, Kind, TM);
+}
+
+MCSection *AArch64_ELFTargetObjectFile::SelectSectionForGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  // Set execute-only access for the explicit section
+  if (isExecuteOnlyFunction(GO, Kind, TM))
+    Kind = SectionKind::getExecuteOnly();
+
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
+}

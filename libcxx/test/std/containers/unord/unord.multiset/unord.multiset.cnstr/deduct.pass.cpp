@@ -81,195 +81,201 @@
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
 
-int main(int, char**)
-{
-    const int expected_s[] = {1, 1, 2, 3, INT_MAX};
+int main(int, char**) {
+  const int expected_s[] = {1, 1, 2, 3, INT_MAX};
 
-    {
-    const int arr[] = { 1, 2, 1, INT_MAX, 3 };
+  {
+    const int arr[] = {1, 2, 1, INT_MAX, 3};
     std::unordered_multiset s(std::begin(arr), std::end(arr));
 
     ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
-    }
+  }
 
-    {
-    const int arr[] = { 1, 2, 1, INT_MAX, 3 };
+  {
+    const int arr[] = {1, 2, 1, INT_MAX, 3};
     std::unordered_multiset s(std::begin(arr), std::end(arr), 42);
 
     ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
-    }
+  }
 
-    {
-    const int arr[] = { 1, 2, 1, INT_MAX, 3 };
+  {
+    const int arr[] = {1, 2, 1, INT_MAX, 3};
     std::unordered_multiset s(std::begin(arr), std::end(arr), 42, std::hash<long long>());
 
     ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int, std::hash<long long>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
-    }
+  }
 
-    {
-    const int arr[] = { 1, 2, 1, INT_MAX, 3 };
+  {
+    const int arr[] = {1, 2, 1, INT_MAX, 3};
     std::unordered_multiset s(std::begin(arr), std::end(arr), 42, std::hash<long long>(), test_allocator<int>(0, 40));
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int, std::hash<long long>, std::equal_to<int>, test_allocator<int>>);
+    ASSERT_SAME_TYPE(
+        decltype(s), std::unordered_multiset<int, std::hash<long long>, std::equal_to<int>, test_allocator<int>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 40);
-    }
+  }
 
-    {
+  {
     std::unordered_multiset<int, std::hash<long long>, std::equal_to<>, test_allocator<int>> source;
     std::unordered_multiset s(source);
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s.size() == 0);
-    }
+  }
 
-    {
+  {
     std::unordered_multiset<int, std::hash<long long>, std::equal_to<>, test_allocator<int>> source;
-    std::unordered_multiset s{source};  // braces instead of parens
+    std::unordered_multiset s{source}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s.size() == 0);
-    }
+  }
 
-    {
+  {
     std::unordered_multiset<int, std::hash<long long>, std::equal_to<>, test_allocator<int>> source;
     std::unordered_multiset s(source, test_allocator<int>(0, 41));
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s.size() == 0);
     assert(s.get_allocator().get_id() == 41);
-    }
+  }
 
-    {
+  {
     std::unordered_multiset<int, std::hash<long long>, std::equal_to<>, test_allocator<int>> source;
-    std::unordered_multiset s{source, test_allocator<int>(0, 42)};  // braces instead of parens
+    std::unordered_multiset s{source, test_allocator<int>(0, 42)}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s.size() == 0);
     assert(s.get_allocator().get_id() == 42);
-    }
+  }
 
-    {
-    std::unordered_multiset s{ 1, 2, 1, INT_MAX, 3 };
-
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int>);
-    assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
-    }
-
-    {
-    std::unordered_multiset s({ 1, 2, 1, INT_MAX, 3 }, 42);
+  {
+    std::unordered_multiset s{1, 2, 1, INT_MAX, 3};
 
     ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
-    }
+  }
 
-    {
-    std::unordered_multiset s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<long long>());
+  {
+    std::unordered_multiset s({1, 2, 1, INT_MAX, 3}, 42);
+
+    ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int>);
+    assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
+  }
+
+  {
+    std::unordered_multiset s({1, 2, 1, INT_MAX, 3}, 42, std::hash<long long>());
 
     ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int, std::hash<long long>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
-    }
+  }
 
-    {
-    std::unordered_multiset s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<long long>(), std::equal_to<>());
+  {
+    std::unordered_multiset s({1, 2, 1, INT_MAX, 3}, 42, std::hash<long long>(), std::equal_to<>());
 
     ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int, std::hash<long long>, std::equal_to<>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
-    }
+  }
 
-    {
-    std::unordered_multiset s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<long long>(), std::equal_to<>(), test_allocator<int>(0, 43));
+  {
+    std::unordered_multiset s(
+        {1, 2, 1, INT_MAX, 3}, 42, std::hash<long long>(), std::equal_to<>(), test_allocator<int>(0, 43));
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int, std::hash<long long>, std::equal_to<>, test_allocator<int>>);
+    ASSERT_SAME_TYPE(
+        decltype(s), std::unordered_multiset<int, std::hash<long long>, std::equal_to<>, test_allocator<int>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 43);
-    }
+  }
 
-    {
-    const int arr[] = { 1, 2, 1, INT_MAX, 3 };
+  {
+    const int arr[] = {1, 2, 1, INT_MAX, 3};
     std::unordered_multiset s(std::begin(arr), std::end(arr), 42, test_allocator<int>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, test_allocator<int>>);
+    ASSERT_SAME_TYPE(
+        decltype(s), std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, test_allocator<int>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 44);
-    }
+  }
 
-    {
-    const int arr[] = { 1, 2, 1, INT_MAX, 3 };
+  {
+    const int arr[] = {1, 2, 1, INT_MAX, 3};
     std::unordered_multiset s(std::begin(arr), std::end(arr), 42, std::hash<long long>(), test_allocator<int>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int, std::hash<long long>, std::equal_to<int>, test_allocator<int>>);
+    ASSERT_SAME_TYPE(
+        decltype(s), std::unordered_multiset<int, std::hash<long long>, std::equal_to<int>, test_allocator<int>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 44);
-    }
+  }
 
-    {
-    std::unordered_multiset s({ 1, 2, 1, INT_MAX, 3 }, 42, test_allocator<int>(0, 43));
+  {
+    std::unordered_multiset s({1, 2, 1, INT_MAX, 3}, 42, test_allocator<int>(0, 43));
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, test_allocator<int>>);
+    ASSERT_SAME_TYPE(
+        decltype(s), std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, test_allocator<int>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 43);
-    }
+  }
 
-    {
-    std::unordered_multiset s({ 1, 2, 1, INT_MAX, 3 }, 42, std::hash<long long>(), test_allocator<int>(0, 42));
+  {
+    std::unordered_multiset s({1, 2, 1, INT_MAX, 3}, 42, std::hash<long long>(), test_allocator<int>(0, 42));
 
-    ASSERT_SAME_TYPE(decltype(s), std::unordered_multiset<int, std::hash<long long>, std::equal_to<int>, test_allocator<int>>);
+    ASSERT_SAME_TYPE(
+        decltype(s), std::unordered_multiset<int, std::hash<long long>, std::equal_to<int>, test_allocator<int>>);
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 42);
-    }
+  }
 
 #if TEST_STD_VER >= 23
-    {
-      using Range = std::array<int, 0>;
-      using Pred = test_equal_to<int>;
-      using DefaultPred = std::equal_to<int>;
-      using Hash = test_hash<int>;
-      using DefaultHash = std::hash<int>;
-      using Alloc = test_allocator<int>;
+  {
+    using Range       = std::array<int, 0>;
+    using Pred        = test_equal_to<int>;
+    using DefaultPred = std::equal_to<int>;
+    using Hash        = test_hash<int>;
+    using DefaultHash = std::hash<int>;
+    using Alloc       = test_allocator<int>;
 
-      { // (from_range, range)
-        std::unordered_multiset c(std::from_range, Range());
-        static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int>>);
-      }
-
-      { // (from_range, range, n)
-        std::unordered_multiset c(std::from_range, Range(), std::size_t());
-        static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int>>);
-      }
-
-      { // (from_range, range, n, hash)
-        std::unordered_multiset c(std::from_range, Range(), std::size_t(), Hash());
-        static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, Hash>>);
-      }
-
-      { // (from_range, range, n, hash, pred)
-        std::unordered_multiset c(std::from_range, Range(), std::size_t(), Hash(), Pred());
-        static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, Hash, Pred>>);
-      }
-
-      { // (from_range, range, n, hash, pred, alloc)
-        std::unordered_multiset c(std::from_range, Range(), std::size_t(), Hash(), Pred(), Alloc());
-        static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, Hash, Pred, Alloc>>);
-      }
-
-      { // (from_range, range, n, alloc)
-        std::unordered_multiset c(std::from_range, Range(), std::size_t(), Alloc());
-        static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, DefaultHash, DefaultPred, Alloc>>);
-      }
-
-      // TODO(LWG 2713): uncomment this test once the constructor is added.
-      { // (from_range, range, alloc)
-        //std::unordered_multiset c(std::from_range, Range(), Alloc());
-        //static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, DefaultHash, DefaultPred, Alloc>>);
-      }
-
-      { // (from_range, range, n, hash, alloc)
-        std::unordered_multiset c(std::from_range, Range(), std::size_t(), Hash(), Alloc());
-        static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, Hash, DefaultPred, Alloc>>);
-      }
+    { // (from_range, range)
+      std::unordered_multiset c(std::from_range, Range());
+      static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int>>);
     }
-#endif
-    UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_multiset, std::unordered_multiset<int>>();
 
-    return 0;
+    { // (from_range, range, n)
+      std::unordered_multiset c(std::from_range, Range(), std::size_t());
+      static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int>>);
+    }
+
+    { // (from_range, range, n, hash)
+      std::unordered_multiset c(std::from_range, Range(), std::size_t(), Hash());
+      static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, Hash>>);
+    }
+
+    { // (from_range, range, n, hash, pred)
+      std::unordered_multiset c(std::from_range, Range(), std::size_t(), Hash(), Pred());
+      static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, Hash, Pred>>);
+    }
+
+    { // (from_range, range, n, hash, pred, alloc)
+      std::unordered_multiset c(std::from_range, Range(), std::size_t(), Hash(), Pred(), Alloc());
+      static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, Hash, Pred, Alloc>>);
+    }
+
+    { // (from_range, range, n, alloc)
+      std::unordered_multiset c(std::from_range, Range(), std::size_t(), Alloc());
+      static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, DefaultHash, DefaultPred, Alloc>>);
+    }
+
+    // TODO(LWG 2713): uncomment this test once the constructor is added.
+    { // (from_range, range, alloc)
+      //std::unordered_multiset c(std::from_range, Range(), Alloc());
+      //static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, DefaultHash, DefaultPred, Alloc>>);
+    }
+
+    { // (from_range, range, n, hash, alloc)
+      std::unordered_multiset c(std::from_range, Range(), std::size_t(), Hash(), Alloc());
+      static_assert(std::is_same_v<decltype(c), std::unordered_multiset<int, Hash, DefaultPred, Alloc>>);
+    }
+  }
+#endif
+  UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_multiset, std::unordered_multiset<int>>();
+
+  return 0;
 }
