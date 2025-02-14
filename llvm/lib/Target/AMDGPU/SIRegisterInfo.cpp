@@ -3759,6 +3759,29 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
                                     unsigned DstSubReg,
                                     const TargetRegisterClass *NewRC,
                                     LiveIntervals &LIS) const {
+
+  auto MFI = MI->getMF()->getInfo<SIMachineFunctionInfo>();
+  if (!MFI->isWholeWaveControlFlow()) {
+    // Do not coalesce any SGPR copy before WaveTransform.
+    // Note that we also need a separate pass to deal with phi-node for
+    // vector-i1 values stored in SGPRs.
+    if (isSGPRClass(SrcRC) || isSGPRClass(DstRC) || isSGPRClass(NewRC))
+      return false;
+    // Check all register operands of the CopyMI. If any vgpr is marked
+    // with WWM flag, we do not want to coalesce them before WaveTransform.
+    // This assumes that we have set the WWM flag properly before coalescer.
+    const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+    for (auto opnd : MI->operands()) {
+      if (!opnd.isReg())
+        continue;
+      auto Reg = opnd.getReg();
+      const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+      if (isVectorSuperClass(RC) &&
+          MFI->checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
+        return false;
+    }
+  }
+
   unsigned SrcSize = getRegSizeInBits(*SrcRC);
   unsigned DstSize = getRegSizeInBits(*DstRC);
   unsigned NewSize = getRegSizeInBits(*NewRC);

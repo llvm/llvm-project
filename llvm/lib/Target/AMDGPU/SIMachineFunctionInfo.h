@@ -390,6 +390,11 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
                                     private MachineRegisterInfo::Delegate {
   friend class GCNTargetMachine;
 
+  // State of the MIR control-flow for this machine function.
+  // TODO-WAVETRANSFORM: this should be default to false, then set to true
+  // based upon when we convert control-flow into the whole-wave mode.
+  bool WholeWaveCF = true;
+
   // State of MODE register, assumed FP mode.
   SIModeRegisterDefaults Mode;
 
@@ -1057,6 +1062,10 @@ public:
   void markPSInputEnabled(unsigned Index) {
     PSInputEnable |= 1 << Index;
   }
+
+  bool isWholeWaveControlFlow() const { return WholeWaveCF; }
+
+  void setWholeWaveControlFlow() { WholeWaveCF = true; }
 
   bool returnsVoid() const {
     return ReturnsVoid;
