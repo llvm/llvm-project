@@ -463,7 +463,9 @@ ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State
     if (!IsMCUABI)
       return getNaturalAlignIndirectInReg(RetTy);
   }
-  return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
+  return getNaturalAlignIndirect(
+      RetTy, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+      /*ByVal=*/false);
 }
 
 ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
@@ -600,20 +602,26 @@ ABIArgInfo X86_32ABIInfo::getIndirectResult(QualType Ty, bool ByVal,
       if (!IsMCUABI)
         return getNaturalAlignIndirectInReg(Ty);
     }
-    return getNaturalAlignIndirect(Ty, false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   false);
   }
 
   // Compute the byval alignment.
   unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
   unsigned StackAlign = getTypeStackAlignInBytes(Ty, TypeAlign);
   if (StackAlign == 0)
-    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(4), /*ByVal=*/true);
+    return ABIArgInfo::getIndirect(
+        CharUnits::fromQuantity(4),
+        /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/true);
 
   // If the stack alignment is less than the type alignment, realign the
   // argument.
   bool Realign = TypeAlign > StackAlign;
-  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(StackAlign),
-                                 /*ByVal=*/true, Realign);
+  return ABIArgInfo::getIndirect(
+      CharUnits::fromQuantity(StackAlign),
+      /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(), /*ByVal=*/true,
+      Realign);
 }
 
 X86_32ABIInfo::Class X86_32ABIInfo::classify(QualType Ty) const {
@@ -2203,13 +2211,13 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
       Ty = EnumTy->getDecl()->getIntegerType();
 
     if (Ty->isBitIntType())
-      return getNaturalAlignIndirect(Ty);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
     return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
                                               : ABIArgInfo::getDirect());
   }
 
-  return getNaturalAlignIndirect(Ty);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 }
 
 bool X86_64ABIInfo::IsIllegalVectorType(QualType Ty) const {
@@ -2249,7 +2257,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Compute the byval alignment. We specify the alignment of the byval in all
   // cases so that the mid-level optimizer knows the alignment of the byval.
@@ -2286,7 +2295,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
                                                           Size));
   }
 
-  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(Align));
+  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(Align),
+                                 getDataLayout().getAllocaAddrSpace());
 }
 
 /// The ABI specifies that a value should be passed in a full vector XMM/YMM
@@ -3322,12 +3332,13 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
   if (RT) {
     if (!IsReturnType) {
       if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI()))
-        return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       RAA == CGCXXABI::RAA_DirectInMemory);
     }
 
     if (RT->getDecl()->hasFlexibleArrayMember())
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
-
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/false);
   }
 
   const Type *Base = nullptr;
@@ -3343,7 +3354,9 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
           return ABIArgInfo::getDirect();
         return ABIArgInfo::getExpand();
       }
-      return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+      return ABIArgInfo::getIndirect(
+          Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+          /*ByVal=*/false);
     } else if (IsVectorCall) {
       if (FreeSSERegs >= NumElts &&
           (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())) {
@@ -3353,7 +3366,9 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
         return ABIArgInfo::getExpand();
       } else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
         // HVAs are delayed and reclassified in the 2nd step.
-        return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+        return ABIArgInfo::getIndirect(
+            Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+            /*ByVal=*/false);
       }
     }
   }
@@ -3370,7 +3385,8 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
     // not 1, 2, 4, or 8 bytes, must be passed by reference."
     if (Width > 64 || !llvm::isPowerOf2_64(Width))
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/false);
 
     // Otherwise, coerce it to a small integer.
     return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Width));
@@ -3389,7 +3405,9 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       if (IsMingw64) {
         const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
         if (LDF == &llvm::APFloat::x87DoubleExtended())
-          return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+          return ABIArgInfo::getIndirect(
+              Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+              /*ByVal=*/false);
       }
       break;
 
@@ -3399,7 +3417,9 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
       // even though it isn't particularly efficient.
       if (!IsReturnType)
-        return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+        return ABIArgInfo::getIndirect(
+            Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+            /*ByVal=*/false);
 
       // Mingw64 GCC returns i128 in XMM0. Coerce to v2i64 to handle that.
       // Clang matches them for compatibility.
@@ -3419,7 +3439,9 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     // the power of 2.
     if (Width <= 64)
       return ABIArgInfo::getDirect();
-    return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+    return ABIArgInfo::getIndirect(
+        Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/false);
   }
 
   return ABIArgInfo::getDirect();
