@@ -449,10 +449,9 @@ define <4 x double> @test_x86_avx_hadd_pd_256(<4 x double> %a0, <4 x double> %a1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[A0:%.*]] = bitcast <4 x i64> [[TMP1]] to <4 x double>
-; CHECK-NEXT:    [[A1:%.*]] = bitcast <4 x i64> [[TMP2]] to <4 x double>
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> [[A0]], <4 x double> [[A1]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = bitcast <4 x double> [[RES]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[RES1:%.*]] = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> [[A2:%.*]], <4 x double> [[A3:%.*]])
 ; CHECK-NEXT:    store <4 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES1]]
@@ -469,10 +468,9 @@ define <8 x float> @test_x86_avx_hadd_ps_256(<8 x float> %a0, <8 x float> %a1) #
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[A0:%.*]] = bitcast <8 x i32> [[TMP1]] to <8 x float>
-; CHECK-NEXT:    [[A1:%.*]] = bitcast <8 x i32> [[TMP2]] to <8 x float>
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> [[A0]], <8 x float> [[A1]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = bitcast <8 x float> [[RES]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[RES1:%.*]] = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> [[A2:%.*]], <8 x float> [[A3:%.*]])
 ; CHECK-NEXT:    store <8 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES1]]
@@ -489,10 +487,9 @@ define <4 x double> @test_x86_avx_hsub_pd_256(<4 x double> %a0, <4 x double> %a1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[A0:%.*]] = bitcast <4 x i64> [[TMP1]] to <4 x double>
-; CHECK-NEXT:    [[A1:%.*]] = bitcast <4 x i64> [[TMP2]] to <4 x double>
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> [[A0]], <4 x double> [[A1]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = bitcast <4 x double> [[RES]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[RES1:%.*]] = call <4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> [[A2:%.*]], <4 x double> [[A3:%.*]])
 ; CHECK-NEXT:    store <4 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES1]]
@@ -509,10 +506,9 @@ define <8 x float> @test_x86_avx_hsub_ps_256(<8 x float> %a0, <8 x float> %a1) #
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[A0:%.*]] = bitcast <8 x i32> [[TMP1]] to <8 x float>
-; CHECK-NEXT:    [[A1:%.*]] = bitcast <8 x i32> [[TMP2]] to <8 x float>
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> [[A0]], <8 x float> [[A1]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = bitcast <8 x float> [[RES]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[RES1:%.*]] = call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> [[A2:%.*]], <8 x float> [[A3:%.*]])
 ; CHECK-NEXT:    store <8 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES1]]
