@@ -201,9 +201,8 @@ def apply_fixes(
     """Calls clang-apply-replacements on a given directory."""
     invocation = [clang_apply_replacements_binary]
     
-    if args.ignore_insert_conflict:  # Only append if the user specified it
+    if args.ignore_insert_conflict:
         invocation.append("-ignore-insert-conflict")
-
     if args.format:
         invocation.append("-format")
     if args.style:
