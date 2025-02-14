@@ -594,6 +594,19 @@ public:
     return Visit(BTE->getSubExpr());
   }
 
+  bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *AILE) {
+    return Visit(AILE->getCommonExpr()) && Visit(AILE->getSubExpr());
+  }
+
+  bool VisitArrayInitIndexExpr(const ArrayInitIndexExpr *AIIE) {
+    return true; // The current array index in VisitArrayInitLoopExpr is always
+                 // trivial.
+  }
+
+  bool VisitOpaqueValueExpr(const OpaqueValueExpr *OVE) {
+    return Visit(OVE->getSourceExpr());
+  }
+
   bool VisitExprWithCleanups(const ExprWithCleanups *EWC) {
     return Visit(EWC->getSubExpr());
   }
