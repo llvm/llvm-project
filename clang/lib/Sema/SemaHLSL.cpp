@@ -2717,6 +2717,9 @@ bool SemaHLSL::CheckCompatibleParameterABI(FunctionDecl *New,
 // clarity of what types are supported
 bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
 
+  if (!SrcTy->isScalarType() || !DestTy->isScalarType())
+    return false;
+
   if (SemaRef.getASTContext().hasSameUnqualifiedType(SrcTy, DestTy))
     return true;
 
@@ -2778,7 +2781,7 @@ bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
 }
 
 // Detect if a type contains a bitfield. Will be removed when
-// bitfield support is added to HLSLElementwiseCast
+// bitfield support is added to HLSLElementwiseCast and HLSLAggregateSplatCast
 bool SemaHLSL::ContainsBitField(QualType BaseTy) {
   llvm::SmallVector<QualType, 16> WorkList;
   WorkList.push_back(BaseTy);
@@ -2809,6 +2812,42 @@ bool SemaHLSL::ContainsBitField(QualType BaseTy) {
     }
   }
   return false;
+}
+
+// Can perform an HLSL Aggregate splat cast if the Dest is an aggregate and the
+// Src is a scalar or a vector of length 1
+// Or if Dest is a vector and Src is a vector of length 1
+bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
+
+  QualType SrcTy = Src->getType();
+  // Not a valid HLSL Aggregate Splat cast if Dest is a scalar or if this is
+  // going to be a vector splat from a scalar.
+  if ((SrcTy->isScalarType() && DestTy->isVectorType()) ||
+      DestTy->isScalarType())
+    return false;
+
+  const VectorType *SrcVecTy = SrcTy->getAs<VectorType>();
+
+  // Src isn't a scalar or a vector of length 1
+  if (!SrcTy->isScalarType() && !(SrcVecTy && SrcVecTy->getNumElements() == 1))
+    return false;
+
+  if (SrcVecTy)
+    SrcTy = SrcVecTy->getElementType();
+
+  if (ContainsBitField(DestTy))
+    return false;
+
+  llvm::SmallVector<QualType> DestTypes;
+  BuildFlattenedTypeList(DestTy, DestTypes);
+
+  for (unsigned I = 0, Size = DestTypes.size(); I < Size; ++I) {
+    if (DestTypes[I]->isUnionType())
+      return false;
+    if (!CanPerformScalarCast(SrcTy, DestTypes[I]))
+      return false;
+  }
+  return true;
 }
 
 // Can we perform an HLSL Elementwise cast?

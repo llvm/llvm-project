@@ -20845,7 +20845,8 @@ private:
         VecResSignedness = IsSigned;
       } else {
         ++NumVectorInstructions;
-        if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy) {
+        if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy &&
+            VecRes->getType()->getScalarType() == Builder.getInt1Ty()) {
           // Handle ctpop.
           unsigned VecResVF = getNumElements(VecRes->getType());
           unsigned VecVF = getNumElements(Vec->getType());

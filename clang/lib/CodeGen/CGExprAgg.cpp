@@ -498,6 +498,31 @@ static bool isTrivialFiller(Expr *E) {
   return false;
 }
 
+static void EmitHLSLAggregateSplatCast(CodeGenFunction &CGF, Address DestVal,
+                                       QualType DestTy, llvm::Value *SrcVal,
+                                       QualType SrcTy, SourceLocation Loc) {
+  // Flatten our destination
+  SmallVector<QualType> DestTypes; // Flattened type
+  SmallVector<std::pair<Address, llvm::Value *>, 16> StoreGEPList;
+  // ^^ Flattened accesses to DestVal we want to store into
+  CGF.FlattenAccessAndType(DestVal, DestTy, StoreGEPList, DestTypes);
+
+  assert(SrcTy->isScalarType() && "Invalid HLSL Aggregate splat cast.");
+  for (unsigned I = 0, Size = StoreGEPList.size(); I < Size; ++I) {
+    llvm::Value *Cast =
+        CGF.EmitScalarConversion(SrcVal, SrcTy, DestTypes[I], Loc);
+
+    // store back
+    llvm::Value *Idx = StoreGEPList[I].second;
+    if (Idx) {
+      llvm::Value *V =
+          CGF.Builder.CreateLoad(StoreGEPList[I].first, "load.for.insert");
+      Cast = CGF.Builder.CreateInsertElement(V, Cast, Idx);
+    }
+    CGF.Builder.CreateStore(Cast, StoreGEPList[I].first);
+  }
+}
+
 // emit a flat cast where the RHS is a scalar, including vector
 static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
                                    QualType DestTy, llvm::Value *SrcVal,
@@ -970,6 +995,19 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_HLSLArrayRValue:
     Visit(E->getSubExpr());
     break;
+  case CK_HLSLAggregateSplatCast: {
+    Expr *Src = E->getSubExpr();
+    QualType SrcTy = Src->getType();
+    RValue RV = CGF.EmitAnyExpr(Src);
+    QualType DestTy = E->getType();
+    Address DestVal = Dest.getAddress();
+    SourceLocation Loc = E->getExprLoc();
+
+    assert(RV.isScalar() && "RHS of HLSL splat cast must be a scalar.");
+    llvm::Value *SrcVal = RV.getScalarVal();
+    EmitHLSLAggregateSplatCast(CGF, DestVal, DestTy, SrcVal, SrcTy, Loc);
+    break;
+  }
   case CK_HLSLElementwiseCast: {
     Expr *Src = E->getSubExpr();
     QualType SrcTy = Src->getType();
@@ -1560,6 +1598,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_AtomicToNonAtomic:
   case CK_HLSLVectorTruncation:
   case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
     return true;
 
   case CK_BaseToDerivedMemberPointer:
