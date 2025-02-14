@@ -3,12 +3,13 @@
 
 constexpr int get_align() { return 1; }
 
-// CHECK-LABEL: @Ztest1P(
+// CHECK-LABEL: @_Z5test1Pv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[A:%.*]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 32, i64 0) ]
+// CHECK-NEXT:    [[TMP1:%.*]] = call noundef i32 @_Z9get_alignv() 
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 32, i64 [[TMP1]]) ]
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 0
