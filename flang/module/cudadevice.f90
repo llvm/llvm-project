@@ -628,5 +628,10 @@ implicit none
   end interface
   public :: atomicdec
 
+  interface
+    attributes(device) integer(8) function clock64()
+    end function
+  end interface
+  public :: clock64
 
 end module
