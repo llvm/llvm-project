@@ -54,7 +54,6 @@ findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
 static bool hasTypeIdLoadAtConstantOffset(const Module *M, Value *VPtr,
                                           int64_t Offset, const CallInst *CI,
                                           CXXABI *ABI) {
-  Triple TT(M->getTargetTriple());
   bool HasTypeIdLoad = false;
   for (const Use &U : VPtr->uses()) {
     Value *User = U.getUser();
