@@ -404,6 +404,8 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
     if (ctx.arg.zGcs != GcsPolicy::Implicit)
       ErrAlways(ctx) << "-z gcs only supported on AArch64";
+    if (ctx.arg.zExecuteOnlyReport != "none")
+      ErrAlways(ctx) << "-z execute-only-report only supported on AArch64";
   }
 
   if (ctx.arg.emachine != EM_PPC64) {
@@ -461,27 +463,6 @@ static void checkOptions(Ctx &ctx) {
 
   if (ctx.arg.zRetpolineplt && ctx.arg.zForceIbt)
     ErrAlways(ctx) << "-z force-ibt may not be used with -z retpolineplt";
-
-  if (ctx.arg.emachine != EM_AARCH64) {
-    if (ctx.arg.zPacPlt)
-      ErrAlways(ctx) << "-z pac-plt only supported on AArch64";
-    if (ctx.arg.zForceBti)
-      ErrAlways(ctx) << "-z force-bti only supported on AArch64";
-    if (ctx.arg.zBtiReport != "none")
-      ErrAlways(ctx) << "-z bti-report only supported on AArch64";
-    if (ctx.arg.zPauthReport != "none")
-      ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
-    if (ctx.arg.zGcsReport != "none")
-      ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
-    if (ctx.arg.zGcs != GcsPolicy::Implicit)
-      ErrAlways(ctx) << "-z gcs only supported on AArch64";
-    if (ctx.arg.zExecuteOnlyReport != "none")
-      ErrAlways(ctx) << "-z execute-only-report only supported on AArch64";
-  }
-
-  if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
-      ctx.arg.zCetReport != "none")
-    ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 }
 
 static const char *getReproduceOption(opt::InputArgList &args) {
