@@ -1630,15 +1630,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
-                  std::make_pair("cet-report", &ctx.arg.zCetReport),
-                  std::make_pair("gcs-report", &ctx.arg.zGcsReport),
-                  std::make_pair("pauth-report", &ctx.arg.zPauthReport),
-                  std::make_pair("zicfilp-unlabeled-report",
-                                 &ctx.arg.zZicfilpUnlabeledReport),
-                  std::make_pair("zicfilp-func-sig-report",
-                                 &ctx.arg.zZicfilpFuncSigReport),
-                  std::make_pair("zicfiss-report", &ctx.arg.zZicfissReport)};
+  auto reports = {
+      std::make_pair("bti-report", &ctx.arg.zBtiReport),
+      std::make_pair("cet-report", &ctx.arg.zCetReport),
+      std::make_pair("gcs-report", &ctx.arg.zGcsReport),
+      std::make_pair("pauth-report", &ctx.arg.zPauthReport),
+      std::make_pair("zicfilp-unlabeled-report",
+                     &ctx.arg.zZicfilpUnlabeledReport),
+      std::make_pair("zicfilp-func-sig-report", &ctx.arg.zZicfilpFuncSigReport),
+      std::make_pair("zicfiss-report", &ctx.arg.zZicfissReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
