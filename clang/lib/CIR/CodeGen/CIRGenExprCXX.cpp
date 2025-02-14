@@ -1120,7 +1120,22 @@ void CIRGenFunction::emitNewArrayInitializer(
       llvm_unreachable("NYI");
     }
 
-    llvm_unreachable("NYI");
+    // Store the new Cleanup position for irregular Cleanups.
+    //
+    // FIXME: Share this cleanup with the constructor call emission rather than
+    // having it create a cleanup of its own.
+    if (EndOfInit.isValid())
+      llvm_unreachable("NYI");
+
+    // Emit a constructor call loop to initialize the remaining elements.
+    if (InitListElements)
+      llvm_unreachable("NYI");
+    auto arrayType = convertType(CCE->getType());
+    CurPtr = CurPtr.withElementType(arrayType);
+    emitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
+                               /*NewPointerIsChecked*/ true,
+                               CCE->requiresZeroInitialization());
+    return;
   }
 
   // If this is value-initialization, we can usually use memset.

@@ -1889,10 +1889,10 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
       llvm_unreachable("NYI");
     }
 
-    // Wmit the constructor call that will execute for every array element.
+    // Emit the constructor call that will execute for every array element.
+    auto arrayOp = builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
     builder.create<cir::ArrayCtor>(
-        *currSrcLoc, arrayBase.getPointer(),
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
+        *currSrcLoc, arrayOp, [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
           Address curAddr = Address(arg, ptrToElmType, eltAlignment);
           auto currAVS = AggValueSlot::forAddr(

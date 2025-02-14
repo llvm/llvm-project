@@ -187,3 +187,31 @@ void t_new_var_size_nontrivial(size_t n) {
 // LLVM:    %[[ANY_OVERFLOW:.*]] = or i1 %[[OVERFLOW]], %[[OVERFLOW2]]
 // LLVM:    %[[ALLOC_SIZE:.*]] = select i1 %[[ANY_OVERFLOW]], i64 -1, i64 %[[SIZE]]
 // LLVM:    %[[ADDR:.*]] = call ptr @_Znam(i64 %[[ALLOC_SIZE]])
+
+class E {
+  public:
+    E();
+    ~E();
+};
+
+void t_new_constant_size_constructor() {
+  auto p = new E[3];
+}
+
+// LLVM:  @_Z31t_new_constant_size_constructorv
+// LLVM:    %[[ALLOC_PTR:.*]] = call ptr @_Znam(i64 11)
+// LLVM:    store i64 3, ptr %[[ALLOC_PTR]], align 8
+// LLVM:    %[[OBJ_PTR:.*]] = getelementptr i8, ptr %[[ALLOC_PTR]], i64 8
+// LLVM:    %[[ELEM_PTR:.*]] = getelementptr %class.E, ptr %[[OBJ_PTR]], i32 0
+// LLVM:    %[[END_PTR:.*]] = getelementptr %class.E, ptr %[[ELEM_PTR]], i64 3
+// LLVM:    br label %[[INIT_ELEM_BB:.*]]
+// LLVM:  [[LOOP_INC_BB:.*]]:
+// LLVM:    %[[NEXT_ELEM_PTR:.*]] = load ptr
+// LLVM:    %[[END_TEST:.*]] = icmp eq ptr %[[NEXT_ELEM_PTR]], %[[END_PTR]]
+// LLVM:    br i1 %[[END_TEST]], label %[[INIT_ELEM_BB]], label %[[EXIT_BB:.*]]
+// LLVM:  [[INIT_ELEM_BB]]:
+// LLVM:    %[[CUR_ELEM_PTR:.*]] = load ptr
+// LLVM:    call void @_ZN1EC1Ev(ptr %[[CUR_ELEM_PTR]])
+// LLVM:    %[[NEXT_PTR:.*]] = getelementptr %class.E, ptr %[[CUR_ELEM_PTR]], i64 1
+// LLVM:    store ptr %[[NEXT_PTR]]
+// LLVM:    br label %[[LOOP_INC_BB]]

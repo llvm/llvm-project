@@ -587,7 +587,7 @@ def ArrayPtr : Type<
       CPred<"::mlir::isa<::cir::PointerType>($_self)">,
       CPred<"::mlir::isa<::cir::ArrayType>("
             "::mlir::cast<::cir::PointerType>($_self).getPointee())">,
-    ]>, "!cir.ptr<!cir.eh_info>"> {
+    ]>, "!cir.ptr<!cir.array>"> {
 }
 
 // Pointer to functions
