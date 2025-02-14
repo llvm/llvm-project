@@ -494,7 +494,6 @@ def : ReadAdvance<ReadFSqrt16, 0>;
 //===----------------------------------------------------------------------===//
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedZvk;
-defm : UnsupportedSchedZvkned;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedXsfvcp;
 }
