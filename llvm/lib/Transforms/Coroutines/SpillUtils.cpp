@@ -162,6 +162,16 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
 
   void visit(Instruction &I) {
     Users.insert(&I);
+
+    for (const Instruction *CoroEnd : CoroShape.CoroEnds) {
+      if (DT.dominates(CoroEnd, &I)) {
+        // Data accessed after coro.end (such as the return object and callee
+        // destroyed parameters) should always go on the stack.
+        ShouldLiveOnFrame = false;
+        return;
+      }
+    }
+
     Base::visit(I);
     // If the pointer is escaped prior to CoroBegin, we have to assume it would
     // be written into before CoroBegin as well.

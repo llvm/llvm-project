@@ -64,7 +64,7 @@ indirect.dest:
   br label %coro_Cleanup
 
 coro_Cleanup:                                     ; preds = %sw.epilog, %sw.bb1
-  %5 = load ptr, ptr %coro_hdl, align 8, !dbg !24
+  %5 = load ptr, ptr %coro_hdl, align 8, !dbg !24  ; XXX: Here %coro_hdl is used between a coro.suspend and coro.end, which seems wrong?
   %6 = call ptr @llvm.coro.free(token %0, ptr %5), !dbg !24
   call void @free(ptr %6), !dbg !24
   call void @llvm.dbg.declare(metadata i32 %asm_res, metadata !32, metadata !13), !dbg !16
@@ -172,14 +172,14 @@ attributes #7 = { noduplicate }
 !32 = !DILocalVariable(name: "inline_asm", scope: !6, file: !7, line: 55, type: !11)
 
 ; CHECK: define ptr @f(i32 %x) #0 personality i32 0 !dbg ![[ORIG:[0-9]+]]
-; CHECK: define internal fastcc void @f.resume(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
+; CHECK: define internal fastcc void @f.resume(ptr noundef nonnull align 8 dereferenceable(32) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
 ; CHECK: entry.resume:
 ; CHECK: %[[DBG_PTR:.*]] = alloca ptr
-; CHECK: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_COROHDL:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
 ; CHECK: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_X:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL:.*]])
 ; CHECK: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_DIRECT:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL]])
 ; CHECK: store ptr {{.*}}, ptr %[[DBG_PTR]]
-; CHECK-NOT: alloca ptr
+; CHECK: alloca ptr
+; CHECK: #dbg_declare(ptr %[[CORO_HDL:.*]], ![[RESUME_COROHDL:[0-9]+]], !DIExpression()
 ; CHECK: #dbg_declare(i8 0, ![[RESUME_CONST:[0-9]+]], !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed),
 ; Note that keeping the undef value here could be acceptable, too.
 ; CHECK-NOT: #dbg_declare(ptr undef, !{{[0-9]+}}, !DIExpression(),
@@ -195,15 +195,15 @@ attributes #7 = { noduplicate }
 ; CHECK: [[DEFAULT_DEST]]:
 ; CHECK-NOT: {{.*}}:
 ; CHECK: #dbg_declare(i32 %[[CALLBR_RES]]
-; CHECK: define internal fastcc void @f.destroy(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
-; CHECK: define internal fastcc void @f.cleanup(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
+; CHECK: define internal fastcc void @f.destroy(ptr noundef nonnull align 8 dereferenceable(32) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
+; CHECK: define internal fastcc void @f.cleanup(ptr noundef nonnull align 8 dereferenceable(32) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
 
 ; CHECK: ![[ORIG]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 
 ; CHECK: ![[RESUME]] = distinct !DISubprogram(name: "f", linkageName: "flink"
-; CHECK: ![[RESUME_COROHDL]] = !DILocalVariable(name: "coro_hdl", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_X]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
 ; CHECK: ![[RESUME_DIRECT]] = !DILocalVariable(name: "direct_mem", scope: ![[RESUME]]
+; CHECK: ![[RESUME_COROHDL]] = !DILocalVariable(name: "coro_hdl", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_CONST]] = !DILocalVariable(name: "direct_const", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_DIRECT_VALUE]] = !DILocalVariable(name: "direct_value", scope: ![[RESUME]]
 
