@@ -155,6 +155,7 @@ analyzeModule(Module &M) {
 
     if (RootElementListNode == nullptr) {
       reportError(Ctx, "Missing Root Element List Metadata node.");
+      continue;
     }
 
     mcdxbc::RootSignatureDesc RSD;
