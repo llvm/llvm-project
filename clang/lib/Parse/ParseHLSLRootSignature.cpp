@@ -89,7 +89,8 @@ bool RootSignatureParser::ParseRootElement() {
   switch (CurToken.Kind) {
   case TokenKind::kw_DescriptorTable:
     return ParseDescriptorTable();
-  default: break;
+  default:
+    break;
   }
   llvm_unreachable("Switch for an expected token was not provided");
 }

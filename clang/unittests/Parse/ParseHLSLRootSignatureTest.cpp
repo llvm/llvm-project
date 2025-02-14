@@ -121,7 +121,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
   Consumer->SetNoDiag();
 
   ASSERT_FALSE(Parser.Parse());
-  ASSERT_EQ((int)Elements.size(), 0);
+  ASSERT_EQ(Elements.size(), 0u);
 
   ASSERT_TRUE(Consumer->IsSatisfied());
 }
@@ -159,9 +159,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
             RegisterType::BReg);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, (uint32_t)0);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)1);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)0);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, 0u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, 1u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 0u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorRangeOffset(DescriptorTableOffsetAppend));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
@@ -172,10 +172,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
             RegisterType::TReg);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number,
-            (uint32_t)42);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)4);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)3);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, 42u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, 4u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 3u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorRangeOffset(32));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
@@ -186,10 +185,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
             RegisterType::SReg);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number,
-            (uint32_t)987);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)1);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)2);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, 987u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, 1u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 2u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorRangeOffset(DescriptorTableOffsetAppend));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
@@ -200,10 +198,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
             RegisterType::UReg);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number,
-            (uint32_t)987234);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)1);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)0);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, 987234u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, 1u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 0u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorRangeOffset(DescriptorTableOffsetAppend));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
@@ -211,7 +208,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
   Elem = Elements[4];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
-  ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, (uint32_t)4);
+  ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, 4u);
   ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility,
             ShaderVisibility::Pixel);
 
