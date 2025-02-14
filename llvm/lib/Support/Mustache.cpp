@@ -221,7 +221,7 @@ bool hasTextBehind(size_t Idx, const ArrayRef<Token> &Tokens) {
     return true;
 
   const Token &PrevToken = Tokens[PrevIdx];
-  StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v");
+  StringRef TokenBody = PrevToken.getRawBody().rtrim(" \r\t\v");
   return !TokenBody.ends_with("\n") && !(TokenBody.empty() && Idx == 1);
 }
 
@@ -257,7 +257,7 @@ bool requiresCleanUp(Token::Type T) {
 void stripTokenAhead(SmallVectorImpl<Token> &Tokens, size_t Idx) {
   Token &NextToken = Tokens[Idx + 1];
   StringRef NextTokenBody = NextToken.getTokenBody();
-  // cut off the leading newline which could be \n or \r\n.
+  // Cut off the leading newline which could be \n or \r\n.
   if (NextTokenBody.starts_with("\r\n"))
     NextToken.setTokenBody(NextTokenBody.substr(2).str());
   else if (NextTokenBody.starts_with("\n"))
@@ -276,7 +276,7 @@ void stripTokenBefore(SmallVectorImpl<Token> &Tokens, size_t Idx,
                       Token &CurrentToken, Token::Type CurrentType) {
   Token &PrevToken = Tokens[Idx - 1];
   StringRef PrevTokenBody = PrevToken.getTokenBody();
-  StringRef Unindented = PrevTokenBody.rtrim(" \t\v");
+  StringRef Unindented = PrevTokenBody.rtrim(" \r\t\v");
   size_t Indentation = PrevTokenBody.size() - Unindented.size();
   if (CurrentType != Token::Type::Partial)
     PrevToken.setTokenBody(Unindented.str());
@@ -456,9 +456,9 @@ Token::Type Token::getTokenType(char Identifier) {
 class Parser {
 public:
   Parser(StringRef TemplateStr, BumpPtrAllocator &Allocator)
-      : Allocator(Allocator), TemplateStr(TemplateStr) {}
+      : ASTAllocator(Allocator), TemplateStr(TemplateStr) {}
 
-  ASTNode *parse(llvm::BumpPtrAllocator &Alloc,
+  ASTNode *parse(llvm::BumpPtrAllocator &RenderAlloc,
                  llvm::StringMap<ASTNode *> &Partials,
                  llvm::StringMap<Lambda> &Lambdas,
                  llvm::StringMap<SectionLambda> &SectionLambdas,
@@ -471,23 +471,23 @@ private:
                      llvm::StringMap<SectionLambda> &SectionLambdas,
                      llvm::DenseMap<char, std::string> &Escapes);
 
-  BumpPtrAllocator &Allocator;
+  BumpPtrAllocator &ASTAllocator;
   SmallVector<Token> Tokens;
   size_t CurrentPtr;
   StringRef TemplateStr;
 };
 
-ASTNode *Parser::parse(llvm::BumpPtrAllocator &Alloc,
+ASTNode *Parser::parse(llvm::BumpPtrAllocator &RenderAlloc,
                        llvm::StringMap<ASTNode *> &Partials,
                        llvm::StringMap<Lambda> &Lambdas,
                        llvm::StringMap<SectionLambda> &SectionLambdas,
                        llvm::DenseMap<char, std::string> &Escapes) {
   Tokens = tokenize(TemplateStr);
   CurrentPtr = 0;
-  void *Root = Allocator.Allocate(sizeof(ASTNode), alignof(ASTNode));
+  void *Root = ASTAllocator.Allocate(sizeof(ASTNode), alignof(ASTNode));
   ASTNode *RootNode =
-      createRootNode(Root, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
-  parseMustache(RootNode, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
+      createRootNode(Root, RenderAlloc, Partials, Lambdas, SectionLambdas, Escapes);
+  parseMustache(RootNode, RenderAlloc, Partials, Lambdas, SectionLambdas, Escapes);
   return RootNode;
 }
 
@@ -502,7 +502,7 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
     CurrentPtr++;
     Accessor A = CurrentToken.getAccessor();
     ASTNode *CurrentNode;
-    void *Node = Allocator.Allocate(sizeof(ASTNode), alignof(ASTNode));
+    void *Node = ASTAllocator.Allocate(sizeof(ASTNode), alignof(ASTNode));
 
     switch (CurrentToken.getType()) {
     case Token::Type::Text: {
@@ -785,4 +785,29 @@ Template::Template(StringRef TemplateStr) {
   overrideEscapeCharacters(HtmlEntities);
 }
 
+Template::Template(Template &&Other) noexcept
+    : Partials(std::move(Other.Partials)),
+      Lambdas(std::move(Other.Lambdas)),
+      SectionLambdas(std::move(Other.SectionLambdas)),
+      Escapes(std::move(Other.Escapes)),
+      Tree(Other.Tree),
+      AstAllocator(std::move(Other.AstAllocator)),
+      RenderAllocator(std::move(Other.RenderAllocator)) {
+  Other.Tree = nullptr;
+}
+
+Template &Template::operator=(Template &&Other) noexcept {
+  if (this != &Other) {
+    // Move assign all members
+    Partials = std::move(Other.Partials);
+    Lambdas = std::move(Other.Lambdas);
+    SectionLambdas = std::move(Other.SectionLambdas);
+    Escapes = std::move(Other.Escapes);
+    Tree = Other.Tree;
+    AstAllocator = std::move(Other.AstAllocator);
+    RenderAllocator = std::move(Other.RenderAllocator);
+    Other.Tree = nullptr;
+  }
+  return *this;
+}
 } // namespace llvm::mustache
