@@ -99,6 +99,10 @@ public:
   unsigned getRegReg(const MCInst &MI, unsigned OpNo,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const;
+
+  unsigned getRVPGPRPair(const MCInst &MI, unsigned OpNo,
+                         SmallVectorImpl<MCFixup> &Fixups,
+                         const MCSubtargetInfo &STI) const;
 };
 } // end anonymous namespace
 
@@ -580,6 +584,17 @@ unsigned RISCVMCCodeEmitter::getRegReg(const MCInst &MI, unsigned OpNo,
   unsigned Op1 = Ctx.getRegisterInfo()->getEncodingValue(MO1.getReg());
 
   return Op | Op1 << 5;
+}
+
+unsigned RISCVMCCodeEmitter::getRVPGPRPair(const MCInst &MI, unsigned OpNo,
+                                           SmallVectorImpl<MCFixup> &Fixups,
+                                           const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isReg() && "Expected a register.");
+
+  unsigned Op = Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
+
+  return Op >> 1;
 }
 
 #include "RISCVGenMCCodeEmitter.inc"

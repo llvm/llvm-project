@@ -220,6 +220,13 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeRVPGPRPair(MCInst &Inst, uint32_t RegNo,
+                                     uint64_t Address,
+                                     const MCDisassembler *Decoder) {
+  RegNo = RegNo << 1;
+  return DecodeGPRPairRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
 static DecodeStatus DecodeSR07RegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
@@ -605,6 +612,9 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
 
   uint32_t Insn = support::endian::read32le(Bytes.data());
 
+  TRY_TO_DECODE_AND_ADD_SP(!STI.hasFeature(RISCV::Feature64Bit),
+                           DecoderTableRISCV32Only_32,
+                           "RISCV32Only_32 table (32-bit Instruction)");
   TRY_TO_DECODE(STI.hasFeature(RISCV::FeatureStdExtZdinx) &&
                     !STI.hasFeature(RISCV::Feature64Bit),
                 DecoderTableRV32Zdinx32,

@@ -18,6 +18,12 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def RVPGPRPairRV32 : RegisterOperand<GPRPair> {
+  let ParserMatchClass = GPRPairRV32Operand;
+  let EncoderMethod = "getRVPGPRPair";
+  let DecoderMethod = "decodeRVPGPRPair";
+}
+
 def simm10 : RISCVSImmLeafOp<10> {
   let MCOperandPredicate = [{
     int64_t Imm;
@@ -38,7 +44,7 @@ class RVPUnary<bits<5> funct5, bits<7> wuimm,
     : RVInstIBase<funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1),
                   opcodestr, "$rd, $rs1"> {
   let Inst{31-27} = funct5;
- let Inst{26-20} = wuimm;
+  let Inst{26-20} = wuimm;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -72,8 +78,8 @@ class RVPUnaryWUF<bits<2> w, bits<5> uf, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnaryWUFRs1pRdp<bits<2> w, bits<5> uf, string opcodestr>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPRPairRV32:$rdp),
-                  (ins GPRPairRV32:$rs1p), opcodestr, "$rdp, $rs1p">  {
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs RVPGPRPairRV32:$rdp),
+                  (ins RVPGPRPairRV32:$rs1p), opcodestr, "$rdp, $rs1p">  {
   bits<4> rs1p;
   bits<4> rdp;
 
@@ -101,7 +107,7 @@ class RVPUnary1F0<bits<3> f, bits<7> wuimm, string opcodestr>
                 (ins GPR:$rs1), "$rd, $rs1">;
 
 class RVPUnary0F0Rdp<bits<3> f, bits<7> wuimm, string opcodestr>
-    : RVPUnaryF<0, f, 0, wuimm, opcodestr, 0b100, (outs GPRPairRV32:$rdp),
+    : RVPUnaryF<0, f, 0, wuimm, opcodestr, 0b010, (outs RVPGPRPairRV32:$rdp),
                (ins GPR:$rs1), "$rdp, $rs1"> {
   bits<4> rdp;
 
@@ -111,7 +117,7 @@ class RVPUnary0F0Rdp<bits<3> f, bits<7> wuimm, string opcodestr>
 
 class RVPUnary0F0Rs1p<bits<3> f, bits<7> wuimm, string opcodestr>
     : RVPUnaryF<0, f, 0, wuimm, opcodestr, 0b100, (outs GPR:$rd),
-                (ins GPRPairRV32:$rs1p), "$rd, $rs1p"> {
+                (ins RVPGPRPairRV32:$rs1p), "$rd, $rs1p"> {
   bits<4> rs1p;
 
   let Inst{19-16} = rs1p;
@@ -120,8 +126,8 @@ class RVPUnary0F0Rs1p<bits<3> f, bits<7> wuimm, string opcodestr>
 
 class RVPUnary0F0Rs1pRdp<bits<3> f, bits<7> wuimm, string opcodestr,
                          bit aft = 0b0>
-    : RVPUnaryF<0, f, 0, wuimm, opcodestr, 0b100, (outs GPRPairRV32:$rdp),
-                (ins GPRPairRV32:$rs1p), "$rdp, $rs1p"> {
+    : RVPUnaryF<0, f, 0, wuimm, opcodestr, 0b110, (outs RVPGPRPairRV32:$rdp),
+                (ins RVPGPRPairRV32:$rs1p), "$rdp, $rs1p"> {
   bits<4> rs1p;
   bits<4> rdp;
 
@@ -153,7 +159,7 @@ class RVPBinary1F0W<bits<3> f, bits<2> w, string opcodestr, bits<3> funct3,
 
 class RVPBinary0F1WRdp<bits<3> f, bits<2> w, string opcodestr,
                        RISCVOpcode Opcode = OPC_OP_IMM_32>
-    : RVPBinaryFW<0, f, 1, w, opcodestr, 0b010, Opcode, (outs GPRPairRV32:$rdp),
+    : RVPBinaryFW<0, f, 1, w, opcodestr, 0b010, Opcode, (outs RVPGPRPairRV32:$rdp),
                   (ins GPR:$rs1, GPR:$rs2), "$rdp, $rs1, $rs2"> {
   bits<4> rdp;
 
@@ -164,7 +170,7 @@ class RVPBinary0F1WRdp<bits<3> f, bits<2> w, string opcodestr,
 class RVPBinary0F1WRs1p<bits<3> f, bits<2> w, string opcodestr,
                     bit aft = 0b0, RISCVOpcode Opcode = OPC_OP_IMM_32>
     : RVPBinaryFW<0, f, 1, w, opcodestr, 0b100, Opcode, (outs GPR:$rd),
-                  (ins GPRPairRV32:$rs1p, GPR:$rs2), "$rd, $rs1p, $rs2"> {
+                  (ins RVPGPRPairRV32:$rs1p, GPR:$rs2), "$rd, $rs1p, $rs2"> {
    bits<4> rs1p;
 
   let Inst{19-16} = rs1p;
@@ -173,8 +179,8 @@ class RVPBinary0F1WRs1p<bits<3> f, bits<2> w, string opcodestr,
 
 class RVPBinary0F1WRs1pRdp<bits<3> f, bits<2> w, string opcodestr,
                            bit aft = 0b0, RISCVOpcode Opcode = OPC_OP_IMM_32>
-    : RVPBinaryFW<0, f, 1, w, opcodestr, 0b110, Opcode, (outs GPRPairRV32:$rdp),
-                  (ins GPRPairRV32:$rs1p, GPR:$rs2), "$rdp, $rs1p, $rs2"> {
+    : RVPBinaryFW<0, f, 1, w, opcodestr, 0b110, Opcode, (outs RVPGPRPairRV32:$rdp),
+                  (ins RVPGPRPairRV32:$rs1p, GPR:$rs2), "$rdp, $rs1p, $rs2"> {
   bits<4> rs1p;
   bits<4> rdp;
 
@@ -187,8 +193,8 @@ class RVPBinary0F1WRs1pRdp<bits<3> f, bits<2> w, string opcodestr,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPBinary1FWRs2pRs1pRdp<bits<4> f, bits<2> w, string opcodestr,
                               bit aft = 0b0, RISCVOpcode Opcode = OPC_OP_IMM_32>
-    : RVInstRBase<0b110, Opcode, (outs GPRPairRV32:$rdp),
-                  (ins GPRPairRV32:$rs1p, GPRPairRV32:$rs2p),
+    : RVInstRBase<0b110, Opcode, (outs RVPGPRPairRV32:$rdp),
+                  (ins RVPGPRPairRV32:$rs1p, RVPGPRPairRV32:$rs2p),
                   opcodestr, "$rdp, $rs1p, $rs2p"> {
   bits<4> rs1p;
   bits<4> rs2p;
@@ -208,8 +214,8 @@ class RVPBinary1FWRs2pRs1pRdp<bits<4> f, bits<2> w, string opcodestr,
 class RVPBinary1F0WRs2pRs1pRdp<bits<3> f, bits<2> w, string opcodestr,
                                bit bfr = 0b1, bit aft = 0b0,
                                RISCVOpcode Opcode = OPC_OP_IMM_32>
-    : RVPBinaryFW<1, f, 0, w, opcodestr, 0b110, Opcode, (outs GPRPairRV32:$rdp),
-                  (ins GPRPairRV32:$rs1p, GPRPairRV32:$rs2p), "$rdp, $rs1p, $rs2p"> {
+    : RVPBinaryFW<1, f, 0, w, opcodestr, 0b110, Opcode, (outs RVPGPRPairRV32:$rdp),
+                  (ins RVPGPRPairRV32:$rs1p, RVPGPRPairRV32:$rs2p), "$rdp, $rs1p, $rs2p"> {
   bits<4> rs1p;
   bits<4> rs2p;
   bits<4> rdp;
@@ -237,32 +243,12 @@ class RVPBinary1LongFW<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
                       (ins GPR:$rs1, GPR:$rs2), "$rd, $rs1, $rs2">;
 
 class RVPBinary0LongFW<bits<4> f, bits<2> w, string opcodestr>
-    : RVPBinaryLongFW<0, f, w, opcodestr, 0b010, (outs GPRPairRV32:$rdp),
-                      (ins GPR:$rs1, GPRPairRV32:$rs2), "$rdp, $rs1, $rs2"> {
+    : RVPBinaryLongFW<0, f, w, opcodestr, 0b010, (outs RVPGPRPairRV32:$rdp),
+                      (ins GPR:$rs1, RVPGPRPairRV32:$rs2), "$rdp, $rs1, $rs2"> {
   bits<4> rdp;
 
   let Inst{11-8} = rdp;
   let Inst{7}    = 0b1;
-}
-
-multiclass RVPUnaryBH<bits<5> funct5, string opcodestr> {
-  def NAME # _B : RVPUnary<funct5, 0b0001000, 0b010, OPC_OP_IMM_32, opcodestr # ".b">;
-  def NAME # _H : RVPUnary<funct5, 0b0010000, 0b010, OPC_OP_IMM_32, opcodestr # ".h">;
-}
-
-multiclass RVPUnaryHNonPacked<bits<5> funct5, string opcodestr> {
-  def P # NAME # _H : RVPUnary<funct5, 0b0010000, 0b010, OPC_OP_IMM_32, "p" # opcodestr # ".h">;
-  def NAME: RVPUnary<funct5, 0b0100000, 0b010, OPC_OP_IMM_32, opcodestr>;
-}
-
-multiclass RVPUnaryBHW<bits<5> funct5, string opcodestr> {
-  defm NAME : RVPUnaryBH<funct5, opcodestr>;
-  def NAME # _W: RVPUnary<funct5, 0b0100000, 0b010, OPC_OP_IMM_32, opcodestr # ".w">;
-}
-
-multiclass RVPUnaryHW<bits<5> funct5, string opcodestr> {
-  def NAME # _H : RVPUnary<funct5, 0b0010000, 0b010, OPC_OP_IMM_32, opcodestr # ".h">;
-  def NAME # _W: RVPUnary<funct5, 0b0100000, 0b010, OPC_OP_IMM_32, opcodestr # ".w">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -273,10 +259,8 @@ let Predicates = [HasStdExtP] in {
 def CLS    : RVPUnary<0b01100, 0b0000011, 0b001, OPC_OP_IMM, "cls">;
 def ABS    : RVPUnary<0b01100, 0b0000111, 0b001, OPC_OP_IMM, "abs">;
 } // Predicates = [HasStdExtP]
-let DecoderNamespace = "RISCV32Only_",
-    Predicates = [HasStdExtP, IsRV32] in {
+let Predicates = [HasStdExtP, IsRV32] in
 def REV_RV32  : RVPUnary<0b01101, 0b0011111, 0b101, OPC_OP_IMM, "rev">;
-} // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
 def REV16 : RVPUnary<0b01101, 0b0110000, 0b101, OPC_OP_IMM, "rev16">;
@@ -286,15 +270,17 @@ def CLSW  : RVPUnary<0b01100, 0b0000011, 0b001, OPC_OP_IMM_32, "clsw">;
 def ABSW  : RVPUnary<0b01100, 0b0000111, 0b001, OPC_OP_IMM_32, "absw">;
 } // Predicates = [HasStdExtP, IsRV64]
 
+let Predicates = [HasStdExtP] in {
+def PSLLI_B  : RVPUnary<0b10000, 0b0001000, 0b010, OPC_OP_IMM_32, "pslli.b">;
+def PSLLI_H  : RVPUnary<0b10000, 0b0010000, 0b010, OPC_OP_IMM_32, "pslli.h">;
+def PSSLAI_H : RVPUnary<0b11010, 0b0010000, 0b010, OPC_OP_IMM_32, "psslai.h">;
+} // Predicates = [HasStdExtP]
 let DecoderNamespace = "RISCV32Only_",
-    Predicates = [HasStdExtP, IsRV32] in {
-  defm PSLLI_RV32 : RVPUnaryBH<0b10000, "pslli">;
-  defm SSLAI_RV32 : RVPUnaryHNonPacked<0b11010, "sslai">;
-} // Predicates = [HasStdExtP, IsRV32]
-
+    Predicates = [HasStdExtP, IsRV32] in
+def SSLAI : RVPUnary<0b11010, 0b0100000, 0b010, OPC_OP_IMM_32, "sslai">;
 let Predicates = [HasStdExtP, IsRV64] in {
-  defm PSLLI_RV64  : RVPUnaryBHW<0b10000, "pslli">;
-  defm PSSLAI_RV64 : RVPUnaryHW<0b01010, "psslai">;
+def PSLLI_W  : RVPUnary<0b10000, 0b0100000, 0b010, OPC_OP_IMM_32, "pslli.w">;
+def PSSLAI_W : RVPUnary<0b11010, 0b0100000, 0b010, OPC_OP_IMM_32, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
@@ -622,8 +608,8 @@ def PM4ADDASU_B : RVPBinary1LongFW<0b1101, 0b10, 0b101, "pm4addasu.b">;
 } // Predicates = [HasStdExtP]
 let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtP, IsRV32] in {
-def MQACC_H01  : RVPBinary1LongFW<0b0111, 0b00, 0b101, "mqacc.h01">;
-def MQRACC_H01 : RVPBinary1LongFW<0b0111, 0b10, 0b101, "mqracc.h01">;
+def MQACC_H01  : RVPBinary1LongFW<0b1111, 0b00, 0b101, "mqacc.h01">;
+def MQRACC_H01 : RVPBinary1LongFW<0b1111, 0b10, 0b101, "mqracc.h01">;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
@@ -809,9 +795,9 @@ def PWSLAI_B : RVPUnary0F0Rdp<0b100, 0b0010000, "pwslai.b">;
 def PWSLAI_H : RVPUnary0F0Rdp<0b100, 0b0100000, "pwslai.h">;
 def WSLAI    : RVPUnary0F0Rdp<0b100, 0b1000000, "wslai">;
 
-def PLI_DH   : RVPUnaryImm9<0b0011000,  "pli.dh", GPRPairRV32>;
-def PLI_DB   : RVPUnaryImm8<0b00110100, "pli.db", GPRPairRV32>;
-def PLUI_DH  : RVPUnaryImm9<0b0111000,  "plui.dh", GPRPairRV32>;
+def PLI_DH   : RVPUnaryImm9<0b0011000,  "pli.dh", RVPGPRPairRV32>;
+def PLI_DB   : RVPUnaryImm8<0b00110100, "pli.db", RVPGPRPairRV32>;
+def PLUI_DH  : RVPUnaryImm9<0b0111000,  "plui.dh", RVPGPRPairRV32>;
 
 
 def PWSLLI_BS : RVPBinary0F1WRdp<0b000, 0b00, "pwslli.bs">;
