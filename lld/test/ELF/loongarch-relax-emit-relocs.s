@@ -96,6 +96,7 @@
 _start:
   la.pcrel $a0, _start
   la.got   $a0, _start
+
 .ifdef ELF64
   call36 _start
   tail36 $a0, _start
