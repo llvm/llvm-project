@@ -3656,7 +3656,7 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
 }
 
 const Constant *X86::getConstantFromPool(const MachineInstr &MI,
-                                         unsigned OpNo) {
+                                         unsigned OpNo, int64_t *ByteOffset) {
   assert(MI.getNumOperands() >= (OpNo + X86::AddrNumOperands) &&
          "Unexpected number of operands!");
 
@@ -3665,7 +3665,11 @@ const Constant *X86::getConstantFromPool(const MachineInstr &MI,
     return nullptr;
 
   const MachineOperand &Disp = MI.getOperand(OpNo + X86::AddrDisp);
-  if (!Disp.isCPI() || Disp.getOffset() != 0)
+  if (!Disp.isCPI())
+    return nullptr;
+
+  int64_t Offset = Disp.getOffset();
+  if (Offset != 0 && !ByteOffset)
     return nullptr;
 
   ArrayRef<MachineConstantPoolEntry> Constants =
@@ -3676,6 +3680,9 @@ const Constant *X86::getConstantFromPool(const MachineInstr &MI,
   // anything useful.
   if (ConstantEntry.isMachineConstantPoolEntry())
     return nullptr;
+
+  if (ByteOffset)
+    *ByteOffset = Offset;
 
   return ConstantEntry.Val.ConstVal;
 }
