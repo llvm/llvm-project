@@ -84,7 +84,9 @@ class TestCase(TestBase):
         # FIXME: this should return a float
         self.assertEqual(template_param_value.GetValueAsSigned(), 1)
 
-        value = self.expect_expr("temp8", result_type="Bar<float, 1.000000e+00, 2.000000e+00>")
+        value = self.expect_expr(
+            "temp8", result_type="Bar<float, 1.000000e+00, 2.000000e+00>"
+        )
         template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)
         self.assertEqual(template_param_value.GetTypeName(), "float")
         # FIXME: this should return a float
