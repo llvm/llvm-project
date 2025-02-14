@@ -525,3 +525,17 @@ template <ArrayType<int>::Array array> void test() {}
 void foo() { test<{1, 2, 3}>(); }
 
 } // namespace GH113518
+
+namespace GH125821 {
+template<typename T>
+struct A { A(T){} };
+
+template<typename T>
+using Proxy = T;
+
+template<typename T>
+using C = Proxy< A<T> >;
+
+C test{ 42 }; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
+
+} // namespace GH125821

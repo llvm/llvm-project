@@ -2666,6 +2666,9 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
   if (!object_file->IsInMemory())
     return;
 
+  if (!GetProcess()->IsLiveDebugSession())
+    return;
+
   Target &target = GetProcess()->GetTarget();
   Debugger &debugger = target.GetDebugger();
 

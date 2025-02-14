@@ -42,6 +42,8 @@ public:
       llvm::DenseSet<const DeclRefExpr *> DeclRefExprsToIgnore;
       llvm::DenseSet<const LambdaExpr *> LambdasToIgnore;
       llvm::DenseSet<const ValueDecl *> ProtectedThisDecls;
+      llvm::DenseSet<const CXXConstructExpr *> ConstructToIgnore;
+
       QualType ClsType;
 
       explicit LocalVisitor(const UncountedLambdaCapturesChecker *Checker)
@@ -107,6 +109,26 @@ public:
         return safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn";
       }
 
+      bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
+        if (ConstructToIgnore.contains(CE))
+          return true;
+        if (auto *Callee = CE->getConstructor()) {
+          unsigned ArgIndex = 0;
+          for (auto *Param : Callee->parameters()) {
+            if (ArgIndex >= CE->getNumArgs())
+              return true;
+            auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
+            if (auto *L = findLambdaInArg(Arg)) {
+              LambdasToIgnore.insert(L);
+              if (!Param->hasAttr<NoEscapeAttr>())
+                Checker->visitLambdaExpr(L, shouldCheckThis());
+            }
+            ++ArgIndex;
+          }
+        }
+        return true;
+      }
+
       bool VisitCallExpr(CallExpr *CE) override {
         checkCalleeLambda(CE);
         if (auto *Callee = CE->getDirectCallee()) {
@@ -145,8 +167,10 @@ public:
         auto *CtorArg = CE->getArg(0)->IgnoreParenCasts();
         if (!CtorArg)
           return nullptr;
-        if (auto *Lambda = dyn_cast<LambdaExpr>(CtorArg))
+        if (auto *Lambda = dyn_cast<LambdaExpr>(CtorArg)) {
+          ConstructToIgnore.insert(CE);
           return Lambda;
+        }
         if (auto *TempExpr = dyn_cast<CXXBindTemporaryExpr>(CtorArg)) {
           E = TempExpr->getSubExpr()->IgnoreParenCasts();
           if (auto *Lambda = dyn_cast<LambdaExpr>(E))
@@ -164,6 +188,7 @@ public:
         TempExpr = dyn_cast<CXXBindTemporaryExpr>(Init->IgnoreParenCasts());
         if (!TempExpr)
           return nullptr;
+        ConstructToIgnore.insert(CE);
         return dyn_cast_or_null<LambdaExpr>(TempExpr->getSubExpr());
       }
 

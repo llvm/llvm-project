@@ -51,10 +51,10 @@ define dso_local void @fsd(ptr %a, double %b, double %c) nounwind {
 ; RV32IZFINXZDINX-LABEL: fsd:
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    mv a5, a4
+; RV32IZFINXZDINX-NEXT:    mv a7, a2
 ; RV32IZFINXZDINX-NEXT:    mv a4, a3
-; RV32IZFINXZDINX-NEXT:    mv a3, a2
-; RV32IZFINXZDINX-NEXT:    mv a2, a1
-; RV32IZFINXZDINX-NEXT:    fadd.d a2, a2, a4
+; RV32IZFINXZDINX-NEXT:    mv a6, a1
+; RV32IZFINXZDINX-NEXT:    fadd.d a2, a6, a4
 ; RV32IZFINXZDINX-NEXT:    sw a2, 0(a0)
 ; RV32IZFINXZDINX-NEXT:    sw a3, 4(a0)
 ; RV32IZFINXZDINX-NEXT:    sw a2, 64(a0)
