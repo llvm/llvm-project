@@ -110,11 +110,13 @@ def : DemangledBuiltin<"__spirv_DotAccSat", OpenCL_std, IntegerDot, 3, 3>;
 def : DemangledBuiltin<"read_imagei", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"read_imageui", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"read_imagef", OpenCL_std, ReadImage, 2, 4>;
+def : DemangledBuiltin<"__spirv_ImageRead", OpenCL_std, ReadImage, 2, 0>;
 
 def : DemangledBuiltin<"write_imagef", OpenCL_std, WriteImage, 3, 4>;
 def : DemangledBuiltin<"write_imagei", OpenCL_std, WriteImage, 3, 4>;
 def : DemangledBuiltin<"write_imageui", OpenCL_std, WriteImage, 3, 4>;
 def : DemangledBuiltin<"write_imageh", OpenCL_std, WriteImage, 3, 4>;
+def : DemangledBuiltin<"__spirv_ImageWrite", OpenCL_std, WriteImage, 3, 0>;
 
 def : DemangledBuiltin<"__translate_sampler_initializer", OpenCL_std, SampleImage, 1, 1>;
 def : DemangledBuiltin<"__spirv_SampledImage", OpenCL_std, SampleImage, 2, 2>;
