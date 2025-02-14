@@ -800,8 +800,13 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
                     Value *Ptr, PredicatedScalarEvolution &PSE) {
   // The access function must stride over the innermost loop.
   if (Lp != AR->getLoop()) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not striding over innermost loop "
-                      << *Ptr << " SCEV: " << *AR << "\n");
+    LLVM_DEBUG({
+      dbgs() << "LAA: Bad stride - Not striding over innermost loop ";
+      if (Ptr)
+        dbgs() << *Ptr << " ";
+
+      dbgs() << "SCEV: " << *AR << "\n";
+    });
     return std::nullopt;
   }
 
@@ -811,8 +816,12 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   // Calculate the pointer stride and check if it is constant.
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Step);
   if (!C) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not a constant strided " << *Ptr
-                      << " SCEV: " << *AR << "\n");
+    LLVM_DEBUG({
+      dbgs() << "LAA: Bad stride - Not a constant strided ";
+      if (Ptr)
+        dbgs() << *Ptr << " ";
+      dbgs() << "SCEV: " << *AR << "\n";
+    });
     return std::nullopt;
   }
 
@@ -839,8 +848,8 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
 static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
                         const Loop *L);
 
-/// Check whether \p AR is a non-wrapping AddRec, or if \p Ptr is a non-wrapping
-/// GEP.
+/// Check whether a pointer address cannot wrap. If \p Ptr is not nullptr, use
+/// informating from the IR pointer value to determine no-wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
                      Value *Ptr, Type *AccessTy, const Loop *L, bool Assume,
                      std::optional<int64_t> Stride = std::nullopt) {
@@ -861,7 +870,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
   // location will be larger than half the pointer index type space. In that
   // case, the GEP would be  poison and any memory access dependent on it would
   // be immediate UB when executed.
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+  if (auto *GEP = dyn_cast_if_present<GetElementPtrInst>(Ptr);
       GEP && GEP->hasNoUnsignedSignedWrap())
     return true;
 
@@ -876,6 +885,9 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
         (Stride == 1 || Stride == -1))
       return true;
   }
+
+  if (!Ptr)
+    return false;
 
   if (Assume) {
     PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
@@ -1144,13 +1156,10 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
 
     // When we run after a failing dependency check we have to make sure
     // we don't have wrapping pointers.
-    if (ShouldCheckWrap) {
-      // Skip wrap checking when translating pointers.
-      if (TranslatedPtrs.size() > 1)
-        return false;
-
-      if (!isNoWrap(PSE, AR, Ptr, AccessTy, TheLoop, Assume))
-        return false;
+    if (ShouldCheckWrap &&
+        !isNoWrap(PSE, AR, TranslatedPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
+                  TheLoop, Assume)) {
+      return false;
     }
   }
 
@@ -1457,6 +1466,9 @@ void AccessAnalysis::processMemAccesses() {
 /// Check whether \p Ptr is non-wrapping GEP.
 static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
                         const Loop *L) {
+  if (PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+    return true;
+
   // Scalar evolution does not propagate the non-wrapping flags to values that
   // are derived from a non-wrapping induction variable because non-wrapping
   // could be flow-sensitive.
