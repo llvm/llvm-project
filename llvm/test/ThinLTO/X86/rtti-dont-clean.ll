@@ -5,7 +5,12 @@
 ; RUN:           -r=%t.o,_ZTSvt,p \
 ; RUN:           -r=%t.o,_ZTIvt,p \
 ; RUN:           -r=%t.o,_ZTVvt,p \
+; RUN:           -r=%t.o,_ZTSvt1,p \
+; RUN:           -r=%t.o,_ZTIvt1,p \
+; RUN:           -r=%t.o,_ZTVvt1,p \
 ; RUN:           -r=%t.o,use,p \
+; RUN:           -r=%t.o,dyncast,p \
+; RUN:           -r=%t.o,__dynamic_cast,px \
 ; RUN:           -whole-program-visibility
 ; RUN: llvm-dis %t2.1.1.promote.bc -o - | FileCheck %s
 ;
@@ -16,10 +21,15 @@ target triple = "x86_64-unknown-linux-gnu"
 @_ZTSvt = external constant ptr
 @_ZTIvt = weak_odr constant { ptr } { ptr @_ZTSvt }
 
+@_ZTSvt1 = external constant ptr
+@_ZTIvt1 = weak_odr constant { ptr } { ptr @_ZTSvt1 }
+
 %vtTy = type { [3 x ptr] }
 
 ; CHECK: @_ZTVvt = weak_odr constant %vtTy { [3 x ptr] [ptr null, ptr @_ZTIvt, ptr @vf] }, !type !0, !vcall_visitbiliy !1
 @_ZTVvt = weak_odr constant %vtTy { [3 x ptr] [ptr null, ptr @_ZTIvt, ptr @vf] }, !type !0, !vcall_visitbiliy !1
+; CHECK: @_ZTVvt1 = weak_odr constant %vtTy { [3 x ptr] [ptr null, ptr @_ZTIvt1, ptr @vf] }, !type !2, !vcall_visitbiliy !1
+@_ZTVvt1 = weak_odr constant %vtTy { [3 x ptr] [ptr null, ptr @_ZTIvt1, ptr @vf] }, !type !2, !vcall_visitbiliy !1
 
 define internal void @vf() {
   ret void
@@ -34,11 +44,19 @@ define ptr @use(ptr %p) {
   ret ptr %rtti
 }
 
+define ptr @dyncast(ptr %p) {
+  %r = call ptr @__dynamic_cast(ptr %p, ptr @_ZTIvt1, ptr @_ZTIvt1, i64 0)
+  ret ptr %r
+}
+
+; Make symbol _ZTVvt and _ZTVvt1 alive.
 define void @main() {
   %vfunc = load ptr, ptr @_ZTVvt
+  %vfunc1 = load ptr, ptr @_ZTVvt1
   ret void
 }
 
+declare ptr @__dynamic_cast(ptr, ptr, ptr, i64)
 declare void @llvm.assume(i1)
 declare i1 @llvm.type.test(ptr %ptr, metadata %type) nounwind readnone
 !0 = !{i32 16, !"_ZTSvt"}
