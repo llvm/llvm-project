@@ -6657,25 +6657,26 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Op = DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, Src);
       Op = DAG.getNode(ISD::BITCAST, SL, N->getValueType(0), Op);
       Results.push_back(Op);
-    } else {
-      // Must be even number
-      assert((EleNo & 1) == 0);
-      SmallVector<SDValue> DstPairs;
-      EVT SrcEleVT = SrcVT.getVectorElementType();
-      EVT DstEleVT = DstVT.getVectorElementType();
-      EVT SrcPairVT = EVT::getVectorVT(*DAG.getContext(), SrcEleVT, 2);
-      EVT DstPairVT = EVT::getVectorVT(*DAG.getContext(), DstEleVT, 2);
-      for (unsigned i = 0; i != EleNo; i += 2) {
-        SDValue SrcPair = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SrcPairVT,
-                                      Src, DAG.getConstant(i, SL, MVT::i32));
-        SDValue SatPk =
-            DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, SrcPair);
-        SDValue DstPair = DAG.getNode(ISD::BITCAST, SL, DstPairVT, SatPk);
-        DstPairs.push_back(DstPair);
-      }
-      SDValue Op = DAG.getNode(ISD::CONCAT_VECTORS, SL, DstVT, DstPairs);
-      Results.push_back(Op);
+      break;
     }
+
+    // Vector case, number of element must be even
+    assert((EleNo & 1) == 0);
+    SmallVector<SDValue> DstPairs;
+    EVT SrcEleVT = SrcVT.getVectorElementType();
+    EVT DstEleVT = DstVT.getVectorElementType();
+    EVT SrcPairVT = EVT::getVectorVT(*DAG.getContext(), SrcEleVT, 2);
+    EVT DstPairVT = EVT::getVectorVT(*DAG.getContext(), DstEleVT, 2);
+    for (unsigned i = 0; i != EleNo; i += 2) {
+      SDValue SrcPair = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SrcPairVT, Src,
+                                    DAG.getConstant(i, SL, MVT::i32));
+      SDValue SatPk =
+          DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, SrcPair);
+      SDValue DstPair = DAG.getNode(ISD::BITCAST, SL, DstPairVT, SatPk);
+      DstPairs.push_back(DstPair);
+    }
+    SDValue Op = DAG.getNode(ISD::CONCAT_VECTORS, SL, DstVT, DstPairs);
+    Results.push_back(Op);
     break;
   }
   default:
