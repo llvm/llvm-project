@@ -2257,7 +2257,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
     if (!VTy) {
       SemaRef.Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_non_vector)
-          << "AddUint64" << /*all*/ 1;
+          << TheCall->getDirectCallee() << /*all*/ 1;
       return true;
     }
 

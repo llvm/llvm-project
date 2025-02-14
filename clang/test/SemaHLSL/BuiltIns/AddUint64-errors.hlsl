@@ -22,7 +22,7 @@ uint2 test_bad_num_arg_elements(uint3 a, uint3 b) {
 
 uint2 test_scalar_arg_type(uint a) {
   return __builtin_hlsl_adduint64(a, a);
-  // expected-error@-1 {{all arguments to AddUint64 must be vectors}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_adduint64' must be vectors}}
 }
 
 uint2 test_signed_integer_args(int2 a, int2 b) {
