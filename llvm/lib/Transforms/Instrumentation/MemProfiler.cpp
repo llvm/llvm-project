@@ -970,6 +970,7 @@ static void
 readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             const TargetLibraryInfo &TLI,
             std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo,
+            std::set<std::vector<uint64_t>> &MatchedCallSites,
             DenseMap<uint64_t, LocToLocMap> &UndriftMaps) {
   auto &Ctx = M.getContext();
   // Previously we used getIRPGOFuncName() here. If F is local linkage,
@@ -1210,6 +1211,13 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
           addCallsiteMetadata(I, InlinedCallStack, Ctx);
           // Only need to find one with a matching call stack and add a single
           // callsite metadata.
+
+          // Accumulate call site matching information upon request.
+          if (ClPrintMemProfMatchInfo) {
+            std::vector<uint64_t> CallStack;
+            append_range(CallStack, InlinedCallStack);
+            MatchedCallSites.insert(std::move(CallStack));
+          }
           break;
         }
       }
@@ -1266,13 +1274,17 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   // it to an allocation in the IR.
   std::map<uint64_t, AllocMatchInfo> FullStackIdToAllocMatchInfo;
 
+  // Set of the matched call sites, each expressed as a sequence of an inline
+  // call stack.
+  std::set<std::vector<uint64_t>> MatchedCallSites;
+
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
 
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
     readMemprof(M, F, MemProfReader.get(), TLI, FullStackIdToAllocMatchInfo,
-                UndriftMaps);
+                MatchedCallSites, UndriftMaps);
   }
 
   if (ClPrintMemProfMatchInfo) {
@@ -1281,6 +1293,13 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
              << " context with id " << Id << " has total profiled size "
              << Info.TotalSize << (Info.Matched ? " is" : " not")
              << " matched\n";
+
+    for (const auto &CallStack : MatchedCallSites) {
+      errs() << "MemProf callsite match for inline call stack";
+      for (uint64_t StackId : CallStack)
+        errs() << " " << StackId;
+      errs() << "\n";
+    }
   }
 
   return PreservedAnalyses::none();

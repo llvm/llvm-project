@@ -122,6 +122,8 @@ MemDGNodeIntervalBuilder::getBotMemDGNode(const Interval<Instruction> &Intvl,
 Interval<MemDGNode>
 MemDGNodeIntervalBuilder::make(const Interval<Instruction> &Instrs,
                                DependencyGraph &DAG) {
+  if (Instrs.empty())
+    return {};
   auto *TopMemN = getTopMemDGNode(Instrs, DAG);
   // If we couldn't find a mem node in range TopN - BotN then it's empty.
   if (TopMemN == nullptr)
@@ -368,6 +370,9 @@ MemDGNode *DependencyGraph::getMemDGNodeAfter(DGNode *N, bool IncludingN,
 }
 
 void DependencyGraph::notifyCreateInstr(Instruction *I) {
+  if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
+    // We don't maintain the DAG while reverting.
+    return;
   // Nothing to do if the node is not in the focus range of the DAG.
   if (!(DAGInterval.contains(I) || DAGInterval.touches(I)))
     return;
@@ -405,6 +410,9 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
 }
 
 void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
+  if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
+    // We don't maintain the DAG while reverting.
+    return;
   // NOTE: This function runs before `I` moves to its new destination.
   BasicBlock *BB = To.getNodeParent();
   assert(!(To != BB->end() && &*To == I->getNextNode()) &&
@@ -472,6 +480,9 @@ void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
 }
 
 void DependencyGraph::notifyEraseInstr(Instruction *I) {
+  if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
+    // We don't maintain the DAG while reverting.
+    return;
   // Update the MemDGNode chain if this is a memory node.
   if (auto *MemN = dyn_cast_or_null<MemDGNode>(getNodeOrNull(I))) {
     auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false);
@@ -520,8 +531,8 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
       }
     }
   };
-  if (DAGInterval.empty()) {
-    assert(NewInterval == InstrsInterval && "Expected empty DAGInterval!");
+  auto MemDAGInterval = MemDGNodeIntervalBuilder::make(DAGInterval, *this);
+  if (MemDAGInterval.empty()) {
     FullScan(NewInterval);
   }
   // 2. The new section is below the old section.
@@ -541,8 +552,7 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
   // range including both NewInterval and DAGInterval until DstN, for each DstN.
   else if (DAGInterval.bottom()->comesBefore(NewInterval.top())) {
     auto DstRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
-    auto SrcRangeFull = MemDGNodeIntervalBuilder::make(
-        DAGInterval.getUnionInterval(NewInterval), *this);
+    auto SrcRangeFull = MemDAGInterval.getUnionInterval(DstRange);
     for (MemDGNode &DstN : DstRange) {
       auto SrcRange =
           Interval<MemDGNode>(SrcRangeFull.top(), DstN.getPrevNode());
@@ -580,7 +590,7 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
     // When scanning for deps with destination in DAGInterval we need to
     // consider sources from the NewInterval only, because all intra-DAGInterval
     // dependencies have already been created.
-    auto DstRangeOld = MemDGNodeIntervalBuilder::make(DAGInterval, *this);
+    auto DstRangeOld = MemDAGInterval;
     auto SrcRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
     for (MemDGNode &DstN : DstRangeOld)
       scanAndAddDeps(DstN, SrcRange);

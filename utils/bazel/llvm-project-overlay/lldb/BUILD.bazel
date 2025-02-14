@@ -634,14 +634,20 @@ cc_library(
 
 cc_library(
     name = "Core",
-    srcs = glob([
-        "source/Core/**/*.cpp",
-        "source/ValueObject/**/*.cpp",  # This should be its own library.
-    ]),
-    hdrs = glob([
-        "include/lldb/Core/**/*.h",
-        "include/lldb/ValueObject/**/*.h",  # This should be its own library.
-    ]),
+    srcs = glob(
+        [
+            "source/Core/**/*.cpp",
+            "source/ValueObject/**/*.cpp",  # This should be its own library.
+        ],
+        exclude = ["source/Core/Telemetry.cpp"],
+    ),
+    hdrs = glob(
+        [
+            "include/lldb/Core/**/*.h",
+            "include/lldb/ValueObject/**/*.h",  # This should be its own library.
+        ],
+        exclude = ["include/lldb/Core/Telemetry.h"],
+    ),
     includes = ["include"],
     deps = [
         ":BreakpointHeaders",

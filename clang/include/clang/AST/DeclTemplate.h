@@ -1960,6 +1960,8 @@ public:
 
   bool hasStrictPackMatch() const { return StrictPackMatch; }
 
+  void setStrictPackMatch(bool Val) { StrictPackMatch = Val; }
+
   /// Get the point of instantiation (if any), or null if none.
   SourceLocation getPointOfInstantiation() const {
     return PointOfInstantiation;

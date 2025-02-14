@@ -54,10 +54,6 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   auto *DXILValMD = M.getOrInsertNamedMetadata(DXILValKey);
   DXILValMD->addOperand(Val);
 }
-void addDisableOptimizations(llvm::Module &M) {
-  StringRef Key = "dx.disable_optimizations";
-  M.addModuleFlag(llvm::Module::ModFlagBehavior::Override, Key, 1);
-}
 // cbuffer will be translated into global variable in special address space.
 // If translate into C,
 // cbuffer A {
@@ -171,8 +167,6 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
 
   generateGlobalCtorDtorCalls();
-  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-    addDisableOptimizations(M);
 
   const DataLayout &DL = M.getDataLayout();
 
@@ -345,6 +339,13 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
                 WaveSizeAttr->getPreferred());
     Fn->addFnAttr(WaveSizeKindStr, WaveSizeStr);
   }
+  // HLSL entry functions are materialized for module functions with
+  // HLSLShaderAttr attribute. SetLLVMFunctionAttributesForDefinition called
+  // later in the compiler-flow for such module functions is not aware of and
+  // hence not able to set attributes of the newly materialized entry functions.
+  // So, set attributes of entry function here, as appropriate.
+  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+    Fn->addFnAttr(llvm::Attribute::OptimizeNone);
   Fn->addFnAttr(llvm::Attribute::NoInline);
 }
 
