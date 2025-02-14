@@ -3096,8 +3096,8 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
   if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
     return CastInitializer(S, Ctx, E, List, DestTypes);
 
-  if (auto *ATy = Ty->getAs<VectorType>()) {
-    uint64_t Size = ATy->getNumElements();
+  if (auto *VecTy = Ty->getAs<VectorType>()) {
+    uint64_t Size = VecTy->getNumElements();
 
     QualType SizeTy = Ctx.getSizeType();
     uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
@@ -3115,8 +3115,8 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
     return true;
   }
 
-  if (auto *VTy = dyn_cast<ConstantArrayType>(Ty.getTypePtr())) {
-    uint64_t Size = VTy->getZExtSize();
+  if (auto *ArrTy = dyn_cast<ConstantArrayType>(Ty.getTypePtr())) {
+    uint64_t Size = ArrTy->getZExtSize();
     QualType SizeTy = Ctx.getSizeType();
     uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
     for (uint64_t I = 0; I < Size; ++I) {

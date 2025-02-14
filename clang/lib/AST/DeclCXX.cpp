@@ -1464,7 +1464,11 @@ void CXXRecordDecl::addedMember(Decl *D) {
   }
 
   // HLSL: All user-defined data types are aggregates and use aggregate
-  // initialization. This _needs_ to change in the future. There are two
+  // initialization, meanwhile most, but not all built-in types behave like
+  // aggregates. Resource types, and some other HLSL types that wrap handles
+  // don't behave like aggregates. We can identify these as different because we
+  // implicitly define "special" member functions, which aren't spellable in
+  // HLSL. This all _needs_ to change in the future. There are two
   // relevant HLSL feature proposals that will depend on this changing:
   // * 0005-strict-initializer-lists.md
   // * https://github.com/microsoft/hlsl-specs/pull/325

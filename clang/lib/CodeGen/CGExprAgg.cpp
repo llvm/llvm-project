@@ -1782,7 +1782,9 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   // emit these we need to emit the opaque values before we emit the argument
   // expressions themselves. This is a little hacky, but it prevents us needing
   // to do a bigger AST-level change for a language feature that we need
-  // deprecate in the near future.
+  // deprecate in the near future. See related HLSL language proposals:
+  // * 0005-strict-initializer-lists.md
+  // * https://github.com/microsoft/hlsl-specs/pull/325
   if (CGF.getLangOpts().HLSL && isa<InitListExpr>(ExprToVisit))
     CGF.CGM.getHLSLRuntime().emitInitListOpaqueValues(
         CGF, cast<InitListExpr>(ExprToVisit));
