@@ -46,3 +46,39 @@
 // RUN: clang-sycl-linker --dry-run -triple spirv64  %t_1.bc %t_2.bc -o a.spv 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=LLVMOPTSLIN
 // LLVMOPTSLIN: -spirv-debug-info-version=nonsemantic-shader-200 -spirv-allow-unknown-intrinsics=llvm.genx. -spirv-ext=
+//
+// Test AOT compilation for an Intel GPU.
+// RUN: clang-sycl-linker --dry-run -arch pvc %t_1.bc %t_2.bc -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
+// AOT-INTEL-GPU:      "{{.*}}llvm-link{{.*}}" {{.*}}.bc {{.*}}.bc -o [[LLVMLINKOUT:.*]].bc --suppress-warnings
+// AOT-INTEL-GPU-NEXT: "{{.*}}llvm-spirv{{.*}}" {{.*}}-o [[SPIRVTRANSLATIONOUT:.*]] [[LLVMLINKOUT]].bc
+// AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device pvc {{.*}}-output a.out -file [[SPIRVTRANSLATIONOUT]]
+//
+// Test AOT compilation for an Intel GPU with additional options.
+// RUN: clang-sycl-linker --dry-run -arch pvc %t_1.bc %t_2.bc -o a.out 2>&1 \
+// RUN:     --ocloc-options="-a -b" \
+// RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU-2
+// AOT-INTEL-GPU-2:      "{{.*}}llvm-link{{.*}}" {{.*}}.bc {{.*}}.bc -o [[LLVMLINKOUT:.*]].bc --suppress-warnings
+// AOT-INTEL-GPU-2-NEXT: "{{.*}}llvm-spirv{{.*}}" {{.*}}-o [[SPIRVTRANSLATIONOUT:.*]] [[LLVMLINKOUT]].bc
+// AOT-INTEL-GPU-2-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device pvc -a -b {{.*}}-output a.out -file [[SPIRVTRANSLATIONOUT]]
+//
+// Test AOT compilation for an Intel CPU.
+// RUN: clang-sycl-linker --dry-run -arch corei7 %t_1.bc %t_2.bc -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU
+// AOT-INTEL-CPU:      "{{.*}}llvm-link{{.*}}" {{.*}}.bc {{.*}}.bc -o [[LLVMLINKOUT:.*]].bc --suppress-warnings
+// AOT-INTEL-CPU-NEXT: "{{.*}}llvm-spirv{{.*}}" {{.*}}-o [[SPIRVTRANSLATIONOUT:.*]] [[LLVMLINKOUT]].bc
+// AOT-INTEL-CPU-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu {{.*}}-o a.out [[SPIRVTRANSLATIONOUT]]
+//
+// Test AOT compilation for an Intel CPU with additional options.
+// RUN: clang-sycl-linker --dry-run -arch corei7 %t_1.bc %t_2.bc -o a.out 2>&1 \
+// RUN:     --opencl-aot-options="-a -b" \
+// RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU-2
+// AOT-INTEL-CPU-2:      "{{.*}}llvm-link{{.*}}" {{.*}}.bc {{.*}}.bc -o [[LLVMLINKOUT:.*]].bc --suppress-warnings
+// AOT-INTEL-CPU-2-NEXT: "{{.*}}llvm-spirv{{.*}}" {{.*}}-o [[SPIRVTRANSLATIONOUT:.*]] [[LLVMLINKOUT]].bc
+// AOT-INTEL-CPU-2-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu -a -b {{.*}}-o a.out [[SPIRVTRANSLATIONOUT]]
+//
+// Check that the output file must be specified.
+// RUN: not clang-sycl-linker --dry-run %t_1.bc %t_2.bc 2>& 1 \
+// RUN: | FileCheck %s --check-prefix=NOOUTPUT
+// NOOUTPUT: Output file is not specified
+//
