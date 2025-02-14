@@ -17,10 +17,10 @@ define void @test_scoped_alloca(i64 %n) {
 ; RV32-NEXT:    .cfi_offset s1, -12
 ; RV32-NEXT:    addi s0, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
-; RV32-NEXT:    mv s1, sp
 ; RV32-NEXT:    addi a0, a0, 15
 ; RV32-NEXT:    andi a0, a0, -16
 ; RV32-NEXT:    sub a0, sp, a0
+; RV32-NEXT:    mv s1, sp
 ; RV32-NEXT:    mv sp, a0
 ; RV32-NEXT:    call use_addr
 ; RV32-NEXT:    mv sp, s1
@@ -48,10 +48,10 @@ define void @test_scoped_alloca(i64 %n) {
 ; RV64-NEXT:    .cfi_offset s1, -24
 ; RV64-NEXT:    addi s0, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
-; RV64-NEXT:    mv s1, sp
 ; RV64-NEXT:    addi a0, a0, 15
 ; RV64-NEXT:    andi a0, a0, -16
 ; RV64-NEXT:    sub a0, sp, a0
+; RV64-NEXT:    mv s1, sp
 ; RV64-NEXT:    mv sp, a0
 ; RV64-NEXT:    call use_addr
 ; RV64-NEXT:    mv sp, s1

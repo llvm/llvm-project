@@ -172,12 +172,12 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ;
 ; RV64-LABEL: icmpasreq:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    bltz a0, .LBB8_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a1, a2
-; RV64-NEXT:  .LBB8_2:
+; RV64-NEXT:    sext.w a3, a0
 ; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bltz a3, .LBB8_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB8_2:
 ; RV64-NEXT:    ret
   %sh = ashr i32 %input, 31
   %c = icmp eq i32 %sh, -1
@@ -197,12 +197,12 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ;
 ; RV64-LABEL: icmpasrne:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    bgez a0, .LBB9_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a1, a2
-; RV64-NEXT:  .LBB9_2:
+; RV64-NEXT:    sext.w a3, a0
 ; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bgez a3, .LBB9_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB9_2:
 ; RV64-NEXT:    ret
   %sh = ashr i32 %input, 31
   %c = icmp ne i32 %sh, -1
