@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj | \
-# RUN:   not llvm-dwarfdump -verify - | FileCheck %s
+# RUN:   not llvm-dwarfdump -verify --verify-num-threads 1 - | FileCheck %s
 
 # CHECK: error: Name Index @ 0x0 does not index any CU
 # CHECK: error: Name Index @ 0x28 references a non-existing CU @ 0x1
