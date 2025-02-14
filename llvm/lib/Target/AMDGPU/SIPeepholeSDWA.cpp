@@ -98,8 +98,7 @@ std::optional<SdwaSel> combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
   if (Sel == SdwaSel::DWORD)
     return OperandSel;
 
-  if (Sel == OperandSel ||
-      OperandSel == SdwaSel::DWORD)
+  if (Sel == OperandSel || OperandSel == SdwaSel::DWORD)
     return Sel;
 
   if (Sel == SdwaSel::WORD_1 || Sel == SdwaSel::BYTE_2 ||
@@ -418,7 +417,7 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
     return nullptr;
 
   return PotentialMO->getParent();
-  }
+}
 
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   switch (MI.getOpcode()) {
@@ -504,12 +503,12 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   return true;
 }
 
-bool SDWASrcOperand::canCombineSelections(const MachineInstr &MI, const SIInstrInfo *TII) {
+bool SDWASrcOperand::canCombineSelections(const MachineInstr &MI,
+                                          const SIInstrInfo *TII) {
   if (!TII->isSDWA(MI.getOpcode()))
     return true;
 
-  auto canCombineSel = [&](auto SrcOpName, auto  SrcSelOpName)
-  {
+  auto canCombineSel = [&](auto SrcOpName, auto SrcSelOpName) {
     const MachineOperand *Src = TII->getNamedOperand(MI, SrcOpName);
     const MachineOperand *SrcSel = TII->getNamedOperand(MI, SrcSelOpName);
     return !Src || !isSameReg(*Src, *getReplacedOperand()) ||
