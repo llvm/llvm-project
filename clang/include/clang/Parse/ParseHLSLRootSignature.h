@@ -40,7 +40,17 @@ public:
   DiagnosticsEngine &Diags() { return PP.getDiagnostics(); }
 
 private:
-  // Root Element helpers
+  /// All private Parse.* methods follow a similar pattern:
+  ///   - Each method will expect that the the next token is of a certain kind
+  /// and will invoke `ConsumeExpectedToken`
+  ///   - As such, an error will be raised if the proceeding tokens are not
+  /// what is expected
+  ///   - Therefore, it is the callers responsibility to ensure that you are
+  /// expecting the next element type. Or equivalently, the methods should not
+  /// be called as a way to try and parse an element
+  ///   - All methods return true if a parsing error is encountered. It is the
+  /// callers responsibility to propogate this error up, or deal with it
+  /// otherwise
   bool ParseRootElement();
   bool ParseDescriptorTable();
   bool ParseDescriptorTableClause();
