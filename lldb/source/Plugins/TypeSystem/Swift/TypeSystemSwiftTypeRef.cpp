@@ -2734,11 +2734,41 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
 #define FORWARD_TO_EXPRAST_ONLY(FUNC, ARGS, DEFAULT_RETVAL)                    \
   do {                                                                         \
     if (auto target_sp = GetTargetWP().lock())                                 \
-      if (auto swift_ast_ctx = GetSwiftASTContext(                            \
+      if (auto swift_ast_ctx = GetSwiftASTContext(                             \
               SymbolContext(target_sp, target_sp->GetExecutableModule())))     \
         return swift_ast_ctx->FUNC ARGS;                                       \
     return DEFAULT_RETVAL;                                                     \
   } while (0)
+
+bool TypeSystemSwiftTypeRef::UseSwiftASTContextFallback(
+    const char *func_name, lldb::opaque_compiler_type_t type) {
+  if (!ModuleList::GetGlobalModuleListProperties().GetSwiftTypeSystemFallback())
+    return false;
+
+  LLDB_LOGF(GetLog(LLDBLog::Types),
+            "TypeSystemSwiftTypeRef::%s(): Engaging SwiftASTContext fallback "
+            "for type %s",
+            func_name, AsMangledName(type));
+  return true;
+}
+
+bool TypeSystemSwiftTypeRef::DiagnoseSwiftASTContextFallback(
+    const char *func_name, lldb::opaque_compiler_type_t type) {
+  const char *type_name = AsMangledName(type);
+
+  std::optional<lldb::user_id_t> debugger_id;
+  if (auto target_sp = GetTargetWP().lock())
+    debugger_id = target_sp->GetDebugger().GetID();
+
+  std::string msg;
+  llvm::raw_string_ostream(msg)
+      << "TypeSystemSwiftTypeRef::" << func_name
+      << ": had to engage SwiftASTContext fallback for type " << type_name;
+  Debugger::ReportWarning(msg, debugger_id, &m_fallback_warning);
+
+  LLDB_LOGF(GetLog(LLDBLog::Types), "%s", msg.c_str());
+  return true;
+}
 
 CompilerType
 TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &dem,
@@ -3452,14 +3482,16 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
       if (auto result = runtime->GetBitSize({weak_from_this(), type}, exe_scope))
         return result;
       // Runtime failed, fallback to SwiftASTContext.
-      LLDB_LOGF(GetLog(LLDBLog::Types),
-                "Couldn't compute size of type %s using SwiftLanguageRuntime.",
-                AsMangledName(type));
-
-      if (auto swift_ast_context =
-              GetSwiftASTContext(GetSymbolContext(exe_scope)))
-        return swift_ast_context->GetBitSize(ReconstructType(type, exe_scope),
-                                             exe_scope);
+      if (UseSwiftASTContextFallback(__FUNCTION__, type)) {
+        if (auto swift_ast_context =
+                GetSwiftASTContext(GetSymbolContext(exe_scope))) {
+          auto result = swift_ast_context->GetBitSize(
+              ReconstructType(type, exe_scope), exe_scope);
+          if (result)
+            DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+          return result;
+        }
+      }
     }
 
     // FIXME: Move this to the top. Currently this causes VALIDATE
@@ -3500,12 +3532,16 @@ TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
         return stride;
     }
     // Runtime failed, fallback to SwiftASTContext.
-    LLDB_LOGF(GetLog(LLDBLog::Types),
-              "Couldn't compute stride of type %s using SwiftLanguageRuntime.",
-              AsMangledName(type));
-    if (auto swift_ast_context =
-            GetSwiftASTContext(GetSymbolContext(exe_scope)))
-      return swift_ast_context->GetByteStride(ReconstructType(type), exe_scope);
+    if (UseSwiftASTContextFallback(__FUNCTION__, type)) {
+      if (auto swift_ast_context =
+              GetSwiftASTContext(GetSymbolContext(exe_scope))) {
+        auto result =
+            swift_ast_context->GetByteStride(ReconstructType(type), exe_scope);
+        if (result)
+          DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+        return result;
+      }
+    }
     return {};
   };
   VALIDATE_AND_RETURN(impl, GetByteStride, type, exe_scope,
@@ -3623,19 +3659,19 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
         impl, GetNumChildren, type, exe_ctx_obj,
         (ReconstructType(type, exe_ctx), omit_empty_base_classes, exe_ctx));
   }
-  LLDB_LOGF(GetLog(LLDBLog::Types),
-            "Using SwiftASTContext::GetNumChildren fallback for type %s",
-            AsMangledName(type));
-
-  // Try SwiftASTContext.
-  if (auto swift_ast_context = GetSwiftASTContext(GetSymbolContext(exe_ctx)))
-    if (auto n = llvm::expectedToStdOptional(swift_ast_context->GetNumChildren(
-            ReconstructType(type, exe_ctx), omit_empty_base_classes,
-            exe_ctx))) {
-      LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), num_children.takeError(),
-                      "SwiftLanguageRuntime::GetNumChildren() failed: {0}");
-      return *n;
-    }
+  // Runtime failed, fallback to SwiftASTContext.
+  if (UseSwiftASTContextFallback(__FUNCTION__, type)) {
+    if (auto swift_ast_context = GetSwiftASTContext(GetSymbolContext(exe_ctx)))
+      if (auto n =
+              llvm::expectedToStdOptional(swift_ast_context->GetNumChildren(
+                  ReconstructType(type, exe_ctx), omit_empty_base_classes,
+                  exe_ctx))) {
+        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), num_children.takeError(),
+                        "SwiftLanguageRuntime::GetNumChildren() failed: {0}");
+        DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+        return *n;
+      }
+  }
 
   // Otherwise return the error from the runtime.
   return num_children.takeError();
@@ -3685,12 +3721,16 @@ uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
                         .value_or(0);
   }
 
-  LLDB_LOGF(GetLog(LLDBLog::Types),
-            "Using SwiftASTContext::GetNumFields fallback for type %s",
-            AsMangledName(type));
-
-  if (auto swift_ast_context = GetSwiftASTContext(GetSymbolContext(exe_ctx)))
-    return swift_ast_context->GetNumFields(ReconstructType(type, exe_ctx), exe_ctx);
+  // Runtime failed, fallback to SwiftASTContext.
+  if (UseSwiftASTContextFallback(__FUNCTION__, type))
+    if (auto swift_ast_context =
+            GetSwiftASTContext(GetSymbolContext(exe_ctx))) {
+      auto result = swift_ast_context->GetNumFields(
+          ReconstructType(type, exe_ctx), exe_ctx);
+      if (result)
+        DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+      return result;
+    }
   return {};
 }
 
@@ -3786,6 +3826,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     return ast_num_children.value_or(0);
   };
   auto impl = [&]() -> llvm::Expected<CompilerType> {
+    std::string error = "unknown error";
     ExecutionContextScope *exe_scope = nullptr;
     if (exe_ctx)
       exe_scope = exe_ctx->GetBestExecutionContextScope();
@@ -3808,7 +3849,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
           return result;
         }
         if (!result)
-          llvm::consumeError(result.takeError());
+          error = llvm::toString(result.takeError());
       }
       // Clang types can be resolved even without a process.
       bool is_signed;
@@ -3922,10 +3963,17 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
                 "Couldn't compute size of type %s without a process.",
                 AsMangledName(type));
 
-    // FIXME: SwiftASTContext can sometimes find more Clang types because it
-    // imports Clang modules from source. We should be able to replicate this
-    // and remove this fallback.
-    return fallback();
+    // Runtime failed, fallback to SwiftASTContext.
+    if (UseSwiftASTContextFallback(__FUNCTION__, type)) {
+      // FIXME: SwiftASTContext can sometimes find more Clang types because it
+      // imports Clang modules from source. We should be able to replicate this
+      // and remove this fallback.
+      auto result = fallback();
+      if (result)
+        DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+      return result;
+    }
+    return llvm::createStringError(llvm::inconvertibleErrorCode(), error);
   };
   // Skip validation when there is no process, because then we also
   // don't have a runtime.
@@ -4079,10 +4127,17 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
             "type %s",
             AsMangledName(type));
 
-  if (auto swift_ast_context = GetSwiftASTContext(GetSymbolContext(exe_ctx)))
-    return swift_ast_context->GetIndexOfChildMemberWithName(
-        ReconstructType(type, exe_ctx), name, exe_ctx, omit_empty_base_classes,
-        child_indexes);
+  // Runtime failed, fallback to SwiftASTContext.
+  if (UseSwiftASTContextFallback(__FUNCTION__, type))
+    if (auto swift_ast_context =
+            GetSwiftASTContext(GetSymbolContext(exe_ctx))) {
+      auto result = swift_ast_context->GetIndexOfChildMemberWithName(
+          ReconstructType(type, exe_ctx), name, exe_ctx,
+          omit_empty_base_classes, child_indexes);
+      if (result)
+        DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+      return result;
+    }
   return {};
 }
 
@@ -4387,10 +4442,16 @@ TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type,
       // type alias isn't possible, or the user might have defined the
       // type alias in the REPL. In these cases, fallback to asking the AST
       // for the canonical type.
-      if (auto swift_ast_context =
-              GetSwiftASTContext(GetSymbolContext(exe_scope)))
-        return swift_ast_context->GetInstanceType(
-            ReconstructType(type, exe_scope), exe_scope);
+      // Runtime failed, fallback to SwiftASTContext.
+      if (UseSwiftASTContextFallback(__FUNCTION__, type))
+        if (auto swift_ast_context =
+                GetSwiftASTContext(GetSymbolContext(exe_scope))) {
+          auto result = swift_ast_context->GetInstanceType(
+              ReconstructType(type, exe_scope), exe_scope);
+          if (result)
+            DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+          return result;
+        }
       return {};
     }
 
