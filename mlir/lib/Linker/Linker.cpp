@@ -157,14 +157,19 @@ bool ModuleLinker::shouldLinkFromSource(bool &linkFromSrc, GlobalValue dst,
       return false;
     }
 
-    llvm_unreachable("unimplemented");
+    // TODO: This is not correct, should use some form of DataLayout concept taking into account alignment etc
+    auto srcType = src.getOperation()->getAttrOfType<TypeAttr>("global_type");
+    auto dstType = dst.getOperation()->getAttrOfType<TypeAttr>("global_type");
+    if (srcType && dstType) {
+      linkFromSrc = srcType.getValue().getIntOrFloatBitWidth() > dstType.getValue().getIntOrFloatBitWidth();
+      return false;
+    }
   }
-
   if (isWeakForLinker(src.getLinkage())) {
     assert(!dst.hasExternalWeakLinkage());
     assert(!dst.hasAvailableExternallyLinkage());
 
-    if (dst.hasLinkOnceLinkage() || src.hasWeakLinkage()) {
+    if (dst.hasLinkOnceLinkage() && src.hasWeakLinkage()) {
       linkFromSrc = true;
       return false;
     }
