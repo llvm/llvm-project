@@ -6,7 +6,7 @@
 #
 # ==-------------------------------------------------------------------------==#
 
-from pathlib import PurePath
+from pathlib import PurePosixPath
 
 
 class HeaderFile:
@@ -37,26 +37,33 @@ class HeaderFile:
     def includes(self):
         return sorted(
             {
-                PurePath("llvm-libc-macros") / macro.header
+                PurePosixPath("llvm-libc-macros") / macro.header
                 for macro in self.macros
                 if macro.header is not None
+            }
+            | {
+                PurePosixPath("llvm-libc-types") / f"{typ.type_name}.h"
+                for typ in self.types
             }
         )
 
     def public_api(self):
-        header_dir = PurePath(self.name).parent
+        # Python 3.12 has .relative_to(dir, walk_up=True) for this.
+        path_prefix = PurePosixPath("../" * (len(PurePosixPath(self.name).parents) - 1))
+
+        def relpath(file):
+            return path_prefix / file
+
         content = [
-            f'#include "{file.relative_to(header_dir)}"' for file in self.includes()
-        ] + [""]
+            f"#include {file}"
+            for file in sorted(f'"{relpath(file)!s}"' for file in self.includes())
+        ]
 
         for macro in self.macros:
             # When there is nothing to define, the Macro object converts to str
             # as an empty string.  Don't emit a blank line for those cases.
             if str(macro):
-                content.append(f"{macro}\n")
-
-        for type_ in self.types:
-            content.append(f"{type_}")
+                content.extend(["", f"{macro}"])
 
         if self.enumerations:
             combined_enum_content = ",\n  ".join(

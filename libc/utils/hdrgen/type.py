@@ -10,6 +10,3 @@
 class Type:
     def __init__(self, type_name):
         self.type_name = type_name
-
-    def __str__(self):
-        return f"#include <llvm-libc-types/{self.type_name}.h>"
