@@ -1016,6 +1016,39 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
                                "'Smctr' (Control Transfer Records Machine Level) or "
                                "'Ssctr' (Control Transfer Records Supervisor Level)">;
 
+// Packed SIMD Extensions
+def FeatureStdExtP
+    : RISCVExperimentalExtension<0, 14,
+                                 "'Base P' (Packed SIMD)">;
+def HasStdExtP : Predicate<"Subtarget->hasStdExtP()">,
+                 AssemblerPredicate<(all_of FeatureStdExtP),
+                                    "'Base P' (Packed SIMD)">;
+
+def HasStdExtZbaOrP
+    : Predicate<"Subtarget->hasStdExtZba() || Subtarget->hasStdExtP()">,
+      AssemblerPredicate<(any_of FeatureStdExtZba, FeatureStdExtP),
+                         "'Zba' (Address Generation Instructions) or "
+                         "'Base P' (Packed-SIMD)">;
+
+def HasStdExtZbbOrP
+    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtP()">,
+      AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtP),
+                         "'Zbb' (Basic Bit-Manipulation) or "
+                         "'Base P' (Packed-SIMD)">;
+
+def HasStdExtZbkbOrP
+    : Predicate<"Subtarget->hasStdExtZbkb() || Subtarget->hasStdExtP()">,
+      AssemblerPredicate<(any_of FeatureStdExtZbkb, FeatureStdExtP),
+                         "'Zbkb' (Bitmanip instructions for Cryptography) or "
+                         "'Base P' (Packed-SIMD)">;
+
+def HasStdExtZbbOrZbkbOrP
+    : Predicate<"Subtarget->HasStdExtZbbOrZbkb()|| Subtarget->hasStdExtP()">,
+      AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbkb, FeatureStdExtP),
+                         "'Zbb' (Basic Bit-Manipulation) or "
+                         "'Zbkb' (Bitmanip instructions for Cryptography) or "
+                         "'Base P' (Packed-SIMD)">;
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
