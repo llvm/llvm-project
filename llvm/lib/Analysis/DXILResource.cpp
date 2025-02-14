@@ -770,23 +770,48 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
   }
 }
 
-SmallVector<dxil::ResourceBindingInfo>::const_iterator
+SmallVector<dxil::ResourceBindingInfo>
 DXILBindingMap::findByUse(const Value *Key) const {
+  const PHINode *Phi = dyn_cast<PHINode>(Key);
+  if (Phi) {
+    SmallVector<dxil::ResourceBindingInfo> Children;
+    for (const Value *V : Phi->operands()) {
+        Children.append(findByUse(V));
+    }
+    return Children;
+  }
+
   const CallInst *CI = dyn_cast<CallInst>(Key);
   if (!CI) {
-    // TODO: Any other cases to follow up the tree?
-    return Infos.end();
+    return {};
   }
+
+  const Type* UseType = CI->getType();
 
   switch (CI->getIntrinsicID()) {
-  case Intrinsic::not_intrinsic:
-    // TODO: Walk the call tree
-    return Infos.end();
+  // Check if any of the parameters are the resource we are following. If so
+  // keep searching
+  case Intrinsic::not_intrinsic: {
+    SmallVector<dxil::ResourceBindingInfo> Children;
+    for (const Value *V : CI->args()) {
+        if (V->getType() != UseType) {
+          continue;
+        }
+
+        Children.append(findByUse(V));
+    }
+
+    return Children;
+  }
+  // Found the create, return the binding
   case Intrinsic::dx_resource_handlefrombinding:
-    return find(CI);
+    const auto *It = find(CI);
+    if (It == Infos.end())
+        return {};
+    return {*It};
   }
 
-  return Infos.end();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -847,9 +872,7 @@ bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
   return false;
 }
 
-void DXILResourceBindingWrapperPass::releaseMemory() {
-  // TODO: Can't comment out this code
-  /*Map.reset();*/ }
+void DXILResourceBindingWrapperPass::releaseMemory() { Map.reset(); }
 
 void DXILResourceBindingWrapperPass::print(raw_ostream &OS,
                                            const Module *M) const {

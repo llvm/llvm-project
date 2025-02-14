@@ -448,7 +448,7 @@ public:
 
   // Resoloves the use of a resource handle into the unique description of that
   // resource by deduping calls to create.
-  const_iterator findByUse(const Value *Key) const;
+  SmallVector<dxil::ResourceBindingInfo> findByUse(const Value *Key) const;
 
   const_iterator find(const CallInst *Key) const {
     auto Pos = CallMap.find(Key);
