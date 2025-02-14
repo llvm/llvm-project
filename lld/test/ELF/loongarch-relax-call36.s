@@ -1,15 +1,16 @@
 # REQUIRES: loongarch
+## Relax R_LARCH_CALL36, which involves the macro instructions call36/tail36.
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax a.s -o a.64.o
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax b.s -o b.64.o
-# RUN: ld.lld --relax -shared -soname=b.so b.64.o -o b.64.so
-# RUN: ld.lld --relax -T lds a.64.o b.64.so -o 64
+# RUN: ld.lld -shared -soname=b.so b.64.o -o b.64.so
+# RUN: ld.lld -T lds a.64.o b.64.so -o 64
 # RUN: llvm-objdump -td --no-show-raw-insn 64 | FileCheck %s --check-prefix=RELAX
 
 ## --no-relax disables relaxation.
-# RUN: ld.lld --no-relax -T lds a.64.o b.64.so -o 64.norelax
+# RUN: ld.lld -T lds a.64.o b.64.so --no-relax -o 64.norelax
 # RUN: llvm-objdump -td --no-show-raw-insn 64.norelax | FileCheck %s --check-prefix=NORELAX
 
 # RELAX:       {{0*}}00010000 g       .text  {{0*}}0000001c _start
