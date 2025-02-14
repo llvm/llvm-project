@@ -81,4 +81,7 @@ class Function:
     def __str__(self):
         attrs_str = "".join(f"{attr} " for attr in self.attributes)
         arguments_str = ", ".join(self.arguments) if self.arguments else "void"
-        return attrs_str + f"{self.return_type} {self.name}({arguments_str})"
+        type_str = str(self.return_type)
+        if type_str[-1].isalnum() or type_str[-1] == "_":
+            type_str += " "
+        return attrs_str + type_str + self.name + "(" + arguments_str + ")"
