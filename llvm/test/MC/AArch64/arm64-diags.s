@@ -121,7 +121,7 @@ ldr    q1, [x3, w3, sxtw #1]
 ; CHECK-ERRORS: error: expected 'uxtw' or 'sxtw' with optional shift of #0 or #3
 ; CHECK-ERRORS:   str    d1, [x3, w3, sxtx #3]
 ; CHECK-ERRORS:                       ^
-; CHECK-ERRORS: error: index must be an integer in range [-256, 255].
+; CHECK-ERRORS: error: index must be a multiple of 4 in range [0, 16380].
 ; CHECK-ERRORS:   ldr    s1, [x3, d3, sxtx #2]
 ; CHECK-ERRORS:                   ^
 
