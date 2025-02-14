@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "DirectXTargetMachine.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/AsmParser/Parser.h"
@@ -15,27 +14,14 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/TypedPointerType.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Transforms/Utils/Debugify.h"
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <optional>
-
-using ::testing::Contains;
-using ::testing::Pair;
 
 using namespace llvm;
 using namespace llvm::dxil;
-
-template <typename T> struct IsA {
-  friend bool operator==(const Value *V, const IsA &) { return isa<T>(V); }
-};
 
 namespace {
 class UniqueResourceFromUseTest : public testing::Test {
