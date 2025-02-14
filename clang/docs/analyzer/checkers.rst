@@ -129,8 +129,8 @@ The ``SuppressAddressSpaces`` option suppresses
 warnings for null dereferences of all pointers with address spaces. You can
 disable this behavior with the option
 ``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
-Value of this option is used for checker :ref:`_core-FixedAddressDereference`
-too.
+Value of this option is used for checker
+:ref:`_alpha-core-FixedAddressDereference` too.
 *Defaults to true*.
 
 .. code-block:: objc
