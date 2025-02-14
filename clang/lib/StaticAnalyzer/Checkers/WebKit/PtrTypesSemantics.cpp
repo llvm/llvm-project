@@ -594,7 +594,8 @@ public:
   }
 
   bool VisitArrayInitIndexExpr(const ArrayInitIndexExpr *AIIE) {
-    return true; // The current array index in VisitArrayInitLoopExpr is always trivial.
+    return true; // The current array index in VisitArrayInitLoopExpr is always
+                 // trivial.
   }
 
   bool VisitOpaqueValueExpr(const OpaqueValueExpr *OVE) {
