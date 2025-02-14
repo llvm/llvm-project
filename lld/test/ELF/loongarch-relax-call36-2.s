@@ -1,4 +1,6 @@
 # REQUIRES: loongarch
+## Relax R_LARCH_CALL36. This test tests boundary cases and some special symbols.
+
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax a.s -o a.o
 

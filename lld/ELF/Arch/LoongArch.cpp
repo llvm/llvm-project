@@ -840,13 +840,13 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
 //   b/bl foo
 static void relaxCall36(Ctx &ctx, const InputSection &sec, size_t i,
                         uint64_t loc, Relocation &r, uint32_t &remove) {
-  const uint64_t symLocal =
+  const uint64_t dest =
       (r.expr == R_PLT_PC ? r.sym->getPltVA(ctx) : r.sym->getVA(ctx)) +
       r.addend;
 
-  const int64_t distance = symLocal - loc;
-  // Check if the distance aligns 4 bytes or exceeds the range of b[l].
-  if ((distance & 0x3) != 0 || !isInt<28>(distance))
+  const int64_t displace = dest - loc;
+  // Check if the displace aligns 4 bytes or exceeds the range of b[l].
+  if ((displace & 0x3) != 0 || !isInt<28>(displace))
     return;
 
   const uint32_t nextInsn = read32le(sec.content().data() + r.offset + 4);

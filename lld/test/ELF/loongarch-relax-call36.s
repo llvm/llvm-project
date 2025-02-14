@@ -1,4 +1,5 @@
 # REQUIRES: loongarch
+## Relax R_LARCH_CALL36, which involves the macro instructions call36/tail36.
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
