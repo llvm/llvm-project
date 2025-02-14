@@ -134,6 +134,9 @@ ModuleDependencyScanner::scan(PathRef FilePath,
 
 void ModuleDependencyScanner::globalScan(
     const ProjectModules::CommandMangler &Mangler) {
+  if (GlobalScanned)
+    return;
+
   for (auto &File : CDB->getAllFiles())
     scan(File, Mangler);
 
