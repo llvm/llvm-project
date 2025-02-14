@@ -2595,7 +2595,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       if (RD->isStandardLayout())
         RD = RD->getStandardLayoutBaseWithFields();
 
-      // For types that we shouldn't decompose (unios and non-aggregates), just
+      // For types that we shouldn't decompose (unions and non-aggregates), just
       // add the type itself to the list.
       if (RD->isUnion() || !RD->isAggregate()) {
         List.push_back(T);
