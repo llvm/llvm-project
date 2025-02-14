@@ -1894,15 +1894,17 @@ bool JumpThreadingPass::maybeMergeBasicBlockIntoOnlyPred(BasicBlock *BB) {
       SinglePred == BB || hasAddressTakenAndUsed(BB))
     return false;
 
+  // MergeBasicBlockIntoOnlyPred may delete SinglePred, we need to avoid
+  // deleting a BB pointer from Unreachable.
+  if (Unreachable.count(SinglePred))
+    return false;
+
   // If SinglePred was a loop header, BB becomes one.
   if (LoopHeaders.erase(SinglePred))
     LoopHeaders.insert(BB);
 
   LVI->eraseBlock(SinglePred);
   MergeBasicBlockIntoOnlyPred(BB, DTU.get());
-
-  if (Unreachable.count(SinglePred) && DTU->isBBPendingDeletion(SinglePred))
-    Unreachable.erase(SinglePred);
 
   // Now that BB is merged into SinglePred (i.e. SinglePred code followed by
   // BB code within one basic block `BB`), we need to invalidate the LVI

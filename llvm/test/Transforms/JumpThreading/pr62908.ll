@@ -5,7 +5,7 @@
 
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
-; CHECK-NEXT:  end:
+; CHECK:       end:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
