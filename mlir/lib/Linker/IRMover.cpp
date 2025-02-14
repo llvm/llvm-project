@@ -175,7 +175,7 @@ class MLIRLinker {
   bool shouldLink(Operation *dst, Operation *src);
   Operation *copyGlobalVariableProto(Operation *src);
   Operation *copyFunctionProto(Operation *src);
-  Operation *copyGlobalValueProto(Operation *src, bool forIndirectSymbol);
+  Operation *copyGlobalValueProto(Operation *src, bool forDefinition);
   Expected<Operation *> linkGlobalValueProto(GlobalValueLinkageOpInterface sgv,
                                              bool forIndirectSymbol);
   void flushRAUWorklist();
@@ -294,9 +294,14 @@ Operation *MLIRLinker::copyGlobalVariableProto(Operation *src) {
   // identical version of the symbol over in the dest module... the
   // initializer will be filled in later by LinkGlobalInits.
   // OpBuilder builder(composite->getRegion(0));
-  Operation *newFunc = src->cloneWithoutRegions();
-  insertUnique(newFunc, composite);
-  return newFunc;
+  auto sgv = dyn_cast<GlobalVariableLinkageOpInterface>(src);
+  Operation *newGv = src->cloneWithoutRegions();
+  if (auto gv = dyn_cast<GlobalVariableLinkageOpInterface>(newGv)) {
+    gv.setLinkage(link::Linkage::External);
+    gv.setAlignment(sgv.getAlignment());
+  }
+  insertUnique(newGv, composite);
+  return newGv;
 }
 
 Operation *MLIRLinker::copyFunctionProto(Operation *src) {
@@ -308,15 +313,26 @@ Operation *MLIRLinker::copyFunctionProto(Operation *src) {
 }
 Operation *MLIRLinker::copyGlobalValueProto(Operation *src,
                                             bool forDefinition) {
-  if (auto sgvar = dyn_cast<GlobalVariableLinkageOpInterface>(src))
-    return copyGlobalVariableProto(src);
-  if (auto f = dyn_cast<FunctionLinkageOpInterface>(src))
-    return copyFunctionProto(src);
+  // TODO: Change signature to accept GlobalValueLinkageOpInterface
+  auto sgv = dyn_cast<GlobalValueLinkageOpInterface>(src);
+  Operation *newOp;
+  if (auto sgvar = dyn_cast<GlobalVariableLinkageOpInterface>(src)) {
+    newOp = copyGlobalVariableProto(src);
+  } else if (auto f = dyn_cast<FunctionLinkageOpInterface>(src)) {
+    newOp = copyFunctionProto(src);
+  }
+  auto newGv = dyn_cast<GlobalValueLinkageOpInterface>(newOp);
+  // TODO: This is unfortunate. Conside changing the return types.
+  if (!newGv)
+    return newGv;
+
+  if (forDefinition || sgv.hasExternalWeakLinkage())
+    newGv.setLinkage(sgv.getLinkage());
 
   // TODO: Copy metadata for global variables and function declarations?
 
   // TODO: If function clear personality, prefix and prologue data
-  return nullptr;
+  return newGv;
 }
 
 Expected<Operation *>
@@ -354,7 +370,7 @@ MLIRLinker::linkGlobalValueProto(GlobalValueLinkageOpInterface sgv,
       return nullptr;
 
     newDst = copyGlobalValueProto(sgv.getOperation(),
-                                  shouldLinkOps); // TODO: || ForIndirectSymbol?
+                                  shouldLinkOps || forIndirectSymbol);
     if (shouldLinkOps) // TODO: || !ForIndirectSymbol?
       needsRenaming = true;
   }
@@ -366,10 +382,9 @@ MLIRLinker::linkGlobalValueProto(GlobalValueLinkageOpInterface sgv,
 
   // TODO: Comdat
 
-  // TODO:
-  // if (!shouldLinkOps && forIndirectSymbol)
-  //   if (auto newDstGVL = dyn_cast<GlobalValueLinkageOpInterface>(newDst))
-  //     newDstGVL.setInternalLinkage();
+  if (!shouldLinkOps && forIndirectSymbol)
+    if (auto newDstGVL = dyn_cast<GlobalValueLinkageOpInterface>(newDst))
+      newDstGVL.setLinkage(link::Linkage::Internal);
 
   // TODO: bitcasts needed??
 

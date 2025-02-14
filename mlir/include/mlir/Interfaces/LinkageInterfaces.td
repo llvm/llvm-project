@@ -44,6 +44,14 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
       /*args=*/        (ins)
     >,
     InterfaceMethod<
+      /*desc=*/        "Sets the linkage of the operation",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setLinkage",
+      /*args=*/(ins "::mlir::link::Linkage":$linkage),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ }]
+    >,
+    InterfaceMethod<
       /*desc=*/       "Returns true if the operation has external linkage",
       /*returnType=*/ "bool",
       /*methodName=*/ "hasExternalLinkage",
@@ -290,7 +298,19 @@ def GlobalVariableLinkageOpInterface
       /*returnType=*/  "bool",
       /*methodName=*/  "isConstant",
       /*args=*/        (ins)
-    >
+    >,
+    InterfaceMethod<
+      /*desc=*/"Get the alignment of this operation if specified",
+      /*retTy=*/"::std::optional<uint64_t>",
+      /*methodName=*/  "getAlignment",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/"Set the alignment of this operation",
+      /*retTy=*/"void",
+      /*methodName=*/  "setAlignment",
+      /*args=*/(ins "::std::optional<uint64_t>":$alignment)
+    >,
   ];
 }
 

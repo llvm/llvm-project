@@ -157,11 +157,13 @@ bool ModuleLinker::shouldLinkFromSource(bool &linkFromSrc, GlobalValue dst,
       return false;
     }
 
-    // TODO: This is not correct, should use some form of DataLayout concept taking into account alignment etc
+    // TODO: This is not correct, should use some form of DataLayout concept
+    // taking into account alignment etc
     auto srcType = src.getOperation()->getAttrOfType<TypeAttr>("global_type");
     auto dstType = dst.getOperation()->getAttrOfType<TypeAttr>("global_type");
     if (srcType && dstType) {
-      linkFromSrc = srcType.getValue().getIntOrFloatBitWidth() > dstType.getValue().getIntOrFloatBitWidth();
+      linkFromSrc = srcType.getValue().getIntOrFloatBitWidth() >
+                    dstType.getValue().getIntOrFloatBitWidth();
       return false;
     }
   }
@@ -301,13 +303,21 @@ bool ModuleLinker::linkIfNeeded(GlobalValue gv,
           (!dgvar.isConstant() || !sgvar.isConstant())) {
         llvm_unreachable("unimplemented");
       }
+
+      if (dgvar.hasCommonLinkage() && sgvar.hasCommonLinkage()) {
+        auto dAlign = dgvar.getAlignment();
+        auto sAlign = sgvar.getAlignment();
+        std::optional<unsigned> align;
+
+        if (dAlign || sAlign)
+          align = std::max(dAlign.value_or(1), sAlign.value_or(1));
+
+        sgvar.setAlignment(align);
+        dgvar.setAlignment(align);
+      }
     }
 
-    if (dgv.hasCommonLinkage() && gv.hasCommonLinkage()) {
-      llvm_unreachable("unimplemented");
-    }
-
-    // TODO: Implement
+    // TODO: Implement visibility and unnamedaddr
     // llvm_unreachable("unimplemented");
   }
 
