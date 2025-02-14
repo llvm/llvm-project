@@ -894,7 +894,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE,
     // If the null pointer is undefined, then a access sequence which would
     // otherwise access it can be assumed not to unsigned wrap.  Note that this
     // assumes the object in memory is aligned to the natural alignment.
-    unsigned AddrSpace = Ptr->getType()->getPointerAddressSpace();
+    unsigned AddrSpace = AR->getType()->getPointerAddressSpace();
     if (!NullPointerIsDefined(L->getHeader()->getParent(), AddrSpace) &&
         (Stride == 1 || Stride == -1))
       return true;
