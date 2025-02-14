@@ -42515,8 +42515,9 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     // freely concatenated.
     MVT WideVT = VT.getDoubleNumVectorElementsVT();
     MVT MaskVT = N.getOperand(1).getSimpleValueType();
-    if (VT.is128BitVector() ||
-        (VT.is256BitVector() && Subtarget.useAVX512Regs())) {
+    bool CanConcat = VT.is128BitVector() ||
+                     (VT.is256BitVector() && Subtarget.useAVX512Regs());
+    if (CanConcat) {
       SDValue Ops[] = {N.getOperand(0), N.getOperand(2)};
       if (SDValue ConcatSrc =
               combineConcatVectorOps(DL, WideVT, Ops, DAG, DCI, Subtarget)) {
@@ -42532,8 +42533,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     if (getTargetShuffleMask(N, /*AllowSentinelZero=*/false, SrcOps, Mask)) {
       assert(Mask.size() == NumElts && "Unexpected shuffle mask size");
       // See if we can concatenate the commuted operands.
-      if (VT.is128BitVector() ||
-          (VT.is256BitVector() && Subtarget.useAVX512Regs())) {
+      if (CanConcat) {
         if (SDValue ConcatSrc = combineConcatVectorOps(
                 DL, WideVT, {N.getOperand(2), N.getOperand(0)}, DAG, DCI,
                 Subtarget)) {
