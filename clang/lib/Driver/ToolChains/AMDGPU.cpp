@@ -732,7 +732,7 @@ amdgpu::dlr::getCommonDeviceLibNames(
   StringRef LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(D, DriverArgs));
-  bool noGPULib = DriverArgs.hasArg(options::OPT_nogpulib);
+  bool noGPULib = DriverArgs.hasArg(options::OPT_offloadlib);
   if (!RocmInstallation.checkCommonBitcodeLibs(CanonArch, LibDeviceFile, ABIVer,
                                                noGPULib))
     return {};
@@ -995,7 +995,8 @@ void ROCMToolChain::addClangTargetOptions(
       DriverArgs.hasArg(options::OPT_nostdlib))
     return;
 
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
     return;
 
   // Get the device name and canonicalize it
@@ -1005,7 +1006,7 @@ void ROCMToolChain::addClangTargetOptions(
   StringRef LibDeviceFile = RocmInstallation->getLibDeviceFile(CanonArch);
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(getDriver(), DriverArgs));
-  bool noGPULib = DriverArgs.hasArg(options::OPT_nogpulib);
+  bool noGPULib = DriverArgs.hasArg(options::OPT_offloadlib);
   if (!RocmInstallation->checkCommonBitcodeLibs(CanonArch, LibDeviceFile,
                                                 ABIVer, noGPULib))
     return;

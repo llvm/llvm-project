@@ -241,7 +241,7 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   // not the installed compiler.
   std::string LibDeviceName = "/libomptarget-amdgpu.bc";
 
-  if (!Args.hasArg(options::OPT_nogpulib)) {
+  if (!Args.hasArg(options::OPT_offloadlib)) {
     // Check if libomptarget device bitcode can be found in a LIBRARY_PATH dir
     bool EnvOmpLibDeviceFound = false;
     for (auto &EnvLibraryPath : EnvironmentLibraryPaths) {
@@ -419,7 +419,8 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
     return;
 
   for (auto BCFile : getDeviceLibs(DriverArgs)) {
@@ -583,7 +584,7 @@ AMDGPUOpenMPToolChain::computeMSVCVersion(const Driver *D,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 AMDGPUOpenMPToolChain::getDeviceLibs(const llvm::opt::ArgList &Args) const {
-  if (Args.hasArg(options::OPT_nogpulib))
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     return {};
 
   StringRef GpuArch = getProcessorFromTargetID(
