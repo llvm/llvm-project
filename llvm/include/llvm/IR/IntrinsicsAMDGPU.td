@@ -3460,15 +3460,19 @@ multiclass Conv<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy = out
 
 defm int_amdgcn_convolve_f16_f16   : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 defm int_amdgcn_convolve_bf16_bf16 : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_convolve_f16_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_convolve_f16_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_fp8_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_fp8_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_bf8_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_bf8_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f16_iu8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f16_iu4   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 
 defm int_amdgcn_convolve_f32_f16   : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 defm int_amdgcn_convolve_f32_bf16  : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_convolve_f32_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_convolve_f32_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_fp8_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_fp8_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_bf8_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_bf8_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f32_iu8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f32_iu4   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_i32_iu8   : Conv<llvm_anyint_ty, llvm_anyint_ty>;
