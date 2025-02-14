@@ -141,6 +141,10 @@ end
   This interpretation has usability advantages and is what six other
   Fortran compilers do, but is not conforming now that J3 approved an
   "interp" in June 2024 to the contrary.
+* When an Arm processor raises an `ieee_overflow` or `ieee_underflow`
+  exception, the `ieee_inexact` exception is also raised. This happens
+  for a call to `ieee_set_flag` as well as for floating point expression
+  evaluation.
 * Arm has processors that allow a user to control what happens when an
   arithmetic exception is signaled, as well as processors that do not
   have this capability. An Arm executable will run on either type of

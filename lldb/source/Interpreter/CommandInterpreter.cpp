@@ -1887,11 +1887,12 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   std::string real_original_command_string(command_string);
 
   Log *log = GetLog(LLDBLog::Commands);
-  llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
-                                           command_line);
-
   LLDB_LOGF(log, "Processing command: %s", command_line);
   LLDB_SCOPED_TIMERF("Processing command: %s.", command_line);
+
+  // Set the command in the CommandReturnObject here so that it's there even if
+  // the command is interrupted.
+  result.SetCommand(command_line);
 
   if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted initiating command")) {
     result.AppendError("... Interrupted");
@@ -2644,7 +2645,8 @@ void CommandInterpreter::HandleCommands(
                                       (uint64_t)idx, cmd, error_msg);
         m_debugger.SetAsyncExecution(old_async_execution);
         return;
-      } else if (options.GetPrintResults()) {
+      }
+      if (options.GetPrintResults()) {
         result.AppendMessageWithFormatv("Command #{0} '{1}' failed with {2}",
                                         (uint64_t)idx + 1, cmd, error_msg);
       }
@@ -3184,30 +3186,40 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
   if ((result.Succeeded() &&
        io_handler.GetFlags().Test(eHandleCommandFlagPrintResult)) ||
       io_handler.GetFlags().Test(eHandleCommandFlagPrintErrors)) {
-    // Display any inline diagnostics first.
-    const bool inline_diagnostics = !result.GetImmediateErrorStream() &&
-                                    GetDebugger().GetShowInlineDiagnostics();
-    if (inline_diagnostics) {
-      unsigned prompt_len = m_debugger.GetPrompt().size();
-      if (auto indent = result.GetDiagnosticIndent()) {
-        std::string diags =
-            result.GetInlineDiagnosticString(prompt_len + *indent);
-        PrintCommandOutput(io_handler, diags, true);
+    auto DefaultPrintCallback = [&](const CommandReturnObject &result) {
+      // Display any inline diagnostics first.
+      const bool inline_diagnostics = !result.GetImmediateErrorStream() &&
+                                      GetDebugger().GetShowInlineDiagnostics();
+      if (inline_diagnostics) {
+        unsigned prompt_len = m_debugger.GetPrompt().size();
+        if (auto indent = result.GetDiagnosticIndent()) {
+          std::string diags =
+              result.GetInlineDiagnosticString(prompt_len + *indent);
+          PrintCommandOutput(io_handler, diags, true);
+        }
       }
-    }
 
-    // Display any STDOUT/STDERR _prior_ to emitting the command result text.
-    GetProcessOutput();
+      // Display any STDOUT/STDERR _prior_ to emitting the command result text.
+      GetProcessOutput();
 
-    if (!result.GetImmediateOutputStream()) {
-      llvm::StringRef output = result.GetOutputString();
-      PrintCommandOutput(io_handler, output, true);
-    }
+      if (!result.GetImmediateOutputStream()) {
+        llvm::StringRef output = result.GetOutputString();
+        PrintCommandOutput(io_handler, output, true);
+      }
 
-    // Now emit the command error text from the command we just executed.
-    if (!result.GetImmediateErrorStream()) {
-      std::string error = result.GetErrorString(!inline_diagnostics);
-      PrintCommandOutput(io_handler, error, false);
+      // Now emit the command error text from the command we just executed.
+      if (!result.GetImmediateErrorStream()) {
+        std::string error = result.GetErrorString(!inline_diagnostics);
+        PrintCommandOutput(io_handler, error, false);
+      }
+    };
+
+    if (m_print_callback) {
+      const auto callback_result = m_print_callback(result);
+      if (callback_result == eCommandReturnObjectPrintCallbackSkipped)
+        DefaultPrintCallback(result);
+    } else {
+      DefaultPrintCallback(result);
     }
   }
 
@@ -3657,4 +3669,9 @@ llvm::json::Value CommandInterpreter::GetStatistics() {
 
 const StructuredData::Array &CommandInterpreter::GetTranscript() const {
   return m_transcript;
+}
+
+void CommandInterpreter::SetPrintCallback(
+    CommandReturnObjectCallback callback) {
+  m_print_callback = callback;
 }

@@ -687,6 +687,22 @@ public:
   /// Deactivates an entire strurcutre.
   void deactivate() const;
 
+  Lifetime getLifetime() const {
+    if (!isBlockPointer())
+      return Lifetime::Started;
+    if (asBlockPointer().Base < sizeof(InlineDescriptor))
+      return Lifetime::Started;
+    return getInlineDesc()->LifeState;
+  }
+
+  void endLifetime() const {
+    if (!isBlockPointer())
+      return;
+    if (asBlockPointer().Base < sizeof(InlineDescriptor))
+      return;
+    getInlineDesc()->LifeState = Lifetime::Ended;
+  }
+
   /// Compare two pointers.
   ComparisonCategoryResult compare(const Pointer &Other) const {
     if (!hasSameBase(*this, Other))

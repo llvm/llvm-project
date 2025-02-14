@@ -16,6 +16,7 @@ add_mlir_dialect_library(MLIRTensorDialect
 
   DEPENDS
   MLIRTensorOpsIncGen
+  MLIRTensorInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect

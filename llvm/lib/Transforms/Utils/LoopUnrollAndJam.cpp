@@ -395,8 +395,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
       }
 
       // Update our running maps of newest clones
-      PrevItValueMap[New] = (It == 1 ? *BB : LastValueMap[*BB]);
-      LastValueMap[*BB] = New;
+      auto &Last = LastValueMap[*BB];
+      PrevItValueMap[New] = (It == 1 ? *BB : Last);
+      Last = New;
       for (ValueToValueMapTy::iterator VI = VMap.begin(), VE = VMap.end();
            VI != VE; ++VI) {
         PrevItValueMap[VI->second] =
@@ -709,7 +710,7 @@ static bool checkDependency(Instruction *Src, Instruction *Dst,
   //   (0,0,>=,*,*)
   // Now, the dependency is not necessarily non-negative anymore, i.e.
   // unroll-and-jam may violate correctness.
-  std::unique_ptr<Dependence> D = DI.depends(Src, Dst, true);
+  std::unique_ptr<Dependence> D = DI.depends(Src, Dst);
   if (!D)
     return true;
   assert(D->isOrdered() && "Expected an output, flow or anti dep.");

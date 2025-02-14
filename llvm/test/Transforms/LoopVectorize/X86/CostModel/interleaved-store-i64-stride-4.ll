@@ -14,31 +14,35 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v3, ptr %out3, align 8
-; SSE2:  Cost of 28 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; SSE2:  Cost of 56 for VF 4: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; SSE2:  Cost of 112 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
+; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v3, ptr %out3, align 8
+; SSE2:  LV: Found an estimated cost of 28 for VF 2 For instruction: store i64 %v3, ptr %out3, align 8
+; SSE2:  LV: Found an estimated cost of 56 for VF 4 For instruction: store i64 %v3, ptr %out3, align 8
+; SSE2:  LV: Found an estimated cost of 112 for VF 8 For instruction: store i64 %v3, ptr %out3, align 8
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v3, ptr %out3, align 8
-; AVX1:  Cost of 20 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; AVX1:  Cost of 44 for VF 4: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; AVX1:  Cost of 88 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; AVX1:  Cost of 176 for VF 16: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
+; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX1:  LV: Found an estimated cost of 20 for VF 2 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX1:  LV: Found an estimated cost of 44 for VF 4 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX1:  LV: Found an estimated cost of 88 for VF 8 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX1:  LV: Found an estimated cost of 176 for VF 16 For instruction: store i64 %v3, ptr %out3, align 8
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v3, ptr %out3, align 8
-; AVX2:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; AVX2:  Cost of 12 for VF 4: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; AVX2:  Cost of 28 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; AVX2:  Cost of 56 for VF 16: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
+; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX2:  LV: Found an estimated cost of 8 for VF 2 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX2:  LV: Found an estimated cost of 12 for VF 4 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX2:  LV: Found an estimated cost of 28 for VF 8 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX2:  LV: Found an estimated cost of 56 for VF 16 For instruction: store i64 %v3, ptr %out3, align 8
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v3, ptr %out3, align 8
-; AVX512:  Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; AVX512:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; AVX512:  Cost of 22 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; AVX512:  Cost of 44 for VF 16: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
-; AVX512:  Cost of 88 for VF 32: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%out0>
+; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX512:  LV: Found an estimated cost of 5 for VF 2 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX512:  LV: Found an estimated cost of 11 for VF 4 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX512:  LV: Found an estimated cost of 22 for VF 8 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX512:  LV: Found an estimated cost of 44 for VF 16 For instruction: store i64 %v3, ptr %out3, align 8
+; AVX512:  LV: Found an estimated cost of 88 for VF 32 For instruction: store i64 %v3, ptr %out3, align 8
 ;
 entry:
   br label %for.body

@@ -91,8 +91,8 @@ void test5(void)
 // CHECK-LABEL: test6
 void test6(void)
 {
-  // CHECK: [[LP:%[a-z0-9]+]] = getelementptr{{.*}}%struct.LLP2P2, ptr{{.*}}, i32 0, i32 0
-  // CHECK: call {{.*}}get456789(ptr {{.*}}[[LP]])
+  // CHECK: [[VAR:%[a-z0-9]+]] = alloca
+  // CHECK: call {{.*}}get456789(ptr {{.*}}sret{{.*}} [[VAR]])
 
   // CHECK: [[CALL:%[a-z0-9]+]] = call {{.*}}@get235()
   // CHECK: store{{.*}}[[CALL]], {{.*}}[[TMP0:%[a-z0-9.]+]]
