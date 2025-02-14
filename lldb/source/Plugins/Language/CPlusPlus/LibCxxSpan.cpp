@@ -119,7 +119,8 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
     } else if (auto arg =
                    m_backend.GetCompilerType().GetIntegralTemplateArgument(1)) {
 
-      m_num_elements = arg->value.getInt().getLimitedValue();
+      if (arg->value.isInt())
+        m_num_elements = arg->value.getInt().getLimitedValue();
     }
   }
 

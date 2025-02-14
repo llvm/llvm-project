@@ -91,7 +91,7 @@ lldb::ChildCacheState GenericBitsetFrontEnd::Update() {
   size_t size = 0;
 
   if (auto arg = m_backend.GetCompilerType().GetIntegralTemplateArgument(0))
-    if (arg->type.IsInteger())
+    if (arg->value.isInt())
       size = arg->value.getInt().getLimitedValue();
 
   m_elements.assign(size, ValueObjectSP());
