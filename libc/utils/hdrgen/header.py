@@ -23,14 +23,12 @@ STDINT_SIZES = [
     "ptr",
 ]
 
-COMPILER_HEADER_TYPES = (
-    {
-        "bool": "<stdbool.h>",
-        "va_list": "<stdarg.h>",
-    }
-    | {f"int{size}_t": "<stdint.h>" for size in STDINT_SIZES}
-    | {f"uint{size}_t": "<stdint.h>" for size in STDINT_SIZES}
-)
+COMPILER_HEADER_TYPES = {
+    "bool": "<stdbool.h>",
+    "va_list": "<stdarg.h>",
+}
+COMPILER_HEADER_TYPES.update({f"int{size}_t": "<stdint.h>" for size in STDINT_SIZES})
+COMPILER_HEADER_TYPES.update({f"uint{size}_t": "<stdint.h>" for size in STDINT_SIZES})
 
 
 class HeaderFile:
