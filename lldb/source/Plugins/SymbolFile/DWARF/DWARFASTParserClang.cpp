@@ -1973,8 +1973,10 @@ private:
   ClangASTMetadata m_metadata;
 };
 
-static clang::APValue MakeAPValue(CompilerType clang_type, uint64_t bit_width,
-                                  uint64_t value) {
+static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
+                                                 CompilerType clang_type,
+                                                 uint64_t bit_width,
+                                                 uint64_t value) {
   bool is_signed = false;
   const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed);
 
@@ -1986,12 +1988,13 @@ static clang::APValue MakeAPValue(CompilerType clang_type, uint64_t bit_width,
 
   uint32_t count;
   bool is_complex;
-  assert(clang_type.IsFloatingPointType(count, is_complex));
+  // FIXME: we currently support a limited set of floating point types.
+  // E.g., 16-bit floats are not supported.
+  if (!clang_type.IsFloatingPointType(count, is_complex))
+    return std::nullopt;
 
-  if (bit_width == 32)
-    return clang::APValue(llvm::APFloat(apint.bitsToFloat()));
-
-  return clang::APValue(llvm::APFloat(apint.bitsToDouble()));
+  return clang::APValue(llvm::APFloat(
+      ast.getFloatTypeSemantics(ClangUtil::GetQualType(clang_type)), apint));
 }
 
 bool DWARFASTParserClang::ParseTemplateDIE(
@@ -2080,17 +2083,21 @@ bool DWARFASTParserClang::ParseTemplateDIE(
         if (!size)
           return false;
 
-        template_param_infos.InsertArg(
-            name,
-            clang::TemplateArgument(ast, ClangUtil::GetQualType(clang_type),
-                                    MakeAPValue(clang_type, *size, uval64),
-                                    is_default_template_arg));
-      } else {
-        template_param_infos.InsertArg(
-            name, clang::TemplateArgument(ClangUtil::GetQualType(clang_type),
-                                          /*isNullPtr*/ false,
-                                          is_default_template_arg));
+        if (auto value = MakeAPValue(ast, clang_type, *size, uval64)) {
+          template_param_infos.InsertArg(
+              name, clang::TemplateArgument(
+                        ast, ClangUtil::GetQualType(clang_type),
+                        std::move(*value), is_default_template_arg));
+          return true;
+        }
       }
+
+      // We get here if this is a type-template parameter or we couldn't create
+      // a non-type template parameter.
+      template_param_infos.InsertArg(
+          name, clang::TemplateArgument(ClangUtil::GetQualType(clang_type),
+                                        /*isNullPtr*/ false,
+                                        is_default_template_arg));
     } else {
       auto *tplt_type = m_ast.CreateTemplateTemplateParmDecl(template_name);
       template_param_infos.InsertArg(
