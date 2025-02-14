@@ -10,6 +10,7 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.output_dir = TestHeaderGenIntegration.output_dir
         self.source_dir = Path(__file__).parent
         self.main_script = self.source_dir.parent / "main.py"
+        self.maxDiff = 80 * 100
 
     def run_script(self, yaml_file, output_file, entry_points):
         command = [
