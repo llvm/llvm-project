@@ -3829,14 +3829,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       (E->getNumArgs() > 2) ? EmitScalarExpr(E->getArg(2)) : nullptr;
 
     Value *AlignmentValue = EmitScalarExpr(E->getArg(1));
-    ConstantInt *AlignmentCI = cast<ConstantInt>(AlignmentValue);
-    if (AlignmentCI->getValue().ugt(llvm::Value::MaximumAlignment))
-      AlignmentCI = ConstantInt::get(AlignmentCI->getIntegerType(),
-                                     llvm::Value::MaximumAlignment);
+    if (ConstantInt *AlignmentCI = cast<ConstantInt>(AlignmentValue)) {
+      if (AlignmentCI->getValue().ugt(llvm::Value::MaximumAlignment))
+        AlignmentCI = ConstantInt::get(AlignmentCI->getIntegerType(),
+                                       llvm::Value::MaximumAlignment);
 
-    emitAlignmentAssumption(PtrValue, Ptr,
-                            /*The expr loc is sufficient.*/ SourceLocation(),
-                            AlignmentCI, OffsetValue);
+      emitAlignmentAssumption(PtrValue, Ptr,
+                              /*The expr loc is sufficient.*/ SourceLocation(),
+                              AlignmentCI, OffsetValue);
+    } else
+      emitAlignmentAssumption(PtrValue, Ptr,
+                              /*The expr loc is sufficient.*/ SourceLocation(),
+                              AlignmentValue, OffsetValue);
     return RValue::get(PtrValue);
   }
   case Builtin::BI__builtin_assume_dereferenceable: {
