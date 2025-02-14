@@ -51,13 +51,21 @@ class StackCoreScriptedProcess(ScriptedProcess):
             for id in range(custom_modules.GetSize()):
 
                 custom_module = custom_modules.GetItemAtIndex(id)
-                if not custom_module or not custom_module.IsValid() or not custom_module.GetType() == lldb.eStructuredDataTypeDictionary:
+                if (
+                    not custom_module
+                    or not custom_module.IsValid()
+                    or not custom_module.GetType() == lldb.eStructuredDataTypeDictionary
+                ):
                     continue
 
                 # Get custom module path from args
                 module_path_arg = custom_module.GetValueForKey("path")
                 module_path = None
-                if not module_path_arg or not module_path_arg.IsValid() or not module_path_arg.GetType() == lldb.eStructuredDataTypeString:
+                if (
+                    not module_path_arg
+                    or not module_path_arg.IsValid()
+                    or not module_path_arg.GetType() == lldb.eStructuredDataTypeString
+                ):
                     return
 
                 module_path = module_path_arg.GetStringValue(100)
@@ -65,9 +73,18 @@ class StackCoreScriptedProcess(ScriptedProcess):
 
                 # Get ignore_module_load_error boolean from args
                 ignore_module_load_error = False
-                ignore_module_load_error_arg = custom_module.GetValueForKey("ignore_module_load_error")
-                if ignore_module_load_error_arg and ignore_module_load_error_arg.IsValid() and ignore_module_load_error_arg.GetType() == lldb.eStructuredDataTypeBoolean:
-                    ignore_module_load_error = ignore_module_load_error_arg.GetBooleanValue()
+                ignore_module_load_error_arg = custom_module.GetValueForKey(
+                    "ignore_module_load_error"
+                )
+                if (
+                    ignore_module_load_error_arg
+                    and ignore_module_load_error_arg.IsValid()
+                    and ignore_module_load_error_arg.GetType()
+                    == lldb.eStructuredDataTypeBoolean
+                ):
+                    ignore_module_load_error = (
+                        ignore_module_load_error_arg.GetBooleanValue()
+                    )
 
                 if not os.path.exists(module_path) and not ignore_module_load_error:
                     return
@@ -75,7 +92,12 @@ class StackCoreScriptedProcess(ScriptedProcess):
                 # Get custom module load address from args
                 module_load_addr = None
                 module_load_addr_arg = custom_module.GetValueForKey("load_addr")
-                if module_load_addr_arg and module_load_addr_arg.IsValid() and module_load_addr_arg.GetType() == lldb.eStructuredDataTypeInteger:
+                if (
+                    module_load_addr_arg
+                    and module_load_addr_arg.IsValid()
+                    and module_load_addr_arg.GetType()
+                    == lldb.eStructuredDataTypeInteger
+                ):
                     module_load_addr = module_load_addr_arg.GetIntegerValue()
 
                 # If module load address is not specified/valid, try to find it from corefile module
@@ -87,11 +109,19 @@ class StackCoreScriptedProcess(ScriptedProcess):
                     if not corefile_module or not corefile_module.IsValid():
                         return
 
-                    module_load_addr = corefile_module.GetObjectFileHeaderAddress().GetLoadAddress(
-                        self.corefile_target
+                    module_load_addr = (
+                        corefile_module.GetObjectFileHeaderAddress().GetLoadAddress(
+                            self.corefile_target
+                        )
                     )
 
-                self.loaded_images.append({"path": module_path, "load_addr": module_load_addr, "ignore_module_load_error": ignore_module_load_error})
+                self.loaded_images.append(
+                    {
+                        "path": module_path,
+                        "load_addr": module_load_addr,
+                        "ignore_module_load_error": ignore_module_load_error,
+                    }
+                )
 
     def get_memory_region_containing_address(
         self, addr: int
@@ -193,9 +223,9 @@ class StackCoreScriptedThread(ScriptedThread):
             if self.is_stopped:
                 if "arm64" in self.scripted_process.arch:
                     stop_reason["type"] = lldb.eStopReasonException
-                    stop_reason["data"][
-                        "desc"
-                    ] = self.corefile_thread.GetStopDescription(100)
+                    stop_reason["data"]["desc"] = (
+                        self.corefile_thread.GetStopDescription(100)
+                    )
                 elif self.scripted_process.arch == "x86_64":
                     stop_reason["type"] = lldb.eStopReasonSignal
                     stop_reason["data"]["signal"] = signal.SIGTRAP

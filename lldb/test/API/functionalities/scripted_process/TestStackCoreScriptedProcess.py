@@ -78,7 +78,9 @@ class StackCoreScriptedProcesTestCase(TestBase):
 
         # Create a random lib which does not exist in the corefile.
         random_dylib = self.get_module_with_name(corefile_target, "random.dylib")
-        self.assertFalse(random_dylib, "Dynamic library random.dylib should not be found.")
+        self.assertFalse(
+            random_dylib, "Dynamic library random.dylib should not be found."
+        )
 
         structured_data = lldb.SBStructuredData()
         structured_data.SetFromJSON(
@@ -94,9 +96,9 @@ class StackCoreScriptedProcesTestCase(TestBase):
                         {
                             "path": "/random/path/random.dylib",
                             "load_addr": 12345678,
-                            "ignore_module_load_error": True
-                        }
-                    ]
+                            "ignore_module_load_error": True,
+                        },
+                    ],
                 }
             )
         )
