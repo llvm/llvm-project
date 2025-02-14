@@ -46,7 +46,6 @@ struct LargeStructTwoMember {
 struct LargeStructOneMember g_s;
 #endif
 
-//
 // X86-LABEL: define void @foo(
 // X86-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_MAT4X4:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_MAT3X3:%.*]]) align 4 [[IN:%.*]]) #[[ATTR0:[0-9]+]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -104,7 +103,6 @@ Mat4X4 __attribute__((noinline)) foo(Mat3X3 in) {
   return out;
 }
 
-//
 // X86-LABEL: define spir_kernel void @ker(
 // X86-SAME: ptr addrspace(1) noundef align 4 [[IN:%.*]], ptr addrspace(1) noundef align 4 [[OUT:%.*]]) #[[ATTR1:[0-9]+]] !kernel_arg_addr_space [[META4:![0-9]+]] !kernel_arg_access_qual [[META5:![0-9]+]] !kernel_arg_type [[META6:![0-9]+]] !kernel_arg_base_type [[META6]] !kernel_arg_type_qual [[META7:![0-9]+]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -150,11 +148,9 @@ Mat4X4 __attribute__((noinline)) foo(Mat3X3 in) {
 // AMDGCN20-NEXT:    [[IN_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN20-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN20-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_MAT4X4:%.*]], align 4, addrspace(5)
-// AMDGCN20-NEXT:    [[IN_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[IN_ADDR]] to ptr
-// AMDGCN20-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
-// AMDGCN20-NEXT:    store ptr addrspace(1) [[IN]], ptr [[IN_ADDR_ASCAST]], align 8
-// AMDGCN20-NEXT:    store ptr addrspace(1) [[OUT]], ptr [[OUT_ADDR_ASCAST]], align 8
-// AMDGCN20-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// AMDGCN20-NEXT:    store ptr addrspace(1) [[IN]], ptr addrspace(5) [[IN_ADDR]], align 8
+// AMDGCN20-NEXT:    store ptr addrspace(1) [[OUT]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// AMDGCN20-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
 // AMDGCN20-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_MAT4X4]], ptr addrspace(1) [[TMP0]], i64 0
 // AMDGCN20-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[IN_ADDR]], align 8
 // AMDGCN20-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_MAT3X3:%.*]], ptr addrspace(1) [[TMP1]], i64 1
@@ -231,7 +227,6 @@ kernel void ker(global Mat3X3 *in, global Mat4X4 *out) {
   out[0] = foo(in[1]);
 }
 
-//
 // X86-LABEL: define void @foo_large(
 // X86-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_MAT64X64:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_MAT32X32:%.*]]) align 4 [[IN:%.*]]) #[[ATTR0]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -277,7 +272,6 @@ Mat64X64 __attribute__((noinline)) foo_large(Mat32X32 in) {
   return out;
 }
 
-//
 // X86-LABEL: define spir_kernel void @ker_large(
 // X86-SAME: ptr addrspace(1) noundef align 4 [[IN:%.*]], ptr addrspace(1) noundef align 4 [[OUT:%.*]]) #[[ATTR1]] !kernel_arg_addr_space [[META4]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META8:![0-9]+]] !kernel_arg_base_type [[META8]] !kernel_arg_type_qual [[META7]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -321,11 +315,9 @@ Mat64X64 __attribute__((noinline)) foo_large(Mat32X32 in) {
 // AMDGCN20-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
 // AMDGCN20-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_MAT64X64:%.*]], align 4, addrspace(5)
 // AMDGCN20-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[STRUCT_MAT32X32:%.*]], align 4, addrspace(5)
-// AMDGCN20-NEXT:    [[IN_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[IN_ADDR]] to ptr
-// AMDGCN20-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
-// AMDGCN20-NEXT:    store ptr addrspace(1) [[IN]], ptr [[IN_ADDR_ASCAST]], align 8
-// AMDGCN20-NEXT:    store ptr addrspace(1) [[OUT]], ptr [[OUT_ADDR_ASCAST]], align 8
-// AMDGCN20-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// AMDGCN20-NEXT:    store ptr addrspace(1) [[IN]], ptr addrspace(5) [[IN_ADDR]], align 8
+// AMDGCN20-NEXT:    store ptr addrspace(1) [[OUT]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// AMDGCN20-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
 // AMDGCN20-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_MAT64X64]], ptr addrspace(1) [[TMP0]], i64 0
 // AMDGCN20-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[IN_ADDR]], align 8
 // AMDGCN20-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [[STRUCT_MAT32X32]], ptr addrspace(1) [[TMP1]], i64 1
@@ -392,7 +384,6 @@ kernel void ker_large(global Mat32X32 *in, global Mat64X64 *out) {
   out[0] = foo_large(in[1]);
 }
 
-//
 // X86-LABEL: define void @FuncOneMember(
 // X86-SAME: ptr noundef byval([[STRUCT_STRUCTONEMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -471,7 +462,6 @@ void FuncOneMember(struct StructOneMember u) {
   u.x = (int2)(0, 0);
 }
 
-//
 // X86-LABEL: define void @FuncOneLargeMember(
 // X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -574,7 +564,6 @@ void test_indirect_arg_globl(void) {
 }
 #endif
 
-//
 // X86-LABEL: define spir_kernel void @test_indirect_arg_local(
 // X86-SAME: ) #[[ATTR1]] !kernel_arg_addr_space [[META9:![0-9]+]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META9]] !kernel_arg_base_type [[META9]] !kernel_arg_type_qual [[META9]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -628,7 +617,6 @@ kernel void test_indirect_arg_local(void) {
   FuncOneLargeMember(l_s);
 }
 
-//
 // X86-LABEL: define void @test_indirect_arg_private(
 // X86-SAME: ) #[[ATTR0]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -676,7 +664,6 @@ void test_indirect_arg_private(void) {
   FuncOneLargeMember(p_s);
 }
 
-//
 // X86-LABEL: define spir_kernel void @KernelOneMember(
 // X86-SAME: ptr noundef byval([[STRUCT_STRUCTONEMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR1]] !kernel_arg_addr_space [[META10:![0-9]+]] !kernel_arg_access_qual [[META11:![0-9]+]] !kernel_arg_type [[META12:![0-9]+]] !kernel_arg_base_type [[META12]] !kernel_arg_type_qual [[META13:![0-9]+]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -737,7 +724,6 @@ kernel void KernelOneMember(struct StructOneMember u) {
   FuncOneMember(u);
 }
 
-//
 // X86-LABEL: define spir_kernel void @KernelOneMemberSpir(
 // X86-SAME: ptr addrspace(1) noundef align 8 [[U:%.*]]) #[[ATTR1]] !kernel_arg_addr_space [[META14:![0-9]+]] !kernel_arg_access_qual [[META11]] !kernel_arg_type [[META15:![0-9]+]] !kernel_arg_base_type [[META15]] !kernel_arg_type_qual [[META13]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -808,7 +794,6 @@ kernel void KernelOneMemberSpir(global struct StructOneMember* u) {
   FuncOneMember(*u);
 }
 
-//
 // X86-LABEL: define spir_kernel void @KernelLargeOneMember(
 // X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTONEMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR1]] !kernel_arg_addr_space [[META10]] !kernel_arg_access_qual [[META11]] !kernel_arg_type [[META16:![0-9]+]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META13]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -865,7 +850,6 @@ kernel void KernelLargeOneMember(struct LargeStructOneMember u) {
   FuncOneLargeMember(u);
 }
 
-//
 // X86-LABEL: define void @FuncTwoMember(
 // X86-SAME: ptr noundef byval([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -952,7 +936,6 @@ void FuncTwoMember(struct StructTwoMember u) {
   u.y = (int2)(0, 0);
 }
 
-//
 // X86-LABEL: define void @FuncLargeTwoMember(
 // X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -1033,7 +1016,6 @@ void FuncLargeTwoMember(struct LargeStructTwoMember u) {
   u.y[0] = (int2)(0, 0);
 }
 
-//
 // X86-LABEL: define spir_kernel void @KernelTwoMember(
 // X86-SAME: ptr noundef byval([[STRUCT_STRUCTTWOMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR1]] !kernel_arg_addr_space [[META10]] !kernel_arg_access_qual [[META11]] !kernel_arg_type [[META17:![0-9]+]] !kernel_arg_base_type [[META17]] !kernel_arg_type_qual [[META13]] {
 // X86-NEXT:  [[ENTRY:.*:]]
@@ -1118,7 +1100,6 @@ kernel void KernelTwoMember(struct StructTwoMember u) {
   FuncTwoMember(u);
 }
 
-//
 // X86-LABEL: define spir_kernel void @KernelLargeTwoMember(
 // X86-SAME: ptr noundef byval([[STRUCT_LARGESTRUCTTWOMEMBER:%.*]]) align 8 [[U:%.*]]) #[[ATTR1]] !kernel_arg_addr_space [[META10]] !kernel_arg_access_qual [[META11]] !kernel_arg_type [[META18:![0-9]+]] !kernel_arg_base_type [[META18]] !kernel_arg_type_qual [[META13]] {
 // X86-NEXT:  [[ENTRY:.*:]]
