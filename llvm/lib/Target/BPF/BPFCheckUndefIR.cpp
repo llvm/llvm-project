@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Check 'undef' and 'unreachable' IRs and issue proper warnings.
+// Check 'unreachable' IRs and issue proper warnings.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +34,6 @@ public:
 private:
   void BPFCheckUndefIRImpl(Function &F);
   void BPFCheckInst(Function &F, BasicBlock &BB, Instruction &I);
-  void HandleReturnInsn(Function &F, ReturnInst *I);
   void HandleUnreachableInsn(Function &F, BasicBlock &BB, Instruction &I);
 };
 } // End anonymous namespace
@@ -44,17 +43,6 @@ INITIALIZE_PASS(BPFCheckUndefIR, DEBUG_TYPE, "BPF Check Undef IRs", false,
                 false)
 
 ModulePass *llvm::createBPFCheckUndefIR() { return new BPFCheckUndefIR(); }
-
-void BPFCheckUndefIR::HandleReturnInsn(Function &F, ReturnInst *I) {
-  Value *RetValue = I->getReturnValue();
-  // PoisonValue is a special UndefValue where compiler intentionally to
-  // poisons a value since it shouldn't be used.
-  if (!RetValue || isa<PoisonValue>(RetValue) || !isa<UndefValue>(RetValue))
-    return;
-
-  dbgs() << "WARNING: return undefined value in func " << F.getName()
-         << ", due to uninitialized variable?\n";
-}
 
 void BPFCheckUndefIR::HandleUnreachableInsn(Function &F, BasicBlock &BB,
                                             Instruction &I) {
@@ -87,16 +75,8 @@ void BPFCheckUndefIR::HandleUnreachableInsn(Function &F, BasicBlock &BB,
 
 void BPFCheckUndefIR::BPFCheckInst(Function &F, BasicBlock &BB,
                                    Instruction &I) {
-  switch (I.getOpcode()) {
-  case Instruction::Ret:
-    HandleReturnInsn(F, cast<ReturnInst>(&I));
-    break;
-  case Instruction::Unreachable:
+  if (I.getOpcode() == Instruction::Unreachable)
     HandleUnreachableInsn(F, BB, I);
-    break;
-  default:
-    break;
-  }
 }
 
 void BPFCheckUndefIR::BPFCheckUndefIRImpl(Function &F) {
