@@ -24,7 +24,7 @@ namespace hlsl {
 
 struct RootSignatureToken {
   enum Kind {
-#define TOK(X) X,
+#define TOK(X, SPELLING) X,
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
