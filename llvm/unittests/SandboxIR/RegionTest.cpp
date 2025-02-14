@@ -362,9 +362,8 @@ define void @foo(i8 %v) {
   llvm::Function *LLVMF = &*M->getFunction("foo");
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
-#ifndef NDEBUG
-  EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI), ".*Gap*");
-#endif
+  EXPECT_DEBUG_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI),
+                     ".*Gap*");
 }
 
 // Check that we get an assertion failure if we try to set the same index more
@@ -383,9 +382,8 @@ define void @foo(i8 %v) {
   llvm::Function *LLVMF = &*M->getFunction("foo");
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
-#ifndef NDEBUG
-  EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI), ".*already.*");
-#endif // NDEBUG
+  EXPECT_DEBUG_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI),
+                     ".*already.*");
 }
 
 TEST_F(RegionTest, AuxRoundTrip) {
