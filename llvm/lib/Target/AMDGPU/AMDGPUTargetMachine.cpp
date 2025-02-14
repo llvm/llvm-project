@@ -1416,9 +1416,15 @@ bool GCNPassConfig::addPreISel() {
   // regions formed by them.
   // TODO: Unify should be intergrated into GCNWaveTransform
   addPass(&AMDGPUUnifyDivergentExitNodesID);
+
+  // In WaveTransformCF mode, we still want to run the following two passes.
+  // That should help simplify the control-flow that WaveTransform has to
+  // deal with.
+  // TODO-WAVETRANSFORM: these two passes need to understand where we expect
+  // the divergent control-flow to converge.
+  addPass(createFixIrreduciblePass());
+  addPass(createUnifyLoopExitsPass());
   if (!WaveTransformCF) {
-    addPass(createFixIrreduciblePass());
-    addPass(createUnifyLoopExitsPass());
     addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
 
     addPass(createAMDGPUAnnotateUniformValuesLegacy());
@@ -1429,7 +1435,8 @@ bool GCNPassConfig::addPreISel() {
     addPass(createAMDGPURewriteUndefForPHILegacyPass());
   }
 
-  // TODO: wave transform should handle this based on cycle info
+  // TODO-WAVETRANSFORM: wave transform should handle this based on cycle info?
+  // Is this TODO necessary if we have FixeIrreducible and UnifyLoopExits?
   addPass(createLCSSAPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
@@ -1472,10 +1479,17 @@ bool GCNPassConfig::addILPOpts() {
 
 bool GCNPassConfig::addInstSelector() {
   AMDGPUPassConfig::addInstSelector();
-  if (WaveTransformCF)
-    addPass(createGCNWaveTransformPass());
-  addPass(&SIFixSGPRCopiesLegacyID);
-  addPass(createSILowerI1CopiesLegacyPass());
+  if (!WaveTransformCF) {
+    addPass(&SIFixSGPRCopiesLegacyID);
+    addPass(createSILowerI1CopiesLegacyPass());
+  }
+  // TODO-WAVETRANSFORM:
+  // Else {
+  // When WaveTransform happens later, we do not need SIFixSGPRCopies.
+  // We may want a different algorithm of LowerI1Copies, and maybe some
+  // other lowering work needed?
+  //   addPass(&AMDGPUFinalizeISelWaveTransformID);
+  // }
   return false;
 }
 
@@ -1525,13 +1539,26 @@ void GCNPassConfig::addFastRegAlloc() {
   // FIXME: We have to disable the verifier here because of PHIElimination +
   // TwoAddressInstructions disabling it.
 
-  // FIXME: wave transform should not need this
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
-  insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
+  if (!WaveTransformCF)
+    insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
-  insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
+  // TODO-WAVETRANSFORM: it is not clear how we are going to deal with
+  // pixel-shader whole-quad-mode. Skip this for now because we initially want
+  // to limit our application to compute-only, will deal with this when
+  // we need to support pixel-shaders.
+  if (!WaveTransformCF)
+    insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
+
+  // TODO-WAVETRANSFORM:
+  // We need to do some preparation pass with MachineUniformityInfo analysis
+  // right before PHIElimination in order to set up information we need
+  // for WaveTransform.
+  // if (WaveTransformCF) {
+  //   insertPass(&LocalStackSlotAllocationID, &AMDGPUPreWaveTransformID);
+  // }
 
   TargetPassConfig::addFastRegAlloc();
 }
@@ -1544,13 +1571,14 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // inside a bundle, seems only the BUNDLE instruction appears as the Kills of
   // the register in LiveVariables, this would trigger a failure in verifier,
   // we should fix it and enable the verifier.
-  if (OptVGPRLiveRange)
+  if (!WaveTransformCF && OptVGPRLiveRange)
     insertPass(&LiveVariablesID, &SIOptimizeVGPRLiveRangeLegacyID);
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
-  insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
+  if (!WaveTransformCF)
+    insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
@@ -1560,15 +1588,27 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   // Allow the scheduler to run before SIWholeQuadMode inserts exec manipulation
   // instructions that cause scheduling barriers.
-  insertPass(&MachineSchedulerID, &SIWholeQuadModeID);
+  // TODO-WAVETRANSFORM: it is not clear how we are going to deal with
+  // pixel-shader whole-quad-mode. Skip this for now because we initially want
+  // to limit our application to compute-only.
+  if (!WaveTransformCF)
+    insertPass(&MachineSchedulerID, &SIWholeQuadModeID);
 
-  if (OptExecMaskPreRA)
+  if (!WaveTransformCF && OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
+
+  // TODO-WAVETRANSFORM:
+  // We need to do some preparation pass with MachineUniformityInfo analysis
+  // right before PHIElimination in order to set up information we need
+  // for WaveTransform.
+  // if (WaveTransformCF) {
+  //   insertPass(&LiveVariablesID, &AMDGPUPreWaveTransformID);
+  // }
 
   TargetPassConfig::addOptimizedRegAlloc();
 }
@@ -1638,6 +1678,29 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
 
   addPass(&GCNPreRALongBranchRegID);
 
+  if (WaveTransformCF) {
+    // TODO-WAVETRANSFORM: simple case will work as it is if there are still
+    // VGPRs left for sgpr-spilling and WMM vgprs. In general, We need run
+    // a cost model to estimate the sgpr-spills and reserve some vgprs here
+    // for wwm-regalloc before we can use the rest for vgpr-alloc.
+    addPass(createVGPRAllocPass(false));
+
+    // Perform the WaveTransform in non-SSA form
+    addPass(createGCNWaveTransformPass());
+
+    // TODO-WAVETRANSFORM:
+    // Short-term plan: we want to preserve physical registers that have been
+    // allocated so that they are not used for sgpr-spilling and other WWMs.
+    //    addPass(&AMDGPUReserveAllocatedVGPRsID);
+
+    // Long-tem plan: we want to update the liveness of those allocated physical
+    // VGPRs on the whole-wave CFG so that they have correct interferences with
+    // WWM virtual VGPRs (including those used in SGPR spilling). In that way,
+    // we have some chance to reuse those physical registers for other
+    // allocations.
+    //    addPass(&AMDGPUUpdateAllocatedVGPRLiveRangesID);
+  }
+
   addPass(createSGPRAllocPass(false));
 
   // Equivalent of PEI for SGPRs.
@@ -1650,10 +1713,19 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(createWWMRegAllocPass(false));
 
   addPass(&SILowerWWMCopiesLegacyID);
-  addPass(&AMDGPUReserveWWMRegsID);
 
-  // For allocating regular VGPRs.
-  addPass(createVGPRAllocPass(false));
+  if (!WaveTransformCF) {
+    addPass(&AMDGPUReserveWWMRegsID);
+    // For allocating regular VGPRs.
+    addPass(createVGPRAllocPass(false));
+  }
+  // TODO-WAVETRANSFORM:
+  // else {
+  //   We still require some code here from AMDGPUReserveWWMRegs pass at the end
+  //   of the wave-transform flow after wmm-regalloc is done:
+  //   the reserveWWMRegister part to add the allocated wwm-regs to be rightly
+  //   preserved at the function entry/exit.
+  // }
 
   return true;
 }
@@ -1663,6 +1735,35 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
     report_fatal_error(RegAllocOptNotSupportedMessage);
 
   addPass(&GCNPreRALongBranchRegID);
+
+  if (WaveTransformCF) {
+    // TODO-WAVETRANSFORM: simple case will work as it is if there are still
+    // VGPRs left for sgpr-spilling and WMM vgprs. In general, We need run
+    // a cost model to estimate the sgpr-spills and reserve some vgprs here
+    // for wwm-regalloc before we can use the rest for vgpr-alloc.
+    addPass(createVGPRAllocPass(true));
+    addPreRewrite();
+    addPass(&VirtRegRewriterID);
+
+    // Perform the WaveTransform in non-SSA form
+    addPass(createGCNWaveTransformPass());
+
+    // TODO-WAVETRANSFORM:
+    // Short-term plan: we want to preserve physical registers that have been
+    // allocated so that they are not used for sgpr-spilling and other WWMs.
+    //    addPass(&AMDGPUReserveAllocatedVGPRsID);
+
+    // Long-tem plan: we want to update the liveness of those allocated physical
+    // VGPRs on the whole-wave CFG so that they have correct interferences with
+    // WWM virtual VGPRs (including those used in SGPR spilling). In that way,
+    // we have some chance to reuse those physical registers for other
+    // allocations.
+    //    addPass(&AMDGPUUpdateAllocatedVGPRLiveRangesID);
+
+    // Now we can perform register-coalescing on remaining copies,
+    // mainly sgpr copies and wwm-vgpr copies.
+    addPass(&RegisterCoalescerID);
+  }
 
   addPass(createSGPRAllocPass(true));
 
@@ -1687,13 +1788,23 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createWWMRegAllocPass(true));
   addPass(&SILowerWWMCopiesLegacyID);
   addPass(createVirtRegRewriter(false));
-  addPass(&AMDGPUReserveWWMRegsID);
 
-  // For allocating regular VGPRs.
-  addPass(createVGPRAllocPass(true));
+  if (!WaveTransformCF) {
+    addPass(&AMDGPUReserveWWMRegsID);
 
-  addPreRewrite();
-  addPass(&VirtRegRewriterID);
+    // For allocating regular VGPRs.
+    addPass(createVGPRAllocPass(true));
+
+    addPreRewrite();
+    addPass(&VirtRegRewriterID);
+  }
+  // TODO-WAVETRANSFORM:
+  // else {
+  //   We still require some code here from AMDGPUReserveWWMRegs pass at the end
+  //   of the wave-transform flow after wmm-regalloc is done:
+  //   the reserveWWMRegister part to add the allocated wwm-regs to be rightly
+  //   preserved at the function entry/exit.
+  // }
 
   addPass(&AMDGPUMarkLastScratchLoadID);
 
