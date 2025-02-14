@@ -327,7 +327,8 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty, unsigned &NSRN,
     return ABIArgInfo::getDirect(ResType);
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
@@ -335,7 +336,8 @@ ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
     const SmallVectorImpl<llvm::Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
     unsigned &NPRN) const {
   if (!IsNamedArg || NSRN + NVec > 8 || NPRN + NPred > 4)
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
   NSRN += NVec;
   NPRN += NPred;
 
@@ -375,7 +377,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(Ty, false);
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       false);
 
     if (Ty->isVectorType())
       NSRN = std::min(NSRN + 1, 8u);
@@ -411,8 +414,9 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   // Structures with either a non-trivial destructor or a non-trivial
   // copy constructor are always indirect.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
-                                     CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   // Empty records are always ignored on Darwin, but actually passed in C++ mode
@@ -486,7 +490,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
                           : llvm::ArrayType::get(BaseTy, Size / Alignment));
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
@@ -504,7 +509,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
   // Large vector types should be returned via memory.
   if (RetTy->isVectorType() && getContext().getTypeSize(RetTy) > 128)
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 
   if (!passAsAggregateType(RetTy)) {
     // Treat an enum type as its underlying type.
@@ -513,7 +518,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(RetTy);
+        return getNaturalAlignIndirect(RetTy,
+                                       getDataLayout().getAllocaAddrSpace());
 
     return (isPromotableIntegerTypeForABI(RetTy) && isDarwinPCS()
                 ? ABIArgInfo::getExtend(RetTy)
@@ -572,7 +578,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
     return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Size));
   }
 
-  return getNaturalAlignIndirect(RetTy);
+  return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 }
 
 /// isIllegalVectorType - check whether the vector type is legal for AArch64.
