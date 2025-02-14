@@ -1527,8 +1527,7 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
 
-  Type *Ty = Ptr->getType();
-  assert(Ty->isPointerTy() && "Unexpected non-ptr");
+  assert(Ptr->getType()->isPointerTy() && "Unexpected non-ptr");
   if (isa<ScalableVectorType>(AccessTy)) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
                       << "\n");
