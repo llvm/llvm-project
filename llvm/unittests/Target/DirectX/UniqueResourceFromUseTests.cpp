@@ -41,17 +41,17 @@ namespace {
 class UniqueResourceFromUseTest : public testing::Test {
 protected:
   PassBuilder *PB;
-  ModuleAnalysisManager* MAM;
+  ModuleAnalysisManager *MAM;
 
   virtual void SetUp() {
-      MAM = new ModuleAnalysisManager();
-      PB = new PassBuilder();
-      PB->registerModuleAnalyses(*MAM);
-      MAM->registerPass([&]{ return DXILResourceTypeAnalysis(); });
-      MAM->registerPass([&]  { return DXILResourceBindingAnalysis(); });
+    MAM = new ModuleAnalysisManager();
+    PB = new PassBuilder();
+    PB->registerModuleAnalyses(*MAM);
+    MAM->registerPass([&] { return DXILResourceTypeAnalysis(); });
+    MAM->registerPass([&] { return DXILResourceBindingAnalysis(); });
   }
 
-  virtual void TearDown()  {
+  virtual void TearDown() {
     delete PB;
     delete MAM;
   }
@@ -91,7 +91,8 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
       const Value *Handle = CI->getArgOperand(0);
 
       const auto Bindings = DBM.findByUse(Handle);
-      ASSERT_EQ(Bindings.size(), 1u) << "Handle should resolve into one resource";
+      ASSERT_EQ(Bindings.size(), 1u)
+          << "Handle should resolve into one resource";
 
       auto Binding = Bindings[0].getBinding();
       EXPECT_EQ(0u, Binding.RecordID);
@@ -143,7 +144,8 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
       const Value *Handle = CI->getArgOperand(0);
 
       const auto Bindings = DBM.findByUse(Handle);
-      ASSERT_EQ(Bindings.size(), 1u) << "Handle should resolve into one resource";
+      ASSERT_EQ(Bindings.size(), 1u)
+          << "Handle should resolve into one resource";
 
       auto Binding = Bindings[0].getBinding();
       EXPECT_EQ(0u, Binding.RecordID);
@@ -198,7 +200,8 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
       const Value *Handle = CI->getArgOperand(0);
 
       const auto Bindings = DBM.findByUse(Handle);
-      ASSERT_EQ(Bindings.size(), 4u) << "Handle should resolve into four resources";
+      ASSERT_EQ(Bindings.size(), 4u)
+          << "Handle should resolve into four resources";
 
       auto Binding = Bindings[0].getBinding();
       EXPECT_EQ(0u, Binding.RecordID);
@@ -280,7 +283,8 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
       const Value *Handle = CI->getArgOperand(0);
 
       const auto Bindings = DBM.findByUse(Handle);
-      ASSERT_EQ(Bindings.size(), 2u) << "Handle should resolve into four resources";
+      ASSERT_EQ(Bindings.size(), 2u)
+          << "Handle should resolve into four resources";
 
       auto Binding = Bindings[0].getBinding();
       EXPECT_EQ(0u, Binding.RecordID);
@@ -302,4 +306,4 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
   }
 }
 
-} // namespace 
+} // namespace

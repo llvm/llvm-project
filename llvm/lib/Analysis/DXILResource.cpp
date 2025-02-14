@@ -776,7 +776,7 @@ DXILBindingMap::findByUse(const Value *Key) const {
   if (Phi) {
     SmallVector<dxil::ResourceBindingInfo> Children;
     for (const Value *V : Phi->operands()) {
-        Children.append(findByUse(V));
+      Children.append(findByUse(V));
     }
     return Children;
   }
@@ -786,7 +786,7 @@ DXILBindingMap::findByUse(const Value *Key) const {
     return {};
   }
 
-  const Type* UseType = CI->getType();
+  const Type *UseType = CI->getType();
 
   switch (CI->getIntrinsicID()) {
   // Check if any of the parameters are the resource we are following. If so
@@ -794,11 +794,11 @@ DXILBindingMap::findByUse(const Value *Key) const {
   case Intrinsic::not_intrinsic: {
     SmallVector<dxil::ResourceBindingInfo> Children;
     for (const Value *V : CI->args()) {
-        if (V->getType() != UseType) {
-          continue;
-        }
+      if (V->getType() != UseType) {
+        continue;
+      }
 
-        Children.append(findByUse(V));
+      Children.append(findByUse(V));
     }
 
     return Children;
@@ -807,7 +807,7 @@ DXILBindingMap::findByUse(const Value *Key) const {
   case Intrinsic::dx_resource_handlefrombinding:
     const auto *It = find(CI);
     if (It == Infos.end())
-        return {};
+      return {};
     return {*It};
   }
 
