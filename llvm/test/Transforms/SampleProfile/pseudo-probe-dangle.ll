@@ -20,8 +20,8 @@ F:
 	br label %Merge
 Merge:
 ;; Check branch T and F are gone, and their probes (probe 2 and 3) are gone too.
-; JT-LABEL-NO: T
-; JT-LABEL-NO: F
+; JT-NOT{LITERAL}: T:
+; JT-NOT{LITERAL}: F:
 ; JT-LABEL: Merge
 ; JT-NOT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4
 ; JT-NOT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3
@@ -43,8 +43,8 @@ Merge:
 define i32 @test(i32 %a, i32 %b, i32 %c) {
 ;; Check block bb1 and bb2 are gone, and their probes (probe 2 and 3) are gone too.
 ; SC-LABEL: @test(
-; SC-LABEL-NO: bb1
-; SC-LABEL-NO: bb2
+; SC-NOT{LITERAL}: bb1:
+; SC-NOT{LITERAL}: bb2:
 ; SC:    [[T1:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; SC-NOT:    call void @llvm.pseudoprobe(i64 [[#]], i64 2
 ; SC-NOT:    call void @llvm.pseudoprobe(i64 [[#]], i64 3

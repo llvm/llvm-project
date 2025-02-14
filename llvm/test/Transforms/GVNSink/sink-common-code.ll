@@ -78,12 +78,12 @@ declare i32 @foo(i32, i32) nounwind readnone
 ;  ret i32 %ret
 ;}
 ;
-; -CHECK-LABEL: test3
-; -CHECK: select
-; -CHECK: call
-; -CHECK: call
-; -CHECK: add
-; -CHECK-NOT: br
+; COM: CHECK-LABEL: test3
+; COM: CHECK: select
+; COM: CHECK: call
+; COM: CHECK: call
+; COM: CHECK: add
+; COM: CHECK-NOT: br
 
 define i32 @test4(i1 zeroext %flag, i32 %x, ptr %y) {
 entry:

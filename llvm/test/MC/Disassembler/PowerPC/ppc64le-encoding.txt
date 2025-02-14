@@ -313,7 +313,7 @@
 # CHECK: subfeo 2, 3, 4
 0x10 0x25 0x43 0x7c
 
-# CHECKE: subfeo. 2, 3, 4
+# CHECK: subfeo. 2, 3, 4
 0x11 0x25 0x43 0x7c
 
 # CHECK: addme 2, 3

@@ -717,7 +717,6 @@ declare i8 @use1safecall(ptr %x) nounwind willreturn ; nounwind+willreturn guara
 ; Without noundef, nonnull cannot be propagated to the parent
 
 define void @parent_poison(ptr %a) {
-; FNATTR-LABEL: @parent_poison(ptr %a)
 ; FNATTRS-LABEL: define void @parent_poison(
 ; FNATTRS-SAME: ptr [[A:%.*]]) {
 ; FNATTRS-NEXT:    call void @use1nonnull_without_noundef(ptr [[A]])

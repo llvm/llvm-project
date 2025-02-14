@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=arm64ec-pc-windows-msvc < %s | FileCheck %s
 
 define void @no_op() nounwind {
-; CHECK-LABEL     .def    $ientry_thunk$cdecl$v$v;
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$v$v;
 ; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$v$v
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
