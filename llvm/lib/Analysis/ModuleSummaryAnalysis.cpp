@@ -943,7 +943,8 @@ static bool hasNonVTableUsers(const User *U, CXXABI *ABI) {
     return false;
   }
 
-  if (!ABI->isVTable(Name))
+  auto *GV = dyn_cast<GlobalVariable>(U);
+  if (!GV || GV->getMetadata(LLVMContext::MD_type))
     return true;
 
   return false;
