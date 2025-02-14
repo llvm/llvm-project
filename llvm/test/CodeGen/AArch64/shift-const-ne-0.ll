@@ -69,8 +69,7 @@ define i1 @lsr_31_ne_0_64(i64 %x) {
 define i1 @lsr_32_ne_0_64(i64 %x) {
 ; CHECK-LABEL: lsr_32_ne_0_64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #32
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    tst x0, #0xffffffff00000000
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %shr = lshr i64 %x, 32
@@ -81,8 +80,7 @@ define i1 @lsr_32_ne_0_64(i64 %x) {
 define i1 @lsr_33_ne_0_64(i64 %x) {
 ; CHECK-LABEL: lsr_33_ne_0_64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #33
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    tst x0, #0xfffffffe00000000
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %shr = lshr i64 %x, 33
@@ -93,8 +91,7 @@ define i1 @lsr_33_ne_0_64(i64 %x) {
 define i1 @lsr_62_ne_0_64(i64 %x) {
 ; CHECK-LABEL: lsr_62_ne_0_64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #62
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    tst x0, #0xc000000000000000
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %shr = lshr i64 %x, 62
