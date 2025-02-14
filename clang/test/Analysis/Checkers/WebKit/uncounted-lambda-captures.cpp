@@ -298,7 +298,11 @@ struct RefCountableWithLambdaCapturingThis {
     callLambda([&]() -> RefPtr<RefCountable> {
       return obj->next();
     });
+    WTF::HashMap<int, RefPtr<RefCountable>> anotherMap([&] {
+      return obj->next();
+    });
   }
+
 };
 
 struct NonRefCountableWithLambdaCapturingThis {
