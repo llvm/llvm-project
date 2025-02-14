@@ -201,6 +201,7 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
+  kw_errnomem,
 
   // Legacy attributes:
   kw_argmemonly,
