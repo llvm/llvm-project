@@ -412,7 +412,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   bool ColdCandidateFound = false;
   BasicBlock *CurrEntry = EntryBlock;
   std::vector<BasicBlock *> DFS;
-  DenseSet<BasicBlock *> VisitedSet;
+  SmallPtrSet<BasicBlock *, 8> VisitedSet;
   DFS.push_back(CurrEntry);
   VisitedSet.insert(CurrEntry);
 
