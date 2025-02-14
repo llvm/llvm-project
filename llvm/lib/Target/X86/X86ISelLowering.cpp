@@ -52011,22 +52011,32 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineLogicBlendIntoPBLENDV(N, dl, DAG, Subtarget))
     return R;
 
-  // (0 - SetCC) | C -> (zext (not SetCC)) * (C + 1) - 1 if we can get a LEA out of it.
-  if ((VT == MVT::i32 || VT == MVT::i64) &&
-      N0.getOpcode() == ISD::SUB && N0.hasOneUse() &&
-      isNullConstant(N0.getOperand(0))) {
-    SDValue Cond = N0.getOperand(1);
-    if (Cond.getOpcode() == ISD::ZERO_EXTEND && Cond.hasOneUse())
-      Cond = Cond.getOperand(0);
+  // Combine `(x86isd::setcc_carry) | C` and `(0 - SetCC) | C`
+  // into `(zext (not SetCC)) * (C + 1) - 1` if we can get a LEA out of it.
+  if ((VT == MVT::i32 || VT == MVT::i64) && N0.hasOneUse()) {
+    if (auto *CN = dyn_cast<ConstantSDNode>(N1)) {
+      uint64_t Val = CN->getZExtValue();
+      if (Val == 1 || Val == 2 || Val == 3 || Val == 4 || Val == 7 ||
+          Val == 8) {
+        SDValue NotCond;
+        if (N0.getOpcode() == X86ISD::SETCC_CARRY &&
+            N0.getOperand(1).hasOneUse()) {
+          X86::CondCode OldCC = (X86::CondCode)N0.getConstantOperandVal(0);
+          X86::CondCode NewCC = X86::GetOppositeBranchCondition(OldCC);
+          NotCond = getSETCC(NewCC, N0.getOperand(1), SDLoc(N0), DAG);
+        } else if (N0.getOpcode() == ISD::SUB &&
+                   isNullConstant(N0.getOperand(0))) {
+          SDValue Cond = N0.getOperand(1);
+          if (Cond.getOpcode() == ISD::ZERO_EXTEND && Cond.hasOneUse())
+            Cond = Cond.getOperand(0);
+          if (Cond.getOpcode() == X86ISD::SETCC && Cond.hasOneUse()) {
+            X86::CondCode OldCC = (X86::CondCode)Cond.getConstantOperandVal(0);
+            X86::CondCode NewCC = X86::GetOppositeBranchCondition(OldCC);
+            NotCond = getSETCC(NewCC, Cond.getOperand(1), SDLoc(Cond), DAG);
+          }
+        }
 
-    if (Cond.getOpcode() == X86ISD::SETCC && Cond.hasOneUse()) {
-      if (auto *CN = dyn_cast<ConstantSDNode>(N1)) {
-        uint64_t Val = CN->getZExtValue();
-        if (Val == 1 || Val == 2 || Val == 3 || Val == 4 || Val == 7 || Val == 8) {
-          X86::CondCode CCode = (X86::CondCode)Cond.getConstantOperandVal(0);
-          CCode = X86::GetOppositeBranchCondition(CCode);
-          SDValue NotCond = getSETCC(CCode, Cond.getOperand(1), SDLoc(Cond), DAG);
-
+        if (NotCond) {
           SDValue R = DAG.getZExtOrTrunc(NotCond, dl, VT);
           R = DAG.getNode(ISD::MUL, dl, VT, R, DAG.getConstant(Val + 1, dl, VT));
           R = DAG.getNode(ISD::SUB, dl, VT, R, DAG.getConstant(1, dl, VT));
