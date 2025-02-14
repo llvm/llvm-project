@@ -117,7 +117,7 @@ define amdgpu_ps void @test_swmma_f32_16x16x32_f16_clamp(<8 x half> %A, <16 x ha
 ; GFX13-LABEL: test_swmma_f32_16x16x32_f16_clamp:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v23, v22 :: v_dual_mov_b32 v22, v21
-; GFX13-NEXT:    v_swmma_f32_16x16x32_f16 v[12:19], v[0:3], v[4:11], v[12:19], v20 sparse_index_odd clamp
+; GFX13-NEXT:    v_swmma_f32_16x16_f16 v[12:19], v[0:3], v[4:11], v[12:19], v20 sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16
 ; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off
@@ -132,7 +132,7 @@ define amdgpu_ps void @test_swmma_f16_16x16x32_f16_clamp(<8 x half> %A, <16 x ha
 ; GFX13-LABEL: test_swmma_f16_16x16x32_f16_clamp:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v18, v17
-; GFX13-NEXT:    v_swmma_f16_16x16x32_f16 v[12:15], v[0:3], v[4:11], v[12:15], v16 sparse_index_odd clamp
+; GFX13-NEXT:    v_swmma_f16_16x16_f16 v[12:15], v[0:3], v[4:11], v[12:15], v16 sparse_index_odd clamp
 ; GFX13-NEXT:    global_store_b128 v[18:19], v[12:15], off
 ; GFX13-NEXT:    s_endpgm
 bb:
@@ -145,7 +145,7 @@ define amdgpu_ps void @test_swmma_f32_16x16x32_bf16_clamp(<8 x bfloat> %A, <16 x
 ; GFX13-LABEL: test_swmma_f32_16x16x32_bf16_clamp:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v23, v22 :: v_dual_mov_b32 v22, v21
-; GFX13-NEXT:    v_swmma_f32_16x16x32_bf16 v[12:19], v[0:3], v[4:11], v[12:19], v20 sparse_index_odd clamp
+; GFX13-NEXT:    v_swmma_f32_16x16_bf16 v[12:19], v[0:3], v[4:11], v[12:19], v20 sparse_index_odd clamp
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    global_store_b128 v[22:23], v[16:19], off offset:16
 ; GFX13-NEXT:    global_store_b128 v[22:23], v[12:15], off
@@ -160,7 +160,7 @@ define amdgpu_ps void @test_swmma_bf16_16x16x32_bf16_clamp(<8 x bfloat> %A, <16 
 ; GFX13-LABEL: test_swmma_bf16_16x16x32_bf16_clamp:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v18, v17
-; GFX13-NEXT:    v_swmma_bf16_16x16x32_bf16 v[12:15], v[0:3], v[4:11], v[12:15], v16 sparse_index_odd clamp
+; GFX13-NEXT:    v_swmma_bf16_16x16_bf16 v[12:15], v[0:3], v[4:11], v[12:15], v16 sparse_index_odd clamp
 ; GFX13-NEXT:    global_store_b128 v[18:19], v[12:15], off
 ; GFX13-NEXT:    s_endpgm
 bb:

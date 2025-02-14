@@ -1416,10 +1416,10 @@ multiclass VOP5M_SWMMA_K1_K2_K4_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X128_", NAME) : VOP5M_SWMMA_Real_gfx13<op, !tolower(NAME)>;
 }
 
-defm V_SWMMA_F32_16X16X32_F16   : VOP5M_SWMMA_Real_gfx13 <0xb0>;
-defm V_SWMMA_F16_16X16X32_F16   : VOP5M_SWMMA_Real_gfx13 <0xb1>;
-defm V_SWMMA_F32_16X16X32_BF16  : VOP5M_SWMMA_Real_gfx13 <0xb2>;
-defm V_SWMMA_BF16_16X16X32_BF16 : VOP5M_SWMMA_Real_gfx13 <0xb3>;
+defm V_SWMMA_F32_16X16X32_F16   : VOP5M_SWMMA_Real_gfx13 <0xb0, "v_swmma_f32_16x16_f16">;
+defm V_SWMMA_F16_16X16X32_F16   : VOP5M_SWMMA_Real_gfx13 <0xb1, "v_swmma_f16_16x16_f16">;
+defm V_SWMMA_F32_16X16X32_BF16  : VOP5M_SWMMA_Real_gfx13 <0xb2, "v_swmma_f32_16x16_bf16">;
+defm V_SWMMA_BF16_16X16X32_BF16 : VOP5M_SWMMA_Real_gfx13 <0xb3, "v_swmma_bf16_16x16_bf16">;
 defm V_SWMMA_F32_16X16_FP8_FP8  : VOP5M_SWMMA_K1_K2_Real <0xb4>;
 defm V_SWMMA_F32_16X16_FP8_BF8  : VOP5M_SWMMA_K1_K2_Real <0xb5>;
 defm V_SWMMA_F32_16X16_BF8_FP8  : VOP5M_SWMMA_K1_K2_Real <0xb6>;
