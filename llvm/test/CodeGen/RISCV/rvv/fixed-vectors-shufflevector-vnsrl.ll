@@ -589,33 +589,27 @@ define void @vnsrl_0_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; V-LABEL: vnsrl_0_i8_two_source:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
-; V-NEXT:    vle8.v v8, (a0)
-; V-NEXT:    vle8.v v9, (a1)
-; V-NEXT:    vmv.v.i v0, -16
-; V-NEXT:    vid.v v10
-; V-NEXT:    vadd.vv v10, v10, v10
-; V-NEXT:    vadd.vi v10, v10, -8
+; V-NEXT:    vle8.v v8, (a1)
+; V-NEXT:    vle8.v v9, (a0)
 ; V-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
 ; V-NEXT:    vnsrl.wi v8, v8, 0
-; V-NEXT:    vsetivli zero, 8, e8, mf4, ta, mu
-; V-NEXT:    vrgather.vv v8, v9, v10, v0.t
-; V-NEXT:    vse8.v v8, (a2)
+; V-NEXT:    vnsrl.wi v9, v9, 0
+; V-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; V-NEXT:    vslideup.vi v9, v8, 4
+; V-NEXT:    vse8.v v9, (a2)
 ; V-NEXT:    ret
 ;
 ; ZVE32F-LABEL: vnsrl_0_i8_two_source:
 ; ZVE32F:       # %bb.0: # %entry
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vle8.v v8, (a0)
-; ZVE32F-NEXT:    vle8.v v9, (a1)
-; ZVE32F-NEXT:    vmv.v.i v0, -16
-; ZVE32F-NEXT:    vid.v v10
-; ZVE32F-NEXT:    vadd.vv v10, v10, v10
-; ZVE32F-NEXT:    vadd.vi v10, v10, -8
+; ZVE32F-NEXT:    vle8.v v8, (a1)
+; ZVE32F-NEXT:    vle8.v v9, (a0)
 ; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; ZVE32F-NEXT:    vnsrl.wi v8, v8, 0
-; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, mu
-; ZVE32F-NEXT:    vrgather.vv v8, v9, v10, v0.t
-; ZVE32F-NEXT:    vse8.v v8, (a2)
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 0
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 4
+; ZVE32F-NEXT:    vse8.v v9, (a2)
 ; ZVE32F-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in0, align 1
@@ -629,33 +623,27 @@ define void @vnsrl_8_8_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; V-LABEL: vnsrl_8_8_two_source:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
-; V-NEXT:    vle8.v v8, (a0)
-; V-NEXT:    vle8.v v9, (a1)
-; V-NEXT:    vmv.v.i v0, -16
-; V-NEXT:    vid.v v10
-; V-NEXT:    vadd.vv v10, v10, v10
-; V-NEXT:    vadd.vi v10, v10, -7
+; V-NEXT:    vle8.v v8, (a1)
+; V-NEXT:    vle8.v v9, (a0)
 ; V-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
 ; V-NEXT:    vnsrl.wi v8, v8, 8
-; V-NEXT:    vsetivli zero, 8, e8, mf4, ta, mu
-; V-NEXT:    vrgather.vv v8, v9, v10, v0.t
-; V-NEXT:    vse8.v v8, (a2)
+; V-NEXT:    vnsrl.wi v9, v9, 8
+; V-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; V-NEXT:    vslideup.vi v9, v8, 4
+; V-NEXT:    vse8.v v9, (a2)
 ; V-NEXT:    ret
 ;
 ; ZVE32F-LABEL: vnsrl_8_8_two_source:
 ; ZVE32F:       # %bb.0: # %entry
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vle8.v v8, (a0)
-; ZVE32F-NEXT:    vle8.v v9, (a1)
-; ZVE32F-NEXT:    vmv.v.i v0, -16
-; ZVE32F-NEXT:    vid.v v10
-; ZVE32F-NEXT:    vadd.vv v10, v10, v10
-; ZVE32F-NEXT:    vadd.vi v10, v10, -7
+; ZVE32F-NEXT:    vle8.v v8, (a1)
+; ZVE32F-NEXT:    vle8.v v9, (a0)
 ; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; ZVE32F-NEXT:    vnsrl.wi v8, v8, 8
-; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, mu
-; ZVE32F-NEXT:    vrgather.vv v8, v9, v10, v0.t
-; ZVE32F-NEXT:    vse8.v v8, (a2)
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 8
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 4
+; ZVE32F-NEXT:    vse8.v v9, (a2)
 ; ZVE32F-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in0, align 1
@@ -669,33 +657,27 @@ define void @vnsrl_0_i16_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; V-LABEL: vnsrl_0_i16_two_source:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; V-NEXT:    vle16.v v8, (a0)
-; V-NEXT:    vle16.v v9, (a1)
-; V-NEXT:    vid.v v10
-; V-NEXT:    vadd.vv v10, v10, v10
-; V-NEXT:    vadd.vi v10, v10, -4
-; V-NEXT:    vmv.v.i v0, 12
+; V-NEXT:    vle16.v v8, (a1)
+; V-NEXT:    vle16.v v9, (a0)
 ; V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; V-NEXT:    vnsrl.wi v8, v8, 0
-; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, mu
-; V-NEXT:    vrgather.vv v8, v9, v10, v0.t
-; V-NEXT:    vse16.v v8, (a2)
+; V-NEXT:    vnsrl.wi v9, v9, 0
+; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V-NEXT:    vslideup.vi v9, v8, 2
+; V-NEXT:    vse16.v v9, (a2)
 ; V-NEXT:    ret
 ;
 ; ZVE32F-LABEL: vnsrl_0_i16_two_source:
 ; ZVE32F:       # %bb.0: # %entry
 ; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVE32F-NEXT:    vle16.v v8, (a0)
-; ZVE32F-NEXT:    vle16.v v9, (a1)
-; ZVE32F-NEXT:    vid.v v10
-; ZVE32F-NEXT:    vadd.vv v10, v10, v10
-; ZVE32F-NEXT:    vadd.vi v10, v10, -4
-; ZVE32F-NEXT:    vmv.v.i v0, 12
+; ZVE32F-NEXT:    vle16.v v8, (a1)
+; ZVE32F-NEXT:    vle16.v v9, (a0)
 ; ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
 ; ZVE32F-NEXT:    vnsrl.wi v8, v8, 0
-; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; ZVE32F-NEXT:    vrgather.vv v8, v9, v10, v0.t
-; ZVE32F-NEXT:    vse16.v v8, (a2)
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 0
+; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
+; ZVE32F-NEXT:    vse16.v v9, (a2)
 ; ZVE32F-NEXT:    ret
 entry:
   %0 = load <4 x i16>, ptr %in0, align 2
@@ -711,16 +693,12 @@ define void @vnsrl_16_i16_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
 ; V-NEXT:    vle16.v v8, (a1)
 ; V-NEXT:    vle16.v v9, (a0)
-; V-NEXT:    li a0, -1
 ; V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; V-NEXT:    vslidedown.vi v10, v8, 2
-; V-NEXT:    vwaddu.vv v11, v8, v10
-; V-NEXT:    vwmaccu.vx v11, a0, v10
-; V-NEXT:    vmv.v.i v0, 12
-; V-NEXT:    vnsrl.wi v8, v9, 16
+; V-NEXT:    vnsrl.wi v8, v8, 16
+; V-NEXT:    vnsrl.wi v9, v9, 16
 ; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; V-NEXT:    vmerge.vvm v8, v8, v11, v0
-; V-NEXT:    vse16.v v8, (a2)
+; V-NEXT:    vslideup.vi v9, v8, 2
+; V-NEXT:    vse16.v v9, (a2)
 ; V-NEXT:    ret
 ;
 ; ZVE32F-LABEL: vnsrl_16_i16_two_source:
@@ -728,16 +706,12 @@ define void @vnsrl_16_i16_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVE32F-NEXT:    vle16.v v8, (a1)
 ; ZVE32F-NEXT:    vle16.v v9, (a0)
-; ZVE32F-NEXT:    li a0, -1
 ; ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVE32F-NEXT:    vslidedown.vi v10, v8, 2
-; ZVE32F-NEXT:    vwaddu.vv v11, v8, v10
-; ZVE32F-NEXT:    vwmaccu.vx v11, a0, v10
-; ZVE32F-NEXT:    vmv.v.i v0, 12
-; ZVE32F-NEXT:    vnsrl.wi v8, v9, 16
+; ZVE32F-NEXT:    vnsrl.wi v8, v8, 16
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 16
 ; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVE32F-NEXT:    vmerge.vvm v8, v8, v11, v0
-; ZVE32F-NEXT:    vse16.v v8, (a2)
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
+; ZVE32F-NEXT:    vse16.v v9, (a2)
 ; ZVE32F-NEXT:    ret
 entry:
   %0 = load <4 x i16>, ptr %in0, align 2
@@ -751,33 +725,27 @@ define void @vnsrl_0_half_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; V-LABEL: vnsrl_0_half_two_source:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; V-NEXT:    vle16.v v8, (a0)
-; V-NEXT:    vle16.v v9, (a1)
-; V-NEXT:    vid.v v10
-; V-NEXT:    vadd.vv v10, v10, v10
-; V-NEXT:    vadd.vi v10, v10, -4
-; V-NEXT:    vmv.v.i v0, 12
+; V-NEXT:    vle16.v v8, (a1)
+; V-NEXT:    vle16.v v9, (a0)
 ; V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; V-NEXT:    vnsrl.wi v8, v8, 0
-; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, mu
-; V-NEXT:    vrgather.vv v8, v9, v10, v0.t
-; V-NEXT:    vse16.v v8, (a2)
+; V-NEXT:    vnsrl.wi v9, v9, 0
+; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V-NEXT:    vslideup.vi v9, v8, 2
+; V-NEXT:    vse16.v v9, (a2)
 ; V-NEXT:    ret
 ;
 ; ZVE32F-LABEL: vnsrl_0_half_two_source:
 ; ZVE32F:       # %bb.0: # %entry
 ; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVE32F-NEXT:    vle16.v v8, (a0)
-; ZVE32F-NEXT:    vle16.v v9, (a1)
-; ZVE32F-NEXT:    vid.v v10
-; ZVE32F-NEXT:    vadd.vv v10, v10, v10
-; ZVE32F-NEXT:    vadd.vi v10, v10, -4
-; ZVE32F-NEXT:    vmv.v.i v0, 12
+; ZVE32F-NEXT:    vle16.v v8, (a1)
+; ZVE32F-NEXT:    vle16.v v9, (a0)
 ; ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
 ; ZVE32F-NEXT:    vnsrl.wi v8, v8, 0
-; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; ZVE32F-NEXT:    vrgather.vv v8, v9, v10, v0.t
-; ZVE32F-NEXT:    vse16.v v8, (a2)
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 0
+; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
+; ZVE32F-NEXT:    vse16.v v9, (a2)
 ; ZVE32F-NEXT:    ret
 entry:
   %0 = load <4 x half>, ptr %in0, align 2
@@ -793,16 +761,12 @@ define void @vnsrl_16_half_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
 ; V-NEXT:    vle16.v v8, (a1)
 ; V-NEXT:    vle16.v v9, (a0)
-; V-NEXT:    li a0, -1
 ; V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; V-NEXT:    vslidedown.vi v10, v8, 2
-; V-NEXT:    vwaddu.vv v11, v8, v10
-; V-NEXT:    vwmaccu.vx v11, a0, v10
-; V-NEXT:    vmv.v.i v0, 12
-; V-NEXT:    vnsrl.wi v8, v9, 16
+; V-NEXT:    vnsrl.wi v8, v8, 16
+; V-NEXT:    vnsrl.wi v9, v9, 16
 ; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; V-NEXT:    vmerge.vvm v8, v8, v11, v0
-; V-NEXT:    vse16.v v8, (a2)
+; V-NEXT:    vslideup.vi v9, v8, 2
+; V-NEXT:    vse16.v v9, (a2)
 ; V-NEXT:    ret
 ;
 ; ZVE32F-LABEL: vnsrl_16_half_two_source:
@@ -810,16 +774,12 @@ define void @vnsrl_16_half_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVE32F-NEXT:    vle16.v v8, (a1)
 ; ZVE32F-NEXT:    vle16.v v9, (a0)
-; ZVE32F-NEXT:    li a0, -1
 ; ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVE32F-NEXT:    vslidedown.vi v10, v8, 2
-; ZVE32F-NEXT:    vwaddu.vv v11, v8, v10
-; ZVE32F-NEXT:    vwmaccu.vx v11, a0, v10
-; ZVE32F-NEXT:    vmv.v.i v0, 12
-; ZVE32F-NEXT:    vnsrl.wi v8, v9, 16
+; ZVE32F-NEXT:    vnsrl.wi v8, v8, 16
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 16
 ; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVE32F-NEXT:    vmerge.vvm v8, v8, v11, v0
-; ZVE32F-NEXT:    vse16.v v8, (a2)
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
+; ZVE32F-NEXT:    vse16.v v9, (a2)
 ; ZVE32F-NEXT:    ret
 entry:
   %0 = load <4 x half>, ptr %in0, align 2
