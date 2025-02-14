@@ -8977,7 +8977,7 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo(), &ST);
   }
   default:
-    if (MI.isMetaInstruction())
+    if (MI.isMetaInstruction() || MI.isDebugInstr())
       return 0;
     return DescSize;
   }

@@ -101,7 +101,7 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
   void reset(const MachineFunction &MF);
 
   // Get function code size and cache the value.
-  uint64_t getFunctionCodeSize(const MachineFunction &MF);
+  uint64_t getFunctionCodeSize(MachineFunction &MF);
 
   /// Compute the value of the ComputePGMRsrc1 register.
   const MCExpr *getComputePGMRSrc1(const GCNSubtarget &ST,
