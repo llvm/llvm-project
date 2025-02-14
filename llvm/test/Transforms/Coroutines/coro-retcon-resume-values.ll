@@ -10,7 +10,7 @@ define ptr @f(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    ret ptr @f.resume.0
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -63,7 +63,7 @@ entry:
 ;   Unfortunately, we don't seem to fully optimize this right now due
 ;   to some sort of phase-ordering thing.
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ...)
 declare ptr @llvm.coro.begin(token, ptr)
 declare { i32, i1 } @llvm.coro.suspend.retcon.sl_i32i1s(...)
 declare i1 @llvm.coro.end(ptr, i1, token)

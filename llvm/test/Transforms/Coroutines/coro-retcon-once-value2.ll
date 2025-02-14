@@ -6,7 +6,7 @@ target triple = "x86_64-apple-macosx10.12.0"
 define {ptr, ptr} @f(ptr %buffer, ptr %ptr) presplitcoroutine {
 entry:
   %temp = alloca i32, align 4
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %oldvalue = load i32, ptr %ptr
   store i32 %oldvalue, ptr %temp
@@ -27,7 +27,7 @@ cleanup:
 define {ptr, ptr} @g(ptr %buffer, ptr %ptr, i8 %val) presplitcoroutine {
 entry:
   %temp = alloca i32, align 4
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype2, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype2, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %oldvalue = load i32, ptr %ptr
   store i32 %oldvalue, ptr %temp
@@ -49,7 +49,7 @@ cleanup:
 define {ptr, ptr} @h(ptr %buffer, ptr %ptr) presplitcoroutine {
 entry:
   %temp = alloca i32, align 4
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype3, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype3, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %oldvalue = load i32, ptr %ptr
   store i32 %oldvalue, ptr %temp
@@ -68,7 +68,7 @@ cleanup:
 }
 
 
-declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ...)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare i1 @llvm.coro.end(ptr, i1, token)

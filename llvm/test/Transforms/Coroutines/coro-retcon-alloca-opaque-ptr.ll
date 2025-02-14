@@ -17,7 +17,7 @@ define {ptr, ptr, i32} @f(ptr %buffer, i32 %n, { i32 } %dummy) {
 ; CHECK-NEXT:    ret { ptr, ptr, i32 } [[TMP2]]
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, ptr %buffer, ptr @prototype_f, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon(i32 1024, i32 8, ptr %buffer, ptr @prototype_f, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -51,7 +51,7 @@ define {ptr, i32} @g(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP2]]
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, ptr %buffer, ptr @prototype_g, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon(i32 1024, i32 8, ptr %buffer, ptr @prototype_g, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -73,7 +73,7 @@ cleanup:
   unreachable
 }
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ...)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.suspend.retcon.isVoid(...)

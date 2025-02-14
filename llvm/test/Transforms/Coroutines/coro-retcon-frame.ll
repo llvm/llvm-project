@@ -18,7 +18,7 @@ entry:
   store i64 0, ptr %proj.1, align 8
   store i64 0, ptr %proj.2, align 8
   %escape_addr = ptrtoint ptr %tmp to i64
-  %id = call token @llvm.coro.id.retcon.once(i32 32, i32 8, ptr %buffer, ptr @prototype_f, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon.once(i32 32, i32 8, ptr %buffer, ptr @prototype_f, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %proj.2.2 = getelementptr inbounds { i64, i64 }, ptr %tmp, i64 0, i32 1
   call void @init(ptr %proj.1)
@@ -49,7 +49,7 @@ end:
 ; CHECK: resume:
 ; CHECK:  call void @use(ptr %0)
 
-declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ...)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare i1 @llvm.coro.end(ptr, i1, token)

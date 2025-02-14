@@ -15,7 +15,7 @@ define ptr @f(ptr %buffer, i32 %n, ptr swifterror %errorslot) {
 ; CHECK-NEXT:    ret ptr @f.resume.0
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @f_prototype, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @f_prototype, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -58,7 +58,7 @@ define ptr @g(ptr %buffer, i32 %n) {
 entry:
   %errorslot = alloca swifterror ptr, align 4
   store ptr null, ptr %errorslot
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @g_prototype, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @g_prototype, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -82,7 +82,7 @@ cleanup:
 
 
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ...)
 declare ptr @llvm.coro.begin(token, ptr)
 declare { i1, ptr } @llvm.coro.suspend.retcon.i1p0p0i8(...)
 declare i1 @llvm.coro.suspend.retcon.i1(...)

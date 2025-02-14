@@ -6,7 +6,7 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 define {ptr, i32} @f(ptr %buffer, ptr %array) {
 entry:
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %load = load i32, ptr %array
   %load.pos = icmp sgt i32 %load, 0
@@ -47,7 +47,7 @@ entry:
 
 define {ptr, i32} @g(ptr %buffer, ptr %array, i32 %val) {
 entry:
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype2, ptr @allocate, ptr @deallocate)
+  %id = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype2, ptr @allocate, ptr @deallocate)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %load = load i32, ptr %array
   %load.pos = icmp sgt i32 %load, 0
@@ -93,7 +93,7 @@ entry:
 ;   Unfortunately, we don't seem to fully optimize this right now due
 ;   to some sort of phase-ordering thing.
 
-declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ...)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare i1 @llvm.coro.end(ptr, i1, token)
