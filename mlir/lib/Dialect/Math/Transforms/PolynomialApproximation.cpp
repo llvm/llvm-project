@@ -1125,6 +1125,12 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
 // Approximates erfc(x) with p((x - 2) / (x + 2)), where p is a 9 degree
 // polynomial.This approximation is based on the following stackoverflow post:
 // https://stackoverflow.com/questions/35966695/vectorizable-implementation-of-complementary-error-function-erfcf
+// The stackoverflow post is in turn based on:
+// M. M. Shepherd and J. G. Laframboise, "Chebyshev Approximation of
+// (1+2x)exp(x^2)erfc x in 0 <= x < INF", Mathematics of Computation, Vol. 36,
+// No. 153, January 1981, pp. 249-253.
+//
+// Maximum error: 2.65 ulps
 LogicalResult
 ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
                                              PatternRewriter &rewriter) const {
@@ -1150,11 +1156,7 @@ ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
   Value posInf = bcast(f32FromBits(builder, 0x7f800000u));
   Value clampVal = bcast(floatCst(builder, 10.0546875f, et));
 
-  // Get abs(x)
-  Value isNegativeArg =
-      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, x, zero);
-  Value negArg = builder.create<arith::NegFOp>(x);
-  Value a = builder.create<arith::SelectOp>(isNegativeArg, negArg, x);
+  Value a = builder.create<math::AbsFOp>(x);
   Value p = builder.create<arith::AddFOp>(a, pos2);
   Value r = builder.create<arith::DivFOp>(one, p);
   Value q = builder.create<math::FmaOp>(neg4, r, one);

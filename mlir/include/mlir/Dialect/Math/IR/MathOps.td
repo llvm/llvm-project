@@ -567,10 +567,10 @@ def Math_ErfOp : Math_FloatUnaryOp<"erf"> {
 def Math_ErfcOp : Math_FloatUnaryOp<"erfc"> {
   let summary = "complementary error function of the specified value";
   let description = [{
-    The `erfc` operation computes the complementary error function.
-    It takes one operand of floating point type (i.e., scalar, tensor or
-    vector) and returns one result of the same type.
-    It has no standard attributes.
+    The `erfc` operation computes the complementary error function, defined
+    as 1-erf(x). It takes one operand of floating point type (i.e., scalar,
+    tensor or vector) and returns one result of the same type. It has no
+    standard attributes.
 
     Example:
 
