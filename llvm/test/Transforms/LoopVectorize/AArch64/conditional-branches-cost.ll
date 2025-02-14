@@ -460,9 +460,9 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 104
 ; PRED-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       middle.block:
-; PRED-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; PRED-NEXT:    br label [[EXIT:%.*]]
 ; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 104, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; PRED-NEXT:    br label [[FOR_BODY:%.*]]
 ; PRED:       loop:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -470,7 +470,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; PRED-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[IV]], 1
 ; PRED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 100
-; PRED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; PRED-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;
@@ -713,9 +713,9 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; PRED-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP28]], i32 0
 ; PRED-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; PRED:       middle.block:
-; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; PRED-NEXT:    br label [[EXIT:%.*]]
 ; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; PRED-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; PRED:       loop.header:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -821,9 +821,6 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
-; PRED-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 8
-; PRED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
-; PRED-NEXT:    [[IND_END1:%.*]] = mul i64 [[N_VEC]], 2
 ; PRED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 2
 ; PRED-NEXT:    [[TMP8:%.*]] = sub i64 257, [[TMP7]]
@@ -850,10 +847,10 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 2 x i1> [[TMP16]], i32 0
 ; PRED-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; PRED:       middle.block:
-; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; PRED-NEXT:    br label [[EXIT:%.*]]
 ; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DST]], [[ENTRY:%.*]] ]
-; PRED-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[DST]], [[ENTRY:%.*]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 0, [[ENTRY]] ]
 ; PRED-NEXT:    br label [[LOOP:%.*]]
 ; PRED:       loop:
 ; PRED-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
@@ -978,9 +975,9 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; DEFAULT:       middle.block:
-; DEFAULT-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; DEFAULT-NEXT:    br label [[EXIT:%.*]]
 ; DEFAULT:       scalar.ph:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 8, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; DEFAULT-NEXT:    br label [[LOOP:%.*]]
 ; DEFAULT:       loop:
 ; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -1080,9 +1077,9 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; PRED-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; PRED:       middle.block:
-; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; PRED-NEXT:    br label [[EXIT:%.*]]
 ; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 8, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; PRED-NEXT:    br label [[LOOP:%.*]]
 ; PRED:       loop:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -1517,9 +1514,9 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[TMP85:%.*]] = extractelement <8 x i1> [[TMP84]], i32 0
 ; PRED-NEXT:    br i1 [[TMP85]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; PRED:       middle.block:
-; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; PRED-NEXT:    br label [[EXIT:%.*]]
 ; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; PRED-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; PRED:       loop.header:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -1630,9 +1627,9 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
 ; DEFAULT-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; DEFAULT:       middle.block:
-; DEFAULT-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; DEFAULT-NEXT:    br label [[EXIT:%.*]]
 ; DEFAULT:       scalar.ph:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 24, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; DEFAULT-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; DEFAULT:       loop.header:
 ; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -1693,9 +1690,9 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; PRED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
 ; PRED-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; PRED:       middle.block:
-; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; PRED-NEXT:    br label [[EXIT:%.*]]
 ; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 24, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; PRED-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; PRED:       loop.header:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]

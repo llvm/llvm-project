@@ -61,7 +61,7 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP27:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP25]])
-; CHECK-NEXT:    br i1 true, label [[DOT_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[DOT_CRIT_EDGE:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
@@ -164,7 +164,7 @@ define i32 @reduction_sum(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP44]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP45:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP43]])
-; CHECK-NEXT:    br i1 true, label [[DOT_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[DOT_CRIT_EDGE:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
@@ -270,7 +270,7 @@ define i32 @reduction_prod(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP42]])
-; CHECK-NEXT:    br i1 true, label [[DOT_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[DOT_CRIT_EDGE:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
@@ -375,7 +375,7 @@ define i32 @reduction_and(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP42]])
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -480,7 +480,7 @@ define i32 @reduction_or(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP42]])
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -585,7 +585,7 @@ define i32 @reduction_xor(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[TMP42]])
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -690,7 +690,7 @@ define float @reduction_fadd(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP44:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP42]])
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -795,7 +795,7 @@ define float @reduction_fmul(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP44:%.*]] = call fast float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[TMP42]])
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -883,7 +883,7 @@ define i32 @reduction_min(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP27:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP25]])
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -969,7 +969,7 @@ define i32 @reduction_max(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP27:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP25]])
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:

@@ -23,7 +23,6 @@ define void @test(i16 %x, i64 %y, ptr %ptr) {
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], [[INC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

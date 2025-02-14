@@ -1724,10 +1724,10 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP181]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-INTERLEAVE1:       middle.block:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP182:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
-; CHECK-INTERLEAVE1-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVE1-NEXT:    br label [[EXIT:%.*]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
-; CHECK-INTERLEAVE1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP182]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       for.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -2079,10 +2079,10 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP181]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-INTERLEAVED:       middle.block:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP182:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
-; CHECK-INTERLEAVED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVED-NEXT:    br label [[EXIT:%.*]]
 ; CHECK-INTERLEAVED:       scalar.ph:
-; CHECK-INTERLEAVED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-INTERLEAVED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP182]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; CHECK-INTERLEAVED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-INTERLEAVED-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       for.body:
 ; CHECK-INTERLEAVED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -2434,10 +2434,10 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP181]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-MAXBW:       middle.block:
 ; CHECK-MAXBW-NEXT:    [[TMP182:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
-; CHECK-MAXBW-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-MAXBW-NEXT:    br label [[EXIT:%.*]]
 ; CHECK-MAXBW:       scalar.ph:
-; CHECK-MAXBW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-MAXBW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP182]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; CHECK-MAXBW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; CHECK-MAXBW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-MAXBW-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-MAXBW:       for.body:
 ; CHECK-MAXBW-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]

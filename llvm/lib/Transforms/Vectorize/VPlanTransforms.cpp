@@ -1468,40 +1468,45 @@ void VPlanTransforms::truncateToMinimalBitwidths(
 }
 
 /// Remove BranchOnCond recipes with constant conditions together with removing
-/// dead edges to their successors. Remove blocks that become dead (no remaining
-/// predecessors())
+/// dead edges to their successors.
 static void simplifyCFG(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
-  // Start by collecting successor blocks known to not be taken from
-  // branch-on-cond terminator in their predecessor.
-  SmallVector<VPBlockBase *> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    VPRecipeBase *Term = VPBB->getTerminator();
-    if (!Term || !match(Term, m_BranchOnCond(m_True())))
+    if (VPBB->getNumSuccessors() != 2 || VPBB->begin() == VPBB->end() ||
+        !match(&VPBB->back(), m_BranchOnCond(m_True())))
       continue;
-    VPBasicBlock *DeadSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
-    VPBlockUtils::disconnectBlocks(VPBB, DeadSucc);
-    Term->eraseFromParent();
-    WorkList.push_back(DeadSucc);
-  }
 
-  VPValue Tmp;
-  // Remove any block in the worklist if it doesn't have any predecessors left.
-  // Disconnect the block from all successors and queue them for removal.
-  while (!WorkList.empty()) {
-    VPBlockBase *VPBB = WorkList.pop_back_val();
-    if (VPBB->getNumPredecessors() != 0)
-      continue;
-    for (VPBlockBase *Succ : to_vector(VPBB->getSuccessors())) {
-      VPBlockUtils::disconnectBlocks(VPBB, Succ);
-      WorkList.push_back(Succ);
+    VPBasicBlock *DeadSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
+    const auto &Preds = DeadSucc->getPredecessors();
+    unsigned DeadIdx = std::distance(Preds.begin(), find(Preds, VPBB));
+
+    // Remove values coming from VPBB from phi-like recipes in DeadSucc.
+    for (VPRecipeBase &R : make_early_inc_range(*DeadSucc)) {
+      assert((!isa<VPIRInstruction>(&R) ||
+              !isa<PHINode>(cast<VPIRInstruction>(&R)->getInstruction())) &&
+             !isa<VPHeaderPHIRecipe>(&R) &&
+             "Cannot update VPIRInstructions wrapping phis or header phis yet");
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (VPI && VPI->getOpcode() == VPInstruction::ResumePhi) {
+        VPBuilder B(VPI);
+        SmallVector<VPValue *> NewOps;
+        // Create new operand list, with the dead incoming value filtered out.
+        for (const auto &[Idx, Op] : enumerate(VPI->operands())) {
+          if (Idx == DeadIdx)
+            continue;
+          NewOps.push_back(Op);
+        }
+        VPI->replaceAllUsesWith(B.createNaryOp(VPInstruction::ResumePhi, NewOps,
+                                               VPI->getDebugLoc(),
+                                               VPI->getName()));
+        VPI->eraseFromParent();
+      }
     }
-    // Replace all uses of values defined in VPB with a dummy VPValue to
-    // facilitate removal. All blocks with remaining uses of the dummy value
-    // must be removed by subsequent operation.
-    VPBB->dropAllReferences(&Tmp);
-    delete VPBB;
+    // Disconnect blocks and remove the terminator. DeadSucc will be deleted
+    // automatically on VPlan descruction.
+    VPBlockUtils::disconnectBlocks(VPBB, DeadSucc);
+    VPBB->back().eraseFromParent();
   }
 }
 
@@ -1514,11 +1519,11 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  simplifyCFG(Plan);
   runPass(removeDeadRecipes, Plan);
 
   runPass(createAndOptimizeReplicateRegions, Plan);
   runPass(mergeBlocksIntoPredecessors, Plan);
-  runPass(simplifyCFG,Plan);
   runPass(licm, Plan);
 }
 
