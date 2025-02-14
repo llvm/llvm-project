@@ -1421,12 +1421,12 @@ parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
     return RAGreedyPass::Options();
   }
   std::optional<RegAllocFilterFunc> Filter = PB.parseRegAllocFilter(Params);
-  if (!Filter) {
-    return make_error<StringError>(
-        formatv("invalid regallocgreedy register filter '{0}' ", Params).str(),
-        inconvertibleErrorCode());
+  if (Filter) {
+    return RAGreedyPass::Options{*Filter, Params};
   }
-  return RAGreedyPass::Options{*Filter, Params};
+  return make_error<StringError>(
+      formatv("invalid regallocgreedy register filter '{0}' ", Params).str(),
+      inconvertibleErrorCode());
 }
 
 } // namespace
