@@ -387,12 +387,12 @@ define i32 @i32_select_fcmp_oeq(float %a, float %b, i32 %c, i32 %d) nounwind {
 ;
 ; CHECKZFINX-LABEL: i32_select_fcmp_oeq:
 ; CHECKZFINX:       # %bb.0:
-; CHECKZFINX-NEXT:    feq.s a0, a0, a1
-; CHECKZFINX-NEXT:    bnez a0, .LBB16_2
-; CHECKZFINX-NEXT:  # %bb.1:
-; CHECKZFINX-NEXT:    mv a2, a3
-; CHECKZFINX-NEXT:  .LBB16_2:
+; CHECKZFINX-NEXT:    feq.s a1, a0, a1
 ; CHECKZFINX-NEXT:    mv a0, a2
+; CHECKZFINX-NEXT:    bnez a1, .LBB16_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a3
+; CHECKZFINX-NEXT:  .LBB16_2:
 ; CHECKZFINX-NEXT:    ret
   %1 = fcmp oeq float %a, %b
   %2 = select i1 %1, i32 %c, i32 %d

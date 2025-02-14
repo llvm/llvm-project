@@ -217,6 +217,8 @@ LoongArch Support
 RISC-V Support
 ^^^^^^^^^^^^^^
 
+- Add support for `-mtune=generic-ooo` (a generic out-of-order model).
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -256,9 +258,6 @@ clang-format
 
 libclang
 --------
-
-- Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
-  increased memory allocation.
 
 Code Completion
 ---------------
