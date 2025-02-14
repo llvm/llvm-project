@@ -1176,6 +1176,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::fma:
   case Intrinsic::fmuladd: {
     // TODO: handle promotion with f16/bf16 with zvfhmin/zvfbfmin
     auto LT = getTypeLegalizationCost(RetTy);
@@ -1353,13 +1354,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
     if (TLI->isOperationCustom(VPISD, LT.second))
       return Cost * LT.first;
-    break;
-  }
-  case Intrinsic::vp_fneg: {
-    std::optional<unsigned> FOp =
-        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-    assert(FOp.has_value());
-    return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
   }
   case Intrinsic::vp_select: {

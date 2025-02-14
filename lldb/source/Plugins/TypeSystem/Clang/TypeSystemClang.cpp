@@ -2303,7 +2303,8 @@ CompilerType TypeSystemClang::GetOrCreateStructForIdentifier(
 CompilerType TypeSystemClang::CreateEnumerationType(
     llvm::StringRef name, clang::DeclContext *decl_ctx,
     OptionalClangModuleID owning_module, const Declaration &decl,
-    const CompilerType &integer_clang_type, bool is_scoped) {
+    const CompilerType &integer_clang_type, bool is_scoped,
+    std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind) {
   // TODO: Do something intelligent with the Declaration object passed in
   // like maybe filling in the SourceLocation with it...
   ASTContext &ast = getASTContext();
@@ -2320,6 +2321,10 @@ CompilerType TypeSystemClang::CreateEnumerationType(
   SetOwningModule(enum_decl, owning_module);
   if (decl_ctx)
     decl_ctx->addDecl(enum_decl);
+
+  if (enum_kind)
+    enum_decl->addAttr(
+        clang::EnumExtensibilityAttr::CreateImplicit(ast, *enum_kind));
 
   // TODO: check if we should be setting the promotion type too?
   enum_decl->setIntegerType(ClangUtil::GetQualType(integer_clang_type));
@@ -8469,29 +8474,22 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
   if (enum_decl->isCompleteDefinition())
     return true;
 
-  clang::ASTContext &ast = lldb_ast->getASTContext();
-
-  /// TODO This really needs to be fixed.
-
   QualType integer_type(enum_decl->getIntegerType());
   if (!integer_type.isNull()) {
-    unsigned NumPositiveBits = 1;
-    unsigned NumNegativeBits = 0;
+    clang::ASTContext &ast = lldb_ast->getASTContext();
 
-    clang::QualType promotion_qual_type;
-    // If the enum integer type is less than an integer in bit width,
-    // then we must promote it to an integer size.
-    if (ast.getTypeSize(enum_decl->getIntegerType()) <
-        ast.getTypeSize(ast.IntTy)) {
-      if (enum_decl->getIntegerType()->isSignedIntegerType())
-        promotion_qual_type = ast.IntTy;
-      else
-        promotion_qual_type = ast.UnsignedIntTy;
-    } else
-      promotion_qual_type = enum_decl->getIntegerType();
+    unsigned NumNegativeBits = 0;
+    unsigned NumPositiveBits = 0;
+    ast.computeEnumBits(enum_decl->enumerators(), NumNegativeBits,
+                        NumPositiveBits);
+
+    clang::QualType BestPromotionType;
+    clang::QualType BestType;
+    ast.computeBestEnumTypes(/*IsPacked=*/false, NumNegativeBits,
+                             NumPositiveBits, BestType, BestPromotionType);
 
     enum_decl->completeDefinition(enum_decl->getIntegerType(),
-                                  promotion_qual_type, NumPositiveBits,
+                                  BestPromotionType, NumPositiveBits,
                                   NumNegativeBits);
   }
   return true;

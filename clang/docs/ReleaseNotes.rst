@@ -54,6 +54,8 @@ ABI Changes in This Version
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+- Added support for dumping template arguments of structural value kinds.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
@@ -91,6 +93,7 @@ C Language Changes
 
 - Clang now allows an ``inline`` specifier on a typedef declaration of a
   function type in Microsoft compatibility mode. #GH124869
+- Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -103,6 +106,10 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+
+- New option ``-fprofile-continuous`` added to enable continuous profile syncing to file (#GH124353, `docs <https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous>`_).
+  The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
+  for a while and this is just a user facing option.
 
 Deprecated Compiler Flags
 -------------------------
@@ -117,6 +124,7 @@ Attribute Changes in Clang
 --------------------------
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+- Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -128,6 +136,8 @@ Improvements to Clang's diagnostics
   which are supposed to only exist once per program, but may get duplicated when
   built into a shared library.
 - Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
+- A statement attribute applied to a ``case`` label no longer suppresses
+  'bypassing variable initialization' diagnostics (#84072).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -137,6 +147,9 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+
+- Clang now outputs correct values when #embed data contains bytes with negative
+  signed char values (#GH102798).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -151,6 +164,8 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+- The initialization kind of elements of structured bindings
+  direct-list-initialized from an array is corrected to direct-initialization.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -203,6 +218,8 @@ LoongArch Support
 RISC-V Support
 ^^^^^^^^^^^^^^
 
+- Add support for `-mtune=generic-ooo` (a generic out-of-order model).
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -237,6 +254,8 @@ clang-format
 ------------
 
 - Adds ``BreakBeforeTemplateCloser`` option.
+- Adds ``BinPackLongBracedList`` option to override bin packing options in
+  long (20 item or more) braced list initializer lists.
 
 libclang
 --------
@@ -280,6 +299,7 @@ Python Binding Changes
 OpenMP Support
 --------------
 - Added support 'no_openmp_constructs' assumption clause.
+- Added support for 'omp stripe' directive.
 
 Improvements
 ^^^^^^^^^^^^

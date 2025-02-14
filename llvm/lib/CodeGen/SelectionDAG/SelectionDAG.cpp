@@ -8015,17 +8015,8 @@ static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
   if (Slice.Array == nullptr) {
     if (VT.isInteger())
       return DAG.getConstant(0, dl, VT);
-    if (VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128)
-      return DAG.getConstantFP(0.0, dl, VT);
-    if (VT.isVector()) {
-      unsigned NumElts = VT.getVectorNumElements();
-      MVT EltVT = (VT.getVectorElementType() == MVT::f32) ? MVT::i32 : MVT::i64;
-      return DAG.getNode(ISD::BITCAST, dl, VT,
-                         DAG.getConstant(0, dl,
-                                         EVT::getVectorVT(*DAG.getContext(),
-                                                          EltVT, NumElts)));
-    }
-    llvm_unreachable("Expected type!");
+    return DAG.getNode(ISD::BITCAST, dl, VT,
+                       DAG.getConstant(0, dl, VT.changeTypeToInteger()));
   }
 
   assert(!VT.isVector() && "Can't handle vector type here!");
@@ -13415,10 +13406,10 @@ BuildVectorSDNode::isConstantSequence() const {
   return std::make_pair(Start, Stride);
 }
 
-bool ShuffleVectorSDNode::isSplatMask(const int *Mask, EVT VT) {
+bool ShuffleVectorSDNode::isSplatMask(ArrayRef<int> Mask) {
   // Find the first non-undef value in the shuffle mask.
   unsigned i, e;
-  for (i = 0, e = VT.getVectorNumElements(); i != e && Mask[i] < 0; ++i)
+  for (i = 0, e = Mask.size(); i != e && Mask[i] < 0; ++i)
     /* search */;
 
   // If all elements are undefined, this shuffle can be considered a splat

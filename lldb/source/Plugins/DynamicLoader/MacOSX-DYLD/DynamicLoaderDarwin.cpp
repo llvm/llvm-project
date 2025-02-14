@@ -419,6 +419,10 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         image_infos[i].os_type = llvm::Triple::WatchOS;
       else if (os_name == "bridgeos")
         image_infos[i].os_type = llvm::Triple::BridgeOS;
+      else if (os_name == "driverkit")
+        image_infos[i].os_type = llvm::Triple::DriverKit;
+      else if (os_name == "xros")
+        image_infos[i].os_type = llvm::Triple::XROS;
       else if (os_name == "maccatalyst") {
         image_infos[i].os_type = llvm::Triple::IOS;
         image_infos[i].os_env = llvm::Triple::MacABI;
@@ -430,6 +434,9 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         image_infos[i].os_env = llvm::Triple::Simulator;
       } else if (os_name == "watchossimulator") {
         image_infos[i].os_type = llvm::Triple::WatchOS;
+        image_infos[i].os_env = llvm::Triple::Simulator;
+      } else if (os_name == "xrsimulator") {
+        image_infos[i].os_type = llvm::Triple::XROS;
         image_infos[i].os_env = llvm::Triple::Simulator;
       }
     }
@@ -765,7 +772,8 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
           (dyld_triple.getEnvironment() == llvm::Triple::Simulator &&
            (dyld_triple.getOS() == llvm::Triple::IOS ||
             dyld_triple.getOS() == llvm::Triple::TvOS ||
-            dyld_triple.getOS() == llvm::Triple::WatchOS)))
+            dyld_triple.getOS() == llvm::Triple::WatchOS ||
+            dyld_triple.getOS() == llvm::Triple::XROS)))
         image_module_sp->MergeArchitecture(dyld_spec);
     }
   }
@@ -835,7 +843,7 @@ lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
   }
   if (os_env == llvm::Triple::Simulator &&
       (os_type == llvm::Triple::IOS || os_type == llvm::Triple::TvOS ||
-       os_type == llvm::Triple::WatchOS)) {
+       os_type == llvm::Triple::WatchOS || os_type == llvm::Triple::XROS)) {
     llvm::Triple triple(llvm::Twine(arch_spec.GetArchitectureName()) +
                         "-apple-" + llvm::Triple::getOSTypeName(os_type) +
                         min_version_os_sdk + "-simulator");

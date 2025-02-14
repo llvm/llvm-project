@@ -3125,6 +3125,24 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
   overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
   by the target, or ``single`` otherwise.
 
+.. option:: -fprofile-continuous
+
+  Enables the continuous instrumentation profiling where profile counter updates
+  are continuously synced to a file. This option sets any neccessary modifiers
+  (currently ``%c``) in the default profile filename and passes any necessary
+  flags to the middle-end to support this mode. Value profiling is not supported
+  in continuous mode.
+
+  .. code-block:: console
+
+    $ clang++ -O2 -fprofile-generate -fprofile-continuous code.cc -o code
+
+  Running ``./code`` will collect the profile and write it to the
+  ``default_xxxx.profraw`` file. However, if ``./code`` abruptly terminates or
+  does not call ``exit()``, in continuous mode the profile collected up to the
+  point of termination will be available in ``default_xxxx.profraw`` while in
+  the non-continuous mode, no profile file is generated.
+
 .. option:: -ftemporal-profile
 
   Enables the temporal profiling extension for IRPGO to improve startup time by

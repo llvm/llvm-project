@@ -350,10 +350,11 @@ def warn_arm_interrupt_vfp_clobber : Warning<
   InGroup<DiagGroup<"arm-interrupt-vfp-clobber">>;
 def err_arm_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
-def warn_interrupt_attribute_invalid : Warning<
-   "%select{MIPS|MSP430|RISC-V}0 'interrupt' attribute only applies to "
-   "functions that have %select{no parameters|a 'void' return type}1">,
-   InGroup<IgnoredAttributes>;
+def warn_interrupt_signal_attribute_invalid : Warning<
+  "%select{MIPS|MSP430|RISC-V|AVR}0 '%select{interrupt|signal}1' "
+  "attribute only applies to functions that have "
+  "%select{no parameters|a 'void' return type}2">,
+  InGroup<IgnoredAttributes>;
 def warn_riscv_repeated_interrupt_attribute : Warning<
   "repeated RISC-V 'interrupt' attribute">, InGroup<IgnoredAttributes>;
 def note_riscv_repeated_interrupt_attribute : Note<
@@ -3831,6 +3832,9 @@ def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Summary
 def warn_type_attribute_wrong_type : Warning<
   "'%0' only applies to %select{function|pointer|"
   "Objective-C object or block pointer}1 types; type here is %2">,
+  InGroup<IgnoredAttributes>;
+def warn_attribute_on_void_param: Warning<
+  "attribute %0 cannot be applied to a 'void' parameter">,
   InGroup<IgnoredAttributes>;
 def err_type_attribute_wrong_type : Error<
   warn_type_attribute_wrong_type.Summary>;
@@ -7409,6 +7413,11 @@ def warn_c23_compat_utf8_string : Warning<
 def note_cxx20_c23_compat_utf8_string_remove_u8 : Note<
   "remove 'u8' prefix to avoid a change of behavior; "
   "Clang encodes unprefixed narrow string literals as UTF-8">;
+def warn_c23_compat_restrict_on_array_of_pointers : Warning<
+  "'restrict' qualifier on an array of pointers is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
+def ext_restrict_on_array_of_pointers_c23 : Extension<
+  "'restrict' qualifier on an array of pointers is a C23 extension">, InGroup<C23>;
 def err_array_init_different_type : Error<
   "cannot initialize array %diff{of type $ with array of type $|"
   "with different type of array}0,1">;
@@ -9193,6 +9202,8 @@ def err_cuda_device_exceptions : Error<
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
     "__device__, __constant__, __shared__, and __managed__ variables">;
+def err_cuda_ctor_dtor_attrs
+    : Error<"CUDA does not support global %0 for __device__ functions">;
 def err_shared_var_init : Error<
     "initialization is not supported for __shared__ variables">;
 def err_cuda_vla : Error<
