@@ -2999,21 +2999,32 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
       return ConstantInt::getBool(ITy, !TrueIfSigned);
   }
 
-  // Rule out tautological comparisons (eg., ult 0 or uge 0).
-  ConstantRange RHS_CR = ConstantRange::makeExactICmpRegion(Pred, *C);
-  if (RHS_CR.isEmptySet())
-    return ConstantInt::getFalse(ITy);
-  if (RHS_CR.isFullSet())
-    return ConstantInt::getTrue(ITy);
-
-  ConstantRange LHS_CR =
+  ConstantRange LCR =
       computeConstantRange(LHS, CmpInst::isSigned(Pred), IIQ.UseInstrInfo);
-  if (!LHS_CR.isFullSet()) {
-    if (RHS_CR.contains(LHS_CR))
-      return ConstantInt::getTrue(ITy);
-    if (RHS_CR.inverse().contains(LHS_CR))
+
+  auto CheckCR = [&](const ConstantRange &CR) -> Constant * {
+    // Rule out tautological comparisons (eg., ult 0 or uge 0).
+    if (CR.isEmptySet())
       return ConstantInt::getFalse(ITy);
-  }
+    if (CR.isFullSet())
+      return ConstantInt::getTrue(ITy);
+
+    if (!LCR.isFullSet()) {
+      if (CR.contains(LCR))
+        return ConstantInt::getTrue(ITy);
+      if (CR.inverse().contains(LCR))
+        return ConstantInt::getFalse(ITy);
+    }
+    return nullptr;
+  };
+
+  // Check unsigned and signed versions of relational predicates with samesign.
+  if (auto *K = CheckCR(ConstantRange::makeExactICmpRegion(Pred, *C)))
+    return K;
+  if (Pred.hasSameSign() && ICmpInst::isRelational(Pred))
+    if (auto *K = CheckCR(ConstantRange::makeExactICmpRegion(
+            ICmpInst::getSignedPredicate(Pred), *C)))
+      return K;
 
   // (mul nuw/nsw X, MulC) != C --> true  (if C is not a multiple of MulC)
   // (mul nuw/nsw X, MulC) == C --> false (if C is not a multiple of MulC)
