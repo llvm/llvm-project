@@ -122,9 +122,22 @@ void AMDGPUMCInstLower::lowerT16D16Helper(const MachineInstr *MI,
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   const auto *Info = AMDGPU::getT16D16Helper(Opcode);
 
+  uint16_t OpName = AMDGPU::OpName::OPERAND_LAST;
+  if (TII->isDS(Opcode)) {
+    if (MI->mayLoad())
+      OpName = llvm::AMDGPU::OpName::vdst;
+    else if (MI->mayStore())
+      OpName = llvm::AMDGPU::OpName::data0;
+    else
+      llvm_unreachable("LDS load or store expected");
+  } else {
+    OpName = AMDGPU::hasNamedOperand(Opcode, llvm::AMDGPU::OpName::vdata)
+                 ? llvm::AMDGPU::OpName::vdata
+                 : llvm::AMDGPU::OpName::vdst;
+  }
+
   // select Dst/Data
-  int VDataIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdata);
-  int VDstOrVDataIdx = VDataIdx != -1 ? VDataIdx : 0;
+  int VDstOrVDataIdx = AMDGPU::getNamedOperandIdx(Opcode, OpName);
   const MachineOperand &MIVDstOrVData = MI->getOperand(VDstOrVDataIdx);
 
   // select hi/lo MCInst
