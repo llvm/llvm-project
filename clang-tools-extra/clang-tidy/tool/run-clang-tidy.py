@@ -198,8 +198,12 @@ def find_binary(arg: str, name: str, build_path: str) -> str:
 def apply_fixes(
     args: argparse.Namespace, clang_apply_replacements_binary: str, tmpdir: str
 ) -> None:
-    """Calls clang-apply-fixes on a given directory."""
+    """Calls clang-apply-replacements on a given directory."""
     invocation = [clang_apply_replacements_binary]
+    
+    if args.ignore_insert_conflict:  # Only append if the user specified it
+        invocation.append("-ignore-insert-conflict")
+
     if args.format:
         invocation.append("-format")
     if args.style:
@@ -444,6 +448,11 @@ async def main() -> None:
         "-allow-no-checks",
         action="store_true",
         help="Allow empty enabled checks.",
+    )
+    parser.add_argument(
+        "-ignore-insert-conflict",
+        action="store_true",
+        help="Ignore insert conflict when applying fixes.",
     )
     args = parser.parse_args()
 
