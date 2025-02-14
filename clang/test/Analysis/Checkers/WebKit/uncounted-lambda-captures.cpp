@@ -323,6 +323,15 @@ struct RefCountableWithLambdaCapturingThis {
       });
     });
   }
+
+  void method_nested_lambda3() {
+    callAsync([this, protectedThis = RefPtr { this }] {
+      callAsync([this] {
+        // expected-warning@-1{{Captured raw-pointer 'this' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+        nonTrivial();
+      });
+    });
+  }
 };
 
 struct NonRefCountableWithLambdaCapturingThis {
