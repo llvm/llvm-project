@@ -358,6 +358,8 @@ func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %produce
   return
 }
 
+// -----
+
 #map = affine_map<()[s0] -> (s0 + 5)>
 #map1 = affine_map<()[s0] -> (s0 + 17)>
 
@@ -389,5 +391,37 @@ func.func @memref_index_type() {
   // PRODUCER-CONSUMER-MAXIMAL: affine.for
   // PRODUCER-CONSUMER-MAXIMAL-NOT: affine.for
   // PRODUCER-CONSUMER-MAXIMAL: return
+  return
+}
+
+// -----
+
+#map = affine_map<(d0) -> (d0)>
+#map1 =affine_map<(d0) -> (d0 + 1)>
+
+// Test non-integer memory spaces.
+
+// PRODUCER-CONSUMER-LABEL: func @non_int_memory_space
+func.func @non_int_memory_space() {
+  %alloc = memref.alloc() : memref<256x8xf32, #spirv.storage_class<StorageBuffer>>
+  affine.for %arg0 = 0 to 64 {
+    affine.for %arg1 = 0 to 8 {
+      %0 = affine.apply #map(%arg1)
+      %1 = affine.load %alloc[%arg0, %0] : memref<256x8xf32, #spirv.storage_class<StorageBuffer>>
+      affine.store %1, %alloc[%arg0, %arg1] : memref<256x8xf32, #spirv.storage_class<StorageBuffer>>
+    }
+  }
+  affine.for %arg0 = 16 to 32 {
+    affine.for %arg1 = 0 to 8 {
+      %0 = affine.apply #map(%arg1)
+      %1 = affine.load %alloc[%arg0, %0] : memref<256x8xf32, #spirv.storage_class<StorageBuffer>>
+      affine.store %1, %alloc[%arg0, %arg1] : memref<256x8xf32, #spirv.storage_class<StorageBuffer>>
+    }
+  }
+  // Fused nest.
+  // PRODUCER-CONSUMER-NEXT: memref.alloc()
+  // PRODUCER-CONSUMER-NEXT: memref.alloc()
+  // PRODUCER-CONSUMER-NEXT: affine.for %{{.*}} = 16 to 32
+  // PRODUCER-CONSUMER-NEXT:   affine.for %{{.*}} = 0 to 8
   return
 }
