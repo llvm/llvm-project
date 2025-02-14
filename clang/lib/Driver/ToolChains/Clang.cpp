@@ -1056,8 +1056,20 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
         DepFile = getDependencyFileName(Args, Inputs);
         C.addFailureResultFile(DepFile, &JA);
       }
-      CmdArgs.push_back("-dependency-file");
-      CmdArgs.push_back(DepFile);
+      // for host compile, if OPT_MMMD is on, default to create *.d.host file
+      // and merge it with *.d (kernel dep) file in DependencyFile.cpp
+      Arg *ArgMMD = Args.getLastArg(options::OPT_MMMD);
+      auto at = getToolChain().getAuxTriple();
+      if (ArgMMD && !at && std::string(DepFile) != "-") {
+        SmallString<128> NewDepFile(DepFile);
+        NewDepFile.append(".host");
+        CmdArgs.push_back("-dependency-file");
+        CmdArgs.push_back(Args.MakeArgString(NewDepFile));
+        // else keep the original dep file name
+      } else {
+        CmdArgs.push_back("-dependency-file");
+        CmdArgs.push_back(DepFile);
+      }
     }
 
     bool HasTarget = false;

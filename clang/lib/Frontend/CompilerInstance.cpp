@@ -494,8 +494,14 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Handle generating dependencies, if requested.
   const DependencyOutputOptions &DepOpts = getDependencyOutputOpts();
-  if (!DepOpts.OutputFile.empty())
-    addDependencyCollector(std::make_shared<DependencyFileGenerator>(DepOpts));
+  if (!DepOpts.OutputFile.empty()) {
+    auto DFG = std::make_shared<DependencyFileGenerator>(DepOpts);
+    for (auto F : getCodeGenOpts().LinkBitcodeFiles) {
+      DFG->maybeAddDependency(F.Filename, false, false, false, false);
+    }
+    addDependencyCollector(DFG);
+  }
+
   if (!DepOpts.DOTOutputFile.empty())
     AttachDependencyGraphGen(*PP, DepOpts.DOTOutputFile,
                              getHeaderSearchOpts().Sysroot);

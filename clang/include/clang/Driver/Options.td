@@ -798,6 +798,8 @@ def MD : Flag<["-"], "MD">, Group<M_Group>,
     HelpText<"Write a depfile containing user and system headers">;
 def MMD : Flag<["-"], "MMD">, Group<M_Group>,
     HelpText<"Write a depfile containing user headers">;
+def MMMD : Flag<["-"], "MMMD">, Group<M_Group>,
+    HelpText<"Merge multiple depfile if available">;
 def M : Flag<["-"], "M">, Group<M_Group>,
     HelpText<"Like -MD, but also implies -E and writes to stdout by default">;
 def MM : Flag<["-"], "MM">, Group<M_Group>,
