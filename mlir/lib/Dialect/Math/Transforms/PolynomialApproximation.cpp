@@ -1153,7 +1153,7 @@ ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
   Value neg4 = bcast(floatCst(builder, -4.0f, et));
   Value neg2 = bcast(floatCst(builder, -2.0f, et));
   Value pos2 = bcast(floatCst(builder, 2.0f, et));
-  Value posInf = bcast(f32FromBits(builder, 0x7f800000u));
+  Value posInf = bcast(floatCst(builder, INFINITY, et));
   Value clampVal = bcast(floatCst(builder, 10.0546875f, et));
 
   Value a = builder.create<math::AbsFOp>(x);
