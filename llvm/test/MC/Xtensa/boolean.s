@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -triple=xtensa -show-encoding --mattr=+bool \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK %s
 
 .align	4
 // CHECK: .p2align	4

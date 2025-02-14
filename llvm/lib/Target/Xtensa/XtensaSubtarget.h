@@ -36,14 +36,10 @@ private:
   SelectionDAGTargetInfo TSInfo;
   XtensaFrameLowering FrameLowering;
 
-  // Enabled Xtensa Density Option
-  bool HasDensity;
-
-  // Enabled Xtensa Windowed Register Option
-  bool HasWindowed;
-
-  // Enabled Boolean Option
-  bool HasBoolean;
+// Bool members corresponding to the SubtargetFeatures defined in tablegen
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool ATTRIBUTE = DEFAULT;
+#include "XtensaGenSubtargetInfo.inc"
 
   XtensaSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
 
