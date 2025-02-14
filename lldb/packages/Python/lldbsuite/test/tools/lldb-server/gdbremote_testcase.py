@@ -249,14 +249,11 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
     def _verify_socket(self, sock):
         # Normally, when the remote stub is not ready, we will get ECONNREFUSED during the
-        # connect() attempt. However, due to the way how ADB forwarding works, on android targets
+        # connect() attempt. However, due to the way how port forwarding can work, on some targets
         # the connect() will always be successful, but the connection will be immediately dropped
-        # if ADB could not connect on the remote side. This function tries to detect this
+        # if we could not connect on the remote side. This function tries to detect this
         # situation, and report it as "connection refused" so that the upper layers attempt the
         # connection again.
-        triple = self.dbg.GetSelectedPlatform().GetTriple()
-        if not re.match(".*-.*-.*-android", triple):
-            return  # Not android.
         can_read, _, _ = select.select([sock], [], [], 0.1)
         if sock not in can_read:
             return  # Data is not available, but the connection is alive.
