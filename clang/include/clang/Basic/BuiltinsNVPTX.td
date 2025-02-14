@@ -21,13 +21,17 @@ class SM<string version, list<SMFeatures> newer_list> : SMFeatures {
                         !strconcat(f, "|", newer.Features));
 }
 
+let Features = "sm_120a" in def SM_120a : SMFeatures;
+
+def SM_120 : SM<"120", [SM_120a]>;
+
 let Features = "sm_101a" in def SM_101a : SMFeatures;
 
-def SM_101 : SM<"101", [SM_101a]>;
+def SM_101 : SM<"101", [SM_101a, SM_120]>;
 
 let Features = "sm_100a" in def SM_100a : SMFeatures;
 
-def SM_100 : SM<"100", [SM_100a]>;
+def SM_100 : SM<"100", [SM_100a, SM_101]>;
 
 let Features = "sm_90a" in def SM_90a : SMFeatures;
 

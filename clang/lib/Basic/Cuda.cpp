@@ -102,6 +102,8 @@ static const OffloadArchToStringMap arch_names[] = {
     SM(100a),                        // Blackwell
     SM(101),                         // Blackwell
     SM(101a),                        // Blackwell
+    SM(120),                         // Blackwell
+    SM(120a),                        // Blackwell
     GFX(600),  // gfx600
     GFX(601),  // gfx601
     GFX(602),  // gfx602
@@ -234,6 +236,8 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
   case OffloadArch::SM_100a:
   case OffloadArch::SM_101:
   case OffloadArch::SM_101a:
+  case OffloadArch::SM_120:
+  case OffloadArch::SM_120a:
     return CudaVersion::CUDA_128;
   default:
     llvm_unreachable("invalid enum");
