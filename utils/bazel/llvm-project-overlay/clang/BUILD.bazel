@@ -751,6 +751,9 @@ cc_library(
         "include/clang/Lex/*.h",
     ]),
     includes = ["include"],
+    textual_hdrs = glob([
+        "include/clang/Lex/*.def",
+    ]),
     deps = [
         ":basic",
         ":config",
