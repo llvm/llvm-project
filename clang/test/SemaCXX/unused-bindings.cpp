@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2c -Wunused %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++26 -Wunused %s
 
 namespace GH125810 {
 struct S {
