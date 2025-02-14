@@ -8,10 +8,10 @@
 
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <string>
 
@@ -52,6 +52,12 @@ bool ConstraintSystem::eliminateUsingFM() {
   for (unsigned R1 = 0; R1 < NumRemainingConstraints; R1++) {
     // FIXME do not use copy
     for (unsigned R2 = R1 + 1; R2 < NumRemainingConstraints; R2++) {
+      // Examples of constraints stored as {Constant, Coeff_x, Coeff_y}
+      // R1:  0 >=  1 * x + (-2) * y  => { 0,  1, -2 }
+      // R2:  3 >=  2 * x +  3 * y    => { 3,  2,  3 }
+      // LastIdx = 2 (tracking coefficient of y)
+      // UpperLast: 3
+      // LowerLast: -2
       int64_t UpperLast = getLastCoefficient(RemainingRows[R2], LastIdx);
       int64_t LowerLast = getLastCoefficient(RemainingRows[R1], LastIdx);
       assert(
@@ -73,10 +79,13 @@ bool ConstraintSystem::eliminateUsingFM() {
       unsigned IdxLower = 0;
       auto &LowerRow = RemainingRows[LowerR];
       auto &UpperRow = RemainingRows[UpperR];
+      // Update constant and coefficients of both constraints.
+      // Stops until every coefficient is updated or overflow.
       while (true) {
         if (IdxUpper >= UpperRow.size() || IdxLower >= LowerRow.size())
           break;
         int64_t M1, M2, N;
+        // Starts with index 0 and updates every coefficients.
         int64_t UpperV = 0;
         int64_t LowerV = 0;
         uint16_t CurrentId = std::numeric_limits<uint16_t>::max();
@@ -92,6 +101,14 @@ bool ConstraintSystem::eliminateUsingFM() {
           IdxUpper++;
         }
 
+        // The new coefficient for CurrentId is
+        // N = UpperV * (-1) * LowerLast + LowerV * UpperLast
+        //
+        // LowerRow: { 0,  1, -2 }, UpperLast: 3
+        // UpperRow: { 3,  2,  3 }, LowerLast: -2
+        //
+        // Multiply by -1 is to ensure the last variable has opposite sign,
+        // so that it can be eliminated with addition.
         if (MulOverflow(UpperV, -1 * LowerLast, M1))
           return false;
         if (IdxLower < LowerRow.size() && LowerRow[IdxLower].Id == CurrentId) {
@@ -101,8 +118,15 @@ bool ConstraintSystem::eliminateUsingFM() {
 
         if (MulOverflow(LowerV, UpperLast, M2))
           return false;
+        // After multiplication:
+        // UpperRow: { 6, 4, 6 }
+        // LowerRow: { 0, 3, -6 }
+        //
+        // Eliminates y after addition:
+        // N: { 6, 7, 0 } => 6 >= 7 * x
         if (AddOverflow(M1, M2, N))
           return false;
+        // Skip variable that is completely eliminated.
         if (N == 0)
           continue;
         NR.emplace_back(N, CurrentId);
