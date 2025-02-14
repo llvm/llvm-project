@@ -23,6 +23,8 @@ StringRef clang::languageToString(Language L) {
     return "LLVM IR";
   case Language::C:
     return "C";
+  case Language::CIR:
+    return "CIR";
   case Language::CXX:
     return "C++";
   case Language::ObjC:
@@ -91,6 +93,7 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
   switch (Lang) {
   case Language::Unknown:
   case Language::LLVM_IR:
+  case Language::CIR:
     llvm_unreachable("Invalid input kind!");
   case Language::OpenCL:
     return LangStandard::lang_opencl12;
