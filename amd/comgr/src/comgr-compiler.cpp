@@ -1931,9 +1931,11 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
       return Status;
     }
 
-    LogS << "SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 "
-         << getFilePath(Input, InputDir) << " "
-         << getFilePath(Output, OutputDir) << " (command line equivalent)\n";
+    if (env::shouldEmitVerboseLogs()) {
+      LogS << "SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 "
+        << getFilePath(Input, InputDir) << " "
+        << getFilePath(Output, OutputDir) << " (command line equivalent)\n";
+    }
 
     if (env::shouldSaveTemps()) {
       if (auto Status = outputToFile(Output, getFilePath(Output, OutputDir))) {
