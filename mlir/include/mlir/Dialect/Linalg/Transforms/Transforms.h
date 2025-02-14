@@ -1005,10 +1005,11 @@ void transformIndexOps(RewriterBase &b, LinalgOp op,
 /// To:
 /// ```
 ///  %cst = arith.constant 0.000000e+00 : f32
-///  %0 = tensor.expand_shape %in [[0, 1]] : tensor<32xf32> into
-///  tensor<4x8xf32> %1 = tensor.empty [4] : tensor<4xf32> %2 = linalg.fill
-///  ins(%cst : f32) outs(%1 : tensor<4xf32>) -> tensor<4xf32> %3 =
-///  linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+///  %0 = tensor.expand_shape %in [[0, 1]]: tensor<32xf32> into tensor<4x8xf32>
+///  %1 = tensor.empty [4] : tensor<4xf32>
+///  %2 = linalg.fill ins(%cst : f32)
+///                   outs(%1 : tensor<4xf32>) -> tensor<4xf32>
+///  %3 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
 ///                                        affine_map<(d0, d1) -> (d0)>],
 ///    iterator_types = ["parallel", "reduction"]}
 ///    ins(%0 : tensor<4x8xf32>) outs(%2 : tensor<4xf32>) {
