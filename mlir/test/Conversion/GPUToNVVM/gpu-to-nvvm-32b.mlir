@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-nvvm='index-bitwidth=32' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-func-to-llvm="index-bitwidth=32" -convert-gpu-to-nvvm="index-bitwidth=32" -convert-arith-to-llvm="index-bitwidth=32" -split-input-file | FileCheck %s
 
 // RUN: mlir-opt %s -transform-interpreter | FileCheck %s
 

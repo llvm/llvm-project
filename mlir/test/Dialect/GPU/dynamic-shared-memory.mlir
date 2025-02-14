@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-nvvm -cse -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -convert-func-to-llvm -convert-gpu-to-nvvm -convert-arith-to-llvm -cse -canonicalize | FileCheck %s
 
 gpu.module @modules {
   // CHECK: llvm.mlir.global internal @__dynamic_shmem__3() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<0 x i8>

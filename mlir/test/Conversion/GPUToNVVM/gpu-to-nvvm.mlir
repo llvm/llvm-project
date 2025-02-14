@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1' -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 use-bare-ptr-memref-call-conv=1' -split-input-file | FileCheck %s --check-prefix=CHECK-BARE
+// RUN: mlir-opt %s -convert-func-to-llvm -convert-gpu-to-nvvm='has-redux=1' -convert-arith-to-llvm -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-func-to-llvm -convert-gpu-to-nvvm='has-redux=1 use-bare-ptr-memref-call-conv=1' -convert-arith-to-llvm -split-input-file | FileCheck %s --check-prefix=CHECK-BARE
 // RUN: mlir-opt %s -transform-interpreter | FileCheck %s
 
 gpu.module @test_module_0 {

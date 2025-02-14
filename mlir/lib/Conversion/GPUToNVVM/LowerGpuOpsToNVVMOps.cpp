@@ -277,10 +277,10 @@ struct AssertOpToAssertfailLowering
     Block *afterBlock =
         rewriter.splitBlock(assertBlock, ++assertOp->getIterator());
     rewriter.setInsertionPointToEnd(beforeBlock);
-    rewriter.create<cf::CondBranchOp>(loc, adaptor.getArg(), afterBlock,
-                                      assertBlock);
+    rewriter.create<LLVM::CondBrOp>(loc, adaptor.getArg(), afterBlock,
+                                    assertBlock);
     rewriter.setInsertionPointToEnd(assertBlock);
-    rewriter.create<cf::BranchOp>(loc, afterBlock);
+    rewriter.create<LLVM::BrOp>(loc, afterBlock);
 
     // Continue cf.assert lowering.
     rewriter.setInsertionPoint(assertOp);
@@ -377,9 +377,7 @@ struct LowerGpuOpsToNVVMOpsPass
     configureGpuToNVVMTypeConverter(converter);
     RewritePatternSet llvmPatterns(m.getContext());
 
-    arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
     cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
-    populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
     populateFinalizeMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
@@ -396,15 +394,12 @@ struct LowerGpuOpsToNVVMOpsPass
 } // namespace
 
 void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
-  target.addIllegalOp<func::FuncOp>();
-  target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
-  target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
-  target.addIllegalDialect<gpu::GPUDialect>();
-  target.addIllegalOp<LLVM::CopySignOp, LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op,
-                      LLVM::FAbsOp, LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FMAOp,
-                      LLVM::FRemOp, LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op,
-                      LLVM::PowOp, LLVM::RoundEvenOp, LLVM::RoundOp,
-                      LLVM::SinOp, LLVM::SqrtOp>();
+  target.addLegalDialect<LLVM::LLVMDialect, NVVM::NVVMDialect>();
+  target.addIllegalOp<cf::AssertOp, LLVM::CopySignOp, LLVM::CosOp, LLVM::ExpOp,
+                      LLVM::Exp2Op, LLVM::FAbsOp, LLVM::FCeilOp, LLVM::FFloorOp,
+                      LLVM::FMAOp, LLVM::FRemOp, LLVM::LogOp, LLVM::Log10Op,
+                      LLVM::Log2Op, LLVM::PowOp, LLVM::RoundEvenOp,
+                      LLVM::RoundOp, LLVM::SinOp, LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
