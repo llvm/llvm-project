@@ -121,7 +121,7 @@ def FeatureUnalignedDSAccess : SubtargetFeature<"unaligned-ds-access",
 
 def FeatureRelaxedBufferOOBMode : SubtargetFeature<"relaxed-buffer-oob-mode",
   "RelaxedBufferOOBMode",
-   "true",
+  "true",
   "Enable relaxed out-of-bounds behavior for buffer accesses"
 >;
 
