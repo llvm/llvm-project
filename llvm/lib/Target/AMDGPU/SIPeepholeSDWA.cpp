@@ -140,6 +140,11 @@ public:
                                            SDWAOperandsMap *PotentialMatches = nullptr) = 0;
   virtual bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) = 0;
 
+  /// Returns true iff the SDWA selection of this SDWAOperand can be combined
+  /// with the SDWA selections of its uses in \p MI.
+  virtual bool canCombineSelections(const MachineInstr &MI,
+                                    const SIInstrInfo *TII) = 0;
+
   MachineOperand *getTargetOperand() const { return Target; }
   MachineOperand *getReplacedOperand() const { return Replaced; }
   MachineInstr *getParentInst() const { return Target->getParent(); }
@@ -172,6 +177,8 @@ public:
                                    const GCNSubtarget &ST,
                                    SDWAOperandsMap *PotentialMatches = nullptr) override;
   bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) override;
+  bool canCombineSelections(const MachineInstr &MI,
+                            const SIInstrInfo *TII) override;
 
   SdwaSel getSrcSel() const { return SrcSel; }
   bool getAbs() const { return Abs; }
@@ -200,6 +207,8 @@ public:
                                    const GCNSubtarget &ST,
                                    SDWAOperandsMap *PotentialMatches = nullptr) override;
   bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) override;
+  bool canCombineSelections(const MachineInstr &MI,
+                            const SIInstrInfo *TII) override;
 
   SdwaSel getDstSel() const { return DstSel; }
   DstUnused getDstUnused() const { return DstUn; }
@@ -220,6 +229,8 @@ public:
         Preserve(PreserveOp) {}
 
   bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) override;
+  bool canCombineSelections(const MachineInstr &MI,
+                            const SIInstrInfo *TII) override;
 
   MachineOperand *getPreservedOperand() const { return Preserve; }
 
@@ -383,7 +394,8 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
 
     for (MachineInstr &UseMI : getMRI()->use_nodbg_instructions(Reg->getReg()))
       // Check that all instructions that use Reg can be converted
-      if (!isConvertibleToSDWA(UseMI, ST, TII))
+      if (!isConvertibleToSDWA(UseMI, ST, TII) ||
+          !canCombineSelections(UseMI, TII))
         return nullptr;
 
     // Now that it's guaranteed all uses are legal, iterate over the uses again
@@ -406,7 +418,7 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
     return nullptr;
 
   return PotentialMO->getParent();
-}
+  }
 
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   switch (MI.getOpcode()) {
@@ -492,6 +504,25 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   return true;
 }
 
+bool SDWASrcOperand::canCombineSelections(const MachineInstr &MI, const SIInstrInfo *TII) {
+  if (!TII->isSDWA(MI.getOpcode()))
+    return true;
+
+  auto canCombineSel = [&](auto SrcOpName, auto  SrcSelOpName)
+  {
+    const MachineOperand *Src = TII->getNamedOperand(MI, SrcOpName);
+    const MachineOperand *SrcSel = TII->getNamedOperand(MI, SrcSelOpName);
+    return !Src || !isSameReg(*Src, *getReplacedOperand()) ||
+           combineSdwaSel(static_cast<SdwaSel>(SrcSel->getImm()), getSrcSel())
+               .has_value();
+  };
+
+  using namespace AMDGPU;
+
+  return canCombineSel(OpName::src0, OpName::src0_sel) &&
+         canCombineSel(OpName::src1, OpName::src1_sel);
+}
+
 MachineInstr *SDWADstOperand::potentialToConvert(const SIInstrInfo *TII,
                                                  const GCNSubtarget &ST,
                                                  SDWAOperandsMap *PotentialMatches) {
@@ -546,6 +577,17 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   return true;
 }
 
+bool SDWADstOperand::canCombineSelections(const MachineInstr &MI,
+                                          const SIInstrInfo *TII) {
+  if (!TII->isSDWA(MI.getOpcode()))
+    return true;
+
+  SdwaSel InstSel = static_cast<SdwaSel>(
+      TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel)->getImm());
+
+  return combineSdwaSel(InstSel, getDstSel()).has_value();
+}
+
 bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
                                            const SIInstrInfo *TII) {
   // MI should be moved right before v_or_b32.
@@ -573,6 +615,11 @@ bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
 
   // Convert MI as any other SDWADstOperand and remove v_or_b32
   return SDWADstOperand::convertToSDWA(MI, TII);
+}
+
+bool SDWADstPreserveOperand::canCombineSelections(const MachineInstr &MI,
+                                                  const SIInstrInfo *TII) {
+  return SDWADstOperand::canCombineSelections(MI, TII);
 }
 
 std::optional<int64_t>
@@ -1328,10 +1375,12 @@ bool SIPeepholeSDWA::run(MachineFunction &MF) {
 
       for (const auto &OperandPair : SDWAOperands) {
         const auto &Operand = OperandPair.second;
-        MachineInstr *PotentialMI = Operand->potentialToConvert(TII, ST, &PotentialMatches);
-        if (PotentialMI && isConvertibleToSDWA(*PotentialMI, ST, TII)) {
+        MachineInstr *PotentialMI =
+            Operand->potentialToConvert(TII, ST, &PotentialMatches);
+
+        if (PotentialMI && isConvertibleToSDWA(*PotentialMI, ST, TII) &&
+            Operand->canCombineSelections(*PotentialMI, TII))
           PotentialMatches[PotentialMI].push_back(Operand.get());
-        }
       }
 
       for (auto &PotentialPair : PotentialMatches) {
