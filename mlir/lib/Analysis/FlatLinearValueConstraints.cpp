@@ -679,7 +679,7 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
       // TODO: being conservative for the moment in cases that
       // lead to multiple bounds - until getConstDifference in LoopFusion.cpp is
       // fixed (b/126426796).
-      if (!lbMap || lbMap.getNumResults() > 1) {
+      if (!lbMap || lbMap.getNumResults() != 1) {
         LLVM_DEBUG(llvm::dbgs()
                    << "WARNING: Potentially over-approximating slice lb\n");
         auto lbConst = getConstantBound64(BoundType::LB, pos + offset);
@@ -688,7 +688,7 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
                                  getAffineConstantExpr(*lbConst, context));
         }
       }
-      if (!ubMap || ubMap.getNumResults() > 1) {
+      if (!ubMap || ubMap.getNumResults() != 1) {
         LLVM_DEBUG(llvm::dbgs()
                    << "WARNING: Potentially over-approximating slice ub\n");
         auto ubConst = getConstantBound64(BoundType::UB, pos + offset);
