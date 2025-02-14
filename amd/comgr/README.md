@@ -122,6 +122,8 @@ include:
   the current working directory, but are instead left in a platform-specific
   temporary directory (typically `/tmp` on Linux and `C:\Temp` or the path
   found in the `TEMP` environment variable on Windows).
+* `AMD_COMGR_SAVE_LLVM_TEMPS`: If this is set, Comgr forwards `--save-temps=obj`
+  to Clang Driver invocations.
 * `AMD_COMGR_REDIRECT_LOGS`: If this is not set, or is set to "0", logs are
   returned to the caller as normal. If this is set to "stdout"/"-" or "stderr",
   logs are instead redirected to the standard output or error stream,

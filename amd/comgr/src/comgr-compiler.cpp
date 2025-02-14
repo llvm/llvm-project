@@ -878,7 +878,8 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
     Argv.push_back("-nogpulib");
   }
 
-  if (getLanguage() == AMD_COMGR_LANGUAGE_HIP && env::shouldSaveTemps()) {
+  // TODO: Enable this for OpenCL as well (SWDEV-377546)
+  if (getLanguage() == AMD_COMGR_LANGUAGE_HIP && env::shouldSaveLLVMTemps()) {
     Argv.push_back("-save-temps=obj");
   }
 

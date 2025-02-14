@@ -148,6 +148,8 @@ extern "C" {
  *   These files do not appear in the current working directory, but are
  *   instead left in a platform-specific temporary directory (/tmp on Linux and
  *   C:\Temp or the path found in the TEMP environment variable on Windows).
+ * - @p AMD_COMGR_SAVE_LLVM_TEMPS: If this is set, and is not "0", Comgr
+ *   forwards "--save-temps=obj" to Clang Driver invocations
  * - @p AMD_COMGR_REDIRECT_LOGS: If this is not set, or is set to "0", logs are
  *   returned to the caller as normal. If this is set to "stdout"/"-" or
  *   "stderr", logs are instead redirected to the standard output or error

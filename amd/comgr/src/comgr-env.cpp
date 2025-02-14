@@ -51,6 +51,11 @@ bool shouldSaveTemps() {
   return SaveTemps && StringRef(SaveTemps) != "0";
 }
 
+bool shouldSaveLLVMTemps() {
+  static char *SaveTemps = getenv("AMD_COMGR_SAVE_LLVM_TEMPS");
+  return SaveTemps && StringRef(SaveTemps) != "0";
+}
+
 std::optional<StringRef> getRedirectLogs() {
   static char *RedirectLogs = getenv("AMD_COMGR_REDIRECT_LOGS");
   if (!RedirectLogs || StringRef(RedirectLogs) == "0") {
