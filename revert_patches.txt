@@ -28,10 +28,6 @@ revert: breaks build of rccl __cpuidex
 1c28b92373 [Clang] __has_builtin should return false for aux triple builtins (#121839) 
 Ron and Saiyed
 ---
-revert: need clean patch from Amit
-b68b4f64a2bd [Driver][ASan] Refactor Clang-Driver "Sanitizer
----
-revert : breaks build of 5 spec-accel codes
-25f29ee377b1 - [flang][OpenMP] Update all `lastprivate` symbols, not just in clauses (#125628)
-Kareem, Ron
+build/run issues: Scott Linder
+1083ec647f16 [reland][DebugInfo] Update DIBuilder insertion to take 
 ---
