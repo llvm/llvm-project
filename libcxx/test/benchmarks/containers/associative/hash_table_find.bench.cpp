@@ -50,7 +50,7 @@ static void BM_UnorderedSet_Find_EmptySet(benchmark::State& state, Gen g) {
 template <class Gen>
 static void BM_UnorderedSet_Find(benchmark::State& state, Gen g) {
   const size_t lookup_count = state.range(0);
-  std::unordered_set<std::string> s{"hello"};  // Non-empty set
+  std::unordered_set<std::string> s{"hello"}; // Non-empty set
 
   for (auto _ : state) {
     for (size_t i = 0; i < lookup_count; i++) {
