@@ -170,8 +170,7 @@ private:
   const llvm::json::Value *ParentContext;
 };
 
-// syntax wrapper for arena allocator for ASTNodes
-
+// A wrapper for arena allocator for ASTNodes
 ASTNode *createRootNode(void *Node, llvm::BumpPtrAllocator &Alloc,
                         llvm::StringMap<ASTNode *> &Partials,
                         llvm::StringMap<Lambda> &Lambdas,

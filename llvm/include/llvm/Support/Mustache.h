@@ -26,7 +26,7 @@
 // - Parents
 // - Dynamic Names
 //
-// The Template class is container class outputs the Mustache template string
+// The Template class is a container class that outputs the Mustache template string
 // and is the main class for users. It stores all the lambdas and the ASTNode
 // Tree. When the Template is instantiated it tokenizes the Template String and
 // creates a vector of Tokens. Then it calls a basic recursive descent parser
