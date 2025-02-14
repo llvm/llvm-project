@@ -45,6 +45,11 @@ private:
   bool ParseDescriptorTable();
   bool ParseDescriptorTableClause();
 
+  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
+  /// 32-bit integer
+  bool HandleUIntLiteral(uint32_t &X);
+  bool ParseRegister(llvm::hlsl::rootsig::Register *Reg);
+
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void ConsumeNextToken() { CurToken = Lexer.ConsumeToken(); }
 

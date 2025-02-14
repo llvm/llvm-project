@@ -1,5 +1,7 @@
 #include "clang/Parse/ParseHLSLRootSignature.h"
 
+#include "clang/Lex/LiteralSupport.h"
+
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm::hlsl::rootsig;
@@ -144,10 +146,65 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   if (ConsumeExpectedToken(TokenKind::pu_l_paren))
     return true;
 
+  // Consume mandatory Register paramater
+  if (ParseRegister(&Clause.Register))
+    return true;
+
   if (ConsumeExpectedToken(TokenKind::pu_r_paren))
     return true;
 
   Elements.push_back(Clause);
+  return false;
+}
+
+bool RootSignatureParser::HandleUIntLiteral(uint32_t &X) {
+  // Parse the numeric value and do semantic checks on its specification
+  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
+                                      PP.getSourceManager(), PP.getLangOpts(),
+                                      PP.getTargetInfo(), PP.getDiagnostics());
+  if (Literal.hadError)
+    return true; // Error has already been reported so just return
+
+  assert(Literal.isIntegerLiteral() && "IsNumberChar will only support digits");
+
+  llvm::APSInt Val = llvm::APSInt(32, false);
+  if (Literal.GetIntegerValue(Val)) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << 0 << CurToken.NumSpelling;
+    return true;
+  }
+
+  X = Val.getExtValue();
+  return false;
+}
+
+bool RootSignatureParser::ParseRegister(Register *Register) {
+  if (ConsumeExpectedToken(
+          {TokenKind::bReg, TokenKind::tReg, TokenKind::uReg, TokenKind::sReg}))
+    return true;
+
+  switch (CurToken.Kind) {
+  case TokenKind::bReg:
+    Register->ViewType = RegisterType::BReg;
+    break;
+  case TokenKind::tReg:
+    Register->ViewType = RegisterType::TReg;
+    break;
+  case TokenKind::uReg:
+    Register->ViewType = RegisterType::UReg;
+    break;
+  case TokenKind::sReg:
+    Register->ViewType = RegisterType::SReg;
+    break;
+  default:
+    llvm_unreachable("Switch for an expected token was not provided");
+  }
+
+  if (HandleUIntLiteral(Register->Number))
+    return true; // propogate NumericLiteralParser error
+
   return false;
 }
 

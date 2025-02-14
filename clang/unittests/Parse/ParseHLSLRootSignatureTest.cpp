@@ -129,10 +129,10 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
 TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   const llvm::StringLiteral Source = R"cc(
     DescriptorTable(
-      CBV(),
-      SRV(),
-      Sampler(),
-      UAV()
+      CBV(b0),
+      SRV(t42),
+      Sampler(s987),
+      UAV(u987234)
     ),
     DescriptorTable()
   )cc";
@@ -152,18 +152,33 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+            RegisterType::BReg);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, (uint32_t)0);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+            RegisterType::TReg);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number,
+            (uint32_t)42);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+            RegisterType::SReg);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number,
+            (uint32_t)987);
 
   Elem = Elements[3];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+            RegisterType::UReg);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number,
+            (uint32_t)987234);
 
   Elem = Elements[4];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
@@ -234,6 +249,29 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
 
   // Test correct diagnostic produced - end of stream
   Consumer->SetExpected(diag::err_hlsl_rootsig_unexpected_token_kind);
+  ASSERT_TRUE(Parser.Parse());
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
+  // This test will check that the lexing fails due to an integer overflow
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+      CBV(s4294967296)
+    )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_number_literal_overflow);
   ASSERT_TRUE(Parser.Parse());
 
   ASSERT_TRUE(Consumer->IsSatisfied());

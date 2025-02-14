@@ -1820,4 +1820,5 @@ def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%
 
 // HLSL Root Signature Parser Diagnostics
 def err_hlsl_rootsig_unexpected_token_kind : Error<"got %1 but expected %select{|one of}0 the following token kind%select{|s}0: %2">;
+def err_hlsl_number_literal_overflow : Error<"integer literal is too large to be represented as a 32-bit %select{signed |}0 integer type">;
 } // end of Parser diagnostics
