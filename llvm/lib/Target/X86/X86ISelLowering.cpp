@@ -53629,7 +53629,8 @@ static SDValue combinei64TruncSrlAdd(SDValue N, EVT VT, SelectionDAG &DAG,
   SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
 
   APInt CleanupSizeConstVal = (SrlConst - 32).zextOrTrunc(VT.getSizeInBits());
-  EVT CleanUpVT = EVT::getIntegerVT(*DAG.getContext(), CleanupSizeConstVal.getZExtValue());
+  EVT CleanUpVT =
+      EVT::getIntegerVT(*DAG.getContext(), CleanupSizeConstVal.getZExtValue());
   SDValue CleanUp = DAG.getAnyExtOrTrunc(NewAddNode, DL, CleanUpVT);
   return DAG.getAnyExtOrTrunc(CleanUp, DL, VT);
 }
