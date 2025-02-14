@@ -451,6 +451,7 @@ async def main() -> None:
     parser.add_argument(
         "-ignore-insert-conflict",
         action="store_true",
+        default=True,
         help="Ignore insert conflict when applying fixes.",
     )
     args = parser.parse_args()
