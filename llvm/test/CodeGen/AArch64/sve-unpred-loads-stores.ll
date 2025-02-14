@@ -12,7 +12,7 @@ define <vscale x 16 x i8> @ld_nxv16i8(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv16i8:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0]
+; CHECK-128-NEXT:    ldr q0, [x0]
 ; CHECK-128-NEXT:    ret
   %2 = load <vscale x 16 x i8>, ptr %0, align 16
   ret <vscale x 16 x i8> %2
@@ -26,7 +26,7 @@ define void @st_nxv16i8(ptr %0, <vscale x 16 x i8> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv16i8:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0]
+; CHECK-128-NEXT:    str q0, [x0]
 ; CHECK-128-NEXT:    ret
   store <vscale x 16 x i8> %1, ptr %0, align 16
   ret void
@@ -40,7 +40,7 @@ define <vscale x 8 x i16> @ld_nxv8i16(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv8i16:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0]
+; CHECK-128-NEXT:    ldr q0, [x0]
 ; CHECK-128-NEXT:    ret
   %2 = load <vscale x 8 x i16>, ptr %0, align 16
   ret <vscale x 8 x i16> %2
@@ -54,7 +54,7 @@ define void @st_nxv8i16(ptr %0, <vscale x 8 x i16> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv8i16:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0]
+; CHECK-128-NEXT:    str q0, [x0]
 ; CHECK-128-NEXT:    ret
   store <vscale x 8 x i16> %1, ptr %0, align 16
   ret void
@@ -68,7 +68,7 @@ define <vscale x 4 x i32> @ld_nxv4i32(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv4i32:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0]
+; CHECK-128-NEXT:    ldr q0, [x0]
 ; CHECK-128-NEXT:    ret
   %2 = load <vscale x 4 x i32>, ptr %0, align 16
   ret <vscale x 4 x i32> %2
@@ -82,7 +82,7 @@ define void @st_nxv4i32(ptr %0, <vscale x 4 x i32> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv4i32:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0]
+; CHECK-128-NEXT:    str q0, [x0]
 ; CHECK-128-NEXT:    ret
   store <vscale x 4 x i32> %1, ptr %0, align 16
   ret void
@@ -96,7 +96,7 @@ define <vscale x 2 x i64> @ld_nxv2i64(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv2i64:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0]
+; CHECK-128-NEXT:    ldr q0, [x0]
 ; CHECK-128-NEXT:    ret
   %2 = load <vscale x 2 x i64>, ptr %0, align 16
   ret <vscale x 2 x i64> %2
@@ -110,7 +110,7 @@ define void @st_nxv2i64(ptr %0, <vscale x 2 x i64> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv2i64:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0]
+; CHECK-128-NEXT:    str q0, [x0]
 ; CHECK-128-NEXT:    ret
   store <vscale x 2 x i64> %1, ptr %0, align 16
   ret void
@@ -124,7 +124,7 @@ define <vscale x 8 x half> @ld_nxv8f16(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv8f16:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0]
+; CHECK-128-NEXT:    ldr q0, [x0]
 ; CHECK-128-NEXT:    ret
   %2 = load <vscale x 8 x half>, ptr %0, align 16
   ret <vscale x 8 x half> %2
@@ -138,7 +138,7 @@ define void @st_nxv8f16(ptr %0, <vscale x 8 x half> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv8f16:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0]
+; CHECK-128-NEXT:    str q0, [x0]
 ; CHECK-128-NEXT:    ret
   store <vscale x 8 x half> %1, ptr %0, align 16
   ret void
@@ -152,7 +152,7 @@ define <vscale x 4 x float> @ld_nxv4f32(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv4f32:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0]
+; CHECK-128-NEXT:    ldr q0, [x0]
 ; CHECK-128-NEXT:    ret
   %2 = load <vscale x 4 x float>, ptr %0, align 16
   ret <vscale x 4 x float> %2
@@ -166,7 +166,7 @@ define void @st_nxv4f32(ptr %0, <vscale x 4 x float> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv4f32:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0]
+; CHECK-128-NEXT:    str q0, [x0]
 ; CHECK-128-NEXT:    ret
   store <vscale x 4 x float> %1, ptr %0, align 16
   ret void
@@ -180,7 +180,7 @@ define <vscale x 2 x double> @ld_nxv2f64(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv2f64:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0]
+; CHECK-128-NEXT:    ldr q0, [x0]
 ; CHECK-128-NEXT:    ret
   %2 = load <vscale x 2 x double>, ptr %0, align 16
   ret <vscale x 2 x double> %2
@@ -194,7 +194,7 @@ define void @st_nxv2f64(ptr %0, <vscale x 2 x double> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv2f64:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0]
+; CHECK-128-NEXT:    str q0, [x0]
 ; CHECK-128-NEXT:    ret
   store <vscale x 2 x double> %1, ptr %0, align 16
   ret void
@@ -208,7 +208,8 @@ define <vscale x 16 x i8> @ld_nxv16i8_offset(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv16i8_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    ldr q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %2 = tail call i64 @llvm.vscale.i64()
   %3 = shl nuw nsw i64 %2, 4
@@ -225,7 +226,8 @@ define void @st_nxv16i8_offset(ptr %0, <vscale x 16 x i8> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv16i8_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    str q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %3 = tail call i64 @llvm.vscale.i64()
   %4 = shl nuw nsw i64 %3, 4
@@ -242,7 +244,8 @@ define <vscale x 8 x i16> @ld_nxv8i16_offset(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv8i16_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    ldr q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %2 = tail call i64 @llvm.vscale.i64()
   %3 = shl nuw nsw i64 %2, 4
@@ -259,7 +262,8 @@ define void @st_nxv8i16_offset(ptr %0, <vscale x 8 x i16> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv8i16_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    str q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %3 = tail call i64 @llvm.vscale.i64()
   %4 = shl nuw nsw i64 %3, 4
@@ -276,7 +280,8 @@ define <vscale x 4 x i32> @ld_nxv4i32_offset(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv4i32_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    ldr q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %2 = tail call i64 @llvm.vscale.i64()
   %3 = shl nuw nsw i64 %2, 4
@@ -293,7 +298,8 @@ define void @st_nxv4i32_offset(ptr %0, <vscale x 4 x i32> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv4i32_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    str q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %3 = tail call i64 @llvm.vscale.i64()
   %4 = shl nuw nsw i64 %3, 4
@@ -310,7 +316,8 @@ define <vscale x 2 x i64> @ld_nxv2i64_offset(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv2i64_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    ldr q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %2 = tail call i64 @llvm.vscale.i64()
   %3 = shl nuw nsw i64 %2, 4
@@ -327,7 +334,8 @@ define void @st_nxv2i64_offset(ptr %0, <vscale x 2 x i64> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv2i64_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    str q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %3 = tail call i64 @llvm.vscale.i64()
   %4 = shl nuw nsw i64 %3, 4
@@ -344,7 +352,8 @@ define <vscale x 8 x half> @ld_nxv8f16_offset(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv8f16_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    ldr q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %2 = tail call i64 @llvm.vscale.i64()
   %3 = shl nuw nsw i64 %2, 4
@@ -361,7 +370,8 @@ define void @st_nxv8f16_offset(ptr %0, <vscale x 8 x half> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv8f16_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    str q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %3 = tail call i64 @llvm.vscale.i64()
   %4 = shl nuw nsw i64 %3, 4
@@ -378,7 +388,8 @@ define <vscale x 4 x float> @ld_nxv4f32_offset(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv4f32_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    ldr q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %2 = tail call i64 @llvm.vscale.i64()
   %3 = shl nuw nsw i64 %2, 4
@@ -395,7 +406,8 @@ define void @st_nxv4f32_offset(ptr %0, <vscale x 4 x float> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv4f32_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    str q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %3 = tail call i64 @llvm.vscale.i64()
   %4 = shl nuw nsw i64 %3, 4
@@ -412,7 +424,8 @@ define <vscale x 2 x double> @ld_nxv2f64_offset(ptr %0) #0 {
 ;
 ; CHECK-128-LABEL: ld_nxv2f64_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    ldr q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %2 = tail call i64 @llvm.vscale.i64()
   %3 = shl nuw nsw i64 %2, 4
@@ -429,7 +442,8 @@ define void @st_nxv2f64_offset(ptr %0, <vscale x 2 x double> %1) #0 {
 ;
 ; CHECK-128-LABEL: st_nxv2f64_offset:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    str z0, [x0, #1, mul vl]
+; CHECK-128-NEXT:    rdvl x8, #1
+; CHECK-128-NEXT:    str q0, [x0, x8]
 ; CHECK-128-NEXT:    ret
   %3 = tail call i64 @llvm.vscale.i64()
   %4 = shl nuw nsw i64 %3, 4

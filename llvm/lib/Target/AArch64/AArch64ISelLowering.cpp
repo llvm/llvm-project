@@ -23589,6 +23589,31 @@ static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
   return DAG.getMergeValues({Extract, TokenFactor}, DL);
 }
 
+// Replace scalable loads with fixed loads when vscale_range(1, 1).
+// This enables further optimisations such as LDP folds.
+static SDValue combineVScale1Load(LoadSDNode *LD, SelectionDAG &DAG,
+                                  const AArch64Subtarget *Subtarget) {
+  EVT MemVT = LD->getMemoryVT();
+  if (!MemVT.isScalableVector() ||
+      Subtarget->getMaxSVEVectorSizeInBits() != AArch64::SVEBitsPerBlock)
+    return SDValue();
+
+  // Skip unpacked types given their different layouts between Neon and SVE.
+  if (MemVT.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock)
+    return SDValue();
+
+  SDLoc DL(LD);
+  MVT NewVT = MVT::getVectorVT(MemVT.getVectorElementType().getSimpleVT(),
+                               MemVT.getVectorMinNumElements());
+  SDValue NewLoad = DAG.getLoad(
+      NewVT, DL, LD->getChain(), LD->getBasePtr(), LD->getPointerInfo(),
+      LD->getOriginalAlign(), LD->getMemOperand()->getFlags(), LD->getAAInfo());
+  SDValue Insert = convertToScalableVector(DAG, MemVT, NewLoad);
+  SDValue TokenFactor = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                                    {SDValue(cast<SDNode>(NewLoad), 1)});
+  return DAG.getMergeValues({Insert, TokenFactor}, DL);
+}
+
 // Perform TBI simplification if supported by the target and try to break up
 // nontemporal loads larger than 256-bits loads for odd types so LDNPQ 256-bit
 // load instructions can be selected.
@@ -23624,6 +23649,9 @@ static SDValue performLOADCombine(SDNode *N,
     return SDValue(N, 0);
 
   if (SDValue Res = combineV3I8LoadExt(LD, DAG))
+    return Res;
+
+  if (SDValue Res = combineVScale1Load(LD, DAG, Subtarget))
     return Res;
 
   if (!LD->isNonTemporal())
@@ -23884,6 +23912,30 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
   return Chain;
 }
 
+// Replace scalable stores with fixed stores when vscale_range(1, 1).
+static SDValue combineVScale1Store(StoreSDNode *ST, SelectionDAG &DAG,
+                                   const AArch64Subtarget *Subtarget) {
+  SDValue Value = ST->getValue();
+  EVT ValueVT = Value.getValueType();
+  if (ST->isVolatile() || !Subtarget->isLittleEndian() ||
+      !ValueVT.isScalableVector() ||
+      Subtarget->getMaxSVEVectorSizeInBits() != AArch64::SVEBitsPerBlock)
+    return SDValue();
+
+  // Skip unpacked types given their different layouts between Neon and SVE.
+  if (ValueVT.getSizeInBits().getKnownMinValue() != AArch64::SVEBitsPerBlock)
+    return SDValue();
+
+  SDLoc DL(ST);
+  MVT NewVT = MVT::getVectorVT(ValueVT.getVectorElementType().getSimpleVT(),
+                               ValueVT.getVectorMinNumElements());
+  SDValue NewValue = convertFromScalableVector(DAG, NewVT, Value);
+  SDValue NewStore = DAG.getStore(
+      ST->getChain(), DL, NewValue, ST->getBasePtr(), ST->getPointerInfo(),
+      ST->getOriginalAlign(), ST->getMemOperand()->getFlags(), ST->getAAInfo());
+  return NewStore;
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -23916,6 +23968,9 @@ static SDValue performSTORECombine(SDNode *N,
   }
 
   if (SDValue Res = combineI8TruncStore(ST, DAG, Subtarget))
+    return Res;
+
+  if (SDValue Res = combineVScale1Store(ST, DAG, Subtarget))
     return Res;
 
   // If this is an FP_ROUND followed by a store, fold this into a truncating
