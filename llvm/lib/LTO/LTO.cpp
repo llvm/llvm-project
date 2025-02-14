@@ -1192,6 +1192,11 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
     return It->second;
   };
 
+  // For ThinLTO with split-lto-unit or FullLTO, at least one module must be
+  // compiled using the regular LTO pipeline. In the regular LTO pipeline,
+  // lowerTypeTestsModule will call isGlobalValueLive, whose result is determined here.
+  // Therefore, if any module is to be compiled in RegularLTO,
+  // we need to compute the dead symbols in advance.
   if (!RegularLTO.ModsWithSummaries.empty())
     computeDeadSymbolsWithConstProp(ThinLTO.CombinedIndex, GUIDPreservedSymbols,
                                     isPrevailing, Conf.OptLevel > 0);
