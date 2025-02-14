@@ -4473,7 +4473,12 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vstl1_lane_s64:
   case NEON::BI__builtin_neon_vstl1q_lane_s64: {
-    llvm_unreachable("NEON::BI__builtin_neon_vstl1q_lane_s64 NYI");
+    Ops[1] = builder.createBitcast(Ops[1], ty);
+    Ops[1] = builder.create<cir::VecExtractOp>(Ops[1].getLoc(), Ops[1], Ops[2]);
+    cir::StoreOp Store = builder.createAlignedStore(
+        getLoc(E->getExprLoc()), Ops[1], Ops[0], PtrOp0.getAlignment());
+    Store.setAtomic(cir::MemOrder::Release);
+    return Ops[1];
   }
   case NEON::BI__builtin_neon_vld2_v:
   case NEON::BI__builtin_neon_vld2q_v: {

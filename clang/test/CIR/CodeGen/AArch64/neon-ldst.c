@@ -501,3 +501,131 @@ void test_vst1q_lane_f64(float64_t * ptr, float64x2_t src) {
 // LLVM: [[VEC_CAST1:%.*]] = bitcast <16 x i8> [[VEC_CAST0]] to <2 x double>
 // LLVM: [[RES:%.*]] = extractelement <2 x double> [[VEC_CAST1]], i32 1
 // LLVM: store double [[RES]], ptr [[PTR]], align 8
+
+void test_vstl1q_lane_u64(uint64_t  *a, uint64x2_t b) {
+  vstl1q_lane_u64(a, b, 1);
+}
+
+// CIR-LABEL: test_vstl1q_lane_u64
+// CIR: [[LANE:%.*]] = cir.const #cir.int<1> : !s32i
+// CIR: [[VAL:%.*]] = cir.vec.extract {{%.*}}[[[LANE]] : !s32i] : !cir.vector<!u64i x 2>
+// CIR: [[PTR:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.ptr<!void>), !cir.ptr<!u64i>
+// CIR: cir.store align(8) atomic(release) [[VAL]], [[PTR]] : !u64i, !cir.ptr<!u64i>
+
+// LLVM: {{.*}}test_vstl1q_lane_u64(ptr{{.*}}[[PTR:%.*]], <2 x i64>{{.*}}[[SRC:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i64> [[SRC]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM: [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+// LLVM: store atomic i64 [[TMP2]], ptr [[PTR]] release, align 8
+
+void test_vstl1q_lane_s64(int64_t  *a, int64x2_t b) {
+  vstl1q_lane_s64(a, b, 1);
+}
+
+// CIR-LABEL: test_vstl1q_lane_s64
+// CIR: [[LANE:%.*]] = cir.const #cir.int<1> : !s32i
+// CIR: [[VAL:%.*]] = cir.vec.extract {{%.*}}[[[LANE]] : !s32i] : !cir.vector<!s64i x 2>
+// CIR: [[PTR:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.ptr<!void>), !cir.ptr<!s64i>
+// CIR: cir.store align(8) atomic(release) [[VAL]], [[PTR]] : !s64i, !cir.ptr<!s64i>
+
+// LLVM: {{.*}}test_vstl1q_lane_s64(ptr{{.*}}[[PTR:%.*]], <2 x i64>{{.*}}[[SRC:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i64> [[SRC]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM: [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+// LLVM: store atomic i64 [[TMP2]], ptr [[PTR]] release, align 8
+
+void test_vstl1q_lane_f64(float64_t  *a, float64x2_t b) {
+  vstl1q_lane_f64(a, b, 1);
+}
+
+// CIR-LABEL: test_vstl1q_lane_f64
+// CIR: [[LANE:%.*]] = cir.const #cir.int<1> : !s32i
+// CIR: [[VAL:%.*]] = cir.vec.extract {{%.*}}[[[LANE]] : !s32i] : !cir.vector<!cir.double x 2>
+// CIR: [[PTR:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.ptr<!void>), !cir.ptr<!cir.double>
+// CIR: cir.store align(8) atomic(release) [[VAL]], [[PTR]] : !cir.double, !cir.ptr<!cir.double>
+
+// LLVM: {{.*}}test_vstl1q_lane_f64(ptr{{.*}}[[PTR:%.*]], <2 x double>{{.*}}[[SRC:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x double> [[SRC]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x double>
+// LLVM: [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+// LLVM: store atomic double [[TMP2]], ptr [[PTR]] release, align 8
+
+void test_vstl1q_lane_p64(poly64_t  *a, poly64x2_t b) {
+  vstl1q_lane_p64(a, b, 1);
+}
+
+// CIR-LABEL: test_vstl1q_lane_p64
+// CIR: [[LANE:%.*]] = cir.const #cir.int<1> : !s32i
+// CIR: [[VAL:%.*]] = cir.vec.extract {{%.*}}[[[LANE]] : !s32i] : !cir.vector<!s64i x 2>
+// CIR: [[PTR:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.ptr<!void>), !cir.ptr<!s64i>
+// CIR: cir.store align(8) atomic(release) [[VAL]], [[PTR]] : !s64i, !cir.ptr<!s64i>
+
+// LLVM: {{.*}}test_vstl1q_lane_p64(ptr{{.*}}[[PTR:%.*]], <2 x i64>{{.*}}[[SRC:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i64> [[SRC]] to <16 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM: [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+// LLVM: store atomic i64 [[TMP2]], ptr [[PTR]] release, align 8
+
+void test_vstl1_lane_u64(uint64_t  *a, uint64x1_t b) {
+  vstl1_lane_u64(a, b, 0);
+}
+
+// CIR-LABEL: test_vstl1_lane_u64
+// CIR: [[LANE:%.*]] = cir.const #cir.int<0> : !s32i
+// CIR: [[VAL:%.*]] = cir.vec.extract {{%.*}}[[[LANE]] : !s32i] : !cir.vector<!u64i x 1>
+// CIR: [[PTR:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.ptr<!void>), !cir.ptr<!u64i>
+// CIR: cir.store align(8) atomic(release) [[VAL]], [[PTR]] : !u64i, !cir.ptr<!u64i>
+
+// LLVM: {{.*}}test_vstl1_lane_u64(ptr{{.*}}[[PTR:%.*]], <1 x i64>{{.*}}[[SRC:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <1 x i64> [[SRC]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM: [[TMP2:%.*]] = extractelement <1 x i64> [[TMP1]], i32 0
+// LLVM: store atomic i64 [[TMP2]], ptr [[PTR]] release, align 8
+
+void test_vstl1_lane_s64(int64_t  *a, int64x1_t b) {
+  vstl1_lane_s64(a, b, 0);
+}
+
+// CIR-LABEL:test_vstl1_lane_s64
+// CIR: [[LANE:%.*]] = cir.const #cir.int<0> : !s32i
+// CIR: [[VAL:%.*]] = cir.vec.extract {{%.*}}[[[LANE]] : !s32i] : !cir.vector<!s64i x 1>
+// CIR: [[PTR:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.ptr<!void>), !cir.ptr<!s64i>
+// CIR: cir.store align(8) atomic(release) [[VAL]], [[PTR]] : !s64i, !cir.ptr<!s64i>
+
+// LLVM: {{.*}}test_vstl1_lane_s64(ptr{{.*}}[[PTR:%.*]], <1 x i64>{{.*}}[[SRC:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <1 x i64> [[SRC]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM: [[TMP2:%.*]] = extractelement <1 x i64> [[TMP1]], i32 0
+// LLVM: store atomic i64 [[TMP2]], ptr [[PTR]] release, align 8
+
+void test_vstl1_lane_f64(float64_t  *a, float64x1_t b) {
+  vstl1_lane_f64(a, b, 0);
+}
+
+// CIR-LABEL:test_vstl1_lane_f64
+// CIR: [[LANE:%.*]] = cir.const #cir.int<0> : !s32i
+// CIR: [[VAL:%.*]] = cir.vec.extract {{%.*}}[[[LANE]] : !s32i] : !cir.vector<!cir.double x 1>
+// CIR: [[PTR:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.ptr<!void>), !cir.ptr<!cir.double>
+// CIR: cir.store align(8) atomic(release) [[VAL]], [[PTR]] : !cir.double, !cir.ptr<!cir.double>
+
+// LLVM: {{.*}}test_vstl1_lane_f64(ptr{{.*}}[[PTR:%.*]], <1 x double>{{.*}}[[SRC:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <1 x double> [[SRC]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x double>
+// LLVM: [[TMP2:%.*]] = extractelement <1 x double> [[TMP1]], i32 0
+// LLVM: store atomic double [[TMP2]], ptr [[PTR]] release, align 8
+
+void test_vstl1_lane_p64(poly64_t  *a, poly64x1_t b) {
+  vstl1_lane_p64(a, b, 0);
+}
+
+// CIR-LABEL: test_vstl1_lane_p64
+// CIR: [[LANE:%.*]] = cir.const #cir.int<0> : !s32i
+// CIR: [[VAL:%.*]] = cir.vec.extract {{%.*}}[[[LANE]] : !s32i] : !cir.vector<!s64i x 1>
+// CIR: [[PTR:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.ptr<!void>), !cir.ptr<!s64i>
+// CIR: cir.store align(8) atomic(release) [[VAL]], [[PTR]] : !s64i, !cir.ptr<!s64i>
+
+// LLVM: {{.*}}test_vstl1_lane_p64(ptr{{.*}}[[PTR:%.*]], <1 x i64>{{.*}}[[SRC:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <1 x i64> [[SRC]] to <8 x i8>
+// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM: [[TMP2:%.*]] = extractelement <1 x i64> [[TMP1]], i32 0
+// LLVM: store atomic i64 [[TMP2]], ptr [[PTR]] release, align 8
