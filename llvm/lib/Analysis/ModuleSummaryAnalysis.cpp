@@ -968,7 +968,6 @@ static void analyzeRTTIVars(ModuleSummaryIndex &Index, const Module &M) {
         Index.addTypeIdAccessed(TypeNameGV->getName());
       else
         Index.addTypeIdAccessed(Index.saveString(TypeName));
-      break;
     }
   }
 }
