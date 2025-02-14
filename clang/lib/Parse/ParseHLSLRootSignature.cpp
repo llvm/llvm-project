@@ -185,9 +185,7 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
 }
 
 // Helper struct so that we can use the overloaded notation of std::visit
-template <class... Ts> struct ParseMethods : Ts... {
-  using Ts::operator()...;
-};
+template <class... Ts> struct ParseMethods : Ts... { using Ts::operator()...; };
 template <class... Ts> ParseMethods(Ts...) -> ParseMethods<Ts...>;
 
 bool RootSignatureParser::ParseParam(ParamType Ref) {
@@ -195,12 +193,18 @@ bool RootSignatureParser::ParseParam(ParamType Ref) {
     return true;
 
   bool Error;
-  std::visit(ParseMethods{
-    [&](uint32_t *X) { Error = ParseUInt(X); },
-    [&](DescriptorRangeOffset *X) { Error = ParseDescriptorRangeOffset(X); },
-    [&](ShaderVisibility *Enum) { Error = ParseShaderVisibility(Enum); },
-    [&](DescriptorRangeFlags *Flags) { Error = ParseDescriptorRangeFlags(Flags); },
-  }, Ref);
+  std::visit(
+      ParseMethods{
+          [&](uint32_t *X) { Error = ParseUInt(X); },
+          [&](DescriptorRangeOffset *X) {
+            Error = ParseDescriptorRangeOffset(X);
+          },
+          [&](ShaderVisibility *Enum) { Error = ParseShaderVisibility(Enum); },
+          [&](DescriptorRangeFlags *Flags) {
+            Error = ParseDescriptorRangeFlags(Flags);
+          },
+      },
+      Ref);
 
   return Error;
 }
@@ -421,8 +425,7 @@ bool RootSignatureParser::ConsumeExpectedToken(
   // Report unexpected token kind error
   Diags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_unexpected_token_kind)
       << (unsigned)(AnyExpected.size() != 1)
-      << FormatTokenKinds({CurToken.Kind})
-      << FormatTokenKinds(AnyExpected);
+      << FormatTokenKinds({CurToken.Kind}) << FormatTokenKinds(AnyExpected);
   return true;
 }
 
