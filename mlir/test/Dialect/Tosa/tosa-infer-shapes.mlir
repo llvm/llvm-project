@@ -469,8 +469,9 @@ func.func @test_concat_axis_1(%arg0 : tensor<2x1xf32>, %arg1 : tensor<2x2xf32>) 
 // CHECK-LABEL:@test_padding_dynamic_input
 func.func @test_padding_dynamic_input(%arg0 : tensor<1x?xf32>) -> () {
   %0 = tosa.const_shape { value = dense<[1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  // CHECK: tosa.pad %arg0, %0 : (tensor<1x?xf32>, !tosa.shape<4>) -> tensor<4x?xf32>
-  %1 = tosa.pad %arg0, %0  : (tensor<1x?xf32>, !tosa.shape<4>) -> tensor<?x?xf32>
+  %1 = "tosa.const"() {value = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+  // CHECK: tosa.pad %arg0, %0, %1  : (tensor<1x?xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<4x?xf32>
+  %2 = tosa.pad %arg0, %0, %1  : (tensor<1x?xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<?x?xf32>
   return
 }
 
@@ -479,8 +480,9 @@ func.func @test_padding_dynamic_input(%arg0 : tensor<1x?xf32>) -> () {
 // CHECK-LABEL: @test_padding_simple
 func.func @test_padding_simple(%arg0 : tensor<1x2xf32>) -> () {
   %0 = tosa.const_shape { value = dense<[1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  // CHECK: tosa.pad %arg0, %0 : (tensor<1x2xf32>, !tosa.shape<4>) -> tensor<4x9xf32>
-  %1 = tosa.pad %arg0, %0  : (tensor<1x2xf32>, !tosa.shape<4>) -> tensor<?x?xf32>
+  %1 = "tosa.const"() {value = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+  // CHECK: tosa.pad %arg0, %0, %1  : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<4x9xf32>
+  %2 = tosa.pad %arg0, %0, %1  : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<?x?xf32>
   return
 }
 
