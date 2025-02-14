@@ -9665,6 +9665,11 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   if (MaxID == 0)
     return DAG.getConstant(0, SL, MVT::i32);
 
+  // It's undefined behavior if a function marked with the amdgpu-no-*
+  // attributes uses the corresponding intrinsic.
+  if (!Arg)
+    return DAG.getUNDEF(Op->getValueType(0));
+
   // Wavegroup launch mode needs to compute workitem id
   if (AMDGPU::getWavegroupEnable(MF.getFunction())) {
     return buildWorkitemIdWavegroupModeISel(DAG, Op, Dim);

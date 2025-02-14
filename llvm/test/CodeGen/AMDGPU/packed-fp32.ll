@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX900,NOTGFX1250 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG,NOTGFX1250,NOTGFX1250-PACKED,NOTGFX1250-PACKED-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL,NOTGFX1250,NOTGFX1250-PACKED %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG,NOTGFX1250,NOTGFX1250-PACKED,NOTGFX1250-PACKED-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL,NOTGFX1250,NOTGFX1250-PACKED %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG,NOTGFX1250,NOTGFX1250-PACKED,NOTGFX1250-PACKED-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL,NOTGFX1250,NOTGFX1250-PACKED %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG,GFX1250,GFX1250-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL,GFX1250,GFX1250-GISEL %s
 
