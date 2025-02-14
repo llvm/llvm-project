@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     @no_debug_info_test
+    @skipIf(compiler="clang", compiler_version=["<", "20.0"])
     def test(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
