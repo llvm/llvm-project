@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj | \
-# RUN:   not llvm-dwarfdump -verify - | FileCheck %s
+# RUN:   not llvm-dwarfdump -verify --verify-num-threads 1 - | FileCheck %s
 
 # CHECK: error: NameIndex @ 0x0: Abbreviation 0x2: DW_IDX_compile_unit uses an unexpected form DW_FORM_ref1 (expected form class constant).
 # CHECK: error: NameIndex @ 0x0: Abbreviation 0x2: DW_IDX_type_unit uses an unexpected form DW_FORM_ref1 (expected form class constant).

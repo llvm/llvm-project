@@ -30,9 +30,11 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -284,6 +286,9 @@ static cl::opt<bool>
                 cat(DwarfDumpCategory));
 static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
                         cat(DwarfDumpCategory));
+static opt<unsigned> VerifyNumThreads(
+    "verify-num-threads", init(hardware_concurrency().compute_thread_count()),
+    desc("Number of threads to use for --verify."), cat(DwarfDumpCategory));
 static opt<ErrorDetailLevel> ErrorDetails(
     "error-display", init(Unspecified),
     desc("Set the level of detail and summary to display when verifying "
@@ -778,7 +783,7 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
     if (filterArch(*Obj)) {
       std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
           *Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
-          RecoverableErrorHandler);
+          RecoverableErrorHandler, WithColor::defaultWarningHandler, true);
       DICtx->setParseCUTUIndexManually(ManuallyGenerateUnitIndex);
       if (!HandleObj(*Obj, *DICtx, Filename, OS))
         Result = false;
@@ -906,6 +911,7 @@ int main(int argc, char **argv) {
 
   bool Success = true;
   if (Verify) {
+    parallel::strategy = hardware_concurrency(VerifyNumThreads);
     for (StringRef Object : Objects)
       Success &= handleFile(Object, verifyObjectFile, OutputFile.os());
   } else if (Statistics) {
