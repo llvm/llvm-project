@@ -634,7 +634,7 @@ private:
     // The merging code is relative to the opening namespace brace, which could
     // be either on the first or second line due to the brace wrapping rules.
     const bool OpenBraceWrapped = Style.BraceWrapping.AfterNamespace;
-    const auto BraceOpenLine = I + OpenBraceWrapped;
+    const auto *BraceOpenLine = I + OpenBraceWrapped;
 
     assert(*BraceOpenLine);
     if (BraceOpenLine[0]->Last->isNot(TT_NamespaceLBrace))
