@@ -133,6 +133,8 @@ static std::optional<unsigned> findOneNVVMAnnotation(const GlobalValue *gv,
     cacheAnnotationFromMD(m, gv);
   else if (ACIt->second.find(gv) == ACIt->second.end())
     cacheAnnotationFromMD(m, gv);
+  // Look up AC.Cache[m][gv] again because cacheAnnotationFromMD may have
+  // inserted the entry.
   auto &KVP = AC.Cache[m][gv];
   auto It = KVP.find(prop);
   if (It == KVP.end())
@@ -151,6 +153,8 @@ static bool findAllNVVMAnnotation(const GlobalValue *gv,
     cacheAnnotationFromMD(m, gv);
   else if (ACIt->second.find(gv) == ACIt->second.end())
     cacheAnnotationFromMD(m, gv);
+  // Look up AC.Cache[m][gv] again because cacheAnnotationFromMD may have
+  // inserted the entry.
   auto &KVP = AC.Cache[m][gv];
   auto It = KVP.find(prop);
   if (It == KVP.end())
