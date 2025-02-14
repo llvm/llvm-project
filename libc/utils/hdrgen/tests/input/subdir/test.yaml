@@ -1,8 +1,5 @@
 header: subdir/test.h
 header_template: test.h.def
-types:
-  - type_name: type_a
-  - type_name: type_b
 functions:
   - name: func
     return_type: type_a

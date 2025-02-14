@@ -6,7 +6,31 @@
 #
 # ==-------------------------------------------------------------------------==#
 
+from functools import reduce
 from pathlib import PurePosixPath
+
+
+STDINT_SIZES = [
+    "16",
+    "32",
+    "64",
+    "8",
+    "least16",
+    "least32",
+    "least64",
+    "least8",
+    "max",
+    "ptr",
+]
+
+COMPILER_HEADER_TYPES = (
+    {
+        "bool": "<stdbool.h>",
+        "va_list": "<stdarg.h>",
+    }
+    | {f"int{size}_t": "<stdint.h>" for size in STDINT_SIZES}
+    | {f"uint{size}_t": "<stdint.h>" for size in STDINT_SIZES}
+)
 
 
 class HeaderFile:
@@ -34,18 +58,24 @@ class HeaderFile:
     def add_function(self, function):
         self.functions.append(function)
 
-    def includes(self):
-        return sorted(
-            {
-                PurePosixPath("llvm-libc-macros") / macro.header
-                for macro in self.macros
-                if macro.header is not None
-            }
-            | {
-                PurePosixPath("llvm-libc-types") / f"{typ.type_name}.h"
-                for typ in self.types
-            }
+    def all_types(self):
+        return reduce(
+            lambda a, b: a | b,
+            [f.signature_types() for f in self.functions],
+            set(self.types),
         )
+
+    def includes(self):
+        return {
+            PurePosixPath("llvm-libc-macros") / macro.header
+            for macro in self.macros
+            if macro.header is not None
+        } | {
+            COMPILER_HEADER_TYPES.get(
+                typ.type_name, PurePosixPath("llvm-libc-types") / f"{typ.type_name}.h"
+            )
+            for typ in self.all_types()
+        }
 
     def public_api(self):
         # Python 3.12 has .relative_to(dir, walk_up=True) for this.
@@ -56,7 +86,10 @@ class HeaderFile:
 
         content = [
             f"#include {file}"
-            for file in sorted(f'"{relpath(file)!s}"' for file in self.includes())
+            for file in sorted(
+                file if isinstance(file, str) else f'"{relpath(file)!s}"'
+                for file in self.includes()
+            )
         ]
 
         for macro in self.macros:
