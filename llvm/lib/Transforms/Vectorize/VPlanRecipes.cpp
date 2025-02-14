@@ -27,6 +27,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -284,13 +285,18 @@ InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode = std::nullopt;
-  VPRecipeBase *BinOpR = getOperand(0)->getDefiningRecipe();
+  VPValue *BinOp = getOperand(0);
 
   // If the partial reduction is predicated, a select will be operand 0 rather
   // than the binary op
   using namespace llvm::VPlanPatternMatch;
   if (match(getOperand(0), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
-    BinOpR = BinOpR->getOperand(1)->getDefiningRecipe();
+    BinOp = BinOp->getDefiningRecipe()->getOperand(1);
+
+  // If BinOp is a negation, use the side effect of match to assign the actual
+  // binary operation to BinOp
+  match(BinOp, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(BinOp)));
+  VPRecipeBase *BinOpR = BinOp->getDefiningRecipe();
 
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
     Opcode = std::make_optional(WidenR->getOpcode());

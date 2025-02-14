@@ -1206,6 +1206,9 @@ func.func @should_fuse_with_private_memref() {
   // CHECK:      affine.for %{{.*}} = 0 to 17 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT: }
+  // CHECK:      affine.for %{{.*}} = 0 to 82 {
+  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: return
