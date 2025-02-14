@@ -17,38 +17,9 @@ static std::string FormatTokenKinds(ArrayRef<TokenKind> Kinds) {
     if (!First)
       Out << ", ";
     switch (Kind) {
-    case TokenKind::invalid:
-      Out << "invalid identifier";
-      break;
-    case TokenKind::end_of_stream:
-      Out << "end of stream";
-      break;
-    case TokenKind::int_literal:
-      Out << "integer literal";
-      break;
-    case TokenKind::bReg:
-      Out << "b register";
-      break;
-    case TokenKind::tReg:
-      Out << "t register";
-      break;
-    case TokenKind::uReg:
-      Out << "u register";
-      break;
-    case TokenKind::sReg:
-      Out << "s register";
-      break;
-#define PUNCTUATOR(X, Y)                                                       \
-  case TokenKind::pu_##X:                                                      \
-    Out << #Y;                                                                 \
-    break;
-#define KEYWORD(NAME)                                                          \
-  case TokenKind::kw_##NAME:                                                   \
-    Out << #NAME;                                                              \
-    break;
-#define ENUM(NAME, LIT)                                                        \
-  case TokenKind::en_##NAME:                                                   \
-    Out << LIT;                                                                \
+#define TOK(X, SPELLING)                                                       \
+  case TokenKind::X:                                                           \
+    Out << SPELLING;                                                           \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
     }
