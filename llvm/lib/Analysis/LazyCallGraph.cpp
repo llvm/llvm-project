@@ -1720,7 +1720,6 @@ void LazyCallGraph::addSplitRefRecursiveFunctions(
   for (Function *NewFunction : NewFunctions) {
     Node &NewN = initNode(*NewFunction);
 
-    // Make the original function reference each new function
     OriginalN->insertEdgeInternal(NewN, Edge::Kind::Ref);
 
     // Check if there is any edge from any new function back to any function in
@@ -1776,9 +1775,8 @@ void LazyCallGraph::addSplitRefRecursiveFunctions(
       if (F1 == F2)
         continue;
       Node &N2 = get(*F2);
-      assert(!N1->lookup(N2) ||
-             (!N1->lookup(N2)->isCall() &&
-              "Edges between new functions must be ref edges"));
+      assert(!N1->lookup(N2)->isCall() &&
+             "Edges between new functions must be ref edges");
     }
   }
 #endif
