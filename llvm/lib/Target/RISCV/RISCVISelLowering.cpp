@@ -4498,11 +4498,9 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
 }
 
 // Can this shuffle be performed on exactly one (possibly larger) input?
-static SDValue getSingleShuffleSrc(MVT VT, MVT ContainerVT, SDValue V1,
-                                   SDValue V2) {
+static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
 
-  if (V2.isUndef() &&
-      RISCVTargetLowering::getLMUL(ContainerVT) != RISCVII::VLMUL::LMUL_8)
+  if (V2.isUndef())
     return V1;
 
   // Both input must be extracts.
@@ -5593,7 +5591,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       unsigned Index = 0;
       if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Index) &&
           1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
-        if (SDValue Src = getSingleShuffleSrc(VT, ContainerVT, V1, V2))
+        if (SDValue Src = getSingleShuffleSrc(VT, V1, V2))
           return getDeinterleaveShiftAndTrunc(DL, VT, Src, Factor, Index, DAG);
       }
     }
