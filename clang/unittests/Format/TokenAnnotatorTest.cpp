@@ -1849,6 +1849,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodExpr) {
   EXPECT_TOKEN(Tokens[15], tok::greater, TT_BinaryOperator);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodDecl) {
+  auto Tokens = annotate("/**/ - (void)foo;");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_ObjCMethodSpecifier);
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_SelectorName);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   auto Tokens = annotate("[]() constexpr {}");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
