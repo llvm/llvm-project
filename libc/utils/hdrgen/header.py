@@ -73,6 +73,7 @@ class HeaderFile:
         self.objects = []
         self.functions = []
         self.standards = []
+        self.merge_yaml_files = []
 
     def add_macro(self, macro):
         self.macros.append(macro)
@@ -88,6 +89,13 @@ class HeaderFile:
 
     def add_function(self, function):
         self.functions.append(function)
+
+    def merge(self, other):
+        self.macros = sorted(set(self.macros) | set(other.macros))
+        self.types = sorted(set(self.types) | set(other.types))
+        self.enumerations = sorted(set(self.enumerations) | set(other.enumerations))
+        self.objects = sorted(set(self.objects) | set(other.objects))
+        self.functions = sorted(set(self.functions) | set(other.functions))
 
     def all_types(self):
         return reduce(
