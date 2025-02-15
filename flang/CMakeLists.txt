@@ -230,6 +230,11 @@ if (FLANG_STANDALONE_BUILD)
     add_custom_target(doxygen ALL)
   endif()
 
+  # Override the value from installed CMake files, as they refer
+  # to the directory used during the original MLIR package build,
+  # which may be no longer available.  Instead, use the current checkout.
+  set(MLIR_MAIN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../mlir )
+
 else()
   option(FLANG_INCLUDE_TESTS
          "Generate build targets for the Flang unit tests."
