@@ -139,6 +139,16 @@ define void @hyperbolic_trig_test(float %0, <8 x float> %1) {
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @isnan_test
+define void @isnan_test(float %0, <8 x float> %1) {
+  ; CHECK: llvm.intr.isnan(%{{.*}}) : (f32) -> i1
+  %3 = call i1 @llvm.isnan.f32(float %0)
+  ; CHECK: llvm.intr.isnan(%{{.*}}) : (vector<8xf32>) -> vector<8xi1>
+  %4 = call <8 x i1> @llvm.sinh.v8f32(<8 x float> %1)
+
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @copysign_test
 define void @copysign_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
   ; CHECK:  llvm.intr.copysign(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
@@ -1017,6 +1027,8 @@ declare float @llvm.cosh.f32(float)
 declare <8 x float> @llvm.cosh.v8f32(<8 x float>)
 declare float @llvm.tanh.f32(float)
 declare <8 x float> @llvm.tanh.v8f32(<8 x float>)
+declare float @llvm.isnan.f32(float)
+declare <8 x float> @llvm.isnan.v8f32(<8 x float>)
 declare float @llvm.copysign.f32(float, float)
 declare <8 x float> @llvm.copysign.v8f32(<8 x float>, <8 x float>)
 declare float @llvm.pow.f32(float, float)

@@ -174,6 +174,8 @@ def LLVM_SinhOp : LLVM_UnaryIntrOpF<"sinh">;
 def LLVM_CoshOp : LLVM_UnaryIntrOpF<"cosh">;
 def LLVM_TanhOp : LLVM_UnaryIntrOpF<"tanh">;
 
+def LLVM_IsNanOp : LLVM_UnaryIntrOpF<"isnan">;
+
 class LLVM_MemcpyIntrOpBase<string name> :
     LLVM_ZeroResultIntrOp<name, [0, 1, 2],
     [DeclareOpInterfaceMethods<PromotableMemOpInterface>,

@@ -141,6 +141,16 @@ llvm.func @hyperbolic_trig_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @isnan_test
+llvm.func @isnan_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call i1 @llvm.isnan.f32
+  llvm.intr.isnan(%arg0) : (f32) -> i1
+  // CHECK: call <8 x i1> @llvm.isnan.v8f32
+  llvm.intr.sinh(%arg1) : (vector<8xf32>) -> vector<8xi1>
+
+  llvm.return
+}
+
 // CHECK-LABEL: @copysign_test
 llvm.func @copysign_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
   // CHECK: call float @llvm.copysign.f32
