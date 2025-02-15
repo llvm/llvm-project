@@ -2447,7 +2447,7 @@ CFGBlock *CFGBuilder::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *Arg,
       autoCreateBlock();
       appendStmt(Block, Arg);
     }
-    return VisitStmt(Arg->getExpr(), asc);
+    return VisitStmt(Arg->getExpr()->IgnoreParens(), asc);
   }
 
   // We can't add the default argument if it's not rewritten because the
@@ -2464,6 +2464,10 @@ CFGBlock *CFGBuilder::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *Init,
       autoCreateBlock();
       appendStmt(Block, Init);
     }
+
+    // Unlike CXXDefaultArgExpr::getExpr stripped off the top level FullExpr and
+    // ConstantExpr, CXXDefaultInitExpr::getExpr does not do this, so we don't
+    // need to ignore ParenExprs, because the top level will not be a ParenExpr.
     return VisitStmt(Init->getExpr(), asc);
   }
 

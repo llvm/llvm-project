@@ -453,3 +453,39 @@ int f(int a) {
   A{};  // expected-warning {{will never be executed}}
 }
 } // namespace test_rebuilt_default_init
+
+// This issue reported by the comments in https://github.com/llvm/llvm-project/pull/117437.
+// All block-level expressions should have already been IgnoreParens()ed.
+namespace gh117437_ignore_parens_in_default_arg {
+  class Location {
+    public:
+      static Location Current(int = __builtin_LINE());
+    };
+    class DOMMatrix;
+    class BasicMember {
+    public:
+      BasicMember(DOMMatrix *);
+    };
+    template <typename> using Member = BasicMember;
+    class ExceptionState {
+    public:
+      ExceptionState &ReturnThis();
+      ExceptionState(Location);
+    };
+    class NonThrowableExceptionState : public ExceptionState {
+    public:
+      NonThrowableExceptionState(Location location = Location::Current())
+          : ExceptionState(location) {}
+    };
+    class DOMMatrix {
+    public:
+      static DOMMatrix *
+      Create(int *, ExceptionState & = (NonThrowableExceptionState().ReturnThis()));
+    };
+    class CSSMatrixComponent {
+      int CSSMatrixComponent_matrix;
+      CSSMatrixComponent()
+          : matrix_(DOMMatrix::Create(&CSSMatrixComponent_matrix)) {}
+      Member<DOMMatrix> matrix_;
+    };
+} // namespace gh117437_ignore_parens_in_default_arg
