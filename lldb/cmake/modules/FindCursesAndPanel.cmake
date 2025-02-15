@@ -20,18 +20,20 @@ else()
   find_package(Curses QUIET)
   find_library(PANEL_LIBRARIES NAMES panel DOC "The curses panel library" QUIET)
   include(FindPackageHandleStandardArgs)
-  
-  # Sometimes the curses libraries define their own terminfo symbols,
-  # other times they're extern and are defined by a separate terminfo library.
-  # Auto-detect which.
-  lldb_check_curses_tinfo("${CURSES_LIBRARIES}" CURSES_HAS_TINFO)
+
   if(CURSES_FOUND AND PANEL_LIBRARIES)
+    # Sometimes the curses libraries define their own terminfo symbols,
+    # other times they're extern and are defined by a separate terminfo library.
+    # Auto-detect which.
+    lldb_check_curses_tinfo("${CURSES_LIBRARIES}" CURSES_HAS_TINFO)
     if (NOT CURSES_HAS_TINFO)
       message(STATUS "curses library missing terminfo symbols, looking for tinfo separately")
       find_library(TINFO_LIBRARIES NAMES tinfo DOC "The curses tinfo library" QUIET)
+      list(APPEND CURSES_LIBRARIES "${TINFO_LIBRARIES}")
     endif()
     set(HAS_TERMINFO_SYMBOLS "$<OR:$<BOOL:${TERMINFO_LIBRARIES}>,$<BOOL:${CURSES_HAS_TINFO}>>")
   endif()
+
   find_package_handle_standard_args(CursesAndPanel
                                     FOUND_VAR
                                       CURSESANDPANEL_FOUND
