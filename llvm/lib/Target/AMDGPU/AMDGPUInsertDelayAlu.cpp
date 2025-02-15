@@ -362,7 +362,10 @@ public:
             for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
               auto It = State.find(Unit);
               if (It != State.end()) {
-                Delay.merge(It->second);
+                if (!(SII->isSALU(MI.getOpcode())) ||
+                    !AMDGPU::isSGPR(Op.getReg(), TRI) ||
+                    It->second.VALUCycles == 0)
+                  Delay.merge(It->second);
                 State.erase(Unit);
               }
             }

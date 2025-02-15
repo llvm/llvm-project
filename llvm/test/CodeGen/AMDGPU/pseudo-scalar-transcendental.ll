@@ -213,7 +213,7 @@ define amdgpu_cs float @v_s_sqrt_f32(float inreg %src) {
 ; GFX12-SDAG-NEXT:    s_mul_f32 s0, s2, 0x37800000
 ; GFX12-SDAG-NEXT:    v_cmp_class_f32_e64 s3, s1, 0x260
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cselect_b32 s0, s0, s2
 ; GFX12-SDAG-NEXT:    s_and_b32 s2, s3, exec_lo
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
