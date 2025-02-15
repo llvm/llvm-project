@@ -43,25 +43,30 @@ def get_sampled_workflow_metrics(github_repo: github.Repository):
       Returns a list of GaugeMetric objects, containing the relevant metrics about
       the workflow
     """
+    queued_job_counts = {}
+    running_job_counts = {}
 
     # Other states are available (pending, waiting, etc), but the meaning
     # is not documented (See #70540).
     # "queued" seems to be the info we want.
-    queued_job_counts = {}
     for queued_workflow in github_repo.get_workflow_runs(status="queued"):
         if queued_workflow.name not in WORKFLOWS_TO_TRACK:
             continue
         for queued_workflow_job in queued_workflow.jobs():
             job_name = queued_workflow_job.name
-            if queued_workflow_job.status != "queued":
-                continue
+            # Workflows marked as queued can potentially only have some jobs
+            # queued, so make sure to also count jobs currently in progress.
+            if queued_workflow_job.status == "queued":
+                if job_name not in queued_job_counts:
+                    queued_job_counts[job_name] = 1
+                else:
+                    queued_job_counts[job_name] += 1
+            elif queued_workflow_job.status == "in_progress":
+                if job_name not in running_job_counts:
+                    running_job_counts[job_name] = 1
+                else:
+                    running_job_counts[job_name] += 1
 
-            if job_name not in queued_job_counts:
-                queued_job_counts[job_name] = 1
-            else:
-                queued_job_counts[job_name] += 1
-
-    running_job_counts = {}
     for running_workflow in github_repo.get_workflow_runs(status="in_progress"):
         if running_workflow.name not in WORKFLOWS_TO_TRACK:
             continue
