@@ -997,13 +997,15 @@ public:
     if (!properties) {
       T *p = new T{};
       properties = p;
-      propertiesDeleter = [](OpaqueProperties prop) {
+      static auto deleter = [](OpaqueProperties prop) {
         delete prop.as<const T *>();
       };
-      propertiesSetter = [](OpaqueProperties new_prop,
-                            const OpaqueProperties prop) {
+      propertiesDeleter = deleter;
+      static auto setter = [](OpaqueProperties new_prop,
+                              const OpaqueProperties prop) {
         *new_prop.as<T *>() = *prop.as<const T *>();
       };
+      propertiesSetter = setter;
       propertiesId = TypeID::get<T>();
     }
     assert(propertiesId == TypeID::get<T>() && "Inconsistent properties");
