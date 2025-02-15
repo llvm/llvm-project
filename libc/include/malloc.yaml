@@ -1,13 +1,17 @@
 header: malloc.h
-header_template: malloc.h.def
-macros: []
-types: []
-enums: []
-objects: []
+standards:
+  - gnu
+merge_yaml_files:
+  - stdlib-malloc.yaml
+macros:
+  - macro_name: M_PURGE
+    macro_header: malloc-macros.h
+  - macro_name: M_PURGE_ALL
+    macro_header: malloc-macros.h
 functions:
   - name: mallopt
     standards:
-      - GNUExtensions
+      - gnu
     return_type: int
     arguments:
       - type: int
