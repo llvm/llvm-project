@@ -278,9 +278,10 @@ public:
           }
           if (auto *UO = dyn_cast<UnaryOperator>(Arg)) {
             auto OpCode = UO->getOpcode();
-            if (OpCode == UO_Deref || OpCode == UO_AddrOf)
+            if (OpCode == UO_Deref || OpCode == UO_AddrOf) {
               Arg = UO->getSubExpr()->IgnoreParenCasts();
-            continue;
+              continue;
+            }
           }
           break;
         } while (Arg);

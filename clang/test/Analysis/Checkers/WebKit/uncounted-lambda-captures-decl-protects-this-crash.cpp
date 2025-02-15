@@ -11,6 +11,7 @@ struct Baz {
   void ref() const;
   void deref() const;
   Foo operator*();
+  bool operator!();
 };
 
 inline Foo operator*(const Foo& a, const Foo& b);
@@ -28,11 +29,10 @@ struct Obj {
   void foo(Foo foo) {
     bar([this](auto baz) {
       // expected-warning@-1{{Captured raw-pointer 'this' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
-      bar([this, foo = *baz](auto&&) {
+      bar([this, foo = *baz, foo2 = !baz](auto&&) {
         // expected-warning@-1{{Captured raw-pointer 'this' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
         someFunction();
       });
     });
   }
 };
-
