@@ -48,10 +48,9 @@ union stream_data {
 #  define STREAM(StreamT, BufferT, CharT, var)                                                                         \
     STRING_DATA_CONSTINIT stream_data<StreamT<CharT>, BufferT<CharT>> var __asm__(                                     \
         "?" #var "@" ABI_NAMESPACE_STR "@std@@3V?$" #StreamT                                                           \
-        "@" CHAR_MANGLING(CharT) "U?$char_traits@" CHAR_MANGLING(CharT) "@" ABI_NAMESPACE_STR "@std@@@12@A") var = {}
+        "@" CHAR_MANGLING(CharT) "U?$char_traits@" CHAR_MANGLING(CharT) "@" ABI_NAMESPACE_STR "@std@@@12@A") var
 #else
-#  define STREAM(StreamT, BufferT, CharT, var)                                                                         \
-    STRING_DATA_CONSTINIT stream_data<StreamT<CharT>, BufferT<CharT>> var = {}
+#  define STREAM(StreamT, BufferT, CharT, var) STRING_DATA_CONSTINIT stream_data<StreamT<CharT>, BufferT<CharT>> var
 #endif
 
 // These definitions and the declarations in <iostream> technically cause ODR violations, since they have different
