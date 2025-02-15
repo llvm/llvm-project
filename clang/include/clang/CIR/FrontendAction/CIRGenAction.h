@@ -29,6 +29,7 @@ public:
     EmitCIR,
     EmitLLVM,
     EmitBC,
+    EmitMLIR,
     EmitObj,
   };
 
@@ -57,6 +58,13 @@ class EmitCIRAction : public CIRGenAction {
 
 public:
   EmitCIRAction(mlir::MLIRContext *MLIRCtx = nullptr);
+};
+
+class EmitMLIRAction : public CIRGenAction {
+  virtual void anchor();
+
+public:
+  EmitMLIRAction(mlir::MLIRContext *MLIRCtx = nullptr);
 };
 
 class EmitLLVMAction : public CIRGenAction {

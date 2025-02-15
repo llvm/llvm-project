@@ -55,6 +55,7 @@ public:
   void Initialize(clang::ASTContext &astContext) override;
   bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
   mlir::ModuleOp getModule() const;
+  mlir::MLIRContext &getContext() { return *mlirContext; }
 };
 
 } // namespace cir

@@ -68,6 +68,9 @@ enum ActionKind {
   /// Emit a .cir file
   EmitCIR,
 
+  /// Emit a .mlir file
+  EmitMLIR,
+
   /// Emit a .ll file.
   EmitLLVM,
 

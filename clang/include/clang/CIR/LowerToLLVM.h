@@ -20,6 +20,7 @@ class Module;
 } // namespace llvm
 
 namespace mlir {
+class MLIRContext;
 class ModuleOp;
 } // namespace mlir
 
@@ -30,6 +31,9 @@ std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule,
                              llvm::LLVMContext &llvmCtx);
 } // namespace direct
+
+mlir::ModuleOp lowerFromCIRToMLIR(mlir::ModuleOp mlirModule,
+                                  mlir::MLIRContext &mlirCtx);
 } // namespace cir
 
 #endif // CLANG_CIR_LOWERTOLLVM_H

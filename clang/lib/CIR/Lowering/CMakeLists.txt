@@ -1,1 +1,2 @@
 add_subdirectory(DirectToLLVM)
+add_subdirectory(ThroughMLIR)
