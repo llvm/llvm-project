@@ -19,6 +19,8 @@ type_a func(type_b) __NOEXCEPT;
 
 void gnufunc(type_a) __NOEXCEPT;
 
+int *ptrfunc(void) __NOEXCEPT;
+
 __END_C_DECLS
 
 #endif // LLVM_LIBC_SUBDIR_TEST_H
