@@ -383,25 +383,26 @@ LLVM_LIBC_FUNCTION(float128, sqrtf128, (float128 x)) {
       // 1 so just need to add shifted m and 1.
       Int128 t1 = t0;
       Int128 sgn = t0 >> 127; // sign of the difference
-      t1 -= (m << 1) ^ sgn;
-      t1 += 1 + sgn;
+      Int128 m_xor_sgn = static_cast<Int128>(m << 1) ^ sgn;
+      t1 -= m_xor_sgn;
+      t1 += Int128(1) + sgn;
 
       Int128 sgn1 = t1 >> 127;
       if (LIBC_UNLIKELY(sgn == sgn1)) {
         t0 = t1;
         v -= sgn << 15;
-        t1 -= (m << 1) ^ sgn;
-        t1 += 1 + sgn;
+        t1 -= m_xor_sgn;
+        t1 += Int128(1) + sgn;
       }
 
       if (t1 == 0) {
         // 1 ulp offset brings again an exact root
-        v = (m - (2 * sgn + 1)) << 15;
+        v = (m - static_cast<UInt128>((sgn << 1) + 1)) << 15;
       } else {
         t1 += t0;
         Int128 side = t1 >> 127; // select what is closer m or m+-1
         v &= ~UInt128(0) << 15;  // wipe the fractional bits
-        v -= ((sgn & side) | (~sgn & 1)) << (15 + side);
+        v -= ((sgn & side) | (~sgn & 1)) << (15 + static_cast<int>(side));
         v |= 1; // add sticky bit since we cannot have an exact mid-point
                 // situation
       }
