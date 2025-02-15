@@ -147,12 +147,14 @@ TargetPassConfig *R600TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new R600PassConfig(*this, PM);
 }
 
-Error R600TargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC) {
-  R600CodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+Error R600TargetMachine::buildCodeGenPipeline(ModulePassManager &MPM,
+                                              raw_pwrite_stream &Out,
+                                              raw_pwrite_stream *DwoOut,
+                                              CodeGenFileType FileType,
+                                              const CGPassBuilderOption &Opts,
+                                              MCContext &Ctx, PassBuilder &PB) {
+  R600CodeGenPassBuilder CGPB(*this, Opts, PB);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
 }
 
 MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(

@@ -77,17 +77,9 @@ static uint32_t getFPMode(SIModeRegisterDefaults Mode) {
          FP_DENORM_MODE_DP(Mode.fpDenormModeDPValue());
 }
 
-static AsmPrinter *
-createAMDGPUAsmPrinterPass(TargetMachine &tm,
-                           std::unique_ptr<MCStreamer> &&Streamer) {
-  return new AMDGPUAsmPrinter(tm, std::move(Streamer));
-}
-
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmPrinter() {
-  TargetRegistry::RegisterAsmPrinter(getTheR600Target(),
-                                     llvm::createR600AsmPrinterPass);
-  TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
-                                     createAMDGPUAsmPrinterPass);
+  RegisterAsmPrinter<R600AsmPrinter> X(getTheR600Target());
+  RegisterAsmPrinter<AMDGPUAsmPrinter> Y(getTheGCNTarget());
 }
 
 AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
@@ -642,7 +634,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(*MF.getFunction().getParent());
 
-  ResourceUsage = &getAnalysis<AMDGPUResourceUsageAnalysis>();
+  if (P)
+    ResourceUsage = &P->getAnalysis<AMDGPUResourceUsageAnalysis>();
   CurrentProgramInfo.reset(MF);
 
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();

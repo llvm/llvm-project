@@ -3359,6 +3359,13 @@ createPPCAsmPrinterPass(TargetMachine &tm,
   return new PPCLinuxAsmPrinter(tm, std::move(Streamer));
 }
 
+static AsmPrinterLegacy *
+createPPCAsmPrinterLegacyPass(TargetMachine &tm,
+                              std::unique_ptr<MCStreamer> &&Streamer) {
+  return new AsmPrinterLegacy(std::unique_ptr<AsmPrinter>(
+      createPPCAsmPrinterPass(tm, std::move(Streamer))));
+}
+
 void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
   const NamedMDNode *NMD = M.getNamedMetadata("llvm.commandline");
   if (!NMD || !NMD->getNumOperands())
@@ -3389,4 +3396,13 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmPrinter() {
                                      createPPCAsmPrinterPass);
   TargetRegistry::RegisterAsmPrinter(getThePPC64LETarget(),
                                      createPPCAsmPrinterPass);
+
+  TargetRegistry::RegisterAsmPrinter(getThePPC32Target(),
+                                     createPPCAsmPrinterLegacyPass);
+  TargetRegistry::RegisterAsmPrinter(getThePPC32LETarget(),
+                                     createPPCAsmPrinterLegacyPass);
+  TargetRegistry::RegisterAsmPrinter(getThePPC64Target(),
+                                     createPPCAsmPrinterLegacyPass);
+  TargetRegistry::RegisterAsmPrinter(getThePPC64LETarget(),
+                                     createPPCAsmPrinterLegacyPass);
 }

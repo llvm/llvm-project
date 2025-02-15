@@ -73,8 +73,8 @@ public:
 
   Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
                              raw_pwrite_stream *, CodeGenFileType,
-                             const CGPassBuilderOption &,
-                             PassInstrumentationCallbacks *) override;
+                             const CGPassBuilderOption &, MCContext &,
+                             PassBuilder &) override;
 
   bool isJIT() const { return IsJIT; }
 

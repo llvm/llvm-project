@@ -16,11 +16,13 @@
 #define LLVM_CODEGEN_ASMPRINTER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/InlineAsm.h"
@@ -84,7 +86,9 @@ class RemarkStreamer;
 }
 
 /// This class is intended to be used as a driving class for all asm writers.
-class AsmPrinter : public MachineFunctionPass {
+/// Use lightweight RefCountedBase here because AsmPrinter is shared only in
+/// pass manager.
+class AsmPrinter : public RefCountedBase<AsmPrinter> {
 public:
   /// Target machine description.
   TargetMachine &TM;
@@ -180,8 +184,6 @@ private:
   /// List of symbols to be inserted into PC sections.
   DenseMap<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
 
-  static char ID;
-
 protected:
   MCSymbol *CurrentFnBegin = nullptr;
 
@@ -200,6 +202,10 @@ protected:
   size_t NumUserHandlers = 0;
 
   StackMaps SM;
+
+  MachineFunctionPass *P = nullptr;
+  ModuleAnalysisManager *MAM = nullptr;
+  MachineFunctionAnalysisManager *MFAM = nullptr;
 
 private:
   /// If generated on the fly this own the instance.
@@ -235,7 +241,7 @@ protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
 
 public:
-  ~AsmPrinter() override;
+  virtual ~AsmPrinter();
 
   DwarfDebug *getDwarfDebug() { return DD; }
   DwarfDebug *getDwarfDebug() const { return DD; }
@@ -375,23 +381,30 @@ public:
   // MachineFunctionPass Implementation.
   //===------------------------------------------------------------------===//
 
+  virtual StringRef getPassName() const;
+
   /// Record analysis usage.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
 
   /// Set up the AsmPrinter when we are working on a new module. If your pass
   /// overrides this, it must make sure to explicitly call this implementation.
-  bool doInitialization(Module &M) override;
+  virtual bool doInitialization(Module &M);
 
   /// Shut down the asmprinter. If you override this in your pass, you must make
   /// sure to call it explicitly.
-  bool doFinalization(Module &M) override;
+  virtual bool doFinalization(Module &M);
 
   /// Emit the specified function out to the OutStreamer.
-  bool runOnMachineFunction(MachineFunction &MF) override {
+  virtual bool runOnMachineFunction(MachineFunction &MF) {
     SetupMachineFunction(MF);
     emitFunctionBody();
     return false;
   }
+
+  void setPass(MachineFunctionPass *Pass) { P = Pass; }
+  void setMAM(ModuleAnalysisManager &AM) { MAM = &AM; }
+  void clearMAM() { MAM = nullptr; }
+  void setMFAM(MachineFunctionAnalysisManager &AM) { MFAM = &AM; }
 
   //===------------------------------------------------------------------===//
   // Coarse grained IR lowering routines.
@@ -523,6 +536,7 @@ public:
 
   /// Emit the stack maps.
   void emitStackMaps();
+  void emitStackMaps(Module &M); // For new pass manager version.
 
   //===------------------------------------------------------------------===//
   // Overridable Hooks
@@ -921,6 +935,78 @@ protected:
     return false;
   }
 };
+
+class AsmPrinterInitializePass
+    : public PassInfoMixin<AsmPrinterInitializePass> {
+  IntrusiveRefCntPtr<AsmPrinter> Printer;
+
+public:
+  explicit AsmPrinterInitializePass(IntrusiveRefCntPtr<AsmPrinter> AP)
+      : Printer(std::move(AP)) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class AsmPrinterPass : public PassInfoMixin<AsmPrinterPass> {
+  IntrusiveRefCntPtr<AsmPrinter> Printer;
+
+public:
+  explicit AsmPrinterPass(IntrusiveRefCntPtr<AsmPrinter> AP)
+      : Printer(std::move(AP)) {}
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AsmPrinterFinalizePass : public PassInfoMixin<AsmPrinterFinalizePass> {
+  IntrusiveRefCntPtr<AsmPrinter> Printer;
+
+public:
+  explicit AsmPrinterFinalizePass(IntrusiveRefCntPtr<AsmPrinter> AP)
+      : Printer(std::move(AP)) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+};
+
+class AsmPrinterLegacy : public MachineFunctionPass {
+  std::unique_ptr<AsmPrinter> Printer;
+
+public:
+  static char ID;
+
+  explicit AsmPrinterLegacy(std::unique_ptr<AsmPrinter> AP);
+
+  AsmPrinter &getPrinter() { return *Printer; }
+
+  //===------------------------------------------------------------------===//
+  // MachineFunctionPass Implementation.
+  //===------------------------------------------------------------------===//
+
+  /// Record analysis usage.
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    MachineFunctionPass::getAnalysisUsage(AU);
+    Printer->getAnalysisUsage(AU);
+  }
+
+  /// Set up the AsmPrinter when we are working on a new module. If your pass
+  /// overrides this, it must make sure to explicitly call this implementation.
+  bool doInitialization(Module &M) override {
+    return Printer->doInitialization(M);
+  }
+
+  /// Shut down the asmprinter. If you override this in your pass, you must make
+  /// sure to call it explicitly.
+  bool doFinalization(Module &M) override { return Printer->doFinalization(M); }
+
+  /// Emit the specified function out to the OutStreamer.
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return Printer->runOnMachineFunction(MF);
+  }
+
+  StringRef getPassName() const override { return Printer->getPassName(); }
+};
+
+AsmPrinterLegacy *createAsmPrinterLegacy(std::unique_ptr<AsmPrinter> AP);
 
 } // end namespace llvm
 

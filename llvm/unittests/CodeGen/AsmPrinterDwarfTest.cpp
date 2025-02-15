@@ -404,7 +404,8 @@ protected:
     TargetMachine *TM = &AP->TM;
     legacy::PassManager PM;
     PM.add(new MachineModuleInfoWrapperPass(TM));
-    PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
+    PM.add(new AsmPrinterLegacy(std::unique_ptr<AsmPrinter>(
+        TestPrinter->releaseAP()))); // Takes ownership of destroying AP
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
     M->setDataLayout(TM->createDataLayout());
