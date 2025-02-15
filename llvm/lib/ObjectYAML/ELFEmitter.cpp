@@ -1550,18 +1550,22 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     return;
 
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
+    unsigned Size = 0;
     if (Section.Type == llvm::ELF::SHT_LLVM_FUNC_MAP) {
       if (E.Version > 1)
         WithColor::warning() << "unsupported SHT_LLVM_FUNC_MAP version: "
                              << static_cast<int>(E.Version)
                              << "; encoding using the most recent version";
       CBA.write(E.Version);
-      SHeader.sh_size += 1;
+      Size += 1;
     }
     CBA.write<uintX_t>(E.Address, ELFT::Endianness);
-    SHeader.sh_size += sizeof(uintX_t);
+    Size += sizeof(uintX_t);
     CBA.write<uint64_t>(E.DynamicInstCount, ELFT::Endianness);
-    SHeader.sh_size += 8;
+    Size += 8;
+
+    SHeader.sh_size += Size;
+    SHeader.sh_entsize = Size;
   }
 }
 
