@@ -267,6 +267,8 @@ public:
             auto OpCode = OpCE->getOperator();
             if (OpCode == OO_Star || OpCode == OO_Amp) {
               auto *Callee = OpCE->getDirectCallee();
+              if (!Callee)
+                return false;
               auto clsName = safeGetName(Callee->getParent());
               if (!isRefType(clsName) || !OpCE->getNumArgs())
                 return false;
@@ -276,9 +278,10 @@ public:
           }
           if (auto *UO = dyn_cast<UnaryOperator>(Arg)) {
             auto OpCode = UO->getOpcode();
-            if (OpCode == UO_Deref || OpCode == UO_AddrOf)
+            if (OpCode == UO_Deref || OpCode == UO_AddrOf) {
               Arg = UO->getSubExpr()->IgnoreParenCasts();
-            continue;
+              continue;
+            }
           }
           break;
         } while (Arg);
