@@ -39,8 +39,7 @@ else()
                                       CURSES_INCLUDE_DIRS
                                       CURSES_LIBRARIES
                                       PANEL_LIBRARIES
-                                      HAS_TERMINFO_SYMBOLS
-                                    )
+                                      HAS_TERMINFO_SYMBOLS)
 
   if(CURSES_FOUND AND PANEL_LIBRARIES AND HAS_TERMINFO_SYMBOLS)
     mark_as_advanced(CURSES_INCLUDE_DIRS
