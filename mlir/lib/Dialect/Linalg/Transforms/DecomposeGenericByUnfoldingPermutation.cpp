@@ -228,7 +228,7 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
 
   SmallVector<Value> operands = op->getOperands();
   ValueRange operandsRef(operands);
-  
+
   auto newOp = rewriter.create<linalg::GenericOp>(
       /*location=*/op.getLoc(),
       /*resultTensorTypes=*/op->getResultTypes(),
