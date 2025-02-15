@@ -12,7 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/XCOFF_ppc64.h"
+#include "XCOFFLinkGraphBuilder.h"
+#include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Support/Error.h"
+#include <system_error>
 
 using namespace llvm;
 
@@ -41,12 +46,16 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromXCOFFObject_ppc64(
     (*Features).print(dbgs());
   });
 
-  llvm_unreachable("Graph builder not implemented for XCOFF yet");
+  return XCOFFLinkGraphBuilder(cast<object::XCOFFObjectFile>(**Obj),
+                               std::move(SSP), Triple("powerpc64-ibm-aix"),
+                               std::move(*Features), ppc64::getEdgeKindName)
+      .buildGraph();
 }
 
 void link_XCOFF_ppc64(std::unique_ptr<LinkGraph> G,
                       std::unique_ptr<JITLinkContext> Ctx) {
-  llvm_unreachable("Link implemented for XCOFF yet");
+  Ctx->notifyFailed(make_error<StringError>(
+      "link_XCOFF_ppc64 is not implemented", std::error_code()));
 }
 
 } // namespace jitlink

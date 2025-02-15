@@ -38,6 +38,7 @@ add_llvm_component_library(LLVMJITLink
   # XCOFF
   XCOFF.cpp
   XCOFF_ppc64.cpp
+  XCOFFLinkGraphBuilder.cpp
 
   # Architectures:
   aarch32.cpp

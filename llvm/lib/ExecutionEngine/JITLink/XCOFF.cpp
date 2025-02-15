@@ -36,7 +36,7 @@ createLinkGraphFromXCOFFObject(MemoryBufferRef ObjectBuffer,
 
 void link_XCOFF(std::unique_ptr<LinkGraph> G,
                 std::unique_ptr<JITLinkContext> Ctx) {
-  llvm_unreachable("Not implmeneted for XCOFF yet");
+  link_XCOFF_ppc64(std::move(G), std::move(Ctx));
 }
 
 } // namespace jitlink
