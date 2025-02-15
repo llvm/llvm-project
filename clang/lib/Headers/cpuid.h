@@ -267,7 +267,6 @@
                   : "0"(__leaf), "2"(__count))
 #else
 /* x86-64 uses %rbx as the base register, so preserve it. */
-#define __cpuid(__leaf, __eax, __ebx, __ecx, __edx) \
 #define __cpuid(__leaf, __eax, __ebx, __ecx, __edx)                            \
   __asm("  xchg{q|}  {%%|}rbx,%q1\n"                                           \
         "  cpuid\n"                                                            \
