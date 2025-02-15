@@ -39,7 +39,7 @@ Options
     Semicolon-delimited list of class names that should additionally be
     excluded from this check. The default is an empty string.
 
-.. option:: SubscriptFixMode
+.. option:: FixMode
 
     Determines what fixes are suggested. Either `None` (default), `at` (use 
     ``a.at(index)`` if a fitting function exists) or `function` (use a 
