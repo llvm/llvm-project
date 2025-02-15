@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/unistd/getsid.h"
 #include "test/UnitTest/Test.h"
 
