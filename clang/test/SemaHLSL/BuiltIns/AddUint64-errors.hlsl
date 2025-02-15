@@ -17,12 +17,17 @@ uint2 test_mismatched_arg_types(uint2 a, uint4 b) {
 
 uint2 test_bad_num_arg_elements(uint3 a, uint3 b) {
   return __builtin_hlsl_adduint64(a, b);
-  // expected-error@-1 {{invalid element count of 3 in vector operand (expected an even element count in the range of 2 and 4)}}
+  // expected-error@-1 {{incorrect number of bits in vector operand (expected a multiple of 64 bits, have 96)}}
 }
 
 uint2 test_scalar_arg_type(uint a) {
   return __builtin_hlsl_adduint64(a, a);
   // expected-error@-1 {{all arguments to '__builtin_hlsl_adduint64' must be vectors}}
+}
+
+uint2 test_uint64_args(uint16_t2 a) {
+  return __builtin_hlsl_adduint64(a, a);
+  // expected-error@-1 {{incorrect number of bits in integer (expected 32 bits, have 16)}}
 }
 
 uint2 test_signed_integer_args(int2 a, int2 b) {

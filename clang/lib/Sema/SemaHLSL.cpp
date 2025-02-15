@@ -21,6 +21,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -36,6 +37,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2261,12 +2263,23 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     }
 
-    // ensure both args have 2 elements, or both args have 4 elements
+    // ensure arg integers are 32-bits
+    uint64_t ElementBitCount = getASTContext()
+                                   .getTypeSizeInChars(VTy->getElementType())
+                                   .getQuantity() *
+                               8;
+    if (ElementBitCount != 32) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_integer_incorrect_bit_count)
+          << 32 << ElementBitCount;
+      return true;
+    }
+
+    // ensure both args are vectors of total bit size of a multiple of 64
     int NumElementsArg = VTy->getNumElements();
     if (NumElementsArg != 2 && NumElementsArg != 4) {
-      SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_invalid_even_odd_vector_element_count)
-          << NumElementsArg << 2 << 4 << /*even*/ 0 << /*operand*/ 1;
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_vector_incorrect_bit_count)
+          << 1 /*a multiple of*/ << 64 << NumElementsArg * ElementBitCount;
       return true;
     }
 
