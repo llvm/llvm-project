@@ -155,7 +155,7 @@ bool IODEF(OutputLogical)(Cookie cookie, bool truth) {
 #endif
 
 
-void std::__libcpp_verbose_abort(char const *format, ...) _LIBCPP_VERBOSE_ABORT_NOT_NOEXCEP {
+void std::__libcpp_verbose_abort(char const *format, ...) _LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT {
   va_list list;
   va_start(list, format);
   std::vfprintf(stderr, format, list);
