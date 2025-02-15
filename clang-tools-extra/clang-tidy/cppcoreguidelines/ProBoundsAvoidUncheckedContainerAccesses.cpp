@@ -31,7 +31,7 @@ ProBoundsAvoidUncheckedContainerAccesses::
   SubscriptExcludedClasses.insert(SubscriptExcludedClasses.end(),
                                   SubscriptDefaultExclusions.begin(),
                                   SubscriptDefaultExclusions.end());
-  SubscriptFixMode = Options.get("SubscriptFixMode", None);
+  FixMode = Options.get("FixMode", None);
   SubscriptFixFunction = Options.get("SubscriptFixFunction", "gsl::at");
 }
 
@@ -39,7 +39,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
 
   Options.store(Opts, "SubscriptFixFunction", SubscriptFixFunction);
-  Options.store(Opts, "SubscriptFixMode", SubscriptFixMode);
+  Options.store(Opts, "FixMode", FixMode);
   if (SubscriptExcludedClasses.size() == SubscriptDefaultExclusions.size()) {
     Options.store(Opts, "ExcludeClasses", "");
     return;
@@ -125,7 +125,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
 
   const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
 
-  if (SubscriptFixMode == None) {
+  if (FixMode == None) {
     diag(MatchedExpr->getCallee()->getBeginLoc(),
          "possibly unsafe 'operator[]', consider bounds-safe alternatives")
         << MatchedExpr->getCallee()->getSourceRange();
@@ -139,7 +139,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
     auto RightBracket =
         SourceRange(OCE->getOperatorLoc(), OCE->getOperatorLoc());
 
-    if (SubscriptFixMode == At) {
+    if (FixMode == At) {
       // Case: a[i] => a.at(i)
       const auto *MatchedOperator =
           Result.Nodes.getNodeAs<CXXMethodDecl>("operator");
@@ -164,7 +164,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
            DiagnosticIDs::Note)
           << Alternative->getNameInfo().getSourceRange();
 
-    } else if (SubscriptFixMode == Function) {
+    } else if (FixMode == Function) {
       // Case: a[i] => f(a, i)
       diag(MatchedExpr->getCallee()->getBeginLoc(),
            "possibly unsafe 'operator[]', use safe function '" +
@@ -183,7 +183,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
     // Case: a.operator[](i) or a->operator[](i)
     const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
 
-    if (SubscriptFixMode == At) {
+    if (FixMode == At) {
       // Cases: a.operator[](i) => a.at(i) and a->operator[](i) => a->at(i)
 
       const auto *MatchedOperator =
@@ -207,7 +207,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
            DiagnosticIDs::Note)
           << Alternative->getNameInfo().getSourceRange();
 
-    } else if (SubscriptFixMode == Function) {
+    } else if (FixMode == Function) {
       // Cases: a.operator[](i) => f(a, i) and a->operator[](i) => f(*a, i)
       const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
       std::string BeginInsertion = SubscriptFixFunction.str() + "(";
@@ -241,9 +241,9 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
 namespace clang::tidy {
 using P = cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccesses;
 
-llvm::ArrayRef<std::pair<P::SubscriptFixModes, StringRef>>
-OptionEnumMapping<P::SubscriptFixModes>::getEnumMapping() {
-  static constexpr std::pair<P::SubscriptFixModes, StringRef> Mapping[] = {
+llvm::ArrayRef<std::pair<P::FixModes, StringRef>>
+OptionEnumMapping<P::FixModes>::getEnumMapping() {
+  static constexpr std::pair<P::FixModes, StringRef> Mapping[] = {
       {P::None, "None"}, {P::At, "at"}, {P::Function, "function"}};
   return {Mapping};
 }
