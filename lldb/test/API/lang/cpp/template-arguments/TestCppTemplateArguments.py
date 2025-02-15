@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     @no_debug_info_test
+    @skipIf(compiler="clang", compiler_version=["<", "20.0"])
     def test(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
@@ -63,6 +64,8 @@ class TestCase(TestBase):
 
         # FIXME: type should be Foo<float, 2.0f>
         # FIXME: double/float NTTP parameter values currently not supported.
-        value = self.expect_expr("temp4", result_type="Foo<float, float>")
+        value = self.expect_expr("temp4", result_type="Foo<float, 1073741824>")
         template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)
-        self.assertFalse(template_param_value)
+        self.assertEqual(template_param_value.GetTypeName(), "float")
+        # FIXME: this should return a float
+        self.assertEqual(template_param_value.GetValueAsSigned(), 2)
