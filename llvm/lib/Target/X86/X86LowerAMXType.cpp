@@ -190,8 +190,8 @@ Value *ShapeCalculator::getRowFromCol(Instruction *II, Value *V,
 
 Value *ShapeCalculator::getColFromRow(Instruction *II, Value *V,
                                       unsigned Granularity) {
-  if (Row2Col.count(V))
-    return Row2Col[V];
+  if (auto It = Row2Col.find(V); It != Row2Col.end())
+    return It->second;
   IRBuilder<> Builder(II);
   Value *RealCol = nullptr;
   if (isa<ConstantInt>(V))
