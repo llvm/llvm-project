@@ -43,3 +43,26 @@ bool4 test_and_bool4(bool4 x, bool4 y) {
   return and(x, y);
 }
 
+// CHECK-LABEL: define noundef <4 x i1> @_Z13test_and_int4Dv4_iS_(
+// CHECK-SAME: <4 x i32> noundef [[X:%.*]], <4 x i32> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne <4 x i32> [[X]], zeroinitializer
+// CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp ne <4 x i32> [[Y]], zeroinitializer
+// CHECK-NEXT:    [[HLSL_AND:%.*]] = and <4 x i1> [[TOBOOL]], [[TOBOOL1]]
+// CHECK-NEXT:    ret <4 x i1> [[HLSL_AND]]
+//
+bool4 test_and_int4(int4 x, int4 y) {
+  return and(x, y);
+}
+
+// CHECK-LABEL: define noundef <4 x i1> @_Z15test_and_float4Dv4_fS_(
+// CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[X:%.*]], <4 x float> noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une <4 x float> [[X]], zeroinitializer
+// CHECK-NEXT:    [[TOBOOL1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une <4 x float> [[Y]], zeroinitializer
+// CHECK-NEXT:    [[HLSL_AND:%.*]] = and <4 x i1> [[TOBOOL]], [[TOBOOL1]]
+// CHECK-NEXT:    ret <4 x i1> [[HLSL_AND]]
+//
+bool4 test_and_float4(float4 x, float4 y) {
+  return and(x, y);
+}

@@ -23,5 +23,5 @@ struct S {
 
 bool test_invalid_type_conversion(S s) {
   return __builtin_hlsl_and(s, s);
-  // expected-error@-1{{no viable conversion from returned value of type 'S' to function return type 'bool'}}
+  // expected-error@-1{{passing 'S' to parameter of incompatible type 'bool'}}
 }

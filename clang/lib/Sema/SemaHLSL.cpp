@@ -2079,6 +2079,14 @@ static bool CheckFloatingOrIntRepresentation(Sema *S, CallExpr *TheCall) {
                                     checkAllSignedTypes);
 }
 
+static bool CheckBoolRepresentation(Sema *S, CallExpr *TheCall) {
+  auto checkAllBoolTypes = [](clang::QualType PassedType) -> bool {
+    return !PassedType->hasIntegerRepresentation();
+  };
+  return CheckAllArgTypesAreCorrect(S, TheCall, S->Context.BoolTy,
+                                    checkAllBoolTypes);
+}
+
 static bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllUnsignedTypes = [](clang::QualType PassedType) -> bool {
     return !PassedType->hasUnsignedIntegerRepresentation();
@@ -2249,6 +2257,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
     if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+      return true;
+    if (CheckBoolRepresentation(&SemaRef, TheCall))
       return true;
     ExprResult A = TheCall->getArg(0);
     QualType ArgTyA = A.get()->getType();
