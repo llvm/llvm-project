@@ -150,7 +150,12 @@ bool IODEF(OutputLogical)(Cookie cookie, bool truth) {
 // Provide own definition for `std::__libcpp_verbose_abort` to avoid dependency
 // on the version provided by libc++.
 
-void std::__libcpp_verbose_abort(char const *format, ...) {
+#if !defined(_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT)
+  #define _LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT
+#endif
+
+
+void std::__libcpp_verbose_abort(char const *format, ...) _LIBCPP_VERBOSE_ABORT_NOT_NOEXCEP {
   va_list list;
   va_start(list, format);
   std::vfprintf(stderr, format, list);
