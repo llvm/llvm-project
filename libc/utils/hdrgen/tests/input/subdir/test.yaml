@@ -12,3 +12,6 @@ functions:
       - type: type_a
     standards:
       - gnu
+  - name: ptrfunc
+    return_type: int *
+    arguments: []
