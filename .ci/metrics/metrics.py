@@ -177,7 +177,7 @@ def get_per_workflow_metrics(
                 # longer in a testing state and we can directly assert the workflow
                 # result.
                 for step in workflow_job.steps:
-                    if step.conclusion != "success":
+                    if step.conclusion != "success" and step.conclusion != "skipped":
                         job_result = 0
                         break
 
