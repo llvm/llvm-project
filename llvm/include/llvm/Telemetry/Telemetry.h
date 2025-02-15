@@ -138,6 +138,10 @@ class Manager {
 public:
   virtual ~Manager() = default;
 
+  // Optional callback for subclasses to perform additional tasks before
+  // dispatching to Destinations.
+  virtual Error preDispatch(TelemetryInfo *Entry) = 0;
+
   // Dispatch Telemetry data to the Destination(s).
   // The argument is non-const because the Manager may add or remove
   // data from the entry.
@@ -145,11 +149,6 @@ public:
 
   // Register a Destination.
   void addDestination(std::unique_ptr<Destination> Destination);
-
-protected:
-  // Optional callback for subclasses to perform additional tasks before
-  // dispatching to Destinations.
-  virtual Error preDispatch(TelemetryInfo *Entry) {}
 
 private:
   std::vector<std::unique_ptr<Destination>> Destinations;

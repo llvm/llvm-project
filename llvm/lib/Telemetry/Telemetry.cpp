@@ -1,16 +1,3 @@
-//===----------------------------------------------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file provides the basic framework for Telemetry.
-/// Refer to its documentation at llvm/docs/Telemetry.rst for more details.
-//===---------------------------------------------------------------------===//
-
 #include "llvm/Telemetry/Telemetry.h"
 
 namespace llvm {
