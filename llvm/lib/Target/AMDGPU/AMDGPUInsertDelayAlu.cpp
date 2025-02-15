@@ -14,8 +14,13 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIDefines.h"
 #include "SIInstrInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/MC/MCRegister.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -44,6 +49,16 @@ public:
     if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
         AMDGPU::DepCtr::decodeFieldVaVdst(MI.getOperand(0).getImm()) == 0)
       return true;
+    return false;
+  }
+
+  static bool instructionWaitsForSGPRWrites(const MachineInstr &MI) {
+    // These instruction types wait for VA_SDST==0 before issuing.
+    const uint64_t VA_SDST_0 = SIInstrFlags::SALU | SIInstrFlags::SMRD;
+
+    if (MI.getDesc().TSFlags & VA_SDST_0)
+      return true;
+
     return false;
   }
 
@@ -227,6 +242,17 @@ public:
       }
     }
 
+    void advanceByNum(DelayType Type, unsigned Cycles,
+                      unsigned SGPRWriteVALUNum) {
+      iterator Next;
+      for (auto I = begin(), E = end(); I != E; I = Next) {
+        Next = std::next(I);
+        if (I->second.VALUNum >= SGPRWriteVALUNum && I->second.VALUCycles > 0) {
+          erase(I);
+        }
+      }
+    }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump(const TargetRegisterInfo *TRI) const {
       if (empty()) {
@@ -331,6 +357,7 @@ public:
     bool Changed = false;
     MachineInstr *LastDelayAlu = nullptr;
 
+    MCRegUnit lastSGPRfromVALU = 0;
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
     for (auto &MI : MBB.instrs()) {
@@ -344,6 +371,15 @@ public:
       }
 
       DelayType Type = getDelayType(MI.getDesc().TSFlags);
+
+      if (instructionWaitsForSGPRWrites(MI)) {
+        auto It = State.find(lastSGPRfromVALU);
+        if (It != State.end()) {
+          DelayInfo Info = It->getSecond();
+          State.advanceByNum(VALU, Info.VALUCycles, Info.VALUNum);
+          lastSGPRfromVALU = 0;
+        }
+      }
 
       if (instructionWaitsForVALU(MI)) {
         // Forget about all outstanding VALU delays.
@@ -368,6 +404,17 @@ public:
             }
           }
         }
+
+        if (SII->isVALU(MI.getOpcode())) {
+          for (const auto &Op : MI.defs()) {
+            Register Reg = Op.getReg();
+            if (AMDGPU::isSGPR(Reg, TRI)) {
+              lastSGPRfromVALU = *(TRI->regunits(Reg).begin());
+              break;
+            }
+          }
+        }
+
         if (Emit && !MI.isBundledWithPred()) {
           // TODO: For VALU->SALU delays should we use s_delay_alu or s_nop or
           // just ignore them?

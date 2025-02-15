@@ -135,7 +135,7 @@ define amdgpu_kernel void @id_row_i32() #0 {
 ; GFX11-SDAG-LABEL: id_row_i32:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0x63
 ; GFX11-SDAG-NEXT:    s_mov_b32 m0, s0
@@ -154,7 +154,7 @@ define amdgpu_kernel void @id_row_i32() #0 {
 ; GFX12-SDAG-LABEL: id_row_i32:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0x63
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s0
