@@ -17,7 +17,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-static constexpr std::array<llvm::StringRef, 3> SubscriptDefaultExclusions = {
+static constexpr std::array<llvm::StringRef, 3> DefaultExclusions = {
     llvm::StringRef("::std::map"), llvm::StringRef("::std::unordered_map"),
     llvm::StringRef("::std::flat_map")};
 
@@ -26,11 +26,10 @@ ProBoundsAvoidUncheckedContainerAccesses::
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {
 
-  SubscriptExcludedClasses = clang::tidy::utils::options::parseStringList(
+  ExcludedClasses = clang::tidy::utils::options::parseStringList(
       Options.get("ExcludeClasses", ""));
-  SubscriptExcludedClasses.insert(SubscriptExcludedClasses.end(),
-                                  SubscriptDefaultExclusions.begin(),
-                                  SubscriptDefaultExclusions.end());
+  ExcludedClasses.insert(ExcludedClasses.end(), DefaultExclusions.begin(),
+                         DefaultExclusions.end());
   FixMode = Options.get("FixMode", None);
   FixFunction = Options.get("FixFunction", "gsl::at");
 }
@@ -40,20 +39,20 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
 
   Options.store(Opts, "FixFunction", FixFunction);
   Options.store(Opts, "FixMode", FixMode);
-  if (SubscriptExcludedClasses.size() == SubscriptDefaultExclusions.size()) {
+  if (ExcludedClasses.size() == DefaultExclusions.size()) {
     Options.store(Opts, "ExcludeClasses", "");
     return;
   }
 
   // Sum up the sizes of the defaults ( + semicolons), so we can remove them
   // from the saved options
-  size_t DefaultsStringLength = std::transform_reduce(
-      SubscriptDefaultExclusions.begin(), SubscriptDefaultExclusions.end(),
-      SubscriptDefaultExclusions.size(), std::plus<>(),
-      [](llvm::StringRef Name) { return Name.size(); });
+  size_t DefaultsStringLength =
+      std::transform_reduce(DefaultExclusions.begin(), DefaultExclusions.end(),
+                            DefaultExclusions.size(), std::plus<>(),
+                            [](llvm::StringRef Name) { return Name.size(); });
 
-  std::string Serialized = clang::tidy::utils::options::serializeStringList(
-      SubscriptExcludedClasses);
+  std::string Serialized =
+      clang::tidy::utils::options::serializeStringList(ExcludedClasses);
 
   Options.store(Opts, "ExcludeClasses",
                 Serialized.substr(0, Serialized.size() - DefaultsStringLength));
@@ -114,7 +113,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::registerMatchers(
       mapAnyOf(cxxOperatorCallExpr, cxxMemberCallExpr)
           .with(callee(cxxMethodDecl(hasOverloadedOperatorName("[]"),
                                      unless(matchers::matchesAnyListedName(
-                                         SubscriptExcludedClasses)))
+                                         ExcludedClasses)))
                            .bind("operator")))
           .bind("caller"),
       this);
