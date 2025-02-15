@@ -206,6 +206,12 @@ public:
 
   /// Insert an unlinked instruction into a basic block immediately before
   /// the specified instruction.
+  ///
+  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
+  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
+  /// insertBefore without unwrapping/rewrapping. For all other positions, call
+  /// getIterator to fetch the instruction iterator.
+  LLVM_DEPRECATED("Use iterators as instruction positions", "")
   void insertBefore(Instruction *InsertPos);
 
   /// Insert an unlinked instruction into a basic block immediately before
@@ -229,6 +235,12 @@ public:
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
+  ///
+  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
+  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
+  /// moveBefore without unwrapping/rewrapping. For all other positions, call
+  /// getIterator to fetch the instruction iterator.
+  LLVM_DEPRECATED("Use iterators as instruction positions", "")
   void moveBefore(Instruction *MovePos);
 
   /// Unlink this instruction from its current basic block and insert it into
@@ -238,8 +250,20 @@ public:
   /// Perform a \ref moveBefore operation, while signalling that the caller
   /// intends to preserve the original ordering of instructions. This implicitly
   /// means that any adjacent debug-info should move with this instruction.
-  /// This method is currently a no-op placeholder, but it will become
-  /// meaningful when the "RemoveDIs" project is enabled.
+  void moveBeforePreserving(InstListType::iterator MovePos);
+
+  /// Perform a \ref moveBefore operation, while signalling that the caller
+  /// intends to preserve the original ordering of instructions. This implicitly
+  /// means that any adjacent debug-info should move with this instruction.
+  void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I);
+
+  /// Perform a \ref moveBefore operation, while signalling that the caller
+  /// intends to preserve the original ordering of instructions. This implicitly
+  /// means that any adjacent debug-info should move with this instruction.
+  ///
+  /// Deprecated in favour of the iterator-accepting flavour of
+  /// moveBeforePreserving, as all insertions should be at iterator positions.
+  LLVM_DEPRECATED("Use iterators as instruction positions", "")
   void moveBeforePreserving(Instruction *MovePos);
 
 private:
@@ -252,11 +276,6 @@ public:
   ///
   /// \pre I is a valid iterator into BB.
   void moveBefore(BasicBlock &BB, InstListType::iterator I);
-
-  void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I);
-  /// Unlink this instruction from its current basic block and insert it into
-  /// the basic block that MovePos lives in, right before MovePos.
-  void moveBeforePreserving(InstListType::iterator I);
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right after MovePos.

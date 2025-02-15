@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/intrinsics.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"
@@ -19,6 +18,7 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
@@ -406,6 +406,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultLogical},
     {"ceiling", {{"a", AnyReal}, DefaultingKIND}, KINDInt},
     {"char", {{"i", AnyInt, Rank::elementalOrBOZ}, DefaultingKIND}, KINDChar},
+    {"chdir", {{"name", DefaultChar, Rank::scalar, Optionality::required}},
+        DefaultInt},
     {"cmplx", {{"x", AnyComplex}, DefaultingKIND}, KINDComplex},
     {"cmplx",
         {{"x", AnyIntUnsignedOrReal, Rank::elementalOrBOZ},
@@ -1413,6 +1415,11 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"stat", AnyInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
+    {"chdir",
+        {{"name", DefaultChar, Rank::scalar, Optionality::required},
+            {"status", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"co_broadcast",
         {{"a", AnyData, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::InOut},
@@ -2029,11 +2036,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       if (!sameArg) {
         sameArg = arg;
       }
-      // Check both ways so that a CLASS(*) actuals to
-      // MOVE_ALLOC and EOSHIFT both work.
       auto sameType{sameArg->GetType().value()};
-      argOk = sameType.IsTkLenCompatibleWith(*type) ||
-          type->IsTkLenCompatibleWith(sameType);
+      if (name == "move_alloc"s) {
+        // second argument can be more general
+        argOk = type->IsTkLenCompatibleWith(sameType);
+      } else if (name == "merge"s) {
+        argOk = type->IsTkLenCompatibleWith(sameType) &&
+            sameType.IsTkLenCompatibleWith(*type);
+      } else {
+        argOk = sameType.IsTkLenCompatibleWith(*type);
+      }
     } break;
     case KindCode::sameKind:
       if (!sameArg) {
@@ -2357,7 +2369,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       if (kindArg) {
         if (auto *expr{kindArg->UnwrapExpr()}) {
           CHECK(expr->Rank() == 0);
-          if (auto code{ToInt64(*expr)}) {
+          if (auto code{ToInt64(Fold(context, common::Clone(*expr)))}) {
             if (context.targetCharacteristics().IsTypeEnabled(
                     *category, *code)) {
               if (*category == TypeCategory::Character) { // ACHAR & CHAR
@@ -2369,9 +2381,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             }
           }
         }
-        messages.Say("'kind=' argument must be a constant scalar integer "
-                     "whose value is a supported kind for the "
-                     "intrinsic result type"_err_en_US);
+        messages.Say(
+            "'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type"_err_en_US);
         // use default kind below for error recovery
       } else if (kindDummyArg->flags.test(ArgFlag::defaultsToSameKind)) {
         CHECK(sameArg);
@@ -2742,8 +2753,8 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
-  static const std::string dualIntrinsic[]{
-      {"etime"s}, {"getcwd"s}, {"rename"s}, {"second"s}, {"system"s}};
+  static const std::string dualIntrinsic[]{{"chdir"s}, {"etime"s}, {"getcwd"s},
+      {"rename"s}, {"second"s}, {"system"s}};
 
   return llvm::is_contained(dualIntrinsic, name);
 }

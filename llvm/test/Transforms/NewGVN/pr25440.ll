@@ -12,7 +12,7 @@ target triple = "thumbv7--linux-gnueabi"
 ; Function Attrs: nounwind
 define fastcc void @foo(ptr nocapture readonly %x, i1 %arg, i1 %arg2, i1 %arg3, i1 %arg4) {
 ; CHECK-LABEL: define fastcc void @foo(
-; CHECK-SAME: ptr nocapture readonly [[X:%.*]], i1 [[ARG:%.*]], i1 [[ARG2:%.*]], i1 [[ARG3:%.*]], i1 [[ARG4:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], i1 [[ARG:%.*]], i1 [[ARG2:%.*]], i1 [[ARG3:%.*]], i1 [[ARG4:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB0:%.*]]
 ; CHECK:       bb0:

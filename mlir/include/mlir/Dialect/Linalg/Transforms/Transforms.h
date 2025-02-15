@@ -1005,10 +1005,11 @@ void transformIndexOps(RewriterBase &b, LinalgOp op,
 /// To:
 /// ```
 ///  %cst = arith.constant 0.000000e+00 : f32
-///  %0 = tensor.expand_shape %in [[0, 1]] : tensor<32xf32> into
-///  tensor<4x8xf32> %1 = tensor.empty [4] : tensor<4xf32> %2 = linalg.fill
-///  ins(%cst : f32) outs(%1 : tensor<4xf32>) -> tensor<4xf32> %3 =
-///  linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+///  %0 = tensor.expand_shape %in [[0, 1]]: tensor<32xf32> into tensor<4x8xf32>
+///  %1 = tensor.empty [4] : tensor<4xf32>
+///  %2 = linalg.fill ins(%cst : f32)
+///                   outs(%1 : tensor<4xf32>) -> tensor<4xf32>
+///  %3 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
 ///                                        affine_map<(d0, d1) -> (d0)>],
 ///    iterator_types = ["parallel", "reduction"]}
 ///    ins(%0 : tensor<4x8xf32>) outs(%2 : tensor<4xf32>) {
@@ -1395,6 +1396,14 @@ FailureOr<Operation *>
 decomposeWinogradOutputTransformOp(RewriterBase &rewriter,
                                    linalg::WinogradOutputTransformOp op);
 
+/// Method to deduplicate operands and remove dead results of `linalg.generic`
+/// operations. This is effectively DCE for a linalg.generic op. If there is
+/// deduplication of operands orremoval of results, replaces the `genericOp`
+/// with a new op and returns it. Returns the same operation if there is no
+/// deduplication/removal.
+FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
+    RewriterBase &rewriter, linalg::GenericOp genericOp, bool removeOutputs);
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.
 // TODO: every single such pattern should be a close to noop wrapper around a
@@ -1723,11 +1732,6 @@ void populateDecomposePadPatterns(RewritePatternSet &patterns);
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
 
-/// Populates `patterns` with vectorisation patterns for tensor.insert_slice.
-/// TODO: Avoid having a dedicated `populate{}` for one pattern. Instead, either
-/// expand or merge with other `populate{}`.
-void populateInsertSliceVectorizationPatterns(RewritePatternSet &patterns);
-
 /// Populates `patterns` with patterns that vectorize tensor.pad.
 /// These patterns are meant to apply in a complementary fashion. Benefits
 /// are used to encode a certain ordering of pattern application. To avoid
@@ -1786,7 +1790,7 @@ void populateDataLayoutPropagationPatterns(
     const ControlPropagationFn &controlPackUnPackPropagation);
 
 /// Pattern to remove dead operands and results of `linalg.generic` operations.
-/// This is effectively DCE for a linalg op.
+/// This is a pattern wrapper for `deduplicateOperandsAndRemoveDeadResults`.
 void populateEraseUnusedOperandsAndResultsPatterns(RewritePatternSet &patterns);
 
 /// Patterns to promote inputs to outputs and remove unused inputs of

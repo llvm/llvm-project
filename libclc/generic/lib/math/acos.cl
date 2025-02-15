@@ -19,10 +19,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
-
-#include "math.h"
+#include <clc/math/math.h>
 
 _CLC_OVERLOAD _CLC_DEF float acos(float x) {
     // Computes arccos(x).

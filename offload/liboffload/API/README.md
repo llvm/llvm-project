@@ -62,7 +62,7 @@ which preserves ABI compatibility with C.
 Represents a C-style enum. Contains a list of `etor` values, which have a name
 and description.
 
-A `TaggedEtor` record type also exists which addtionally takes a type. This type
+A `TaggedEtor` record type also exists which additionally takes a type. This type
 is used when the enum is used as a parameter to a function with a type-tagged
 function parameter (e.g. `olGetDeviceInfo`).
 
