@@ -987,18 +987,10 @@ void VPlan::execute(VPTransformState *State) {
   setName("Final VPlan");
   LLVM_DEBUG(dump());
 
-  // Disconnect the middle block from its single successor (the scalar loop
-  // header) in both the CFG and DT. The branch will be recreated during VPlan
-  // execution.
-  BasicBlock *MiddleBB = State->CFG.ExitBB;
-  BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
-  auto *BrInst = new UnreachableInst(MiddleBB->getContext());
-  BrInst->insertBefore(MiddleBB->getTerminator()->getIterator());
-  MiddleBB->getTerminator()->eraseFromParent();
-  State->CFG.DTU.applyUpdates({{DominatorTree::Delete, MiddleBB, ScalarPh}});
   // Disconnect scalar preheader and scalar header, as the dominator tree edge
   // will be updated as part of VPlan execution. This allows keeping the DTU
   // logic generic during VPlan execution.
+  BasicBlock *ScalarPh = State->CFG.ExitBB;
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
 
