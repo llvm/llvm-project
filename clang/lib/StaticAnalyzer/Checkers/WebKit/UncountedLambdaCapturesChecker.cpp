@@ -267,6 +267,8 @@ public:
             auto OpCode = OpCE->getOperator();
             if (OpCode == OO_Star || OpCode == OO_Amp) {
               auto *Callee = OpCE->getDirectCallee();
+              if (!Callee)
+                return false;
               auto clsName = safeGetName(Callee->getParent());
               if (!isRefType(clsName) || !OpCE->getNumArgs())
                 return false;
