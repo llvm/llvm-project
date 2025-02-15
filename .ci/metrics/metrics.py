@@ -24,6 +24,7 @@ class JobMetrics:
     status: int
     created_at_ns: int
     workflow_id: int
+    workflow_name: str
 
 
 @dataclass
@@ -199,6 +200,7 @@ def get_per_workflow_metrics(
                     job_result,
                     created_at_ns,
                     workflow_run.id,
+                    workflow_run.name,
                 )
             )
 
@@ -278,7 +280,7 @@ def main():
         for workflow_metric in reversed(current_metrics):
             if isinstance(workflow_metric, JobMetrics):
                 workflows_to_track[
-                    workflow_metric.job_name
+                    workflow_metric.workflow_name
                 ] = workflow_metric.workflow_id
 
         time.sleep(SCRAPE_INTERVAL_SECONDS)
