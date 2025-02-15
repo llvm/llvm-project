@@ -156,8 +156,9 @@ int llvm::compileModuleWithNewPM(
     if (MIR->parseMachineFunctions(*M, MAM))
       return 1;
   } else {
-    ExitOnErr(Target->buildCodeGenPipeline(
-        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
+    ExitOnErr(
+        Target->buildCodeGenPipeline(MPM, *OS, DwoOut ? &DwoOut->os() : nullptr,
+                                     FileType, Opt, MMI.getContext(), PB));
   }
 
   if (PrintPipelinePasses) {

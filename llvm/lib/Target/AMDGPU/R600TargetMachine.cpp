@@ -16,6 +16,7 @@
 
 #include "R600TargetMachine.h"
 #include "R600.h"
+#include "R600AsmPrinter.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600MachineScheduler.h"
 #include "R600TargetTransformInfo.h"
@@ -147,12 +148,22 @@ TargetPassConfig *R600TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new R600PassConfig(*this, PM);
 }
 
-Error R600TargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC) {
-  R600CodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+void R600TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  AMDGPUTargetMachine::registerPassBuilderCallbacks(PB);
+  PB.registerAsmPrinterCreationCallback(
+      [&](std::unique_ptr<MCStreamer> Streamer) {
+        return makeIntrusiveRefCnt<R600AsmPrinter>(*this, std::move(Streamer));
+      });
+}
+
+Error R600TargetMachine::buildCodeGenPipeline(ModulePassManager &MPM,
+                                              raw_pwrite_stream &Out,
+                                              raw_pwrite_stream *DwoOut,
+                                              CodeGenFileType FileType,
+                                              const CGPassBuilderOption &Opts,
+                                              MCContext &Ctx, PassBuilder &PB) {
+  R600CodeGenPassBuilder CGPB(*this, Opts, PB);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
 }
 
 MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
@@ -166,10 +177,10 @@ MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
 // R600 CodeGen Pass Builder interface.
 //===----------------------------------------------------------------------===//
 
-R600CodeGenPassBuilder::R600CodeGenPassBuilder(
-    R600TargetMachine &TM, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC)
-    : CodeGenPassBuilder(TM, Opts, PIC) {
+R600CodeGenPassBuilder::R600CodeGenPassBuilder(R600TargetMachine &TM,
+                                               const CGPassBuilderOption &Opts,
+                                               PassBuilder &PB)
+    : CodeGenPassBuilder(TM, Opts, PB) {
   Opt.RequiresCodeGenSCCOrder = true;
 }
 

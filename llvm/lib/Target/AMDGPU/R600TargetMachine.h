@@ -38,11 +38,13 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
   Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
                              raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opt,
-                             PassInstrumentationCallbacks *PIC) override;
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassBuilder &PB) override;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override;
 
@@ -63,7 +65,7 @@ class R600CodeGenPassBuilder
     : public CodeGenPassBuilder<R600CodeGenPassBuilder, R600TargetMachine> {
 public:
   R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
-                         PassInstrumentationCallbacks *PIC);
+                         PassBuilder &PB);
 
   void addPreISel(AddIRPass &addPass) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;

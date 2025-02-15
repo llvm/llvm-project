@@ -17,6 +17,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
+#include "AMDGPUAsmPrinter.h"
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
 #include "AMDGPUIGroupLP.h"
@@ -899,6 +900,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           return onlyAllocateWWMRegs;
         return nullptr;
       });
+
+  PB.registerAsmPrinterCreationCallback(
+      [&](std::unique_ptr<MCStreamer> Streamer) {
+        return makeIntrusiveRefCnt<AMDGPUAsmPrinter>(*this,
+                                                     std::move(Streamer));
+      });
 }
 
 int64_t AMDGPUTargetMachine::getNullPointerValue(unsigned AddrSpace) {
@@ -1038,12 +1045,14 @@ GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(GCNTTIImpl(this, F));
 }
 
-Error GCNTargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC) {
-  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+Error GCNTargetMachine::buildCodeGenPipeline(ModulePassManager &MPM,
+                                             raw_pwrite_stream &Out,
+                                             raw_pwrite_stream *DwoOut,
+                                             CodeGenFileType FileType,
+                                             const CGPassBuilderOption &Opts,
+                                             MCContext &Ctx, PassBuilder &PB) {
+  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PB);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1929,9 +1938,8 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 //===----------------------------------------------------------------------===//
 
 AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
-    GCNTargetMachine &TM, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC)
-    : CodeGenPassBuilder(TM, Opts, PIC) {
+    GCNTargetMachine &TM, const CGPassBuilderOption &Opts, PassBuilder &PB)
+    : CodeGenPassBuilder(TM, Opts, PB) {
   Opt.RequiresCodeGenSCCOrder = true;
   // Exceptions and StackMaps are not supported, so these passes will never do
   // anything.

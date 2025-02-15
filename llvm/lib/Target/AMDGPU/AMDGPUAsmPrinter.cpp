@@ -77,17 +77,9 @@ static uint32_t getFPMode(SIModeRegisterDefaults Mode) {
          FP_DENORM_MODE_DP(Mode.fpDenormModeDPValue());
 }
 
-static AsmPrinter *
-createAMDGPUAsmPrinterPass(TargetMachine &tm,
-                           std::unique_ptr<MCStreamer> &&Streamer) {
-  return new AMDGPUAsmPrinter(tm, std::move(Streamer));
-}
-
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmPrinter() {
-  TargetRegistry::RegisterAsmPrinter(getTheR600Target(),
-                                     llvm::createR600AsmPrinterPass);
-  TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
-                                     createAMDGPUAsmPrinterPass);
+  RegisterAsmPrinter<R600AsmPrinter> X(getTheR600Target());
+  RegisterAsmPrinter<AMDGPUAsmPrinter> Y(getTheGCNTarget());
 }
 
 AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
@@ -441,9 +433,13 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
         RI.getSymbol(FnSym->getName(), RIK::RIK_NumAGPR, OutContext, IsLocal);
     uint64_t NumVgpr, NumAgpr;
 
-    MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF =
+        MFPass ? MMI->getMachineFunction(F)
+               : &MAM->getResult<FunctionAnalysisManagerModuleProxy>(
+                         *F.getParent())
+                      .getManager()
+                      .getResult<MachineFunctionAnalysis>(F)
+                      .getMF();
     if (MF && NumVgprSymbol->isVariable() && NumAgprSymbol->isVariable() &&
         TryGetMCExprValue(NumVgprSymbol->getVariableValue(), NumVgpr) &&
         TryGetMCExprValue(NumAgprSymbol->getVariableValue(), NumAgpr)) {
@@ -642,7 +638,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(*MF.getFunction().getParent());
 
-  ResourceUsage = &getAnalysis<AMDGPUResourceUsageAnalysis>();
+  if (MFPass)
+    ResourceUsage = &MFPass->getAnalysis<AMDGPUResourceUsageAnalysis>();
   CurrentProgramInfo.reset(MF);
 
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
