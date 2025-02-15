@@ -884,11 +884,6 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Indicates whether or not we need to set up our own private segment size.
   bool usesDynamicStack() const { return DynamicStack; }
 
-  /// Get the execution mode of this kernel.
-  OMPTgtExecModeFlags getExecutionMode() const {
-    return getExecutionModeFlags();
-  }
-
   /// Envar to disable host-exec thread creation.
   BoolEnvar OMPX_DisableHostExec;
 
@@ -1717,7 +1712,7 @@ private:
     std::string KernelName;
     uint32_t NumTeams;
     uint32_t NumThreads;
-    KernelRunRecord *KernelRunRecords;
+    KernelRunRecordTy *KernelRunRecords;
   };
 
   using AMDGPUStreamCallbackTy = Error(void *Data);
@@ -2096,7 +2091,7 @@ private:
     PostKernelRunProcessingArgsTy *Args =
         reinterpret_cast<PostKernelRunProcessingArgsTy *>(Data);
 
-    KernelRunRecord *KernelRecord = Args->KernelRunRecords;
+    KernelRunRecordTy *KernelRecord = Args->KernelRunRecords;
     assert(KernelRecord && "KernelRunRecord is null!");
 
     uint64_t KernelDuration = getKernelDuration(Args);
@@ -2191,10 +2186,10 @@ public:
 
     // If runtime autotuning is enabled, setup the callback functions to process
     // the data after kernel completed.
-    if (Device.enableRuntimeAutotuning() &&
-        Kernel.getExecutionMode() == OMP_TGT_EXEC_MODE_SPMD) {
+    if (Device.enableRuntimeAutotuning() && Kernel.isSPMDMode()) {
       std::string KernelName(Kernel.getName());
-      KernelRunRecord *KernelRecords = Device.getKernelRunRecords();
+      KernelRunRecordTy *KernelRecords = Device.getKernelRunRecords();
+      assert(KernelRecords && "No KernelRecords!");
 
       // If this kernel has reached the run limit,
       // skip registering the callback function.

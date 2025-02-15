@@ -727,7 +727,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                            KernelArgs.NumTeams[2]};
 
   std::string KernelName = getName();
-  KernelRunRecord *KernelRecord = GenericDevice.getKernelRunRecords();
+  KernelRunRecordTy *KernelRecord = GenericDevice.getKernelRunRecords();
   uint32_t KernelRunCounter = 0;
 
   if (KernelRecord) {
@@ -1033,7 +1033,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 
   // Allocate resources for autotuning if enabled.
   if (OMPX_EnableRuntimeAutotuning) {
-    KernelRunRecords = new KernelRunRecord();
+    KernelRunRecords = new KernelRunRecordTy();
   }
 
   return Plugin::success();

@@ -60,7 +60,7 @@ struct GenericPluginTy;
 struct GenericKernelTy;
 struct GenericDeviceTy;
 struct RecordReplayTy;
-struct KernelRunRecord;
+struct KernelRunRecordTy;
 
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
@@ -1108,7 +1108,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   bool getMultiDeviceKernelValue(void *EntryPtr);
 
-  KernelRunRecord *getKernelRunRecords() const { return KernelRunRecords; }
+  KernelRunRecordTy *getKernelRunRecords() const { return KernelRunRecords; }
 
   /// Return true if a descriptor of size 'Size' should be allocated using
   /// shared memory. Default implementation returns 'false',
@@ -1262,7 +1262,7 @@ protected:
   RPCServerTy *RPCServer;
 
   /// Structs for functions and data used in runtime autotuning.
-  KernelRunRecord *KernelRunRecords;
+  KernelRunRecordTy *KernelRunRecords;
 
 private:
 #ifdef OMPT_SUPPORT
@@ -1291,35 +1291,39 @@ private:
 };
 
 /// Struct represents the metadata for each kernel run on the device.
-struct KernelRunRecord {
+struct KernelRunRecordTy {
 
-  struct KernelRunEntry {
+  struct KernelRunEntryTy {
     std::string KernelName;
-    uint32_t NumTeams;
-    uint32_t NumThreads;
-    uint64_t RunDuration;
+    uint32_t NumTeams = 0;
+    uint32_t NumThreads = 0;
+    uint64_t RunDuration = 0;
   };
 
   // Metadata used in tuning process.
-  struct TuningMetadata {
+  struct TuningMetadataTy {
     uint32_t IdxThread = 0;
     uint32_t IdxCUMultiplier = 0;
     // Run counters.
     uint32_t RunCounters = 0;
     // Entry with minimum running time.
-    KernelRunEntry MinEntries;
+    KernelRunEntryTy MinEntry;
   };
 
   // Add a new entry
   void addEntry(std::string KernelName, uint32_t NumTeams, uint32_t NumThreads,
                 uint64_t RunDuration) {
-    KernelRunEntry NewRunEnry = {KernelName, NumTeams, NumThreads, RunDuration};
     TuningData[KernelName].RunCounters++;
 
     // Update min entries.
-    auto MinDuration = TuningData[KernelName].MinEntries.RunDuration;
+    uint64_t MinDuration = 0;
+    auto It = TuningData.find(KernelName);
+    if (It != TuningData.end()) {
+      MinDuration = It->second.MinEntry.RunDuration;
+    }
     if (MinDuration > RunDuration || MinDuration == 0) {
-      TuningData[KernelName].MinEntries = NewRunEnry;
+      TuningData[KernelName].MinEntry = {KernelName, NumTeams, NumThreads,
+                                         RunDuration};
     }
   }
 
@@ -1330,7 +1334,7 @@ struct KernelRunRecord {
     // If the kernel reaches the run limit,
     // return the current optimal launch parameters.
     if (reachedRunLimitForKernel(KernelName)) {
-      auto MinEntry = TuningData[KernelName].MinEntries;
+      auto MinEntry = TuningData[KernelName].MinEntry;
       return {MinEntry.NumTeams, MinEntry.NumThreads};
     }
 
@@ -1341,8 +1345,8 @@ struct KernelRunRecord {
     if (IdxCUMulti >= CUMultiplierCandidate.size()) {
       // No more element to search.
       // Return current optimal launch parameters.
-      return {TuningData[KernelName].MinEntries.NumTeams,
-              TuningData[KernelName].MinEntries.NumThreads};
+      return {TuningData[KernelName].MinEntry.NumTeams,
+              TuningData[KernelName].MinEntry.NumThreads};
     }
 
     // New team/thread pair for launch parameters.
@@ -1363,7 +1367,7 @@ struct KernelRunRecord {
   }
 
   bool reachedRunLimitForKernel(std::string KernelName) {
-    if (TuningData.count(KernelName) == 0) {
+    if (TuningData.find(KernelName) == TuningData.end()) {
       // If no record for this kernel.
       return false;
     }
@@ -1372,7 +1376,7 @@ struct KernelRunRecord {
   }
 
   uint32_t getRunCounterForKernel(std::string KernelName) {
-    if (TuningData.count(KernelName) == 0) {
+    if (TuningData.find(KernelName) == TuningData.end()) {
       return 0;
     }
 
@@ -1386,7 +1390,7 @@ private:
   // The max number of tuning runs for each kernel.
   uint32_t RunLimiter = ThreadCandidate.size() * CUMultiplierCandidate.size();
   // Used for keeping track of the metatdata used in tuning for each kernel.
-  std::unordered_map<std::string, TuningMetadata> TuningData;
+  std::unordered_map<std::string, TuningMetadataTy> TuningData;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
