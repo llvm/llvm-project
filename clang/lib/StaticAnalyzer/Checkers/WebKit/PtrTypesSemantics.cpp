@@ -392,6 +392,11 @@ public:
     return false;
   }
 
+  bool VisitAttributedStmt(const AttributedStmt *AS) {
+    // Ignore attributes.
+    return Visit(AS->getSubStmt());
+  }
+
   bool VisitCompoundStmt(const CompoundStmt *CS) {
     // A compound statement is allowed as long each individual sub-statement
     // is trivial.
