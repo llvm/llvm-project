@@ -17,7 +17,7 @@
 #include "test_comparisons.h"
 
 // Implementation detail of `test_sequence_container_spaceship`
-template <template <typename...> typename Container, typename Elem, typename Allocator,  typename Order>
+template <template <typename...> typename Container, typename Elem, typename Allocator, typename Order>
 constexpr void test_sequence_container_spaceship_with_type() {
   // Empty containers
   {
@@ -71,12 +71,21 @@ constexpr bool test_sequence_container_spaceship() {
 
   // Test different comparison categories
   test_sequence_container_spaceship_with_type<Container, int, std::allocator<int>, std::strong_ordering>();
-  test_sequence_container_spaceship_with_type<Container, StrongOrder, test_allocator<StrongOrder>, std::strong_ordering>();
+  test_sequence_container_spaceship_with_type<Container,
+                                              StrongOrder,
+                                              test_allocator<StrongOrder>,
+                                              std::strong_ordering>();
   test_sequence_container_spaceship_with_type<Container, WeakOrder, std::allocator<WeakOrder>, std::weak_ordering>();
-  test_sequence_container_spaceship_with_type<Container, PartialOrder, test_allocator<PartialOrder>, std::partial_ordering>();
+  test_sequence_container_spaceship_with_type<Container,
+                                              PartialOrder,
+                                              test_allocator<PartialOrder>,
+                                              std::partial_ordering>();
 
   // `LessAndEqComp` does not have `operator<=>`. Ordering is synthesized based on `operator<`
-  test_sequence_container_spaceship_with_type<Container, LessAndEqComp, std::allocator<LessAndEqComp>, std::weak_ordering>();
+  test_sequence_container_spaceship_with_type<Container,
+                                              LessAndEqComp,
+                                              std::allocator<LessAndEqComp>,
+                                              std::weak_ordering>();
 
   // Thanks to SFINAE, the following is not a compiler error but returns `false`
   struct NonComparable {};
@@ -176,7 +185,12 @@ constexpr bool test_sequence_container_adaptor_spaceship() {
 }
 
 // Implementation detail of `test_ordered_map_container_spaceship`
-template <template <typename...> typename Container, typename Key, typename Val, typename Allocator, typename Order, typename Compare>
+template <template <typename...> typename Container,
+          typename Key,
+          typename Val,
+          typename Allocator,
+          typename Order,
+          typename Compare>
 constexpr void test_ordered_map_container_spaceship_with_type(Compare comp) {
   // Empty containers
   {
@@ -294,23 +308,63 @@ constexpr bool test_ordered_map_container_spaceship() {
   static_assert(std::three_way_comparable<Container<int, int>>);
 
   // Test different comparison categories
-  test_ordered_map_container_spaceship_with_type<Container, int, int, std::allocator<std::pair<const int, int>>, std::strong_ordering>(std::less{});
-  test_ordered_map_container_spaceship_with_type<Container, int, int, test_allocator<std::pair<const int, int>>, std::strong_ordering>(std::greater{});
-  test_ordered_map_container_spaceship_with_type<Container, int, StrongOrder, std::allocator<std::pair<const int, StrongOrder>>, std::strong_ordering>(std::less{});
-  test_ordered_map_container_spaceship_with_type<Container, int, StrongOrder, test_allocator<std::pair<const int, StrongOrder>>, std::strong_ordering>(std::greater{});
-  test_ordered_map_container_spaceship_with_type<Container, int, WeakOrder, std::allocator<std::pair<const int, WeakOrder>>, std::weak_ordering>(std::less{});
-  test_ordered_map_container_spaceship_with_type<Container, int, WeakOrder, test_allocator<std::pair<const int, WeakOrder>>, std::weak_ordering>(std::greater{});
-  test_ordered_map_container_spaceship_with_type<Container, int, PartialOrder, std::allocator<std::pair<const int, PartialOrder>>, std::partial_ordering>(std ::less{});
-  test_ordered_map_container_spaceship_with_type<Container, int, PartialOrder, test_allocator<std::pair<const int, PartialOrder>>, std::partial_ordering>(std ::greater{});
+  test_ordered_map_container_spaceship_with_type<Container,
+                                                 int,
+                                                 int,
+                                                 std::allocator<std::pair<const int, int>>,
+                                                 std::strong_ordering>(std::less{});
+  test_ordered_map_container_spaceship_with_type<Container,
+                                                 int,
+                                                 int,
+                                                 test_allocator<std::pair<const int, int>>,
+                                                 std::strong_ordering>(std::greater{});
+  test_ordered_map_container_spaceship_with_type<Container,
+                                                 int,
+                                                 StrongOrder,
+                                                 std::allocator<std::pair<const int, StrongOrder>>,
+                                                 std::strong_ordering>(std::less{});
+  test_ordered_map_container_spaceship_with_type<Container,
+                                                 int,
+                                                 StrongOrder,
+                                                 test_allocator<std::pair<const int, StrongOrder>>,
+                                                 std::strong_ordering>(std::greater{});
+  test_ordered_map_container_spaceship_with_type<Container,
+                                                 int,
+                                                 WeakOrder,
+                                                 std::allocator<std::pair<const int, WeakOrder>>,
+                                                 std::weak_ordering>(std::less{});
+  test_ordered_map_container_spaceship_with_type<Container,
+                                                 int,
+                                                 WeakOrder,
+                                                 test_allocator<std::pair<const int, WeakOrder>>,
+                                                 std::weak_ordering>(std::greater{});
+  test_ordered_map_container_spaceship_with_type<Container,
+                                                 int,
+                                                 PartialOrder,
+                                                 std::allocator<std::pair<const int, PartialOrder>>,
+                                                 std::partial_ordering>(std ::less{});
+  test_ordered_map_container_spaceship_with_type<Container,
+                                                 int,
+                                                 PartialOrder,
+                                                 test_allocator<std::pair<const int, PartialOrder>>,
+                                                 std::partial_ordering>(std ::greater{});
 
   // `LessAndEqComp` does not have `operator<=>`. Ordering is synthesized based on `operator<`
-  test_ordered_map_container_spaceship_with_type<Container, int, LessAndEqComp, std::allocator<std::pair<const int, LessAndEqComp>>, std::weak_ordering>(std::less{});
+  test_ordered_map_container_spaceship_with_type<Container,
+                                                 int,
+                                                 LessAndEqComp,
+                                                 std::allocator<std::pair<const int, LessAndEqComp>>,
+                                                 std::weak_ordering>(std::less{});
 
   return true;
 }
 
 // Implementation detail of `test_ordered_set_container_spaceship`
-template <template <typename...> typename Container, typename Elem, typename Allocator, typename Order, typename Compare>
+template <template <typename...> typename Container,
+          typename Elem,
+          typename Allocator,
+          typename Order,
+          typename Compare>
 constexpr void test_ordered_set_spaceship_with_type(Compare comp) {
   // Empty containers
   {
@@ -399,15 +453,22 @@ constexpr bool test_ordered_set_container_spaceship() {
   // Test different comparison categories
   test_ordered_set_spaceship_with_type<Container, int, std::allocator<int>, std::strong_ordering>(std::less{});
   test_ordered_set_spaceship_with_type<Container, int, test_allocator<int>, std::strong_ordering>(std::greater{});
-  test_ordered_set_spaceship_with_type<Container, StrongOrder, std::allocator<StrongOrder>, std::strong_ordering>(std::less{});
-  test_ordered_set_spaceship_with_type<Container, StrongOrder, test_allocator<StrongOrder>, std::strong_ordering>(std::greater{});
-  test_ordered_set_spaceship_with_type<Container, WeakOrder, std::allocator<WeakOrder>, std::weak_ordering>(std::less{});
-  test_ordered_set_spaceship_with_type<Container, WeakOrder, test_allocator<WeakOrder>, std::weak_ordering>(std::greater{});
-  test_ordered_set_spaceship_with_type<Container, PartialOrder, std::allocator<PartialOrder>, std::partial_ordering>(std::less{});
-  test_ordered_set_spaceship_with_type<Container, PartialOrder, test_allocator<PartialOrder>, std::partial_ordering>(std::greater{});
+  test_ordered_set_spaceship_with_type<Container, StrongOrder, std::allocator<StrongOrder>, std::strong_ordering>(
+      std::less{});
+  test_ordered_set_spaceship_with_type<Container, StrongOrder, test_allocator<StrongOrder>, std::strong_ordering>(
+      std::greater{});
+  test_ordered_set_spaceship_with_type<Container, WeakOrder, std::allocator<WeakOrder>, std::weak_ordering>(
+      std::less{});
+  test_ordered_set_spaceship_with_type<Container, WeakOrder, test_allocator<WeakOrder>, std::weak_ordering>(
+      std::greater{});
+  test_ordered_set_spaceship_with_type<Container, PartialOrder, std::allocator<PartialOrder>, std::partial_ordering>(
+      std::less{});
+  test_ordered_set_spaceship_with_type<Container, PartialOrder, test_allocator<PartialOrder>, std::partial_ordering>(
+      std::greater{});
 
   // `LessAndEqComp` does not have `operator<=>`. Ordering is synthesized based on `operator<`
-  test_ordered_set_spaceship_with_type<Container, LessAndEqComp, std::allocator<LessAndEqComp>, std::weak_ordering>(std::less{});
+  test_ordered_set_spaceship_with_type<Container, LessAndEqComp, std::allocator<LessAndEqComp>, std::weak_ordering>(
+      std::less{});
 
   return true;
 }
