@@ -1367,7 +1367,7 @@ void tools::addFortranRuntimeLibraryPath(const ToolChain &TC,
   // lib64 instead of lib.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
-  llvm::sys::path::append(DefaultLibPath, "lib");
+  llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   if (TC.getTriple().isKnownWindowsMSVCEnvironment())
     CmdArgs.push_back(Args.MakeArgString("-libpath:" + DefaultLibPath));
   else
