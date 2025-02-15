@@ -544,7 +544,7 @@ link <https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20A
 an issue and request commit access. Replace the <user> string in the title
 with your github username, and explain why you are requesting commit access in
 the issue description.  Once the issue is created, you will need to get two
-current contributors to support your requests before commit access will be granted.
+current contributors to support your request before commit access will be granted.
 
 Reviewers of your committed patches will automatically be CCed upon creating the issue.
 Most commonly these reviewers will provide the necessary approval, but approvals
