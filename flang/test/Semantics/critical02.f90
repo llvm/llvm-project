@@ -82,7 +82,7 @@ end subroutine test8
 
 subroutine test9()
   use iso_fortran_env
-  type(lock_type) :: l
+  type(lock_type), save :: l[*]
 
   critical
     !ERROR: An image control statement is not allowed in a CRITICAL construct

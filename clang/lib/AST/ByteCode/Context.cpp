@@ -27,10 +27,7 @@ Context::~Context() {}
 
 bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   assert(Stk.empty());
-  Function *Func = P->getFunction(FD);
-  if (!Func || !Func->hasBody())
-    Func = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD);
-
+  const Function *Func = getOrCreateFunction(FD);
   if (!Func)
     return false;
 
@@ -215,14 +212,11 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 bool Context::Run(State &Parent, const Function *Func) {
 
   {
-    InterpState State(Parent, *P, Stk, *this);
-    State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, CodePtr(),
-                                    Func->getArgSize());
+    InterpState State(Parent, *P, Stk, *this, Func);
     if (Interpret(State)) {
       assert(Stk.empty());
       return true;
     }
-
     // State gets destroyed here, so the Stk.clear() below doesn't accidentally
     // remove values the State's destructor might access.
   }
@@ -271,6 +265,7 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
 
 const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
   assert(FD);
+  FD = FD->getMostRecentDecl();
   const Function *Func = P->getFunction(FD);
   bool IsBeingCompiled = Func && Func->isDefined() && !Func->isFullyCompiled();
   bool WasNotDefined = Func && !Func->isConstexpr() && !Func->isDefined();

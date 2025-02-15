@@ -895,8 +895,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     // type deduction and lambdas. For trailing return types resolve the
     // decltype expression. Otherwise print the real type when this is
     // not a constructor or destructor.
-    if (isa<CXXMethodDecl>(FD) &&
-         cast<CXXMethodDecl>(FD)->getParent()->isLambda())
+    if (isLambdaMethod(FD))
       Proto = "auto " + Proto;
     else if (FT && FT->getReturnType()->getAs<DecltypeType>())
       FT->getReturnType()
@@ -1646,11 +1645,22 @@ SourceLocation CallExpr::getBeginLoc() const {
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
     return OCE->getBeginLoc();
 
-  if (const auto *Method =
-          dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
-      Method && Method->isExplicitObjectMemberFunction()) {
-    assert(getNumArgs() > 0 && getArg(0));
-    return getArg(0)->getBeginLoc();
+  // A non-dependent call to a member function with an explicit object parameter
+  // is modelled with the object expression being the first argument, e.g. in
+  // `o.f(x)`, the callee will be just `f`, and `o` will be the first argument.
+  // Since the first argument is written before the callee, the expression's
+  // begin location should come from the first argument.
+  // This does not apply to dependent calls, which are modelled with `o.f`
+  // being the callee.
+  if (!isTypeDependent()) {
+    if (const auto *Method =
+            dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
+        Method && Method->isExplicitObjectMemberFunction()) {
+      bool HasFirstArg = getNumArgs() > 0 && getArg(0);
+      assert(HasFirstArg);
+      if (HasFirstArg)
+        return getArg(0)->getBeginLoc();
+    }
   }
 
   SourceLocation begin = getCallee()->getBeginLoc();
@@ -1957,6 +1967,8 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToBoolean:
   case CK_HLSLArrayRValue:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
   CheckNoBasePath:
     assert(path_empty() && "Cast kind should not have a base path!");
     break;
@@ -3660,6 +3672,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackIndexingExprClass:
   case HLSLOutArgExprClass:
   case OpenACCAsteriskSizeExprClass:
+  case ResolvedUnexpandedPackExprClass:
     // These never have a side-effect.
     return false;
 
@@ -5077,6 +5090,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__opencl_atomic_init:
   case AO__c11_atomic_load:
   case AO__atomic_load_n:
+  case AO__atomic_test_and_set:
+  case AO__atomic_clear:
     return 2;
 
   case AO__scoped_atomic_load_n:

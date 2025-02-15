@@ -112,10 +112,12 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-NEXT:    s_and_b32 s33, s33, 0xfff80000
 ; MUBUF-NEXT:    v_lshrrev_b32_e64 v3, 6, s33
 ; MUBUF-NEXT:    v_add_u32_e32 v3, 0x3000, v3
+; MUBUF-NEXT:    s_mov_b32 s6, s34
 ; MUBUF-NEXT:    v_add_u32_e32 v2, 64, v3
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v4, 0x2000
 ; MUBUF-NEXT:    s_mov_b32 s4, 0
+; MUBUF-NEXT:    s_mov_b32 s34, s32
 ; MUBUF-NEXT:    s_add_i32 s32, s32, 0x200000
 ; MUBUF-NEXT:    buffer_store_dword v3, v4, s[0:3], s33 offen
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
@@ -141,7 +143,8 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    s_add_i32 s32, s32, 0xffe00000
+; MUBUF-NEXT:    s_mov_b32 s32, s34
+; MUBUF-NEXT:    s_mov_b32 s34, s6
 ; MUBUF-NEXT:    s_mov_b32 s33, s5
 ; MUBUF-NEXT:    v_add_co_u32_e32 v2, vcc, v4, v6
 ; MUBUF-NEXT:    v_addc_co_u32_e32 v3, vcc, v5, v7, vcc
@@ -155,6 +158,8 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    s_mov_b32 s2, s33
 ; FLATSCR-NEXT:    s_add_i32 s33, s32, 0x1fff
 ; FLATSCR-NEXT:    s_and_b32 s33, s33, 0xffffe000
+; FLATSCR-NEXT:    s_mov_b32 s3, s34
+; FLATSCR-NEXT:    s_mov_b32 s34, s32
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 0x8000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
 ; FLATSCR-NEXT:    s_add_i32 s0, s33, 0x2000
@@ -179,7 +184,8 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    s_add_i32 s0, s33, 0x3000
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[4:5], off, s0 offset:64 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    s_addk_i32 s32, 0x8000
+; FLATSCR-NEXT:    s_mov_b32 s32, s34
+; FLATSCR-NEXT:    s_mov_b32 s34, s3
 ; FLATSCR-NEXT:    s_mov_b32 s33, s2
 ; FLATSCR-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v4
 ; FLATSCR-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v5, vcc

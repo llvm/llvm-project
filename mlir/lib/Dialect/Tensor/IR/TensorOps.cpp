@@ -23,7 +23,9 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -350,6 +352,35 @@ bool mlir::tensor::canFoldIntoProducerOp(CastOp castOp) {
     return false;
   return preservesStaticInformation(castOp.getSource().getType(),
                                     castOp.getType());
+}
+
+bool mlir::tensor::hasFoldableTensorCastOperand(Operation *op) {
+  return llvm::any_of(op->getOpOperands(), [&](OpOperand &opOperand) {
+    if (llvm::isa<BlockArgument>(opOperand.get()))
+      return false;
+    auto castOp = opOperand.get().getDefiningOp<tensor::CastOp>();
+    return castOp && canFoldIntoConsumerOp(castOp);
+  });
+}
+
+SmallVector<Value> mlir::tensor::getUpdatedOperandsAfterCastOpFolding(
+    DestinationStyleOpInterface op, SmallVector<Type> &newResTy) {
+  SmallVector<Value> newOperands;
+  newOperands.reserve(op->getNumOperands());
+
+  assert(hasFoldableTensorCastOperand(op) && "No foldable CastOp operands!");
+
+  // Assumes that the result has dpsInits followed by nonDpsInits.
+  int64_t dpsInitIdx = 0;
+  for (OpOperand &opOperand : op->getOpOperands()) {
+    auto tensorCastOp = opOperand.get().getDefiningOp<tensor::CastOp>();
+    bool fold = canFoldIntoConsumerOp(tensorCastOp);
+    newOperands.push_back(fold ? tensorCastOp.getOperand() : opOperand.get());
+    if (op.isDpsInit(&opOperand) &&
+        !llvm::isa<MemRefType>(newOperands.back().getType()))
+      newResTy[dpsInitIdx++] = newOperands.back().getType();
+  }
+  return newOperands;
 }
 
 /// Performs folding of any operand of `op` if it comes from a tensor::CastOp
@@ -780,6 +811,12 @@ Speculation::Speculatability DimOp::getSpeculatability() {
     return Speculation::NotSpeculatable;
 
   return Speculation::Speculatable;
+}
+
+void DimOp::inferResultRangesFromOptional(ArrayRef<IntegerValueRange> argRanges,
+                                          SetIntLatticeFn setResultRange) {
+  setResultRange(getResult(),
+                 intrange::inferShapedDimOpInterface(*this, argRanges[1]));
 }
 
 OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
@@ -1730,6 +1767,10 @@ ExpandShapeOp::inferOutputShape(OpBuilder &b, Location loc,
   if (!outputShape)
     return failure();
   return *outputShape;
+}
+
+SmallVector<OpFoldResult> ExpandShapeOp::getMixedOutputShape() {
+  return getMixedValues(getStaticOutputShape(), getOutputShape(), getContext());
 }
 
 void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
@@ -4765,34 +4806,7 @@ bool foldTensorCastPrecondition(DestinationStyleOpInterface op) {
       isa<LoopLikeOpInterface>(op.getOperation()))
     return false;
 
-  // If no operand comes from a tensor::CastOp and can be folded then fail.
-  bool hasTensorCastOperand =
-      llvm::any_of(op->getOpOperands(), [&](OpOperand &opOperand) {
-        if (llvm::isa<BlockArgument>(opOperand.get()))
-          return false;
-        auto castOp = opOperand.get().getDefiningOp<tensor::CastOp>();
-        return castOp && canFoldIntoConsumerOp(castOp);
-      });
-
-  return hasTensorCastOperand;
-}
-
-static SmallVector<Value> getNewOperands(DestinationStyleOpInterface op,
-                                         SmallVector<Type> &newResTy) {
-  SmallVector<Value> newOperands;
-  newOperands.reserve(op->getNumOperands());
-
-  // Assumes that the result has dpsInits followed by nonDpsInits.
-  int64_t dpsInitIdx = 0;
-  for (OpOperand &opOperand : op->getOpOperands()) {
-    auto tensorCastOp = opOperand.get().getDefiningOp<tensor::CastOp>();
-    bool fold = canFoldIntoConsumerOp(tensorCastOp);
-    newOperands.push_back(fold ? tensorCastOp.getOperand() : opOperand.get());
-    if (op.isDpsInit(&opOperand) &&
-        !llvm::isa<MemRefType>(newOperands.back().getType()))
-      newResTy[dpsInitIdx++] = newOperands.back().getType();
-  }
-  return newOperands;
+  return hasFoldableTensorCastOperand(op);
 }
 
 // Given the (potentially) updated packed type, `newPackedTy`, generates an
@@ -4856,7 +4870,8 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());
-    SmallVector<Value> newOperands = getNewOperands(op, newResultTypes);
+    SmallVector<Value> newOperands =
+        getUpdatedOperandsAfterCastOpFolding(op, newResultTypes);
 
     // Get the updated mixed-tile-sizes attribute.
     SmallVector<OpFoldResult> newMixedTileSizes =
@@ -4908,7 +4923,8 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());
-    SmallVector<Value> newOperands = getNewOperands(op, newResultTypes);
+    SmallVector<Value> newOperands =
+        getUpdatedOperandsAfterCastOpFolding(op, newResultTypes);
     Value sourceTensor = newOperands[0];
 
     // Get the updated mixed-tile-sizes attribute.
@@ -4964,11 +4980,12 @@ struct FoldTensorCastProducerOp
 
     // Reject tensor::PackOp - there's dedicated pattern for that instead.
     if (!foldTensorCastPrecondition(op) ||
-        isa<tensor::PackOp, tensor::UnPackOp>(*op))
+        isa<tensor::RelayoutOpInterface>(*op))
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());
-    SmallVector<Value> newOperands = getNewOperands(op, newResultTypes);
+    SmallVector<Value> newOperands =
+        getUpdatedOperandsAfterCastOpFolding(op, newResultTypes);
 
     // Clone op
     auto newOp = clone(rewriter, op, newResultTypes, newOperands);

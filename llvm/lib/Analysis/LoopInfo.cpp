@@ -103,7 +103,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
       return false;
 
   // Hoist.
-  I->moveBefore(InsertPt);
+  I->moveBefore(InsertPt->getIterator());
   if (MSSAU)
     if (auto *MUD = MSSAU->getMemorySSA()->getMemoryAccess(I))
       MSSAU->moveToPlace(MUD, InsertPt->getParent(),
