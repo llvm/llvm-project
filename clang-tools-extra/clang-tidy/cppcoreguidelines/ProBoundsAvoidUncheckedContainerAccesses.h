@@ -38,7 +38,7 @@ private:
   std::vector<llvm::StringRef> SubscriptExcludedClasses;
   // Setting which fix to suggest
   FixModes FixMode;
-  llvm::StringRef SubscriptFixFunction;
+  llvm::StringRef FixFunction;
 };
 } // namespace clang::tidy::cppcoreguidelines
 

@@ -11,7 +11,7 @@
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses %t -- \
 // RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.ExcludeClasses: "::ExcludedClass1;::ExcludedClass2", \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixMode: function, \
-// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.SubscriptFixFunction: "f"}}'
+// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixFunction: "f"}}'
 
 namespace std {
   template<typename T, unsigned size>
