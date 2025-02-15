@@ -56,7 +56,8 @@ Improvements to clangd
 Inlay hints
 ^^^^^^^^^^^
 
-- Added `DefaultArguments` Inlay Hints option.
+- Added support for inlay hints for default arguments, enabled using the
+  `DefaultArguments` config option (#GH95712)
 
 Diagnostics
 ^^^^^^^^^^^
@@ -67,21 +68,42 @@ Semantic Highlighting
 Compile flags
 ^^^^^^^^^^^^^
 
+- Fixed a bug where clangd would unnecessarily reparse open files whose
+  compile command did not change when receiving a new compile command
+  via an LSP `workspace/configuration` request (#GH115438)
+
 Hover
 ^^^^^
+
+- Hovering over a function name now shows the function's documentation
+  comment even if the comment is written above the function's out-of-line
+  definition in a different source file (#GH67802)
 
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Added an `ArgumentLists` config option under `Completion`. This is a more
+  flexible version of the `--function-arg-placeholders` command line flag,
+  allowing users more detailed control of what is inserted in argument list
+  position when clangd completes the name of a function in a function call
+  context. (#GH111322)
+- Clangd now supports configuring which headers should be inserted using 
+  `<>` vs. `""` syntax using the `QuotedHeaders` and `AngledHeaders` config
+  options under `Style` (#GH67749)
 - Added completion for C++20 keywords.
+- Improved code completion behaviour in dependent/templated code
+- Completion items now include documentation comments in more cases (#GH120099)
 
 Code actions
 ^^^^^^^^^^^^
 
 - Added `Swap operands` tweak for certain binary operators.
-
 - Improved the extract-to-function code action to allow extracting statements
   with overloaded operators like ``<<`` of ``std::ostream``.
+- `Define outline` now handles member functions of class templates, and
+  member function templates.
+- `Extract variable` can now operate on the top-level expression in an
+  expression statement (#GH112525)
 
 Signature help
 ^^^^^^^^^^^^^^
@@ -89,13 +111,38 @@ Signature help
 Cross-references
 ^^^^^^^^^^^^^^^^
 
+- Clangd now supports the "outgoing calls" direction of call hierarchy
+  (#GH77556)
+- Call hierarchy can now be invoked on fields and namespace-scope
+  variables (#GH113900)
+- Improved heuristics for filtering out generated Protobuf symbol names
+  during indexing (#GH110091)
+- Compiler intrinsics defined in `*intrin.h` system headers are now
+  indexed even if they have reserved names (#GH119735)
+- Various improvements to go-to-definition in templated code
+
 Objective-C
 ^^^^^^^^^^^
+
+Clang-tidy integration
+^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved robustness in handling clang-tidy check names (#GH109421)
+
+C++20 Modules Support
+^^^^^^^^^^^^^^^^^^^^^
+
+- Support code completion for symbols defined in modules (#GH110083)
+- Improve performance when opening files that import modules (#GH106683)
+- Compile commands for modules now respect modifications specified in `.clangd`
+  files (#GH122606)
 
 Miscellaneous
 ^^^^^^^^^^^^^
 
-- The DefineOutline tweak now handles member functions of class templates.
+- Fixed an OOM affecting some versions of libcxx headers compiled in C++20
+  mode (#GH108866)
+- Various other stability improvements, e.g. crash fixes
 
 Improvements to clang-doc
 -------------------------
