@@ -17,6 +17,7 @@
 
 #include "benchmark/benchmark.h"
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 template <class Container, class Operation>
 void bm_general(std::string operation_name, Operation copy) {
@@ -74,8 +75,10 @@ int main(int argc, char** argv) {
   bm_general<std::vector<int>>("ranges::copy(vector<int>)", ranges_copy);
   bm_general<std::deque<int>>("ranges::copy(deque<int>)", ranges_copy);
   bm_general<std::list<int>>("ranges::copy(list<int>)", ranges_copy);
+#if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
   bm_vector_bool<true>("ranges::copy(vector<bool>) (aligned)", ranges_copy);
   bm_vector_bool<false>("ranges::copy(vector<bool>) (unaligned)", ranges_copy);
+#endif
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
