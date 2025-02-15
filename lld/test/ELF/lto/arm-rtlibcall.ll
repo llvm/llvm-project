@@ -36,6 +36,9 @@
 PIE-ERROR: ld.lld: error: relocation R_ARM_CALL cannot refer to absolute symbol: __divmoddi4
 PIE-ERROR-NEXT: >>> defined in divmoddi4.bc
 PIE-ERROR-NEXT: >>> referenced by aeabi_ldivmod.o:(__aeabi_ldivmod)
+;; Removing --start-lib/--end-lib also ensures that the reference is retained
+; RUN: ld.lld main-implicit-ldivmod.bc aeabi_ldivmod.o divmoddi4.bc -o test.exe -Bstatic
+; RUN: llvm-objdump -d -r -t test.exe | FileCheck %s --check-prefix=GOOD-DUMP
 
 ;; Interestingly, just declaring __aeabi_ldivmod is sufficient to not run into this issue.
 ; RUN: llvm-as main-declared.ll -o main-declared-ldivmod.bc
