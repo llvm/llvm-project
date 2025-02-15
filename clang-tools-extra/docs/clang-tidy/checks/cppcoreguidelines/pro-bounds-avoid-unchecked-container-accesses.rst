@@ -6,14 +6,14 @@ cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
 Flags calls to ``operator[]`` in STL containers and suggests replacing it with
 safe alternatives.
 
-For example the code
+For example, both
 
 .. code-block:: c++
 
   std::vector<int> a;
   int b = a[4];
 
-will generate a warning but 
+and
 
 .. code-block:: c++
 
