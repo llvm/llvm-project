@@ -6752,11 +6752,9 @@ void SemaCodeCompletion::CodeCompleteInitializer(Scope *S, Decl *D) {
 void SemaCodeCompletion::CodeCompleteIfConstexpr(Scope *S) const {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
-                        CodeCompletionContext::CCC_SymbolOrNewName);
+                        CodeCompletionContext::CCC_Other);
   Results.EnterNewScope();
-
   Results.AddResult(CodeCompletionResult("constexpr"));
-
   Results.ExitScope();
 
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
