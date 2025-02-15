@@ -50,8 +50,8 @@ template <typename Op>
 struct ScalarOpToLibmCall : public OpRewritePattern<Op> {
 public:
   using OpRewritePattern<Op>::OpRewritePattern;
-  ScalarOpToLibmCall(MLIRContext *context, PatternBenefit benefit, StringRef floatFunc,
-                     StringRef doubleFunc)
+  ScalarOpToLibmCall(MLIRContext *context, PatternBenefit benefit,
+                     StringRef floatFunc, StringRef doubleFunc)
       : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
         doubleFunc(doubleFunc){};
 
@@ -62,8 +62,9 @@ private:
 };
 
 template <typename OpTy>
-void populatePatternsForOp(RewritePatternSet &patterns, PatternBenefit benefit, MLIRContext *ctx,
-                           StringRef floatFunc, StringRef doubleFunc) {
+void populatePatternsForOp(RewritePatternSet &patterns, PatternBenefit benefit,
+                           MLIRContext *ctx, StringRef floatFunc,
+                           StringRef doubleFunc) {
   patterns.add<VecOpToScalarOp<OpTy>, PromoteOpToF32<OpTy>>(ctx, benefit);
   patterns.add<ScalarOpToLibmCall<OpTy>>(ctx, benefit, floatFunc, doubleFunc);
 }
@@ -159,17 +160,22 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
   return success();
 }
 
-void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns, PatternBenefit benefit) {
+void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
+                                                PatternBenefit benefit) {
   MLIRContext *ctx = patterns.getContext();
 
   populatePatternsForOp<math::AbsFOp>(patterns, benefit, ctx, "fabsf", "fabs");
   populatePatternsForOp<math::AcosOp>(patterns, benefit, ctx, "acosf", "acos");
-  populatePatternsForOp<math::AcoshOp>(patterns, benefit, ctx, "acoshf", "acosh");
+  populatePatternsForOp<math::AcoshOp>(patterns, benefit, ctx, "acoshf",
+                                       "acosh");
   populatePatternsForOp<math::AsinOp>(patterns, benefit, ctx, "asinf", "asin");
-  populatePatternsForOp<math::AsinhOp>(patterns, benefit, ctx, "asinhf", "asinh");
-  populatePatternsForOp<math::Atan2Op>(patterns, benefit, ctx, "atan2f", "atan2");
+  populatePatternsForOp<math::AsinhOp>(patterns, benefit, ctx, "asinhf",
+                                       "asinh");
+  populatePatternsForOp<math::Atan2Op>(patterns, benefit, ctx, "atan2f",
+                                       "atan2");
   populatePatternsForOp<math::AtanOp>(patterns, benefit, ctx, "atanf", "atan");
-  populatePatternsForOp<math::AtanhOp>(patterns, benefit, ctx, "atanhf", "atanh");
+  populatePatternsForOp<math::AtanhOp>(patterns, benefit, ctx, "atanhf",
+                                       "atanh");
   populatePatternsForOp<math::CbrtOp>(patterns, benefit, ctx, "cbrtf", "cbrt");
   populatePatternsForOp<math::CeilOp>(patterns, benefit, ctx, "ceilf", "ceil");
   populatePatternsForOp<math::CosOp>(patterns, benefit, ctx, "cosf", "cos");
@@ -177,24 +183,31 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns, Pat
   populatePatternsForOp<math::ErfOp>(patterns, benefit, ctx, "erff", "erf");
   populatePatternsForOp<math::ExpOp>(patterns, benefit, ctx, "expf", "exp");
   populatePatternsForOp<math::Exp2Op>(patterns, benefit, ctx, "exp2f", "exp2");
-  populatePatternsForOp<math::ExpM1Op>(patterns, benefit, ctx, "expm1f", "expm1");
-  populatePatternsForOp<math::FloorOp>(patterns, benefit, ctx, "floorf", "floor");
+  populatePatternsForOp<math::ExpM1Op>(patterns, benefit, ctx, "expm1f",
+                                       "expm1");
+  populatePatternsForOp<math::FloorOp>(patterns, benefit, ctx, "floorf",
+                                       "floor");
   populatePatternsForOp<math::FmaOp>(patterns, benefit, ctx, "fmaf", "fma");
   populatePatternsForOp<math::LogOp>(patterns, benefit, ctx, "logf", "log");
   populatePatternsForOp<math::Log2Op>(patterns, benefit, ctx, "log2f", "log2");
-  populatePatternsForOp<math::Log10Op>(patterns, benefit, ctx, "log10f", "log10");
-  populatePatternsForOp<math::Log1pOp>(patterns, benefit, ctx, "log1pf", "log1p");
+  populatePatternsForOp<math::Log10Op>(patterns, benefit, ctx, "log10f",
+                                       "log10");
+  populatePatternsForOp<math::Log1pOp>(patterns, benefit, ctx, "log1pf",
+                                       "log1p");
   populatePatternsForOp<math::PowFOp>(patterns, benefit, ctx, "powf", "pow");
   populatePatternsForOp<math::RoundEvenOp>(patterns, benefit, ctx, "roundevenf",
                                            "roundeven");
-  populatePatternsForOp<math::RoundOp>(patterns, benefit, ctx, "roundf", "round");
+  populatePatternsForOp<math::RoundOp>(patterns, benefit, ctx, "roundf",
+                                       "round");
   populatePatternsForOp<math::SinOp>(patterns, benefit, ctx, "sinf", "sin");
   populatePatternsForOp<math::SinhOp>(patterns, benefit, ctx, "sinhf", "sinh");
   populatePatternsForOp<math::SqrtOp>(patterns, benefit, ctx, "sqrtf", "sqrt");
-  populatePatternsForOp<math::RsqrtOp>(patterns, benefit, ctx, "rsqrtf", "rsqrt");
+  populatePatternsForOp<math::RsqrtOp>(patterns, benefit, ctx, "rsqrtf",
+                                       "rsqrt");
   populatePatternsForOp<math::TanOp>(patterns, benefit, ctx, "tanf", "tan");
   populatePatternsForOp<math::TanhOp>(patterns, benefit, ctx, "tanhf", "tanh");
-  populatePatternsForOp<math::TruncOp>(patterns, benefit, ctx, "truncf", "trunc");
+  populatePatternsForOp<math::TruncOp>(patterns, benefit, ctx, "truncf",
+                                       "trunc");
 }
 
 namespace {
