@@ -159,7 +159,7 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
   return success();
 }
 
-void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns, PatternBenefit benefit = 1) {
+void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns, PatternBenefit benefit) {
   MLIRContext *ctx = patterns.getContext();
 
   populatePatternsForOp<math::AbsFOp>(patterns, benefit, ctx, "fabsf", "fabs");
