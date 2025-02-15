@@ -5,12 +5,12 @@
 // RUN: %check_clang_tidy -std=c++2b -check-suffix=AT %s \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses %t -- \
 // RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.ExcludeClasses: "::ExcludedClass1;::ExcludedClass2", \
-// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.SubscriptFixMode: at}}'
+// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixMode: at}}'
 
 // RUN: %check_clang_tidy -std=c++2b -check-suffix=FUNC %s \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses %t -- \
 // RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.ExcludeClasses: "::ExcludedClass1;::ExcludedClass2", \
-// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.SubscriptFixMode: function, \
+// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixMode: function, \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.SubscriptFixFunction: "f"}}'
 
 namespace std {
