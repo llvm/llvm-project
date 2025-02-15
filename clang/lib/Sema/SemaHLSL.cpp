@@ -3223,7 +3223,7 @@ bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
     Expr *E = Init->getInit(I);
     if (E->HasSideEffects(Ctx)) {
       QualType Ty = E->getType();
-      if (auto *RTy = Ty->getAs<RecordType>())
+      if (Ty->isRecordType())
         E = new (Ctx) MaterializeTemporaryExpr(Ty, E, E->isLValue());
       E = new (Ctx) OpaqueValueExpr(E->getBeginLoc(), Ty, E->getValueKind(),
                                     E->getObjectKind(), E);
