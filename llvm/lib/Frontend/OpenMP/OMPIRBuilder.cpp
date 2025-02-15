@@ -7025,7 +7025,7 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
   // target kernel launch function. If there are local live-in values
   // that the outlined function uses then these are aggregated into a structure
   // which is passed as the second argument. If there are no local live-in
-  // vallues or if all values used by the outlined kernel are global variables,
+  // values or if all values used by the outlined kernel are global variables,
   // then there's only one argument, the threadID. So, StaleCI can be
   //
   // %structArg = alloca { ptr, ptr }, align 8
@@ -7088,8 +7088,9 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
         LoadShared->getPointerAlignment(M.getDataLayout()), SharedsSize);
 
     Builder.CreateCall(KernelLaunchFunction, {ThreadId, NewArgStructAlloca});
-  } else
+  } else {
     Builder.CreateCall(KernelLaunchFunction, {ThreadId});
+  }
 
   Builder.CreateRetVoid();
   return ProxyFn;
@@ -7246,14 +7247,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   // OI.ExitBlock is set to the single task body block and will get left out of
   // the outlining process. So, simply create a new empty block to which we
   // uncoditionally branch from where TaskBodyCB left off
-  BasicBlock *TargetTaskContBlock =
-      BasicBlock::Create(Builder.getContext(), "target.task.cont");
-
-  auto *CurFn = Builder.GetInsertBlock()->getParent();
-  emitBranch(TargetTaskContBlock);
-  emitBlock(TargetTaskContBlock, CurFn, /*IsFinished=*/true);
-
-  OI.ExitBB = TargetTaskContBlock;
+  OI.ExitBB = BasicBlock::Create(Builder.getContext(), "target.task.cont");
+  emitBlock(OI.ExitBB, Builder.GetInsertBlock()->getParent(),
+            /*IsFinished=*/true);
 
   OI.PostOutlineCB = [this, ToBeDeleted, Dependencies, HasNoWait,
                       DeviceID](Function &OutlinedFn) mutable {
