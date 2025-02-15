@@ -20,7 +20,7 @@ target_link_libraries(tco PRIVATE
   flangPasses
   FIROpenACCSupport
   FlangOpenMPTransforms
-  FortranCommon
+  FortranSupport
 )
 
 mlir_target_link_libraries(tco PRIVATE

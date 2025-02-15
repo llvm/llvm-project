@@ -645,10 +645,11 @@ collectMacroDefinitions(const PreprocessorOptions &PPOpts,
 
     // For an #undef'd macro, we only care about the name.
     if (IsUndef) {
-      if (MacroNames && !Macros.count(MacroName))
+      auto [It, Inserted] = Macros.try_emplace(MacroName);
+      if (MacroNames && Inserted)
         MacroNames->push_back(MacroName);
 
-      Macros[MacroName] = std::make_pair("", true);
+      It->second = std::make_pair("", true);
       continue;
     }
 
@@ -661,9 +662,10 @@ collectMacroDefinitions(const PreprocessorOptions &PPOpts,
       MacroBody = MacroBody.substr(0, End);
     }
 
-    if (MacroNames && !Macros.count(MacroName))
+    auto [It, Inserted] = Macros.try_emplace(MacroName);
+    if (MacroNames && Inserted)
       MacroNames->push_back(MacroName);
-    Macros[MacroName] = std::make_pair(MacroBody, false);
+    It->second = std::make_pair(MacroBody, false);
   }
 }
 
@@ -6864,7 +6866,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       // command line (-w, -Weverything, -Werror, ...) along with any explicit
       // -Wblah flags.
       unsigned Flags = Record[Idx++];
-      DiagState Initial;
+      DiagState Initial(*Diag.getDiagnosticIDs());
       Initial.SuppressSystemWarnings = Flags & 1; Flags >>= 1;
       Initial.ErrorsAsFatal = Flags & 1; Flags >>= 1;
       Initial.WarningsAsErrors = Flags & 1; Flags >>= 1;
@@ -11060,6 +11062,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_no_openmp_routines:
     C = new (Context) OMPNoOpenMPRoutinesClause();
     break;
+  case llvm::omp::OMPC_no_openmp_constructs:
+    C = new (Context) OMPNoOpenMPConstructsClause();
+    break;
   case llvm::omp::OMPC_no_parallelism:
     C = new (Context) OMPNoParallelismClause();
     break;
@@ -11500,6 +11505,9 @@ void OMPClauseReader::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
 
 void OMPClauseReader::VisitOMPNoOpenMPRoutinesClause(
     OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseReader::VisitOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *) {}
 
 void OMPClauseReader::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {}
 

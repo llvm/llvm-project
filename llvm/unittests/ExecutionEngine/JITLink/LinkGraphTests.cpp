@@ -54,6 +54,36 @@ TEST(LinkGraphTest, AddressAccess) {
   EXPECT_EQ(B1.getFixupAddress(E1), B1Addr + 8) << "Incorrect fixup address";
 }
 
+TEST(LinkGraphTest, DefinedSymbolProperties) {
+  // Check that Section::empty behaves as expected.
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+              getGenericEdgeKindName);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
+  auto &B =
+      G.createContentBlock(Sec, BlockContent, orc::ExecutorAddr(0x1000), 8, 0);
+  auto &S = G.addDefinedSymbol(B, 0, "sym", 4, Linkage::Strong, Scope::Default,
+                               false, false);
+
+  EXPECT_TRUE(S.hasName());
+  EXPECT_EQ(*S.getName(), "sym");
+  EXPECT_TRUE(S.isDefined());
+  EXPECT_FALSE(S.isLive());
+  EXPECT_FALSE(S.isCallable());
+  EXPECT_FALSE(S.isExternal());
+  EXPECT_FALSE(S.isAbsolute());
+  EXPECT_EQ(&S.getBlock(), &B);
+  EXPECT_EQ(&S.getSection(), &Sec);
+  EXPECT_EQ(S.getOffset(), 0U);
+  EXPECT_EQ(S.getSize(), 4U);
+  EXPECT_EQ(S.getRange(), orc::ExecutorAddrRange(B.getAddress(), 4));
+  EXPECT_EQ(S.getSymbolContent(), BlockContent.slice(0, 4));
+  EXPECT_EQ(S.getLinkage(), Linkage::Strong);
+  EXPECT_EQ(S.getScope(), Scope::Default);
+  EXPECT_EQ(S.getTargetFlags(), 0U);
+}
+
 TEST(LinkGraphTest, SectionEmpty) {
   // Check that Section::empty behaves as expected.
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),

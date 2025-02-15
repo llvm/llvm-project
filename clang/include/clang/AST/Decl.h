@@ -698,6 +698,10 @@ public:
     return const_cast<ValueDecl *>(this)->getPotentiallyDecomposedVarDecl();
   }
 
+  /// Determine whether this value is actually a function parameter pack,
+  /// init-capture pack, or structured binding pack
+  bool isParameterPack() const;
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstValue && K <= lastValue; }
@@ -1527,10 +1531,6 @@ public:
     NonParmVarDeclBits.IsInitCapture = IC;
   }
 
-  /// Determine whether this variable is actually a function parameter pack or
-  /// init-capture pack.
-  bool isParameterPack() const;
-
   /// Whether this local extern variable declaration's previous declaration
   /// was declared in the same block scope. Only correct in C++.
   bool isPreviousDeclInSameBlockScope() const {
@@ -2296,6 +2296,13 @@ public:
   /// State that this templated function will be late parsed.
   void setLateTemplateParsed(bool ILT = true) {
     FunctionDeclBits.IsLateTemplateParsed = ILT;
+  }
+
+  bool isInstantiatedFromMemberTemplate() const {
+    return FunctionDeclBits.IsInstantiatedFromMemberTemplate;
+  }
+  void setInstantiatedFromMemberTemplate(bool Val = true) {
+    FunctionDeclBits.IsInstantiatedFromMemberTemplate = Val;
   }
 
   /// Whether this function is "trivial" in some specialized C++ senses.
@@ -5034,7 +5041,7 @@ class HLSLBufferDecl final : public NamedDecl, public DeclContext {
   bool IsCBuffer;
   /// HasValidPackoffset - Whether the buffer has valid packoffset annotations
   //                       on all declarations
-  bool HasPackoffset;
+  bool HasValidPackoffset;
   // LayoutStruct - Layout struct for the buffer
   CXXRecordDecl *LayoutStruct;
 
@@ -5064,8 +5071,8 @@ public:
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
   bool isCBuffer() const { return IsCBuffer; }
-  void setHasPackoffset(bool PO) { HasPackoffset = PO; }
-  bool hasPackoffset() const { return HasPackoffset; }
+  void setHasValidPackoffset(bool PO) { HasValidPackoffset = PO; }
+  bool hasValidPackoffset() const { return HasValidPackoffset; }
   const CXXRecordDecl *getLayoutStruct() const { return LayoutStruct; }
   void addLayoutStruct(CXXRecordDecl *LS);
   void addDefaultBufferDecl(Decl *D);
@@ -5169,6 +5176,12 @@ static constexpr StringRef getOpenMPVariantManglingSeparatorStr() {
 /// attribute.
 bool IsArmStreamingFunction(const FunctionDecl *FD,
                             bool IncludeLocallyStreaming);
+
+/// Returns whether the given FunctionDecl has Arm ZA state.
+bool hasArmZAState(const FunctionDecl *FD);
+
+/// Returns whether the given FunctionDecl has Arm ZT0 state.
+bool hasArmZT0State(const FunctionDecl *FD);
 
 } // namespace clang
 

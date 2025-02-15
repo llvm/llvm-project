@@ -1517,6 +1517,19 @@ public:
       Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       const Instruction *I = nullptr) const;
 
+  /// \return The cost of Expand Load or Compress Store operation
+  /// \p Opcode - is a type of memory access Load or Store
+  /// \p Src - a vector type of the data to be loaded or stored
+  /// \p VariableMask - true when the memory access is predicated with a mask
+  ///                   that is not a compile-time constant
+  /// \p Alignment - alignment of single element
+  /// \p I - the optional original context instruction, if one exists, e.g. the
+  ///        load/store to transform or the call to the gather/scatter intrinsic
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      const Instruction *I = nullptr) const;
+
   /// \return The cost of strided memory operations.
   /// \p Opcode - is a type of memory access Load or Store
   /// \p DataTy - a vector type of the data to be loaded or stored
@@ -1891,6 +1904,11 @@ public:
 
   /// @}
 
+  /// Collect kernel launch bounds for \p F into \p LB.
+  void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
+
 private:
   /// The abstract base class used to type erase specific TTI
   /// implementations.
@@ -2223,6 +2241,9 @@ public:
                          bool VariableMask, Align Alignment,
                          TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr) = 0;
+  virtual InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) = 0;
   virtual InstructionCost
   getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
                          bool VariableMask, Align Alignment,
@@ -2329,6 +2350,9 @@ public:
   virtual unsigned getMaxNumArgs() const = 0;
   virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
                                                Type *ArrayType) const = 0;
+  virtual void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const = 0;
 };
 
 template <typename T>
@@ -2955,6 +2979,12 @@ public:
     return Impl.getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                        Alignment, CostKind, I);
   }
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) override {
+    return Impl.getExpandCompressMemoryOpCost(Opcode, DataTy, VariableMask,
+                                              Alignment, CostKind, I);
+  }
   InstructionCost
   getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
                          bool VariableMask, Align Alignment,
@@ -3173,6 +3203,12 @@ public:
   unsigned getNumBytesToPadGlobalArray(unsigned Size,
                                        Type *ArrayType) const override {
     return Impl.getNumBytesToPadGlobalArray(Size, ArrayType);
+  }
+
+  void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override {
+    Impl.collectKernelLaunchBounds(F, LB);
   }
 };
 

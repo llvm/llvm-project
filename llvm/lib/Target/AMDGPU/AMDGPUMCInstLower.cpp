@@ -29,6 +29,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include <algorithm>
@@ -316,7 +317,8 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       raw_string_ostream HexStream(HexLine);
 
       for (size_t i = 0; i < CodeBytes.size(); i += 4) {
-        unsigned int CodeDWord = *(unsigned int *)&CodeBytes[i];
+        unsigned int CodeDWord =
+            support::endian::read32le(CodeBytes.data() + i);
         HexStream << format("%s%08X", (i > 0 ? " " : ""), CodeDWord);
       }
 

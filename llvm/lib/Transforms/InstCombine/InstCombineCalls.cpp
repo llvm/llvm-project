@@ -2752,7 +2752,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
       // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
-      if (isa<Constant>(TVal) || isa<Constant>(FVal)) {
+      if (Arg->hasOneUse() ? (isa<Constant>(TVal) || isa<Constant>(FVal))
+                           : (isa<Constant>(TVal) && isa<Constant>(FVal))) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
         SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);

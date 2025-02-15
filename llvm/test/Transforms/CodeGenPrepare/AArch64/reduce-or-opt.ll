@@ -3,7 +3,7 @@
 
 define i64 @select_or_reduce_v2i1(ptr nocapture noundef readonly %src) {
 ; CHECK-LABEL: define i64 @select_or_reduce_v2i1(
-; CHECK-SAME: ptr nocapture noundef readonly [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -41,7 +41,7 @@ middle.split:
 
 define i64 @br_or_reduce_v2i1(ptr nocapture noundef readonly %src, ptr noundef readnone %p) {
 ; CHECK-LABEL: define i64 @br_or_reduce_v2i1(
-; CHECK-SAME: ptr nocapture noundef readonly [[SRC:%.*]], ptr noundef readnone [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[SRC:%.*]], ptr noundef readnone [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -89,7 +89,7 @@ notfound:
 
 define i64 @select_or_reduce_nxv2i1(ptr nocapture noundef readonly %src) {
 ; CHECK-LABEL: define i64 @select_or_reduce_nxv2i1(
-; CHECK-SAME: ptr nocapture noundef readonly [[SRC:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -133,7 +133,7 @@ middle.split:
 
 define i64 @br_or_reduce_nxv2i1(ptr nocapture noundef readonly %src, ptr noundef readnone %p) {
 ; CHECK-LABEL: define i64 @br_or_reduce_nxv2i1(
-; CHECK-SAME: ptr nocapture noundef readonly [[SRC:%.*]], ptr noundef readnone [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[SRC:%.*]], ptr noundef readnone [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

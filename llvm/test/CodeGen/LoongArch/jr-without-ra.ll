@@ -78,7 +78,7 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:  # %bb.6: # %calc_6g.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    slli.d $s8, $zero, 3
-; CHECK-NEXT:    ldx.d $s8, $s8, $s1
+; CHECK-NEXT:    ldx.d $s8, $s1, $s8
 ; CHECK-NEXT:    jr $s8
 ; CHECK-NEXT:  .LBB0_7: # %sw.bb12.i.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
@@ -113,7 +113,7 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    pcalau12i $ra, %pc_hi20(.LJTI0_1)
 ; CHECK-NEXT:    addi.d $ra, $ra, %pc_lo12(.LJTI0_1)
-; CHECK-NEXT:    ldx.d $s5, $s4, $ra
+; CHECK-NEXT:    ldx.d $s5, $ra, $s4
 ; CHECK-NEXT:    jr $s5
 ; CHECK-NEXT:  .LBB0_13: # %phy_tssi_get_ofdm_trim_de.exit
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1

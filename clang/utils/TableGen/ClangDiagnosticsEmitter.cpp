@@ -359,7 +359,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
 
     // The diagnostic is not included in a group that is (transitively) in
     // -Wpedantic.  Include it in -Wpedantic directly.
-    if (auto *V = DiagsInPedantic.dyn_cast<RecordVec *>())
+    if (auto *V = dyn_cast<RecordVec *>(DiagsInPedantic))
       V->push_back(R);
     else
       cast<RecordSet *>(DiagsInPedantic)->insert(R);
@@ -386,7 +386,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (Parents.size() > 0 && AllParentsInPedantic)
       continue;
 
-    if (auto *V = GroupsInPedantic.dyn_cast<RecordVec *>())
+    if (auto *V = dyn_cast<RecordVec *>(GroupsInPedantic))
       V->push_back(Group);
     else
       cast<RecordSet *>(GroupsInPedantic)->insert(Group);
@@ -1785,8 +1785,7 @@ static void emitDiagArrays(DiagsInGroupTy &DiagsInGroup,
 /// This creates an `llvm::StringTable` of all the diagnostic group names.
 static void emitDiagGroupNames(const StringToOffsetTable &GroupNames,
                                raw_ostream &OS) {
-  GroupNames.EmitStringLiteralDef(
-      OS, "static constexpr llvm::StringTable DiagGroupNames");
+  GroupNames.EmitStringTableDef(OS, "DiagGroupNames");
   OS << "\n";
 }
 
@@ -1939,9 +1938,6 @@ void clang::EmitClangDiagGroups(const RecordKeeper &Records, raw_ostream &OS) {
   inferPedantic.compute(&DiagsInPedantic, &GroupsInPedantic);
 
   StringToOffsetTable GroupNames;
-  // Add an empty string to the table first so we can use `llvm::StringTable`.
-  // TODO: Factor this into `StringToOffsetTable`.
-  GroupNames.GetOrAddStringOffset("");
   for (const auto &[Name, Group] : DiagsInGroup) {
     GroupNames.GetOrAddStringOffset(Name);
   }

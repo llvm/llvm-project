@@ -2868,11 +2868,26 @@ void AsmPrinter::emitJumpTableInfo() {
           MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64,
       F);
 
-  SmallVector<unsigned> JumpTableIndices;
-  for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI) {
-    JumpTableIndices.push_back(JTI);
+  if (!TM.Options.EnableStaticDataPartitioning) {
+    emitJumpTableImpl(*MJTI, llvm::to_vector(llvm::seq<unsigned>(JT.size())),
+                      JTInDiffSection);
+    return;
   }
-  emitJumpTableImpl(*MJTI, JumpTableIndices, JTInDiffSection);
+
+  SmallVector<unsigned> HotJumpTableIndices, ColdJumpTableIndices;
+  // When static data partitioning is enabled, collect jump table entries that
+  // go into the same section together to reduce the amount of section switch
+  // statements.
+  for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI) {
+    if (JT[JTI].Hotness == MachineFunctionDataHotness::Cold) {
+      ColdJumpTableIndices.push_back(JTI);
+    } else {
+      HotJumpTableIndices.push_back(JTI);
+    }
+  }
+
+  emitJumpTableImpl(*MJTI, HotJumpTableIndices, JTInDiffSection);
+  emitJumpTableImpl(*MJTI, ColdJumpTableIndices, JTInDiffSection);
 }
 
 void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
@@ -2884,7 +2899,13 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const Function &F = MF->getFunction();
   const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
-  MCSection *JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
+  MCSection *JumpTableSection = nullptr;
+  if (TM.Options.EnableStaticDataPartitioning) {
+    JumpTableSection =
+        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
+  } else {
+    JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
+  }
 
   const DataLayout &DL = MF->getDataLayout();
   if (JTInDiffSection) {

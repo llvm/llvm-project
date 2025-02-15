@@ -10,13 +10,8 @@
 #define LLDB_TOOLS_LLDB_DAP_IOSTREAM_H
 
 #if defined(_WIN32)
-// We need to #define NOMINMAX in order to skip `min()` and `max()` macro
-// definitions that conflict with other system headers.
-// We also need to #undef GetObject (which is defined to GetObjectW) because
-// the JSON code we use also has methods named `GetObject()` and we conflict
-// against these.
-#define NOMINMAX
-#include <windows.h>
+#include "lldb/Host/windows/windows.h"
+#include <winsock2.h>
 #else
 typedef int SOCKET;
 #endif

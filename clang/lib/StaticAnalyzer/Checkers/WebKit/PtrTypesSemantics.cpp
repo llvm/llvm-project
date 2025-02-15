@@ -503,6 +503,11 @@ public:
     return true;
   }
 
+  bool VisitOffsetOfExpr(const OffsetOfExpr *OE) {
+    // offsetof(T, D) is considered trivial.
+    return true;
+  }
+
   bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
     if (!checkArguments(MCE))
       return false;
@@ -589,6 +594,19 @@ public:
     return Visit(BTE->getSubExpr());
   }
 
+  bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *AILE) {
+    return Visit(AILE->getCommonExpr()) && Visit(AILE->getSubExpr());
+  }
+
+  bool VisitArrayInitIndexExpr(const ArrayInitIndexExpr *AIIE) {
+    return true; // The current array index in VisitArrayInitLoopExpr is always
+                 // trivial.
+  }
+
+  bool VisitOpaqueValueExpr(const OpaqueValueExpr *OVE) {
+    return Visit(OVE->getSourceExpr());
+  }
+
   bool VisitExprWithCleanups(const ExprWithCleanups *EWC) {
     return Visit(EWC->getSubExpr());
   }
@@ -633,6 +651,11 @@ public:
 
   bool VisitConstantExpr(const ConstantExpr *CE) {
     // Constant expressions are trivial.
+    return true;
+  }
+
+  bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *IVIE) {
+    // An implicit value initialization is trvial.
     return true;
   }
 

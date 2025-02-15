@@ -2,9 +2,9 @@
 // RUN:   dxil-pc-shadermodel6.3-compute %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
-// CHECK: %struct.__cblayout_CB = type <{ float, double, <2 x i32> }>
+// CHECK: %__cblayout_CB = type <{ float, double, <2 x i32> }>
 
-// CHECK: @CB.cb = external constant target("dx.CBuffer", %struct.__cblayout_CB)
+// CHECK: @CB.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 176, 16, 168, 88))
 // CHECK: @a = external addrspace(2) global float, align 4
 // CHECK: @b = external addrspace(2) global double, align 8
 // CHECK: @c = external addrspace(2) global <2 x i32>, align 8
@@ -17,7 +17,8 @@ cbuffer CB : register(b1, space3) {
 
 // CHECK: define internal void @_init_resource_CB.cb()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: %CB.cb_h = call target("dx.CBuffer", %struct.__cblayout_CB) @llvm.dx.resource.handlefrombinding.tdx.CBuffer_s_struct.__cblayout_CBst(i32 3, i32 1, i32 1, i32 0, i1 false)
+// CHECK-NEXT: %CB.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 176, 16, 168, 88))
+// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBs_176_16_168_88tt(i32 3, i32 1, i32 1, i32 0, i1 false)
 
 float foo() {
   // CHECK: load float, ptr addrspace(2) @a, align 4
@@ -34,7 +35,4 @@ void main() {
 }
 
 // CHECK: !hlsl.cbs = !{![[CB:[0-9]+]]}
-// CHECK: !hlsl.cblayouts = !{![[CB_LAYOUT:[0-9]+]]}
-
 // CHECK: ![[CB]] = !{ptr @CB.cb, ptr addrspace(2) @a, ptr addrspace(2) @b, ptr addrspace(2) @c}
-// CHECK: ![[CB_LAYOUT]] = !{!"struct.__cblayout_CB", i32 176, i32 16, i32 168, i32 88}

@@ -70,18 +70,15 @@ static const MachineFunction *getMFIfAvailable(const MachineInstr &MI) {
   return nullptr;
 }
 
-// Try to crawl up to the machine function and get TRI and IntrinsicInfo from
-// it.
+// Try to crawl up to the machine function and get TRI/MRI/TII from it.
 static void tryToGetTargetInfo(const MachineInstr &MI,
                                const TargetRegisterInfo *&TRI,
                                const MachineRegisterInfo *&MRI,
-                               const TargetIntrinsicInfo *&IntrinsicInfo,
                                const TargetInstrInfo *&TII) {
 
   if (const MachineFunction *MF = getMFIfAvailable(MI)) {
     TRI = MF->getSubtarget().getRegisterInfo();
     MRI = &MF->getRegInfo();
-    IntrinsicInfo = MF->getTarget().getIntrinsicInfo();
     TII = MF->getSubtarget().getInstrInfo();
   }
 }
@@ -1753,8 +1750,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   // We can be a bit tidier if we know the MachineFunction.
   const TargetRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
-  const TargetIntrinsicInfo *IntrinsicInfo = nullptr;
-  tryToGetTargetInfo(*this, TRI, MRI, IntrinsicInfo, TII);
+  tryToGetTargetInfo(*this, TRI, MRI, TII);
 
   if (isCFIInstruction())
     assert(getNumOperands() == 1 && "Expected 1 operand in CFI instruction");
@@ -1784,7 +1780,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     LLT TypeToPrint = MRI ? getTypeToPrint(StartOp, PrintedTypes, *MRI) : LLT{};
     unsigned TiedOperandIdx = getTiedOperandIdx(StartOp);
     MO.print(OS, MST, TypeToPrint, StartOp, /*PrintDef=*/false, IsStandalone,
-             ShouldPrintRegisterTies, TiedOperandIdx, TRI, IntrinsicInfo);
+             ShouldPrintRegisterTies, TiedOperandIdx, TRI);
     ++StartOp;
   }
 
@@ -1846,9 +1842,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     const unsigned OpIdx = InlineAsm::MIOp_AsmString;
     LLT TypeToPrint = MRI ? getTypeToPrint(OpIdx, PrintedTypes, *MRI) : LLT{};
     unsigned TiedOperandIdx = getTiedOperandIdx(OpIdx);
-    getOperand(OpIdx).print(OS, MST, TypeToPrint, OpIdx, /*PrintDef=*/true, IsStandalone,
-                            ShouldPrintRegisterTies, TiedOperandIdx, TRI,
-                            IntrinsicInfo);
+    getOperand(OpIdx).print(OS, MST, TypeToPrint, OpIdx, /*PrintDef=*/true,
+                            IsStandalone, ShouldPrintRegisterTies,
+                            TiedOperandIdx, TRI);
 
     // Print HasSideEffects, MayLoad, MayStore, IsAlignStack
     unsigned ExtraInfo = getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
@@ -1886,7 +1882,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
         unsigned TiedOperandIdx = getTiedOperandIdx(i);
         MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
-                 ShouldPrintRegisterTies, TiedOperandIdx, TRI, IntrinsicInfo);
+                 ShouldPrintRegisterTies, TiedOperandIdx, TRI);
       }
     } else if (isDebugLabel() && MO.isMetadata()) {
       // Pretty print DBG_LABEL instructions.
@@ -1897,7 +1893,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
         unsigned TiedOperandIdx = getTiedOperandIdx(i);
         MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
-                 ShouldPrintRegisterTies, TiedOperandIdx, TRI, IntrinsicInfo);
+                 ShouldPrintRegisterTies, TiedOperandIdx, TRI);
       }
     } else if (i == AsmDescOp && MO.isImm()) {
       // Pretty print the inline asm operand descriptor.
@@ -1941,7 +1937,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         MachineOperand::printSubRegIdx(OS, MO.getImm(), TRI);
       else
         MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
-                 ShouldPrintRegisterTies, TiedOperandIdx, TRI, IntrinsicInfo);
+                 ShouldPrintRegisterTies, TiedOperandIdx, TRI);
     }
   }
 

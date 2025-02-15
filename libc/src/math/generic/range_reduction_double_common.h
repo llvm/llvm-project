@@ -21,7 +21,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-static constexpr unsigned SPLIT = DEFAULT_DOUBLE_SPLIT;
+static constexpr unsigned SPLIT = fputil::DefaultSplit<double>::VALUE;
 #else
 // When there is no-FMA instructions, in order to have exact product of 2 double
 // precision with directional roundings, we need to lower the precision of the
