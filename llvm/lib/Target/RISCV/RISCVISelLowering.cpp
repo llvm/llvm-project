@@ -4498,11 +4498,9 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
 }
 
 // Can this shuffle be performed on exactly one (possibly larger) input?
-static SDValue getSingleShuffleSrc(MVT VT, MVT ContainerVT, SDValue V1,
-                                   SDValue V2) {
+static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
 
-  if (V2.isUndef() &&
-      RISCVTargetLowering::getLMUL(ContainerVT) != RISCVII::VLMUL::LMUL_8)
+  if (V2.isUndef())
     return V1;
 
   // Both input must be extracts.
@@ -4660,10 +4658,10 @@ static SDValue getDeinterleaveShiftAndTrunc(const SDLoc &DL, MVT VT,
   SDValue Res = DAG.getNode(ISD::SRL, DL, WideSrcVT, Src,
                             DAG.getConstant(Shift, DL, WideSrcVT));
   Res = DAG.getNode(ISD::TRUNCATE, DL, ResVT, Res);
-  MVT IntVT = VT.changeVectorElementTypeToInteger();
-  Res = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, IntVT, DAG.getUNDEF(IntVT), Res,
-                    DAG.getVectorIdxConstant(0, DL));
-  return DAG.getBitcast(VT, Res);
+  MVT CastVT = ResVT.changeVectorElementType(VT.getVectorElementType());
+  Res = DAG.getBitcast(CastVT, Res);
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), Res,
+                     DAG.getVectorIdxConstant(0, DL));
 }
 
 // Lower the following shuffle to vslidedown.
@@ -5352,8 +5350,24 @@ static bool isLocalRepeatingShuffle(ArrayRef<int> Mask, int Span) {
 
 /// Is this mask only using elements from the first span of the input?
 static bool isLowSourceShuffle(ArrayRef<int> Mask, int Span) {
-  return all_of(Mask,
-                [&](const auto &Idx) { return Idx == -1 || Idx < Span; });
+  return all_of(Mask, [&](const auto &Idx) { return Idx == -1 || Idx < Span; });
+}
+
+/// Return true for a mask which performs an arbitrary shuffle within the first
+/// span, and then repeats that same result across all remaining spans.  Note
+/// that this doesn't check if all the inputs come from a single span!
+static bool isSpanSplatShuffle(ArrayRef<int> Mask, int Span) {
+  SmallVector<int> LowSpan(Span, -1);
+  for (auto [I, M] : enumerate(Mask)) {
+    if (M == -1)
+      continue;
+    int SpanIdx = I % Span;
+    if (LowSpan[SpanIdx] == -1)
+      LowSpan[SpanIdx] = M;
+    if (LowSpan[SpanIdx] != M)
+      return false;
+  }
+  return true;
 }
 
 /// Try to widen element type to get a new mask value for a better permutation
@@ -5577,7 +5591,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       unsigned Index = 0;
       if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Index) &&
           1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
-        if (SDValue Src = getSingleShuffleSrc(VT, ContainerVT, V1, V2))
+        if (SDValue Src = getSingleShuffleSrc(VT, V1, V2))
           return getDeinterleaveShiftAndTrunc(DL, VT, Src, Factor, Index, DAG);
       }
     }
@@ -5768,6 +5782,35 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         SDValue SubVec =
             DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
                         DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
+        Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
+                             SubVec, SubIdx);
+      }
+    } else if (NumElts > MinVLMAX && isLowSourceShuffle(Mask, MinVLMAX) &&
+               isSpanSplatShuffle(Mask, MinVLMAX)) {
+      // If we have a shuffle which only uses the first register in our source
+      // register group, and repeats the same index across all spans, we can
+      // use a single vrgather (and possibly some register moves).
+      // TODO: This can be generalized for m2 or m4, or for any shuffle for
+      // which we can do a linear number of shuffles to form an m1 which
+      // contains all the output elements.
+      const MVT M1VT = getLMUL1VT(ContainerVT);
+      EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
+      auto [InnerTrueMask, InnerVL] =
+          getDefaultScalableVLOps(M1VT, DL, DAG, Subtarget);
+      int N = ContainerVT.getVectorMinNumElements() /
+              M1VT.getVectorMinNumElements();
+      assert(isPowerOf2_32(N) && N <= 8);
+      SDValue SubV1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1,
+                                  DAG.getVectorIdxConstant(0, DL));
+      SDValue SubIndex =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubIndexVT, LHSIndices,
+                      DAG.getVectorIdxConstant(0, DL));
+      SDValue SubVec = DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
+                                   DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
+      Gather = DAG.getUNDEF(ContainerVT);
+      for (int i = 0; i < N; i++) {
+        SDValue SubIdx =
+            DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
         Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
                              SubVec, SubIdx);
       }

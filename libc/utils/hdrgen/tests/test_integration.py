@@ -12,7 +12,7 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.main_script = self.source_dir.parent / "main.py"
         self.maxDiff = 80 * 100
 
-    def run_script(self, yaml_file, output_file, entry_points):
+    def run_script(self, yaml_file, output_file, entry_points=[]):
         command = [
             "python3",
             str(self.main_script),
@@ -50,6 +50,13 @@ class TestHeaderGenIntegration(unittest.TestCase):
 
         self.run_script(yaml_file, output_file, entry_points)
 
+        self.compare_files(output_file, expected_output_file)
+
+    def test_generate_subdir_header(self):
+        yaml_file = self.source_dir / "input" / "subdir" / "test.yaml"
+        expected_output_file = self.source_dir / "expected_output" / "subdir" / "test.h"
+        output_file = self.output_dir / "subdir" / "test.h"
+        self.run_script(yaml_file, output_file)
         self.compare_files(output_file, expected_output_file)
 
 
