@@ -255,8 +255,6 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
 def main():
     # Authenticate with Github
     auth = Auth.Token(os.environ["GITHUB_TOKEN"])
-    github_object = Github(auth=auth)
-    github_repo = github_object.get_repo("llvm/llvm-project")
 
     grafana_api_key = os.environ["GRAFANA_API_KEY"]
     grafana_metrics_userid = os.environ["GRAFANA_METRICS_USERID"]
@@ -268,6 +266,9 @@ def main():
     # Enter the main loop. Every five minutes we wake up and dump metrics for
     # the relevant jobs.
     while True:
+        github_object = Github(auth=auth)
+        github_repo = github_object.get_repo("llvm/llvm-project")
+
         current_metrics = get_per_workflow_metrics(github_repo, workflows_to_track)
         current_metrics += get_sampled_workflow_metrics(github_repo)
 
