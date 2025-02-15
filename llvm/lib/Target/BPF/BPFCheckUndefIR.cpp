@@ -12,6 +12,7 @@
 
 #include "BPF.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -69,8 +70,11 @@ void BPFCheckUndefIR::HandleUnreachableInsn(Function &F, BasicBlock &BB,
       return;
   }
 
-  dbgs() << "WARNING: unreachable in func " << F.getName()
-         << ", due to uninitialized variable?\n";
+  F.getContext().diagnose(
+      DiagnosticInfoGeneric(Twine("unreachable in func ")
+                                .concat(F.getName())
+                                .concat(", due to uninitialized variable?"),
+                            DS_Warning));
 }
 
 void BPFCheckUndefIR::BPFCheckInst(Function &F, BasicBlock &BB,
