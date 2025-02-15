@@ -10,6 +10,7 @@
 #define MLIR_CONVERSION_MATHTOLLVM_MATHTOLLVM_H
 
 #include <memory>
+#include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
 
