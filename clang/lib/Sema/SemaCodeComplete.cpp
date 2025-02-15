@@ -6749,7 +6749,7 @@ void SemaCodeCompletion::CodeCompleteInitializer(Scope *S, Decl *D) {
   CodeCompleteExpression(S, Data);
 }
 
-void SemaCodeCompletion::CodeCompleteIfConstExpr(Scope *S) const {
+void SemaCodeCompletion::CodeCompleteIfConstexpr(Scope *S) const {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_SymbolOrNewName);

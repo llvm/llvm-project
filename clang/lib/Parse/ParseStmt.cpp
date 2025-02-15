@@ -1557,7 +1557,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     if (Tok.is(tok::code_completion)) {
       if (getLangOpts().CPlusPlus17) {
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteIfConstExpr(getCurScope());
+        Actions.CodeCompletion().CodeCompleteIfConstexpr(getCurScope());
         return StmtError();
       }
     }
