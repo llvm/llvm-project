@@ -2254,7 +2254,6 @@ private:
     return __guess;
   }
 
-  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(const value_type* __s, size_type __sz, size_type __reserve);
   inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(const value_type* __s, size_type __sz);
   inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(size_type __n, value_type __c);
 
@@ -2439,6 +2438,12 @@ private:
   template <class _CharT2, class _Traits2, class _Allocator2>
   friend inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
   operator==(const basic_string<_CharT2, _Traits2, _Allocator2>&, const _CharT2*) _NOEXCEPT;
+
+  // These functions aren't used anymore but are part of out ABI, so we need to provide them in the dylib for backwards
+  // compatibility
+#  ifdef _LIBCPP_BUILDING_LIBRARY
+  void __init(const value_type* __s, size_type __sz, size_type __reserve);
+#  endif
 };
 
 // These declarations must appear before any functions are implicitly used
@@ -2489,30 +2494,6 @@ template <ranges::input_range _Range,
 basic_string(from_range_t, _Range&&, _Allocator = _Allocator())
     -> basic_string<ranges::range_value_t<_Range>, char_traits<ranges::range_value_t<_Range>>, _Allocator>;
 #  endif
-
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void
-basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_type __sz, size_type __reserve) {
-  if (__libcpp_is_constant_evaluated())
-    __rep_ = __rep();
-  if (__reserve > max_size())
-    __throw_length_error();
-  pointer __p;
-  if (__fits_in_sso(__reserve)) {
-    __set_short_size(__sz);
-    __p = __get_short_pointer();
-  } else {
-    auto __allocation = std::__allocate_at_least(__alloc_, __recommend(__reserve) + 1);
-    __p               = __allocation.ptr;
-    __begin_lifetime(__p, __allocation.count);
-    __set_long_pointer(__p);
-    __set_long_cap(__allocation.count);
-    __set_long_size(__sz);
-  }
-  traits_type::copy(std::__to_address(__p), __s, __sz);
-  traits_type::assign(__p[__sz], value_type());
-  __annotate_new(__sz);
-}
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
