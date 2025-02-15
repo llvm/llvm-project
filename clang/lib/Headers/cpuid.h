@@ -268,17 +268,18 @@
 #else
 /* x86-64 uses %rbx as the base register, so preserve it. */
 #define __cpuid(__leaf, __eax, __ebx, __ecx, __edx) \
-    __asm("  xchg{q|}  {%%|}rbx,%q1\n" \
-          "  cpuid\n" \
-          "  xchg{q|}  {%%|}rbx,%q1" \
-        : "=a"(__eax), "=r" (__ebx), "=c"(__ecx), "=d"(__edx) \
+#define __cpuid(__leaf, __eax, __ebx, __ecx, __edx)                            \
+  __asm("  xchg{q|}  {%%|}rbx,%q1\n"                                           \
+        "  cpuid\n"                                                            \
+        "  xchg{q|}  {%%|}rbx,%q1"                                             \
+        : "=a"(__eax), "=r"(__ebx), "=c"(__ecx), "=d"(__edx)                   \
         : "0"(__leaf))
 
-#define __cpuid_count(__leaf, __count, __eax, __ebx, __ecx, __edx) \
-    __asm("  xchg{q|}  {%%|}rbx,%q1\n" \
-          "  cpuid\n" \
-          "  xchg{q|}  {%%|}rbx,%q1" \
-        : "=a"(__eax), "=r" (__ebx), "=c"(__ecx), "=d"(__edx) \
+#define __cpuid_count(__leaf, __count, __eax, __ebx, __ecx, __edx)             \
+  __asm("  xchg{q|}  {%%|}rbx,%q1\n"                                           \
+        "  cpuid\n"                                                            \
+        "  xchg{q|}  {%%|}rbx,%q1"                                             \
+        : "=a"(__eax), "=r"(__ebx), "=c"(__ecx), "=d"(__edx)                   \
         : "0"(__leaf), "2"(__count))
 #endif
 
@@ -302,7 +303,9 @@ static __inline unsigned int __get_cpuid_max (unsigned int __leaf,
           "  je     1f\n"
           "  mov{l|}   {$1,%0|%0,1}\n"
           "1:"
-        : "=r" (__cpuid_supported) : : "eax", "ecx");
+          : "=r"(__cpuid_supported)
+          :
+          : "eax", "ecx");
     if (!__cpuid_supported)
         return 0;
 #endif
