@@ -99,6 +99,9 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   SPIRV::ModuleAnalysisInfo *MAI;
+
+protected:
+  void cleanUp(Module &M);
 };
 } // namespace
 
@@ -125,6 +128,19 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (MCAssembler *Asm = OutStreamer->getAssemblerPtr())
     static_cast<SPIRVObjectWriter &>(Asm->getWriter())
         .setBuildVersion(Major, Minor, Bound);
+
+  cleanUp(M);
+}
+
+// Any cleanup actions with the Module after we don't care about its content
+// anymore.
+void SPIRVAsmPrinter::cleanUp(Module &M) {
+  // Verifier disallows uses of intrinsic global variables.
+  for (StringRef GVName : {"llvm.global_ctors", "llvm.global_dtors",
+                           "llvm.used", "llvm.compiler.used"}) {
+    if (GlobalVariable *GV = M.getNamedGlobal(GVName))
+      GV->setName("");
+  }
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {
@@ -274,7 +290,7 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 void SPIRVAsmPrinter::outputModuleSection(SPIRV::ModuleSectionType MSType) {
-  for (MachineInstr *MI : MAI->getMSInstrs(MSType))
+  for (const MachineInstr *MI : MAI->getMSInstrs(MSType))
     outputInstruction(MI);
 }
 
@@ -326,7 +342,7 @@ void SPIRVAsmPrinter::outputOpMemoryModel() {
 void SPIRVAsmPrinter::outputEntryPoints() {
   // Find all OpVariable IDs with required StorageClass.
   DenseSet<Register> InterfaceIDs;
-  for (MachineInstr *MI : MAI->GlobalVarList) {
+  for (const MachineInstr *MI : MAI->GlobalVarList) {
     assert(MI->getOpcode() == SPIRV::OpVariable);
     auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
         MI->getOperand(2).getImm());
@@ -336,14 +352,14 @@ void SPIRVAsmPrinter::outputEntryPoints() {
     // declaring all global variables referenced by the entry point call tree.
     if (ST->isAtLeastSPIRVVer(VersionTuple(1, 4)) ||
         SC == SPIRV::StorageClass::Input || SC == SPIRV::StorageClass::Output) {
-      MachineFunction *MF = MI->getMF();
+      const MachineFunction *MF = MI->getMF();
       Register Reg = MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
       InterfaceIDs.insert(Reg);
     }
   }
 
   // Output OpEntryPoints adding interface args to all of them.
-  for (MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_EntryPoints)) {
+  for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_EntryPoints)) {
     SPIRVMCInstLower MCInstLowering;
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst, MAI);
@@ -381,9 +397,8 @@ void SPIRVAsmPrinter::outputGlobalRequirements() {
 
 void SPIRVAsmPrinter::outputExtFuncDecls() {
   // Insert OpFunctionEnd after each declaration.
-  SmallVectorImpl<MachineInstr *>::iterator
-      I = MAI->getMSInstrs(SPIRV::MB_ExtFuncDecls).begin(),
-      E = MAI->getMSInstrs(SPIRV::MB_ExtFuncDecls).end();
+  auto I = MAI->getMSInstrs(SPIRV::MB_ExtFuncDecls).begin(),
+       E = MAI->getMSInstrs(SPIRV::MB_ExtFuncDecls).end();
   for (; I != E; ++I) {
     outputInstruction(*I);
     if ((I + 1) == E || (*(I + 1))->getOpcode() == SPIRV::OpFunction)

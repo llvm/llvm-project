@@ -23,7 +23,9 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -350,6 +352,35 @@ bool mlir::tensor::canFoldIntoProducerOp(CastOp castOp) {
     return false;
   return preservesStaticInformation(castOp.getSource().getType(),
                                     castOp.getType());
+}
+
+bool mlir::tensor::hasFoldableTensorCastOperand(Operation *op) {
+  return llvm::any_of(op->getOpOperands(), [&](OpOperand &opOperand) {
+    if (llvm::isa<BlockArgument>(opOperand.get()))
+      return false;
+    auto castOp = opOperand.get().getDefiningOp<tensor::CastOp>();
+    return castOp && canFoldIntoConsumerOp(castOp);
+  });
+}
+
+SmallVector<Value> mlir::tensor::getUpdatedOperandsAfterCastOpFolding(
+    DestinationStyleOpInterface op, SmallVector<Type> &newResTy) {
+  SmallVector<Value> newOperands;
+  newOperands.reserve(op->getNumOperands());
+
+  assert(hasFoldableTensorCastOperand(op) && "No foldable CastOp operands!");
+
+  // Assumes that the result has dpsInits followed by nonDpsInits.
+  int64_t dpsInitIdx = 0;
+  for (OpOperand &opOperand : op->getOpOperands()) {
+    auto tensorCastOp = opOperand.get().getDefiningOp<tensor::CastOp>();
+    bool fold = canFoldIntoConsumerOp(tensorCastOp);
+    newOperands.push_back(fold ? tensorCastOp.getOperand() : opOperand.get());
+    if (op.isDpsInit(&opOperand) &&
+        !llvm::isa<MemRefType>(newOperands.back().getType()))
+      newResTy[dpsInitIdx++] = newOperands.back().getType();
+  }
+  return newOperands;
 }
 
 /// Performs folding of any operand of `op` if it comes from a tensor::CastOp
@@ -780,6 +811,12 @@ Speculation::Speculatability DimOp::getSpeculatability() {
     return Speculation::NotSpeculatable;
 
   return Speculation::Speculatable;
+}
+
+void DimOp::inferResultRangesFromOptional(ArrayRef<IntegerValueRange> argRanges,
+                                          SetIntLatticeFn setResultRange) {
+  setResultRange(getResult(),
+                 intrange::inferShapedDimOpInterface(*this, argRanges[1]));
 }
 
 OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
@@ -1730,6 +1767,10 @@ ExpandShapeOp::inferOutputShape(OpBuilder &b, Location loc,
   if (!outputShape)
     return failure();
   return *outputShape;
+}
+
+SmallVector<OpFoldResult> ExpandShapeOp::getMixedOutputShape() {
+  return getMixedValues(getStaticOutputShape(), getOutputShape(), getContext());
 }
 
 void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
@@ -4765,34 +4806,45 @@ bool foldTensorCastPrecondition(DestinationStyleOpInterface op) {
       isa<LoopLikeOpInterface>(op.getOperation()))
     return false;
 
-  // If no operand comes from a tensor::CastOp and can be folded then fail.
-  bool hasTensorCastOperand =
-      llvm::any_of(op->getOpOperands(), [&](OpOperand &opOperand) {
-        if (llvm::isa<BlockArgument>(opOperand.get()))
-          return false;
-        auto castOp = opOperand.get().getDefiningOp<tensor::CastOp>();
-        return castOp && canFoldIntoConsumerOp(castOp);
-      });
-
-  return hasTensorCastOperand;
+  return hasFoldableTensorCastOperand(op);
 }
 
-static SmallVector<Value> getNewOperands(DestinationStyleOpInterface op,
-                                         SmallVector<Type> &newResTy) {
-  SmallVector<Value> newOperands;
-  newOperands.reserve(op->getNumOperands());
+// Given the (potentially) updated packed type, `newPackedTy`, generates an
+// updated mixed-tile-sizes attribute. A tile size is updated only
+// when:
+//  * a dim from newPackedTy is static, and
+//  * the corresponding size from mixedTiles is still dynamic.
+// Otherwise, the original tile size is preserved.
+// Note - packed-type-dim and mixed-tile-size should always match!
+static SmallVector<OpFoldResult>
+getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
+                     SmallVector<OpFoldResult> mixedTiles) {
+  SmallVector<OpFoldResult> newMixedTileSizes;
+  for (auto it : llvm::zip(cast<ShapedType>(newPackedTy)
+                               .getShape()
+                               .take_back(mixedTiles.size()),
+                           mixedTiles)) {
+    int64_t shape = std::get<0>(it);
+    if (shape == ShapedType::kDynamic) {
+      newMixedTileSizes.push_back(std::get<1>(it));
+      continue;
+    }
 
-  // Assumes that the result has dpsInits followed by nonDpsInits.
-  int64_t dpsInitIdx = 0;
-  for (OpOperand &opOperand : op->getOpOperands()) {
-    auto tensorCastOp = opOperand.get().getDefiningOp<tensor::CastOp>();
-    bool fold = canFoldIntoConsumerOp(tensorCastOp);
-    newOperands.push_back(fold ? tensorCastOp.getOperand() : opOperand.get());
-    if (op.isDpsInit(&opOperand) &&
-        !llvm::isa<MemRefType>(newOperands.back().getType()))
-      newResTy[dpsInitIdx++] = newOperands.back().getType();
+    // If the current result dim is static, update the dynamic mixed-size
+    // (provided the original value is dynamic).
+    OpFoldResult tile = std::get<1>(it);
+    if (Attribute attr = llvm::dyn_cast_if_present<Attribute>(tile)) {
+      // Already a constant
+      newMixedTileSizes.push_back(tile);
+    } else {
+      assert(getConstantIntValue(tile).value() == shape &&
+             "tile size and dim size don't match!");
+      newMixedTileSizes.push_back(
+          (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
+    }
   }
-  return newOperands;
+
+  return newMixedTileSizes;
 }
 
 /// Folds a tensor.cast op into a consuming tensor::PackOp op if the
@@ -4818,37 +4870,74 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());
-    SmallVector<Value> newOperands = getNewOperands(op, newResultTypes);
+    SmallVector<Value> newOperands =
+        getUpdatedOperandsAfterCastOpFolding(op, newResultTypes);
 
     // Get the updated mixed-tile-sizes attribute.
-    SmallVector<OpFoldResult> newMixedTileSizes;
-    for (auto it : llvm::zip(cast<ShapedType>(newResultTypes[0])
-                                 .getShape()
-                                 .take_back(op.getMixedTiles().size()),
-                             op.getMixedTiles())) {
-      int64_t shape = std::get<0>(it);
-      if (shape == ShapedType::kDynamic) {
-        newMixedTileSizes.push_back(std::get<1>(it));
-        continue;
-      }
-
-      if (Attribute attr =
-              llvm::dyn_cast_if_present<Attribute>(std::get<1>(it))) {
-        // Already a constant
-        newMixedTileSizes.push_back(std::get<1>(it));
-      } else {
-        int64_t tileSize = getConstantIntValue(std::get<1>(it)).value();
-        assert(tileSize == shape && "tile size and dim size don't match!");
-        (void)tileSize;
-        newMixedTileSizes.push_back(
-            (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
-      }
-    }
+    SmallVector<OpFoldResult> newMixedTileSizes =
+        getNewMixedTileSizes(rewriter, newResultTypes[0], op.getMixedTiles());
 
     // Clone op.
+    // TODO: Strictly speaking, discardable attributes should be _discarded_ at
+    // this point. However, in practice, we use them for things that we'd like
+    // to preserve. Implement a better abstraction.
     PackOp newOp = rewriter.create<PackOp>(
         op.getLoc(), newOperands[0], newOperands[1], op.getInnerDimsPos(),
         newMixedTileSizes, op.getPaddingValue(), op.getOuterDimsPerm());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+
+    // Replace op.
+    Value oldResult = op.getResult();
+    Value newResult = newOp.getResult();
+    Value replacement = (newResult.getType() != oldResult.getType())
+                            ? rewriter.create<tensor::CastOp>(
+                                  op->getLoc(), oldResult.getType(), newResult)
+                            : newResult;
+
+    rewriter.replaceOp(op, {replacement});
+
+    return success();
+  }
+};
+
+/// Folds a tensor.cast op into a consuming tensor::UnPackOp op if the
+/// `tensor.cast` has source that is more static than the consuming op.
+///
+/// Example:
+/// ```mlir
+///   %1 = tensor.cast %0 : tensor<1x1x8x1xi32> to tensor<1x1x?x1xi32>
+///   %2 = tensor.unpack %1 ... : tensor<1x1x?x1xi32> -> tensor<7x?xi32>
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+///   %2 = tensor.unpack %0  ... tensor<1x1x8x1xi32> -> tensor<7x?xi32>
+/// ```
+struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
+  using OpRewritePattern<UnPackOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(UnPackOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!foldTensorCastPrecondition(op))
+      return failure();
+
+    SmallVector<Type> newResultTypes(op->getResultTypes());
+    SmallVector<Value> newOperands =
+        getUpdatedOperandsAfterCastOpFolding(op, newResultTypes);
+    Value sourceTensor = newOperands[0];
+
+    // Get the updated mixed-tile-sizes attribute.
+    SmallVector<OpFoldResult> newMixedTileSizes = getNewMixedTileSizes(
+        rewriter, sourceTensor.getType(), op.getMixedTiles());
+
+    // Clone op.
+    // TODO: Strictly speaking, discardable attributes should be _discarded_ at
+    // this point. However, in practice, we use them for things that we'd like
+    // to preserve. Implement a better abstraction.
+    UnPackOp newOp = rewriter.create<UnPackOp>(
+        op.getLoc(), sourceTensor, newOperands[1], op.getInnerDimsPos(),
+        newMixedTileSizes, op.getOuterDimsPerm());
     newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     // Replace op.
@@ -4890,11 +4979,13 @@ struct FoldTensorCastProducerOp
                                 PatternRewriter &rewriter) const override {
 
     // Reject tensor::PackOp - there's dedicated pattern for that instead.
-    if (!foldTensorCastPrecondition(op) || dyn_cast<tensor::PackOp>(*op))
+    if (!foldTensorCastPrecondition(op) ||
+        isa<tensor::RelayoutOpInterface>(*op))
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());
-    SmallVector<Value> newOperands = getNewOperands(op, newResultTypes);
+    SmallVector<Value> newOperands =
+        getUpdatedOperandsAfterCastOpFolding(op, newResultTypes);
 
     // Clone op
     auto newOp = clone(rewriter, op, newResultTypes, newOperands);
@@ -4923,6 +5014,7 @@ struct FoldTensorCastProducerOp
 void TensorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
   results.add<FoldTensorCastPackOp>(getContext());
+  results.add<FoldTensorCastUnPackOp>(getContext());
   results.add<FoldTensorCastProducerOp>(getContext());
 }
 

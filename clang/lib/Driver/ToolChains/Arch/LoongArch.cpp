@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArch.h"
+#include "../Clang.h"
 #include "ToolChains/CommonArgs.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Driver.h"
@@ -134,6 +135,24 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       (!Args.hasArgNoClaim(clang::driver::options::OPT_march_EQ)))
     Features.push_back("+lsx");
 
+  // FIXME: Now we must use -mrelax to enable relax, maybe -mrelax will be set
+  // as default in the future.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mrelax, options::OPT_mno_relax)) {
+    if (A->getOption().matches(options::OPT_mrelax)) {
+      Features.push_back("+relax");
+      // -gsplit-dwarf -mrelax requires DW_AT_high_pc/DW_AT_ranges/... indexing
+      // into .debug_addr, which is currently not implemented.
+      Arg *A;
+      if (getDebugFissionKind(D, Args, A) != DwarfFissionKind::None)
+        D.Diag(
+            clang::diag::err_drv_loongarch_unsupported_with_linker_relaxation)
+            << A->getAsString(Args);
+    } else {
+      Features.push_back("-relax");
+    }
+  }
+
   std::string ArchName;
   const Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
   if (MArch)
@@ -180,10 +199,6 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       D.Diag(diag::err_drv_loongarch_invalid_mfpu_EQ) << FPU;
     }
   }
-
-  // Select the `ual` feature determined by -m[no-]strict-align.
-  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
-                   options::OPT_mstrict_align, "ual");
 
   // Accept but warn about these TargetSpecific options.
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_mabi_EQ))
@@ -257,50 +272,22 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       Features.push_back("-lasx");
   }
 
-  // Select frecipe feature determined by -m[no-]frecipe.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_mfrecipe, options::OPT_mno_frecipe)) {
-    if (A->getOption().matches(options::OPT_mfrecipe))
-      Features.push_back("+frecipe");
-    else
-      Features.push_back("-frecipe");
-  }
-
-  // Select lam-bh feature determined by -m[no-]lam-bh.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_mlam_bh, options::OPT_mno_lam_bh)) {
-    if (A->getOption().matches(options::OPT_mlam_bh))
-      Features.push_back("+lam-bh");
-    else
-      Features.push_back("-lam-bh");
-  }
-
-  // Select lamcas feature determined by -m[no-]lamcas.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_mlamcas, options::OPT_mno_lamcas)) {
-    if (A->getOption().matches(options::OPT_mlamcas))
-      Features.push_back("+lamcas");
-    else
-      Features.push_back("-lamcas");
-  }
-
-  // Select ld-seq-sa feature determined by -m[no-]ld-seq-sa.
-  if (const Arg *A = Args.getLastArg(options::OPT_mld_seq_sa,
-                                     options::OPT_mno_ld_seq_sa)) {
-    if (A->getOption().matches(options::OPT_mld_seq_sa))
-      Features.push_back("+ld-seq-sa");
-    else
-      Features.push_back("-ld-seq-sa");
-  }
-
-  // Select div32 feature determined by -m[no-]div32.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_mdiv32, options::OPT_mno_div32)) {
-    if (A->getOption().matches(options::OPT_mdiv32))
-      Features.push_back("+div32");
-    else
-      Features.push_back("-div32");
-  }
+  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
+                   options::OPT_mstrict_align, "ual");
+  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
+                   options::OPT_mstrict_align, "ual");
+  AddTargetFeature(Args, Features, options::OPT_mfrecipe,
+                   options::OPT_mno_frecipe, "frecipe");
+  AddTargetFeature(Args, Features, options::OPT_mlam_bh,
+                   options::OPT_mno_lam_bh, "lam-bh");
+  AddTargetFeature(Args, Features, options::OPT_mlamcas,
+                   options::OPT_mno_lamcas, "lamcas");
+  AddTargetFeature(Args, Features, options::OPT_mld_seq_sa,
+                   options::OPT_mno_ld_seq_sa, "ld-seq-sa");
+  AddTargetFeature(Args, Features, options::OPT_mdiv32,
+                   options::OPT_mno_div32, "div32");
+  AddTargetFeature(Args, Features, options::OPT_mscq, options::OPT_mno_scq,
+                   "scq");
 }
 
 std::string loongarch::postProcessTargetCPUString(const std::string &CPU,

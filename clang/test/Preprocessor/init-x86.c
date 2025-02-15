@@ -35,26 +35,31 @@
 // I386:#define __FLT_MIN_EXP__ (-125)
 // I386:#define __FLT_MIN__ 1.17549435e-38F
 // I386:#define __FLT_RADIX__ 2
+// I386:#define __INT16_C(c) c
 // I386:#define __INT16_C_SUFFIX__
 // I386:#define __INT16_FMTd__ "hd"
 // I386:#define __INT16_FMTi__ "hi"
 // I386:#define __INT16_MAX__ 32767
 // I386:#define __INT16_TYPE__ short
+// I386:#define __INT32_C(c) c
 // I386:#define __INT32_C_SUFFIX__
 // I386:#define __INT32_FMTd__ "d"
 // I386:#define __INT32_FMTi__ "i"
 // I386:#define __INT32_MAX__ 2147483647
 // I386:#define __INT32_TYPE__ int
+// I386:#define __INT64_C(c) c##LL
 // I386:#define __INT64_C_SUFFIX__ LL
 // I386:#define __INT64_FMTd__ "lld"
 // I386:#define __INT64_FMTi__ "lli"
 // I386:#define __INT64_MAX__ 9223372036854775807LL
 // I386:#define __INT64_TYPE__ long long int
+// I386:#define __INT8_C(c) c
 // I386:#define __INT8_C_SUFFIX__
 // I386:#define __INT8_FMTd__ "hhd"
 // I386:#define __INT8_FMTi__ "hhi"
 // I386:#define __INT8_MAX__ 127
 // I386:#define __INT8_TYPE__ signed char
+// I386:#define __INTMAX_C(c) c##LL
 // I386:#define __INTMAX_C_SUFFIX__ LL
 // I386:#define __INTMAX_FMTd__ "lld"
 // I386:#define __INTMAX_FMTi__ "lli"
@@ -140,18 +145,23 @@
 // I386:#define __SIZE_MAX__ 4294967295U
 // I386:#define __SIZE_TYPE__ unsigned int
 // I386:#define __SIZE_WIDTH__ 32
+// I386:#define __UINT16_C(c) c
 // I386:#define __UINT16_C_SUFFIX__
 // I386:#define __UINT16_MAX__ 65535
 // I386:#define __UINT16_TYPE__ unsigned short
+// I386:#define __UINT32_C(c) c##U
 // I386:#define __UINT32_C_SUFFIX__ U
 // I386:#define __UINT32_MAX__ 4294967295U
 // I386:#define __UINT32_TYPE__ unsigned int
+// I386:#define __UINT64_C(c) c##ULL
 // I386:#define __UINT64_C_SUFFIX__ ULL
 // I386:#define __UINT64_MAX__ 18446744073709551615ULL
 // I386:#define __UINT64_TYPE__ long long unsigned int
+// I386:#define __UINT8_C(c) c
 // I386:#define __UINT8_C_SUFFIX__
 // I386:#define __UINT8_MAX__ 255
 // I386:#define __UINT8_TYPE__ unsigned char
+// I386:#define __UINTMAX_C(c) c##ULL
 // I386:#define __UINTMAX_C_SUFFIX__ ULL
 // I386:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // I386:#define __UINTMAX_TYPE__ long long unsigned int
@@ -235,26 +245,31 @@
 // I386-LINUX:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
 // I386-LINUX:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // I386-LINUX:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+// I386-LINUX:#define __INT16_C(c) c
 // I386-LINUX:#define __INT16_C_SUFFIX__
 // I386-LINUX:#define __INT16_FMTd__ "hd"
 // I386-LINUX:#define __INT16_FMTi__ "hi"
 // I386-LINUX:#define __INT16_MAX__ 32767
 // I386-LINUX:#define __INT16_TYPE__ short
+// I386-LINUX:#define __INT32_C(c) c
 // I386-LINUX:#define __INT32_C_SUFFIX__
 // I386-LINUX:#define __INT32_FMTd__ "d"
 // I386-LINUX:#define __INT32_FMTi__ "i"
 // I386-LINUX:#define __INT32_MAX__ 2147483647
 // I386-LINUX:#define __INT32_TYPE__ int
+// I386-LINUX:#define __INT64_C(c) c##LL
 // I386-LINUX:#define __INT64_C_SUFFIX__ LL
 // I386-LINUX:#define __INT64_FMTd__ "lld"
 // I386-LINUX:#define __INT64_FMTi__ "lli"
 // I386-LINUX:#define __INT64_MAX__ 9223372036854775807LL
 // I386-LINUX:#define __INT64_TYPE__ long long int
+// I386-LINUX:#define __INT8_C(c) c
 // I386-LINUX:#define __INT8_C_SUFFIX__
 // I386-LINUX:#define __INT8_FMTd__ "hhd"
 // I386-LINUX:#define __INT8_FMTi__ "hhi"
 // I386-LINUX:#define __INT8_MAX__ 127
 // I386-LINUX:#define __INT8_TYPE__ signed char
+// I386-LINUX:#define __INTMAX_C(c) c##LL
 // I386-LINUX:#define __INTMAX_C_SUFFIX__ LL
 // I386-LINUX:#define __INTMAX_FMTd__ "lld"
 // I386-LINUX:#define __INTMAX_FMTi__ "lli"
@@ -341,18 +356,23 @@
 // I386-LINUX:#define __SIZE_TYPE__ unsigned int
 // I386-LINUX:#define __SIZE_WIDTH__ 32
 // I386-LINUX-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
+// I386-LINUX:#define __UINT16_C(c) c
 // I386-LINUX:#define __UINT16_C_SUFFIX__
 // I386-LINUX:#define __UINT16_MAX__ 65535
 // I386-LINUX:#define __UINT16_TYPE__ unsigned short
+// I386-LINUX:#define __UINT32_C(c) c##U
 // I386-LINUX:#define __UINT32_C_SUFFIX__ U
 // I386-LINUX:#define __UINT32_MAX__ 4294967295U
 // I386-LINUX:#define __UINT32_TYPE__ unsigned int
+// I386-LINUX:#define __UINT64_C(c) c##ULL
 // I386-LINUX:#define __UINT64_C_SUFFIX__ ULL
 // I386-LINUX:#define __UINT64_MAX__ 18446744073709551615ULL
 // I386-LINUX:#define __UINT64_TYPE__ long long unsigned int
+// I386-LINUX:#define __UINT8_C(c) c
 // I386-LINUX:#define __UINT8_C_SUFFIX__
 // I386-LINUX:#define __UINT8_MAX__ 255
 // I386-LINUX:#define __UINT8_TYPE__ unsigned char
+// I386-LINUX:#define __UINTMAX_C(c) c##ULL
 // I386-LINUX:#define __UINTMAX_C_SUFFIX__ ULL
 // I386-LINUX:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // I386-LINUX:#define __UINTMAX_TYPE__ long long unsigned int
@@ -436,26 +456,31 @@
 // I386-NETBSD:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
 // I386-NETBSD:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // I386-NETBSD:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+// I386-NETBSD:#define __INT16_C(c) c
 // I386-NETBSD:#define __INT16_C_SUFFIX__
 // I386-NETBSD:#define __INT16_FMTd__ "hd"
 // I386-NETBSD:#define __INT16_FMTi__ "hi"
 // I386-NETBSD:#define __INT16_MAX__ 32767
 // I386-NETBSD:#define __INT16_TYPE__ short
+// I386-NETBSD:#define __INT32_C(c) c
 // I386-NETBSD:#define __INT32_C_SUFFIX__
 // I386-NETBSD:#define __INT32_FMTd__ "d"
 // I386-NETBSD:#define __INT32_FMTi__ "i"
 // I386-NETBSD:#define __INT32_MAX__ 2147483647
 // I386-NETBSD:#define __INT32_TYPE__ int
+// I386-NETBSD:#define __INT64_C(c) c##LL
 // I386-NETBSD:#define __INT64_C_SUFFIX__ LL
 // I386-NETBSD:#define __INT64_FMTd__ "lld"
 // I386-NETBSD:#define __INT64_FMTi__ "lli"
 // I386-NETBSD:#define __INT64_MAX__ 9223372036854775807LL
 // I386-NETBSD:#define __INT64_TYPE__ long long int
+// I386-NETBSD:#define __INT8_C(c) c
 // I386-NETBSD:#define __INT8_C_SUFFIX__
 // I386-NETBSD:#define __INT8_FMTd__ "hhd"
 // I386-NETBSD:#define __INT8_FMTi__ "hhi"
 // I386-NETBSD:#define __INT8_MAX__ 127
 // I386-NETBSD:#define __INT8_TYPE__ signed char
+// I386-NETBSD:#define __INTMAX_C(c) c##LL
 // I386-NETBSD:#define __INTMAX_C_SUFFIX__ LL
 // I386-NETBSD:#define __INTMAX_FMTd__ "lld"
 // I386-NETBSD:#define __INTMAX_FMTi__ "lli"
@@ -542,18 +567,23 @@
 // I386-NETBSD:#define __SIZE_TYPE__ unsigned int
 // I386-NETBSD:#define __SIZE_WIDTH__ 32
 // I386-NETBSD-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 4U
+// I386-NETBSD:#define __UINT16_C(c) c
 // I386-NETBSD:#define __UINT16_C_SUFFIX__
 // I386-NETBSD:#define __UINT16_MAX__ 65535
 // I386-NETBSD:#define __UINT16_TYPE__ unsigned short
+// I386-NETBSD:#define __UINT32_C(c) c##U
 // I386-NETBSD:#define __UINT32_C_SUFFIX__ U
 // I386-NETBSD:#define __UINT32_MAX__ 4294967295U
 // I386-NETBSD:#define __UINT32_TYPE__ unsigned int
+// I386-NETBSD:#define __UINT64_C(c) c##ULL
 // I386-NETBSD:#define __UINT64_C_SUFFIX__ ULL
 // I386-NETBSD:#define __UINT64_MAX__ 18446744073709551615ULL
 // I386-NETBSD:#define __UINT64_TYPE__ long long unsigned int
+// I386-NETBSD:#define __UINT8_C(c) c
 // I386-NETBSD:#define __UINT8_C_SUFFIX__
 // I386-NETBSD:#define __UINT8_MAX__ 255
 // I386-NETBSD:#define __UINT8_TYPE__ unsigned char
+// I386-NETBSD:#define __UINTMAX_C(c) c##ULL
 // I386-NETBSD:#define __UINTMAX_C_SUFFIX__ ULL
 // I386-NETBSD:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // I386-NETBSD:#define __UINTMAX_TYPE__ long long unsigned int
@@ -636,26 +666,31 @@
 // X86_64:#define __FLT_MIN_EXP__ (-125)
 // X86_64:#define __FLT_MIN__ 1.17549435e-38F
 // X86_64:#define __FLT_RADIX__ 2
+// X86_64:#define __INT16_C(c) c
 // X86_64:#define __INT16_C_SUFFIX__
 // X86_64:#define __INT16_FMTd__ "hd"
 // X86_64:#define __INT16_FMTi__ "hi"
 // X86_64:#define __INT16_MAX__ 32767
 // X86_64:#define __INT16_TYPE__ short
+// X86_64:#define __INT32_C(c) c
 // X86_64:#define __INT32_C_SUFFIX__
 // X86_64:#define __INT32_FMTd__ "d"
 // X86_64:#define __INT32_FMTi__ "i"
 // X86_64:#define __INT32_MAX__ 2147483647
 // X86_64:#define __INT32_TYPE__ int
+// X86_64:#define __INT64_C(c) c##L
 // X86_64:#define __INT64_C_SUFFIX__ L
 // X86_64:#define __INT64_FMTd__ "ld"
 // X86_64:#define __INT64_FMTi__ "li"
 // X86_64:#define __INT64_MAX__ 9223372036854775807L
 // X86_64:#define __INT64_TYPE__ long int
+// X86_64:#define __INT8_C(c) c
 // X86_64:#define __INT8_C_SUFFIX__
 // X86_64:#define __INT8_FMTd__ "hhd"
 // X86_64:#define __INT8_FMTi__ "hhi"
 // X86_64:#define __INT8_MAX__ 127
 // X86_64:#define __INT8_TYPE__ signed char
+// X86_64:#define __INTMAX_C(c) c##L
 // X86_64:#define __INTMAX_C_SUFFIX__ L
 // X86_64:#define __INTMAX_FMTd__ "ld"
 // X86_64:#define __INTMAX_FMTi__ "li"
@@ -748,18 +783,23 @@
 // X86_64:#define __SSE_MATH__ 1
 // X86_64:#define __SSE__ 1
 // X86_64-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
+// X86_64:#define __UINT16_C(c) c
 // X86_64:#define __UINT16_C_SUFFIX__
 // X86_64:#define __UINT16_MAX__ 65535
 // X86_64:#define __UINT16_TYPE__ unsigned short
+// X86_64:#define __UINT32_C(c) c##U
 // X86_64:#define __UINT32_C_SUFFIX__ U
 // X86_64:#define __UINT32_MAX__ 4294967295U
 // X86_64:#define __UINT32_TYPE__ unsigned int
+// X86_64:#define __UINT64_C(c) c##UL
 // X86_64:#define __UINT64_C_SUFFIX__ UL
 // X86_64:#define __UINT64_MAX__ 18446744073709551615UL
 // X86_64:#define __UINT64_TYPE__ long unsigned int
+// X86_64:#define __UINT8_C(c) c
 // X86_64:#define __UINT8_C_SUFFIX__
 // X86_64:#define __UINT8_MAX__ 255
 // X86_64:#define __UINT8_TYPE__ unsigned char
+// X86_64:#define __UINTMAX_C(c) c##UL
 // X86_64:#define __UINTMAX_C_SUFFIX__ UL
 // X86_64:#define __UINTMAX_MAX__ 18446744073709551615UL
 // X86_64:#define __UINTMAX_TYPE__ long unsigned int
@@ -842,26 +882,31 @@
 // X32:#define __FLT_RADIX__ 2
 // X32:#define __ILP32__ 1
 // X32-NOT:#define __LP64__ 1
+// X32:#define __INT16_C(c) c
 // X32:#define __INT16_C_SUFFIX__
 // X32:#define __INT16_FMTd__ "hd"
 // X32:#define __INT16_FMTi__ "hi"
 // X32:#define __INT16_MAX__ 32767
 // X32:#define __INT16_TYPE__ short
+// X32:#define __INT32_C(c) c
 // X32:#define __INT32_C_SUFFIX__
 // X32:#define __INT32_FMTd__ "d"
 // X32:#define __INT32_FMTi__ "i"
 // X32:#define __INT32_MAX__ 2147483647
 // X32:#define __INT32_TYPE__ int
+// X32:#define __INT64_C(c) c##LL
 // X32:#define __INT64_C_SUFFIX__ LL
 // X32:#define __INT64_FMTd__ "lld"
 // X32:#define __INT64_FMTi__ "lli"
 // X32:#define __INT64_MAX__ 9223372036854775807LL
 // X32:#define __INT64_TYPE__ long long int
+// X32:#define __INT8_C(c) c
 // X32:#define __INT8_C_SUFFIX__
 // X32:#define __INT8_FMTd__ "hhd"
 // X32:#define __INT8_FMTi__ "hhi"
 // X32:#define __INT8_MAX__ 127
 // X32:#define __INT8_TYPE__ signed char
+// X32:#define __INTMAX_C(c) c##LL
 // X32:#define __INTMAX_C_SUFFIX__ LL
 // X32:#define __INTMAX_FMTd__ "lld"
 // X32:#define __INTMAX_FMTi__ "lli"
@@ -952,18 +997,23 @@
 // X32:#define __SSE_MATH__ 1
 // X32:#define __SSE__ 1
 // X32-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16U
+// X32:#define __UINT16_C(c) c
 // X32:#define __UINT16_C_SUFFIX__
 // X32:#define __UINT16_MAX__ 65535
 // X32:#define __UINT16_TYPE__ unsigned short
+// X32:#define __UINT32_C(c) c##U
 // X32:#define __UINT32_C_SUFFIX__ U
 // X32:#define __UINT32_MAX__ 4294967295U
 // X32:#define __UINT32_TYPE__ unsigned int
+// X32:#define __UINT64_C(c) c##ULL
 // X32:#define __UINT64_C_SUFFIX__ ULL
 // X32:#define __UINT64_MAX__ 18446744073709551615ULL
 // X32:#define __UINT64_TYPE__ long long unsigned int
+// X32:#define __UINT8_C(c) c
 // X32:#define __UINT8_C_SUFFIX__
 // X32:#define __UINT8_MAX__ 255
 // X32:#define __UINT8_TYPE__ unsigned char
+// X32:#define __UINTMAX_C(c) c##ULL
 // X32:#define __UINTMAX_C_SUFFIX__ ULL
 // X32:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // X32:#define __UINTMAX_TYPE__ long long unsigned int
@@ -1046,26 +1096,31 @@
 // X86_64-LINUX:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
 // X86_64-LINUX:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // X86_64-LINUX:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+// X86_64-LINUX:#define __INT16_C(c) c
 // X86_64-LINUX:#define __INT16_C_SUFFIX__
 // X86_64-LINUX:#define __INT16_FMTd__ "hd"
 // X86_64-LINUX:#define __INT16_FMTi__ "hi"
 // X86_64-LINUX:#define __INT16_MAX__ 32767
 // X86_64-LINUX:#define __INT16_TYPE__ short
+// X86_64-LINUX:#define __INT32_C(c) c
 // X86_64-LINUX:#define __INT32_C_SUFFIX__
 // X86_64-LINUX:#define __INT32_FMTd__ "d"
 // X86_64-LINUX:#define __INT32_FMTi__ "i"
 // X86_64-LINUX:#define __INT32_MAX__ 2147483647
 // X86_64-LINUX:#define __INT32_TYPE__ int
+// X86_64-LINUX:#define __INT64_C(c) c##L
 // X86_64-LINUX:#define __INT64_C_SUFFIX__ L
 // X86_64-LINUX:#define __INT64_FMTd__ "ld"
 // X86_64-LINUX:#define __INT64_FMTi__ "li"
 // X86_64-LINUX:#define __INT64_MAX__ 9223372036854775807L
 // X86_64-LINUX:#define __INT64_TYPE__ long int
+// X86_64-LINUX:#define __INT8_C(c) c
 // X86_64-LINUX:#define __INT8_C_SUFFIX__
 // X86_64-LINUX:#define __INT8_FMTd__ "hhd"
 // X86_64-LINUX:#define __INT8_FMTi__ "hhi"
 // X86_64-LINUX:#define __INT8_MAX__ 127
 // X86_64-LINUX:#define __INT8_TYPE__ signed char
+// X86_64-LINUX:#define __INTMAX_C(c) c##L
 // X86_64-LINUX:#define __INTMAX_C_SUFFIX__ L
 // X86_64-LINUX:#define __INTMAX_FMTd__ "ld"
 // X86_64-LINUX:#define __INTMAX_FMTi__ "li"
@@ -1156,18 +1211,23 @@
 // X86_64-LINUX:#define __SSE2__ 1
 // X86_64-LINUX:#define __SSE_MATH__ 1
 // X86_64-LINUX:#define __SSE__ 1
+// X86_64-LINUX:#define __UINT16_C(c) c
 // X86_64-LINUX:#define __UINT16_C_SUFFIX__
 // X86_64-LINUX:#define __UINT16_MAX__ 65535
 // X86_64-LINUX:#define __UINT16_TYPE__ unsigned short
+// X86_64-LINUX:#define __UINT32_C(c) c##U
 // X86_64-LINUX:#define __UINT32_C_SUFFIX__ U
 // X86_64-LINUX:#define __UINT32_MAX__ 4294967295U
 // X86_64-LINUX:#define __UINT32_TYPE__ unsigned int
+// X86_64-LINUX:#define __UINT64_C(c) c##UL
 // X86_64-LINUX:#define __UINT64_C_SUFFIX__ UL
 // X86_64-LINUX:#define __UINT64_MAX__ 18446744073709551615UL
 // X86_64-LINUX:#define __UINT64_TYPE__ long unsigned int
+// X86_64-LINUX:#define __UINT8_C(c) c
 // X86_64-LINUX:#define __UINT8_C_SUFFIX__
 // X86_64-LINUX:#define __UINT8_MAX__ 255
 // X86_64-LINUX:#define __UINT8_TYPE__ unsigned char
+// X86_64-LINUX:#define __UINTMAX_C(c) c##UL
 // X86_64-LINUX:#define __UINTMAX_C_SUFFIX__ UL
 // X86_64-LINUX:#define __UINTMAX_MAX__ 18446744073709551615UL
 // X86_64-LINUX:#define __UINTMAX_TYPE__ long unsigned int
@@ -1258,26 +1318,31 @@
 // X86_64-NETBSD:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
 // X86_64-NETBSD:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // X86_64-NETBSD:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+// X86_64-NETBSD:#define __INT16_C(c) c
 // X86_64-NETBSD:#define __INT16_C_SUFFIX__
 // X86_64-NETBSD:#define __INT16_FMTd__ "hd"
 // X86_64-NETBSD:#define __INT16_FMTi__ "hi"
 // X86_64-NETBSD:#define __INT16_MAX__ 32767
 // X86_64-NETBSD:#define __INT16_TYPE__ short
+// X86_64-NETBSD:#define __INT32_C(c) c
 // X86_64-NETBSD:#define __INT32_C_SUFFIX__
 // X86_64-NETBSD:#define __INT32_FMTd__ "d"
 // X86_64-NETBSD:#define __INT32_FMTi__ "i"
 // X86_64-NETBSD:#define __INT32_MAX__ 2147483647
 // X86_64-NETBSD:#define __INT32_TYPE__ int
+// X86_64-NETBSD:#define __INT64_C(c) c##L
 // X86_64-NETBSD:#define __INT64_C_SUFFIX__ L
 // X86_64-NETBSD:#define __INT64_FMTd__ "ld"
 // X86_64-NETBSD:#define __INT64_FMTi__ "li"
 // X86_64-NETBSD:#define __INT64_MAX__ 9223372036854775807L
 // X86_64-NETBSD:#define __INT64_TYPE__ long int
+// X86_64-NETBSD:#define __INT8_C(c) c
 // X86_64-NETBSD:#define __INT8_C_SUFFIX__
 // X86_64-NETBSD:#define __INT8_FMTd__ "hhd"
 // X86_64-NETBSD:#define __INT8_FMTi__ "hhi"
 // X86_64-NETBSD:#define __INT8_MAX__ 127
 // X86_64-NETBSD:#define __INT8_TYPE__ signed char
+// X86_64-NETBSD:#define __INTMAX_C(c) c##L
 // X86_64-NETBSD:#define __INTMAX_C_SUFFIX__ L
 // X86_64-NETBSD:#define __INTMAX_FMTd__ "ld"
 // X86_64-NETBSD:#define __INTMAX_FMTi__ "li"
@@ -1368,18 +1433,23 @@
 // X86_64-NETBSD:#define __SSE2__ 1
 // X86_64-NETBSD:#define __SSE_MATH__ 1
 // X86_64-NETBSD:#define __SSE__ 1
+// X86_64-NETBSD:#define __UINT16_C(c) c
 // X86_64-NETBSD:#define __UINT16_C_SUFFIX__
 // X86_64-NETBSD:#define __UINT16_MAX__ 65535
 // X86_64-NETBSD:#define __UINT16_TYPE__ unsigned short
+// X86_64-NETBSD:#define __UINT32_C(c) c##U
 // X86_64-NETBSD:#define __UINT32_C_SUFFIX__ U
 // X86_64-NETBSD:#define __UINT32_MAX__ 4294967295U
 // X86_64-NETBSD:#define __UINT32_TYPE__ unsigned int
+// X86_64-NETBSD:#define __UINT64_C(c) c##UL
 // X86_64-NETBSD:#define __UINT64_C_SUFFIX__ UL
 // X86_64-NETBSD:#define __UINT64_MAX__ 18446744073709551615UL
 // X86_64-NETBSD:#define __UINT64_TYPE__ long unsigned int
+// X86_64-NETBSD:#define __UINT8_C(c) c
 // X86_64-NETBSD:#define __UINT8_C_SUFFIX__
 // X86_64-NETBSD:#define __UINT8_MAX__ 255
 // X86_64-NETBSD:#define __UINT8_TYPE__ unsigned char
+// X86_64-NETBSD:#define __UINTMAX_C(c) c##UL
 // X86_64-NETBSD:#define __UINTMAX_C_SUFFIX__ UL
 // X86_64-NETBSD:#define __UINTMAX_MAX__ 18446744073709551615UL
 // X86_64-NETBSD:#define __UINTMAX_TYPE__ long unsigned int

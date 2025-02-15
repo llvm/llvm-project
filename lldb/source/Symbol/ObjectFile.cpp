@@ -646,8 +646,7 @@ ObjectFile::GetLoadableData(Target &target) {
   for (size_t i = 0; i < section_count; ++i) {
     LoadableData loadable;
     SectionSP section_sp = section_list->GetSectionAtIndex(i);
-    loadable.Dest =
-        target.GetSectionLoadList().GetSectionLoadAddress(section_sp);
+    loadable.Dest = target.GetSectionLoadAddress(section_sp);
     if (loadable.Dest == LLDB_INVALID_ADDRESS)
       continue;
     // We can skip sections like bss

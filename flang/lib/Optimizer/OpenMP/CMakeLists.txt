@@ -12,7 +12,6 @@ add_flang_library(FlangOpenMPTransforms
   FIRDialect
   HLFIROpsIncGen
   FlangOpenMPPassesIncGen
-  ${dialect_libs}
 
   LINK_LIBS
   FIRAnalysis
@@ -21,10 +20,15 @@ add_flang_library(FlangOpenMPTransforms
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FortranCommon
+  FortranSupport
+  HLFIRDialect
+
+  MLIR_DEPS
+  ${dialect_libs}
+
+  MLIR_LIBS
   MLIRFuncDialect
   MLIROpenMPDialect
-  HLFIRDialect
   MLIRIR
   MLIRPass
   MLIRTransformUtils

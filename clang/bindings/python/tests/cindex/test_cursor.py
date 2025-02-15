@@ -5,6 +5,8 @@ from clang.cindex import (
     BinaryOperator,
     Config,
     CursorKind,
+    PrintingPolicy,
+    PrintingPolicyProperty,
     StorageClass,
     TemplateArgumentKind,
     TranslationUnit,
@@ -981,3 +983,15 @@ int count(int a, int b){
     def test_from_cursor_result_null(self):
         tu = get_tu("")
         self.assertEqual(tu.cursor.semantic_parent, None)
+
+    def test_pretty_print(self):
+        tu = get_tu("struct X { int x; }; void f(bool x) { }", lang="cpp")
+        f = get_cursor(tu, "f")
+
+        self.assertEqual(f.displayname, "f(bool)")
+        pp = PrintingPolicy.create(f)
+        self.assertEqual(pp.get_property(PrintingPolicyProperty.Bool), True)
+        self.assertEqual(f.pretty_printed(pp), "void f(bool x) {\n}\n")
+        pp.set_property(PrintingPolicyProperty.Bool, False)
+        self.assertEqual(pp.get_property(PrintingPolicyProperty.Bool), False)
+        self.assertEqual(f.pretty_printed(pp), "void f(_Bool x) {\n}\n")

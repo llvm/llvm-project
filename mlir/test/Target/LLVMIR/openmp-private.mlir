@@ -60,9 +60,9 @@ llvm.func @parallel_op_2_privates(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
 
 // Check that the privatizer alloc region was inlined properly.
 // CHECK: %[[PRIV1_ALLOC:.*]] = alloca float, align 4
+// CHECK: %[[PRIV2_ALLOC:.*]] = alloca i32, align 4
 // CHECK: %[[ORIG1_VAL:.*]] = load float, ptr %[[ORIG1_PTR]], align 4
 // CHECK: store float %[[ORIG1_VAL]], ptr %[[PRIV1_ALLOC]], align 4
-// CHECK: %[[PRIV2_ALLOC:.*]] = alloca i32, align 4
 // CHECK: %[[ORIG2_VAL:.*]] = load i32, ptr %[[ORIG2_PTR]], align 4
 // CHECK: store i32 %[[ORIG2_VAL]], ptr %[[PRIV2_ALLOC]], align 4
 // CHECK-NEXT: br
@@ -72,22 +72,20 @@ llvm.func @parallel_op_2_privates(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
 // CHECK: load i32, ptr %[[PRIV2_ALLOC]], align 4
 // CHECK: }
 
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
+omp.private {type = private} @x.privatizer : f32 init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %c1 = llvm.mlir.constant(1 : i32) : i32
-  %0 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr
   %1 = llvm.load %arg0 : !llvm.ptr -> f32
-  llvm.store %1, %0 : f32, !llvm.ptr
-  omp.yield(%0 : !llvm.ptr)
+  llvm.store %1, %arg1 : f32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
 }
 
-omp.private {type = private} @y.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
+omp.private {type = private} @y.privatizer : i32 init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %c1 = llvm.mlir.constant(1 : i32) : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   %1 = llvm.load %arg0 : !llvm.ptr -> i32
-  llvm.store %1, %0 : i32, !llvm.ptr
-  omp.yield(%0 : !llvm.ptr)
+  llvm.store %1, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
 }
 
 // -----
@@ -104,17 +102,20 @@ llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr) {
 // CHECK: omp.par.entry:
 // CHECK:  %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
 // CHECK:  %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
-// CHECK:  br label %omp.private.latealloc
+// CHECK:  %[[PRIV_ALLOC:.*]] = alloca float, align 4
+// CHECK-NEXT:   br label %[[PAR_REG:.*]]
 
-// CHECK: omp.private.latealloc:
+// CHECK: [[PAR_REG]]:
+// CHECK:  br label %omp.private.init
+
+// CHECK: omp.private.init:
 // CHECK:   br label %[[PRIV_BB1:.*]]
 
-// Check contents of the first block in the `alloc` region.
+// Check contents of the first block in the `init` region.
 // CHECK: [[PRIV_BB1]]:
-// CHECK-NEXT:   %[[PRIV_ALLOC:.*]] = alloca float, align 4
 // CHECK-NEXT:   br label %[[PRIV_BB2:.*]]
 
-// Check contents of the second block in the `alloc` region.
+// Check contents of the second block in the `init` region.
 // CHECK: [[PRIV_BB2]]:
 // CHECK-NEXT:   %[[ORIG_PTR2:.*]] = phi ptr [ %[[ORIG_PTR]], %[[PRIV_BB1]] ]
 // CHECK-NEXT:   %[[PRIV_ALLOC2:.*]] = phi ptr [ %[[PRIV_ALLOC]], %[[PRIV_BB1]] ]
@@ -126,22 +127,20 @@ llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr) {
 // address.
 // CHECK: [[PRIV_CONT]]:
 // CHECK-NEXT:   %[[PRIV_ALLOC3:.*]] = phi ptr [ %[[PRIV_ALLOC2]], %[[PRIV_BB2]] ]
-// CHECK-NEXT:   br label %[[PAR_REG:.*]]
+// CHECK-NEXT:   br label %[[PAR_REG2:.*]]
 
 // Check that the body of the parallel region loads from the private clone.
-// CHECK: [[PAR_REG]]:
+// CHECK: [[PAR_REG2]]:
 // CHECK:        %{{.*}} = load float, ptr %[[PRIV_ALLOC3]], align 4
 
-omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %c1 = llvm.mlir.constant(1 : i32) : i32
-  %0 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr
-  llvm.br ^bb1(%arg0, %0 : !llvm.ptr, !llvm.ptr)
+omp.private {type = private} @multi_block.privatizer : f32 init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  llvm.br ^bb1(%arg0, %arg1 : !llvm.ptr, !llvm.ptr)
 
-^bb1(%arg1: !llvm.ptr, %arg2: !llvm.ptr):
-  %1 = llvm.load %arg1 : !llvm.ptr -> f32
-  llvm.store %1, %arg2 : f32, !llvm.ptr
-  omp.yield(%arg2 : !llvm.ptr)
+^bb1(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %1 = llvm.load %arg2 : !llvm.ptr -> f32
+  llvm.store %1, %arg3 : f32, !llvm.ptr
+  omp.yield(%arg3 : !llvm.ptr)
 }
 
 // Tests fix for Fujitsu test suite test: 0007_0019.f90: the
@@ -154,8 +153,8 @@ omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
 // CHECK:         omp.par.region:
 // CHECK:           br label %[[PAR_REG_BEG:.*]]
 // CHECK:         [[PAR_REG_BEG]]:
-// CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 111))
-// CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 222))
+// CHECK:           call void @bar(ptr getelementptr (i8, ptr @_QQfoo, i64 888))
+// CHECK:           call void @bar(ptr getelementptr (i8, ptr @_QQfoo, i64 1776))
 llvm.func @lower_region_with_addressof() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x f64 {bindc_name = "u1"} : (i64) -> !llvm.ptr
@@ -174,8 +173,8 @@ llvm.func @lower_region_with_addressof() {
   llvm.return
 }
 
-omp.private {type = private} @_QFlower_region_with_addressof_privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
+omp.private {type = private} @_QFlower_region_with_addressof_privatizer : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.mlir.addressof @_QQfoo: !llvm.ptr
   omp.yield(%0 : !llvm.ptr)
 }
@@ -195,10 +194,12 @@ llvm.func @bar(!llvm.ptr)
 // that we access the different sets of args properly.
 
 // CHECK-LABEL: define internal void @private_and_reduction_..omp_par
-// CHECK-DAG:    %[[PRV_ALLOC:.*]] = alloca float, i64 1, align 4
+// CHECK-DAG:    %[[PRV_ALLOC:.*]] = alloca float, align 4
 // CHECK-DAG:     %[[RED_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 
 // CHECK:         omp.par.region:
+// CHECK:           br label %omp.reduction.init
+// CHECK:         omp.reduction.init:
 // CHECK:           br label %[[PAR_REG_BEG:.*]]
 // CHECK:         [[PAR_REG_BEG]]:
 // CHECK-NEXT:      %{{.*}} = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[RED_ALLOC]], align 8
@@ -217,12 +218,7 @@ llvm.func @private_and_reduction_() attributes {fir.internal_name = "_QPprivate_
   llvm.return
 }
 
-omp.private {type = private} @privatizer.part : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x f32 {bindc_name = "to_priv", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
+omp.private {type = private} @privatizer.part : f32
 
 omp.declare_reduction @reducer.part : !llvm.ptr alloc {
   %0 = llvm.mlir.constant(1 : i64) : i64
@@ -254,12 +250,7 @@ llvm.func @_QPequivalence() {
   llvm.return
 }
 
-omp.private {type = firstprivate} @_QFequivalenceEx_firstprivate_ptr_f32 : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x f32 {bindc_name = "x", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-} copy {
+omp.private {type = firstprivate} @_QFequivalenceEx_firstprivate_ptr_f32 : f32 copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.load %arg0 : !llvm.ptr -> f32
   llvm.store %0, %arg1 : f32, !llvm.ptr
@@ -268,7 +259,7 @@ omp.private {type = firstprivate} @_QFequivalenceEx_firstprivate_ptr_f32 : !llvm
 
 // CHECK: define internal void @_QPequivalence..omp_par
 // CHECK-NOT: define {{.*}} @{{.*}}
-// CHECK:   %[[PRIV_ALLOC:.*]] = alloca float, i64 1, align 4
+// CHECK:   %[[PRIV_ALLOC:.*]] = alloca float, align 4
 // CHECK:   %[[HOST_VAL:.*]] = load float, ptr %{{.*}}, align 4
 // Test that we initialize the firstprivate variable.
 // CHECK:   store float %[[HOST_VAL]], ptr %[[PRIV_ALLOC]], align 4

@@ -131,6 +131,17 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
           break;
       }
 
+      // This offset can't be negative. Therefore we must be accessing something
+      // before the current type (not legal) or partially inside the last type.
+      // In the latter case, we adjust Idx.
+      if (TDA->Struct.Members[Idx].Offset > OffsetA) {
+        // Trying to access something before the current type.
+        if (!Idx)
+          return false;
+
+        Idx -= 1;
+      }
+
       OffsetA -= TDA->Struct.Members[Idx].Offset;
       TDA = TDA->Struct.Members[Idx].Type;
     } else {
@@ -197,10 +208,14 @@ static void reportError(void *Addr, int Size, tysan_type_descriptor *TD,
     Printf("\n");
 
   if (pc) {
+    uptr top = 0;
+    uptr bottom = 0;
+    if (flags().print_stacktrace)
+      GetThreadStackTopAndBottom(false, &top, &bottom);
 
     bool request_fast = StackTrace::WillUseFastUnwind(true);
     BufferedStackTrace ST;
-    ST.Unwind(kStackTraceMax, pc, bp, 0, 0, 0, request_fast);
+    ST.Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
     ST.Print();
   } else {
     Printf("\n");

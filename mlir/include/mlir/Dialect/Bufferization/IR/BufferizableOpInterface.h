@@ -456,7 +456,7 @@ public:
   /// read by themselves (e.g., ExtractSliceOp).
   bool isValueRead(Value value) const;
 
-  /// Starting from `value`, follow the use-def chain in reverse, always
+  /// Starting from `opOperand`, follow the use-def chain in reverse, always
   /// selecting the aliasing OpOperands. Find and return Values for which
   /// `condition` evaluates to true. OpOperands of such matching Values are not
   /// traversed any further, the visited aliasing opOperands will be preserved
@@ -484,7 +484,7 @@ public:
   /// Additional stopping conditions for the traversal can be specified in
   /// `config`.
   SetVector<Value> findValueInReverseUseDefChain(
-      Value value, llvm::function_ref<bool(Value)> condition,
+      OpOperand *opOperand, llvm::function_ref<bool(Value)> condition,
       TraversalConfig config = TraversalConfig(),
       llvm::DenseSet<OpOperand *> *visitedOpOperands = nullptr) const;
 
@@ -520,7 +520,7 @@ public:
   ///
   /// Note: OpResults of unknown ops are handled conservatively and assumed to
   /// be definitions.
-  SetVector<Value> findDefinitions(Value value) const;
+  SetVector<Value> findDefinitions(OpOperand *opOperand) const;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   virtual bool isInPlace(OpOperand &opOperand) const;
@@ -563,6 +563,11 @@ public:
 
   virtual void resetCache();
 
+  /// Checks whether `op0` and `op1` are inside mutually exclusive regions.
+  /// The logic defers to `mlir::insideMutuallyExclusiveRegions`, but the
+  /// result is cached.
+  bool insideMutuallyExclusiveRegions(Operation *op0, Operation *op1);
+
 protected:
   AnalysisState(const BufferizationOptions &options, TypeID type);
 
@@ -576,6 +581,11 @@ private:
   /// Cache containing closest ancestor repetitive Region.
   DenseMap<std::variant<Operation *, Block *, Region *, Value>, Region *>
       enclosingRepetitiveRegionCache;
+
+  /// Cache that specifies whether the two operations are in mutually exclusive
+  /// regions.
+  DenseMap<std::pair<Operation *, Operation *>, bool>
+      insideMutuallyExclusiveRegionsCache;
 };
 
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).

@@ -21,6 +21,7 @@
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
+#include <__memory/destroy.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/extent.h>
@@ -511,14 +512,6 @@ __uninitialized_allocator_value_construct_n_multidimensional(_Alloc& __alloc, _B
 
 #endif // _LIBCPP_STD_VER >= 17
 
-// Destroy all elements in [__first, __last) from left to right using allocator destruction.
-template <class _Alloc, class _Iter, class _Sent>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-__allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
-  for (; __first != __last; ++__first)
-    allocator_traits<_Alloc>::destroy(__alloc, std::__to_address(__first));
-}
-
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {
 public:
@@ -585,9 +578,9 @@ __uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* 
 template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
 __uninitialized_allocator_copy(_Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
-  auto __unwrapped_range = std::__unwrap_range(__first1, __last1);
+  auto __unwrapped_range = std::__unwrap_range(std::move(__first1), std::move(__last1));
   auto __result          = std::__uninitialized_allocator_copy_impl(
-      __alloc, __unwrapped_range.first, __unwrapped_range.second, std::__unwrap_iter(__first2));
+      __alloc, std::move(__unwrapped_range.first), std::move(__unwrapped_range.second), std::__unwrap_iter(__first2));
   return std::__rewrap_iter(__first2, __result);
 }
 

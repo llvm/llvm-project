@@ -125,6 +125,12 @@ bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
   // https://github.com/llvm/llvm-project/issues/112408
   switch (ID) {
   case Intrinsic::frexp:
+  case Intrinsic::uadd_with_overflow:
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
     return true;
   }
   return false;
@@ -479,6 +485,41 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::widenShuffleMaskElts(ArrayRef<int> M,
+                                SmallVectorImpl<int> &NewMask) {
+  unsigned NumElts = M.size();
+  if (NumElts % 2 != 0)
+    return false;
+
+  NewMask.clear();
+  for (unsigned i = 0; i < NumElts; i += 2) {
+    int M0 = M[i];
+    int M1 = M[i + 1];
+
+    // If both elements are undef, new mask is undef too.
+    if (M0 == -1 && M1 == -1) {
+      NewMask.push_back(-1);
+      continue;
+    }
+
+    if (M0 == -1 && M1 != -1 && (M1 % 2) == 1) {
+      NewMask.push_back(M1 / 2);
+      continue;
+    }
+
+    if (M0 != -1 && (M0 % 2) == 0 && ((M0 + 1) == M1 || M1 == -1)) {
+      NewMask.push_back(M0 / 2);
+      continue;
+    }
+
+    NewMask.clear();
+    return false;
+  }
+
+  assert(NewMask.size() == NumElts / 2 && "Incorrect size for mask!");
+  return true;
+}
+
 bool llvm::scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
                                 SmallVectorImpl<int> &ScaledMask) {
   unsigned NumSrcElts = Mask.size();
@@ -522,7 +563,8 @@ void llvm::processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
-    function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction) {
+    function_ref<void(ArrayRef<int>, unsigned, unsigned, bool)>
+        ManyInputsAction) {
   SmallVector<SmallVector<SmallVector<int>>> Res(NumOfDestRegs);
   // Try to perform better estimation of the permutation.
   // 1. Split the source/destination vectors into real registers.
@@ -593,6 +635,7 @@ void llvm::processShuffleMasks(
         }
       };
       int SecondIdx;
+      bool NewReg = true;
       do {
         int FirstIdx = -1;
         SecondIdx = -1;
@@ -610,7 +653,8 @@ void llvm::processShuffleMasks(
           SecondIdx = I;
           SecondMask = RegMask;
           CombineMasks(FirstMask, SecondMask);
-          ManyInputsAction(FirstMask, FirstIdx, SecondIdx);
+          ManyInputsAction(FirstMask, FirstIdx, SecondIdx, NewReg);
+          NewReg = false;
           NormalizeMask(FirstMask);
           RegMask.clear();
           SecondMask = FirstMask;
@@ -618,7 +662,8 @@ void llvm::processShuffleMasks(
         }
         if (FirstIdx != SecondIdx && SecondIdx >= 0) {
           CombineMasks(SecondMask, FirstMask);
-          ManyInputsAction(SecondMask, SecondIdx, FirstIdx);
+          ManyInputsAction(SecondMask, SecondIdx, FirstIdx, NewReg);
+          NewReg = false;
           Dest[FirstIdx].clear();
           NormalizeMask(SecondMask);
         }

@@ -199,7 +199,7 @@ static unsigned macToMad(unsigned Opc) {
   case AMDGPU::V_FMAC_F16_e64:
     return AMDGPU::V_FMA_F16_gfx9_e64;
   case AMDGPU::V_FMAC_F16_fake16_e64:
-    return AMDGPU::V_FMA_F16_gfx9_e64;
+    return AMDGPU::V_FMA_F16_gfx9_fake16_e64;
   case AMDGPU::V_FMAC_LEGACY_F32_e64:
     return AMDGPU::V_FMA_LEGACY_F32_e64;
   case AMDGPU::V_FMAC_F64_e64:
@@ -369,20 +369,20 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(FoldCandidate &Fold) const {
 
   // Refer to op_sel/op_sel_hi and check if we can change the immediate and
   // op_sel in a way that allows an inline constant.
-  int ModIdx = -1;
+  AMDGPU::OpName ModName = AMDGPU::OpName::NUM_OPERAND_NAMES;
   unsigned SrcIdx = ~0;
   if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0)) {
-    ModIdx = AMDGPU::OpName::src0_modifiers;
+    ModName = AMDGPU::OpName::src0_modifiers;
     SrcIdx = 0;
   } else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1)) {
-    ModIdx = AMDGPU::OpName::src1_modifiers;
+    ModName = AMDGPU::OpName::src1_modifiers;
     SrcIdx = 1;
   } else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2)) {
-    ModIdx = AMDGPU::OpName::src2_modifiers;
+    ModName = AMDGPU::OpName::src2_modifiers;
     SrcIdx = 2;
   }
-  assert(ModIdx != -1);
-  ModIdx = AMDGPU::getNamedOperandIdx(Opcode, ModIdx);
+  assert(ModName != AMDGPU::OpName::NUM_OPERAND_NAMES);
+  int ModIdx = AMDGPU::getNamedOperandIdx(Opcode, ModName);
   MachineOperand &Mod = MI->getOperand(ModIdx);
   unsigned ModVal = Mod.getImm();
 
@@ -1096,21 +1096,8 @@ void SIFoldOperandsImpl::foldOperand(
           B.addImm(Defs[I].second);
         }
         LLVM_DEBUG(dbgs() << "Folded " << *UseMI);
-        return;
       }
 
-      if (Size != 4)
-        return;
-
-      Register Reg0 = UseMI->getOperand(0).getReg();
-      Register Reg1 = UseMI->getOperand(1).getReg();
-      if (TRI->isAGPR(*MRI, Reg0) && TRI->isVGPR(*MRI, Reg1))
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_WRITE_B32_e64));
-      else if (TRI->isVGPR(*MRI, Reg0) && TRI->isAGPR(*MRI, Reg1))
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_READ_B32_e64));
-      else if (ST->hasGFX90AInsts() && TRI->isAGPR(*MRI, Reg0) &&
-               TRI->isAGPR(*MRI, Reg1))
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_MOV_B32));
       return;
     }
 

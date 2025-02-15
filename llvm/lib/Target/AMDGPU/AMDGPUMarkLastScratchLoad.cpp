@@ -88,7 +88,7 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
       if (Segment.end.isBlock())
         continue;
 
-      const int FrameIndex = Register::stackSlot2Index(LI.reg());
+      const int FrameIndex = LI.reg().stackSlotIndex();
       MachineInstr *LastLoad = nullptr;
 
       MachineInstr *MISegmentEnd = SI->getInstructionFromIndex(Segment.end);

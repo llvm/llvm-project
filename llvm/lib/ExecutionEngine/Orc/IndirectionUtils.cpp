@@ -273,8 +273,8 @@ createLocalIndirectStubsManagerBuilder(const Triple &T) {
 Constant* createIRTypedAddress(FunctionType &FT, ExecutorAddr Addr) {
   Constant *AddrIntVal =
     ConstantInt::get(Type::getInt64Ty(FT.getContext()), Addr.getValue());
-  Constant *AddrPtrVal =
-    ConstantExpr::getIntToPtr(AddrIntVal, PointerType::get(&FT, 0));
+  Constant *AddrPtrVal = ConstantExpr::getIntToPtr(
+      AddrIntVal, PointerType::get(FT.getContext(), 0));
   return AddrPtrVal;
 }
 

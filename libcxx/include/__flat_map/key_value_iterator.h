@@ -15,9 +15,7 @@
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
-#include <__ranges/access.h>
 #include <__type_traits/conditional.h>
-#include <__type_traits/maybe_const.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 
@@ -41,9 +39,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Owner, class _KeyContainer, class _MappedContainer, bool _Const>
 struct __key_value_iterator {
 private:
-  using __key_iterator    = ranges::iterator_t<const _KeyContainer>;
-  using __mapped_iterator = ranges::iterator_t<__maybe_const<_Const, _MappedContainer>>;
-  using __reference       = _If<_Const, typename _Owner::const_reference, typename _Owner::reference>;
+  using __key_iterator _LIBCPP_NODEBUG = typename _KeyContainer::const_iterator;
+  using __mapped_iterator _LIBCPP_NODEBUG =
+      _If<_Const, typename _MappedContainer::const_iterator, typename _MappedContainer::iterator>;
+  using __reference _LIBCPP_NODEBUG = _If<_Const, typename _Owner::const_reference, typename _Owner::reference>;
 
   struct __arrow_proxy {
     __reference __ref_;
@@ -71,8 +70,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI __key_value_iterator() = default;
 
   _LIBCPP_HIDE_FROM_ABI __key_value_iterator(__key_value_iterator<_Owner, _KeyContainer, _MappedContainer, !_Const> __i)
-    requires _Const && convertible_to<ranges::iterator_t<_KeyContainer>, __key_iterator> &&
-                 convertible_to<ranges::iterator_t<_MappedContainer>, __mapped_iterator>
+    requires _Const && convertible_to<typename _KeyContainer::iterator, __key_iterator> &&
+                 convertible_to<typename _MappedContainer::iterator, __mapped_iterator>
       : __key_iter_(std::move(__i.__key_iter_)), __mapped_iter_(std::move(__i.__mapped_iter_)) {}
 
   _LIBCPP_HIDE_FROM_ABI __key_value_iterator(__key_iterator __key_iter, __mapped_iterator __mapped_iter)

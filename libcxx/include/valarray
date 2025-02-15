@@ -821,9 +821,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI valarray& operator=(const __val_expr<_ValExpr>& __v);
 
   // element access:
-  _LIBCPP_HIDE_FROM_ABI const value_type& operator[](size_t __i) const { return __begin_[__i]; }
+  _LIBCPP_HIDE_FROM_ABI const value_type& operator[](size_t __i) const {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i < size(), "valarray::operator[] index out of bounds");
+    return __begin_[__i];
+  }
 
-  _LIBCPP_HIDE_FROM_ABI value_type& operator[](size_t __i) { return __begin_[__i]; }
+  _LIBCPP_HIDE_FROM_ABI value_type& operator[](size_t __i) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i < size(), "valarray::operator[] index out of bounds");
+    return __begin_[__i];
+  }
 
   // subset operations:
   _LIBCPP_HIDE_FROM_ABI __val_expr<__slice_expr<const valarray&> > operator[](slice __s) const;

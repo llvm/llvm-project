@@ -2263,6 +2263,10 @@ APInt mulhs(const APInt &C1, const APInt &C2);
 /// Returns the high N bits of the multiplication result.
 APInt mulhu(const APInt &C1, const APInt &C2);
 
+/// Compute X^N for N>=0.
+/// 0^0 is supported and returns 1.
+APInt pow(const APInt &X, int64_t N);
+
 /// Compute GCD of two unsigned APInt values.
 ///
 /// This function returns the greatest common divisor of the two APInt values

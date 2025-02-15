@@ -2,10 +2,12 @@
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 class FunctionOpInterface;
+class MemRefType;
 class ModuleOp;
 class RewritePatternSet;
 class OpBuilder;
@@ -28,17 +30,13 @@ using DeallocHelperMap = llvm::DenseMap<Operation *, func::FuncOp>;
 #define GEN_PASS_DECL
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 
-/// Creates an instance of the BufferDeallocation pass to free all allocated
-/// buffers.
-std::unique_ptr<Pass> createBufferDeallocationPass();
-
 /// Creates an instance of the OwnershipBasedBufferDeallocation pass to free all
 /// allocated buffers.
 std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass(
     DeallocationOptions options = DeallocationOptions());
 
 /// Creates a pass that finds all temporary allocations
-/// and attempts to move the deallocation after the last user/dependency 
+/// and attempts to move the deallocation after the last user/dependency
 /// of the allocation, thereby optimizing allocation liveness.
 std::unique_ptr<Pass> createOptimizeAllocationLivenessPass();
 
@@ -139,9 +137,6 @@ void populateBufferizationDeallocLoweringPattern(
 func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
                                               SymbolTable &symbolTable);
 
-/// Run buffer deallocation.
-LogicalResult deallocateBuffers(Operation *op);
-
 /// Run the ownership-based buffer deallocation.
 LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,
                                               DeallocationOptions options);
@@ -157,6 +152,12 @@ std::unique_ptr<Pass> createBufferLoopHoistingPass();
 // Options struct for BufferResultsToOutParams pass.
 // Note: defined only here, not in tablegen.
 struct BufferResultsToOutParamsOpts {
+  /// Allocator function: Generate a memref allocation with the given type.
+  /// Since `promoteBufferResultsToOutParams` doesn't allow dynamically shaped
+  /// results, we don't allow passing a range of values for dynamic dims.
+  using AllocationFn =
+      std::function<FailureOr<Value>(OpBuilder &, Location, MemRefType)>;
+
   /// Memcpy function: Generate a memcpy between two memrefs.
   using MemCpyFn =
       std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
@@ -167,9 +168,20 @@ struct BufferResultsToOutParamsOpts {
     return true;
   };
 
+  /// Allocation function; used to allocate a memref.
+  /// Default memref.alloc is used
+  AllocationFn allocationFn = [](OpBuilder &builder, Location loc,
+                                 MemRefType type) {
+    return builder.create<memref::AllocOp>(loc, type).getResult();
+  };
+
   /// Memcpy function; used to create a copy between two memrefs.
-  /// If this is empty, memref.copy is used.
-  std::optional<MemCpyFn> memCpyFn;
+  /// Default memref.copy is used.
+  MemCpyFn memCpyFn = [](OpBuilder &builder, Location loc, Value from,
+                         Value to) {
+    builder.create<memref::CopyOp>(loc, from, to);
+    return success();
+  };
 
   /// If true, the pass adds a "bufferize.result" attribute to each output
   /// parameter.

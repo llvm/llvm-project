@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if _LIBCPP_HAS_LOCALIZATION && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+#if _LIBCPP_HAS_LOCALIZATION && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
   using std::basic_syncbuf;
 
   // [syncstream.syncbuf.special], specialized algorithms
@@ -24,5 +24,5 @@ export namespace std {
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wosyncstream;
 #  endif
-#endif // _LIBCPP_HAS_LOCALIZATION && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+#endif // _LIBCPP_HAS_LOCALIZATION && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 } // namespace std
