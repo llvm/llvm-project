@@ -2126,6 +2126,16 @@ TEST(ConstantRange, GetEquivalentICmp) {
   });
 }
 
+TEST(ConstantRange, SplitPosNeg) {
+  EnumerateInterestingConstantRanges([](const ConstantRange &CR) {
+    auto [Pos, Neg] = CR.splitPosNeg();
+    EXPECT_TRUE(Pos.isAllPositive());
+    EXPECT_TRUE(Neg.isAllNegative());
+    if (CR.getBitWidth() == 1)
+      EXPECT_TRUE(Pos.isEmptySet());
+  });
+}
+
 #define EXPECT_MAY_OVERFLOW(op) \
   EXPECT_EQ(ConstantRange::OverflowResult::MayOverflow, (op))
 #define EXPECT_ALWAYS_OVERFLOWS_LOW(op) \
