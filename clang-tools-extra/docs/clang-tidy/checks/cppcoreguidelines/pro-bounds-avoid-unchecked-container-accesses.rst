@@ -47,4 +47,4 @@ Options
 
 .. option:: FixFunction
 
-    The function to use in the `function` mode. ``gsl::at`` by default.
+    The function to use in the `function` mode. `gsl::at` by default.
