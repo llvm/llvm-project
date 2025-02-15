@@ -19,6 +19,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <utility>
 
 using namespace llvm;
 
@@ -267,12 +268,9 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         continue;
 
       mcdxbc::RootSignatureDesc RS;
-      RS.Flags = P.RootSignature->getEncodedFlags();
-      RS.Version = P.RootSignature->Version;
-      RS.NumParameters = P.RootSignature->NumParameters;
-      RS.RootParametersOffset = P.RootSignature->RootParametersOffset;
-      RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
-      RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
+      RS.Header.Flags = P.RootSignature->getEncodedFlags();
+      RS.Header.Version = P.RootSignature->Version;
+      RS.Parameters = std::move(P.RootSignature->Parameters);
 
       RS.write(OS);
       break;

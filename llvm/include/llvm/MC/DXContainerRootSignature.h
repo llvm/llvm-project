@@ -15,13 +15,10 @@ namespace llvm {
 class raw_ostream;
 
 namespace mcdxbc {
+  
 struct RootSignatureDesc {
-  uint32_t Version = 2;
-  uint32_t NumParameters = 0;
-  uint32_t RootParametersOffset = 0;
-  uint32_t NumStaticSamplers = 0;
-  uint32_t StaticSamplersOffset = 0;
-  uint32_t Flags = 0;
+  dxbc::RootSignatureHeader Header;
+  SmallVector<dxbc::RootParameter> Parameters;
 
   void write(raw_ostream &OS) const;
 };
