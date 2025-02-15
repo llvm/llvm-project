@@ -109,7 +109,7 @@ static cl::opt<unsigned> MaxNumVisitiedPaths(
     "dfa-max-num-visited-paths",
     cl::desc(
         "Max number of blocks visited while enumerating paths around a switch"),
-    cl::Hidden, cl::init(2000));
+    cl::Hidden, cl::init(2500));
 
 static cl::opt<unsigned>
     MaxNumPaths("dfa-max-num-paths",
@@ -754,17 +754,15 @@ private:
     return Res;
   }
 
-  /// Walk the use-def chain and collect all the state-defining instructions.
-  ///
-  /// Return an empty map if unpredictable values encountered inside the basic
-  /// blocks of \p LoopPaths.
+  /// Walk the use-def chain and collect all the state-defining blocks and the
+  /// PHI nodes in those blocks that define the state.
   StateDefMap getStateDefMap() const {
     StateDefMap Res;
-    Value *FirstDef = Switch->getOperand(0);
-    assert(isa<PHINode>(FirstDef) && "The first definition must be a phi.");
+    PHINode *FirstDef = dyn_cast<PHINode>(Switch->getOperand(0));
+    assert(FirstDef && "The first definition must be a phi.");
 
     SmallVector<PHINode *, 8> Stack;
-    Stack.push_back(dyn_cast<PHINode>(FirstDef));
+    Stack.push_back(FirstDef);
     SmallSet<Value *, 16> SeenValues;
 
     while (!Stack.empty()) {
@@ -774,18 +772,15 @@ private:
       SeenValues.insert(CurPhi);
 
       for (BasicBlock *IncomingBB : CurPhi->blocks()) {
-        Value *Incoming = CurPhi->getIncomingValueForBlock(IncomingBB);
-        bool IsOutsideLoops = !SwitchOuterLoop->contains(IncomingBB);
-        if (Incoming == FirstDef || isa<ConstantInt>(Incoming) ||
-            SeenValues.contains(Incoming) || IsOutsideLoops) {
+        PHINode *IncomingPhi =
+            dyn_cast<PHINode>(CurPhi->getIncomingValueForBlock(IncomingBB));
+        if (!IncomingPhi)
           continue;
-        }
+        bool IsOutsideLoops = !SwitchOuterLoop->contains(IncomingBB);
+        if (SeenValues.contains(IncomingPhi) || IsOutsideLoops)
+          continue;
 
-        // Any unpredictable value inside the loops means we must bail out.
-        if (!isa<PHINode>(Incoming))
-          return StateDefMap();
-
-        Stack.push_back(cast<PHINode>(Incoming));
+        Stack.push_back(IncomingPhi);
       }
     }
 

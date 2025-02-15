@@ -177,7 +177,7 @@ Available checks are:
      problems at higher optimization levels.
   -  ``-fsanitize=pointer-overflow``: Performing pointer arithmetic which
      overflows, or where either the old or new pointer value is a null pointer
-     (or in C, when they both are).
+     (excluding the case where both are null pointers).
   -  ``-fsanitize=return``: In C++, reaching the end of a
      value-returning function without returning a value.
   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer

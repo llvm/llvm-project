@@ -353,6 +353,8 @@ You can test this locally with the following command:
 
     def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
         files = self.filter_changed_files(changed_files)
+        if not files:
+            return None
 
         # Use git to find files that have had a change in the number of undefs
         regex = "([^a-zA-Z0-9#_-]undef[^a-zA-Z0-9_-]|UndefValue::get)"

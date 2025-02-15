@@ -11,7 +11,7 @@
 
 #include "ISO_Fortran_util.h"
 #include "terminator.h"
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/pointer.h"
 #include "flang/Runtime/type-code.h"

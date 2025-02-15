@@ -292,7 +292,7 @@ endif()
 
 # Figure out if lldb could use lldb-server.  If so, then we'll
 # ensure we build lldb-server when an lldb target is being built.
-if (CMAKE_SYSTEM_NAME MATCHES "Android|Darwin|FreeBSD|Linux|NetBSD|Windows")
+if (CMAKE_SYSTEM_NAME MATCHES "Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
   set(LLDB_CAN_USE_LLDB_SERVER ON)
 else()
   set(LLDB_CAN_USE_LLDB_SERVER OFF)
@@ -304,11 +304,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(LLDB_CAN_USE_DEBUGSERVER ON)
 else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
-endif()
-
-if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
-    ((ANDROID_ABI MATCHES "armeabi") OR (ANDROID_ABI MATCHES "mips")))
-  add_definitions(-DANDROID_USE_ACCEPT_WORKAROUND)
 endif()
 
 include(LLDBGenerateConfig)

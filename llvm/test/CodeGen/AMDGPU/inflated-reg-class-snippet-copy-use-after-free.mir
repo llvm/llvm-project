@@ -1,0 +1,204 @@
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -simplify-mir -start-before=greedy,2 -stress-regalloc=4 -stop-before=virtregrewriter,2 -o - -verify-regalloc %s 2> %t.err | FileCheck %s
+# RUN: FileCheck -check-prefix=ERR %s < %t.err
+
+# To allocate the vreg_512_align2, the allocation will attempt to
+# inflate the register class to av_512_align2. This will ultimately
+# not work, and the allocation will fail. There is an unproductive
+# live range split, and we end up with a snippet copy of an
+# unspillable register. Recursive assignment of interfering ranges
+# during last chance recoloring would delete the unspillable snippet
+# live range. Make sure there's no use after free when rolling back
+# the last chance assignment.
+
+# ERR: error: <unknown>:0:0: ran out of registers during register allocation in function 'inflated_reg_class_copy_use_after_free'
+# ERR: error: <unknown>:0:0: ran out of registers during register allocation in function 'inflated_reg_class_copy_use_after_free_lane_subset'
+
+--- |
+  define amdgpu_kernel void @inflated_reg_class_copy_use_after_free() {
+    ret void
+  }
+
+  define amdgpu_kernel void @inflated_reg_class_copy_use_after_free_lane_subset() {
+    ret void
+  }
+
+...
+
+# CHECK-LABEL: name: inflated_reg_class_copy_use_after_free
+# CHECK: S_NOP 0, implicit-def [[ORIG_REG:%[0-9]+]].sub0_sub1_sub2_sub3
+# CHECK-NEXT: SI_SPILL_AV512_SAVE [[ORIG_REG]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: [[RESTORE0:%[0-9]+]]:vreg_512_align2 = SI_SPILL_V512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: early-clobber [[MFMA0:%[0-9]+]]:vreg_512_align2 = V_MFMA_F32_16X16X1F32_vgprcd_e64 undef %3:vgpr_32, undef %3:vgpr_32, [[RESTORE0]], 0, 0, 0, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+# CHECK-NEXT: undef [[SPLIT0:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[MFMA0]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT0]].sub0:av_512_align2 = COPY [[MFMA0]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: undef [[SPLIT1:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT0]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT1]].sub0:av_512_align2 = COPY [[SPLIT0]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: undef [[SPLIT2:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT1]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT2]].sub0:av_512_align2 = COPY [[SPLIT1]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: SI_SPILL_AV512_SAVE [[SPLIT2]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
+# CHECK-NEXT: [[RESTORE1:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: undef [[SPLIT3:%[0-9]+]].sub0_sub1:av_512_align2 = COPY [[RESTORE1]].sub0_sub1
+# CHECK-NEXT: [[RESTORE2:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.1, align 4, addrspace 5)
+# CHECK-NEXT: undef [[SPLIT3:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[RESTORE2]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT3]].sub0:av_512_align2 = COPY [[RESTORE2]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: undef [[SPLIT4:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT3]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT4]].sub0:av_512_align2 = COPY [[SPLIT3]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: [[SPLIT5:%[0-9]+]].sub2:av_512_align2 = COPY [[SPLIT4]].sub3
+# CHECK-NEXT: undef [[SPLIT6:%[0-9]+]].sub0_sub1_sub2:av_512_align2 = COPY [[SPLIT5]].sub0_sub1_sub2
+# CHECK-NEXT: undef [[SPLIT7:%[0-9]+]].sub0_sub1_sub2:av_512_align2 = COPY [[SPLIT6]].sub0_sub1_sub2
+# CHECK-NEXT: undef [[SPLIT8:%[0-9]+]].sub0:av_512_align2 = COPY [[SPLIT4]].sub0 {
+# CHECK-NEXT: internal [[SPLIT8]].sub2:av_512_align2 = COPY [[SPLIT4]].sub2
+# CHECK-NEXT: }
+# CHECK-NEXT: [[SPLIT9:%[0-9]+]].sub3:av_512_align2 = COPY [[SPLIT8]].sub2
+# CHECK-NEXT: undef [[SPLIT10:%[0-9]+]].sub0_sub1_sub2_sub3:av_512_align2 = COPY [[SPLIT9]].sub0_sub1_sub2_sub3
+# CHECK-NEXT: undef [[SPLIT13:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_512_align2 = COPY [[SPLIT10]].sub0_sub1_sub2_sub3
+# CHECK-NEXT: [[MFMA_USE1:%[0-9]+]].sub4:vreg_512_align2 = COPY [[SPLIT8]].sub0
+# CHECK-NEXT: [[MFMA_USE1]].sub5:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]].sub6:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]].sub7:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]].sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]].sub9:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]].sub10:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]].sub11:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]].sub12:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]].sub13:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]].sub14:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]].sub15:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[MFMA_USE1]]:vreg_512_align2 = V_MFMA_F32_16X16X1F32_mac_vgprcd_e64 undef %3:vgpr_32, undef %3:vgpr_32, [[MFMA_USE1]], 0, 0, 0, implicit $mode, implicit $exec
+
+---
+name:            inflated_reg_class_copy_use_after_free
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       7
+  vgprForAGPRCopy: '$vgpr255'
+  sgprForEXECCopy: '$sgpr74_sgpr75'
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr4_sgpr5
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed undef renamable $sgpr4_sgpr5, 0, 0 :: (load (s64), addrspace 4)
+    S_NOP 0, implicit-def undef %1.sub12_sub13_sub14_sub15:vreg_512_align2
+    S_NOP 0, implicit-def %1.sub8_sub9_sub10_sub11:vreg_512_align2
+    S_NOP 0, implicit-def %1.sub4_sub5_sub6_sub7:vreg_512_align2
+    S_NOP 0, implicit-def %1.sub0_sub1_sub2_sub3:vreg_512_align2
+    early-clobber %2:vreg_512_align2 = V_MFMA_F32_16X16X1F32_vgprcd_e64 undef %3:vgpr_32, undef %3:vgpr_32, %1, 0, 0, 0, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    %1.sub2:vreg_512_align2 = COPY %2.sub3
+    %1.sub3:vreg_512_align2 = COPY %2.sub2
+    %1.sub4:vreg_512_align2 = COPY %2.sub0
+    %1.sub5:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub6:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub7:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub9:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub10:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub11:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub12:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub13:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub14:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub15:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1:vreg_512_align2 = V_MFMA_F32_16X16X1F32_mac_vgprcd_e64 undef %3:vgpr_32, undef %3:vgpr_32, %1, 0, 0, 0, implicit $mode, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR undef %3:vgpr_32, %1.sub12_sub13_sub14_sub15, undef renamable $sgpr0_sgpr1, 96, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+# This test is similar to except it is still broken when the use
+# instruction does not read the full set of lanes after one attempted fix.
+
+# CHECK-LABEL: name: inflated_reg_class_copy_use_after_free_lane_subset
+# CHECK: S_NOP 0, implicit-def [[ORIG_REG:%[0-9]+]].sub0_sub1_sub2_sub3
+# CHECK-NEXT: SI_SPILL_AV512_SAVE [[ORIG_REG]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: [[RESTORE_0:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: S_NOP 0, implicit-def early-clobber [[REG1:%[0-9]+]], implicit [[RESTORE_0]].sub0_sub1_sub2_sub3, implicit [[RESTORE_0]].sub4_sub5_sub6_sub7
+# CHECK-NEXT: undef [[SPLIT0:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[REG1]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT0]].sub0:av_512_align2 = COPY [[REG1]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: undef [[SPLIT1:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT0]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT1]].sub0:av_512_align2 = COPY [[SPLIT0]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: undef [[SPLIT2:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT1]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT2]].sub0:av_512_align2 = COPY [[SPLIT1]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: SI_SPILL_AV512_SAVE [[SPLIT2]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
+# CHECK-NEXT: [[RESTORE_1:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: undef [[SPLIT3:%[0-9]+]].sub0_sub1:av_512_align2 = COPY [[RESTORE_1]].sub0_sub1
+# CHECK-NEXT: [[RESTORE_2:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.1, align 4, addrspace 5)
+# CHECK-NEXT: undef [[SPLIT4:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[RESTORE_2]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT4]].sub0:av_512_align2 = COPY [[RESTORE_2]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: undef [[SPLIT5:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT4]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT5]].sub0:av_512_align2 = COPY [[SPLIT4]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: [[SPLIT3]].sub2:av_512_align2 = COPY [[SPLIT5]].sub3
+# CHECK-NEXT: undef [[SPLIT6:%[0-9]+]].sub0_sub1_sub2:av_512_align2 = COPY [[SPLIT3]].sub0_sub1_sub2
+# CHECK-NEXT: undef [[SPLIT7:%[0-9]+]].sub0_sub1_sub2:av_512_align2 = COPY [[SPLIT6]].sub0_sub1_sub2
+# CHECK-NEXT: undef [[SPLIT8:%[0-9]+]].sub0:av_512_align2 = COPY [[SPLIT5]].sub0 {
+# CHECK-NEXT: internal [[SPLIT8]].sub2:av_512_align2 = COPY [[SPLIT5]].sub2
+# CHECK-NEXT: }
+# CHECK-NEXT: [[SPLIT7]].sub3:av_512_align2 = COPY [[SPLIT8]].sub2
+# CHECK-NEXT: undef [[SPLIT9:%[0-9]+]].sub0_sub1_sub2_sub3:av_512_align2 = COPY [[SPLIT7]].sub0_sub1_sub2_sub3
+# CHECK-NEXT: undef [[LAST_USE:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_512_align2 = COPY [[SPLIT9]].sub0_sub1_sub2_sub3
+# CHECK-NEXT: [[LAST_USE]].sub4:vreg_512_align2 = COPY [[SPLIT8]].sub0
+# CHECK-NEXT: [[LAST_USE]].sub5:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[LAST_USE]].sub6:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[LAST_USE]].sub7:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[LAST_USE]].sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[LAST_USE]].sub9:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[LAST_USE]].sub10:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[LAST_USE]].sub11:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[LAST_USE]].sub12:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[LAST_USE]].sub13:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[LAST_USE]].sub14:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: [[LAST_USE]].sub15:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+# CHECK-NEXT: S_NOP 0, implicit-def [[LAST_USE]], implicit [[LAST_USE]].sub0_sub1_sub2_sub3, implicit [[LAST_USE]].sub4_sub5_sub6_sub7, implicit [[LAST_USE]].sub8_sub9_sub10_sub11
+
+---
+name:            inflated_reg_class_copy_use_after_free_lane_subset
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       7
+  vgprForAGPRCopy: '$vgpr255'
+  sgprForEXECCopy: '$sgpr74_sgpr75'
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr4_sgpr5
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed undef renamable $sgpr4_sgpr5, 0, 0 :: (load (s64), addrspace 4)
+    S_NOP 0, implicit-def undef %1.sub12_sub13_sub14_sub15:vreg_512_align2
+    S_NOP 0, implicit-def %1.sub8_sub9_sub10_sub11:vreg_512_align2
+    S_NOP 0, implicit-def %1.sub4_sub5_sub6_sub7:vreg_512_align2
+    S_NOP 0, implicit-def %1.sub0_sub1_sub2_sub3:vreg_512_align2
+    S_NOP 0, implicit-def early-clobber %2:vreg_512_align2, implicit %1.sub0_sub1_sub2_sub3, implicit %1.sub4_sub5_sub6_sub7
+    %1.sub2:vreg_512_align2 = COPY %2.sub3
+    %1.sub3:vreg_512_align2 = COPY %2.sub2
+    %1.sub4:vreg_512_align2 = COPY %2.sub0
+    %1.sub5:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub6:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub7:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub9:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub10:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub11:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub12:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub13:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub14:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub15:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    S_NOP 0, implicit-def %1:vreg_512_align2, implicit %1.sub0_sub1_sub2_sub3, implicit %1.sub4_sub5_sub6_sub7, implicit %1.sub8_sub9_sub10_sub11
+    GLOBAL_STORE_DWORDX4_SADDR undef %3:vgpr_32, %1.sub12_sub13_sub14_sub15, undef renamable $sgpr0_sgpr1, 96, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...

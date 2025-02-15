@@ -1197,7 +1197,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 define float @fcmp_multi(ptr nocapture readonly %a, i32 %n) nounwind readonly {
 ; CHECK-LABEL: define float @fcmp_multi(
-; CHECK-SAME: ptr nocapture readonly [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP10]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1323,7 +1323,7 @@ for.end:                                          ; preds = %for.inc, %entry
 
 define float @fcmp_fadd_fsub(ptr nocapture readonly %a, i32 %n) nounwind readonly {
 ; CHECK-LABEL: define float @fcmp_fadd_fsub(
-; CHECK-SAME: ptr nocapture readonly [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1446,7 +1446,7 @@ for.end:                                          ; preds = %for.inc, %entry
 
 define float @fcmp_fadd_fmul(ptr nocapture readonly %a, i32 %n) nounwind readonly {
 ; CHECK-LABEL: define float @fcmp_fadd_fmul(
-; CHECK-SAME: ptr nocapture readonly [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -1535,7 +1535,7 @@ for.end:                                          ; preds = %for.inc, %entry
 
 define float @fcmp_store_back(ptr nocapture %a, i32 %LEN) nounwind readonly {
 ; CHECK-LABEL: define float @fcmp_store_back(
-; CHECK-SAME: ptr nocapture [[A:%.*]], i32 [[LEN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], i32 [[LEN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]

@@ -16,6 +16,17 @@ New entries should be added directly below the "Version" header.
 Version 20.0
 ------------
 
+* [libc++][PMR] Remove duplicate implementation of __try_allocate_from_chunk
+
+  This patch removes member functions __try_allocate_from_chunk from __chunk_footer and __initial_descriptor.
+  The two implementations were almost identical and can be easily moved to be implementation details of the built library.
+  Since they were only used from within the built library, the removal of these symbols should not be an ABI break.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__13pmr25monotonic_buffer_resource14__chunk_footer25__try_allocate_from_chunkEmm
+  Symbol removed: _ZNSt3__13pmr25monotonic_buffer_resource20__initial_descriptor25__try_allocate_from_chunkEmm
+
 * [libc++] Remove the pointer safety functions from the dylib
 
   The pointer safety functions were never implemented by anyone in a non-trivial

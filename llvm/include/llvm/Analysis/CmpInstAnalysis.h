@@ -108,6 +108,12 @@ namespace llvm {
                        bool LookThroughTrunc = true,
                        bool AllowNonZeroC = false);
 
+  /// Decompose an icmp into the form ((X & Mask) pred C) if
+  /// possible. Unless \p AllowNonZeroC is true, C will always be 0.
+  std::optional<DecomposedBitTest>
+  decomposeBitTest(Value *Cond, bool LookThroughTrunc = true,
+                   bool AllowNonZeroC = false);
+
 } // end namespace llvm
 
 #endif

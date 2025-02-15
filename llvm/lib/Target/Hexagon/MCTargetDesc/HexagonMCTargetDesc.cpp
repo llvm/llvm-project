@@ -93,6 +93,8 @@ cl::opt<bool> MV73("mv73", cl::Hidden, cl::desc("Build for Hexagon V73"),
                    cl::init(false));
 cl::opt<bool> MV75("mv75", cl::Hidden, cl::desc("Build for Hexagon V75"),
                    cl::init(false));
+cl::opt<bool> MV79("mv79", cl::Hidden, cl::desc("Build for Hexagon V79"),
+                   cl::init(false));
 } // namespace
 
 cl::opt<Hexagon::ArchEnum> EnableHVX(
@@ -107,6 +109,7 @@ cl::opt<Hexagon::ArchEnum> EnableHVX(
                clEnumValN(Hexagon::ArchEnum::V71, "v71", "Build for HVX v71"),
                clEnumValN(Hexagon::ArchEnum::V73, "v73", "Build for HVX v73"),
                clEnumValN(Hexagon::ArchEnum::V75, "v75", "Build for HVX v75"),
+               clEnumValN(Hexagon::ArchEnum::V79, "v79", "Build for HVX v79"),
                // Sentinel for no value specified.
                clEnumValN(Hexagon::ArchEnum::Generic, "", "")),
     // Sentinel for flag not present.
@@ -153,6 +156,9 @@ static StringRef HexagonGetArchVariant() {
     return "hexagonv73";
   if (MV75)
     return "hexagonv75";
+  if (MV79)
+    return "hexagonv79";
+
   return "";
 }
 
@@ -451,6 +457,10 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
   case Hexagon::ArchEnum::V75:
     Result.push_back("+hvxv75");
     break;
+  case Hexagon::ArchEnum::V79:
+    Result.push_back("+hvxv79");
+    break;
+
   case Hexagon::ArchEnum::Generic: {
     Result.push_back(StringSwitch<StringRef>(CPU)
                          .Case("hexagonv60", "+hvxv60")
@@ -464,7 +474,8 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
                          .Case("hexagonv71", "+hvxv71")
                          .Case("hexagonv71t", "+hvxv71")
                          .Case("hexagonv73", "+hvxv73")
-                         .Case("hexagonv75", "+hvxv75"));
+                         .Case("hexagonv75", "+hvxv75")
+                         .Case("hexagonv79", "+hvxv79"));
     break;
   }
   case Hexagon::ArchEnum::NoArch:
@@ -512,8 +523,9 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   // turns on hvxvNN, corresponding to the existing ArchVNN.
   FeatureBitset FB = S;
   unsigned CpuArch = ArchV5;
-  for (unsigned F : {ArchV75, ArchV73, ArchV71, ArchV69, ArchV68, ArchV67,
-                     ArchV66, ArchV65, ArchV62, ArchV60, ArchV55, ArchV5}) {
+  for (unsigned F :
+       {ArchV79, ArchV75, ArchV73, ArchV71, ArchV69, ArchV68, ArchV67, ArchV66,
+        ArchV65, ArchV62, ArchV60, ArchV55, ArchV5}) {
     if (!FB.test(F))
       continue;
     CpuArch = F;
@@ -530,7 +542,7 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   for (unsigned F :
        {ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65, ExtensionHVXV66,
         ExtensionHVXV67, ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
-        ExtensionHVXV73, ExtensionHVXV75}) {
+        ExtensionHVXV73, ExtensionHVXV75, ExtensionHVXV79}) {
     if (!FB.test(F))
       continue;
     HasHvxVer = true;
@@ -543,6 +555,9 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
 
   // HasHvxVer is false, and UseHvx is true.
   switch (CpuArch) {
+  case ArchV79:
+    FB.set(ExtensionHVXV79);
+    [[fallthrough]];
   case ArchV75:
     FB.set(ExtensionHVXV75);
     [[fallthrough]];
@@ -599,7 +614,7 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   }
 
   // Add qfloat subtarget feature by default to v68 and above
-  // unless explicitely disabled
+  // unless explicitly disabled
   if (checkFeature(X, Hexagon::ExtensionHVXV68) &&
       !ArchFS.contains("-hvx-qfloat")) {
     llvm::FeatureBitset Features = X->getFeatureBits();
@@ -640,11 +655,12 @@ void Hexagon_MC::addArchSubtarget(MCSubtargetInfo const *STI, StringRef FS) {
 
 std::optional<unsigned>
 Hexagon_MC::getHVXVersion(const FeatureBitset &Features) {
-  for (auto Arch : {Hexagon::ExtensionHVXV75, Hexagon::ExtensionHVXV73,
-                    Hexagon::ExtensionHVXV71, Hexagon::ExtensionHVXV69,
-                    Hexagon::ExtensionHVXV68, Hexagon::ExtensionHVXV67,
-                    Hexagon::ExtensionHVXV66, Hexagon::ExtensionHVXV65,
-                    Hexagon::ExtensionHVXV62, Hexagon::ExtensionHVXV60})
+  for (auto Arch : {Hexagon::ExtensionHVXV79, Hexagon::ExtensionHVXV75,
+                    Hexagon::ExtensionHVXV73, Hexagon::ExtensionHVXV71,
+                    Hexagon::ExtensionHVXV69, Hexagon::ExtensionHVXV68,
+                    Hexagon::ExtensionHVXV67, Hexagon::ExtensionHVXV66,
+                    Hexagon::ExtensionHVXV65, Hexagon::ExtensionHVXV62,
+                    Hexagon::ExtensionHVXV60})
     if (Features.test(Arch))
       return Arch;
   return {};
@@ -652,12 +668,13 @@ Hexagon_MC::getHVXVersion(const FeatureBitset &Features) {
 
 unsigned Hexagon_MC::getArchVersion(const FeatureBitset &Features) {
   for (auto Arch :
-       {Hexagon::ArchV75, Hexagon::ArchV73, Hexagon::ArchV71, Hexagon::ArchV69,
-        Hexagon::ArchV68, Hexagon::ArchV67, Hexagon::ArchV66, Hexagon::ArchV65,
-        Hexagon::ArchV62, Hexagon::ArchV60, Hexagon::ArchV55, Hexagon::ArchV5})
+       {Hexagon::ArchV79, Hexagon::ArchV75, Hexagon::ArchV73, Hexagon::ArchV71,
+        Hexagon::ArchV69, Hexagon::ArchV68, Hexagon::ArchV67, Hexagon::ArchV66,
+        Hexagon::ArchV65, Hexagon::ArchV62, Hexagon::ArchV60, Hexagon::ArchV55,
+        Hexagon::ArchV5})
     if (Features.test(Arch))
       return Arch;
-  llvm_unreachable("Expected arch v5-v75");
+  llvm_unreachable("Expected arch v5-v79");
   return 0;
 }
 
@@ -677,7 +694,8 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
       .Case("hexagonv71", llvm::ELF::EF_HEXAGON_MACH_V71)
       .Case("hexagonv71t", llvm::ELF::EF_HEXAGON_MACH_V71T)
       .Case("hexagonv73", llvm::ELF::EF_HEXAGON_MACH_V73)
-      .Case("hexagonv75", llvm::ELF::EF_HEXAGON_MACH_V75);
+      .Case("hexagonv75", llvm::ELF::EF_HEXAGON_MACH_V75)
+      .Case("hexagonv79", llvm::ELF::EF_HEXAGON_MACH_V79);
 }
 
 llvm::ArrayRef<MCPhysReg> Hexagon_MC::GetVectRegRev() {
@@ -716,8 +734,42 @@ public:
     Target = Value;
     return true;
   }
+
+  uint32_t getValueFromMask(uint32_t Instruction, uint32_t Mask) const {
+    uint32_t Result = 0;
+    uint32_t Offset = 0;
+    while (Mask) {
+      if (Instruction & (Mask & -Mask))
+        Result |= (1 << Offset);
+      Mask &= (Mask - 1);
+      ++Offset;
+    }
+    return Result;
+  }
+
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 const Triple &TargetTriple) const override {
+    // Do a lightweight parsing of PLT entries.
+    std::vector<std::pair<uint64_t, uint64_t>> Result;
+    for (uint64_t Byte = 0x0, End = PltContents.size(); Byte < End; Byte += 4) {
+      // Recognize immext(##gotpltn)
+      uint32_t ImmExt = support::endian::read32le(PltContents.data() + Byte);
+      if ((ImmExt & 0x00004000) != 0x00004000)
+        continue;
+      uint32_t LoadGotPlt =
+          support::endian::read32le(PltContents.data() + Byte + 4);
+      if ((LoadGotPlt & 0x6a49c00c) != 0x6a49c00c)
+        continue;
+      uint32_t Address = (getValueFromMask(ImmExt, 0xfff3fff) << 6) +
+                         getValueFromMask(LoadGotPlt, 0x1f80) + PltSectionVA +
+                         Byte;
+      Result.emplace_back(PltSectionVA + Byte, Address);
+    }
+    return Result;
+  }
 };
-}
+} // namespace
 
 static MCInstrAnalysis *createHexagonMCInstrAnalysis(const MCInstrInfo *Info) {
   return new HexagonMCInstrAnalysis(Info);

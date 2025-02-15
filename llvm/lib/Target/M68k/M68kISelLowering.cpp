@@ -1060,7 +1060,8 @@ SDValue M68kTargetLowering::LowerFormalArguments(
 
 bool M68kTargetLowering::CanLowerReturn(
     CallingConv::ID CCID, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CCID, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_M68k);

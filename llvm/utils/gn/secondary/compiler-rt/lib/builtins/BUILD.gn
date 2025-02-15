@@ -299,6 +299,7 @@ static_library("builtins") {
         "mulxc3.c",
         "powixf2.c",
         "trunctfxf2.c",
+        "truncxfhf2.c",
       ]
     }
   }

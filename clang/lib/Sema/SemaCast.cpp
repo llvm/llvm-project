@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2094,6 +2095,10 @@ void Sema::CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
     }
   }
 
+  if (SrcTy->isDependentType() || DestTy->isDependentType()) {
+    return;
+  }
+
   Diag(Range.getBegin(), DiagID) << SrcType << DestType << Range;
 }
 
@@ -2768,6 +2773,44 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     return;
   }
 
+  CheckedConversionKind CCK = FunctionalStyle
+                                  ? CheckedConversionKind::FunctionalCast
+                                  : CheckedConversionKind::CStyleCast;
+
+  QualType SrcTy = SrcExpr.get()->getType();
+  // This case should not trigger on regular vector cast, vector truncation
+  if (Self.getLangOpts().HLSL &&
+      Self.HLSL().CanPerformElementwiseCast(SrcExpr.get(), DestType)) {
+    if (SrcTy->isConstantArrayType())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
+          CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
+    Kind = CK_HLSLElementwiseCast;
+    return;
+  }
+
+  // This case should not trigger on regular vector splat
+  // If the relative order of this and the HLSLElementWise cast checks
+  // are changed, it might change which cast handles what in a few cases
+  if (Self.getLangOpts().HLSL &&
+      Self.HLSL().CanPerformAggregateSplatCast(SrcExpr.get(), DestType)) {
+    const VectorType *VT = SrcTy->getAs<VectorType>();
+    // change splat from vec1 case to splat from scalar
+    if (VT && VT->getNumElements() == 1)
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    // Inserting a scalar cast here allows for a simplified codegen in
+    // the case the destTy is a vector
+    if (const VectorType *DVT = DestType->getAs<VectorType>())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), DVT->getElementType(),
+          Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    Kind = CK_HLSLAggregateSplatCast;
+    return;
+  }
+
   if (ValueKind == VK_PRValue && !DestType->isRecordType() &&
       !isPlaceholder(BuiltinType::Overload)) {
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
@@ -2820,9 +2863,6 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   if (isValidCast(tcr))
     Kind = CK_NoOp;
 
-  CheckedConversionKind CCK = FunctionalStyle
-                                  ? CheckedConversionKind::FunctionalCast
-                                  : CheckedConversionKind::CStyleCast;
   if (tcr == TC_NotApplicable) {
     tcr = TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ true, msg,
                               Kind);

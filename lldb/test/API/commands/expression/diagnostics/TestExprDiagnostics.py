@@ -252,7 +252,7 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
         value = frame.EvaluateExpression("a+b")
         error = value.GetError()
         self.assertTrue(error.Fail())
-        self.assertEquals(error.GetType(), lldb.eErrorTypeExpression)
+        self.assertEqual(error.GetType(), lldb.eErrorTypeExpression)
         data = error.GetErrorData()
         version = data.GetValueForKey("version")
         self.assertEqual(version.GetIntegerValue(), 1)

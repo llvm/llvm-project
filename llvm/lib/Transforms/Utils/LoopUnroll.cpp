@@ -590,10 +590,11 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                               : isEpilogProfitable(L);
 
   if (ULO.Runtime &&
-      !UnrollRuntimeLoopRemainder(
-          L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
-          ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-          PreserveLCSSA, ULO.SCEVExpansionBudget, RemainderLoop)) {
+      !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
+                                  EpilogProfitability, ULO.UnrollRemainder,
+                                  ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
+                                  PreserveLCSSA, ULO.SCEVExpansionBudget,
+                                  ULO.RuntimeUnrollMultiExit, RemainderLoop)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {

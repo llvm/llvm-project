@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sme2p2 2>&1 < %s| FileCheck %s
+// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-tmop 2>&1 < %s| FileCheck %s
 
 // --------------------------------------------------------------------------//
 // Invalid ZA register

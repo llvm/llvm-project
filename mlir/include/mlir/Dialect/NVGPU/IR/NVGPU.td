@@ -771,7 +771,7 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
 
   let arguments = (ins NVGPU_WarpgroupMatrixDescriptor:$descriptorA, 
                        NVGPU_WarpgroupMatrixDescriptor:$descriptorB,                                               
-                       DefaultValuedOptionalAttr<I32Attr, "1">:$waitGroup,
+                       DefaultValuedOptionalAttr<I64Attr, "1">:$waitGroup,
                        OptionalAttr<UnitAttr>:$transposeA,
                        OptionalAttr<UnitAttr>:$transposeB,
                        NVGPU_WarpgroupAccumulator:$matrixC);

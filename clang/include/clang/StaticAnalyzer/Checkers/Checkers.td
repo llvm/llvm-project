@@ -206,7 +206,12 @@ def CallAndMessageChecker : Checker<"CallAndMessage">,
   Documentation<HasDocumentation>,
   Dependencies<[CallAndMessageModeling]>;
 
-def DereferenceChecker : Checker<"NullDereference">,
+def DereferenceModeling : Checker<"DereferenceModeling">,
+  HelpText<"General support for dereference related checkers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def NullDereferenceChecker : Checker<"NullDereference">,
   HelpText<"Check for dereferences of null pointers">,
   CheckerOptions<[
     CmdLineOption<Boolean,
@@ -215,7 +220,8 @@ def DereferenceChecker : Checker<"NullDereference">,
                   "true",
                   Released>
   ]>,
-  Documentation<HasDocumentation>;
+  Documentation<HasDocumentation>,
+  Dependencies<[DereferenceModeling]>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
   HelpText<"Check for null pointers passed as arguments to a function whose "
@@ -983,30 +989,41 @@ def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
 
 let ParentPackage = Security in {
 
-def FloatLoopCounter : Checker<"FloatLoopCounter">,
-  HelpText<"Warn on using a floating point value as a loop counter (CERT: "
-           "FLP30-C, FLP30-CPP)">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def ArrayBoundChecker : Checker<"ArrayBound">,
+                          HelpText<"Warn about out of bounds access to memory">,
+                          Documentation<HasDocumentation>;
 
-def MmapWriteExecChecker : Checker<"MmapWriteExec">,
-  HelpText<"Warn on mmap() calls with both writable and executable access">,
-  Documentation<HasDocumentation>;
+  def FloatLoopCounter
+      : Checker<"FloatLoopCounter">,
+        HelpText<
+            "Warn on using a floating point value as a loop counter (CERT: "
+            "FLP30-C, FLP30-CPP)">,
+        Dependencies<[SecuritySyntaxChecker]>,
+        Documentation<HasDocumentation>;
 
-def PointerSubChecker : Checker<"PointerSub">,
-  HelpText<"Check for pointer subtractions on two pointers pointing to "
-           "different memory chunks">,
-  Documentation<HasDocumentation>;
+  def MmapWriteExecChecker
+      : Checker<"MmapWriteExec">,
+        HelpText<
+            "Warn on mmap() calls with both writable and executable access">,
+        Documentation<HasDocumentation>;
 
-def PutenvStackArray : Checker<"PutenvStackArray">,
-  HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
-           "an automatic (stack-allocated) array as the argument.">,
-  Documentation<HasDocumentation>;
+  def PointerSubChecker
+      : Checker<"PointerSub">,
+        HelpText<"Check for pointer subtractions on two pointers pointing to "
+                 "different memory chunks">,
+        Documentation<HasDocumentation>;
 
-def SetgidSetuidOrderChecker : Checker<"SetgidSetuidOrder">,
-  HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
-           "'setuid(getuid())' (CERT: POS36-C)">,
-  Documentation<HasDocumentation>;
+  def PutenvStackArray
+      : Checker<"PutenvStackArray">,
+        HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
+                 "an automatic (stack-allocated) array as the argument.">,
+        Documentation<HasDocumentation>;
+
+  def SetgidSetuidOrderChecker
+      : Checker<"SetgidSetuidOrder">,
+        HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
+                 "'setuid(getuid())' (CERT: POS36-C)">,
+        Documentation<HasDocumentation>;
 
 } // end "security"
 
@@ -1028,14 +1045,6 @@ let ParentPackage = ENV in {
 } // end "security.cert.env"
 
 let ParentPackage = SecurityAlpha in {
-
-def ArrayBoundChecker : Checker<"ArrayBound">,
-  HelpText<"Warn about buffer overflows (older checker)">,
-  Documentation<HasDocumentation>;
-
-def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
-  HelpText<"Warn about buffer overflows (newer checker)">,
-  Documentation<HasDocumentation>;
 
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
   HelpText<"Check for an out-of-bound pointer being returned to callers">,
