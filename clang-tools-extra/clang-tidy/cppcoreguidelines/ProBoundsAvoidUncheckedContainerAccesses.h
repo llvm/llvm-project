@@ -31,13 +31,13 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
-  enum SubscriptFixModes { None, At, Function };
+  enum FixModes { None, At, Function };
 
 private:
   // A list of class names that are excluded from the warning
   std::vector<llvm::StringRef> SubscriptExcludedClasses;
   // Setting which fix to suggest
-  SubscriptFixModes SubscriptFixMode;
+  FixModes FixMode;
   llvm::StringRef SubscriptFixFunction;
 };
 } // namespace clang::tidy::cppcoreguidelines
@@ -45,12 +45,10 @@ private:
 namespace clang::tidy {
 template <>
 struct OptionEnumMapping<
-    cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccesses::
-        SubscriptFixModes> {
-  static ArrayRef<
-      std::pair<cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccesses::
-                    SubscriptFixModes,
-                StringRef>>
+    cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccesses::FixModes> {
+  static ArrayRef<std::pair<
+      cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccesses::FixModes,
+      StringRef>>
   getEnumMapping();
 };
 } // namespace clang::tidy
