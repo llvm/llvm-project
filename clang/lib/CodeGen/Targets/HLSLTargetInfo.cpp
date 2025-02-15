@@ -31,7 +31,7 @@ createArrayWithNewElementType(CodeGenModule &CGM,
 }
 
 // Returns the size of a scalar or vector in bytes/
-static unsigned getScalarOrVectorSize(llvm::Type *Ty) {
+static unsigned getScalarOrVectorSizeInBytes(llvm::Type *Ty) {
   assert(Ty->isVectorTy() || Ty->isIntegerTy() || Ty->isFloatingPointTy());
   if (Ty->isVectorTy()) {
     llvm::FixedVectorType *FVT = cast<llvm::FixedVectorType>(Ty);
@@ -65,6 +65,7 @@ llvm::Type *CommonHLSLTargetCodeGenInfo::createHLSLBufferLayoutType(
   SmallVector<llvm::Type *> LayoutElements;
   unsigned Index = 0; // packoffset index
   unsigned EndOffset = 0;
+  const unsigned BufferRowAlign = 16U;
 
   // reserve first spot in the layout vector for buffer size
   Layout.push_back(0);
@@ -94,7 +95,7 @@ llvm::Type *CommonHLSLTargetCodeGenInfo::createHLSLBufferLayoutType(
       unsigned ElemOffset = 0;
       unsigned ArrayCount = 1;
       unsigned ArrayStride = 0;
-      unsigned NextRowOffset = llvm::alignTo(EndOffset, 16U);
+      unsigned NextRowOffset = llvm::alignTo(EndOffset, BufferRowAlign);
       llvm::Type *ElemLayoutTy = nullptr;
 
       QualType FieldTy = FD->getType();
@@ -120,11 +121,11 @@ llvm::Type *CommonHLSLTargetCodeGenInfo::createHLSLBufferLayoutType(
               CGM, cast<ConstantArrayType>(FieldTy.getTypePtr()), NewTy);
         } else {
           // Array of vectors or scalars
-          ElemSize =
-              getScalarOrVectorSize(CGM.getTypes().ConvertTypeForMem(Ty));
+          ElemSize = getScalarOrVectorSizeInBytes(
+              CGM.getTypes().ConvertTypeForMem(Ty));
           ElemLayoutTy = CGM.getTypes().ConvertTypeForMem(FieldTy);
         }
-        ArrayStride = llvm::alignTo(ElemSize, 16U);
+        ArrayStride = llvm::alignTo(ElemSize, BufferRowAlign);
         ElemOffset =
             Packoffsets != nullptr ? (*Packoffsets)[Index] : NextRowOffset;
 
