@@ -270,10 +270,6 @@ def main():
     while True:
         current_metrics = get_per_workflow_metrics(github_repo, workflows_to_track)
         current_metrics += get_sampled_workflow_metrics(github_repo)
-        # Always send a hearbeat metric so we can monitor is this container is still able to log to Grafana.
-        current_metrics.append(
-            GaugeMetric("metrics_container_heartbeat", 1, time.time_ns())
-        )
 
         upload_metrics(current_metrics, grafana_metrics_userid, grafana_api_key)
         print(f"Uploaded {len(current_metrics)} metrics", file=sys.stderr)
