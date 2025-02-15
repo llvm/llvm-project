@@ -236,6 +236,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getsid
+  SRCS
+    getsid.cpp
+  HDRS
+    ../getsid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   getuid
   SRCS
     getuid.cpp

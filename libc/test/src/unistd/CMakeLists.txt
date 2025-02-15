@@ -395,6 +395,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  getsid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    getsid_test.cpp
+  DEPENDS
+    libc.src.unistd.getsid
+)
+
+add_libc_unittest(
   getuid_test
   SUITE
     libc_unistd_unittests
