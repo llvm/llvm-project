@@ -7115,6 +7115,9 @@ def warn_shift_result_sets_sign_bit : Warning<
   "signed shift result (%0) sets the sign bit of the shift expression's "
   "type (%1) and becomes negative">,
   InGroup<DiagGroup<"shift-sign-overflow">>, DefaultIgnore;
+def warn_shift_bool : Warning<
+  "%select{left|right}0 shifting a `bool` implicitly converts it to 'int'">,
+  InGroup<ShiftBool>, DefaultIgnore;
 
 def warn_precedence_bitwise_rel : Warning<
   "%0 has lower precedence than %1; %1 will be evaluated first">,
