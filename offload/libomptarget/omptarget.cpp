@@ -1065,7 +1065,6 @@ public:
            (IsFirstPrivate ? "first-" : ""), DPxPTR(HstPtr));
         return OFFLOAD_FAIL;
       }
-#define OMPTARGET_DEBUG
 #ifdef OMPTARGET_DEBUG
       void *TgtPtrBase = (void *)((intptr_t)TgtPtr + ArgOffset);
       DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD
