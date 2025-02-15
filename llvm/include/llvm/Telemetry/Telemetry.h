@@ -149,7 +149,7 @@ public:
 protected:
   // Optional callback for subclasses to perform additional tasks before
   // dispatching to Destinations.
-  virtual Error preDispatch(TelemetryInfo *Entry) = 0;
+  virtual Error preDispatch(TelemetryInfo *Entry) {}
 
 private:
   std::vector<std::unique_ptr<Destination>> Destinations;
