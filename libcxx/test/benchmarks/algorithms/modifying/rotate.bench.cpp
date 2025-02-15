@@ -49,8 +49,17 @@ int main(int argc, char** argv) {
           ->Range(64, 1 << 20);
     };
 
+    // std::rotate
+    bm.operator()<std::vector<int>>("std::rotate(vector<int>)", std_rotate, 0.51);
+    bm.operator()<std::deque<int>>("std::rotate(deque<int>)", std_rotate, 0.51);
+    bm.operator()<std::list<int>>("std::rotate(list<int>)", std_rotate, 0.51);
     bm.operator()<std::vector<bool>>("std::rotate(vector<bool>) (by 1/4)", std_rotate, 0.25);
     bm.operator()<std::vector<bool>>("std::rotate(vector<bool>) (by 51%)", std_rotate, 0.51);
+
+    // ranges::rotate
+    bm.operator()<std::vector<int>>("rng::rotate(vector<int>)", std::ranges::rotate, 0.51);
+    bm.operator()<std::deque<int>>("rng::rotate(deque<int>)", std::ranges::rotate, 0.51);
+    bm.operator()<std::list<int>>("rng::rotate(list<int>)", std::ranges::rotate, 0.51);
 #if TEST_STD_VER >= 23 // vector<bool>::iterator is not std::permutable before C++23
     bm.operator()<std::vector<bool>>("rng::rotate(vector<bool>) (by 1/4)", std::ranges::rotate, 0.25);
     bm.operator()<std::vector<bool>>("rng::rotate(vector<bool>) (by 51%)", std::ranges::rotate, 0.51);
