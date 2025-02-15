@@ -4415,8 +4415,7 @@ void Parser::ParseDeclarationSpecifiers(
         DiagID = diag::err_hlsl_virtual_function;
         PrevSpec = Tok.getIdentifierInfo()->getNameStart();
         isInvalid = true;
-      }
-      else {
+      } else {
         isInvalid = DS.setFunctionSpecVirtual(Loc, PrevSpec, DiagID);
       }
       break;
