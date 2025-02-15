@@ -53,7 +53,7 @@ public:
   ScalarOpToLibmCall(MLIRContext *context, PatternBenefit benefit,
                      StringRef floatFunc, StringRef doubleFunc)
       : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
-        doubleFunc(doubleFunc){};
+        doubleFunc(doubleFunc) {};
 
   LogicalResult matchAndRewrite(Op op, PatternRewriter &rewriter) const final;
 
