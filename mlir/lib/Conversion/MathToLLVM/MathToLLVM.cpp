@@ -304,8 +304,7 @@ struct ConvertMathToLLVMPass
 
 void mlir::populateMathToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    PatternBenefit benefit,
-    bool approximateLog1p) {
+    bool approximateLog1p, PatternBenefit benefit) {
   if (approximateLog1p)
     patterns.add<Log1pOpLowering>(converter, benefit);
   // clang-format off

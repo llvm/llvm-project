@@ -24,8 +24,8 @@ class Pass;
 
 void populateMathToLLVMConversionPatterns(const LLVMTypeConverter &converter,
                                           RewritePatternSet &patterns,
-					  PatternBenefit benefit = 1,
-                                          bool approximateLog1p = true);
+                                          bool approximateLog1p = true,                    
+                    					  PatternBenefit benefit = 1);
 
 void registerConvertMathToLLVMInterface(DialectRegistry &registry);
 
