@@ -1033,6 +1033,11 @@ struct FuncMap {
   uint64_t DynamicInstCount = 0; // Dynamic instruction count for this function.
 
   uint64_t getFunctionAddress() const { return FunctionAddress; }
+
+  static unsigned getEntrySize(unsigned PointSize) {
+    return 1 /* version */ + PointSize /* FunctionAddress */ +
+           8 /* DynamicInstCount */;
+  }
 };
 
 } // end namespace object.

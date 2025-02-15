@@ -5,7 +5,7 @@
 ; CHECK:  .section .text.foo,"ax",@progbits
 ; CHECK-LABEL: foo:
 ; CHECK-NEXT:  [[FOO_BEGIN:.Lfunc_begin[0-9]+]]:
-; CHECK:	.section .llvm_func_map,"o",@llvm_func_map,.text.foo{{$}}
+; CHECK:	.section .llvm_func_map,"Mo",@llvm_func_map,17,.text.foo{{$}}
 ; CHECK-NEXT:  .byte 1			            # version
 ; CHECK-NEXT:  .quad [[FOO_BEGIN]]	    # function address
 ; CHECK-NEXT:  .quad 170                # dynamic instruction count
@@ -14,7 +14,7 @@
 ; CHECK:  .section .text.main,"ax",@progbits
 ; CHECK-LABEL: main:
 ; CHECK-NEXT:  [[MAIN_BEGIN:.Lfunc_begin[0-9]+]]:
-; CHECK:  .section .llvm_func_map,"o",@llvm_func_map,.text.main{{$}}
+; CHECK:  .section .llvm_func_map,"Mo",@llvm_func_map,17,.text.main{{$}}
 ; CHECK-NEXT:  .byte 1			            # version
 ; CHECK-NEXT:  .quad [[MAIN_BEGIN]]	    # function address
 ; CHECK-NEXT:  .quad 437                # dynamic instruction count

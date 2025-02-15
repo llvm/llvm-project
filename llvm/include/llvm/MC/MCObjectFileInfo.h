@@ -364,7 +364,8 @@ public:
 
   MCSection *getBBAddrMapSection(const MCSection &TextSec) const;
 
-  MCSection *getFuncMapSection(const MCSection &TextSec) const;
+  MCSection *getFuncMapSection(const MCSection &TextSec,
+                               unsigned EntrySize) const;
 
   MCSection *getKCFITrapSection(const MCSection &TextSec) const;
 

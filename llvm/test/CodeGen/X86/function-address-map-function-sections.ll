@@ -10,7 +10,7 @@ define dso_local i32 @_Z3barv() {
 ; CHECK:		.section .text._Z3barv,"ax",@progbits
 ; CHECK-LABEL:	_Z3barv:
 ; CHECK-NEXT:	[[BAR_BEGIN:.Lfunc_begin[0-9]+]]:
-; CHECK:		.section .llvm_func_map,"o",@llvm_func_map,.text._Z3barv{{$}}
+; CHECK:		.section .llvm_func_map,"Mo",@llvm_func_map,17,.text._Z3barv{{$}}
 ; CHECK-NEXT:		.byte 1			# version
 ; CHECK-NEXT:		.quad [[BAR_BEGIN]]	# function address
 
@@ -22,7 +22,7 @@ define dso_local i32 @_Z3foov() {
 ; CHECK:		.section .text._Z3foov,"ax",@progbits
 ; CHECK-LABEL:	_Z3foov:
 ; CHECK-NEXT:	[[FOO_BEGIN:.Lfunc_begin[0-9]+]]:
-; CHECK:		.section  .llvm_func_map,"o",@llvm_func_map,.text._Z3foov{{$}}
+; CHECK:		.section  .llvm_func_map,"Mo",@llvm_func_map,17,.text._Z3foov{{$}}
 ; CHECK-NEXT:		.byte 1			# version
 ; CHECK-NEXT:		.quad [[FOO_BEGIN]]	# function address
 
@@ -35,6 +35,6 @@ define linkonce_odr dso_local i32 @_Z4fooTIiET_v() comdat {
 ; CHECK:		.section .text._Z4fooTIiET_v,"axG",@progbits,_Z4fooTIiET_v,comdat
 ; CHECK-LABEL:	_Z4fooTIiET_v:
 ; CHECK-NEXT:	[[FOOCOMDAT_BEGIN:.Lfunc_begin[0-9]+]]:
-; CHECK:		.section .llvm_func_map,"oG",@llvm_func_map,.text._Z4fooTIiET_v,_Z4fooTIiET_v,comdat{{$}}
+; CHECK:		.section .llvm_func_map,"MoG",@llvm_func_map,17,.text._Z4fooTIiET_v,_Z4fooTIiET_v,comdat{{$}}
 ; CHECK-NEXT:		.byte 1				# version
 ; CHECK-NEXT:		.quad [[FOOCOMDAT_BEGIN]]	# function address

@@ -1560,8 +1560,8 @@ void AsmPrinter::emitFuncMapSection(const MachineFunction &MF) {
   if (!EmitFuncMap)
     return;
 
-  MCSection *FuncMapSection =
-      getObjFileLowering().getFuncMapSection(*MF.getSection());
+  MCSection *FuncMapSection = getObjFileLowering().getFuncMapSection(
+      *MF.getSection(), llvm::object::FuncMap::getEntrySize(getPointerSize()));
   assert(FuncMapSection && ".llvm_func_map section is not initialized.");
   const MCSymbol *FunctionSymbol = getFunctionBegin();
   OutStreamer->pushSection();
