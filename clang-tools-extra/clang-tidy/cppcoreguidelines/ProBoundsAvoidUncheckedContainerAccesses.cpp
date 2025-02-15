@@ -46,12 +46,12 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
 
   // Sum up the sizes of the defaults ( + semicolons), so we can remove them
   // from the saved options
-  size_t DefaultsStringLength =
+  const size_t DefaultsStringLength =
       std::transform_reduce(DefaultExclusions.begin(), DefaultExclusions.end(),
                             DefaultExclusions.size(), std::plus<>(),
                             [](llvm::StringRef Name) { return Name.size(); });
 
-  std::string Serialized =
+  const std::string Serialized =
       clang::tidy::utils::options::serializeStringList(ExcludedClasses);
 
   Options.store(Opts, "ExcludeClasses",
