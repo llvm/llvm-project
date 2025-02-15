@@ -7357,6 +7357,19 @@ defm FMAXV   : SIMDFPAcrossLanes<0b01111, 0, "fmaxv", AArch64fmaxv>;
 defm FMINNMV : SIMDFPAcrossLanes<0b01100, 1, "fminnmv", AArch64fminnmv>;
 defm FMINV   : SIMDFPAcrossLanes<0b01111, 1, "fminv", AArch64fminv>;
 
+def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (sext (v8i8 V64:$op))))), (i64 0))),
+          (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (i64 0), (SADDLVv8i8v V64:$op), hsub)), ssub)>;
+def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (zext (v8i8 V64:$op))))), (i64 0))),
+          (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$op), hsub)), ssub)>;
+def : Pat<(v8i16 (AArch64uaddv (v8i16 (sext (v8i8 V64:$op))))),
+          (v8i16 (SUBREG_TO_REG (i64 0), (SADDLVv8i8v V64:$op), hsub))>;
+def : Pat<(v8i16 (AArch64uaddv (v8i16 (zext (v8i8 V64:$op))))),
+          (v8i16 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$op), hsub))>;
+def : Pat<(v4i32 (AArch64uaddv (v4i32 (sext (v4i16 V64:$op))))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (SADDLVv4i16v V64:$op), ssub))>;
+def : Pat<(v4i32 (AArch64uaddv (v4i32 (zext (v4i16 V64:$op))))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv4i16v V64:$op), ssub))>;
+
 multiclass SIMDAcrossLaneLongPairIntrinsic<string Opc, SDPatternOperator addlp> {
   // Patterns for addv(addlp(x)) ==> addlv
   def : Pat<(i32 (vector_extract (v8i16 (insert_subvector undef,
@@ -7370,7 +7383,7 @@ multiclass SIMDAcrossLaneLongPairIntrinsic<string Opc, SDPatternOperator addlp> 
   def : Pat<(v4i32 (AArch64uaddv (v4i32 (addlp (v8i16 V128:$op))))),
             (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), (!cast<Instruction>(Opc#"v8i16v") V128:$op), ssub)>;
 
-  // Patterns for addp(addlp(x))) ==> addlv
+  // Patterns for addp(addlp(x)) ==> addlv
   def : Pat<(v2i32 (AArch64uaddv (v2i32 (addlp (v4i16 V64:$op))))),
             (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)), (!cast<Instruction>(Opc#"v4i16v") V64:$op), ssub)>;
   def : Pat<(v2i64 (AArch64uaddv (v2i64 (addlp (v4i32 V128:$op))))),
