@@ -92,8 +92,7 @@ if (LLVM_RELEASE_ENABLE_LTO)
   # Enable LTO for the runtimes.  We need to configure stage1 clang to default
   # to using lld as the linker because the stage1 toolchain will be used to
   # build and link the runtimes.
-  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON" CACHE STRING "")
-  set(LLVM_ENABLE_LLD ON CACHE STRING "")
+  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DLLVM_ENABLE_LLD=ON" CACHE STRING "")
 endif()
 
 # Stage 1 Common Config
