@@ -32,13 +32,13 @@ ProBoundsAvoidUncheckedContainerAccesses::
                                   SubscriptDefaultExclusions.begin(),
                                   SubscriptDefaultExclusions.end());
   FixMode = Options.get("FixMode", None);
-  SubscriptFixFunction = Options.get("SubscriptFixFunction", "gsl::at");
+  FixFunction = Options.get("FixFunction", "gsl::at");
 }
 
 void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
 
-  Options.store(Opts, "SubscriptFixFunction", SubscriptFixFunction);
+  Options.store(Opts, "FixFunction", FixFunction);
   Options.store(Opts, "FixMode", FixMode);
   if (SubscriptExcludedClasses.size() == SubscriptDefaultExclusions.size()) {
     Options.store(Opts, "ExcludeClasses", "");
@@ -168,10 +168,10 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       // Case: a[i] => f(a, i)
       diag(MatchedExpr->getCallee()->getBeginLoc(),
            "possibly unsafe 'operator[]', use safe function '" +
-               SubscriptFixFunction.str() + "()' instead")
+               FixFunction.str() + "()' instead")
           << MatchedExpr->getCallee()->getSourceRange()
           << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
-                                        SubscriptFixFunction.str() + "(")
+                                        FixFunction.str() + "(")
           // Since C++23, the subscript operator may also be called without an
           // argument, which makes the following distinction necessary
           << (MatchedExpr->getDirectCallee()->getNumParams() > 0
@@ -210,14 +210,14 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
     } else if (FixMode == Function) {
       // Cases: a.operator[](i) => f(a, i) and a->operator[](i) => f(*a, i)
       const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
-      std::string BeginInsertion = SubscriptFixFunction.str() + "(";
+      std::string BeginInsertion = FixFunction.str() + "(";
 
       if (Callee->isArrow())
         BeginInsertion += "*";
 
       diag(Callee->getBeginLoc(),
            "possibly unsafe 'operator[]', use safe function '" +
-               SubscriptFixFunction.str() + "()' instead")
+               FixFunction.str() + "()' instead")
           << Callee->getSourceRange()
           << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
                                         BeginInsertion)

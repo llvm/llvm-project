@@ -45,6 +45,6 @@ Options
     ``a.at(index)`` if a fitting function exists) or `function` (use a 
     function ``f(a, index)``).
 
-.. option:: SubscriptFixFunction
+.. option:: FixFunction
 
     The function to use in the `function` mode. ``gsl::at`` by default.
