@@ -394,6 +394,7 @@ public:
   AdjustTypeForOriginallyDefinedInModule(llvm::StringRef mangled_typename);
 
   /// Return the canonicalized Demangle tree for a Swift mangled type name.
+  /// It resolves all type aliases and removes sugar.
   swift::Demangle::NodePointer
   GetCanonicalDemangleTree(swift::Demangle::Demangler &dem,
                            llvm::StringRef mangled_name);
@@ -460,13 +461,6 @@ protected:
   /// Cast \p opaque_type as a mangled name.
   static const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
-  /// Helper function that canonicalizes node, but doesn't look at its
-  /// children.
-  swift::Demangle::NodePointer
-  Canonicalize(swift::Demangle::Demangler &dem,
-               swift::Demangle::NodePointer node,
-               swift::Mangle::ManglingFlavor flavor);
-
   /// Demangle the mangled name of the canonical type of \p type and
   /// drill into the Global(TypeMangling(Type())).
   ///
@@ -483,6 +477,20 @@ protected:
   swift::Demangle::NodePointer
   DemangleCanonicalOutermostType(swift::Demangle::Demangler &dem,
                                  lldb::opaque_compiler_type_t type);
+
+  /// Desugar to this node and if it is a type alias resolve it by
+  /// looking up its type in the debug info.
+  swift::Demangle::NodePointer
+  Canonicalize(swift::Demangle::Demangler &dem,
+               swift::Demangle::NodePointer node,
+               swift::Mangle::ManglingFlavor flavor);
+
+  /// Iteratively desugar and resolve all type aliases in \p node by
+  /// looking up their types in the debug info.
+  swift::Demangle::NodePointer
+  GetCanonicalNode(swift::Demangle::Demangler &dem,
+                   swift::Demangle::NodePointer node,
+                   swift::Mangle::ManglingFlavor flavor);
 
   /// If \p node is a Struct/Class/Typedef in the __C module, return a
   /// Swiftified node by looking up the name in the corresponding APINotes and
@@ -514,11 +522,6 @@ protected:
   CompilerType LookupClangForwardType(llvm::StringRef name, 
                   llvm::ArrayRef<CompilerContext> decl_context);
 
-  /// Recursively resolves all type aliases.
-  swift::Demangle::NodePointer
-  ResolveAllTypeAliases(swift::Demangle::Demangler &dem,
-                        swift::Demangle::NodePointer node);
-
   /// Resolve a type alias node and return a demangle tree for the
   /// resolved type. If the type alias resolves to a Clang type, return
   /// a Clang CompilerType.
@@ -531,11 +534,6 @@ protected:
                    swift::Demangle::NodePointer node,
                    swift::Mangle::ManglingFlavor flavor,
                    bool prefer_clang_types = false);
-
-  swift::Demangle::NodePointer
-  GetCanonicalNode(swift::Demangle::Demangler &dem,
-                   swift::Demangle::NodePointer node,
-                   swift::Mangle::ManglingFlavor flavor);
 
   uint32_t CollectTypeInfo(swift::Demangle::Demangler &dem,
                            swift::Demangle::NodePointer node,
