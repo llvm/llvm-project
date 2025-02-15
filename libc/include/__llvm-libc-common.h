@@ -47,6 +47,9 @@
 #define __NOEXCEPT throw()
 #endif
 
+#undef LLVM_LIBC_CAST
+#define LLVM_LIBC_CAST(cast, type, value) (cast<type>(value))
+
 #else // not __cplusplus
 
 #undef __BEGIN_C_DECLS
@@ -84,6 +87,9 @@
 
 #undef _Returns_twice
 #define _Returns_twice __attribute__((returns_twice))
+
+#undef LLVM_LIBC_CAST
+#define LLVM_LIBC_CAST(cast, type, value) ((type)(value))
 
 #endif // __cplusplus
 
