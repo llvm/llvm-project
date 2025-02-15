@@ -171,11 +171,11 @@ LIBC_INLINE int convert_full_date_time(printf_core::Writer *writer,
   // we only pad the first conversion, and we assume all the other values are in
   // their valid ranges.
   // sizeof("Sun Jan 12 03:45:06 2025")
-  const size_t full_conv_len = 3 + 1 + 3 + 1 + 2 + 1 + 8 + 1 + 4;
+  constexpr int FULL_CONV_LEN = 3 + 1 + 3 + 1 + 2 + 1 + 8 + 1 + 4;
   // use the full conv len because this isn't being passed to a proper converter
   // that will handle the width of the leading conversion. Instead it has to be
   // handled below.
-  const int requested_padding = to_conv.min_width - full_conv_len;
+  const int requested_padding = to_conv.min_width - FULL_CONV_LEN;
 
   cpp::string_view wday_str = unwrap_opt(time_reader.get_weekday_short_name());
   cpp::string_view month_str = unwrap_opt(time_reader.get_month_short_name());
