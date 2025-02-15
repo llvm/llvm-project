@@ -1143,9 +1143,8 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> TranslatedPtrs =
       findForkedPointer(PSE, StridesMap, Ptr, TheLoop);
 
-  for (const auto &P : TranslatedPtrs) {
-    const SCEV *PtrExpr = get<0>(P);
-    if (!hasComputableBounds(PSE, Ptr, PtrExpr, TheLoop, Assume))
+  for (auto &P : TranslatedPtrs) {
+    if (!hasComputableBounds(PSE, Ptr, P.getPointer(), TheLoop, Assume))
       return false;
 
     // When we run after a failing dependency check we have to make sure
@@ -1161,8 +1160,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
     // If there's only one option for Ptr, look it up after bounds and wrap
     // checking, because assumptions might have been added to PSE.
     if (TranslatedPtrs.size() == 1)
-      TranslatedPtrs[0] = {replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr),
-                           false};
+      P.setPointer(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
   }
 
   for (auto [PtrExpr, NeedsFreeze] : TranslatedPtrs) {
