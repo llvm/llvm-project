@@ -6,11 +6,23 @@
 #
 # ==-------------------------------------------------------------------------==#
 
+from functools import total_ordering
 
+
+@total_ordering
 class Object:
     def __init__(self, name, type):
         self.name = name
         self.type = type
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def __hash__(self):
+        return self.name.__hash__()
 
     def __str__(self):
         return f"extern {self.type} {self.name};"
