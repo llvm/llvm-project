@@ -376,6 +376,7 @@ public:
   };
   void trivial68() { point pt = { 1.0 }; }
   unsigned trivial69() { return offsetof(RefCounted, children); }
+  DerivedNumber* trivial70() { [[clang::suppress]] return static_cast<DerivedNumber*>(number); }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -564,6 +565,7 @@ public:
     getFieldTrivial().trivial67()->trivial6(); // no-warning
     getFieldTrivial().trivial68(); // no-warning
     getFieldTrivial().trivial69(); // no-warning
+    getFieldTrivial().trivial70(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
