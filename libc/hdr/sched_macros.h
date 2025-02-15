@@ -11,7 +11,12 @@
 
 #ifdef LIBC_FULL_BUILD
 
+#ifndef _SCHED_H
+#define _SCHED_H 1
+
 #include "include/llvm-libc-macros/sched-macros.h"
+
+#endif
 
 #else // Overlay mode
 
