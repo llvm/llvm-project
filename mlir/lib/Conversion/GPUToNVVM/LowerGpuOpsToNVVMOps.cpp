@@ -378,6 +378,8 @@ struct LowerGpuOpsToNVVMOpsPass final
     RewritePatternSet llvmPatterns(m.getContext());
     LLVMConversionTarget target(getContext());
 
+    populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
+
     llvm::SmallDenseSet<StringRef> allowedDialectsSet(allowedDialects.begin(),
                                                       allowedDialects.end());
     for (Dialect *dialect : getContext().getLoadedDialects()) {
@@ -407,7 +409,6 @@ struct LowerGpuOpsToNVVMOpsPass final
                                                      llvmPatterns);
     }
 
-    populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
     if (this->hasRedux)
       populateGpuSubgroupReduceOpLoweringPattern(converter, llvmPatterns);
@@ -552,6 +553,11 @@ void mlir::populateGpuToNVVMConversionPatterns(
 
   populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
                                     "__nv_fmod");
+  populateOpPatterns<arith::MaxNumFOp>(converter, patterns, "__nv_fmaxf",
+                                       "__nv_fmax");
+  populateOpPatterns<arith::MinNumFOp>(converter, patterns, "__nv_fminf",
+                                       "__nv_fmin");
+
   populateIntOpPatterns<math::AbsIOp>(converter, patterns, "__nv_abs");
   populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
                                    "__nv_fabs");
