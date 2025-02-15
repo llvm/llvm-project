@@ -8,34 +8,64 @@
 
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
+#include <cstdint>
+#include <sys/types.h>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
 
+template <typename T>
+static uint32_t getSizeOf () {
+    return static_cast<uint32_t>(sizeof(T));
+}
+
+
+
 void RootSignatureDesc::write(raw_ostream &OS) const {
+  uint32_t Offset = 16;
+  const uint32_t ParametersOffset = getSizeOf<dxbc::RootSignatureHeader>() + Offset;
+  const uint32_t ParameterByteSize = Parameters.size_in_bytes();
 
-  support::endian::write(OS, Version, llvm::endianness::little);
-  support::endian::write(OS, NumParameters, llvm::endianness::little);
-  support::endian::write(OS, RootParametersOffset, llvm::endianness::little);
-  support::endian::write(OS, NumStaticSamplers, llvm::endianness::little);
-  support::endian::write(OS, StaticSamplersOffset, llvm::endianness::little);
-  support::endian::write(OS, Flags, llvm::endianness::little);
-}
 
-void RootParameter::write(raw_ostream &OS) {
-  support::endian::write(OS, ParameterType, llvm::endianness::little);
-  support::endian::write(OS, ShaderVisibility, llvm::endianness::little);
+  // Writing header information
+  support::endian::write(OS, Header.Version, llvm::endianness::little);
+  Offset += getSizeOf<uint32_t>();    
 
-  switch(ParameterType){
-  case dxbc::RootParameterType::Constants32Bit:
-    Constants.write(OS);
-    break;
+  support::endian::write(OS, (uint32_t)Parameters.size(), llvm::endianness::little);
+  Offset += getSizeOf<uint32_t>();    
+
+  support::endian::write(OS, ParametersOffset, llvm::endianness::little);
+  Offset += getSizeOf<uint32_t>();    
+
+  support::endian::write(OS, ((uint32_t)0), llvm::endianness::little);
+  Offset += getSizeOf<uint32_t>();    
+
+  support::endian::write(OS, ParameterByteSize + ParametersOffset, llvm::endianness::little);
+  Offset += getSizeOf<uint32_t>();    
+
+  support::endian::write(OS, Header.Flags, llvm::endianness::little);
+
+  for (const dxbc::RootParameter &P : Parameters){
+    support::endian::write(OS, P.ParameterType, llvm::endianness::little);    
+    support::endian::write(OS, P.ShaderVisibility, llvm::endianness::little);
+    support::endian::write(OS, Offset, llvm::endianness::little);
+    Offset += getSizeOf<uint32_t>();    
+
+    
+    switch(P.ParameterType){
+      case dxbc::RootParameterType::Constants32Bit:{
+        support::endian::write(OS, P.Constants.ShaderRegister, llvm::endianness::little);
+        Offset += getSizeOf<uint32_t>();
+        
+        support::endian::write(OS, P.Constants.RegisterSpace, llvm::endianness::little);
+        Offset += getSizeOf<uint32_t>();
+        
+        support::endian::write(OS, P.Constants.Num32BitValues, llvm::endianness::little);
+        Offset += getSizeOf<uint32_t>();
+
+      } break;
+      }
   }
-}
-
-void RootConstants::write(raw_ostream &OS) {
-  support::endian::write(OS, Num32BitValues, llvm::endianness::little);
-  support::endian::write(OS, RegisterSpace, llvm::endianness::little);
-  support::endian::write(OS, ShaderRegister, llvm::endianness::little);
 }
