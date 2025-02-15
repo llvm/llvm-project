@@ -2079,14 +2079,6 @@ static bool CheckFloatingOrIntRepresentation(Sema *S, CallExpr *TheCall) {
                                     checkAllSignedTypes);
 }
 
-static bool CheckBoolRepresentation(Sema *S, CallExpr *TheCall) {
-  auto checkAllBoolTypes = [](clang::QualType PassedType) -> bool {
-    return !PassedType->hasIntegerRepresentation();
-  };
-  return CheckAllArgTypesAreCorrect(S, TheCall, S->Context.BoolTy,
-                                    checkAllBoolTypes);
-}
-
 static bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllUnsignedTypes = [](clang::QualType PassedType) -> bool {
     return !PassedType->hasUnsignedIntegerRepresentation();
@@ -2258,8 +2250,21 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (CheckVectorElementCallArgs(&SemaRef, TheCall))
       return true;
-    if (CheckBoolRepresentation(&SemaRef, TheCall))
+
+    // check that the arguments are bools or, if vectors,
+    // vectors of bools
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    if (const auto *VecTy = ArgTy->getAs<VectorType>()) {
+      ArgTy = VecTy->getElementType();
+    }
+    if (!getASTContext().hasSameUnqualifiedType(ArgTy,
+                                                getASTContext().BoolTy)) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTy << getASTContext().BoolTy << 1 << 0 << 0;
       return true;
+    }
+
     ExprResult A = TheCall->getArg(0);
     QualType ArgTyA = A.get()->getType();
     // return type is the same as the input type
