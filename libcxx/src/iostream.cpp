@@ -18,8 +18,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class StreamT, class BufferT>
 union stream_data {
-  stream_data() {}
-  ~stream_data() {}
+  constexpr stream_data() {}
+  constexpr ~stream_data() {}
   struct {
     // The stream has to be the first element, since that's referenced by the stream declarations in <iostream>
     StreamT stream;
@@ -38,13 +38,19 @@ union stream_data {
 #define CHAR_MANGLING_wchar_t "_W"
 #define CHAR_MANGLING(CharT) CHAR_MANGLING_##CharT
 
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#  define STRING_DATA_CONSTINIT constinit
+#else
+#  define STRING_DATA_CONSTINIT
+#endif
+
 #ifdef _LIBCPP_ABI_MICROSOFT
 #  define STREAM(StreamT, BufferT, CharT, var)                                                                         \
-    stream_data<StreamT<CharT>, BufferT<CharT>> var __asm__(                                                           \
+    STRING_DATA_CONSTINIT stream_data<StreamT<CharT>, BufferT<CharT>> var __asm__(                                     \
         "?" #var "@" ABI_NAMESPACE_STR "@std@@3V?$" #StreamT                                                           \
         "@" CHAR_MANGLING(CharT) "U?$char_traits@" CHAR_MANGLING(CharT) "@" ABI_NAMESPACE_STR "@std@@@12@A")
 #else
-#  define STREAM(StreamT, BufferT, CharT, var) stream_data<StreamT<CharT>, BufferT<CharT>> var
+#  define STREAM(StreamT, BufferT, CharT, var) STRING_DATA_CONSTINIT stream_data<StreamT<CharT>, BufferT<CharT>> var
 #endif
 
 // These definitions and the declarations in <iostream> technically cause ODR violations, since they have different

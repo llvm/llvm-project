@@ -127,6 +127,14 @@ functions:
     arguments:
       - type: long long
       - type: long long
+  - name: posix_memalign
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: void **
+      - type: size_t
+      - type: size_t
   - name: qsort
     standards:
       - stdc
