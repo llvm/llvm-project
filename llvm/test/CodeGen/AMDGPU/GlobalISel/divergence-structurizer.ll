@@ -10,12 +10,13 @@ define amdgpu_ps void @divergent_i1_phi_if_then(ptr addrspace(1) %out, i32 %tid,
 ; GFX10-NEXT:    v_cmp_le_u32_e64 s0, 6, v2
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v3
 ; GFX10-NEXT:    s_and_saveexec_b32 s1, vcc_lo
+; GFX10-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX10-NEXT:  ; %bb.1: ; %B
 ; GFX10-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 1, v2
 ; GFX10-NEXT:    s_andn2_b32 s0, s0, exec_lo
 ; GFX10-NEXT:    s_and_b32 s2, exec_lo, vcc_lo
 ; GFX10-NEXT:    s_or_b32 s0, s0, s2
-; GFX10-NEXT:  ; %bb.2: ; %exit
+; GFX10-NEXT:  .LBB0_2: ; %exit
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, -1, s0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v2, 2, v2
@@ -46,20 +47,22 @@ define amdgpu_ps void @divergent_i1_phi_if_else(ptr addrspace(1) %out, i32 %tid,
 ; GFX10-NEXT:    v_cmp_ne_u32_e64 s0, 0, s0
 ; GFX10-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; GFX10-NEXT:    s_xor_b32 s1, exec_lo, s1
+; GFX10-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX10-NEXT:  ; %bb.1: ; %B
 ; GFX10-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 2, v2
 ; GFX10-NEXT:    s_andn2_b32 s0, s0, exec_lo
 ; GFX10-NEXT:    ; implicit-def: $vgpr2
 ; GFX10-NEXT:    s_and_b32 s2, exec_lo, vcc_lo
 ; GFX10-NEXT:    s_or_b32 s0, s0, s2
-; GFX10-NEXT:  ; %bb.2: ; %Flow
+; GFX10-NEXT:  .LBB1_2: ; %Flow
 ; GFX10-NEXT:    s_andn2_saveexec_b32 s1, s1
+; GFX10-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX10-NEXT:  ; %bb.3: ; %A
 ; GFX10-NEXT:    v_cmp_le_u32_e32 vcc_lo, 1, v2
 ; GFX10-NEXT:    s_andn2_b32 s0, s0, exec_lo
 ; GFX10-NEXT:    s_and_b32 s2, exec_lo, vcc_lo
 ; GFX10-NEXT:    s_or_b32 s0, s0, s2
-; GFX10-NEXT:  ; %bb.4: ; %exit
+; GFX10-NEXT:  .LBB1_4: ; %exit
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, -1, s0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v2, 2, v2
@@ -437,11 +440,10 @@ define amdgpu_cs void @loop_with_div_break_with_body(ptr addrspace(1) %x, ptr ad
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-NEXT:    s_and_saveexec_b32 s0, s1
 ; GFX10-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execz .LBB5_6
 ; GFX10-NEXT:  ; %bb.5: ; %break.body
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 10
 ; GFX10-NEXT:    global_store_dword v[4:5], v0, off
-; GFX10-NEXT:  .LBB5_6: ; %exit
+; GFX10-NEXT:  ; %bb.6: ; %exit
 ; GFX10-NEXT:    s_endpgm
 entry:
   br label %A

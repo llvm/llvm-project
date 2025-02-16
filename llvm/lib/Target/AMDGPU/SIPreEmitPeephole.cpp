@@ -15,7 +15,9 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/BranchProbability.h"
 
 using namespace llvm;
@@ -29,6 +31,10 @@ private:
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
 
+  // Trace metrics analysis result, used to estimate the number of cycles it
+  // takes to execute a block.
+  MachineTraceMetrics::Ensemble *Traces;
+
   bool optimizeVccBranch(MachineInstr &MI) const;
   bool optimizeSetGPR(MachineInstr &First, MachineInstr &MI) const;
   bool getBlockDestinations(MachineBasicBlock &SrcMBB,
@@ -37,8 +43,13 @@ private:
                             SmallVectorImpl<MachineOperand> &Cond);
   bool mustRetainExeczBranch(const MachineInstr &Branch,
                              const MachineBasicBlock &From,
-                             const MachineBasicBlock &To) const;
+                             const MachineBasicBlock &To);
   bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineTraceMetricsWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
 public:
   static char ID;
@@ -52,8 +63,11 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS(SIPreEmitPeephole, DEBUG_TYPE,
-                "SI peephole optimizations", false, false)
+INITIALIZE_PASS_BEGIN(SIPreEmitPeephole, DEBUG_TYPE,
+                      "SI peephole optimizations", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
+INITIALIZE_PASS_END(SIPreEmitPeephole, DEBUG_TYPE, "SI peephole optimizations",
+                    false, false)
 
 char SIPreEmitPeephole::ID = 0;
 
@@ -299,58 +313,23 @@ bool SIPreEmitPeephole::getBlockDestinations(
   return true;
 }
 
-namespace {
-class BranchWeightCostModel {
-  const SIInstrInfo &TII;
-  const TargetSchedModel &SchedModel;
-  BranchProbability BranchProb;
-  static constexpr uint64_t BranchNotTakenCost = 1;
-  uint64_t BranchTakenCost;
-  uint64_t ThenCyclesCost = 0;
-
-public:
-  BranchWeightCostModel(const SIInstrInfo &TII, const MachineInstr &Branch,
-                        const MachineBasicBlock &Succ)
-      : TII(TII), SchedModel(TII.getSchedModel()) {
-    const MachineBasicBlock &Head = *Branch.getParent();
-    const auto *FromIt = find(Head.successors(), &Succ);
-    assert(FromIt != Head.succ_end());
-
-    BranchProb = Head.getSuccProbability(FromIt);
-    if (BranchProb.isUnknown())
-      BranchProb = BranchProbability::getZero();
-    BranchTakenCost = SchedModel.computeInstrLatency(&Branch);
-  }
-
-  bool isProfitable(const MachineInstr &MI) {
-    if (TII.isWaitcnt(MI.getOpcode()))
-      return false;
-
-    ThenCyclesCost += SchedModel.computeInstrLatency(&MI);
-
-    // Consider `P = N/D` to be the probability of execz being false (skipping
-    // the then-block) The transformation is profitable if always executing the
-    // 'then' block is cheaper than executing sometimes 'then' and always
-    // executing s_cbranch_execz:
-    // * ThenCost <= P*ThenCost + (1-P)*BranchTakenCost + P*BranchNotTakenCost
-    // * (1-P) * ThenCost <= (1-P)*BranchTakenCost + P*BranchNotTakenCost
-    // * (D-N)/D * ThenCost <= (D-N)/D * BranchTakenCost + N/D *
-    // BranchNotTakenCost
-    uint64_t Numerator = BranchProb.getNumerator();
-    uint64_t Denominator = BranchProb.getDenominator();
-    return (Denominator - Numerator) * ThenCyclesCost <=
-           ((Denominator - Numerator) * BranchTakenCost +
-            Numerator * BranchNotTakenCost);
-  }
-};
-
-bool SIPreEmitPeephole::mustRetainExeczBranch(
-    const MachineInstr &Branch, const MachineBasicBlock &From,
-    const MachineBasicBlock &To) const {
+bool SIPreEmitPeephole::mustRetainExeczBranch(const MachineInstr &Branch,
+                                              const MachineBasicBlock &From,
+                                              const MachineBasicBlock &To) {
   assert(is_contained(Branch.getParent()->successors(), &From));
-  BranchWeightCostModel CostModel{*TII, Branch, From};
+
+  const MachineBasicBlock &Head = *Branch.getParent();
+  const auto *FromIt = find(Head.successors(), &From);
+  assert(FromIt != Head.succ_end());
+
+  auto BranchProb = Head.getSuccProbability(FromIt);
+  if (BranchProb.isUnknown())
+    return true;
 
   const MachineFunction *MF = From.getParent();
+
+  SmallVector<const MachineBasicBlock *> ThenBlocks;
+
   for (MachineFunction::const_iterator MBBI(&From), ToI(&To), End = MF->end();
        MBBI != End && MBBI != ToI; ++MBBI) {
     const MachineBasicBlock &MBB = *MBBI;
@@ -372,14 +351,37 @@ bool SIPreEmitPeephole::mustRetainExeczBranch(
       if (TII->hasUnwantedEffectsWhenEXECEmpty(MI))
         return true;
 
-      if (!CostModel.isProfitable(MI))
+      if (TII->isWaitcnt(MI.getOpcode()))
         return true;
     }
+    ThenBlocks.push_back(&MBB);
   }
 
-  return false;
+  MachineTraceMetrics::Trace Trace = Traces->getTrace(&Head);
+  const MCSchedClassDesc *BranchSchedClassDesc =
+      TII->getSchedModel().getMCSchedModel()->getSchedClassDesc(
+          Branch.getDesc().getSchedClass());
+  unsigned ResourceThenWithoutBranch =
+      Trace.getResourceLength(ThenBlocks, {}, {BranchSchedClassDesc});
+  unsigned ResourceThenWithBranch = Trace.getResourceLength(ThenBlocks, {}, {});
+  unsigned ResourceElseWithBranch = Trace.getResourceLength({}, {}, {});
+
+  // Consider `P = N/D` to be the probability of execz being false (skipping
+  // the then-block) The transformation is profitable if always executing the
+  // 'then' block is cheaper than executing sometimes 'then' and always
+  // executing s_cbranch_execz:
+  // * ThenCost <= P*BranchThenCost + (1-P)*BranchElseCost
+  // * D * ThenCost <= N * BranchThenCost + (D - N) * BranchElseCost
+  // For the resource lenght to be equivalent to the number of cycles to execute
+  // the block, we assume no data-dependencies between the instructions. This
+  // may not be true and should be refined.
+  uint64_t Numerator = BranchProb.getNumerator();
+  uint64_t Denominator = BranchProb.getDenominator();
+  bool IsProfitable = Denominator * ResourceThenWithoutBranch <=
+                      Numerator * ResourceThenWithBranch +
+                          (Denominator - Numerator) * ResourceElseWithBranch;
+  return !IsProfitable;
 }
-} // namespace
 
 // Returns true if the skip branch instruction is removed.
 bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
@@ -414,6 +416,8 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
+  Traces = getAnalysis<MachineTraceMetricsWrapperPass>().getMTM().getEnsemble(
+      llvm::MachineTraceStrategy::TS_MinInstrCount);
   bool Changed = false;
 
   MF.RenumberBlocks();

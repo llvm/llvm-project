@@ -264,6 +264,7 @@ define amdgpu_gfx void @strict_wwm_cfg(ptr addrspace(8) inreg %tmp14, i32 %arg) 
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX9-O3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-O3-NEXT:    s_and_saveexec_b64 s[34:35], vcc
+; GFX9-O3-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX9-O3-NEXT:  ; %bb.1: ; %if
 ; GFX9-O3-NEXT:    s_or_saveexec_b64 s[36:37], -1
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v1, 0
@@ -273,7 +274,7 @@ define amdgpu_gfx void @strict_wwm_cfg(ptr addrspace(8) inreg %tmp14, i32 %arg) 
 ; GFX9-O3-NEXT:    v_add_u32_e32 v1, v2, v1
 ; GFX9-O3-NEXT:    s_mov_b64 exec, s[36:37]
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v5, v1
-; GFX9-O3-NEXT:  ; %bb.2: ; %merge
+; GFX9-O3-NEXT:  .LBB1_2: ; %merge
 ; GFX9-O3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-O3-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; GFX9-O3-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc

@@ -396,13 +396,14 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    ; implicit-def: $vgpr4
 ; GFX1032-NEXT:    s_and_saveexec_b32 s5, s4
 ; GFX1032-NEXT:    s_xor_b32 s4, exec_lo, s5
+; GFX1032-NEXT:    s_cbranch_execz .LBB10_6
 ; GFX1032-NEXT:  ; %bb.5: ; %bb11
 ; GFX1032-NEXT:    ; in Loop: Header=BB10_2 Depth=1
 ; GFX1032-NEXT:    v_lshrrev_b32_e32 v4, 31, v1
 ; GFX1032-NEXT:    s_andn2_b32 s3, s3, exec_lo
 ; GFX1032-NEXT:    v_add_nc_u32_e32 v4, v1, v4
 ; GFX1032-NEXT:    v_ashrrev_i32_e32 v4, 1, v4
-; GFX1032-NEXT:  ; %bb.6: ; %Flow1
+; GFX1032-NEXT:  .LBB10_6: ; %Flow1
 ; GFX1032-NEXT:    ; in Loop: Header=BB10_2 Depth=1
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1032-NEXT:    s_and_saveexec_b32 s4, s3
@@ -458,13 +459,14 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    ; implicit-def: $vgpr4
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
 ; GFX1064-NEXT:    s_xor_b64 s[6:7], exec, s[8:9]
+; GFX1064-NEXT:    s_cbranch_execz .LBB10_6
 ; GFX1064-NEXT:  ; %bb.5: ; %bb11
 ; GFX1064-NEXT:    ; in Loop: Header=BB10_2 Depth=1
 ; GFX1064-NEXT:    v_lshrrev_b32_e32 v4, 31, v1
 ; GFX1064-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
 ; GFX1064-NEXT:    v_add_nc_u32_e32 v4, v1, v4
 ; GFX1064-NEXT:    v_ashrrev_i32_e32 v4, 1, v4
-; GFX1064-NEXT:  ; %bb.6: ; %Flow1
+; GFX1064-NEXT:  .LBB10_6: ; %Flow1
 ; GFX1064-NEXT:    ; in Loop: Header=BB10_2 Depth=1
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]

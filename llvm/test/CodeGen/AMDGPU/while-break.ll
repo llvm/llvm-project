@@ -103,13 +103,14 @@ define amdgpu_ps float @while_break2(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:  ; %bb.4: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_andn2_saveexec_b32 s3, s3
+; GCN-NEXT:    s_cbranch_execz .LBB1_6
 ; GCN-NEXT:  ; %bb.5: ; %else
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, s1, v3
 ; GCN-NEXT:    s_andn2_b32 s2, s2, exec_lo
 ; GCN-NEXT:    s_and_b32 s4, vcc_lo, exec_lo
 ; GCN-NEXT:    s_or_b32 s2, s2, s4
-; GCN-NEXT:  ; %bb.6: ; %Flow1
+; GCN-NEXT:  .LBB1_6: ; %Flow1
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GCN-NEXT:    s_mov_b32 s3, -1
