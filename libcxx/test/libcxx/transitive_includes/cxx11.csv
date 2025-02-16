@@ -1957,6 +1957,7 @@ spanstream limits
 spanstream locale
 spanstream memory
 spanstream mutex
+spanstream new
 spanstream optional
 spanstream ostream
 spanstream print
