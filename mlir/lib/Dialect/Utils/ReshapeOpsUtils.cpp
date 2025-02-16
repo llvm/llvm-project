@@ -49,27 +49,26 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
     int64_t currTargetShape = targetShape[targetDim];
     while (sourceDim < (sourceShape.size() - 1) &&
            sourceShape[sourceDim] != ShapedType::kDynamic &&
-           prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape) {
+           (currTargetShape == ShapedType::kDynamic ||
+            prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape)) {
       prodOfCollapsedDims *= sourceShape[sourceDim];
       currIndices.push_back(sourceDim++);
     }
+
+    if (sourceDim >= sourceShape.size())
+      return std::nullopt;
 
     // If the current expanded dimension is dynamic, then the collapsed
     // dimensions should also be dynamic and product of all previous unprocessed
     // dimensions of the expanded shape should be 1.
     if (sourceShape[sourceDim] == ShapedType::kDynamic &&
-        (currTargetShape != ShapedType::kDynamic || prodOfCollapsedDims != 1))
-      return std::nullopt;
-
-    // If the collapsed dim is dynamic, the current expanded dim should also
-    // be dynamic.
-    if (currTargetShape == ShapedType::kDynamic &&
-        sourceShape[sourceDim] != ShapedType::kDynamic)
+        currTargetShape != ShapedType::kDynamic)
       return std::nullopt;
 
     // For static shapes, if the product of dimensions of the expanded shape
     // should match the collapsed dimension shape.
-    if (prodOfCollapsedDims * sourceShape[sourceDim] != currTargetShape)
+    if (sourceShape[sourceDim] != ShapedType::kDynamic &&
+        prodOfCollapsedDims * sourceShape[sourceDim] != currTargetShape)
       return std::nullopt;
 
     currIndices.push_back(sourceDim++);
@@ -315,11 +314,11 @@ SmallVector<Range> SliceFromCollapseHelper::getExtractSliceParams(
     // have proven that these are not sliced. In this case we just take
     // the full extent of each dimension in the reassociation list.
     if (linearizedDimensions[it.index()]) {
-      llvm::append_range(
-          offsetsSizesAndStrides,
-          llvm::map_range(it.value(), [&](int64_t idx) -> Range {
-            return {zeroAttr, collapseShapeInputShape[idx], oneAttr};
-          }));
+      llvm::append_range(offsetsSizesAndStrides,
+                         llvm::map_range(it.value(), [&](int64_t idx) -> Range {
+                           return {zeroAttr, collapseShapeInputShape[idx],
+                                   oneAttr};
+                         }));
       continue;
     }
 
