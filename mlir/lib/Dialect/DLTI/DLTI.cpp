@@ -318,7 +318,8 @@ combineOneSpec(DataLayoutSpecInterface spec,
            "unexpected data layout entry for built-in type");
 
     auto interface = cast<DataLayoutTypeInterface>(typeSample);
-    if (!interface.areCompatible(entriesForType.lookup(kvp.first), kvp.second))
+    if (!interface.areCompatible(entriesForType.lookup(kvp.first), kvp.second,
+                                 spec))
       return failure();
 
     overwriteDuplicateEntries(entriesForType[kvp.first], kvp.second);
@@ -377,6 +378,12 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
 StringAttr
 DataLayoutSpecAttr::getEndiannessIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(DLTIDialect::kDataLayoutEndiannessKey);
+}
+
+StringAttr DataLayoutSpecAttr::getDefaultMemorySpaceIdentifier(
+    MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutDefaultMemorySpaceKey);
 }
 
 StringAttr
@@ -609,7 +616,8 @@ public:
                             << DLTIDialect::kDataLayoutEndiannessBig << "' or '"
                             << DLTIDialect::kDataLayoutEndiannessLittle << "'";
     }
-    if (entryName == DLTIDialect::kDataLayoutAllocaMemorySpaceKey ||
+    if (entryName == DLTIDialect::kDataLayoutDefaultMemorySpaceKey ||
+        entryName == DLTIDialect::kDataLayoutAllocaMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutProgramMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutGlobalMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutStackAlignmentKey ||

@@ -350,7 +350,8 @@ LLVMPointerType::getIndexBitwidth(const DataLayout &dataLayout,
 }
 
 bool LLVMPointerType::areCompatible(DataLayoutEntryListRef oldLayout,
-                                    DataLayoutEntryListRef newLayout) const {
+                                    DataLayoutEntryListRef newLayout,
+                                    DataLayoutSpecInterface newSpec) const {
   for (DataLayoutEntryInterface newEntry : newLayout) {
     if (!newEntry.isTypeEntry())
       continue;
@@ -598,7 +599,8 @@ static uint64_t extractStructSpecValue(Attribute attr, StructDLEntryPos pos) {
 }
 
 bool LLVMStructType::areCompatible(DataLayoutEntryListRef oldLayout,
-                                   DataLayoutEntryListRef newLayout) const {
+                                   DataLayoutEntryListRef newLayout,
+                                   DataLayoutSpecInterface newSpec) const {
   for (DataLayoutEntryInterface newEntry : newLayout) {
     if (!newEntry.isTypeEntry())
       continue;

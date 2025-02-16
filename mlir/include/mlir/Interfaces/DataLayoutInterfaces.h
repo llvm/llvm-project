@@ -74,6 +74,10 @@ getDefaultIndexBitwidth(Type type, const DataLayout &dataLayout,
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultEndianness(DataLayoutEntryInterface entry);
 
+/// Default handler for the default memory space request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultMemorySpace(DataLayoutEntryInterface entry);
+
 /// Default handler for alloca memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry);
@@ -231,6 +235,9 @@ public:
   /// Returns the specified endianness.
   Attribute getEndianness() const;
 
+  /// Returns the default memory space used for memory operations.
+  Attribute getDefaultMemorySpace() const;
+
   /// Returns the memory space used for AllocaOps.
   Attribute getAllocaMemorySpace() const;
 
@@ -285,7 +292,8 @@ private:
   mutable std::optional<Attribute> endianness;
   /// Cache for the mangling mode.
   mutable std::optional<Attribute> manglingMode;
-  /// Cache for alloca, global, and program memory spaces.
+  /// Cache for default, alloca, global, and program memory spaces.
+  mutable std::optional<Attribute> defaultMemorySpace;
   mutable std::optional<Attribute> allocaMemorySpace;
   mutable std::optional<Attribute> programMemorySpace;
   mutable std::optional<Attribute> globalMemorySpace;
