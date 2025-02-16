@@ -249,13 +249,19 @@ function(add_libclc_builtin_set)
 
     get_filename_component( file_dir ${file} DIRECTORY )
 
+    if( ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64 )
+      set(CONVERT_DEP clspv-generate_convert.cl)
+    else()
+      set(CONVERT_DEP generate_convert.cl)
+    endif()
+
     compile_to_bc(
       TRIPLE ${ARG_TRIPLE}
       INPUT ${input_file}
       OUTPUT ${output_file}
       EXTRA_OPTS -fno-builtin -nostdlib
         "${ARG_COMPILE_FLAGS}" -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
-      DEPENDENCIES generate_convert.cl clspv-generate_convert.cl
+      DEPENDENCIES ${CONVERT_DEP}
     )
     list( APPEND bytecode_files ${output_file} )
   endforeach()
