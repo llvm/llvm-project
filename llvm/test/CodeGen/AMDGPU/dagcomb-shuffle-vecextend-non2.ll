@@ -10,9 +10,9 @@
 ;
 ; GCN: s_endpgm
 
-define amdgpu_ps void @main(i32 %in1) local_unnamed_addr {
+define amdgpu_ps void @main(i32 %in1, i1 %arg) local_unnamed_addr {
 .entry:
-  br i1 undef, label %bb12, label %bb
+  br i1 %arg, label %bb12, label %bb
 
 bb:
   %__llpc_global_proxy_r5.12.vec.insert = insertelement <4 x i32> undef, i32 %in1, i32 3
