@@ -456,8 +456,9 @@ void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
   unsigned Major = getTriple().getOSMajorVersion();
   bool SuffixedLib = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
   if (SuffixedLib && GetCXXStdlibType(Args) == CST_Libcxx)
-    llvm::replace(CmdArgs, static_cast<const char *>("-lc++"),
-                  static_cast<const char *>("-lc++_p"));
+    std::replace_if(
+        CmdArgs.begin(), CmdArgs.end(),
+        [](const char *S) { return StringRef(S) == "-lc++"; }, "-lc++_p");
 }
 
 void FreeBSD::AddCudaIncludeArgs(const ArgList &DriverArgs,
