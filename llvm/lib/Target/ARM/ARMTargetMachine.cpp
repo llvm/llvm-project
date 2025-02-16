@@ -610,7 +610,7 @@ void ARMPassConfig::addPreEmitPass2() {
   addPass(createARMFixCortexA57AES1742098Pass());
   // Enable the hazard recognizer for cortex-m4f at -O2 or higher.
   if ((EnablePostRAHazardRecognizer == cl::BOU_UNSET &&
-      CodeGenOptLevel::Default <= getOptLevel()) ||
+       CodeGenOptLevel::Default <= getOptLevel()) ||
       EnablePostRAHazardRecognizer == cl::BOU_TRUE)
     addPass(&PostRAHazardRecognizerID);
   // Inserts BTIs at the start of functions and indirectly-called basic blocks,

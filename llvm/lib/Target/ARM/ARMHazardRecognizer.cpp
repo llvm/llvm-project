@@ -321,7 +321,7 @@ void ARMCortexM4FAlignmentHazardRecognizer::EmitInstruction(MachineInstr *MI) {
 
 ScheduleHazardRecognizer::HazardType
 ARMCortexM4FAlignmentHazardRecognizer::getHazardType(SUnit *SU,
-                                                    int /*Ignored*/) {
+                                                     int /*Ignored*/) {
   if (!SU->isInstr())
     return HazardType::NoHazard;
 

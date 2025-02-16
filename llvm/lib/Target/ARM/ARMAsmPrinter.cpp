@@ -1446,8 +1446,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     InConstantPool = false;
   }
 
-  if (MI->getAsmPrinterFlag(
-          MachineInstr::CommentFlag(ARM::ALIGNMENT_HAZARD)))
+  if (MI->getAsmPrinterFlag(MachineInstr::CommentFlag(ARM::ALIGNMENT_HAZARD)))
     OutStreamer->AddComment("alignment hazard");
 
   // Emit unwinding stuff for frame-related instructions
