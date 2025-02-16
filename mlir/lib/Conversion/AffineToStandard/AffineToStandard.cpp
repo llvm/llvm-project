@@ -26,7 +26,7 @@
 #include "mlir/Transforms/Passes.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LOWERAFFINE
+#define GEN_PASS_DEF_LOWERAFFINEPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -553,7 +553,7 @@ void mlir::populateAffineToVectorConversionPatterns(
 }
 
 namespace {
-class LowerAffine : public impl::LowerAffineBase<LowerAffine> {
+class LowerAffine : public impl::LowerAffinePassBase<LowerAffine> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateAffineToStdConversionPatterns(patterns);

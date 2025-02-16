@@ -68,7 +68,7 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   pm.addNestedPass<func::FuncOp>(memref::createExpandReallocPass());
   pm.addNestedPass<func::FuncOp>(createSCFToControlFlowPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
-  pm.addPass(createLowerAffine());
+  pm.addPass(createLowerAffinePass());
   pm.addPass(
       createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());

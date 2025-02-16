@@ -59,7 +59,7 @@ void buildCommonPassPipeline(
   nvvmTargetOptions.features = options.cubinFeatures;
   nvvmTargetOptions.optLevel = options.optLevel;
   pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
-  pm.addPass(createLowerAffine());
+  pm.addPass(createLowerAffinePass());
   pm.addPass(createArithToLLVMConversionPass());
   ConvertIndexToLLVMPassOptions convertIndexToLLVMPassOpt;
   convertIndexToLLVMPassOpt.indexBitwidth = options.indexBitWidth;

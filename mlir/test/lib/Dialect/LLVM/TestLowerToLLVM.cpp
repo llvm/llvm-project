@@ -53,7 +53,7 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // Blanket-convert any remaining linalg ops to loops if any remain.
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
   // Blanket-convert any remaining affine ops if any remain.
-  pm.addPass(createLowerAffine());
+  pm.addPass(createLowerAffinePass());
   // Convert SCF to CF (always needed).
   pm.addPass(createSCFToControlFlowPass());
   // Sprinkle some cleanups.
@@ -68,7 +68,7 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // Expand complicated MemRef operations before lowering them.
   pm.addPass(memref::createExpandStridedMetadataPass());
   // The expansion may create affine expressions. Get rid of them.
-  pm.addPass(createLowerAffine());
+  pm.addPass(createLowerAffinePass());
   // Convert MemRef to LLVM (always needed).
   pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   // Convert Func to LLVM (always needed).

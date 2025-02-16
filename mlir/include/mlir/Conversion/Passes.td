@@ -42,7 +42,7 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
 // LowerAffine
 //===----------------------------------------------------------------------===//
 
-def LowerAffine : Pass<"lower-affine"> {
+def LowerAffinePass : Pass<"lower-affine"> {
   let summary = "Lower Affine operations to a combination of Arith and SCF "
                 "operations";
   let description = [{
