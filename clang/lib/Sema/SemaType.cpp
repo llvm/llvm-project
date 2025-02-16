@@ -8336,12 +8336,11 @@ static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
 /// match one of the standard Neon vector types.
 static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                      Sema &S, VectorKind VecKind) {
-  bool IsTargetCUDAAndHostARM = false;
-  if (S.getLangOpts().CUDAIsDevice) {
-    const TargetInfo *AuxTI = S.getASTContext().getAuxTargetInfo();
-    IsTargetCUDAAndHostARM =
-        AuxTI && (AuxTI->getTriple().isAArch64() || AuxTI->getTriple().isARM());
-  }
+  const TargetInfo *AuxTI = S.getASTContext().getAuxTargetInfo();
+  bool IsArm = AuxTI->getTriple().isAArch64() || AuxTI->getTriple().isARM();
+
+  bool IsTargetCUDAAndHostARM = IsArm && S.getLangOpts().CUDAIsDevice;
+  bool IsTargetOpenMPDeviceAndHostARM = IsArm && S.getLangOpts().OpenMPIsTargetDevice;
 
   // Target must have NEON (or MVE, whose vectors are similar enough
   // not to need a separate attribute)
@@ -8376,7 +8375,7 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 
   // Only certain element types are supported for Neon vectors.
   if (!isPermittedNeonBaseType(CurType, VecKind, S) &&
-      !IsTargetCUDAAndHostARM) {
+      !IsTargetCUDAAndHostARM && !IsTargetOpenMPDeviceAndHostARM) {
     S.Diag(Attr.getLoc(), diag::err_attribute_invalid_vector_type) << CurType;
     Attr.setInvalid();
     return;
