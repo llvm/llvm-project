@@ -1765,6 +1765,8 @@ void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
 void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
                                          AccessKind AK,
                                          ProtectedOperationKind POK) {
+  // Strip off paren- and cast-expressions, checking if we encounter any other
+  // operator that should be delegated to checkAccess() instead.
   while (true) {
     if (const auto *PE = dyn_cast<ParenExpr>(Exp)) {
       Exp = PE->getSubExpr();
@@ -1781,6 +1783,15 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
       continue;
     }
     break;
+  }
+
+  if (const auto *UO = dyn_cast<UnaryOperator>(Exp)) {
+    if (UO->getOpcode() == UO_AddrOf) {
+      // Pointer access via pointer taken of variable, so the dereferenced
+      // variable is not actually a pointer.
+      checkAccess(FSet, UO->getSubExpr(), AK, POK);
+      return;
+    }
   }
 
   // Pass by reference warnings are under a different flag.
