@@ -224,16 +224,6 @@ public:
     }
   }
 
-  void Initialize(ASTContext &Context) override {
-    Ctx = &Context;
-    checkerMgr = std::make_unique<CheckerManager>(*Ctx, Opts, PP, Plugins,
-                                                  CheckerRegistrationFns);
-
-    Mgr = std::make_unique<AnalysisManager>(*Ctx, PP, PathConsumers,
-                                            CreateStoreMgr, CreateConstraintMgr,
-                                            checkerMgr.get(), Opts, Injector);
-  }
-
   /// Store the top level decls in the set to be processed later on.
   /// (Doing this pre-processing avoids deserialization of data from PCH.)
   bool HandleTopLevelDecl(DeclGroupRef D) override;
@@ -614,6 +604,14 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
   DiagnosticsEngine &Diags = PP.getDiagnostics();
   if (Diags.hasErrorOccurred() || Diags.hasFatalErrorOccurred())
     return;
+
+  Ctx = &C;
+  checkerMgr = std::make_unique<CheckerManager>(*Ctx, Opts, PP, Plugins,
+                                                CheckerRegistrationFns);
+
+  Mgr = std::make_unique<AnalysisManager>(*Ctx, PP, PathConsumers,
+                                          CreateStoreMgr, CreateConstraintMgr,
+                                          checkerMgr.get(), Opts, Injector);
 
   // Explicitly destroy the PathDiagnosticConsumer.  This will flush its output.
   // FIXME: This should be replaced with something that doesn't rely on
