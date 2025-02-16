@@ -618,7 +618,7 @@ struct __fn {
 
   template <input_range _Views>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views&& __views) const
-      noexcept(noexcept(views::all((std::forward<_Views>(__views)))){
+      noexcept(noexcept(views::all((std::forward<_Views>(__views))))){
     return views::all(std::forward<_Views>(__views)...);
   }
 
