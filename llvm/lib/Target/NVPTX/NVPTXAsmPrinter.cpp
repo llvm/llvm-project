@@ -1437,7 +1437,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         else if (IsTexture)
           O << ".texref ";
         else // IsSurface
-          O << ".samplerref ";
+          O << ".surfref ";
         O << ParamSym;
         continue;
       }

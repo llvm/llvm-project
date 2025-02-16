@@ -20845,7 +20845,8 @@ private:
         VecResSignedness = IsSigned;
       } else {
         ++NumVectorInstructions;
-        if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy) {
+        if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy &&
+            VecRes->getType()->getScalarType() == Builder.getInt1Ty()) {
           // Handle ctpop.
           unsigned VecResVF = getNumElements(VecRes->getType());
           unsigned VecVF = getNumElements(Vec->getType());
@@ -20858,7 +20859,7 @@ private:
           }
           if (VecResVF != VecVF) {
             SmallVector<int> ResizeMask(VecResVF, PoisonMaskElem);
-            std::iota(Mask.begin(), std::next(Mask.begin(), VecVF), 0);
+            std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), VecVF), 0);
             Vec = Builder.CreateShuffleVector(Vec, ResizeMask);
           }
           VecRes = Builder.CreateShuffleVector(VecRes, Vec, Mask, "rdx.op");
