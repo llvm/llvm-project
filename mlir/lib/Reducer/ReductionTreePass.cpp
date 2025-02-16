@@ -56,12 +56,12 @@ static void applyPatterns(Region &region,
       opsInRange.push_back(&op.value());
   }
 
-  // `applyOpPatternsAndFold` may erase the ops so we can't do the pattern
+  // `applyOpPatternsGreedily` may erase the ops so we can't do the pattern
   // matching in above iteration. Besides, erase op not-in-range may end up in
-  // invalid module, so `applyOpPatternsAndFold` should come before that
+  // invalid module, so `applyOpPatternsGreedily` should come before that
   // transform.
   for (Operation *op : opsInRange) {
-    // `applyOpPatternsAndFold` returns whether the op is convered. Omit it
+    // `applyOpPatternsGreedily` returns whether the op is convered. Omit it
     // because we don't have expectation this reduction will be success or not.
     GreedyRewriteConfig config;
     config.strictMode = GreedyRewriteStrictness::ExistingOps;
