@@ -2681,13 +2681,9 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
           Cost->requiresScalarEpilogue(VF.isVector())) &&
          "loops not exiting via the latch without required epilogue?");
 
-  LoopMiddleBlock =
-      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
-                 LI, nullptr, Twine(Prefix) + "middle.block");
-  replaceVPBBWithIRVPBB(Plan.getMiddleBlock(), LoopMiddleBlock);
   LoopScalarPreHeader =
-      SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
-                 nullptr, Twine(Prefix) + "scalar.ph");
+      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
+                 LI, nullptr, Twine(Prefix) + "scalar.ph");
   replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
 }
 
@@ -10761,6 +10757,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         // to be vectorized by executing the plan (potentially with a different
         // factor) again shortly afterwards.
         VPlan &BestEpiPlan = LVP.getPlanFor(EpilogueVF.Width);
+        BestEpiPlan.getMiddleBlock()->setName("vec.epilog.middle.block");
         preparePlanForMainVectorLoop(*BestMainPlan, BestEpiPlan);
         EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF.Width, 1,
                                           BestEpiPlan);
