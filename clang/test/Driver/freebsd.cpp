@@ -4,7 +4,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
 // RUN: %clangxx %s -### --target=amd64-unknown-freebsd -stdlib=libc++ 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
-// RUN: %clangxx %s -### -target=amd64-unknown-freebsd -stdlib=libstdc++ 2>&1 \
+// RUN: %clangxx %s -### --target=amd64-unknown-freebsd -stdlib=libstdc++ 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-STDLIBCXX %s
 // CHECK-DEFAULT: "-lc++" "-lm"
 // CHECK-STDLIBCXX: "-lstdc++" "-lm"
