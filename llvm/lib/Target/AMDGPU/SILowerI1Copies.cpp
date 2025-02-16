@@ -512,10 +512,6 @@ bool PhiLoweringHelper::lowerPhis() {
              DT->getNode(RHS.Block)->getDFSNumIn();
     });
 
-#ifndef NDEBUG
-    PhiRegisters.insert(DstReg);
-#endif
-
     // Phis in a loop that are observed outside the loop receive a simple but
     // conservatively correct treatment.
     std::vector<MachineBasicBlock *> DomBlocks = {&MBB};
