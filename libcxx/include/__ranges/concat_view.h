@@ -613,16 +613,13 @@ public:
 namespace views {
 namespace __concat {
 struct __fn {
-  template <input_range... _Views>
-  concept __models_input_range = requires { concat_view(std::declval<_Ts>()...); };
-
   template <input_range _Views>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views&& __views) const
       noexcept(noexcept(views::all((std::forward<_Views>(__views))))) {
-    return views::all(std::forward<_Views>(__views)...);
+    return views::all(std::forward<_Views>(__views));
   }
 
-  template <class... _Views> 
+  template <class... _Views>
     requires(sizeof...(_Views) > 1) && (view<_Views> && ...) && __concatable<_Views...>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... __views) const
       noexcept(noexcept(concat_view(std::forward<_Views>(__views)...))) {
