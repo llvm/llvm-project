@@ -13297,7 +13297,8 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     DebugLoc dl = MI.getDebugLoc();
     F->insert(It, copy0MBB);
     F->insert(It, sinkMBB);
-    if (isPhysRegLiveAfter(PPC::CARRY , MI.getIterator())) {
+
+    if (isPhysRegLiveAfter(PPC::CARRY, MI.getIterator())) {
       copy0MBB->addLiveIn(PPC::CARRY);
       sinkMBB->addLiveIn(PPC::CARRY);
     }
