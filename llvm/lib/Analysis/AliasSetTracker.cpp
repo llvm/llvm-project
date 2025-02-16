@@ -491,7 +491,7 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
   return *AliasAnyAS;
 }
 
-AliasSet &AliasSetTracker::addMemoryLocation(MemoryLocation Loc,
+AliasSet &AliasSetTracker::addMemoryLocation(const MemoryLocation &Loc,
                                              AliasSet::AccessLattice E) {
   AliasSet &AS = getAliasSetFor(Loc);
   AS.Access |= E;

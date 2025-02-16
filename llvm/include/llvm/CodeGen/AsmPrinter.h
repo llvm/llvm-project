@@ -632,7 +632,7 @@ public:
                                          StringRef Suffix) const;
 
   /// Return the MCSymbol for the specified ExternalSymbol.
-  MCSymbol *GetExternalSymbolSymbol(Twine Sym) const;
+  MCSymbol *GetExternalSymbolSymbol(const Twine &Sym) const;
 
   /// Return the symbol for the specified jump table entry.
   MCSymbol *GetJTISymbol(unsigned JTID, bool isLinkerPrivate = false) const;
@@ -723,10 +723,10 @@ public:
   /// emitDwarfSymbolReference().
   ///
   /// The length of the emitted value depends on the DWARF format.
-  void emitDwarfStringOffset(DwarfStringPoolEntry S) const;
+  void emitDwarfStringOffset(const DwarfStringPoolEntry &S) const;
 
   /// Emit the 4-or 8-byte offset of a string from the start of its section.
-  void emitDwarfStringOffset(DwarfStringPoolEntryRef S) const {
+  void emitDwarfStringOffset(const DwarfStringPoolEntryRef &S) const {
     emitDwarfStringOffset(S.getEntry());
   }
 

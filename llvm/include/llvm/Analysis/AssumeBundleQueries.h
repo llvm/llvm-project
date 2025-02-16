@@ -100,14 +100,14 @@ struct RetainedKnowledge {
   Attribute::AttrKind AttrKind = Attribute::None;
   uint64_t ArgValue = 0;
   Value *WasOn = nullptr;
-  bool operator==(RetainedKnowledge Other) const {
+  bool operator==(const RetainedKnowledge &Other) const {
     return AttrKind == Other.AttrKind && WasOn == Other.WasOn &&
            ArgValue == Other.ArgValue;
   }
-  bool operator!=(RetainedKnowledge Other) const { return !(*this == Other); }
+  bool operator!=(const RetainedKnowledge &Other) const { return !(*this == Other); }
   /// This is only intended for use in std::min/std::max between attribute that
   /// only differ in ArgValue.
-  bool operator<(RetainedKnowledge Other) const {
+  bool operator<(const RetainedKnowledge &Other) const {
     assert(((AttrKind == Other.AttrKind && WasOn == Other.WasOn) ||
             AttrKind == Attribute::None || Other.AttrKind == Attribute::None) &&
            "This is only intend for use in min/max to select the best for "
