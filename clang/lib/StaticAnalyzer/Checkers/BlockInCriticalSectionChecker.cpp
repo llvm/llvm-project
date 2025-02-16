@@ -153,12 +153,12 @@ private:
   bool Satisfied = false;
 
 public:
-  SuppressNonBlockingStreams(SymbolRef SR, int NonBlockMacroVal)
-      : StreamSym(SR), NonBlockMacroVal(NonBlockMacroVal) {}
+  SuppressNonBlockingStreams(SymbolRef StreamSym, int NonBlockMacroVal)
+      : StreamSym(StreamSym), NonBlockMacroVal(NonBlockMacroVal) {}
 
   static void *getTag() {
-    static int Tag = 0;
-    return static_cast<void *>(&Tag);
+    static bool Tag;
+    return &Tag;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
@@ -171,28 +171,25 @@ public:
     if (Satisfied)
       return nullptr;
 
-    std::optional<StmtPoint> Point = N->getLocation().getAs<StmtPoint>();
+    std::optional<StmtPoint> Point = N->getLocationAs<StmtPoint>();
     if (!Point)
       return nullptr;
 
-    auto *CE = dyn_cast<CallExpr>(Point->getStmt());
+    const auto *CE = Point->getStmtAs<CallExpr>();
     if (!CE || !OpenFunction.matchesAsWritten(*CE))
       return nullptr;
 
-    SVal SV = N->getSVal(CE);
-    if (SV.getAsSymbol() != StreamSym)
+    if (N->getSVal(CE).getAsSymbol() != StreamSym)
       return nullptr;
 
     Satisfied = true;
 
     // Check if open's second argument contains O_NONBLOCK
-    const auto *Flag = CE->getArg(1);
-    SVal FlagSV = N->getSVal(Flag);
-    const llvm::APSInt *FlagV = FlagSV.getAsInteger();
-    if (!FlagV)
+    const llvm::APSInt *FlagVal = N->getSVal(CE->getArg(1)).getAsInteger();
+    if (!FlagVal)
       return nullptr;
 
-    if ((*FlagV & NonBlockMacroVal) != 0)
+    if ((*FlagVal & NonBlockMacroVal) != 0)
       BR.markInvalid(getTag(), nullptr);
 
     return nullptr;
