@@ -285,16 +285,16 @@ static cl::opt<bool>
                        cl::init(true),
                        cl::desc("Emit noops only in innermost loops"));
 
-void ARMCortexM4AlignmentHazardRecognizer::Reset() { Offset = 0; }
+void ARMCortexM4FAlignmentHazardRecognizer::Reset() { Offset = 0; }
 
-ARMCortexM4AlignmentHazardRecognizer::ARMCortexM4AlignmentHazardRecognizer(
+ARMCortexM4FAlignmentHazardRecognizer::ARMCortexM4FAlignmentHazardRecognizer(
     const MCSubtargetInfo &STI)
     : STI(STI), MBB(nullptr), MF(nullptr), Offset(0), Advanced(false),
       EmittingNoop(false) {
   MaxLookAhead = 1;
 }
 
-void ARMCortexM4AlignmentHazardRecognizer::EmitInstruction(SUnit *SU) {
+void ARMCortexM4FAlignmentHazardRecognizer::EmitInstruction(SUnit *SU) {
   if (!SU->isInstr())
     return;
 
@@ -303,7 +303,7 @@ void ARMCortexM4AlignmentHazardRecognizer::EmitInstruction(SUnit *SU) {
   return EmitInstruction(MI);
 }
 
-void ARMCortexM4AlignmentHazardRecognizer::EmitInstruction(MachineInstr *MI) {
+void ARMCortexM4FAlignmentHazardRecognizer::EmitInstruction(MachineInstr *MI) {
   if (MI->isDebugInstr())
     return;
 
@@ -314,13 +314,13 @@ void ARMCortexM4AlignmentHazardRecognizer::EmitInstruction(MachineInstr *MI) {
   // it with an AsmPrinter comment.
   if (EmittingNoop)
     if (MachineInstr *Prev = MI->getPrevNode())
-      Prev->setAsmPrinterFlag(ARM::M4F_ALIGNMENT_HAZARD);
+      Prev->setAsmPrinterFlag(ARM::ALIGNMENT_HAZARD);
 
   EmittingNoop = false;
 }
 
 ScheduleHazardRecognizer::HazardType
-ARMCortexM4AlignmentHazardRecognizer::getHazardType(SUnit *SU,
+ARMCortexM4FAlignmentHazardRecognizer::getHazardType(SUnit *SU,
                                                     int /*Ignored*/) {
   if (!SU->isInstr())
     return HazardType::NoHazard;
@@ -331,7 +331,7 @@ ARMCortexM4AlignmentHazardRecognizer::getHazardType(SUnit *SU,
 }
 
 ScheduleHazardRecognizer::HazardType
-ARMCortexM4AlignmentHazardRecognizer::getHazardTypeAssumingOffset(
+ARMCortexM4FAlignmentHazardRecognizer::getHazardTypeAssumingOffset(
     MachineInstr *MI, size_t AssumedOffset) {
   if (Advanced) {
     Advanced = false;
@@ -375,12 +375,12 @@ ARMCortexM4AlignmentHazardRecognizer::getHazardTypeAssumingOffset(
   return HazardType::NoHazard;
 }
 
-void ARMCortexM4AlignmentHazardRecognizer::AdvanceCycle() { Advanced = true; }
-void ARMCortexM4AlignmentHazardRecognizer::RecedeCycle() {}
+void ARMCortexM4FAlignmentHazardRecognizer::AdvanceCycle() { Advanced = true; }
+void ARMCortexM4FAlignmentHazardRecognizer::RecedeCycle() {}
 
-void ARMCortexM4AlignmentHazardRecognizer::EmitNoop() { Offset += 2; }
+void ARMCortexM4FAlignmentHazardRecognizer::EmitNoop() { Offset += 2; }
 
-unsigned ARMCortexM4AlignmentHazardRecognizer::PreEmitNoops(SUnit *SU) {
+unsigned ARMCortexM4FAlignmentHazardRecognizer::PreEmitNoops(SUnit *SU) {
   if (!SU->isInstr())
     return 0;
 
@@ -389,7 +389,7 @@ unsigned ARMCortexM4AlignmentHazardRecognizer::PreEmitNoops(SUnit *SU) {
   return PreEmitNoops(MI);
 }
 
-unsigned ARMCortexM4AlignmentHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
+unsigned ARMCortexM4FAlignmentHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   const MachineBasicBlock *Parent = MI->getParent();
   const Function &F = Parent->getParent()->getFunction();
   if (F.hasMinSize())
@@ -430,7 +430,7 @@ unsigned ARMCortexM4AlignmentHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
 }
 
 const MachineLoop *
-ARMCortexM4AlignmentHazardRecognizer::getLoopFor(MachineInstr *MI) {
+ARMCortexM4FAlignmentHazardRecognizer::getLoopFor(MachineInstr *MI) {
   // Calculate and cache the MachineLoopInfo.
   MachineFunction *ParentMF = MI->getParent()->getParent();
   if (MF != ParentMF) {

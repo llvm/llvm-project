@@ -151,9 +151,9 @@ ScheduleHazardRecognizer *ARMBaseInstrInfo::CreateTargetMIHazardRecognizer(
     MHR->AddHazardRecognizer(
         std::make_unique<ARMBankConflictHazardRecognizer>(DAG, 0x4, true));
 
-  if (Subtarget.isCortexM4() && !DAG->hasVRegLiveness())
+  if (Subtarget.hasCortexM4FAlignmentHazards() && !DAG->hasVRegLiveness())
     MHR->AddHazardRecognizer(
-        std::make_unique<ARMCortexM4AlignmentHazardRecognizer>(
+        std::make_unique<ARMCortexM4FAlignmentHazardRecognizer>(
             DAG->MF.getSubtarget()));
 
   // Not inserting ARMHazardRecognizerFPMLx because that would change
@@ -173,9 +173,9 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
   if (Subtarget.isThumb2() || Subtarget.hasVFP2Base())
     MHR->AddHazardRecognizer(std::make_unique<ARMHazardRecognizerFPMLx>());
 
-  if (Subtarget.isCortexM4())
+  if (Subtarget.hasCortexM4FAlignmentHazards())
     MHR->AddHazardRecognizer(
-        std::make_unique<ARMCortexM4AlignmentHazardRecognizer>(
+        std::make_unique<ARMCortexM4FAlignmentHazardRecognizer>(
             DAG->MF.getSubtarget()));
 
   auto BHR = TargetInstrInfo::CreateTargetPostRAHazardRecognizer(II, DAG);
@@ -186,10 +186,10 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 
 ScheduleHazardRecognizer *ARMBaseInstrInfo::CreateTargetPostRAHazardRecognizer(
     const MachineFunction &MF) const {
-  if (!Subtarget.isCortexM4())
+  if (!Subtarget.hasCortexM4FAlignmentHazards())
     return TargetInstrInfo::CreateTargetPostRAHazardRecognizer(MF);
 
-  return new ARMCortexM4AlignmentHazardRecognizer(MF.getSubtarget());
+  return new ARMCortexM4FAlignmentHazardRecognizer(MF.getSubtarget());
 }
 
 MachineInstr *

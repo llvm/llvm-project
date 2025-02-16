@@ -1447,8 +1447,8 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   if (MI->getAsmPrinterFlag(
-          MachineInstr::CommentFlag(ARM::M4F_ALIGNMENT_HAZARD)))
-    OutStreamer->AddComment("cortex-m4f alignment hazard");
+          MachineInstr::CommentFlag(ARM::ALIGNMENT_HAZARD)))
+    OutStreamer->AddComment("alignment hazard");
 
   // Emit unwinding stuff for frame-related instructions
   if (Subtarget->isTargetEHABICompatible() &&

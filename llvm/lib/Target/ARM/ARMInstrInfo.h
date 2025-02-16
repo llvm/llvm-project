@@ -43,7 +43,7 @@ private:
 
 namespace ARM {
 enum AsmComments {
-  M4F_ALIGNMENT_HAZARD = MachineInstr::TAsmComments,
+  ALIGNMENT_HAZARD = MachineInstr::TAsmComments,
 };
 } // namespace ARM
 }

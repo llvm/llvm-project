@@ -74,7 +74,7 @@ private:
   odd halfword boundaries will experience a performance drop. Specifically, one
   stall cycle is inserted for every three instructions executed."
 */
-class ARMCortexM4AlignmentHazardRecognizer : public ScheduleHazardRecognizer {
+class ARMCortexM4FAlignmentHazardRecognizer : public ScheduleHazardRecognizer {
   const MCSubtargetInfo &STI;
   const MachineBasicBlock *MBB;
   MachineDominatorTree MDT;
@@ -85,7 +85,7 @@ class ARMCortexM4AlignmentHazardRecognizer : public ScheduleHazardRecognizer {
   bool EmittingNoop;
 
 public:
-  ARMCortexM4AlignmentHazardRecognizer(const MCSubtargetInfo &STI);
+  ARMCortexM4FAlignmentHazardRecognizer(const MCSubtargetInfo &STI);
 
   void Reset() override;
 
