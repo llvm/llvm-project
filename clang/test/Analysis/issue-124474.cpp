@@ -1,8 +1,6 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=unix.BlockInCriticalSection \
-// RUN:   -std=c++11 \
-// RUN:   -analyzer-output text \
-// RUN:   -verify %s
+// RUN:   -analyzer-checker=core,unix.BlockInCriticalSection \
+// RUN:   -analyzer-output text -verify %s
 
 // expected-no-diagnostics
 
