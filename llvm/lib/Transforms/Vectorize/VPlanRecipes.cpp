@@ -1220,6 +1220,7 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
 
   Value *Address = State.get(getOperand(0));
   Value *IncAmt = State.get(getOperand(1), /*IsScalar=*/true);
+  Instruction *UpdateInst = cast<Instruction>(State.get(getOperand(2)));
   VectorType *VTy = cast<VectorType>(Address->getType());
 
   // The histogram intrinsic requires a mask even if the recipe doesn't;
@@ -1236,10 +1237,10 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
   // add a separate intrinsic in future, but for now we'll try this.
   if (Opcode == Instruction::Sub)
     IncAmt = Builder.CreateNeg(IncAmt);
-  else
-    assert(Opcode == Instruction::Add && "only add or sub supported for now");
+  assert(isLegalUpdateInstruction(UpdateInst) &&
+         "Found Ilegal update instruction for histogram");
 
-  State.Builder.CreateIntrinsic(Intrinsic::experimental_vector_histogram_add,
+  State.Builder.CreateIntrinsic(getHistogramOpcode(UpdateInst),
                                 {VTy, IncAmt->getType()},
                                 {Address, IncAmt, Mask});
 }
@@ -1274,29 +1275,95 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_histogram_add,
                               Type::getVoidTy(Ctx.LLVMCtx),
                               {PtrTy, IncTy, MaskTy});
+  auto *UpdateInst = getOperand(2)->getUnderlyingValue();
+  InstructionCost UpdateCost;
+  if (isa<IntrinsicInst>(UpdateInst)) {
+    IntrinsicCostAttributes UpdateICA(Opcode, IncTy, {IncTy, IncTy});
+    UpdateCost = Ctx.TTI.getIntrinsicInstrCost(UpdateICA, Ctx.CostKind);
+  } else
+    UpdateCost = Ctx.TTI.getArithmeticInstrCost(Opcode, VTy, Ctx.CostKind);
 
   // Add the costs together with the add/sub operation.
   return Ctx.TTI.getIntrinsicInstrCost(ICA, Ctx.CostKind) + MulCost +
-         Ctx.TTI.getArithmeticInstrCost(Opcode, VTy, Ctx.CostKind);
+         UpdateCost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPHistogramRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
+  auto *UpdateInst = cast<Instruction>(getOperand(2)->getUnderlyingValue());
+  assert(isLegalUpdateInstruction(UpdateInst) &&
+         "Found Ilegal update instruction for histogram");
   O << Indent << "WIDEN-HISTOGRAM buckets: ";
   getOperand(0)->printAsOperand(O, SlotTracker);
 
-  if (Opcode == Instruction::Sub)
-    O << ", dec: ";
-  else {
-    assert(Opcode == Instruction::Add);
-    O << ", inc: ";
+  std::string UpdateMsg;
+  if (isa<BinaryOperator>(UpdateInst)) {
+    if (Opcode == Instruction::Sub)
+      UpdateMsg = ", dec: ";
+    else {
+      UpdateMsg = ", inc: ";
+    }
+  } else {
+    switch (cast<IntrinsicInst>(UpdateInst)->getIntrinsicID()) {
+    case Intrinsic::uadd_sat:
+      UpdateMsg = ", saturated inc: ";
+      break;
+    case Intrinsic::umax:
+      UpdateMsg = ", max: ";
+      break;
+    case Intrinsic::umin:
+      UpdateMsg = ", min: ";
+      break;
+    default:
+      llvm_unreachable("Found Ilegal update instruction for histogram");
+    }
   }
+  O << UpdateMsg;
   getOperand(1)->printAsOperand(O, SlotTracker);
 
   if (VPValue *Mask = getMask()) {
     O << ", mask: ";
     Mask->printAsOperand(O, SlotTracker);
+  }
+}
+
+bool VPHistogramRecipe::isLegalUpdateInstruction(Instruction *I) {
+  // We only support add and sub instructions and the following list of
+  // intrinsics: uadd.sat, umax, umin.
+  if (isa<BinaryOperator>(I))
+    return I->getOpcode() == Instruction::Add ||
+           I->getOpcode() == Instruction::Sub;
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::uadd_sat:
+    case Intrinsic::umax:
+    case Intrinsic::umin:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+unsigned VPHistogramRecipe::getHistogramOpcode(Instruction *I) {
+  // We only support add and sub instructions and the following list of
+  // intrinsics: uadd.sat, umax, umin.
+  assert(isLegalUpdateInstruction(I) &&
+         "Found Ilegal update instruction for histogram");
+  if (isa<BinaryOperator>(I))
+    return Intrinsic::experimental_vector_histogram_add;
+  auto *II = cast<IntrinsicInst>(I);
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::uadd_sat:
+    return Intrinsic::experimental_vector_histogram_uadd_sat;
+  case Intrinsic::umax:
+    return Intrinsic::experimental_vector_histogram_umax;
+  case Intrinsic::umin:
+    return Intrinsic::experimental_vector_histogram_umin;
+  default:
+    llvm_unreachable("Found Ilegal update instruction for histogram");
   }
 }
 

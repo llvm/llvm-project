@@ -8656,14 +8656,16 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
                                      ArrayRef<VPValue *> Operands) {
   // FIXME: Support other operations.
   unsigned Opcode = HI->Update->getOpcode();
-  assert((Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
-         "Histogram update operation must be an Add or Sub");
+  assert(VPHistogramRecipe::isLegalUpdateInstruction(HI->Update) &&
+         "Found Ilegal update instruction for histogram");
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
   HGramOps.push_back(Operands[1]);
   // Increment value.
   HGramOps.push_back(getVPValueOrAddLiveIn(HI->Update->getOperand(1)));
+  // Update Instruction.
+  HGramOps.push_back(getVPValueOrAddLiveIn(HI->Update));
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.

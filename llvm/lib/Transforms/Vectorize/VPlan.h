@@ -1415,8 +1415,15 @@ public:
   /// Return the mask operand if one was provided, or a null pointer if all
   /// lanes should be executed unconditionally.
   VPValue *getMask() const {
-    return getNumOperands() == 3 ? getOperand(2) : nullptr;
+    return getNumOperands() == 4 ? getOperand(3) : nullptr;
   }
+
+  /// Returns true if \p I is a legal update instruction of histogram operation.
+  static bool isLegalUpdateInstruction(Instruction *I);
+
+  /// Given update instruction \p I, returns the opcode of the coresponding
+  /// histogram instruction.
+  static unsigned getHistogramOpcode(Instruction *I);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe
