@@ -3839,6 +3839,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                             AlignmentCI, OffsetValue);
     return RValue::get(PtrValue);
   }
+  case Builtin::BI__builtin_assume_dereferenceable: {
+    const Expr *Ptr = E->getArg(0);
+    const Expr *Size = E->getArg(1);
+    Value *PtrValue = EmitScalarExpr(Ptr);
+    Value *SizeValue = EmitScalarExpr(Size);
+    if (SizeValue->getType() != IntPtrTy)
+      SizeValue =
+          Builder.CreateIntCast(SizeValue, IntPtrTy, false, "casted.size");
+    Builder.CreateDereferenceableAssumption(PtrValue, SizeValue);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
     if (E->getArg(0)->HasSideEffects(getContext()))
@@ -21011,6 +21022,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
               CI = Intrinsic::experimental_constrained_nearbyint; break;
       case 1: ID = Intrinsic::round;
               CI = Intrinsic::experimental_constrained_round; break;
+      case 4: ID = Intrinsic::roundeven;
+              CI = Intrinsic::experimental_constrained_roundeven; break;
       case 5: ID = Intrinsic::trunc;
               CI = Intrinsic::experimental_constrained_trunc; break;
       case 6: ID = Intrinsic::ceil;

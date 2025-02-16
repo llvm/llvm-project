@@ -1108,6 +1108,7 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
+    p                    0.14
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
     zalasr               0.1

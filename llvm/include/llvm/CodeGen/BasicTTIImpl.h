@@ -1675,7 +1675,8 @@ public:
           return thisT()->getMemoryOpCost(*FOp, ICA.getArgTypes()[0], Alignment,
                                           AS, CostKind);
         }
-        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
+        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID()) ||
+            ICA.getID() == Intrinsic::vp_fneg) {
           return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
                                                  CostKind);
         }
