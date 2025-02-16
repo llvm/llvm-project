@@ -9,6 +9,12 @@ macros:
   - macro_name: M_PURGE_ALL
     macro_header: malloc-macros.h
 functions:
+  - name: malloc_usable_size
+    standards:
+      - gnu
+    return_type: size_t
+    arguments:
+      - type: void *
   - name: mallopt
     standards:
       - gnu
@@ -16,3 +22,10 @@ functions:
     arguments:
       - type: int
       - type: int
+  - name: pvalloc
+    standards:
+      - bsd
+      - gnu
+    return_type: void *
+    arguments:
+      - type: size_t
