@@ -174,12 +174,12 @@ define void @f_chained_gep_with_nofree_nosync(ptr %ptr, ptr %ptr2, i1 %cond) nof
 ; CHECK-NEXT:    store i32 0, ptr [[PTR2:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY_LR_PH]]
 ; CHECK:       for.body.lr.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[IF_END:%.*]] ]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_END]], label [[IF:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[GEP]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[PTR2]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
