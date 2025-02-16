@@ -6404,7 +6404,7 @@ unsigned MipsAsmParser::getATReg(SMLoc Loc) {
 }
 
 unsigned MipsAsmParser::getReg(int RC, int RegNo) {
-  return *(getContext().getRegisterInfo()->getRegClass(RC).begin() + RegNo);
+  return getContext().getRegisterInfo()->getRegClass(RC).getRegister(RegNo);
 }
 
 bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
