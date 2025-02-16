@@ -28,6 +28,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -35349,22 +35350,7 @@ MVT X86TargetLowering::getPreferredSwitchConditionType(LLVMContext &Context,
 // basic block or any successors of the basic block.
 static bool isEFLAGSLiveAfter(MachineBasicBlock::iterator Itr,
                               MachineBasicBlock *BB) {
-  // Scan forward through BB for a use/def of EFLAGS.
-  for (const MachineInstr &mi : llvm::make_range(std::next(Itr), BB->end())) {
-    if (mi.readsRegister(X86::EFLAGS, /*TRI=*/nullptr))
-      return true;
-    // If we found a def, we can stop searching.
-    if (mi.definesRegister(X86::EFLAGS, /*TRI=*/nullptr))
-      return false;
-  }
-
-  // If we hit the end of the block, check whether EFLAGS is live into a
-  // successor.
-  for (MachineBasicBlock *Succ : BB->successors())
-    if (Succ->isLiveIn(X86::EFLAGS))
-      return true;
-
-  return false;
+  return isPhysRegLiveAfter(X86::EFLAGS, Itr);
 }
 
 /// Utility function to emit xbegin specifying the start of an RTM region.

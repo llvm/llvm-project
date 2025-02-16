@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -13296,6 +13297,10 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     DebugLoc dl = MI.getDebugLoc();
     F->insert(It, copy0MBB);
     F->insert(It, sinkMBB);
+    if (isPhysRegLiveAfter(PPC::CARRY , MI.getIterator())) {
+      copy0MBB->addLiveIn(PPC::CARRY);
+      sinkMBB->addLiveIn(PPC::CARRY);
+    }
 
     // Set the call frame size on entry to the new basic blocks.
     // See https://reviews.llvm.org/D156113.
