@@ -196,6 +196,12 @@ Improvements to Clang's diagnostics
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
 
+- The :doc:`ThreadSafetyAnalysis` now supports ``-Wthread-safety-pointer``,
+  which enables warning on passing or returning pointers to guarded variables
+  as function arguments or return value respectively. Note that
+  :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
+  feature will be default-enabled with ``-Wthread-safety`` in a future release.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
