@@ -199,6 +199,11 @@ if (FLANG_STANDALONE_BUILD)
     ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 
   set(LLVM_EXTERNAL_LIT "${LLVM_TOOLS_BINARY_DIR}/llvm-lit" CACHE STRING "Command used to spawn lit")
+  set(LIT_ARGS_DEFAULT "-sv")
+  if (MSVC OR XCODE)
+    set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
+  endif()
+  set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
   option(FLANG_INCLUDE_TESTS
          "Generate build targets for the Flang unit tests."
@@ -229,11 +234,6 @@ if (FLANG_STANDALONE_BUILD)
   if (LLVM_BUILD_DOCS)
     add_custom_target(doxygen ALL)
   endif()
-
-  # Override the value from installed CMake files, as they refer
-  # to the directory used during the original MLIR package build,
-  # which may be no longer available.  Instead, use the current checkout.
-  set(MLIR_MAIN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../mlir )
 
 else()
   option(FLANG_INCLUDE_TESTS
