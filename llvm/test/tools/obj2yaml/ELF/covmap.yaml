@@ -1,0 +1,160 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: obj2yaml %t.o | tee %t.plain.yaml | FileCheck %s --check-prefixes=CHECK,PLAIN
+# RUN: obj2yaml --covmap-raw %t.o | tee %t.raw.yaml | FileCheck %s --check-prefixes=CHECK,COVMAP,RAWONLY,RAW,DLOC
+# RUN: obj2yaml --covmap --covmap-raw %t.o | tee %t.mixed.yaml | FileCheck %s --check-prefixes=CHECK,COVMAP,RAW,DET,LOC,DLOC
+# RUN: obj2yaml --covmap --covmap-dloc %t.o | tee %t.dloc.yaml | FileCheck %s --check-prefixes=CHECK,COVMAP,DET,DETONLY,DLOC
+# RUN: obj2yaml --covmap %t.o | tee %t.covmap.yaml | FileCheck %s --check-prefixes=CHECK,COVMAP,DET,DETONLY,LOC
+# RUN: sed -E '/^(#.*)?$/d' %s | diff -au %t.covmap.yaml -
+# RUN: yaml2obj %t.plain.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.raw.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.mixed.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.dloc.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.covmap.yaml -o - | cmp %t.o -
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_GNU
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+# CHECK:             __llvm_covfun
+  - Name:            __llvm_covfun
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+# PLAIN: Content:
+# COVMAP: CovFun:
+    CovFun:
+# RAW:- NameRef:         0xA72DB7A33048E6A3
+      - FuncName:        _Z4funci
+# COVMAP: FuncHash:      0xAFC772D567676299
+        FuncHash:        0xAFC772D567676299
+        FilenamesRef:    0x70DA2CAFD8CE198E
+# COVMAP: Expressions:
+        Expressions:
+# RAW:    - [ { Tag: Ref, Val: 0 }, { Tag: Ref, Val: 1 } ]
+          - [ { Ref: 0 }, { Ref: 1 } ]
+          - [ { Add: 0 }, { Ref: 2 } ]
+          - [ { Add: 0 }, { Ref: 2 } ]
+          - [ { Add: 0 }, { Ref: 2 } ]
+          - [ { Ref: 0 }, { Ref: 2 } ]
+          - [ { Ref: 0 }, { Ref: 2 } ]
+          - [ { Ref: 0 }, { Ref: 2 } ]
+          - [ { Add: 0 }, { Ref: 5 } ]
+# COVMAP: Files:
+        Files:
+# DET:    - Index:           0
+          - Index:           0
+# DET:      Filename:        func.cpp
+            Filename:        func.cpp
+# COVMAP:   Regions:
+            Regions:
+# LOC:     Loc: [ 3, 17, 14, 2 ]
+# DLOC:   dLoc: [ 3, 17, 11, 2 ]
+# RAW:     Tag: Ref, Val: 0
+# DETONLY: Ref: 0
+              - { Loc: [ 3, 17, 14, 2 ], Ref: 0 }
+# LOC:     Loc: [ 6, 6, 11, 4 ]
+# DLOC    dLoc: [ 3, 6, 5, 4 ]
+# RAW:     Tag: Add, Val: 0
+# DETONLY: Add: 0
+              - { Loc: [ 6, 6, 11, 4 ], Add: 0 }
+# COVMAP: Expansion: 1
+              - { Loc: [ 7, 9, 7, 13 ], Expansion: 1 }
+# COVMAP: isGap: true
+# RAW:      Tag: Ref, Val: 2
+# DETONLY:  Ref: 2
+              - { Loc: [ 7, 23, 8, 7 ], isGap: true, Ref: 2 }
+              - { Loc: [ 8, 7, 8, 16 ], Ref: 2 }
+# COVMAP: isGap: true
+# RAW:      Tag: Sub, Val: 3
+# DETONLY:  Sub: 3
+              - { Loc: [ 8, 17, 10, 5 ], isGap: true, Sub: 3 }
+# COVMAP: ExtTag: Skip
+              - { Loc: [ 9, 1, 9, 1 ], ExtTag: Skip }
+              - { Loc: [ 10, 5, 11, 4 ], Sub: 3 }
+              - { Loc: [ 11, 12, 11, 17 ], Sub: 3 }
+# RAW: ExtTag: Branch, Branch: [ { Tag: Ref, Val: 1 }, { Tag: Sub, Val: 6 } ] }
+# DETONLY: Branch: [ { Ref: 1 }, { Sub: 6 } ]
+              - { Loc: [ 11, 12, 11, 17 ], Branch: [ { Ref: 1 }, { Sub: 6 } ] }
+              - { Loc: [ 11, 19, 12, 3 ], isGap: true, Sub: 6 }
+              - { Loc: [ 12, 3, 12, 11 ], Sub: 6 }
+              - { Loc: [ 12, 12, 13, 3 ], isGap: true, Tag: Zero }
+# LOC:    Loc: [ 13, 3, 13, 12 ]
+# DLOC:  dLoc: [ 1, 3, 0, 12 ]
+# COVMAP: Tag: Zero
+              - { Loc: [ 13, 3, 13, 12 ], Tag: Zero }
+# DET:    - Index:           1
+          - Index:           1
+# DET:      Filename:        func.cpp
+            Filename:        func.cpp
+# COVMAP:   Regions:
+            Regions:
+              - { Loc: [ 1, 17, 1, 41 ], Add: 0 }
+              - { Loc: [ 1, 18, 1, 32 ], Add: 0 }
+# RAW:      ExtTag: Decision
+# COVMAP: Decision: { BIdx: 5, NCond: 3 } }
+              - { Loc: [ 1, 18, 1, 40 ], Decision: { BIdx: 5, NCond: 3 } }
+              - { Loc: [ 1, 19, 1, 22 ], Add: 0 }
+# RAW: ExtTag: MCDCBranch
+# RAW:     Branch: [ { Tag: Sub, Val: 7 }, { Tag: Ref, Val: 5 } ]
+# DETONLY: Branch: [ { Sub: 7 }, { Ref: 5 } ]
+# COVMAP: MCDC: [ 1, 2, 3 ]
+              - { Loc: [ 1, 19, 1, 22 ], Branch: [ { Sub: 7 }, { Ref: 5 } ], MCDC: [ 1, 2, 3 ] }
+              - { Loc: [ 1, 26, 1, 31 ], Ref: 5 }
+              - { Loc: [ 1, 26, 1, 31 ], Branch: [ { Tag: Zero }, { Ref: 6 } ], MCDC: [ 3, 2, 0 ] }
+              - { Loc: [ 1, 36, 1, 40 ], Ref: 3 }
+              - { Loc: [ 1, 36, 1, 40 ], Branch: [ { Ref: 4 }, { Tag: Zero } ], MCDC: [ 2, 0, 0 ] }
+# CHECK:             __llvm_covmap
+  - Name:            __llvm_covmap
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+# PLAIN: Content:
+# COVMAP: CovMap:
+    CovMap:
+# COVMAP: - FilenamesRef:    0x70DA2CAFD8CE198E
+      - FilenamesRef:    0x70DA2CAFD8CE198E
+# COVMAP: Version:
+        Version:         6
+# RAWONLY: Filenames:
+# RAWONLY:    - ''
+# RAWONLY:    - func.cpp
+# CHECK:             __llvm_prf_names
+  - Name:            __llvm_prf_names
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
+    AddressAlign:    0x1
+# PLAIN-NOT: CovFun:
+# PLAIN-NOT: CovMap:
+# PLAIN-NOT: PrfNames:
+# PLAIN: Content:
+# CovMap: ProfNames
+    PrfNames:
+# CovMap: - - _Z4funci
+      - - _Z4funci
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            __llvm_covfun
+      - Name:            __llvm_covmap
+      - Name:            __llvm_prf_names
+...
+
+# #define EXPR(x) (((x) || false) && true)
+#
+# int func(int a) {
+#   int r = 0;
+#   int i = 0;
+#   do {
+#     if (EXPR(30 <= i))
+#       return -1;
+#
+#     r += i++;
+#   } while (i < a);
+#   return r;
+#   return -1;
+# }

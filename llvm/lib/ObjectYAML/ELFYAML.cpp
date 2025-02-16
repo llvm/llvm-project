@@ -15,6 +15,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/ObjectYAML/CovMap.h"
 #include "llvm/Support/ARMEHABI.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1425,6 +1426,12 @@ static void sectionMapping(IO &IO, ELFYAML::RawContentSection &Section) {
   IO.mapOptional("Info", Section.Info);
 }
 
+static void sectionMapping(IO &IO, ELFYAML::CovMapSectionBase &Section) {
+  commonSectionMapping(IO, Section);
+  Section.mapping(IO);
+  IO.mapOptional("Info", Section.Info);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::BBAddrMapSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Content", Section.Content);
@@ -1734,10 +1741,15 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       if (ELFYAML::StackSizesSection::nameMatches(Name))
         Section = std::make_unique<ELFYAML::StackSizesSection>();
       else
+        Section = covmap::make_unique(Name);
+
+      if (!Section)
         Section = std::make_unique<ELFYAML::RawContentSection>();
     }
 
     if (auto S = dyn_cast<ELFYAML::RawContentSection>(Section.get()))
+      sectionMapping(IO, *S);
+    else if (auto S = dyn_cast<ELFYAML::CovMapSectionBase>(Section.get()))
       sectionMapping(IO, *S);
     else
       sectionMapping(IO, *cast<ELFYAML::StackSizesSection>(Section.get()));

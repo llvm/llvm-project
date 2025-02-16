@@ -16,11 +16,15 @@
 #include "llvm/Object/Minidump.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
 enum RawSegments : unsigned { none = 0, data = 1, linkedit = 1 << 1 };
+
+extern llvm::cl::OptionCategory ELFCat;
+
 std::error_code coff2yaml(llvm::raw_ostream &Out,
                           const llvm::object::COFFObjectFile &Obj);
 llvm::Error elf2yaml(llvm::raw_ostream &Out,

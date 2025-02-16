@@ -229,6 +229,7 @@ struct Chunk {
     DependentLibraries,
     CallGraphProfile,
     BBAddrMap,
+    CovMapBase,
 
     // Special chunks.
     SpecialChunksStart,
@@ -396,6 +397,19 @@ struct RawContentSection : Section {
 
   // Is used when a content is read as an array of bytes.
   std::optional<std::vector<uint8_t>> ContentBuf;
+};
+
+struct CovMapSectionBase : Section {
+  std::optional<llvm::yaml::Hex64> Info;
+
+  CovMapSectionBase() : Section(ChunkKind::CovMapBase) {}
+
+  virtual void mapping(yaml::IO &IO) = 0;
+  virtual Error encode(raw_ostream &OS) const = 0;
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::CovMapBase;
+  }
 };
 
 struct NoBitsSection : Section {

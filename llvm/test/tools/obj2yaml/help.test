@@ -7,5 +7,6 @@
 # CHECK: OVERVIEW: Dump a YAML description from an object file
 # CHECK: USAGE: obj2yaml{{(.exe)?}} [options] <input file>{{$}}
 # CHECK: OPTIONS:
+# CATEG: ELF Options:
 # CATEG: Generic Options:
 # CATEG: obj2yaml Options:

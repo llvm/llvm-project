@@ -7,6 +7,7 @@ add_llvm_component_library(LLVMObjectYAML
   CodeViewYAMLTypes.cpp
   COFFEmitter.cpp
   COFFYAML.cpp
+  CovMap.cpp
   DWARFEmitter.cpp
   DWARFYAML.cpp
   DXContainerEmitter.cpp
@@ -34,7 +35,9 @@ add_llvm_component_library(LLVMObjectYAML
 
   LINK_COMPONENTS
   BinaryFormat
+  Coverage
   Object
+  ProfileData
   Support
   TargetParser
   DebugInfoCodeView

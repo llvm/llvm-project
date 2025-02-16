@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/ObjectYAML/CovMap.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
@@ -65,6 +66,13 @@ public:
   uint64_t tell() const { return OS.tell(); }
   uint64_t getOffset() const { return InitialOffset + OS.tell(); }
   void writeBlobToStream(raw_ostream &Out) const { Out << OS.str(); }
+
+  uint64_t checkAndTell(uint64_t Base) {
+    uint64_t Offset = OS.tell() - Base;
+    if (checkLimit(Offset))
+      return Offset;
+    return 0;
+  }
 
   Error takeLimitError() {
     // Request to write 0 bytes to check we did not reach the limit.
@@ -307,6 +315,9 @@ template <class ELFT> class ELFState {
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::CallGraphProfileSection &Section,
+                           ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::CovMapSectionBase &Section,
                            ContiguousBlobAccumulator &CBA);
 
   void writeFill(ELFYAML::Fill &Fill, ContiguousBlobAccumulator &CBA);
@@ -761,6 +772,13 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
   // valid SHN_UNDEF entry since SHT_NULL == 0.
   SHeaders.resize(Doc.getSections().size());
 
+  auto CovMapEncoder = covmap::Encoder::get();
+  for (auto &Chunk : Doc.Chunks) {
+    if (isa<ELFYAML::CovMapSectionBase>(Chunk.get()))
+      CovMapEncoder->collect(Chunk.get());
+  }
+  CovMapEncoder->fixup();
+
   for (const std::unique_ptr<ELFYAML::Chunk> &D : Doc.Chunks) {
     if (ELFYAML::Fill *S = dyn_cast<ELFYAML::Fill>(D.get())) {
       S->Offset = alignToOffset(CBA, /*Align=*/1, S->Offset);
@@ -893,6 +911,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::CallGraphProfileSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::BBAddrMapSection>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::CovMapSectionBase>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else {
       llvm_unreachable("Unknown section type");
@@ -1901,6 +1921,24 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                     Section.BloomFilter->size() * sizeof(typename ELFT::uint) +
                     Section.HashBuckets->size() * 4 +
                     Section.HashValues->size() * 4;
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(
+    Elf_Shdr &SHeader, const ELFYAML::CovMapSectionBase &Section,
+    ContiguousBlobAccumulator &CBA) {
+  if (Section.Info)
+    SHeader.sh_info = *Section.Info;
+
+  if (Section.Content)
+    return;
+
+  auto &OS = *CBA.getRawOS(0);
+  auto BaseOffset = OS.tell();
+  if (auto E = Section.encode(OS))
+    reportError(std::move(E));
+
+  SHeader.sh_size = CBA.checkAndTell(BaseOffset);
 }
 
 template <class ELFT>
