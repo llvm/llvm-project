@@ -265,9 +265,9 @@ static MemRefType dropUnitDims(MemRefType inputType,
                                ArrayRef<OpFoldResult> sizes,
                                ArrayRef<OpFoldResult> strides) {
   auto targetShape = getReducedShape(sizes);
-  MemRefType rankReducedType = memref::SubViewOp::inferRankReducedResultType(
+  Type rankReducedType = memref::SubViewOp::inferRankReducedResultType(
       targetShape, inputType, offsets, sizes, strides);
-  return rankReducedType.canonicalizeStridedLayout();
+  return cast<MemRefType>(rankReducedType).canonicalizeStridedLayout();
 }
 
 /// Creates a rank-reducing memref.subview op that drops unit dims from its

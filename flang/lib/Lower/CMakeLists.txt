@@ -44,6 +44,8 @@ add_flang_library(FortranLower
   FIRDialect
   FIRTransforms
   HLFIRDialect
+  ${dialect_libs}
+  ${extension_libs}
 
   LINK_LIBS
   CUFAttrs
@@ -61,10 +63,6 @@ add_flang_library(FortranLower
 
   LINK_COMPONENTS
   Support
-
-  MLIR_DEPS
-  ${dialect_libs}
-  ${extension_libs}
 
   MLIR_LIBS
   ${dialect_libs}

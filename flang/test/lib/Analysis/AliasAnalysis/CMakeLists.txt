@@ -8,6 +8,7 @@ add_flang_library(FIRTestAnalysis
   FIRSupport
   FIRTransforms
   FIRAnalysis
+  ${dialect_libs}
 
   LINK_LIBS
   FIRDialect
@@ -16,9 +17,6 @@ add_flang_library(FIRTestAnalysis
   FIRTransforms
   FIRAnalysis
   MLIRTestAnalysis
-
-  MLIR_DEPS
-  ${dialect_libs}
 
   MLIR_LIBS
   ${dialect_libs}

@@ -186,23 +186,20 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
   OS << "Root Signature Definitions"
      << "\n";
   uint8_t Space = 0;
-  for (const Function &F : M) {
-    auto It = RSDMap.find(&F);
-    if (It == RSDMap.end())
-      continue;
-    const auto &RS = It->second;
-    OS << "Definition for '" << F.getName() << "':\n";
+  for (const auto &P : RSDMap) {
+    const auto &[Function, RSD] = P;
+    OS << "Definition for '" << Function->getName() << "':\n";
 
     // start root signature header
     Space++;
-    OS << indent(Space) << "Flags: " << format_hex(RS.Flags, 8) << ":\n";
-    OS << indent(Space) << "Version: " << RS.Version << ":\n";
-    OS << indent(Space) << "NumParameters: " << RS.NumParameters << ":\n";
-    OS << indent(Space) << "RootParametersOffset: " << RS.RootParametersOffset
+    OS << indent(Space) << "Flags: " << format_hex(RSD.Flags, 8) << ":\n";
+    OS << indent(Space) << "Version: " << RSD.Version << ":\n";
+    OS << indent(Space) << "NumParameters: " << RSD.NumParameters << ":\n";
+    OS << indent(Space) << "RootParametersOffset: " << RSD.RootParametersOffset
        << ":\n";
-    OS << indent(Space) << "NumStaticSamplers: " << RS.NumStaticSamplers
+    OS << indent(Space) << "NumStaticSamplers: " << RSD.NumStaticSamplers
        << ":\n";
-    OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
+    OS << indent(Space) << "StaticSamplersOffset: " << RSD.StaticSamplersOffset
        << ":\n";
     Space--;
     // end root signature header

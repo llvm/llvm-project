@@ -75,9 +75,10 @@ static DenseMap<StringRef, StringRef> getImageArguments(StringRef Image,
   DenseMap<StringRef, StringRef> Args;
   for (StringRef Arg : llvm::split(Image, ",")) {
     auto [Key, Value] = Arg.split("=");
-    auto [It, Inserted] = Args.try_emplace(Key, Value);
-    if (!Inserted)
-      It->second = Saver.save(It->second + "," + Value);
+    if (Args.count(Key))
+      Args[Key] = Saver.save(Args[Key] + "," + Value);
+    else
+      Args[Key] = Value;
   }
 
   return Args;

@@ -855,61 +855,16 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   return Stride;
 }
 
-static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
-                           PredicatedScalarEvolution &PSE, const Loop *L);
-
 /// Check whether a pointer address cannot wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE,
                      const DenseMap<Value *, const SCEV *> &Strides, Value *Ptr,
-                     Type *AccessTy, const Loop *L, bool Assume,
-                     std::optional<int64_t> Stride = std::nullopt) {
-  const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
+                     Type *AccessTy, Loop *L, bool Assume) {
+  const SCEV *PtrScev = PSE.getSCEV(Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, L))
     return true;
 
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
-  if (!AR) {
-    if (!Assume)
-      return false;
-    AR = PSE.getAsAddRec(Ptr);
-  }
-
-  // The address calculation must not wrap. Otherwise, a dependence could be
-  // inverted.
-  if (isNoWrapAddRec(Ptr, AR, PSE, L))
-    return true;
-
-  // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
-  // the distance between the previously accessed location and the wrapped
-  // location will be larger than half the pointer index type space. In that
-  // case, the GEP would be  poison and any memory access dependent on it would
-  // be immediate UB when executed.
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-      GEP && GEP->hasNoUnsignedSignedWrap())
-    return true;
-
-  if (!Stride)
-    Stride = getStrideFromAddRec(AR, L, AccessTy, Ptr, PSE);
-  if (Stride) {
-    // If the null pointer is undefined, then a access sequence which would
-    // otherwise access it can be assumed not to unsigned wrap.  Note that this
-    // assumes the object in memory is aligned to the natural alignment.
-    unsigned AddrSpace = AR->getType()->getPointerAddressSpace();
-    if (!NullPointerIsDefined(L->getHeader()->getParent(), AddrSpace) &&
-        (Stride == 1 || Stride == -1))
-      return true;
-  }
-
-  if (Assume) {
-    PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
-    LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
-                      << "LAA:   Pointer: " << *Ptr << "\n"
-                      << "LAA:   SCEV: " << *AR << "\n"
-                      << "LAA:   Added an overflow assumption\n");
-    return true;
-  }
-
-  return PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
+  return getPtrStride(PSE, AccessTy, Ptr, L, Strides, Assume).has_value() ||
+         PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
 }
 
 static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
@@ -1143,14 +1098,10 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> TranslatedPtrs =
       findForkedPointer(PSE, StridesMap, Ptr, TheLoop);
 
-  for (auto &P : TranslatedPtrs) {
-    if (!hasComputableBounds(PSE, Ptr, P.getPointer(), TheLoop, Assume))
+  for (const auto &P : TranslatedPtrs) {
+    const SCEV *PtrExpr = get<0>(P);
+    if (!hasComputableBounds(PSE, Ptr, PtrExpr, TheLoop, Assume))
       return false;
-
-    // If there's only one option for Ptr, look it up after bounds and wrap
-    // checking, because assumptions might have been added to PSE.
-    if (TranslatedPtrs.size() == 1)
-      P.setPointer(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
 
     // When we run after a failing dependency check we have to make sure
     // we don't have wrapping pointers.
@@ -1162,6 +1113,11 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       if (!isNoWrap(PSE, StridesMap, Ptr, AccessTy, TheLoop, Assume))
         return false;
     }
+    // If there's only one option for Ptr, look it up after bounds and wrap
+    // checking, because assumptions might have been added to PSE.
+    if (TranslatedPtrs.size() == 1)
+      TranslatedPtrs[0] = {replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr),
+                           false};
   }
 
   for (auto [PtrExpr, NeedsFreeze] : TranslatedPtrs) {
@@ -1526,7 +1482,8 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
 
-  assert(Ptr->getType()->isPointerTy() && "Unexpected non-ptr");
+  Type *Ty = Ptr->getType();
+  assert(Ty->isPointerTy() && "Unexpected non-ptr");
   if (isa<ScalableVectorType>(AccessTy)) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
                       << "\n");
@@ -1548,9 +1505,36 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   if (!ShouldCheckWrap || !Stride)
     return Stride;
 
-  if (isNoWrap(PSE, StridesMap, Ptr, AccessTy, Lp, Assume, Stride))
+  // The address calculation must not wrap. Otherwise, a dependence could be
+  // inverted.
+  if (isNoWrapAddRec(Ptr, AR, PSE, Lp))
     return Stride;
 
+  // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
+  // the distance between the previously accessed location and the wrapped
+  // location will be larger than half the pointer index type space. In that
+  // case, the GEP would be  poison and any memory access dependent on it would
+  // be immediate UB when executed.
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+      GEP && GEP->hasNoUnsignedSignedWrap())
+    return Stride;
+
+  // If the null pointer is undefined, then a access sequence which would
+  // otherwise access it can be assumed not to unsigned wrap.  Note that this
+  // assumes the object in memory is aligned to the natural alignment.
+  unsigned AddrSpace = Ty->getPointerAddressSpace();
+  if (!NullPointerIsDefined(Lp->getHeader()->getParent(), AddrSpace) &&
+      (Stride == 1 || Stride == -1))
+    return Stride;
+
+  if (Assume) {
+    PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
+    LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
+                      << "LAA:   Pointer: " << *Ptr << "\n"
+                      << "LAA:   SCEV: " << *AR << "\n"
+                      << "LAA:   Added an overflow assumption\n");
+    return Stride;
+  }
   LLVM_DEBUG(
       dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
              << *Ptr << " SCEV: " << *AR << "\n");

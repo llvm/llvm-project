@@ -500,17 +500,19 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
                                                      std::string &line) {
   io_handler.SetIsDone(true);
-  StreamSP output_stream =
-      GetCommandInterpreter().GetDebugger().GetAsyncOutputStream();
-  StreamSP error_stream =
-      GetCommandInterpreter().GetDebugger().GetAsyncErrorStream();
+  StreamFileSP output_sp = io_handler.GetOutputStreamFileSP();
+  StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
   CommandReturnObject return_obj(
       GetCommandInterpreter().GetDebugger().GetUseColor());
-  EvaluateExpression(line.c_str(), *output_stream, *error_stream, return_obj);
+  EvaluateExpression(line.c_str(), *output_sp, *error_sp, return_obj);
 
-  output_stream->Flush();
-  *error_stream << return_obj.GetErrorString();
+  if (output_sp)
+    output_sp->Flush();
+  if (error_sp) {
+    *error_sp << return_obj.GetErrorString();
+    error_sp->Flush();
+  }
 }
 
 bool CommandObjectExpression::IOHandlerIsInputComplete(IOHandler &io_handler,

@@ -1326,9 +1326,10 @@ class DropInnerMostUnitDimsTransferRead
                                       rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(srcType.getRank(),
                                       rewriter.getIndexAttr(1));
-    MemRefType resultMemrefType = memref::SubViewOp::inferRankReducedResultType(
-        srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
-        strides);
+    auto resultMemrefType =
+        cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
+            srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
+            strides));
     ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
         readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
@@ -1416,9 +1417,10 @@ class DropInnerMostUnitDimsTransferWrite
                                       rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(srcType.getRank(),
                                       rewriter.getIndexAttr(1));
-    MemRefType resultMemrefType = memref::SubViewOp::inferRankReducedResultType(
-        srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
-        strides);
+    auto resultMemrefType =
+        cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
+            srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
+            strides));
     ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
         writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
 

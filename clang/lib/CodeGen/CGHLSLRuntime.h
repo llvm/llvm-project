@@ -55,7 +55,6 @@ class StructType;
 namespace clang {
 class VarDecl;
 class ParmVarDecl;
-class InitListExpr;
 class HLSLBufferDecl;
 class HLSLResourceBindingAttr;
 class Type;
@@ -66,7 +65,6 @@ class FunctionDecl;
 namespace CodeGen {
 
 class CodeGenModule;
-class CodeGenFunction;
 
 class CGHLSLRuntime {
 public:
@@ -162,8 +160,6 @@ public:
   void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
-
-  void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,

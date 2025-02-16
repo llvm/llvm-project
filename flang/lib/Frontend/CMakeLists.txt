@@ -18,6 +18,9 @@ add_flang_library(flangFrontend
   FIROptCodeGenPassIncGen
   FIROptTransformsPassIncGen
   HLFIRDialect
+  MLIRIR
+  ${dialect_libs}
+  ${extension_libs}
 
   LINK_LIBS
   CUFDialect
@@ -52,11 +55,6 @@ add_flang_library(flangFrontend
   FrontendDriver
   FrontendOpenACC
   FrontendOpenMP
-
-  MLIR_DEPS
-  MLIRIR
-  ${dialect_libs}
-  ${extension_libs}
 
   MLIR_LIBS
   MLIRTransforms

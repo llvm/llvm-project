@@ -432,45 +432,7 @@ namespace {
 // ConvertVectorStore
 //===----------------------------------------------------------------------===//
 
-// Emulate `vector.store` using a multi-byte container type.
-//
-// The container type is obtained through Op adaptor and would normally be
-// generated via `NarrowTypeEmulationConverter`.
-//
-// EXAMPLE 1
-// (aligned store of i4, emulated using i8 as the container type)
-//
-//      vector.store %src, %dest[%idx_1, %idx_2] : memref<4x8xi4>, vector<8xi4>
-//
-// is rewritten as:
-//
-//      %src_bitcast = vector.bitcast %src : vector<8xi4> to vector<4xi8>
-//      vector.store %src_bitcast, %dest_bitcast[%idx]
-//        : memref<16xi8>, vector<4xi8>
-//
-// EXAMPLE 2
-// (unaligned store of i2, emulated using i8 as the container type)
-//
-//    vector.store %src, %dest[%c2, %c0] :memref<3x3xi2>, vector<3xi2>
-//
-// The i2 store is emulated through 2 x RMW sequences. The destination i2 memref
-// is modelled using 3 bytes:
-//
-//    Byte 0     Byte 1     Byte 2
-// +----------+----------+----------+
-// | oooooooo | ooooNNNN | NNoooooo |
-// +----------+----------+----------+
-//
-// N - (N)ew entries (i.e. to be overwritten by vector.store)
-// o - (o)ld entries (to be preserved)
-//
-// For the generated output in the non-atomic case, see:
-//  * @vector_store_i2_const_index_two_partial_stores`
-// in:
-//  * "vector-emulate-narrow-type-unaligned-non-atomic.mlir".
-//
-// NOTE: By default, all RMW sequences are atomic. Set `disableAtomicRMW` to
-// `false` to generate non-atomic RMW sequences.
+// TODO: Document-me
 struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -502,7 +464,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
           op, "impossible to pack emulated elements into container elements "
               "(bit-wise misalignment)");
     }
-    int emulatedPerContainerElem = containerBits / emulatedBits;
+    int numSrcElemsPerDest = containerBits / emulatedBits;
 
     // Adjust the number of elements to store when emulating narrow types.
     // Here only the 1-D vector store is considered, and the N-D memref types
@@ -518,8 +480,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     // vector<4xi8>
 
     auto origElements = valueToStore.getType().getNumElements();
-    // Note, per-element-alignment was already verified above.
-    bool isFullyAligned = origElements % emulatedPerContainerElem == 0;
+    bool isAlignedEmulation = origElements % numSrcElemsPerDest == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
@@ -535,8 +496,9 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedNumFrontPadElems =
-        isFullyAligned ? 0
-                       : getConstantIntValue(linearizedInfo.intraDataOffset);
+        isAlignedEmulation
+            ? 0
+            : getConstantIntValue(linearizedInfo.intraDataOffset);
 
     if (!foldedNumFrontPadElems) {
       return rewriter.notifyMatchFailure(
@@ -554,10 +516,10 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     // need unaligned emulation because the store address is aligned and the
     // source is a whole byte.
     bool emulationRequiresPartialStores =
-        !isFullyAligned || *foldedNumFrontPadElems != 0;
+        !isAlignedEmulation || *foldedNumFrontPadElems != 0;
     if (!emulationRequiresPartialStores) {
       // Basic case: storing full bytes.
-      auto numElements = origElements / emulatedPerContainerElem;
+      auto numElements = origElements / numSrcElemsPerDest;
       auto bitCast = rewriter.create<vector::BitCastOp>(
           loc, VectorType::get(numElements, containerElemTy),
           op.getValueToStore());
@@ -605,7 +567,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
 
     // Build a mask used for rmw.
     auto subWidthStoreMaskType =
-        VectorType::get({emulatedPerContainerElem}, rewriter.getI1Type());
+        VectorType::get({numSrcElemsPerDest}, rewriter.getI1Type());
 
     auto storeFunc = disableAtomicRMW ? nonAtomicRMW : atomicRMW;
 
@@ -614,11 +576,10 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     // with the unaligned part so that the rest elements are aligned to width
     // boundary.
     auto frontSubWidthStoreElem =
-        (emulatedPerContainerElem - *foldedNumFrontPadElems) %
-        emulatedPerContainerElem;
+        (numSrcElemsPerDest - *foldedNumFrontPadElems) % numSrcElemsPerDest;
     if (frontSubWidthStoreElem > 0) {
-      SmallVector<bool> frontMaskValues(emulatedPerContainerElem, false);
-      if (*foldedNumFrontPadElems + origElements < emulatedPerContainerElem) {
+      SmallVector<bool> frontMaskValues(numSrcElemsPerDest, false);
+      if (*foldedNumFrontPadElems + origElements < numSrcElemsPerDest) {
         std::fill_n(frontMaskValues.begin() + *foldedNumFrontPadElems,
                     origElements, true);
         frontSubWidthStoreElem = origElements;
@@ -629,7 +590,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       auto frontMask = rewriter.create<arith::ConstantOp>(
           loc, DenseElementsAttr::get(subWidthStoreMaskType, frontMaskValues));
 
-      currentSourceIndex = emulatedPerContainerElem - (*foldedNumFrontPadElems);
+      currentSourceIndex = numSrcElemsPerDest - (*foldedNumFrontPadElems);
       auto value =
           extractSliceIntoByte(rewriter, loc, valueToStore, 0,
                                frontSubWidthStoreElem, *foldedNumFrontPadElems);
@@ -653,9 +614,8 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     // After the previous step, the store address is aligned to the emulated
     // width boundary.
     int64_t fullWidthStoreSize =
-        (origElements - currentSourceIndex) / emulatedPerContainerElem;
-    int64_t numNonFullWidthElements =
-        fullWidthStoreSize * emulatedPerContainerElem;
+        (origElements - currentSourceIndex) / numSrcElemsPerDest;
+    int64_t numNonFullWidthElements = fullWidthStoreSize * numSrcElemsPerDest;
     if (fullWidthStoreSize > 0) {
       auto fullWidthStorePart = staticallyExtractSubvector(
           rewriter, loc, valueToStore, currentSourceIndex,
@@ -664,8 +624,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       auto originType = cast<VectorType>(fullWidthStorePart.getType());
       auto memrefElemType = getElementTypeOrSelf(memrefBase.getType());
       auto storeType = VectorType::get(
-          {originType.getNumElements() / emulatedPerContainerElem},
-          memrefElemType);
+          {originType.getNumElements() / numSrcElemsPerDest}, memrefElemType);
       auto bitCast = rewriter.create<vector::BitCastOp>(loc, storeType,
                                                         fullWidthStorePart);
       rewriter.create<vector::StoreOp>(loc, bitCast.getResult(), memrefBase,
@@ -687,7 +646,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
                                currentSourceIndex, remainingElements, 0);
 
       // Generate back mask.
-      auto maskValues = SmallVector<bool>(emulatedPerContainerElem, 0);
+      auto maskValues = SmallVector<bool>(numSrcElemsPerDest, 0);
       std::fill_n(maskValues.begin(), remainingElements, 1);
       auto backMask = rewriter.create<arith::ConstantOp>(
           loc, DenseElementsAttr::get(subWidthStoreMaskType, maskValues));
@@ -1001,8 +960,7 @@ struct ConvertVectorMaskedLoad final
     // subvector at the proper offset after bit-casting.
     auto origType = op.getVectorType();
     auto origElements = origType.getNumElements();
-    // Note, per-element-alignment was already verified above.
-    bool isFullyAligned = origElements % emulatedPerContainerElem == 0;
+    bool isAlignedEmulation = origElements % emulatedPerContainerElem == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
@@ -1017,8 +975,9 @@ struct ConvertVectorMaskedLoad final
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isFullyAligned ? 0
-                       : getConstantIntValue(linearizedInfo.intraDataOffset);
+        isAlignedEmulation
+            ? 0
+            : getConstantIntValue(linearizedInfo.intraDataOffset);
 
     int64_t maxIntraDataOffset =
         foldedIntraVectorOffset.value_or(emulatedPerContainerElem - 1);
@@ -1042,7 +1001,7 @@ struct ConvertVectorMaskedLoad final
       passthru = dynamicallyInsertSubVector(
           rewriter, loc, passthru, emptyVector, linearizedInfo.intraDataOffset,
           origElements);
-    } else if (!isFullyAligned) {
+    } else if (!isAlignedEmulation) {
       passthru = staticallyInsertSubvector(rewriter, loc, passthru, emptyVector,
                                            *foldedIntraVectorOffset);
     }
@@ -1070,7 +1029,7 @@ struct ConvertVectorMaskedLoad final
       mask = dynamicallyInsertSubVector(rewriter, loc, mask, emptyMask,
                                         linearizedInfo.intraDataOffset,
                                         origElements);
-    } else if (!isFullyAligned) {
+    } else if (!isAlignedEmulation) {
       mask = staticallyInsertSubvector(rewriter, loc, op.getMask(), emptyMask,
                                        *foldedIntraVectorOffset);
     }
@@ -1081,7 +1040,7 @@ struct ConvertVectorMaskedLoad final
       result = dynamicallyExtractSubVector(
           rewriter, loc, result, op.getPassThru(),
           linearizedInfo.intraDataOffset, origElements);
-    } else if (!isFullyAligned) {
+    } else if (!isAlignedEmulation) {
       result = staticallyExtractSubvector(
           rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }

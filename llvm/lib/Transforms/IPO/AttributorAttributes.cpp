@@ -3970,17 +3970,18 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       // TODO: We should track the capturing uses in AANoCapture but the problem
       //       is CGSCC runs. For those we would need to "allow" AANoCapture for
       //       a value in the module slice.
-      // TODO(captures): Make this more precise.
-      UseCaptureInfo CI =
-          DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
-      if (capturesNothing(CI))
+      switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
+      case UseCaptureKind::NO_CAPTURE:
         return true;
-      if (CI.isPassthrough()) {
+      case UseCaptureKind::MAY_CAPTURE:
+        LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] Unknown user: " << *UserI
+                          << "\n");
+        return false;
+      case UseCaptureKind::PASSTHROUGH:
         Follow = true;
         return true;
       }
-      LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] Unknown user: " << *UserI << "\n");
-      return false;
+      llvm_unreachable("unknown UseCaptureKind");
     };
 
     bool IsKnownNoCapture;
@@ -6018,16 +6019,16 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   };
 
   auto UseCheck = [&](const Use &U, bool &Follow) -> bool {
-    // TODO(captures): Make this more precise.
-    UseCaptureInfo CI =
-        DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
-    if (capturesNothing(CI))
+    switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
+    case UseCaptureKind::NO_CAPTURE:
       return true;
-    if (CI.isPassthrough()) {
+    case UseCaptureKind::MAY_CAPTURE:
+      return checkUse(A, T, U, Follow);
+    case UseCaptureKind::PASSTHROUGH:
       Follow = true;
       return true;
     }
-    return checkUse(A, T, U, Follow);
+    llvm_unreachable("Unexpected use capture kind!");
   };
 
   if (!A.checkForAllUses(UseCheck, *this, *V))
@@ -12160,13 +12161,16 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
 
     auto UsePred = [&](const Use &U, bool &Follow) -> bool {
       Uses.insert(&U);
-      // TODO(captures): Make this more precise.
-      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr, nullptr);
-      if (CI.isPassthrough()) {
+      switch (DetermineUseCaptureKind(U, nullptr)) {
+      case UseCaptureKind::NO_CAPTURE:
+        return checkUse(A, U, Follow, Worklist);
+      case UseCaptureKind::MAY_CAPTURE:
+        return checkUse(A, U, Follow, Worklist);
+      case UseCaptureKind::PASSTHROUGH:
         Follow = true;
         return true;
       }
-      return checkUse(A, U, Follow, Worklist);
+      return true;
     };
     auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
       Uses.insert(&OldU);

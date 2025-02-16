@@ -1,6 +1,8 @@
 header: ctype.h
-standards:
-  - stdc
+header_template: ctype.h.def
+macros: []
+types:
+  - type_name: locale_t
 enums: []
 objects: []
 functions:
@@ -102,98 +104,98 @@ functions:
       - type: int
   - name: isalnum_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: isalpha_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: isblank_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: iscntrl_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: isdigit_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: isgraph_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: islower_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: isprint_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: ispunct_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: isspace_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: isupper_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: isxdigit_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: tolower_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int
       - type: locale_t
   - name: toupper_l
     standards:
-      - posix
+      - stdc
     return_type: int
     arguments:
       - type: int

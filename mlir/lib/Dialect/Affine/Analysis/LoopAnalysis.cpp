@@ -182,9 +182,10 @@ template bool mlir::affine::isInvariantAccess(AffineStoreOp, AffineForOp);
 DenseSet<Value> mlir::affine::getInvariantAccesses(Value iv,
                                                    ArrayRef<Value> indices) {
   DenseSet<Value> res;
-  for (Value index : indices) {
-    if (isAccessIndexInvariant(iv, index))
-      res.insert(index);
+  for (auto val : indices) {
+    if (isAccessIndexInvariant(iv, val)) {
+      res.insert(val);
+    }
   }
   return res;
 }

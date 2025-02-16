@@ -7,7 +7,6 @@ add_clang_unittest(LexTests
   HeaderMapTest.cpp
   HeaderSearchTest.cpp
   LexerTest.cpp
-  LexHLSLRootSignatureTest.cpp
   ModuleDeclStateTest.cpp
   PPCallbacksTest.cpp
   PPConditionalDirectiveRecordTest.cpp

@@ -32,6 +32,11 @@ namespace lldb_private {
 class Debugger;
 } // namespace lldb_private
 
+namespace curses {
+class Application;
+typedef std::unique_ptr<Application> ApplicationAP;
+} // namespace curses
+
 namespace lldb_private {
 
 class IOHandler {

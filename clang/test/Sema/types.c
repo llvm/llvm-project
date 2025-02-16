@@ -9,20 +9,20 @@ typedef int (*T)[2];
 restrict T x;
 
 typedef int *S[2];
-restrict S y; // expected-warning {{'restrict' qualifier on an array of pointers is a C23 extension}}
+restrict S y; // expected-error {{restrict requires a pointer or reference ('S' (aka 'int *[2]') is invalid)}}
+
+
 
 // int128_t is available.
-void a(void) {
+int a(void) {
   __int128_t s;
   __uint128_t t;
 }
-
 // but not a keyword
-void b(void) {
+int b(void) {
   int __int128_t;
   int __uint128_t;
 }
-
 // __int128 is a keyword
 int c(void) {
   __int128 i;

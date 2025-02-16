@@ -814,9 +814,7 @@ public:
     return (Val >= 0 && Val < 64);
   }
 
-  template <int Width> bool isSImm() const {
-    return bool(isSImmScaled<Width, 1>());
-  }
+  template <int Width> bool isSImm() const { return isSImmScaled<Width, 1>(); }
 
   template <int Bits, int Scale> DiagnosticPredicate isSImmScaled() const {
     return isImmScaled<Bits, Scale>(true);
@@ -826,7 +824,7 @@ public:
   DiagnosticPredicate isUImmScaled() const {
     if (IsRange && isImmRange() &&
         (getLastImmVal() != getFirstImmVal() + Offset))
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     return isImmScaled<Bits, Scale, IsRange>(false);
   }
@@ -835,7 +833,7 @@ public:
   DiagnosticPredicate isImmScaled(bool Signed) const {
     if ((!isImm() && !isImmRange()) || (isImm() && IsRange) ||
         (isImmRange() && !IsRange))
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     int64_t Val;
     if (isImmRange())
@@ -843,7 +841,7 @@ public:
     else {
       const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
       if (!MCE)
-        return DiagnosticPredicate::NoMatch;
+        return DiagnosticPredicateTy::NoMatch;
       Val = MCE->getValue();
     }
 
@@ -858,33 +856,33 @@ public:
     }
 
     if (Val >= MinVal && Val <= MaxVal && (Val % Scale) == 0)
-      return DiagnosticPredicate::Match;
+      return DiagnosticPredicateTy::Match;
 
-    return DiagnosticPredicate::NearMatch;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   DiagnosticPredicate isSVEPattern() const {
     if (!isImm())
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
     auto *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
     int64_t Val = MCE->getValue();
     if (Val >= 0 && Val < 32)
-      return DiagnosticPredicate::Match;
-    return DiagnosticPredicate::NearMatch;
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   DiagnosticPredicate isSVEVecLenSpecifier() const {
     if (!isImm())
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
     auto *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
     int64_t Val = MCE->getValue();
     if (Val >= 0 && Val <= 1)
-      return DiagnosticPredicate::Match;
-    return DiagnosticPredicate::NearMatch;
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   bool isSymbolicUImm12Offset(const MCExpr *Expr) const {
@@ -1059,7 +1057,7 @@ public:
   template <typename T>
   DiagnosticPredicate isSVECpyImm() const {
     if (!isShiftedImm() && (!isImm() || !isa<MCConstantExpr>(getImm())))
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     bool IsByte = std::is_same<int8_t, std::make_signed_t<T>>::value ||
                   std::is_same<int8_t, T>::value;
@@ -1067,9 +1065,9 @@ public:
       if (!(IsByte && ShiftedImm->second) &&
           AArch64_AM::isSVECpyImm<T>(uint64_t(ShiftedImm->first)
                                      << ShiftedImm->second))
-        return DiagnosticPredicate::Match;
+        return DiagnosticPredicateTy::Match;
 
-    return DiagnosticPredicate::NearMatch;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   // Unsigned value in the range 0 to 255. For element widths of
@@ -1077,7 +1075,7 @@ public:
   // range 0 to 65280.
   template <typename T> DiagnosticPredicate isSVEAddSubImm() const {
     if (!isShiftedImm() && (!isImm() || !isa<MCConstantExpr>(getImm())))
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     bool IsByte = std::is_same<int8_t, std::make_signed_t<T>>::value ||
                   std::is_same<int8_t, T>::value;
@@ -1085,15 +1083,15 @@ public:
       if (!(IsByte && ShiftedImm->second) &&
           AArch64_AM::isSVEAddSubImm<T>(ShiftedImm->first
                                         << ShiftedImm->second))
-        return DiagnosticPredicate::Match;
+        return DiagnosticPredicateTy::Match;
 
-    return DiagnosticPredicate::NearMatch;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   template <typename T> DiagnosticPredicate isSVEPreferredLogicalImm() const {
     if (isLogicalImm<T>() && !isSVECpyImm<T>())
-      return DiagnosticPredicate::Match;
-    return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NoMatch;
   }
 
   bool isCondCode() const { return Kind == k_CondCode; }
@@ -1321,48 +1319,48 @@ public:
   template <int ElementWidth, unsigned Class>
   DiagnosticPredicate isSVEPredicateVectorRegOfWidth() const {
     if (Kind != k_Register || Reg.Kind != RegKind::SVEPredicateVector)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     if (isSVEVectorReg<Class>() && (Reg.ElementWidth == ElementWidth))
-      return DiagnosticPredicate::Match;
+      return DiagnosticPredicateTy::Match;
 
-    return DiagnosticPredicate::NearMatch;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   template <int ElementWidth, unsigned Class>
   DiagnosticPredicate isSVEPredicateOrPredicateAsCounterRegOfWidth() const {
     if (Kind != k_Register || (Reg.Kind != RegKind::SVEPredicateAsCounter &&
                                Reg.Kind != RegKind::SVEPredicateVector))
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     if ((isSVEPredicateAsCounterReg<Class>() ||
          isSVEPredicateVectorRegOfWidth<ElementWidth, Class>()) &&
         Reg.ElementWidth == ElementWidth)
-      return DiagnosticPredicate::Match;
+      return DiagnosticPredicateTy::Match;
 
-    return DiagnosticPredicate::NearMatch;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   template <int ElementWidth, unsigned Class>
   DiagnosticPredicate isSVEPredicateAsCounterRegOfWidth() const {
     if (Kind != k_Register || Reg.Kind != RegKind::SVEPredicateAsCounter)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     if (isSVEPredicateAsCounterReg<Class>() && (Reg.ElementWidth == ElementWidth))
-      return DiagnosticPredicate::Match;
+      return DiagnosticPredicateTy::Match;
 
-    return DiagnosticPredicate::NearMatch;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   template <int ElementWidth, unsigned Class>
   DiagnosticPredicate isSVEDataVectorRegOfWidth() const {
     if (Kind != k_Register || Reg.Kind != RegKind::SVEDataVector)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     if (isSVEVectorReg<Class>() && Reg.ElementWidth == ElementWidth)
-      return DiagnosticPredicate::Match;
+      return DiagnosticPredicateTy::Match;
 
-    return DiagnosticPredicate::NearMatch;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   template <int ElementWidth, unsigned Class,
@@ -1371,7 +1369,7 @@ public:
   DiagnosticPredicate isSVEDataVectorRegWithShiftExtend() const {
     auto VectorMatch = isSVEDataVectorRegOfWidth<ElementWidth, Class>();
     if (!VectorMatch.isMatch())
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     // Give a more specific diagnostic when the user has explicitly typed in
     // a shift-amount that does not match what is expected, but for which
@@ -1380,12 +1378,12 @@ public:
     if (!MatchShift && (ShiftExtendTy == AArch64_AM::UXTW ||
                         ShiftExtendTy == AArch64_AM::SXTW) &&
         !ShiftWidthAlwaysSame && hasShiftExtendAmount() && ShiftWidth == 8)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     if (MatchShift && ShiftExtendTy == getShiftExtendType())
-      return DiagnosticPredicate::Match;
+      return DiagnosticPredicateTy::Match;
 
-    return DiagnosticPredicate::NearMatch;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   bool isGPR32as64() const {
@@ -1422,17 +1420,15 @@ public:
 
   template<int64_t Angle, int64_t Remainder>
   DiagnosticPredicate isComplexRotation() const {
-    if (!isImm())
-      return DiagnosticPredicate::NoMatch;
+    if (!isImm()) return DiagnosticPredicateTy::NoMatch;
 
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE)
-      return DiagnosticPredicate::NoMatch;
+    if (!CE) return DiagnosticPredicateTy::NoMatch;
     uint64_t Value = CE->getValue();
 
     if (Value % Angle == Remainder && Value <= 270)
-      return DiagnosticPredicate::Match;
-    return DiagnosticPredicate::NearMatch;
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   template <unsigned RegClassID> bool isGPR64() const {
@@ -1443,12 +1439,12 @@ public:
   template <unsigned RegClassID, int ExtWidth>
   DiagnosticPredicate isGPR64WithShiftExtend() const {
     if (Kind != k_Register || Reg.Kind != RegKind::Scalar)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     if (isGPR64<RegClassID>() && getShiftExtendType() == AArch64_AM::LSL &&
         getShiftExtendAmount() == Log2_32(ExtWidth / 8))
-      return DiagnosticPredicate::Match;
-    return DiagnosticPredicate::NearMatch;
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   /// Is this a vector list with the type implicit (presumably attached to the
@@ -1483,10 +1479,10 @@ public:
     bool Res =
         isTypedVectorList<VectorKind, NumRegs, NumElements, ElementWidth>();
     if (!Res)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
     if (!AArch64MCRegisterClasses[RegClass].contains(VectorList.RegNum))
-      return DiagnosticPredicate::NearMatch;
-    return DiagnosticPredicate::Match;
+      return DiagnosticPredicateTy::NearMatch;
+    return DiagnosticPredicateTy::Match;
   }
 
   template <RegKind VectorKind, unsigned NumRegs, unsigned Stride,
@@ -1495,21 +1491,21 @@ public:
     bool Res = isTypedVectorList<VectorKind, NumRegs, /*NumElements*/ 0,
                                  ElementWidth, Stride>();
     if (!Res)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
     if ((VectorList.RegNum < (AArch64::Z0 + Stride)) ||
         ((VectorList.RegNum >= AArch64::Z16) &&
          (VectorList.RegNum < (AArch64::Z16 + Stride))))
-      return DiagnosticPredicate::Match;
-    return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NoMatch;
   }
 
   template <int Min, int Max>
   DiagnosticPredicate isVectorIndex() const {
     if (Kind != k_VectorIndex)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
     if (VectorIndex.Val >= Min && VectorIndex.Val <= Max)
-      return DiagnosticPredicate::Match;
-    return DiagnosticPredicate::NearMatch;
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   bool isToken() const override { return Kind == k_Token; }
@@ -1535,7 +1531,7 @@ public:
 
   template <unsigned ImmEnum> DiagnosticPredicate isExactFPImm() const {
     if (Kind != k_FPImm)
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
 
     if (getFPImmIsExact()) {
       // Lookup the immediate from table of supported immediates.
@@ -1550,19 +1546,19 @@ public:
         llvm_unreachable("FP immediate is not exact");
 
       if (getFPImm().bitwiseIsEqual(RealVal))
-        return DiagnosticPredicate::Match;
+        return DiagnosticPredicateTy::Match;
     }
 
-    return DiagnosticPredicate::NearMatch;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   template <unsigned ImmA, unsigned ImmB>
   DiagnosticPredicate isExactFPImm() const {
-    DiagnosticPredicate Res = DiagnosticPredicate::NoMatch;
+    DiagnosticPredicate Res = DiagnosticPredicateTy::NoMatch;
     if ((Res = isExactFPImm<ImmA>()))
-      return DiagnosticPredicate::Match;
+      return DiagnosticPredicateTy::Match;
     if ((Res = isExactFPImm<ImmB>()))
-      return DiagnosticPredicate::Match;
+      return DiagnosticPredicateTy::Match;
     return Res;
   }
 
@@ -1745,12 +1741,12 @@ public:
   template <MatrixKind Kind, unsigned EltSize, unsigned RegClass>
   DiagnosticPredicate isMatrixRegOperand() const {
     if (!isMatrix())
-      return DiagnosticPredicate::NoMatch;
+      return DiagnosticPredicateTy::NoMatch;
     if (getMatrixKind() != Kind ||
         !AArch64MCRegisterClasses[RegClass].contains(getMatrixReg()) ||
         EltSize != getMatrixElementWidth())
-      return DiagnosticPredicate::NearMatch;
-    return DiagnosticPredicate::Match;
+      return DiagnosticPredicateTy::NearMatch;
+    return DiagnosticPredicateTy::Match;
   }
 
   bool isPAuthPCRelLabel16Operand() const {
