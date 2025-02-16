@@ -372,6 +372,22 @@ define i32 @test15e(i32 %X) {
   ret i32 %t3
 }
 
+;; (a & 128) ? 256 : 0
+define i32 @test15e_extra_use(i32 %X) {
+; CHECK-LABEL: @test15e_extra_use(
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 128
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[T1]], 1
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t1 = and i32 %X, 128
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i32 256, i32 0
+  call void @use1(i1 %t2)
+  ret i32 %t3
+}
+
 ;; (a & 128) ? 0 : 256
 define i32 @test15f(i32 %X) {
 ; CHECK-LABEL: @test15f(
@@ -383,6 +399,23 @@ define i32 @test15f(i32 %X) {
   %t1 = and i32 %X, 128
   %t2 = icmp ne i32 %t1, 0
   %t3 = select i1 %t2, i32 0, i32 256
+  ret i32 %t3
+}
+
+;; (a & 128) ? 0 : 256
+define i32 @test15f_extra_use(i32 %X) {
+; CHECK-LABEL: @test15f_extra_use(
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 128
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[T1]], 1
+; CHECK-NEXT:    [[T3:%.*]] = xor i32 [[TMP1]], 256
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t1 = and i32 %X, 128
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i32 0, i32 256
+  call void @use1(i1 %t2)
   ret i32 %t3
 }
 
