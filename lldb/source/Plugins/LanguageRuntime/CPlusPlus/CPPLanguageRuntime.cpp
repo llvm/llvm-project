@@ -476,3 +476,9 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
 
   return ret_plan_sp;
 }
+
+bool CPPLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
+  llvm::outs() << symbol.GetMangled().GetMangledName().GetStringRef() << '\n';
+  return symbol.GetMangled().GetMangledName().GetStringRef().starts_with(
+      "_ZThn");
+}
