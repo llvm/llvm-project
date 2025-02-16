@@ -145,17 +145,16 @@ using MutexDescriptor =
     std::variant<FirstArgMutexDescriptor, MemberMutexDescriptor,
                  RAIIMutexDescriptor>;
 
-class NonBlockOpenVisitor : public BugReporterVisitor {
+class SuppressNonBlockingStreams : public BugReporterVisitor {
 private:
-  SymbolRef SR;
-  int O_NONBLOCKValue;
-  const CallDescription OpenFunction;
-  bool Satisfied;
+  const CallDescription OpenFunction{CDM::CLibrary, {"open"}, 2};
+  SymbolRef StreamSym;
+  const int NonBlockMacroVal;
+  bool Satisfied = false;
 
 public:
-  NonBlockOpenVisitor(SymbolRef SR, int O_NONBLOCKValue)
-      : SR(SR), O_NONBLOCKValue(O_NONBLOCKValue),
-        OpenFunction(CDM::CLibrary, {"open"}, 2), Satisfied(false) {}
+  SuppressNonBlockingStreams(SymbolRef SR, int NonBlockMacroVal)
+      : StreamSym(SR), NonBlockMacroVal(NonBlockMacroVal) {}
 
   static void *getTag() {
     static int Tag = 0;
@@ -164,7 +163,6 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     ID.AddPointer(getTag());
-    ID.AddPointer(SR);
   }
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
@@ -182,7 +180,7 @@ public:
       return nullptr;
 
     SVal SV = N->getSVal(CE);
-    if (SV.getAsSymbol() != SR)
+    if (SV.getAsSymbol() != StreamSym)
       return nullptr;
 
     Satisfied = true;
@@ -194,7 +192,7 @@ public:
     if (!FlagV)
       return nullptr;
 
-    if ((*FlagV & O_NONBLOCKValue) != 0)
+    if ((*FlagV & NonBlockMacroVal) != 0)
       BR.markInvalid(getTag(), nullptr);
 
     return nullptr;
@@ -415,7 +413,7 @@ void BlockInCriticalSectionChecker::reportBlockInCritSection(
         O_NONBLOCKValue = tryExpandAsInteger(
             "O_NONBLOCK", C.getBugReporter().getPreprocessor());
       if (*O_NONBLOCKValue)
-        R->addVisitor<NonBlockOpenVisitor>(SR, **O_NONBLOCKValue);
+        R->addVisitor<SuppressNonBlockingStreams>(SR, **O_NONBLOCKValue);
     }
   }
   R->addRange(Call.getSourceRange());
