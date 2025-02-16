@@ -89,6 +89,7 @@ set(SCUDO_HEADERS
   release.h
   report.h
   report_linux.h
+  sched.h
   secondary.h
   size_class_map.h
   stack_depot.h
