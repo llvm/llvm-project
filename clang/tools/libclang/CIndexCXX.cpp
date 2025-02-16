@@ -67,7 +67,7 @@ unsigned clang_visitCXXMethods(CXType PT, CXFieldVisitor visitor,
   if (!RD || RD->isInvalidDecl())
     return false;
 
-  for (auto Method : RD->methods()) {
+  for (const auto *Method : RD->methods()) {
     // Callback to the client.
     switch (
         visitor(cxcursor::MakeCXCursor(Method, getCursorTU(PC)),
