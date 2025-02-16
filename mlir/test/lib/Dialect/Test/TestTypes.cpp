@@ -284,7 +284,8 @@ TestTypeWithLayoutType::getIndexBitwidth(const DataLayout &dataLayout,
 }
 
 bool TestTypeWithLayoutType::areCompatible(
-    DataLayoutEntryListRef oldLayout, DataLayoutEntryListRef newLayout) const {
+    DataLayoutEntryListRef oldLayout, DataLayoutEntryListRef newLayout,
+    DataLayoutSpecInterface newSpec) const {
   unsigned old = extractKind(oldLayout, "alignment");
   return old == 1 || extractKind(newLayout, "alignment") <= old;
 }

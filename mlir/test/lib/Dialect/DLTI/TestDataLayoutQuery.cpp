@@ -42,6 +42,7 @@ struct TestDataLayoutQuery
       uint64_t preferred = layout.getTypePreferredAlignment(op.getType());
       uint64_t index = layout.getTypeIndexBitwidth(op.getType()).value_or(0);
       Attribute endianness = layout.getEndianness();
+      Attribute defaultMemorySpace = layout.getDefaultMemorySpace();
       Attribute allocaMemorySpace = layout.getAllocaMemorySpace();
       Attribute programMemorySpace = layout.getProgramMemorySpace();
       Attribute globalMemorySpace = layout.getGlobalMemorySpace();
@@ -68,6 +69,10 @@ struct TestDataLayoutQuery
            builder.getNamedAttr("endianness", endianness == Attribute()
                                                   ? builder.getStringAttr("")
                                                   : endianness),
+           builder.getNamedAttr("default_memory_space",
+                                defaultMemorySpace == Attribute()
+                                    ? builder.getUI32IntegerAttr(0)
+                                    : defaultMemorySpace),
            builder.getNamedAttr("alloca_memory_space",
                                 allocaMemorySpace == Attribute()
                                     ? builder.getUI32IntegerAttr(0)
