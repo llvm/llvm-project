@@ -622,7 +622,8 @@ struct __fn {
     return views::all(std::forward<_Views>(__views)...);
   }
 
-  template <class... _Views> requires(sizeof...(_Views) > 1) && (view<_Views> && ...) && __concatable<_Views...>
+  template <class... _Views> 
+    requires(sizeof...(_Views) > 1) && (view<_Views> && ...) && __concatable<_Views...>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... __views) const
       noexcept(noexcept(concat_view(std::forward<_Views>(__views)...))) {
     return concat_view(std::forward<_Views>(__views)...);
