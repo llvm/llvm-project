@@ -401,6 +401,12 @@ struct PragmaMaxTokensTotalHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+struct PragmaExportHandler : public PragmaHandler {
+  explicit PragmaExportHandler() : PragmaHandler("export") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 struct PragmaRISCVHandler : public PragmaHandler {
   PragmaRISCVHandler(Sema &Actions)
       : PragmaHandler("riscv"), Actions(Actions) {}
@@ -564,6 +570,11 @@ void Parser::initializePragmaHandlers() {
   MaxTokensTotalPragmaHandler = std::make_unique<PragmaMaxTokensTotalHandler>();
   PP.AddPragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
 
+  if (getLangOpts().ZOSExt) {
+    ExportHandler = std::make_unique<PragmaExportHandler>();
+    PP.AddPragmaHandler(ExportHandler.get());
+  }
+
   if (getTargetInfo().getTriple().isRISCV()) {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
@@ -697,6 +708,11 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
   MaxTokensTotalPragmaHandler.reset();
+
+  if (getLangOpts().ZOSExt) {
+    PP.RemovePragmaHandler(ExportHandler.get());
+    ExportHandler.reset();
+  }
 
   if (getTargetInfo().getTriple().isRISCV()) {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
@@ -1399,6 +1415,164 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
 
   Actions.ActOnPragmaMSAllocText(FirstTok.getLocation(), Section, Functions);
   return true;
+}
+
+NestedNameSpecifier *Parser::zOSParseIdentifier(StringRef PragmaName,
+                                                IdentifierInfo *IdentName) {
+  NestedNameSpecifier *NestedId = nullptr;
+  if (Tok.is(tok::coloncolon)) {
+    NestedId = NestedNameSpecifier::Create(Actions.Context, IdentName);
+  } else if (Actions.CurContext->isNamespace()) {
+    auto *NS = cast<NamespaceDecl>(Actions.CurContext);
+    NestedId =
+        NestedNameSpecifier::Create(Actions.Context, NS->getIdentifier());
+    NestedId =
+        NestedNameSpecifier::Create(Actions.Context, NestedId, IdentName);
+    PP.Lex(Tok);
+  } else {
+    NestedId = NestedNameSpecifier::Create(Actions.Context, IdentName);
+    PP.Lex(Tok);
+  }
+  while (Tok.is(tok::coloncolon)) {
+    PP.Lex(Tok);
+    IdentName = Tok.getIdentifierInfo();
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << PragmaName;
+      return nullptr;
+    }
+    NestedId =
+        NestedNameSpecifier::Create(Actions.Context, NestedId, IdentName);
+    PP.Lex(Tok);
+  }
+  return NestedId;
+}
+
+bool Parser::zOSParseParameterList(
+    StringRef PragmaName, std::optional<SmallVector<QualType, 4>> &TypeList,
+    Qualifiers &CVQual) {
+  if (Tok.is(tok::l_paren)) {
+    TypeList = SmallVector<QualType, 4>();
+    PP.Lex(Tok);
+    while (Tok.isNot(tok::eof) && !Tok.is(tok::r_paren)) {
+      //SourceRange MatchingCTypeRange;
+      TypeResult TResult = ParseTypeName(nullptr, DeclaratorContext::Prototype);
+      if (!TResult.isInvalid()) {
+        QualType QT = TResult.get().get();
+        if (!QT.getTypePtr()->isVoidType())
+          TypeList->push_back(QT);
+      }
+      if (Tok.is(tok::comma) || Tok.is(tok::identifier))
+        PP.Lex(Tok);
+    }
+    if (Tok.is(tok::r_paren))
+      PP.Lex(Tok);
+    else {
+      // We ate the whole line trying to find the right paren of the parameter
+      // list
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << PragmaName;
+      return false;
+    }
+
+    if (TypeList.has_value())
+      while (Tok.is(tok::kw_const) || Tok.is(tok::kw_volatile)) {
+        if (Tok.is(tok::kw_const)) {
+          CVQual.addConst();
+        } else {
+          assert(Tok.is(tok::kw_volatile));
+          CVQual.addVolatile();
+        }
+        PP.Lex(Tok);
+      }
+  }
+  return true;
+}
+
+bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
+  assert(Tok.is(PragmaKind));
+
+  bool IsPragmaExport = PragmaKind == tok::annot_pragma_export;
+  assert(IsPragmaExport);
+  StringRef PragmaName = "export";
+
+  using namespace clang::charinfo;
+  auto *TheTokens =
+      (std::pair<std::unique_ptr<Token[]>, size_t> *)Tok.getAnnotationValue();
+  PP.EnterTokenStream(std::move(TheTokens->first), TheTokens->second, true,
+                      false);
+  ConsumeAnnotationToken(); // The annotation token.
+
+  do {
+
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
+          << PragmaName;
+      return false;
+    }
+
+    // C++ could have a nested name, or be qualified with ::.
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::identifier) && Tok.isNot(tok::coloncolon)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << PragmaName;
+      return false;
+    }
+
+    IdentifierInfo *IdentName = Tok.getIdentifierInfo();
+    SourceLocation IdentNameLoc = Tok.getLocation();
+    NestedNameSpecifier *NestedId = zOSParseIdentifier(PragmaName, IdentName);
+    if (!NestedId)
+      return false;
+
+    if (Tok.isNot(tok::l_paren) && Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << PragmaName;
+      return false;
+    }
+
+    // C++ can have a paramater list for overloaded functions.
+    // Try to parse the argument types.
+    std::optional<SmallVector<QualType, 4>> TypeList;
+    Qualifiers CVQual;
+
+    if (!zOSParseParameterList(PragmaName, TypeList, CVQual))
+      return false;
+
+    PP.Lex(Tok);
+    Actions.ActOnPragmaExport(NestedId, IdentNameLoc, std::move(TypeList),
+                              CVQual);
+
+    // Because export is also a C++ keyword, we also check for that
+    if (Tok.is(tok::identifier) || Tok.is(tok::kw_export)) {
+      IsPragmaExport = false;
+      PragmaName = Tok.getIdentifierInfo()->getName();
+      if (PragmaName == "export")
+        IsPragmaExport = true;
+      else
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+            << PragmaName;
+    } else if (Tok.isNot(tok::eof)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+          << PragmaName;
+      return false;
+    }
+  } while (Tok.isNot(tok::eof));
+  PP.Lex(Tok);
+  return true;
+}
+
+void Parser::HandlePragmaExport() {
+  assert(Tok.is(tok::annot_pragma_export));
+
+  if (!zOSHandlePragmaHelper(tok::annot_pragma_export)) {
+    // Parsing pragma failed, and has been diagnosed.  Slurp up the
+    // tokens until eof (really end of line) to prevent follow-on errors.
+    while (Tok.isNot(tok::eof))
+      PP.Lex(Tok);
+    PP.Lex(Tok);
+  }
 }
 
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
@@ -4147,6 +4321,43 @@ void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
   }
 
   PP.overrideMaxTokens(MaxTokens, Loc);
+}
+
+/// Helper function for handling z/OS pragmas like #pragma export.
+static void zOSPragmaHandlerHelper(Preprocessor &PP, Token &Tok,
+                                   tok::TokenKind TokKind) {
+  Token EoF, AnnotTok;
+  EoF.startToken();
+  EoF.setKind(tok::eof);
+  AnnotTok.startToken();
+  AnnotTok.setKind(TokKind);
+  AnnotTok.setLocation(Tok.getLocation());
+  AnnotTok.setAnnotationEndLoc(Tok.getLocation());
+  SmallVector<Token, 8> TokenVector;
+  // Suck up all of the tokens before the eod.
+  for (; Tok.isNot(tok::eod); PP.Lex(Tok)) {
+    TokenVector.push_back(Tok);
+    AnnotTok.setAnnotationEndLoc(Tok.getLocation());
+  }
+  // Add a sentinel EoF token to the end of the list.
+  TokenVector.push_back(EoF);
+  // We must allocate this array with new because EnterTokenStream is going to
+  // delete it later.
+  markAsReinjectedForRelexing(TokenVector);
+  auto TokenArray = std::make_unique<Token[]>(TokenVector.size());
+  std::copy(TokenVector.begin(), TokenVector.end(), TokenArray.get());
+  auto Value = new (PP.getPreprocessorAllocator())
+      std::pair<std::unique_ptr<Token[]>, size_t>(std::move(TokenArray),
+                                                  TokenVector.size());
+  AnnotTok.setAnnotationValue(Value);
+  PP.EnterToken(AnnotTok, /*IsReinject*/ false);
+}
+
+/// Handle #pragma export.
+void PragmaExportHandler::HandlePragma(Preprocessor &PP,
+                                       PragmaIntroducer Introducer,
+                                       Token &FirstToken) {
+  zOSPragmaHandlerHelper(PP, FirstToken, tok::annot_pragma_export);
 }
 
 // Handle '#pragma clang riscv intrinsic vector'.

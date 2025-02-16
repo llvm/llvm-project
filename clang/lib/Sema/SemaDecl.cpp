@@ -5125,6 +5125,19 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   assert(EllipsisLoc.isInvalid() &&
          "Friend ellipsis but not friend-specified?");
 
+  if (DS.isExportSpecified()) {
+    VisibilityAttr *existingAttr = TagD->getAttr<VisibilityAttr>();
+    if (existingAttr) {
+      VisibilityAttr::VisibilityType existingValue =
+          existingAttr->getVisibility();
+      if (existingValue != VisibilityAttr::Default)
+        Diag(DS.getExportSpecLoc(), diag::err_mismatched_visibility);
+    } else {
+      Tag->addAttr(
+          VisibilityAttr::CreateImplicit(Context, VisibilityAttr::Default));
+    }
+  }
+
   // Track whether this decl-specifier declares anything.
   bool DeclaresAnything = true;
 
@@ -6463,6 +6476,19 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
 
   if (!New)
     return nullptr;
+
+  if (D.IsExport()) {
+    VisibilityAttr *existingAttr = New->getAttr<VisibilityAttr>();
+    if (existingAttr) {
+      VisibilityAttr::VisibilityType existingValue =
+          existingAttr->getVisibility();
+      if (existingValue != VisibilityAttr::Default)
+        Diag(D.getExportLoc(), diag::err_mismatched_visibility);
+    } else {
+      New->addAttr(
+          VisibilityAttr::CreateImplicit(Context, VisibilityAttr::Default));
+    }
+  }
 
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
