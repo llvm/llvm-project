@@ -124,7 +124,7 @@ class HeaderFile:
         }
 
     def header_guard(self):
-        return "_LLVM_LIBC_" + "_".join(
+        return "LLVM_LIBC_" + "_".join(
             word.upper() for word in NONIDENTIFIER.split(self.name) if word
         )
 
