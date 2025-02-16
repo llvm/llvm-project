@@ -24,7 +24,7 @@ namespace affine {
 class AffineForOp;
 } // namespace affine
 
-#define GEN_PASS_DECL_CONVERTAFFINETOSTANDARD
+#define GEN_PASS_DECL_LOWERAFFINE
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Collect a set of patterns to convert from the Affine dialect to the Standard

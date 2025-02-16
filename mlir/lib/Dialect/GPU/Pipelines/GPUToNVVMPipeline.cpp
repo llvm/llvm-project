@@ -48,7 +48,7 @@ void buildCommonPassPipeline(
   pm.addPass(createConvertNVGPUToNVVMPass());
   pm.addPass(createGpuKernelOutliningPass());
   pm.addPass(createConvertVectorToSCFPass());
-  pm.addPass(createConvertSCFToCFPass());
+  pm.addPass(createSCFToControlFlowPass());
   pm.addPass(createConvertNVVMToLLVMPass());
   pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
@@ -59,7 +59,7 @@ void buildCommonPassPipeline(
   nvvmTargetOptions.features = options.cubinFeatures;
   nvvmTargetOptions.optLevel = options.optLevel;
   pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
-  pm.addPass(createLowerAffinePass());
+  pm.addPass(createLowerAffine());
   pm.addPass(createArithToLLVMConversionPass());
   ConvertIndexToLLVMPassOptions convertIndexToLLVMPassOpt;
   convertIndexToLLVMPassOpt.indexBitwidth = options.indexBitWidth;
