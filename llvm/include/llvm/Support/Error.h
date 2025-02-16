@@ -16,7 +16,6 @@
 #include "llvm-c/Error.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -727,8 +726,8 @@ private:
   }
 
   union {
-    AlignedCharArrayUnion<storage_type> TStorage;
-    AlignedCharArrayUnion<error_type> ErrorStorage;
+    storage_type TStorage;
+    error_type ErrorStorage;
   };
   bool HasError : 1;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
