@@ -37,4 +37,3 @@ void foo1(int fd) {
     read(fd, buffer, 199); // no-warning: consider file descriptor is a symbol equals to -1
   close(fd);
 }
-  
