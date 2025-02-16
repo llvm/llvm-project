@@ -358,41 +358,6 @@ CallInst *IRBuilderBase::CreateFree(Value *Source,
   return Result;
 }
 
-CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
-    Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
-    uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,
-    MDNode *ScopeTag, MDNode *NoAliasTag) {
-  assert(DstAlign >= ElementSize &&
-         "Pointer alignment must be at least element size");
-  assert(SrcAlign >= ElementSize &&
-         "Pointer alignment must be at least element size");
-  Value *Ops[] = {Dst, Src, Size, getInt32(ElementSize)};
-  Type *Tys[] = {Dst->getType(), Src->getType(), Size->getType()};
-
-  CallInst *CI =
-      CreateIntrinsic(Intrinsic::memmove_element_unordered_atomic, Tys, Ops);
-
-  // Set the alignment of the pointer args.
-  CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), DstAlign));
-  CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), SrcAlign));
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  // Set the TBAA Struct info if present.
-  if (TBAAStructTag)
-    CI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
-  return CI;
-}
-
 CallInst *IRBuilderBase::getReductionIntrinsic(Intrinsic::ID ID, Value *Src) {
   Value *Ops[] = {Src};
   Type *Tys[] = { Src->getType() };

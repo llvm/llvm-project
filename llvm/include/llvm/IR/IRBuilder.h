@@ -746,21 +746,6 @@ public:
                                  NoAliasTag);
   }
 
-  /// \brief Create and insert an element unordered-atomic memmove between the
-  /// specified pointers.
-  ///
-  /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers,
-  /// respectively.
-  ///
-  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
-  /// and noalias tags.
-  CallInst *CreateElementUnorderedAtomicMemMove(
-      Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
-      uint32_t ElementSize, MDNode *TBAATag = nullptr,
-      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
-      MDNode *NoAliasTag = nullptr);
-
 private:
   CallInst *getReductionIntrinsic(Intrinsic::ID ID, Value *Src);
 
