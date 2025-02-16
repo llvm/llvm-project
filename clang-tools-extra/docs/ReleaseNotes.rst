@@ -234,6 +234,10 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
+  fix false positives related to operator overloading and templates.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
