@@ -30,6 +30,7 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -625,14 +626,14 @@ operator<<(RemarkT &R,
 /// Also allow r-value for the remark to allow insertion into a
 /// temporarily-constructed remark.
 template <class RemarkT>
-RemarkT &
+RemarkT &&
 operator<<(RemarkT &&R,
            std::enable_if_t<
                std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
                StringRef>
                S) {
   R.insert(S);
-  return R;
+  return std::move(R);
 }
 
 template <class RemarkT>
@@ -647,14 +648,14 @@ operator<<(RemarkT &R,
 }
 
 template <class RemarkT>
-RemarkT &
+RemarkT &&
 operator<<(RemarkT &&R,
            std::enable_if_t<
                std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
                DiagnosticInfoOptimizationBase::Argument>
                A) {
   R.insert(A);
-  return R;
+  return std::move(R);
 }
 
 template <class RemarkT>
@@ -669,14 +670,14 @@ operator<<(RemarkT &R,
 }
 
 template <class RemarkT>
-RemarkT &
+RemarkT &&
 operator<<(RemarkT &&R,
            std::enable_if_t<
                std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
                DiagnosticInfoOptimizationBase::setIsVerbose>
                V) {
   R.insert(V);
-  return R;
+  return std::move(R);
 }
 
 template <class RemarkT>
@@ -688,6 +689,17 @@ operator<<(RemarkT &R,
                EA) {
   R.insert(EA);
   return R;
+}
+
+template <class RemarkT>
+RemarkT &&
+operator<<(RemarkT &&R,
+           std::enable_if_t<
+               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
+               DiagnosticInfoOptimizationBase::setExtraArgs>
+               EA) {
+  R.insert(EA);
+  return std::move(R);
 }
 
 /// Common features for diagnostics dealing with optimization remarks

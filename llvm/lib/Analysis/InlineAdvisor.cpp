@@ -337,8 +337,7 @@ static raw_ostream &operator<<(raw_ostream &R, const ore::NV &Arg) {
   return R << Arg.Val;
 }
 
-template <class RemarkT>
-RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {
+template <class RemarkT> RemarkT &operator<<(RemarkT &R, const InlineCost &IC) {
   using namespace ore;
   if (IC.isAlways()) {
     R << "(cost=always)";
@@ -351,6 +350,12 @@ RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {
   if (const char *Reason = IC.getReason())
     R << ": " << ore::NV("Reason", Reason);
   return R;
+}
+
+template <class RemarkT>
+RemarkT &&operator<<(RemarkT &&R, const InlineCost &IC) {
+  static_cast<RemarkT &>(R) << IC;
+  return std::move(R);
 }
 } // namespace llvm
 
