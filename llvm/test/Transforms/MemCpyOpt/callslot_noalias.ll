@@ -8,8 +8,8 @@ declare void @func(ptr %dst)
 define i8 @test(ptr writable dereferenceable(1) noalias %dst) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @func(ptr nocapture [[DST:%.*]]) #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    [[V2:%.*]] = load i8, ptr [[DST]], align 1, !alias.scope !0
+; CHECK-NEXT:    call void @func(ptr captures(none) [[DST:%.*]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[V2:%.*]] = load i8, ptr [[DST]], align 1, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret i8 [[V2]]
 ;
   %tmp = alloca i8

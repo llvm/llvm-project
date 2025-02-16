@@ -86,7 +86,7 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
-  bool callsInitClone = false;
+  llvm::SmallSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
   lower::SymMap &symTable;
   OMPConstructSymbolVisitor visitor;
 

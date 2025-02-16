@@ -134,7 +134,7 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -209,50 +209,42 @@ define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) #0
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE18:.*]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[B]], i32 [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i1> [[BROADCAST_SPLAT]], i32 0
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META11:![0-9]+]], !noalias [[META14:![0-9]+]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i1> [[BROADCAST_SPLAT]], i32 1
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
 ; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META11]], !noalias [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <8 x i1> [[BROADCAST_SPLAT]], i32 2
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
 ; CHECK:       [[PRED_STORE_IF7]]:
 ; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META11]], !noalias [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
 ; CHECK:       [[PRED_STORE_CONTINUE8]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x i1> [[BROADCAST_SPLAT]], i32 3
-; CHECK-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
 ; CHECK:       [[PRED_STORE_IF9]]:
 ; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META11]], !noalias [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
 ; CHECK:       [[PRED_STORE_CONTINUE10]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i1> [[BROADCAST_SPLAT]], i32 4
-; CHECK-NEXT:    br i1 [[TMP16]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
 ; CHECK:       [[PRED_STORE_IF11]]:
 ; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META11]], !noalias [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
 ; CHECK:       [[PRED_STORE_CONTINUE12]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i1> [[BROADCAST_SPLAT]], i32 5
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
 ; CHECK:       [[PRED_STORE_IF13]]:
 ; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META11]], !noalias [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
 ; CHECK:       [[PRED_STORE_CONTINUE14]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x i1> [[BROADCAST_SPLAT]], i32 6
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
 ; CHECK:       [[PRED_STORE_IF15]]:
 ; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META11]], !noalias [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
 ; CHECK:       [[PRED_STORE_CONTINUE16]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <8 x i1> [[BROADCAST_SPLAT]], i32 7
-; CHECK-NEXT:    br i1 [[TMP19]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18]]
 ; CHECK:       [[PRED_STORE_IF17]]:
 ; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META11]], !noalias [[META14]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
@@ -265,7 +257,7 @@ define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) #0
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]

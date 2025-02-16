@@ -374,6 +374,20 @@ bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 
 void X86TargetMachine::reset() { SubtargetMap.clear(); }
 
+ScheduleDAGInstrs *
+X86TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  DAG->addMutation(createX86MacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+X86TargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  DAG->addMutation(createX86MacroFusionDAGMutation());
+  return DAG;
+}
+
 //===----------------------------------------------------------------------===//
 // X86 TTI query.
 //===----------------------------------------------------------------------===//
@@ -397,20 +411,6 @@ public:
 
   X86TargetMachine &getX86TargetMachine() const {
     return getTM<X86TargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    DAG->addMutation(createX86MacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-    DAG->addMutation(createX86MacroFusionDAGMutation());
-    return DAG;
   }
 
   void addIRPasses() override;

@@ -276,10 +276,10 @@ AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
 //
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
-                   AddressRanges ranges)
+                   Address address, AddressRanges ranges)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
       m_type(type), m_mangled(mangled), m_block(*this, func_uid),
-      m_range(CollapseRanges(ranges)), m_address(m_range.GetBaseAddress()),
+      m_range(CollapseRanges(ranges)), m_address(std::move(address)),
       m_prologue_byte_size(0) {
   assert(comp_unit != nullptr);
   lldb::addr_t base_file_addr = m_address.GetFileAddress();

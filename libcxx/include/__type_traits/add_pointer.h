@@ -41,7 +41,7 @@ using __add_pointer_t = typename __add_pointer_impl<_Tp>::type;
 #endif // !defined(_LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS) && __has_builtin(__add_pointer)
 
 template <class _Tp>
-struct add_pointer {
+struct _LIBCPP_NO_SPECIALIZATIONS add_pointer {
   using type _LIBCPP_NODEBUG = __add_pointer_t<_Tp>;
 };
 

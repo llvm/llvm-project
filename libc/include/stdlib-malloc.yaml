@@ -1,0 +1,44 @@
+# This file has declarations that appear both in <stdlib.h> and in <malloc.h>.
+
+functions:
+  - name: aligned_alloc
+    standards:
+      - stdc
+    return_type: void *
+    arguments:
+      - type: size_t
+      - type: size_t
+  - name: calloc
+    standards:
+      - stdc
+    return_type: void *
+    arguments:
+      - type: size_t
+      - type: size_t
+  - name: free
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: void *
+  - name: malloc
+    standards:
+      - stdc
+    return_type: void *
+    arguments:
+      - type: size_t
+  - name: realloc
+    standards:
+      - stdc
+    return_type: void *
+    arguments:
+      - type: void *
+      - type: size_t
+
+# Note: glibc's <stdlib.h> and <malloc.h> both have these, which are
+# currently missing here:
+#  - name: reallocarray
+#  - name: memalign
+#  - name: valloc
+# Each of those glibc headers also has related functions the other lacks.
+# Only the common subset is mentioned here for future consideration.

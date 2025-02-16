@@ -223,10 +223,8 @@ float32x4_t test_vcvtq_high_f32_bf16(bfloat16x8_t a) {
 // CHECK-A64-LABEL: @test_vcvt_bf16_f32(
 // CHECK-A64-NEXT:  entry:
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_F321_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float> [[A]])
-// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_F322_I:%.*]] = bitcast <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_F321_I]] to <16 x i8>
-// CHECK-A64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_F321_I]], <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_F321_I]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK-A64-NEXT:    ret <4 x bfloat> [[SHUFFLE_I]]
+// CHECK-A64-NEXT:    [[TMP1:%.*]] = fptrunc <4 x float> [[A]] to <4 x bfloat>
+// CHECK-A64-NEXT:    ret <4 x bfloat> [[TMP1]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvt_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
@@ -263,9 +261,9 @@ bfloat16x4_t test_vcvt_bf16_f32(float32x4_t a) {
 // CHECK-A64-LABEL: @test_vcvtq_low_bf16_f32(
 // CHECK-A64-NEXT:  entry:
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_F321_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float> [[A]])
-// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_F322_I:%.*]] = bitcast <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_F321_I]] to <16 x i8>
-// CHECK-A64-NEXT:    ret <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_F321_I]]
+// CHECK-A64-NEXT:    [[TMP1:%.*]] = fptrunc <4 x float> [[A]] to <4 x bfloat>
+// CHECK-A64-NEXT:    [[TMP2:%.*]] = shufflevector <4 x bfloat> [[TMP1]], <4 x bfloat> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// CHECK-A64-NEXT:    ret <8 x bfloat> [[TMP2]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvtq_low_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
@@ -323,9 +321,10 @@ bfloat16x8_t test_vcvtq_low_bf16_f32(float32x4_t a) {
 // CHECK-A64-NEXT:  entry:
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = bitcast <8 x bfloat> [[INACTIVE:%.*]] to <16 x i8>
 // CHECK-A64-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A64-NEXT:    [[VCVTQ_HIGH_BF16_F322_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn2(<8 x bfloat> [[INACTIVE]], <4 x float> [[A]])
-// CHECK-A64-NEXT:    [[VCVTQ_HIGH_BF16_F323_I:%.*]] = bitcast <8 x bfloat> [[VCVTQ_HIGH_BF16_F322_I]] to <16 x i8>
-// CHECK-A64-NEXT:    ret <8 x bfloat> [[VCVTQ_HIGH_BF16_F322_I]]
+// CHECK-A64-NEXT:    [[TMP2:%.*]] = shufflevector <8 x bfloat> [[INACTIVE]], <8 x bfloat> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-A64-NEXT:    [[TMP3:%.*]] = fptrunc <4 x float> [[A]] to <4 x bfloat>
+// CHECK-A64-NEXT:    [[TMP4:%.*]] = shufflevector <4 x bfloat> [[TMP2]], <4 x bfloat> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// CHECK-A64-NEXT:    ret <8 x bfloat> [[TMP4]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvtq_high_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
@@ -404,8 +403,8 @@ bfloat16x8_t test_vcvtq_high_bf16_f32(bfloat16x8_t inactive, float32x4_t a) {
 
 // CHECK-A64-LABEL: @test_vcvth_bf16_f32(
 // CHECK-A64-NEXT:  entry:
-// CHECK-A64-NEXT:    [[VCVTH_BF16_F32_I:%.*]] = call bfloat @llvm.aarch64.neon.bfcvt(float [[A:%.*]])
-// CHECK-A64-NEXT:    ret bfloat [[VCVTH_BF16_F32_I]]
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = fptrunc float [[A:%.*]] to bfloat
+// CHECK-A64-NEXT:    ret bfloat [[TMP0]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvth_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
