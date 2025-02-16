@@ -874,6 +874,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[14], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[15], tok::amp, TT_UnaryOperator);
 
+  Tokens = annotate("return (Foo (Bar::*)())&Bar::foo;");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionTypeLParen);
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
+
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
   Tokens = annotate("#define FOO(bar) foo((Foo)&bar)", Style);
@@ -1181,8 +1187,8 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[33], tok::identifier, TT_Unknown);
 
   Tokens =
-      annotate("template<typename T>\n"
-               "requires (C1<T> && (C21<T> || C22<T> && C2e<T>) && C3<T>)\n"
+      annotate("template <typename T>\n"
+               "  requires(C1<T> && (C21<T> || C22<T> && C2e<T>) && C3<T>)\n"
                "struct Foo;");
   ASSERT_EQ(Tokens.size(), 38u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
@@ -1841,6 +1847,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodExpr) {
   ASSERT_EQ(Tokens.size(), 20u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::l_square, TT_ObjCMethodExpr);
   EXPECT_TOKEN(Tokens[15], tok::greater, TT_BinaryOperator);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodDecl) {
+  auto Tokens = annotate("/**/ - (void)foo;");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_ObjCMethodSpecifier);
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_SelectorName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {

@@ -43,7 +43,7 @@
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
 ; RUN:	-memprof-allow-recursive-callsites=true \
 ; RUN:  %s -S 2>&1 | FileCheck %s \
-; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
+; RUN:  --implicit-check-not "memprof_recursive.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
 ; RUN:  --check-prefix=ALL --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=ALLOW-RECUR-CONTEXTS
 
 ;; Skipping recursive callsites should result in no cloning.
@@ -52,7 +52,7 @@
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
 ; RUN:	-memprof-allow-recursive-callsites=false \
 ; RUN:  %s -S 2>&1 | FileCheck %s \
-; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
+; RUN:  --implicit-check-not "memprof_recursive.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
 ; RUN:  --implicit-check-not="created clone" \
 ; RUN:	--implicit-check-not="marked with memprof allocation attribute cold" \
 ; RUN:  --check-prefix=ALL
@@ -62,7 +62,7 @@
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
 ; RUN:  %s -S 2>&1 | FileCheck %s \
-; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
+; RUN:  --implicit-check-not "memprof_recursive.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
 ; RUN:  --check-prefix=ALL --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=ALLOW-RECUR-CONTEXTS
 
 ;; Skipping recursive contexts should prevent spurious call to cloned version of
@@ -74,7 +74,7 @@
 ; RUN:	-memprof-allow-recursive-callsites=true \
 ; RUN:	-memprof-allow-recursive-contexts=false \
 ; RUN:  %s -S 2>&1 | FileCheck %s \
-; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
+; RUN:  --implicit-check-not "memprof_recursive.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
 ; RUN:  --check-prefix=ALL --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=SKIP-RECUR-CONTEXTS
 
 ; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:4:0: created clone _Z1Dv.memprof.1

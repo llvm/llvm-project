@@ -311,6 +311,14 @@ add_macro_header(
 )
 
 add_macro_header(
+  endian_macros
+  HDR
+    endian-macros.h
+  DEPENDS
+    .stdint_macros
+)
+
+add_macro_header(
   locale_macros
   HDR
     locale-macros.h
@@ -320,6 +328,8 @@ add_macro_header(
   pthread_macros
   HDR
     pthread-macros.h
+  DEPENDS
+    .null_macro
 )
 
 add_macro_header(

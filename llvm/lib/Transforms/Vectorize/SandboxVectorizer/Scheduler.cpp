@@ -86,6 +86,31 @@ void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
   }
 }
 
+void Scheduler::notifyCreateInstr(Instruction *I) {
+  // The DAG notifier should have run by now.
+  auto *N = DAG.getNode(I);
+  // If there is no DAG node for `I` it means that this is out of scope for the
+  // DAG and as such out of scope for the scheduler too, so nothing to do.
+  if (N == nullptr)
+    return;
+  // If the instruction is inserted below the top-of-schedule then we mark it as
+  // "scheduled".
+  bool IsScheduled = ScheduleTopItOpt &&
+                     *ScheduleTopItOpt != I->getParent()->end() &&
+                     (*ScheduleTopItOpt.value()).comesBefore(I);
+  if (IsScheduled)
+    N->setScheduled(true);
+  // If the new instruction is above the top of schedule we need to remove its
+  // dependency predecessors from the ready list and increment their
+  // `UnscheduledSuccs` counters.
+  if (!IsScheduled) {
+    for (auto *PredN : N->preds(DAG)) {
+      ReadyList.remove(PredN);
+      PredN->incrUnscheduledSuccs();
+    }
+  }
+}
+
 SchedBundle *Scheduler::createBundle(ArrayRef<Instruction *> Instrs) {
   SchedBundle::ContainerTy Nodes;
   Nodes.reserve(Instrs.size());
@@ -205,11 +230,13 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // top-most part of the schedule that includes the instrs in the bundle and
     // re-schedule.
     trimSchedule(Instrs);
+    ScheduleTopItOpt = std::nullopt;
     [[fallthrough]];
   case BndlSchedState::NoneScheduled: {
     // TODO: Set the window of the DAG that we are interested in.
-    // We start scheduling at the bottom instr of Instrs.
-    ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
+    if (!ScheduleTopItOpt)
+      // We start scheduling at the bottom instr of Instrs.
+      ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
 
     // TODO: For now don't cross BBs.
     if (!DAG.getInterval().empty()) {
@@ -237,6 +264,12 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
 void Scheduler::dump(raw_ostream &OS) const {
   OS << "ReadyList:\n";
   ReadyList.dump(OS);
+  OS << "Top of schedule: ";
+  if (ScheduleTopItOpt)
+    OS << **ScheduleTopItOpt;
+  else
+    OS << "Empty";
+  OS << "\n";
 }
 void Scheduler::dump() const { dump(dbgs()); }
 #endif // NDEBUG

@@ -87,9 +87,8 @@ See also SBThread."
     no additional arguments.  
     The register-set SBValue will have a name, e.g. 
     SBFrame::GetRegisters().GetValueAtIndex(0).GetName() 
-By convention, certain stubs choose to name their general-purpose register-set the 'General Purpose Registers', but that is not required.
-    register-set may not use that exact name, it is only a convention 
-    used by some stubs.
+    By convention, certain stubs choose to name their general-purpose 
+    register-set the 'General Purpose Registers', but that is not required.
     A register-set SBValue will have children, one child per register 
     in the register-set."
 ) lldb::SBFrame::GetRegisters;

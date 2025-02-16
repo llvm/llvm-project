@@ -3997,23 +3997,29 @@ private:
       return Sum;
     }
 
-    void dump(raw_ostream &os) const {
-      if (!isSchedulingEntity()) {
-        os << "/ " << *Inst;
-      } else if (NextInBundle) {
-        os << '[' << *Inst;
+    void dump(raw_ostream &OS) const {
+      if (isPartOfBundle()) {
+        if (!isSchedulingEntity()) {
+          OS << "/ " << *Inst << ", part of ";
+          FirstInBundle->dump(OS);
+          return;
+        }
+        OS << '[' << *Inst;
         ScheduleData *SD = NextInBundle;
         while (SD) {
-          os << ';' << *SD->Inst;
+          OS << ';' << *SD->Inst;
           SD = SD->NextInBundle;
         }
-        os << ']';
+        OS << ']';
       } else {
-        os << *Inst;
+        OS << *Inst;
       }
     }
 
-    LLVM_DUMP_METHOD void dump() const { dump(dbgs()); }
+    LLVM_DUMP_METHOD void dump() const {
+      dump(dbgs());
+      dbgs() << '\n';
+    }
 
     Instruction *Inst = nullptr;
 
@@ -5596,6 +5602,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         ::getNumberOfParts(*TTI, getWidenedType(TE.Scalars.front()->getType(),
                                                 2 * TE.getVectorFactor())) == 1)
       return std::nullopt;
+    if (TE.ReuseShuffleIndices.size() % Sz != 0)
+      return std::nullopt;
     if (!ShuffleVectorInst::isOneUseSingleSourceMask(TE.ReuseShuffleIndices,
                                                      Sz)) {
       SmallVector<int> ReorderMask(Sz, PoisonMaskElem);
@@ -5626,7 +5634,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         UsedVals.set(Val);
         for (unsigned K = 0; K < NumParts; ++K) {
           unsigned Idx = Val + Sz * K;
-          if (Idx < VF)
+          if (Idx < VF && I + K < VF)
             ResOrder[Idx] = I + K;
         }
       }
@@ -9948,12 +9956,16 @@ void BoUpSLP::transformNodes() {
         };
         for (auto [Cnt, Sz] : Slices) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, Sz);
-          // If any instruction is vectorized already - do not try again.
-          if (TreeEntry *SE = getSameValuesTreeEntry(Slice.front(), Slice,
-                                                     /*SameVF=*/true)) {
-            SE->UserTreeIndices.emplace_back(&E, UINT_MAX);
-            AddCombinedNode(SE->Idx, Cnt, Sz);
-            continue;
+          if (const auto *It = find_if(Slice, IsaPred<Instruction>);
+              It != Slice.end()) {
+            // If any instruction is vectorized already - do not try again.
+            if (TreeEntry *SE = getSameValuesTreeEntry(*It, Slice)) {
+              if (SE->getVectorFactor() != Sz)
+                continue;
+              SE->UserTreeIndices.emplace_back(&E, UINT_MAX);
+              AddCombinedNode(SE->Idx, Cnt, Sz);
+              continue;
+            }
           }
           unsigned PrevSize = VectorizableTree.size();
           [[maybe_unused]] unsigned PrevEntriesSize =
@@ -12185,7 +12197,11 @@ bool BoUpSLP::isTreeNotExtendable() const {
     TreeEntry &E = *VectorizableTree[Idx];
     if (!E.isGather())
       continue;
-    if (E.hasState() && E.getOpcode() != Instruction::Load)
+    if ((E.hasState() && E.getOpcode() != Instruction::Load) ||
+        (!E.hasState() &&
+         all_of(E.Scalars, IsaPred<ExtractElementInst, LoadInst>)) ||
+        (isa<ExtractElementInst>(E.Scalars.front()) &&
+         getSameOpcode(ArrayRef(E.Scalars).drop_front(), *TLI).valid()))
       return false;
     if (isSplat(E.Scalars) || allConstant(E.Scalars))
       continue;
@@ -13190,8 +13206,16 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
         // If the user instruction is used for some reason in different
         // vectorized nodes - make it depend on index.
+        // If any vector node is PHI node, this dependency might not work
+        // because of cycle dependencies, so disable it.
         if (TEUseEI.UserTE != UseEI.UserTE &&
-            TEUseEI.UserTE->Idx < UseEI.UserTE->Idx)
+            (TEUseEI.UserTE->Idx < UseEI.UserTE->Idx ||
+             any_of(
+                 VectorizableTree,
+                 [](const std::unique_ptr<TreeEntry> &TE) {
+                   return TE->State == TreeEntry::Vectorize &&
+                          TE->getOpcode() == Instruction::PHI;
+                 })))
           continue;
       }
 
@@ -18451,8 +18475,8 @@ void BoUpSLP::computeMinimumValueSizes() {
           any_of(
               VectorizableTree[NodeIdx]->UserTreeIndices,
               [&](const EdgeInfo &EI) {
-                return (EI.UserTE->hasState() &&
-                        EI.UserTE->getOpcode() == Instruction::ICmp) &&
+                return EI.UserTE && EI.UserTE->hasState() &&
+                       EI.UserTE->getOpcode() == Instruction::ICmp &&
                        any_of(EI.UserTE->Scalars, [&](Value *V) {
                          auto *IC = dyn_cast<ICmpInst>(V);
                          return IC &&
@@ -19393,6 +19417,9 @@ class HorizontalReduction {
   /// Checks if the optimization of original scalar identity operations on
   /// matched horizontal reductions is enabled and allowed.
   bool IsSupportedHorRdxIdentityOp = false;
+  /// Contains vector values for reduction including their scale factor and
+  /// signedness.
+  SmallVector<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales;
 
   static bool isCmpSelMinMax(Instruction *I) {
     return match(I, m_Select(m_Cmp(), m_Value(), m_Value())) &&
@@ -19443,19 +19470,23 @@ class HorizontalReduction {
   /// Creates reduction operation with the current opcode.
   static Value *createOp(IRBuilderBase &Builder, RecurKind Kind, Value *LHS,
                          Value *RHS, const Twine &Name, bool UseSelect) {
+    Type *OpTy = LHS->getType();
+    assert(OpTy == RHS->getType() && "Expected LHS and RHS of same type");
     switch (Kind) {
     case RecurKind::Or: {
-      if (UseSelect &&
-          LHS->getType() == CmpInst::makeCmpResultType(LHS->getType()))
-        return Builder.CreateSelect(LHS, Builder.getTrue(), RHS, Name);
+      if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
+        return Builder.CreateSelect(
+            LHS, ConstantInt::getAllOnesValue(CmpInst::makeCmpResultType(OpTy)),
+            RHS, Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
     }
     case RecurKind::And: {
-      if (UseSelect &&
-          LHS->getType() == CmpInst::makeCmpResultType(LHS->getType()))
-        return Builder.CreateSelect(LHS, RHS, Builder.getFalse(), Name);
+      if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
+        return Builder.CreateSelect(
+            LHS, RHS,
+            ConstantInt::getNullValue(CmpInst::makeCmpResultType(OpTy)), Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
@@ -20330,12 +20361,11 @@ public:
                                          SameValuesCounter, TrackedToOrig);
         }
 
-        Value *ReducedSubTree;
         Type *ScalarTy = VL.front()->getType();
         if (isa<FixedVectorType>(ScalarTy)) {
           assert(SLPReVec && "FixedVectorType is not expected.");
           unsigned ScalarTyNumElements = getNumElements(ScalarTy);
-          ReducedSubTree = PoisonValue::get(FixedVectorType::get(
+          Value *ReducedSubTree = PoisonValue::get(getWidenedType(
               VectorizedRoot->getType()->getScalarType(), ScalarTyNumElements));
           for (unsigned I : seq<unsigned>(ScalarTyNumElements)) {
             // Do reduction for each lane.
@@ -20353,30 +20383,33 @@ public:
             SmallVector<int, 16> Mask =
                 createStrideMask(I, ScalarTyNumElements, VL.size());
             Value *Lane = Builder.CreateShuffleVector(VectorizedRoot, Mask);
-            ReducedSubTree = Builder.CreateInsertElement(
-                ReducedSubTree,
-                emitReduction(Lane, Builder, TTI, RdxRootInst->getType()), I);
+            Value *Val =
+                createSingleOp(Builder, *TTI, Lane,
+                               OptReusedScalars && SameScaleFactor
+                                   ? SameValuesCounter.front().second
+                                   : 1,
+                               Lane->getType()->getScalarType() !=
+                                       VL.front()->getType()->getScalarType()
+                                   ? V.isSignedMinBitwidthRootNode()
+                                   : true,
+                               RdxRootInst->getType());
+            ReducedSubTree =
+                Builder.CreateInsertElement(ReducedSubTree, Val, I);
           }
+          VectorizedTree = GetNewVectorizedTree(VectorizedTree, ReducedSubTree);
         } else {
-          ReducedSubTree = emitReduction(VectorizedRoot, Builder, TTI,
-                                         RdxRootInst->getType());
-        }
-        if (ReducedSubTree->getType() != VL.front()->getType()) {
-          assert(ReducedSubTree->getType() != VL.front()->getType() &&
-                 "Expected different reduction type.");
-          ReducedSubTree =
-              Builder.CreateIntCast(ReducedSubTree, VL.front()->getType(),
-                                    V.isSignedMinBitwidthRootNode());
+          Type *VecTy = VectorizedRoot->getType();
+          Type *RedScalarTy = VecTy->getScalarType();
+          VectorValuesAndScales.emplace_back(
+              VectorizedRoot,
+              OptReusedScalars && SameScaleFactor
+                  ? SameValuesCounter.front().second
+                  : 1,
+              RedScalarTy != ScalarTy->getScalarType()
+                  ? V.isSignedMinBitwidthRootNode()
+                  : true);
         }
 
-        // Improved analysis for add/fadd/xor reductions with same scale factor
-        // for all operands of reductions. We can emit scalar ops for them
-        // instead.
-        if (OptReusedScalars && SameScaleFactor)
-          ReducedSubTree = emitScaleForReusedOps(
-              ReducedSubTree, Builder, SameValuesCounter.front().second);
-
-        VectorizedTree = GetNewVectorizedTree(VectorizedTree, ReducedSubTree);
         // Count vectorized reduced values to exclude them from final reduction.
         for (Value *RdxVal : VL) {
           Value *OrigV = TrackedToOrig.at(RdxVal);
@@ -20405,6 +20438,10 @@ public:
         continue;
       }
     }
+    if (!VectorValuesAndScales.empty())
+      VectorizedTree = GetNewVectorizedTree(
+          VectorizedTree,
+          emitReduction(Builder, *TTI, ReductionRoot->getType()));
     if (VectorizedTree) {
       // Reorder operands of bool logical op in the natural order to avoid
       // possible problem with poison propagation. If not possible to reorder
@@ -20539,6 +20576,22 @@ public:
   }
 
 private:
+  /// Creates the reduction from the given \p Vec vector value with the given
+  /// scale \p Scale and signedness \p IsSigned.
+  Value *createSingleOp(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
+                        Value *Vec, unsigned Scale, bool IsSigned,
+                        Type *DestTy) {
+    Value *Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
+    if (Rdx->getType() != DestTy->getScalarType())
+      Rdx = Builder.CreateIntCast(Rdx, DestTy, IsSigned);
+    // Improved analysis for add/fadd/xor reductions with same scale
+    // factor for all operands of reductions. We can emit scalar ops for
+    // them instead.
+    if (Scale > 1)
+      Rdx = emitScaleForReusedOps(Rdx, Builder, Scale);
+    return Rdx;
+  }
+
   /// Calculate the cost of a reduction.
   InstructionCost getReductionCost(TargetTransformInfo *TTI,
                                    ArrayRef<Value *> ReducedVals,
@@ -20581,6 +20634,12 @@ private:
       }
       return Cost;
     };
+    // Require reduction cost if:
+    // 1. This type is not a full register type and no other vectors with the
+    // same type in the storage (first vector with small type).
+    // 2. The storage does not have any vector with full vector use (first
+    // vector with full register use).
+    bool DoesRequireReductionOp = !AllConsts && VectorValuesAndScales.empty();
     switch (RdxKind) {
     case RecurKind::Add:
     case RecurKind::Mul:
@@ -20604,7 +20663,7 @@ private:
           VectorCost += TTI->getScalarizationOverhead(
               VecTy, APInt::getAllOnes(ScalarTyNumElements), /*Insert*/ true,
               /*Extract*/ false, TTI::TCK_RecipThroughput);
-        } else {
+        } else if (DoesRequireReductionOp) {
           Type *RedTy = VectorTy->getElementType();
           auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
               std::make_pair(RedTy, true));
@@ -20615,6 +20674,20 @@ private:
             VectorCost = TTI->getExtendedReductionCost(
                 RdxOpcode, !IsSigned, RedTy, getWidenedType(RType, ReduxWidth),
                 FMF, CostKind);
+          }
+        } else {
+          Type *RedTy = VectorTy->getElementType();
+          auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
+              std::make_pair(RedTy, true));
+          VectorType *RVecTy = getWidenedType(RType, ReduxWidth);
+          VectorCost +=
+              TTI->getArithmeticInstrCost(RdxOpcode, RVecTy, CostKind);
+          if (RType != RedTy) {
+            unsigned Opcode = Instruction::Trunc;
+            if (RedTy->getScalarSizeInBits() > RType->getScalarSizeInBits())
+              Opcode = IsSigned ? Instruction::SExt : Instruction::ZExt;
+            VectorCost += TTI->getCastInstrCost(
+                Opcode, VectorTy, RVecTy, TTI::CastContextHint::None, CostKind);
           }
         }
       }
@@ -20632,8 +20705,27 @@ private:
     case RecurKind::UMax:
     case RecurKind::UMin: {
       Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
-      if (!AllConsts)
-        VectorCost = TTI->getMinMaxReductionCost(Id, VectorTy, FMF, CostKind);
+      if (!AllConsts) {
+        if (DoesRequireReductionOp) {
+          VectorCost = TTI->getMinMaxReductionCost(Id, VectorTy, FMF, CostKind);
+        } else {
+          // Check if the previous reduction already exists and account it as
+          // series of operations + single reduction.
+          Type *RedTy = VectorTy->getElementType();
+          auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
+              std::make_pair(RedTy, true));
+          VectorType *RVecTy = getWidenedType(RType, ReduxWidth);
+          IntrinsicCostAttributes ICA(Id, RVecTy, {RVecTy, RVecTy}, FMF);
+          VectorCost += TTI->getIntrinsicInstrCost(ICA, CostKind);
+          if (RType != RedTy) {
+            unsigned Opcode = Instruction::Trunc;
+            if (RedTy->getScalarSizeInBits() > RType->getScalarSizeInBits())
+              Opcode = IsSigned ? Instruction::SExt : Instruction::ZExt;
+            VectorCost += TTI->getCastInstrCost(
+                Opcode, VectorTy, RVecTy, TTI::CastContextHint::None, CostKind);
+          }
+        }
+      }
       ScalarCost = EvaluateScalarCost([&]() {
         IntrinsicCostAttributes ICA(Id, ScalarTy, {ScalarTy, ScalarTy}, FMF);
         return TTI->getIntrinsicInstrCost(ICA, CostKind);
@@ -20648,6 +20740,161 @@ private:
                       << " for reduction of " << shortBundleName(ReducedVals)
                       << " (It is a splitting reduction)\n");
     return VectorCost - ScalarCost;
+  }
+
+  /// Splits the values, stored in VectorValuesAndScales, into registers/free
+  /// sub-registers, combines them with the given reduction operation as a
+  /// vector operation and then performs single (small enough) reduction.
+  Value *emitReduction(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
+                       Type *DestTy) {
+    Value *ReducedSubTree = nullptr;
+    // Creates reduction and combines with the previous reduction.
+    auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned) {
+      Value *Rdx = createSingleOp(Builder, TTI, Vec, Scale, IsSigned, DestTy);
+      if (ReducedSubTree)
+        ReducedSubTree = createOp(Builder, RdxKind, ReducedSubTree, Rdx,
+                                  "op.rdx", ReductionOps);
+      else
+        ReducedSubTree = Rdx;
+    };
+    if (VectorValuesAndScales.size() == 1) {
+      const auto &[Vec, Scale, IsSigned] = VectorValuesAndScales.front();
+      CreateSingleOp(Vec, Scale, IsSigned);
+      return ReducedSubTree;
+    }
+    // Scales Vec using given Cnt scale factor and then performs vector combine
+    // with previous value of VecOp.
+    Value *VecRes = nullptr;
+    bool VecResSignedness = false;
+    auto CreateVecOp = [&](Value *Vec, unsigned Cnt, bool IsSigned) {
+      Type *ScalarTy = Vec->getType()->getScalarType();
+      // Scale Vec using given Cnt scale factor.
+      if (Cnt > 1) {
+        ElementCount EC = cast<VectorType>(Vec->getType())->getElementCount();
+        switch (RdxKind) {
+        case RecurKind::Add: {
+          if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy) {
+            unsigned VF = getNumElements(Vec->getType());
+            LLVM_DEBUG(dbgs() << "SLP: ctpop " << Cnt << "of " << Vec
+                              << ". (HorRdx)\n");
+            SmallVector<int> Mask(Cnt * VF, PoisonMaskElem);
+            for (unsigned I : seq<unsigned>(Cnt))
+              std::iota(std::next(Mask.begin(), VF * I),
+                        std::next(Mask.begin(), VF * (I + 1)), 0);
+            ++NumVectorInstructions;
+            Vec = Builder.CreateShuffleVector(Vec, Mask);
+            break;
+          }
+          // res = mul vv, n
+          if (ScalarTy != DestTy->getScalarType())
+            Vec = Builder.CreateIntCast(
+                Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
+                IsSigned);
+          Value *Scale = ConstantVector::getSplat(
+              EC, ConstantInt::get(DestTy->getScalarType(), Cnt));
+          LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of " << Vec
+                            << ". (HorRdx)\n");
+          ++NumVectorInstructions;
+          Vec = Builder.CreateMul(Vec, Scale);
+          break;
+        }
+        case RecurKind::Xor: {
+          // res = n % 2 ? 0 : vv
+          LLVM_DEBUG(dbgs()
+                     << "SLP: Xor " << Cnt << "of " << Vec << ". (HorRdx)\n");
+          if (Cnt % 2 == 0)
+            Vec = Constant::getNullValue(Vec->getType());
+          break;
+        }
+        case RecurKind::FAdd: {
+          // res = fmul v, n
+          Value *Scale =
+              ConstantVector::getSplat(EC, ConstantFP::get(ScalarTy, Cnt));
+          LLVM_DEBUG(dbgs() << "SLP: FAdd (to-fmul) " << Cnt << "of " << Vec
+                            << ". (HorRdx)\n");
+          ++NumVectorInstructions;
+          Vec = Builder.CreateFMul(Vec, Scale);
+          break;
+        }
+        case RecurKind::And:
+        case RecurKind::Or:
+        case RecurKind::SMax:
+        case RecurKind::SMin:
+        case RecurKind::UMax:
+        case RecurKind::UMin:
+        case RecurKind::FMax:
+        case RecurKind::FMin:
+        case RecurKind::FMaximum:
+        case RecurKind::FMinimum:
+          // res = vv
+          break;
+        case RecurKind::Mul:
+        case RecurKind::FMul:
+        case RecurKind::FMulAdd:
+        case RecurKind::IAnyOf:
+        case RecurKind::FAnyOf:
+        case RecurKind::IFindLastIV:
+        case RecurKind::FFindLastIV:
+        case RecurKind::None:
+          llvm_unreachable("Unexpected reduction kind for repeated scalar.");
+        }
+      }
+      // Combine Vec with the previous VecOp.
+      if (!VecRes) {
+        VecRes = Vec;
+        VecResSignedness = IsSigned;
+      } else {
+        ++NumVectorInstructions;
+        if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy &&
+            VecRes->getType()->getScalarType() == Builder.getInt1Ty()) {
+          // Handle ctpop.
+          unsigned VecResVF = getNumElements(VecRes->getType());
+          unsigned VecVF = getNumElements(Vec->getType());
+          SmallVector<int> Mask(VecResVF + VecVF, PoisonMaskElem);
+          std::iota(Mask.begin(), Mask.end(), 0);
+          // Ensure that VecRes is always larger than Vec
+          if (VecResVF < VecVF) {
+            std::swap(VecRes, Vec);
+            std::swap(VecResVF, VecVF);
+          }
+          if (VecResVF != VecVF) {
+            SmallVector<int> ResizeMask(VecResVF, PoisonMaskElem);
+            std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), VecVF), 0);
+            Vec = Builder.CreateShuffleVector(Vec, ResizeMask);
+          }
+          VecRes = Builder.CreateShuffleVector(VecRes, Vec, Mask, "rdx.op");
+          return;
+        }
+        if (VecRes->getType()->getScalarType() != DestTy->getScalarType())
+          VecRes = Builder.CreateIntCast(
+              VecRes, getWidenedType(DestTy, getNumElements(VecRes->getType())),
+              VecResSignedness);
+        if (ScalarTy != DestTy->getScalarType())
+          Vec = Builder.CreateIntCast(
+              Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
+              IsSigned);
+        unsigned VecResVF = getNumElements(VecRes->getType());
+        unsigned VecVF = getNumElements(Vec->getType());
+        // Ensure that VecRes is always larger than Vec
+        if (VecResVF < VecVF) {
+          std::swap(VecRes, Vec);
+          std::swap(VecResVF, VecVF);
+        }
+        // extract + op + insert
+        Value *Op = VecRes;
+        if (VecResVF != VecVF)
+          Op = createExtractVector(Builder, VecRes, VecVF, /*Index=*/0);
+        Op = createOp(Builder, RdxKind, Op, Vec, "rdx.op", ReductionOps);
+        if (VecResVF != VecVF)
+          Op = createInsertVector(Builder, VecRes, Op, /*Index=*/0);
+        VecRes = Op;
+      }
+    };
+    for (auto [Vec, Scale, IsSigned] : VectorValuesAndScales)
+      CreateVecOp(Vec, Scale, IsSigned);
+    CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false);
+
+    return ReducedSubTree;
   }
 
   /// Emit a horizontal reduction of the vectorized value.

@@ -199,7 +199,7 @@ def AffineLoopTiling : Pass<"affine-loop-tile", "func::FuncOp"> {
   ];
 }
 
-def AffineLoopUnroll : Pass<"affine-loop-unroll", "func::FuncOp"> {
+def AffineLoopUnroll : InterfacePass<"affine-loop-unroll", "FunctionOpInterface"> {
   let summary = "Unroll affine loops";
   let constructor = "mlir::affine::createLoopUnrollPass()";
   let options = [
@@ -219,7 +219,7 @@ def AffineLoopUnroll : Pass<"affine-loop-unroll", "func::FuncOp"> {
   ];
 }
 
-def AffineLoopUnrollAndJam : Pass<"affine-loop-unroll-jam", "func::FuncOp"> {
+def AffineLoopUnrollAndJam : InterfacePass<"affine-loop-unroll-jam", "FunctionOpInterface"> {
   let summary = "Unroll and jam affine loops";
   let constructor = "mlir::affine::createLoopUnrollAndJamPass()";
   let options = [

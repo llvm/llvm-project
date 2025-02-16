@@ -25,6 +25,8 @@
 // BINARY-ID-NEXT: Total functions: 3
 // BINARY-ID-NEXT: Maximum function count: 2
 // BINARY-ID-NEXT: Maximum internal block count: 0
+// BINARY-ID-NEXT: Total number of blocks: 3
+// BINARY-ID-NEXT: Total count: 2
 // BINARY-ID-NEXT: Binary IDs:
 // BINARY-ID-NEXT: {{[0-9a-f]+}}
 // BINARY-ID-NEXT: {{[0-9a-f]+}}
