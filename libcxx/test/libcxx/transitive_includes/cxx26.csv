@@ -896,7 +896,6 @@ spanstream iostream
 spanstream istream
 spanstream limits
 spanstream locale
-spanstream new
 spanstream optional
 spanstream ostream
 spanstream print
