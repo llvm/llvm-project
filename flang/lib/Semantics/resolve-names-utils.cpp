@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "resolve-names-utils.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/fold.h"
@@ -20,6 +18,8 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <initializer_list>
 #include <variant>
 
@@ -762,7 +762,11 @@ void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
               proc.set_procInterfaces(
                   *mappedSymbol, BypassGeneric(mappedSymbol->GetUltimate()));
             } else if (const DeclTypeSpec * mappedType{MapType(proc.type())}) {
-              proc.set_type(*mappedType);
+              if (proc.type()) {
+                CHECK(*proc.type() == *mappedType);
+              } else {
+                proc.set_type(*mappedType);
+              }
             }
             if (proc.init()) {
               if (const Symbol * mapped{MapSymbol(*proc.init())}) {

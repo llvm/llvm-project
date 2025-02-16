@@ -160,7 +160,7 @@ static Module *getInternal(LLVMContext &Ctx) {
   IRBuilder<> Builder(BB);
   Builder.CreateRetVoid();
 
-  StructType *STy = StructType::create(Ctx, PointerType::get(FTy, 0));
+  StructType *STy = StructType::create(Ctx, PointerType::get(Ctx, 0));
 
   GlobalVariable *GV =
       new GlobalVariable(*InternalM, STy, false /*=isConstant*/,

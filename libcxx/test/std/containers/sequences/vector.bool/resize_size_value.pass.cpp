@@ -17,47 +17,45 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
-    {
-        std::vector<bool> v(100);
-        v.resize(50, 1);
-        assert(v.size() == 50);
-        assert(v.capacity() >= 100);
-        assert(v == std::vector<bool>(50));
-        v.resize(200, 1);
-        assert(v.size() == 200);
-        assert(v.capacity() >= 200);
-        for (unsigned i = 0; i < 50; ++i)
-            assert(v[i] == 0);
-        for (unsigned i = 50; i < 200; ++i)
-            assert(v[i] == 1);
-    }
+TEST_CONSTEXPR_CXX20 bool tests() {
+  {
+    std::vector<bool> v(100);
+    v.resize(50, 1);
+    assert(v.size() == 50);
+    assert(v.capacity() >= 100);
+    assert(v == std::vector<bool>(50));
+    v.resize(200, 1);
+    assert(v.size() == 200);
+    assert(v.capacity() >= 200);
+    for (unsigned i = 0; i < 50; ++i)
+      assert(v[i] == 0);
+    for (unsigned i = 50; i < 200; ++i)
+      assert(v[i] == 1);
+  }
 #if TEST_STD_VER >= 11
-    {
-        std::vector<bool, min_allocator<bool>> v(100);
-        v.resize(50, 1);
-        assert(v.size() == 50);
-        assert(v.capacity() >= 100);
-        assert((v == std::vector<bool, min_allocator<bool>>(50)));
-        v.resize(200, 1);
-        assert(v.size() == 200);
-        assert(v.capacity() >= 200);
-        for (unsigned i = 0; i < 50; ++i)
-            assert(v[i] == 0);
-        for (unsigned i = 50; i < 200; ++i)
-            assert(v[i] == 1);
-    }
+  {
+    std::vector<bool, min_allocator<bool>> v(100);
+    v.resize(50, 1);
+    assert(v.size() == 50);
+    assert(v.capacity() >= 100);
+    assert((v == std::vector<bool, min_allocator<bool>>(50)));
+    v.resize(200, 1);
+    assert(v.size() == 200);
+    assert(v.capacity() >= 200);
+    for (unsigned i = 0; i < 50; ++i)
+      assert(v[i] == 0);
+    for (unsigned i = 50; i < 200; ++i)
+      assert(v[i] == 1);
+  }
 #endif
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
-    tests();
+int main(int, char**) {
+  tests();
 #if TEST_STD_VER > 17
-    static_assert(tests());
+  static_assert(tests());
 #endif
-    return 0;
+  return 0;
 }

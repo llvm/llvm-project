@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,alpha.security.ArrayBound -verify %s
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound -verify %s
 // XFAIL: *
 
 // Once we better handle modeling of sizes of VLAs, we can pull this back
@@ -9,7 +9,7 @@ void sizeof_vla(int a) {
     char x[a];
     int y[sizeof(x)];
     y[4] = 4; // no-warning
-    y[5] = 5; // expected-warning{{out-of-bound}}
+    y[5] = 5; // expected-warning{{Out of bounds access}}
   }
 }
 
@@ -18,7 +18,7 @@ void sizeof_vla_2(int a) {
     char x[a];
     int y[sizeof(x) / sizeof(char)];
     y[4] = 4; // no-warning
-    y[5] = 5; // expected-warning{{out-of-bound}}
+    y[5] = 5; // expected-warning{{Out of bounds access}}
   }
 }
 
@@ -27,6 +27,6 @@ void sizeof_vla_3(int a) {
     char x[a];
     int y[sizeof(*&*&*&x)];
     y[4] = 4; // no-warning
-    y[5] = 5; // expected-warning{{out-of-bound}}
+    y[5] = 5; // expected-warning{{Out of bounds access}}
   }
 }

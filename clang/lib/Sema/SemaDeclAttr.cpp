@@ -64,6 +64,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -879,22 +880,38 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!checkFunctionConditionAttr(S, D, AL, Cond, Msg))
     return;
 
-  StringRef DiagTypeStr;
-  if (!S.checkStringLiteralArgumentAttr(AL, 2, DiagTypeStr))
+  StringRef DefaultSevStr;
+  if (!S.checkStringLiteralArgumentAttr(AL, 2, DefaultSevStr))
     return;
 
-  DiagnoseIfAttr::DiagnosticType DiagType;
-  if (!DiagnoseIfAttr::ConvertStrToDiagnosticType(DiagTypeStr, DiagType)) {
+  DiagnoseIfAttr::DefaultSeverity DefaultSev;
+  if (!DiagnoseIfAttr::ConvertStrToDefaultSeverity(DefaultSevStr, DefaultSev)) {
     S.Diag(AL.getArgAsExpr(2)->getBeginLoc(),
            diag::err_diagnose_if_invalid_diagnostic_type);
     return;
+  }
+
+  StringRef WarningGroup;
+  SmallVector<StringRef, 2> Options;
+  if (AL.getNumArgs() > 3) {
+    if (!S.checkStringLiteralArgumentAttr(AL, 3, WarningGroup))
+      return;
+    if (WarningGroup.empty() ||
+        !S.getDiagnostics().getDiagnosticIDs()->getGroupForWarningOption(
+            WarningGroup)) {
+      S.Diag(AL.getArgAsExpr(3)->getBeginLoc(),
+             diag::err_diagnose_if_unknown_warning)
+          << WarningGroup;
+      return;
+    }
   }
 
   bool ArgDependent = false;
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     ArgDependent = ArgumentDependenceChecker(FD).referencesArgs(Cond);
   D->addAttr(::new (S.Context) DiagnoseIfAttr(
-      S.Context, AL, Cond, Msg, DiagType, ArgDependent, cast<NamedDecl>(D)));
+      S.Context, AL, Cond, Msg, DefaultSev, WarningGroup, ArgDependent,
+      cast<NamedDecl>(D)));
 }
 
 static void handleNoBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -2933,15 +2950,49 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
+static bool isValidCodeModelAttr(llvm::Triple &Triple, StringRef Str) {
+  if (Triple.isLoongArch()) {
+    return Str == "normal" || Str == "medium" || Str == "extreme";
+  } else {
+    assert(Triple.getArch() == llvm::Triple::x86_64 &&
+           "only loongarch/x86-64 supported");
+    return Str == "small" || Str == "large";
+  }
+}
+
 static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   SourceLocation LiteralLoc;
+  auto IsTripleSupported = [](llvm::Triple &Triple) {
+    return Triple.getArch() == llvm::Triple::ArchType::x86_64 ||
+           Triple.isLoongArch();
+  };
+
   // Check that it is a string.
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc))
     return;
 
+  SmallVector<llvm::Triple, 2> Triples = {
+      S.Context.getTargetInfo().getTriple()};
+  if (auto *aux = S.Context.getAuxTargetInfo()) {
+    Triples.push_back(aux->getTriple());
+  } else if (S.Context.getTargetInfo().getTriple().isNVPTX() ||
+             S.Context.getTargetInfo().getTriple().isAMDGPU() ||
+             S.Context.getTargetInfo().getTriple().isSPIRV()) {
+    // Ignore the attribute for pure GPU device compiles since it only applies
+    // to host globals.
+    return;
+  }
+
+  auto SupportedTripleIt = llvm::find_if(Triples, IsTripleSupported);
+  if (SupportedTripleIt == Triples.end()) {
+    S.Diag(LiteralLoc, diag::warn_unknown_attribute_ignored) << AL;
+    return;
+  }
+
   llvm::CodeModel::Model CM;
-  if (!CodeModelAttr::ConvertStrToModel(Str, CM)) {
+  if (!CodeModelAttr::ConvertStrToModel(Str, CM) ||
+      !isValidCodeModelAttr(*SupportedTripleIt, Str)) {
     S.Diag(LiteralLoc, diag::err_attr_codemodel_arg) << Str;
     return;
   }
@@ -3057,7 +3108,8 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   if (ParsedAttrs.BranchProtection.empty())
     return false;
   if (!Context.getTargetInfo().validateBranchProtection(
-          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI, DiagMsg)) {
+          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI,
+          Context.getLangOpts(), DiagMsg)) {
     if (DiagMsg.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "branch-protection" << Target;
@@ -7465,6 +7517,15 @@ void Sema::ProcessDeclAttributeList(
           << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
       D->setInvalidDecl();
     }
+  }
+
+  // Do not permit 'constructor' or 'destructor' attributes on __device__ code.
+  if (getLangOpts().CUDAIsDevice && D->hasAttr<CUDADeviceAttr>() &&
+      (D->hasAttr<ConstructorAttr>() || D->hasAttr<DestructorAttr>()) &&
+      !getLangOpts().GPUAllowDeviceInit) {
+    Diag(D->getLocation(), diag::err_cuda_ctor_dtor_attrs)
+        << (D->hasAttr<ConstructorAttr>() ? "constructors" : "destructors");
+    D->setInvalidDecl();
   }
 
   // Do this check after processing D's attributes because the attribute

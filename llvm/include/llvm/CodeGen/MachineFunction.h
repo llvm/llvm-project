@@ -88,6 +88,15 @@ template <> struct ilist_callback_traits<MachineBasicBlock> {
   }
 };
 
+// The hotness of static data tracked by a MachineFunction and not represented
+// as a global object in the module IR / MIR. Typical examples are
+// MachineJumpTableInfo and MachineConstantPool.
+enum class MachineFunctionDataHotness {
+  Unknown,
+  Cold,
+  Hot,
+};
+
 /// MachineFunctionInfo - This class can be derived from and used by targets to
 /// hold private target-specific information for each MachineFunction.  Objects
 /// of type are accessed/created with MF::getInfo and destroyed when the
@@ -908,6 +917,13 @@ public:
   /// \returns true if no problems were found.
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
               raw_ostream *OS = nullptr, bool AbortOnError = true) const;
+
+  /// For New Pass Manager: Run the current MachineFunction through the machine
+  /// code verifier, useful for debugger use.
+  /// \returns true if no problems were found.
+  bool verify(MachineFunctionAnalysisManager &MFAM,
+              const char *Banner = nullptr, raw_ostream *OS = nullptr,
+              bool AbortOnError = true) const;
 
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
