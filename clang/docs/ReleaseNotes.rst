@@ -93,6 +93,7 @@ C Language Changes
 
 - Clang now allows an ``inline`` specifier on a typedef declaration of a
   function type in Microsoft compatibility mode. #GH124869
+- Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -124,6 +125,10 @@ Attribute Changes in Clang
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
 - Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
+- Clang now allows ``__attribute__((model("small")))`` and
+  ``__attribute__((model("large")))`` on non-TLS globals in x86-64 compilations.
+  This forces the global to be considered small or large in regards to the
+  x86-64 code model, regardless of the code model specified for the compilation.
 
 Improvements to Clang's diagnostics
 -----------------------------------

@@ -1284,6 +1284,16 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
   return CreateAlignmentAssumptionHelper(DL, PtrValue, Alignment, OffsetValue);
 }
 
+CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
+                                                         Value *SizeValue) {
+  assert(isa<PointerType>(PtrValue->getType()) &&
+         "trying to create an deferenceable assumption on a non-pointer?");
+  SmallVector<Value *, 4> Vals({PtrValue, SizeValue});
+  OperandBundleDefT<Value *> DereferenceableOpB("dereferenceable", Vals);
+  return CreateAssumption(ConstantInt::getTrue(getContext()),
+                          {DereferenceableOpB});
+}
+
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;
 IRBuilderCallbackInserter::~IRBuilderCallbackInserter() = default;
 IRBuilderFolder::~IRBuilderFolder() = default;
