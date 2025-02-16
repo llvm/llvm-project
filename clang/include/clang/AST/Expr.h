@@ -741,8 +741,8 @@ public:
   /// unevaluated context. Returns true if the expression could be folded to a
   /// constant.
   bool EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
-                                const FunctionDecl *Callee,
-                                ArrayRef<const Expr*> Args,
+                                const NamedDecl *Callee,
+                                ArrayRef<const Expr *> Args,
                                 const Expr *This = nullptr) const;
 
   enum class ConstantExprKind {
