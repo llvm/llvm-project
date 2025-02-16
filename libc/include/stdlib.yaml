@@ -2,6 +2,8 @@ header: stdlib.h
 header_template: stdlib.h.def
 standards:
   - stdc
+merge_yaml_files:
+  - stdlib-malloc.yaml
 macros: []
 types:
   - type_name: __atexithandler_t
@@ -34,13 +36,6 @@ functions:
     return_type: int
     arguments:
       - type: int
-  - name: aligned_alloc
-    standards:
-      - stdc
-    return_type: void *
-    arguments:
-      - type: size_t
-      - type: size_t
   - name: at_quick_exit
     standards:
       - stdc
@@ -87,13 +82,6 @@ functions:
       - type: size_t
       - type: size_t
       - type: __bsearchcompare_t
-  - name: calloc
-    standards:
-      - stdc
-    return_type: void *
-    arguments:
-      - type: size_t
-      - type: size_t
   - name: div
     standards:
       - stdc
@@ -107,12 +95,6 @@ functions:
     return_type: _Noreturn void
     arguments:
       - type: int
-  - name: free
-    standards:
-      - stdc
-    return_type: void
-    arguments:
-      - type: void *
   - name: getenv
     standards:
       - stdc
@@ -145,11 +127,13 @@ functions:
     arguments:
       - type: long long
       - type: long long
-  - name: malloc
+  - name: posix_memalign
     standards:
-      - stdc
-    return_type: void *
+      - posix
+    return_type: int
     arguments:
+      - type: void **
+      - type: size_t
       - type: size_t
   - name: qsort
     standards:
@@ -182,13 +166,6 @@ functions:
     return_type: int
     arguments:
       - type: void
-  - name: realloc
-    standards:
-      - stdc
-    return_type: void *
-    arguments:
-      - type: void *
-      - type: size_t
   - name: srand
     standards:
       - stdc

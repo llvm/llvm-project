@@ -417,7 +417,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_erase_if                             202002L
 # undef  __cpp_lib_execution
 // # define __cpp_lib_execution                            201902L
-# define __cpp_lib_format                               202110L
+# if _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   define __cpp_lib_format                             202110L
+# endif
 # define __cpp_lib_format_uchar                         202311L
 # define __cpp_lib_generic_unordered_lookup             201811L
 # define __cpp_lib_int_pow2                             202002L
@@ -499,7 +501,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # undef  __cpp_lib_optional
 # define __cpp_lib_optional                             202110L
 # define __cpp_lib_out_ptr                              202106L
-# define __cpp_lib_print                                202207L
+# if _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   define __cpp_lib_print                              202207L
+# endif
 # undef  __cpp_lib_ranges
 # define __cpp_lib_ranges                               202406L
 // # define __cpp_lib_ranges_as_const                      202207L

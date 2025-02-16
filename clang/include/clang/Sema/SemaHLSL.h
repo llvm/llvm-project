@@ -26,6 +26,8 @@
 namespace clang {
 class AttributeCommonInfo;
 class IdentifierInfo;
+class InitializedEntity;
+class InitializationKind;
 class ParsedAttr;
 class Scope;
 class VarDecl;
@@ -144,9 +146,13 @@ public:
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
   bool ContainsBitField(QualType BaseTy);
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
+  bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);
+
+  bool TransformInitList(const InitializedEntity &Entity,
+                         const InitializationKind &Kind, InitListExpr *Init);
 
 private:
   // HLSL resource type attributes need to be processed all at once.
