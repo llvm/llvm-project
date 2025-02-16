@@ -8337,7 +8337,7 @@ static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
 static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                      Sema &S, VectorKind VecKind) {
   const TargetInfo *AuxTI = S.getASTContext().getAuxTargetInfo();
-  bool IsArm = AuxTI->getTriple().isAArch64() || AuxTI->getTriple().isARM();
+  bool IsArm = AuxTI && (AuxTI->getTriple().isAArch64() || AuxTI->getTriple().isARM());
 
   bool IsTargetCUDAAndHostARM = IsArm && S.getLangOpts().CUDAIsDevice;
   bool IsTargetOpenMPDeviceAndHostARM = IsArm && S.getLangOpts().OpenMPIsTargetDevice;
