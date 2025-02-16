@@ -91,8 +91,8 @@ static void LowerLargeShift(MCInst& Inst) {
 void MipsMCCodeEmitter::LowerCompactBranch(MCInst& Inst) const {
   // Encoding may be illegal !(rs < rt), but this situation is
   // easily fixed.
-  unsigned RegOp0 = Inst.getOperand(0).getReg();
-  unsigned RegOp1 = Inst.getOperand(1).getReg();
+  MCRegister RegOp0 = Inst.getOperand(0).getReg();
+  MCRegister RegOp1 = Inst.getOperand(1).getReg();
 
   unsigned Reg0 =  Ctx.getRegisterInfo()->getEncodingValue(RegOp0);
   unsigned Reg1 =  Ctx.getRegisterInfo()->getEncodingValue(RegOp1);
@@ -724,7 +724,7 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                   SmallVectorImpl<MCFixup> &Fixups,
                   const MCSubtargetInfo &STI) const {
   if (MO.isReg()) {
-    unsigned Reg = MO.getReg();
+    MCRegister Reg = MO.getReg();
     unsigned RegNo = Ctx.getRegisterInfo()->getEncodingValue(Reg);
     return RegNo;
   } else if (MO.isImm()) {
@@ -1033,7 +1033,7 @@ MipsMCCodeEmitter::getRegisterListOpValue(const MCInst &MI, unsigned OpNo,
   // placed before memory operand (register + imm).
 
   for (unsigned I = OpNo, E = MI.getNumOperands() - 2; I < E; ++I) {
-    unsigned Reg = MI.getOperand(I).getReg();
+    MCRegister Reg = MI.getOperand(I).getReg();
     unsigned RegNo = Ctx.getRegisterInfo()->getEncodingValue(Reg);
     if (RegNo != 31)
       res++;
@@ -1093,7 +1093,7 @@ MipsMCCodeEmitter::getMovePRegSingleOpValue(const MCInst &MI, unsigned OpNo,
 
   MCOperand Op = MI.getOperand(OpNo);
   assert(Op.isReg() && "Operand of movep is not a register!");
-  switch (Op.getReg()) {
+  switch (Op.getReg().id()) {
   default:
     llvm_unreachable("Unknown register for movep!");
   case Mips::ZERO:  return 0;
