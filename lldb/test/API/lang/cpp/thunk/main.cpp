@@ -16,7 +16,9 @@ Base2 *b;
 class Derived1 : public Base1, public Base2 {
 public:
   virtual void doit() { printf("Derived1\n"); }
-  virtual void __attribute__((nodebug)) doit_debug() { printf("Derived1 (no debug)\n"); }
+  virtual void __attribute__((nodebug)) doit_debug() {
+    printf("Derived1 (no debug)\n");
+  }
 };
 
 class Derived2 : public Base2 {
