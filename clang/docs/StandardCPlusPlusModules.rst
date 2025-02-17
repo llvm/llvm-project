@@ -1378,14 +1378,6 @@ merging happening in the semantic analyzer. This is due to a divergence in the
 implementation path. This is tracked by
 `#61465 <https://github.com/llvm/llvm-project/issues/61465>`_.
 
-Ignored ``preferred_name`` Attribute
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-When Clang writes BMIs, it will ignore the ``preferred_name`` attribute on
-declarations which use it. Thus, the preferred name will not be displayed in
-the debugger as expected. This is tracked by
-`#56490 <https://github.com/llvm/llvm-project/issues/56490>`_.
-
 Don't emit macros about module declaration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
