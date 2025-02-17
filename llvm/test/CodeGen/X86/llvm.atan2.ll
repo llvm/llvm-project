@@ -4,48 +4,6 @@
 ; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=X86,GISEL-X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=X64,GISEL-X64
 
-define half @use_atan2f16(half %a, half %b) nounwind {
-; X86-LABEL: use_atan2f16:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    calll __gnu_h2f_ieee
-; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    movl %esi, (%esp)
-; X86-NEXT:    calll __gnu_h2f_ieee
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    calll atan2f
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    calll __gnu_f2h_ieee
-; X86-NEXT:    addl $24, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl
-;
-; X64-LABEL: use_atan2f16:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movaps %xmm1, %xmm0
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
-; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    movss (%rsp), %xmm1 # 4-byte Reload
-; X64-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    callq atan2f@PLT
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    popq %rax
-; X64-NEXT:    retq
-  %x = call half @llvm.atan2.f16(half %a, half %b)
-  ret half %x
-}
-
 define float @use_atan2f32(float %a, float %b) nounwind {
 ; X86-LABEL: use_atan2f32:
 ; X86:       # %bb.0:
@@ -110,116 +68,9 @@ define x86_fp80 @use_atan2f80(x86_fp80 %a, x86_fp80 %b) nounwind {
   ret x86_fp80 %x
 }
 
-define fp128 @use_atan2fp128(fp128 %a, fp128 %b) nounwind {
-; X86-LABEL: use_atan2fp128:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $20, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll atan2l
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movl (%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
-; X86-NEXT:    movl %eax, (%esi)
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $20, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    retl $4
-;
-; X64-LABEL: use_atan2fp128:
-; X64:       # %bb.0:
-; X64-NEXT:    jmp atan2f128@PLT # TAILCALL
-  %x = call fp128 @llvm.atan2.f128(fp128 %a, fp128 %b)
-  ret fp128 %x
-}
-
-define ppc_fp128 @use_atan2ppc_fp128(ppc_fp128 %a, ppc_fp128 %b) nounwind {
-; X86-LABEL: use_atan2ppc_fp128:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $140, %esp
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl (%esp)
-; X86-NEXT:    calll atan2l
-; X86-NEXT:    fxch %st(1)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    addl $140, %esp
-; X86-NEXT:    retl
-;
-; X64-LABEL: use_atan2ppc_fp128:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq atan2l@PLT
-; X64-NEXT:    popq %rax
-; X64-NEXT:    retq
-  %x = call ppc_fp128 @llvm.atan2.ppcf128(ppc_fp128 %a, ppc_fp128 %b)
-  ret ppc_fp128 %x
-}
-
-declare half @llvm.atan2.f16(half, half)
 declare float @llvm.atan2.f32(float, float)
 declare double @llvm.atan2.f64(double, double)
 declare x86_fp80 @llvm.atan2.f80(x86_fp80, x86_fp80)
-declare fp128 @llvm.atan2.f128(fp128, fp128)
-declare ppc_fp128 @llvm.atan2.ppcf128(ppc_fp128, ppc_fp128)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GISEL-X64: {{.*}}
 ; GISEL-X86: {{.*}}
