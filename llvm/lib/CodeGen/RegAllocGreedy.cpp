@@ -206,29 +206,30 @@ void RAGreedyPass::printPipeline(raw_ostream &OS, function_ref<StringRef(StringR
   OS << "greedy<" << FilterName << '>';
 }
 
+RAGreedy::RequiredAnalyses::RequiredAnalyses(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LRM = &MFAM.getResult<LiveRegMatrixAnalysis>(MF);
+  LSS = &MFAM.getResult<LiveStacksAnalysis>(MF);
+  Indexes = &MFAM.getResult<SlotIndexesAnalysis>(MF);
+  MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  DomTree = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  ORE = &MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
+  Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  Bundles = &MFAM.getResult<EdgeBundlesAnalysis>(MF);
+  SpillPlacer = &MFAM.getResult<SpillPlacementAnalysis>(MF);
+  DebugVars = &MFAM.getResult<LiveDebugVariablesAnalysis>(MF);
+  EvictProvider = MFAM.getResult<RegAllocEvictionAdvisorAnalysis>(MF).Provider;
+  PriorityProvider =
+      MFAM.getResult<RegAllocPriorityAdvisorAnalysis>(MF).Provider;
+  VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
+}
+
 PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
 
-  RAGreedy::RequiredAnalyses Analyses;
-
-  Analyses.LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  Analyses.LRM = &MFAM.getResult<LiveRegMatrixAnalysis>(MF);
-  Analyses.LSS = &MFAM.getResult<LiveStacksAnalysis>(MF);
-  Analyses.Indexes = &MFAM.getResult<SlotIndexesAnalysis>(MF);
-  Analyses.MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-  Analyses.DomTree = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  Analyses.ORE = &MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
-  Analyses.Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
-  Analyses.Bundles = &MFAM.getResult<EdgeBundlesAnalysis>(MF);
-  Analyses.SpillPlacer = &MFAM.getResult<SpillPlacementAnalysis>(MF);
-  Analyses.DebugVars = &MFAM.getResult<LiveDebugVariablesAnalysis>(MF);
-  Analyses.EvictProvider =
-      MFAM.getResult<RegAllocEvictionAdvisorAnalysis>(MF).Provider;
-  Analyses.PriorityProvider =
-      MFAM.getResult<RegAllocPriorityAdvisorAnalysis>(MF).Provider;
-  Analyses.VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
-
+  RAGreedy::RequiredAnalyses Analyses(MF, MFAM);
   RAGreedy Impl(Analyses, Opts.Filter);
 
   bool Changed = Impl.run(MF);
@@ -246,29 +247,27 @@ PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
   return PA;
 }
 
+RAGreedy::RequiredAnalyses::RequiredAnalyses(Pass &P) {
+  VRM = &P.getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
+  LIS = &P.getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  LSS = &P.getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  LRM = &P.getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
+  Indexes = &P.getAnalysis<SlotIndexesWrapperPass>().getSI();
+  MBFI = &P.getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  DomTree = &P.getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  ORE = &P.getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+  Loops = &P.getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  Bundles = &P.getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
+  SpillPlacer = &P.getAnalysis<SpillPlacementWrapperLegacy>().getResult();
+  DebugVars = &P.getAnalysis<LiveDebugVariablesWrapperLegacy>().getLDV();
+  EvictProvider =
+      &P.getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().getProvider();
+  PriorityProvider =
+      &P.getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().getProvider();
+}
+
 bool RAGreedyLegacy::runOnMachineFunction(MachineFunction &MF) {
-
-  RAGreedy::RequiredAnalyses Analyses;
-  Analyses.VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
-  Analyses.LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  Analyses.LSS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
-  Analyses.LRM = &getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
-  Analyses.Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
-  Analyses.MBFI =
-      &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  Analyses.DomTree =
-      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  Analyses.ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-  Analyses.Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  Analyses.Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
-  Analyses.SpillPlacer =
-      &getAnalysis<SpillPlacementWrapperLegacy>().getResult();
-  Analyses.DebugVars = &getAnalysis<LiveDebugVariablesWrapperLegacy>().getLDV();
-  Analyses.EvictProvider =
-      &getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().getProvider();
-  Analyses.PriorityProvider =
-      &getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().getProvider();
-
+  RAGreedy::RequiredAnalyses Analyses(*this);
   RAGreedy Impl(Analyses, F);
   return Impl.run(MF);
 }

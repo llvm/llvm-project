@@ -79,6 +79,10 @@ public:
     // Proxies for eviction and priority advisors
     RegAllocEvictionAdvisorProvider *EvictProvider;
     RegAllocPriorityAdvisorProvider *PriorityProvider;
+
+    RequiredAnalyses() {}
+    RequiredAnalyses(Pass &P);
+    RequiredAnalyses(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
   };
 
   // Interface to eviction advisers
