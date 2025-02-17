@@ -166,7 +166,7 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
 
   if (needInitClone()) {
     Fortran::lower::initializeCloneAtRuntime(converter, *sym, symTable);
-    mightHaveReadHostSym = true;
+    mightHaveReadHostSym.insert(sym);
   }
 }
 
@@ -222,7 +222,7 @@ bool DataSharingProcessor::needBarrier() {
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
         (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
-         mightHaveReadHostSym))
+         mightHaveReadHostSym.contains(sym)))
       return true;
   }
   return false;
@@ -594,7 +594,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       // TODO: currently there are false positives from dead uses of the mold
       // arg
       if (!result.getInitMoldArg().getUses().empty())
-        mightHaveReadHostSym = true;
+        mightHaveReadHostSym.insert(sym);
     }
 
     // Populate the `copy` region if this is a `firstprivate`.

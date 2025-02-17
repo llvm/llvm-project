@@ -4824,6 +4824,18 @@ def int_nvvm_redux_sync_xor : ClangBuiltin<"__nvvm_redux_sync_xor">,
 def int_nvvm_redux_sync_or : ClangBuiltin<"__nvvm_redux_sync_or">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
+            
+// redux.sync.op.{abs}.{NaN}.f32 dst, src, membermask;
+foreach binOp = ["min", "max"] in {
+  foreach abs = ["", "_abs"] in {
+    foreach NaN = ["", "_NaN"] in {
+      def int_nvvm_redux_sync_f # binOp # abs # NaN : 
+        ClangBuiltin<!strconcat("__nvvm_redux_sync_f", binOp, abs, NaN)>,
+        Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty],
+                  [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
+    }
+  }
+}
 
 //
 // WGMMA fence instructions
