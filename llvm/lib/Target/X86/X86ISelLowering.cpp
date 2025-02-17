@@ -57582,7 +57582,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       EVT SubVT = peekThroughBitcasts(Subs[0]).getValueType();
       if (SubVT.isSimple() && SubVT.isVector()) {
         EVT ConcatVT =
-            EVT::getVectorVT(*DAG.getContext(), SubVT.getScalarType(),
+            EVT::getVectorVT(Ctx, SubVT.getScalarType(),
                              SubVT.getVectorElementCount() * Subs.size());
         for (SDValue &Sub : Subs)
           Sub = DAG.getBitcast(SubVT, Sub);
