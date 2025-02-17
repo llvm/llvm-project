@@ -290,7 +290,6 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
       return MILog2SEW;
     return 6;
   }
-
   // Vector Integer Arithmetic Instructions
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
@@ -1141,6 +1140,10 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFNCVT_F_F_W:
   case RISCV::VFNCVT_ROD_F_F_W:
   case RISCV::VFNCVTBF16_F_F_W:
+  // Vector Floating-Point Square-Root Instruction
+  case RISCV::VFSQRT_V:
+  // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
+  case RISCV::VFRSQRT7_V:
     return true;
   }
 

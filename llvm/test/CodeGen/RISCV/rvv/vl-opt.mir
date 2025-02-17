@@ -141,6 +141,26 @@ body: |
     %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 4 /* e16 */, 0
 ...
 ---
+name: vfsqr
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vfsqr
+    ; CHECK: %x:vrm2 = nofpexcept PseudoVFSQRT_V_M2_E32 $noreg, $noreg, 7, 6, 5 /* e32 */, 3 /* ta, ma */, implicit $frm
+    ; CHECK-NEXT: early-clobber %y:vr = nofpexcept PseudoVFNCVTBF16_F_F_W_M1_E16 $noreg, %x, 7, 6, 4 /* e16 */, 3 /* ta, ma */, implicit $frm
+    %x:vrm2 = nofpexcept PseudoVFSQRT_V_M2_E32 $noreg, $noreg, 7, 8, 5, 3, implicit $frm
+    early-clobber %y:vr = nofpexcept PseudoVFNCVTBF16_F_F_W_M1_E16 $noreg, %x, 7, 6, 4, 3, implicit $frm
+...
+---
+name: vfsqr_nofpexcept
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vfsqr_nofpexcept
+    ; CHECK: %x:vrm2 = PseudoVFSQRT_V_M2_E32 $noreg, $noreg, 7, 8, 5 /* e32 */, 3 /* ta, ma */, implicit $frm
+    ; CHECK-NEXT: early-clobber %y:vr = nofpexcept PseudoVFNCVTBF16_F_F_W_M1_E16 $noreg, %x, 7, 6, 4 /* e16 */, 3 /* ta, ma */, implicit $frm
+    %x:vrm2 = PseudoVFSQRT_V_M2_E32 $noreg, $noreg, 7, 8, 5, 3, implicit $frm
+    early-clobber %y:vr = nofpexcept PseudoVFNCVTBF16_F_F_W_M1_E16 $noreg, %x, 7, 6, 4, 3, implicit $frm
+...
+---
 name: vwadd_tied_vs1
 body: |
   bb.0:
