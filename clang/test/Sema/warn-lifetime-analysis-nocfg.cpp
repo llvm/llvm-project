@@ -870,7 +870,7 @@ const char* foo() {
   StatusOr<StatusOr<std::string_view>> s3;
   return s3.value()->value()->data();
 
-  // would be nice to support the nested cases.
+  // FIXME: nested cases are not supported now.
   StatusOr<StatusOr<std::string>> s4;
   return s4.value()->value()->data();
 }
