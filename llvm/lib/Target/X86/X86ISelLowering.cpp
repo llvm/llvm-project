@@ -56405,8 +56405,8 @@ static SDValue combineFPToSInt(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
-  if (Src.getOpcode() == ISD::FRINT && VT.getScalarType() == MVT::i32 &&
-      Src.hasOneUse())
+  if (Subtarget.hasSSE2() && Src.getOpcode() == ISD::FRINT &&
+      VT.getScalarType() == MVT::i32 && Src.hasOneUse())
     return DAG.getNode(ISD::LRINT, SDLoc(N), VT, Src.getOperand(0));
 
   return SDValue();
