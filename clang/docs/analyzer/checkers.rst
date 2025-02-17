@@ -129,8 +129,8 @@ The ``SuppressAddressSpaces`` option suppresses
 warnings for null dereferences of all pointers with address spaces. You can
 disable this behavior with the option
 ``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
-Value of this option is used for checker
-:ref:`_alpha-core-FixedAddressDereference` too.
+Value of this option is also used for checker
+:ref:`_alpha-core-FixedAddressDereference`.
 *Defaults to true*.
 
 .. code-block:: objc
@@ -2925,19 +2925,7 @@ Check for assignment of a fixed address to a pointer.
 
 alpha.core.FixedAddressDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""""""""""""""""
-Check for dereferences of fixed values used as pointers.
-
-Similarly as at :ref:`_core-NullDereference`, the checker specifically does
-not report dereferences for x86 and x86-64 targets when the
-address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
-segment). (See `X86/X86-64 Language Extensions
-<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
-for reference.)
-
-If you want to disable this behavior, set the ``SuppressAddressSpaces`` option
-of checker ``core.NullDereference`` to false, like
-``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``. The value
-of this option is used for both checkers.
+Check for dereferences of fixed addresses.
 
 .. code-block:: c
 
@@ -2956,6 +2944,18 @@ of this option is used for both checkers.
    p_function = (int (*)(char, char))0x04080;
    int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
  }
+
+Similarly to :ref:`_core-NullDereference`, the checker intentionally does
+not report dereferences for x86 and x86-64 targets when the
+address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
+Segment). (See `X86/X86-64 Language Extensions
+<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
+for reference.)
+
+If you want to disable this behavior, set the ``SuppressAddressSpaces`` option
+of checker ``core.NullDereference`` to false, like
+``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``. The value
+of this option is used for both checkers.
 
 .. _alpha-core-PointerArithm:
 

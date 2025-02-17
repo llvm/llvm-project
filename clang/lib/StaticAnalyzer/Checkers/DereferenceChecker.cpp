@@ -35,7 +35,7 @@ class DereferenceChecker
     NullPointer,
     UndefinedPointerValue,
     AddressOfLabel,
-    FixedAddress
+    FixedAddress,
   };
 
   void reportBug(DerefKind K, ProgramStateRef State, const Stmt *S,

@@ -211,15 +211,17 @@ def DereferenceModeling : Checker<"DereferenceModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
-def NullDereferenceChecker
-    : Checker<"NullDereference">,
-      HelpText<"Check for dereferences of null pointers">,
-      CheckerOptions<[CmdLineOption<
-          Boolean, "SuppressAddressSpaces",
-          "Suppresses warning when pointer dereferences an address space",
-          "true", Released>]>,
-      Documentation<HasDocumentation>,
-      Dependencies<[DereferenceModeling]>;
+def NullDereferenceChecker : Checker<"NullDereference">,
+  HelpText<"Check for dereferences of null pointers">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "SuppressAddressSpaces",
+                  "Suppresses warning when pointer dereferences an address space",
+                  "true",
+                  Released>
+  ]>,
+  Documentation<HasDocumentation>,
+  Dependencies<[DereferenceModeling]>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
   HelpText<"Check for null pointers passed as arguments to a function whose "
@@ -285,7 +287,7 @@ def FixedAddressChecker : Checker<"FixedAddr">,
 
 def FixedAddressDereferenceChecker
     : Checker<"FixedAddressDereference">,
-      HelpText<"Check for dereferences of fixed values used as pointers">,
+      HelpText<"Check for dereferences of fixed addresses">,
       Documentation<HasDocumentation>,
       Dependencies<[DereferenceModeling]>;
 

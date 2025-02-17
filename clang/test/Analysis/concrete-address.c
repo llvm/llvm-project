@@ -7,7 +7,7 @@ extern void __assert_fail (__const char *__assertion, __const char *__file,
 #define assert(expr) \
   ((expr)  ? (void)(0)  : __assert_fail (#expr, __FILE__, __LINE__, __func__))
 
-typedef unsigned long uintptr_t;
+typedef unsigned long long uintptr_t;
 
 void f0(void) {
   int *p = (int*) 0x10000; // Should not crash here.
