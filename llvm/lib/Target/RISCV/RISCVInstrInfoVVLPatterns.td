@@ -2701,20 +2701,12 @@ foreach mti = AllMasks in {
                    VR:$rs, VR:$rs, GPR:$vl, mti.Log2SEW)>;
 
     // 15.2 Vector count population in mask vcpop.m
-    def : Pat<(XLenVT (riscv_vcpop_vl (mti.Mask VR:$rs2), (mti.Mask true_mask),
-                                      VLOpFrag)),
-              (!cast<Instruction>("PseudoVCPOP_M_" # mti.BX)
-                   VR:$rs2, GPR:$vl, mti.Log2SEW)>;
     def : Pat<(XLenVT (riscv_vcpop_vl (mti.Mask VR:$rs2), (mti.Mask VMV0:$vm),
                                       VLOpFrag)),
               (!cast<Instruction>("PseudoVCPOP_M_" # mti.BX # "_MASK")
                    VR:$rs2, (mti.Mask VMV0:$vm), GPR:$vl, mti.Log2SEW)>;
 
     // 15.3 vfirst find-first-set mask bit
-    def : Pat<(XLenVT (riscv_vfirst_vl (mti.Mask VR:$rs2), (mti.Mask true_mask),
-                                      VLOpFrag)),
-              (!cast<Instruction>("PseudoVFIRST_M_" # mti.BX)
-                   VR:$rs2, GPR:$vl, mti.Log2SEW)>;
     def : Pat<(XLenVT (riscv_vfirst_vl (mti.Mask VR:$rs2), (mti.Mask VMV0:$vm),
                                       VLOpFrag)),
               (!cast<Instruction>("PseudoVFIRST_M_" # mti.BX # "_MASK")
