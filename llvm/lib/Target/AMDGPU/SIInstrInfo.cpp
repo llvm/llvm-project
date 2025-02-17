@@ -3473,14 +3473,19 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       assert(UseMI.getOperand(1).getReg().isVirtual());
     }
 
+    MachineFunction *MF = UseMI.getParent()->getParent();
     const MCInstrDesc &NewMCID = get(NewOpc);
-    if (DstReg.isPhysical() &&
-        !RI.getRegClass(NewMCID.operands()[0].RegClass)->contains(DstReg))
+    const TargetRegisterClass *NewDefRC = getRegClass(NewMCID, 0, &RI, *MF);
+
+    if (DstReg.isPhysical()) {
+      if (!NewDefRC->contains(DstReg))
+        return false;
+    } else if (!MRI->constrainRegClass(DstReg, NewDefRC))
       return false;
 
     UseMI.setDesc(NewMCID);
     UseMI.getOperand(1).ChangeToImmediate(Imm.getSExtValue());
-    UseMI.addImplicitDefUseOperands(*UseMI.getParent()->getParent());
+    UseMI.addImplicitDefUseOperands(*MF);
     return true;
   }
 
