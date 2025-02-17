@@ -44,8 +44,8 @@ add_custom_target(flang-rt-test-depends)
 set_target_properties(flang-rt-test-depends PROPERTIES FOLDER "Flang-RT/Meta")
 add_dependencies(flang-rt-test-depends
     FlangRTUnitTests
-    flang_rt.runtime
     flang_rt.runtime.unittest
+    flang_rt.runtime
   )
 
 add_lit_testsuite(check-flang-rt "Running the Flang-RT regression tests"
