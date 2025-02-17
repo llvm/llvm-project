@@ -23594,7 +23594,7 @@ static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
 static SDValue combineVScale1Load(LoadSDNode *LD, SelectionDAG &DAG,
                                   const AArch64Subtarget *Subtarget) {
   EVT MemVT = LD->getMemoryVT();
-  if (!MemVT.isScalableVector() ||
+  if (!Subtarget->isNeonAvailable() || !MemVT.isScalableVector() ||
       Subtarget->getMaxSVEVectorSizeInBits() != AArch64::SVEBitsPerBlock)
     return SDValue();
 
@@ -23918,7 +23918,7 @@ static SDValue combineVScale1Store(StoreSDNode *ST, SelectionDAG &DAG,
   SDValue Value = ST->getValue();
   EVT ValueVT = Value.getValueType();
   if (ST->isVolatile() || !Subtarget->isLittleEndian() ||
-      !ValueVT.isScalableVector() ||
+      !Subtarget->isNeonAvailable() || !ValueVT.isScalableVector() ||
       Subtarget->getMaxSVEVectorSizeInBits() != AArch64::SVEBitsPerBlock)
     return SDValue();
 
