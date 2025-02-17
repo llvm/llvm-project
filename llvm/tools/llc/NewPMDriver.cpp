@@ -48,17 +48,10 @@
 
 using namespace llvm;
 
-static cl::opt<RegAllocType> RegAlloc(
-    "regalloc-npm", cl::desc("Register allocator to use for new pass manager"),
-    cl::Hidden, cl::init(RegAllocType::Unset),
-    cl::values(
-        clEnumValN(RegAllocType::Default, "default",
-                   "Default register allocator"),
-        clEnumValN(RegAllocType::PBQP, "pbqp", "PBQP register allocator"),
-        clEnumValN(RegAllocType::Fast, "fast", "Fast register allocator"),
-        clEnumValN(RegAllocType::Basic, "basic", "Basic register allocator"),
-        clEnumValN(RegAllocType::Greedy, "greedy",
-                   "Greedy register allocator")));
+static cl::opt<RegAllocType, false, RegAllocTypeParser>
+    RegAlloc("regalloc-npm",
+             cl::desc("Register allocator to use for new pass manager"),
+             cl::Hidden, cl::init(RegAllocType::Unset));
 
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
