@@ -58,6 +58,13 @@ def ConvertLinalgToParallelLoopsPass
   ];
 }
 
+def ConvertLinalgToFunctionCallsPass
+    : Pass<"convert-linalg-to-function-calls", "ModuleOp"> {
+  let summary = "Convert the operations from the Linalg dialect into "
+                "function calls";
+  let dependentDialects = ["func::FuncDialect", "LLVM::LLVMDialect"];
+}
+
 def LinalgFoldUnitExtentDimsPass : Pass<"linalg-fold-unit-extent-dims", ""> {
   let summary = "Remove unit-extent dimension in Linalg ops on tensors";
   let options = [
