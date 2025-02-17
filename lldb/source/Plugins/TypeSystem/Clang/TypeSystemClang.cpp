@@ -7367,14 +7367,25 @@ TypeSystemClang::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
 
   switch (arg->getKind()) {
   case clang::TemplateArgument::Integral:
-    return {{clang::APValue(arg->getAsIntegral()),
-             GetType(arg->getIntegralType())}};
-  case clang::TemplateArgument::StructuralValue:
-    return {
-        {arg->getAsStructuralValue(), GetType(arg->getStructuralValueType())}};
+    return {{arg->getAsIntegral(), GetType(arg->getIntegralType())}};
+  case clang::TemplateArgument::StructuralValue: {
+    clang::APValue value = arg->getAsStructuralValue();
+    CompilerType type = GetType(arg->getStructuralValueType());
+
+    if (value.isFloat())
+      return {{value.getFloat(), type}};
+
+    if (value.isInt())
+      return {{value.getInt(), type}};
+
+    return std::nullopt;
+    ;
+  }
   default:
     return std::nullopt;
   }
+
+  return std::nullopt;
 }
 
 CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {

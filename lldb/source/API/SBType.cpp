@@ -709,14 +709,8 @@ lldb::SBValue SBType::GetTemplateArgumentValue(lldb::SBTarget target,
   if (!arg)
     return {};
 
-  Scalar value;
-  if (arg->value.isFloat())
-    value = arg->value.getFloat();
-  else
-    value = arg->value.getInt();
-
   DataExtractor data;
-  value.GetData(data);
+  arg->value.GetData(data);
 
   ExecutionContext exe_ctx;
   auto target_sp = target.GetSP();
