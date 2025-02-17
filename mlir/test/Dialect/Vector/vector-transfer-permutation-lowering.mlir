@@ -1,5 +1,8 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
+// TODO: Review the usage of `in_bounds` and remove where not affecting the
+// generated output.
+
 ///  CHECK: #[[$MAP:.*]] = affine_map<(d0, d1, d2, d3) -> (d1, 0, d3)>
 
 ///----------------------------------------------------------------------------------------
