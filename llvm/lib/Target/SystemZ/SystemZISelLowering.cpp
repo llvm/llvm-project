@@ -543,20 +543,24 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   }
 
   // Handle floating-point types.
-  // Promote all f16 operations to float, with some exceptions below.
-  for (unsigned Opc = 0; Opc < ISD::BUILTIN_OP_END; ++Opc)
-    setOperationAction(Opc, MVT::f16, Promote);
-  setOperationAction(ISD::ConstantFP, MVT::f16, Expand);
-  for (MVT VT : {MVT::f32, MVT::f64, MVT::f128}) {
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
-    setTruncStoreAction(VT, MVT::f16, Expand);
+  if (!useSoftFloat()) {
+    // Promote all f16 operations to float, with some exceptions below.
+    for (unsigned Opc = 0; Opc < ISD::BUILTIN_OP_END; ++Opc)
+      setOperationAction(Opc, MVT::f16, Promote);
+    setOperationAction(ISD::ConstantFP, MVT::f16, Expand);
+    for (MVT VT : {MVT::f32, MVT::f64, MVT::f128}) {
+      setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
+      setTruncStoreAction(VT, MVT::f16, Expand);
+    }
+    for (auto Op : {ISD::LOAD, ISD::ATOMIC_LOAD, ISD::STORE, ISD::ATOMIC_STORE})
+      setOperationAction(Op, MVT::f16, Subtarget.hasVector() ? Legal : Custom);
+    setOperationAction(ISD::FP_ROUND, MVT::f16, LibCall);
+    setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, LibCall);
+    // Use LEFR_16/LFER_16 for f16 <-> i16 bitcasts with vector support,
+    // otherwise fall back to do it via memory.
+    if (Subtarget.hasVector())
+      setOperationAction(ISD::BITCAST, MVT::i16, Custom);
   }
-  for (auto Op : {ISD::LOAD, ISD::ATOMIC_LOAD, ISD::STORE, ISD::ATOMIC_STORE})
-    setOperationAction(Op, MVT::f16, Subtarget.hasVector() ? Legal : Custom);
-  setOperationAction(ISD::FP_ROUND, MVT::f16, LibCall);
-  setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, LibCall);
-  if (Subtarget.hasVector()) // f16 <-> i16 bitcasts.
-    setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
   for (unsigned I = MVT::FIRST_FP_VALUETYPE;
        I <= MVT::LAST_FP_VALUETYPE;
@@ -3872,6 +3876,14 @@ SDValue SystemZTargetLowering::lowerSELECT_CC(SDValue Op,
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
   SDLoc DL(Op);
 
+  // SELECT_CC involving f16 will not have the cmp-ops promoted by the
+  // legalizer, as it will be handled according to the type of the resulting
+  // value. Extend them here if needed.
+  if (CmpOp0.getSimpleValueType() == MVT::f16) {
+    CmpOp0 = DAG.getFPExtendOrRound(CmpOp0, SDLoc(CmpOp0), MVT::f32);
+    CmpOp1 = DAG.getFPExtendOrRound(CmpOp1, SDLoc(CmpOp1), MVT::f32);
+  }
+
   Comparison C(getCmp(DAG, CmpOp0, CmpOp1, CC, DL));
 
   // Check for absolute and negative-absolute selections, including those
@@ -6536,11 +6548,40 @@ SDValue SystemZTargetLowering::lowerFP_EXTEND(SDValue Op,
   return SDValue(); // Let legalizer emit the libcall.
 }
 
+// Shift the lower 2 bytes of Op to the left in order to insert into the
+// upper 2 bytes of the FP register.
+static SDValue convertToF16(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType() == MVT::i32 &&
+         "Expexted to convert i32 to f16.");
+  SDLoc DL(Op);
+  SDValue Shft = DAG.getNode(ISD::SHL, DL, MVT::i32, Op,
+                             DAG.getConstant(16, DL, MVT::i32));
+  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Shft);
+  SDValue F16Val =
+    DAG.getTargetExtractSubreg(SystemZ::subreg_h16, DL, MVT::f16, BCast);
+  return F16Val;
+}
+
+// Extract Op into GPR and shift the 2 f16 bytes to the right.
+static SDValue convertFromF16(SDValue Op, SDLoc DL, SelectionDAG &DAG) {
+  assert(Op.getSimpleValueType() == MVT::f16 &&
+         "Expected to convert f16 to i32.");
+  SDNode *U32 = DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::f32);
+  SDValue In32 = DAG.getTargetInsertSubreg(SystemZ::subreg_h16, DL, MVT::f32,
+                                           SDValue(U32, 0), Op);
+  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::i32, In32);
+  SDValue Shft = DAG.getNode(ISD::SRL, DL, MVT::i32, BCast,
+                             DAG.getConstant(16, DL, MVT::i32));
+  return Shft;
+}
+
+// Lower an f16 LOAD in case of no vector support.
 SDValue SystemZTargetLowering::lowerLoadF16(SDValue Op,
                                             SelectionDAG &DAG) const {
   MVT RegVT = Op.getSimpleValueType();
   assert(RegVT == MVT::f16 && "Expected to lower an f16 load.");
 
+  // Load as integer.
   SDLoc DL(Op);
   SDValue NewLd;
   if (auto *AtomicLd = dyn_cast<AtomicSDNode>(Op.getNode())) {
@@ -6557,30 +6598,15 @@ SDValue SystemZTargetLowering::lowerLoadF16(SDValue Op,
                        Ld->getBasePtr(), Ld->getPointerInfo(), MVT::i16,
                        Ld->getOriginalAlign(), Ld->getMemOperand()->getFlags());
   }
-  // Load as integer, shift and then insert into upper 2 bytes of the FP
-  // register.
-  SDValue Shft = DAG.getNode(ISD::SHL, DL, MVT::i32, NewLd,
-                             DAG.getConstant(16, DL, MVT::i32));
-  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Shft);
-  SDValue F16Val =
-      DAG.getTargetExtractSubreg(SystemZ::subreg_h16, DL, MVT::f16, BCast);
+  SDValue F16Val = convertToF16(NewLd, DAG);
   return DAG.getMergeValues({F16Val, NewLd.getValue(1)}, DL);
 }
 
+// Lower an f16 STORE in case of no vector support.
 SDValue SystemZTargetLowering::lowerStoreF16(SDValue Op,
                                              SelectionDAG &DAG) const {
-  SDValue StoredVal = Op->getOperand(1);
-  MVT StoreVT = StoredVal.getSimpleValueType();
-  assert(StoreVT == MVT::f16 && "Expected to lower an f16 store.");
-
-  // Move into a GPR, shift and store the 2 bytes.
   SDLoc DL(Op);
-  SDNode *U32 = DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::f32);
-  SDValue In32 = DAG.getTargetInsertSubreg(SystemZ::subreg_h16, DL, MVT::f32,
-                                           SDValue(U32, 0), StoredVal);
-  SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::i32, In32);
-  SDValue Shft = DAG.getNode(ISD::SRL, DL, MVT::i32, BCast,
-                             DAG.getConstant(16, DL, MVT::i32));
+  SDValue Shft = convertFromF16(Op->getOperand(1), DL, DAG);
 
   if (auto *AtomicSt = dyn_cast<AtomicSDNode>(Op.getNode()))
     return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MVT::i16, AtomicSt->getChain(),

@@ -459,7 +459,8 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
 
-    // The structure is passed as an unextended integer, a float, or a double.
+    // The structure is passed as an unextended integer, a half, a float,
+    // or a double.
     if (llvm::Type *FPArgTy = getFPArgumentType(SingleElementTy, Size)) {
       assert(Size == 16 || Size == 32 || Size == 64);
       return ABIArgInfo::getDirect(FPArgTy);
