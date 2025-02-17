@@ -51,6 +51,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-interchange"
 
+/// @{
+/// Metadata attribute names
+static const char *const LLVMLoopInterchangeFollowupAll =
+    "llvm.loop.interchange.followup_all";
+static const char *const LLVMLoopInterchangeFollowupOuter =
+    "llvm.loop.interchange.followup_outer";
+static const char *const LLVMLoopInterchangeFollowupInner =
+    "llvm.loop.interchange.followup_inner";
+/// @}
+
 STATISTIC(LoopsInterchanged, "Number of loops interchanged");
 
 static cl::opt<int> LoopInterchangeCostThreshold(
@@ -64,6 +74,14 @@ static cl::opt<unsigned int> MaxMemInstrCount(
         "Maximum number of load-store instructions that should be handled "
         "in the dependency matrix. Higher value may lead to more interchanges "
         "at the cost of compile-time"));
+
+// Whether to apply by default.
+// TODO: Once this pass is enabled by default, remove this option and use the
+// value of PipelineTuningOptions.
+static cl::opt<bool> OnlyWhenForced(
+    "loop-interchange-only-when-forced", cl::init(false), cl::ReallyHidden,
+    cl::desc(
+        "Apply interchanges only when explicitly specified metadata exists"));
 
 namespace {
 
@@ -297,6 +315,16 @@ static bool isComputableLoopNest(ScalarEvolution *SE,
   return true;
 }
 
+static std::optional<bool> findMetadata(Loop *L) {
+  auto Value = findStringMetadataForLoop(L, "llvm.loop.interchange.enable");
+  if (!Value)
+    return std::nullopt;
+
+  const MDOperand *Op = *Value;
+  assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
+  return mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+}
+
 namespace {
 
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
@@ -504,6 +532,10 @@ struct LoopInterchange {
         CostMap[LoopCosts[i].first] = i;
       }
     }
+
+    if (OnlyWhenForced)
+      return processEnabledLoop(LoopList, DependencyMatrix, CostMap);
+
     // We try to achieve the globally optimal memory access for the loopnest,
     // and do interchange based on a bubble-sort fasion. We start from
     // the innermost loop, move it outwards to the best possible position
@@ -532,6 +564,8 @@ struct LoopInterchange {
     Loop *InnerLoop = LoopList[InnerLoopId];
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
+    if (findMetadata(OuterLoop) == false || findMetadata(InnerLoop) == false)
+      return false;
     LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {
       LLVM_DEBUG(dbgs() << "Not interchanging loops. Cannot prove legality.\n");
@@ -568,6 +602,48 @@ struct LoopInterchange {
                printDepMatrix(DependencyMatrix));
 
     return true;
+  }
+
+  bool processEnabledLoop(SmallVectorImpl<Loop *> &LoopList,
+                          std::vector<std::vector<char>> &DependencyMatrix,
+                          const DenseMap<const Loop *, unsigned> &CostMap) {
+    bool Changed = false;
+    for (unsigned InnerLoopId = LoopList.size() - 1; InnerLoopId > 0;
+         InnerLoopId--) {
+      unsigned OuterLoopId = InnerLoopId - 1;
+      if (findMetadata(LoopList[OuterLoopId]) != true)
+        continue;
+
+      MDNode *MDOrigLoopID = LoopList[OuterLoopId]->getLoopID();
+      bool Interchanged =
+          processLoop(LoopList[InnerLoopId], LoopList[OuterLoopId], InnerLoopId,
+                      OuterLoopId, DependencyMatrix, CostMap);
+
+      // TODO: Consolidate the duplicate code in `processLoopList`.
+      if (Interchanged) {
+        std::swap(LoopList[OuterLoopId], LoopList[InnerLoopId]);
+        // Update the DependencyMatrix
+        interChangeDependencies(DependencyMatrix, InnerLoopId, OuterLoopId);
+
+        LLVM_DEBUG(dbgs() << "Dependency matrix after interchange:\n";
+                   printDepMatrix(DependencyMatrix));
+      }
+
+      std::optional<MDNode *> MDOuterLoopID =
+          makeFollowupLoopID(MDOrigLoopID, {LLVMLoopInterchangeFollowupAll,
+                                            LLVMLoopInterchangeFollowupOuter});
+      if (MDOuterLoopID)
+        LoopList[OuterLoopId]->setLoopID(*MDOuterLoopID);
+
+      std::optional<MDNode *> MDInnerLoopID =
+          makeFollowupLoopID(MDOrigLoopID, {LLVMLoopInterchangeFollowupAll,
+                                            LLVMLoopInterchangeFollowupInner});
+      if (MDInnerLoopID)
+        LoopList[InnerLoopId]->setLoopID(*MDInnerLoopID);
+
+      Changed |= Interchanged;
+    }
+    return Changed;
   }
 };
 
