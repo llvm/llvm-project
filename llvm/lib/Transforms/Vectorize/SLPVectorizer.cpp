@@ -817,11 +817,13 @@ namespace {
 /// Derived classes implement specific interchange patterns by overriding the
 /// virtual methods to define their interchange logic.
 ///
-/// The class maintains a reference to the main instruction (MainOp) and provides
-/// methods to:
+/// The class maintains a reference to the main instruction (MainOp) and
+/// provides methods to:
 /// - Check if another instruction is interchangeable (isSame)
-/// - Get the opcode for the interchangeable form (getInterchangeableInstructionOpcode)
-/// - Get the operands for the interchangeable form (getInterchangeableInstructionOps)
+/// - Get the opcode for the interchangeable form
+/// (getInterchangeableInstructionOpcode)
+/// - Get the operands for the interchangeable form
+/// (getInterchangeableInstructionOps)
 class InterchangeableInstruction {
 protected:
   Instruction *const MainOp;
