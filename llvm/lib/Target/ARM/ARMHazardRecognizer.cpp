@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -285,6 +286,17 @@ static cl::opt<bool>
                        cl::init(true),
                        cl::desc("Emit noops only in innermost loops"));
 
+static cl::opt<int> MaxLookaheadInsts(
+    DEBUG_TYPE "-max-lookahead", cl::Hidden, cl::init(6),
+    cl::desc(
+        "Maximum number of instructions to look ahead for a run of hazards"));
+
+static cl::opt<int>
+    RequiredHazardCount(DEBUG_TYPE "-reqd-hazard-count", cl::Hidden,
+                        cl::init(6),
+                        cl::desc("Number of hazards required to be observed in "
+                                 "a run before emitting a nop"));
+
 void ARMCortexM4FAlignmentHazardRecognizer::Reset() { Offset = 0; }
 
 ARMCortexM4FAlignmentHazardRecognizer::ARMCortexM4FAlignmentHazardRecognizer(
@@ -392,7 +404,7 @@ unsigned ARMCortexM4FAlignmentHazardRecognizer::PreEmitNoops(SUnit *SU) {
 unsigned ARMCortexM4FAlignmentHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   const MachineBasicBlock *Parent = MI->getParent();
   const Function &F = Parent->getParent()->getFunction();
-  if (F.hasMinSize())
+  if (F.hasOptSize())
     return 0;
 
   if (Parent != MBB) {
@@ -418,13 +430,44 @@ unsigned ARMCortexM4FAlignmentHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
     }
   }
 
-  if (HazardType::NoopHazard == getHazardTypeAssumingOffset(MI, Offset)) {
+  // Since one stall cycle is inserted for every three such instructions aligned
+  // to an odd-halfword boundary, look for runs of 6 or more, at which point it
+  // becomes profitable to insert the nop:
+  //
+  //   Insts | Bytes | Improvement
+  //  -------+-------+--------------
+  //   1 T2  |   2   |  -1 cycle (slower)
+  //   2 T2  |   2   |  -1 cycle
+  //   3 T2  |   2   |   0 cycle (breakeven)
+  //   4 T2  |   2   |   0 cycle
+  //   5 T2  |   2   |   0 cycle
+  //   6 T2  |   2   |   1 cycle (faster)
+  //
+  MachineBasicBlock::iterator Next = MI->getIterator();
+  MachineBasicBlock::const_iterator End = Parent->end();
+  int LookaheadInsts = 0;
+  int HazardCount = 0;
+  size_t LookaheadOffset = Offset;
+  while (Next != End && LookaheadInsts < MaxLookaheadInsts &&
+         (HazardType::NoopHazard ==
+          getHazardTypeAssumingOffset(&*Next, LookaheadOffset))) {
+    LookaheadOffset += Next->getDesc().getSize();
+    Next++;
+    HazardCount++;
+    LookaheadInsts++;
+  }
+
+  if (RequiredHazardCount <= HazardCount) {
     EmittingNoop = true;
     NumNoops++;
     LLVM_DEBUG(dbgs() << "\toffset=0x" << utohexstr(Offset)
                       << "\n\thas an alignment hazard, and requires a noop\n");
     return 1;
   }
+
+  LLVM_DEBUG(dbgs() << formatv("\toffset=0x{0}\n\tfound only {1} hazards in "
+                               "the next {2} instructions\n",
+                               utohexstr(Offset), HazardCount, LookaheadInsts));
 
   return 0;
 }
