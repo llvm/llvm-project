@@ -247,13 +247,13 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     if (Scheme == CFBranchLabelSchemeKind::Default)
       Scheme = getDefaultCFBranchLabelScheme();
 
-    Builder.defineMacro("__riscv_landing_pad", "1");
+    Builder.defineMacro("__riscv_landing_pad");
     switch (Scheme) {
     case CFBranchLabelSchemeKind::Unlabeled:
-      Builder.defineMacro("__riscv_landing_pad_unlabeled", "1");
+      Builder.defineMacro("__riscv_landing_pad_unlabeled");
       break;
     case CFBranchLabelSchemeKind::FuncSig:
-      Builder.defineMacro("__riscv_landing_pad_func_sig", "1");
+      Builder.defineMacro("__riscv_landing_pad_func_sig");
       break;
     case CFBranchLabelSchemeKind::Default:
       llvm_unreachable("default cf-branch-label scheme should already be "
