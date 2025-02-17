@@ -3,7 +3,13 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+// skip if no MPI C header was found
+#ifdef FOUND_MPI_C_HEADER
 #include <mpi.h>
+#else // not FOUND_MPI_C_HEADER
+#include "mpi_fallback.h"
+#endif // FOUND_MPI_C_HEADER
 
 namespace {
 
@@ -24,8 +30,8 @@ struct MPIImplTraits {
 };
 
 // ****************************************************************************
-// Intel MPI
-#ifdef IMPI_DEVICE_EXPORT
+// Intel MPI/MPICH
+#if defined(IMPI_DEVICE_EXPORT) || defined(_MPI_FALLBACK_DEFS)
 
 mlir::Value
 MPIImplTraits::getCommWorld(mlir::ModuleOp &moduleOp, const mlir::Location loc,
