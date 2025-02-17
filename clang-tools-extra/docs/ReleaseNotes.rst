@@ -216,6 +216,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
   flag to specify the function used for forwarding instead of ``std::forward``.
    
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
+  fix false positives related to operator overloading and templates.
+
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
   by adding a flag to specify the function used for moving instead of
@@ -335,10 +339,6 @@ Changes in existing checks
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
-
-- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
-  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
-  fix false positives related to operator overloading and templates.
 
 Removed checks
 ^^^^^^^^^^^^^^
