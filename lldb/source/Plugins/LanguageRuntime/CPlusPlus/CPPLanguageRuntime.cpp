@@ -478,10 +478,10 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
 }
 
 bool CPPLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
-  // Virtual function override thunks come in two forms. Those overriding from a
-  // non-virtual base, with fixed this adjustments, use a "Th" prefix and encode
-  // the required adjustment offset, probably negative, indicated by a 'n'
-  // prefix, and the encoding of the target function.
-  return symbol.GetMangled().GetMangledName().GetStringRef().starts_with(
-      "_ZTh");
+  llvm::StringRef mangled_name = symbol.GetMangled().GetMangledName().GetStringRef();
+  // Virtual function overriding from a non-virtual base use a "Th" prefix.
+  // Virtual function overriding from a virtual base must use a "Tv" prefix.
+  // Virtual function overriding thunks with covariant returns use a "Tc" prefix.
+  return mangled_name.starts_with("_ZTh") || mangled_name.starts_with("_ZTv") ||
+         mangled_name.starts_with("_ZTc");
 }
