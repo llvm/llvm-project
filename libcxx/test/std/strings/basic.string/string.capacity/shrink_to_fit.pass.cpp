@@ -86,8 +86,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(s.capacity() <= capacity);
       assert(s.size() == size);
       LIBCPP_ASSERT(is_string_asan_correct(s));
-      if (s.capacity() == capacity)
-        LIBCPP_ASSERT(s.data() == data);
+      LIBCPP_ASSERT(s.capacity() == capacity && s.data() == data);
     }
     { // Test with custom allocator with a minimum power of two allocation size
       std::basic_string<char, std::char_traits<char>, pow2_allocator<char> > s(
@@ -99,8 +98,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(s.capacity() <= capacity);
       assert(s.size() == size);
       LIBCPP_ASSERT(is_string_asan_correct(s));
-      if (s.capacity() == capacity)
-        LIBCPP_ASSERT(s.data() == data);
+      LIBCPP_ASSERT(s.capacity() == capacity && s.data() == data);
     }
   }
 
