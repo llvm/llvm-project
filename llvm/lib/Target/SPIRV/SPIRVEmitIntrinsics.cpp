@@ -182,7 +182,7 @@ class SPIRVEmitIntrinsics
 
   bool deduceOperandElementTypeCalledFunction(
       CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
-      Type *&KnownElemTy);
+      Type *&KnownElemTy, bool &Uncomplete);
   void deduceOperandElementTypeFunctionPointer(
       CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
       Type *&KnownElemTy, bool IsPostprocessing);
@@ -893,7 +893,7 @@ static inline Type *getAtomicElemTy(SPIRVGlobalRegistry *GR, Instruction *I,
 // indirect function invocation, and true otherwise.
 bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
     CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
-    Type *&KnownElemTy) {
+    Type *&KnownElemTy, bool &Uncomplete) {
   Function *CalledF = CI->getCalledFunction();
   if (!CalledF)
     return false;
@@ -915,12 +915,15 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
         Ops.push_back(std::make_pair(Op, i));
       }
     } else if (Grp == SPIRV::Atomic || Grp == SPIRV::AtomicFloating) {
-      if (CI->arg_size() < 2)
+      if (CI->arg_size() == 0)
         return true;
       Value *Op = CI->getArgOperand(0);
       if (!isPointerTy(Op->getType()))
         return true;
       switch (Opcode) {
+      case SPIRV::OpAtomicFAddEXT:
+      case SPIRV::OpAtomicFMinEXT:
+      case SPIRV::OpAtomicFMaxEXT:
       case SPIRV::OpAtomicLoad:
       case SPIRV::OpAtomicCompareExchangeWeak:
       case SPIRV::OpAtomicCompareExchange:
@@ -934,9 +937,23 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
       case SPIRV::OpAtomicUMax:
       case SPIRV::OpAtomicSMin:
       case SPIRV::OpAtomicSMax: {
-        KnownElemTy = getAtomicElemTy(GR, CI, Op);
+        KnownElemTy = isPointerTy(CI->getType()) ? getAtomicElemTy(GR, CI, Op)
+                                                 : CI->getType();
         if (!KnownElemTy)
           return true;
+        Uncomplete = isTodoType(Op);
+        Ops.push_back(std::make_pair(Op, 0));
+      } break;
+      case SPIRV::OpAtomicStore: {
+        if (CI->arg_size() < 4)
+          return true;
+        Value *ValOp = CI->getArgOperand(3);
+        KnownElemTy = isPointerTy(ValOp->getType())
+                          ? getAtomicElemTy(GR, CI, Op)
+                          : ValOp->getType();
+        if (!KnownElemTy)
+          return true;
+        Uncomplete = isTodoType(Op);
         Ops.push_back(std::make_pair(Op, 0));
       } break;
       }
@@ -1090,15 +1107,21 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     Ops.push_back(std::make_pair(Ref->getPointerOperand(),
                                  StoreInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<AtomicCmpXchgInst>(I)) {
-    KnownElemTy = getAtomicElemTy(GR, I, Ref->getPointerOperand());
+    KnownElemTy = isPointerTy(I->getType())
+                      ? getAtomicElemTy(GR, I, Ref->getPointerOperand())
+                      : I->getType();
     if (!KnownElemTy)
       return;
+    Uncomplete = isTodoType(Ref->getPointerOperand());
     Ops.push_back(std::make_pair(Ref->getPointerOperand(),
                                  AtomicCmpXchgInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<AtomicRMWInst>(I)) {
-    KnownElemTy = getAtomicElemTy(GR, I, Ref->getPointerOperand());
+    KnownElemTy = isPointerTy(I->getType())
+                      ? getAtomicElemTy(GR, I, Ref->getPointerOperand())
+                      : I->getType();
     if (!KnownElemTy)
       return;
+    Uncomplete = isTodoType(Ref->getPointerOperand());
     Ops.push_back(std::make_pair(Ref->getPointerOperand(),
                                  AtomicRMWInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
@@ -1141,7 +1164,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     }
   } else if (CallInst *CI = dyn_cast<CallInst>(I)) {
     if (!CI->isIndirectCall())
-      deduceOperandElementTypeCalledFunction(CI, Ops, KnownElemTy);
+      deduceOperandElementTypeCalledFunction(CI, Ops, KnownElemTy, Uncomplete);
     else if (HaveFunPtrs)
       deduceOperandElementTypeFunctionPointer(CI, Ops, KnownElemTy,
                                               IsPostprocessing);
