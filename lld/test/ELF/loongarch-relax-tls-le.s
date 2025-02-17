@@ -39,9 +39,9 @@
 
 .macro add dst, src1, src2, src3
 .ifdef ELF32
-add.w \dst, \src1, \src2, \src3
+  add.w \dst, \src1, \src2, \src3
 .else
-add.d \dst, \src1, \src2, \src3
+  add.d \dst, \src1, \src2, \src3
 .endif
 .endm
 .macro inst op dst, src1, src2
@@ -73,38 +73,38 @@ add.d \dst, \src1, \src2, \src3
 .endm
 
 .macro addi dst, src1, src2
-inst addi \dst, \src1, \src2
+  inst addi \dst, \src1, \src2
 .endm
 .macro ld dst, src1, src2
-inst ld \dst, \src1, \src2
+  inst ld \dst, \src1, \src2
 .endm
 .macro st dst, src1, src2
-inst st \dst, \src1, \src2
+  inst st \dst, \src1, \src2
 .endm
 .macro ldptr dst, src1, src2
-inst ldptr \dst, \src1, \src2
+  inst ldptr \dst, \src1, \src2
 .endm
 
 _start:
-## Test instructions not in pairs.
-lu12i.w $a0, %le_hi20_r(.LANCHOR0)
-add $a0, $a0, $tp, %le_add_r(.LANCHOR0)
-addi $a0, $a0, %le_lo12_r(.LANCHOR0)
-ld $a1, $a0, 0
-ld $a2, $a0, %le_lo12_r(.LANCHOR0)
+  ## Test instructions not in pairs.
+  lu12i.w $a0, %le_hi20_r(.LANCHOR0)
+  add $a0, $a0, $tp, %le_add_r(.LANCHOR0)
+  addi $a0, $a0, %le_lo12_r(.LANCHOR0)
+  ld $a1, $a0, 0
+  ld $a2, $a0, %le_lo12_r(.LANCHOR0)
 
-## hi20(a-4) = hi20(0x7fc) = 0. relaxable
-## Test non-adjacent instructions.
-lu12i.w $a0, %le_hi20_r(a-4)
-addi $a1, $zero, 0x1
-add $a0, $a0, $tp, %le_add_r(a-4)
-addi $a1, $a1, 0x2
-st $a1, $a0, %le_lo12_r(a-4)
+  ## hi20(a-4) = hi20(0x7fc) = 0. relaxable
+  ## Test non-adjacent instructions.
+  lu12i.w $a0, %le_hi20_r(a-4)
+  addi $a1, $zero, 0x1
+  add $a0, $a0, $tp, %le_add_r(a-4)
+  addi $a1, $a1, 0x2
+  st $a1, $a0, %le_lo12_r(a-4)
 
-## hi20(a) = hi20(0x800) = 1. not relaxable
-lu12i.w $a0, %le_hi20_r(a)
-add $a0, $a0, $tp, %le_add_r(a)
-addi $a0, $a0, %le_lo12_r(a)
+  ## hi20(a) = hi20(0x800) = 1. not relaxable
+  lu12i.w $a0, %le_hi20_r(a)
+  add $a0, $a0, $tp, %le_add_r(a)
+  addi $a0, $a0, %le_lo12_r(a)
 
 .section .tbss,"awT",@nobits
 .space 8

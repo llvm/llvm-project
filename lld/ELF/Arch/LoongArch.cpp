@@ -154,6 +154,10 @@ static uint32_t setJ20(uint32_t insn, uint32_t imm) {
   return (insn & 0xfe00001f) | (extractBits(imm, 19, 0) << 5);
 }
 
+static uint32_t setJ5(uint32_t insn, uint32_t imm) {
+  return (insn & 0xfffffc1f) | (extractBits(imm, 4, 0) << 5);
+}
+
 static uint32_t setK12(uint32_t insn, uint32_t imm) {
   return (insn & 0xffc003ff) | (extractBits(imm, 11, 0) << 10);
 }
@@ -895,9 +899,7 @@ static void relaxTlsLe(Ctx &ctx, const InputSection &sec, size_t i,
     remove = 4;
     break;
   case R_LARCH_TLS_LE_LO12_R:
-    currInsn =
-        insn(extractBits(currInsn, 31, 22) << 22, getD5(currInsn), R_TP, 0);
-    sec.relaxAux->writes.push_back(currInsn);
+    sec.relaxAux->writes.push_back(setJ5(currInsn, R_TP));
     sec.relaxAux->relocTypes[i] = R_LARCH_TLS_LE_LO12_R;
     break;
   }
@@ -1069,10 +1071,11 @@ void LoongArch::finalizeRelax(int passes) const {
             break;
           case R_LARCH_TLS_GD_PCREL20_S2:
             // Note: R_LARCH_TLS_LD_PCREL20_S2 must also use R_TLSGD_PC instead
-            // of R_TLSLD_PC because the processing of relocation
-            // R_LARCH_TLS_LD_PC_HI20 is the same as R_LARCH_TLS_GD_PC_HI20. If
-            // not, the value obtained from getRelocTargetVA will be unexpected
-            // and lead to error.
+            // of R_TLSLD_PC due to historical reasons. In fact, right now TLSLD
+            // behaves exactly like TLSGD on LoongArch.
+            //
+            // This reason has also been mentioned in mold commit:
+            // https://github.com/rui314/mold/commit/5dfa1cf07c03bd57cb3d493b652ef22441bcd71c
           case R_LARCH_TLS_LD_PCREL20_S2:
             skip = 4;
             write32le(p, aux.writes[writesIdx++]);
