@@ -1555,11 +1555,9 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     }
 
     if (Tok.is(tok::code_completion)) {
-      if (getLangOpts().CPlusPlus17) {
-        cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteIfConstexpr(getCurScope());
-        return StmtError();
-      }
+      cutOffParsing();
+      Actions.CodeCompletion().CodeCompleteIfConst(getCurScope());
+      return StmtError();
     }
   }
   if (!IsConsteval && (NotLocation.isValid() || Tok.isNot(tok::l_paren))) {
