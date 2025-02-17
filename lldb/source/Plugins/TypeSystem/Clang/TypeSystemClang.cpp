@@ -7383,8 +7383,6 @@ TypeSystemClang::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
   default:
     return std::nullopt;
   }
-
-  return std::nullopt;
 }
 
 CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
