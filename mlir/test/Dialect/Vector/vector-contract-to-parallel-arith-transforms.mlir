@@ -51,6 +51,24 @@ func.func @parallel_contract_lowering_scalar(%arg0: vector<1x1xf32>, %arg1: vect
   return %0 : f32
 }
 
+// CHECK-LABEL: func @parallel_contract_lowering_mixed_types
+//       CHECK:   %[[E0:.*]] = vector.extract %{{.*}}[0, 0] : f16 from vector<1x1xf16>
+//       CHECK:   %[[E1:.*]] = vector.extract %{{.*}}[0, 0] : f16 from vector<1x1xf16>
+//       CHECK:   %[[EXT0:.+]] = arith.extf %[[E0]] : f16 to f32
+//       CHECK:   %[[EXT1:.+]] = arith.extf %[[E1]] : f16 to f32
+//       CHECK:   %[[M:.*]] = arith.mulf %[[EXT0]], %[[EXT1]] : f32
+//       CHECK:   %[[A:.*]] = arith.addf %[[M]], %{{.*}} : f32
+//       CHECK:   return %[[A]] : f32
+func.func @parallel_contract_lowering_mixed_types(%arg0: vector<1x1xf16>, %arg1: vector<1x1xf16>, %arg2: f32) -> f32 {
+  %0 = vector.contract {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> ()>],
+    iterator_types = ["reduction", "reduction"], kind = #vector.kind<add>}
+  %arg0, %arg1, %arg2 : vector<1x1xf16>, vector<1x1xf16> into f32
+  return %0 : f32
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op
