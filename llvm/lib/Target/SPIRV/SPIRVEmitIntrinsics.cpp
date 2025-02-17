@@ -135,7 +135,7 @@ class SPIRVEmitIntrinsics
 
   // deduce Types of operands of the Instruction if possible
   void deduceOperandElementType(Instruction *I,
-                                SmallPtrSet<Instruction *, 4> *UncompleteRets,
+                                SmallPtrSet<Instruction *, 4> *IncompleteRets,
                                 const SmallPtrSet<Value *, 4> *AskOps = nullptr,
                                 bool IsPostprocessing = false);
 
@@ -182,12 +182,12 @@ class SPIRVEmitIntrinsics
 
   bool deduceOperandElementTypeCalledFunction(
       CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
-      Type *&KnownElemTy);
+      Type *&KnownElemTy, bool &Incomplete);
   void deduceOperandElementTypeFunctionPointer(
       CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
       Type *&KnownElemTy, bool IsPostprocessing);
   bool deduceOperandElementTypeFunctionRet(
-      Instruction *I, SmallPtrSet<Instruction *, 4> *UncompleteRets,
+      Instruction *I, SmallPtrSet<Instruction *, 4> *IncompleteRets,
       const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing,
       Type *&KnownElemTy, Value *Op, Function *F);
 
@@ -893,7 +893,7 @@ static inline Type *getAtomicElemTy(SPIRVGlobalRegistry *GR, Instruction *I,
 // indirect function invocation, and true otherwise.
 bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
     CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
-    Type *&KnownElemTy) {
+    Type *&KnownElemTy, bool &Incomplete) {
   Function *CalledF = CI->getCalledFunction();
   if (!CalledF)
     return false;
@@ -915,12 +915,15 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
         Ops.push_back(std::make_pair(Op, i));
       }
     } else if (Grp == SPIRV::Atomic || Grp == SPIRV::AtomicFloating) {
-      if (CI->arg_size() < 2)
+      if (CI->arg_size() == 0)
         return true;
       Value *Op = CI->getArgOperand(0);
       if (!isPointerTy(Op->getType()))
         return true;
       switch (Opcode) {
+      case SPIRV::OpAtomicFAddEXT:
+      case SPIRV::OpAtomicFMinEXT:
+      case SPIRV::OpAtomicFMaxEXT:
       case SPIRV::OpAtomicLoad:
       case SPIRV::OpAtomicCompareExchangeWeak:
       case SPIRV::OpAtomicCompareExchange:
@@ -934,9 +937,23 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
       case SPIRV::OpAtomicUMax:
       case SPIRV::OpAtomicSMin:
       case SPIRV::OpAtomicSMax: {
-        KnownElemTy = getAtomicElemTy(GR, CI, Op);
+        KnownElemTy = isPointerTy(CI->getType()) ? getAtomicElemTy(GR, CI, Op)
+                                                 : CI->getType();
         if (!KnownElemTy)
           return true;
+        Incomplete = isTodoType(Op);
+        Ops.push_back(std::make_pair(Op, 0));
+      } break;
+      case SPIRV::OpAtomicStore: {
+        if (CI->arg_size() < 4)
+          return true;
+        Value *ValOp = CI->getArgOperand(3);
+        KnownElemTy = isPointerTy(ValOp->getType())
+                          ? getAtomicElemTy(GR, CI, Op)
+                          : ValOp->getType();
+        if (!KnownElemTy)
+          return true;
+        Incomplete = isTodoType(Op);
         Ops.push_back(std::make_pair(Op, 0));
       } break;
       }
@@ -954,7 +971,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
     return;
   Ops.push_back(std::make_pair(Op, std::numeric_limits<unsigned>::max()));
   FunctionType *FTy = CI->getFunctionType();
-  bool IsNewFTy = false, IsUncomplete = false;
+  bool IsNewFTy = false, IsIncomplete = false;
   SmallVector<Type *, 4> ArgTys;
   for (Value *Arg : CI->args()) {
     Type *ArgTy = Arg->getType();
@@ -963,9 +980,9 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
         IsNewFTy = true;
         ArgTy = getTypedPointerWrapper(ElemTy, getPointerAddressSpace(ArgTy));
         if (isTodoType(Arg))
-          IsUncomplete = true;
+          IsIncomplete = true;
       } else {
-        IsUncomplete = true;
+        IsIncomplete = true;
       }
     }
     ArgTys.push_back(ArgTy);
@@ -977,19 +994,19 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
       RetTy =
           getTypedPointerWrapper(ElemTy, getPointerAddressSpace(CI->getType()));
       if (isTodoType(CI))
-        IsUncomplete = true;
+        IsIncomplete = true;
     } else {
-      IsUncomplete = true;
+      IsIncomplete = true;
     }
   }
-  if (!IsPostprocessing && IsUncomplete)
+  if (!IsPostprocessing && IsIncomplete)
     insertTodoType(Op);
   KnownElemTy =
       IsNewFTy ? FunctionType::get(RetTy, ArgTys, FTy->isVarArg()) : FTy;
 }
 
 bool SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionRet(
-    Instruction *I, SmallPtrSet<Instruction *, 4> *UncompleteRets,
+    Instruction *I, SmallPtrSet<Instruction *, 4> *IncompleteRets,
     const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing,
     Type *&KnownElemTy, Value *Op, Function *F) {
   KnownElemTy = GR->findDeducedElementType(F);
@@ -1018,13 +1035,13 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionRet(
     // This may happen just once per a function, the latch is a pair of
     // findDeducedElementType(F) / addDeducedElementType(F, ...).
     // With or without the latch it is a non-recursive call due to
-    // UncompleteRets set to nullptr in this call.
-    if (UncompleteRets)
-      for (Instruction *UncompleteRetI : *UncompleteRets)
-        deduceOperandElementType(UncompleteRetI, nullptr, AskOps,
+    // IncompleteRets set to nullptr in this call.
+    if (IncompleteRets)
+      for (Instruction *IncompleteRetI : *IncompleteRets)
+        deduceOperandElementType(IncompleteRetI, nullptr, AskOps,
                                  IsPostprocessing);
-  } else if (UncompleteRets) {
-    UncompleteRets->insert(I);
+  } else if (IncompleteRets) {
+    IncompleteRets->insert(I);
   }
   TypeValidated.insert(I);
   return true;
@@ -1035,17 +1052,17 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionRet(
 // types which differ from expected, this function tries to insert a bitcast to
 // resolve the issue.
 void SPIRVEmitIntrinsics::deduceOperandElementType(
-    Instruction *I, SmallPtrSet<Instruction *, 4> *UncompleteRets,
+    Instruction *I, SmallPtrSet<Instruction *, 4> *IncompleteRets,
     const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing) {
   SmallVector<std::pair<Value *, unsigned>> Ops;
   Type *KnownElemTy = nullptr;
-  bool Uncomplete = false;
+  bool Incomplete = false;
   // look for known basic patterns of type inference
   if (auto *Ref = dyn_cast<PHINode>(I)) {
     if (!isPointerTy(I->getType()) ||
         !(KnownElemTy = GR->findDeducedElementType(I)))
       return;
-    Uncomplete = isTodoType(I);
+    Incomplete = isTodoType(I);
     for (unsigned i = 0; i < Ref->getNumIncomingValues(); i++) {
       Value *Op = Ref->getIncomingValue(i);
       if (isPointerTy(Op->getType()))
@@ -1055,7 +1072,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     KnownElemTy = GR->findDeducedElementType(I);
     if (!KnownElemTy)
       return;
-    Uncomplete = isTodoType(I);
+    Incomplete = isTodoType(I);
     Ops.push_back(std::make_pair(Ref->getPointerOperand(), 0));
   } else if (auto *Ref = dyn_cast<BitCastInst>(I)) {
     if (!isPointerTy(I->getType()))
@@ -1063,7 +1080,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     KnownElemTy = GR->findDeducedElementType(I);
     if (!KnownElemTy)
       return;
-    Uncomplete = isTodoType(I);
+    Incomplete = isTodoType(I);
     Ops.push_back(std::make_pair(Ref->getOperand(0), 0));
   } else if (auto *Ref = dyn_cast<GetElementPtrInst>(I)) {
     if (GR->findDeducedElementType(Ref->getPointerOperand()))
@@ -1090,22 +1107,28 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     Ops.push_back(std::make_pair(Ref->getPointerOperand(),
                                  StoreInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<AtomicCmpXchgInst>(I)) {
-    KnownElemTy = getAtomicElemTy(GR, I, Ref->getPointerOperand());
+    KnownElemTy = isPointerTy(I->getType())
+                      ? getAtomicElemTy(GR, I, Ref->getPointerOperand())
+                      : I->getType();
     if (!KnownElemTy)
       return;
+    Incomplete = isTodoType(Ref->getPointerOperand());
     Ops.push_back(std::make_pair(Ref->getPointerOperand(),
                                  AtomicCmpXchgInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<AtomicRMWInst>(I)) {
-    KnownElemTy = getAtomicElemTy(GR, I, Ref->getPointerOperand());
+    KnownElemTy = isPointerTy(I->getType())
+                      ? getAtomicElemTy(GR, I, Ref->getPointerOperand())
+                      : I->getType();
     if (!KnownElemTy)
       return;
+    Incomplete = isTodoType(Ref->getPointerOperand());
     Ops.push_back(std::make_pair(Ref->getPointerOperand(),
                                  AtomicRMWInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
     if (!isPointerTy(I->getType()) ||
         !(KnownElemTy = GR->findDeducedElementType(I)))
       return;
-    Uncomplete = isTodoType(I);
+    Incomplete = isTodoType(I);
     for (unsigned i = 0; i < Ref->getNumOperands(); i++) {
       Value *Op = Ref->getOperand(i);
       if (isPointerTy(Op->getType()))
@@ -1117,11 +1140,11 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     Value *Op = Ref->getReturnValue();
     if (!Op)
       return;
-    if (deduceOperandElementTypeFunctionRet(I, UncompleteRets, AskOps,
+    if (deduceOperandElementTypeFunctionRet(I, IncompleteRets, AskOps,
                                             IsPostprocessing, KnownElemTy, Op,
                                             CurrF))
       return;
-    Uncomplete = isTodoType(CurrF);
+    Incomplete = isTodoType(CurrF);
     Ops.push_back(std::make_pair(Op, 0));
   } else if (auto *Ref = dyn_cast<ICmpInst>(I)) {
     if (!isPointerTy(Ref->getOperand(0)->getType()))
@@ -1132,16 +1155,16 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     Type *ElemTy1 = GR->findDeducedElementType(Op1);
     if (ElemTy0) {
       KnownElemTy = ElemTy0;
-      Uncomplete = isTodoType(Op0);
+      Incomplete = isTodoType(Op0);
       Ops.push_back(std::make_pair(Op1, 1));
     } else if (ElemTy1) {
       KnownElemTy = ElemTy1;
-      Uncomplete = isTodoType(Op1);
+      Incomplete = isTodoType(Op1);
       Ops.push_back(std::make_pair(Op0, 0));
     }
   } else if (CallInst *CI = dyn_cast<CallInst>(I)) {
     if (!CI->isIndirectCall())
-      deduceOperandElementTypeCalledFunction(CI, Ops, KnownElemTy);
+      deduceOperandElementTypeCalledFunction(CI, Ops, KnownElemTy, Incomplete);
     else if (HaveFunPtrs)
       deduceOperandElementTypeFunctionPointer(CI, Ops, KnownElemTy,
                                               IsPostprocessing);
@@ -1175,7 +1198,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       Type *PrevElemTy = GR->findDeducedElementType(Op);
       GR->addDeducedElementType(Op, normalizeType(KnownElemTy));
       // check if KnownElemTy is complete
-      if (!Uncomplete)
+      if (!Incomplete)
         eraseTodoType(Op);
       else if (!IsPostprocessing)
         insertTodoType(Op);
@@ -2394,9 +2417,9 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   // Pass backward: use instructions results to specify/update/cast operands
   // where needed.
-  SmallPtrSet<Instruction *, 4> UncompleteRets;
+  SmallPtrSet<Instruction *, 4> IncompleteRets;
   for (auto &I : llvm::reverse(instructions(Func)))
-    deduceOperandElementType(&I, &UncompleteRets);
+    deduceOperandElementType(&I, &IncompleteRets);
 
   // Pass forward for PHIs only, their operands are not preceed the instruction
   // in meaning of `instructions(Func)`.
@@ -2465,7 +2488,7 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
 
   for (auto &F : M) {
     CurrF = &F;
-    SmallPtrSet<Instruction *, 4> UncompleteRets;
+    SmallPtrSet<Instruction *, 4> IncompleteRets;
     for (auto &I : llvm::reverse(instructions(F))) {
       auto It = ToProcess.find(&I);
       if (It == ToProcess.end())
@@ -2473,7 +2496,7 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
       It->second.remove_if([this](Value *V) { return !isTodoType(V); });
       if (It->second.size() == 0)
         continue;
-      deduceOperandElementType(&I, &UncompleteRets, &It->second, true);
+      deduceOperandElementType(&I, &IncompleteRets, &It->second, true);
       if (TodoTypeSz == 0)
         return true;
     }
