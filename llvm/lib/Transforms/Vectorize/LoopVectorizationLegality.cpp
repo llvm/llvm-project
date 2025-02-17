@@ -954,7 +954,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       if (CI && !VFDatabase::getMappings(*CI).empty())
         VecCallVariantsFound = true;
 
-      auto CanWidenInstructionTy = [this](Instruction const &Inst) {
+      auto CanWidenInstructionTy = [](Instruction const &Inst) {
         Type *InstTy = Inst.getType();
         if (!isa<StructType>(InstTy))
           return canVectorizeTy(InstTy);
@@ -962,15 +962,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // For now, we only recognize struct values returned from calls where
         // all users are extractvalue as vectorizable. All element types of the
         // struct must be types that can be widened.
-        if (isa<CallInst>(Inst) && canWidenCallReturnType(InstTy) &&
-            all_of(Inst.users(), IsaPred<ExtractValueInst>)) {
-          // TODO: Remove the `StructVecCallFound` flag once vectorizing calls
-          // with struct returns is supported.
-          StructVecCallFound = true;
-          return true;
-        }
-
-        return false;
+        return isa<CallInst>(Inst) && canWidenCallReturnType(InstTy) &&
+               all_of(Inst.users(), IsaPred<ExtractValueInst>);
       };
 
       // Check that the instruction return type is vectorizable.

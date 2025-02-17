@@ -431,8 +431,3 @@ struct ConvertMeshToMPIPass
 };
 
 } // namespace
-
-// Create a pass that convert Mesh to MPI
-std::unique_ptr<::mlir::Pass> mlir::createConvertMeshToMPIPass() {
-  return std::make_unique<ConvertMeshToMPIPass>();
-}
