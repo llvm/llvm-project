@@ -886,7 +886,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
     return true;
   }
 
-  return PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
+  return false;
 }
 
 static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,

@@ -2335,21 +2335,28 @@ void Writer::createRuntimePseudoRelocs() {
 // There's a symbol pointing to the start sentinel pointer, __CTOR_LIST__
 // and __DTOR_LIST__ respectively.
 void Writer::insertCtorDtorSymbols() {
-  AbsolutePointerChunk *ctorListHead = make<AbsolutePointerChunk>(ctx, -1);
-  AbsolutePointerChunk *ctorListEnd = make<AbsolutePointerChunk>(ctx, 0);
-  AbsolutePointerChunk *dtorListHead = make<AbsolutePointerChunk>(ctx, -1);
-  AbsolutePointerChunk *dtorListEnd = make<AbsolutePointerChunk>(ctx, 0);
-  ctorsSec->insertChunkAtStart(ctorListHead);
-  ctorsSec->addChunk(ctorListEnd);
-  dtorsSec->insertChunkAtStart(dtorListHead);
-  dtorsSec->addChunk(dtorListEnd);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    AbsolutePointerChunk *ctorListHead = make<AbsolutePointerChunk>(symtab, -1);
+    AbsolutePointerChunk *ctorListEnd = make<AbsolutePointerChunk>(symtab, 0);
+    AbsolutePointerChunk *dtorListHead = make<AbsolutePointerChunk>(symtab, -1);
+    AbsolutePointerChunk *dtorListEnd = make<AbsolutePointerChunk>(symtab, 0);
+    ctorsSec->insertChunkAtStart(ctorListHead);
+    ctorsSec->addChunk(ctorListEnd);
+    dtorsSec->insertChunkAtStart(dtorListHead);
+    dtorsSec->addChunk(dtorListEnd);
 
-  Symbol *ctorListSym = ctx.symtab.findUnderscore("__CTOR_LIST__");
-  Symbol *dtorListSym = ctx.symtab.findUnderscore("__DTOR_LIST__");
-  replaceSymbol<DefinedSynthetic>(ctorListSym, ctorListSym->getName(),
-                                  ctorListHead);
-  replaceSymbol<DefinedSynthetic>(dtorListSym, dtorListSym->getName(),
-                                  dtorListHead);
+    Symbol *ctorListSym = symtab.findUnderscore("__CTOR_LIST__");
+    Symbol *dtorListSym = symtab.findUnderscore("__DTOR_LIST__");
+    replaceSymbol<DefinedSynthetic>(ctorListSym, ctorListSym->getName(),
+                                    ctorListHead);
+    replaceSymbol<DefinedSynthetic>(dtorListSym, dtorListSym->getName(),
+                                    dtorListHead);
+  });
+
+  if (ctx.hybridSymtab) {
+    ctorsSec->splitECChunks();
+    dtorsSec->splitECChunks();
+  }
 }
 
 // Handles /section options to allow users to overwrite
