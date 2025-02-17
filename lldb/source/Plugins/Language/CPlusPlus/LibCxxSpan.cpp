@@ -55,8 +55,6 @@ public:
   // from the only other place it can be: the template argument.
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -124,11 +122,6 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
   }
 
   return lldb::ChildCacheState::eReuse;
-}
-
-bool lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 size_t lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
