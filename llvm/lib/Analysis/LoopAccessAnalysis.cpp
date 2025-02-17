@@ -848,7 +848,7 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
 static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
                         const Loop *L);
 
-/// Check whether a pointer address cannot wrap. If \p Ptr is not nullptr, use
+/// Check whether \p AR is a non-wrapping AddRec. If \p Ptr is not nullptr, use
 /// informating from the IR pointer value to determine no-wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
                      Value *Ptr, Type *AccessTy, const Loop *L, bool Assume,
