@@ -8233,15 +8233,16 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     auto ChildMapperFn = CustomMapperCB(I);
     if (!ChildMapperFn)
       return ChildMapperFn.takeError();
-    if (*ChildMapperFn)
+    if (*ChildMapperFn) {
       // Call the corresponding mapper function.
       Builder.CreateCall(*ChildMapperFn, OffloadingArgs)->setDoesNotThrow();
-    else
+    } else {
       // Call the runtime API __tgt_push_mapper_component to fill up the runtime
       // data structure.
       Builder.CreateCall(
           getOrCreateRuntimeFunction(M, OMPRTL___tgt_push_mapper_component),
           OffloadingArgs);
+    }
   }
 
   // Update the pointer to point to the next element that needs to be mapped,

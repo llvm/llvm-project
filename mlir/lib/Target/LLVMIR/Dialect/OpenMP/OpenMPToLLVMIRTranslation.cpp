@@ -3551,7 +3551,8 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
 
 static llvm::Expected<llvm::Function *>
 emitUserDefinedMapper(Operation *declMapperOp, llvm::IRBuilderBase &builder,
-                      LLVM::ModuleTranslation &moduleTranslation);
+                      LLVM::ModuleTranslation &moduleTranslation,
+                      llvm::StringRef mapperFuncName);
 
 static llvm::Expected<llvm::Function *>
 getOrCreateUserDefinedMapperFunc(Operation *op, llvm::IRBuilderBase &builder,
@@ -3560,27 +3561,23 @@ getOrCreateUserDefinedMapperFunc(Operation *op, llvm::IRBuilderBase &builder,
   std::string mapperFuncName =
       moduleTranslation.getOpenMPBuilder()->createPlatformSpecificName(
           {"omp_mapper", declMapperOp.getSymName()});
+
   if (auto *lookupFunc = moduleTranslation.lookupFunction(mapperFuncName))
     return lookupFunc;
 
-  llvm::Expected<llvm::Function *> mapperFunc =
-      emitUserDefinedMapper(declMapperOp, builder, moduleTranslation);
-  if (!mapperFunc)
-    return mapperFunc.takeError();
-  moduleTranslation.mapFunction(mapperFuncName, *mapperFunc);
-  return mapperFunc;
+  return emitUserDefinedMapper(declMapperOp, builder, moduleTranslation,
+                               mapperFuncName);
 }
 
 static llvm::Expected<llvm::Function *>
 emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
-                      LLVM::ModuleTranslation &moduleTranslation) {
+                      LLVM::ModuleTranslation &moduleTranslation,
+                      llvm::StringRef mapperFuncName) {
   auto declMapperOp = cast<omp::DeclareMapperOp>(op);
   auto declMapperInfoOp = declMapperOp.getDeclareMapperInfo();
   DataLayout dl = DataLayout(declMapperOp->getParentOfType<ModuleOp>());
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::Type *varType = moduleTranslation.convertType(declMapperOp.getType());
-  std::string mapperName = ompBuilder->createPlatformSpecificName(
-      {"omp_mapper", declMapperOp.getSymName()});
   SmallVector<Value> mapVars = declMapperInfoOp.getMapVars();
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
@@ -3610,22 +3607,17 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
   };
 
   auto customMapperCB = [&](unsigned i) -> llvm::Expected<llvm::Function *> {
-    llvm::Function *mapperFunc = nullptr;
-    if (combinedInfo.Mappers[i]) {
-      // Call the corresponding mapper function.
-      llvm::Expected<llvm::Function *> newFn = getOrCreateUserDefinedMapperFunc(
-          combinedInfo.Mappers[i], builder, moduleTranslation);
-      if (!newFn)
-        return newFn.takeError();
-      mapperFunc = *newFn;
-    }
-    return mapperFunc;
+    if (!combinedInfo.Mappers[i])
+      return nullptr;
+    return getOrCreateUserDefinedMapperFunc(combinedInfo.Mappers[i], builder,
+                                            moduleTranslation);
   };
 
   llvm::Expected<llvm::Function *> newFn = ompBuilder->emitUserDefinedMapper(
-      genMapInfoCB, varType, mapperName, customMapperCB);
+      genMapInfoCB, varType, mapperFuncName, customMapperCB);
   if (!newFn)
     return newFn.takeError();
+  moduleTranslation.mapFunction(mapperFuncName, *newFn);
   return *newFn;
 }
 
@@ -3844,16 +3836,11 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
   auto customMapperCB =
       [&](unsigned int i) -> llvm::Expected<llvm::Function *> {
-    llvm::Function *mapperFunc = nullptr;
-    if (combinedInfo.Mappers[i]) {
-      info.HasMapper = true;
-      llvm::Expected<llvm::Function *> newFn = getOrCreateUserDefinedMapperFunc(
-          combinedInfo.Mappers[i], builder, moduleTranslation);
-      if (!newFn)
-        return newFn.takeError();
-      mapperFunc = *newFn;
-    }
-    return mapperFunc;
+    if (!combinedInfo.Mappers[i])
+      return nullptr;
+    info.HasMapper = true;
+    return getOrCreateUserDefinedMapperFunc(combinedInfo.Mappers[i], builder,
+                                            moduleTranslation);
   };
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
@@ -4557,16 +4544,11 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   auto customMapperCB =
       [&](unsigned int i) -> llvm::Expected<llvm::Function *> {
-    llvm::Function *mapperFunc = nullptr;
-    if (combinedInfos.Mappers[i]) {
-      info.HasMapper = true;
-      llvm::Expected<llvm::Function *> newFn = getOrCreateUserDefinedMapperFunc(
-          combinedInfos.Mappers[i], builder, moduleTranslation);
-      if (!newFn)
-        return newFn.takeError();
-      mapperFunc = *newFn;
-    }
-    return mapperFunc;
+    if (!combinedInfos.Mappers[i])
+      return nullptr;
+    info.HasMapper = true;
+    return getOrCreateUserDefinedMapperFunc(combinedInfos.Mappers[i], builder,
+                                            moduleTranslation);
   };
 
   llvm::Value *ifCond = nullptr;
@@ -4811,6 +4793,8 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
         // was created in the region that handles their parent operation.
         // `declare_reduction` will be used by reductions and is not
         // converted directly, skip it.
+        // `declare_mapper` and `declare_mapper.info` are handled whenever they
+        // are referred to through a `map` clause.
         // `critical.declare` is only used to declare names of critical
         // sections which will be used by `critical` ops and hence can be
         // ignored for lowering. The OpenMP IRBuilder will create unique
