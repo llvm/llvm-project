@@ -106,13 +106,13 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.
 
-- Improved :doc:`misc-redundant-expression
-  <clang-tidy/checks/misc/redundant-expression>` check by providing additional
-  examples and fixing some macro related false positives.
-
 - Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
   fix false positives related to operator overloading and templates.
+
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check by providing additional
+  examples and fixing some macro related false positives.
 
 Removed checks
 ^^^^^^^^^^^^^^
