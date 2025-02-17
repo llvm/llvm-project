@@ -443,23 +443,28 @@ static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
   }
 
   // Otherwise symbolizer program is unknown, let's search $PATH
+#ifdef SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH
+   VReport(2, "Symbolizer path search is disabled\n");
+   return nullptr;
+#else 
   CHECK(path == nullptr);
-#if SANITIZER_APPLE
-  if (const char *found_path = FindPathToBinary("atos")) {
-    VReport(2, "Using atos found at: %s\n", found_path);
-    return new(*allocator) AtosSymbolizer(found_path, allocator);
-  }
-#endif  // SANITIZER_APPLE
-  if (const char *found_path = FindPathToBinary("llvm-symbolizer")) {
-    VReport(2, "Using llvm-symbolizer found at: %s\n", found_path);
-    return new(*allocator) LLVMSymbolizer(found_path, allocator);
-  }
-  if (common_flags()->allow_addr2line) {
-    if (const char *found_path = FindPathToBinary("addr2line")) {
-      VReport(2, "Using addr2line found at: %s\n", found_path);
-      return new(*allocator) Addr2LinePool(found_path, allocator);
+  #if SANITIZER_APPLE
+    if (const char *found_path = FindPathToBinary("atos")) {
+      VReport(2, "Using atos found at: %s\n", found_path);
+      return new(*allocator) AtosSymbolizer(found_path, allocator);
     }
-  }
+  #endif  // SANITIZER_APPLE
+    if (const char *found_path = FindPathToBinary("llvm-symbolizer")) {
+      VReport(2, "Using llvm-symbolizer found at: %s\n", found_path);
+      return new(*allocator) LLVMSymbolizer(found_path, allocator);
+    }
+    if (common_flags()->allow_addr2line) {
+      if (const char *found_path = FindPathToBinary("addr2line")) {
+        VReport(2, "Using addr2line found at: %s\n", found_path);
+        return new(*allocator) Addr2LinePool(found_path, allocator);
+      }
+    }
+#endif // SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH
   return nullptr;
 }
 
