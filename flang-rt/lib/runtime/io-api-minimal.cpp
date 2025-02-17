@@ -146,8 +146,8 @@ bool IODEF(OutputLogical)(Cookie cookie, bool truth) {
 
 } // namespace Fortran::runtime::io
 
-void std::__libcpp_verbose_abort(char const *format, ...)
-    noexcept(noexcept(std::__libcpp_verbose_abort(""))) {
+void std::__libcpp_verbose_abort(char const *format, ...) noexcept(
+    noexcept(std::__libcpp_verbose_abort(""))) {
   va_list list;
   va_start(list, format);
   std::vfprintf(stderr, format, list);
