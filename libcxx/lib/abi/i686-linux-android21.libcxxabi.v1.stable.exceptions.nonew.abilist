@@ -1197,7 +1197,6 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk119__thread_local_dataEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk119declare_no_pointersEPcj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk119is_debugger_presentEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk120__get_collation_nameEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEEi', 'type': 'FUNC'}
