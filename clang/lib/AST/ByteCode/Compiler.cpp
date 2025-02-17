@@ -2707,7 +2707,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // For everyhing else, use local variables.
   if (SubExprT) {
-    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, /*IsConst=*/true,
+    bool IsConst = SubExpr->getType().isConstQualified();
+    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, IsConst,
                                                  /*IsExtended=*/true);
     if (!this->visit(SubExpr))
       return false;
