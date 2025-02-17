@@ -6749,12 +6749,17 @@ void SemaCodeCompletion::CodeCompleteInitializer(Scope *S, Decl *D) {
   CodeCompleteExpression(S, Data);
 }
 
-void SemaCodeCompletion::CodeCompleteIfConstexpr(Scope *S) const {
+void SemaCodeCompletion::CodeCompleteIfConst(Scope *S) const {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Other);
   Results.EnterNewScope();
-  Results.AddResult(CodeCompletionResult("constexpr"));
+  if (getLangOpts().CPlusPlus17) {
+    Results.AddResult(CodeCompletionResult("constexpr"));
+  }
+  if (getLangOpts().CPlusPlus23) {
+    Results.AddResult(CodeCompletionResult("consteval"));
+  }
   Results.ExitScope();
 
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
