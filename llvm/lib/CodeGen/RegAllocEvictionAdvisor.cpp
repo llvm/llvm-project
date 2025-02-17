@@ -165,7 +165,6 @@ Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysisLegacy>() {
 #endif
   }
   llvm_unreachable("unexpected advisor mode");
-  return nullptr;
 }
 
 StringRef RegAllocEvictionAdvisorAnalysisLegacy::getPassName() const {
