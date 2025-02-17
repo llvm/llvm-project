@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
@@ -113,11 +114,29 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
     std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
 }
 
+/// Eliminate loops that will never actually execute
+LogicalResult mlir::affine::removeInvalidLoop(AffineForOp forOp) {
+  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  std::optional<uint64_t> maxTripCount = getMaxConstantTripCount(forOp);
+  if (!tripCount || *tripCount > 0 || !maxTripCount || *maxTripCount > 0)
+    return failure();
+
+  auto iterOperands = forOp.getInits();
+  auto results = forOp.getResults();
+  for (auto [result, operand] : llvm::zip(results, iterOperands))
+    result.replaceAllUsesWith(operand);
+
+  IRRewriter b(forOp);
+  b.eraseOp(forOp);
+  return success();
+}
+
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
 LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
-  if (!tripCount || *tripCount != 1)
+  std::optional<uint64_t> maxTripCount = getMaxConstantTripCount(forOp);
+  if (!tripCount || *tripCount != 1 || !maxTripCount || *maxTripCount != 1)
     return failure();
 
   // TODO: extend this for arbitrary affine bounds.
@@ -160,7 +179,8 @@ LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   forOp.getBody()->back().erase();
   parentBlock->getOperations().splice(Block::iterator(forOp),
                                       forOp.getBody()->getOperations());
-  forOp.erase();
+  IRRewriter b(forOp.getContext());
+  b.eraseOp(forOp);
   return success();
 }
 
@@ -884,15 +904,27 @@ void mlir::affine::getTileableBands(
 /// Unrolls this loop completely.
 LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
-  if (mayBeConstantTripCount.has_value()) {
-    uint64_t tripCount = *mayBeConstantTripCount;
-    if (tripCount == 0)
-      return success();
-    if (tripCount == 1)
-      return promoteIfSingleIteration(forOp);
-    return loopUnrollByFactor(forOp, tripCount);
-  }
-  return failure();
+  std::optional<uint64_t> maxMayBeConstantTripCount =
+      getMaxConstantTripCount(forOp);
+
+  if (!mayBeConstantTripCount.has_value() &&
+      !maxMayBeConstantTripCount.has_value())
+    return failure();
+
+  uint64_t tripCount = *mayBeConstantTripCount;
+  uint64_t maxTripCount = *maxMayBeConstantTripCount;
+
+  // The values of Trip are all 0, and the invalid loop is deleted.
+  if (tripCount <= 0 && maxTripCount <= 0)
+    return removeInvalidLoop(forOp);
+
+  // In special cases, such as in a GPU, only some threads execute this loop.
+  if (tripCount == 0 && maxTripCount == 1)
+    return success();
+
+  if (tripCount == 1 && maxTripCount == 1)
+    return promoteIfSingleIteration(forOp);
+  return loopUnrollByFactor(forOp, tripCount);
 }
 
 /// Unrolls this loop by the specified factor or by the trip count (if constant)
@@ -1013,8 +1045,11 @@ LogicalResult mlir::affine::loopUnrollByFactor(
   assert(unrollFactor > 0 && "unroll factor should be positive");
 
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<uint64_t> maxMayBeConstantTripCount =
+      getMaxConstantTripCount(forOp);
   if (unrollFactor == 1) {
     if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
+        maxMayBeConstantTripCount && *maxMayBeConstantTripCount == 1 &&
         failed(promoteIfSingleIteration(forOp)))
       return failure();
     return success();

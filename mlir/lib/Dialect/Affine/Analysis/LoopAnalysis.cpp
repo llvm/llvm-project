@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "llvm/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -84,6 +85,67 @@ void mlir::affine::getTripCountMapAndOperands(
                             tripCountValueMap.getOperands().end());
 }
 
+/// Replace thread_id with its maximum value, if `replaceWithZero` is true,
+/// thread_id will be replaced by its minimum value 0.
+static void replaceGPUOperands(AffineForOp forOp,
+                               SmallVectorImpl<Value> &operands,
+                               SmallVectorImpl<AffineExpr> &symReplacements,
+                               unsigned numDim, bool replaceWithZero = false) {
+  auto launchOp = forOp->getParentOfType<gpu::LaunchOp>();
+  if (!launchOp)
+    return;
+
+  // `b` is only used to create `AffineExpr`.
+  Builder b(forOp.getContext());
+  unsigned idx = 0;
+
+  for (unsigned i = numDim, e = operands.size(); i < e; ++i) {
+    Value operand = operands[i];
+    if (Value blockSize = launchOp.getBlockSizeOnAxis(operand)) {
+      operands[i] = blockSize;
+      if (!replaceWithZero)
+        symReplacements.push_back(b.getAffineSymbolExpr(idx++) - 1);
+      else
+        symReplacements.push_back(b.getAffineConstantExpr(0));
+      continue;
+    }
+
+    Operation *defOp = operand.getDefiningOp();
+    if (!defOp) {
+      ++idx;
+      continue;
+    }
+
+    if (auto threadIdOp = mlir::dyn_cast<gpu::ThreadIdOp>(defOp)) {
+      gpu::Dimension dimension = threadIdOp.getDimension();
+      operands[i] = launchOp.getBlockSizeOnAxis(dimension);
+      if (!replaceWithZero)
+        symReplacements.push_back(b.getAffineSymbolExpr(idx++) - 1);
+      else
+        symReplacements.push_back(b.getAffineConstantExpr(0));
+      continue;
+    }
+    ++idx;
+  }
+}
+
+/// Take the min if all trip counts are constant.
+static std::optional<uint64_t>
+getConstantTripCountFromAffineMap(AffineMap map) {
+  std::optional<uint64_t> tripCount;
+  for (auto resultExpr : map.getResults()) {
+    auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr);
+    if (!constExpr)
+      return std::nullopt;
+    if (tripCount.has_value())
+      tripCount =
+          std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
+    else
+      tripCount = constExpr.getValue();
+  }
+  return tripCount;
+}
+
 /// Returns the trip count of the loop if it's a constant, std::nullopt
 /// otherwise. This method uses affine expression analysis (in turn using
 /// getTripCount) and is able to determine constant trip count in non-trivial
@@ -95,20 +157,34 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
 
   if (!map)
     return std::nullopt;
+  SmallVector<AffineExpr, 4> symReplacements;
+  replaceGPUOperands(forOp, operands, symReplacements, map.getNumDims());
+  map = map.replaceDimsAndSymbols({}, symReplacements, map.getNumDims(),
+                                  map.getNumSymbols());
+  affine::AffineValueMap valueMap(map, operands);
+  (void)valueMap.canonicalize();
+  map = valueMap.getAffineMap();
+  return getConstantTripCountFromAffineMap(map);
+}
 
-  // Take the min if all trip counts are constant.
-  std::optional<uint64_t> tripCount;
-  for (auto resultExpr : map.getResults()) {
-    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
-      if (tripCount.has_value())
-        tripCount =
-            std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
-      else
-        tripCount = constExpr.getValue();
-    } else
-      return std::nullopt;
-  }
-  return tripCount;
+/// In some scenarios, such as GPU, the number of trip of each thread in the
+/// loop is inconsistent. This function returns the maximum number of trip.
+std::optional<uint64_t>
+mlir::affine::getMaxConstantTripCount(AffineForOp forOp) {
+  SmallVector<Value, 4> operands;
+  AffineMap map;
+  getTripCountMapAndOperands(forOp, &map, &operands);
+
+  if (!map)
+    return std::nullopt;
+  SmallVector<AffineExpr, 4> symReplacements;
+  replaceGPUOperands(forOp, operands, symReplacements, map.getNumDims(), true);
+  map = map.replaceDimsAndSymbols({}, symReplacements, map.getNumDims(),
+                                  map.getNumSymbols());
+  affine::AffineValueMap valueMap(map, operands);
+  (void)valueMap.canonicalize();
+  map = valueMap.getAffineMap();
+  return getConstantTripCountFromAffineMap(map);
 }
 
 /// Returns the greatest known integral divisor of the trip count. Affine
@@ -121,7 +197,13 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
 
   if (!map)
     return 1;
-
+  SmallVector<AffineExpr, 4> symReplacements;
+  replaceGPUOperands(forOp, operands, symReplacements, map.getNumDims());
+  map = map.replaceDimsAndSymbols({}, symReplacements, map.getNumDims(),
+                                  map.getNumSymbols());
+  affine::AffineValueMap valueMap(map, operands);
+  (void)valueMap.canonicalize();
+  map = valueMap.getAffineMap();
   // The largest divisor of the trip count is the GCD of the individual largest
   // divisors.
   assert(map.getNumResults() >= 1 && "expected one or more results");

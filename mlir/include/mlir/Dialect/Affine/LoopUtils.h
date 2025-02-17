@@ -86,6 +86,9 @@ LogicalResult loopUnrollJamUpToFactor(AffineForOp forOp,
 /// was known to have a single iteration.
 LogicalResult promoteIfSingleIteration(AffineForOp forOp);
 
+/// Eliminate loops that will never actually execute.
+LogicalResult removeInvalidLoop(AffineForOp forOp);
+
 /// Promotes all single iteration AffineForOp's in the Function, i.e., moves
 /// their body into the containing Block.
 void promoteSingleIterationLoops(func::FuncOp f);
