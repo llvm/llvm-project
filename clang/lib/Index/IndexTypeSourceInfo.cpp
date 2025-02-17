@@ -8,8 +8,9 @@
 
 #include "IndexingContext.h"
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/DeclObjC.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/PrettyPrinter.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "llvm/ADT/ScopeExit.h"
 
@@ -18,19 +19,18 @@ using namespace index;
 
 namespace {
 
-class TypeIndexer : public RecursiveASTVisitor<TypeIndexer> {
+class TypeIndexer : public DynamicRecursiveASTVisitor {
   IndexingContext &IndexCtx;
   const NamedDecl *Parent;
   const DeclContext *ParentDC;
   bool IsBase;
   SmallVector<SymbolRelation, 3> Relations;
 
-  typedef RecursiveASTVisitor<TypeIndexer> base;
-
 public:
   TypeIndexer(IndexingContext &indexCtx, const NamedDecl *parent,
               const DeclContext *DC, bool isBase, bool isIBType)
     : IndexCtx(indexCtx), Parent(parent), ParentDC(DC), IsBase(isBase) {
+    ShouldWalkTypesOfTypeLocs = false;
     if (IsBase) {
       assert(Parent);
       Relations.emplace_back((unsigned)SymbolRole::RelationBaseOf, Parent);
@@ -41,22 +41,20 @@ public:
     }
   }
 
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-
 #define TRY_TO(CALL_EXPR)                                                      \
   do {                                                                         \
     if (!CALL_EXPR)                                                            \
       return false;                                                            \
   } while (0)
 
-  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TTPL) {
+  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TTPL) override {
     SourceLocation Loc = TTPL.getNameLoc();
     TemplateTypeParmDecl *TTPD = TTPL.getDecl();
     return IndexCtx.handleReference(TTPD, Loc, Parent, ParentDC,
                                     SymbolRoleSet());
   }
 
-  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) override {
     SourceLocation Loc = TL.getNameLoc();
     TypedefNameDecl *ND = TL.getTypedefNameDecl();
     if (ND->isTransparentTag()) {
@@ -80,7 +78,7 @@ public:
     return true;
   }
 
-  bool VisitAutoTypeLoc(AutoTypeLoc TL) {
+  bool VisitAutoTypeLoc(AutoTypeLoc TL) override {
     if (auto *C = TL.getNamedConcept())
       return IndexCtx.handleReference(C, TL.getConceptNameLoc(), Parent,
                                       ParentDC);
@@ -94,7 +92,7 @@ public:
     return true;
   }
 
-  bool TraverseParmVarDecl(ParmVarDecl *D) {
+  bool TraverseParmVarDecl(ParmVarDecl *D) override {
     // Avoid visiting default arguments from the definition that were already
     // visited in the declaration.
     // FIXME: A free function definition can have default arguments.
@@ -107,15 +105,15 @@ public:
       }
     }
 
-    return base::TraverseParmVarDecl(D);
+    return DynamicRecursiveASTVisitor::TraverseParmVarDecl(D);
   }
 
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override {
     IndexCtx.indexNestedNameSpecifierLoc(NNS, Parent, ParentDC);
     return true;
   }
 
-  bool VisitTagTypeLoc(TagTypeLoc TL) {
+  bool VisitTagTypeLoc(TagTypeLoc TL) override {
     TagDecl *D = TL.getDecl();
     if (!IndexCtx.shouldIndexFunctionLocalSymbols() &&
         D->getParentFunctionOrMethod())
@@ -131,12 +129,12 @@ public:
                                     Relations);
   }
 
-  bool VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
+  bool VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) override {
     return IndexCtx.handleReference(TL.getIFaceDecl(), TL.getNameLoc(),
                                     Parent, ParentDC, SymbolRoleSet(), Relations);
   }
 
-  bool VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
+  bool VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) override {
     for (unsigned i = 0, e = TL.getNumProtocols(); i != e; ++i) {
       IndexCtx.handleReference(TL.getProtocol(i), TL.getProtocolLoc(i),
                                Parent, ParentDC, SymbolRoleSet(), Relations);
@@ -161,7 +159,8 @@ public:
     }
   }
 
-  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
+  bool VisitTemplateSpecializationTypeLoc(
+      TemplateSpecializationTypeLoc TL) override {
     auto *T = TL.getTypePtr();
     if (!T)
       return true;
@@ -171,7 +170,8 @@ public:
     return true;
   }
 
-  bool TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
+  bool TraverseTemplateSpecializationTypeLoc(
+      TemplateSpecializationTypeLoc TL) override {
     if (!WalkUpFromTemplateSpecializationTypeLoc(TL))
       return false;
     if (!TraverseTemplateName(TL.getTypePtr()->getTemplateName()))
@@ -191,7 +191,8 @@ public:
     return true;
   }
 
-  bool VisitDeducedTemplateSpecializationTypeLoc(DeducedTemplateSpecializationTypeLoc TL) {
+  bool VisitDeducedTemplateSpecializationTypeLoc(
+      DeducedTemplateSpecializationTypeLoc TL) override {
     auto *T = TL.getTypePtr();
     if (!T)
       return true;
@@ -201,12 +202,12 @@ public:
     return true;
   }
 
-  bool VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
+  bool VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) override {
     return IndexCtx.handleReference(TL.getDecl(), TL.getNameLoc(), Parent,
                                     ParentDC, SymbolRoleSet(), Relations);
   }
 
-  bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
+  bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) override {
     const DependentNameType *DNT = TL.getTypePtr();
     const NestedNameSpecifier *NNS = DNT->getQualifier();
     const Type *T = NNS->getAsType();
@@ -234,7 +235,7 @@ public:
                                     ParentDC, SymbolRoleSet(), Relations);
   }
 
-  bool TraverseStmt(Stmt *S) {
+  bool TraverseStmt(Stmt *S) override {
     IndexCtx.indexBody(S, Parent, ParentDC);
     return true;
   }

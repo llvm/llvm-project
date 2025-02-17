@@ -16,7 +16,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_RECURSIVESYMBOLVISITOR_H
 
 #include "clang/AST/AST.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Lex/Lexer.h"
 
 namespace clang {
@@ -24,27 +24,23 @@ namespace tooling {
 
 /// Traverses the AST and visits the occurrence of each named symbol in the
 /// given nodes.
-template <typename T>
-class RecursiveSymbolVisitor
-    : public RecursiveASTVisitor<RecursiveSymbolVisitor<T>> {
-  using BaseType = RecursiveASTVisitor<RecursiveSymbolVisitor<T>>;
-
+class RecursiveSymbolVisitor : public DynamicRecursiveASTVisitor {
 public:
   RecursiveSymbolVisitor(const SourceManager &SM, const LangOptions &LangOpts)
       : SM(SM), LangOpts(LangOpts) {}
 
-  bool visitSymbolOccurrence(const NamedDecl *ND,
-                             ArrayRef<SourceRange> NameRanges) {
+  virtual bool visitSymbolOccurrence(const NamedDecl *ND,
+                                     ArrayRef<SourceRange> NameRanges) {
     return true;
   }
 
   // Declaration visitors:
 
-  bool VisitNamedDecl(const NamedDecl *D) {
+  bool VisitNamedDecl(NamedDecl *D) override {
     return isa<CXXConversionDecl>(D) ? true : visit(D, D->getLocation());
   }
 
-  bool VisitCXXConstructorDecl(const CXXConstructorDecl *CD) {
+  bool VisitCXXConstructorDecl(CXXConstructorDecl *CD) override {
     for (const auto *Initializer : CD->inits()) {
       // Ignore implicit initializers.
       if (!Initializer->isWritten())
@@ -61,15 +57,15 @@ public:
 
   // Expression visitors:
 
-  bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
+  bool VisitDeclRefExpr(DeclRefExpr *Expr) override {
     return visit(Expr->getFoundDecl(), Expr->getLocation());
   }
 
-  bool VisitMemberExpr(const MemberExpr *Expr) {
+  bool VisitMemberExpr(MemberExpr *Expr) override {
     return visit(Expr->getFoundDecl().getDecl(), Expr->getMemberLoc());
   }
 
-  bool VisitOffsetOfExpr(const OffsetOfExpr *S) {
+  bool VisitOffsetOfExpr(OffsetOfExpr *S) override {
     for (unsigned I = 0, E = S->getNumComponents(); I != E; ++I) {
       const OffsetOfNode &Component = S->getComponent(I);
       if (Component.getKind() == OffsetOfNode::Field) {
@@ -83,7 +79,7 @@ public:
 
   // Other visitors:
 
-  bool VisitTypeLoc(const TypeLoc Loc) {
+  bool VisitTypeLoc(TypeLoc Loc) override {
     const SourceLocation TypeBeginLoc = Loc.getBeginLoc();
     const SourceLocation TypeEndLoc =
         Lexer::getLocForEndOfToken(TypeBeginLoc, 0, SM, LangOpts);
@@ -105,13 +101,13 @@ public:
     return true;
   }
 
-  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) override {
     const SourceLocation TypeEndLoc =
         Lexer::getLocForEndOfToken(TL.getBeginLoc(), 0, SM, LangOpts);
     return visit(TL.getTypedefNameDecl(), TL.getBeginLoc(), TypeEndLoc);
   }
 
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override {
     // The base visitor will visit NNSL prefixes, so we should only look at
     // the current NNS.
     if (NNS) {
@@ -119,10 +115,10 @@ public:
       if (!visit(ND, NNS.getLocalBeginLoc(), NNS.getLocalEndLoc()))
         return false;
     }
-    return BaseType::TraverseNestedNameSpecifierLoc(NNS);
+    return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNS);
   }
 
-  bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
+  bool VisitDesignatedInitExpr(DesignatedInitExpr *E) override {
     for (const DesignatedInitExpr::Designator &D : E->designators()) {
       if (D.isFieldDesignator()) {
         if (const FieldDecl *Decl = D.getFieldDecl()) {
@@ -140,8 +136,7 @@ private:
 
   bool visit(const NamedDecl *ND, SourceLocation BeginLoc,
              SourceLocation EndLoc) {
-    return static_cast<T *>(this)->visitSymbolOccurrence(
-        ND, SourceRange(BeginLoc, EndLoc));
+    return visitSymbolOccurrence(ND, SourceRange(BeginLoc, EndLoc));
   }
   bool visit(const NamedDecl *ND, SourceLocation Loc) {
     return visit(ND, Loc, Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts));

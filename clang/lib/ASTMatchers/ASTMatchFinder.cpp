@@ -19,7 +19,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
@@ -87,11 +87,8 @@ struct MemoizedMatchResult {
 
 // A RecursiveASTVisitor that traverses all children or all descendants of
 // a node.
-class MatchChildASTVisitor
-    : public RecursiveASTVisitor<MatchChildASTVisitor> {
+class MatchChildASTVisitor : public DynamicRecursiveASTVisitor {
 public:
-  typedef RecursiveASTVisitor<MatchChildASTVisitor> VisitorBase;
-
   // Creates an AST visitor that matches 'matcher' on all children or
   // descendants of a traversed node. max_depth is the maximum depth
   // to traverse: use 1 for matching the children and INT_MAX for
@@ -101,8 +98,10 @@ public:
                        bool IgnoreImplicitChildren,
                        ASTMatchFinder::BindKind Bind)
       : Matcher(Matcher), Finder(Finder), Builder(Builder), CurrentDepth(0),
-        MaxDepth(MaxDepth), IgnoreImplicitChildren(IgnoreImplicitChildren),
-        Bind(Bind), Matches(false) {}
+        MaxDepth(MaxDepth), Bind(Bind), Matches(false) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldVisitImplicitCode = !IgnoreImplicitChildren;
+  }
 
   // Returns true if a match is found in the subtree rooted at the
   // given AST node. This is done via a set of mutually recursive
@@ -111,7 +110,8 @@ public:
   //
   //   - Traverse(node) calls BaseTraverse(node) when it needs
   //     to visit the descendants of node.
-  //   - BaseTraverse(node) then calls (via VisitorBase::Traverse*(node))
+  //   - BaseTraverse(node) then calls (via
+  //   DynamicRecursiveASTVisitor::Traverse*(node))
   //     Traverse*(c) for each child c of 'node'.
   //   - Traverse*(c) in turn calls Traverse(c), completing the
   //     recursion.
@@ -151,7 +151,7 @@ public:
   // The following are overriding methods from the base visitor class.
   // They are public only to allow CRTP to work. They are *not *part
   // of the public API of this class.
-  bool TraverseDecl(Decl *DeclNode) {
+  bool TraverseDecl(Decl *DeclNode) override {
 
     if (DeclNode && DeclNode->isImplicit() &&
         Finder->isTraversalIgnoringImplicitNodes())
@@ -175,26 +175,22 @@ public:
     return StmtToTraverse;
   }
 
-  bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr) {
-    // If we need to keep track of the depth, we can't perform data recursion.
-    if (CurrentDepth == 0 || (CurrentDepth <= MaxDepth && MaxDepth < INT_MAX))
-      Queue = nullptr;
-
+  bool TraverseStmt(Stmt *StmtNode) override {
     ScopedIncrement ScopedDepth(&CurrentDepth);
     Stmt *StmtToTraverse = getStmtToTraverse(StmtNode);
     if (!StmtToTraverse)
       return true;
 
-    if (IgnoreImplicitChildren && isa<CXXDefaultArgExpr>(StmtNode))
+    if (!ShouldVisitImplicitCode && isa<CXXDefaultArgExpr>(StmtNode))
       return true;
 
     if (!match(*StmtToTraverse))
       return false;
-    return VisitorBase::TraverseStmt(StmtToTraverse, Queue);
+    return DynamicRecursiveASTVisitor::TraverseStmt(StmtToTraverse);
   }
   // We assume that the QualType and the contained type are on the same
   // hierarchy level. Thus, we try to match either of them.
-  bool TraverseType(QualType TypeNode) {
+  bool TraverseType(QualType TypeNode) override {
     if (TypeNode.isNull())
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
@@ -206,7 +202,7 @@ public:
   }
   // We assume that the TypeLoc, contained QualType and contained Type all are
   // on the same hierarchy level. Thus, we try to match all of them.
-  bool TraverseTypeLoc(TypeLoc TypeLocNode) {
+  bool TraverseTypeLoc(TypeLoc TypeLocNode) override {
     if (TypeLocNode.isNull())
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
@@ -219,11 +215,11 @@ public:
     // The TypeLoc is matched inside traverse.
     return traverse(TypeLocNode);
   }
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) override {
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return (NNS == nullptr) || traverse(*NNS);
   }
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override {
     if (!NNS)
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
@@ -231,19 +227,19 @@ public:
       return false;
     return traverse(NNS);
   }
-  bool TraverseConstructorInitializer(CXXCtorInitializer *CtorInit) {
+  bool TraverseConstructorInitializer(CXXCtorInitializer *CtorInit) override {
     if (!CtorInit)
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return traverse(*CtorInit);
   }
-  bool TraverseTemplateArgumentLoc(TemplateArgumentLoc TAL) {
+  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &TAL) override {
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return traverse(TAL);
   }
-  bool TraverseCXXForRangeStmt(CXXForRangeStmt *Node) {
+  bool TraverseCXXForRangeStmt(CXXForRangeStmt *Node) override {
     if (!Finder->isTraversalIgnoringImplicitNodes())
-      return VisitorBase::TraverseCXXForRangeStmt(Node);
+      return DynamicRecursiveASTVisitor::TraverseCXXForRangeStmt(Node);
     if (!Node)
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
@@ -253,22 +249,24 @@ public:
     if (!match(*Node->getLoopVariable()))
       return false;
     if (match(*Node->getRangeInit()))
-      if (!VisitorBase::TraverseStmt(Node->getRangeInit()))
+      if (!DynamicRecursiveASTVisitor::TraverseStmt(Node->getRangeInit()))
         return false;
     if (!match(*Node->getBody()))
       return false;
-    return VisitorBase::TraverseStmt(Node->getBody());
+    return DynamicRecursiveASTVisitor::TraverseStmt(Node->getBody());
   }
-  bool TraverseCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *Node) {
+  bool TraverseCXXRewrittenBinaryOperator(
+      CXXRewrittenBinaryOperator *Node) override {
     if (!Finder->isTraversalIgnoringImplicitNodes())
-      return VisitorBase::TraverseCXXRewrittenBinaryOperator(Node);
+      return DynamicRecursiveASTVisitor::TraverseCXXRewrittenBinaryOperator(
+          Node);
     if (!Node)
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
 
     return match(*Node->getLHS()) && match(*Node->getRHS());
   }
-  bool TraverseAttr(Attr *A) {
+  bool TraverseAttr(Attr *A) override {
     if (A == nullptr ||
         (A->isImplicit() &&
          Finder->getASTContext().getParentMapContext().getTraversalKind() ==
@@ -277,9 +275,9 @@ public:
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return traverse(*A);
   }
-  bool TraverseLambdaExpr(LambdaExpr *Node) {
+  bool TraverseLambdaExpr(LambdaExpr *Node) override {
     if (!Finder->isTraversalIgnoringImplicitNodes())
-      return VisitorBase::TraverseLambdaExpr(Node);
+      return DynamicRecursiveASTVisitor::TraverseLambdaExpr(Node);
     if (!Node)
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
@@ -310,11 +308,8 @@ public:
     if (!match(*Node->getBody()))
       return false;
 
-    return VisitorBase::TraverseStmt(Node->getBody());
+    return DynamicRecursiveASTVisitor::TraverseStmt(Node->getBody());
   }
-
-  bool shouldVisitTemplateInstantiations() const { return true; }
-  bool shouldVisitImplicitCode() const { return !IgnoreImplicitChildren; }
 
 private:
   // Used for updating the depth during traversal.
@@ -335,33 +330,36 @@ private:
   // Forwards the call to the corresponding Traverse*() method in the
   // base visitor class.
   bool baseTraverse(const Decl &DeclNode) {
-    return VisitorBase::TraverseDecl(const_cast<Decl*>(&DeclNode));
+    return DynamicRecursiveASTVisitor::TraverseDecl(
+        const_cast<Decl *>(&DeclNode));
   }
   bool baseTraverse(const Stmt &StmtNode) {
-    return VisitorBase::TraverseStmt(const_cast<Stmt*>(&StmtNode));
+    return DynamicRecursiveASTVisitor::TraverseStmt(
+        const_cast<Stmt *>(&StmtNode));
   }
   bool baseTraverse(QualType TypeNode) {
-    return VisitorBase::TraverseType(TypeNode);
+    return DynamicRecursiveASTVisitor::TraverseType(TypeNode);
   }
   bool baseTraverse(TypeLoc TypeLocNode) {
-    return VisitorBase::TraverseTypeLoc(TypeLocNode);
+    return DynamicRecursiveASTVisitor::TraverseTypeLoc(TypeLocNode);
   }
   bool baseTraverse(const NestedNameSpecifier &NNS) {
-    return VisitorBase::TraverseNestedNameSpecifier(
-        const_cast<NestedNameSpecifier*>(&NNS));
+    return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifier(
+        const_cast<NestedNameSpecifier *>(&NNS));
   }
   bool baseTraverse(NestedNameSpecifierLoc NNS) {
-    return VisitorBase::TraverseNestedNameSpecifierLoc(NNS);
+    return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNS);
   }
   bool baseTraverse(const CXXCtorInitializer &CtorInit) {
-    return VisitorBase::TraverseConstructorInitializer(
+    return DynamicRecursiveASTVisitor::TraverseConstructorInitializer(
         const_cast<CXXCtorInitializer *>(&CtorInit));
   }
   bool baseTraverse(TemplateArgumentLoc TAL) {
-    return VisitorBase::TraverseTemplateArgumentLoc(TAL);
+    return DynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(TAL);
   }
   bool baseTraverse(const Attr &AttrNode) {
-    return VisitorBase::TraverseAttr(const_cast<Attr *>(&AttrNode));
+    return DynamicRecursiveASTVisitor::TraverseAttr(
+        const_cast<Attr *>(&AttrNode));
   }
 
   // Sets 'Matched' to true if 'Matcher' matches 'Node' and:
@@ -411,19 +409,25 @@ private:
   BoundNodesTreeBuilder ResultBindings;
   int CurrentDepth;
   const int MaxDepth;
-  const bool IgnoreImplicitChildren;
   const ASTMatchFinder::BindKind Bind;
   bool Matches;
 };
 
 // Controls the outermost traversal of the AST and allows to match multiple
 // matchers.
-class MatchASTVisitor : public RecursiveASTVisitor<MatchASTVisitor>,
+class MatchASTVisitor : public DynamicRecursiveASTVisitor,
                         public ASTMatchFinder {
 public:
   MatchASTVisitor(const MatchFinder::MatchersByType *Matchers,
                   const MatchFinder::MatchFinderOptions &Options)
-      : Matchers(Matchers), Options(Options), ActiveASTContext(nullptr) {}
+      : Matchers(Matchers), Options(Options), ActiveASTContext(nullptr) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldVisitImplicitCode = true;
+
+    // We visit the lambda body explicitly, so instruct the RAV
+    // to not visit it on our behalf too.
+    ShouldVisitLambdaBody = false;
+  }
 
   ~MatchASTVisitor() override {
     if (Options.CheckProfiling) {
@@ -455,10 +459,7 @@ public:
     ActiveASTContext = NewActiveASTContext;
   }
 
-  // The following Visit*() and Traverse*() functions "override"
-  // methods in RecursiveASTVisitor.
-
-  bool VisitTypedefNameDecl(TypedefNameDecl *DeclNode) {
+  bool VisitTypedefNameDecl(TypedefNameDecl *DeclNode) override {
     // When we see 'typedef A B', we add name 'B' to the set of names
     // A's canonical type maps to.  This is necessary for implementing
     // isDerivedFrom(x) properly, where x can be the name of the base
@@ -493,23 +494,23 @@ public:
     return true;
   }
 
-  bool VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *CAD) {
+  bool VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *CAD) override {
     const ObjCInterfaceDecl *InterfaceDecl = CAD->getClassInterface();
     CompatibleAliases[InterfaceDecl].insert(CAD);
     return true;
   }
 
-  bool TraverseDecl(Decl *DeclNode);
-  bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr);
-  bool TraverseType(QualType TypeNode);
-  bool TraverseTypeLoc(TypeLoc TypeNode);
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS);
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS);
-  bool TraverseConstructorInitializer(CXXCtorInitializer *CtorInit);
-  bool TraverseTemplateArgumentLoc(TemplateArgumentLoc TAL);
-  bool TraverseAttr(Attr *AttrNode);
+  bool TraverseDecl(Decl *DeclNode) override;
+  bool TraverseStmt(Stmt *StmtNode) override;
+  bool TraverseType(QualType TypeNode) override;
+  bool TraverseTypeLoc(TypeLoc TypeNode) override;
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) override;
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override;
+  bool TraverseConstructorInitializer(CXXCtorInitializer *CtorInit) override;
+  bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &TAL) override;
+  bool TraverseAttr(Attr *AttrNode) override;
 
-  bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue) {
+  bool dataTraverseNode(Stmt *S) override {
     if (auto *RF = dyn_cast<CXXForRangeStmt>(S)) {
       {
         ASTNodeNotAsIsSourceScope RAII(this, true);
@@ -580,7 +581,7 @@ public:
           TraverseType(E);
 
         if (Expr *NE = T->getNoexceptExpr())
-          TraverseStmt(NE, Queue);
+          TraverseStmt(NE);
 
         if (LE->hasExplicitResultType())
           TraverseTypeLoc(Proto.getReturnLoc());
@@ -590,7 +591,7 @@ public:
       TraverseStmt(LE->getBody());
       return true;
     }
-    return RecursiveASTVisitor<MatchASTVisitor>::dataTraverseNode(S, Queue);
+    return DynamicRecursiveASTVisitor::dataTraverseNode(S);
   }
 
   // Matches children or descendants of 'Node' with 'BaseMatcher'.
@@ -734,13 +735,6 @@ public:
   // Implements ASTMatchFinder::getASTContext.
   ASTContext &getASTContext() const override { return *ActiveASTContext; }
 
-  bool shouldVisitTemplateInstantiations() const { return true; }
-  bool shouldVisitImplicitCode() const { return true; }
-
-  // We visit the lambda body explicitly, so instruct the RAV
-  // to not visit it on our behalf too.
-  bool shouldVisitLambdaBody() const { return false; }
-
   bool IsMatchingInASTNodeNotSpelledInSource() const override {
     return TraversingASTNodeNotSpelledInSource;
   }
@@ -755,22 +749,19 @@ public:
     return TraversingASTNodeNotAsIs;
   }
 
-  bool TraverseTemplateInstantiations(ClassTemplateDecl *D) {
+  bool TraverseTemplateInstantiations(ClassTemplateDecl *D) override {
     ASTNodeNotSpelledInSourceScope RAII(this, true);
-    return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(
-        D);
+    return DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(D);
   }
 
-  bool TraverseTemplateInstantiations(VarTemplateDecl *D) {
+  bool TraverseTemplateInstantiations(VarTemplateDecl *D) override {
     ASTNodeNotSpelledInSourceScope RAII(this, true);
-    return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(
-        D);
+    return DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(D);
   }
 
-  bool TraverseTemplateInstantiations(FunctionTemplateDecl *D) {
+  bool TraverseTemplateInstantiations(FunctionTemplateDecl *D) override {
     ASTNodeNotSpelledInSourceScope RAII(this, true);
-    return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(
-        D);
+    return DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(D);
   }
 
 private:
@@ -1469,10 +1460,10 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   ASTChildrenNotSpelledInSourceScope RAII2(this, ScopedChildren);
 
   match(*DeclNode);
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseDecl(DeclNode);
+  return DynamicRecursiveASTVisitor::TraverseDecl(DeclNode);
 }
 
-bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
+bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode) {
   if (!StmtNode) {
     return true;
   }
@@ -1481,12 +1472,12 @@ bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
 
   ASTNodeNotSpelledInSourceScope RAII(this, ScopedTraversal);
   match(*StmtNode);
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseStmt(StmtNode, Queue);
+  return DynamicRecursiveASTVisitor::TraverseStmt(StmtNode);
 }
 
 bool MatchASTVisitor::TraverseType(QualType TypeNode) {
   match(TypeNode);
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseType(TypeNode);
+  return DynamicRecursiveASTVisitor::TraverseType(TypeNode);
 }
 
 bool MatchASTVisitor::TraverseTypeLoc(TypeLoc TypeLocNode) {
@@ -1497,12 +1488,12 @@ bool MatchASTVisitor::TraverseTypeLoc(TypeLoc TypeLocNode) {
   // each TypeLoc.
   match(TypeLocNode);
   match(TypeLocNode.getType());
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseTypeLoc(TypeLocNode);
+  return DynamicRecursiveASTVisitor::TraverseTypeLoc(TypeLocNode);
 }
 
 bool MatchASTVisitor::TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
   match(*NNS);
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseNestedNameSpecifier(NNS);
+  return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifier(NNS);
 }
 
 bool MatchASTVisitor::TraverseNestedNameSpecifierLoc(
@@ -1516,8 +1507,7 @@ bool MatchASTVisitor::TraverseNestedNameSpecifierLoc(
   // because the traversal is already done in the parallel "Loc"-hierarchy.
   if (NNS.hasQualifier())
     match(*NNS.getNestedNameSpecifier());
-  return
-      RecursiveASTVisitor<MatchASTVisitor>::TraverseNestedNameSpecifierLoc(NNS);
+  return DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNS);
 }
 
 bool MatchASTVisitor::TraverseConstructorInitializer(
@@ -1535,18 +1525,18 @@ bool MatchASTVisitor::TraverseConstructorInitializer(
 
   match(*CtorInit);
 
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseConstructorInitializer(
-      CtorInit);
+  return DynamicRecursiveASTVisitor::TraverseConstructorInitializer(CtorInit);
 }
 
-bool MatchASTVisitor::TraverseTemplateArgumentLoc(TemplateArgumentLoc Loc) {
+bool MatchASTVisitor::TraverseTemplateArgumentLoc(
+    const TemplateArgumentLoc &Loc) {
   match(Loc);
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateArgumentLoc(Loc);
+  return DynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(Loc);
 }
 
 bool MatchASTVisitor::TraverseAttr(Attr *AttrNode) {
   match(*AttrNode);
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseAttr(AttrNode);
+  return DynamicRecursiveASTVisitor::TraverseAttr(AttrNode);
 }
 
 class MatchASTConsumer : public ASTConsumer {

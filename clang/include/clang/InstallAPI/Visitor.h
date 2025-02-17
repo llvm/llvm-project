@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_INSTALLAPI_VISITOR_H
 #define LLVM_CLANG_INSTALLAPI_VISITOR_H
 
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/InstallAPI/Context.h"
@@ -26,35 +26,37 @@ namespace installapi {
 
 /// ASTVisitor for collecting declarations that represent global symbols.
 class InstallAPIVisitor final : public ASTConsumer,
-                                public RecursiveASTVisitor<InstallAPIVisitor> {
+                                public DynamicRecursiveASTVisitor {
 public:
   InstallAPIVisitor(ASTContext &ASTCtx, InstallAPIContext &Ctx,
                     SourceManager &SrcMgr, Preprocessor &PP)
       : Ctx(Ctx), SrcMgr(SrcMgr), PP(PP),
         MC(ItaniumMangleContext::create(ASTCtx, ASTCtx.getDiagnostics())),
-        Layout(ASTCtx.getTargetInfo().getDataLayoutString()) {}
+        Layout(ASTCtx.getTargetInfo().getDataLayoutString()) {
+    ShouldVisitTemplateInstantiations = true;
+  }
+
   void HandleTranslationUnit(ASTContext &ASTCtx) override;
-  bool shouldVisitTemplateInstantiations() const { return true; }
 
   /// Collect global variables.
-  bool VisitVarDecl(const VarDecl *D);
+  bool VisitVarDecl(VarDecl *D) override;
 
   /// Collect global functions.
-  bool VisitFunctionDecl(const FunctionDecl *D);
+  bool VisitFunctionDecl(FunctionDecl *D) override;
 
   /// Collect Objective-C Interface declarations.
   /// Every Objective-C class has an interface declaration that lists all the
   /// ivars, properties, and methods of the class.
-  bool VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D);
+  bool VisitObjCInterfaceDecl(ObjCInterfaceDecl *D) override;
 
   /// Collect Objective-C Category/Extension declarations.
   ///
   /// The class that is being extended might come from a different library and
   /// is therefore itself not collected.
-  bool VisitObjCCategoryDecl(const ObjCCategoryDecl *D);
+  bool VisitObjCCategoryDecl(ObjCCategoryDecl *D) override;
 
   /// Collect global c++ declarations.
-  bool VisitCXXRecordDecl(const CXXRecordDecl *D);
+  bool VisitCXXRecordDecl(CXXRecordDecl *D) override;
 
 private:
   std::string getMangledName(const NamedDecl *D) const;
