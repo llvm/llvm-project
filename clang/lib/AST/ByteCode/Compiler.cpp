@@ -2707,7 +2707,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // For everyhing else, use local variables.
   if (SubExprT) {
-    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, /*IsConst=*/true,
+    bool IsConst = SubExpr->getType().isConstQualified();
+    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, IsConst,
                                                  /*IsExtended=*/true);
     if (!this->visit(SubExpr))
       return false;
@@ -3028,7 +3029,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
     size_t NumElems = CAT->getZExtSize();
     const Function *Func = getFunction(E->getConstructor());
-    if (!Func || !Func->isConstexpr())
+    if (!Func)
       return false;
 
     // FIXME(perf): We're calling the constructor once per array element here,

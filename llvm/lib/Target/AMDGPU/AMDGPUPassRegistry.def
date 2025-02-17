@@ -104,6 +104,7 @@ MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
 MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-fix-vgpr-copies", SIFixVGPRCopiesPass())
 MACHINE_FUNCTION_PASS("si-fold-operands", SIFoldOperandsPass());
+MACHINE_FUNCTION_PASS("si-form-memory-clauses", SIFormMemoryClausesPass())
 MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())
 MACHINE_FUNCTION_PASS("si-load-store-opt", SILoadStoreOptimizerPass())
 MACHINE_FUNCTION_PASS("si-lower-control-flow", SILowerControlFlowPass())
@@ -124,7 +125,6 @@ DUMMY_MACHINE_FUNCTION_PASS("amdgpu-pre-ra-optimizations", GCNPreRAOptimizations
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-rewrite-partial-reg-uses", GCNRewritePartialRegUsesPass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-set-wave-priority", AMDGPUSetWavePriorityPass())
 
-DUMMY_MACHINE_FUNCTION_PASS("si-form-memory-clauses", SIFormMemoryClausesPass())
 DUMMY_MACHINE_FUNCTION_PASS("si-insert-hard-clauses", SIInsertHardClausesPass())
 DUMMY_MACHINE_FUNCTION_PASS("si-insert-waitcnts", SIInsertWaitcntsPass())
 DUMMY_MACHINE_FUNCTION_PASS("si-late-branch-lowering", SILateBranchLoweringPass())
