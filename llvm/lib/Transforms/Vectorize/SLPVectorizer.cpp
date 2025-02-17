@@ -833,9 +833,9 @@ protected:
     Constant *C;
     if (!match(I, m_BinOp(m_Value(), m_Constant(C))))
       return nullptr;
-    if (auto *CI = dyn_cast<ConstantInt>(C)) {
+    if (auto *CI = dyn_cast<ConstantInt>(C))
       return CI;
-    } else if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
+    if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
       if (auto *CI = dyn_cast_if_present<ConstantInt>(CDV->getSplatValue()))
         return CI;
     }
@@ -900,7 +900,8 @@ public:
   }
   SmallVector<Value *>
   getInterchangeableInstructionOps(Instruction *I) override {
-    assert(is_contained(SupportedOp, I->getOpcode()));
+    assert(is_contained(SupportedOp, I->getOpcode()) &&
+           "Not supported opcode.");
     return {MainOp->getOperand(0),
             ConstantInt::get(MainOp->getOperand(1)->getType(),
                              I->getOpcode() == Instruction::Mul)};
@@ -1304,9 +1305,9 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
             for (Value *V : VL) {
               if (isa<PoisonValue>(V))
                 continue;
-              if (cast<Instruction>(V)->getOpcode() ==
-                  InterchangeableInstructionOpcode)
-                return cast<Instruction>(V);
+              Instruction *Inst = cast<Instruction>(V);
+              if (Inst->getOpcode() == InterchangeableInstructionOpcode)
+                return Inst;
             }
           }
           llvm_unreachable(
@@ -2679,9 +2680,9 @@ public:
       ArgSize = isa<IntrinsicInst>(MainOp) ? IntrinsicNumOperands : NumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
-      for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx)
-        OpsVec[OpIdx].resize(NumLanes);
-      for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+      for (OperandDataVec &Ops : OpsVec)
+        Ops.resize(NumLanes);
+      for (unsigned Lane : seq<unsigned>(NumLanes)) {
         assert((isa<Instruction>(VL[Lane]) || isa<PoisonValue>(VL[Lane])) &&
                "Expected instruction or poison value");
         // Our tree has just 3 nodes: the root and two operands.
@@ -2700,7 +2701,8 @@ public:
               if (auto *EI = dyn_cast<ExtractElementInst>(MainOp)) {
                 OpsVec[OpIdx][Lane] = {EI->getVectorOperand(), true, false};
                 continue;
-              } else if (auto *EV = dyn_cast<ExtractValueInst>(MainOp)) {
+              }
+              if (auto *EV = dyn_cast<ExtractValueInst>(MainOp)) {
                 OpsVec[OpIdx][Lane] = {EV->getAggregateOperand(), true, false};
                 continue;
               }
