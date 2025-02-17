@@ -2878,10 +2878,10 @@ def NVVM_TargettAttr : NVVM_Attr<"NVVMTarget", "target"> {
       return hasFlag("ftz");
     }
     bool $cppClass::hasCmdOptions() const {
-      return hasFlag("cmd-options");
+      return hasFlag("ptxas-cmd-options");
     }
     std::optional<mlir::NamedAttribute> $cppClass::getCmdOptions() const {
-      return getFlags().getNamed("cmd-options");
+      return getFlags().getNamed("ptxas-cmd-options");
     }
   }];
 }

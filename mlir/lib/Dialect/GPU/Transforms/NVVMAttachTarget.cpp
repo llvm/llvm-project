@@ -64,7 +64,7 @@ DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
             mlir::StringAttr::get(builder.getContext(), StringRef(opt)));
       }
       flags.push_back(builder.getNamedAttr(
-          "cmd-options",
+          "ptxas-cmd-options",
           mlir::ArrayAttr::get(builder.getContext(), nvvmOptionAttrs)));
     }
   }
