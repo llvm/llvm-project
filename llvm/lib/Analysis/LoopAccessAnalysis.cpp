@@ -793,14 +793,15 @@ private:
 
 } // end anonymous namespace
 
-/// Try to compute the stride for \p AR. Used by getPtrStride.
+/// Try to compute a constant stride for \p AR. Used by getPtrStride and
+/// isNoWrap.
 static std::optional<int64_t>
 getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
-                    Value *Ptr, PredicatedScalarEvolution &PSE) {
+                    PredicatedScalarEvolution &PSE) {
   // The access function must stride over the innermost loop.
   if (Lp != AR->getLoop()) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not striding over innermost loop "
-                      << *Ptr << " SCEV: " << *AR << "\n");
+                      << "SCEV: " << *AR << "\n");
     return std::nullopt;
   }
 
@@ -810,8 +811,8 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   // Calculate the pointer stride and check if it is constant.
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Step);
   if (!C) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not a constant strided " << *Ptr
-                      << " SCEV: " << *AR << "\n");
+    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not a constant strided "
+                      << "SCEV: " << *AR << "\n");
     return std::nullopt;
   }
 
@@ -835,16 +836,21 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   return Stride;
 }
 
-static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
-                           PredicatedScalarEvolution &PSE, const Loop *L);
+static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
+                        const Loop *L);
 
-/// Check whether a pointer address cannot wrap.
+/// Check whether \p AR is a non-wrapping AddRec, or if \p Ptr is a non-wrapping
+/// GEP.
 static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
                      Value *Ptr, Type *AccessTy, const Loop *L, bool Assume,
                      std::optional<int64_t> Stride = std::nullopt) {
+  // FIXME: This should probably only return true for NUW.
+  if (AR->getNoWrapFlags(SCEV::NoWrapMask))
+    return true;
+
   // The address calculation must not wrap. Otherwise, a dependence could be
   // inverted.
-  if (isNoWrapAddRec(Ptr, AR, PSE, L))
+  if (isNoWrapGEP(Ptr, PSE, L))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -857,7 +863,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
     return true;
 
   if (!Stride)
-    Stride = getStrideFromAddRec(AR, L, AccessTy, Ptr, PSE);
+    Stride = getStrideFromAddRec(AR, L, AccessTy, PSE);
   if (Stride) {
     // If the null pointer is undefined, then a access sequence which would
     // otherwise access it can be assumed not to unsigned wrap.  Note that this
@@ -1445,15 +1451,9 @@ void AccessAnalysis::processMemAccesses() {
   }
 }
 
-/// Return true if an AddRec pointer \p Ptr is unsigned non-wrapping,
-/// i.e. monotonically increasing/decreasing.
-static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
-                           PredicatedScalarEvolution &PSE, const Loop *L) {
-
-  // FIXME: This should probably only return true for NUW.
-  if (AR->getNoWrapFlags(SCEV::NoWrapMask))
-    return true;
-
+/// Check whether \p Ptr is non-wrapping GEP.
+static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
+                        const Loop *L) {
   if (PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
     return true;
 
@@ -1524,8 +1524,7 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
     return std::nullopt;
   }
 
-  std::optional<int64_t> Stride =
-      getStrideFromAddRec(AR, Lp, AccessTy, Ptr, PSE);
+  std::optional<int64_t> Stride = getStrideFromAddRec(AR, Lp, AccessTy, PSE);
   if (!ShouldCheckWrap || !Stride)
     return Stride;
 
