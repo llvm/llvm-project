@@ -260,6 +260,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  syscall_compat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.syscall_compat
+)
+
+add_entrypoint_object(
   sysconf
   ALIAS
   DEPENDS

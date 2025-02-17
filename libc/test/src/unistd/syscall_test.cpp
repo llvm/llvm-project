@@ -8,6 +8,7 @@
 
 #include "src/errno/libc_errno.h"
 #include "src/unistd/syscall.h"
+#include "src/unistd/syscall_compat.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -175,5 +176,14 @@ TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
   ASSERT_ERRNO_SUCCESS();
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_close, dir_fd), 0l);
+  ASSERT_ERRNO_SUCCESS();
+}
+
+TEST(LlvmLibcSyscallTest, TrivialCallCompat) {
+  LIBC_NAMESPACE::libc_errno = 0;
+#pragma push_macro("syscall")
+#undef syscall
+  ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_gettid), 0l);
+#pragma pop_macro("syscall")
   ASSERT_ERRNO_SUCCESS();
 }

@@ -439,6 +439,7 @@ add_libc_unittest(
     libc.include.sys_syscall
     libc.src.errno.errno
     libc.src.unistd.__llvm_libc_syscall
+    libc.src.unistd.syscall_compat
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
