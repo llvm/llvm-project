@@ -300,6 +300,8 @@ public:
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
+  bool isHighLatencyDef(int Opc) const override;
+
 protected:
   const RISCVSubtarget &STI;
 
