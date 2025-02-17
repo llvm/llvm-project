@@ -267,10 +267,6 @@ public:
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  void materializeImmediate(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
-                            Register DestReg, int64_t Value) const;
-
   const TargetRegisterClass *getPreferredSelectRegClass(
                                unsigned Size) const;
 
