@@ -230,11 +230,17 @@ function(add_libclc_builtin_set)
     # We need to take each file and produce an absolute input file, as well
     # as a unique architecture-specific output file. We deal with a mix of
     # different input files, which makes this trickier.
+    set( input_file_dep )
     if( ${file} IN_LIST ARG_GEN_FILES )
       # Generated files are given just as file names, which we must make
       # absolute to the binary directory.
       set( input_file ${CMAKE_CURRENT_BINARY_DIR}/${file} )
       set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${file}.bc" )
+      # If a target exists that generates this file, add that as a dependency
+      # of the custom command.
+      if( TARGET generate-${file} )
+        set( input_file_dep generate-${file} )
+      endif()
     else()
       # Other files are originally relative to each SOURCE file, which are
       # then make relative to the libclc root directory. We must normalize
@@ -255,7 +261,7 @@ function(add_libclc_builtin_set)
       OUTPUT ${output_file}
       EXTRA_OPTS -fno-builtin -nostdlib
         "${ARG_COMPILE_FLAGS}" -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
-      DEPENDENCIES generate_convert.cl clspv-generate_convert.cl
+      DEPENDENCIES ${input_file_dep}
     )
     list( APPEND bytecode_files ${output_file} )
   endforeach()

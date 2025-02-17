@@ -1484,7 +1484,10 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.peek<Pointer>().atField(I);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
   Field.activate();
   Field.initialize();
@@ -2893,9 +2896,7 @@ inline bool Alloc(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   Block *B = Allocator.allocate(Desc, S.Ctx.getEvalID(),
                                 DynamicAllocator::Form::NonArray);
   assert(B);
-
   S.Stk.push<Pointer>(B);
-
   return true;
 }
 
@@ -2920,8 +2921,7 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
       Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
                          S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
   assert(B);
-  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
-
+  S.Stk.push<Pointer>(B);
   return true;
 }
 
@@ -2947,9 +2947,7 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
       Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
                          S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
   assert(B);
-
-  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
-
+  S.Stk.push<Pointer>(B);
   return true;
 }
 

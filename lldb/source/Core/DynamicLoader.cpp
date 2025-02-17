@@ -263,7 +263,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
         module_sp = std::make_shared<Module>(module_spec);
       } else if (force_symbol_search && error.AsCString("") &&
                  error.AsCString("")[0] != '\0') {
-        target.GetDebugger().GetErrorStream() << error.AsCString();
+        *target.GetDebugger().GetAsyncErrorStream() << error.AsCString();
       }
     }
 
@@ -328,19 +328,19 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     }
   } else {
     if (force_symbol_search) {
-      Stream &s = target.GetDebugger().GetErrorStream();
-      s.Printf("Unable to find file");
+      lldb::StreamSP s = target.GetDebugger().GetAsyncErrorStream();
+      s->Printf("Unable to find file");
       if (!name.empty())
-        s.Printf(" %s", name.str().c_str());
+        s->Printf(" %s", name.str().c_str());
       if (uuid.IsValid())
-        s.Printf(" with UUID %s", uuid.GetAsString().c_str());
+        s->Printf(" with UUID %s", uuid.GetAsString().c_str());
       if (value != LLDB_INVALID_ADDRESS) {
         if (value_is_offset)
-          s.Printf(" with slide 0x%" PRIx64, value);
+          s->Printf(" with slide 0x%" PRIx64, value);
         else
-          s.Printf(" at address 0x%" PRIx64, value);
+          s->Printf(" at address 0x%" PRIx64, value);
       }
-      s.Printf("\n");
+      s->Printf("\n");
     }
     LLDB_LOGF(log,
               "Unable to find binary %s with UUID %s and load it at "

@@ -735,19 +735,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Promote);
   }
 
-  for (auto Op : {ISD::FREM,         ISD::FPOW,          ISD::FPOWI,
-                  ISD::FCOS,         ISD::FSIN,          ISD::FSINCOS,
-                  ISD::FMODF,        ISD::FACOS,         ISD::FASIN,
-                  ISD::FATAN,        ISD::FATAN2,        ISD::FCOSH,
-                  ISD::FSINH,        ISD::FTANH,         ISD::FTAN,
-                  ISD::FEXP,         ISD::FEXP2,         ISD::FEXP10,
-                  ISD::FLOG,         ISD::FLOG2,         ISD::FLOG10,
-                  ISD::STRICT_FREM,  ISD::STRICT_FPOW,   ISD::STRICT_FPOWI,
-                  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,   ISD::STRICT_FACOS,
-                  ISD::STRICT_FASIN, ISD::STRICT_FATAN,  ISD::STRICT_FATAN2,
-                  ISD::STRICT_FCOSH, ISD::STRICT_FSINH,  ISD::STRICT_FTANH,
-                  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,  ISD::STRICT_FLOG,
-                  ISD::STRICT_FLOG2, ISD::STRICT_FLOG10, ISD::STRICT_FTAN}) {
+  for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
+                  ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
+                  ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
+                  ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
+                  ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
+                  ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
+                  ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
+                  ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                  ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                  ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
+                  ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
+                  ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
+                  ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
+                  ISD::STRICT_FTAN}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::v4f16, Expand);
     setOperationAction(Op, MVT::v8f16, Expand);
@@ -1208,7 +1209,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::FSIN,              ISD::FCOS,           ISD::FTAN,
           ISD::FASIN,             ISD::FACOS,          ISD::FATAN,
           ISD::FSINH,             ISD::FCOSH,          ISD::FTANH,
-          ISD::FPOW,              ISD::FLOG,           ISD::FLOG2,          
+          ISD::FPOW,              ISD::FLOG,           ISD::FLOG2,
           ISD::FLOG10,            ISD::FEXP,           ISD::FEXP2,
           ISD::FEXP10,            ISD::FRINT,          ISD::FROUND,
           ISD::FROUNDEVEN,        ISD::FTRUNC,         ISD::FMINNUM,
@@ -1217,7 +1218,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::STRICT_FADD,       ISD::STRICT_FSUB,    ISD::STRICT_FMUL,
           ISD::STRICT_FDIV,       ISD::STRICT_FMA,     ISD::STRICT_FCEIL,
           ISD::STRICT_FFLOOR,     ISD::STRICT_FSQRT,   ISD::STRICT_FRINT,
-          ISD::STRICT_FNEARBYINT, ISD::STRICT_FROUND,  ISD::STRICT_FTRUNC,  
+          ISD::STRICT_FNEARBYINT, ISD::STRICT_FROUND,  ISD::STRICT_FTRUNC,
           ISD::STRICT_FROUNDEVEN, ISD::STRICT_FMINNUM, ISD::STRICT_FMAXNUM,
           ISD::STRICT_FMINIMUM,   ISD::STRICT_FMAXIMUM})
       setOperationAction(Op, MVT::v1f64, Expand);
@@ -15507,7 +15508,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
 
   unsigned EltSize = VT.getScalarSizeInBits();
   unsigned NumElts = VT.getVectorNumElements();
-  return (ShuffleVectorSDNode::isSplatMask(&M[0], VT) ||
+  return (ShuffleVectorSDNode::isSplatMask(M) ||
           isREVMask(M, EltSize, NumElts, 64) ||
           isREVMask(M, EltSize, NumElts, 32) ||
           isREVMask(M, EltSize, NumElts, 16) ||
@@ -25069,10 +25070,10 @@ static SDValue performSETCCCombine(SDNode *N,
   // setcc (srl x, imm), 0, ne ==> setcc (and x, (-1 << imm)), 0, ne
   if (Cond == ISD::SETNE && isNullConstant(RHS) &&
       LHS->getOpcode() == ISD::SRL && isa<ConstantSDNode>(LHS->getOperand(1)) &&
-      LHS->getConstantOperandVal(1) < VT.getScalarSizeInBits() &&
       LHS->hasOneUse()) {
     EVT TstVT = LHS->getValueType(0);
-    if (TstVT.isScalarInteger() && TstVT.getFixedSizeInBits() <= 64) {
+    if (TstVT.isScalarInteger() && TstVT.getFixedSizeInBits() <= 64 &&
+        LHS->getConstantOperandVal(1) < TstVT.getFixedSizeInBits()) {
       // this pattern will get better opt in emitComparison
       uint64_t TstImm = -1ULL << LHS->getConstantOperandVal(1);
       SDValue TST = DAG.getNode(ISD::AND, DL, TstVT, LHS->getOperand(0),

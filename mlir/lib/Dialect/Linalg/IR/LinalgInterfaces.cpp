@@ -1094,19 +1094,6 @@ SmallVector<Range, 4> LinalgOp::createLoopRanges(OpBuilder &b, Location loc) {
   return res;
 }
 
-SmallVector<int64_t, 4> LinalgOp::computeStaticLoopSizes() {
-  AffineMap map = getLoopsToShapesMap();
-  unsigned numDims = map.getNumDims(), numRes = map.getNumResults();
-  SmallVector<int64_t, 4> allShapeSizes = createFlatListOfOperandStaticDims();
-  SmallVector<int64_t, 4> res(numDims, 0);
-  for (unsigned idx = 0; idx < numRes; ++idx) {
-    auto result = map.getResult(idx);
-    if (auto d = dyn_cast<AffineDimExpr>(result))
-      res[d.getPosition()] = allShapeSizes[idx];
-  }
-  return res;
-}
-
 /// Visitor to check if any of the given set of positions from AffineDimExprs
 /// are used within an AffineExpr.
 struct HasAffineDimExprVisitor

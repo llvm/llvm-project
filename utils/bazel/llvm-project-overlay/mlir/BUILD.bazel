@@ -4259,6 +4259,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
         ":MemRefDialect",
         ":Pass",
@@ -6115,6 +6116,7 @@ cc_library(
         ":ControlFlowDialect",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
+        ":ConvertToLLVM",
         ":ConvertToLLVMInterface",
         ":FuncDialect",
         ":FuncToLLVM",
@@ -6242,6 +6244,8 @@ cc_library(
         ":ControlFlowDialect",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
+        ":ConvertToLLVM",
+        ":ConvertToLLVMInterface",
         ":FuncDialect",
         ":FuncToLLVM",
         ":GPUCommonTransforms",
@@ -9298,6 +9302,7 @@ cc_library(
         ":OpenMPDialect",
         ":Support",
         ":TransformUtils",
+        "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
@@ -12900,6 +12905,14 @@ gentbl_cc_library(
             ["-gen-attrdef-defs"],
             "include/mlir/Dialect/Complex/IR/ComplexAttributes.cpp.inc",
         ),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/Complex/IR/ComplexEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/Complex/IR/ComplexEnums.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Complex/IR/ComplexAttributes.td",
@@ -12971,6 +12984,26 @@ cc_library(
 )
 
 cc_library(
+    name = "ComplexCommon",
+    srcs = glob([
+        "lib/Conversion/ComplexCommon/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ComplexCommon/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArithAttrToLLVMConversion",
+        ":ArithDialect",
+        ":ComplexDialect",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MathDialect",
+        ":Pass",
+    ],
+)
+
+cc_library(
     name = "ComplexToLLVM",
     srcs = glob([
         "lib/Conversion/ComplexToLLVM/*.cpp",
@@ -12982,6 +13015,7 @@ cc_library(
     deps = [
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
+        ":ComplexCommon",
         ":ComplexDialect",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
@@ -13041,6 +13075,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ComplexCommon",
         ":ComplexDialect",
         ":ConversionPassIncGen",
         ":IR",
@@ -13269,6 +13304,8 @@ cc_library(
         ":FuncTransforms",
         ":IR",
         ":MemRefDialect",
+        ":MeshDialect",
+        ":MeshShardingInterface",
         ":Pass",
         ":SideEffectInterfaces",
         ":Support",

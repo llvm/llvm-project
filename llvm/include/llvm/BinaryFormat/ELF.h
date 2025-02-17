@@ -1299,8 +1299,11 @@ enum : unsigned {
   // Section data is string data by default.
   SHF_MIPS_STRING = 0x80000000,
 
-  // Make code section unreadable when in execute-only mode
-  SHF_ARM_PURECODE = 0x20000000
+  // Section contains only program instructions and no program data.
+  SHF_ARM_PURECODE = 0x20000000,
+
+  // Section contains only program instructions and no program data.
+  SHF_AARCH64_PURECODE = 0x20000000
 };
 
 // Section Group Flags

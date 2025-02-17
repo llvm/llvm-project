@@ -336,10 +336,10 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
   } else {
     // Initialize packing with insertelements to start from undef.
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    Value *Undef = PoisonValue::get(VectorType::get(LastInst->getType(), VF));
+    Value *Undef = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
     set(Def, Undef);
     for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
-      packScalarIntoVectorValue(Def, Lane);
+      packScalarIntoVectorizedValue(Def, Lane);
     VectorValue = get(Def);
   }
   Builder.restoreIP(OldIP);
@@ -392,13 +392,24 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
     Builder.SetCurrentDebugLocation(DIL);
 }
 
-void VPTransformState::packScalarIntoVectorValue(VPValue *Def,
-                                                 const VPLane &Lane) {
+void VPTransformState::packScalarIntoVectorizedValue(VPValue *Def,
+                                                     const VPLane &Lane) {
   Value *ScalarInst = get(Def, Lane);
-  Value *VectorValue = get(Def);
-  VectorValue = Builder.CreateInsertElement(VectorValue, ScalarInst,
-                                            Lane.getAsRuntimeExpr(Builder, VF));
-  set(Def, VectorValue);
+  Value *WideValue = get(Def);
+  Value *LaneExpr = Lane.getAsRuntimeExpr(Builder, VF);
+  if (auto *StructTy = dyn_cast<StructType>(WideValue->getType())) {
+    // We must handle each element of a vectorized struct type.
+    for (unsigned I = 0, E = StructTy->getNumElements(); I != E; I++) {
+      Value *ScalarValue = Builder.CreateExtractValue(ScalarInst, I);
+      Value *VectorValue = Builder.CreateExtractValue(WideValue, I);
+      VectorValue =
+          Builder.CreateInsertElement(VectorValue, ScalarValue, LaneExpr);
+      WideValue = Builder.CreateInsertValue(WideValue, VectorValue, I);
+    }
+  } else {
+    WideValue = Builder.CreateInsertElement(WideValue, ScalarInst, LaneExpr);
+  }
+  set(Def, WideValue);
 }
 
 BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState &State) {
@@ -987,18 +998,10 @@ void VPlan::execute(VPTransformState *State) {
   setName("Final VPlan");
   LLVM_DEBUG(dump());
 
-  // Disconnect the middle block from its single successor (the scalar loop
-  // header) in both the CFG and DT. The branch will be recreated during VPlan
-  // execution.
-  BasicBlock *MiddleBB = State->CFG.ExitBB;
-  BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
-  auto *BrInst = new UnreachableInst(MiddleBB->getContext());
-  BrInst->insertBefore(MiddleBB->getTerminator()->getIterator());
-  MiddleBB->getTerminator()->eraseFromParent();
-  State->CFG.DTU.applyUpdates({{DominatorTree::Delete, MiddleBB, ScalarPh}});
   // Disconnect scalar preheader and scalar header, as the dominator tree edge
   // will be updated as part of VPlan execution. This allows keeping the DTU
   // logic generic during VPlan execution.
+  BasicBlock *ScalarPh = State->CFG.ExitBB;
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
 

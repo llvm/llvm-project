@@ -12,6 +12,7 @@
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
+#include "llvm/SandboxIR/Region.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
@@ -327,12 +328,14 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
     const ShuffleMask &Mask =
         cast<DiamondReuseWithShuffle>(LegalityRes).getMask();
     NewVec = createShuffle(VecOp, Mask, UserBB);
+    assert(NewVec->getType() == VecOp->getType() &&
+           "Expected same type! Bad mask ?");
     break;
   }
   case LegalityResultID::DiamondReuseMultiInput: {
     const auto &Descr =
         cast<DiamondReuseMultiInput>(LegalityRes).getCollectDescr();
-    Type *ResTy = FixedVectorType::get(Bndl[0]->getType(), Bndl.size());
+    Type *ResTy = VecUtils::getWideType(Bndl[0]->getType(), Bndl.size());
 
     // TODO: Try to get WhereIt without creating a vector.
     SmallVector<Value *, 4> DescrInstrs;
@@ -344,7 +347,8 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
         getInsertPointAfterInstrs(DescrInstrs, UserBB);
 
     Value *LastV = PoisonValue::get(ResTy);
-    for (auto [Lane, ElmDescr] : enumerate(Descr.getDescrs())) {
+    unsigned Lane = 0;
+    for (const auto &ElmDescr : Descr.getDescrs()) {
       Value *VecOp = ElmDescr.getValue();
       Context &Ctx = VecOp->getContext();
       Value *ValueToInsert;
@@ -356,10 +360,32 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
       } else {
         ValueToInsert = VecOp;
       }
-      ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
-      Value *Ins = InsertElementInst::create(LastV, ValueToInsert, LaneC,
-                                             WhereIt, Ctx, "VIns");
-      LastV = Ins;
+      auto NumLanesToInsert = VecUtils::getNumLanes(ValueToInsert);
+      if (NumLanesToInsert == 1) {
+        // If we are inserting a scalar element then we need a single insert.
+        //   %VIns = insert %DstVec,  %SrcScalar, Lane
+        ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
+        LastV = InsertElementInst::create(LastV, ValueToInsert, LaneC, WhereIt,
+                                          Ctx, "VIns");
+      } else {
+        // If we are inserting a vector element then we need to extract and
+        // insert each vector element one by one with a chain of extracts and
+        // inserts, for example:
+        //   %VExt0 = extract %SrcVec, 0
+        //   %VIns0 = insert  %DstVec, %Vect0, Lane + 0
+        //   %VExt1 = extract %SrcVec, 1
+        //   %VIns1 = insert  %VIns0,  %Vect0, Lane + 1
+        for (unsigned LnCnt = 0; LnCnt != NumLanesToInsert; ++LnCnt) {
+          auto *ExtrIdxC = ConstantInt::get(Type::getInt32Ty(Ctx), LnCnt);
+          auto *ExtrI = ExtractElementInst::create(ValueToInsert, ExtrIdxC,
+                                                   WhereIt, Ctx, "VExt");
+          unsigned InsLane = Lane + LnCnt;
+          auto *InsLaneC = ConstantInt::get(Type::getInt32Ty(Ctx), InsLane);
+          LastV = InsertElementInst::create(LastV, ExtrI, InsLaneC, WhereIt,
+                                            Ctx, "VIns");
+        }
+      }
+      Lane += NumLanesToInsert;
     }
     NewVec = LastV;
     break;
@@ -448,13 +474,24 @@ bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
 
           assert(SeedSlice.size() >= 2 && "Should have been rejected!");
 
-          // TODO: If vectorization succeeds, run the RegionPassManager on the
-          // resulting region.
-
           // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
           SmallVector<Value *> SeedSliceVals(SeedSlice.begin(),
                                              SeedSlice.end());
-          Change |= tryVectorize(SeedSliceVals);
+          // Create an empty region. Instructions get added to the region
+          // automatically by the callbacks.
+          auto &Ctx = F.getContext();
+          Region Rgn(Ctx, A.getTTI());
+          // Save the state of the IR before we make any changes. The
+          // transaction gets accepted/reverted by the tr-accept-or-revert pass.
+          Ctx.save();
+          // Try to vectorize starting from the seed slice. The returned value
+          // is true if we found vectorizable code and generated some vector
+          // code for it. It does not mean that the code is profitable.
+          bool VecSuccess = tryVectorize(SeedSliceVals);
+          if (VecSuccess)
+            // WARNING: All passes should return false, except those that
+            // accept/revert the state.
+            Change |= RPM.runOnRegion(Rgn, A);
         }
       }
     }
