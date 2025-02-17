@@ -253,6 +253,12 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
 
+- Improved :doc:`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by adding
+  a new (off-by-default) option `AllowFalseEvaluated`, which allows marking
+  move constructors with ``noexcept(expr)`` even if ``expr``
+  evaluates to ``false``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
