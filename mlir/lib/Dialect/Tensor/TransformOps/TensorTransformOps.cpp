@@ -100,11 +100,6 @@ void transform::ApplyFoldTensorEmptyPatternsOp::populatePatterns(
   tensor::populateFoldTensorEmptyPatterns(patterns, getFoldSingleUseOnly());
 }
 
-void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
-}
-
 void transform::ApplyFoldTensorSubsetOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
