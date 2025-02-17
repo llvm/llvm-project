@@ -713,8 +713,13 @@ def err_thread_non_global : Error<
 def err_thread_unsupported : Error<
   "thread-local storage is not supported for the current target">;
 
-def warn_falloff_nonvoid_function : Warning<
-  "non-void function does not return a value%select{| in all control paths}0">,
+def warn_falloff_nonvoid : Warning<
+  "non-void %select{function|block|lambda|coroutine}0 "
+  "does not return a value%select{| in all control paths}1">,
+  InGroup<ReturnType>;
+def err_falloff_nonvoid : Warning<
+  "non-void %select{function|block|lambda|coroutine}0 "
+  "does not return a value%select{| in all control paths}1">,
   InGroup<ReturnType>;
 def warn_const_attr_with_pure_attr : Warning<
   "'const' attribute imposes more restrictions; 'pure' attribute ignored">,
@@ -723,11 +728,6 @@ def warn_pure_function_returns_void : Warning<
   "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
   InGroup<IgnoredAttributes>;
 
-def err_falloff_nonvoid_block : Error<
-  "non-void block does not return a value%select{| in all control paths}0">;
-def warn_falloff_nonvoid_coroutine : Warning<
-  "non-void coroutine does not return a value%select{| in all control paths}0">,
-  InGroup<ReturnType>;
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
   InGroup<MissingNoreturn>, DefaultIgnore;
@@ -8399,9 +8399,6 @@ let CategoryName = "Lambda Issue" in {
     "incomplete result type %0 in lambda expression">;
   def err_noreturn_lambda_has_return_expr : Error<
     "lambda declared 'noreturn' should not return">;
-  def warn_falloff_nonvoid_lambda : Warning<
-    "non-void lambda does not return a value%select{| in all control paths}0">,
-    InGroup<ReturnType>;
   def err_access_lambda_capture : Error<
     // The ERRORs represent other special members that aren't constructors, in
     // hopes that someone will bother noticing and reporting if they appear
