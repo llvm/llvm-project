@@ -29,7 +29,7 @@ namespace interp {
 template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
   DeclScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
-      : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P, VD),
+      : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P),
         OldInitializingDecl(Ctx->InitializingDecl) {
     Ctx->InitializingDecl = VD;
     Ctx->InitStack.push_back(InitLink::Decl(VD));
