@@ -1118,6 +1118,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
+  case Intrinsic::amdgcn_readanylane:
   case Intrinsic::amdgcn_readlane: {
     // If the first argument is uniform these intrinsics return it unchanged.
     const Use &Src = II.getArgOperandUse(0);

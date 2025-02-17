@@ -1217,6 +1217,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
                                                    i64, double, pointers, multiples of the 32-bit vectors.
 
+  llvm.amdgcn.readanylane                          Similar to readfirstlane. But marks value that is uniform when used.
+                                                   The result is undefined if the value is actual divergent.
+
   llvm.amdgcn.readlane                             Provides direct access to v_readlane_b32. Returns the value in the
                                                    specified lane of the first input operand. The second operand specifies
                                                    the lane to read from. Currently implemented for i16, i32, float, half,
