@@ -16,7 +16,9 @@ macros:
     macro_header: fenv-macros.h
   - macro_name: FE_DOWNWARD
     macro_header: fenv-macros.h
-  - macro_name: FE_DOWNWARD
+  - macro_name: FE_TONEAREST
+    macro_header: fenv-macros.h
+  - macro_name: FE_TOWARDZERO
     macro_header: fenv-macros.h
   - macro_name: FE_UPWARD
     macro_header: fenv-macros.h
