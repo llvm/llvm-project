@@ -139,9 +139,7 @@ namespace TypeId {
   static_assert(&B2().ti1 == &typeid(B));
   static_assert(&B2().ti2 == &typeid(B2));
   extern B2 extern_b2;
-  static_assert(&typeid(extern_b2) == &typeid(B2)); // both-error {{constant expression}} \
-                                                    // both-note{{typeid applied to object 'extern_b2' whose dynamic type is not constant}}
-
+  static_assert(&typeid(extern_b2) == &typeid(B2));
 
   constexpr B2 b2;
   constexpr const B &b1 = b2;
@@ -170,3 +168,12 @@ namespace TypeId {
   }
   static_assert(side_effects());
 }
+
+consteval int f(int i);
+constexpr bool test(auto i) {
+    return f(0) == 0;
+}
+consteval int f(int i) {
+    return 2 * i;
+}
+static_assert(test(42));

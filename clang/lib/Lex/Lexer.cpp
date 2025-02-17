@@ -1352,6 +1352,27 @@ std::optional<Token> Lexer::findNextToken(SourceLocation Loc,
   return Tok;
 }
 
+std::optional<Token> Lexer::findPreviousToken(SourceLocation Loc,
+                                              const SourceManager &SM,
+                                              const LangOptions &LangOpts,
+                                              bool IncludeComments) {
+  const auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Loc));
+  while (Loc != StartOfFile) {
+    Loc = Loc.getLocWithOffset(-1);
+    if (Loc.isInvalid())
+      return std::nullopt;
+
+    Loc = GetBeginningOfToken(Loc, SM, LangOpts);
+    Token Tok;
+    if (getRawToken(Loc, Tok, SM, LangOpts))
+      continue; // Not a token, go to prev location.
+    if (!Tok.is(tok::comment) || IncludeComments) {
+      return Tok;
+    }
+  }
+  return std::nullopt;
+}
+
 /// Checks that the given token is the first token that occurs after the
 /// given location (this excludes comments and whitespace). Returns the location
 /// immediately after the specified token. If the token is not found or the

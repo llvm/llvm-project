@@ -409,6 +409,7 @@ public:
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
+  void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
   void VisitEmptyDecl(EmptyDecl *D);
   void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
@@ -613,7 +614,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
 
   if (HasAttrs) {
     AttrVec Attrs;
-    Record.readAttributes(Attrs, D);
+    Record.readAttributes(Attrs);
     // Avoid calling setAttrs() directly because it uses Decl::getASTContext()
     // internally which is unsafe during derialization.
     D->setAttrsImpl(Attrs, Reader.getContext());
@@ -1063,6 +1064,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setHasImplicitReturnZero(FunctionDeclBits.getNextBit());
   FD->setIsMultiVersion(FunctionDeclBits.getNextBit());
   FD->setLateTemplateParsed(FunctionDeclBits.getNextBit());
+  FD->setInstantiatedFromMemberTemplate(FunctionDeclBits.getNextBit());
   FD->setFriendConstraintRefersToEnclosingTemplate(
       FunctionDeclBits.getNextBit());
   FD->setUsesSEHTry(FunctionDeclBits.getNextBit());
@@ -1795,6 +1797,15 @@ void ASTDeclReader::VisitBlockDecl(BlockDecl *BD) {
   BD->setCaptures(Reader.getContext(), captures, capturesCXXThis);
 }
 
+void ASTDeclReader::VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D) {
+  // NumParams is deserialized by OutlinedFunctionDecl::CreateDeserialized().
+  VisitDecl(D);
+  for (unsigned I = 0; I < D->NumParams; ++I)
+    D->setParam(I, readDeclAs<ImplicitParamDecl>());
+  D->setNothrow(Record.readInt() != 0);
+  D->setBody(cast_or_null<Stmt>(Record.readStmt()));
+}
+
 void ASTDeclReader::VisitCapturedDecl(CapturedDecl *CD) {
   VisitDecl(CD);
   unsigned ContextParamPos = Record.readInt();
@@ -2285,6 +2296,10 @@ void ASTDeclReader::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   VisitFunctionDecl(D);
   D->setDeductionCandidateKind(
       static_cast<DeductionCandidate>(Record.readInt()));
+  D->setSourceDeductionGuide(readDeclAs<CXXDeductionGuideDecl>());
+  D->setSourceDeductionGuideKind(
+      static_cast<CXXDeductionGuideDecl::SourceDeductionGuideKind>(
+          Record.readInt()));
 }
 
 void ASTDeclReader::VisitCXXMethodDecl(CXXMethodDecl *D) {
@@ -2518,6 +2533,7 @@ RedeclarableResult ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
   D->TemplateArgs = TemplateArgumentList::CreateCopy(C, TemplArgs);
   D->PointOfInstantiation = readSourceLocation();
   D->SpecializationKind = (TemplateSpecializationKind)Record.readInt();
+  D->StrictPackMatch = Record.readBool();
 
   bool writtenAsCanonicalDecl = Record.readInt();
   if (writtenAsCanonicalDecl) {
@@ -3098,8 +3114,6 @@ public:
     return Reader.readInt();
   }
 
-  uint64_t peekInts(unsigned N) { return Reader.peekInts(N); }
-
   bool readBool() { return Reader.readBool(); }
 
   SourceRange readSourceRange() {
@@ -3130,28 +3144,17 @@ public:
     return Reader.readVersionTuple();
   }
 
-  void skipInt() { Reader.skipInts(1); }
-
-  void skipInts(unsigned N) { Reader.skipInts(N); }
-
-  unsigned getCurrentIdx() { return Reader.getIdx(); }
-
   OMPTraitInfo *readOMPTraitInfo() { return Reader.readOMPTraitInfo(); }
 
   template <typename T> T *readDeclAs() { return Reader.readDeclAs<T>(); }
 };
 }
 
-/// Reads one attribute from the current stream position, advancing Idx.
 Attr *ASTRecordReader::readAttr() {
   AttrReader Record(*this);
   auto V = Record.readInt();
   if (!V)
     return nullptr;
-
-  // Read and ignore the skip count, since attribute deserialization is not
-  // deferred on this pass.
-  Record.skipInt();
 
   Attr *New = nullptr;
   // Kind is stored as a 1-based integer because 0 is used to indicate a null
@@ -3182,26 +3185,11 @@ Attr *ASTRecordReader::readAttr() {
   return New;
 }
 
-/// Reads attributes from the current stream position, advancing Idx.
-/// For some attributes (where type depends on itself recursively), defer
-/// reading the attribute until the type has been read.
-void ASTRecordReader::readAttributes(AttrVec &Attrs, Decl *D) {
+/// Reads attributes from the current stream position.
+void ASTRecordReader::readAttributes(AttrVec &Attrs) {
   for (unsigned I = 0, E = readInt(); I != E; ++I)
-    if (auto *A = readOrDeferAttrFor(D))
+    if (auto *A = readAttr())
       Attrs.push_back(A);
-}
-
-/// Reads one attribute from the current stream position, advancing Idx.
-/// For some attributes (where type depends on itself recursively), defer
-/// reading the attribute until the type has been read.
-Attr *ASTRecordReader::readOrDeferAttrFor(Decl *D) {
-  AttrReader Record(*this);
-  unsigned SkipCount = Record.peekInts(1);
-  if (!SkipCount)
-    return readAttr();
-  Reader->PendingDeferredAttributes.push_back({Record.getCurrentIdx(), D});
-  Record.skipInts(SkipCount);
-  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3760,6 +3748,18 @@ void ASTDeclReader::checkMultipleDefinitionInNamedModules(ASTReader &Reader,
       Func && Func->getTemplateSpecializationInfo())
     return;
 
+  // The module ownership of in-class friend declaration is not straightforward.
+  // Avoid diagnosing such cases.
+  if (D->getFriendObjectKind() || Previous->getFriendObjectKind())
+    return;
+
+  // Skip diagnosing in-class declarations.
+  if (!Previous->getLexicalDeclContext()
+           ->getNonTransparentContext()
+           ->isFileContext() ||
+      !D->getLexicalDeclContext()->getNonTransparentContext()->isFileContext())
+    return;
+
   Module *M = Previous->getOwningModule();
   if (!M)
     return;
@@ -4131,6 +4131,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     break;
   case DECL_TEMPLATE_PARAM_OBJECT:
     D = TemplateParamObjectDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_OUTLINEDFUNCTION:
+    D = OutlinedFunctionDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
   case DECL_CAPTURED:
     D = CapturedDecl::CreateDeserialized(Context, ID, Record.readInt());
@@ -4512,49 +4515,6 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
   ASTDeclReader::attachLatestDecl(CanonDecl, MostRecent);
 }
 
-void ASTReader::loadDeferredAttribute(const DeferredAttribute &DA) {
-  Decl *D = DA.TargetedDecl;
-  ModuleFile *M = getOwningModuleFile(D);
-
-  unsigned LocalDeclIndex = D->getGlobalID().getLocalDeclIndex();
-  const DeclOffset &DOffs = M->DeclOffsets[LocalDeclIndex];
-  RecordLocation Loc(M, DOffs.getBitOffset(M->DeclsBlockStartOffset));
-
-  llvm::BitstreamCursor &Cursor = Loc.F->DeclsCursor;
-  SavedStreamPosition SavedPosition(Cursor);
-  if (llvm::Error Err = Cursor.JumpToBit(Loc.Offset)) {
-    Error(std::move(Err));
-  }
-
-  Expected<unsigned> MaybeCode = Cursor.ReadCode();
-  if (!MaybeCode) {
-    llvm::report_fatal_error(
-        Twine("ASTReader::loadPreferredNameAttribute failed reading code: ") +
-        toString(MaybeCode.takeError()));
-  }
-  unsigned Code = MaybeCode.get();
-
-  ASTRecordReader Record(*this, *Loc.F);
-  Expected<unsigned> MaybeRecCode = Record.readRecord(Cursor, Code);
-  if (!MaybeRecCode) {
-    llvm::report_fatal_error(
-        Twine(
-            "ASTReader::loadPreferredNameAttribute failed reading rec code: ") +
-        toString(MaybeCode.takeError()));
-  }
-  unsigned RecCode = MaybeRecCode.get();
-  if (RecCode < DECL_TYPEDEF || RecCode > DECL_LAST) {
-    llvm::report_fatal_error(
-        Twine("ASTReader::loadPreferredNameAttribute failed reading rec code: "
-              "expected valid DeclCode") +
-        toString(MaybeCode.takeError()));
-  }
-
-  Record.skipInts(DA.RecordIdx);
-  Attr *A = Record.readAttr();
-  getContext().getDeclAttrs(D).push_back(A);
-}
-
 namespace {
 
   /// Given an ObjC interface, goes through the modules and links to the
@@ -4736,8 +4696,8 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
         MSInfo->setPointOfInstantiation(POI);
       } else {
         auto *FD = cast<FunctionDecl>(D);
-        if (auto *FTSInfo = FD->TemplateOrSpecialization
-                    .dyn_cast<FunctionTemplateSpecializationInfo *>())
+        if (auto *FTSInfo = dyn_cast<FunctionTemplateSpecializationInfo *>(
+                FD->TemplateOrSpecialization))
           FTSInfo->setPointOfInstantiation(POI);
         else
           cast<MemberSpecializationInfo *>(FD->TemplateOrSpecialization)

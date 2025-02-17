@@ -42,6 +42,10 @@ public:
 
   bool IsValid() const;
 
+  /// Get the command as the user typed it. Empty string if commands were run on
+  /// behalf of lldb.
+  const char *GetCommand();
+
   const char *GetOutput();
 
   const char *GetError();

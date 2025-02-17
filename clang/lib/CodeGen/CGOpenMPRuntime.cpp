@@ -1332,7 +1332,7 @@ void CGOpenMPRuntime::setLocThreadIdInsertPt(CodeGenFunction &CGF,
                                                  CGF.Builder.GetInsertBlock());
   } else {
     Elem.ServiceInsertPt = new llvm::BitCastInst(Undef, CGF.Int32Ty, "svcpt");
-    Elem.ServiceInsertPt->insertAfter(CGF.AllocaInsertPt);
+    Elem.ServiceInsertPt->insertAfter(CGF.AllocaInsertPt->getIterator());
   }
 }
 
@@ -1457,14 +1457,13 @@ void CGOpenMPRuntime::functionFinished(CodeGenFunction &CGF) {
     clearLocThreadIdInsertPt(CGF);
     OpenMPLocThreadIDMap.erase(CGF.CurFn);
   }
-  if (FunctionUDRMap.count(CGF.CurFn) > 0) {
-    for(const auto *D : FunctionUDRMap[CGF.CurFn])
+  if (auto I = FunctionUDRMap.find(CGF.CurFn); I != FunctionUDRMap.end()) {
+    for (const auto *D : I->second)
       UDRMap.erase(D);
-    FunctionUDRMap.erase(CGF.CurFn);
+    FunctionUDRMap.erase(I);
   }
-  auto I = FunctionUDMMap.find(CGF.CurFn);
-  if (I != FunctionUDMMap.end()) {
-    for(const auto *D : I->second)
+  if (auto I = FunctionUDMMap.find(CGF.CurFn); I != FunctionUDMMap.end()) {
+    for (const auto *D : I->second)
       UDMMap.erase(D);
     FunctionUDMMap.erase(I);
   }
@@ -4079,7 +4078,7 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
       Size = llvm::ConstantInt::get(CGF.SizeTy, 0);
     }
     LValue Base;
-    if (unsigned *P = Pos.dyn_cast<unsigned *>()) {
+    if (unsigned *P = dyn_cast<unsigned *>(Pos)) {
       Base = CGF.MakeAddrLValue(
           CGF.Builder.CreateConstGEP(DependenciesArray, *P), KmpDependInfoTy);
     } else {
@@ -4109,7 +4108,7 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
     CGF.EmitStoreOfScalar(
         llvm::ConstantInt::get(LLVMFlagsTy, static_cast<unsigned int>(DepKind)),
         FlagsLVal);
-    if (unsigned *P = Pos.dyn_cast<unsigned *>()) {
+    if (unsigned *P = dyn_cast<unsigned *>(Pos)) {
       ++(*P);
     } else {
       LValue &PosLVal = *cast<LValue *>(Pos);
@@ -7448,7 +7447,7 @@ private:
           // Update info about the lowest and highest elements for this struct
           if (!PartialStruct.Base.isValid()) {
             PartialStruct.LowestElem = {FieldIndex, LowestElem};
-            if (IsFinalArraySection) {
+            if (IsFinalArraySection && OASE) {
               Address HB =
                   CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false)
                       .getAddress();
@@ -7461,7 +7460,7 @@ private:
           } else if (FieldIndex < PartialStruct.LowestElem.first) {
             PartialStruct.LowestElem = {FieldIndex, LowestElem};
           } else if (FieldIndex > PartialStruct.HighestElem.first) {
-            if (IsFinalArraySection) {
+            if (IsFinalArraySection && OASE) {
               Address HB =
                   CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false)
                       .getAddress();

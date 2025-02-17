@@ -36,10 +36,10 @@ define void @f0() {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_readlane_b32 s31, v4, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v4, 0
+; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_load_b32 v4, off, s33 ; 4-byte Folded Reload
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    s_add_i32 s32, s32, -16
 ; GFX11-NEXT:    s_mov_b32 s33, s2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

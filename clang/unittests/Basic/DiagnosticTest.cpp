@@ -62,7 +62,7 @@ TEST(DiagnosticTest, suppressAndTrap) {
 
     // Diag that would set FatalErrorOccurred
     // (via non-note following a fatal error).
-    Diags.Report(diag::warn_mt_message) << "warning";
+    Diags.Report(diag::warn_apinotes_message) << "warning";
 
     EXPECT_TRUE(trap.hasErrorOccurred());
     EXPECT_TRUE(trap.hasUnrecoverableErrorOccurred());
@@ -87,7 +87,7 @@ TEST(DiagnosticTest, fatalsAsError) {
 
     // Diag that would set FatalErrorOccurred
     // (via non-note following a fatal error).
-    Diags.Report(diag::warn_mt_message) << "warning";
+    Diags.Report(diag::warn_apinotes_message) << "warning";
 
     EXPECT_TRUE(Diags.hasErrorOccurred());
     EXPECT_EQ(Diags.hasFatalErrorOccurred(), FatalsAsError ? 0u : 1u);
@@ -345,5 +345,14 @@ TEST_F(SuppressionMappingTest, IsIgnored) {
                     SM.getLocForStartOfFile(ClangID));
   EXPECT_FALSE(Diags.isIgnored(diag::warn_unused_function,
                                SM.getLocForStartOfFile(ClangID)));
+}
+
+TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer("[non-existing-warning]"));
+  Diags.getDiagnosticOptions().Warnings.push_back("no-unknown-warning-option");
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
 }
 } // namespace
