@@ -384,9 +384,9 @@ class EnumParameter<EnumAttrInfo enumInfo>
 // The op will appear in the IR as `my_dialect.my_op first`. However, the
 // generic format of the attribute will be `#my_dialect<"enum first">`. Override
 // the attribute's assembly format as required.
-class EnumAttr<Dialect dialect, EnumAttrInfo enumInfo, string name = "",
-               list <Trait> traits = []>
-    : AttrDef<dialect, enumInfo.className, traits> {
+class EnumAttr<Dialect dialect, EnumAttrInfo enumInfo, string mnemonicArg = "",
+               string name = "", list <Trait> traits = []>
+    : AttrDef<dialect, !if(!empty(name), enumInfo.className, name), traits> {
   let summary = enumInfo.summary;
   let description = enumInfo.description;
 
@@ -410,7 +410,7 @@ class EnumAttr<Dialect dialect, EnumAttrInfo enumInfo, string name = "",
   let parameters = (ins EnumParameter<enumInfo>:$value);
 
   // If a mnemonic was provided, use it to generate a custom assembly format.
-  let mnemonic = name;
+  let mnemonic = mnemonicArg;
 
   // The default assembly format for enum attributes. Selected to best work with
   // operation assembly formats.
