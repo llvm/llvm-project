@@ -614,15 +614,16 @@ namespace views {
 namespace __concat {
 struct __fn {
   template <input_range _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range)
-      noexcept(noexcept(views::all((std::forward<_Range>(__range)))))
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Range&& __range) noexcept(noexcept(views::all((std::forward<_Range>(__range)))))
       -> decltype(views::all((std::forward<_Range>(__range)))) {
     return views::all(std::forward<_Range>(__range));
   }
 
   template <class _FirstRange, class... _TailRanges>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_FirstRange&& __first, _TailRanges&&... __tail) 
-      noexcept(noexcept(concat_view(std::forward<_FirstRange>(__first), std::forward<_TailRanges>(__tail)...)))
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_FirstRange&& __first, _TailRanges&&... __tail) noexcept(
+      noexcept(concat_view(std::forward<_FirstRange>(__first), std::forward<_TailRanges>(__tail)...)))
       -> decltype(concat_view(std::forward<_FirstRange>(__first), std::forward<_TailRanges>(__tail)...)) {
     return concat_view(std::forward<_FirstRange>(__first), std::forward<_TailRanges>(__tail)...);
   }
