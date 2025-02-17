@@ -948,9 +948,11 @@ void ASTContext::cleanup() {
 
   // ASTRecordLayout objects in ASTRecordLayouts must always be destroyed
   // because they can contain DenseMaps.
-  for (llvm::DenseMap<const ObjCContainerDecl*,
-       const ASTRecordLayout*>::iterator
-       I = ObjCLayouts.begin(), E = ObjCLayouts.end(); I != E; )
+  for (llvm::DenseMap<const ObjCInterfaceDecl *,
+                      const ASTRecordLayout *>::iterator
+           I = ObjCLayouts.begin(),
+           E = ObjCLayouts.end();
+       I != E;)
     // Increment in loop to prevent using deallocated memory.
     if (auto *R = const_cast<ASTRecordLayout *>((I++)->second))
       R->Destroy(*this);
@@ -3092,13 +3094,7 @@ TypeSourceInfo *ASTContext::getTrivialTypeSourceInfo(QualType T,
 
 const ASTRecordLayout &
 ASTContext::getASTObjCInterfaceLayout(const ObjCInterfaceDecl *D) const {
-  return getObjCLayout(D, nullptr);
-}
-
-const ASTRecordLayout &
-ASTContext::getASTObjCImplementationLayout(
-                                        const ObjCImplementationDecl *D) const {
-  return getObjCLayout(D->getClassInterface(), D);
+  return getObjCLayout(D);
 }
 
 static auto getCanonicalTemplateArguments(const ASTContext &C,
@@ -8916,8 +8912,7 @@ static void EncodeBitField(const ASTContext *Ctx, std::string& S,
     uint64_t Offset;
 
     if (const auto *IVD = dyn_cast<ObjCIvarDecl>(FD)) {
-      Offset = Ctx->lookupFieldBitOffset(IVD->getContainingInterface(), nullptr,
-                                         IVD);
+      Offset = Ctx->lookupFieldBitOffset(IVD->getContainingInterface(), IVD);
     } else {
       const RecordDecl *RD = FD->getParent();
       const ASTRecordLayout &RL = Ctx->getASTRecordLayout(RD);
@@ -11848,8 +11843,12 @@ bool ASTContext::mergeExtParameterInfo(
   return true;
 }
 
-void ASTContext::ResetObjCLayout(const ObjCContainerDecl *CD) {
-  ObjCLayouts[CD] = nullptr;
+void ASTContext::ResetObjCLayout(const ObjCInterfaceDecl *D) {
+  if (ObjCLayouts.count(D)) {
+    ObjCLayouts[D] = nullptr;
+    for (auto *SubClass : ObjCSubClasses[D])
+      ResetObjCLayout(SubClass);
+  }
 }
 
 /// mergeObjCGCQualifiers - This routine merges ObjC's GC attribute of 'LHS' and
