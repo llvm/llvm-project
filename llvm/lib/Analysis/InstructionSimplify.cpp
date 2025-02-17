@@ -3021,7 +3021,7 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
   // Check unsigned and signed versions of relational predicates with samesign.
   if (auto *K = CheckCR(ConstantRange::makeExactICmpRegion(Pred, *C)))
     return K;
-  if (Pred.hasSameSign() && ICmpInst::isRelational(Pred))
+  if (IIQ.UseInstrInfo && Pred.hasSameSign() && ICmpInst::isRelational(Pred))
     if (auto *K = CheckCR(ConstantRange::makeExactICmpRegion(
             ICmpInst::getSignedPredicate(Pred), *C)))
       return K;
