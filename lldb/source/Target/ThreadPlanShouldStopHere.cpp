@@ -80,12 +80,13 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
   // Check whether the frame we are in is a language runtime thunk, only for
   // step out:
   if (operation == eFrameCompareOlder) {
-    Symbol *symbol = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
-    if (symbol) {
+    if (Symbol *symbol = frame->GetSymbolContext(eSymbolContextSymbol).symbol) {
       ProcessSP process_sp(current_plan->GetThread().GetProcess());
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
-        if (runtime->IsSymbolARuntimeThunk(*symbol))
+        if (runtime->IsSymbolARuntimeThunk(*symbol)) {
           should_stop_here = false;
+          break;
+        }
       }
     }
   }
@@ -134,6 +135,7 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
           LLDB_LOGF(log, "In runtime thunk %s - stepping out.",
                     sc.symbol->GetName().GetCString());
           is_thunk = true;
+          break;
         }
       }
 
