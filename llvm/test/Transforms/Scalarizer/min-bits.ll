@@ -1081,6 +1081,17 @@ define <4 x half> @call_v4f16(<4 x half> %a, <4 x half> %b) {
   ret <4 x half> %r
 }
 
+define <3 x i32> @call_v3i32(<3 x i32> %a, <3 x i32> %b) {
+; CHECK-LABEL: @call_v3i32(
+; CHECK-NEXT:    [[T:%.*]] = call { <3 x i32>, <3 x i1> } @llvm.uadd.with.overflow.v3i32(<3 x i32> [[A:%.*]], <3 x i32> [[B:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = extractvalue { <3 x i32>, <3 x i1> } [[T]], 0
+; CHECK-NEXT:    ret <3 x i32> [[R]]
+;
+  %t = call { <3 x i32>, <3 x i1> } @llvm.uadd.with.overflow.v3i32(<3 x i32> %a, <3 x i32> %b)
+  %r = extractvalue { <3 x i32>, <3 x i1> } %t, 0
+  ret <3 x i32> %r
+}
+
 declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
 declare <3 x half> @llvm.minnum.v3f16(<3 x half>, <3 x half>)
 declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>)
