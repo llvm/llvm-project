@@ -613,10 +613,11 @@ public:
 namespace views {
 namespace __concat {
 struct __fn {
-  template <input_range _Views>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views&& __views) const
-      noexcept(noexcept(views::all((std::forward<_Views&&>(__views))))) {
-    return views::all(std::forward<_Views&&>(__views));
+  template <input_range _Range>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range)
+      noexcept(noexcept(views::all((std::forward<_Range>(__range)))))
+      -> decltype(views::all((std::forward<_Range>(__range)))) {
+    return views::all(std::forward<_Range>(__range));
   }
 
   template <class... _Views>
