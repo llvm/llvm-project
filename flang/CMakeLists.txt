@@ -478,12 +478,11 @@ endif()
 # useful for building flang alongside several other projects since you can use
 # the maximum number of build jobs for the other projects while limiting the
 # number of flang compile jobs.
-#
-# We want this set to infinity by default
-set(FLANG_PARALLEL_COMPILE_JOBS 0 CACHE STRING
-  "The maximum number of concurrent compilation jobs (Ninja only)")
-
-set_property(GLOBAL APPEND PROPERTY JOB_POOLS flang_compile_job_pool=${FLANG_PARALLEL_COMPILE_JOBS})
+set(FLANG_PARALLEL_COMPILE_JOBS CACHE STRING
+  "The maximum number of concurrent compilation jobs for Flang(Ninja only)")
+if (FLANG_PARALLEL_COMPILE_JOBS)
+  set_property(GLOBAL APPEND PROPERTY JOB_POOLS flang_compile_job_pool=${FLANG_PARALLEL_COMPILE_JOBS})
+endif()
 
 include(AddFlang)
 

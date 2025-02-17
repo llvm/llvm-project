@@ -58,10 +58,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     is mapped to long double, etc."
     )
 
-   # For the stand alone runtime builds, we need to define this job pool,
-   # because add_flang_library will use it.  If we don't define it here, the
-   # build will fail.
-   set_property(GLOBAL APPEND PROPERTY JOB_POOLS flang_compile_job_pool=0)
 endif()
 
 set(linked_libraries "")
