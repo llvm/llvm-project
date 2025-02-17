@@ -7379,7 +7379,6 @@ TypeSystemClang::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
       return {{value.getInt(), type}};
 
     return std::nullopt;
-    ;
   }
   default:
     return std::nullopt;
