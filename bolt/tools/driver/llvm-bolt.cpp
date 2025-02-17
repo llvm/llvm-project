@@ -183,12 +183,12 @@ int main(int argc, char **argv) {
   std::string ToolPath = llvm::sys::fs::getMainExecutable(argv[0], nullptr);
 
   // Initialize targets and assembly printers/parsers.
-#define BOLT_TARGET(target) \
-  LLVMInitialize##target##TargetInfo(); \
-  LLVMInitialize##target##TargetMC(); \
-  LLVMInitialize##target##AsmParser(); \
-  LLVMInitialize##target##Disassembler(); \
-  LLVMInitialize##target##Target(); \
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
   LLVMInitialize##target##AsmPrinter();
 
 #include "bolt/Core/TargetConfig.def"
