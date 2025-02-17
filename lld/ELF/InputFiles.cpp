@@ -918,6 +918,60 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     handleSectionGroup<ELFT>(this->sections, entries);
 }
 
+template <typename ELFT>
+static void parseGnuPropertyNote(Ctx &ctx, uint32_t &featureAndType,
+                                 ArrayRef<uint8_t> &desc, ELFFileBase *f,
+                                 const uint8_t *base,
+                                 ArrayRef<uint8_t> *data = nullptr) {
+  auto err = [&](const uint8_t *place) -> ELFSyncStream {
+    auto diag = Err(ctx);
+    diag << f->getName() << ":(" << ".note.gnu.property+0x"
+         << Twine::utohexstr(place - base) << "): ";
+    return diag;
+  };
+
+  while (!desc.empty()) {
+    const uint8_t *place = desc.data();
+    if (desc.size() < 8)
+      return void(err(place) << "program property is too short");
+    uint32_t type = read32<ELFT::Endianness>(desc.data());
+    uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
+    desc = desc.slice(8);
+    if (desc.size() < size)
+      return void(err(place) << "program property is too short");
+
+    if (type == featureAndType) {
+      // We found a FEATURE_1_AND field. There may be more than one of these
+      // in a .note.gnu.property section, for a relocatable object we
+      // accumulate the bits set.
+      if (size < 4)
+        return void(err(place) << "FEATURE_1_AND entry is too short");
+      f->andFeatures |= read32<ELFT::Endianness>(desc.data());
+    } else if (ctx.arg.emachine == EM_AARCH64 &&
+               type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
+      // If the file being parsed is a SharedFile, we cannot pass in
+      // the data variable as there is no InputSection to collect the
+      // data from. As such, these are ignored. They are needed either
+      // when loading a shared library oject.
+      ArrayRef<uint8_t> contents = data ? *data : desc;
+      if (!f->aarch64PauthAbiCoreInfo.empty()) {
+        return void(
+            err(contents.data())
+            << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
+               "not supported");
+      } else if (size != 16) {
+        return void(err(contents.data())
+                    << "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
+                       "is invalid: expected 16 bytes, but got "
+                    << size);
+      }
+      f->aarch64PauthAbiCoreInfo = desc;
+    }
+
+    // Padding is present in the note descriptor, if necessary.
+    desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
+  }
+}
 // Read the following info from the .note.gnu.property section and write it to
 // the corresponding fields in `ObjFile`:
 // - Feature flags (32 bits) representing x86 or AArch64 features for
@@ -955,42 +1009,8 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
-    while (!desc.empty()) {
-      const uint8_t *place = desc.data();
-      if (desc.size() < 8)
-        return void(err(place) << "program property is too short");
-      uint32_t type = read32<ELFT::Endianness>(desc.data());
-      uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
-      desc = desc.slice(8);
-      if (desc.size() < size)
-        return void(err(place) << "program property is too short");
-
-      if (type == featureAndType) {
-        // We found a FEATURE_1_AND field. There may be more than one of these
-        // in a .note.gnu.property section, for a relocatable object we
-        // accumulate the bits set.
-        if (size < 4)
-          return void(err(place) << "FEATURE_1_AND entry is too short");
-        f.andFeatures |= read32<ELFT::Endianness>(desc.data());
-      } else if (ctx.arg.emachine == EM_AARCH64 &&
-                 type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
-        if (!f.aarch64PauthAbiCoreInfo.empty()) {
-          return void(
-              err(data.data())
-              << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
-                 "not supported");
-        } else if (size != 16) {
-          return void(err(data.data())
-                      << "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
-                         "is invalid: expected 16 bytes, but got "
-                      << size);
-        }
-        f.aarch64PauthAbiCoreInfo = desc;
-      }
-
-      // Padding is present in the note descriptor, if necessary.
-      desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
-    }
+    const uint8_t *base = sec.content().data();
+    parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, &f, base, &data);
 
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     data = data.slice(nhdr->getSize(sec.addralign));
@@ -1418,6 +1438,37 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
   return verneeds;
 }
 
+// To determine if a shared file can support any of the GNU Attributes,
+// the .note.gnu.properties section need to be read. The appropriate
+// location in memory is located then the GnuPropertyNote can be parsed.
+// This is the same process as is used for readGnuProperty, however we
+// do not pass the data variable as, without an InputSection, its value
+// is unknown in a SharedFile. This is ok as the information that would
+// be collected from this is irrelevant for a dynamic object.
+template <typename ELFT>
+void SharedFile::parseGnuAndFeatures(const uint8_t *base,
+                                     const typename ELFT::PhdrRange headers) {
+  if (headers.size() == 0)
+    return;
+  uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
+                                ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
+                                : GNU_PROPERTY_X86_FEATURE_1_AND;
+
+  for (unsigned i = 0; i < headers.size(); i++) {
+    if (headers[i].p_type != PT_GNU_PROPERTY)
+      continue;
+    const typename ELFT::Note note(
+        *reinterpret_cast<const typename ELFT::Nhdr *>(base +
+                                                       headers[i].p_offset));
+    if (note.getType() != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU")
+      continue;
+
+    // Read a body of a NOTE record, which consists of type-length-value fields.
+    ArrayRef<uint8_t> desc = note.getDesc(headers[i].p_align);
+    parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, this, base);
+  }
+}
+
 // We do not usually care about alignments of data in shared object
 // files because the loader takes care of it. However, if we promote a
 // DSO symbol to point to .bss due to copy relocation, we need to keep
@@ -1454,10 +1505,12 @@ template <class ELFT> void SharedFile::parse() {
   using Elf_Sym = typename ELFT::Sym;
   using Elf_Verdef = typename ELFT::Verdef;
   using Elf_Versym = typename ELFT::Versym;
+  using Elf_Phdr = typename ELFT::Phdr;
 
   ArrayRef<Elf_Dyn> dynamicTags;
   const ELFFile<ELFT> obj = this->getObj<ELFT>();
   ArrayRef<Elf_Shdr> sections = getELFShdrs<ELFT>();
+  ArrayRef<Elf_Phdr> pHeaders = CHECK2(obj.program_headers(), this);
 
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
@@ -1528,6 +1581,7 @@ template <class ELFT> void SharedFile::parse() {
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
   std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
+  parseGnuAndFeatures<ELFT>(obj.base(), pHeaders);
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use

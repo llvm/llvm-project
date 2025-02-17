@@ -56,13 +56,13 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -402,6 +402,8 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
     if (ctx.arg.zGcsReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
+    if (ctx.arg.zGcsReportDynamic != ReportPolicy::None)
+      ErrAlways(ctx) << "-z gcs-report-dynamic only supported on AArch64";
     if (ctx.arg.zGcs != GcsPolicy::Implicit)
       ErrAlways(ctx) << "-z gcs only supported on AArch64";
   }
@@ -574,25 +576,35 @@ static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
   return ret;
 }
 
-static ReportPolicy getZGcsReport(Ctx &ctx, opt::InputArgList &args) {
-  ReportPolicy ret = ReportPolicy::None;
+static void getZGcsReport(Ctx &ctx, opt::InputArgList &args) {
+  bool reportDynamicDefined = false;
 
   for (auto *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
-    if (kv.first == "gcs-report") {
+    if ((kv.first == "gcs-report") || kv.first == "gcs-report-dynamic") {
       arg->claim();
-      if (kv.second == "none")
-        ret = ReportPolicy::None;
-      else if (kv.second == "warning")
-        ret = ReportPolicy::Warning;
-      else if (kv.second == "error")
-        ret = ReportPolicy::Error;
-      else
-        ErrAlways(ctx) << "unknown -z gcs-report= value: " << kv.second;
+      ReportPolicy value = StringSwitch<ReportPolicy>(kv.second)
+                                  .Case("none", ReportPolicy::None)
+                                  .Case("warning", ReportPolicy::Warning)
+                                  .Case("error", ReportPolicy::Error);
+
+      if (kv.first == "gcs-report")
+        ctx.arg.zGcsReport = value;
+      else if (kv.first == "gcs-report-dynamic") {
+        ctx.arg.zGcsReportDynamic = value;
+        reportDynamicDefined = true;
+      }
     }
   }
 
-  return ret;
+  // The behaviour of -zgnu-report-dynamic matches that of GNU ld. When
+  // -zgcs-report is set to `warning` or `error`, -zgcs-report-dynamic will
+  // inherit this value if there is no user set value. This detects shared
+  // libraries without the GCS property but does not the shared-libraries to be
+  // rebuilt for successful linking
+  if (!reportDynamicDefined && ctx.arg.zGcsReport != ReportPolicy::None &&
+      ctx.arg.zGcsReportDynamic == ReportPolicy::None)
+    ctx.arg.zGcsReportDynamic = ReportPolicy::Warning;
 }
 
 // Report a warning for an unknown -z option.
@@ -1569,7 +1581,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
   ctx.arg.zGcs = getZGcs(ctx, args);
-  ctx.arg.zGcsReport = getZGcsReport(ctx, args);
+  // getZGcsReport assings the values for `ctx.arg.zGcsReport` and
+  // `ctx.arg.zGcsReportDynamic within the function. By doing this, it saves
+  // calling the function twice, as both values can be parsed at once.
+  getZGcsReport(ctx, args);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
   ctx.arg.zHazardplt = hasZOption(args, "hazardplt");
@@ -1642,10 +1657,11 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
-                  std::make_pair("cet-report", &ctx.arg.zCetReport),
-                  std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
-                  std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  auto reports = {
+      std::make_pair("bti-report", &ctx.arg.zBtiReport),
+      std::make_pair("cet-report", &ctx.arg.zCetReport),
+      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
+      std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -2927,6 +2943,22 @@ static void readSecurityNotes(Ctx &ctx) {
     ctx.arg.andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
   else if (ctx.arg.zGcs == GcsPolicy::Never)
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
+  // If we are utilising GCS at any stage, the sharedFiles should be checked to
+  // ensure they also support this feature. The gcs-report-dynamic option is
+  // used to indicate if the user wants information relating to this, and will
+  // be set depending on the user's input, or warning if gcs-report is set to
+  // either `warning` or `error`.
+  if (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+    for (SharedFile *f : ctx.sharedFiles)
+      reportUnless(ctx.arg.zGcsReportDynamic,
+                   f->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+          << f
+          << ": GCS is required by -z gcs, but this shared library lacks the "
+             "necessary property note. The "
+          << "dynamic loader might not enable GCS or refuse to load the "
+             "program unless all shared library "
+          << "dependencies have the GCS marking.";
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {

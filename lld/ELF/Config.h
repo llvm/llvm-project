@@ -232,6 +232,7 @@ struct Config {
   ReportPolicy zCetReport = ReportPolicy::None;
   ReportPolicy zPauthReport = ReportPolicy::None;
   ReportPolicy zGcsReport = ReportPolicy::None;
+  ReportPolicy zGcsReportDynamic = ReportPolicy::None;
   ReportPolicy zExecuteOnlyReport = ReportPolicy::None;
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
@@ -748,6 +749,18 @@ ELFSyncStream Fatal(Ctx &ctx);
 uint64_t errCount(Ctx &ctx);
 
 ELFSyncStream InternalErr(Ctx &ctx, const uint8_t *buf);
+
+inline StringRef gcsReportPolicytoString(GcsReportPolicy value) {
+  StringRef ret;
+  if (value == GcsReportPolicy::Warning)
+    ret = "warning";
+  else if (value == GcsReportPolicy::Error)
+    ret = "error";
+  else
+    ret = "none";
+
+  return ret;
+}
 
 #define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
 
