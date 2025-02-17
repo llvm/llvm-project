@@ -107,7 +107,7 @@ _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WEAK bool is_debugger_present() noexcept {
   // Initialize the flags so that, if 'sysctl' fails for some bizarre
   // reason, we get a predictable result.
 
-  struct kinfo_proc __info {};
+  struct kinfo_proc __info{};
 
   // Call sysctl.
   // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/sysctl.3.html
