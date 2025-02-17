@@ -3439,8 +3439,9 @@ void CGObjCMac::GenerateClass(const ObjCImplementationDecl *ID) {
   else if ((hasMRCWeak = hasMRCWeakIvars(CGM, ID)))
     Flags |= FragileABI_Class_HasMRCWeakIvars;
 
-  CharUnits Size =
-      CGM.getContext().getASTObjCImplementationLayout(ID).getSize();
+  CharUnits Size = CGM.getContext()
+                       .getASTObjCInterfaceLayout(ID->getClassInterface())
+                       .getSize();
 
   // FIXME: Set CXX-structors flag.
   if (ID->getClassInterface()->getVisibility() == HiddenVisibility)
@@ -6330,7 +6331,7 @@ void CGObjCNonFragileABIMac::GetClassSizeInfo(const ObjCImplementationDecl *OID,
                                               uint32_t &InstanceStart,
                                               uint32_t &InstanceSize) {
   const ASTRecordLayout &RL =
-      CGM.getContext().getASTObjCImplementationLayout(OID);
+      CGM.getContext().getASTObjCInterfaceLayout(OID->getClassInterface());
 
   // InstanceSize is really instance end.
   InstanceSize = RL.getDataSize().getQuantity();
