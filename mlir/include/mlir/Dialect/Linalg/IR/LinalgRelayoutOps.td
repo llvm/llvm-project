@@ -23,6 +23,7 @@ include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
+include "mlir/Dialect/Tensor/IR/TensorInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 
 //===----------------------------------------------------------------------===//
@@ -32,7 +33,7 @@ include "mlir/IR/OpAsmInterface.td"
 class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
       Op<Linalg_Dialect, mnemonic, !listconcat(traits, [
         DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-        DestinationStyleOpInterface, LinalgRelayoutOpInterface,
+        DestinationStyleOpInterface, TensorRelayoutOpInterface,
         ConditionallySpeculatable, NoMemoryEffect,
         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
         TypesMatchWith<"result type matches type of dest",
