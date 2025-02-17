@@ -611,3 +611,14 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 256>>} {
 // LOWLIMIT-NEXT: memref.alloc() {alignment = 64 : i64, custom_attr}
 // RANK-NEXT: memref.alloca() {alignment = 64 : i64, custom_attr}
 // CHECK-NEXT: return
+
+// -----
+
+// Test Case: AllocOp with nested memref type, it is not
+// converted. Ensure this case not crash.
+
+// CHECK-LABEL: func @nested_memref
+func.func @nested_memref() {
+  %0 = memref.alloc() : memref<1xmemref<1xf32>>
+  return
+}
