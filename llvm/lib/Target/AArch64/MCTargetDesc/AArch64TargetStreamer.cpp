@@ -222,13 +222,9 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
                      "Can not add AArch64 build attribute: An attribute with "
                      "the same tag and a different value already exists");
               return;
-            } else {
-              // Case Item.IntValue == Value, no need to emit twice
-              assert(0 &&
-                     "AArch64 build attribute: An attribute with the same tag "
-                     "and a same value already exists");
-              return;
             }
+            // Case Item.IntValue == Value is permited.
+            return;
           }
         }
       }
