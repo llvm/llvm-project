@@ -4,7 +4,7 @@
 module attributes {gpu.container_module} {
     // CHECK-LABEL:gpu.module @kernel_module1
     // CHECK: [#nvvm.target]
-    // CHECK-OPTIONS:#nvvm.target<flags = {"cmd-options" = ["-v", "--register-usage-level=8"]}>
+    // CHECK-OPTIONS: [#nvvm.target<flags = {"cmd-options" = ["-v", "--register-usage-level=8"]}>
     gpu.module @kernel_module1 {
     llvm.func @kernel(%arg0: i32, %arg1: !llvm.ptr,
         %arg2: !llvm.ptr, %arg3: i64, %arg4: i64,
