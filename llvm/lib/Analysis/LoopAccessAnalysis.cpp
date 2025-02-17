@@ -797,11 +797,11 @@ private:
 /// isNoWrap.
 static std::optional<int64_t>
 getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
-                    PredicatedScalarEvolution &PSE) {
+                    Value *Ptr, PredicatedScalarEvolution &PSE) {
   // The access function must stride over the innermost loop.
   if (Lp != AR->getLoop()) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not striding over innermost loop "
-                      << "SCEV: " << *AR << "\n");
+                      << *Ptr << " SCEV: " << *AR << "\n");
     return std::nullopt;
   }
 
@@ -811,8 +811,8 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   // Calculate the pointer stride and check if it is constant.
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Step);
   if (!C) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not a constant strided "
-                      << "SCEV: " << *AR << "\n");
+    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not a constant strided " << *Ptr
+                      << " SCEV: " << *AR << "\n");
     return std::nullopt;
   }
 
@@ -848,6 +848,9 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
   if (AR->getNoWrapFlags(SCEV::NoWrapMask))
     return true;
 
+  if (PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+    return true;
+
   // The address calculation must not wrap. Otherwise, a dependence could be
   // inverted.
   if (isNoWrapGEP(Ptr, PSE, L))
@@ -863,7 +866,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
     return true;
 
   if (!Stride)
-    Stride = getStrideFromAddRec(AR, L, AccessTy, PSE);
+    Stride = getStrideFromAddRec(AR, L, AccessTy, Ptr, PSE);
   if (Stride) {
     // If the null pointer is undefined, then a access sequence which would
     // otherwise access it can be assumed not to unsigned wrap.  Note that this
@@ -1454,9 +1457,6 @@ void AccessAnalysis::processMemAccesses() {
 /// Check whether \p Ptr is non-wrapping GEP.
 static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
                         const Loop *L) {
-  if (PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
-    return true;
-
   // Scalar evolution does not propagate the non-wrapping flags to values that
   // are derived from a non-wrapping induction variable because non-wrapping
   // could be flow-sensitive.
@@ -1524,7 +1524,8 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
     return std::nullopt;
   }
 
-  std::optional<int64_t> Stride = getStrideFromAddRec(AR, Lp, AccessTy, PSE);
+  std::optional<int64_t> Stride =
+      getStrideFromAddRec(AR, Lp, AccessTy, Ptr, PSE);
   if (!ShouldCheckWrap || !Stride)
     return Stride;
 
