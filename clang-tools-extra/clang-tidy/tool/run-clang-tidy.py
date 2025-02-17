@@ -195,13 +195,22 @@ def find_binary(arg: str, name: str, build_path: str) -> str:
         raise SystemExit(f"error: failed to find {name} in $PATH or at {built_path}")
 
 
+def supports_flag(binary: str, flag: str) -> bool:
+    """Checks if a given flag is supported by the binary by running --help."""
+    try:
+        result = subprocess.run(
+            [binary, "--help"], capture_output=True, text=True, check=True
+        )
+        return flag in result.stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False  # Binary not found or error running it
+
 def apply_fixes(
     args: argparse.Namespace, clang_apply_replacements_binary: str, tmpdir: str
 ) -> None:
     """Calls clang-apply-replacements on a given directory."""
     invocation = [clang_apply_replacements_binary]
-    
-    if args.ignore_insert_conflict:
+    if supports_flag(clang_apply_replacements_binary, "-ignore-insert-conflict"):
         invocation.append("-ignore-insert-conflict")
     if args.format:
         invocation.append("-format")
@@ -447,12 +456,6 @@ async def main() -> None:
         "-allow-no-checks",
         action="store_true",
         help="Allow empty enabled checks.",
-    )
-    parser.add_argument(
-        "-ignore-insert-conflict",
-        action="store_true",
-        default=True,
-        help="Ignore insert conflict when applying fixes.",
     )
     args = parser.parse_args()
 
