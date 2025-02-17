@@ -2776,9 +2776,9 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   CheckedConversionKind CCK = FunctionalStyle
                                   ? CheckedConversionKind::FunctionalCast
                                   : CheckedConversionKind::CStyleCast;
-  // This case should not trigger on regular vector splat
-  // vector cast, vector truncation, or special hlsl splat cases
+
   QualType SrcTy = SrcExpr.get()->getType();
+  // This case should not trigger on regular vector cast, vector truncation
   if (Self.getLangOpts().HLSL &&
       Self.HLSL().CanPerformElementwiseCast(SrcExpr.get(), DestType)) {
     if (SrcTy->isConstantArrayType())
@@ -2786,6 +2786,28 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
           SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
           CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
     Kind = CK_HLSLElementwiseCast;
+    return;
+  }
+
+  // This case should not trigger on regular vector splat
+  // If the relative order of this and the HLSLElementWise cast checks
+  // are changed, it might change which cast handles what in a few cases
+  if (Self.getLangOpts().HLSL &&
+      Self.HLSL().CanPerformAggregateSplatCast(SrcExpr.get(), DestType)) {
+    const VectorType *VT = SrcTy->getAs<VectorType>();
+    // change splat from vec1 case to splat from scalar
+    if (VT && VT->getNumElements() == 1)
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    // Inserting a scalar cast here allows for a simplified codegen in
+    // the case the destTy is a vector
+    if (const VectorType *DVT = DestType->getAs<VectorType>())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), DVT->getElementType(),
+          Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    Kind = CK_HLSLAggregateSplatCast;
     return;
   }
 

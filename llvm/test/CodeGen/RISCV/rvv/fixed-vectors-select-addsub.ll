@@ -141,18 +141,36 @@ define <32 x i32> @select_addsub_v32i32(<32 x i1> %cc, <32 x i32> %a, <32 x i32>
 define <64 x i32> @select_addsub_v64i32(<64 x i1> %cc, <64 x i32> %a, <64 x i32> %b) {
 ; CHECK-LABEL: select_addsub_v64i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
-; CHECK-NEXT:    vle32.v v24, (a0)
-; CHECK-NEXT:    vrsub.vi v24, v24, 0, v0.t
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vadd.vv v8, v8, v24
 ; CHECK-NEXT:    vle32.v v24, (a0)
+; CHECK-NEXT:    vrsub.vi v8, v8, 0, v0.t
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v16, v8
 ; CHECK-NEXT:    vrsub.vi v24, v24, 0, v0.t
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vadd.vv v16, v16, v24
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %sub = sub <64 x i32> %a, %b
   %add = add <64 x i32> %a, %b

@@ -33,21 +33,21 @@ define half @flh(ptr %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: flh:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    flh fa5, 0(a0)
-; CHECKIZFHMIN-NEXT:    flh fa4, 6(a0)
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; CHECKIZFHMIN-NEXT:    flh fa5, 6(a0)
+; CHECKIZFHMIN-NEXT:    flh fa4, 0(a0)
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: flh:
 ; CHECKIZHINXMIN:       # %bb.0:
-; CHECKIZHINXMIN-NEXT:    lh a1, 0(a0)
-; CHECKIZHINXMIN-NEXT:    lh a0, 6(a0)
-; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    lh a1, 6(a0)
+; CHECKIZHINXMIN-NEXT:    lh a0, 0(a0)
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    fadd.s a0, a1, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = load half, ptr %a

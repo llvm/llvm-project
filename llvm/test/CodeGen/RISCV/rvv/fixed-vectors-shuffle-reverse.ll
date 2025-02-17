@@ -1161,8 +1161,8 @@ define <32 x half> @reverse_v32f16_2(<16 x half> %a) {
 ; CHECK-NEXT:    vrgather.vv v10, v9, v12
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    addi a0, a0, -32
 ; CHECK-NEXT:    vrgather.vv v8, v9, v12
+; CHECK-NEXT:    addi a0, a0, -32
 ; CHECK-NEXT:    vmv.v.v v9, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0

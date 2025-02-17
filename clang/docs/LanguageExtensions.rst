@@ -2866,6 +2866,47 @@ etc.).
 
 Query for this feature with ``__has_builtin(__builtin_assume_separate_storage)``.
 
+``__builtin_assume_dereferenceable``
+-------------------------------------
+
+``__builtin_assume_dereferenceable`` is used to provide the optimizer with the
+knowledge that the pointer argument P is dereferenceable up to at least the
+specified number of bytes.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_assume_dereferenceable(const void *, size_t)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  int foo(int *x, int y) {
+      __builtin_assume_dereferenceable(x, sizeof(int));
+      int z = 0;
+      if (y == 1) {
+        // The optimizer may execute the load of x unconditionally due to
+        // __builtin_assume_dereferenceable guaranteeing sizeof(int) bytes can
+        // be loaded speculatively without trapping.
+        z = *x;
+      }
+      return z;
+  }
+
+**Description**:
+
+The arguments to this function provide a start pointer ``P`` and a size ``S``.
+``S`` must be at least 1 and a constant. The optimizer may assume that ``S``
+bytes are dereferenceable starting at ``P``. Note that this does not necessarily
+imply that ``P`` is non-null as ``nullptr`` can be dereferenced in some cases.
+The assumption also does not imply that ``P`` is not dereferenceable past ``S``
+bytes.
+
+
+Query for this feature with ``__has_builtin(__builtin_assume_dereferenceable)``.
+
 
 ``__builtin_offsetof``
 ----------------------

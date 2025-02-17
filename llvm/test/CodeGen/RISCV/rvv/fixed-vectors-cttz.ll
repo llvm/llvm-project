@@ -45,9 +45,9 @@ define void @cttz_v16i8(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vnsrl.wi v10, v12, 23
 ; RVF-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; RVF-NEXT:    vnsrl.wi v9, v10, 0
-; RVF-NEXT:    vsub.vx v9, v9, a1
 ; RVF-NEXT:    vmseq.vi v0, v8, 0
-; RVF-NEXT:    vmerge.vim v8, v9, 8, v0
+; RVF-NEXT:    vsub.vx v8, v9, a1
+; RVF-NEXT:    vmerge.vim v8, v8, 8, v0
 ; RVF-NEXT:    vse8.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
@@ -64,9 +64,9 @@ define void @cttz_v16i8(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vnsrl.wi v10, v12, 23
 ; RVD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; RVD-NEXT:    vnsrl.wi v9, v10, 0
-; RVD-NEXT:    vsub.vx v9, v9, a1
 ; RVD-NEXT:    vmseq.vi v0, v8, 0
-; RVD-NEXT:    vmerge.vim v8, v9, 8, v0
+; RVD-NEXT:    vsub.vx v8, v9, a1
+; RVD-NEXT:    vmerge.vim v8, v8, 8, v0
 ; RVD-NEXT:    vse8.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
@@ -390,10 +390,10 @@ define void @cttz_v32i8(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: cttz_v32i8:
 ; RVI:       # %bb.0:
 ; RVI-NEXT:    li a1, 32
-; RVI-NEXT:    li a2, 1
 ; RVI-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; RVI-NEXT:    vle8.v v8, (a0)
-; RVI-NEXT:    vsub.vx v10, v8, a2
+; RVI-NEXT:    li a1, 1
+; RVI-NEXT:    vsub.vx v10, v8, a1
 ; RVI-NEXT:    li a1, 85
 ; RVI-NEXT:    vnot.v v8, v8
 ; RVI-NEXT:    vand.vv v8, v8, v10
@@ -425,9 +425,9 @@ define void @cttz_v32i8(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vnsrl.wi v12, v16, 23
 ; RVF-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; RVF-NEXT:    vnsrl.wi v10, v12, 0
-; RVF-NEXT:    vsub.vx v10, v10, a1
 ; RVF-NEXT:    vmseq.vi v0, v8, 0
-; RVF-NEXT:    vmerge.vim v8, v10, 8, v0
+; RVF-NEXT:    vsub.vx v8, v10, a1
+; RVF-NEXT:    vmerge.vim v8, v8, 8, v0
 ; RVF-NEXT:    vse8.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
@@ -445,9 +445,9 @@ define void @cttz_v32i8(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vnsrl.wi v12, v16, 23
 ; RVD-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; RVD-NEXT:    vnsrl.wi v10, v12, 0
-; RVD-NEXT:    vsub.vx v10, v10, a1
 ; RVD-NEXT:    vmseq.vi v0, v8, 0
-; RVD-NEXT:    vmerge.vim v8, v10, 8, v0
+; RVD-NEXT:    vsub.vx v8, v10, a1
+; RVD-NEXT:    vmerge.vim v8, v8, 8, v0
 ; RVD-NEXT:    vse8.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
@@ -1121,10 +1121,10 @@ define void @cttz_zero_undef_v32i8(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: cttz_zero_undef_v32i8:
 ; RVI:       # %bb.0:
 ; RVI-NEXT:    li a1, 32
-; RVI-NEXT:    li a2, 1
 ; RVI-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; RVI-NEXT:    vle8.v v8, (a0)
-; RVI-NEXT:    vsub.vx v10, v8, a2
+; RVI-NEXT:    li a1, 1
+; RVI-NEXT:    vsub.vx v10, v8, a1
 ; RVI-NEXT:    li a1, 85
 ; RVI-NEXT:    vnot.v v8, v8
 ; RVI-NEXT:    vand.vv v8, v8, v10

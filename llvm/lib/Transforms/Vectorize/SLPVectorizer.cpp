@@ -13206,8 +13206,16 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
         // If the user instruction is used for some reason in different
         // vectorized nodes - make it depend on index.
+        // If any vector node is PHI node, this dependency might not work
+        // because of cycle dependencies, so disable it.
         if (TEUseEI.UserTE != UseEI.UserTE &&
-            TEUseEI.UserTE->Idx < UseEI.UserTE->Idx)
+            (TEUseEI.UserTE->Idx < UseEI.UserTE->Idx ||
+             any_of(
+                 VectorizableTree,
+                 [](const std::unique_ptr<TreeEntry> &TE) {
+                   return TE->State == TreeEntry::Vectorize &&
+                          TE->getOpcode() == Instruction::PHI;
+                 })))
           continue;
       }
 
@@ -18467,8 +18475,8 @@ void BoUpSLP::computeMinimumValueSizes() {
           any_of(
               VectorizableTree[NodeIdx]->UserTreeIndices,
               [&](const EdgeInfo &EI) {
-                return (EI.UserTE->hasState() &&
-                        EI.UserTE->getOpcode() == Instruction::ICmp) &&
+                return EI.UserTE && EI.UserTE->hasState() &&
+                       EI.UserTE->getOpcode() == Instruction::ICmp &&
                        any_of(EI.UserTE->Scalars, [&](Value *V) {
                          auto *IC = dyn_cast<ICmpInst>(V);
                          return IC &&
@@ -20837,7 +20845,8 @@ private:
         VecResSignedness = IsSigned;
       } else {
         ++NumVectorInstructions;
-        if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy) {
+        if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy &&
+            VecRes->getType()->getScalarType() == Builder.getInt1Ty()) {
           // Handle ctpop.
           unsigned VecResVF = getNumElements(VecRes->getType());
           unsigned VecVF = getNumElements(Vec->getType());
@@ -20850,7 +20859,7 @@ private:
           }
           if (VecResVF != VecVF) {
             SmallVector<int> ResizeMask(VecResVF, PoisonMaskElem);
-            std::iota(Mask.begin(), std::next(Mask.begin(), VecVF), 0);
+            std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), VecVF), 0);
             Vec = Builder.CreateShuffleVector(Vec, ResizeMask);
           }
           VecRes = Builder.CreateShuffleVector(VecRes, Vec, Mask, "rdx.op");

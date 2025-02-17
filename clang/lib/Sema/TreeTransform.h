@@ -13672,7 +13672,7 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
       Desig.AddDesignator(
           Designator::CreateArrayDesignator(Index.get(), D.getLBracketLoc()));
 
-      ExprChanged = ExprChanged || Init.get() != E->getArrayIndex(D);
+      ExprChanged = ExprChanged || Index.get() != E->getArrayIndex(D);
       ArrayExprs.push_back(Index.get());
       continue;
     }

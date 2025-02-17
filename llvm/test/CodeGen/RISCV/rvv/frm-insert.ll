@@ -466,8 +466,8 @@ define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float>
 ; CHECK-NEXT:    slli a2, a2, 2
 ; CHECK-NEXT:    srl a0, a0, a2
 ; CHECK-NEXT:    andi a0, a0, 7
-; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
+; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:    ret
 ;
 ; UNOPT-LABEL: test5:
@@ -482,8 +482,8 @@ define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float>
 ; UNOPT-NEXT:    slli a2, a2, 2
 ; UNOPT-NEXT:    srl a0, a0, a2
 ; UNOPT-NEXT:    andi a0, a0, 7
-; UNOPT-NEXT:    sw a0, 0(a1)
 ; UNOPT-NEXT:    vfadd.vv v8, v8, v8
+; UNOPT-NEXT:    sw a0, 0(a1)
 ; UNOPT-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(

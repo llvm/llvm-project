@@ -48,9 +48,9 @@ define i64 @test_floor_si64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    call floor
-; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_0)
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI1_0)(a0)
+; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    fle.d s0, fa5, fa0
 ; RV32IFD-NEXT:    call __fixdfdi
 ; RV32IFD-NEXT:    lui a3, 524288
@@ -103,9 +103,9 @@ define i64 @test_floor_si64(double %x) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a3, %hi(.LCPI1_1)
 ; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI1_0)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI1_0+4)(a2)
-; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI1_1)(a3)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI1_1+4)(a3)
+; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    flt.d a3, a2, s0
 ; RV32IZFINXZDINX-NEXT:    feq.d a2, s0, s0
 ; RV32IZFINXZDINX-NEXT:    lui a4, 524288
@@ -185,12 +185,12 @@ define i64 @test_floor_ui64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    call floor
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV32IFD-NEXT:    fcvt.d.w fa5, zero
-; RV32IFD-NEXT:    fle.d a1, fa5, fa0
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI3_0)(a0)
-; RV32IFD-NEXT:    flt.d a0, fa5, fa0
-; RV32IFD-NEXT:    neg s0, a0
-; RV32IFD-NEXT:    neg s1, a1
+; RV32IFD-NEXT:    fcvt.d.w fa4, zero
+; RV32IFD-NEXT:    fle.d a0, fa4, fa0
+; RV32IFD-NEXT:    flt.d a1, fa5, fa0
+; RV32IFD-NEXT:    neg s0, a1
+; RV32IFD-NEXT:    neg s1, a0
 ; RV32IFD-NEXT:    call __fixunsdfdi
 ; RV32IFD-NEXT:    and a0, s1, a0
 ; RV32IFD-NEXT:    and a1, s1, a1
@@ -292,9 +292,9 @@ define i64 @test_ceil_si64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    call ceil
-; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI5_0)
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI5_0)(a0)
+; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    fle.d s0, fa5, fa0
 ; RV32IFD-NEXT:    call __fixdfdi
 ; RV32IFD-NEXT:    lui a3, 524288
@@ -347,9 +347,9 @@ define i64 @test_ceil_si64(double %x) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a3, %hi(.LCPI5_1)
 ; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI5_0)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI5_0+4)(a2)
-; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI5_1)(a3)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI5_1+4)(a3)
+; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    flt.d a3, a2, s0
 ; RV32IZFINXZDINX-NEXT:    feq.d a2, s0, s0
 ; RV32IZFINXZDINX-NEXT:    lui a4, 524288
@@ -429,12 +429,12 @@ define i64 @test_ceil_ui64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    call ceil
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI7_0)
-; RV32IFD-NEXT:    fcvt.d.w fa5, zero
-; RV32IFD-NEXT:    fle.d a1, fa5, fa0
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI7_0)(a0)
-; RV32IFD-NEXT:    flt.d a0, fa5, fa0
-; RV32IFD-NEXT:    neg s0, a0
-; RV32IFD-NEXT:    neg s1, a1
+; RV32IFD-NEXT:    fcvt.d.w fa4, zero
+; RV32IFD-NEXT:    fle.d a0, fa4, fa0
+; RV32IFD-NEXT:    flt.d a1, fa5, fa0
+; RV32IFD-NEXT:    neg s0, a1
+; RV32IFD-NEXT:    neg s1, a0
 ; RV32IFD-NEXT:    call __fixunsdfdi
 ; RV32IFD-NEXT:    and a0, s1, a0
 ; RV32IFD-NEXT:    and a1, s1, a1
@@ -536,9 +536,9 @@ define i64 @test_trunc_si64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    call trunc
-; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI9_0)
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI9_0)(a0)
+; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    fle.d s0, fa5, fa0
 ; RV32IFD-NEXT:    call __fixdfdi
 ; RV32IFD-NEXT:    lui a3, 524288
@@ -591,9 +591,9 @@ define i64 @test_trunc_si64(double %x) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a3, %hi(.LCPI9_1)
 ; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI9_0)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI9_0+4)(a2)
-; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI9_1)(a3)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI9_1+4)(a3)
+; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    flt.d a3, a2, s0
 ; RV32IZFINXZDINX-NEXT:    feq.d a2, s0, s0
 ; RV32IZFINXZDINX-NEXT:    lui a4, 524288
@@ -673,12 +673,12 @@ define i64 @test_trunc_ui64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    call trunc
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI11_0)
-; RV32IFD-NEXT:    fcvt.d.w fa5, zero
-; RV32IFD-NEXT:    fle.d a1, fa5, fa0
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
-; RV32IFD-NEXT:    flt.d a0, fa5, fa0
-; RV32IFD-NEXT:    neg s0, a0
-; RV32IFD-NEXT:    neg s1, a1
+; RV32IFD-NEXT:    fcvt.d.w fa4, zero
+; RV32IFD-NEXT:    fle.d a0, fa4, fa0
+; RV32IFD-NEXT:    flt.d a1, fa5, fa0
+; RV32IFD-NEXT:    neg s0, a1
+; RV32IFD-NEXT:    neg s1, a0
 ; RV32IFD-NEXT:    call __fixunsdfdi
 ; RV32IFD-NEXT:    and a0, s1, a0
 ; RV32IFD-NEXT:    and a1, s1, a1
@@ -780,9 +780,9 @@ define i64 @test_round_si64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    call round
-; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI13_0)
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI13_0)(a0)
+; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    fle.d s0, fa5, fa0
 ; RV32IFD-NEXT:    call __fixdfdi
 ; RV32IFD-NEXT:    lui a3, 524288
@@ -835,9 +835,9 @@ define i64 @test_round_si64(double %x) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a3, %hi(.LCPI13_1)
 ; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI13_0)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI13_0+4)(a2)
-; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI13_1)(a3)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI13_1+4)(a3)
+; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    flt.d a3, a2, s0
 ; RV32IZFINXZDINX-NEXT:    feq.d a2, s0, s0
 ; RV32IZFINXZDINX-NEXT:    lui a4, 524288
@@ -917,12 +917,12 @@ define i64 @test_round_ui64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    call round
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI15_0)
-; RV32IFD-NEXT:    fcvt.d.w fa5, zero
-; RV32IFD-NEXT:    fle.d a1, fa5, fa0
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI15_0)(a0)
-; RV32IFD-NEXT:    flt.d a0, fa5, fa0
-; RV32IFD-NEXT:    neg s0, a0
-; RV32IFD-NEXT:    neg s1, a1
+; RV32IFD-NEXT:    fcvt.d.w fa4, zero
+; RV32IFD-NEXT:    fle.d a0, fa4, fa0
+; RV32IFD-NEXT:    flt.d a1, fa5, fa0
+; RV32IFD-NEXT:    neg s0, a1
+; RV32IFD-NEXT:    neg s1, a0
 ; RV32IFD-NEXT:    call __fixunsdfdi
 ; RV32IFD-NEXT:    and a0, s1, a0
 ; RV32IFD-NEXT:    and a1, s1, a1
@@ -1024,9 +1024,9 @@ define i64 @test_roundeven_si64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    call roundeven
-; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI17_0)
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI17_0)(a0)
+; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    fle.d s0, fa5, fa0
 ; RV32IFD-NEXT:    call __fixdfdi
 ; RV32IFD-NEXT:    lui a3, 524288
@@ -1079,9 +1079,9 @@ define i64 @test_roundeven_si64(double %x) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a3, %hi(.LCPI17_1)
 ; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI17_0)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI17_0+4)(a2)
-; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI17_1)(a3)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI17_1+4)(a3)
+; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    flt.d a3, a2, s0
 ; RV32IZFINXZDINX-NEXT:    feq.d a2, s0, s0
 ; RV32IZFINXZDINX-NEXT:    lui a4, 524288
@@ -1161,12 +1161,12 @@ define i64 @test_roundeven_ui64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    call roundeven
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI19_0)
-; RV32IFD-NEXT:    fcvt.d.w fa5, zero
-; RV32IFD-NEXT:    fle.d a1, fa5, fa0
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI19_0)(a0)
-; RV32IFD-NEXT:    flt.d a0, fa5, fa0
-; RV32IFD-NEXT:    neg s0, a0
-; RV32IFD-NEXT:    neg s1, a1
+; RV32IFD-NEXT:    fcvt.d.w fa4, zero
+; RV32IFD-NEXT:    fle.d a0, fa4, fa0
+; RV32IFD-NEXT:    flt.d a1, fa5, fa0
+; RV32IFD-NEXT:    neg s0, a1
+; RV32IFD-NEXT:    neg s1, a0
 ; RV32IFD-NEXT:    call __fixunsdfdi
 ; RV32IFD-NEXT:    and a0, s1, a0
 ; RV32IFD-NEXT:    and a1, s1, a1
@@ -1268,9 +1268,9 @@ define i64 @test_rint_si64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    call rint
-; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI21_0)
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI21_0)(a0)
+; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    fle.d s0, fa5, fa0
 ; RV32IFD-NEXT:    call __fixdfdi
 ; RV32IFD-NEXT:    lui a3, 524288
@@ -1323,9 +1323,9 @@ define i64 @test_rint_si64(double %x) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a3, %hi(.LCPI21_1)
 ; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI21_0)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI21_0+4)(a2)
-; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI21_1)(a3)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI21_1+4)(a3)
+; RV32IZFINXZDINX-NEXT:    fle.d a6, a4, s0
 ; RV32IZFINXZDINX-NEXT:    flt.d a3, a2, s0
 ; RV32IZFINXZDINX-NEXT:    feq.d a2, s0, s0
 ; RV32IZFINXZDINX-NEXT:    lui a4, 524288
@@ -1405,12 +1405,12 @@ define i64 @test_rint_ui64(double %x) nounwind {
 ; RV32IFD-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    call rint
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV32IFD-NEXT:    fcvt.d.w fa5, zero
-; RV32IFD-NEXT:    fle.d a1, fa5, fa0
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI23_0)(a0)
-; RV32IFD-NEXT:    flt.d a0, fa5, fa0
-; RV32IFD-NEXT:    neg s0, a0
-; RV32IFD-NEXT:    neg s1, a1
+; RV32IFD-NEXT:    fcvt.d.w fa4, zero
+; RV32IFD-NEXT:    fle.d a0, fa4, fa0
+; RV32IFD-NEXT:    flt.d a1, fa5, fa0
+; RV32IFD-NEXT:    neg s0, a1
+; RV32IFD-NEXT:    neg s1, a0
 ; RV32IFD-NEXT:    call __fixunsdfdi
 ; RV32IFD-NEXT:    and a0, s1, a0
 ; RV32IFD-NEXT:    and a1, s1, a1

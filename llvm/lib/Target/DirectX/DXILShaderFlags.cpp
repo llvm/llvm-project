@@ -32,6 +32,43 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+static bool checkWaveOps(Intrinsic::ID IID) {
+  // Currently unsupported intrinsics
+  // case Intrinsic::dx_wave_getlanecount:
+  // case Intrinsic::dx_wave_allequal:
+  // case Intrinsic::dx_wave_ballot:
+  // case Intrinsic::dx_wave_readfirst:
+  // case Intrinsic::dx_wave_reduce.and:
+  // case Intrinsic::dx_wave_reduce.or:
+  // case Intrinsic::dx_wave_reduce.xor:
+  // case Intrinsic::dx_wave_prefixop:
+  // case Intrinsic::dx_quad.readat:
+  // case Intrinsic::dx_quad.readacrossx:
+  // case Intrinsic::dx_quad.readacrossy:
+  // case Intrinsic::dx_quad.readacrossdiagonal:
+  // case Intrinsic::dx_wave_prefixballot:
+  // case Intrinsic::dx_wave_match:
+  // case Intrinsic::dx_wavemulti.*:
+  // case Intrinsic::dx_wavemulti.ballot:
+  // case Intrinsic::dx_quad.vote:
+  switch (IID) {
+  default:
+    return false;
+  case Intrinsic::dx_wave_is_first_lane:
+  case Intrinsic::dx_wave_getlaneindex:
+  case Intrinsic::dx_wave_any:
+  case Intrinsic::dx_wave_all:
+  case Intrinsic::dx_wave_readlane:
+  case Intrinsic::dx_wave_active_countbits:
+  // Wave Active Op Variants
+  case Intrinsic::dx_wave_reduce_sum:
+  case Intrinsic::dx_wave_reduce_usum:
+  case Intrinsic::dx_wave_reduce_max:
+  case Intrinsic::dx_wave_reduce_umax:
+    return true;
+  }
+}
+
 /// Update the shader flags mask based on the given instruction.
 /// \param CSF Shader flags mask to update.
 /// \param I Instruction to check.
@@ -94,6 +131,8 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
 
     // TODO: Set DX11_1_DoubleExtensions if I is a call to DXIL intrinsic
     // DXIL::Opcode::Fma https://github.com/llvm/llvm-project/issues/114554
+
+    CSF.WaveOps |= checkWaveOps(CI->getIntrinsicID());
   }
 }
 

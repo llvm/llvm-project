@@ -378,6 +378,8 @@ struct LowerGpuOpsToNVVMOpsPass final
     RewritePatternSet llvmPatterns(m.getContext());
     LLVMConversionTarget target(getContext());
 
+    populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
+
     llvm::SmallDenseSet<StringRef> allowedDialectsSet(allowedDialects.begin(),
                                                       allowedDialects.end());
     for (Dialect *dialect : getContext().getLoadedDialects()) {
@@ -407,7 +409,6 @@ struct LowerGpuOpsToNVVMOpsPass final
                                                      llvmPatterns);
     }
 
-    populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
     if (this->hasRedux)
       populateGpuSubgroupReduceOpLoweringPattern(converter, llvmPatterns);
@@ -552,6 +553,11 @@ void mlir::populateGpuToNVVMConversionPatterns(
 
   populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
                                     "__nv_fmod");
+  populateOpPatterns<arith::MaxNumFOp>(converter, patterns, "__nv_fmaxf",
+                                       "__nv_fmax");
+  populateOpPatterns<arith::MinNumFOp>(converter, patterns, "__nv_fminf",
+                                       "__nv_fmin");
+
   populateIntOpPatterns<math::AbsIOp>(converter, patterns, "__nv_abs");
   populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
                                    "__nv_fabs");
@@ -589,6 +595,13 @@ void mlir::populateGpuToNVVMConversionPatterns(
   populateOpPatterns<math::FloorOp>(converter, patterns, "__nv_floorf",
                                     "__nv_floor");
   populateOpPatterns<math::FmaOp>(converter, patterns, "__nv_fmaf", "__nv_fma");
+  // Note: libdevice does not provide `__nv_isfinitef` as of moment of writing.
+  populateOpPatterns<math::IsFiniteOp>(converter, patterns, "",
+                                       "__nv_isfinited");
+  populateOpPatterns<math::IsInfOp>(converter, patterns, "__nv_isinff",
+                                    "__nv_isinfd");
+  populateOpPatterns<math::IsNaNOp>(converter, patterns, "__nv_isnanf",
+                                    "__nv_isnand");
   populateOpPatterns<math::LogOp>(converter, patterns, "__nv_logf", "__nv_log",
                                   "__nv_fast_logf");
   populateOpPatterns<math::Log10Op>(converter, patterns, "__nv_log10f",
