@@ -10,8 +10,6 @@ config.substitutions.append(('%{link_flags}',
    '-nostdlib++ -startfiles -stdlib '
    '-L %{lib-dir} -lc++ -lc++abi '
    '-Wl,--suppress-stack-size-warning '
-   '-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1 '
-   '-Wl,-mllvm,-nvptx-emit-init-fini-kernel'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --no-parallelism'

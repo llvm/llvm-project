@@ -33,17 +33,12 @@ Marking Functions as Kernels
 
 In PTX, there are two types of functions: *device functions*, which are only
 callable by device code, and *kernel functions*, which are callable by host
-code. By default, the back-end will emit device functions. Metadata is used to
-declare a function as a kernel function. This metadata is attached to the
-``nvvm.annotations`` named metadata object, and has the following format:
+code. By default, the back-end will emit device functions. The ``ptx_kernel``
+calling convention is used to declare a function as a kernel function.
 
-.. code-block:: text
-
-   !0 = !{<function-ref>, metadata !"kernel", i32 1}
-
-The first parameter is a reference to the kernel function. The following
-example shows a kernel function calling a device function in LLVM IR. The
-function ``@my_kernel`` is callable from host code, but ``@my_fmad`` is not.
+The following example shows a kernel function calling a device function in LLVM
+IR. The function ``@my_kernel`` is callable from host code, but ``@my_fmad`` is
+not.
 
 .. code-block:: llvm
 
@@ -53,17 +48,31 @@ function ``@my_kernel`` is callable from host code, but ``@my_fmad`` is not.
       ret float %add
     }
 
-    define void @my_kernel(ptr %ptr) {
+    define ptx_kernel void @my_kernel(ptr %ptr) {
       %val = load float, ptr %ptr
       %ret = call float @my_fmad(float %val, float %val, float %val)
       store float %ret, ptr %ptr
       ret void
     }
 
-    !nvvm.annotations = !{!1}
-    !1 = !{ptr @my_kernel, !"kernel", i32 1}
-
 When compiled, the PTX kernel functions are callable by host-side code.
+
+.. _nvptx_fnattrs:
+
+Function Attributes
+-------------------
+
+``"nvvm.maxclusterrank"="<n>"``
+    This attribute specifies the maximum number of blocks per cluster. Must be 
+    non-zero. Only supported for Hopper+.
+
+``"nvvm.minctasm"="<n>"``
+    This indicates a hint/directive to the compiler/driver, asking it to put at
+    least these many CTAs on an SM.
+
+``"nvvm.maxnreg"="<n>"``
+    This attribute indicates the maximum number of registers to be used for the
+    kernel function.
 
 
 .. _address_spaces:
@@ -580,6 +589,46 @@ prefetched in terms of bytes and it must be a multiple of 16.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`_.
+
+'``llvm.nvvm.prefetch.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void  @llvm.nvvm.prefetch.global.L1(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L2(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.local.L1(ptr addrspace(5) %local_ptr)
+  declare void  @llvm.nvvm.prefetch.local.L2(ptr addrspace(5) %local_ptr)
+  
+  declare void  @llvm.nvvm.prefetch.L1(ptr %ptr)
+  declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
+  
+  declare void  @llvm.nvvm.prefetch.global.L2.evict.normal(ptr addrspace(1) %global_ptr)
+  declare void  @llvm.nvvm.prefetch.global.L2.evict.last(ptr addrspace(1) %global_ptr)
+
+  declare void  @llvm.nvvm.prefetchu.L1(ptr %ptr)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.prefetch.*``' and '``@llvm.nvvm.prefetchu.*``' intrinsic
+correspond to the '``prefetch.*``;' and '``prefetchu.*``' family of PTX instructions. 
+The '``prefetch.*``' instructions bring the cache line containing the
+specified address in global or local memory address space into the 
+specified cache level (L1 or L2). The '`prefetchu.*``' instruction brings the cache line 
+containing the specified generic address into the specified uniform cache level.
+If no address space is specified, it is assumed to be generic address. The intrinsic 
+uses and eviction priority which can be accessed by the '``.level::eviction_priority``' modifier.
+
+* A prefetch to a shared memory location performs no operation.
+* A prefetch into the uniform cache requires a generic address, 
+  and no operation occurs if the address maps to a const, local, or shared memory location.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`_.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

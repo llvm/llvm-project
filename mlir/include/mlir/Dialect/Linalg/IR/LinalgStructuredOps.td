@@ -138,19 +138,6 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
       }
     }
     ```
-
-    To allow progressive lowering from the value world (a.k.a tensor values) to
-    the buffer world (a.k.a memref values), a `linalg.generic` op allows mixing
-    tensors and buffers operands and tensor results.
-
-    ```mlir
-    %C = linalg.generic #trait_attribute
-      ins(%A, %B : tensor<?x?xf32>, memref<?x?xf32, stride_specification>)
-      outs(%C : tensor<?x?xf32>)
-      {other-optional-attributes}
-      {region}
-      -> (tensor<?x?xf32>)
-    ```
   }];
 
   let arguments = (ins Variadic<AnyType>:$inputs,

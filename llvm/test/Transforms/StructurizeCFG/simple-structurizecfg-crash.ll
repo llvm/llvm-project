@@ -1,4 +1,5 @@
 ; RUN: opt -S -passes=structurizecfg %s -o -
+; REQUIRES: asserts
 ; XFAIL: *
 
 ; Issue tracking: https://github.com/llvm/llvm-project/issues/126534.

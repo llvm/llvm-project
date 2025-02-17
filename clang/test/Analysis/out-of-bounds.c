@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound,debug.ExprInspection -verify %s
 
-void clang_analyzer_eval(int);
+void clang_analyzer_value(int);
 
 // Tests doing an out-of-bounds access after the end of an array using:
 // - constant integer index
@@ -142,18 +142,12 @@ void test4(int x) {
     buf[x] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
-void test_assume_after_access(unsigned long x) {
-  int buf[100];
-  buf[x] = 1;
-  clang_analyzer_eval(x <= 99); // expected-warning{{TRUE}}
-}
-
 // Don't warn when indexing below the start of a symbolic region's whose
 // base extent we don't know.
 int *get_symbolic(void);
 void test_underflow_symbolic(void) {
   int *buf = get_symbolic();
-  buf[-1] = 0; // no-warning;
+  buf[-1] = 0; // no-warning
 }
 
 // But warn if we understand the internal memory layout of a symbolic region.
@@ -180,12 +174,6 @@ void test_extern_void(void) {
   p[1] = 42; // no-warning
 }
 
-void test_assume_after_access2(unsigned long x) {
-  char buf[100];
-  buf[x] = 1;
-  clang_analyzer_eval(x <= 99); // expected-warning{{TRUE}}
-}
-
 struct incomplete;
 char test_comparison_with_extent_symbol(struct incomplete *p) {
   // Previously this was reported as a (false positive) overflow error because
@@ -194,3 +182,36 @@ char test_comparison_with_extent_symbol(struct incomplete *p) {
   return ((char *)p)[-1]; // no-warning
 }
 
+int table[256], small_table[128];
+int test_cast_to_unsigned(signed char x) {
+  unsigned char y = x;
+  if (x >= 0)
+    return x;
+  // FIXME: Here the analyzer ignores the signed -> unsigned cast, and manages to
+  // load a negative value from an unsigned variable. This causes an underflow
+  // report, which is an ugly false positive.
+  // The underlying issue is tracked by Github ticket #39492.
+  clang_analyzer_value(y); // expected-warning {{8s:{ [-128, -1] } }}
+  return table[y]; // expected-warning {{Out of bound access to memory preceding}}
+}
+
+int test_cast_to_unsigned_overflow(signed char x) {
+  unsigned char y = x;
+  if (x >= 0)
+    return x;
+  // A variant of 'test_cast_to_unsigned' where the correct behavior would be
+  // an overflow report (because the negative values are cast to `unsigned
+  // char` values that are too large).
+  // FIXME: See comment in 'test_cast_to_unsigned'.
+  clang_analyzer_value(y); // expected-warning {{8s:{ [-128, -1] } }}
+  return small_table[y]; // expected-warning {{Out of bound access to memory preceding}}
+}
+
+int test_negative_offset_with_unsigned_idx(void) {
+  // An example where the subscript operator uses an unsigned index, but the
+  // underflow report is still justified. (We should try to keep this if we
+  // silence false positives like the one in 'test_cast_to_unsigned'.)
+  int *p = table - 10;
+  unsigned idx = 2u;
+  return p[idx]; // expected-warning {{Out of bound access to memory preceding}}
+}

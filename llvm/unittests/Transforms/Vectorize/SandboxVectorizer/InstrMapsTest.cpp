@@ -85,3 +85,30 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2, i8 %v3, <2 x i8> %vec) {
   EXPECT_FALSE(IMaps.getOrigLane(VAdd0, Add1));
   EXPECT_EQ(IMaps.getVectorForOrig(Add1), nullptr);
 }
+
+TEST_F(InstrMapsTest, VectorLanes) {
+  parseIR(C, R"IR(
+define void @foo(<2 x i8> %v0, <2 x i8> %v1, <4 x i8> %v2, <4 x i8> %v3) {
+  %vadd0 = add <2 x i8> %v0, %v1
+  %vadd1 = add <2 x i8> %v0, %v1
+  %vadd2 = add <4 x i8> %v2, %v3
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+
+  auto *VAdd0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *VAdd1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *VAdd2 = cast<sandboxir::BinaryOperator>(&*It++);
+
+  sandboxir::InstrMaps IMaps(Ctx);
+
+  // Check that the vector lanes are calculated correctly.
+  IMaps.registerVector({VAdd0, VAdd1}, VAdd2);
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd2, VAdd0), 0U);
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd2, VAdd1), 2U);
+}

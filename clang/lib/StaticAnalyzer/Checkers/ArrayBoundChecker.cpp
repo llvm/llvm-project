@@ -323,7 +323,7 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
   // we want to ensure that assumptions coming from this precondition and
   // assumptions coming from regular C/C++ operator calls are represented by
   // constraints on the same symbolic expression. A solution that would
-  // evaluate these "mathematical" compariosns through a separate pathway would
+  // evaluate these "mathematical" comparisons through a separate pathway would
   // be a step backwards in this sense.
 
   const BinaryOperatorKind OpKind = CheckEquality ? BO_EQ : BO_LT;
@@ -394,14 +394,13 @@ static bool tryDividePair(std::optional<int64_t> &Val1,
     return false;
   const bool Val1HasRemainder = Val1 && *Val1 % Divisor;
   const bool Val2HasRemainder = Val2 && *Val2 % Divisor;
-  if (!Val1HasRemainder && !Val2HasRemainder) {
-    if (Val1)
-      *Val1 /= Divisor;
-    if (Val2)
-      *Val2 /= Divisor;
-    return true;
-  }
-  return false;
+  if (Val1HasRemainder || Val2HasRemainder)
+    return false;
+  if (Val1)
+    *Val1 /= Divisor;
+  if (Val2)
+    *Val2 /= Divisor;
+  return true;
 }
 
 static Messages getExceedsMsgs(ASTContext &ACtx, const SubRegion *Region,

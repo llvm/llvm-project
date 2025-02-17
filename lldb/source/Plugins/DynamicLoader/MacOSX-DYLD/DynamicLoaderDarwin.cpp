@@ -419,6 +419,8 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         image_infos[i].os_type = llvm::Triple::WatchOS;
       else if (os_name == "bridgeos")
         image_infos[i].os_type = llvm::Triple::BridgeOS;
+      else if (os_name == "driverkit")
+        image_infos[i].os_type = llvm::Triple::DriverKit;
       else if (os_name == "xros")
         image_infos[i].os_type = llvm::Triple::XROS;
       else if (os_name == "maccatalyst") {

@@ -343,6 +343,9 @@ private:
   // x86_64 .pdata sections on ARM64EC/ARM64X targets.
   ChunkRange hybridPdata;
 
+  // CHPE metadata symbol on ARM64C target.
+  DefinedRegular *chpeSym = nullptr;
+
   COFFLinkerContext &ctx;
 };
 } // anonymous namespace
@@ -1215,9 +1218,11 @@ void Writer::createMiscChunks() {
     // if we're ultimately not going to write CodeView data to the PDB.
     buildId = make<CVDebugRecordChunk>(ctx);
     debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId);
-    if (Symbol *buildidSym = ctx.symtab.findUnderscore("__buildid"))
-      replaceSymbol<DefinedSynthetic>(buildidSym, buildidSym->getName(),
-                                      buildId, 4);
+    ctx.forEachSymtab([&](SymbolTable &symtab) {
+      if (Symbol *buildidSym = symtab.findUnderscore("__buildid"))
+        replaceSymbol<DefinedSynthetic>(buildidSym, buildidSym->getName(),
+                                        buildId, 4);
+    });
   }
 
   if (config->cetCompat) {
@@ -2360,16 +2365,17 @@ void Writer::setECSymbols() {
     return a.first->getRVA() < b.first->getRVA();
   });
 
+  ChunkRange &chpePdata = ctx.hybridSymtab ? hybridPdata : pdata;
   Symbol *rfeTableSym = symtab->findUnderscore("__arm64x_extra_rfe_table");
   replaceSymbol<DefinedSynthetic>(rfeTableSym, "__arm64x_extra_rfe_table",
-                                  pdata.first);
+                                  chpePdata.first);
 
-  if (pdata.first) {
+  if (chpePdata.first) {
     Symbol *rfeSizeSym =
         symtab->findUnderscore("__arm64x_extra_rfe_table_size");
     cast<DefinedAbsolute>(rfeSizeSym)
-        ->setVA(pdata.last->getRVA() + pdata.last->getSize() -
-                pdata.first->getRVA());
+        ->setVA(chpePdata.last->getRVA() + chpePdata.last->getSize() -
+                chpePdata.first->getRVA());
   }
 
   Symbol *rangesCountSym =
@@ -2423,12 +2429,22 @@ void Writer::setECSymbols() {
               offsetof(data_directory, Size),
           symtab->edataEnd->getRVA() - symtab->edataStart->getRVA() +
               symtab->edataEnd->getSize());
-    if (hybridPdata.first)
+    if (hybridPdata.first) {
       ctx.dynamicRelocs->set(
           dataDirOffset64 + EXCEPTION_TABLE * sizeof(data_directory) +
               offsetof(data_directory, Size),
           hybridPdata.last->getRVA() - hybridPdata.first->getRVA() +
               hybridPdata.last->getSize());
+      if (chpeSym) {
+        size_t size = 0;
+        if (pdata.first)
+          size = pdata.last->getRVA() + pdata.last->getSize() -
+                 pdata.first->getRVA();
+        ctx.dynamicRelocs->set(chpeSym->getRVA() +
+                                   offsetof(chpe_metadata, ExtraRFETableSize),
+                               size);
+      }
+    }
   }
 }
 
@@ -2664,6 +2680,14 @@ void Writer::createDynamicRelocs() {
                          coffHeaderOffset + offsetof(coff_file_header, Machine),
                          AMD64);
 
+  if (ctx.symtab.entry != ctx.hybridSymtab->entry ||
+      pdata.first != hybridPdata.first) {
+    chpeSym = cast_or_null<DefinedRegular>(
+        ctx.hybridSymtab->findUnderscore("__chpe_metadata"));
+    if (!chpeSym)
+      Warn(ctx) << "'__chpe_metadata' is missing for ARM64X target";
+  }
+
   if (ctx.symtab.entry != ctx.hybridSymtab->entry) {
     ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                            peHeaderOffset +
@@ -2671,14 +2695,11 @@ void Writer::createDynamicRelocs() {
                            cast_or_null<Defined>(ctx.hybridSymtab->entry));
 
     // Swap the alternate entry point in the CHPE metadata.
-    Symbol *s = ctx.hybridSymtab->findUnderscore("__chpe_metadata");
-    if (auto chpeSym = cast_or_null<DefinedRegular>(s))
+    if (chpeSym)
       ctx.dynamicRelocs->add(
           IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
           Arm64XRelocVal(chpeSym, offsetof(chpe_metadata, AlternateEntryPoint)),
           cast_or_null<Defined>(ctx.symtab.entry));
-    else
-      Warn(ctx) << "'__chpe_metadata' is missing for ARM64X target";
   }
 
   if (ctx.symtab.edataStart != ctx.hybridSymtab->edataStart) {
@@ -2705,6 +2726,18 @@ void Writer::createDynamicRelocs() {
                            dataDirOffset64 +
                                EXCEPTION_TABLE * sizeof(data_directory) +
                                offsetof(data_directory, Size));
+
+    // Swap ExtraRFETable in the CHPE metadata.
+    if (chpeSym) {
+      ctx.dynamicRelocs->add(
+          IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+          Arm64XRelocVal(chpeSym, offsetof(chpe_metadata, ExtraRFETable)),
+          pdata.first);
+      // The Size value is assigned after addresses are finalized.
+      ctx.dynamicRelocs->add(
+          IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+          Arm64XRelocVal(chpeSym, offsetof(chpe_metadata, ExtraRFETableSize)));
+    }
   }
 
   // Set the hybrid load config to the EC load config.
