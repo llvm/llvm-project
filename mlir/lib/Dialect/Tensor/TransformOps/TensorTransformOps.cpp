@@ -138,6 +138,11 @@ void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
     tensor::populateRewriteAsConstantPatterns(patterns, defaultControlFn);
 }
 
+void transform::ApplyDecomposeTensorGatherPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateDecomposeTensorGatherPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // TypeConversionCastTensorShapeOp
 //===----------------------------------------------------------------------===//
