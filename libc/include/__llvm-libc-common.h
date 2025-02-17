@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_COMMON_H
-#define LLVM_LIBC_COMMON_H
+#ifndef _LLVM_LIBC_COMMON_H
+#define _LLVM_LIBC_COMMON_H
 
 #define __LLVM_LIBC__ 1
 
@@ -87,4 +87,4 @@
 
 #endif // __cplusplus
 
-#endif // LLVM_LIBC_COMMON_H
+#endif // _LLVM_LIBC_COMMON_H

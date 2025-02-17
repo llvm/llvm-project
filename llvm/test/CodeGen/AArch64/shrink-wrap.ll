@@ -31,7 +31,7 @@ declare fastcc i32 @foo()
 
 declare fastcc i32 @bar()
 
-define internal fastcc i32 @func(i32 %alpha, i32 %beta) {
+define internal fastcc i32 @func(i32 %alpha, i32 %beta, i1 %arg) {
 entry:
   %v1 = alloca [2 x [11 x i32]], align 4
   %v2 = alloca [11 x i32], align 16
@@ -69,7 +69,7 @@ for.body:
   %a.0983 = phi i32 [ 1, %if.end.9 ], [ %a.1, %for.inc ]
   %arrayidx = getelementptr inbounds [62 x i32], ptr @g17, i64 0, i64 undef
   %tmp5 = load i32, ptr %arrayidx, align 4
-  br i1 undef, label %for.inc, label %if.else.51
+  br i1 %arg, label %for.inc, label %if.else.51
 
 if.else.51:
   %idxprom53 = sext i32 %tmp5 to i64

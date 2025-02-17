@@ -9282,6 +9282,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       for (StringRef Arg : LinkerArgs)
         CmdArgs.push_back(Args.MakeArgString(
             "--device-linker=" + TC->getTripleString() + "=" + Arg));
+
+      // Forward the LTO mode relying on the Driver's parsing.
+      if (C.getDriver().getOffloadLTOMode() == LTOK_Full)
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-compiler=" + TC->getTripleString() + "=-flto=full"));
+      else if (C.getDriver().getOffloadLTOMode() == LTOK_Thin)
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-compiler=" + TC->getTripleString() + "=-flto=thin"));
     }
   }
 
@@ -9289,6 +9297,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       Args.MakeArgString("--host-triple=" + getToolChain().getTripleString()));
   if (Args.hasArg(options::OPT_v))
     CmdArgs.push_back("--wrapper-verbose");
+  if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("--cuda-path=") + A->getValue()));
 
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);

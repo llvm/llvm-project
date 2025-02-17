@@ -6666,14 +6666,6 @@ MacroID ASTWriter::getMacroRef(MacroInfo *MI, const IdentifierInfo *Name) {
   return ID;
 }
 
-MacroID ASTWriter::getMacroID(MacroInfo *MI) {
-  if (!MI || MI->isBuiltinMacro())
-    return 0;
-
-  assert(MacroIDs.contains(MI) && "Macro not emitted!");
-  return MacroIDs[MI];
-}
-
 uint32_t ASTWriter::getMacroDirectivesOffset(const IdentifierInfo *Name) {
   return IdentMacroDirectivesOffsetMap.lookup(Name);
 }
