@@ -96,8 +96,8 @@ func.func @scf_loop_unroll_full_outter_loops(%arg0: vector<4x4xindex>) -> index 
   // UNROLL-FULL:   %[[VAL_2:.*]] = arith.constant 1 : index
   // UNROLL-FULL:   %[[VAL_3:.*]] = arith.constant 4 : index
   // UNROLL-FULL:   %[[VAL_4:.*]] = scf.for %[[VAL_5:.*]] = %[[VAL_1]] to %[[VAL_3]] step %[[VAL_2]] iter_args(%[[VAL_6:.*]] = %[[VAL_1]]) -> (index) {
-  // UNROLL-FULL:   %[[VAL_7:.*]] = vector.extract %[[VAL_0]][0, %[[VAL_5]]] : index from vector<4x4xindex>
-  // UNROLL-FULL:   scf.yield %[[VAL_7]] : index
+  // UNROLL-FULL:     %[[VAL_7:.*]] = vector.extract %[[VAL_0]][0, %[[VAL_5]]] : index from vector<4x4xindex>
+  // UNROLL-FULL:     scf.yield %[[VAL_7]] : index
   // UNROLL-FULL: }
   // UNROLL-FULL:   %[[VAL_8:.*]] = scf.for %[[VAL_9:.*]] = %[[VAL_1]] to %[[VAL_3]] step %[[VAL_2]] iter_args(%[[VAL_10:.*]] = %[[VAL_4]]) -> (index) {
   // UNROLL-FULL:   %[[VAL_11:.*]] = vector.extract %[[VAL_0]][1, %[[VAL_9]]] : index from vector<4x4xindex>
