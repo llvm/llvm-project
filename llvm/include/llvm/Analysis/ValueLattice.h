@@ -9,6 +9,7 @@
 #ifndef LLVM_ANALYSIS_VALUELATTICE_H
 #define LLVM_ANALYSIS_VALUELATTICE_H
 
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 
@@ -38,6 +39,7 @@ class ValueLatticeElement {
     /// Transition allowed to the following states:
     ///  constant
     ///  constantrange_including_undef
+    ///  constantfprange_including_undef
     ///  overdefined
     undef,
 
@@ -70,6 +72,21 @@ class ValueLatticeElement {
     ///  overdefined
     constantrange_including_undef,
 
+    /// The Value falls within this range. (Used only for floating point typed
+    /// values.)
+    /// Transition allowed to the following states:
+    ///  constantfprange (new range must be a superset of the existing range)
+    ///  constantfprange_including_undef
+    ///  overdefined
+    constantfprange,
+
+    /// This Value falls within this range, but also may be undef.
+    /// Merging it with other constant ranges results in
+    /// constantfprange_including_undef.
+    /// Transition allowed to the following states:
+    ///  overdefined
+    constantfprange_including_undef,
+
     /// We can not precisely model the dynamic values this value might take.
     /// No transitions are allowed after reaching overdefined.
     overdefined,
@@ -85,6 +102,7 @@ class ValueLatticeElement {
   union {
     Constant *ConstVal;
     ConstantRange Range;
+    ConstantFPRange FPRange;
   };
 
   /// Destroy contents of lattice value, without destructing the object.
@@ -99,6 +117,10 @@ class ValueLatticeElement {
     case constantrange_including_undef:
     case constantrange:
       Range.~ConstantRange();
+      break;
+    case constantfprange_including_undef:
+    case constantfprange:
+      FPRange.~ConstantFPRange();
       break;
     };
   }
@@ -154,6 +176,11 @@ public:
       new (&Range) ConstantRange(Other.Range);
       NumRangeExtensions = Other.NumRangeExtensions;
       break;
+    case constantfprange:
+    case constantfprange_including_undef:
+      new (&FPRange) ConstantFPRange(Other.FPRange);
+      NumRangeExtensions = Other.NumRangeExtensions;
+      break;
     case constant:
     case notconstant:
       ConstVal = Other.ConstVal;
@@ -171,6 +198,11 @@ public:
     case constantrange:
     case constantrange_including_undef:
       new (&Range) ConstantRange(std::move(Other.Range));
+      NumRangeExtensions = Other.NumRangeExtensions;
+      break;
+    case constantfprange:
+    case constantfprange_including_undef:
+      new (&FPRange) ConstantFPRange(std::move(Other.FPRange));
       NumRangeExtensions = Other.NumRangeExtensions;
       break;
     case constant:
@@ -225,6 +257,23 @@ public:
                           MergeOptions().setMayIncludeUndef(MayIncludeUndef));
     return Res;
   }
+  static ValueLatticeElement getFPRange(ConstantFPRange CR,
+                                        bool MayIncludeUndef = false) {
+    if (CR.isFullSet())
+      return getOverdefined();
+
+    if (CR.isEmptySet()) {
+      ValueLatticeElement Res;
+      if (MayIncludeUndef)
+        Res.markUndef();
+      return Res;
+    }
+
+    ValueLatticeElement Res;
+    Res.markConstantFPRange(std::move(CR),
+                            MergeOptions().setMayIncludeUndef(MayIncludeUndef));
+    return Res;
+  }
   static ValueLatticeElement getOverdefined() {
     ValueLatticeElement Res;
     Res.markOverdefined();
@@ -239,6 +288,9 @@ public:
   bool isConstantRangeIncludingUndef() const {
     return Tag == constantrange_including_undef;
   }
+  bool isConstantFPRangeIncludingUndef() const {
+    return Tag == constantfprange_including_undef;
+  }
   /// Returns true if this value is a constant range. Use \p UndefAllowed to
   /// exclude non-singleton constant ranges that may also be undef. Note that
   /// this function also returns true if the range may include undef, but only
@@ -246,6 +298,16 @@ public:
   bool isConstantRange(bool UndefAllowed = true) const {
     return Tag == constantrange || (Tag == constantrange_including_undef &&
                                     (UndefAllowed || Range.isSingleElement()));
+  }
+  /// Returns true if this value is a constant floating point range. Use \p
+  /// UndefAllowed to exclude non-singleton constant ranges that may also be
+  /// undef. Note that this function also returns true if the range may include
+  /// undef, but only contains a single element. In that case, it can be
+  /// replaced by a constant.
+  bool isConstantFPRange(bool UndefAllowed = true) const {
+    return Tag == constantfprange ||
+           (Tag == constantfprange_including_undef &&
+            (UndefAllowed || FPRange.isSingleElement()));
   }
   bool isOverdefined() const { return Tag == overdefined; }
 
@@ -269,11 +331,31 @@ public:
     return Range;
   }
 
+  /// Returns the constant floating point range for this value. Use \p
+  /// UndefAllowed to exclude non-singleton constant ranges that may also be
+  /// undef. Note that this function also returns a range if the range may
+  /// include undef, but only contains a single element. In that case, it can be
+  /// replaced by a constant.
+  const ConstantFPRange &getConstantFPRange(bool UndefAllowed = true) const {
+    assert(isConstantFPRange(UndefAllowed) &&
+           "Cannot get the constant-fprange of a non-constant-fprange!");
+    return FPRange;
+  }
+
   std::optional<APInt> asConstantInteger() const {
     if (isConstant() && isa<ConstantInt>(getConstant())) {
       return cast<ConstantInt>(getConstant())->getValue();
     } else if (isConstantRange() && getConstantRange().isSingleElement()) {
       return *getConstantRange().getSingleElement();
+    }
+    return std::nullopt;
+  }
+
+  std::optional<APFloat> asConstantFP() const {
+    if (isConstant() && isa<ConstantFP>(getConstant())) {
+      return cast<ConstantFP>(getConstant())->getValue();
+    } else if (isConstantFPRange() && getConstantFPRange().isSingleElement()) {
+      return *getConstantFPRange().getSingleElement();
     }
     return std::nullopt;
   }
@@ -288,9 +370,26 @@ public:
     return ConstantRange::getFull(BW);
   }
 
+  ConstantFPRange asConstantFPRange(const fltSemantics &Sem,
+                                    bool UndefAllowed = false) const {
+    if (isConstantFPRange(UndefAllowed))
+      return getConstantFPRange();
+    if (isConstant())
+      return getConstant()->toConstantFPRange();
+    if (isUnknown())
+      return ConstantFPRange::getEmpty(Sem);
+    return ConstantFPRange::getFull(Sem);
+  }
+
   ConstantRange asConstantRange(Type *Ty, bool UndefAllowed = false) const {
     assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
     return asConstantRange(Ty->getScalarSizeInBits(), UndefAllowed);
+  }
+
+  ConstantFPRange asConstantFPRange(Type *Ty, bool UndefAllowed = false) const {
+    assert(Ty->isFPOrFPVectorTy() && "Must be floating point type");
+    return asConstantFPRange(Ty->getScalarType()->getFltSemantics(),
+                             UndefAllowed);
   }
 
   bool markOverdefined() {
@@ -394,6 +493,51 @@ public:
     return true;
   }
 
+  /// Mark the object as constant floating point range with \p NewR. If the
+  /// object is already a constant range, nothing changes if the existing range
+  /// is equal to \p NewR and the tag. Otherwise \p NewR must be a superset of
+  /// the existing range or the object must be undef. The tag is set to
+  /// constant_range_including_undef if either the existing value or the new
+  /// range may include undef.
+  bool markConstantFPRange(ConstantFPRange NewR,
+                           MergeOptions Opts = MergeOptions()) {
+    assert(!NewR.isEmptySet() && "should only be called for non-empty sets");
+
+    if (NewR.isFullSet())
+      return markOverdefined();
+
+    ValueLatticeElementTy OldTag = Tag;
+    ValueLatticeElementTy NewTag =
+        (isUndef() || isConstantFPRangeIncludingUndef() || Opts.MayIncludeUndef)
+            ? constantfprange_including_undef
+            : constantfprange;
+    if (isConstantFPRange()) {
+      Tag = NewTag;
+      if (getConstantFPRange() == NewR)
+        return Tag != OldTag;
+
+      // Simple form of widening. If a range is extended multiple times, go to
+      // overdefined.
+      if (Opts.CheckWiden && ++NumRangeExtensions > Opts.MaxWidenSteps)
+        return markOverdefined();
+
+      assert(NewR.contains(getConstantFPRange()) &&
+             "Existing range must be a subset of NewR");
+      FPRange = std::move(NewR);
+      return true;
+    }
+
+    assert(isUnknown() || isUndef() || isConstant());
+    assert(
+        (!isConstant() || NewR.contains(getConstant()->toConstantFPRange())) &&
+        "Constant must be subset of new range");
+
+    NumRangeExtensions = 0;
+    Tag = NewTag;
+    new (&FPRange) ConstantFPRange(std::move(NewR));
+    return true;
+  }
+
   /// Updates this object to approximate both this object and RHS. Returns
   /// true if this object has been changed.
   bool mergeIn(const ValueLatticeElement &RHS,
@@ -414,6 +558,9 @@ public:
       if (RHS.isConstantRange())
         return markConstantRange(RHS.getConstantRange(true),
                                  Opts.setMayIncludeUndef());
+      if (RHS.isConstantFPRange())
+        return markConstantFPRange(RHS.getConstantFPRange(true),
+                                   Opts.setMayIncludeUndef());
       return markOverdefined();
     }
 
@@ -428,15 +575,26 @@ public:
         return false;
       if (RHS.isUndef())
         return false;
-      // If the constant is a vector of integers, try to treat it as a range.
-      if (getConstant()->getType()->isVectorTy() &&
-          getConstant()->getType()->getScalarType()->isIntegerTy()) {
-        ConstantRange L = getConstant()->toConstantRange();
-        ConstantRange NewR = L.unionWith(
-            RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
-        return markConstantRange(
-            std::move(NewR),
-            Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));
+      // If the constant is a vector of integers/floating point values, try to
+      // treat it as a range.
+      if (getConstant()->getType()->isVectorTy()) {
+        Type *ScalarTy = getConstant()->getType()->getScalarType();
+        if (ScalarTy->isIntegerTy()) {
+          ConstantRange L = getConstant()->toConstantRange();
+          ConstantRange NewR = L.unionWith(
+              RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
+          return markConstantRange(
+              std::move(NewR),
+              Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));
+        }
+        if (ScalarTy->isFloatingPointTy()) {
+          ConstantFPRange L = getConstant()->toConstantFPRange();
+          ConstantFPRange NewR = L.unionWith(
+              RHS.asConstantFPRange(L.getSemantics(), /*UndefAllowed=*/true));
+          return markConstantFPRange(
+              std::move(NewR),
+              Opts.setMayIncludeUndef(RHS.isConstantFPRangeIncludingUndef()));
+        }
       }
       markOverdefined();
       return true;
@@ -450,18 +608,35 @@ public:
     }
 
     auto OldTag = Tag;
-    assert(isConstantRange() && "New ValueLattice type?");
-    if (RHS.isUndef()) {
-      Tag = constantrange_including_undef;
-      return OldTag != Tag;
+    if (isConstantRange()) {
+      if (RHS.isUndef()) {
+        Tag = constantrange_including_undef;
+        return OldTag != Tag;
+      }
+
+      const ConstantRange &L = getConstantRange();
+      ConstantRange NewR = L.unionWith(
+          RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
+      return markConstantRange(
+          std::move(NewR),
+          Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));
     }
 
-    const ConstantRange &L = getConstantRange();
-    ConstantRange NewR = L.unionWith(
-        RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
-    return markConstantRange(
-        std::move(NewR),
-        Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));
+    if (isConstantFPRange()) {
+      if (RHS.isUndef()) {
+        Tag = constantfprange_including_undef;
+        return OldTag != Tag;
+      }
+
+      const ConstantFPRange &L = getConstantFPRange();
+      ConstantFPRange NewR = L.unionWith(
+          RHS.asConstantFPRange(L.getSemantics(), /*UndefAllowed=*/true));
+      return markConstantFPRange(
+          std::move(NewR),
+          Opts.setMayIncludeUndef(RHS.isConstantFPRangeIncludingUndef()));
+    } else {
+      llvm_unreachable("New ValueLattice type?");
+    }
   }
 
   // Compares this symbolic value with Other using Pred and returns either
@@ -492,7 +667,7 @@ public:
   void setNumRangeExtensions(unsigned N) { NumRangeExtensions = N; }
 };
 
-static_assert(sizeof(ValueLatticeElement) <= 40,
+static_assert(sizeof(ValueLatticeElement) <= 64,
               "size of ValueLatticeElement changed unexpectedly");
 
 raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val);

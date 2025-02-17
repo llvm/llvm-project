@@ -20,6 +20,7 @@
 namespace llvm {
 
 class ConstantRange;
+class ConstantFPRange;
 class APInt;
 
 /// This is an important base class in LLVM. It provides the common facilities
@@ -158,6 +159,11 @@ public:
   /// Convert constant to an approximate constant range. For vectors, the
   /// range is the union over the element ranges. Poison elements are ignored.
   ConstantRange toConstantRange() const;
+
+  /// Convert constant to an approximate constant floating point range. For
+  /// vectors, the range is the union over the element ranges. Poison elements
+  /// are ignored.
+  ConstantFPRange toConstantFPRange() const;
 
   /// Called if some element of this constant is no longer valid.
   /// At this point only other constants may be on the use_list for this
