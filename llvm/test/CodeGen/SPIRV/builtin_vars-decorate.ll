@@ -39,6 +39,18 @@
 
 ; CHECK-DAG: %[[#SizeT:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#Int32:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#SizeTPtr:]] = OpTypePointer Input %[[#SizeT]]
+; CHECK-DAG: %[[#Int32Ptr:]] = OpTypePointer Input %[[#Int32]]
+
+; CHECK-DAG: %[[#GLI]] = OpVariable %[[#SizeTPtr]] Input
+; CHECK-DAG: %[[#LLII]] = OpVariable %[[#SizeTPtr]] Input
+; CHECK-DAG: %[[#WD]] = OpVariable %[[#Int32Ptr]] Input
+; CHECK-DAG: %[[#SS]] = OpVariable %[[#Int32Ptr]] Input
+; CHECK-DAG: %[[#SMS]] = OpVariable %[[#Int32Ptr]] Input
+; CHECK-DAG: %[[#NS]] = OpVariable %[[#Int32Ptr]] Input
+; CHECK-DAG: %[[#NES]] = OpVariable %[[#Int32Ptr]] Input
+; CHECK-DAG: %[[#SI]] = OpVariable %[[#Int32Ptr]] Input
+; CHECK-DAG: %[[#SLII]] = OpVariable %[[#Int32Ptr]] Input
 
 ; CHECK: OpFunction
 ; CHECK: %[[#]] = OpLoad %[[#SizeT]] %[[#GLI]]
