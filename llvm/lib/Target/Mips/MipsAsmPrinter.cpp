@@ -380,7 +380,7 @@ void MipsAsmPrinter::emitFrameDirective() {
   const TargetRegisterInfo &RI = *MF->getSubtarget().getRegisterInfo();
 
   Register stackReg = RI.getFrameRegister(*MF);
-  unsigned returnReg = RI.getRARegister();
+  MCRegister returnReg = RI.getRARegister();
   unsigned stackSize = MF->getFrameInfo().getStackSize();
 
   getTargetStreamer().emitFrame(stackReg, stackSize, returnReg);

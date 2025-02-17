@@ -584,3 +584,420 @@ entry:
   store <64 x i32> %shuffle.i5, ptr %out, align 4
   ret void
 }
+
+define void @vnsrl_0_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_0_i8_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; V-NEXT:    vle8.v v8, (a1)
+; V-NEXT:    vle8.v v9, (a0)
+; V-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; V-NEXT:    vnsrl.wi v8, v8, 0
+; V-NEXT:    vnsrl.wi v9, v9, 0
+; V-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; V-NEXT:    vslideup.vi v9, v8, 4
+; V-NEXT:    vse8.v v9, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_0_i8_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vle8.v v8, (a1)
+; ZVE32F-NEXT:    vle8.v v9, (a0)
+; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vnsrl.wi v8, v8, 0
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 0
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 4
+; ZVE32F-NEXT:    vse8.v v9, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <8 x i8>, ptr %in0, align 1
+  %1 = load <8 x i8>, ptr %in1, align 1
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  store <8 x i8> %shuffle.i5, ptr %out, align 1
+  ret void
+}
+
+define void @vnsrl_8_8_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_8_8_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; V-NEXT:    vle8.v v8, (a1)
+; V-NEXT:    vle8.v v9, (a0)
+; V-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; V-NEXT:    vnsrl.wi v8, v8, 8
+; V-NEXT:    vnsrl.wi v9, v9, 8
+; V-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; V-NEXT:    vslideup.vi v9, v8, 4
+; V-NEXT:    vse8.v v9, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_8_8_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vle8.v v8, (a1)
+; ZVE32F-NEXT:    vle8.v v9, (a0)
+; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vnsrl.wi v8, v8, 8
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 8
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 4
+; ZVE32F-NEXT:    vse8.v v9, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <8 x i8>, ptr %in0, align 1
+  %1 = load <8 x i8>, ptr %in1, align 1
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  store <8 x i8> %shuffle.i5, ptr %out, align 1
+  ret void
+}
+
+define void @vnsrl_0_i16_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_0_i16_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V-NEXT:    vle16.v v8, (a1)
+; V-NEXT:    vle16.v v9, (a0)
+; V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; V-NEXT:    vnsrl.wi v8, v8, 0
+; V-NEXT:    vnsrl.wi v9, v9, 0
+; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V-NEXT:    vslideup.vi v9, v8, 2
+; V-NEXT:    vse16.v v9, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_0_i16_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vle16.v v8, (a1)
+; ZVE32F-NEXT:    vle16.v v9, (a0)
+; ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vnsrl.wi v8, v8, 0
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 0
+; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
+; ZVE32F-NEXT:    vse16.v v9, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <4 x i16>, ptr %in0, align 2
+  %1 = load <4 x i16>, ptr %in1, align 2
+  %shuffle.i5 = shufflevector <4 x i16> %0, <4 x i16> %1, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  store <4 x i16> %shuffle.i5, ptr %out, align 2
+  ret void
+}
+
+define void @vnsrl_16_i16_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_16_i16_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V-NEXT:    vle16.v v8, (a1)
+; V-NEXT:    vle16.v v9, (a0)
+; V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; V-NEXT:    vnsrl.wi v8, v8, 16
+; V-NEXT:    vnsrl.wi v9, v9, 16
+; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V-NEXT:    vslideup.vi v9, v8, 2
+; V-NEXT:    vse16.v v9, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_16_i16_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vle16.v v8, (a1)
+; ZVE32F-NEXT:    vle16.v v9, (a0)
+; ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vnsrl.wi v8, v8, 16
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 16
+; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
+; ZVE32F-NEXT:    vse16.v v9, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <4 x i16>, ptr %in0, align 2
+  %1 = load <4 x i16>, ptr %in1, align 2
+  %shuffle.i5 = shufflevector <4 x i16> %0, <4 x i16> %1, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  store <4 x i16> %shuffle.i5, ptr %out, align 2
+  ret void
+}
+
+define void @vnsrl_0_half_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_0_half_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V-NEXT:    vle16.v v8, (a1)
+; V-NEXT:    vle16.v v9, (a0)
+; V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; V-NEXT:    vnsrl.wi v8, v8, 0
+; V-NEXT:    vnsrl.wi v9, v9, 0
+; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V-NEXT:    vslideup.vi v9, v8, 2
+; V-NEXT:    vse16.v v9, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_0_half_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vle16.v v8, (a1)
+; ZVE32F-NEXT:    vle16.v v9, (a0)
+; ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vnsrl.wi v8, v8, 0
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 0
+; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
+; ZVE32F-NEXT:    vse16.v v9, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <4 x half>, ptr %in0, align 2
+  %1 = load <4 x half>, ptr %in1, align 2
+  %shuffle.i5 = shufflevector <4 x half> %0, <4 x half> %1, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  store <4 x half> %shuffle.i5, ptr %out, align 2
+  ret void
+}
+
+define void @vnsrl_16_half_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_16_half_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V-NEXT:    vle16.v v8, (a1)
+; V-NEXT:    vle16.v v9, (a0)
+; V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; V-NEXT:    vnsrl.wi v8, v8, 16
+; V-NEXT:    vnsrl.wi v9, v9, 16
+; V-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V-NEXT:    vslideup.vi v9, v8, 2
+; V-NEXT:    vse16.v v9, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_16_half_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vle16.v v8, (a1)
+; ZVE32F-NEXT:    vle16.v v9, (a0)
+; ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vnsrl.wi v8, v8, 16
+; ZVE32F-NEXT:    vnsrl.wi v9, v9, 16
+; ZVE32F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
+; ZVE32F-NEXT:    vse16.v v9, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <4 x half>, ptr %in0, align 2
+  %1 = load <4 x half>, ptr %in1, align 2
+  %shuffle.i5 = shufflevector <4 x half> %0, <4 x half> %1, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  store <4 x half> %shuffle.i5, ptr %out, align 2
+  ret void
+}
+
+define void @vnsrl_0_i32_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_0_i32_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; V-NEXT:    vle32.v v8, (a0)
+; V-NEXT:    vle32.v v9, (a1)
+; V-NEXT:    vslideup.vi v8, v9, 1
+; V-NEXT:    vse32.v v8, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_0_i32_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; ZVE32F-NEXT:    vle32.v v8, (a0)
+; ZVE32F-NEXT:    vle32.v v9, (a1)
+; ZVE32F-NEXT:    vslideup.vi v8, v9, 1
+; ZVE32F-NEXT:    vse32.v v8, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <2 x i32>, ptr %in0, align 4
+  %1 = load <2 x i32>, ptr %in1, align 4
+  %shuffle.i5 = shufflevector <2 x i32> %0, <2 x i32> %1, <2 x i32> <i32 0, i32 2>
+  store <2 x i32> %shuffle.i5, ptr %out, align 4
+  ret void
+}
+
+define void @vnsrl_32_i32_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_32_i32_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; V-NEXT:    vle32.v v8, (a0)
+; V-NEXT:    vle32.v v9, (a1)
+; V-NEXT:    vmv.v.i v0, 1
+; V-NEXT:    vrgather.vi v9, v8, 1, v0.t
+; V-NEXT:    vse32.v v9, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_32_i32_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
+; ZVE32F-NEXT:    vle32.v v8, (a0)
+; ZVE32F-NEXT:    vle32.v v9, (a1)
+; ZVE32F-NEXT:    vmv.v.i v0, 1
+; ZVE32F-NEXT:    vrgather.vi v9, v8, 1, v0.t
+; ZVE32F-NEXT:    vse32.v v9, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <2 x i32>, ptr %in0, align 4
+  %1 = load <2 x i32>, ptr %in1, align 4
+  %shuffle.i5 = shufflevector <2 x i32> %0, <2 x i32> %1, <2 x i32> <i32 1, i32 3>
+  store <2 x i32> %shuffle.i5, ptr %out, align 4
+  ret void
+}
+
+define void @vnsrl_0_float_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_0_float_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; V-NEXT:    vle32.v v8, (a0)
+; V-NEXT:    vle32.v v9, (a1)
+; V-NEXT:    vslideup.vi v8, v9, 1
+; V-NEXT:    vse32.v v8, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_0_float_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; ZVE32F-NEXT:    vle32.v v8, (a0)
+; ZVE32F-NEXT:    vle32.v v9, (a1)
+; ZVE32F-NEXT:    vslideup.vi v8, v9, 1
+; ZVE32F-NEXT:    vse32.v v8, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <2 x float>, ptr %in0, align 4
+  %1 = load <2 x float>, ptr %in1, align 4
+  %shuffle.i5 = shufflevector <2 x float> %0, <2 x float> %1, <2 x i32> <i32 0, i32 2>
+  store <2 x float> %shuffle.i5, ptr %out, align 4
+  ret void
+}
+
+define void @vnsrl_32_float_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_32_float_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; V-NEXT:    vle32.v v8, (a0)
+; V-NEXT:    vle32.v v9, (a1)
+; V-NEXT:    vmv.v.i v0, 1
+; V-NEXT:    vrgather.vi v9, v8, 1, v0.t
+; V-NEXT:    vse32.v v9, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_32_float_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
+; ZVE32F-NEXT:    vle32.v v8, (a0)
+; ZVE32F-NEXT:    vle32.v v9, (a1)
+; ZVE32F-NEXT:    vmv.v.i v0, 1
+; ZVE32F-NEXT:    vrgather.vi v9, v8, 1, v0.t
+; ZVE32F-NEXT:    vse32.v v9, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <2 x float>, ptr %in0, align 4
+  %1 = load <2 x float>, ptr %in1, align 4
+  %shuffle.i5 = shufflevector <2 x float> %0, <2 x float> %1, <2 x i32> <i32 1, i32 3>
+  store <2 x float> %shuffle.i5, ptr %out, align 4
+  ret void
+}
+
+define void @vnsrl_0_i64_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_0_i64_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; V-NEXT:    vle64.v v8, (a0)
+; V-NEXT:    vle64.v v9, (a1)
+; V-NEXT:    vslideup.vi v8, v9, 1
+; V-NEXT:    vse64.v v8, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_0_i64_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVE32F-NEXT:    vle32.v v8, (a0)
+; ZVE32F-NEXT:    vle32.v v9, (a1)
+; ZVE32F-NEXT:    vslideup.vi v8, v9, 2
+; ZVE32F-NEXT:    vse32.v v8, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <2 x i64>, ptr %in0, align 8
+  %1 = load <2 x i64>, ptr %in1, align 8
+  %shuffle.i5 = shufflevector <2 x i64> %0, <2 x i64> %1, <2 x i32> <i32 0, i32 2>
+  store <2 x i64> %shuffle.i5, ptr %out, align 8
+  ret void
+}
+
+define void @vnsrl_64_i64_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_64_i64_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; V-NEXT:    vle64.v v8, (a0)
+; V-NEXT:    vle64.v v9, (a1)
+; V-NEXT:    vmv.v.i v0, 1
+; V-NEXT:    vrgather.vi v9, v8, 1, v0.t
+; V-NEXT:    vse64.v v9, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_64_i64_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; ZVE32F-NEXT:    vle32.v v8, (a0)
+; ZVE32F-NEXT:    vle32.v v9, (a1)
+; ZVE32F-NEXT:    vmv.v.i v0, 3
+; ZVE32F-NEXT:    vslidedown.vi v9, v8, 2, v0.t
+; ZVE32F-NEXT:    vse32.v v9, (a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <2 x i64>, ptr %in0, align 8
+  %1 = load <2 x i64>, ptr %in1, align 8
+  %shuffle.i5 = shufflevector <2 x i64> %0, <2 x i64> %1, <2 x i32> <i32 1, i32 3>
+  store <2 x i64> %shuffle.i5, ptr %out, align 8
+  ret void
+}
+
+define void @vnsrl_0_double_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_0_double_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; V-NEXT:    vle64.v v8, (a0)
+; V-NEXT:    vle64.v v9, (a1)
+; V-NEXT:    vslideup.vi v8, v9, 1
+; V-NEXT:    vse64.v v8, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_0_double_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    ld a0, 0(a0)
+; ZVE32F-NEXT:    ld a1, 0(a1)
+; ZVE32F-NEXT:    sd a0, 0(a2)
+; ZVE32F-NEXT:    sd a1, 8(a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <2 x double>, ptr %in0, align 8
+  %1 = load <2 x double>, ptr %in1, align 8
+  %shuffle.i5 = shufflevector <2 x double> %0, <2 x double> %1, <2 x i32> <i32 0, i32 2>
+  store <2 x double> %shuffle.i5, ptr %out, align 8
+  ret void
+}
+
+define void @vnsrl_64_double_two_source(ptr %in0, ptr %in1, ptr %out) {
+; V-LABEL: vnsrl_64_double_two_source:
+; V:       # %bb.0: # %entry
+; V-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; V-NEXT:    vle64.v v8, (a0)
+; V-NEXT:    vle64.v v9, (a1)
+; V-NEXT:    vmv.v.i v0, 1
+; V-NEXT:    vrgather.vi v9, v8, 1, v0.t
+; V-NEXT:    vse64.v v9, (a2)
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: vnsrl_64_double_two_source:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    ld a0, 8(a0)
+; ZVE32F-NEXT:    ld a1, 8(a1)
+; ZVE32F-NEXT:    sd a0, 0(a2)
+; ZVE32F-NEXT:    sd a1, 8(a2)
+; ZVE32F-NEXT:    ret
+entry:
+  %0 = load <2 x double>, ptr %in0, align 8
+  %1 = load <2 x double>, ptr %in1, align 8
+  %shuffle.i5 = shufflevector <2 x double> %0, <2 x double> %1, <2 x i32> <i32 1, i32 3>
+  store <2 x double> %shuffle.i5, ptr %out, align 8
+  ret void
+}
