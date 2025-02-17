@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "lldb/Utility/Scalar.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Casting.h"
@@ -579,7 +580,7 @@ bool operator==(const CompilerType &lhs, const CompilerType &rhs);
 bool operator!=(const CompilerType &lhs, const CompilerType &rhs);
 
 struct CompilerType::IntegralTemplateArgument {
-  llvm::APSInt value;
+  Scalar value;
   CompilerType type;
 };
 
