@@ -5,10 +5,11 @@ from lldbsuite.test import lldbutil
 
 
 class ThunkTest(TestBase):
-    def test(self):
+    def test_step_through_thunk(self):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "testit")
 
+        # Make sure we step through the thunk into Derived1::doit
         self.expect(
             "step",
             STEP_IN_SUCCEEDED,
@@ -21,4 +22,23 @@ class ThunkTest(TestBase):
             "step",
             STEP_IN_SUCCEEDED,
             substrs=["stop reason = step in", "Derived2::doit"],
+        )
+
+    def test_step_out_thunk(self):
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "testit_debug")
+
+        # Make sure we step out of the thunk and don't end up in Derived1::doit.
+        self.expect(
+            "step",
+            STEP_IN_SUCCEEDED,
+            substrs=["stop reason = step in", "main at main.cpp"],
+        )
+
+        self.runCmd("continue")
+
+        self.expect(
+            "step",
+            STEP_IN_SUCCEEDED,
+            substrs=["stop reason = step in", "Derived2::doit_debug"],
         )
