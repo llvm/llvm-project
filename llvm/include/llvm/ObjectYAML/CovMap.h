@@ -56,29 +56,25 @@ public:
   iterator begin() {
     if (auto *V = std::get_if<Vec>(&Array))
       return &V->front();
-    else
-      return &std::get<Ref>(Array).front();
+    return &std::get<Ref>(Array).front();
   }
 
   iterator end() {
     if (auto *V = std::get_if<Vec>(&Array))
       return &V->back() + 1;
-    else
-      return &std::get<Ref>(Array).back() + 1;
+    return &std::get<Ref>(Array).back() + 1;
   }
 
   size_t size() const {
     if (const auto *V = std::get_if<Vec>(&Array))
       return V->size();
-    else
-      return std::get<Ref>(Array).size();
+    return std::get<Ref>(Array).size();
   }
 
   T &operator[](int Idx) {
     if (auto *V = std::get_if<Vec>(&Array))
       return (*V)[Idx];
-    else
-      return std::get<Ref>(Array)[Idx];
+    return std::get<Ref>(Array)[Idx];
   }
 
   void resize(size_t Size) { std::get<Vec>(Array).resize(Size); }
