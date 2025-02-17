@@ -160,19 +160,15 @@ void cortexM4FHazardLookahead(const Function &F, const MachineLoop *Loop,
                               int &RequiredHazardCount) {
   MaxLookaheadInsts = ::MaxLookaheadInsts;
   RequiredHazardCount = ::RequiredHazardCount;
-  if (LoopsOnly) {
-    // This optimization is likely only critical in loops. Try to save code size
-    // elsewhere by avoiding it when we're not in an innermost loop.
-    if (Loop) {
-      if (InnermostLoopsOnly && !Loop->isInnermost()) {
-        MaxLookaheadInsts = -1;
-        return;
-      }
-    } else if (LoopsOnly) {
-      MaxLookaheadInsts = -1;
-      return;
-    }
-  }
+
+  // This optimization is likely only critical in loops. Try to save code size
+  // elsewhere by avoiding it when we're not in an innermost loop.
+  if (LoopsOnly && InnermostLoopsOnly && (!Loop || !Loop->isInnermost()))
+    MaxLookaheadInsts = -1;
+
+  if (LoopsOnly && !Loop)
+    MaxLookaheadInsts = -1;
+
   if (F.hasOptSize())
     MaxLookaheadInsts = -1;
 }
