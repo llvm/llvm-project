@@ -5,6 +5,7 @@
 
 int produce_int();
 void blackbox(const int &);
+void consume(int);
 
 void local_const_int() {
   const int x = produce_int();
@@ -85,3 +86,87 @@ int local_const_optimize() {
 // LLVM-NEXT:    call void @_Z8blackboxRKi(ptr nonnull %[[#slot]])
 // LLVM-NEXT:    ret i32 %[[#init]]
 // LLVM-NEXT:  }
+
+int local_scoped_const() {
+  {
+    const int x = produce_int();
+    blackbox(x);
+    return x;
+  }
+}
+
+// CIR-LABEL: @_Z18local_scoped_constv()
+//      CIR:    cir.scope {
+// CIR-NEXT:      %[[#x_slot:]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init, const]
+// CIR-NEXT:      %[[#init:]] = cir.call @_Z11produce_intv() : () -> !s32i
+// CIR-NEXT:      cir.store %[[#init]], %[[#x_slot]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:      cir.call @_Z8blackboxRKi(%[[#x_slot]]) : (!cir.ptr<!s32i>) -> ()
+// CIR-NEXT:      %[[#x_reload:]] = cir.load %[[#x_slot]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:      cir.store %[[#x_reload]], %[[#ret_slot:]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:      %[[#ret:]] = cir.load %[[#ret_slot]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:      cir.return %[[#ret]] : !s32i
+// CIR-NEXT:    }
+//      CIR:  }
+
+// LLVM-LABEL: @_Z18local_scoped_constv()
+// LLVM-NEXT:    %[[#x_slot:]] = alloca i32, align 4
+// LLVM-NEXT:    %[[#init:]] = tail call i32 @_Z11produce_intv()
+// LLVM-NEXT:    store i32 %[[#init]], ptr %[[#x_slot]], align 4, !tbaa !{{.+}}, !invariant.group !{{.+}}
+// LLVM-NEXT:    call void @_Z8blackboxRKi(ptr nonnull %[[#x_slot]])
+// LLVM-NEXT:    ret i32 %[[#init]]
+// LLVM-NEXT:  }
+
+void local_const_in_loop() {
+  for (int i = 0; i < 10; ++i) {
+    const int x = produce_int();
+    blackbox(x);
+    consume(x);
+  }
+}
+
+// CIR-LABEL: @_Z19local_const_in_loopv
+//      CIR:    cir.scope {
+//      CIR:      cir.for : cond {
+//      CIR:      } body {
+// CIR-NEXT:        cir.scope {
+// CIR-NEXT:          %[[#x_slot:]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init, const]
+// CIR-NEXT:          %[[#init:]] = cir.call @_Z11produce_intv() : () -> !s32i
+// CIR-NEXT:          cir.store %[[#init]], %[[#x_slot]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:          cir.call @_Z8blackboxRKi(%[[#x_slot]]) : (!cir.ptr<!s32i>) -> ()
+// CIR-NEXT:          %[[#x_reload:]] = cir.load %[[#x_slot]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:          cir.call @_Z7consumei(%[[#x_reload]]) : (!s32i) -> ()
+// CIR-NEXT:        }
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      } step {
+//      CIR:      }
+// CIR-NEXT:    }
+// CIR-NEXT:    cir.return
+// CIR-NEXT:  }
+
+// LLVM-LABEL: @_Z19local_const_in_loopv()
+//      LLVM:    %[[#x_ptr:]] = call ptr @llvm.launder.invariant.group.p0(ptr nonnull %1)
+// LLVM-NEXT:    %[[#init:]] = call i32 @_Z11produce_intv()
+// LLVM-NEXT:    store i32 %[[#init]], ptr %[[#x_ptr]], align 4, !tbaa !{{.+}}, !invariant.group !{{.+}}
+// LLVM-NEXT:    call void @_Z8blackboxRKi(ptr nonnull %[[#x_ptr]])
+// LLVM-NEXT:    call void @_Z7consumei(i32 %[[#init]])
+//      LLVM:  }
+
+void local_const_in_while_condition() {
+  while (const int x = produce_int()) {
+    blackbox(x);
+  }
+}
+
+// LLVM-LABEL: @_Z30local_const_in_while_conditionv()
+//      LLVM:    %[[#x_slot:]] = alloca i32, align 4
+// LLVM-NEXT:    %[[#init:]] = tail call i32 @_Z11produce_intv()
+// LLVM-NEXT:    store i32 %[[#init]], ptr %[[#x_slot]], align 4
+// LLVM-NEXT:    %[[loop_cond:.+]] = icmp eq i32 %[[#init]], 0
+// LLVM-NEXT:    br i1 %[[loop_cond]], label %{{.+}}, label %[[loop_body:.+]]
+//      LLVM:  [[loop_body]]:
+// LLVM-NEXT:    call void @_Z8blackboxRKi(ptr nonnull %[[#x_slot]])
+// LLVM-NEXT:    %[[#next:]] = call i32 @_Z11produce_intv()
+// LLVM-NEXT:    store i32 %[[#next]], ptr %[[#x_slot]], align 4
+// LLVM-NEXT:    %[[cond:.+]] = icmp eq i32 %[[#next]], 0
+// LLVM-NEXT:    br i1 %[[cond]], label %{{.+}}, label %[[loop_body]]
+//      LLVM:  }

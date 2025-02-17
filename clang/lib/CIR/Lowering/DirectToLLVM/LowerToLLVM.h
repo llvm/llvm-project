@@ -975,6 +975,21 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMInvariantGroupOpLowering
+    : public mlir::OpConversionPattern<cir::InvariantGroupOp> {
+  cir::LowerModule *lowerMod;
+
+public:
+  CIRToLLVMInvariantGroupOpLowering(const mlir::TypeConverter &typeConverter,
+                                    mlir::MLIRContext *context,
+                                    cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::InvariantGroupOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMPrefetchOpLowering
     : public mlir::OpConversionPattern<cir::PrefetchOp> {
 public:

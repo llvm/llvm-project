@@ -3564,6 +3564,63 @@ def LLVMIntrinsicCallOp : CIR_Op<"llvm.intrinsic"> {
 }
 
 //===----------------------------------------------------------------------===//
+// InvariantGroupOp
+//===----------------------------------------------------------------------===//
+
+def InvariantGroupOp
+    : CIR_Op<"invariant_group", [Pure, SameOperandsAndResultType]> {
+  let summary = "Start an invariant group";
+  let description = [{
+    The `cir.invariant_group` operation takes a single pointer value as argument
+    and returns the same pointer value with fresh [invariant group] information.
+    All loads and stores that access the returned pointer value are presumed by
+    the optimizer to load or store the same value.
+
+    [invariant group]: https://llvm.org/docs/LangRef.html#invariant-group-metadata
+
+    This operation is not emitted during CIRGen. Instead, it is created when
+    hoisting constant alloca operations to the entry block of a function. This
+    operation effectively marks the syntactic scope of the constant local
+    variable represented by the hosited alloca operation, and it allows for
+    better LLVMIR generation with potentially more optimizations.
+
+    For example, if we have the following CIR before alloca hoisting:
+
+    ```mlir
+    cir.func @foo() {
+      cir.scope {
+        %0 = cir.alloca !s32i : !cir.ptr<!s32i>
+        use(%0)
+      }
+    }
+    ```
+
+    After alloca hoisting:
+
+    ```mlir
+    cir.func @foo() {
+      %0 = cir.alloca !s32i : !cir.ptr<!s32i>
+      cir.scope {
+        %1 = cir.invariant_group %0 : !cir.ptr<!s32i>
+        use(%1)
+      }
+    }
+    ```
+
+    During LLVMIR lowering, load and store operations whose pointer operand
+    comes from `cir.invariant_group` are lowered to corresponding LLVM
+    instructions with invariant group metadata attached.
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $ptr `:` type($result) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // DeleteArrayOp
 //===----------------------------------------------------------------------===//
 
