@@ -309,11 +309,6 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
 size_t lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "__ptr_")
@@ -410,11 +405,6 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   }
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
