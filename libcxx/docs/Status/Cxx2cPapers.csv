@@ -15,7 +15,7 @@
 "`P1901R2 <https://wg21.link/P1901R2>`__","Enabling the Use of ``weak_ptr`` as Keys in Unordered Associative Containers","2023-06 (Varna)","","",""
 "`P1885R12 <https://wg21.link/P1885R12>`__","Naming Text Encodings to Demystify Them","2023-06 (Varna)","","",""
 "`P0792R14 <https://wg21.link/P0792R14>`__","``function_ref``: a type-erased callable reference","2023-06 (Varna)","","",""
-"`P2874R2 <https://wg21.link/P2874R2>`__","Mandating Annex D Require No More","2023-06 (Varna)","","",""
+"`P2874R2 <https://wg21.link/P2874R2>`__","P2874R2: Mandating Annex D Require No More","2023-06 (Varna)","|Complete|","12",""
 "`P2757R3 <https://wg21.link/P2757R3>`__","Type-checking format args","2023-06 (Varna)","","",""
 "`P2637R3 <https://wg21.link/P2637R3>`__","Member ``visit``","2023-06 (Varna)","|Complete|","19","Change of ``__cpp_lib_variant`` is completed in LLVM 20. Change of ``__cpp_lib_format`` is blocked by `P2419R2 <https://wg21.link/P2419R2>`__."
 "`P2641R4 <https://wg21.link/P2641R4>`__","Checking if a ``union`` alternative is active","2023-06 (Varna)","","",""
