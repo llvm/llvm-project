@@ -820,6 +820,9 @@ public:
   /// True if this function needs frame moves for debug or exceptions.
   bool needsFrameMoves() const;
 
+  /// True if function attribute unsafe-fp-math is true.
+  bool hasUnsafeFPMath() const;
+
   /// Get the function properties
   const MachineFunctionProperties &getProperties() const { return Properties; }
   MachineFunctionProperties &getProperties() { return Properties; }

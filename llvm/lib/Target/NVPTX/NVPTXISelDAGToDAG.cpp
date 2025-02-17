@@ -64,11 +64,11 @@ bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 }
 
 int NVPTXDAGToDAGISel::getDivF32Level() const {
-  return Subtarget->getTargetLowering()->getDivF32Level();
+  return Subtarget->getTargetLowering()->getDivF32Level(*MF);
 }
 
-bool NVPTXDAGToDAGISel::usePrecSqrtF32() const {
-  return Subtarget->getTargetLowering()->usePrecSqrtF32();
+bool NVPTXDAGToDAGISel::usePrecSqrtF32(MachineFunction &MF) const {
+  return Subtarget->getTargetLowering()->usePrecSqrtF32(MF);
 }
 
 bool NVPTXDAGToDAGISel::useF32FTZ() const {

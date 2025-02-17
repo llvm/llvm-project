@@ -8864,9 +8864,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     //
     // However, if -enable-unsafe-fp-math is in effect, accept double
     // rounding to avoid the extra overhead.
-    if (Op.getValueType() == MVT::f32 &&
-        !Subtarget.hasFPCVT() &&
-        !DAG.getTarget().Options.UnsafeFPMath) {
+    if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT() &&
+        !DAG.getMachineFunction().hasUnsafeFPMath()) {
 
       // Twiddle input to make sure the low 11 bits are zero.  (If this
       // is the case, we are guaranteed the value will fit into the 53 bit

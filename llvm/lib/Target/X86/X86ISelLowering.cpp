@@ -8272,8 +8272,8 @@ static bool isFMAddSubOrFMSubAdd(const X86Subtarget &Subtarget,
   // function that would answer if it is Ok to fuse MUL + ADD to FMADD
   // or MUL + ADDSUB to FMADDSUB.
   const TargetOptions &Options = DAG.getTarget().Options;
-  bool AllowFusion =
-      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath);
+  bool AllowFusion = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
+                      DAG.getMachineFunction().hasUnsafeFPMath());
   if (!AllowFusion)
     return false;
 

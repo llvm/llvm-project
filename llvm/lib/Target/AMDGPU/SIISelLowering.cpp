@@ -10738,7 +10738,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   const SDNodeFlags Flags = Op->getFlags();
 
   bool AllowInaccurateRcp =
-      Flags.hasApproximateFuncs() || DAG.getTarget().Options.UnsafeFPMath;
+      Flags.hasApproximateFuncs() || DAG.getMachineFunction().hasUnsafeFPMath();
 
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
     // Without !fpmath accuracy information, we can't do more because we don't
@@ -10791,7 +10791,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV64(SDValue Op,
   const SDNodeFlags Flags = Op->getFlags();
 
   bool AllowInaccurateDiv =
-      Flags.hasApproximateFuncs() || DAG.getTarget().Options.UnsafeFPMath;
+      Flags.hasApproximateFuncs() || DAG.getMachineFunction().hasUnsafeFPMath();
   if (!AllowInaccurateDiv)
     return SDValue();
 
@@ -13911,7 +13911,8 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
     return ISD::FMAD;
 
   const TargetOptions &Options = DAG.getTarget().Options;
-  if ((Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
+  if ((Options.AllowFPOpFusion == FPOpFusion::Fast ||
+       DAG.getMachineFunction().hasUnsafeFPMath() ||
        (N0->getFlags().hasAllowContract() &&
         N1->getFlags().hasAllowContract())) &&
       isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
@@ -14903,7 +14904,8 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
   // regardless of the denorm mode setting. Therefore,
   // unsafe-fp-math/fp-contract is sufficient to allow generating fdot2.
   const TargetOptions &Options = DAG.getTarget().Options;
-  if (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
+  if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
+      DAG.getMachineFunction().hasUnsafeFPMath() ||
       (N->getFlags().hasAllowContract() &&
        FMA->getFlags().hasAllowContract())) {
     Op1 = Op1.getOperand(0);

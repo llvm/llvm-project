@@ -94,7 +94,7 @@ def FP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().F
 def NoFP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
 def NoFP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals == DenormalMode::getPreserveSign()">;
 def NoFP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
-def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
+def UnsafeFPMath : Predicate<"MF->hasUnsafeFPMath()">;
 }
 
 def FMA : Predicate<"Subtarget->hasFMA()">;

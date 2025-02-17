@@ -699,6 +699,11 @@ bool MachineFunction::needsFrameMoves() const {
          !F.getParent()->debug_compile_units().empty();
 }
 
+/// True if function attribute unsafe-fp-math is true.
+bool MachineFunction::hasUnsafeFPMath() const {
+  return F.getFnAttribute("unsafe-fp-math").getValueAsBool();
+}
+
 namespace llvm {
 
   template<>

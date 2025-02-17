@@ -107,26 +107,26 @@ static cl::opt<bool> ForceMinByValParamAlign(
              " params of device functions."),
     cl::init(false));
 
-int NVPTXTargetLowering::getDivF32Level() const {
+int NVPTXTargetLowering::getDivF32Level(MachineFunction &MF) const {
   if (UsePrecDivF32.getNumOccurrences() > 0) {
     // If nvptx-prec-div32=N is used on the command-line, always honor it
     return UsePrecDivF32;
   } else {
     // Otherwise, use div.approx if fast math is enabled
-    if (getTargetMachine().Options.UnsafeFPMath)
+    if (MF.hasUnsafeFPMath())
       return 0;
     else
       return 2;
   }
 }
 
-bool NVPTXTargetLowering::usePrecSqrtF32() const {
+bool NVPTXTargetLowering::usePrecSqrtF32(MachineFunction &MF) const {
   if (UsePrecSqrtF32.getNumOccurrences() > 0) {
     // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
     return UsePrecSqrtF32;
   } else {
     // Otherwise, use sqrt.approx if fast math is enabled
-    return !getTargetMachine().Options.UnsafeFPMath;
+    return !MF.hasUnsafeFPMath();
   }
 }
 
@@ -1091,7 +1091,8 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
                                              bool &UseOneConst,
                                              bool Reciprocal) const {
   if (!(Enabled == ReciprocalEstimate::Enabled ||
-        (Enabled == ReciprocalEstimate::Unspecified && !usePrecSqrtF32())))
+        (Enabled == ReciprocalEstimate::Unspecified &&
+         !usePrecSqrtF32(DAG.getMachineFunction()))))
     return SDValue();
 
   if (ExtraSteps == ReciprocalEstimate::Unspecified)
@@ -4458,13 +4459,7 @@ bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
 }
 
 bool NVPTXTargetLowering::allowUnsafeFPMath(MachineFunction &MF) const {
-  // Honor TargetOptions flags that explicitly say unsafe math is okay.
-  if (MF.getTarget().Options.UnsafeFPMath)
-    return true;
-
-  // Allow unsafe math if unsafe-fp-math attribute explicitly says so.
-  const Function &F = MF.getFunction();
-  return F.getFnAttribute("unsafe-fp-math").getValueAsBool();
+  return MF.hasUnsafeFPMath();
 }
 
 static bool isConstZero(const SDValue &Operand) {
