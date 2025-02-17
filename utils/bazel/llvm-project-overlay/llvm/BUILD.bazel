@@ -2,12 +2,16 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 load(":binary_alias.bzl", "binary_alias")
-load(":config.bzl", "llvm_config_defines")
+load(
+    ":config.bzl",
+    "CONFIG_H_SUBSTITUTIONS",
+    "LLVM_CONFIG_H_SUBSTITUTIONS",
+)
 load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary", "select_driver_tools")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":targets.bzl", "llvm_targets")
@@ -153,13 +157,6 @@ expand_template(
     template = "include/llvm/Config/abi-breaking.h.cmake",
 )
 
-# To enable diff testing out of tree
-exports_files([
-    "include/llvm/Config/config.h.cmake",
-    "include/llvm/Config/llvm-config.h.cmake",
-    "include/llvm/Config/abi-breaking.h.cmake",
-])
-
 td_library(
     name = "OptParserTdFiles",
     srcs = ["include/llvm/Option/OptParser.td"],
@@ -171,14 +168,52 @@ llvm_config_target_defines = [
     for t in llvm_targets
 ]
 
+expand_template(
+    name = "config_h",
+    out = "include/llvm/Config/config.h",
+    substitutions = CONFIG_H_SUBSTITUTIONS,
+    template = "include/llvm/Config/config.h.cmake",
+)
+
+expand_template(
+    name = "llvm-config_h",
+    out = "include/llvm/Config/llvm-config.h",
+    substitutions = LLVM_CONFIG_H_SUBSTITUTIONS,
+    template = "include/llvm/Config/llvm-config.h.cmake",
+)
+
 cc_library(
     name = "config",
     hdrs = [
         "include/llvm/Config/abi-breaking.h",
+        "include/llvm/Config/config.h",
         "include/llvm/Config/llvm-config.h",
     ],
     copts = llvm_copts,
-    defines = llvm_config_defines + llvm_config_target_defines,
+    defines = select({
+        "@platforms//os:windows": [
+            "_CRT_SECURE_NO_DEPRECATE",
+            "_CRT_SECURE_NO_WARNINGS",
+            "_CRT_NONSTDC_NO_DEPRECATE",
+            "_CRT_NONSTDC_NO_WARNINGS",
+            "_SCL_SECURE_NO_DEPRECATE",
+            "_SCL_SECURE_NO_WARNINGS",
+            "UNICODE",
+            "_UNICODE",
+        ],
+        "//conditions:default": [
+            "_GNU_SOURCE",
+        ],
+    }) + [
+        # These shouldn't be needed by the C++11 standard, but are for some
+        # platforms (e.g. glibc < 2.18. See
+        # https://sourceware.org/bugzilla/show_bug.cgi?id=15366). These are also
+        # included unconditionally in the CMake build:
+        # https://github.com/llvm/llvm-project/blob/cd0dd8ece8e/llvm/cmake/modules/HandleLLVMOptions.cmake#L907-L909
+        "__STDC_LIMIT_MACROS",
+        "__STDC_CONSTANT_MACROS",
+        "__STDC_FORMAT_MACROS",
+    ],
     includes = ["include"],
     textual_hdrs = [
         "include/llvm/Config/AsmParsers.def",
@@ -316,17 +351,15 @@ cc_library(
         "include/llvm/Support/*.def",
     ]),
     deps = [
-        ":config",
         ":Demangle",
-        # We unconditionally depend on the custom LLVM zlib wrapper. This will
-        # be an empty library unless zlib is enabled, in which case it will
-        # both provide the necessary dependencies and configuration defines.
-        "@llvm_zlib//:zlib",
-        # We unconditionally depend on the custom LLVM zstd wrapper. This will
-        # be an empty library unless zstd is enabled, in which case it will
-        # both provide the necessary dependencies and configuration defines.
-        "@llvm_zstd//:zstd",
-    ],
+        ":config",
+    ] + select({
+        "//config:LLVM_ENABLE_ZLIB_disabled": [],
+        "//conditions:default": ["@zlib-ng"],
+    }) + select({
+        "//config:LLVM_ENABLE_ZSTD_disabled": [],
+        "//conditions:default": ["@zstd"],
+    }),
 )
 
 # Note: although FileCheck (the binary) is a test utility, some non-test

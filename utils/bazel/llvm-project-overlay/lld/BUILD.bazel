@@ -111,9 +111,13 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
-        "@llvm_zstd//:zstd",
-    ],
+    ] + select({
+        "//config:LLVM_ENABLE_ZLIB_disabled": [],
+        "//conditions:default": ["@zlib-ng"],
+    }) + select({
+        "//config:LLVM_ENABLE_ZSTD_disabled": [],
+        "//conditions:default": ["@zstd"],
+    }),
 )
 
 gentbl(

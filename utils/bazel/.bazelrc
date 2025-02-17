@@ -9,7 +9,9 @@
 
 # Flip off to disable MODULE.bazel until we're ready.
 # https://github.com/llvm/llvm-project/issues/55924
-common --enable_bzlmod=false --enable_workspace
+# 
+# WARNING: This option will be removed soon. Please migrate to bzlmod.
+common:deprecated_workspace --enable_bzlmod=false --enable_workspace
 
 # TODO: Remove lit test reliance on this
 common --legacy_external_runfiles
@@ -57,14 +59,6 @@ build --experimental_cc_shared_library
 # https://github.com/bazelbuild/bazel/issues/6627 and
 # https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6df
 build --build_runfile_links=false
-
-###############################################################################
-# Options to select different strategies for linking potential dependent
-# libraries. The default leaves it disabled.
-###############################################################################
-
-build:zlib_external --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=external
-build:zlib_system --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=system
 
 ###############################################################################
 # Options for "generic_clang" builds: these options should generally apply to
