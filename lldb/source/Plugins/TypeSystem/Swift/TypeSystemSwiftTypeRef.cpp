@@ -1263,22 +1263,69 @@ TypeSystemSwiftTypeRef::Canonicalize(swift::Demangle::Demangler &dem,
     // Hit the safeguard limit.
     return node;
   }
-  default:
-    break;
+  default: {
+    llvm::SmallVector<NodePointer, 2> children;
+    bool changed = false;
+    for (NodePointer child : *node) {
+      NodePointer transformed = GetCanonicalNode(dem, child, flavor);
+      changed |= (child != transformed);
+      children.push_back(transformed);
+    }
+    if (changed) {
+      // Create a new node with the transformed children.
+      auto kind = node->getKind();
+      if (node->hasText())
+        node = dem.createNodeWithAllocatedText(kind, node->getText());
+      else if (node->hasIndex())
+        node = dem.createNode(kind, node->getIndex());
+      else
+        node = dem.createNode(kind);
+      for (NodePointer transformed_child : children)
+        node->addChild(transformed_child, dem);
+    }
+    return node;
+  }
   }
   return node;
 }
 
-/// Iteratively resolve all type aliases in \p node by looking up their
-/// desugared types in the debug info of module \p M.
 swift::Demangle::NodePointer
 TypeSystemSwiftTypeRef::GetCanonicalNode(swift::Demangle::Demangler &dem,
                                          swift::Demangle::NodePointer node,
                                          swift::Mangle::ManglingFlavor flavor) {
+  if (!node)
+    return nullptr;
+  // This is a pre-order traversal, which is necessary to resolve
+  // generic type aliases that bind other type aliases in one go,
+  // instead of first resolving the bound type aliases.  Debug Info
+  // will have a record for SomeAlias<SomeOtherAlias> but not
+  // SomeAlias<WhatSomeOtherAliasResolvesTo> because it tries to
+  // preserve all sugar.
   using namespace swift::Demangle;
-  return TypeSystemSwiftTypeRef::Transform(dem, node, [&](NodePointer node) {
-    return Canonicalize(dem, node, flavor);
-  });
+  NodePointer transformed = Canonicalize(dem, node, flavor);
+  if (node != transformed)
+    return transformed;
+
+  llvm::SmallVector<NodePointer, 2> children;
+  bool changed = false;
+  for (NodePointer child : *node) {
+    NodePointer transformed_child = GetCanonicalNode(dem, child, flavor);
+    changed |= (child != transformed_child);
+    children.push_back(transformed_child);
+  }
+  if (changed) {
+    // Create a new node with the transformed children.
+    auto kind = node->getKind();
+    if (node->hasText())
+      node = dem.createNodeWithAllocatedText(kind, node->getText());
+    else if (node->hasIndex())
+      node = dem.createNode(kind, node->getIndex());
+    else
+      node = dem.createNode(kind);
+    for (NodePointer transformed_child : children)
+      node->addChild(transformed_child, dem);
+  }
+  return node;
 }
 
 /// Return the demangle tree representation of this type's canonical
