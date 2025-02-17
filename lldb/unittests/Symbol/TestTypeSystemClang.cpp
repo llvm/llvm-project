@@ -591,7 +591,7 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
     auto result = m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 1,
                                                      expand_pack);
     ASSERT_NE(std::nullopt, result);
-    EXPECT_EQ(arg, result->value.getInt());
+    EXPECT_EQ(arg, result->value.GetAPSInt());
     EXPECT_EQ(int_type, result->type);
 
     EXPECT_EQ(
@@ -603,7 +603,7 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
     auto float_result = m_ast->GetIntegralTemplateArgument(
         t.GetOpaqueQualType(), 2, expand_pack);
     ASSERT_NE(std::nullopt, float_result);
-    EXPECT_EQ(float_arg, float_result->value.getFloat());
+    EXPECT_EQ(float_arg, float_result->value.GetAPFloat());
     EXPECT_EQ(float_type, float_result->type);
 
     EXPECT_EQ(
@@ -615,7 +615,7 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
     auto double_result = m_ast->GetIntegralTemplateArgument(
         t.GetOpaqueQualType(), 3, expand_pack);
     ASSERT_NE(std::nullopt, double_result);
-    EXPECT_EQ(double_arg, double_result->value.getFloat());
+    EXPECT_EQ(double_arg, double_result->value.GetAPFloat());
     EXPECT_EQ(double_type, double_result->type);
   }
 }
