@@ -58,8 +58,8 @@ func.func @scf_loop_unroll_factor_1_promote() -> () {
   // UNROLL-BY-1-NEXT: %{{.*}} = "test.foo"(%[[C0]]) : (index) -> i32
 }
 
-// UNROLL-FULL-LABEL: func @scf_loop_unroll_full_single(
-// UNROLL-FULL-SAME:    %[[VAL_0:.*]]: index) -> index {
+// UNROLL-FULL-LABEL: func @scf_loop_unroll_full_single
+// UNROLL-FULL-SAME:    %[[ARG:.*]]: index)
 func.func @scf_loop_unroll_full_single(%arg : index) -> index {
   %0 = arith.constant 0 : index
   %1 = arith.constant 1 : index
@@ -69,16 +69,16 @@ func.func @scf_loop_unroll_full_single(%arg : index) -> index {
     scf.yield %3 : index
   }
   return %4 : index
-  // UNROLL-FULL: %[[VAL_1:.*]] = arith.constant 1 : index
-  // UNROLL-FULL: %[[VAL_2:.*]] = arith.addi %[[VAL_0]], %[[VAL_1]] : index
-  // UNROLL-FULL: %[[VAL_3:.*]] = arith.addi %[[VAL_2]], %[[VAL_0]] : index
-  // UNROLL-FULL: %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_0]] : index
-  // UNROLL-FULL: %[[VAL_5:.*]] = arith.addi %[[VAL_4]], %[[VAL_0]] : index
-  // UNROLL-FULL: return %[[VAL_5]] : index
+  // UNROLL-FULL: %[[C1:.*]] = arith.constant 1 : index
+  // UNROLL-FULL: %[[V0:.*]] = arith.addi %[[ARG]], %[[C1]] : index
+  // UNROLL-FULL: %[[V1:.*]] = arith.addi %[[V0]], %[[ARG]] : index
+  // UNROLL-FULL: %[[V2:.*]] = arith.addi %[[V1]], %[[ARG]] : index
+  // UNROLL-FULL: %[[V3:.*]] = arith.addi %[[V2]], %[[ARG]] : index
+  // UNROLL-FULL: return %[[V3]] : index
 }
 
-// UNROLL-FULL-LABEL: func @scf_loop_unroll_full_outter_loops(
-// UNROLL-FULL-SAME:    %[[VAL_0:.*]]: vector<4x4xindex>) -> index {
+// UNROLL-FULL-LABEL: func @scf_loop_unroll_full_outter_loops
+// UNROLL-FULL-SAME:    %[[ARG:.*]]: vector<4x4xindex>)
 func.func @scf_loop_unroll_full_outter_loops(%arg0: vector<4x4xindex>) -> index {
   %0 = arith.constant 0 : index
   %1 = arith.constant 1 : index
@@ -92,24 +92,24 @@ func.func @scf_loop_unroll_full_outter_loops(%arg0: vector<4x4xindex>) -> index 
     scf.yield %5 : index
   }
   return %6 : index
-  // UNROLL-FULL:   %[[VAL_1:.*]] = arith.constant 0 : index
-  // UNROLL-FULL:   %[[VAL_2:.*]] = arith.constant 1 : index
-  // UNROLL-FULL:   %[[VAL_3:.*]] = arith.constant 4 : index
-  // UNROLL-FULL:   %[[VAL_4:.*]] = scf.for %[[VAL_5:.*]] = %[[VAL_1]] to %[[VAL_3]] step %[[VAL_2]] iter_args(%[[VAL_6:.*]] = %[[VAL_1]]) -> (index) {
-  // UNROLL-FULL:     %[[VAL_7:.*]] = vector.extract %[[VAL_0]][0, %[[VAL_5]]] : index from vector<4x4xindex>
-  // UNROLL-FULL:     scf.yield %[[VAL_7]] : index
+  // UNROLL-FULL: %[[C0:.*]] = arith.constant 0 : index
+  // UNROLL-FULL: %[[C1:.*]] = arith.constant 1 : index
+  // UNROLL-FULL: %[[C4:.*]] = arith.constant 4 : index
+  // UNROLL-FULL: %[[SUM0:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[C4]] step %[[C1]] iter_args(%{{.*}} = %[[C0]])
+  // UNROLL-FULL:   %[[VAL:.*]] = vector.extract %[[ARG]][0, %[[IV]]] : index from vector<4x4xindex>
+  // UNROLL-FULL:   scf.yield %[[VAL]] : index
   // UNROLL-FULL: }
-  // UNROLL-FULL:   %[[VAL_8:.*]] = scf.for %[[VAL_9:.*]] = %[[VAL_1]] to %[[VAL_3]] step %[[VAL_2]] iter_args(%[[VAL_10:.*]] = %[[VAL_4]]) -> (index) {
-  // UNROLL-FULL:   %[[VAL_11:.*]] = vector.extract %[[VAL_0]][1, %[[VAL_9]]] : index from vector<4x4xindex>
-  // UNROLL-FULL:   scf.yield %[[VAL_11]] : index
+  // UNROLL-FULL: %[[SUM1:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[C4]] step %[[C1]] iter_args(%{{.*}} = %[[SUM0]])
+  // UNROLL-FULL:   %[[VAL:.*]] = vector.extract %[[ARG]][1, %[[IV]]] : index from vector<4x4xindex>
+  // UNROLL-FULL:   scf.yield %[[VAL]] : index
   // UNROLL-FULL: }
-  // UNROLL-FULL:   %[[VAL_12:.*]] = scf.for %[[VAL_13:.*]] = %[[VAL_1]] to %[[VAL_3]] step %[[VAL_2]] iter_args(%[[VAL_14:.*]] = %[[VAL_8]]) -> (index) {
-  // UNROLL-FULL:   %[[VAL_15:.*]] = vector.extract %[[VAL_0]][2, %[[VAL_13]]] : index from vector<4x4xindex>
-  // UNROLL-FULL:   scf.yield %[[VAL_15]] : index
+  // UNROLL-FULL: %[[SUM2:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[C4]] step %[[C1]] iter_args(%{{.*}} = %[[SUM1]])
+  // UNROLL-FULL:   %[[VAL:.*]] = vector.extract %[[ARG]][2, %[[IV]]] : index from vector<4x4xindex>
+  // UNROLL-FULL:   scf.yield %[[VAL]] : index
   // UNROLL-FULL: }
-  // UNROLL-FULL:   %[[VAL_16:.*]] = scf.for %[[VAL_17:.*]] = %[[VAL_1]] to %[[VAL_3]] step %[[VAL_2]] iter_args(%[[VAL_18:.*]] = %[[VAL_12]]) -> (index) {
-  // UNROLL-FULL:   %[[VAL_19:.*]] = vector.extract %[[VAL_0]][3, %[[VAL_17]]] : index from vector<4x4xindex>
-  // UNROLL-FULL:   scf.yield %[[VAL_19]] : index
+  // UNROLL-FULL: %[[SUM3:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[C4]] step %[[C1]] iter_args(%{{.*}} = %[[SUM2]])
+  // UNROLL-FULL:   %[[VAL:.*]] = vector.extract %[[ARG]][3, %[[IV]]] : index from vector<4x4xindex>
+  // UNROLL-FULL:   scf.yield %[[VAL]] : index
   // UNROLL-FULL: }
-  // UNROLL-FULL: return %[[VAL_16]] : index
+  // UNROLL-FULL: return %[[SUM3]] : index
 }

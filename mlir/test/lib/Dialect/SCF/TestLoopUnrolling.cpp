@@ -66,7 +66,7 @@ struct TestLoopUnrollingPass
     };
     for (auto loop : loops) {
       if (unrollFull)
-        loopUnrollFull(loop);
+        (void)loopUnrollFull(loop);
       else
         (void)loopUnrollByFactor(loop, unrollFactor, annotateFn);
     }
