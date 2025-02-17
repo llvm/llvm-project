@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <unordered_set>
 #include <string>
@@ -46,9 +46,9 @@ std::vector<std::string> LongStringGenerator::cached_strings;
 }();
 
 template <class Gen>
-static void BM_UnorderedSet_Find_EmptySet(benchmark::State& state, Gen g) {
+static void BM_UnorderedSet_Find_EmptyNoBuckets(benchmark::State& state, Gen g) {
   const size_t lookup_count = state.range(0);
-  std::unordered_set<std::string> s; // Empty set
+  std::unordered_set<std::string> s; // Empty and no buckets
 
   for (auto _ : state) {
     for (size_t i = 0; i < lookup_count; i++) {
@@ -58,9 +58,10 @@ static void BM_UnorderedSet_Find_EmptySet(benchmark::State& state, Gen g) {
 }
 
 template <class Gen>
-static void BM_UnorderedSet_Find(benchmark::State& state, Gen g) {
+static void BM_UnorderedSet_Find_EmptyWithBuckets(benchmark::State& state, Gen g) {
   const size_t lookup_count = state.range(0);
-  std::unordered_set<std::string> s{"hello"}; // Non-empty set
+  std::unordered_set<std::string> s;
+  s.reserve(1); // Still empty but reserved buckets
 
   for (auto _ : state) {
     for (size_t i = 0; i < lookup_count; i++) {
@@ -69,12 +70,28 @@ static void BM_UnorderedSet_Find(benchmark::State& state, Gen g) {
   }
 }
 
-BENCHMARK_CAPTURE(BM_UnorderedSet_Find_EmptySet, long_string, LongStringGenerator())
+template <class Gen>
+static void BM_UnorderedSet_Find_NonEmpty(benchmark::State& state, Gen g) {
+  const size_t lookup_count = state.range(0);
+  std::unordered_set<std::string> s{"hello"};
+
+  for (auto _ : state) {
+    for (size_t i = 0; i < lookup_count; i++) {
+      benchmark::DoNotOptimize(s.find(g.generate(i)));
+    }
+  }
+}
+
+BENCHMARK_CAPTURE(BM_UnorderedSet_Find_EmptyNoBuckets, long_string, LongStringGenerator())
     ->RangeMultiplier(2)
     ->Range(1 << 10, 1 << 15); // Test from 1K to 32K lookups
 
-BENCHMARK_CAPTURE(BM_UnorderedSet_Find, long_string, LongStringGenerator())
+BENCHMARK_CAPTURE(BM_UnorderedSet_Find_EmptyWithBuckets, long_string, LongStringGenerator())
     ->RangeMultiplier(2)
-    ->Range(1 << 10, 1 << 15); // Test from 1K to 32K lookups
+    ->Range(1 << 10, 1 << 15);
+
+BENCHMARK_CAPTURE(BM_UnorderedSet_Find_NonEmpty, long_string, LongStringGenerator())
+    ->RangeMultiplier(2)
+    ->Range(1 << 10, 1 << 15);
 
 BENCHMARK_MAIN();
