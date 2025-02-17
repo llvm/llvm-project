@@ -1060,8 +1060,9 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
       if (Sym.isFormatSpecific() || !Sym.isGlobal())
         continue;
 
-      bool NewSymbol = Syms.count(Sym.getName()) == 0;
-      auto OldSym = NewSymbol ? Sym_None : Syms[Sym.getName()];
+      auto It = Syms.find(Sym.getName());
+      bool NewSymbol = It == Syms.end();
+      auto OldSym = NewSymbol ? Sym_None : It->second;
 
       // We will extract if it defines a currenlty undefined non-weak
       // symbol.
