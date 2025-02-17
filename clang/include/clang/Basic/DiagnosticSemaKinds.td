@@ -717,10 +717,9 @@ def warn_falloff_nonvoid : Warning<
   "non-void %select{function|block|lambda|coroutine}0 "
   "does not return a value%select{| in all control paths}1">,
   InGroup<ReturnType>;
-def err_falloff_nonvoid : Warning<
+def err_falloff_nonvoid : Error<
   "non-void %select{function|block|lambda|coroutine}0 "
-  "does not return a value%select{| in all control paths}1">,
-  InGroup<ReturnType>;
+  "does not return a value%select{| in all control paths}1">;
 def warn_const_attr_with_pure_attr : Warning<
   "'const' attribute imposes more restrictions; 'pure' attribute ignored">,
   InGroup<IgnoredAttributes>;
