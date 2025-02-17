@@ -146,5 +146,3 @@
 // NO-MACRO-NOT: __riscv_landing_pad
 // NO-MACRO-NOT: __riscv_landing_pad_unlabeled
 // NO-MACRO-NOT: __riscv_landing_pad_func_sig
-
-int main() { return 0; }
