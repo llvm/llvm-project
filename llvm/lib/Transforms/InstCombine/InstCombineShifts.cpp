@@ -1626,7 +1626,6 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     if (HasNUW || HasNSW) {
       Value *NewShl = Builder.CreateShl(ConstantInt::get(Shl1->getType(), 1),
                                         Shl0_Op1, "", HasNUW, HasNSW);
-      Builder.CreateShl(ConstantInt::get(Shl1->getType(), 1), Shl0_Op1);
       return BinaryOperator::CreateLShr(NewShl, Shl1_Op1);
     }
   }
