@@ -1325,6 +1325,15 @@ multiclass DemangledGetBuiltin<string name, InstructionSet set, BuiltinGroup gro
 }
 
 // Builtin variable records:
+defm : DemangledGetBuiltin<"get_global_linear_id", OpenCL_std, Variable, GlobalLinearId>;
+defm : DemangledGetBuiltin<"get_local_linear_id", OpenCL_std, Variable, LocalInvocationIndex>;
+defm : DemangledGetBuiltin<"get_work_dim", OpenCL_std, Variable, WorkDim>;
+defm : DemangledGetBuiltin<"get_sub_group_size", OpenCL_std, Variable, SubgroupSize>;
+defm : DemangledGetBuiltin<"get_max_sub_group_size", OpenCL_std, Variable, SubgroupMaxSize>;
+defm : DemangledGetBuiltin<"get_num_sub_groups", OpenCL_std, Variable, NumSubgroups>;
+defm : DemangledGetBuiltin<"get_enqueued_num_sub_groups", OpenCL_std, Variable, NumEnqueuedSubgroups>;
+defm : DemangledGetBuiltin<"get_sub_group_id", OpenCL_std, Variable, SubgroupId>;
+defm : DemangledGetBuiltin<"get_sub_group_local_id", OpenCL_std, Variable, SubgroupLocalInvocationId>;
 defm : DemangledGetBuiltin<"get_sub_group_eq_mask", OpenCL_std, Variable, SubgroupEqMask>;
 defm : DemangledGetBuiltin<"get_sub_group_ge_mask", OpenCL_std, Variable, SubgroupGeMask>;
 defm : DemangledGetBuiltin<"get_sub_group_gt_mask", OpenCL_std, Variable, SubgroupGtMask>;
@@ -1341,6 +1350,7 @@ defm : DemangledGetBuiltin<"get_global_size", OpenCL_std, GetQuery, GlobalSize>;
 defm : DemangledGetBuiltin<"get_group_id", OpenCL_std, GetQuery, WorkgroupId>;
 defm : DemangledGetBuiltin<"get_enqueued_local_size", OpenCL_std, GetQuery, EnqueuedWorkgroupSize>;
 defm : DemangledGetBuiltin<"get_num_groups", OpenCL_std, GetQuery, NumWorkgroups>;
+defm : DemangledGetBuiltin<"get_global_offset", OpenCL_std, GetQuery, GlobalOffset>;
 defm : DemangledGetBuiltin<"__hlsl_wave_get_lane_index", GLSL_std_450, Wave, SubgroupLocalInvocationId>;
 
 //===----------------------------------------------------------------------===//
