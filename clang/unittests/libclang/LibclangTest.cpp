@@ -1220,7 +1220,7 @@ static_assert(true, message);
   const char *Args[] = {"-xc++", "-std=c++26"};
   ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args,
                                        std::size(Args), nullptr, 0, TUFlags);
-  ASSERT_EQ(clang_getNumDiagnostics(ClangTU), 0);
+  ASSERT_EQ(clang_getNumDiagnostics(ClangTU), 0u);
   std::optional<CXCursor> staticAssertCsr;
   Traverse([&](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
     if (cursor.kind == CXCursor_StaticAssert) {
@@ -1229,7 +1229,7 @@ static_assert(true, message);
     return CXChildVisit_Continue;
   });
   ASSERT_TRUE(staticAssertCsr.has_value());
-  size_t argCnt = 0;
+  int argCnt = 0;
   Traverse(*staticAssertCsr, [&argCnt](CXCursor cursor, CXCursor parent) {
     switch (argCnt) {
     case 0:

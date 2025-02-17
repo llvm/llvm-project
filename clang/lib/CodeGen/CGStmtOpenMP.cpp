@@ -393,8 +393,8 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
       Builder.CreateAlloca(RedVarType, nullptr, "d_team_vals");
   Address DTeamValsAddr(DTeamValsInst, RedVarType,
                         Context.getTypeAlignInChars(RedVarQualType));
-  llvm::Value *NullPtrDTeamVals =
-      llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
+  llvm::Value *NullPtrDTeamVals = llvm::ConstantPointerNull::get(
+      llvm::PointerType::get(getLLVMContext(), /*AddressSpace=*/0));
   Builder.CreateStore(NullPtrDTeamVals, DTeamValsAddr);
 
   // Placeholder for d_teams_done_ptr initialized to nullptr
@@ -402,8 +402,8 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
       Builder.CreateAlloca(Int32Ty, nullptr, "d_teams_done_ptr");
   Address DTeamsDoneAddr(DTeamsDonePtrInst, Int32Ty,
                          Context.getTypeAlignInChars(Context.UnsignedIntTy));
-  llvm::Value *NullPtrDTeamsDone =
-      llvm::ConstantPointerNull::get(Int32Ty->getPointerTo());
+  llvm::Value *NullPtrDTeamsDone = llvm::ConstantPointerNull::get(
+      llvm::PointerType::get(getLLVMContext(), /*AddressSpace=*/0));
   Builder.CreateStore(NullPtrDTeamsDone, DTeamsDoneAddr);
 
   assert(DTeamValsInst && "Device team vals pointer cannot be null");
@@ -419,8 +419,8 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
     Address DScanStorageAddr(
         DScanStorageInst, RedVarType,
         Context.getTypeAlignInChars(Context.UnsignedIntTy));
-    llvm::Value *NullPtrDScanStorage =
-        llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
+    llvm::Value *NullPtrDScanStorage = llvm::ConstantPointerNull::get(
+        llvm::PointerType::get(getLLVMContext(), /*AddressSpace=*/0));
     Builder.CreateStore(NullPtrDScanStorage, DScanStorageAddr);
 
     assert(DScanStorageInst && "Device scan storage pointer cannot be null");
@@ -432,8 +432,8 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
       Address DSegmentValsAddr(
           DSegmentValsInst, RedVarType,
           Context.getTypeAlignInChars(Context.UnsignedIntTy));
-      llvm::Value *NullPtrDSegmentVals =
-          llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
+      llvm::Value *NullPtrDSegmentVals = llvm::ConstantPointerNull::get(
+          llvm::PointerType::get(getLLVMContext(), /*AddressSpace=*/0));
       Builder.CreateStore(NullPtrDSegmentVals, DSegmentValsAddr);
 
       assert(DSegmentValsInst && "Segment Vals Array pointer cannot be null");

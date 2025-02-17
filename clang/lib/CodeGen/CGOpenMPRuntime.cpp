@@ -9572,8 +9572,8 @@ static void emitTargetCallKernelLaunch(
               CGF.Builder.CreateAlloca(RedVarType, nullptr, "d_team_vals");
           Address DTeamValsAddr(DTeamValsInst, RedVarType,
                                 Context.getTypeAlignInChars(RedVarQualType));
-          llvm::Value *NullPtrDTeamVals =
-              llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
+          llvm::Value *NullPtrDTeamVals = llvm::ConstantPointerNull::get(
+              llvm::PointerType::get(CGF.getLLVMContext(), /*AddressSpace=*/0));
           CGF.Builder.CreateStore(NullPtrDTeamVals, DTeamValsAddr);
         } else {
           // dteam_vals = omp_target_alloc(sizeof(red-type) * num_teams, devid)
@@ -9665,8 +9665,8 @@ static void emitTargetCallKernelLaunch(
           Address DTeamsDoneAddr(
               DTeamsDonePtrInst, CGF.Int32Ty,
               Context.getTypeAlignInChars(Context.UnsignedIntTy));
-          llvm::Value *NullPtrDTeamsDone =
-              llvm::ConstantPointerNull::get(CGF.Int32Ty->getPointerTo());
+          llvm::Value *NullPtrDTeamsDone = llvm::ConstantPointerNull::get(
+              llvm::PointerType::get(CGF.getLLVMContext(), /*AddressSpace=*/0));
           CGF.Builder.CreateStore(NullPtrDTeamsDone, DTeamsDoneAddr);
         } else {
           // uint32 teams_done = 0
