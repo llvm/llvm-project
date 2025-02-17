@@ -57,7 +57,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
     is mapped to long double, etc."
     )
-
 endif()
 
 set(linked_libraries "")
