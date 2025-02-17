@@ -114,6 +114,13 @@ TEST_F(InterpreterTest, Errors) {
 
   RecoverErr = Interp->Parse("var1 = 424;");
   EXPECT_TRUE(!!RecoverErr);
+
+  Err = Interp->Parse("int x = 5; auto capture = [&]() { return x * 2; };").takeError();
+  EXPECT_THAT(DiagnosticOutput, HasSubstr("error: non-local lambda expression cannot have a capture-default"));
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+
+  RecoverErr = Interp->Parse("int validVar = 10;");
+  EXPECT_TRUE(!!RecoverErr);
 }
 
 // Here we test whether the user can mix declarations and statements. The

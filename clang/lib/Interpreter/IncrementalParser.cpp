@@ -178,8 +178,8 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
     if (!ND)
       continue;
     // Check if we need to clean up the IdResolver chain.
-    if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
-        !D->getLangOpts().CPlusPlus)
+    if (!ND->getDeclName().isEmpty() && ND->getDeclName().getFETokenInfo() &&
+        !D->getLangOpts().ObjC && !D->getLangOpts().CPlusPlus)
       S.IdResolver.RemoveDecl(ND);
   }
 }
