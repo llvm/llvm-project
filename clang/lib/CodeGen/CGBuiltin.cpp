@@ -4121,7 +4121,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_modff:
   case Builtin::BI__builtin_modfl:
     if (Builder.getIsFPConstrained())
-      break;
+      break; // TODO: Emit constrained modf intrinsic once one exists.
     return RValue::get(emitModfBuiltin(*this, E, Intrinsic::modf));
   case Builtin::BI__builtin_isgreater:
   case Builtin::BI__builtin_isgreaterequal:
