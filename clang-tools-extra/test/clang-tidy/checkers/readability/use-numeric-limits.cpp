@@ -82,4 +82,3 @@ void constants() {
   // CHECK-FIXES: uint64_t _ = std::numeric_limits<uint64_t>::max();
   uint64_t _ = +18446744073709551615;
 }
-

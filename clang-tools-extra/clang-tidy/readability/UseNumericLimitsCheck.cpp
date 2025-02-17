@@ -96,7 +96,6 @@ void UseNumericLimitsCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<UnaryOperator>("unary-op-exp");
 
   const llvm::APInt MatchedIntegerConstant = MatchedDecl->getValue();
-  const auto Language = getLangOpts();
 
   auto Fixer = [&](auto SourceValue, auto Value,
                    const std::string &Replacement) {

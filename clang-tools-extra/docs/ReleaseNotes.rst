@@ -92,8 +92,10 @@ New checks
 ^^^^^^^^^^
 
 - New :doc:`readability-use-numeric-limits
-  <clang-tidy/checks/readability/use-numeric-limits>` check to replace certain
-  integer literals with ``std::numeric_limits`` calls.
+  <clang-tidy/checks/readability/use-numeric-limits>` check.
+
+  Replaces certain integer literals with equivalent calls to
+  ``std::numeric_limits<T>::min()`` or ``std::numeric_limits<T>::max()``.
 
 
 New check aliases
