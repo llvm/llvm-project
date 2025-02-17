@@ -597,6 +597,9 @@ llvm::Error Interpreter::CreateExecutor() {
     auto JTMB = createJITTargetMachineBuilder(TT);
     if (!JTMB)
       return JTMB.takeError();
+#if defined(_WIN32)
+    JTMB->getOptions().EmulatedTLS = false;
+#endif
     auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
     if (!JB)
       return JB.takeError();
