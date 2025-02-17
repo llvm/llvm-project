@@ -96,7 +96,7 @@ namespace unconstrained {
   // expected-error@-1{{no matching}}
 
   template<typename T>
-  struct S {
+  struct S { // #defined-here
     constexpr auto f1(auto x, T t) -> decltype(x + t);
 
     template<typename U>
@@ -110,6 +110,7 @@ namespace unconstrained {
   template<typename U>
   constexpr auto S<T>::f2(auto x, U u, T t) -> decltype(x + u + t) { return x + u + t; }
   // expected-error@-1 {{out-of-line definition of 'f2' does not match any declaration in 'S<T>'}}
+  // expected-note@#defined-here {{S defined here}}
 
   template<typename T>
   template<typename U>

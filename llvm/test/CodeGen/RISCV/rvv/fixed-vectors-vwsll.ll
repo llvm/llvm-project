@@ -225,9 +225,10 @@ define <4 x i64> @vwsll_vx_i8_v4i64_zext(<4 x i32> %a, i8 %b) {
 define <4 x i64> @vwsll_vi_v4i64(<4 x i32> %a) {
 ; CHECK-LABEL: vwsll_vi_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 2
+; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vwmulu.vx v10, v8, a0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_v4i64:
@@ -434,9 +435,10 @@ define <8 x i32> @vwsll_vx_i8_v8i32_zext(<8 x i16> %a, i8 %b) {
 define <8 x i32> @vwsll_vi_v8i32(<8 x i16> %a) {
 ; CHECK-LABEL: vwsll_vi_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 2
+; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vwmulu.vx v10, v8, a0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_v8i32:
@@ -654,9 +656,10 @@ define <16 x i16> @vwsll_vx_i8_v16i16_zext(<16 x i8> %a, i8 %b) {
 define <16 x i16> @vwsll_vi_v16i16(<16 x i8> %a) {
 ; CHECK-LABEL: vwsll_vi_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 2
+; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vwmulu.vx v10, v8, a0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_v16i16:
@@ -906,19 +909,12 @@ define <4 x i64> @vwsll_vi_v4i64_v4i8(<4 x i8> %a) {
 ; CHECK-NEXT:    vsll.vi v8, v10, 2
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-RV32-LABEL: vwsll_vi_v4i64_v4i8:
-; CHECK-ZVBB-RV32:       # %bb.0:
-; CHECK-ZVBB-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-ZVBB-RV32-NEXT:    vzext.vf8 v10, v8
-; CHECK-ZVBB-RV32-NEXT:    vsll.vi v8, v10, 2
-; CHECK-ZVBB-RV32-NEXT:    ret
-;
-; CHECK-ZVBB-RV64-LABEL: vwsll_vi_v4i64_v4i8:
-; CHECK-ZVBB-RV64:       # %bb.0:
-; CHECK-ZVBB-RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-ZVBB-RV64-NEXT:    vzext.vf4 v10, v8
-; CHECK-ZVBB-RV64-NEXT:    vwsll.vi v8, v10, 2
-; CHECK-ZVBB-RV64-NEXT:    ret
+; CHECK-ZVBB-LABEL: vwsll_vi_v4i64_v4i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vzext.vf4 v10, v8
+; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 2
+; CHECK-ZVBB-NEXT:    ret
   %x = zext <4 x i8> %a to <4 x i64>
   %z = shl <4 x i64> %x, splat (i64 2)
   ret <4 x i64> %z

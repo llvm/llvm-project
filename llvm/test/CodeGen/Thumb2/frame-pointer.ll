@@ -14,7 +14,7 @@ define void @leaf() {
 
 ; Leaf function, frame pointer is requested but we don't need any stack frame,
 ; so don't create a frame pointer.
-define void @leaf_nofpelim() "frame-pointer"="all" {
+define void @leaf_nofpelim() "frame-pointer"="none" {
 ; CHECK-LABEL: leaf_nofpelim:
 ; CHECK-NOT: push
 ; CHECK-NOT: sp

@@ -25,12 +25,12 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # X32:                 registers:
-# X32-NEXT:              - { id: 0, class: gr32, preferred-register: '' }
-# X32-NEXT:              - { id: 1, class: gr32, preferred-register: '' }
+# X32-NEXT:              - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
+# X32-NEXT:              - { id: 1, class: gr32, preferred-register: '', flags: [   ] }
 #
 # X32ABI:              registers:
-# X32ABI-NEXT:           - { id: 0, class: low32_addr_access, preferred-register: '' }
-# X32ABI-NEXT:           - { id: 1, class: gr32, preferred-register: '' }
+# X32ABI-NEXT:           - { id: 0, class: low32_addr_access, preferred-register: '', flags: [   ] }
+# X32ABI-NEXT:           - { id: 1, class: gr32, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
@@ -60,8 +60,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # X32ALL:              registers:
-# X32ALL-NEXT:           - { id: 0, class: gr32, preferred-register: '' }
-# X32ALL-NEXT:           - { id: 1, class: gr32, preferred-register: '' }
+# X32ALL-NEXT:           - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
+# X32ALL-NEXT:           - { id: 1, class: gr32, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }

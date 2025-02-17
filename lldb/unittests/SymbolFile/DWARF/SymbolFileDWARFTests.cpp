@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/Support/FileSystem.h"
@@ -16,7 +17,6 @@
 
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDataExtractor.h"
-#include "Plugins/SymbolFile/DWARF/DWARFDebugArangeSet.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugAranges.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
@@ -39,6 +39,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using llvm::DWARFDebugArangeSet;
 
 class SymbolFileDWARFTests : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo, ObjectFilePECOFF, SymbolFileDWARF,
@@ -91,14 +92,15 @@ TEST_F(SymbolFileDWARFTests, ParseArangesNonzeroSegmentSize) {
       // END TUPLES
       0, 0, 0, 0, 0, 0, 0, 0, 0 // terminator
   };
-  DWARFDataExtractor data;
-  data.SetData(static_cast<const void *>(binary_data), sizeof binary_data,
-               lldb::ByteOrder::eByteOrderBig);
+  llvm::DWARFDataExtractor data(llvm::ArrayRef<unsigned char>(binary_data),
+                                /*isLittleEndian=*/false, /*AddrSize=*/4);
+
   DWARFDebugArangeSet debug_aranges;
   offset_t off = 0;
   llvm::Error error = debug_aranges.extract(data, &off);
   EXPECT_TRUE(bool(error));
-  EXPECT_EQ("segmented arange entries are not supported",
+  EXPECT_EQ("non-zero segment selector size in address range table at offset "
+            "0x0 is not supported",
             llvm::toString(std::move(error)));
   EXPECT_EQ(off, 12U); // Parser should read no further than the segment size
 }
@@ -115,12 +117,12 @@ TEST_F(SymbolFileDWARFTests, ParseArangesWithMultipleTerminators) {
   // DWARFDebugArangeSet header using the remaining segment + address pairs
   // from the remaining bytes.
   unsigned char binary_data[] = {
-      0, 0, 0, 0, // unit_length that will be set correctly after this
-      0, 2,       // DWARF version number (uint16_t)
-      0, 0, 0, 0, // CU offset (ignored for the purposes of this test)
-      4,          // address size
-      0,          // segment size
-      0, 0, 0, 0, // alignment for the first tuple
+      0, 0, 0, 0,   // unit_length that will be set correctly after this
+      0, 2,         // DWARF version number (uint16_t)
+      0, 0, 0, 255, // CU offset
+      4,            // address size
+      0,            // segment size
+      0, 0, 0, 0,   // alignment for the first tuple
       // BEGIN TUPLES
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // premature terminator
       0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, // [0x1000-0x1100)
@@ -135,18 +137,18 @@ TEST_F(SymbolFileDWARFTests, ParseArangesWithMultipleTerminators) {
   DWARFDataExtractor data;
   data.SetData(static_cast<const void *>(binary_data), sizeof binary_data,
                lldb::ByteOrder::eByteOrderBig);
-  DWARFDebugArangeSet set;
-  offset_t off = 0;
-  llvm::Error error = set.extract(data, &off);
-  // Multiple terminators are not fatal as they do appear in binaries.
-  EXPECT_FALSE(bool(error));
+  DWARFDebugAranges debug_aranges;
+  debug_aranges.extract(data);
   // Parser should read all terminators to the end of the length specified.
-  EXPECT_EQ(off, binary_data_size);
-  ASSERT_EQ(set.NumDescriptors(), 2U);
-  ASSERT_EQ(set.GetDescriptorRef(0).address, (dw_addr_t)0x1000);
-  ASSERT_EQ(set.GetDescriptorRef(0).length, (dw_addr_t)0x100);
-  ASSERT_EQ(set.GetDescriptorRef(1).address, (dw_addr_t)0x2000);
-  ASSERT_EQ(set.GetDescriptorRef(1).length, (dw_addr_t)0x10);
+  ASSERT_EQ(debug_aranges.GetNumRanges(), 2U);
+  EXPECT_EQ(debug_aranges.FindAddress(0x0fff), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1000), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1100 - 1), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1100), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1fff), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2000), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2010 - 1), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2010), DW_INVALID_OFFSET);
 }
 
 TEST_F(SymbolFileDWARFTests, ParseArangesIgnoreEmpty) {
@@ -154,12 +156,12 @@ TEST_F(SymbolFileDWARFTests, ParseArangesIgnoreEmpty) {
   // and we ensure that these are ignored by our DWARFDebugArangeSet parser
   // and not included in the descriptors that are returned.
   unsigned char binary_data[] = {
-      0, 0, 0, 0, // unit_length that will be set correctly after this
-      0, 2,       // DWARF version number (uint16_t)
-      0, 0, 0, 0, // CU offset (ignored for the purposes of this test)
-      4,          // address size
-      0,          // segment size
-      0, 0, 0, 0, // alignment for the first tuple
+      0, 0, 0, 0,   // unit_length that will be set correctly after this
+      0, 2,         // DWARF version number (uint16_t)
+      0, 0, 0, 255, // CU offset
+      4,            // address size
+      0,            // segment size
+      0, 0, 0, 0,   // alignment for the first tuple
       // BEGIN TUPLES
       0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, // [0x1000-0x1100)
       0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, // [0x1100-0x1100)
@@ -174,22 +176,22 @@ TEST_F(SymbolFileDWARFTests, ParseArangesIgnoreEmpty) {
   DWARFDataExtractor data;
   data.SetData(static_cast<const void *>(binary_data), sizeof binary_data,
                lldb::ByteOrder::eByteOrderBig);
-  DWARFDebugArangeSet set;
-  offset_t off = 0;
-  llvm::Error error = set.extract(data, &off);
-  // Multiple terminators are not fatal as they do appear in binaries.
-  EXPECT_FALSE(bool(error));
+  DWARFDebugAranges debug_aranges;
+  debug_aranges.extract(data);
   // Parser should read all terminators to the end of the length specified.
   // Previously the DWARFDebugArangeSet would stop at the first terminator
   // entry and leave the offset in the middle of the current
   // DWARFDebugArangeSet data, and that would cause the next extracted
   // DWARFDebugArangeSet to fail.
-  EXPECT_EQ(off, binary_data_size);
-  ASSERT_EQ(set.NumDescriptors(), 2U);
-  ASSERT_EQ(set.GetDescriptorRef(0).address, (dw_addr_t)0x1000);
-  ASSERT_EQ(set.GetDescriptorRef(0).length, (dw_addr_t)0x100);
-  ASSERT_EQ(set.GetDescriptorRef(1).address, (dw_addr_t)0x2000);
-  ASSERT_EQ(set.GetDescriptorRef(1).length, (dw_addr_t)0x10);
+  ASSERT_EQ(debug_aranges.GetNumRanges(), 2U);
+  EXPECT_EQ(debug_aranges.FindAddress(0x0fff), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1000), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1100 - 1), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1100), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1fff), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2000), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2010 - 1), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2010), DW_INVALID_OFFSET);
 }
 
 TEST_F(SymbolFileDWARFTests, ParseAranges) {
@@ -211,6 +213,7 @@ TEST_F(SymbolFileDWARFTests, ParseAranges) {
       0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Address 0x2000
       0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Size    0x0100
       // Terminating tuple
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Terminator
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Terminator
   };
   // Set the little endian length correctly.

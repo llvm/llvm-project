@@ -6,7 +6,6 @@
 #
 
 --- |
-  ; ModuleID = '<stdin>'
   source_filename = "<stdin>"
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8m.main-arm-none-eabi"
@@ -69,48 +68,67 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: h
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   renamable $d0 = VLDRD %const.3, 0, 14 /* CC::al */, $noreg :: (load (s64) from constant-pool)
-  ; CHECK:   dead renamable $r0 = SPACE 40, undef renamable $r0
-  ; CHECK:   tB %bb.4, 14 /* CC::al */, $noreg
-  ; CHECK: bb.1 (align 8):
-  ; CHECK:   successors:
-  ; CHECK:   CONSTPOOL_ENTRY 3, %const.0, 8
-  ; CHECK: bb.2:
-  ; CHECK:   successors:
-  ; CHECK: bb.3 (align 8):
-  ; CHECK:   successors:
-  ; CHECK:   CONSTPOOL_ENTRY 5, %const.2, 8
-  ; CHECK: bb.4 (align 2):
-  ; CHECK:   successors: %bb.5(0x80000000)
-  ; CHECK:   dead renamable $r0 = SPACE 790, undef renamable $r0
-  ; CHECK: bb.5:
-  ; CHECK:   successors: %bb.7(0x80000000)
-  ; CHECK:   renamable $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2CMPri $r0, 32, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   renamable $r0 = SPACE 200, undef renamable $r0
-  ; CHECK:   t2IT 0, 1, implicit-def $itstate
-  ; CHECK:   renamable $d0 = VLDRD %const.7, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
-  ; CHECK:   renamable $d1 = VLDRD %const.5, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
-  ; CHECK:   renamable $d2 = VLDRD %const.6, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
-  ; CHECK:   $r0 = t2SUBri $r0, 12, 0 /* CC::eq */, $cpsr, $noreg, implicit killed $itstate
-  ; CHECK:   t2B %bb.7, 14 /* CC::al */, $noreg
-  ; CHECK: bb.6 (align 8):
-  ; CHECK:   successors:
-  ; CHECK:   CONSTPOOL_ENTRY 7, %const.1, 8
-  ; CHECK: bb.7 (align 2):
-  ; CHECK:   liveins: $r0, $cpsr, $d0, $s0, $s1, $d1, $s2, $s3, $d2, $s4, $s5
-  ; CHECK:   t2IT 0, 4, implicit-def $itstate
-  ; CHECK:   $sp = tMOVr $r0, 0 /* CC::eq */, $cpsr, implicit $itstate
-  ; CHECK:   $sp = t2LDMIA_RET $sp, 0 /* CC::eq */, killed $cpsr, def $r4, def $r5, def $r6, def $r7, def $r8, def $r9, def $r10, def $r11, def $pc, implicit killed $d0, implicit killed $d1, implicit killed $d2, implicit $sp, implicit killed $itstate
-  ; CHECK: bb.8 (align 8):
-  ; CHECK:   successors:
-  ; CHECK:   CONSTPOOL_ENTRY 6, %const.0, 8
-  ; CHECK: bb.9 (align 2):
-  ; CHECK:   successors: %bb.9(0x80000000)
-  ; CHECK:   dead renamable $r0 = SPACE 4000, undef renamable $r0
-  ; CHECK:   t2B %bb.9, 14 /* CC::al */, $noreg
-  ; CHECK: bb.10:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $d0 = VLDRD %const.3, 0, 14 /* CC::al */, $noreg :: (load (s64) from constant-pool)
+  ; CHECK-NEXT:   dead renamable $r0 = SPACE 40, undef renamable $r0
+  ; CHECK-NEXT:   tB %bb.4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (align 8):
+  ; CHECK-NEXT:   successors:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 3, %const.0, 8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3 (align 8):
+  ; CHECK-NEXT:   successors:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 5, %const.2, 8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4 (align 2):
+  ; CHECK-NEXT:   successors: %bb.5(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead renamable $r0 = SPACE 790, undef renamable $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5:
+  ; CHECK-NEXT:   successors: %bb.7(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   t2CMPri $r0, 32, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   renamable $r0 = SPACE 200, undef renamable $r0
+  ; CHECK-NEXT:   t2IT 0, 1, implicit-def $itstate
+  ; CHECK-NEXT:   renamable $d0 = VLDRD %const.7, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
+  ; CHECK-NEXT:   renamable $d1 = VLDRD %const.5, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
+  ; CHECK-NEXT:   renamable $d2 = VLDRD %const.6, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
+  ; CHECK-NEXT:   $r0 = t2SUBri $r0, 12, 0 /* CC::eq */, $cpsr, $noreg, implicit killed $itstate
+  ; CHECK-NEXT:   t2B %bb.7, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.6 (align 8):
+  ; CHECK-NEXT:   successors:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 7, %const.1, 8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.7 (align 2):
+  ; CHECK-NEXT:   liveins: $r0, $cpsr, $d0, $s0, $s1, $d1, $s2, $s3, $d2, $s4, $s5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   t2IT 0, 4, implicit-def $itstate
+  ; CHECK-NEXT:   $sp = tMOVr $r0, 0 /* CC::eq */, $cpsr, implicit $itstate
+  ; CHECK-NEXT:   $sp = t2LDMIA_RET $sp, 0 /* CC::eq */, killed $cpsr, def $r4, def $r5, def $r6, def $r7, def $r8, def $r9, def $r10, def $r11, def $pc, implicit killed $d0, implicit killed $d1, implicit killed $d2, implicit $sp, implicit killed $itstate
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.8 (align 8):
+  ; CHECK-NEXT:   successors:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 6, %const.0, 8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.9 (align 2):
+  ; CHECK-NEXT:   successors: %bb.9(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead renamable $r0 = SPACE 4000, undef renamable $r0
+  ; CHECK-NEXT:   t2B %bb.9, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.10:
   bb.0:
     successors: %bb.1(0x80000000)
 

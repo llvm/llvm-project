@@ -39,7 +39,12 @@ on:
         type: string
         # Use windows-2019 due to:
         # https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
-        default: '["ubuntu-latest", "windows-2019", "macOS-13"]'
+        # Use ubuntu-22.04 rather than ubuntu-latest to match the ubuntu
+        # version in the CI container. Without this, setup-python tries
+        # to install a python version linked against a newer version of glibc.
+        # TODO(boomanaiden154): Bump the Ubuntu version once the version in the
+        # container is bumped.
+        default: '["ubuntu-22.04", "windows-2019", "macOS-13"]'
 
       python_version:
         required: false
@@ -51,7 +56,7 @@ concurrency:
   # Cancel intermediate builds: only if it is a pull request build.
   # If the group name here is the same as the group name in the workflow that includes
   # this one, then the action will try to wait on itself and get stuck.
-  group: llvm-project-${{ github.workflow }}-${{ inputs.projects }}${{ github.ref }}
+  group: llvm-project-${{ github.workflow }}-${{ inputs.projects }}-${{ inputs.python_version }}${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
@@ -77,7 +82,7 @@ jobs:
       # lldb.  Using this setup-python action to make 3.10 the default
       # python fixes this.
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install Ninja
@@ -113,7 +118,8 @@ jobs:
         run: |
           if [ "${{ runner.os }}" == "Linux" ]; then
             builddir="/mnt/build/"
-            mkdir -p $builddir
+            sudo mkdir -p $builddir
+            sudo chown gha $builddir
             extra_cmake_args="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
           else
             builddir="$(pwd)"/build
@@ -131,6 +137,7 @@ jobs:
                 -DCMAKE_BUILD_TYPE=Release \
                 -DLLVM_ENABLE_ASSERTIONS=ON \
                 -DLLDB_INCLUDE_TESTS=OFF \
+                -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl" \
                 -DCMAKE_C_COMPILER_LAUNCHER=sccache \
                 -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
                 $extra_cmake_args \
@@ -142,8 +149,6 @@ jobs:
         env:
           LLVM_BUILDDIR: ${{ steps.build-llvm.outputs.llvm-builddir }}
         run: |
-          # Make sure all of LLVM libraries that llvm-config needs are built.
+          # The libclc tests don't have a generated check target so all we can
+          # do is build it.
           ninja -C "$LLVM_BUILDDIR"
-          cmake -G Ninja -S libclc -B libclc-build -DLLVM_DIR="$LLVM_BUILDDIR"/lib/cmake/llvm -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
-          ninja -C libclc-build
-          ninja -C libclc-build test

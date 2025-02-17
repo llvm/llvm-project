@@ -6,29 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SequenceToOffsetTable can be used to emit a number of null-terminated
-// sequences as one big array.  Use the same memory when a sequence is a suffix
-// of another.
+// SequenceToOffsetTable can be used to emit a number of sequences as one big
+// array. Uses the same memory when a sequence is a suffix of another.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_SEQUENCETOOFFSETTABLE_H
-#define LLVM_UTILS_TABLEGEN_SEQUENCETOOFFSETTABLE_H
+#ifndef LLVM_UTILS_TABLEGEN_BASIC_SEQUENCETOOFFSETTABLE_H
+#define LLVM_UTILS_TABLEGEN_BASIC_SEQUENCETOOFFSETTABLE_H
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <cctype>
 #include <functional>
 #include <map>
 
 namespace llvm {
-extern llvm::cl::opt<bool> EmitLongStrLiterals;
+extern cl::opt<bool> EmitLongStrLiterals;
 
-static inline void printChar(raw_ostream &OS, char C) {
+inline void printChar(raw_ostream &OS, char C) {
   unsigned char UC(C);
-  if (isalnum(UC) || ispunct(UC)) {
+  if (isAlnum(UC) || isPunct(UC)) {
     OS << '\'';
     if (C == '\\' || C == '\'')
       OS << '\\';
@@ -65,8 +64,14 @@ class SequenceToOffsetTable {
   // Sequences added so far, with suffixes removed.
   SeqMap Seqs;
 
+  // Terminator element to be appended to each added sequence.
+  std::optional<ElemT> Terminator;
+
+  // True if `layout` method was called.
+  bool IsLaidOut = false;
+
   // Entries in the final table, or 0 before layout was called.
-  unsigned Entries;
+  unsigned Entries = 0;
 
   // isSuffix - Returns true if A is a suffix of B.
   static bool isSuffix(const SeqT &A, const SeqT &B) {
@@ -74,12 +79,13 @@ class SequenceToOffsetTable {
   }
 
 public:
-  SequenceToOffsetTable() : Entries(0) {}
+  explicit SequenceToOffsetTable(std::optional<ElemT> Terminator = ElemT())
+      : Terminator(Terminator) {}
 
   /// add - Add a sequence to the table.
   /// This must be called before layout().
   void add(const SeqT &Seq) {
-    assert(Entries == 0 && "Cannot call add() after layout()");
+    assert(!IsLaidOut && "Cannot call add() after layout()");
     typename SeqMap::iterator I = Seqs.lower_bound(Seq);
 
     // If SeqMap contains a sequence that has Seq as a suffix, I will be
@@ -87,7 +93,7 @@ public:
     if (I != Seqs.end() && isSuffix(Seq, I->first))
       return;
 
-    I = Seqs.insert(I, std::pair(Seq, 0u));
+    I = Seqs.insert(I, {Seq, 0u});
 
     // The entry before I may be a suffix of Seq that can now be erased.
     if (I != Seqs.begin() && isSuffix((--I)->first, Seq))
@@ -97,25 +103,27 @@ public:
   bool empty() const { return Seqs.empty(); }
 
   unsigned size() const {
-    assert((empty() || Entries) && "Call layout() before size()");
+    assert(IsLaidOut && "Call layout() before size()");
     return Entries;
   }
 
   /// layout - Computes the final table layout.
   void layout() {
-    assert(Entries == 0 && "Can only call layout() once");
+    assert(!IsLaidOut && "Can only call layout() once");
+    IsLaidOut = true;
+
     // Lay out the table in Seqs iteration order.
     for (typename SeqMap::iterator I = Seqs.begin(), E = Seqs.end(); I != E;
          ++I) {
       I->second = Entries;
       // Include space for a terminator.
-      Entries += I->first.size() + 1;
+      Entries += I->first.size() + Terminator.has_value();
     }
   }
 
   /// get - Returns the offset of Seq in the final table.
   unsigned get(const SeqT &Seq) const {
-    assert(Entries && "Call layout() before get()");
+    assert(IsLaidOut && "Call layout() before get()");
     typename SeqMap::const_iterator I = Seqs.lower_bound(Seq);
     assert(I != Seqs.end() && isSuffix(Seq, I->first) &&
            "get() called with sequence that wasn't added first");
@@ -126,11 +134,11 @@ public:
   /// initializer, where each element is a C string literal terminated by
   /// `\0`. Falls back to emitting a comma-separated integer list if
   /// `EmitLongStrLiterals` is false
-  void emitStringLiteralDef(raw_ostream &OS, const llvm::Twine &Decl) const {
-    assert(Entries && "Call layout() before emitStringLiteralDef()");
+  void emitStringLiteralDef(raw_ostream &OS, const Twine &Decl) const {
+    assert(IsLaidOut && "Call layout() before emitStringLiteralDef()");
     if (!EmitLongStrLiterals) {
       OS << Decl << " = {\n";
-      emit(OS, printChar, "0");
+      emit(OS, printChar);
       OS << "  0\n};\n\n";
       return;
     }
@@ -140,10 +148,12 @@ public:
        << "#pragma GCC diagnostic ignored \"-Woverlength-strings\"\n"
        << "#endif\n"
        << Decl << " = {\n";
-    for (auto I : Seqs) {
-      OS << "  /* " << I.second << " */ \"";
-      OS.write_escaped(I.first);
-      OS << "\\0\"\n";
+    for (const auto &[Seq, Offset] : Seqs) {
+      OS << "  /* " << Offset << " */ \"";
+      OS.write_escaped(Seq);
+      if (Terminator)
+        OS.write_escaped(StringRef(&*Terminator, 1));
+      OS << "\"\n";
     }
     OS << "};\n"
        << "#ifdef __GNUC__\n"
@@ -153,23 +163,30 @@ public:
 
   /// emit - Print out the table as the body of an array initializer.
   /// Use the Print function to print elements.
-  void emit(raw_ostream &OS, void (*Print)(raw_ostream &, ElemT),
-            const char *Term = "0") const {
-    assert((empty() || Entries) && "Call layout() before emit()");
-    for (typename SeqMap::const_iterator I = Seqs.begin(), E = Seqs.end();
-         I != E; ++I) {
-      OS << "  /* " << I->second << " */ ";
-      for (typename SeqT::const_iterator SI = I->first.begin(),
-                                         SE = I->first.end();
-           SI != SE; ++SI) {
-        Print(OS, *SI);
+  void emit(raw_ostream &OS, void (*Print)(raw_ostream &, ElemT)) const {
+    assert(IsLaidOut && "Call layout() before emit()");
+    for (const auto &[Seq, Offset] : Seqs) {
+      OS << "  /* " << Offset << " */ ";
+      for (const ElemT &Element : Seq) {
+        Print(OS, Element);
         OS << ", ";
       }
-      OS << Term << ",\n";
+      if (Terminator) {
+        Print(OS, *Terminator);
+        OS << ',';
+      }
+      OS << '\n';
+    }
+
+    // Print a dummy element if the array would be empty otherwise.
+    if (!Entries) {
+      OS << "  /* dummy */ ";
+      Print(OS, ElemT());
+      OS << '\n';
     }
   }
 };
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_BASIC_SEQUENCETOOFFSETTABLE_H

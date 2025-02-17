@@ -166,7 +166,7 @@ class CrashLog(symbolication.Symbolicator):
             this_thread_crashed = self.app_specific_backtrace
             if not this_thread_crashed:
                 this_thread_crashed = self.did_crash()
-                if options.crashed_only and this_thread_crashed == False:
+                if options.crashed_only and not this_thread_crashed:
                     return
 
             print("%s" % self)
@@ -1512,7 +1512,7 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
         arch = crashlog.process_arch
         if not arch:
             raise InteractiveCrashLogException(
-                "couldn't create find the architecture to create the target"
+                "couldn't find the architecture to create the target"
             )
         target = debugger.CreateTargetWithFileAndArch(None, arch)
     # 4. Fail

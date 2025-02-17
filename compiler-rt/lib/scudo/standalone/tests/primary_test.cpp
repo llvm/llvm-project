@@ -386,6 +386,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Allocator->getFragmentationInfo(&Str);
+  Allocator->getMemoryGroupFragmentationInfo(&Str);
   Str.output();
 }
 

@@ -15,6 +15,7 @@
 #include "src/__support/HashTable/bitmask.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/memory_size.h"
 #include "src/string/memset.h"
@@ -23,7 +24,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 LIBC_INLINE uint8_t secondary_hash(uint64_t hash) {
@@ -349,6 +350,6 @@ public:
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_HASHTABLE_TABLE_H

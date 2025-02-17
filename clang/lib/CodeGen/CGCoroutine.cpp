@@ -103,7 +103,7 @@ static void createCoroData(CodeGenFunction &CGF,
     return;
   }
 
-  CurCoro.Data = std::unique_ptr<CGCoroData>(new CGCoroData);
+  CurCoro.Data = std::make_unique<CGCoroData>();
   CurCoro.Data->CoroId = CoroId;
   CurCoro.Data->CoroIdExpr = CoroIdExpr;
 }
@@ -626,7 +626,7 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
 
     // Get back to the block we were originally and move coro.free there.
     auto *InsertPt = SaveInsertBlock->getTerminator();
-    CoroFree->moveBefore(InsertPt);
+    CoroFree->moveBefore(InsertPt->getIterator());
     CGF.Builder.SetInsertPoint(InsertPt);
 
     // Add if (auto *mem = coro.free) Deallocate;
@@ -866,8 +866,9 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     EmitStmt(S.getPromiseDeclStmt());
 
     Address PromiseAddr = GetAddrOfLocalVar(S.getPromiseDecl());
-    auto *PromiseAddrVoidPtr = new llvm::BitCastInst(
-        PromiseAddr.emitRawPointer(*this), VoidPtrTy, "", CoroId);
+    auto *PromiseAddrVoidPtr =
+        new llvm::BitCastInst(PromiseAddr.emitRawPointer(*this), VoidPtrTy, "",
+                              CoroId->getIterator());
     // Update CoroId to refer to the promise. We could not do it earlier because
     // promise local variable was not emitted yet.
     CoroId->setArgOperand(1, PromiseAddrVoidPtr);

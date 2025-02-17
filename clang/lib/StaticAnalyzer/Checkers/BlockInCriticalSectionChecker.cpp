@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -147,10 +148,18 @@ using MutexDescriptor =
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
   const std::array<MutexDescriptor, 8> MutexDescriptors{
-      MemberMutexDescriptor({/*MatchAs=*/CDM::CXXMethod,
-                             /*QualifiedName=*/{"std", "mutex", "lock"},
-                             /*RequiredArgs=*/0},
-                            {CDM::CXXMethod, {"std", "mutex", "unlock"}, 0}),
+      // NOTE: There are standard library implementations where some methods
+      // of `std::mutex` are inherited from an implementation detail base
+      // class, and those aren't matched by the name specification {"std",
+      // "mutex", "lock"}.
+      // As a workaround here we omit the class name and only require the
+      // presence of the name parts "std" and "lock"/"unlock".
+      // TODO: Ensure that CallDescription understands inherited methods.
+      MemberMutexDescriptor(
+          {/*MatchAs=*/CDM::CXXMethod,
+           /*QualifiedName=*/{"std", /*"mutex",*/ "lock"},
+           /*RequiredArgs=*/0},
+          {CDM::CXXMethod, {"std", /*"mutex",*/ "unlock"}, 0}),
       FirstArgMutexDescriptor({CDM::CLibrary, {"pthread_mutex_lock"}, 1},
                               {CDM::CLibrary, {"pthread_mutex_unlock"}, 1}),
       FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_lock"}, 1},
@@ -202,13 +211,12 @@ public:
 
 REGISTER_LIST_WITH_PROGRAMSTATE(ActiveCritSections, CritSectionMarker)
 
-namespace std {
 // Iterator traits for ImmutableList data structure
 // that enable the use of STL algorithms.
 // TODO: Move these to llvm::ImmutableList when overhauling immutable data
 // structures for proper iterator concept support.
 template <>
-struct iterator_traits<
+struct std::iterator_traits<
     typename llvm::ImmutableList<CritSectionMarker>::iterator> {
   using iterator_category = std::forward_iterator_tag;
   using value_type = CritSectionMarker;
@@ -216,7 +224,6 @@ struct iterator_traits<
   using reference = CritSectionMarker &;
   using pointer = CritSectionMarker *;
 };
-} // namespace std
 
 std::optional<MutexDescriptor>
 BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,
@@ -235,12 +242,22 @@ BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,
   return std::nullopt;
 }
 
+static const MemRegion *skipStdBaseClassRegion(const MemRegion *Reg) {
+  while (Reg) {
+    const auto *BaseClassRegion = dyn_cast<CXXBaseObjectRegion>(Reg);
+    if (!BaseClassRegion || !isWithinStdNamespace(BaseClassRegion->getDecl()))
+      break;
+    Reg = BaseClassRegion->getSuperRegion();
+  }
+  return Reg;
+}
+
 static const MemRegion *getRegion(const CallEvent &Call,
                                   const MutexDescriptor &Descriptor,
                                   bool IsLock) {
   return std::visit(
-      [&Call, IsLock](auto &&Descriptor) {
-        return Descriptor.getRegion(Call, IsLock);
+      [&Call, IsLock](auto &Descr) -> const MemRegion * {
+        return skipStdBaseClassRegion(Descr.getRegion(Call, IsLock));
       },
       Descriptor);
 }

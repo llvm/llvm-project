@@ -7,10 +7,15 @@ on:
   pull_request:
     branches:
       - main
+      - 'users/**'
 
 jobs:
   code_formatter:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
@@ -55,10 +60,10 @@ jobs:
       - name: Install clang-format
         uses: aminya/setup-cpp@v1
         with:
-          clangformat: 18.1.1
+          clangformat: 19.1.6
 
       - name: Setup Python env
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'

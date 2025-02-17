@@ -124,6 +124,64 @@ func.func @invariant_affine_if() {
 
 // -----
 
+func.func @hoist_invariant_affine_if_success(%lb: index, %ub: index, %step: index) -> i32 {
+  %cst_0 = arith.constant 0 : i32
+  %cst_42 = arith.constant 42 : i32
+  %sum_result = affine.for %i = %lb to %ub iter_args(%acc = %cst_0) -> i32 {
+    %conditional_add = affine.if affine_set<() : ()> () -> (i32) {
+      %add = arith.addi %cst_42, %cst_42 : i32
+      affine.yield %add : i32
+    } else {
+      %poison = ub.poison : i32
+      affine.yield %poison : i32
+    }
+    %sum = arith.addi %acc, %conditional_add : i32
+    affine.yield %sum : i32
+  }
+
+  // CHECK-LABEL: hoist_invariant_affine_if_success
+  // CHECK-NEXT: arith.constant 0 : i32
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 42 : i32
+  // CHECK-NEXT: %[[IF:.*]] = affine.if
+  // CHECK-NEXT: arith.addi %[[CST]], %[[CST]] : i32
+  // CHECK: affine.for
+  // CHECK-NOT: affine.if
+  // CHECK-NEXT: arith.addi %{{.*}}, %[[IF]]
+
+  return %sum_result : i32
+}
+
+// -----
+
+func.func @hoist_variant_affine_if_failure(%lb: index, %ub: index, %step: index) -> i32 {
+  %cst_0 = arith.constant 0 : i32
+  %cst_42 = arith.constant 42 : i32
+  %ind_7 = arith.constant 7 : index
+  %sum_result = affine.for %i = %lb to %ub iter_args(%acc = %cst_0) -> i32 {
+    %conditional_add = affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%i, %ind_7) -> (i32) {
+      %add = arith.addi %cst_42, %cst_42 : i32
+      affine.yield %add : i32
+    } else {
+      %poison = ub.poison : i32
+      affine.yield %poison : i32
+    }
+    %sum = arith.addi %acc, %conditional_add : i32
+    affine.yield %sum : i32
+  }
+
+  // CHECK-LABEL: hoist_variant_affine_if_failure
+  // CHECK-NEXT: arith.constant 0 : i32
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 42 : i32
+  // CHECK-NEXT: arith.constant 7 : index
+  // CHECK-NEXT: affine.for
+  // CHECK-NEXT: %[[IF:.*]] = affine.if
+  // CHECK: arith.addi %{{.*}}, %[[IF]]
+
+  return %sum_result : i32
+}
+
+// -----
+
 func.func @hoist_affine_for_with_unknown_trip_count(%lb: index, %ub: index) {
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = %lb to %ub {
@@ -379,6 +437,69 @@ func.func @parallel_loop_with_invariant() {
   // CHECK-NEXT: return
 
   return
+}
+
+// -----
+
+func.func @hoist_invariant_scf_if_success(%lb: index, %ub: index, %step: index) -> i32 {
+  %cst_0 = arith.constant 0 : i32
+  %cst_42 = arith.constant 42 : i32
+  %true = arith.constant true
+  %sum_result = scf.for %i = %lb to %ub step %step iter_args(%acc = %cst_0) -> i32 {
+    %conditional_add = scf.if %true -> (i32) {
+      %add = arith.addi %cst_42, %cst_42 : i32
+      scf.yield %add : i32
+    } else {
+      %poison = ub.poison : i32
+      scf.yield %poison : i32
+    }
+    %sum = arith.addi %acc, %conditional_add : i32
+    scf.yield %sum : i32
+  }
+
+  // CHECK-LABEL: hoist_invariant_scf_if_success
+  // CHECK-NEXT: arith.constant 0 : i32
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 42 : i32
+  // CHECK-NEXT: %[[TRUE:.*]] = arith.constant true
+  // CHECK-NEXT: %[[IF:.*]] = scf.if %[[TRUE]]
+  // CHECK-NEXT: arith.addi %[[CST]], %[[CST]] : i32
+  // CHECK: scf.for
+  // CHECK-NOT: scf.if
+  // CHECK-NEXT: arith.addi %{{.*}}, %[[IF]]
+
+  return %sum_result : i32
+}
+
+// -----
+
+func.func @hoist_variant_scf_if_failure(%lb: index, %ub: index, %step: index) -> i32 {
+  %cst_0 = arith.constant 0 : i32
+  %cst_42 = arith.constant 42 : i32
+  %ind_7 = arith.constant 7 : index
+  %sum_result = scf.for %i = %lb to %ub step %step iter_args(%acc = %cst_0) -> i32 {
+    %cond = arith.cmpi ult, %i, %ind_7 : index
+    %conditional_add = scf.if %cond -> (i32) {
+      %add = arith.addi %cst_42, %cst_42 : i32
+      scf.yield %add : i32
+    } else {
+      %poison = ub.poison : i32
+      scf.yield %poison : i32
+    }
+    %sum = arith.addi %acc, %conditional_add : i32
+    scf.yield %sum : i32
+  }
+
+  // CHECK-LABEL: hoist_variant_scf_if_failure
+  // CHECK-NEXT: arith.constant 0 : i32
+  // CHECK-NEXT: %[[CST_42:.*]] = arith.constant 42 : i32
+  // CHECK-NEXT: %[[CST_7:.*]] = arith.constant 7 : index
+  // CHECK-NEXT: scf.for %[[IV:.*]] = %{{.*}} to %{{.*}}
+  // CHECK-NEXT: %[[CMP:.*]] = arith.cmpi ult, %[[IV]], %[[CST_7]]
+  // CHECK-NEXT: %[[IF:.*]] = scf.if %[[CMP]]
+  // CHECK-NEXT: arith.addi %[[CST_42]], %[[CST_42]] : i32
+  // CHECK: arith.addi %{{.*}}, %[[IF]]
+
+  return %sum_result : i32
 }
 
 // -----
@@ -923,6 +1044,120 @@ func.func @speculate_ceildivsi_const(
   return
 }
 
+func.func @no_speculate_divui_range(
+// CHECK-LABEL: @no_speculate_divui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divui
+    %val = arith.divui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi_range(
+// CHECK-LABEL: @no_speculate_divsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = -1: i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = 127 : i8, smin = 0 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK-COUNT-2: arith.divsi
+    %val0 = arith.divsi %num, %denom0 : i8
+    %val1 = arith.divsi %num, %denom1 : i8
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivui_range(
+// CHECK-LABEL: @no_speculate_ceildivui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivui
+    %val = arith.ceildivui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi_range(
+// CHECK-LABEL: @no_speculate_ceildivsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = -1 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = 127 : i8, smin = 0 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK-COUNT-2: arith.ceildivsi
+    %val0 = arith.ceildivsi %num, %denom0 : i8
+    %val1 = arith.ceildivsi %num, %denom1 : i8
+  }
+
+  return
+}
+
+func.func @speculate_divui_range(
+// CHECK-LABEL: @speculate_divui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 1 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.divui
+// CHECK: scf.for
+    %val = arith.divui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @speculate_divsi_range(
+// CHECK-LABEL: @speculate_divsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = 127 : i8, smin = 1 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = -2 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK-COUNT-2: arith.divsi
+// CHECK: scf.for
+    %val0 = arith.divsi %num, %denom0 : i8
+    %val1 = arith.divsi %num, %denom1 : i8
+
+  }
+
+  return
+}
+
+func.func @speculate_ceildivui_range(
+// CHECK-LABEL: @speculate_ceildivui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 1 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.ceildivui
+// CHECK: scf.for
+    %val = arith.ceildivui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @speculate_ceildivsi_range(
+// CHECK-LABEL: @speculate_ceildivsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = 127 : i8, smin = 1 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = -2 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK-COUNT-2: arith.ceildivsi
+// CHECK: scf.for
+    %val0 = arith.ceildivsi %num, %denom0 : i8
+    %val1 = arith.ceildivsi %num, %denom1 : i8
+
+  }
+
+  return
+}
+
 // -----
 
 func.func @speculate_static_pack_and_unpack(%source: tensor<128x256xf32>,
@@ -1003,4 +1238,202 @@ func.func @hoist_from_scf_while(%arg0: i32, %arg1: i32) -> i32 {
     scf.yield %added2 : i32
   }
   return %0 : i32
+}
+
+// -----
+
+#trait = {
+  indexing_maps = [
+    affine_map<(m, n, k) -> (m, k)>,
+    affine_map<(m, n, k) -> (k, n)>,
+    affine_map<(m, n, k) -> (m, n)>
+  ],
+  iterator_types = ["parallel", "parallel", "reduction"] 
+}
+
+// CHECK-LABEL: func @hoist_linalg_ops
+// CHECK: linalg.generic
+// CHECK: scf.for
+// CHECK-NOT: linalg.generic
+// CHECK: tensor.insert_slice
+// CHECK: scf.yield
+func.func @hoist_linalg_ops(%a : tensor<128x128xf32>, 
+                            %b : tensor<128x128xf32>, 
+                            %c: tensor<128x128xf32>,
+                            %lb : index,
+                            %ub : index,
+                            %step : index,
+                            %output : tensor<?x128xf32>) -> tensor<?x128xf32> {
+  %final = 
+  scf.for %i = %lb to %ub step %step iter_args(%acc = %output) 
+                                            -> tensor<?x128xf32> {
+    %compute = linalg.generic #trait
+               ins(%a, %b : tensor<128x128xf32>, tensor<128x128xf32>) 
+               outs(%c : tensor<128x128xf32>) {
+    ^bb0(%in : f32, %in2 : f32, %in3 : f32):
+      %mul = arith.mulf %in, %in2 : f32
+      %add = arith.addf %mul, %in3 : f32
+      linalg.yield %in3 : f32
+    } -> tensor<128x128xf32>
+
+    %newacc = tensor.insert_slice %compute into 
+                                  %output[%i, 0][128, 128][1, 1] 
+                                  : tensor<128x128xf32> into tensor<?x128xf32>
+    scf.yield %newacc : tensor<?x128xf32>
+  }
+
+  func.return %final : tensor<?x128xf32>
+}
+
+// -----
+
+#trait = {
+  indexing_maps = [
+    affine_map<(m, n, k) -> (m, k)>,
+    affine_map<(m, n, k) -> (k, n)>,
+    affine_map<(m, n, k) -> (m, n)>
+  ],
+  iterator_types = ["parallel", "parallel", "reduction"] 
+}
+
+// CHECK-LABEL: func @hoist_linalg_ops_div_by_zero
+// CHECK-NOT: linalg.generic
+// CHECK: scf.for
+// CHECK: linalg.generic
+// CHECK: tensor.insert_slice
+// CHECK: scf.yield
+func.func @hoist_linalg_ops_div_by_zero(%a : tensor<128x128xi32>, 
+                            %b : tensor<128x128xi32>, 
+                            %c: tensor<128x128xi32>,
+                            %lb : index,
+                            %ub : index,
+                            %step : index,
+                            %output : tensor<?x128xi32>) -> tensor<?x128xi32> {
+  %cst0 = arith.constant 0 : i32
+  %final = 
+  scf.for %i = %lb to %ub step %step iter_args(%acc = %output) 
+                                            -> tensor<?x128xi32> {
+    %compute = linalg.generic #trait
+               ins(%a, %b : tensor<128x128xi32>, tensor<128x128xi32>) 
+               outs(%c : tensor<128x128xi32>) {
+    ^bb0(%in : i32, %in2 : i32, %in3 : i32):
+      %div = arith.divui %in, %in2 : i32
+      %add = arith.addi %div, %in3 : i32
+      linalg.yield %in3 : i32
+    } -> tensor<128x128xi32>
+
+    %newacc = tensor.insert_slice %compute into 
+                                  %output[%i, 0][128, 128][1, 1] 
+                                  : tensor<128x128xi32> into tensor<?x128xi32>
+    scf.yield %newacc : tensor<?x128xi32>
+  }
+
+  func.return %final : tensor<?x128xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @hoist_vector_transfer_ops
+// CHECK: vector.transfer_read
+// CHECK: scf.for
+// CHECK-NOT: vector.transfer_read
+// CHECK: arith.addf
+// CHECK: scf.yield
+func.func @hoist_vector_transfer_ops(
+                            %a : tensor<128x128xf32>, 
+                            %lb : index,
+                            %ub : index,
+                            %step : index,
+                            %ida : index,
+                            %idb : index) -> vector<4x4xf32> {
+  %cst_0 = arith.constant 0.0 : f32
+  %cst = arith.constant dense<0.0> : vector<4x4xf32>
+  %final = 
+  scf.for %i = %lb to %ub step %step iter_args(%acc = %cst) -> vector<4x4xf32> {
+    %read = vector.transfer_read %a[%ida, %idb], %cst_0 : tensor<128x128xf32>, vector<4x4xf32>
+    %out = arith.addf %read, %acc : vector<4x4xf32>
+    scf.yield %out : vector<4x4xf32>
+  }
+  func.return %final : vector<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @hoist_vector_transfer_ops
+// CHECK: vector.transfer_write
+// CHECK: vector.transfer_read
+// CHECK: scf.for
+// CHECK-NOT: vector.transfer_write
+// CHECK-NOT: vector.transfer_read
+// CHECK: arith.addf
+// CHECK: scf.yield
+func.func @hoist_vector_transfer_ops(
+                            %lb : index,
+                            %ub : index,
+                            %step : index,
+                            %ida : index,
+                            %idb : index) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant 0.0 : f32
+  %cst = arith.constant dense<0.0> : vector<4x4xf32>
+  %empty = tensor.empty() : tensor<4x4xf32>
+  %final = 
+  scf.for %i = %lb to %ub step %step iter_args(%acc = %cst) -> vector<4x4xf32> {
+    %a = vector.transfer_write %cst, %empty[%c0, %c0] : vector<4x4xf32>, tensor<4x4xf32>
+    %read = vector.transfer_read %a[%c0, %c0], %cst_0 : tensor<4x4xf32>, vector<4x4xf32>
+    %out = arith.addf %read, %acc : vector<4x4xf32>
+    scf.yield %out : vector<4x4xf32>
+  }
+  func.return %final : vector<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @do_not_hoist_vector_transfer_ops_loop_dep
+// CHECK-NOT: vector.transfer_read
+// CHECK: scf.for
+// CHECK: vector.transfer_read
+// CHECK: arith.addf
+// CHECK: scf.yield
+func.func @do_not_hoist_vector_transfer_ops_loop_dep(
+                            %a : tensor<128x128xf32>, 
+                            %lb : index,
+                            %ub : index,
+                            %step : index,
+                            %ida : index) -> vector<4x4xf32> {
+  %cst_0 = arith.constant 0.0 : f32
+  %cst = arith.constant dense<0.0> : vector<4x4xf32>
+  %final = 
+  scf.for %i = %lb to %ub step %step iter_args(%acc = %cst) -> vector<4x4xf32> {
+    %read = vector.transfer_read %a[%ida, %i], %cst_0 : tensor<128x128xf32>, vector<4x4xf32>
+    %out = arith.addf %read, %acc : vector<4x4xf32>
+    scf.yield %out : vector<4x4xf32>
+  }
+  func.return %final : vector<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @do_not_hoist_vector_transfer_ops_memref
+// CHECK-NOT: vector.transfer_read
+// CHECK: scf.for
+// CHECK: vector.transfer_read
+// CHECK: arith.addf
+// CHECK: scf.yield
+func.func @do_not_hoist_vector_transfer_ops_memref(
+                            %a : memref<128x128xf32>, 
+                            %lb : index,
+                            %ub : index,
+                            %step : index,
+                            %ida : index,
+                            %idb : index) -> vector<4x4xf32> {
+  %cst_0 = arith.constant 0.0 : f32
+  %cst = arith.constant dense<0.0> : vector<4x4xf32>
+  %final = 
+  scf.for %i = %lb to %ub step %step iter_args(%acc = %cst) -> vector<4x4xf32> {
+    %read = vector.transfer_read %a[%ida, %idb], %cst_0 : memref<128x128xf32>, vector<4x4xf32>
+    %out = arith.addf %read, %acc : vector<4x4xf32>
+    scf.yield %out : vector<4x4xf32>
+  }
+  func.return %final : vector<4x4xf32>
 }

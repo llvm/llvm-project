@@ -139,10 +139,16 @@ define arm_aapcs_vfpcc <2 x i32> @v_mvni32f() nounwind {
 }
 
 define arm_aapcs_vfpcc <1 x i64> @v_movi64() nounwind {
-; CHECK-LABEL: v_movi64:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i64 d0, #0xff0000ff0000ffff
-; CHECK-NEXT:    mov pc, lr
+; CHECK-LE-LABEL: v_movi64:
+; CHECK-LE:       @ %bb.0:
+; CHECK-LE-NEXT:    vmov.i64 d0, #0xff0000ff0000ffff
+; CHECK-LE-NEXT:    mov pc, lr
+;
+; CHECK-BE-LABEL: v_movi64:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vmov.i64 d16, #0xffffff0000ff
+; CHECK-BE-NEXT:    vrev64.32 d0, d16
+; CHECK-BE-NEXT:    mov pc, lr
 	ret <1 x i64> < i64 18374687574888349695 >
 }
 
@@ -889,11 +895,18 @@ define arm_aapcs_vfpcc void @v_movf32_sti64(ptr %p) {
 }
 
 define arm_aapcs_vfpcc void @v_movi64_sti64(ptr %p) {
-; CHECK-LABEL: v_movi64_sti64:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i64 d16, #0xff
-; CHECK-NEXT:    vst1.64 {d16}, [r0:64]
-; CHECK-NEXT:    mov pc, lr
+; CHECK-LE-LABEL: v_movi64_sti64:
+; CHECK-LE:       @ %bb.0:
+; CHECK-LE-NEXT:    vmov.i64 d16, #0xff
+; CHECK-LE-NEXT:    vst1.64 {d16}, [r0:64]
+; CHECK-LE-NEXT:    mov pc, lr
+;
+; CHECK-BE-LABEL: v_movi64_sti64:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vmov.i64 d16, #0xff00000000
+; CHECK-BE-NEXT:    vrev64.32 d16, d16
+; CHECK-BE-NEXT:    vst1.64 {d16}, [r0:64]
+; CHECK-BE-NEXT:    mov pc, lr
   call void @llvm.arm.neon.vst1.p0.v1i64(ptr %p, <1 x i64> <i64 255>, i32 8)
   ret void
 }
@@ -1094,11 +1107,18 @@ define arm_aapcs_vfpcc void @v_movQf32_sti64(ptr %p) {
 }
 
 define arm_aapcs_vfpcc void @v_movQi64_sti64(ptr %p) {
-; CHECK-LABEL: v_movQi64_sti64:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i64 q8, #0xff
-; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:64]
-; CHECK-NEXT:    mov pc, lr
+; CHECK-LE-LABEL: v_movQi64_sti64:
+; CHECK-LE:       @ %bb.0:
+; CHECK-LE-NEXT:    vmov.i64 q8, #0xff
+; CHECK-LE-NEXT:    vst1.64 {d16, d17}, [r0:64]
+; CHECK-LE-NEXT:    mov pc, lr
+;
+; CHECK-BE-LABEL: v_movQi64_sti64:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vmov.i64 q8, #0xff00000000
+; CHECK-BE-NEXT:    vrev64.32 q8, q8
+; CHECK-BE-NEXT:    vst1.64 {d16, d17}, [r0:64]
+; CHECK-BE-NEXT:    mov pc, lr
   call void @llvm.arm.neon.vst1.p0.v2i64(ptr %p, <2 x i64> <i64 255, i64 255>, i32 8)
   ret void
 }

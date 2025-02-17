@@ -19,36 +19,6 @@
 
 #define DEBUG_TYPE "flang-lower-iteration-space"
 
-unsigned Fortran::lower::getHashValue(
-    const Fortran::lower::ExplicitIterSpace::ArrayBases &x) {
-  return std::visit(
-      [&](const auto *p) { return HashEvaluateExpr::getHashValue(*p); }, x);
-}
-
-bool Fortran::lower::isEqual(
-    const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
-    const Fortran::lower::ExplicitIterSpace::ArrayBases &y) {
-  return std::visit(
-      Fortran::common::visitors{
-          // Fortran::semantics::Symbol * are the exception here. These pointers
-          // have identity; if two Symbol * values are the same (different) then
-          // they are the same (different) logical symbol.
-          [&](Fortran::lower::FrontEndSymbol p,
-              Fortran::lower::FrontEndSymbol q) { return p == q; },
-          [&](const auto *p, const auto *q) {
-            if constexpr (std::is_same_v<decltype(p), decltype(q)>) {
-              LLVM_DEBUG(llvm::dbgs()
-                         << "is equal: " << p << ' ' << q << ' '
-                         << IsEqualEvaluateExpr::isEqual(*p, *q) << '\n');
-              return IsEqualEvaluateExpr::isEqual(*p, *q);
-            } else {
-              // Different subtree types are never equal.
-              return false;
-            }
-          }},
-      x, y);
-}
-
 namespace {
 
 /// This class can recover the base array in an expression that contains
@@ -59,7 +29,7 @@ public:
   using RT = bool;
 
   ArrayBaseFinder(llvm::ArrayRef<Fortran::lower::FrontEndSymbol> syms)
-      : controlVars(syms.begin(), syms.end()) {}
+      : controlVars(syms) {}
 
   template <typename T>
   void operator()(const T &x) {
@@ -169,7 +139,7 @@ private:
   }
   template <typename... A>
   RT find(const std::variant<A...> &u) {
-    return std::visit([&](const auto &v) { return find(v); }, u);
+    return Fortran::common::visit([&](const auto &v) { return find(v); }, u);
   }
   template <typename A>
   RT find(const std::vector<A> &x) {
@@ -361,22 +331,23 @@ llvm::raw_ostream &
 Fortran::lower::operator<<(llvm::raw_ostream &s,
                            const Fortran::lower::ExplicitIterSpace &e) {
   auto dump = [&](const auto &u) {
-    std::visit(Fortran::common::visitors{
-                   [&](const Fortran::semantics::Symbol *y) {
-                     s << "  " << *y << '\n';
-                   },
-                   [&](const Fortran::evaluate::ArrayRef *y) {
-                     s << "  ";
-                     if (y->base().IsSymbol())
-                       s << y->base().GetFirstSymbol();
-                     else
-                       s << y->base().GetComponent().GetLastSymbol();
-                     s << '\n';
-                   },
-                   [&](const Fortran::evaluate::Component *y) {
-                     s << "  " << y->GetLastSymbol() << '\n';
-                   }},
-               u);
+    Fortran::common::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::semantics::Symbol *y) {
+              s << "  " << *y << '\n';
+            },
+            [&](const Fortran::evaluate::ArrayRef *y) {
+              s << "  ";
+              if (y->base().IsSymbol())
+                s << y->base().GetFirstSymbol();
+              else
+                s << y->base().GetComponent().GetLastSymbol();
+              s << '\n';
+            },
+            [&](const Fortran::evaluate::Component *y) {
+              s << "  " << y->GetLastSymbol() << '\n';
+            }},
+        u);
   };
   s << "LHS bases:\n";
   for (const std::optional<Fortran::lower::ExplicitIterSpace::ArrayBases> &u :

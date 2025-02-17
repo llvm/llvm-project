@@ -644,14 +644,14 @@ public:
   void EmitBasicReport(const Decl *DeclWithIssue, const CheckerBase *Checker,
                        StringRef BugName, StringRef BugCategory,
                        StringRef BugStr, PathDiagnosticLocation Loc,
-                       ArrayRef<SourceRange> Ranges = std::nullopt,
-                       ArrayRef<FixItHint> Fixits = std::nullopt);
+                       ArrayRef<SourceRange> Ranges = {},
+                       ArrayRef<FixItHint> Fixits = {});
 
   void EmitBasicReport(const Decl *DeclWithIssue, CheckerNameRef CheckerName,
                        StringRef BugName, StringRef BugCategory,
                        StringRef BugStr, PathDiagnosticLocation Loc,
-                       ArrayRef<SourceRange> Ranges = std::nullopt,
-                       ArrayRef<FixItHint> Fixits = std::nullopt);
+                       ArrayRef<SourceRange> Ranges = {},
+                       ArrayRef<FixItHint> Fixits = {});
 
 private:
   llvm::StringMap<std::unique_ptr<BugType>> StrBugTypes;
@@ -748,8 +748,8 @@ public:
 /// It can be valuable to produce tags with some bits of information and later
 /// reuse them for a better diagnostic.
 ///
-/// Please make sure that derived class' constuctor is private and that the user
-/// can only create objects using DataTag::Factory.  This also means that
+/// Please make sure that derived class' constructor is private and that the
+/// user can only create objects using DataTag::Factory.  This also means that
 /// DataTag::Factory should be friend for every derived class.
 class DataTag : public ProgramPointTag {
 public:

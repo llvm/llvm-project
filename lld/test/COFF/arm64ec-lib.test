@@ -1,0 +1,159 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows symref.s -o symref-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows nsymref.s -o nsymref-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows nsymref.s -o nsymref-aarch64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows sym.s -o sym-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows sym.s -o sym-x86_64.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows nsym.s -o nsym-aarch64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows ref-alias.s -o ref-alias.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows ref-thunk.s -o ref-thunk.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func.s -o func.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows func-x86_64.s -o func-x86_64.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+
+RUN: llvm-lib -machine:arm64ec -out:sym-arm64ec.lib sym-arm64ec.obj nsym-aarch64.obj
+RUN: llvm-lib -machine:amd64 -out:sym-x86_64.lib sym-x86_64.obj
+RUN: llvm-lib -machine:arm64ec -out:func.lib func.obj
+RUN: llvm-lib -machine:arm64ec -out:func-x86_64.lib func-x86_64.obj
+RUN: llvm-lib -machine:arm64ec -out:func-imp.lib -def:func.def
+
+Verify that a symbol can be referenced from ECSYMBOLS.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:test.dll symref-arm64ec.obj sym-arm64ec.lib loadconfig-arm64ec.obj
+
+Verify that a symbol can be referenced from a regular archive map when ECSYMBOLS is absent (using an x86_64 archive).
+RUN: lld-link -machine:arm64ec -dll -noentry -out:test2.dll symref-arm64ec.obj sym-x86_64.lib loadconfig-arm64ec.obj
+
+Verify that both native and EC symbols can be referenced in a hybrid target.
+RUN: lld-link -machine:arm64x -dll -noentry -out:test3.dll symref-arm64ec.obj nsymref-aarch64.obj sym-arm64ec.lib \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj
+
+Ensure that an EC symbol is not resolved using a regular symbol map.
+RUN: not lld-link -machine:arm64ec -dll -noentry -out:test-err.dll nsymref-arm64ec.obj sym-arm64ec.lib loadconfig-arm64ec.obj 2>&1 |\
+RUN:              FileCheck --check-prefix=ERR %s
+ERR: error: undefined symbol: nsym
+
+Verify that a library symbol can be referenced, even if its name conflicts with an anti-dependency alias.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-alias-1.dll ref-alias.obj func.lib loadconfig-arm64ec.obj
+RUN: llvm-objdump -d ref-alias-1.dll | FileCheck -check-prefix=DISASM %s
+DISASM:      0000000180001000 <.text>:
+DISASM-NEXT: 180001000: d65f03c0     ret
+DISASM-EMPTY:
+
+RUN: llvm-readobj --hex-dump=.test ref-alias-1.dll | FileCheck -check-prefix=TESTSEC %s
+TESTSEC: 0x180005000 00100000
+
+The same test, but with a different input order.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-alias-2.dll func.lib ref-alias.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d ref-alias-2.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test ref-alias-2.dll | FileCheck -check-prefix=TESTSEC %s
+
+Verify that when an anti-dependency to a guess exit thunk is present, it is overridden by an archive symbol.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-thunk-1.dll ref-thunk.obj func.lib loadconfig-arm64ec.obj
+RUN: llvm-objdump -d ref-thunk-1.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test ref-thunk-1.dll | FileCheck -check-prefix=TESTSEC %s
+
+The same test, but with a different input order.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-thunk-2.dll func.lib ref-thunk.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d ref-thunk-2.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test ref-thunk-2.dll | FileCheck -check-prefix=TESTSEC %s
+
+Pass multiple libraries containing `func` with different manglings and ensure they don't conflict with each other.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-thunk-3.dll func.lib loadconfig-arm64ec.obj func-x86_64.lib func-imp.lib ref-thunk.obj
+RUN: llvm-objdump -d ref-thunk-3.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test ref-thunk-3.dll | FileCheck -check-prefix=TESTSEC %s
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-thunk-4.dll ref-thunk.obj func.lib loadconfig-arm64ec.obj func-x86_64.lib func-imp.lib
+RUN: llvm-objdump -d ref-thunk-4.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test ref-thunk-4.dll | FileCheck -check-prefix=TESTSEC %s
+
+Test linking against an x86_64 library (which uses a demangled function name).
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-x86-1.dll ref-thunk.obj func-x86_64.lib loadconfig-arm64ec.obj
+RUN: llvm-objdump -d ref-x86-1.dll | FileCheck -check-prefix=DISASM-X86 %s
+RUN: llvm-readobj --hex-dump=.test ref-x86-1.dll | FileCheck -check-prefix=TESTSEC %s
+
+DISASM-X86:      0000000180001000 <.text>:
+DISASM-X86-NEXT: 180001000: c3                           retq
+
+The same test, but with a different input order.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-x86-2.dll func-x86_64.lib ref-thunk.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d ref-x86-2.dll | FileCheck -check-prefix=DISASM-X86 %s
+RUN: llvm-readobj --hex-dump=.test ref-x86-2.dll | FileCheck -check-prefix=TESTSEC %s
+
+Check that an alias to the implementation takes precedence over an archive symbol.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:ref-x86-2.dll func-x86_64.lib func.obj ref-thunk.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d ref-x86-2.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test ref-x86-2.dll | FileCheck -check-prefix=TESTSEC %s
+
+A similar test using -start-lib for linking.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:start-lib-1.dll ref-thunk.obj -start-lib func.obj -end-lib loadconfig-arm64ec.obj
+RUN: llvm-objdump -d start-lib-1.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test start-lib-1.dll | FileCheck -check-prefix=TESTSEC %s
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:start-lib-2.dll ref-thunk.obj -start-lib func.obj -end-lib loadconfig-arm64ec.obj \
+RUN:          -start-lib func-x86_64.obj -end-lib func-imp.lib
+RUN: llvm-objdump -d ref-thunk-3.dll | FileCheck -check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test ref-thunk-3.dll | FileCheck -check-prefix=TESTSEC %s
+
+#--- symref.s
+    .data
+    .rva sym
+
+#--- nsymref.s
+    .data
+    .rva nsym
+
+#--- sym.s
+     .data
+     .globl sym
+sym:
+     .word 0
+
+#--- nsym.s
+     .data
+     .globl nsym
+nsym:
+     .word 0
+
+#--- ref-alias.s
+    .weak_anti_dep func
+.set func,"#func"
+
+    .section .test, "r"
+    .rva func
+
+#--- ref-thunk.s
+    .weak_anti_dep func
+.set func, "#func"
+    .weak_anti_dep "#func"
+.set "#func", thunksym
+
+    .section .test, "r"
+    .rva func
+
+    .section .thnk,"xr",discard,thunksym
+thunksym:
+    mov w0, #2
+    ret
+
+#--- func.s
+    .text
+    .globl "#func"
+"#func":
+    ret
+
+    .weak_anti_dep func
+.set func,"#func"
+
+#--- func-x86_64.s
+    .text
+    .globl func
+func:
+    ret
+
+#--- func.def
+LIBRARY func.dll
+EXPORTS
+        func

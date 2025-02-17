@@ -61,19 +61,6 @@ static LogicalResult checkConstantOperandTranspose(Operation *op) {
   return success();
 }
 
-static LogicalResult checkConstantOperandFullyConnected(Operation *op) {
-  if (auto fcOp = dyn_cast<tosa::FullyConnectedOp>(op)) {
-    DenseElementsAttr weight;
-    if (!matchPattern(fcOp.getWeight(), m_Constant(&weight)))
-      return op->emitOpError("weight of fully_connected is not constant");
-
-    DenseElementsAttr bias;
-    if (!matchPattern(fcOp.getBias(), m_Constant(&bias)))
-      return op->emitOpError("bias of fully_connected is not constant");
-  }
-  return success();
-}
-
 struct TosaLevel {
   int32_t MAX_RANK = 0;
   int32_t MAX_KERNEL = 0;
@@ -123,7 +110,6 @@ private:
   void populateConstantOperandChecks() {
     constCheckers.emplace_back(checkConstantOperandPad);
     constCheckers.emplace_back(checkConstantOperandTranspose);
-    constCheckers.emplace_back(checkConstantOperandFullyConnected);
   }
 
   bool levelCheckKernel(Operation *op, int32_t v,
@@ -357,7 +343,7 @@ private:
   bool levelCheckTransposeConv2d(Operation *op) {
     if (auto transpose = dyn_cast<tosa::TransposeConv2DOp>(op)) {
       if (ShapedType filterType =
-              dyn_cast<ShapedType>(transpose.getFilter().getType())) {
+              dyn_cast<ShapedType>(transpose.getWeight().getType())) {
         auto shape = filterType.getShape();
         assert(shape.size() == 4);
         // level check kernel sizes for kH and KW
@@ -405,14 +391,28 @@ private:
     if (level == TosaLevelEnum::EightK) {
       tosaLevel = TOSA_LEVEL_EIGHTK;
     }
+
+    if (!profile.empty()) {
+      for (std::string &prof : profile) {
+        auto profSymbol = symbolizeTosaProfileEnum(prof);
+        if (profSymbol) {
+          enabled_profiles.push_back(profSymbol.value());
+        }
+      }
+    }
   }
 
   bool CheckVariable(Operation *op);
   bool CheckVariableReadOrWrite(Operation *op);
 
   bool isValidElementType(Type type);
+  bool isEnabledProfile(TosaProfileEnum prof) {
+    return std::find(enabled_profiles.begin(), enabled_profiles.end(), prof) !=
+           std::end(enabled_profiles);
+  }
 
   SmallVector<std::function<LogicalResult(Operation *)>> constCheckers;
+  SmallVector<TosaProfileEnum, 3> enabled_profiles;
   TosaLevel tosaLevel;
   DenseMap<StringAttr, mlir::Type> variablesMap;
 };
@@ -507,21 +507,11 @@ LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
 
 bool TosaValidation::isValidElementType(Type type) {
   if (isa<FloatType>(type)) {
-    if (profile == TosaProfileEnum::BaseInference)
+    if (!isEnabledProfile(TosaProfileEnum::MainInference))
       return false;
     return type.isF32() || type.isF16() || type.isBF16();
-  }
-  if (auto intTy = dyn_cast<IntegerType>(type)) {
-    if (intTy.isUnsigned()) {
-      switch (intTy.getWidth()) {
-      case 8:
-      case 16:
-        return true;
-      default:
-        return false;
-      }
-    } else {
-      // Signless - treated as signed.
+  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
+    if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
       case 1:
       case 4:
@@ -529,20 +519,26 @@ bool TosaValidation::isValidElementType(Type type) {
       case 16:
       case 32:
       case 48:
-      case 64:
         return true;
-      default:
-        return false;
       }
     }
-    return false;
+  } else if (mlir::isa<tosa::shapeType>(type)) {
+    return true;
   }
-  return true;
+  return false;
 }
 
 void TosaValidation::runOnOperation() {
   configLevelAndProfile();
+
+  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
+  if (!tosaDialect)
+    return;
+
   getOperation().walk([&](Operation *op) {
+    if (op->getDialect() != tosaDialect)
+      return;
+
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {

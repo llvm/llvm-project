@@ -7,6 +7,12 @@
 import numpy as np
 import ctypes
 
+try:
+    import ml_dtypes
+except ModuleNotFoundError:
+    # The third-party ml_dtypes provides some optional low precision data-types for NumPy.
+    ml_dtypes = None
+
 
 class C128(ctypes.Structure):
     """A ctype representation for MLIR's Double Complex."""
@@ -26,6 +32,17 @@ class F16(ctypes.Structure):
     _fields_ = [("f16", ctypes.c_int16)]
 
 
+class BF16(ctypes.Structure):
+    """A ctype representation for MLIR's BFloat16."""
+
+    _fields_ = [("bf16", ctypes.c_int16)]
+
+class F8E5M2(ctypes.Structure):
+    """A ctype representation for MLIR's Float8E5M2."""
+
+    _fields_ = [("f8E5M2", ctypes.c_int8)]
+
+
 # https://stackoverflow.com/questions/26921836/correct-way-to-test-for-numpy-dtype
 def as_ctype(dtp):
     """Converts dtype to ctype."""
@@ -35,6 +52,10 @@ def as_ctype(dtp):
         return C64
     if dtp == np.dtype(np.float16):
         return F16
+    if ml_dtypes is not None and dtp == ml_dtypes.bfloat16:
+        return BF16
+    if ml_dtypes is not None and dtp == ml_dtypes.float8_e5m2:
+        return F8E5M2
     return np.ctypeslib.as_ctypes_type(dtp)
 
 
@@ -46,6 +67,16 @@ def to_numpy(array):
         return array.view("complex64")
     if array.dtype == F16:
         return array.view("float16")
+    assert not (
+        array.dtype == BF16 and ml_dtypes is None
+    ), f"bfloat16 requires the ml_dtypes package, please run:\n\npip install ml_dtypes\n"
+    if array.dtype == BF16:
+        return array.view("bfloat16")
+    assert not (
+        array.dtype == F8E5M2 and ml_dtypes is None
+    ), f"float8_e5m2 requires the ml_dtypes package, please run:\n\npip install ml_dtypes\n"
+    if array.dtype == F8E5M2:
+        return array.view("float8_e5m2")
     return array
 
 

@@ -99,7 +99,7 @@ class TestStopOnSharedlibraryEvents(TestBase):
             backstop_bkpt_2.GetNumLocations(), 0, "Set our third breakpoint"
         )
 
-        if bkpt_modifier == None:
+        if bkpt_modifier is None:
             process.Continue()
             self.assertState(
                 process.GetState(), lldb.eStateStopped, "We didn't stop for the load"

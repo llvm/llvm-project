@@ -29,6 +29,9 @@ private:
   KnownBits(APInt Zero, APInt One)
       : Zero(std::move(Zero)), One(std::move(One)) {}
 
+  // Flip the range of values: [-0x80000000, 0x7FFFFFFF] <-> [0, 0xFFFFFFFF]
+  static KnownBits flipSignBit(const KnownBits &Val);
+
 public:
   // Default construct Zero and One.
   KnownBits() = default;
@@ -311,12 +314,6 @@ public:
     return KnownBits(Zero | RHS.Zero, One | RHS.One);
   }
 
-  /// Compute known bits common to LHS and RHS.
-  LLVM_DEPRECATED("use intersectWith instead", "intersectWith")
-  static KnownBits commonBits(const KnownBits &LHS, const KnownBits &RHS) {
-    return LHS.intersectWith(RHS);
-  }
-
   /// Return true if LHS and RHS have no common bits set.
   static bool haveNoCommonBitsSet(const KnownBits &LHS, const KnownBits &RHS) {
     return (LHS.Zero | RHS.Zero).isAllOnes();
@@ -334,6 +331,18 @@ public:
   /// Borrow.
   static KnownBits computeForSubBorrow(const KnownBits &LHS, KnownBits RHS,
                                        const KnownBits &Borrow);
+
+  /// Compute knownbits resulting from addition of LHS and RHS.
+  static KnownBits add(const KnownBits &LHS, const KnownBits &RHS,
+                       bool NSW = false, bool NUW = false) {
+    return computeForAddSub(/*Add=*/true, NSW, NUW, LHS, RHS);
+  }
+
+  /// Compute knownbits resulting from subtraction of LHS and RHS.
+  static KnownBits sub(const KnownBits &LHS, const KnownBits &RHS,
+                       bool NSW = false, bool NUW = false) {
+    return computeForAddSub(/*Add=*/false, NSW, NUW, LHS, RHS);
+  }
 
   /// Compute knownbits resulting from llvm.sadd.sat(LHS, RHS)
   static KnownBits sadd_sat(const KnownBits &LHS, const KnownBits &RHS);

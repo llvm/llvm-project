@@ -939,7 +939,7 @@ if.end.loopexit:
 }
 
 @f.b = external global i8, align 1
-define void @pr48450_3() {
+define void @pr48450_3(i1 %arg) {
 ; CHECK-LABEL: @pr48450_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
@@ -979,7 +979,7 @@ for.cond.cleanup:
   br label %cleanup
 
 for.body4:
-  br i1 undef, label %if.then6, label %if.end7
+  br i1 %arg, label %if.then6, label %if.end7
 
 if.then6:
   br label %cleanup

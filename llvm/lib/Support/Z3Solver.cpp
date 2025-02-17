@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/SMTAPI.h"
 
 using namespace llvm;
@@ -17,6 +19,7 @@ using namespace llvm;
 #include "llvm/ADT/Twine.h"
 
 #include <set>
+#include <unordered_map>
 
 #include <z3.h>
 
@@ -26,18 +29,14 @@ namespace {
 class Z3Config {
   friend class Z3Context;
 
-  Z3_config Config;
+  Z3_config Config = Z3_mk_config();
 
 public:
-  Z3Config() : Config(Z3_mk_config()) {
-    // Enable model finding
-    Z3_set_param_value(Config, "model", "true");
-    // Disable proof generation
-    Z3_set_param_value(Config, "proof", "false");
-    // Set timeout to 15000ms = 15s
-    Z3_set_param_value(Config, "timeout", "15000");
-  }
-
+  Z3Config() = default;
+  Z3Config(const Z3Config &) = delete;
+  Z3Config(Z3Config &&) = default;
+  Z3Config &operator=(Z3Config &) = delete;
+  Z3Config &operator=(Z3Config &&) = default;
   ~Z3Config() { Z3_del_config(Config); }
 }; // end class Z3Config
 
@@ -50,16 +49,22 @@ void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
 /// Wrapper for Z3 context
 class Z3Context {
 public:
+  Z3Config Config;
   Z3_context Context;
 
   Z3Context() {
-    Context = Z3_mk_context_rc(Z3Config().Config);
+    Context = Z3_mk_context_rc(Config.Config);
     // The error function is set here because the context is the first object
     // created by the backend
     Z3_set_error_handler(Context, Z3ErrorHandler);
   }
 
-  virtual ~Z3Context() {
+  Z3Context(const Z3Context &) = delete;
+  Z3Context(Z3Context &&) = default;
+  Z3Context &operator=(Z3Context &) = delete;
+  Z3Context &operator=(Z3Context &&) = default;
+
+  ~Z3Context() {
     Z3_del_context(Context);
     Context = nullptr;
   }
@@ -262,7 +267,17 @@ class Z3Solver : public SMTSolver {
 
   Z3Context Context;
 
-  Z3_solver Solver;
+  Z3_solver Solver = [this] {
+    Z3_solver S = Z3_mk_simple_solver(Context.Context);
+    Z3_solver_inc_ref(Context.Context, S);
+    return S;
+  }();
+
+  Z3_params Params = [this] {
+    Z3_params P = Z3_mk_params(Context.Context);
+    Z3_params_inc_ref(Context.Context, P);
+    return P;
+  }();
 
   // Cache Sorts
   std::set<Z3Sort> CachedSorts;
@@ -271,18 +286,15 @@ class Z3Solver : public SMTSolver {
   std::set<Z3Expr> CachedExprs;
 
 public:
-  Z3Solver() : Solver(Z3_mk_simple_solver(Context.Context)) {
-    Z3_solver_inc_ref(Context.Context, Solver);
-  }
-
+  Z3Solver() = default;
   Z3Solver(const Z3Solver &Other) = delete;
   Z3Solver(Z3Solver &&Other) = delete;
   Z3Solver &operator=(Z3Solver &Other) = delete;
   Z3Solver &operator=(Z3Solver &&Other) = delete;
 
-  ~Z3Solver() {
-    if (Solver)
-      Z3_solver_dec_ref(Context.Context, Solver);
+  ~Z3Solver() override {
+    Z3_params_dec_ref(Context.Context, Params);
+    Z3_solver_dec_ref(Context.Context, Solver);
   }
 
   void addConstraint(const SMTExprRef &Exp) const override {
@@ -871,6 +883,7 @@ public:
   }
 
   std::optional<bool> check() const override {
+    Z3_solver_set_params(Context.Context, Solver, Params);
     Z3_lbool res = Z3_solver_check(Context.Context, Solver);
     if (res == Z3_L_TRUE)
       return true;
@@ -896,7 +909,70 @@ public:
   void print(raw_ostream &OS) const override {
     OS << Z3_solver_to_string(Context.Context, Solver);
   }
+
+  void setUnsignedParam(StringRef Key, unsigned Value) override {
+    Z3_symbol Sym = Z3_mk_string_symbol(Context.Context, Key.str().c_str());
+    Z3_params_set_uint(Context.Context, Params, Sym, Value);
+  }
+
+  void setBoolParam(StringRef Key, bool Value) override {
+    Z3_symbol Sym = Z3_mk_string_symbol(Context.Context, Key.str().c_str());
+    Z3_params_set_bool(Context.Context, Params, Sym, Value);
+  }
+
+  std::unique_ptr<SMTSolverStatistics> getStatistics() const override;
 }; // end class Z3Solver
+
+class Z3Statistics final : public SMTSolverStatistics {
+public:
+  double getDouble(StringRef Key) const override {
+    auto It = DoubleValues.find(Key.str());
+    assert(It != DoubleValues.end());
+    return It->second;
+  };
+  unsigned getUnsigned(StringRef Key) const override {
+    auto It = UnsignedValues.find(Key.str());
+    assert(It != UnsignedValues.end());
+    return It->second;
+  };
+
+  void print(raw_ostream &OS) const override {
+    for (auto const &[K, V] : UnsignedValues) {
+      OS << K << ": " << V << '\n';
+    }
+    for (auto const &[K, V] : DoubleValues) {
+      write_double(OS << K << ": ", V, FloatStyle::Fixed);
+      OS << '\n';
+    }
+  }
+
+private:
+  friend class Z3Solver;
+  std::unordered_map<std::string, unsigned> UnsignedValues;
+  std::unordered_map<std::string, double> DoubleValues;
+};
+
+std::unique_ptr<SMTSolverStatistics> Z3Solver::getStatistics() const {
+  auto const &C = Context.Context;
+  Z3_stats S = Z3_solver_get_statistics(C, Solver);
+  Z3_stats_inc_ref(C, S);
+  auto StatsGuard = llvm::make_scope_exit([&C, &S] { Z3_stats_dec_ref(C, S); });
+  Z3Statistics Result;
+
+  unsigned NumKeys = Z3_stats_size(C, S);
+  for (unsigned Idx = 0; Idx < NumKeys; ++Idx) {
+    const char *Key = Z3_stats_get_key(C, S, Idx);
+    if (Z3_stats_is_uint(C, S, Idx)) {
+      auto Value = Z3_stats_get_uint_value(C, S, Idx);
+      Result.UnsignedValues.try_emplace(Key, Value);
+    } else {
+      assert(Z3_stats_is_double(C, S, Idx));
+      auto Value = Z3_stats_get_double_value(C, S, Idx);
+      Result.DoubleValues.try_emplace(Key, Value);
+    }
+  }
+  return std::make_unique<Z3Statistics>(std::move(Result));
+}
 
 } // end anonymous namespace
 
@@ -916,3 +992,4 @@ llvm::SMTSolverRef llvm::CreateZ3Solver() {
 LLVM_DUMP_METHOD void SMTSort::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTExpr::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTSolver::dump() const { print(llvm::errs()); }
+LLVM_DUMP_METHOD void SMTSolverStatistics::dump() const { print(llvm::errs()); }

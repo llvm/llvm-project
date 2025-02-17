@@ -136,7 +136,7 @@ static bool isYmmOrZmmReg(unsigned Reg) {
 }
 
 static bool checkFnHasLiveInYmmOrZmm(MachineRegisterInfo &MRI) {
-  for (std::pair<unsigned, unsigned> LI : MRI.liveins())
+  for (std::pair<MCRegister, Register> LI : MRI.liveins())
     if (isYmmOrZmmReg(LI.first))
       return true;
 

@@ -314,3 +314,52 @@ exit:
   tail call void asm sideeffect "; use $0", "v"(i64 %v1)
   ret void
 }
+
+; CHECK-LABEL: {{^}}scc_as_i32:
+; CHECK: ; def scc
+; CHECK: ; use scc
+define void @scc_as_i32() {
+  %scc = call i32 asm sideeffect "; def $0", "={scc}"()
+  call void asm sideeffect "; use $0 ", "{scc}"(i32 %scc)
+  ret void
+}
+
+; CHECK-LABEL: {{^}}scc_as_i1:
+; CHECK: ; def scc
+; CHECK: ; use scc
+define void @scc_as_i1() {
+  %scc = call i1 asm sideeffect "; def $0", "={scc}"()
+  call void asm sideeffect "; use $0 ", "{scc}"(i1 %scc)
+  ret void
+}
+
+; Make sure the SGPR def is treated as a uniform value when the inline
+; assembly also defines a divergent value. The add should be scalar
+; and not introduce illegal vgpr to sgpr copies.
+; CHECK-LABEL: {{^}}mixed_def_vgpr_sgpr_def_asm:
+; CHECK: ; def v0 s[4:5]
+; CHECK: s_add_u32
+; CHECK-NEXT: s_addc_u32
+; CHECK: ; use s[4:5]
+define void @mixed_def_vgpr_sgpr_def_asm() {
+  %vgpr_sgpr = call { i32, i64 } asm sideeffect "; def $0 $1 ", "=v,={s[4:5]}"()
+  %vgpr = extractvalue { i32, i64 } %vgpr_sgpr, 0
+  %sgpr = extractvalue { i32, i64 } %vgpr_sgpr, 1
+  %sgpr.add = add i64 %sgpr, 2
+  call void asm sideeffect "; use $0 ", "{s[4:5]}"(i64 %sgpr.add)
+  ret void
+}
+
+; CHECK-LABEL: {{^}}mixed_def_sgpr_vgpr_def_asm:
+; CHECK: ; def s[4:5] v0
+; CHECK: s_add_u32
+; CHECK-NEXT: s_addc_u32
+; CHECK: ; use s[4:5]
+define void @mixed_def_sgpr_vgpr_def_asm() {
+  %sgpr_vgpr = call { i64, i32 } asm sideeffect "; def $0 $1 ", "={s[4:5]},=v"()
+  %sgpr = extractvalue { i64, i32 } %sgpr_vgpr, 0
+  %vgpr = extractvalue { i64, i32 } %sgpr_vgpr, 1
+  %sgpr.add = add i64 %sgpr, 2
+  call void asm sideeffect "; use $0 ", "{s[4:5]}"(i64 %sgpr.add)
+  ret void
+}

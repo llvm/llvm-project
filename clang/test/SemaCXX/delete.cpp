@@ -1,5 +1,5 @@
 // Test without PCH
-// RUN: %clang_cc1 -fsyntax-only -include %S/delete-mismatch.h -fdiagnostics-parseable-fixits -std=c++11 %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -include %S/delete-mismatch.h -fdiagnostics-parseable-fixits -std=c++11 %s 2>&1 -fexperimental-new-constant-interpreter | FileCheck %s
 
 // Test with PCH
 // RUN: %clang_cc1 -x c++-header -std=c++11 -emit-pch -o %t %S/delete-mismatch.h

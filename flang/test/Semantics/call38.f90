@@ -522,3 +522,61 @@ module char
     call scalar('a')
   end
 end
+
+subroutine bug114080(arg, contigArg)
+  character(*) :: arg(..)
+  character(*), contiguous :: contigArg(..)
+  interface
+   subroutine sub1(arg1) bind(c)
+     character(1) :: arg1(2,4)
+   end subroutine
+  end interface
+  !ERROR: Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank
+  call sub1(arg)
+  !ERROR: Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank
+  call sub1(contigArg)
+  !ERROR: Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank
+  call sub2(arg)
+  !ERROR: Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank
+  call sub2(contigArg)
+  contains
+    subroutine sub2(arg2)
+      character(*) :: arg2(10)
+    end subroutine sub2
+end subroutine
+
+subroutine bug123807
+  interface
+    subroutine test(s)
+      character(5), intent(inout) :: s(5)
+    end
+  end interface
+  character(30) :: s30a
+  character(30), allocatable :: s30b
+  character(6) :: s30c(5)
+  character(24) :: s24a
+  character(24), allocatable :: s24b
+  character(4) :: s24c(6)
+  allocate(s30b)
+  allocate(s24b)
+  call test(s30a)
+  call test(s30a(6:))
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s30a(7:))
+  call test(s30b)
+  call test(s30b(6:))
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s30b(7:))
+  call test(s30c)
+  call test(s30c(1)(6:))
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s30c(2))
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s30c(2)(1:))
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s24a)
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s24b)
+  !ERROR: Actual argument array has fewer characters (24) than dummy argument 's=' array (25)
+  call test(s24c)
+end

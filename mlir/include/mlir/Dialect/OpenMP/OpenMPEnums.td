@@ -108,14 +108,15 @@ def ClauseRequiresAttr : OpenMP_EnumAttr<ClauseRequires, "clause_requires">;
 def ClauseTaskDependIn : I32EnumAttrCase<"taskdependin", 0>;
 def ClauseTaskDependOut : I32EnumAttrCase<"taskdependout", 1>;
 def ClauseTaskDependInOut : I32EnumAttrCase<"taskdependinout", 2>;
+def ClauseTaskDependMutexInOutSet
+    : I32EnumAttrCase<"taskdependmutexinoutset", 3>;
+def ClauseTaskDependInOutSet : I32EnumAttrCase<"taskdependinoutset", 4>;
 
-def ClauseTaskDepend : OpenMP_I32EnumAttr<
-    "ClauseTaskDepend",
-    "depend clause in a target or task construct", [
-      ClauseTaskDependIn,
-      ClauseTaskDependOut,
-      ClauseTaskDependInOut
-    ]>;
+def ClauseTaskDepend
+    : OpenMP_I32EnumAttr<
+          "ClauseTaskDepend", "depend clause in a target or task construct",
+          [ClauseTaskDependIn, ClauseTaskDependOut, ClauseTaskDependInOut,
+           ClauseTaskDependMutexInOutSet, ClauseTaskDependInOutSet]>;
 
 def ClauseTaskDependAttr : OpenMP_EnumAttr<ClauseTaskDepend,
                                            "clause_task_depend"> {
@@ -160,6 +161,42 @@ def DeclareTargetDeviceType : OpenMP_I32EnumAttr<
 
 def DeclareTargetDeviceTypeAttr : OpenMP_EnumAttr<DeclareTargetDeviceType,
                                                   "device_type"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+//===----------------------------------------------------------------------===//
+// order_modifer enum.
+//===----------------------------------------------------------------------===//
+
+def OMP_OrderModReproducible       : I32EnumAttrCase<"reproducible", 0>;
+def OMP_OrderModUnconstrained      : I32EnumAttrCase<"unconstrained", 1>;
+def OrderModifier
+    : I32EnumAttr<"OrderModifier", "OpenMP Order Modifier",
+                  [OMP_OrderModReproducible, OMP_OrderModUnconstrained]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
+}
+def OrderModifierAttr : EnumAttr<OpenMP_Dialect, OrderModifier,
+                                    "order_mod">;
+
+//===----------------------------------------------------------------------===//
+// reduction_modifier enum.
+//===----------------------------------------------------------------------===//
+
+def ReductionModifierDefault : I32EnumAttrCase<"defaultmod", 0>;
+def ReductionModifierInscan : I32EnumAttrCase<"inscan", 1>;
+def ReductionModifierTask : I32EnumAttrCase<"task", 2>;
+
+def ReductionModifier : OpenMP_I32EnumAttr<
+    "ReductionModifier",
+    "reduction modifier", [
+      ReductionModifierDefault,
+      ReductionModifierInscan,
+      ReductionModifierTask
+    ]>;
+
+def ReductionModifierAttr : OpenMP_EnumAttr<ReductionModifier,
+                                            "reduction_modifier"> {
   let assemblyFormat = "`(` $value `)`";
 }
 

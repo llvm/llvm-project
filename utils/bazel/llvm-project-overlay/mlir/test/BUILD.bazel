@@ -123,6 +123,7 @@ td_library(
         "//mlir:LinalgStructuredOpsTdFiles",
         "//mlir:MemorySlotInterfacesTdFiles",
         "//mlir:OpBaseTdFiles",
+        "//mlir:PolynomialTdFiles",
         "//mlir:SideEffectInterfacesTdFiles",
     ],
 )
@@ -222,11 +223,17 @@ gentbl_cc_library(
     strip_include_prefix = "lib/Dialect/Test",
     tbl_outs = [
         (
-            ["-gen-attrdef-decls"],
+            [
+                "-gen-attrdef-decls",
+                "--attrdefs-dialect=test",
+            ],
             "lib/Dialect/Test/TestAttrDefs.h.inc",
         ),
         (
-            ["-gen-attrdef-defs"],
+            [
+                "-gen-attrdef-defs",
+                "--attrdefs-dialect=test",
+            ],
             "lib/Dialect/Test/TestAttrDefs.cpp.inc",
         ),
     ],
@@ -421,6 +428,7 @@ cc_library(
         "//mlir:LoopLikeInterface",
         "//mlir:MemorySlotInterfaces",
         "//mlir:Pass",
+        "//mlir:PolynomialDialect",
         "//mlir:Reducer",
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
@@ -438,6 +446,7 @@ cc_library(
     srcs = ["lib/Dialect/Test/TestToLLVMIRTranslation.cpp"],
     deps = [
         ":TestDialect",
+        "//llvm:Core",
         "//llvm:Support",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:IR",
@@ -537,10 +546,33 @@ cc_library(
     deps = [
         ":TestDialect",
         "//llvm:Support",
+        "//mlir:ArithToSPIRV",
+        "//mlir:ArithTransforms",
         "//mlir:FuncDialect",
+        "//mlir:FuncToSPIRV",
+        "//mlir:GPUDialect",
+        "//mlir:GPUToGPURuntimeTransforms",
+        "//mlir:GPUToSPIRV",
+        "//mlir:GPUTransforms",
         "//mlir:IR",
+        "//mlir:IndexToSPIRV",
+        "//mlir:LLVMIRTransforms",
+        "//mlir:MemRefToLLVM",
+        "//mlir:MemRefToSPIRV",
+        "//mlir:MemRefTransforms",
         "//mlir:Pass",
+        "//mlir:Rewrite",
+        "//mlir:SCFToSPIRV",
+        "//mlir:SPIRVConversion",
+        "//mlir:SPIRVDialect",
+        "//mlir:SPIRVToLLVM",
+        "//mlir:SPIRVTransforms",
         "//mlir:Support",
+        "//mlir:TransformUtils",
+        "//mlir:UBToSPIRV",
+        "//mlir:VectorDialect",
+        "//mlir:VectorToSPIRV",
+        "//mlir:VectorTransforms",
     ],
 )
 
@@ -648,6 +680,23 @@ cc_library(
 )
 
 cc_library(
+    name = "TestConvertToSPIRV",
+    srcs = glob(["lib/Conversion/ConvertToSPIRV/*.cpp"]),
+    deps = [
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:Pass",
+        "//mlir:SPIRVConversion",
+        "//mlir:SPIRVDialect",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+        "//mlir:UBDialect",
+        "//mlir:VectorDialect",
+        "//mlir:VectorTransforms",
+    ],
+)
+
+cc_library(
     name = "TestAffine",
     srcs = glob([
         "lib/Dialect/Affine/*.cpp",
@@ -663,6 +712,7 @@ cc_library(
         "//mlir:ArithTransforms",
         "//mlir:DialectUtils",
         "//mlir:FuncDialect",
+        "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
@@ -773,10 +823,13 @@ cc_library(
     includes = ["lib/Dialect/Test"],
     deps = [
         "//mlir:AffineToStandard",
+        "//mlir:ArithToLLVM",
+        "//mlir:ControlFlowToLLVM",
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",
         "//mlir:IR",
         "//mlir:IndexToLLVM",
+        "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",
         "//mlir:LinalgTransforms",
         "//mlir:MathToLLVM",
@@ -785,7 +838,9 @@ cc_library(
         "//mlir:Pass",
         "//mlir:ReconcileUnrealizedCasts",
         "//mlir:SCFToControlFlow",
+        "//mlir:TransformUtils",
         "//mlir:Transforms",
+        "//mlir:UBToLLVM",
         "//mlir:VectorToLLVM",
         "//mlir:VectorToSCF",
     ],

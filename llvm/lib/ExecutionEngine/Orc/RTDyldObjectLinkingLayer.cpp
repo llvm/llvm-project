@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <memory>
+
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/Object/COFF.h"
 
@@ -86,7 +88,10 @@ RTDyldObjectLinkingLayer::RTDyldObjectLinkingLayer(
 }
 
 RTDyldObjectLinkingLayer::~RTDyldObjectLinkingLayer() {
-  assert(MemMgrs.empty() && "Layer destroyed with resources still attached");
+  assert(MemMgrs.empty() &&
+         "Layer destroyed with resources still attached"
+         "(ExecutionSession::endSession() must be called prior to "
+         "destruction)");
 }
 
 void RTDyldObjectLinkingLayer::emit(
@@ -184,11 +189,13 @@ void RTDyldObjectLinkingLayer::emit(
   std::shared_ptr<MaterializationResponsibility> SharedR(std::move(R));
   auto Deps = std::make_unique<SymbolDependenceMap>();
 
-  JITDylibSearchOrderResolver Resolver(*SharedR, *Deps);
+  auto Resolver =
+      std::make_unique<JITDylibSearchOrderResolver>(*SharedR, *Deps);
+  auto *ResolverPtr = Resolver.get();
 
   jitLinkForORC(
       object::OwningBinary<object::ObjectFile>(std::move(*Obj), std::move(O)),
-      MemMgrRef, Resolver, ProcessAllSections,
+      MemMgrRef, *ResolverPtr, ProcessAllSections,
       [this, SharedR, &MemMgrRef, InternalSymbols](
           const object::ObjectFile &Obj,
           RuntimeDyld::LoadedObjectInfo &LoadedObjInfo,
@@ -196,7 +203,8 @@ void RTDyldObjectLinkingLayer::emit(
         return onObjLoad(*SharedR, Obj, MemMgrRef, LoadedObjInfo,
                          ResolvedSymbols, *InternalSymbols);
       },
-      [this, SharedR, MemMgr = std::move(MemMgr), Deps = std::move(Deps)](
+      [this, SharedR, MemMgr = std::move(MemMgr), Deps = std::move(Deps),
+       Resolver = std::move(Resolver)](
           object::OwningBinary<object::ObjectFile> Obj,
           std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
           Error Err) mutable {
@@ -425,16 +433,15 @@ Error RTDyldObjectLinkingLayer::handleRemoveResources(JITDylib &JD,
 void RTDyldObjectLinkingLayer::handleTransferResources(JITDylib &JD,
                                                        ResourceKey DstKey,
                                                        ResourceKey SrcKey) {
-  auto I = MemMgrs.find(SrcKey);
-  if (I != MemMgrs.end()) {
-    auto &SrcMemMgrs = I->second;
+  if (MemMgrs.contains(SrcKey)) {
+    // DstKey may not be in the DenseMap yet, so the following line may resize
+    // the container and invalidate iterators and value references.
     auto &DstMemMgrs = MemMgrs[DstKey];
+    auto &SrcMemMgrs = MemMgrs[SrcKey];
     DstMemMgrs.reserve(DstMemMgrs.size() + SrcMemMgrs.size());
     for (auto &MemMgr : SrcMemMgrs)
       DstMemMgrs.push_back(std::move(MemMgr));
 
-    // Erase SrcKey entry using value rather than iterator I: I may have been
-    // invalidated when we looked up DstKey.
     MemMgrs.erase(SrcKey);
   }
 }

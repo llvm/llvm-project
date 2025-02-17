@@ -46,6 +46,8 @@
 // CORTEXX3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-x3"
 // RUN: %clang --target=aarch64 -mcpu=cortex-x4 -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-X4 %s
 // CORTEX-X4: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-x4"
+// RUN: %clang --target=aarch64 -mcpu=cortex-x925 -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-X925 %s
+// CORTEX-X925: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-x925"
 // RUN: %clang --target=aarch64 -mcpu=cortex-a78  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXA78 %s
 // CORTEXA78: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a78"
 // RUN: %clang --target=aarch64 -mcpu=cortex-a78c  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A78C %s
@@ -58,6 +60,8 @@
 // CORTEX-A720: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a720"
 // RUN: %clang --target=aarch64 -mcpu=cortex-a720ae  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A720AE %s
 // CORTEX-A720AE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a720ae"
+// RUN: %clang --target=aarch64 -mcpu=cortex-a725  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A725 %s
+// CORTEX-A725: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a725"
 // RUN: %clang --target=aarch64 -mcpu=neoverse-e1  -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-E1 %s
 // NEOVERSE-E1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-e1"
 // RUN: %clang --target=aarch64 -mcpu=neoverse-v1  -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V1 %s

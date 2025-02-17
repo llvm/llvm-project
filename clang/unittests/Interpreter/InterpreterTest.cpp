@@ -101,11 +101,18 @@ TEST_F(InterpreterTest, Errors) {
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
   auto Err = Interp->Parse("intentional_error v1 = 42; ").takeError();
   using ::testing::HasSubstr;
-  EXPECT_THAT(DiagnosticsOS.str(),
+  EXPECT_THAT(DiagnosticOutput,
               HasSubstr("error: unknown type name 'intentional_error'"));
   EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
 
   auto RecoverErr = Interp->Parse("int var1 = 42;");
+  EXPECT_TRUE(!!RecoverErr);
+
+  Err = Interp->Parse("try { throw 1; } catch { 0; }").takeError();
+  EXPECT_THAT(DiagnosticOutput, HasSubstr("error: expected '('"));
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+
+  RecoverErr = Interp->Parse("var1 = 424;");
   EXPECT_TRUE(!!RecoverErr);
 }
 
@@ -186,7 +193,7 @@ static std::string MangleName(NamedDecl *ND) {
   std::string mangledName;
   llvm::raw_string_ostream RawStr(mangledName);
   MangleC->mangleName(ND, RawStr);
-  return RawStr.str();
+  return mangledName;
 }
 
 TEST_F(InterpreterTest, FindMangledNameSymbol) {
@@ -282,11 +289,9 @@ TEST_F(InterpreterTest, InstantiateTemplate) {
   EXPECT_EQ(42, fn(NewA.getPtr()));
 }
 
-// This test exposes an ARM specific problem in the interpreter, see
-// https://github.com/llvm/llvm-project/issues/94741.
-#ifndef __arm__
 TEST_F(InterpreterTest, Value) {
-  std::unique_ptr<Interpreter> Interp = createInterpreter();
+  std::vector<const char *> Args = {"-fno-sized-deallocation"};
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 
   Value V1;
   llvm::cantFail(Interp->ParseAndExecute("int x = 42;"));
@@ -382,6 +387,27 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_EQ(V9.getKind(), Value::K_PtrOrObj);
   EXPECT_TRUE(V9.isManuallyAlloc());
 }
-#endif /* ifndef __arm__ */
+
+TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
+  std::vector<const char *> Args;
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  Sema &sema = Interp->getCompilerInstance()->getSema();
+
+  llvm::cantFail(Interp->ParseAndExecute("int x = 42;"));
+
+  TranslationUnitDecl *TU =
+      sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl();
+
+  llvm::cantFail(Interp->ParseAndExecute("long y = 84;"));
+
+  EXPECT_EQ(TU,
+            sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+
+  llvm::cantFail(Interp->ParseAndExecute("char z = 'z';"));
+
+  EXPECT_EQ(TU,
+            sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+}
 
 } // end anonymous namespace

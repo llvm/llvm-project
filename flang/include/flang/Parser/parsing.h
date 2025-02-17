@@ -14,8 +14,8 @@
 #include "message.h"
 #include "parse-tree.h"
 #include "provenance.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Parser/preprocessor.h"
+#include "flang/Support/Fortran-features.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
@@ -40,6 +40,7 @@ struct Options {
   bool needProvenanceRangeToCharBlockMappings{false};
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
   bool prescanAndReformat{false}; // -E
+  bool expandIncludeLinesInPreprocessedOutput{true};
   bool showColors{false};
 };
 

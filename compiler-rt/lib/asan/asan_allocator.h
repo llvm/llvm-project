@@ -182,42 +182,44 @@ static_assert(SizeClassMap::kNumClassesRounded <= 32,
               "allocator size and SizeClassMap tunings that allows us to "
               "reliably run all bringup tests in a sanitized environment.");
 
-#    else
+#    else   // SANITIZER_RISCV64
 // These are the default allocator tunings for non-RISCV environments where the
 // VMA is usually 48 bits and we have lots of space.
 const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
-#    endif
-#  elif defined(__powerpc64__)
+#    endif  // SANITIZER_RISCV64
+#  else     // SANITIZER_FUCHSIA
+
+#    if SANITIZER_APPLE
+const uptr kAllocatorSpace = 0x600000000000ULL;
+#    else   // SANITIZER_APPLE
 const uptr kAllocatorSpace = ~(uptr)0;
+#    endif  // SANITIZER_APPLE
+
+#    if defined(__powerpc64__)
 const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
-#  elif defined(__aarch64__) && SANITIZER_ANDROID
+#    elif defined(__aarch64__) && SANITIZER_ANDROID
 // Android needs to support 39, 42 and 48 bit VMA.
-const uptr kAllocatorSpace =  ~(uptr)0;
 const uptr kAllocatorSize  =  0x2000000000ULL;  // 128G.
 typedef VeryCompactSizeClassMap SizeClassMap;
-#  elif SANITIZER_RISCV64
-const uptr kAllocatorSpace = ~(uptr)0;
+#    elif SANITIZER_RISCV64
 const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
 typedef VeryDenseSizeClassMap SizeClassMap;
-#  elif defined(__sparc__)
-const uptr kAllocatorSpace = ~(uptr)0;
+#    elif defined(__sparc__)
 const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
-#  elif SANITIZER_WINDOWS
-const uptr kAllocatorSpace = ~(uptr)0;
+#    elif SANITIZER_WINDOWS
 const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
 typedef DefaultSizeClassMap SizeClassMap;
-#  elif SANITIZER_APPLE
-const uptr kAllocatorSpace = 0x600000000000ULL;
+#    elif SANITIZER_APPLE
 const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
-#  else
-const uptr kAllocatorSpace = 0x500000000000ULL;
+#    else
 const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
-#  endif
+#    endif  // defined(__powerpc64__) etc.
+#  endif    // SANITIZER_FUCHSIA
 template <typename AddressSpaceViewTy>
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;
@@ -232,7 +234,7 @@ struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
 template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
 using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
-#else  // Fallback to SizeClassAllocator32.
+#else   // SANITIZER_CAN_USE_ALLOCATOR64. Fallback to SizeClassAllocator32.
 typedef CompactSizeClassMap SizeClassMap;
 template <typename AddressSpaceViewTy>
 struct AP32 {

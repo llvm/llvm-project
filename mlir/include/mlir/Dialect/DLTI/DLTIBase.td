@@ -23,9 +23,21 @@ def DLTI_Dialect : Dialect {
   }];
 
   let extraClassDeclaration = [{
-    // Top level attribute name.
+    // Top-level attribute name for arbitrary description.
+    constexpr const static ::llvm::StringLiteral
+    kMapAttrName = "dlti.map";
+
+    // Top-level attribute name for data layout description.
     constexpr const static ::llvm::StringLiteral
     kDataLayoutAttrName = "dlti.dl_spec";
+
+    // Top-level attribute name for target system description.
+    constexpr const static ::llvm::StringLiteral
+    kTargetSystemDescAttrName = "dlti.target_system_spec";
+
+    // Top-level attribute name for target device description.
+    constexpr const static ::llvm::StringLiteral
+    kTargetDeviceDescAttrName = "dlti.target_device_spec";
 
     // Constants used in entries.
     constexpr const static ::llvm::StringLiteral
@@ -51,24 +63,6 @@ def DLTI_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
-}
-
-def DLTI_DataLayoutEntryAttr : DialectAttr<
-    DLTI_Dialect,
-    CPred<"::llvm::isa<::mlir::DataLayoutEntryAttr>($_self)">,
-    "Target data layout entry"> {
-  let storageType = "::mlir::DataLayoutEntryAttr";
-  let returnType = "::mlir::DataLayoutEntryAttr";
-  let convertFromStorage = "$_self";
-}
-
-def DLTI_DataLayoutSpecAttr : DialectAttr<
-    DLTI_Dialect,
-    CPred<"::llvm::isa<::mlir::DataLayoutSpecAttr>($_self)">,
-    "Target data layout specification"> {
-  let storageType = "::mlir::DataLayoutSpecAttr";
-  let returnType = "::mlir::DataLayoutSpecAttr";
-  let convertFromStorage = "$_self";
 }
 
 def HasDefaultDLTIDataLayout : NativeOpTrait<"HasDefaultDLTIDataLayout"> {

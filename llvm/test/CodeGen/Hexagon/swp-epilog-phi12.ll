@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 -pipeliner-experimental-cg=true -disable-cgp-delete-phis < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 -pipeliner-experimental-cg=true -disable-cgp-delete-phis < %s | FileCheck %s
 
 ; Test epilogue generation when reading loop-carried dependency from a previous
 ; stage. The first epilogue should read value from iteration N-1 of the kernel.

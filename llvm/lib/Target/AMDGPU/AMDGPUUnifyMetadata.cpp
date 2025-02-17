@@ -53,16 +53,16 @@ namespace {
     /// Keep the largest version as the sole operand if PickFirst is false.
     /// Otherwise pick it from the first value, representing kernel module.
     bool unifyVersionMD(Module &M, StringRef Name, bool PickFirst) {
-      auto NamedMD = M.getNamedMetadata(Name);
+      auto *NamedMD = M.getNamedMetadata(Name);
       if (!NamedMD || NamedMD->getNumOperands() <= 1)
         return false;
       MDNode *MaxMD = nullptr;
       auto MaxVer = 0U;
       for (auto *VersionMD : NamedMD->operands()) {
         assert(VersionMD->getNumOperands() == 2);
-        auto CMajor = mdconst::extract<ConstantInt>(VersionMD->getOperand(0));
+        auto *CMajor = mdconst::extract<ConstantInt>(VersionMD->getOperand(0));
         auto VersionMajor = CMajor->getZExtValue();
-        auto CMinor = mdconst::extract<ConstantInt>(VersionMD->getOperand(1));
+        auto *CMinor = mdconst::extract<ConstantInt>(VersionMD->getOperand(1));
         auto VersionMinor = CMinor->getZExtValue();
         auto Ver = (VersionMajor * 100) + (VersionMinor * 10);
         if (Ver > MaxVer) {
@@ -86,7 +86,7 @@ namespace {
   /// !n2 = !{!"cl_khr_image"}
   /// Combine it into a single list with unique operands.
   bool unifyExtensionMD(Module &M, StringRef Name) {
-    auto NamedMD = M.getNamedMetadata(Name);
+    auto *NamedMD = M.getNamedMetadata(Name);
     if (!NamedMD || NamedMD->getNumOperands() == 1)
       return false;
 

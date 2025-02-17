@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 
+#include <cstdint>
 #include <memory>
 
 namespace llvm {
@@ -49,7 +50,6 @@ createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
 #include "AMDGPUGenRegisterInfo.inc"
 
 #define GET_INSTRINFO_ENUM
-#define GET_INSTRINFO_OPERAND_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
 #include "AMDGPUGenInstrInfo.inc"
 

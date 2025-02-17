@@ -33,7 +33,12 @@ class ArchiveFile;
 class COFFLinkerContext;
 class InputFile;
 class ObjFile;
+class Symbol;
 class SymbolTable;
+
+const COFFSyncStream &operator<<(const COFFSyncStream &,
+                                 const llvm::object::Archive::Symbol *);
+const COFFSyncStream &operator<<(const COFFSyncStream &, Symbol *);
 
 // The base class for real symbol classes.
 class Symbol {
@@ -98,15 +103,15 @@ protected:
   friend SymbolTable;
   explicit Symbol(Kind k, StringRef n = "")
       : symbolKind(k), isExternal(true), isCOMDAT(false),
-        writtenToSymtab(false), pendingArchiveLoad(false), isGCRoot(false),
-        isRuntimePseudoReloc(false), deferUndefined(false), canInline(true),
-        isWeak(false), nameSize(n.size()),
-        nameData(n.empty() ? nullptr : n.data()) {
+        writtenToSymtab(false), isUsedInRegularObj(false),
+        pendingArchiveLoad(false), isGCRoot(false), isRuntimePseudoReloc(false),
+        deferUndefined(false), canInline(true), isWeak(false), isAntiDep(false),
+        nameSize(n.size()), nameData(n.empty() ? nullptr : n.data()) {
     assert((!n.empty() || k <= LastDefinedCOFFKind) &&
            "If the name is empty, the Symbol must be a DefinedCOFF.");
   }
 
-  const unsigned symbolKind : 8;
+  unsigned symbolKind : 8;
   unsigned isExternal : 1;
 
 public:
@@ -144,6 +149,9 @@ public:
   // This information isn't written to the output; rather, it's used for
   // managing weak symbol overrides.
   unsigned isWeak : 1;
+
+  // True if the symbol is an anti-dependency.
+  unsigned isAntiDep : 1;
 
 protected:
   // Symbol name length. Assume symbol lengths fit in a 32-bit integer.
@@ -340,7 +348,22 @@ public:
   // If this symbol is external weak, try to resolve it to a defined
   // symbol by searching the chain of fallback symbols. Returns the symbol if
   // successful, otherwise returns null.
-  Defined *getWeakAlias();
+  Symbol *getWeakAlias();
+  Defined *getDefinedWeakAlias() {
+    return dyn_cast_or_null<Defined>(getWeakAlias());
+  }
+
+  void setWeakAlias(Symbol *sym, bool antiDep = false) {
+    weakAlias = sym;
+    isAntiDep = antiDep;
+  }
+
+  bool isECAlias(MachineTypes machine) const {
+    return weakAlias && isAntiDep && isArm64EC(machine);
+  }
+
+  // If this symbol is external weak, replace this object with aliased symbol.
+  bool resolveWeakAlias();
 };
 
 // Windows-specific classes.
@@ -351,23 +374,23 @@ public:
 // table in an output. The former has "__imp_" prefix.
 class DefinedImportData : public Defined {
 public:
-  DefinedImportData(StringRef n, ImportFile *f)
-      : Defined(DefinedImportDataKind, n), file(f) {
-  }
+  DefinedImportData(StringRef n, ImportFile *file, Chunk *&location)
+      : Defined(DefinedImportDataKind, n), file(file), location(location) {}
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedImportDataKind;
   }
 
-  uint64_t getRVA() { return file->location->getRVA(); }
-  Chunk *getChunk() { return file->location; }
-  void setLocation(Chunk *addressTable) { file->location = addressTable; }
+  uint64_t getRVA() { return getChunk()->getRVA(); }
+  Chunk *getChunk() { return location; }
+  void setLocation(Chunk *addressTable) { location = addressTable; }
 
   StringRef getDLLName() { return file->dllName; }
   StringRef getExternalName() { return file->externalName; }
   uint16_t getOrdinal() { return file->hdr->OrdinalHint; }
 
   ImportFile *file;
+  Chunk *&location;
 
   // This is a pointer to the synthetic symbol associated with the load thunk
   // for this symbol that will be called if the DLL is delay-loaded. This is
@@ -385,19 +408,19 @@ public:
 class DefinedImportThunk : public Defined {
 public:
   DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
-                     DefinedImportData *s, uint16_t machine);
+                     DefinedImportData *s, ImportThunkChunk *chunk);
 
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedImportThunkKind;
   }
 
   uint64_t getRVA() { return data->getRVA(); }
-  Chunk *getChunk() { return data; }
+  ImportThunkChunk *getChunk() const { return data; }
 
   DefinedImportData *wrappedSym;
 
 private:
-  Chunk *data;
+  ImportThunkChunk *data;
 };
 
 // If you have a symbol "foo" in your object file, a symbol name
@@ -499,14 +522,20 @@ void replaceSymbol(Symbol *s, ArgT &&... arg) {
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a Symbol");
   bool canInline = s->canInline;
+  bool isUsedInRegularObj = s->isUsedInRegularObj;
   new (s) T(std::forward<ArgT>(arg)...);
   s->canInline = canInline;
+  s->isUsedInRegularObj = isUsedInRegularObj;
 }
 } // namespace coff
 
 std::string toString(const coff::COFFLinkerContext &ctx, coff::Symbol &b);
 std::string toCOFFString(const coff::COFFLinkerContext &ctx,
                          const llvm::object::Archive::Symbol &b);
+
+// Returns a symbol name for an error message.
+std::string maybeDemangleSymbol(const coff::COFFLinkerContext &ctx,
+                                StringRef symName);
 
 } // namespace lld
 

@@ -23,10 +23,10 @@
 ;; Check that the memset that memcpyopt creates to merge 4 stores merges the
 ;; DIASsignIDs from the stores.
 
-; CHECK: call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata ![[ID:[0-9]+]], metadata ptr %arrayidx.i, metadata !DIExpression())
-; CHECK: call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID]], metadata ptr %arrayidx3.i, metadata !DIExpression())
-; CHECK: call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata ![[ID]], metadata ptr %arrayidx5.i, metadata !DIExpression())
-; CHECK: call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata ![[ID]], metadata ptr %arrayidx7.i, metadata !DIExpression())
+; CHECK: #dbg_assign(float 0.000000e+00, ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 64, 32), ![[ID:[0-9]+]], ptr %arrayidx.i, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID]], ptr %arrayidx3.i, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 0, 32), ![[ID]], ptr %arrayidx5.i, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 96, 32), ![[ID]], ptr %arrayidx7.i, !DIExpression(),
 ; CHECK: call void @llvm.memset{{.*}}, !DIAssignID ![[ID]]
 
 %struct.v = type { [4 x float] }

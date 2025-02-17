@@ -8,6 +8,6 @@ int recurse(int x) {
 }
 
 int main(int argc, char const *argv[]) {
-  recurse(20); // recurse invocation
+  recurse(40); // recurse invocation
   return 0;
 }

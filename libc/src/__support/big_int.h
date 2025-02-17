@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_UINT_H
-#define LLVM_LIBC_SRC___SUPPORT_UINT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_BIG_INT_H
+#define LLVM_LIBC_SRC___SUPPORT_BIG_INT_H
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h" // countl_zero
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h"          // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"        // LIBC_UNLIKELY
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128, LIBC_TYPES_HAS_INT64
@@ -24,7 +25,7 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace multiword {
 
@@ -240,7 +241,7 @@ LIBC_INLINE constexpr void quick_mul_hi(cpp::array<word, N> &dst,
 }
 
 template <typename word, size_t N>
-LIBC_INLINE constexpr bool is_negative(cpp::array<word, N> &array) {
+LIBC_INLINE constexpr bool is_negative(const cpp::array<word, N> &array) {
   using signed_word = cpp::make_signed_t<word>;
   return cpp::bit_cast<signed_word>(array.back()) < 0;
 }
@@ -299,9 +300,11 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
     if (bit_offset == 0)
       dst = part1; // no crosstalk between parts.
     else if constexpr (direction == LEFT)
-      dst = (part1 << bit_offset) | (part2 >> (WORD_BITS - bit_offset));
+      dst = static_cast<word>((part1 << bit_offset) |
+                              (part2 >> (WORD_BITS - bit_offset)));
     else
-      dst = (part1 >> bit_offset) | (part2 << (WORD_BITS - bit_offset));
+      dst = static_cast<word>((part1 >> bit_offset) |
+                              (part2 << (WORD_BITS - bit_offset)));
   }
   return out;
 }
@@ -358,17 +361,94 @@ public:
 
   LIBC_INLINE constexpr BigInt(const BigInt &other) = default;
 
-  template <size_t OtherBits, bool OtherSigned>
+  template <size_t OtherBits, bool OtherSigned, typename OtherWordType>
   LIBC_INLINE constexpr BigInt(
-      const BigInt<OtherBits, OtherSigned, WordType> &other) {
-    if (OtherBits >= Bits) { // truncate
-      for (size_t i = 0; i < WORD_COUNT; ++i)
-        val[i] = other[i];
-    } else { // zero or sign extend
-      size_t i = 0;
-      for (; i < OtherBits / WORD_SIZE; ++i)
-        val[i] = other[i];
-      extend(i, Signed && other.is_neg());
+      const BigInt<OtherBits, OtherSigned, OtherWordType> &other) {
+    using BigIntOther = BigInt<OtherBits, OtherSigned, OtherWordType>;
+    const bool should_sign_extend = Signed && other.is_neg();
+
+    static_assert(!(Bits == OtherBits && WORD_SIZE != BigIntOther::WORD_SIZE) &&
+                  "This is currently untested for casting between bigints with "
+                  "the same bit width but different word sizes.");
+
+    if constexpr (BigIntOther::WORD_SIZE < WORD_SIZE) {
+      // OtherWordType is smaller
+      constexpr size_t WORD_SIZE_RATIO = WORD_SIZE / BigIntOther::WORD_SIZE;
+      static_assert(
+          (WORD_SIZE % BigIntOther::WORD_SIZE) == 0 &&
+          "Word types must be multiples of each other for correct conversion.");
+      if constexpr (OtherBits >= Bits) { // truncate
+        // for each big word
+        for (size_t i = 0; i < WORD_COUNT; ++i) {
+          WordType cur_word = 0;
+          // combine WORD_SIZE_RATIO small words into a big word
+          for (size_t j = 0; j < WORD_SIZE_RATIO; ++j)
+            cur_word |= static_cast<WordType>(other[(i * WORD_SIZE_RATIO) + j])
+                        << (BigIntOther::WORD_SIZE * j);
+
+          val[i] = cur_word;
+        }
+      } else { // zero or sign extend
+        size_t i = 0;
+        WordType cur_word = 0;
+        // for each small word
+        for (; i < BigIntOther::WORD_COUNT; ++i) {
+          // combine WORD_SIZE_RATIO small words into a big word
+          cur_word |= static_cast<WordType>(other[i])
+                      << (BigIntOther::WORD_SIZE * (i % WORD_SIZE_RATIO));
+          // if we've completed a big word, copy it into place and reset
+          if ((i % WORD_SIZE_RATIO) == WORD_SIZE_RATIO - 1) {
+            val[i / WORD_SIZE_RATIO] = cur_word;
+            cur_word = 0;
+          }
+        }
+        // Pretend there are extra words of the correct sign extension as needed
+
+        const WordType extension_bits =
+            should_sign_extend ? cpp::numeric_limits<WordType>::max()
+                               : cpp::numeric_limits<WordType>::min();
+        if ((i % WORD_SIZE_RATIO) != 0) {
+          cur_word |= static_cast<WordType>(extension_bits)
+                      << (BigIntOther::WORD_SIZE * (i % WORD_SIZE_RATIO));
+        }
+        // Copy the last word into place.
+        val[(i / WORD_SIZE_RATIO)] = cur_word;
+        extend((i / WORD_SIZE_RATIO) + 1, should_sign_extend);
+      }
+    } else if constexpr (BigIntOther::WORD_SIZE == WORD_SIZE) {
+      if constexpr (OtherBits >= Bits) { // truncate
+        for (size_t i = 0; i < WORD_COUNT; ++i)
+          val[i] = other[i];
+      } else { // zero or sign extend
+        size_t i = 0;
+        for (; i < BigIntOther::WORD_COUNT; ++i)
+          val[i] = other[i];
+        extend(i, should_sign_extend);
+      }
+    } else {
+      // OtherWordType is bigger.
+      constexpr size_t WORD_SIZE_RATIO = BigIntOther::WORD_SIZE / WORD_SIZE;
+      static_assert(
+          (BigIntOther::WORD_SIZE % WORD_SIZE) == 0 &&
+          "Word types must be multiples of each other for correct conversion.");
+      if constexpr (OtherBits >= Bits) { // truncate
+        // for each small word
+        for (size_t i = 0; i < WORD_COUNT; ++i) {
+          // split each big word into WORD_SIZE_RATIO small words
+          val[i] = static_cast<WordType>(other[i / WORD_SIZE_RATIO] >>
+                                         ((i % WORD_SIZE_RATIO) * WORD_SIZE));
+        }
+      } else { // zero or sign extend
+        size_t i = 0;
+        // for each big word
+        for (; i < BigIntOther::WORD_COUNT; ++i) {
+          // split each big word into WORD_SIZE_RATIO small words
+          for (size_t j = 0; j < WORD_SIZE_RATIO; ++j)
+            val[(i * WORD_SIZE_RATIO) + j] =
+                static_cast<WordType>(other[i] >> (j * WORD_SIZE));
+        }
+        extend(i * WORD_SIZE_RATIO, should_sign_extend);
+      }
     }
   }
 
@@ -385,10 +465,11 @@ public:
   }
 
   // Initialize the first word to |v| and the rest to 0.
-  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T>>>
+  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
+                                                    !cpp::is_same_v<T, bool>>>
   LIBC_INLINE constexpr BigInt(T v) {
     constexpr size_t T_SIZE = sizeof(T) * CHAR_BIT;
-    const bool is_neg = Signed && (v < 0);
+    const bool is_neg = v < 0;
     for (size_t i = 0; i < WORD_COUNT; ++i) {
       if (v == 0) {
         extend(i, is_neg);
@@ -423,6 +504,12 @@ public:
   // TODO: Reuse the Sign type.
   LIBC_INLINE constexpr bool is_neg() const { return SIGNED && get_msb(); }
 
+  template <size_t OtherBits, bool OtherSigned, typename OtherWordType>
+  LIBC_INLINE constexpr explicit
+  operator BigInt<OtherBits, OtherSigned, OtherWordType>() const {
+    return BigInt<OtherBits, OtherSigned, OtherWordType>(this);
+  }
+
   template <typename T> LIBC_INLINE constexpr explicit operator T() const {
     return to<T>();
   }
@@ -438,7 +525,7 @@ public:
     constexpr size_t MAX_COUNT =
         T_SIZE > Bits ? WORD_COUNT : T_SIZE / WORD_SIZE;
     for (size_t i = 1; i < MAX_COUNT; ++i)
-      lo += static_cast<T>(val[i]) << (WORD_SIZE * i);
+      lo += static_cast<T>(static_cast<T>(val[i]) << (WORD_SIZE * i));
     if constexpr (Signed && (T_SIZE > Bits)) {
       // Extend sign for negative numbers.
       constexpr T MASK = (~T(0) << Bits);
@@ -728,6 +815,11 @@ public:
     return *result.div(other);
   }
 
+  LIBC_INLINE constexpr BigInt operator%=(const BigInt &other) {
+    *this = *this % other;
+    return *this;
+  }
+
   LIBC_INLINE constexpr BigInt &operator*=(const BigInt &other) {
     *this = *this * other;
     return *this;
@@ -844,6 +936,18 @@ public:
   // Return the i-th word of the number.
   LIBC_INLINE constexpr WordType &operator[](size_t i) { return val[i]; }
 
+  // Return the i-th bit of the number.
+  LIBC_INLINE constexpr bool get_bit(size_t i) const {
+    const size_t word_index = i / WORD_SIZE;
+    return 1 & (val[word_index] >> (i % WORD_SIZE));
+  }
+
+  // Set the i-th bit of the number.
+  LIBC_INLINE constexpr void set_bit(size_t i) {
+    const size_t word_index = i / WORD_SIZE;
+    val[word_index] |= WordType(1) << (i % WORD_SIZE);
+  }
+
 private:
   LIBC_INLINE friend constexpr int cmp(const BigInt &lhs, const BigInt &rhs) {
     constexpr auto compare = [](WordType a, WordType b) {
@@ -876,7 +980,7 @@ private:
   }
 
   LIBC_INLINE constexpr void decrement() {
-    multiword::add_with_carry(val, cpp::array<WordType, 1>{1});
+    multiword::sub_with_borrow(val, cpp::array<WordType, 1>{1});
   }
 
   LIBC_INLINE constexpr void extend(size_t index, bool is_neg) {
@@ -897,12 +1001,6 @@ private:
   LIBC_INLINE constexpr void clear_msb() {
     val.back() &= mask_trailing_ones<WordType, WORD_SIZE - 1>();
   }
-
-  LIBC_INLINE constexpr void set_bit(size_t i) {
-    const size_t word_index = i / WORD_SIZE;
-    val[word_index] |= WordType(1) << (i % WORD_SIZE);
-  }
-
   LIBC_INLINE constexpr static Division divide_unsigned(const BigInt &dividend,
                                                         const BigInt &divider) {
     BigInt remainder = dividend;
@@ -969,8 +1067,11 @@ struct WordTypeSelector : cpp::type_identity<
 #endif // LIBC_TYPES_HAS_INT64
                               > {
 };
-// Except if we request 32 bits explicitly.
+// Except if we request 16 or 32 bits explicitly.
+template <> struct WordTypeSelector<16> : cpp::type_identity<uint16_t> {};
 template <> struct WordTypeSelector<32> : cpp::type_identity<uint32_t> {};
+template <> struct WordTypeSelector<96> : cpp::type_identity<uint32_t> {};
+
 template <size_t Bits>
 using WordTypeSelectorT = typename WordTypeSelector<Bits>::type;
 } // namespace internal
@@ -981,23 +1082,18 @@ using UInt = BigInt<Bits, false, internal::WordTypeSelectorT<Bits>>;
 template <size_t Bits>
 using Int = BigInt<Bits, true, internal::WordTypeSelectorT<Bits>>;
 
-// Provides limits of U/Int<128>.
-template <> class cpp::numeric_limits<UInt<128>> {
-public:
-  LIBC_INLINE static constexpr UInt<128> max() { return UInt<128>::max(); }
-  LIBC_INLINE static constexpr UInt<128> min() { return UInt<128>::min(); }
+// Provides limits of BigInt.
+template <size_t Bits, bool Signed, typename T>
+struct cpp::numeric_limits<BigInt<Bits, Signed, T>> {
+  LIBC_INLINE static constexpr BigInt<Bits, Signed, T> max() {
+    return BigInt<Bits, Signed, T>::max();
+  }
+  LIBC_INLINE static constexpr BigInt<Bits, Signed, T> min() {
+    return BigInt<Bits, Signed, T>::min();
+  }
   // Meant to match std::numeric_limits interface.
   // NOLINTNEXTLINE(readability-identifier-naming)
-  LIBC_INLINE_VAR static constexpr int digits = 128;
-};
-
-template <> class cpp::numeric_limits<Int<128>> {
-public:
-  LIBC_INLINE static constexpr Int<128> max() { return Int<128>::max(); }
-  LIBC_INLINE static constexpr Int<128> min() { return Int<128>::min(); }
-  // Meant to match std::numeric_limits interface.
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  LIBC_INLINE_VAR static constexpr int digits = 128;
+  LIBC_INLINE_VAR static constexpr int digits = Bits - Signed;
 };
 
 // type traits to determine whether a T is a BigInt.
@@ -1070,6 +1166,18 @@ struct make_integral_or_big_int_signed<T, cpp::enable_if_t<is_big_int_v<T>>>
 template <typename T>
 using make_integral_or_big_int_signed_t =
     typename make_integral_or_big_int_signed<T>::type;
+
+// is_unsigned_integral_or_big_int
+template <typename T>
+struct is_unsigned_integral_or_big_int
+    : cpp::bool_constant<
+          cpp::is_same_v<T, make_integral_or_big_int_unsigned_t<T>>> {};
+
+template <typename T>
+// Meant to look like <type_traits> helper variable templates.
+// NOLINTNEXTLINE(readability-identifier-naming)
+LIBC_INLINE_VAR constexpr bool is_unsigned_integral_or_big_int_v =
+    is_unsigned_integral_or_big_int<T>::value;
 
 namespace cpp {
 
@@ -1277,6 +1385,6 @@ first_trailing_one(T value) {
                                                 : cpp::countr_zero(value) + 1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_UINT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_BIG_INT_H

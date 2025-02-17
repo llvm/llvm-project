@@ -18,9 +18,7 @@ define <vscale x 4 x i32> @asrlsr(<vscale x 4 x i64> %va) {
 ; CHECK-NEXT:    lsr z0.d, z0.d, #15
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> poison, i32 15, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %vb = zext <vscale x 4 x i32> %splat to <vscale x 4 x i64>
+  %vb = zext <vscale x 4 x i32> splat(i32 15) to <vscale x 4 x i64>
   %x = ashr <vscale x 4 x i64> %va, %vb
   %y = trunc <vscale x 4 x i64> %x to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %y

@@ -190,9 +190,10 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
       Delimited = true;
       ThisTokBuf++;
       if (*ThisTokBuf == '}') {
-        Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-             diag::err_delimited_escape_empty);
-        return ResultChar;
+        HadError = true;
+        if (Diags)
+          Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
+               diag::err_delimited_escape_empty);
       }
     } else if (ThisTokBuf == ThisTokEnd || !isHexDigit(*ThisTokBuf)) {
       if (Diags)
@@ -283,9 +284,10 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
     Delimited = true;
     ++ThisTokBuf;
     if (*ThisTokBuf == '}') {
-      Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-           diag::err_delimited_escape_empty);
-      return ResultChar;
+      HadError = true;
+      if (Diags)
+        Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
+             diag::err_delimited_escape_empty);
     }
 
     while (ThisTokBuf != ThisTokEnd) {
@@ -1123,8 +1125,9 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
         break; // Invalid for floats
       if (HasSize)
         break;
-      if (DoubleUnderscore)
-        break; // Cannot be repeated.
+      // There is currently no way to reach this with DoubleUnderscore set.
+      // If new double underscope literals are added handle it here as above.
+      assert(!DoubleUnderscore && "unhandled double underscore case");
       if (LangOpts.CPlusPlus && s + 2 < ThisTokEnd &&
           s[1] == '_') { // s + 2 < ThisTokEnd to ensure some character exists
                          // after __

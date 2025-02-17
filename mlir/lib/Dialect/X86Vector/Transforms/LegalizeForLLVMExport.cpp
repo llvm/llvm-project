@@ -37,7 +37,7 @@ namespace {
 /// results of multi-result intrinsic ops.
 template <typename OpTy, typename Intr32OpTy, typename Intr64OpTy>
 struct LowerToIntrinsic : public OpConversionPattern<OpTy> {
-  explicit LowerToIntrinsic(LLVMTypeConverter &converter)
+  explicit LowerToIntrinsic(const LLVMTypeConverter &converter)
       : OpConversionPattern<OpTy>(converter, &converter.getContext()) {}
 
   const LLVMTypeConverter &getTypeConverter() const {
@@ -90,6 +90,47 @@ struct MaskCompressOpConversion
   }
 };
 
+struct DotBF16OpConversion : public ConvertOpToLLVMPattern<DotBF16Op> {
+  using ConvertOpToLLVMPattern<DotBF16Op>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(DotBF16Op op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto typeA = dyn_cast<VectorType>(op.getA().getType());
+    unsigned elemBitWidth = typeA.getElementTypeBitWidth();
+    unsigned opBitWidth = typeA.getShape()[0] * elemBitWidth;
+
+    auto opType = adaptor.getSrc().getType();
+    auto opSrc = adaptor.getSrc();
+    auto opA = adaptor.getA();
+    auto opB = adaptor.getB();
+
+    switch (opBitWidth) {
+    case 128: {
+      rewriter.replaceOpWithNewOp<DotBF16Ps128IntrOp>(op, opType, opSrc, opA,
+                                                      opB);
+      break;
+    }
+    case 256: {
+      rewriter.replaceOpWithNewOp<DotBF16Ps256IntrOp>(op, opType, opSrc, opA,
+                                                      opB);
+      break;
+    }
+    case 512: {
+      rewriter.replaceOpWithNewOp<DotBF16Ps512IntrOp>(op, opType, opSrc, opA,
+                                                      opB);
+      break;
+    }
+    default: {
+      return rewriter.notifyMatchFailure(op,
+                                         "unsupported AVX512-BF16 dot variant");
+    }
+    }
+
+    return success();
+  }
+};
+
 struct RsqrtOpConversion : public ConvertOpToLLVMPattern<RsqrtOp> {
   using ConvertOpToLLVMPattern<RsqrtOp>::ConvertOpToLLVMPattern;
 
@@ -135,7 +176,7 @@ template <typename... Args>
 struct RegistryImpl {
   /// Registers the patterns specializing the "main" op to one of the
   /// "intrinsic" ops depending on elemental type.
-  static void registerPatterns(LLVMTypeConverter &converter,
+  static void registerPatterns(const LLVMTypeConverter &converter,
                                RewritePatternSet &patterns) {
     patterns
         .add<LowerToIntrinsic<typename Args::MainOp, typename Args::Intr32Op,
@@ -159,10 +200,10 @@ using Registry = RegistryImpl<
 
 /// Populate the given list with patterns that convert from X86Vector to LLVM.
 void mlir::populateX86VectorLegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   Registry::registerPatterns(converter, patterns);
-  patterns.add<MaskCompressOpConversion, RsqrtOpConversion, DotOpConversion>(
-      converter);
+  patterns.add<MaskCompressOpConversion, DotBF16OpConversion, RsqrtOpConversion,
+               DotOpConversion>(converter);
 }
 
 void mlir::configureX86VectorLegalizeForExportTarget(
@@ -170,6 +211,10 @@ void mlir::configureX86VectorLegalizeForExportTarget(
   Registry::configureTarget(target);
   target.addLegalOp<MaskCompressIntrOp>();
   target.addIllegalOp<MaskCompressOp>();
+  target.addLegalOp<DotBF16Ps128IntrOp>();
+  target.addLegalOp<DotBF16Ps256IntrOp>();
+  target.addLegalOp<DotBF16Ps512IntrOp>();
+  target.addIllegalOp<DotBF16Op>();
   target.addLegalOp<RsqrtIntrOp>();
   target.addIllegalOp<RsqrtOp>();
   target.addLegalOp<DotIntrOp>();

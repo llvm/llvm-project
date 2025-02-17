@@ -11,6 +11,7 @@ static_library("Lex") {
     "HeaderMap.cpp",
     "HeaderSearch.cpp",
     "InitHeaderSearch.cpp",
+    "LexHLSLRootSignature.cpp",
     "Lexer.cpp",
     "LiteralSupport.cpp",
     "MacroArgs.cpp",

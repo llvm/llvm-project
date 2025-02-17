@@ -220,24 +220,8 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
 void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
 
   ValueInfo VI;
-  if (GV.hasName()) {
+  if (GV.hasName())
     VI = ImportIndex.getValueInfo(GV.getGUID());
-    // Set synthetic function entry counts.
-    if (VI && ImportIndex.hasSyntheticEntryCounts()) {
-      if (Function *F = dyn_cast<Function>(&GV)) {
-        if (!F->isDeclaration()) {
-          for (const auto &S : VI.getSummaryList()) {
-            auto *FS = cast<FunctionSummary>(S->getBaseObject());
-            if (FS->modulePath() == M.getModuleIdentifier()) {
-              F->setEntryCount(Function::ProfileCount(FS->entryCount(),
-                                                      Function::PCT_Synthetic));
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
 
   // We should always have a ValueInfo (i.e. GV in index) for definitions when
   // we are exporting, and also when importing that value.
@@ -347,15 +331,12 @@ void FunctionImportGlobalProcessing::processGlobalsForThinLTO() {
       }
 }
 
-bool FunctionImportGlobalProcessing::run() {
-  processGlobalsForThinLTO();
-  return false;
-}
+void FunctionImportGlobalProcessing::run() { processGlobalsForThinLTO(); }
 
-bool llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
+void llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
                                   bool ClearDSOLocalOnDeclarations,
                                   SetVector<GlobalValue *> *GlobalsToImport) {
   FunctionImportGlobalProcessing ThinLTOProcessing(M, Index, GlobalsToImport,
                                                    ClearDSOLocalOnDeclarations);
-  return ThinLTOProcessing.run();
+  ThinLTOProcessing.run();
 }

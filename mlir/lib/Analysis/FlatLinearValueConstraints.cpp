@@ -16,7 +16,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -446,6 +445,58 @@ static bool detectAsFloorDiv(const FlatLinearConstraints &cst, unsigned pos,
   return true;
 }
 
+void FlatLinearConstraints::dumpRow(ArrayRef<int64_t> row,
+                                    bool fixedColWidth) const {
+  unsigned ncols = getNumCols();
+  bool firstNonZero = true;
+  for (unsigned j = 0; j < ncols; j++) {
+    if (j == ncols - 1) {
+      // Constant.
+      if (row[j] == 0 && !firstNonZero) {
+        if (fixedColWidth)
+          llvm::errs().indent(7);
+      } else {
+        llvm::errs() << ((row[j] >= 0) ? "+ " : "") << row[j] << ' ';
+      }
+    } else {
+      std::string var = std::string("c_") + std::to_string(j);
+      if (row[j] == 1)
+        llvm::errs() << "+ " << var << ' ';
+      else if (row[j] == -1)
+        llvm::errs() << "- " << var << ' ';
+      else if (row[j] >= 2)
+        llvm::errs() << "+ " << row[j] << '*' << var << ' ';
+      else if (row[j] <= -2)
+        llvm::errs() << "- " << -row[j] << '*' << var << ' ';
+      else if (fixedColWidth)
+        // Zero coeff.
+        llvm::errs().indent(7);
+      if (row[j] != 0)
+        firstNonZero = false;
+    }
+  }
+}
+
+void FlatLinearConstraints::dumpPretty() const {
+  assert(hasConsistentState());
+  llvm::errs() << "Constraints (" << getNumDimVars() << " dims, "
+               << getNumSymbolVars() << " symbols, " << getNumLocalVars()
+               << " locals), (" << getNumConstraints() << " constraints)\n";
+  auto dumpConstraint = [&](unsigned rowPos, bool isEq) {
+    // Is it the first non-zero entry?
+    SmallVector<int64_t> row =
+        isEq ? getEquality64(rowPos) : getInequality64(rowPos);
+    dumpRow(row);
+    llvm::errs() << (isEq ? "=" : ">=") << " 0\n";
+  };
+
+  for (unsigned i = 0, e = getNumInequalities(); i < e; i++)
+    dumpConstraint(i, /*isEq=*/false);
+  for (unsigned i = 0, e = getNumEqualities(); i < e; i++)
+    dumpConstraint(i, /*isEq=*/true);
+  llvm::errs() << '\n';
+}
+
 std::pair<AffineMap, AffineMap> FlatLinearConstraints::getLowerAndUpperBound(
     unsigned pos, unsigned offset, unsigned num, unsigned symStartPos,
     ArrayRef<AffineExpr> localExprs, MLIRContext *context,
@@ -545,9 +596,9 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
   // Basic simplification.
   normalizeConstraintsByGCD();
 
-  LLVM_DEBUG(llvm::dbgs() << "getSliceBounds for first " << num
-                          << " variables\n");
-  LLVM_DEBUG(dump());
+  LLVM_DEBUG(llvm::dbgs() << "getSliceBounds for variables at positions ["
+                          << offset << ", " << offset + num << ")\n");
+  LLVM_DEBUG(dumpPretty());
 
   // Record computed/detected variables.
   SmallVector<AffineExpr, 8> memo(getNumVars());
@@ -680,7 +731,7 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
       // TODO: being conservative for the moment in cases that
       // lead to multiple bounds - until getConstDifference in LoopFusion.cpp is
       // fixed (b/126426796).
-      if (!lbMap || lbMap.getNumResults() > 1) {
+      if (!lbMap || lbMap.getNumResults() != 1) {
         LLVM_DEBUG(llvm::dbgs()
                    << "WARNING: Potentially over-approximating slice lb\n");
         auto lbConst = getConstantBound64(BoundType::LB, pos + offset);
@@ -689,7 +740,7 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
                                  getAffineConstantExpr(*lbConst, context));
         }
       }
-      if (!ubMap || ubMap.getNumResults() > 1) {
+      if (!ubMap || ubMap.getNumResults() != 1) {
         LLVM_DEBUG(llvm::dbgs()
                    << "WARNING: Potentially over-approximating slice ub\n");
         auto ubConst = getConstantBound64(BoundType::UB, pos + offset);
@@ -700,12 +751,12 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
         }
       }
     }
-    LLVM_DEBUG(llvm::dbgs()
-               << "lb map for pos = " << Twine(pos + offset) << ", expr: ");
-    LLVM_DEBUG(lbMap.dump(););
-    LLVM_DEBUG(llvm::dbgs()
-               << "ub map for pos = " << Twine(pos + offset) << ", expr: ");
-    LLVM_DEBUG(ubMap.dump(););
+
+    LLVM_DEBUG(llvm::dbgs() << "Slice bounds:\n");
+    LLVM_DEBUG(llvm::dbgs() << "lb map for pos = " << Twine(pos + offset)
+                            << ", expr: " << lbMap << '\n');
+    LLVM_DEBUG(llvm::dbgs() << "ub map for pos = " << Twine(pos + offset)
+                            << ", expr: " << ubMap << '\n');
   }
 }
 
@@ -893,8 +944,8 @@ FlatLinearValueConstraints::FlatLinearValueConstraints(IntegerSet set,
                             set.getNumDims() + set.getNumSymbols() + 1,
                             set.getNumDims(), set.getNumSymbols(),
                             /*numLocals=*/0) {
-  assert(operands.empty() ||
-         set.getNumInputs() == operands.size() && "operand count mismatch");
+  assert((operands.empty() || set.getNumInputs() == operands.size()) &&
+         "operand count mismatch");
   // Set the values for the non-local variables.
   for (unsigned i = 0, e = operands.size(); i < e; ++i)
     setValue(i, operands[i]);
@@ -1318,7 +1369,8 @@ mlir::getMultiAffineFunctionFromMap(AffineMap map,
          "AffineMap cannot produce divs without local representation");
 
   // TODO: We shouldn't have to do this conversion.
-  Matrix<MPInt> mat(map.getNumResults(), map.getNumInputs() + divs.getNumDivs() + 1);
+  Matrix<DynamicAPInt> mat(map.getNumResults(),
+                           map.getNumInputs() + divs.getNumDivs() + 1);
   for (unsigned i = 0, e = flattenedExprs.size(); i < e; ++i)
     for (unsigned j = 0, f = flattenedExprs[i].size(); j < f; ++j)
       mat(i, j) = flattenedExprs[i][j];

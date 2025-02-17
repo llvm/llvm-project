@@ -11,10 +11,12 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/fixed_point/fx_bits.h"
 #include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
@@ -22,7 +24,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 // This is just for assertions. It will be compiled out for release builds.
@@ -67,10 +69,6 @@ LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
   using LARep = fixed_point::FXRep<unsigned long accum>;
   using StorageType = LARep::StorageType;
 
-  // All of the letters will be defined relative to variable a, which will be
-  // the appropriate case based on the name of the conversion. This converts any
-  // conversion name into the letter 'a' with the appropriate case.
-  const char a = (to_conv.conv_name & 32) | 'A';
   FormatFlags flags = to_conv.flags;
 
   bool is_negative;
@@ -178,9 +176,9 @@ LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
     // unspecified.
     RoundDirection round;
     char first_digit_after = fraction_digits[precision];
-    if (first_digit_after > '5') {
+    if (internal::b36_char_to_int(first_digit_after) > 5) {
       round = RoundDirection::Up;
-    } else if (first_digit_after < '5') {
+    } else if (internal::b36_char_to_int(first_digit_after) < 5) {
       round = RoundDirection::Down;
     } else {
       // first_digit_after == '5'
@@ -203,7 +201,8 @@ LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
         keep_rounding = false;
         char cur_digit = fraction_digits[digit_to_round];
         // if the digit should not be rounded up
-        if (round == RoundDirection::Even && ((cur_digit - '0') % 2) == 0) {
+        if (round == RoundDirection::Even &&
+            (internal::b36_char_to_int(cur_digit) % 2) == 0) {
           // break out of the loop
           break;
         }
@@ -245,7 +244,7 @@ LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
   char sign_char = 0;
 
   // Check if the conv name is uppercase
-  if (a == 'A') {
+  if (internal::isupper(to_conv.conv_name)) {
     // These flags are only for signed conversions, so this removes them if the
     // conversion is unsigned.
     flags = FormatFlags(flags &
@@ -304,6 +303,6 @@ LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FIXED_CONVERTER_H

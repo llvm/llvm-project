@@ -13,16 +13,16 @@
 
 ; CHECK-LABEL: inner.body:
 ; CHECK: %add = add nsw i32 0, 2
-; CHECK: call void @llvm.dbg.value(metadata i32 %add, metadata [[VAR:![0-9]+]], metadata !DIExpression())
+; CHECK: #dbg_value(i32 %add, [[VAR:![0-9]+]], !DIExpression(),
 
 
 ; CHECK-LABEL: outer.exit:
 ; CHECK-NEXT: [[PN:%[^ ]*]] = phi i32 [ %add.lcssa, %outer.latch ]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 [[PN]], metadata [[VAR]], metadata !DIExpression())
+; CHECK-NEXT: #dbg_value(i32 [[PN]], [[VAR]], !DIExpression(),
 ; CHECK-NEXT: call void @bar(i32 [[PN]])
 
 ; CHECK-LABEL: exit:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 [[PN]], metadata [[VAR]], metadata !DIExpression())
+; CHECK-NEXT: #dbg_value(i32 [[PN]], [[VAR]], !DIExpression(),
 
 define void @single_exit()  !dbg !6 {
 entry:
@@ -60,23 +60,23 @@ exit:                                             ; preds = %outer.exit
 
 ; CHECK-LABEL: for.header:
 ; CHECK-NEXT: %add = add nsw i32 0, 2
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata [[VAR2:![0-9]+]], metadata !DIExpression())
+; CHECK-NEXT: #dbg_value(i32 %add, [[VAR2:![0-9]+]], !DIExpression(),
 
 ; CHECK-LABEL: for.exit1:
 ; CHECK-NEXT: [[PN1:%[^ ]*]] = phi i32 [ %add, %for.header ]
 ; CHECK-NEXT: br label %for.exit1.succ
 
 ; CHECK-LABEL: for.exit1.succ:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 [[PN1]], metadata [[VAR2]], metadata !DIExpression())
+; CHECK-NEXT: #dbg_value(i32 [[PN1]], [[VAR2]], !DIExpression(),
 ; CHECK-NEXT: call void @bar(i32 [[PN1]])
 
 ; CHECK-LABEL: for.exit2:
 ; CHECK-NEXT: [[PN2:%[^ ]*]] = phi i32 [ %add, %for.latch ]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 [[PN2]], metadata [[VAR2]], metadata !DIExpression())
+; CHECK-NEXT: #dbg_value(i32 [[PN2]], [[VAR2]], !DIExpression(),
 ; CHECK-NEXT: call void @bar(i32 [[PN2]])
 
 ; CHECK-LABEL: exit:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata [[VAR2]], metadata !DIExpression())
+; CHECK-NEXT: #dbg_value(i32 %add, [[VAR2]], !DIExpression(),
 
 define void @multi_exit()  !dbg !13 {
 entry:

@@ -283,14 +283,6 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     DAL->append(A);
   }
 
-  // Add default validator version if not set.
-  // TODO: remove this once read validator version from validator.
-  if (!DAL->hasArg(options::OPT_dxil_validator_version)) {
-    const StringRef DefaultValidatorVer = "1.7";
-    DAL->AddSeparateArg(nullptr,
-                        Opts.getOption(options::OPT_dxil_validator_version),
-                        DefaultValidatorVer);
-  }
   if (!DAL->hasArg(options::OPT_O_Group)) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_O), "3");
   }

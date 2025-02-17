@@ -644,8 +644,6 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_ALIAS;
   case Attribute::NoBuiltin:
     return bitc::ATTR_KIND_NO_BUILTIN;
-  case Attribute::NoCapture:
-    return bitc::ATTR_KIND_NO_CAPTURE;
   case Attribute::NoDuplicate:
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoImplicitFloat:
@@ -749,8 +747,8 @@ uint64_t DXILBitcodeWriter::getOptimizationFlags(const Value *V) {
     if (PEO->isExact())
       Flags |= 1 << bitc::PEO_EXACT;
   } else if (const auto *FPMO = dyn_cast<FPMathOperator>(V)) {
-    if (FPMO->hasAllowReassoc())
-      Flags |= bitc::AllowReassoc;
+    if (FPMO->hasAllowReassoc() || FPMO->hasAllowContract())
+      Flags |= bitc::UnsafeAlgebra;
     if (FPMO->hasNoNaNs())
       Flags |= bitc::NoNaNs;
     if (FPMO->hasNoInfs())
@@ -759,10 +757,6 @@ uint64_t DXILBitcodeWriter::getOptimizationFlags(const Value *V) {
       Flags |= bitc::NoSignedZeros;
     if (FPMO->hasAllowReciprocal())
       Flags |= bitc::AllowReciprocal;
-    if (FPMO->hasAllowContract())
-      Flags |= bitc::AllowContract;
-    if (FPMO->hasApproxFunc())
-      Flags |= bitc::ApproxFunc;
   }
 
   return Flags;
@@ -1047,9 +1041,6 @@ void DXILBitcodeWriter::writeTypeTable() {
       break;
     case Type::MetadataTyID:
       Code = bitc::TYPE_CODE_METADATA;
-      break;
-    case Type::X86_MMXTyID:
-      Code = bitc::TYPE_CODE_X86_MMX;
       break;
     case Type::IntegerTyID:
       // INTEGER: [width]
@@ -1348,7 +1339,7 @@ void DXILBitcodeWriter::writeValueAsMetadata(
     Ty = TypedPointerType::get(F->getFunctionType(), F->getAddressSpace());
   else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
     Ty = TypedPointerType::get(GV->getValueType(), GV->getAddressSpace());
-  Record.push_back(getTypeID(Ty));
+  Record.push_back(getTypeID(Ty, V));
   Record.push_back(VE.getValueID(V));
   Stream.EmitRecord(bitc::METADATA_VALUE, Record, 0);
   Record.clear();
@@ -1397,16 +1388,16 @@ void DXILBitcodeWriter::writeDISubrange(const DISubrange *N,
 
   // TODO: Do we need to handle DIExpression here? What about cases where Count
   // isn't specified but UpperBound and such are?
-  ConstantInt *Count = N->getCount().dyn_cast<ConstantInt *>();
+  ConstantInt *Count = dyn_cast<ConstantInt *>(N->getCount());
   assert(Count && "Count is missing or not ConstantInt");
   Record.push_back(Count->getValue().getSExtValue());
 
   // TODO: Similarly, DIExpression is allowed here now
   DISubrange::BoundType LowerBound = N->getLowerBound();
-  assert((LowerBound.isNull() || LowerBound.is<ConstantInt *>()) &&
+  assert((LowerBound.isNull() || isa<ConstantInt *>(LowerBound)) &&
          "Lower bound provided but not ConstantInt");
   Record.push_back(
-      LowerBound ? rotateSign(LowerBound.get<ConstantInt *>()->getValue()) : 0);
+      LowerBound ? rotateSign(cast<ConstantInt *>(LowerBound)->getValue()) : 0);
 
   Stream.EmitRecord(bitc::METADATA_SUBRANGE, Record, Abbrev);
   Record.clear();

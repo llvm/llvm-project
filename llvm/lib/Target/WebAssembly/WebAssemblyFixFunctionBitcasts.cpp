@@ -86,9 +86,9 @@ static void findUses(Value *V, Function &F,
 // Create a wrapper function with type Ty that calls F (which may have a
 // different type). Attempt to support common bitcasted function idioms:
 //  - Call with more arguments than needed: arguments are dropped
-//  - Call with fewer arguments than needed: arguments are filled in with undef
+//  - Call with fewer arguments than needed: arguments are filled in with poison
 //  - Return value is not needed: drop it
-//  - Return value needed but not present: supply an undef
+//  - Return value needed but not present: supply a poison value
 //
 // If the all the argument types of trivially castable to one another (i.e.
 // I32 vs pointer type) then we don't create a wrapper at all (return nullptr
@@ -111,8 +111,9 @@ static Function *createWrapper(Function *F, FunctionType *Ty) {
 
   Function *Wrapper = Function::Create(Ty, Function::PrivateLinkage,
                                        F->getName() + "_bitcast", M);
+  Wrapper->setAttributes(F->getAttributes());
   BasicBlock *BB = BasicBlock::Create(M->getContext(), "body", Wrapper);
-  const DataLayout &DL = BB->getModule()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
 
   // Determine what arguments to pass.
   SmallVector<Value *, 4> Args;
@@ -160,7 +161,7 @@ static Function *createWrapper(Function *F, FunctionType *Ty) {
 
   if (WrapperNeeded && !TypeMismatch) {
     for (; PI != PE; ++PI)
-      Args.push_back(UndefValue::get(*PI));
+      Args.push_back(PoisonValue::get(*PI));
     if (F->isVarArg())
       for (; AI != AE; ++AI)
         Args.push_back(&*AI);
@@ -174,7 +175,7 @@ static Function *createWrapper(Function *F, FunctionType *Ty) {
       ReturnInst::Create(M->getContext(), BB);
     } else if (ExpectedRtnType->isVoidTy()) {
       LLVM_DEBUG(dbgs() << "Creating dummy return: " << *RtnType << "\n");
-      ReturnInst::Create(M->getContext(), UndefValue::get(RtnType), BB);
+      ReturnInst::Create(M->getContext(), PoisonValue::get(RtnType), BB);
     } else if (RtnType == ExpectedRtnType) {
       ReturnInst::Create(M->getContext(), Call, BB);
     } else if (CastInst::isBitOrNoopPointerCastable(ExpectedRtnType, RtnType,
@@ -201,6 +202,7 @@ static Function *createWrapper(Function *F, FunctionType *Ty) {
     Wrapper->eraseFromParent();
     Wrapper = Function::Create(Ty, Function::PrivateLinkage,
                                F->getName() + "_bitcast_invalid", M);
+    Wrapper->setAttributes(F->getAttributes());
     BasicBlock *BB = BasicBlock::Create(M->getContext(), "body", Wrapper);
     new UnreachableInst(M->getContext(), BB);
     Wrapper->setName(F->getName() + "_bitcast_invalid");
@@ -253,8 +255,8 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
       if (shouldFixMainFunction(F.getFunctionType(), MainTy)) {
         LLVM_DEBUG(dbgs() << "Found `main` function with incorrect type: "
                           << *F.getFunctionType() << "\n");
-        Value *Args[] = {UndefValue::get(MainArgTys[0]),
-                         UndefValue::get(MainArgTys[1])};
+        Value *Args[] = {PoisonValue::get(MainArgTys[0]),
+                         PoisonValue::get(MainArgTys[1])};
         CallMain = CallInst::Create(MainTy, Main, Args, "call_main");
         Uses.push_back(std::make_pair(CallMain, &F));
       }

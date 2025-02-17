@@ -14,7 +14,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -24,7 +23,6 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -32,7 +30,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <tuple>
 #include <utility>
 
@@ -40,49 +37,66 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-trace-metrics"
 
-char MachineTraceMetrics::ID = 0;
+AnalysisKey MachineTraceMetricsAnalysis::Key;
 
-char &llvm::MachineTraceMetricsID = MachineTraceMetrics::ID;
-
-INITIALIZE_PASS_BEGIN(MachineTraceMetrics, DEBUG_TYPE,
-                      "Machine Trace Metrics", false, true)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_END(MachineTraceMetrics, DEBUG_TYPE,
-                    "Machine Trace Metrics", false, true)
-
-MachineTraceMetrics::MachineTraceMetrics() : MachineFunctionPass(ID) {
-  std::fill(std::begin(Ensembles), std::end(Ensembles), nullptr);
+MachineTraceMetricsAnalysis::Result
+MachineTraceMetricsAnalysis::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  return Result(MF, MFAM.getResult<MachineLoopAnalysis>(MF));
 }
 
-void MachineTraceMetrics::getAnalysisUsage(AnalysisUsage &AU) const {
+PreservedAnalyses
+MachineTraceMetricsVerifierPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  MFAM.getResult<MachineTraceMetricsAnalysis>(MF).verifyAnalysis();
+  return PreservedAnalyses::all();
+}
+
+char MachineTraceMetricsWrapperPass::ID = 0;
+
+char &llvm::MachineTraceMetricsID = MachineTraceMetricsWrapperPass::ID;
+
+INITIALIZE_PASS_BEGIN(MachineTraceMetricsWrapperPass, DEBUG_TYPE,
+                      "Machine Trace Metrics", false, true)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_END(MachineTraceMetricsWrapperPass, DEBUG_TYPE,
+                    "Machine Trace Metrics", false, true)
+
+MachineTraceMetricsWrapperPass::MachineTraceMetricsWrapperPass()
+    : MachineFunctionPass(ID) {}
+
+void MachineTraceMetricsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool MachineTraceMetrics::runOnMachineFunction(MachineFunction &Func) {
+void MachineTraceMetrics::init(MachineFunction &Func,
+                               const MachineLoopInfo &LI) {
   MF = &Func;
   const TargetSubtargetInfo &ST = MF->getSubtarget();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MRI = &MF->getRegInfo();
-  Loops = &getAnalysis<MachineLoopInfo>();
+  Loops = &LI;
   SchedModel.init(&ST);
   BlockInfo.resize(MF->getNumBlockIDs());
   ProcReleaseAtCycles.resize(MF->getNumBlockIDs() *
                             SchedModel.getNumProcResourceKinds());
+}
+
+bool MachineTraceMetricsWrapperPass::runOnMachineFunction(MachineFunction &MF) {
+  MTM.init(MF, getAnalysis<MachineLoopInfoWrapperPass>().getLI());
   return false;
 }
 
-void MachineTraceMetrics::releaseMemory() {
+MachineTraceMetrics::~MachineTraceMetrics() { clear(); }
+
+void MachineTraceMetrics::clear() {
   MF = nullptr;
   BlockInfo.clear();
-  for (Ensemble *&E : Ensembles) {
-    delete E;
-    E = nullptr;
-  }
+  for (auto &E : Ensembles)
+    E.reset();
 }
 
 //===----------------------------------------------------------------------===//
@@ -398,27 +412,42 @@ MachineTraceMetrics::Ensemble *
 MachineTraceMetrics::getEnsemble(MachineTraceStrategy strategy) {
   assert(strategy < MachineTraceStrategy::TS_NumStrategies &&
          "Invalid trace strategy enum");
-  Ensemble *&E = Ensembles[static_cast<size_t>(strategy)];
+  std::unique_ptr<MachineTraceMetrics::Ensemble> &E =
+      Ensembles[static_cast<size_t>(strategy)];
   if (E)
-    return E;
+    return E.get();
 
   // Allocate new Ensemble on demand.
   switch (strategy) {
   case MachineTraceStrategy::TS_MinInstrCount:
-    return (E = new MinInstrCountEnsemble(this));
+    E = std::make_unique<MinInstrCountEnsemble>(MinInstrCountEnsemble(this));
+    break;
   case MachineTraceStrategy::TS_Local:
-    return (E = new LocalEnsemble(this));
+    E = std::make_unique<LocalEnsemble>(LocalEnsemble(this));
+    break;
   default: llvm_unreachable("Invalid trace strategy enum");
   }
+  return E.get();
 }
 
 void MachineTraceMetrics::invalidate(const MachineBasicBlock *MBB) {
   LLVM_DEBUG(dbgs() << "Invalidate traces through " << printMBBReference(*MBB)
                     << '\n');
   BlockInfo[MBB->getNumber()].invalidate();
-  for (Ensemble *E : Ensembles)
+  for (auto &E : Ensembles)
     if (E)
       E->invalidate(MBB);
+}
+
+bool MachineTraceMetrics::invalidate(
+    MachineFunction &, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on machine functions, or the
+  // machine function's CFG have been preserved.
+  auto PAC = PA.getChecker<MachineTraceMetricsAnalysis>();
+  return !PAC.preserved() &&
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
+         !PAC.preservedSet<CFGAnalyses>();
 }
 
 void MachineTraceMetrics::verifyAnalysis() const {
@@ -426,7 +455,7 @@ void MachineTraceMetrics::verifyAnalysis() const {
     return;
 #ifndef NDEBUG
   assert(BlockInfo.size() == MF->getNumBlockIDs() && "Outdated BlockInfo size");
-  for (Ensemble *E : Ensembles)
+  for (auto &E : Ensembles)
     if (E)
       E->verify();
 #endif
@@ -654,11 +683,10 @@ struct DataDep {
   DataDep(const MachineRegisterInfo *MRI, unsigned VirtReg, unsigned UseOp)
     : UseOp(UseOp) {
     assert(Register::isVirtualRegister(VirtReg));
-    MachineRegisterInfo::def_iterator DefI = MRI->def_begin(VirtReg);
-    assert(!DefI.atEnd() && "Register has no defs");
-    DefMI = DefI->getParent();
-    DefOp = DefI.getOperandNo();
-    assert((++DefI).atEnd() && "Register has multiple defs");
+    MachineOperand *DefMO = MRI->getOneDef(VirtReg);
+    assert(DefMO && "Register does not have unique def");
+    DefMI = DefMO->getParent();
+    DefOp = DefMO->getOperandNo();
   }
 };
 
@@ -939,15 +967,15 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
   }
 
   // Now we know the height of MI. Update any regunits read.
-  for (size_t I = 0, E = ReadOps.size(); I != E; ++I) {
-    MCRegister Reg = MI.getOperand(ReadOps[I]).getReg().asMCReg();
+  for (unsigned Op : ReadOps) {
+    MCRegister Reg = MI.getOperand(Op).getReg().asMCReg();
     for (MCRegUnit Unit : TRI->regunits(Reg)) {
       LiveRegUnit &LRU = RegUnits[Unit];
       // Set the height to the highest reader of the unit.
       if (LRU.Cycle <= Height && LRU.MI != &MI) {
         LRU.Cycle = Height;
         LRU.MI = &MI;
-        LRU.Op = ReadOps[I];
+        LRU.Op = Op;
       }
     }
   }

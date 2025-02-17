@@ -72,127 +72,132 @@ bool CaptureTracker::isDereferenceableOrNull(Value *O, const DataLayout &DL) {
 }
 
 namespace {
-  struct SimpleCaptureTracker : public CaptureTracker {
-    explicit SimpleCaptureTracker(bool ReturnCaptures)
-        : ReturnCaptures(ReturnCaptures) {}
+struct SimpleCaptureTracker : public CaptureTracker {
+  explicit SimpleCaptureTracker(bool ReturnCaptures)
+      : ReturnCaptures(ReturnCaptures) {}
 
-    void tooManyUses() override {
-      LLVM_DEBUG(dbgs() << "Captured due to too many uses\n");
-      Captured = true;
-    }
+  void tooManyUses() override {
+    LLVM_DEBUG(dbgs() << "Captured due to too many uses\n");
+    Captured = true;
+  }
 
-    bool captured(const Use *U) override {
-      if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
-        return false;
+  Action captured(const Use *U, UseCaptureInfo CI) override {
+    // TODO(captures): Use UseCaptureInfo.
+    if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
+      return ContinueIgnoringReturn;
 
-      LLVM_DEBUG(dbgs() << "Captured by: " << *U->getUser() << "\n");
+    LLVM_DEBUG(dbgs() << "Captured by: " << *U->getUser() << "\n");
 
-      Captured = true;
+    Captured = true;
+    return Stop;
+  }
+
+  bool ReturnCaptures;
+
+  bool Captured = false;
+};
+
+/// Only find pointer captures which happen before the given instruction. Uses
+/// the dominator tree to determine whether one instruction is before another.
+/// Only support the case where the Value is defined in the same basic block
+/// as the given instruction and the use.
+struct CapturesBefore : public CaptureTracker {
+
+  CapturesBefore(bool ReturnCaptures, const Instruction *I,
+                 const DominatorTree *DT, bool IncludeI, const LoopInfo *LI)
+      : BeforeHere(I), DT(DT), ReturnCaptures(ReturnCaptures),
+        IncludeI(IncludeI), LI(LI) {}
+
+  void tooManyUses() override { Captured = true; }
+
+  bool isSafeToPrune(Instruction *I) {
+    if (BeforeHere == I)
+      return !IncludeI;
+
+    // We explore this usage only if the usage can reach "BeforeHere".
+    // If use is not reachable from entry, there is no need to explore.
+    if (!DT->isReachableFromEntry(I->getParent()))
       return true;
-    }
 
-    bool ReturnCaptures;
+    // Check whether there is a path from I to BeforeHere.
+    return !isPotentiallyReachable(I, BeforeHere, nullptr, DT, LI);
+  }
 
-    bool Captured = false;
-  };
+  Action captured(const Use *U, UseCaptureInfo CI) override {
+    // TODO(captures): Use UseCaptureInfo.
+    Instruction *I = cast<Instruction>(U->getUser());
+    if (isa<ReturnInst>(I) && !ReturnCaptures)
+      return ContinueIgnoringReturn;
 
-  /// Only find pointer captures which happen before the given instruction. Uses
-  /// the dominator tree to determine whether one instruction is before another.
-  /// Only support the case where the Value is defined in the same basic block
-  /// as the given instruction and the use.
-  struct CapturesBefore : public CaptureTracker {
+    // Check isSafeToPrune() here rather than in shouldExplore() to avoid
+    // an expensive reachability query for every instruction we look at.
+    // Instead we only do one for actual capturing candidates.
+    if (isSafeToPrune(I))
+      // If the use is not reachable, the instruction result isn't either.
+      return ContinueIgnoringReturn;
 
-    CapturesBefore(bool ReturnCaptures, const Instruction *I,
-                   const DominatorTree *DT, bool IncludeI, const LoopInfo *LI)
-        : BeforeHere(I), DT(DT), ReturnCaptures(ReturnCaptures),
-          IncludeI(IncludeI), LI(LI) {}
+    Captured = true;
+    return Stop;
+  }
 
-    void tooManyUses() override { Captured = true; }
+  const Instruction *BeforeHere;
+  const DominatorTree *DT;
 
-    bool isSafeToPrune(Instruction *I) {
-      if (BeforeHere == I)
-        return !IncludeI;
+  bool ReturnCaptures;
+  bool IncludeI;
 
-      // We explore this usage only if the usage can reach "BeforeHere".
-      // If use is not reachable from entry, there is no need to explore.
-      if (!DT->isReachableFromEntry(I->getParent()))
-        return true;
+  bool Captured = false;
 
-      // Check whether there is a path from I to BeforeHere.
-      return !isPotentiallyReachable(I, BeforeHere, nullptr, DT, LI);
-    }
+  const LoopInfo *LI;
+};
 
-    bool captured(const Use *U) override {
-      Instruction *I = cast<Instruction>(U->getUser());
-      if (isa<ReturnInst>(I) && !ReturnCaptures)
-        return false;
+/// Find the 'earliest' instruction before which the pointer is known not to
+/// be captured. Here an instruction A is considered earlier than instruction
+/// B, if A dominates B. If 2 escapes do not dominate each other, the
+/// terminator of the common dominator is chosen. If not all uses cannot be
+/// analyzed, the earliest escape is set to the first instruction in the
+/// function entry block.
+// NOTE: Users have to make sure instructions compared against the earliest
+// escape are not in a cycle.
+struct EarliestCaptures : public CaptureTracker {
 
-      // Check isSafeToPrune() here rather than in shouldExplore() to avoid
-      // an expensive reachability query for every instruction we look at.
-      // Instead we only do one for actual capturing candidates.
-      if (isSafeToPrune(I))
-        return false;
+  EarliestCaptures(bool ReturnCaptures, Function &F, const DominatorTree &DT)
+      : DT(DT), ReturnCaptures(ReturnCaptures), F(F) {}
 
-      Captured = true;
-      return true;
-    }
+  void tooManyUses() override {
+    Captured = true;
+    EarliestCapture = &*F.getEntryBlock().begin();
+  }
 
-    const Instruction *BeforeHere;
-    const DominatorTree *DT;
+  Action captured(const Use *U, UseCaptureInfo CI) override {
+    // TODO(captures): Use UseCaptureInfo.
+    Instruction *I = cast<Instruction>(U->getUser());
+    if (isa<ReturnInst>(I) && !ReturnCaptures)
+      return ContinueIgnoringReturn;
 
-    bool ReturnCaptures;
-    bool IncludeI;
+    if (!EarliestCapture)
+      EarliestCapture = I;
+    else
+      EarliestCapture = DT.findNearestCommonDominator(EarliestCapture, I);
+    Captured = true;
 
-    bool Captured = false;
+    // Continue analysis, as we need to see all potential captures. However,
+    // we do not need to follow the instruction result, as this use will
+    // dominate any captures made through the instruction result..
+    return ContinueIgnoringReturn;
+  }
 
-    const LoopInfo *LI;
-  };
+  Instruction *EarliestCapture = nullptr;
 
-  /// Find the 'earliest' instruction before which the pointer is known not to
-  /// be captured. Here an instruction A is considered earlier than instruction
-  /// B, if A dominates B. If 2 escapes do not dominate each other, the
-  /// terminator of the common dominator is chosen. If not all uses cannot be
-  /// analyzed, the earliest escape is set to the first instruction in the
-  /// function entry block.
-  // NOTE: Users have to make sure instructions compared against the earliest
-  // escape are not in a cycle.
-  struct EarliestCaptures : public CaptureTracker {
+  const DominatorTree &DT;
 
-    EarliestCaptures(bool ReturnCaptures, Function &F, const DominatorTree &DT)
-        : DT(DT), ReturnCaptures(ReturnCaptures), F(F) {}
+  bool ReturnCaptures;
 
-    void tooManyUses() override {
-      Captured = true;
-      EarliestCapture = &*F.getEntryBlock().begin();
-    }
+  bool Captured = false;
 
-    bool captured(const Use *U) override {
-      Instruction *I = cast<Instruction>(U->getUser());
-      if (isa<ReturnInst>(I) && !ReturnCaptures)
-        return false;
-
-      if (!EarliestCapture)
-        EarliestCapture = I;
-      else
-        EarliestCapture = DT.findNearestCommonDominator(EarliestCapture, I);
-      Captured = true;
-
-      // Return false to continue analysis; we need to see all potential
-      // captures.
-      return false;
-    }
-
-    Instruction *EarliestCapture = nullptr;
-
-    const DominatorTree &DT;
-
-    bool ReturnCaptures;
-
-    bool Captured = false;
-
-    Function &F;
-  };
-}
+  Function &F;
+};
+} // namespace
 
 /// PointerMayBeCaptured - Return true if this pointer value may be captured
 /// by the enclosing function (which is required to exist).  This routine can
@@ -274,25 +279,26 @@ Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
   return CB.EarliestCapture;
 }
 
-UseCaptureKind llvm::DetermineUseCaptureKind(
-    const Use &U,
+UseCaptureInfo llvm::DetermineUseCaptureKind(
+    const Use &U, const Value *Base,
     function_ref<bool(Value *, const DataLayout &)> IsDereferenceableOrNull) {
   Instruction *I = dyn_cast<Instruction>(U.getUser());
 
   // TODO: Investigate non-instruction uses.
   if (!I)
-    return UseCaptureKind::MAY_CAPTURE;
+    return CaptureComponents::All;
 
   switch (I->getOpcode()) {
   case Instruction::Call:
   case Instruction::Invoke: {
+    // TODO(captures): Make this more precise.
     auto *Call = cast<CallBase>(I);
     // Not captured if the callee is readonly, doesn't return a copy through
     // its return value and doesn't unwind (a readonly function can leak bits
     // by throwing an exception or not depending on the input value).
     if (Call->onlyReadsMemory() && Call->doesNotThrow() &&
         Call->getType()->isVoidTy())
-      return UseCaptureKind::NO_CAPTURE;
+      return CaptureComponents::None;
 
     // The pointer is not captured if returned pointer is not captured.
     // NOTE: CaptureTracking users should not assume that only functions
@@ -300,13 +306,13 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
     // getUnderlyingObject in ValueTracking or DecomposeGEPExpression
     // in BasicAA also need to know about this property.
     if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call, true))
-      return UseCaptureKind::PASSTHROUGH;
+      return UseCaptureInfo::passthrough();
 
     // Volatile operations effectively capture the memory location that they
     // load and store to.
     if (auto *MI = dyn_cast<MemIntrinsic>(Call))
       if (MI->isVolatile())
-        return UseCaptureKind::MAY_CAPTURE;
+        return CaptureComponents::All;
 
     // Calling a function pointer does not in itself cause the pointer to
     // be captured.  This is a subtle point considering that (for example)
@@ -315,30 +321,27 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
     // captured, even though the loaded value might be the pointer itself
     // (think of self-referential objects).
     if (Call->isCallee(&U))
-      return UseCaptureKind::NO_CAPTURE;
+      return CaptureComponents::None;
 
     // Not captured if only passed via 'nocapture' arguments.
-    if (Call->isDataOperand(&U) &&
-        !Call->doesNotCapture(Call->getDataOperandNo(&U))) {
-      // The parameter is not marked 'nocapture' - captured.
-      return UseCaptureKind::MAY_CAPTURE;
-    }
-    return UseCaptureKind::NO_CAPTURE;
+    assert(Call->isDataOperand(&U) && "Non-callee must be data operand");
+    CaptureInfo CI = Call->getCaptureInfo(Call->getDataOperandNo(&U));
+    return UseCaptureInfo(CI.getOtherComponents(), CI.getRetComponents());
   }
   case Instruction::Load:
     // Volatile loads make the address observable.
     if (cast<LoadInst>(I)->isVolatile())
-      return UseCaptureKind::MAY_CAPTURE;
-    return UseCaptureKind::NO_CAPTURE;
+      return CaptureComponents::All;
+    return CaptureComponents::None;
   case Instruction::VAArg:
     // "va-arg" from a pointer does not cause it to be captured.
-    return UseCaptureKind::NO_CAPTURE;
+    return CaptureComponents::None;
   case Instruction::Store:
     // Stored the pointer - conservatively assume it may be captured.
     // Volatile stores make the address observable.
     if (U.getOperandNo() == 0 || cast<StoreInst>(I)->isVolatile())
-      return UseCaptureKind::MAY_CAPTURE;
-    return UseCaptureKind::NO_CAPTURE;
+      return CaptureComponents::All;
+    return CaptureComponents::None;
   case Instruction::AtomicRMW: {
     // atomicrmw conceptually includes both a load and store from
     // the same location.
@@ -347,8 +350,8 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
     // Volatile stores make the address observable.
     auto *ARMWI = cast<AtomicRMWInst>(I);
     if (U.getOperandNo() == 1 || ARMWI->isVolatile())
-      return UseCaptureKind::MAY_CAPTURE;
-    return UseCaptureKind::NO_CAPTURE;
+      return CaptureComponents::All;
+    return CaptureComponents::None;
   }
   case Instruction::AtomicCmpXchg: {
     // cmpxchg conceptually includes both a load and store from
@@ -358,49 +361,59 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
     // Volatile stores make the address observable.
     auto *ACXI = cast<AtomicCmpXchgInst>(I);
     if (U.getOperandNo() == 1 || U.getOperandNo() == 2 || ACXI->isVolatile())
-      return UseCaptureKind::MAY_CAPTURE;
-    return UseCaptureKind::NO_CAPTURE;
+      return CaptureComponents::All;
+    return CaptureComponents::None;
   }
   case Instruction::GetElementPtr:
     // AA does not support pointers of vectors, so GEP vector splats need to
     // be considered as captures.
     if (I->getType()->isVectorTy())
-      return UseCaptureKind::MAY_CAPTURE;
-    return UseCaptureKind::PASSTHROUGH;
+      return CaptureComponents::All;
+    return UseCaptureInfo::passthrough();
   case Instruction::BitCast:
   case Instruction::PHI:
   case Instruction::Select:
   case Instruction::AddrSpaceCast:
     // The original value is not captured via this if the new value isn't.
-    return UseCaptureKind::PASSTHROUGH;
+    return UseCaptureInfo::passthrough();
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
-    if (auto *CPN = dyn_cast<ConstantPointerNull>(I->getOperand(OtherIdx))) {
+    if (isa<ConstantPointerNull>(I->getOperand(OtherIdx)) &&
+        cast<ICmpInst>(I)->isEquality()) {
+      // TODO(captures): Remove these special cases once we make use of
+      // captures(address_is_null).
+
       // Don't count comparisons of a no-alias return value against null as
       // captures. This allows us to ignore comparisons of malloc results
       // with null, for example.
-      if (CPN->getType()->getAddressSpace() == 0)
+      if (U->getType()->getPointerAddressSpace() == 0)
         if (isNoAliasCall(U.get()->stripPointerCasts()))
-          return UseCaptureKind::NO_CAPTURE;
+          return CaptureComponents::None;
       if (!I->getFunction()->nullPointerIsDefined()) {
         auto *O = I->getOperand(Idx)->stripPointerCastsSameRepresentation();
         // Comparing a dereferenceable_or_null pointer against null cannot
         // lead to pointer escapes, because if it is not null it must be a
         // valid (in-bounds) pointer.
-        const DataLayout &DL = I->getModule()->getDataLayout();
+        const DataLayout &DL = I->getDataLayout();
         if (IsDereferenceableOrNull && IsDereferenceableOrNull(O, DL))
-          return UseCaptureKind::NO_CAPTURE;
+          return CaptureComponents::None;
       }
+
+      // Check whether this is a comparison of the base pointer against
+      // null.
+      if (U.get() == Base)
+        return CaptureComponents::AddressIsNull;
     }
 
     // Otherwise, be conservative. There are crazy ways to capture pointers
-    // using comparisons.
-    return UseCaptureKind::MAY_CAPTURE;
+    // using comparisons. However, only the address is captured, not the
+    // provenance.
+    return CaptureComponents::Address;
   }
   default:
     // Something else - be conservative and say it is captured.
-    return UseCaptureKind::MAY_CAPTURE;
+    return CaptureComponents::All;
   }
 }
 
@@ -438,18 +451,26 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
   };
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
-    switch (DetermineUseCaptureKind(*U, IsDereferenceableOrNull)) {
-    case UseCaptureKind::NO_CAPTURE:
-      continue;
-    case UseCaptureKind::MAY_CAPTURE:
-      if (Tracker->captured(U))
+    UseCaptureInfo CI = DetermineUseCaptureKind(*U, V, IsDereferenceableOrNull);
+    if (capturesAnything(CI.UseCC)) {
+      switch (Tracker->captured(U, CI)) {
+      case CaptureTracker::Stop:
         return;
-      continue;
-    case UseCaptureKind::PASSTHROUGH:
-      if (!AddUses(U->getUser()))
-        return;
-      continue;
+      case CaptureTracker::ContinueIgnoringReturn:
+        continue;
+      case CaptureTracker::Continue:
+        // Fall through to passthrough handling, but only if ResultCC contains
+        // additional components that UseCC does not. We assume that a
+        // capture at this point will be strictly more constraining than a
+        // later capture from following the return value.
+        if (capturesNothing(CI.ResultCC & ~CI.UseCC))
+          continue;
+        break;
+      }
     }
+    // TODO(captures): We could keep track of ResultCC for the users.
+    if (capturesAnything(CI.ResultCC) && !AddUses(U->getUser()))
+      return;
   }
 
   // All uses examined.

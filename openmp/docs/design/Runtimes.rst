@@ -742,6 +742,9 @@ variables is defined below.
     * ``LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT=<Num> (default: 32)``
+    * ``LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=[TRUE/FALSE] (default TRUE)``
+    * ``OFFLOAD_TRACK_ALLOCATION_TRACES=[TRUE/FALSE] (default FALSE)``
+    * ``OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=<Num> (default 0)``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
@@ -1162,7 +1165,25 @@ of threads possible times the number of teams (aka. blocks) the device prefers
 count to increase outer (team/block) parallelism. The thread count will never
 be reduced below the value passed for this environment variable though.
 
+LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT
+"""""""""""""""""""""""""""""""""""""""""""""
 
+This environment variable can be used to control how the OpenMP runtime assigns
+blocks to loops with high trip counts. By default we reuse existing blocks
+rather than spawning new blocks.
+
+OFFLOAD_TRACK_ALLOCATION_TRACES
+"""""""""""""""""""""""""""""""
+
+This environment variable determines if the stack traces of allocations and
+deallocations are tracked to aid in error reporting, e.g., in case of
+double-free.
+
+OFFLOAD_TRACK_KERNEL_LAUNCH_TRACES
+""""""""""""""""""""""""""""""""""
+
+This environment variable determines how manytstack traces of kernel launches
+are tracked to aid in error reporting, e.g., what asynchronous kernel failed.
 
 .. _libomptarget_plugin:
 
@@ -1475,6 +1496,14 @@ clause. Examples for both are given below.
     $ clang++ -fopenmp --offload-arch=gfx90a -O3 shared.c
     $ env ./shared
 
+.. _libomptarget_device_allocator:
+
+Device Allocation
+^^^^^^^^^^^^^^^^^
+
+The device runtime supports basic runtime allocation via the ``omp_alloc`` 
+function. Currently, this allocates global memory for all default traits. Access 
+modifiers are currently not supported and return a null pointer.
 
 .. _libomptarget_device_debugging:
 
@@ -1493,3 +1522,4 @@ debugging features are supported.
     * Enable debugging assertions in the device. ``0x01``
     * Enable diagnosing common problems during offloading . ``0x4``
     * Enable device malloc statistics (amdgpu only). ``0x8``
+    * Dump device PGO counters (only if PGO on GPU is enabled). ``0x10``

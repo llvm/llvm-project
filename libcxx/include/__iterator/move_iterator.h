@@ -105,9 +105,8 @@ public:
   typedef iterator_type pointer;
 
   typedef typename iterator_traits<iterator_type>::reference __reference;
-  typedef typename conditional< is_reference<__reference>::value,
-                                __libcpp_remove_reference_t<__reference>&&,
-                                __reference >::type reference;
+  typedef __conditional_t<is_reference<__reference>::value, __libcpp_remove_reference_t<__reference>&&, __reference>
+      reference;
 #endif // _LIBCPP_STD_VER >= 20
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 explicit move_iterator(_Iter __i) : __current_(std::move(__i)) {}
@@ -292,8 +291,8 @@ operator>=(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& __y) {
 #if _LIBCPP_STD_VER >= 20
 template <class _Iter1, three_way_comparable_with<_Iter1> _Iter2>
 inline _LIBCPP_HIDE_FROM_ABI constexpr auto
-operator<=>(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& __y)
-    -> compare_three_way_result_t<_Iter1, _Iter2> {
+operator<=>(const move_iterator<_Iter1>& __x,
+            const move_iterator<_Iter2>& __y) -> compare_three_way_result_t<_Iter1, _Iter2> {
   return __x.base() <=> __y.base();
 }
 #endif // _LIBCPP_STD_VER >= 20

@@ -67,9 +67,16 @@ Streams:
       Parameter 1: 0x24
     Thread Context:  '8182838485868788'
   - Type:            MemoryList
-    Memory Ranges:   
+    Memory Ranges:
       - Start of Memory Range: 0x7C7D7E7F80818283
         Content:               '8485868788'
+  - Type:            Memory64List
+    Memory Ranges:
+      - Start of Memory Range: 0x7FFFFFCF08180283
+        Content:               '68656c6c6f776f726c64'
+      - Start of Memory Range: 0x7FFAFFCF08180283
+        Data Size:              8
+        Content:               '8008'
   - Type:            MemoryInfoList
     Memory Ranges:
       - Base Address:    0x0000000000000000
@@ -156,9 +163,15 @@ Streams:
 # CHECK-NEXT:       Parameter 1: 0x24
 # CHECK-NEXT:     Thread Context:  '8182838485868788'
 # CHECK-NEXT:   - Type:            MemoryList
-# CHECK-NEXT:     Memory Ranges:   
+# CHECK-NEXT:     Memory Ranges:
 # CHECK-NEXT:       - Start of Memory Range: 0x7C7D7E7F80818283
 # CHECK-NEXT:         Content:               '8485868788'
+# CHECK-NEXT:  - Type:            Memory64List
+# CHECK-NEXT:    Memory Ranges:
+# CHECK-NEXT:      - Start of Memory Range: 0x7FFFFFCF08180283
+# CHECK-NEXT:        Content:         68656C6C6F776F726C64
+# CHECK-NEXT:      - Start of Memory Range: 0x7FFAFFCF08180283
+# CHECK-NEXT:        Content:         '8008000000000000'
 # CHECK-NEXT:   - Type:            MemoryInfoList
 # CHECK-NEXT:     Memory Ranges:
 # CHECK-NEXT:       - Base Address:       0x0

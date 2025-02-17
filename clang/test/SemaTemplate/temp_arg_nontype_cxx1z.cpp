@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
 
-template<typename T, T val> struct A {};
+template<typename T, T val> struct A {}; // expected-note 3{{template parameter is declared here}}
 
 template<typename T, typename U> constexpr bool is_same = false;
 template<typename T> constexpr bool is_same<T, T> = true;
@@ -122,13 +122,13 @@ namespace DeduceDifferentType {
   int a_imp = a(A<3>()); // expected-error {{no matching function}}
   int a_exp = a<3>(A<3>());
 
-  template<decltype(nullptr)> struct B {};
+  template<decltype(nullptr)> struct B {}; // expected-note {{template parameter is declared here}}
   template<int *P> int b(B<P>); // expected-error {{value of type 'int *' is not implicitly convertible to 'decltype(nullptr)'}}
   int b_imp = b(B<nullptr>()); // expected-error {{no matching function}}
   int b_exp = b<nullptr>(B<nullptr>()); // expected-error {{no matching function}}
 
   struct X { constexpr operator int() { return 0; } } x;
-  template<X &> struct C {};
+  template<X &> struct C {}; // expected-note {{template parameter is declared here}}
   template<int N> int c(C<N>); // expected-error {{value of type 'int' is not implicitly convertible to 'X &'}}
   int c_imp = c(C<x>()); // expected-error {{no matching function}}
   int c_exp = c<x>(C<x>()); // expected-error {{no matching function}}
@@ -448,7 +448,7 @@ namespace PR42108 {
   struct R {};
   struct S { constexpr S() {} constexpr S(R) {} };
   struct T { constexpr operator S() { return {}; } };
-  template <const S &> struct A {};
+  template <const S &> struct A {}; // expected-note {{template parameter is declared here}}
   void f() {
     A<R{}>(); // expected-error {{would bind reference to a temporary}}
     A<S{}>(); // expected-error {{reference to temporary object}}
@@ -613,3 +613,11 @@ struct {
 template<typename T>
 using a = s<f(T::x)>;
 }
+
+namespace GH73460 {
+  template <class T, T, T> struct A;
+  template <class T, T n> struct A<T, n, n> {};
+
+  int j;
+  template struct A<int&, j, j>;
+} // namespace GH73460

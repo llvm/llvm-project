@@ -71,6 +71,41 @@ def SDT_XCoreLdwsp    : SDTypeProfile<1, 1, [SDTCisInt<1>]>;
 def XCoreLdwsp        : SDNode<"XCoreISD::LDWSP", SDT_XCoreLdwsp,
                                [SDNPHasChain, SDNPMayLoad]>;
 
+def SDT_XCoreLAddSub : SDTypeProfile<2, 3, [
+  SDTCisVT<0, i32>, // result
+  SDTCisVT<1, i32>, // carry out
+  SDTCisVT<2, i32>, // lhs
+  SDTCisVT<3, i32>, // rhs
+  SDTCisVT<4, i32>  // carry in
+]>;
+
+def XCoreLAdd : SDNode<"XCoreISD::LADD", SDT_XCoreLAddSub>;
+def XCoreLSub : SDNode<"XCoreISD::LSUB", SDT_XCoreLAddSub>;
+
+// Used for both long multiplication and multiply-accumulate.
+def SDT_XCoreMul : SDTypeProfile<2, 4, [
+  SDTCisVT<0, i32>, // result (high part)
+  SDTCisVT<1, i32>, // result (low part)
+  SDTCisVT<2, i32>, // lhs
+  SDTCisVT<3, i32>, // rhs
+  SDTCisVT<4, i32>, // addend 1
+  SDTCisVT<5, i32>, // addend 2
+]>;
+
+def XCoreLMul : SDNode<"XCoreISD::LMUL", SDT_XCoreMul>;
+def XCoreMAccU : SDNode<"XCoreISD::MACCU", SDT_XCoreMul>;
+def XCoreMAccS : SDNode<"XCoreISD::MACCS", SDT_XCoreMul>;
+
+def XCoreCRC8 : SDNode<"XCoreISD::CRC8",
+  SDTypeProfile<2, 3, [
+    SDTCisVT<0, i32>, // shifted data
+    SDTCisVT<1, i32>, // result crc
+    SDTCisVT<2, i32>, // initial crc
+    SDTCisVT<3, i32>, // data
+    SDTCisVT<4, i32>, // polynomial
+  ]>
+>;
+
 // These are target-independent nodes, but have target-specific formats.
 def SDT_XCoreCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
                                              SDTCisVT<1, i32> ]>;
@@ -485,28 +520,35 @@ def OUTPW_l2rus : _FL2RUSBitp<0b100101101, (outs),
 let Constraints = "$e = $a,$f = $b" in {
 def MACCU_l4r : _FL4RSrcDstSrcDst<
   0b000001, (outs GRRegs:$a, GRRegs:$b),
-  (ins GRRegs:$e, GRRegs:$f, GRRegs:$c, GRRegs:$d), "maccu $a, $b, $c, $d", []>;
+  (ins GRRegs:$e, GRRegs:$f, GRRegs:$c, GRRegs:$d), "maccu $a, $b, $c, $d",
+  [(set i32:$a, i32:$b, (XCoreMAccU i32:$e, i32:$f, i32:$c, i32:$d))]>;
 
 def MACCS_l4r : _FL4RSrcDstSrcDst<
   0b000010, (outs GRRegs:$a, GRRegs:$b),
-  (ins GRRegs:$e, GRRegs:$f, GRRegs:$c, GRRegs:$d), "maccs $a, $b, $c, $d", []>;
+  (ins GRRegs:$e, GRRegs:$f, GRRegs:$c, GRRegs:$d), "maccs $a, $b, $c, $d",
+  [(set i32:$a, i32:$b, (XCoreMAccS i32:$e, i32:$f, i32:$c, i32:$d))]>;
 }
 
 let Constraints = "$e = $b" in
 def CRC8_l4r : _FL4RSrcDst<0b000000, (outs GRRegs:$a, GRRegs:$b),
                            (ins GRRegs:$e, GRRegs:$c, GRRegs:$d),
-                           "crc8 $b, $a, $c, $d", []>;
+                           "crc8 $b, $a, $c, $d",
+                           [(set i32:$a, i32:$b,
+                                 (XCoreCRC8 i32:$e, i32:$c, i32:$d))]>;
 
 // Five operand long
 
 def LADD_l5r : _FL5R<0b000001, (outs GRRegs:$dst1, GRRegs:$dst2),
                      (ins GRRegs:$src1, GRRegs:$src2, GRRegs:$src3),
                      "ladd $dst2, $dst1, $src1, $src2, $src3",
-                     []>;
+                     [(set i32:$dst1, i32:$dst2,
+                           (XCoreLAdd i32:$src1, i32:$src2, i32:$src3))]>;
 
 def LSUB_l5r : _FL5R<0b000010, (outs GRRegs:$dst1, GRRegs:$dst2),
                      (ins GRRegs:$src1, GRRegs:$src2, GRRegs:$src3),
-                     "lsub $dst2, $dst1, $src1, $src2, $src3", []>;
+                     "lsub $dst2, $dst1, $src1, $src2, $src3",
+                     [(set i32:$dst1, i32:$dst2,
+                           (XCoreLSub i32:$src1, i32:$src2, i32:$src3))]>;
 
 def LDIVU_l5r : _FL5R<0b000000, (outs GRRegs:$dst1, GRRegs:$dst2),
                       (ins GRRegs:$src1, GRRegs:$src2, GRRegs:$src3),
@@ -517,7 +559,9 @@ def LDIVU_l5r : _FL5R<0b000000, (outs GRRegs:$dst1, GRRegs:$dst2),
 def LMUL_l6r : _FL6R<
   0b00000, (outs GRRegs:$dst1, GRRegs:$dst2),
   (ins GRRegs:$src1, GRRegs:$src2, GRRegs:$src3, GRRegs:$src4),
-  "lmul $dst1, $dst2, $src1, $src2, $src3, $src4", []>;
+  "lmul $dst1, $dst2, $src1, $src2, $src3, $src4",
+  [(set i32:$dst1, i32:$dst2,
+        (XCoreLMul i32:$src1, i32:$src2, i32:$src3, i32:$src4))]>;
 
 // Register - U6
 

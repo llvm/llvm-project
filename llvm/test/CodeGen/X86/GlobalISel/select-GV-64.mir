@@ -25,8 +25,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # X64ALL:              registers:
-# X64ALL-NEXT:           - { id: 0, class: gr64, preferred-register: '' }
-# X64ALL-NEXT:           - { id: 1, class: gr64, preferred-register: '' }
+# X64ALL-NEXT:           - { id: 0, class: gr64, preferred-register: '', flags: [   ] }
+# X64ALL-NEXT:           - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
 #
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
@@ -58,8 +58,8 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # X64ALL:              registers:
-# X64ALL-NEXT:           - { id: 0, class: gr32, preferred-register: '' }
-# X64ALL-NEXT:           - { id: 1, class: gr64, preferred-register: '' }
+# X64ALL-NEXT:           - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
+# X64ALL-NEXT:           - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
 #
 registers:
   - { id: 0, class: gpr, preferred-register: '' }

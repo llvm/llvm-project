@@ -97,7 +97,7 @@ struct ScalarDynamicDerived : ScalarSym {
       : ScalarSym{sym}, lens{std::move(lens)} {}
 
 private:
-  llvm::SmallVector<Fortran::lower::SomeExpr> lens;
+  llvm::SmallVector<Fortran::lower::SomeExpr, 1> lens;
 };
 
 struct LBoundsAndShape {

@@ -331,6 +331,7 @@ if(NOT DEFINED CLANG_VERSION_SUFFIX)
   set(CLANG_VERSION_SUFFIX ${LLVM_VERSION_SUFFIX})
 endif()
 set(CLANG_VERSION "${CLANG_VERSION_MAJOR}.${CLANG_VERSION_MINOR}.${CLANG_VERSION_PATCHLEVEL}${CLANG_VERSION_SUFFIX}")
+set(MAX_CLANG_ABI_COMPAT_VERSION "${LLVM_VERSION_MAJOR}")
 message(STATUS "Clang version: ${CLANG_VERSION}")
 
 # Configure the Version.inc file.
@@ -350,7 +351,9 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wno-long-long")
   endif ()
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types" )
+  endif ()
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
@@ -360,7 +363,6 @@ if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
 
-include(CMakeParseArguments)
 include(AddClang)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -430,18 +432,16 @@ if(NOT LLVM_STATIC_LINK_CXX_STDLIB)
   set(HAVE_CLANG_REPL_SUPPORT ON)
 endif()
 
-option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
+option(CLANG_ENABLE_OBJC_REWRITER "Build the Objective-C rewriter tool" OFF)
+
 option(CLANG_ENABLE_STATIC_ANALYZER
   "Include static analyzer in clang binary." ON)
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
-if(NOT CLANG_ENABLE_STATIC_ANALYZER AND CLANG_ENABLE_ARCMT)
-  message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
-endif()
-
-if(CLANG_ENABLE_ARCMT)
-  set(CLANG_ENABLE_OBJC_REWRITER ON)
+if (DEFINED CLANG_ENABLE_ARCMT)
+  set(CLANG_ENABLE_OBJC_REWRITER ${CLANG_ENABLE_ARCMT})
+  message(DEPRECATION "'CLANG_ENABLE_ARCMT' is deprecated as ARCMigrate has been removed from Clang. Please use 'CLANG_ENABLE_OBJC_REWRITER' instead to enable or disable the Objective-C rewriter.")
 endif()
 
 # This option is a stop-gap, we should commit to removing this as
@@ -848,23 +848,17 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(CLANG_BOOTSTRAP_TARGETS check-llvm check-clang check-all)
   endif()
   foreach(target ${CLANG_BOOTSTRAP_TARGETS})
-    # Install targets have side effects, so we always want to execute them.
-    # "install" is reserved by CMake and can't be used as a step name for
-    # ExternalProject_Add_Step, so we can match against "^install-" instead of
-    # "^install" to get a tighter match. CMake's installation scripts already
-    # skip up-to-date files, so there's no behavior change if you install to the
-    # same destination multiple times.
-    if(target MATCHES "^install-")
-      set(step_always ON)
-    else()
-      set(step_always OFF)
-    endif()
 
     ExternalProject_Add_Step(${NEXT_CLANG_STAGE} ${target}
       COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target ${target}
       COMMENT "Performing ${target} for '${NEXT_CLANG_STAGE}'"
       DEPENDEES configure
-      ALWAYS ${step_always}
+      # We need to set ALWAYS to ON here, otherwise these targets won't be
+      # built on a second invocation of ninja.  The targets have their own
+      # logic to determine if they should build or not so setting ALWAYS ON
+      # here does not mean the targets will always rebuild it just means that
+      # they will check their dependenices and see if they need to be built.
+      ALWAYS ON
       EXCLUDE_FROM_MAIN ON
       USES_TERMINAL 1
     )
@@ -875,58 +869,6 @@ if (CLANG_ENABLE_BOOTSTRAP)
 
     ExternalProject_Add_StepTargets(${NEXT_CLANG_STAGE} ${target})
   endforeach()
-endif()
-
-set(CLANG_BOLT OFF CACHE STRING "Apply BOLT optimization to Clang. \
-  May be specified as Instrument or Perf or LBR to use a particular profiling \
-  mechanism.")
-string(TOUPPER "${CLANG_BOLT}" CLANG_BOLT)
-
-if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
-  set(CLANG_PATH ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
-  set(CLANG_INSTRUMENTED ${LLVM_RUNTIME_OUTPUT_INTDIR}/${CLANG_BOLT_INSTRUMENTED})
-  set(BOLT_FDATA ${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/prof.fdata)
-
-  # Pass extra flag in no-LBR mode
-  if (CLANG_BOLT STREQUAL "PERF")
-    set(BOLT_NO_LBR "-nl")
-  endif()
-
-  if (CLANG_BOLT STREQUAL "INSTRUMENT")
-    # Instrument clang with BOLT
-    add_custom_target(clang-instrumented
-      DEPENDS ${CLANG_INSTRUMENTED}
-    )
-    add_custom_command(OUTPUT ${CLANG_INSTRUMENTED}
-      DEPENDS clang llvm-bolt
-      COMMAND llvm-bolt ${CLANG_PATH} -o ${CLANG_INSTRUMENTED}
-        -instrument --instrumentation-file-append-pid
-        --instrumentation-file=${BOLT_FDATA}
-      COMMENT "Instrumenting clang binary with BOLT"
-      VERBATIM
-    )
-    add_custom_target(clang-bolt-training-deps DEPENDS clang-instrumented)
-  else() # perf or LBR
-    add_custom_target(clang-bolt-training-deps DEPENDS clang)
-  endif()
-
-  # Optimize original (pre-bolt) Clang using the collected profile
-  set(CLANG_OPTIMIZED ${CMAKE_CURRENT_BINARY_DIR}/clang.bolt)
-  add_custom_target(clang-bolt
-    DEPENDS ${CLANG_OPTIMIZED}
-  )
-  add_custom_command(OUTPUT ${CLANG_OPTIMIZED}
-    DEPENDS clang-bolt-profile
-    COMMAND llvm-bolt ${CLANG_PATH}
-      -o ${CLANG_OPTIMIZED}
-      -data ${BOLT_FDATA}
-      -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions
-      -split-all-cold -split-eh -dyno-stats -icf=1 -use-gnu-stack
-      ${BOLT_NO_LBR}
-    COMMAND ${CMAKE_COMMAND} -E rename ${CLANG_OPTIMIZED} $<TARGET_FILE:clang>
-    COMMENT "Optimizing Clang with BOLT"
-    VERBATIM
-  )
 endif()
 
 if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)

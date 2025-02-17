@@ -19,10 +19,8 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallString.h"
 
 using namespace clang;
 
@@ -2460,7 +2458,7 @@ void SemaObjC::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       QualType modifiedTy = resultTy;
       if (auto nullability = AttributedType::stripOuterNullability(modifiedTy)) {
         if (*nullability == NullabilityKind::Unspecified)
-          resultTy = Context.getAttributedType(attr::TypeNonNull,
+          resultTy = Context.getAttributedType(NullabilityKind::NonNull,
                                                modifiedTy, modifiedTy);
       }
     }
@@ -2538,7 +2536,7 @@ void SemaObjC::ProcessPropertyDecl(ObjCPropertyDecl *property) {
         QualType modifiedTy = paramTy;
         if (auto nullability = AttributedType::stripOuterNullability(modifiedTy)){
           if (*nullability == NullabilityKind::Unspecified)
-            paramTy = Context.getAttributedType(attr::TypeNullable,
+            paramTy = Context.getAttributedType(NullabilityKind::Nullable,
                                                 modifiedTy, modifiedTy);
         }
       }
@@ -2552,7 +2550,7 @@ void SemaObjC::ProcessPropertyDecl(ObjCPropertyDecl *property) {
                                                   /*TInfo=*/nullptr,
                                                   SC_None,
                                                   nullptr);
-      SetterMethod->setMethodParams(Context, Argument, std::nullopt);
+      SetterMethod->setMethodParams(Context, Argument, {});
 
       AddPropertyAttrs(SemaRef, SetterMethod, property);
 

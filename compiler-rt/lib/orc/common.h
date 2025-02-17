@@ -19,9 +19,9 @@
 
 /// This macro should be used to define tags that will be associated with
 /// handlers in the JIT process, and call can be used to define tags f
-#define ORC_RT_JIT_DISPATCH_TAG(X) \
-extern "C" char X; \
-char X = 0;
+#define ORC_RT_JIT_DISPATCH_TAG(X)                                             \
+  ORC_RT_INTERFACE char X;                                                     \
+  char X = 0;
 
 /// Opaque struct for external symbols.
 struct __orc_rt_Opaque {};

@@ -1,18 +1,18 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=PTX32
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=PTX64
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=PTX32
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=PTX64
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
 ; Ensure we access the local stack properly
 
 ; PTX32:        mov.u32          %SPL, __local_depot{{[0-9]+}};
 ; PTX32:        cvta.local.u32   %SP, %SPL;
 ; PTX32:        ld.param.u32     %r{{[0-9]+}}, [foo_param_0];
-; PTX32:        st.volatile.u32  [%SP+0], %r{{[0-9]+}};
+; PTX32:        st.volatile.u32  [%SP], %r{{[0-9]+}};
 ; PTX64:        mov.u64          %SPL, __local_depot{{[0-9]+}};
 ; PTX64:        cvta.local.u64   %SP, %SPL;
 ; PTX64:        ld.param.u32     %r{{[0-9]+}}, [foo_param_0];
-; PTX64:        st.volatile.u32  [%SP+0], %r{{[0-9]+}};
+; PTX64:        st.volatile.u32  [%SP], %r{{[0-9]+}};
 define void @foo(i32 %a) {
   %local = alloca i32, align 4
   store volatile i32 %a, ptr %local
@@ -29,7 +29,7 @@ define void @foo(i32 %a) {
 ; PTX64:        ld.param.u32     %r{{[0-9]+}}, [foo2_param_0];
 ; PTX64:        add.u64          %rd[[SP_REG:[0-9]+]], %SPL, 0;
 ; PTX64:        st.local.u32  [%rd[[SP_REG]]], %r{{[0-9]+}};
-define void @foo2(i32 %a) {
+define ptx_kernel void @foo2(i32 %a) {
   %local = alloca i32, align 4
   store i32 %a, ptr %local
   call void @bar(ptr %local)
@@ -38,8 +38,6 @@ define void @foo2(i32 %a) {
 
 declare void @bar(ptr %a)
 
-!nvvm.annotations = !{!0}
-!0 = !{ptr @foo2, !"kernel", i32 1}
 
 ; PTX32:        mov.u32          %SPL, __local_depot{{[0-9]+}};
 ; PTX32-NOT:    cvta.local.u32   %SP, %SPL;

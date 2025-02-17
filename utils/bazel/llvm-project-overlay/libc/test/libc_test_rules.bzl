@@ -34,8 +34,12 @@ def libc_test(name, srcs, libc_function_deps = [], copts = [], deps = [], local_
         local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
         deps = [libc_internal_target(d) for d in all_function_deps] + [
             "//libc/test/UnitTest:LibcUnitTest",
+            "//libc:__support_macros_config",
+            "//libc:func_aligned_alloc",
+            "//libc:func_free",
+            "//libc:func_malloc",
+            "//libc:func_realloc",
         ] + deps,
-        features = ["-link_llvmlibc"],  # Do not link libllvmlibc.a
         copts = copts + libc_common_copts(),
         linkstatic = 1,
         **kwargs

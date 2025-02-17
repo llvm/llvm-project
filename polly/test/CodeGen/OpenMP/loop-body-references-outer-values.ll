@@ -15,7 +15,7 @@
 ; AST:   Stmt_for_body(c0);
 
 ; IR-LABEL: polly.parallel.for:
-; IR-NEXT:  %polly.subfn.storeaddr.A = getelementptr inbounds { ptr }, ptr %polly.par.userContext, i32 0, i32 0
+; IR-NEXT:  %polly.subfn.storeaddr.A = getelementptr inbounds nuw { ptr }, ptr %polly.par.userContext, i32 0, i32 0
 ; IR-NEXT:  store ptr %A, ptr %polly.subfn.storeaddr.A
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

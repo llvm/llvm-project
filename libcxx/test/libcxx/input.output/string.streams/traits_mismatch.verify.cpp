@@ -16,6 +16,8 @@
 
 // UNSUPPORTED: no-wide-characters
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <sstream>
 
 std::basic_stringbuf<char, std::char_traits<wchar_t> > sb;

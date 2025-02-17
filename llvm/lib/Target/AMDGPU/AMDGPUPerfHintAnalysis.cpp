@@ -12,12 +12,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "AMDGPUPerfHintAnalysis.h"
+#include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -54,12 +57,6 @@ static cl::opt<unsigned>
 STATISTIC(NumMemBound, "Number of functions marked as memory bound");
 STATISTIC(NumLimitWave, "Number of functions marked as needing limit wave");
 
-char llvm::AMDGPUPerfHintAnalysis::ID = 0;
-char &llvm::AMDGPUPerfHintAnalysisID = AMDGPUPerfHintAnalysis::ID;
-
-INITIALIZE_PASS(AMDGPUPerfHintAnalysis, DEBUG_TYPE,
-                "Analysis if a function is memory bound", true, true)
-
 namespace {
 
 struct AMDGPUPerfHint {
@@ -67,8 +64,8 @@ struct AMDGPUPerfHint {
 
 public:
   AMDGPUPerfHint(AMDGPUPerfHintAnalysis::FuncInfoMap &FIM_,
-                 const TargetLowering *TLI_)
-      : FIM(FIM_), DL(nullptr), TLI(TLI_) {}
+                 const SITargetLowering *TLI_)
+      : FIM(FIM_), TLI(TLI_) {}
 
   bool runOnFunction(Function &F);
 
@@ -95,9 +92,9 @@ private:
 
   AMDGPUPerfHintAnalysis::FuncInfoMap &FIM;
 
-  const DataLayout *DL;
+  const DataLayout *DL = nullptr;
 
-  const TargetLowering *TLI;
+  const SITargetLowering *TLI;
 
   AMDGPUPerfHintAnalysis::FuncInfo *visit(const Function &F);
   static bool isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &F);
@@ -121,15 +118,15 @@ private:
 
 static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
     const Instruction *Inst) {
-  if (auto LI = dyn_cast<LoadInst>(Inst))
+  if (const auto *LI = dyn_cast<LoadInst>(Inst))
     return {LI->getPointerOperand(), LI->getType()};
-  if (auto SI = dyn_cast<StoreInst>(Inst))
+  if (const auto *SI = dyn_cast<StoreInst>(Inst))
     return {SI->getPointerOperand(), SI->getValueOperand()->getType()};
-  if (auto AI = dyn_cast<AtomicCmpXchgInst>(Inst))
+  if (const auto *AI = dyn_cast<AtomicCmpXchgInst>(Inst))
     return {AI->getPointerOperand(), AI->getCompareOperand()->getType()};
-  if (auto AI = dyn_cast<AtomicRMWInst>(Inst))
+  if (const auto *AI = dyn_cast<AtomicRMWInst>(Inst))
     return {AI->getPointerOperand(), AI->getValOperand()->getType()};
-  if (auto MI = dyn_cast<AnyMemIntrinsic>(Inst))
+  if (const auto *MI = dyn_cast<AnyMemIntrinsic>(Inst))
     return {MI->getRawDest(), Type::getInt8Ty(MI->getContext())};
 
   return {nullptr, nullptr};
@@ -151,8 +148,8 @@ bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
       continue;
     LLVM_DEBUG(dbgs() << "  check: " << *V << '\n');
 
-    if (auto LD = dyn_cast<LoadInst>(V)) {
-      auto M = LD->getPointerOperand();
+    if (const auto *LD = dyn_cast<LoadInst>(V)) {
+      const auto *M = LD->getPointerOperand();
       if (isGlobalAddr(M)) {
         LLVM_DEBUG(dbgs() << "    is IA\n");
         return true;
@@ -160,32 +157,32 @@ bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
       continue;
     }
 
-    if (auto GEP = dyn_cast<GetElementPtrInst>(V)) {
-      auto P = GEP->getPointerOperand();
+    if (const auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
+      const auto *P = GEP->getPointerOperand();
       WorkSet.insert(P);
       for (unsigned I = 1, E = GEP->getNumIndices() + 1; I != E; ++I)
         WorkSet.insert(GEP->getOperand(I));
       continue;
     }
 
-    if (auto U = dyn_cast<UnaryInstruction>(V)) {
+    if (const auto *U = dyn_cast<UnaryInstruction>(V)) {
       WorkSet.insert(U->getOperand(0));
       continue;
     }
 
-    if (auto BO = dyn_cast<BinaryOperator>(V)) {
+    if (const auto *BO = dyn_cast<BinaryOperator>(V)) {
       WorkSet.insert(BO->getOperand(0));
       WorkSet.insert(BO->getOperand(1));
       continue;
     }
 
-    if (auto S = dyn_cast<SelectInst>(V)) {
+    if (const auto *S = dyn_cast<SelectInst>(V)) {
       WorkSet.insert(S->getFalseValue());
       WorkSet.insert(S->getTrueValue());
       continue;
     }
 
-    if (auto E = dyn_cast<ExtractElementInst>(V)) {
+    if (const auto *E = dyn_cast<ExtractElementInst>(V)) {
       WorkSet.insert(E->getVectorOperand());
       continue;
     }
@@ -334,7 +331,7 @@ bool AMDGPUPerfHint::needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
 }
 
 bool AMDGPUPerfHint::isGlobalAddr(const Value *V) const {
-  if (auto PT = dyn_cast<PointerType>(V->getType())) {
+  if (auto *PT = dyn_cast<PointerType>(V->getType())) {
     unsigned As = PT->getAddressSpace();
     // Flat likely points to global too.
     return As == AMDGPUAS::GLOBAL_ADDRESS || As == AMDGPUAS::FLAT_ADDRESS;
@@ -343,7 +340,7 @@ bool AMDGPUPerfHint::isGlobalAddr(const Value *V) const {
 }
 
 bool AMDGPUPerfHint::isLocalAddr(const Value *V) const {
-  if (auto PT = dyn_cast<PointerType>(V->getType()))
+  if (auto *PT = dyn_cast<PointerType>(V->getType()))
     return PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
   return false;
 }
@@ -388,30 +385,25 @@ bool AMDGPUPerfHint::MemAccessInfo::isLargeStride(
                << Reference.print() << "Result:" << Result << '\n');
   return Result;
 }
-} // namespace
 
-bool AMDGPUPerfHintAnalysis::runOnSCC(CallGraphSCC &SCC) {
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (!TPC)
-    return false;
+class AMDGPUPerfHintAnalysisLegacy : public CallGraphSCCPass {
+private:
+  // FIXME: This is relying on maintaining state between different SCCs.
+  AMDGPUPerfHintAnalysis Impl;
 
-  const TargetMachine &TM = TPC->getTM<TargetMachine>();
+public:
+  static char ID;
 
-  bool Changed = false;
-  for (CallGraphNode *I : SCC) {
-    Function *F = I->getFunction();
-    if (!F || F->isDeclaration())
-      continue;
+  AMDGPUPerfHintAnalysisLegacy() : CallGraphSCCPass(ID) {}
 
-    const TargetSubtargetInfo *ST = TM.getSubtargetImpl(*F);
-    AMDGPUPerfHint Analyzer(FIM, ST->getTargetLowering());
+  bool runOnSCC(CallGraphSCC &SCC) override;
 
-    if (Analyzer.runOnFunction(*F))
-      Changed = true;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
   }
+};
 
-  return Changed;
-}
+} // namespace
 
 bool AMDGPUPerfHintAnalysis::isMemoryBound(const Function *F) const {
   auto FI = FIM.find(F);
@@ -427,4 +419,75 @@ bool AMDGPUPerfHintAnalysis::needsWaveLimiter(const Function *F) const {
     return false;
 
   return AMDGPUPerfHint::needLimitWave(FI->second);
+}
+
+bool AMDGPUPerfHintAnalysis::runOnSCC(const GCNTargetMachine &TM,
+                                      CallGraphSCC &SCC) {
+  bool Changed = false;
+  for (CallGraphNode *I : SCC) {
+    Function *F = I->getFunction();
+    if (!F || F->isDeclaration())
+      continue;
+
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
+    AMDGPUPerfHint Analyzer(FIM, ST.getTargetLowering());
+
+    if (Analyzer.runOnFunction(*F))
+      Changed = true;
+  }
+
+  return Changed;
+}
+
+bool AMDGPUPerfHintAnalysis::run(const GCNTargetMachine &TM,
+                                 LazyCallGraph &CG) {
+  bool Changed = false;
+
+  CG.buildRefSCCs();
+
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+    for (LazyCallGraph::SCC &SCC : RC) {
+      if (SCC.size() != 1)
+        continue;
+      Function &F = SCC.begin()->getFunction();
+      // TODO: Skip without norecurse, or interposable?
+      if (F.isDeclaration())
+        continue;
+
+      const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+      AMDGPUPerfHint Analyzer(FIM, ST.getTargetLowering());
+      if (Analyzer.runOnFunction(F))
+        Changed = true;
+    }
+  }
+
+  return Changed;
+}
+
+char AMDGPUPerfHintAnalysisLegacy::ID = 0;
+char &llvm::AMDGPUPerfHintAnalysisLegacyID = AMDGPUPerfHintAnalysisLegacy::ID;
+
+INITIALIZE_PASS(AMDGPUPerfHintAnalysisLegacy, DEBUG_TYPE,
+                "Analysis if a function is memory bound", true, true)
+
+bool AMDGPUPerfHintAnalysisLegacy::runOnSCC(CallGraphSCC &SCC) {
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC)
+    return false;
+
+  const GCNTargetMachine &TM = TPC->getTM<GCNTargetMachine>();
+  return Impl.runOnSCC(TM, SCC);
+}
+
+PreservedAnalyses AMDGPUPerfHintAnalysisPass::run(Module &M,
+                                                  ModuleAnalysisManager &AM) {
+  auto &CG = AM.getResult<LazyCallGraphAnalysis>(M);
+
+  bool Changed = Impl->run(TM, CG);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<LazyCallGraphAnalysis>();
+  return PA;
 }

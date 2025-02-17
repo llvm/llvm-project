@@ -1,4 +1,7 @@
 # REQUIRES: aarch64
+# UNSUPPORTED: system-windows
+#   due to awk usage
+
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
 ############ Test merging multiple categories into a single category ############
@@ -23,6 +26,23 @@
 # RUN: llvm-objdump --objc-meta-data --macho merge_base_class_minimal_no_merge.dylib  | FileCheck %s --check-prefixes=NO_MERGE_INTO_BASE
 # RUN: llvm-objdump --objc-meta-data --macho merge_base_class_minimal_yes_merge.dylib | FileCheck %s --check-prefixes=YES_MERGE_INTO_BASE
 
+############ Test merging swift category into the base class ############
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o MyBaseClassSwiftExtension.o MyBaseClassSwiftExtension.s
+# RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o merge_base_class_swift_minimal_yes_merge.dylib -objc_category_merging MyBaseClassSwiftExtension.o merge_base_class_minimal.o
+# RUN: llvm-objdump --objc-meta-data --macho merge_base_class_swift_minimal_yes_merge.dylib | FileCheck %s --check-prefixes=YES_MERGE_INTO_BASE_SWIFT
+
+############ Test merging skipped due to invalid category name ############
+# Modify __OBJC_$_CATEGORY_MyBaseClass_$_Category01's name to point to L_OBJC_IMAGE_INFO+3
+# RUN: awk '/^__OBJC_\$_CATEGORY_MyBaseClass_\$_Category01:/ { print; getline; sub(/^[ \t]*\.quad[ \t]+l_OBJC_CLASS_NAME_$/, "\t.quad\tL_OBJC_IMAGE_INFO+3"); print; next } { print }' merge_cat_minimal.s > merge_cat_minimal_bad_name.s
+
+# Assemble the modified source
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal_bad_name.o merge_cat_minimal_bad_name.s
+
+# Run lld and check for the specific warning
+# RUN: %no-fatal-warnings-lld -arch arm64 -dylib -objc_category_merging -o merge_cat_minimal_merge.dylib a64_fakedylib.dylib merge_cat_minimal_bad_name.o 2>&1 | FileCheck %s --check-prefix=MERGE_WARNING
+
+# Check that lld emitted the warning about skipping category merging
+MERGE_WARNING: warning: ObjC category merging skipped for class symbol' _OBJC_CLASS_$_MyBaseClass'
 
 #### Check merge categories enabled ###
 # Check that the original categories are not there
@@ -33,14 +53,14 @@ MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass(Category01|Category02)
 MERGE_CATS-NEXT:   name {{.*}} Category01|Category02
 MERGE_CATS:       instanceMethods
-MERGE_CATS-NEXT:  24
-MERGE_CATS-NEXT:  2
+MERGE_CATS-NEXT:  entsize 12 (relative)
+MERGE_CATS-NEXT:  count 2
 MERGE_CATS-NEXT:   name {{.*}} cat01_InstanceMethod
 MERGE_CATS-NEXT:  types {{.*}} v16@0:8
-MERGE_CATS-NEXT:    imp -[MyBaseClass(Category01) cat01_InstanceMethod]
+MERGE_CATS-NEXT:    imp {{.*}} -[MyBaseClass(Category01) cat01_InstanceMethod]
 MERGE_CATS-NEXT:   name {{.*}} cat02_InstanceMethod
 MERGE_CATS-NEXT:  types {{.*}} v16@0:8
-MERGE_CATS-NEXT:    imp -[MyBaseClass(Category02) cat02_InstanceMethod]
+MERGE_CATS-NEXT:    imp {{.*}} -[MyBaseClass(Category02) cat02_InstanceMethod]
 MERGE_CATS-NEXT:         classMethods 0x0
 MERGE_CATS-NEXT:            protocols 0x0
 MERGE_CATS-NEXT:   instanceProperties 0x0
@@ -65,17 +85,32 @@ YES_MERGE_INTO_BASE-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 YES_MERGE_INTO_BASE: _OBJC_CLASS_$_MyBaseClass
 YES_MERGE_INTO_BASE-NEXT: _OBJC_METACLASS_$_MyBaseClass
 YES_MERGE_INTO_BASE: baseMethods
-YES_MERGE_INTO_BASE-NEXT: entsize 24
+YES_MERGE_INTO_BASE-NEXT: entsize 12 (relative)
 YES_MERGE_INTO_BASE-NEXT: count 3
 YES_MERGE_INTO_BASE-NEXT: name {{.*}} cat01_InstanceMethod
 YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass(Category01) cat01_InstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: imp {{.*}} -[MyBaseClass(Category01) cat01_InstanceMethod]
 YES_MERGE_INTO_BASE-NEXT: name {{.*}} cat02_InstanceMethod
 YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass(Category02) cat02_InstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: imp {{.*}} -[MyBaseClass(Category02) cat02_InstanceMethod]
 YES_MERGE_INTO_BASE-NEXT: name {{.*}} baseInstanceMethod
 YES_MERGE_INTO_BASE-NEXT: types {{.*}} v16@0:8
-YES_MERGE_INTO_BASE-NEXT: imp -[MyBaseClass baseInstanceMethod]
+YES_MERGE_INTO_BASE-NEXT: imp {{.*}} -[MyBaseClass baseInstanceMethod]
+
+
+#### Check merge swift category into base class ###
+YES_MERGE_INTO_BASE_SWIFT: _OBJC_CLASS_$_MyBaseClass
+YES_MERGE_INTO_BASE_SWIFT-NEXT: _OBJC_METACLASS_$_MyBaseClass
+YES_MERGE_INTO_BASE_SWIFT: baseMethods
+YES_MERGE_INTO_BASE_SWIFT-NEXT: entsize 24
+YES_MERGE_INTO_BASE_SWIFT-NEXT: count 2
+YES_MERGE_INTO_BASE_SWIFT-NEXT: name {{.*}} swiftMethod
+YES_MERGE_INTO_BASE_SWIFT-NEXT: types {{.*}} v16@0:8
+YES_MERGE_INTO_BASE_SWIFT-NEXT: imp _$sSo11MyBaseClassC0abC14SwiftExtensionE11swiftMethodyyFTo
+YES_MERGE_INTO_BASE_SWIFT-NEXT: name {{.*}} baseInstanceMethod
+YES_MERGE_INTO_BASE_SWIFT-NEXT: types {{.*}} v16@0:8
+YES_MERGE_INTO_BASE_SWIFT-NEXT: imp -[MyBaseClass baseInstanceMethod]
+
 
 #--- a64_fakedylib.s
 
@@ -278,4 +313,75 @@ l_OBJC_LABEL_CLASS_$:
 L_OBJC_IMAGE_INFO:
 	.long	0
 	.long	64
+.subsections_via_symbols
+
+
+#--- MyBaseClassSwiftExtension.s
+; xcrun -sdk macosx swiftc -emit-assembly MyBaseClassSwiftExtension.swift -import-objc-header YourProject-Bridging-Header.h -o MyBaseClassSwiftExtension.s
+;  ================== Generated from Swift: ==================
+; import Foundation
+; extension MyBaseClass {
+;     @objc func swiftMethod() {
+;     }
+; }
+;  ================== Generated from Swift ===================
+	.private_extern	_$sSo11MyBaseClassC0abC14SwiftExtensionE11swiftMethodyyF
+	.globl	_$sSo11MyBaseClassC0abC14SwiftExtensionE11swiftMethodyyF
+	.p2align	2
+_$sSo11MyBaseClassC0abC14SwiftExtensionE11swiftMethodyyF:
+	.cfi_startproc
+	mov	w0, #0
+	ret
+	.cfi_endproc
+
+	.p2align	2
+_$sSo11MyBaseClassC0abC14SwiftExtensionE11swiftMethodyyFTo:
+	.cfi_startproc
+	mov	w0, #0
+	ret
+	.cfi_endproc
+
+	.section	__TEXT,__cstring,cstring_literals
+	.p2align	4, 0x0
+l_.str.25.MyBaseClassSwiftExtension:
+	.asciz	"MyBaseClassSwiftExtension"
+
+	.section	__TEXT,__objc_methname,cstring_literals
+"L_selector_data(swiftMethod)":
+	.asciz	"swiftMethod"
+
+	.section	__TEXT,__cstring,cstring_literals
+"l_.str.7.v16@0:8":
+	.asciz	"v16@0:8"
+
+	.section	__DATA,__objc_data
+	.p2align	3, 0x0
+__CATEGORY_INSTANCE_METHODS_MyBaseClass_$_MyBaseClassSwiftExtension:
+	.long	24
+	.long	1
+	.quad	"L_selector_data(swiftMethod)"
+	.quad	"l_.str.7.v16@0:8"
+	.quad	_$sSo11MyBaseClassC0abC14SwiftExtensionE11swiftMethodyyFTo
+
+	.section	__DATA,__objc_const
+	.p2align	3, 0x0
+__CATEGORY_MyBaseClass_$_MyBaseClassSwiftExtension:
+	.quad	l_.str.25.MyBaseClassSwiftExtension
+	.quad	_OBJC_CLASS_$_MyBaseClass
+	.quad	__CATEGORY_INSTANCE_METHODS_MyBaseClass_$_MyBaseClassSwiftExtension
+	.quad	0
+	.quad	0
+	.quad	0
+	.quad	0
+	.long	60
+	.space	4
+
+	.section	__DATA,__objc_catlist,regular,no_dead_strip
+	.p2align	3, 0x0
+_objc_categories:
+	.quad	__CATEGORY_MyBaseClass_$_MyBaseClassSwiftExtension
+
+	.no_dead_strip	_main
+	.no_dead_strip	l_entry_point
+
 .subsections_via_symbols

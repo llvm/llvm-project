@@ -19,6 +19,13 @@ typedef struct {
   __UINT64_TYPE__ r15;
   __UINTPTR_TYPE__ rsp;
   __UINTPTR_TYPE__ rip;
+#elif defined(__i386__)
+  long ebx;
+  long esi;
+  long edi;
+  long ebp;
+  long esp;
+  long eip;
 #elif defined(__riscv)
   /* Program counter.  */
   long int __pc;
@@ -31,6 +38,14 @@ typedef struct {
   double __fpregs[12];
 #elif defined(__riscv_float_abi_single)
 #error "__jmp_buf not available for your target architecture."
+#endif
+#elif defined(__arm__)
+  // r4, r5, r6, r7, r8, r9, r10, r11, r12, lr
+  long opaque[10];
+#elif defined(__aarch64__)
+  long opaque[14]; // x19-x29, lr, sp, optional x18
+#if __ARM_FP
+  long fopaque[8]; // d8-d15
 #endif
 #else
 #error "__jmp_buf not available for your target architecture."

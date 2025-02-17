@@ -53,6 +53,14 @@ public:
   const GDBIndexTUEntryType &getGDBIndexTUEntryVector() const {
     return GDBIndexTUEntryVector;
   }
+
+  /// Sorts entries in GDBIndexTUEntryVector according to the TypeHash.
+  void sortGDBIndexTUEntryVector() {
+    llvm::stable_sort(GDBIndexTUEntryVector, [](const GDBIndexTUEntry &LHS,
+                                                const GDBIndexTUEntry &RHS) {
+      return LHS.TypeHash > RHS.TypeHash;
+    });
+  }
 };
 
 } // namespace bolt

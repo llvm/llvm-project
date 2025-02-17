@@ -23,7 +23,6 @@ module attributes { } {
       %13 = omp.map.info var_ptr(%10 : !llvm.ptr, !llvm.array<100 x i32>) map_clauses(from) capture(ByRef) bounds(%11) -> !llvm.ptr {name = "int_array"}
       %14 = omp.map.info var_ptr(%9 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "index_"}
       omp.target map_entries(%13 -> %arg0, %14 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-      ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
         %15 = llvm.mlir.constant(100 : i32) : i32
         %16 = llvm.mlir.constant(1 : i32) : i32
         %17 = llvm.mlir.constant(100 : index) : i64
@@ -47,7 +46,6 @@ module attributes { } {
               llvm.store %21, %30 : i32, !llvm.ptr
               omp.yield
             }
-            omp.terminator
           }
           omp.terminator
         }

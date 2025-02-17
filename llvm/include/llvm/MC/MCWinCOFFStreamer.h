@@ -22,6 +22,7 @@ class MCSection;
 class MCSubtargetInfo;
 class MCSymbol;
 class StringRef;
+class WinCOFFObjectWriter;
 class raw_pwrite_stream;
 
 class MCWinCOFFStreamer : public MCObjectStreamer {
@@ -36,13 +37,15 @@ public:
     MCObjectStreamer::reset();
   }
 
+  WinCOFFObjectWriter &getWriter();
+
   /// \name MCStreamer interface
   /// \{
 
   void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
+  void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
-  void emitThumbFunc(MCSymbol *Func) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void beginCOFFSymbolDef(MCSymbol const *Symbol) override;
@@ -54,6 +57,8 @@ public:
   void emitCOFFSectionIndex(MCSymbol const *Symbol) override;
   void emitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
   void emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
+  void emitCOFFSecNumber(MCSymbol const *Symbol) override;
+  void emitCOFFSecOffset(MCSymbol const *Symbol) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override;
   void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -77,7 +82,6 @@ protected:
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   void finalizeCGProfileEntry(const MCSymbolRefExpr *&S);
-  void finalizeCGProfile();
 
 private:
   void Error(const Twine &Msg) const;

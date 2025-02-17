@@ -51,13 +51,14 @@ def segmented_accessor(elements, raw_segments, idx):
 
 
 def equally_sized_accessor(
-    elements, n_variadic, n_preceding_simple, n_preceding_variadic
+    elements, n_simple, n_variadic, n_preceding_simple, n_preceding_variadic
 ):
     """
     Returns a starting position and a number of elements per variadic group
     assuming equally-sized groups and the given numbers of preceding groups.
 
       elements: a sequential container.
+      n_simple: the number of non-variadic groups in the container.
       n_variadic: the number of variadic groups in the container.
       n_preceding_simple: the number of non-variadic groups preceding the current
           group.
@@ -65,7 +66,7 @@ def equally_sized_accessor(
           group.
     """
 
-    total_variadic_length = len(elements) - n_variadic + 1
+    total_variadic_length = len(elements) - n_simple
     # This should be enforced by the C++-side trait verifier.
     assert total_variadic_length % n_variadic == 0
 
@@ -114,7 +115,10 @@ def get_op_results_or_values(
         _cext.ir.Operation,
         _Sequence[_Union[_cext.ir.OpView, _cext.ir.Operation, _cext.ir.Value]],
     ]
-) -> _Union[_Sequence[_cext.ir.Value], _cext.ir.OpResultList]:
+) -> _Union[
+    _Sequence[_Union[_cext.ir.OpView, _cext.ir.Operation, _cext.ir.Value]],
+    _cext.ir.OpResultList,
+]:
     """Returns the given sequence of values or the results of the given op.
 
     This is useful to implement op constructors so that they can take other ops as
@@ -126,21 +130,22 @@ def get_op_results_or_values(
     elif isinstance(arg, _cext.ir.Operation):
         return arg.results
     else:
-        return [get_op_result_or_value(element) for element in arg]
+        return arg
 
 
 def get_op_result_or_op_results(
     op: _Union[_cext.ir.OpView, _cext.ir.Operation],
 ) -> _Union[_cext.ir.Operation, _cext.ir.OpResult, _Sequence[_cext.ir.OpResult]]:
-    if isinstance(op, _cext.ir.OpView):
-        op = op.operation
-    return (
-        list(get_op_results_or_values(op))
-        if len(op.results) > 1
-        else get_op_result_or_value(op)
-        if len(op.results) > 0
-        else op
-    )
+    results = op.results
+    num_results = len(results)
+    if num_results == 1:
+        return results[0]
+    elif num_results > 1:
+        return results
+    elif isinstance(op, _cext.ir.OpView):
+        return op.operation
+    else:
+        return op
 
 ResultValueTypeTuple = _cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value
 ResultValueT = _Union[ResultValueTypeTuple]

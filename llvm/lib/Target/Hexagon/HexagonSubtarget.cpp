@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonSubtarget.h"
-#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
@@ -54,10 +53,6 @@ static cl::opt<bool>
 static cl::opt<bool>
     DisableHexagonMISched("disable-hexagon-misched", cl::Hidden,
                           cl::desc("Disable Hexagon MI Scheduling"));
-
-static cl::opt<bool> EnableSubregLiveness(
-    "hexagon-subreg-liveness", cl::Hidden, cl::init(true),
-    cl::desc("Enable subregister liveness tracking for Hexagon"));
 
 static cl::opt<bool> OverrideLongCalls(
     "hexagon-long-calls", cl::Hidden,
@@ -497,7 +492,7 @@ void HexagonSubtarget::adjustSchedDependency(
         break;
       }
     }
-    Dep.setLatency(DLatency ? *DLatency : 0);
+    Dep.setLatency(DLatency.value_or(0));
   }
 
   // Try to schedule uses near definitions to generate .cur.
@@ -691,7 +686,7 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
       restoreLatency(Src, DstBest);
   }
 
-  // Attempt to find another opprotunity for zero latency in a different
+  // Attempt to find another opportunity for zero latency in a different
   // dependence.
   if (SrcBest && DstBest)
     // If there is an edge from SrcBest to DstBst, then try to change that
@@ -726,9 +721,7 @@ unsigned HexagonSubtarget::getL1PrefetchDistance() const {
   return 32;
 }
 
-bool HexagonSubtarget::enableSubRegLiveness() const {
-  return EnableSubregLiveness;
-}
+bool HexagonSubtarget::enableSubRegLiveness() const { return true; }
 
 Intrinsic::ID HexagonSubtarget::getIntrinsicId(unsigned Opc) const {
   struct Scalar {

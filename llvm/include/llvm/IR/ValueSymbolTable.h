@@ -28,6 +28,7 @@ class GlobalIFunc;
 class GlobalVariable;
 class Instruction;
 template <bool ExtraIteratorBits> struct ilist_iterator_bits;
+template <class ParentTy> struct ilist_parent;
 template <unsigned InternalLen> class SmallString;
 template <typename ValueSubClass, typename ... Args> class SymbolTableListTraits;
 
@@ -42,7 +43,8 @@ class ValueSymbolTable {
   friend class SymbolTableListTraits<GlobalAlias>;
   friend class SymbolTableListTraits<GlobalIFunc>;
   friend class SymbolTableListTraits<GlobalVariable>;
-  friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>>;
+  friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>,
+                                     ilist_parent<BasicBlock>>;
   friend class Value;
 
 /// @name Types

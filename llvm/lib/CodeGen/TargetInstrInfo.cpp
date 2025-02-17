@@ -150,12 +150,12 @@ TargetInstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
   // Save off the debug loc before erasing the instruction.
   DebugLoc DL = Tail->getDebugLoc();
 
-  // Update call site info and remove all the dead instructions
+  // Update call info and remove all the dead instructions
   // from the end of MBB.
   while (Tail != MBB->end()) {
     auto MI = Tail++;
-    if (MI->shouldUpdateCallSiteInfo())
-      MBB->getParent()->eraseCallSiteInfo(&*MI);
+    if (MI->shouldUpdateAdditionalCallInfo())
+      MBB->getParent()->eraseAdditionalCallInfo(&*MI);
     MBB->erase(MI);
   }
 
@@ -823,7 +823,9 @@ void TargetInstrInfo::lowerCopy(MachineInstr *MI,
   }
 
   copyPhysReg(*MI->getParent(), MI, MI->getDebugLoc(), DstMO.getReg(),
-              SrcMO.getReg(), SrcMO.isKill());
+              SrcMO.getReg(), SrcMO.isKill(),
+              DstMO.getReg().isPhysical() ? DstMO.isRenamable() : false,
+              SrcMO.getReg().isPhysical() ? SrcMO.isRenamable() : false);
 
   if (MI->getNumOperands() > 2)
     transferImplicitOperands(MI, TRI);
@@ -1750,7 +1752,7 @@ std::string TargetInstrInfo::createMIROperandComment(
       OS << Info;
     }
 
-    return OS.str();
+    return Flags;
   }
 
   int FlagIdx = MI.findInlineAsmFlagIdx(OpIdx);
@@ -1784,7 +1786,7 @@ std::string TargetInstrInfo::createMIROperandComment(
       F.getRegMayBeFolded())
     OS << " foldable";
 
-  return OS.str();
+  return Flags;
 }
 
 TargetInstrInfo::PipelinerLoopInfo::~PipelinerLoopInfo() = default;
@@ -1809,15 +1811,17 @@ void TargetInstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(Attribute::NoUnwind);
 }
 
-outliner::InstrType TargetInstrInfo::getOutliningType(
-    MachineBasicBlock::iterator &MIT, unsigned Flags) const {
+outliner::InstrType
+TargetInstrInfo::getOutliningType(const MachineModuleInfo &MMI,
+                                  MachineBasicBlock::iterator &MIT,
+                                  unsigned Flags) const {
   MachineInstr &MI = *MIT;
 
   // NOTE: MI.isMetaInstruction() will match CFI_INSTRUCTION, but some targets
   // have support for outlining those. Special-case that here.
   if (MI.isCFIInstruction())
     // Just go right to the target implementation.
-    return getOutliningTypeImpl(MIT, Flags);
+    return getOutliningTypeImpl(MMI, MIT, Flags);
 
   // Be conservative about inline assembly.
   if (MI.isInlineAsm())
@@ -1883,7 +1887,7 @@ outliner::InstrType TargetInstrInfo::getOutliningType(
   }
 
   // If we don't know, delegate to the target-specific hook.
-  return getOutliningTypeImpl(MIT, Flags);
+  return getOutliningTypeImpl(MMI, MIT, Flags);
 }
 
 bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
@@ -1912,4 +1916,9 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
       return false;
   }
   return true;
+}
+
+bool TargetInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
+  return MI->isCall() || MI->hasUnmodeledSideEffects() ||
+         (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad());
 }

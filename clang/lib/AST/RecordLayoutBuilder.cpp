@@ -14,10 +14,9 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/VTableBuilder.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -139,9 +138,9 @@ class EmptySubobjectMap {
     return Offset <= MaxEmptyClassOffset;
   }
 
-  CharUnits
-  getFieldOffset(const ASTRecordLayout &Layout, unsigned FieldNo) const {
-    uint64_t FieldOffset = Layout.getFieldOffset(FieldNo);
+  CharUnits getFieldOffset(const ASTRecordLayout &Layout,
+                           const FieldDecl *Field) const {
+    uint64_t FieldOffset = Layout.getFieldOffset(Field->getFieldIndex());
     assert(FieldOffset % CharWidth == 0 &&
            "Field offset not at char boundary!");
 
@@ -299,14 +298,12 @@ EmptySubobjectMap::CanPlaceBaseSubobjectAtOffset(const BaseSubobjectInfo *Info,
   }
 
   // Traverse all member variables.
-  unsigned FieldNo = 0;
-  for (CXXRecordDecl::field_iterator I = Info->Class->field_begin(),
-       E = Info->Class->field_end(); I != E; ++I, ++FieldNo) {
-    if (I->isBitField())
+  for (const FieldDecl *Field : Info->Class->fields()) {
+    if (Field->isBitField())
       continue;
 
-    CharUnits FieldOffset = Offset + getFieldOffset(Layout, FieldNo);
-    if (!CanPlaceFieldSubobjectAtOffset(*I, FieldOffset))
+    CharUnits FieldOffset = Offset + getFieldOffset(Layout, Field);
+    if (!CanPlaceFieldSubobjectAtOffset(Field, FieldOffset))
       return false;
   }
 
@@ -346,14 +343,12 @@ void EmptySubobjectMap::UpdateEmptyBaseSubobjects(const BaseSubobjectInfo *Info,
   }
 
   // Traverse all member variables.
-  unsigned FieldNo = 0;
-  for (CXXRecordDecl::field_iterator I = Info->Class->field_begin(),
-       E = Info->Class->field_end(); I != E; ++I, ++FieldNo) {
-    if (I->isBitField())
+  for (const FieldDecl *Field : Info->Class->fields()) {
+    if (Field->isBitField())
       continue;
 
-    CharUnits FieldOffset = Offset + getFieldOffset(Layout, FieldNo);
-    UpdateEmptyFieldSubobjects(*I, FieldOffset, PlacingEmptyBase);
+    CharUnits FieldOffset = Offset + getFieldOffset(Layout, Field);
+    UpdateEmptyFieldSubobjects(Field, FieldOffset, PlacingEmptyBase);
   }
 }
 
@@ -411,15 +406,12 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const CXXRecordDecl *RD,
   }
 
   // Traverse all member variables.
-  unsigned FieldNo = 0;
-  for (CXXRecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
-       I != E; ++I, ++FieldNo) {
-    if (I->isBitField())
+  for (const FieldDecl *Field : RD->fields()) {
+    if (Field->isBitField())
       continue;
 
-    CharUnits FieldOffset = Offset + getFieldOffset(Layout, FieldNo);
-
-    if (!CanPlaceFieldSubobjectAtOffset(*I, FieldOffset))
+    CharUnits FieldOffset = Offset + getFieldOffset(Layout, Field);
+    if (!CanPlaceFieldSubobjectAtOffset(Field, FieldOffset))
       return false;
   }
 
@@ -466,9 +458,8 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const FieldDecl *FD,
   return true;
 }
 
-bool
-EmptySubobjectMap::CanPlaceFieldAtOffset(const FieldDecl *FD,
-                                         CharUnits Offset) {
+bool EmptySubobjectMap::CanPlaceFieldAtOffset(const FieldDecl *FD,
+                                              CharUnits Offset) {
   if (!CanPlaceFieldSubobjectAtOffset(FD, Offset))
     return false;
 
@@ -522,15 +513,12 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(
   }
 
   // Traverse all member variables.
-  unsigned FieldNo = 0;
-  for (CXXRecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
-       I != E; ++I, ++FieldNo) {
-    if (I->isBitField())
+  for (const FieldDecl *Field : RD->fields()) {
+    if (Field->isBitField())
       continue;
 
-    CharUnits FieldOffset = Offset + getFieldOffset(Layout, FieldNo);
-
-    UpdateEmptyFieldSubobjects(*I, FieldOffset, PlacingOverlappingField);
+    CharUnits FieldOffset = Offset + getFieldOffset(Layout, Field);
+    UpdateEmptyFieldSubobjects(Field, FieldOffset, PlacingOverlappingField);
   }
 }
 
@@ -819,7 +807,7 @@ protected:
   void setSize(CharUnits NewSize) { Size = Context.toBits(NewSize); }
   void setSize(uint64_t NewSize) { Size = NewSize; }
 
-  CharUnits getAligment() const { return Alignment; }
+  CharUnits getAlignment() const { return Alignment; }
 
   CharUnits getDataSize() const {
     assert(DataSize % Context.getCharWidth() == 0);
@@ -1456,10 +1444,8 @@ void ItaniumRecordLayoutBuilder::LayoutFields(const RecordDecl *D) {
   bool InsertExtraPadding = D->mayInsertExtraPadding(/*EmitRemark=*/true);
   bool HasFlexibleArrayMember = D->hasFlexibleArrayMember();
   for (auto I = D->field_begin(), End = D->field_end(); I != End; ++I) {
-    auto Next(I);
-    ++Next;
-    LayoutField(*I,
-                InsertExtraPadding && (Next != End || !HasFlexibleArrayMember));
+    LayoutField(*I, InsertExtraPadding &&
+                        (std::next(I) != End || !HasFlexibleArrayMember));
   }
 }
 
@@ -1543,7 +1529,7 @@ static bool isAIXLayout(const ASTContext &Context) {
 
 void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   bool FieldPacked = Packed || D->hasAttr<PackedAttr>();
-  uint64_t FieldSize = D->getBitWidthValue(Context);
+  uint64_t FieldSize = D->getBitWidthValue();
   TypeInfo FieldInfo = Context.getTypeInfo(D->getType());
   uint64_t StorageUnitSize = FieldInfo.Width;
   unsigned FieldAlign = FieldInfo.Align;
@@ -3023,7 +3009,7 @@ void MicrosoftRecordLayoutBuilder::layoutField(const FieldDecl *FD) {
 }
 
 void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
-  unsigned Width = FD->getBitWidthValue(Context);
+  unsigned Width = FD->getBitWidthValue();
   if (Width == 0) {
     layoutZeroWidthBitField(FD);
     return;
@@ -3673,35 +3659,33 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
   }
 
   // Dump fields.
-  uint64_t FieldNo = 0;
-  for (RecordDecl::field_iterator I = RD->field_begin(),
-         E = RD->field_end(); I != E; ++I, ++FieldNo) {
-    const FieldDecl &Field = **I;
-    uint64_t LocalFieldOffsetInBits = Layout.getFieldOffset(FieldNo);
+  for (const FieldDecl *Field : RD->fields()) {
+    uint64_t LocalFieldOffsetInBits =
+        Layout.getFieldOffset(Field->getFieldIndex());
     CharUnits FieldOffset =
       Offset + C.toCharUnitsFromBits(LocalFieldOffsetInBits);
 
     // Recursively dump fields of record type.
-    if (auto RT = Field.getType()->getAs<RecordType>()) {
+    if (auto RT = Field->getType()->getAs<RecordType>()) {
       DumpRecordLayout(OS, RT->getDecl(), C, FieldOffset, IndentLevel,
-                       Field.getName().data(),
+                       Field->getName().data(),
                        /*PrintSizeInfo=*/false,
                        /*IncludeVirtualBases=*/true);
       continue;
     }
 
-    if (Field.isBitField()) {
+    if (Field->isBitField()) {
       uint64_t LocalFieldByteOffsetInBits = C.toBits(FieldOffset - Offset);
       unsigned Begin = LocalFieldOffsetInBits - LocalFieldByteOffsetInBits;
-      unsigned Width = Field.getBitWidthValue(C);
+      unsigned Width = Field->getBitWidthValue();
       PrintBitFieldOffset(OS, FieldOffset, Begin, Width, IndentLevel);
     } else {
       PrintOffset(OS, FieldOffset, IndentLevel);
     }
     const QualType &FieldType = C.getLangOpts().DumpRecordLayoutsCanonical
-                                    ? Field.getType().getCanonicalType()
-                                    : Field.getType();
-    OS << FieldType << ' ' << Field << '\n';
+                                    ? Field->getType().getCanonicalType()
+                                    : Field->getType();
+    OS << FieldType << ' ' << *Field << '\n';
   }
 
   // Dump virtual bases.

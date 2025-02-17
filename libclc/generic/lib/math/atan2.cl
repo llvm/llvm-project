@@ -21,10 +21,9 @@
  */
 
 #include <clc/clc.h>
-
-#include "math.h"
-#include "tables.h"
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
 
 _CLC_OVERLOAD _CLC_DEF float atan2(float y, float x)
 {
@@ -233,5 +232,13 @@ _CLC_OVERLOAD _CLC_DEF double atan2(double y, double x)
 }
 
 _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, atan2, double, double);
+
+#endif
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_DEFINE_BINARY_BUILTIN_FP16(atan2)
 
 #endif

@@ -39,13 +39,16 @@ static void CopyAttrs(const semantics::Symbol &src, A &dst,
 // Shapes of function results and dummy arguments have to have
 // the same rank, the same deferred dimensions, and the same
 // values for explicit dimensions when constant.
-bool ShapesAreCompatible(
-    const Shape &x, const Shape &y, bool *possibleWarning) {
-  if (x.size() != y.size()) {
+bool ShapesAreCompatible(const std::optional<Shape> &x,
+    const std::optional<Shape> &y, bool *possibleWarning) {
+  if (!x || !y) {
+    return !x && !y;
+  }
+  if (x->size() != y->size()) {
     return false;
   }
-  auto yIter{y.begin()};
-  for (const auto &xDim : x) {
+  auto yIter{y->begin()};
+  for (const auto &xDim : *x) {
     const auto &yDim{*yIter++};
     if (xDim && yDim) {
       if (auto equiv{AreEquivalentInInterface(*xDim, *yDim)}) {
@@ -63,8 +66,9 @@ bool ShapesAreCompatible(
 }
 
 bool TypeAndShape::operator==(const TypeAndShape &that) const {
-  return type_ == that.type_ && ShapesAreCompatible(shape_, that.shape_) &&
-      attrs_ == that.attrs_ && corank_ == that.corank_;
+  return type_.IsEquivalentTo(that.type_) &&
+      ShapesAreCompatible(shape_, that.shape_) && attrs_ == that.attrs_ &&
+      corank_ == that.corank_;
 }
 
 TypeAndShape &TypeAndShape::Rewrite(FoldingContext &context) {
@@ -178,9 +182,11 @@ bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
         thatIs, that.AsFortran(), thisIs, AsFortran());
     return false;
   }
-  return omitShapeConformanceCheck ||
-      CheckConformance(messages, shape_, that.shape_, flags, thisIs, thatIs)
-          .value_or(true /*fail only when nonconformance is known now*/);
+  return omitShapeConformanceCheck || (!shape_ && !that.shape_) ||
+      (shape_ && that.shape_ &&
+          CheckConformance(
+              messages, *shape_, *that.shape_, flags, thisIs, thatIs)
+              .value_or(true /*fail only when nonconformance is known now*/));
 }
 
 std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureElementSizeInBytes(
@@ -201,11 +207,11 @@ std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureElementSizeInBytes(
 
 std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureSizeInBytes(
     FoldingContext &foldingContext) const {
-  if (auto elements{GetSize(Shape{shape_})}) {
+  if (auto elements{GetSize(shape_)}) {
     // Sizes of arrays (even with single elements) are multiples of
     // their alignments.
     if (auto elementBytes{
-            MeasureElementSizeInBytes(foldingContext, GetRank(shape_) > 0)}) {
+            MeasureElementSizeInBytes(foldingContext, Rank() > 0)}) {
       return Fold(
           foldingContext, std::move(*elements) * std::move(*elementBytes));
     }
@@ -221,15 +227,13 @@ void TypeAndShape::AcquireAttrs(const semantics::Symbol &symbol) {
   } else if (semantics::IsAssumedSizeArray(symbol)) {
     attrs_.set(Attr::AssumedSize);
   }
+  if (int corank{GetCorank(symbol)}; corank > 0) {
+    corank_ = corank;
+  }
   if (const auto *object{
-          symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
-    corank_ = object->coshape().Rank();
-    if (object->IsAssumedRank()) {
-      attrs_.set(Attr::AssumedRank);
-    }
-    if (object->IsCoarray()) {
-      attrs_.set(Attr::Coarray);
-    }
+          symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()};
+      object && object->IsAssumedRank()) {
+    attrs_.set(Attr::AssumedRank);
   }
 }
 
@@ -254,10 +258,12 @@ std::string TypeAndShape::AsFortran() const {
 llvm::raw_ostream &TypeAndShape::Dump(llvm::raw_ostream &o) const {
   o << type_.AsFortran(LEN_ ? LEN_->AsFortran() : "");
   attrs_.Dump(o, EnumToString);
-  if (!shape_.empty()) {
+  if (!shape_) {
+    o << " dimension(..)";
+  } else if (!shape_->empty()) {
     o << " dimension";
     char sep{'('};
-    for (const auto &expr : shape_) {
+    for (const auto &expr : *shape_) {
       o << sep;
       sep = ',';
       if (expr) {
@@ -363,7 +369,7 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
   }
   if (!attrs.test(Attr::Value) &&
       !common::AreCompatibleCUDADataAttrs(cudaDataAttr, actual.cudaDataAttr,
-          ignoreTKR,
+          ignoreTKR, warning,
           /*allowUnifiedMatchingRule=*/false)) {
     if (whyNot) {
       *whyNot = "incompatible CUDA data attributes";
@@ -432,9 +438,9 @@ bool DummyDataObject::CanBePassedViaImplicitInterface(
     return false; // 15.4.2.2(3)(a)
   } else if ((type.attrs() &
                  TypeAndShape::Attrs{TypeAndShape::Attr::AssumedShape,
-                     TypeAndShape::Attr::AssumedRank,
-                     TypeAndShape::Attr::Coarray})
-                 .any()) {
+                     TypeAndShape::Attr::AssumedRank})
+                 .any() ||
+      type.corank() > 0) {
     if (whyNot) {
       *whyNot = "a dummy argument is assumed-shape, assumed-rank, or a coarray";
     }
@@ -464,14 +470,15 @@ bool DummyDataObject::CanBePassedViaImplicitInterface(
 }
 
 bool DummyDataObject::IsPassedByDescriptor(bool isBindC) const {
-  constexpr TypeAndShape::Attrs shapeRequiringBox = {
+  constexpr TypeAndShape::Attrs shapeRequiringBox{
       TypeAndShape::Attr::AssumedShape, TypeAndShape::Attr::DeferredShape,
-      TypeAndShape::Attr::AssumedRank, TypeAndShape::Attr::Coarray};
+      TypeAndShape::Attr::AssumedRank};
   if ((attrs & Attrs{Attr::Allocatable, Attr::Pointer}).any()) {
     return true;
   } else if ((type.attrs() & shapeRequiringBox).any()) {
-    // Need to pass shape/coshape info in a descriptor.
-    return true;
+    return true; // pass shape in descriptor
+  } else if (type.corank() > 0) {
+    return true; // pass coshape in descriptor
   } else if (type.type().IsPolymorphic() && !type.type().IsAssumedType()) {
     // Need to pass dynamic type info in a descriptor.
     return true;
@@ -723,11 +730,16 @@ static std::optional<Procedure> CharacterizeProcedure(
               return std::optional<Procedure>{};
             }
           },
-          [&](const semantics::EntityDetails &) {
+          [&](const semantics::EntityDetails &x) {
             CheckForNested(symbol);
             return std::optional<Procedure>{};
           },
           [&](const semantics::SubprogramNameDetails &) {
+            if (const semantics::Symbol *
+                ancestor{FindAncestorModuleProcedure(&symbol)}) {
+              return CharacterizeProcedure(
+                  *ancestor, context, seenProcs, emitError);
+            }
             CheckForNested(symbol);
             return std::optional<Procedure>{};
           },
@@ -1112,6 +1124,7 @@ bool FunctionResult::CanBeReturnedViaImplicitInterface(
 
 static std::optional<std::string> AreIncompatibleFunctionResultShapes(
     const Shape &x, const Shape &y) {
+  // Function results cannot be assumed-rank, hence the non optional arguments.
   int rank{GetRank(x)};
   if (int yrank{GetRank(y)}; yrank != rank) {
     return "rank "s + std::to_string(rank) + " vs " + std::to_string(yrank);
@@ -1147,7 +1160,8 @@ bool FunctionResult::IsCompatibleWith(
         }
       } else if (!attrs.test(Attr::Allocatable) && !attrs.test(Attr::Pointer) &&
           (details = AreIncompatibleFunctionResultShapes(
-               ifaceTypeShape->shape(), actualTypeShape->shape()))) {
+               ifaceTypeShape->shape().value(),
+               actualTypeShape->shape().value()))) {
         if (whyNot) {
           *whyNot = "function results have distinct extents (" + *details + ')';
         }
@@ -1761,7 +1775,7 @@ bool DistinguishUtils::Distinguishable(
       x.intent != common::Intent::In) {
     return true;
   } else if (!common::AreCompatibleCUDADataAttrs(x.cudaDataAttr, y.cudaDataAttr,
-                 x.ignoreTKR | y.ignoreTKR,
+                 x.ignoreTKR | y.ignoreTKR, nullptr,
                  /*allowUnifiedMatchingRule=*/false)) {
     return true;
   } else if (features_.IsEnabled(

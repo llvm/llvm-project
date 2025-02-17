@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX7,UNPACKED-TID %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=-xnack -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A,PACKED-TID %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri < %s | llc -mcpu=gfx90a -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,GFX7,UNPACKED-TID %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx90a -mattr=-xnack < %s | llc -mcpu=gfx90a -mattr=-xnack -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A,PACKED-TID %s
+
+target triple = "amdgcn-amd-amdhsa"
 
 ; GCN-LABEL: {{^}}use_workitem_id_x:
 ; GCN: s_waitcnt
@@ -426,8 +428,8 @@ define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
 
 ; GCN: s_swappc_b64
 
+; GCN: s_mov_b32 s32, s33
 ; GCN: buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GCN: s_addk_i32 s32, 0xfc00{{$}}
 ; GCN: s_setpc_b64
 define void @too_many_args_call_too_many_args_use_workitem_id_x(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,

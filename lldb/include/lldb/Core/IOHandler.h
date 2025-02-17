@@ -9,7 +9,6 @@
 #ifndef LLDB_CORE_IOHANDLER_H
 #define LLDB_CORE_IOHANDLER_H
 
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Flags.h"
@@ -32,11 +31,6 @@
 namespace lldb_private {
 class Debugger;
 } // namespace lldb_private
-
-namespace curses {
-class Application;
-typedef std::unique_ptr<Application> ApplicationAP;
-} // namespace curses
 
 namespace lldb_private {
 

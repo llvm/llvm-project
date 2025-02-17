@@ -310,7 +310,7 @@ namespace {
       Builder->EmitTentativeDefinition(D);
     }
 
-    void CompleteExternalDeclaration(VarDecl *D) override {
+    void CompleteExternalDeclaration(DeclaratorDecl *D) override {
       Builder->EmitExternalDeclaration(D);
     }
 

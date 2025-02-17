@@ -38,12 +38,6 @@ class CallGraphUpdater {
   SmallVector<Function *, 16> DeadFunctionsInComdats;
   ///}
 
-  /// Old PM variables
-  ///{
-  CallGraph *CG = nullptr;
-  CallGraphSCC *CGSCC = nullptr;
-  ///}
-
   /// New PM variables
   ///{
   LazyCallGraph *LCG = nullptr;
@@ -60,10 +54,6 @@ public:
   /// Initializers for usage outside of a CGSCC pass, inside a CGSCC pass in
   /// the old and new pass manager (PM).
   ///{
-  void initialize(CallGraph &CG, CallGraphSCC &SCC) {
-    this->CG = &CG;
-    this->CGSCC = &SCC;
-  }
   void initialize(LazyCallGraph &LCG, LazyCallGraph::SCC &SCC,
                   CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR) {
     this->LCG = &LCG;
@@ -95,14 +85,6 @@ public:
   /// Note that \p OldFn is also removed from the call graph
   /// (\see removeFunction).
   void replaceFunctionWith(Function &OldFn, Function &NewFn);
-
-  /// Remove the call site \p CS from the call graph.
-  void removeCallSite(CallBase &CS);
-
-  /// Replace \p OldCS with the new call site \p NewCS.
-  /// \return True if the replacement was successful, otherwise False. In the
-  /// latter case the parent function of \p OldCB needs to be re-analyzed.
-  bool replaceCallSite(CallBase &OldCS, CallBase &NewCS);
 };
 
 } // end namespace llvm

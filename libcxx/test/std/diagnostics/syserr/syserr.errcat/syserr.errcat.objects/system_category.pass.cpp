@@ -12,8 +12,6 @@
 
 // const error_category& system_category();
 
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
-
 #include <system_error>
 #include <cassert>
 #include <string>
@@ -35,7 +33,12 @@ int main(int, char**) {
   {
     const std::error_category& e_cat1 = std::system_category();
     std::error_condition e_cond       = e_cat1.default_error_condition(5);
+#ifdef _WIN32
+    // Windows' system error 5 is ERROR_ACCESS_DENIED, which maps to generic code permission_denied.
+    LIBCPP_ASSERT(e_cond.value() == static_cast<int>(std::errc::permission_denied));
+#else
     LIBCPP_ASSERT(e_cond.value() == 5);
+#endif
     LIBCPP_ASSERT(e_cond.category() == std::generic_category());
     assert(e_cat1.equivalent(5, e_cond));
 

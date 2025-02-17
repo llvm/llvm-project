@@ -11,38 +11,34 @@
 define i32 @load_store_global() nounwind {
 ; LA32NOPIC-LABEL: load_store_global:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    pcalau12i $a0, %pc_hi20(G)
-; LA32NOPIC-NEXT:    addi.w $a1, $a0, %pc_lo12(G)
-; LA32NOPIC-NEXT:    ld.w $a0, $a1, 0
+; LA32NOPIC-NEXT:    pcalau12i $a1, %pc_hi20(G)
+; LA32NOPIC-NEXT:    ld.w $a0, $a1, %pc_lo12(G)
 ; LA32NOPIC-NEXT:    addi.w $a0, $a0, 1
-; LA32NOPIC-NEXT:    st.w $a0, $a1, 0
+; LA32NOPIC-NEXT:    st.w $a0, $a1, %pc_lo12(G)
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: load_store_global:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    pcalau12i $a0, %pc_hi20(.LG$local)
-; LA32PIC-NEXT:    addi.w $a1, $a0, %pc_lo12(.LG$local)
-; LA32PIC-NEXT:    ld.w $a0, $a1, 0
+; LA32PIC-NEXT:    pcalau12i $a1, %pc_hi20(.LG$local)
+; LA32PIC-NEXT:    ld.w $a0, $a1, %pc_lo12(.LG$local)
 ; LA32PIC-NEXT:    addi.w $a0, $a0, 1
-; LA32PIC-NEXT:    st.w $a0, $a1, 0
+; LA32PIC-NEXT:    st.w $a0, $a1, %pc_lo12(.LG$local)
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: load_store_global:
 ; LA64NOPIC:       # %bb.0:
-; LA64NOPIC-NEXT:    pcalau12i $a0, %pc_hi20(G)
-; LA64NOPIC-NEXT:    addi.d $a1, $a0, %pc_lo12(G)
-; LA64NOPIC-NEXT:    ld.w $a0, $a1, 0
+; LA64NOPIC-NEXT:    pcalau12i $a1, %pc_hi20(G)
+; LA64NOPIC-NEXT:    ld.w $a0, $a1, %pc_lo12(G)
 ; LA64NOPIC-NEXT:    addi.w $a0, $a0, 1
-; LA64NOPIC-NEXT:    st.w $a0, $a1, 0
+; LA64NOPIC-NEXT:    st.w $a0, $a1, %pc_lo12(G)
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: load_store_global:
 ; LA64PIC:       # %bb.0:
-; LA64PIC-NEXT:    pcalau12i $a0, %pc_hi20(.LG$local)
-; LA64PIC-NEXT:    addi.d $a1, $a0, %pc_lo12(.LG$local)
-; LA64PIC-NEXT:    ld.w $a0, $a1, 0
+; LA64PIC-NEXT:    pcalau12i $a1, %pc_hi20(.LG$local)
+; LA64PIC-NEXT:    ld.w $a0, $a1, %pc_lo12(.LG$local)
 ; LA64PIC-NEXT:    addi.w $a0, $a0, 1
-; LA64PIC-NEXT:    st.w $a0, $a1, 0
+; LA64PIC-NEXT:    st.w $a0, $a1, %pc_lo12(.LG$local)
 ; LA64PIC-NEXT:    ret
   %v = load i32, ptr @G
   %sum = add i32 %v, 1
@@ -977,9 +973,8 @@ define i64 @ld_sd_constant(i64 %a) nounwind {
 ; LA64NOPIC-LABEL: ld_sd_constant:
 ; LA64NOPIC:       # %bb.0:
 ; LA64NOPIC-NEXT:    lu12i.w $a1, -136485
-; LA64NOPIC-NEXT:    ori $a1, $a1, 3823
-; LA64NOPIC-NEXT:    lu32i.d $a1, -147729
-; LA64NOPIC-NEXT:    lu52i.d $a2, $a1, -534
+; LA64NOPIC-NEXT:    ori $a2, $a1, 3823
+; LA64NOPIC-NEXT:    bstrins.d $a2, $a2, 61, 32
 ; LA64NOPIC-NEXT:    ld.d $a1, $a2, 0
 ; LA64NOPIC-NEXT:    st.d $a0, $a2, 0
 ; LA64NOPIC-NEXT:    move $a0, $a1
@@ -988,9 +983,8 @@ define i64 @ld_sd_constant(i64 %a) nounwind {
 ; LA64PIC-LABEL: ld_sd_constant:
 ; LA64PIC:       # %bb.0:
 ; LA64PIC-NEXT:    lu12i.w $a1, -136485
-; LA64PIC-NEXT:    ori $a1, $a1, 3823
-; LA64PIC-NEXT:    lu32i.d $a1, -147729
-; LA64PIC-NEXT:    lu52i.d $a2, $a1, -534
+; LA64PIC-NEXT:    ori $a2, $a1, 3823
+; LA64PIC-NEXT:    bstrins.d $a2, $a2, 61, 32
 ; LA64PIC-NEXT:    ld.d $a1, $a2, 0
 ; LA64PIC-NEXT:    st.d $a0, $a2, 0
 ; LA64PIC-NEXT:    move $a0, $a1

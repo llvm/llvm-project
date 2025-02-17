@@ -16,6 +16,7 @@
 #include <cassert>
 #include <cstddef>
 #include <deque>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -26,35 +27,35 @@ struct Proj {
     constexpr explicit Proj(int *copies) : copies_(copies) {}
     constexpr Proj(const Proj& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
     constexpr Proj& operator=(const Proj&) = default;
-    constexpr void *operator()(T) const { return nullptr; }
+    constexpr void* operator()(T) const { return nullptr; }
 };
 
 struct Less {
-    constexpr bool operator()(void*, void*) const { return false; }
+  constexpr bool operator()(void*, void*) const { return false; }
 };
 
 struct Equal {
-    constexpr bool operator()(void*, void*) const { return true; }
+  constexpr bool operator()(void*, void*) const { return true; }
 };
 
 struct UnaryVoid {
-    constexpr void operator()(void*) const {}
+  constexpr void operator()(void*) const {}
 };
 
 struct UnaryTrue {
-    constexpr bool operator()(void*) const { return true; }
+  constexpr bool operator()(void*) const { return true; }
 };
 
 struct NullaryValue {
-    constexpr std::nullptr_t operator()() const { return nullptr; }
+  constexpr std::nullptr_t operator()() const { return nullptr; }
 };
 
 struct UnaryTransform {
-    constexpr T operator()(void*) const { return T(); }
+  constexpr T operator()(void*) const { return T(); }
 };
 
 struct BinaryTransform {
-    constexpr T operator()(void*, void*) const { return T(); }
+  constexpr T operator()(void*, void*) const { return T(); }
 };
 
 constexpr bool all_the_algorithms()
@@ -115,6 +116,20 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::find_if(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+#if TEST_STD_VER >= 23
+    (void)std::ranges::find_last(first, last, value, Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last(a, value, Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if(first, last, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if(a, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if_not(first, last, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+    (void)std::ranges::find_last_if_not(a, UnaryTrue(), Proj(&copies));
+    assert(copies == 0);
+#endif
     (void)std::ranges::for_each(first, last, UnaryVoid(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::for_each(a, UnaryVoid(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::for_each_n(first, count, UnaryVoid(), Proj(&copies)); assert(copies == 0);

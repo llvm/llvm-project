@@ -119,7 +119,8 @@ public:
   virtual lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                           llvm::StringRef name,
                                           Status &error) const {
-    error.SetErrorStringWithFormatv("'{0}' is not a valid subvalue", name);
+    error = Status::FromErrorStringWithFormatv("'{0}' is not a valid subvalue",
+                                               name);
     return lldb::OptionValueSP();
   }
 

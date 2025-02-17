@@ -5,8 +5,8 @@ writing pattern rewrites targeting MLIR.
 
 Note: This document assumes a familiarity with MLIR concepts; more specifically
 the concepts detailed within the
-[MLIR Pattern Rewriting](https://mlir.llvm.org/docs/PatternRewriter/) and
-[Operation Definition Specification (ODS)](https://mlir.llvm.org/docs/OpDefinitions/)
+[MLIR Pattern Rewriting](PatternRewriter.md) and
+[Operation Definition Specification (ODS)](DefiningDialects/Operations.md)
 documentation.
 
 [TOC]
@@ -34,11 +34,11 @@ that no longer exist.
 ### Why build a new language instead of improving TableGen DRR?
 
 Note: This section assumes familiarity with
-[TDRR](https://mlir.llvm.org/docs/DeclarativeRewrites/), please refer the
+[TDRR](DeclarativeRewrites.md), please refer the
 relevant documentation before continuing.
 
 Tablegen DRR (TDRR), i.e.
-[Table-driven Declarative Rewrite Rules](https://mlir.llvm.org/docs/DeclarativeRewrites/),
+[Table-driven Declarative Rewrite Rules](DeclarativeRewrites.md),
 is a declarative DSL for defining MLIR pattern rewrites within the
 [TableGen](https://llvm.org/docs/TableGen/index.html) language. This
 infrastructure is currently the main way in which patterns may be defined
@@ -257,7 +257,7 @@ the current file.
 #### `.td` includes
 
 When including a `.td` file, PDLL will automatically import any pertinent
-[ODS](https://mlir.llvm.org/docs/OpDefinitions/) information within that file.
+[ODS](DefiningDialects/Operations.md) information within that file.
 This includes any defined operations, constraints, interfaces, and more, making
 them implicitly accessible within PDLL. This is important, as ODS information
 allows for certain PDLL constructs, such as the
@@ -277,7 +277,7 @@ Pattern {
   // * Match Section
   //    - Describes the input IR.
   let root = op<toy.reshape>(op<toy.reshape>(arg: Value));
-  
+
   // * Rewrite Section
   //    - Describes how to transform the IR.
   //    - Last statement starts the rewrite.
@@ -1009,7 +1009,7 @@ Pattern {
   // Return a tuple of values.
   let result = ExtractMultipleResults(op: op<my_dialect.foo>);
 
-  // Index the tuple elements by index, or by name. 
+  // Index the tuple elements by index, or by name.
   replace op<my_dialect.foo> with (result.0, result.1, result.result1);
 }
 ```
@@ -1150,7 +1150,7 @@ same name. See the ["type translation"](#native-constraint-type-translations) be
 detailed information on how PDLL types are converted to native types. In addition to the
 PDLL arguments, the code block may also access the current `PatternRewriter` using
 `rewriter`. The result type of the native constraint function is implicitly defined
-as a `::mlir::LogicalResult`.
+as a `::llvm::LogicalResult`.
 
 Taking the constraints defined above as an example, these function would roughly be
 translated into:
@@ -1220,7 +1220,7 @@ was imported:
 
   * `Attr` constraints
     - Imported `Attr` constraints utilize the `storageType` field for native type translation.
-  
+
   * `Type` constraints
     - Imported `Type` constraints utilize the `cppClassName` field for native type translation.
 
@@ -1310,7 +1310,7 @@ Pattern {
 // A pattern that replaces the root operation with another operation.
 // Note that when an operation is used as the replacement, we can infer its
 // result types from the input operation. In these cases, the result
-// types of replacement operation may be elided. 
+// types of replacement operation may be elided.
 Pattern {
   // Note: In this pattern we also inlined the `root` expression.
   replace op<my_dialect.foo> with op<my_dialect.bar>;
@@ -1385,7 +1385,7 @@ Pattern {
     // Invoke the rewrite, which returns a tuple of values.
     let result = CreateRewriteOps();
 
-    // Index the tuple elements by index, or by name. 
+    // Index the tuple elements by index, or by name.
     replace root with (result.0, result.1, result.result1);
   }
 }
@@ -1466,7 +1466,7 @@ the C++ PDL API. For example, the rewrite above may be registered as:
 ```c++
 static Operation *buildOpImpl(PDLResultList &results, Value value) {
   // insert special rewrite logic here.
-  Operation *resultOp = ...; 
+  Operation *resultOp = ...;
   return resultOp;
 }
 

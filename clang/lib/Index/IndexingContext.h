@@ -68,17 +68,17 @@ public:
   static bool isTemplateImplicitInstantiation(const Decl *D);
 
   bool handleDecl(const Decl *D, SymbolRoleSet Roles = SymbolRoleSet(),
-                  ArrayRef<SymbolRelation> Relations = std::nullopt);
+                  ArrayRef<SymbolRelation> Relations = {});
 
   bool handleDecl(const Decl *D, SourceLocation Loc,
                   SymbolRoleSet Roles = SymbolRoleSet(),
-                  ArrayRef<SymbolRelation> Relations = std::nullopt,
+                  ArrayRef<SymbolRelation> Relations = {},
                   const DeclContext *DC = nullptr);
 
   bool handleReference(const NamedDecl *D, SourceLocation Loc,
                        const NamedDecl *Parent, const DeclContext *DC,
                        SymbolRoleSet Roles = SymbolRoleSet(),
-                       ArrayRef<SymbolRelation> Relations = std::nullopt,
+                       ArrayRef<SymbolRelation> Relations = {},
                        const Expr *RefE = nullptr);
 
   void handleMacroDefined(const IdentifierInfo &Name, SourceLocation Loc,
@@ -94,8 +94,7 @@ public:
 
   bool indexDecl(const Decl *D);
 
-  void indexTagDecl(const TagDecl *D,
-                    ArrayRef<SymbolRelation> Relations = std::nullopt);
+  void indexTagDecl(const TagDecl *D, ArrayRef<SymbolRelation> Relations = {});
 
   void indexTypeSourceInfo(TypeSourceInfo *TInfo, const NamedDecl *Parent,
                            const DeclContext *DC = nullptr,

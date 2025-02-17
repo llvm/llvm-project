@@ -10,9 +10,11 @@
 #define LLDB_TOOLS_LLDB_DAP_RUNINTERMINAL_H
 
 #include "FifoFiles.h"
+#include "lldb/API/SBError.h"
 
 #include <future>
-#include <thread>
+#include <memory>
+#include <string>
 
 namespace lldb_dap {
 

@@ -772,3 +772,17 @@ void test_scoped_enum_vector(EnumClass ea, v2u v2ua) {
 }
 #endif
 }
+
+namespace GH105486 {
+__attribute__((__vector_size__(sizeof(double)))) double a;
+double b = a - (long)(*0); // expected-error {{indirection requires pointer operand ('int' invalid)}} \
+                           // expected-error {{cannot initialize a variable of type 'double' with an rvalue of type '__attribute__((__vector_size__(1 * sizeof(double)))) double' (vector of 1 'double' value)}}
+
+__attribute__((__vector_size__(sizeof(long)))) long c;
+long d = c - (long)(*0); // expected-error {{indirection requires pointer operand ('int' invalid)}} \
+                         // expected-error {{cannot initialize a variable of type 'long' with an rvalue of type '__attribute__((__vector_size__(1 * sizeof(long)))) long' (vector of 1 'long' value)}}
+
+const long long e = *0; // expected-error {{indirection requires pointer operand ('int' invalid)}}
+double f = a - e;       // expected-error {{cannot initialize a variable of type 'double' with an rvalue of type '__attribute__((__vector_size__(1 * sizeof(double)))) double' (vector of 1 'double' value)}}
+int h = c - e;          // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type '__attribute__((__vector_size__(1 * sizeof(long)))) long' (vector of 1 'long' value)}}
+}

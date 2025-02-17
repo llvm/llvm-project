@@ -56,6 +56,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBCommandReturnObject.cpp
   SBCommunication.cpp
   SBCompileUnit.cpp
+  SBSaveCoreOptions.cpp
   SBData.cpp
   SBDebugger.cpp
   SBDeclaration.cpp
@@ -82,6 +83,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBModule.cpp
   SBModuleSpec.cpp
   SBPlatform.cpp
+  SBProgress.cpp
   SBProcess.cpp
   SBProcessInfo.cpp
   SBProcessInfoList.cpp
@@ -136,6 +138,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbVersion
     ${LLDB_ALL_PLUGINS}
   LINK_COMPONENTS

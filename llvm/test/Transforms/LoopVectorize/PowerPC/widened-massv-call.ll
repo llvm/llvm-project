@@ -10,7 +10,7 @@ define dso_local double @test(ptr %Arr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[ARR:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[ARR:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast <2 x double> @__sind2(<2 x double> [[TMP1]])
@@ -20,7 +20,7 @@ define dso_local double @test(ptr %Arr) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <2 x double> [ [[TMP3]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[DOTLCSSA]])
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[DOTLCSSA]])
 ; CHECK-NEXT:    ret double [[TMP5]]
 ;
 entry:

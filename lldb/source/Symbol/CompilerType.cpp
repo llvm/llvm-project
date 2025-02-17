@@ -540,6 +540,14 @@ ConstString CompilerType::GetDisplayTypeName() const {
   return ConstString("<invalid>");
 }
 
+ConstString CompilerType::GetMangledTypeName() const {
+  if (IsValid()) {
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetMangledTypeName(m_type);
+  }
+  return ConstString("<invalid>");
+}
+
 uint32_t CompilerType::GetTypeInfo(
     CompilerType *pointee_or_element_compiler_type) const {
   if (IsValid())
@@ -1097,8 +1105,11 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
       return false;
 
     std::optional<uint64_t> byte_size = GetByteSize(exe_scope);
-    if (!byte_size)
+    // A bit or byte size of 0 is not a bug, but it doesn't make sense to read a
+    // scalar of zero size.
+    if (!byte_size || *byte_size == 0)
       return false;
+
     lldb::offset_t offset = data_byte_offset;
     switch (encoding) {
     case lldb::eEncodingInvalid:

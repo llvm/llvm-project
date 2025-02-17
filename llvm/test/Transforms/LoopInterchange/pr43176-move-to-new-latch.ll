@@ -14,10 +14,10 @@
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            InterchangeNotProfitable
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test1
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:  - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
+; CHECK-NEXT:  - String:       Cannot interchange loops due to dependences.
 
 define void @test1() {
 entry:
@@ -45,7 +45,7 @@ for.cond1.for.end_crit_edge:                      ; preds = %for.inc
 
 for.inc3:                                         ; preds = %for.cond1.for.end_crit_edge
   %inc4 = add nsw i32 %inc41, 1
-  br i1 undef, label %for.body, label %for.cond.for.end5_crit_edge
+  br i1 false, label %for.body, label %for.cond.for.end5_crit_edge
 
 for.cond.for.end5_crit_edge:                      ; preds = %for.inc3
   ret void
@@ -54,10 +54,10 @@ for.cond.for.end5_crit_edge:                      ; preds = %for.inc3
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            InterchangeNotProfitable
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test2
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:  - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
+; CHECK-NEXT:  - String:       Cannot interchange loops due to dependences.
 
 define void @test2() {
 entry:
@@ -86,7 +86,7 @@ for.cond1.for.end_crit_edge:                      ; preds = %for.inc
 
 for.inc3:                                         ; preds = %for.cond1.for.end_crit_edge
   %inc4 = add nsw i32 %inc41, 1
-  br i1 undef, label %for.body, label %for.cond.for.end5_crit_edge
+  br i1 false, label %for.body, label %for.cond.for.end5_crit_edge
 
 for.cond.for.end5_crit_edge:                      ; preds = %for.inc3
   ret void

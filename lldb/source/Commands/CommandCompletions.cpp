@@ -791,7 +791,7 @@ void CommandCompletions::ThreadIndexes(CommandInterpreter &interpreter,
   lldb::ThreadSP thread_sp;
   for (uint32_t idx = 0; (thread_sp = threads.GetThreadAtIndex(idx)); ++idx) {
     StreamString strm;
-    thread_sp->GetStatus(strm, 0, 1, 1, true);
+    thread_sp->GetStatus(strm, 0, 1, 1, true, /*show_hidden*/ true);
     request.TryCompleteCurrentArg(std::to_string(thread_sp->GetIndexID()),
                                   strm.GetString());
   }
@@ -835,7 +835,7 @@ void CommandCompletions::ThreadIDs(CommandInterpreter &interpreter,
   lldb::ThreadSP thread_sp;
   for (uint32_t idx = 0; (thread_sp = threads.GetThreadAtIndex(idx)); ++idx) {
     StreamString strm;
-    thread_sp->GetStatus(strm, 0, 1, 1, true);
+    thread_sp->GetStatus(strm, 0, 1, 1, true, /*show_hidden*/ true);
     request.TryCompleteCurrentArg(std::to_string(thread_sp->GetID()),
                                   strm.GetString());
   }

@@ -49,11 +49,16 @@ typedef struct ValueProfNode {
 #include "profile/InstrProfData.inc"
 } ValueProfNode;
 
-typedef void *IntPtrT;
 typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT) VTableProfData {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer) Type Name;
 #include "profile/InstrProfData.inc"
 } VTableProfData;
+
+typedef struct COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
+    __llvm_gcov_init_func_struct {
+#define COVINIT_FUNC(Type, LLVMType, Name, Initializer) Type Name;
+#include "profile/InstrProfData.inc"
+} __llvm_gcov_init_func_struct;
 
 /*!
  * \brief Return 1 if profile counters are continuously synced to the raw
@@ -115,11 +120,11 @@ char *__llvm_profile_begin_counters(void);
 char *__llvm_profile_end_counters(void);
 char *__llvm_profile_begin_bitmap(void);
 char *__llvm_profile_end_bitmap(void);
-ValueProfNode *__llvm_profile_begin_vnodes();
-ValueProfNode *__llvm_profile_end_vnodes();
-const VTableProfData *__llvm_profile_begin_vtables();
-const VTableProfData *__llvm_profile_end_vtables();
-uint32_t *__llvm_profile_begin_orderfile();
+ValueProfNode *__llvm_profile_begin_vnodes(void);
+ValueProfNode *__llvm_profile_end_vnodes(void);
+const VTableProfData *__llvm_profile_begin_vtables(void);
+const VTableProfData *__llvm_profile_end_vtables(void);
+uint32_t *__llvm_profile_begin_orderfile(void);
 
 /*!
  * \brief Merge profile data from buffer.
@@ -209,6 +214,9 @@ void __llvm_profile_initialize_file(void);
 /*! \brief Initialize the profile runtime. */
 void __llvm_profile_initialize(void);
 
+/*! \brief Initialize the gcov profile runtime. */
+void __llvm_profile_gcov_initialize(void);
+
 /*!
  * \brief Return path prefix (excluding the base filename) of the profile data.
  * This is useful for users using \c -fprofile-generate=./path_prefix who do
@@ -217,7 +225,7 @@ void __llvm_profile_initialize(void);
  * merge mode is turned on for instrumented programs with shared libs).
  * Side-effect: this API call will invoke malloc with dynamic memory allocation.
  */
-const char *__llvm_profile_get_path_prefix();
+const char *__llvm_profile_get_path_prefix(void);
 
 /*!
  * \brief Return filename (including path) of the profile data. Note that if the
@@ -230,7 +238,7 @@ const char *__llvm_profile_get_path_prefix();
  * instrumented image/DSO). This API only retrieves the filename from the copy
  * of the runtime available to the calling image.
  */
-const char *__llvm_profile_get_filename();
+const char *__llvm_profile_get_filename(void);
 
 /*! \brief Get the magic token for the file format. */
 uint64_t __llvm_profile_get_magic(void);
@@ -294,7 +302,18 @@ int __llvm_profile_get_padding_sizes_for_counters(
  * certain processes in case the processes don't have permission to write to
  * the disks, and trying to do so would result in side effects such as crashes.
  */
-void __llvm_profile_set_dumped();
+void __llvm_profile_set_dumped(void);
+
+/*!
+ * \brief Write custom target-specific profiling data to a seperate file.
+ * Used by offload PGO.
+ */
+int __llvm_write_custom_profile(const char *Target,
+                                const __llvm_profile_data *DataBegin,
+                                const __llvm_profile_data *DataEnd,
+                                const char *CountersBegin,
+                                const char *CountersEnd, const char *NamesBegin,
+                                const char *NamesEnd);
 
 /*!
  * This variable is defined in InstrProfilingRuntime.cpp as a hidden
@@ -325,4 +344,6 @@ COMPILER_RT_VISIBILITY extern uint64_t
  */
 extern char INSTR_PROF_PROFILE_NAME_VAR[1]; /* __llvm_profile_filename. */
 
+const __llvm_gcov_init_func_struct *__llvm_profile_begin_covinit();
+const __llvm_gcov_init_func_struct *__llvm_profile_end_covinit();
 #endif /* PROFILE_INSTRPROFILING_H_ */

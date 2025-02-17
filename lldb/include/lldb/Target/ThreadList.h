@@ -27,12 +27,13 @@ class ThreadList : public ThreadCollection {
   friend class Process;
 
 public:
-  ThreadList(Process *process);
+  ThreadList(Process &process);
 
   ThreadList(const ThreadList &rhs);
 
   ~ThreadList() override;
 
+  /// Precondition: both thread lists must be belong to the same process.
   const ThreadList &operator=(const ThreadList &rhs);
 
   uint32_t GetSize(bool can_update = true);
@@ -100,8 +101,6 @@ public:
 
   lldb::ThreadSP GetThreadSPForThreadPtr(Thread *thread_ptr);
 
-  lldb::ThreadSP GetBackingThread(const lldb::ThreadSP &real_thread);
-
   bool ShouldStop(Event *event_ptr);
 
   Vote ShouldReportStop(Event *event_ptr);
@@ -135,6 +134,7 @@ public:
 
   std::recursive_mutex &GetMutex() const override;
 
+  /// Precondition: both thread lists must be belong to the same process.
   void Update(ThreadList &rhs);
 
 protected:
@@ -143,7 +143,7 @@ protected:
   void NotifySelectedThreadChanged(lldb::tid_t tid);
 
   // Classes that inherit from Process can see and modify these
-  Process *m_process; ///< The process that manages this thread list.
+  Process &m_process; ///< The process that manages this thread list.
   uint32_t
       m_stop_id; ///< The process stop ID that this thread list is valid for.
   lldb::tid_t

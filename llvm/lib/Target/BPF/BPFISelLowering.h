@@ -118,7 +118,9 @@ private:
     return Op.size() >= 8 ? MVT::i64 : MVT::i32;
   }
 
-  bool isIntDivCheap(EVT VT, AttributeList Attr) const override { return true; }
+  bool isIntDivCheap(EVT VT, AttributeList Attr) const override {
+    return false;
+  }
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                          Type *Ty) const override {

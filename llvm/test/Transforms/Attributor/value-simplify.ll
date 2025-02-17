@@ -519,13 +519,13 @@ define internal void @test_sret(ptr sret(%struct.X) %a, ptr %b) {
 ;
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@test_sret
-; TUNIT-SAME: (ptr noalias nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 dereferenceable_or_null(8) [[A:%.*]], ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR4:[0-9]+]] {
+; TUNIT-SAME: (ptr noalias nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 dereferenceable_or_null(8) [[A:%.*]], ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[B:%.*]]) #[[ATTR4:[0-9]+]] {
 ; TUNIT-NEXT:    store ptr [[A]], ptr [[B]], align 8
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@test_sret
-; CGSCC-SAME: (ptr noalias nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 dereferenceable_or_null(8) [[A:%.*]], ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR5:[0-9]+]] {
+; CGSCC-SAME: (ptr noalias nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 dereferenceable_or_null(8) [[A:%.*]], ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[B:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CGSCC-NEXT:    store ptr [[A]], ptr [[B]], align 8
 ; CGSCC-NEXT:    ret void
 ;
@@ -538,14 +538,14 @@ define void @complicated_args_sret(ptr %b) {
 ;
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@complicated_args_sret
-; TUNIT-SAME: (ptr nocapture nofree writeonly [[B:%.*]]) #[[ATTR4]] {
-; TUNIT-NEXT:    call void @test_sret(ptr nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 null, ptr nocapture nofree noundef writeonly align 8 [[B]]) #[[ATTR11:[0-9]+]]
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[B:%.*]]) #[[ATTR4]] {
+; TUNIT-NEXT:    call void @test_sret(ptr nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 null, ptr nofree noundef writeonly align 8 captures(none) [[B]]) #[[ATTR11:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@complicated_args_sret
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR6:[0-9]+]] {
-; CGSCC-NEXT:    call void @test_sret(ptr nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 dereferenceable_or_null(8) null, ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B]]) #[[ATTR15:[0-9]+]]
+; CGSCC-SAME: (ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[B:%.*]]) #[[ATTR6:[0-9]+]] {
+; CGSCC-NEXT:    call void @test_sret(ptr nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 dereferenceable_or_null(8) null, ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[B]]) #[[ATTR15:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @test_sret(ptr sret(%struct.X) null, ptr %b)
@@ -555,7 +555,7 @@ define void @complicated_args_sret(ptr %b) {
 define internal ptr @test_nest(ptr nest %a) {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_nest
-; CGSCC-SAME: (ptr nest noalias nocapture nofree readnone align 4294967296 [[A:%.*]]) #[[ATTR1]] {
+; CGSCC-SAME: (ptr nest noalias nofree readnone align 4294967296 captures(none) [[A:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    ret ptr null
 ;
   ret ptr %a
@@ -645,7 +645,7 @@ define ptr @complicated_args_byval2() {
 define void @fixpoint_changed(ptr %p) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@fixpoint_changed
-; TUNIT-SAME: (ptr nocapture nofree writeonly [[P:%.*]]) #[[ATTR4]] {
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[P:%.*]]) #[[ATTR4]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    br label [[FOR_COND:%.*]]
 ; TUNIT:       for.cond:
@@ -668,7 +668,7 @@ define void @fixpoint_changed(ptr %p) {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@fixpoint_changed
-; CGSCC-SAME: (ptr nocapture nofree writeonly [[P:%.*]]) #[[ATTR5]] {
+; CGSCC-SAME: (ptr nofree writeonly captures(none) [[P:%.*]]) #[[ATTR5]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[FOR_COND:%.*]]
 ; CGSCC:       for.cond:
@@ -838,8 +838,7 @@ define void @user() {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@user
 ; TUNIT-SAME: () #[[ATTR5]] {
-; TUNIT-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspacecast (ptr addrspace(3) @ConstAS3Ptr to ptr) to ptr addrspace(3)
-; TUNIT-NEXT:    store i32 0, ptr addrspace(3) [[TMP1]], align 4
+; TUNIT-NEXT:    store i32 0, ptr addrspacecast (ptr addrspace(3) @ConstAS3Ptr to ptr), align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(write)
@@ -973,13 +972,13 @@ define i1 @icmp() {
 
 define void @test_callee_is_undef(ptr %fn) {
 ; TUNIT-LABEL: define {{[^@]+}}@test_callee_is_undef
-; TUNIT-SAME: (ptr nocapture nofree [[FN:%.*]]) {
-; TUNIT-NEXT:    call void @unknown_calle_arg_is_undef(ptr nocapture nofree noundef [[FN]])
+; TUNIT-SAME: (ptr nofree captures(none) [[FN:%.*]]) {
+; TUNIT-NEXT:    call void @unknown_calle_arg_is_undef(ptr nofree noundef captures(none) [[FN]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@test_callee_is_undef
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull [[FN:%.*]]) {
-; CGSCC-NEXT:    call void @unknown_calle_arg_is_undef(ptr nocapture nofree noundef nonnull [[FN]])
+; CGSCC-SAME: (ptr nofree noundef nonnull captures(none) [[FN:%.*]]) {
+; CGSCC-NEXT:    call void @unknown_calle_arg_is_undef(ptr nofree noundef nonnull captures(none) [[FN]])
 ; CGSCC-NEXT:    ret void
 ;
   call void @callee_is_undef(ptr undef)
@@ -999,7 +998,7 @@ define internal void @callee_is_undef(ptr %fn) {
 define internal void @unknown_calle_arg_is_undef(ptr %fn, i32 %arg) {
 ;
 ; CHECK-LABEL: define {{[^@]+}}@unknown_calle_arg_is_undef
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull [[FN:%.*]]) {
+; CHECK-SAME: (ptr nofree noundef nonnull captures(none) [[FN:%.*]]) {
 ; CHECK-NEXT:    call void [[FN]](i32 undef)
 ; CHECK-NEXT:    ret void
 ;
@@ -1015,14 +1014,14 @@ define internal void @unknown_calle_arg_is_undef(ptr %fn, i32 %arg) {
 define internal void @f1(ptr %a) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@f1
-; TUNIT-SAME: (ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
+; TUNIT-SAME: (ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    store ptr @g, ptr [[A]], align 8
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@f1
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
+; CGSCC-SAME: (ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    store ptr @g, ptr [[A]], align 8
 ; CGSCC-NEXT:    ret void
@@ -1036,7 +1035,7 @@ define internal void @f2(ptr %a) {
 ; CHECK-LABEL: define {{[^@]+}}@f2
 ; CHECK-SAME: (ptr [[A:%.*]]) {
 ; CHECK-NEXT:  cont461:
-; CHECK-NEXT:    call void @f3(ptr [[A]], ptr nocapture nofree [[A]])
+; CHECK-NEXT:    call void @f3(ptr [[A]], ptr nofree captures(none) [[A]])
 ; CHECK-NEXT:    ret void
 ;
 cont461:
@@ -1046,7 +1045,7 @@ cont461:
 
 define internal void @f3(ptr %a1, ptr %a) {
 ; CHECK-LABEL: define {{[^@]+}}@f3
-; CHECK-SAME: (ptr [[A1:%.*]], ptr nocapture nofree [[A:%.*]]) {
+; CHECK-SAME: (ptr [[A1:%.*]], ptr nofree captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL20:%.*]] = call i1 @f9()
 ; CHECK-NEXT:    br i1 [[CALL20]], label [[LAND_LHS_TRUE:%.*]], label [[IF_END40:%.*]]
@@ -1270,7 +1269,7 @@ define internal i8 @memcpy_uses_store(i8 %arg) {
 ; TUNIT-NEXT:    [[SRC:%.*]] = alloca i8, align 1
 ; TUNIT-NEXT:    [[DST:%.*]] = alloca i8, align 1
 ; TUNIT-NEXT:    store i8 [[ARG]], ptr [[SRC]], align 1
-; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[DST]], ptr noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[SRC]], i32 noundef 1, i1 noundef false) #[[ATTR12:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nofree noundef nonnull writeonly captures(none) dereferenceable(1) [[DST]], ptr noalias nofree noundef nonnull readonly captures(none) dereferenceable(1) [[SRC]], i32 noundef 1, i1 noundef false) #[[ATTR12:[0-9]+]]
 ; TUNIT-NEXT:    [[L:%.*]] = load i8, ptr [[DST]], align 1
 ; TUNIT-NEXT:    ret i8 [[L]]
 ;
@@ -1280,7 +1279,7 @@ define internal i8 @memcpy_uses_store(i8 %arg) {
 ; CGSCC-NEXT:    [[SRC:%.*]] = alloca i8, align 1
 ; CGSCC-NEXT:    [[DST:%.*]] = alloca i8, align 1
 ; CGSCC-NEXT:    store i8 [[ARG]], ptr [[SRC]], align 1
-; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[DST]], ptr noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[SRC]], i32 noundef 1, i1 noundef false) #[[ATTR16:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nofree noundef nonnull writeonly captures(none) dereferenceable(1) [[DST]], ptr noalias nofree noundef nonnull readonly captures(none) dereferenceable(1) [[SRC]], i32 noundef 1, i1 noundef false) #[[ATTR16:[0-9]+]]
 ; CGSCC-NEXT:    [[L:%.*]] = load i8, ptr [[DST]], align 1
 ; CGSCC-NEXT:    ret i8 [[L]]
 ;

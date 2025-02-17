@@ -30,12 +30,6 @@ public:
   /// Lifetime management
   virtual void reset() {}
 
-  /// Append the prefixes of given instruction to the code buffer.
-  ///
-  /// \param Inst a single low-level machine instruction.
-  /// \param CB code buffer
-  virtual void emitPrefix(const MCInst &Inst, SmallVectorImpl<char> &CB,
-                          const MCSubtargetInfo &STI) const {}
   /// Encode the given \p Inst to bytes and append to \p CB.
   virtual void encodeInstruction(const MCInst &Inst, SmallVectorImpl<char> &CB,
                                  SmallVectorImpl<MCFixup> &Fixups,

@@ -13,7 +13,6 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Support/LogicalResult.h"
 #include <optional>
 
 namespace mlir {
@@ -194,6 +193,13 @@ public:
   unsigned appendLocalVar(unsigned num = 1) {
     return appendVar(VarKind::Local, num);
   }
+
+  /// A more human-readable version of dump().
+  void dumpPretty() const;
+  /// An easier to read dump of a `row` of the same width as the number of
+  /// columns. `fixedColWidth` ensure that even with a zero coefficient, we
+  /// print spaces so that variables are aligned.
+  void dumpRow(ArrayRef<int64_t> row, bool fixedColWidth = true) const;
 
 protected:
   using VarKind = presburger::VarKind;

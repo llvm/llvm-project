@@ -43,7 +43,7 @@ int use() {
   return 0;
 }
 
-// CHECK: OpenMP{{.*}}differs in PCH file vs. current file
+// CHECK: OpenMP{{.*}}differs in AST file '{{.*}}Hello.pcm' vs. current file
 
 //--- use2.cpp
 // expected-no-diagnostics
@@ -55,5 +55,5 @@ int use2() {
   return 0;
 }
 
-// CHECK: OpenMP{{.*}}differs in PCH file vs. current file
+// CHECK: OpenMP{{.*}}differs in AST file '{{.*}}Hello.pcm' vs. current file
 // CHECK: use of undeclared identifier 'pragma'

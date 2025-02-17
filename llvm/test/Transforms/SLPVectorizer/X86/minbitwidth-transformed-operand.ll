@@ -5,20 +5,15 @@ define void @test(i64 %d.promoted.i) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i64 [[D_PROMOTED_I:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[AND_1_I:%.*]] = and i64 0, [[D_PROMOTED_I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i64> <i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[AND_1_I]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i64> [[TMP0]] to <8 x i1>
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i1> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[AND_1_I_1:%.*]] = and i64 0, 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i64> <i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[AND_1_I_1]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i64> [[TMP3]] to <8 x i1>
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <8 x i1> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP5]])
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i1 [[TMP6]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[D_PROMOTED_I]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i1>
+; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x i1> @llvm.vector.insert.v16i1.v2i1(<16 x i1> poison, <2 x i1> [[TMP3]], i64 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i1> [[TMP4]], <16 x i1> <i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i32> <i32 0, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 1, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <16 x i1> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i1 [[TMP8]] to i32
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP7]], [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[OP_RDX]], 0
+; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP9]], 0
 ; CHECK-NEXT:    store i32 [[TMP10]], ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;

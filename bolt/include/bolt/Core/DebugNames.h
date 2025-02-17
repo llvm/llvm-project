@@ -72,8 +72,8 @@ public:
     return std::move(FullTableBuffer);
   }
   /// Adds a DIE that is referenced across CUs.
-  void addCrossCUDie(const DIE *Die) {
-    CrossCUDies.insert({Die->getOffset(), Die});
+  void addCrossCUDie(DWARFUnit *Unit, const DIE *Die) {
+    CrossCUDies.insert({Die->getOffset(), {Unit, Die}});
   }
   /// Returns true if the DIE can generate an entry for a cross cu reference.
   /// This only checks TAGs of a DIE because when this is invoked DIE might not
@@ -91,6 +91,10 @@ private:
   uint64_t CurrentUnitOffset = 0;
   const DWARFUnit *CurrentUnit = nullptr;
   std::unordered_map<uint32_t, uint32_t> AbbrevTagToIndexMap;
+  /// Contains a map of TU hashes to a Foreign TU indecies.
+  /// This is used to reduce the size of Foreign TU list since there could be
+  /// multiple TUs with the same hash.
+  DenseMap<uint64_t, uint32_t> TUHashToIndexMap;
 
   /// Represents a group of entries with identical name (and hence, hash value).
   struct HashData {
@@ -141,7 +145,7 @@ private:
   llvm::DenseMap<uint64_t, uint32_t> CUOffsetsToPatch;
   // Contains a map of Entry ID to Entry relative offset.
   llvm::DenseMap<uint64_t, uint32_t> EntryRelativeOffsets;
-  llvm::DenseMap<uint64_t, const DIE *> CrossCUDies;
+  llvm::DenseMap<uint64_t, std::pair<DWARFUnit *, const DIE *>> CrossCUDies;
   /// Adds Unit to either CUList, LocalTUList or ForeignTUList.
   /// Input Unit being processed, and DWO ID if Unit is being processed comes
   /// from a DWO section.
@@ -187,6 +191,29 @@ private:
   void emitData();
   /// Emit augmentation string.
   void emitAugmentationString() const;
+  /// Creates a new entry for a given DIE.
+  std::optional<BOLTDWARF5AccelTableData *>
+  addEntry(DWARFUnit &DU, const DIE &CurrDie,
+           const std::optional<uint64_t> &DWOID,
+           const std::optional<BOLTDWARF5AccelTableData *> &Parent,
+           const std::optional<std::string> &Name,
+           const uint32_t NumberParentsInChain);
+  /// Returns UnitID for a given DWARFUnit.
+  uint32_t getUnitID(const DWARFUnit &Unit,
+                     const std::optional<uint64_t> &DWOID, bool &IsTU);
+  std::optional<std::string> getName(DWARFUnit &DU,
+                                     const std::optional<uint64_t> &DWOID,
+                                     const std::string &NameToUse,
+                                     DIEValue ValName);
+  /// Processes a DIE with references to other DIEs for DW_AT_name and
+  /// DW_AT_linkage_name resolution.
+  /// If DW_AT_name exists method creates a new entry for this DIE and returns
+  /// it.
+  std::optional<BOLTDWARF5AccelTableData *> processReferencedDie(
+      DWARFUnit &Unit, const DIE &Die, const std::optional<uint64_t> &DWOID,
+      const std::optional<BOLTDWARF5AccelTableData *> &Parent,
+      const std::string &NameToUse, const uint32_t NumberParentsInChain,
+      const dwarf::Attribute &Attr);
 };
 } // namespace bolt
 } // namespace llvm

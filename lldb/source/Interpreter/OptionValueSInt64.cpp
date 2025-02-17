@@ -48,13 +48,13 @@ Status OptionValueSInt64::SetValueFromString(llvm::StringRef value_ref,
         m_current_value = value;
         NotifyValueChanged();
       } else
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "%" PRIi64 " is out of range, valid values must be between %" PRIi64
             " and %" PRIi64 ".",
             value, m_min_value, m_max_value);
     } else {
-      error.SetErrorStringWithFormat("invalid int64_t string value: '%s'",
-                                     value_ref.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "invalid int64_t string value: '%s'", value_ref.str().c_str());
     }
   } break;
 
