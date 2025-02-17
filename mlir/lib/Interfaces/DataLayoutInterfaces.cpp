@@ -250,9 +250,8 @@ Attribute mlir::detail::getDefaultEndianness(DataLayoutEntryInterface entry) {
 // entry is empty the default memory space represented by an empty attribute is
 // returned.
 Attribute mlir::detail::getDefaultMemorySpace(DataLayoutEntryInterface entry) {
-  if (entry == DataLayoutEntryInterface()) {
+  if (!entry)
     return Attribute();
-  }
 
   return entry.getValue();
 }
