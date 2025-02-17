@@ -32,7 +32,7 @@ static cl::opt<bool> CovMapRaw("covmap-raw",
                                cl::desc("Dump raw YAML in Coverage Map."),
                                cl::cat(ELFCat));
 static cl::opt<bool> CovMapDLoc("covmap-dloc",
-                                cl::desc("Prefer dLoc thatn absolute Loc."),
+                                cl::desc("Prefer dLoc over absolute Loc."),
                                 cl::cat(ELFCat));
 
 namespace {
