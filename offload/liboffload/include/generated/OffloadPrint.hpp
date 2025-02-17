@@ -31,6 +31,7 @@ inline std::ostream &operator<<(std::ostream &os,
                                 enum ol_platform_backend_t value);
 inline std::ostream &operator<<(std::ostream &os, enum ol_device_type_t value);
 inline std::ostream &operator<<(std::ostream &os, enum ol_device_info_t value);
+inline std::ostream &operator<<(std::ostream &os, enum ol_alloc_type_t value);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the ol_errc_t type
@@ -274,6 +275,26 @@ inline void printTagged(std::ostream &os, const void *ptr,
     break;
   }
 }
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Print operator for the ol_alloc_type_t type
+/// @returns std::ostream &
+inline std::ostream &operator<<(std::ostream &os, enum ol_alloc_type_t value) {
+  switch (value) {
+  case OL_ALLOC_TYPE_HOST:
+    os << "OL_ALLOC_TYPE_HOST";
+    break;
+  case OL_ALLOC_TYPE_DEVICE:
+    os << "OL_ALLOC_TYPE_DEVICE";
+    break;
+  case OL_ALLOC_TYPE_SHARED:
+    os << "OL_ALLOC_TYPE_SHARED";
+    break;
+  default:
+    os << "unknown enumerator";
+    break;
+  }
+  return os;
+}
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const ol_error_struct_t *Err) {
@@ -399,6 +420,38 @@ operator<<(std::ostream &os,
   os << ", ";
   os << ".PropSizeRet = ";
   printPtr(os, *params->pPropSizeRet);
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ol_mem_alloc_params_t *params) {
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".Type = ";
+  os << *params->pType;
+  os << ", ";
+  os << ".Size = ";
+  os << *params->pSize;
+  os << ", ";
+  os << ".Aligment = ";
+  os << *params->pAligment;
+  os << ", ";
+  os << ".AllocationOut = ";
+  printPtr(os, *params->pAllocationOut);
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ol_mem_free_params_t *params) {
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".Type = ";
+  os << *params->pType;
+  os << ", ";
+  os << ".Address = ";
+  printPtr(os, *params->pAddress);
   return os;
 }
 
