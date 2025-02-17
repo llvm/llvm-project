@@ -857,12 +857,12 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
   if (AR->getNoWrapFlags(SCEV::NoWrapMask))
     return true;
 
-  if (PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+  if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
     return true;
 
   // The address calculation must not wrap. Otherwise, a dependence could be
   // inverted.
-  if (isNoWrapGEP(Ptr, PSE, L))
+  if (Ptr && isNoWrapGEP(Ptr, PSE, L))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -886,10 +886,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
       return true;
   }
 
-  if (!Ptr)
-    return false;
-
-  if (Assume) {
+  if (Ptr && Assume) {
     PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
     LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
                       << "LAA:   Pointer: " << *Ptr << "\n"
@@ -1466,9 +1463,6 @@ void AccessAnalysis::processMemAccesses() {
 /// Check whether \p Ptr is non-wrapping GEP.
 static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
                         const Loop *L) {
-  if (PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
-    return true;
-
   // Scalar evolution does not propagate the non-wrapping flags to values that
   // are derived from a non-wrapping induction variable because non-wrapping
   // could be flow-sensitive.
