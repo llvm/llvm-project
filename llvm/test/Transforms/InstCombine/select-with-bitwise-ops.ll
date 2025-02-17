@@ -1731,3 +1731,82 @@ define i8 @select_icmp_eq_and_1_0_lshr_tv(i8 %x, i8 %y) {
   %select = select i1 %cmp, i8 %blshr, i8 %y
   ret i8 %select
 }
+
+define i8 @select_trunc_or_2(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_trunc_or_2(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[OR]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %trunc = trunc i8 %x to i1
+  %or = or i8 %y, 2
+  %select = select i1 %trunc, i8 %or, i8 %y
+  ret i8 %select
+}
+
+define i8 @select_not_trunc_or_2(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_not_trunc_or_2(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[OR]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %trunc = trunc i8 %x to i1
+  %not = xor i1 %trunc, true
+  %or = or i8 %y, 2
+  %select = select i1 %not, i8 %y, i8 %or
+  ret i8 %select
+}
+
+define i8 @select_trunc_nuw_or_2(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_trunc_nuw_or_2(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[OR]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %or = or i8 %y, 2
+  %select = select i1 %trunc, i8 %or, i8 %y
+  ret i8 %select
+}
+
+define i8 @select_trunc_nsw_or_2(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_trunc_nsw_or_2(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[OR]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %trunc = trunc nsw i8 %x to i1
+  %or = or i8 %y, 2
+  %select = select i1 %trunc, i8 %or, i8 %y
+  ret i8 %select
+}
+
+define <2 x i8> @select_trunc_or_2_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @select_trunc_or_2_vec(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[Y:%.*]], splat (i8 2)
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[TRUNC]], <2 x i8> [[OR]], <2 x i8> [[Y]]
+; CHECK-NEXT:    ret <2 x i8> [[SELECT]]
+;
+  %trunc = trunc <2 x i8> %x to <2 x i1>
+  %or = or <2 x i8> %y, <i8 2, i8 2>
+  %select = select <2 x i1> %trunc, <2 x i8> %or, <2 x i8> %y
+  ret <2 x i8> %select
+}
+
+define i8 @neg_select_trunc_or_2(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_select_trunc_or_2(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[Y]], i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %trunc = trunc i8 %x to i1
+  %or = or i8 %y, 2
+  %select = select i1 %trunc, i8 %y, i8 %or
+  ret i8 %select
+}
