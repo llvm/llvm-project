@@ -91,6 +91,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`readability-use-numeric-limits
+  <clang-tidy/checks/readability/use-numeric-limits>` check to replace certain
+  integer literals with ``std::numeric_limits`` calls.
+
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
