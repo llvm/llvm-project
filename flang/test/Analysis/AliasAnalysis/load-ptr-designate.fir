@@ -93,6 +93,11 @@
 // CHECK-DAG: obj.fir#0 <-> obj%p0.tgt.fir#0: MayAlias
 // CHECK-DAG: obj.fir#0 <-> obj%alloc.tgt.fir#0: MayAlias
 
+// The addresses obtained via multiple load instructions from the same
+// allocatable can alias.
+// CHECK-DAG: obj%alloc.tgt#0 <-> obj%alloc.tgt2#0: MayAlias
+// CHECK-DAG: obj%alloc.tgt.fir#0 <-> obj%alloc.tgt2.fir#0: MayAlias
+
 func.func @_QPtest() {
   %0 = fir.alloca !fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}> {bindc_name = "obj", uniq_name = "_QFtestEobj"}
   %1:2 = hlfir.declare %0 {test.ptr="obj", uniq_name = "_QFtestEobj"} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>) -> (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>, !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>)
@@ -114,7 +119,9 @@ func.func @_QPtest() {
   %15 = hlfir.designate %1#0{"arr"} <%14> (%c1) {test.ptr="obj%arr(1)"} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>, index) -> !fir.ref<f32>
   %16 = hlfir.designate %1#0{"alloc"}   {test.ptr="obj%alloc", fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %17 = fir.load %16 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  %repeat17 = fir.load %16 : !fir.ref<!fir.box<!fir.heap<f32>>>
   %18 = fir.box_addr %17 {test.ptr="obj%alloc.tgt"}: (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+  %repeat18 = fir.box_addr %repeat17 {test.ptr="obj%alloc.tgt2"}: (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   %c2_1 = arith.constant 2 : index
   %19 = fir.shape %c2_1 : (index) -> !fir.shape<1>
   %c1_2 = arith.constant 1 : index
@@ -151,7 +158,9 @@ func.func @_QPtest.fir() {
   %20 = fir.field_index alloc, !fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>
   %21 = fir.coordinate_of %1, %20 {test.ptr="obj%alloc.fir"} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %22 = fir.load %21 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  %repeat22 = fir.load %21 : !fir.ref<!fir.box<!fir.heap<f32>>>
   %23 = fir.box_addr %22 {test.ptr = "obj%alloc.tgt.fir"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+  %repeat23 = fir.box_addr %repeat22 {test.ptr = "obj%alloc.tgt2.fir"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   %c2_0 = arith.constant 2 : index
   %24 = fir.shape %c2_0 : (index) -> !fir.shape<1>
   %c1_1 = arith.constant 1 : index
@@ -254,6 +263,11 @@ func.func @_QPtest.fir() {
 // CHECK-DAG: obj.fir#0 <-> obj%p0.tgt.fir#0: MayAlias
 // CHECK-DAG: obj.fir#0 <-> obj%alloc.tgt.fir#0: MayAlias
 
+// The addresses obtained via multiple load instructions from the same
+// allocatable can alias.
+// CHECK-DAG: obj%alloc.tgt#0 <-> obj%alloc.tgt2#0: MayAlias
+// CHECK-DAG: obj%alloc.tgt.fir#0 <-> obj%alloc.tgt2.fir#0: MayAlias
+
 func.func @_QPtest(%arg0: !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>> {fir.bindc_name = "obj"}, %arg1: !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>> {fir.bindc_name = "t_obj", fir.target}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1:2 = hlfir.declare %arg0 dummy_scope %0 {test.ptr="obj", uniq_name = "_QFtestEobj"} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>, !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>)
@@ -274,7 +288,9 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,
   %14 = hlfir.designate %1#0{"arr"} <%13> (%c1) {test.ptr="obj%arr(1)"} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>, index) -> !fir.ref<f32>
   %15 = hlfir.designate %1#0{"alloc"}   {test.ptr="obj%alloc", fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %16 = fir.load %15 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  %repeat16 = fir.load %15 : !fir.ref<!fir.box<!fir.heap<f32>>>
   %17 = fir.box_addr %16 {test.ptr="obj%alloc.tgt"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+  %repeat17 = fir.box_addr %repeat16 {test.ptr="obj%alloc.tgt2"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   %c2_0 = arith.constant 2 : index
   %18 = fir.shape %c2_0 : (index) -> !fir.shape<1>
   %c1_1 = arith.constant 1 : index
@@ -310,7 +326,9 @@ func.func @_QPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f3
   %19 = fir.field_index alloc, !fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>
   %20 = fir.coordinate_of %1, %19 {test.ptr="obj%alloc.fir"} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %21 = fir.load %20 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  %repeat21 = fir.load %20 : !fir.ref<!fir.box<!fir.heap<f32>>>
   %22 = fir.box_addr %21 {test.ptr = "obj%alloc.tgt.fir"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+  %repeat22 = fir.box_addr %repeat21 {test.ptr = "obj%alloc.tgt2.fir"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   %c2_0 = arith.constant 2 : index
   %23 = fir.shape %c2_0 : (index) -> !fir.shape<1>
   %c1_1 = arith.constant 1 : index
@@ -411,6 +429,11 @@ func.func @_QPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f3
 // CHECK-DAG: obj.fir#0 <-> obj%p0.tgt.fir#0: MayAlias
 // CHECK-DAG: obj.fir#0 <-> obj%alloc.tgt.fir#0: MayAlias
 
+// The addresses obtained via multiple load instructions from the same
+// allocatable can alias.
+// CHECK-DAG: obj%alloc.tgt#0 <-> obj%alloc.tgt2#0: MayAlias
+// CHECK-DAG: obj%alloc.tgt.fir#0 <-> obj%alloc.tgt2.fir#0: MayAlias
+
 func.func @_QPtest() {
   %0 = fir.address_of(@_QMmEobj) : !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>
   %1:2 = hlfir.declare %0 {test.ptr="obj", uniq_name = "_QMmEobj"} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>) -> (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>, !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>)
@@ -432,7 +455,9 @@ func.func @_QPtest() {
   %17 = hlfir.designate %1#0{"arr"} <%16> (%c1) {test.ptr="obj%arr(1)"} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>, index) -> !fir.ref<f32>
   %19 = hlfir.designate %1#0{"alloc"}   {test.ptr="obj%alloc", fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %20 = fir.load %19 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  %repeat20 = fir.load %19 : !fir.ref<!fir.box<!fir.heap<f32>>>
   %21 = fir.box_addr %20 {test.ptr="obj%alloc.tgt"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+  %repeat21 = fir.box_addr %repeat20 {test.ptr="obj%alloc.tgt2"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   %c2_0 = arith.constant 2 : index
   %23 = fir.shape %c2_0 : (index) -> !fir.shape<1>
   %c1_1 = arith.constant 1 : index
@@ -469,7 +494,9 @@ func.func @_QPtest.fir() {
   %20 = fir.field_index alloc, !fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>
   %21 = fir.coordinate_of %1, %20 {test.ptr="obj%alloc.fir"} : (!fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %22 = fir.load %21 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  %repeat22 = fir.load %21 : !fir.ref<!fir.box<!fir.heap<f32>>>
   %23 = fir.box_addr %22 {test.ptr = "obj%alloc.tgt.fir"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+  %repeat23 = fir.box_addr %repeat22 {test.ptr = "obj%alloc.tgt2.fir"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   %c2_0 = arith.constant 2 : index
   %24 = fir.shape %c2_0 : (index) -> !fir.shape<1>
   %c1_1 = arith.constant 1 : index
