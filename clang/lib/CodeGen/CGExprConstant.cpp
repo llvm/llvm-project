@@ -1883,8 +1883,10 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (APValue *value = D.evaluateValue())
-    return tryEmitPrivateForMemory(*value, destType);
+  if (APValue *value = D.evaluateValue()) {
+    if (!value->allowConstexprUnknown())
+      return tryEmitPrivateForMemory(*value, destType);
+  }
 
   return nullptr;
 }
