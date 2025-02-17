@@ -1975,12 +1975,15 @@ private:
 
 static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
                                                  CompilerType clang_type,
-                                                 uint64_t bit_width,
                                                  uint64_t value) {
+  std::optional<uint64_t> bit_width = clang_type.GetBitSize(nullptr);
+  if (!bit_width)
+    return std::nullopt;
+
   bool is_signed = false;
   const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed);
 
-  llvm::APSInt apint(bit_width, !is_signed);
+  llvm::APSInt apint(*bit_width, !is_signed);
   apint = value;
 
   if (is_integral)
@@ -2079,11 +2082,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
         name = nullptr;
 
       if (tag == DW_TAG_template_value_parameter && uval64_valid) {
-        std::optional<uint64_t> size = clang_type.GetBitSize(nullptr);
-        if (!size)
-          return false;
-
-        if (auto value = MakeAPValue(ast, clang_type, *size, uval64)) {
+        if (auto value = MakeAPValue(ast, clang_type, uval64)) {
           template_param_infos.InsertArg(
               name, clang::TemplateArgument(
                         ast, ClangUtil::GetQualType(clang_type),
