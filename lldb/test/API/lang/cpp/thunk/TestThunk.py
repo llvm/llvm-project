@@ -28,11 +28,11 @@ class ThunkTest(TestBase):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "testit_debug")
 
-        # Make sure we step out of the thunk and don't end up in Derived1::doit.
+        # Make sure we step out of the thunk and end up in testit_debug.
         self.expect(
             "step",
             STEP_IN_SUCCEEDED,
-            substrs=["stop reason = step in", "main at main.cpp"],
+            substrs=["stop reason = step in", "main.cpp:34"],
         )
 
         self.runCmd("continue")

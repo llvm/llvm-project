@@ -29,7 +29,10 @@ public:
 
 void testit() { b->doit(); }
 
-void testit_debug() { b->doit_debug(); }
+void testit_debug() {
+  b->doit_debug();
+  printf("This is where I should step out to with nodebug.\n");
+}
 
 int main() {
 
