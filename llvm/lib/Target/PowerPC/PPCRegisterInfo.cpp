@@ -531,7 +531,7 @@ bool PPCRegisterInfo::requiresVirtualBaseRegisters(
 
 bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
                                                const MachineFunction &MF) const {
-  assert(Register::isPhysicalRegister(PhysReg));
+  assert(PhysReg.isPhysical());
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -623,6 +623,13 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
   }
   return BaseImplRetVal;
+}
+
+const TargetRegisterClass *
+PPCRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
+  if (RC == &PPC::CARRYRCRegClass)
+    return TM.isPPC64() ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
+  return RC;
 }
 
 unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,

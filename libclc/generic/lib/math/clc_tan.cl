@@ -19,15 +19,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "sincos_helpers.h"
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_fabs.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
 #include <clc/relational/clc_isinf.h>
 #include <clc/relational/clc_isnan.h>
-
-#include "math.h"
-#include "sincos_helpers.h"
-#include "tables.h"
 
 _CLC_DEF _CLC_OVERLOAD float __clc_tan(float x) {
   int ix = as_int(x);

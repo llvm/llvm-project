@@ -209,9 +209,9 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
+; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<middle.block>:
+; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VEC_TC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, ir-bb<scalar.ph>
@@ -230,7 +230,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
-; CHECK:  LV: Loop does not require scalar epilogue
 ;
 entry:
   %cmp7 = icmp sgt i32 %n, 0
@@ -459,9 +458,9 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
+; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<middle.block>:
+; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VEC_TC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, ir-bb<scalar.ph>
@@ -480,7 +479,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
-; CHECK:  LV: Loop does not require scalar epilogue
 ;
 entry:
   %cmp7 = icmp sgt i32 %n, 0

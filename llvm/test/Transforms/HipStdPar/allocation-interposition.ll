@@ -14,6 +14,8 @@ declare i32 @__hipstdpar_posix_aligned_alloc(ptr, i64, i64)
 
 declare void @__hipstdpar_hidden_free(ptr)
 
+declare ptr @__hipstdpar_hidden_malloc(i64)
+
 declare ptr @__hipstdpar_realloc(ptr, i64)
 
 declare ptr @__hipstdpar_realloc_array(ptr, i64, i64)

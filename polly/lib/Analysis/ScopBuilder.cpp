@@ -2522,7 +2522,7 @@ combineReductionType(MemoryAccess::ReductionType RT0,
   return MemoryAccess::RT_NONE;
 }
 
-///  True if @p AllAccs intersects with @p MemAccs execpt @p LoadMA and @p
+///  True if @p AllAccs intersects with @p MemAccs except @p LoadMA and @p
 ///  StoreMA
 bool hasIntersectingAccesses(isl::set AllAccs, MemoryAccess *LoadMA,
                              MemoryAccess *StoreMA, isl::set Domain,

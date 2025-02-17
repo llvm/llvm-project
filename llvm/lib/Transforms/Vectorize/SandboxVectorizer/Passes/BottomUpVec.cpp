@@ -12,6 +12,7 @@
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
+#include "llvm/SandboxIR/Region.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
@@ -26,6 +27,13 @@ static cl::opt<unsigned>
 static cl::opt<bool>
     AllowNonPow2("sbvec-allow-non-pow2", cl::init(false), cl::Hidden,
                  cl::desc("Allow non-power-of-2 vectorization."));
+
+#ifndef NDEBUG
+static cl::opt<bool>
+    AlwaysVerify("sbvec-always-verify", cl::init(false), cl::Hidden,
+                 cl::desc("Helps find bugs by verifying the IR whenever we "
+                          "emit new instructions (*very* expensive)."));
+#endif // NDEBUG
 
 namespace sandboxir {
 
@@ -43,14 +51,17 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
   return Operands;
 }
 
-static BasicBlock::iterator
-getInsertPointAfterInstrs(ArrayRef<Value *> Instrs) {
-  // TODO: Use the VecUtils function for getting the bottom instr once it lands.
-  auto *BotI = cast<Instruction>(
-      *std::max_element(Instrs.begin(), Instrs.end(), [](auto *V1, auto *V2) {
-        return cast<Instruction>(V1)->comesBefore(cast<Instruction>(V2));
-      }));
-  // If Bndl contains Arguments or Constants, use the beginning of the BB.
+/// \Returns the BB iterator after the lowest instruction in \p Vals, or the top
+/// of BB if no instruction found in \p Vals.
+static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
+                                                      BasicBlock *BB) {
+  auto *BotI = VecUtils::getLastPHIOrSelf(VecUtils::getLowest(Vals, BB));
+  if (BotI == nullptr)
+    // We are using BB->begin() (or after PHIs) as the fallback insert point.
+    return BB->empty()
+               ? BB->begin()
+               : std::next(
+                     VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
   return std::next(BotI->getIterator());
 }
 
@@ -65,7 +76,8 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
     Type *ScalarTy = VecUtils::getElementType(Utils::getExpectedType(Bndl[0]));
     auto *VecTy = VecUtils::getWideType(ScalarTy, VecUtils::getNumLanes(Bndl));
 
-    BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(Bndl);
+    BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(
+        Bndl, cast<Instruction>(Bndl[0])->getParent());
 
     auto Opcode = cast<Instruction>(Bndl[0])->getOpcode();
     switch (Opcode) {
@@ -167,26 +179,32 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
 }
 
 void BottomUpVec::tryEraseDeadInstrs() {
-  // Visiting the dead instructions bottom-to-top.
-  SmallVector<Instruction *> SortedDeadInstrCandidates(
-      DeadInstrCandidates.begin(), DeadInstrCandidates.end());
-  sort(SortedDeadInstrCandidates,
-       [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
-  for (Instruction *I : reverse(SortedDeadInstrCandidates)) {
-    if (I->hasNUses(0))
-      I->eraseFromParent();
+  DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
+  // The dead instrs could span BBs, so we need to collect and sort them per BB.
+  for (auto *DeadI : DeadInstrCandidates)
+    SortedDeadInstrCandidates[DeadI->getParent()].push_back(DeadI);
+  for (auto &Pair : SortedDeadInstrCandidates)
+    sort(Pair.second,
+         [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
+  for (const auto &Pair : SortedDeadInstrCandidates) {
+    for (Instruction *I : reverse(Pair.second)) {
+      if (I->hasNUses(0))
+        // Erase the dead instructions bottom-to-top.
+        I->eraseFromParent();
+    }
   }
   DeadInstrCandidates.clear();
 }
 
-Value *BottomUpVec::createShuffle(Value *VecOp, const ShuffleMask &Mask) {
-  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs({VecOp});
+Value *BottomUpVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
+                                  BasicBlock *UserBB) {
+  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs({VecOp}, UserBB);
   return ShuffleVectorInst::create(VecOp, VecOp, Mask, WhereIt,
                                    VecOp->getContext(), "VShuf");
 }
 
-Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack) {
-  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(ToPack);
+Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
+  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(ToPack, UserBB);
 
   Type *ScalarTy = VecUtils::getCommonScalarType(ToPack);
   unsigned Lanes = VecUtils::getNumLanes(ToPack);
@@ -262,8 +280,12 @@ void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
   }
 }
 
-Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
+Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
+                                 ArrayRef<Value *> UserBndl, unsigned Depth) {
   Value *NewVec = nullptr;
+  auto *UserBB = !UserBndl.empty()
+                     ? cast<Instruction>(UserBndl.front())->getParent()
+                     : cast<Instruction>(Bndl[0])->getParent();
   const auto &LegalityRes = Legality->canVectorize(Bndl);
   switch (LegalityRes.getSubclassID()) {
   case LegalityResultID::Widen: {
@@ -276,7 +298,7 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
       break;
     case Instruction::Opcode::Store: {
       // Don't recurse towards the pointer operand.
-      auto *VecOp = vectorizeRec(getOperand(Bndl, 0), Depth + 1);
+      auto *VecOp = vectorizeRec(getOperand(Bndl, 0), Bndl, Depth + 1);
       VecOperands.push_back(VecOp);
       VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
       break;
@@ -284,7 +306,7 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
     default:
       // Visit all operands.
       for (auto OpIdx : seq<unsigned>(I->getNumOperands())) {
-        auto *VecOp = vectorizeRec(getOperand(Bndl, OpIdx), Depth + 1);
+        auto *VecOp = vectorizeRec(getOperand(Bndl, OpIdx), Bndl, Depth + 1);
         VecOperands.push_back(VecOp);
       }
       break;
@@ -305,24 +327,95 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
     auto *VecOp = cast<DiamondReuseWithShuffle>(LegalityRes).getVector();
     const ShuffleMask &Mask =
         cast<DiamondReuseWithShuffle>(LegalityRes).getMask();
-    NewVec = createShuffle(VecOp, Mask);
+    NewVec = createShuffle(VecOp, Mask, UserBB);
+    assert(NewVec->getType() == VecOp->getType() &&
+           "Expected same type! Bad mask ?");
+    break;
+  }
+  case LegalityResultID::DiamondReuseMultiInput: {
+    const auto &Descr =
+        cast<DiamondReuseMultiInput>(LegalityRes).getCollectDescr();
+    Type *ResTy = VecUtils::getWideType(Bndl[0]->getType(), Bndl.size());
+
+    // TODO: Try to get WhereIt without creating a vector.
+    SmallVector<Value *, 4> DescrInstrs;
+    for (const auto &ElmDescr : Descr.getDescrs()) {
+      if (auto *I = dyn_cast<Instruction>(ElmDescr.getValue()))
+        DescrInstrs.push_back(I);
+    }
+    BasicBlock::iterator WhereIt =
+        getInsertPointAfterInstrs(DescrInstrs, UserBB);
+
+    Value *LastV = PoisonValue::get(ResTy);
+    unsigned Lane = 0;
+    for (const auto &ElmDescr : Descr.getDescrs()) {
+      Value *VecOp = ElmDescr.getValue();
+      Context &Ctx = VecOp->getContext();
+      Value *ValueToInsert;
+      if (ElmDescr.needsExtract()) {
+        ConstantInt *IdxC =
+            ConstantInt::get(Type::getInt32Ty(Ctx), ElmDescr.getExtractIdx());
+        ValueToInsert = ExtractElementInst::create(VecOp, IdxC, WhereIt,
+                                                   VecOp->getContext(), "VExt");
+      } else {
+        ValueToInsert = VecOp;
+      }
+      auto NumLanesToInsert = VecUtils::getNumLanes(ValueToInsert);
+      if (NumLanesToInsert == 1) {
+        // If we are inserting a scalar element then we need a single insert.
+        //   %VIns = insert %DstVec,  %SrcScalar, Lane
+        ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
+        LastV = InsertElementInst::create(LastV, ValueToInsert, LaneC, WhereIt,
+                                          Ctx, "VIns");
+      } else {
+        // If we are inserting a vector element then we need to extract and
+        // insert each vector element one by one with a chain of extracts and
+        // inserts, for example:
+        //   %VExt0 = extract %SrcVec, 0
+        //   %VIns0 = insert  %DstVec, %Vect0, Lane + 0
+        //   %VExt1 = extract %SrcVec, 1
+        //   %VIns1 = insert  %VIns0,  %Vect0, Lane + 1
+        for (unsigned LnCnt = 0; LnCnt != NumLanesToInsert; ++LnCnt) {
+          auto *ExtrIdxC = ConstantInt::get(Type::getInt32Ty(Ctx), LnCnt);
+          auto *ExtrI = ExtractElementInst::create(ValueToInsert, ExtrIdxC,
+                                                   WhereIt, Ctx, "VExt");
+          unsigned InsLane = Lane + LnCnt;
+          auto *InsLaneC = ConstantInt::get(Type::getInt32Ty(Ctx), InsLane);
+          LastV = InsertElementInst::create(LastV, ExtrI, InsLaneC, WhereIt,
+                                            Ctx, "VIns");
+        }
+      }
+      Lane += NumLanesToInsert;
+    }
+    NewVec = LastV;
     break;
   }
   case LegalityResultID::Pack: {
     // If we can't vectorize the seeds then just return.
     if (Depth == 0)
       return nullptr;
-    NewVec = createPack(Bndl);
+    NewVec = createPack(Bndl, UserBB);
     break;
   }
   }
+#ifndef NDEBUG
+  if (AlwaysVerify) {
+    // This helps find broken IR by constantly verifying the function. Note that
+    // this is very expensive and should only be used for debugging.
+    Instruction *I0 = isa<Instruction>(Bndl[0])
+                          ? cast<Instruction>(Bndl[0])
+                          : cast<Instruction>(UserBndl[0]);
+    assert(!Utils::verifyFunction(I0->getParent()->getParent(), dbgs()) &&
+           "Broken function!");
+  }
+#endif
   return NewVec;
 }
 
 bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
   DeadInstrCandidates.clear();
   Legality->clear();
-  vectorizeRec(Bndl, /*Depth=*/0);
+  vectorizeRec(Bndl, {}, /*Depth=*/0);
   tryEraseDeadInstrs();
   return Change;
 }
@@ -381,13 +474,24 @@ bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
 
           assert(SeedSlice.size() >= 2 && "Should have been rejected!");
 
-          // TODO: If vectorization succeeds, run the RegionPassManager on the
-          // resulting region.
-
           // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
           SmallVector<Value *> SeedSliceVals(SeedSlice.begin(),
                                              SeedSlice.end());
-          Change |= tryVectorize(SeedSliceVals);
+          // Create an empty region. Instructions get added to the region
+          // automatically by the callbacks.
+          auto &Ctx = F.getContext();
+          Region Rgn(Ctx, A.getTTI());
+          // Save the state of the IR before we make any changes. The
+          // transaction gets accepted/reverted by the tr-accept-or-revert pass.
+          Ctx.save();
+          // Try to vectorize starting from the seed slice. The returned value
+          // is true if we found vectorizable code and generated some vector
+          // code for it. It does not mean that the code is profitable.
+          bool VecSuccess = tryVectorize(SeedSliceVals);
+          if (VecSuccess)
+            // WARNING: All passes should return false, except those that
+            // accept/revert the state.
+            Change |= RPM.runOnRegion(Rgn, A);
         }
       }
     }

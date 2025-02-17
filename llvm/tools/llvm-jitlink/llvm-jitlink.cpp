@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -43,6 +44,7 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -1202,6 +1204,19 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
               " not supported",
           inconvertibleErrorCode());
       return;
+    }
+  } else if (TT.isOSBinFormatMachO()) {
+    if (!NoExec) {
+      std::optional<bool> ForceEHFrames;
+      if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
+                                                     ForceEHFrames)))
+        return;
+      bool UseEHFrames = ForceEHFrames ? *ForceEHFrames : false;
+      if (!UseEHFrames)
+        ObjLayer.addPlugin(ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
+      else
+        ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
+            ES, ExitOnErr(EPCEHFrameRegistrar::Create(ES))));
     }
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)

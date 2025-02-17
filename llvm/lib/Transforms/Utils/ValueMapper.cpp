@@ -120,12 +120,14 @@ class Mapper {
   SmallVector<WorklistEntry, 4> Worklist;
   SmallVector<DelayedBasicBlock, 1> DelayedBBs;
   SmallVector<Constant *, 16> AppendingInits;
+  const MetadataSetTy *IdentityMD;
 
 public:
   Mapper(ValueToValueMapTy &VM, RemapFlags Flags,
-         ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer)
+         ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer,
+         const MetadataSetTy *IdentityMD)
       : Flags(Flags), TypeMapper(TypeMapper),
-        MCs(1, MappingContext(VM, Materializer)) {}
+        MCs(1, MappingContext(VM, Materializer)), IdentityMD(IdentityMD) {}
 
   /// ValueMapper should explicitly call \a flush() before destruction.
   ~Mapper() { assert(!hasWorkToDo() && "Expected to be flushed"); }
@@ -899,6 +901,13 @@ std::optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
     return wrapConstantAsMetadata(*CMD, mapValue(CMD->getValue()));
   }
 
+  // Map metadata from IdentityMD on first use. We need to add these nodes to
+  // the mapping as otherwise metadata nodes numbering gets messed up. This is
+  // still economical because the amount of data in IdentityMD may be a lot
+  // larger than what will actually get used.
+  if (IdentityMD && IdentityMD->contains(MD))
+    return getVM().MD()[MD] = TrackingMDRef(const_cast<Metadata *>(MD));
+
   assert(isa<MDNode>(MD) && "Expected a metadata node");
 
   return std::nullopt;
@@ -1198,8 +1207,9 @@ public:
 
 ValueMapper::ValueMapper(ValueToValueMapTy &VM, RemapFlags Flags,
                          ValueMapTypeRemapper *TypeMapper,
-                         ValueMaterializer *Materializer)
-    : pImpl(new Mapper(VM, Flags, TypeMapper, Materializer)) {}
+                         ValueMaterializer *Materializer,
+                         const MetadataSetTy *IdentityMD)
+    : pImpl(new Mapper(VM, Flags, TypeMapper, Materializer, IdentityMD)) {}
 
 ValueMapper::~ValueMapper() { delete getAsMapper(pImpl); }
 

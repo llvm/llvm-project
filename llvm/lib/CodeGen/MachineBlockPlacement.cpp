@@ -3178,11 +3178,11 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     // Conservative default.
     bool InWorkList = true;
     // Remove from the Chain and Chain Map
-    if (BlockToChain.count(RemBB)) {
-      BlockChain *Chain = BlockToChain[RemBB];
+    if (auto It = BlockToChain.find(RemBB); It != BlockToChain.end()) {
+      BlockChain *Chain = It->second;
       InWorkList = Chain->UnscheduledPredecessors == 0;
       Chain->remove(RemBB);
-      BlockToChain.erase(RemBB);
+      BlockToChain.erase(It);
     }
 
     // Handle the unplaced block iterator

@@ -147,7 +147,7 @@ linalg::isaBroadcastOpInterface(GenericOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// TranposeOpInterface implementation
+// TransposeOpInterface implementation
 //===----------------------------------------------------------------------===//
 std::optional<SmallVector<int64_t>>
 linalg::isaTransposeOpInterface(GenericOp op) {
@@ -1090,19 +1090,6 @@ SmallVector<Range, 4> LinalgOp::createLoopRanges(OpBuilder &b, Location loc) {
       res[d.getPosition()] =
           Range{b.getIndexAttr(0), viewSizes[idx], b.getIndexAttr(1)};
     }
-  }
-  return res;
-}
-
-SmallVector<int64_t, 4> LinalgOp::computeStaticLoopSizes() {
-  AffineMap map = getLoopsToShapesMap();
-  unsigned numDims = map.getNumDims(), numRes = map.getNumResults();
-  SmallVector<int64_t, 4> allShapeSizes = createFlatListOfOperandStaticDims();
-  SmallVector<int64_t, 4> res(numDims, 0);
-  for (unsigned idx = 0; idx < numRes; ++idx) {
-    auto result = map.getResult(idx);
-    if (auto d = dyn_cast<AffineDimExpr>(result))
-      res[d.getPosition()] = allShapeSizes[idx];
   }
   return res;
 }

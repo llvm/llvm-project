@@ -2158,6 +2158,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPAssumeDirective = 309,
 
+  /** OpenMP assume directive.
+   */
+  CXCursor_OMPStripeDirective = 310,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -2206,7 +2210,11 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCUpdateConstruct = 331,
 
-  CXCursor_LastStmt = CXCursor_OpenACCUpdateConstruct,
+  /** OpenACC atomic Construct.
+   */
+  CXCursor_OpenACCAtomicConstruct = 332,
+
+  CXCursor_LastStmt = CXCursor_OpenACCAtomicConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -5905,66 +5913,6 @@ CINDEX_LINKAGE const char *clang_EvalResult_getAsStr(CXEvalResult E);
  * Disposes the created Eval memory.
  */
 CINDEX_LINKAGE void clang_EvalResult_dispose(CXEvalResult E);
-/**
- * @}
- */
-
-/** \defgroup CINDEX_REMAPPING Remapping functions
- *
- * @{
- */
-
-/**
- * A remapping of original source files and their translated files.
- */
-typedef void *CXRemapping;
-
-/**
- * Retrieve a remapping.
- *
- * \param path the path that contains metadata about remappings.
- *
- * \returns the requested remapping. This remapping must be freed
- * via a call to \c clang_remap_dispose(). Can return NULL if an error occurred.
- */
-CINDEX_LINKAGE CXRemapping clang_getRemappings(const char *path);
-
-/**
- * Retrieve a remapping.
- *
- * \param filePaths pointer to an array of file paths containing remapping info.
- *
- * \param numFiles number of file paths.
- *
- * \returns the requested remapping. This remapping must be freed
- * via a call to \c clang_remap_dispose(). Can return NULL if an error occurred.
- */
-CINDEX_LINKAGE
-CXRemapping clang_getRemappingsFromFileList(const char **filePaths,
-                                            unsigned numFiles);
-
-/**
- * Determine the number of remappings.
- */
-CINDEX_LINKAGE unsigned clang_remap_getNumFiles(CXRemapping);
-
-/**
- * Get the original and the associated filename from the remapping.
- *
- * \param original If non-NULL, will be set to the original filename.
- *
- * \param transformed If non-NULL, will be set to the filename that the original
- * is associated with.
- */
-CINDEX_LINKAGE void clang_remap_getFilenames(CXRemapping, unsigned index,
-                                             CXString *original,
-                                             CXString *transformed);
-
-/**
- * Dispose the remapping.
- */
-CINDEX_LINKAGE void clang_remap_dispose(CXRemapping);
-
 /**
  * @}
  */

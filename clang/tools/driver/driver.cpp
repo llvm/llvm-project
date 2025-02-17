@@ -318,6 +318,10 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(Args);
+  // Driver's diagnostics don't use suppression mappings, so don't bother
+  // parsing them. CC1 still receives full args, so this doesn't impact other
+  // actions.
+  DiagOpts->DiagnosticSuppressionMappingsFile.clear();
 
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);

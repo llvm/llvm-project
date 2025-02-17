@@ -17,5 +17,7 @@ functions:
     standards:
       - stdc
     return_type: int
+    attributes:
+      - _Returns_twice
     arguments:
       - type: jmp_buf

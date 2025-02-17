@@ -39,8 +39,8 @@ enum BackendAction {
   Backend_EmitObj       ///< Emit native object files
 };
 
-void emitBackendOutput(CompilerInstance &CI, StringRef TDesc, llvm::Module *M,
-                       BackendAction Action,
+void emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
+                       StringRef TDesc, llvm::Module *M, BackendAction Action,
                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                        std::unique_ptr<raw_pwrite_stream> OS,
                        BackendConsumer *BC = nullptr);

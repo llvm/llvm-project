@@ -839,6 +839,12 @@ def BuiltinAssumeAligned : Builtin {
   let Prototype = "void*(void const*, size_t, ...)";
 }
 
+def BuiltinAssumeDereferenceable : Builtin {
+  let Spellings = ["__builtin_assume_dereferenceable"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(void const*, _Constant size_t)";
+}
+
 def BuiltinFree : Builtin {
   let Spellings = ["__builtin_free"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
@@ -1977,16 +1983,16 @@ def AtomicNandFetch : AtomicBuiltin {
   let Prototype = "void(...)";
 }
 
-def AtomicTestAndSet : Builtin {
+def AtomicTestAndSet : AtomicBuiltin {
   let Spellings = ["__atomic_test_and_set"];
-  let Attributes = [NoThrow];
-  let Prototype = "bool(void volatile*, int)";
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "bool(...)";
 }
 
-def AtomicClear : Builtin {
+def AtomicClear : AtomicBuiltin {
   let Spellings = ["__atomic_clear"];
-  let Attributes = [NoThrow];
-  let Prototype = "void(void volatile*, int)";
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 def AtomicThreadFence : Builtin {
@@ -4793,6 +4799,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int(bool)";
+}
+
+def HLSLWaveActiveMax : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_max"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
 }
 
 def HLSLWaveActiveSum : LangBuiltin<"HLSL_LANG"> {

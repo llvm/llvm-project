@@ -214,12 +214,23 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
 
   let arguments = (ins
     FlatSymbolRefAttr:$callee,
-    Variadic<SPIRV_Type>:$arguments
+    Variadic<SPIRV_Type>:$arguments,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
 
   let results = (outs
     Optional<SPIRV_Type>:$return_value
   );
+
+  let builders = [
+    OpBuilder<(ins "Type":$returnType, "FlatSymbolRefAttr":$callee,
+      "ValueRange":$arguments),
+    [{
+      build($_builder, $_state, returnType, callee, arguments,
+            /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
+    }]>
+  ];
 
   let autogenSerialization = 0;
 

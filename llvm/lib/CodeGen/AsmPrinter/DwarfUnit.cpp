@@ -232,6 +232,42 @@ void DwarfUnit::addUInt(DIEValueList &Block, dwarf::Form Form,
   addUInt(Block, (dwarf::Attribute)0, Form, Integer);
 }
 
+void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val) {
+  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
+
+  // Get the raw data form of the large APInt.
+  const uint64_t *Ptr64 = Val.getRawData();
+
+  int NumBytes = Val.getBitWidth() / 8; // 8 bits per byte.
+  bool LittleEndian = Asm->getDataLayout().isLittleEndian();
+
+  // Output the constant to DWARF one byte at a time.
+  for (int i = 0; i < NumBytes; i++) {
+    uint8_t c;
+    if (LittleEndian)
+      c = Ptr64[i / 8] >> (8 * (i & 7));
+    else
+      c = Ptr64[(NumBytes - 1 - i) / 8] >> (8 * ((NumBytes - 1 - i) & 7));
+    addUInt(*Block, dwarf::DW_FORM_data1, c);
+  }
+
+  addBlock(Die, Attribute, Block);
+}
+
+void DwarfUnit::addInt(DIE &Die, dwarf::Attribute Attribute,
+		       const APInt &Val, bool Unsigned) {
+  unsigned CIBitWidth = Val.getBitWidth();
+  if (CIBitWidth <= 64) {
+    if (Unsigned)
+      addUInt(Die, Attribute, std::nullopt, Val.getZExtValue());
+    else
+      addSInt(Die, Attribute, std::nullopt, Val.getSExtValue());
+    return;
+  }
+
+  addIntAsBlock(Die, Attribute, Val);
+}
+
 void DwarfUnit::addSInt(DIEValueList &Die, dwarf::Attribute Attribute,
                         std::optional<dwarf::Form> Form, int64_t Integer) {
   if (!Form)
@@ -484,25 +520,7 @@ void DwarfUnit::addConstantValue(DIE &Die, const APInt &Val, bool Unsigned) {
     return;
   }
 
-  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
-
-  // Get the raw data form of the large APInt.
-  const uint64_t *Ptr64 = Val.getRawData();
-
-  int NumBytes = Val.getBitWidth() / 8; // 8 bits per byte.
-  bool LittleEndian = Asm->getDataLayout().isLittleEndian();
-
-  // Output the constant to DWARF one byte at a time.
-  for (int i = 0; i < NumBytes; i++) {
-    uint8_t c;
-    if (LittleEndian)
-      c = Ptr64[i / 8] >> (8 * (i & 7));
-    else
-      c = Ptr64[(NumBytes - 1 - i) / 8] >> (8 * ((NumBytes - 1 - i) & 7));
-    addUInt(*Block, dwarf::DW_FORM_data1, c);
-  }
-
-  addBlock(Die, dwarf::DW_AT_const_value, Block);
+  addIntAsBlock(Die, dwarf::DW_AT_const_value, Val);
 }
 
 void DwarfUnit::addLinkageName(DIE &Die, StringRef LinkageName) {
@@ -849,9 +867,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   }
 }
 
-DIE *DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
-  // Args[0] is the return type.
-  DIE *ObjectPointer = nullptr;
+void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
   for (unsigned i = 1, N = Args.size(); i < N; ++i) {
     const DIType *Ty = Args[i];
     if (!Ty) {
@@ -862,14 +878,8 @@ DIE *DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
       addType(Arg, Ty);
       if (Ty->isArtificial())
         addFlag(Arg, dwarf::DW_AT_artificial);
-      if (Ty->isObjectPointer()) {
-        assert(!ObjectPointer && "Can't have more than one object pointer");
-        ObjectPointer = &Arg;
-      }
     }
   }
-
-  return ObjectPointer;
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
@@ -980,12 +990,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           DIE &Variant = createAndAddDIE(dwarf::DW_TAG_variant, Buffer);
           if (const ConstantInt *CI =
               dyn_cast_or_null<ConstantInt>(DDTy->getDiscriminantValue())) {
-            if (DD->isUnsignedDIType(Discriminator->getBaseType()))
-              addUInt(Variant, dwarf::DW_AT_discr_value, std::nullopt,
-                      CI->getZExtValue());
-            else
-              addSInt(Variant, dwarf::DW_AT_discr_value, std::nullopt,
-                      CI->getSExtValue());
+	    addInt(Variant, dwarf::DW_AT_discr_value, CI->getValue(),
+		   DD->isUnsignedDIType(Discriminator->getBaseType()));
           }
           constructMemberDIE(Variant, DDTy);
         } else {
@@ -1141,6 +1147,8 @@ void DwarfUnit::constructTemplateValueParameterDIE(
   if (Metadata *Val = VP->getValue()) {
     if (ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Val))
       addConstantValue(ParamDIE, CI, VP->getType());
+    else if (ConstantFP *CF = mdconst::dyn_extract<ConstantFP>(Val))
+      addConstantFPValue(ParamDIE, CF);
     else if (GlobalValue *GV = mdconst::dyn_extract<GlobalValue>(Val)) {
       // We cannot describe the location of dllimport'd entities: the
       // computation of their address requires loads from the IAT.
@@ -1366,8 +1374,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
     // Add arguments. Do not add arguments for subprogram definition. They will
     // be handled while processing variables.
-    if (auto *ObjectPointer = constructSubprogramArguments(SPDie, Args))
-      addDIEEntry(SPDie, dwarf::DW_AT_object_pointer, *ObjectPointer);
+    constructSubprogramArguments(SPDie, Args);
   }
 
   addThrownTypes(SPDie, SP->getThrownTypes());
@@ -1623,6 +1630,9 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     if (DD->getDwarfVersion() >= 4 && (CTy->getFlags() & DINode::FlagEnumClass))
       addFlag(Buffer, dwarf::DW_AT_enum_class);
   }
+
+  if (auto Kind = CTy->getEnumKind())
+    addUInt(Buffer, dwarf::DW_AT_APPLE_enum_kind, dwarf::DW_FORM_data1, *Kind);
 
   auto *Context = CTy->getScope();
   bool IndexEnumerators = !Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||

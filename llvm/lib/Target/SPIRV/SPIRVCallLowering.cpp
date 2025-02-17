@@ -544,13 +544,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
 
   bool isFunctionDecl = CF && CF->isDeclaration();
-  bool canUseOpenCL = ST->canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std);
-  bool canUseGLSL = ST->canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450);
-  assert(canUseGLSL != canUseOpenCL &&
-         "Scenario where both sets are enabled is not supported.");
-
-  if (isFunctionDecl && !DemangledName.empty() &&
-      (canUseGLSL || canUseOpenCL)) {
+  if (isFunctionDecl && !DemangledName.empty()) {
     if (ResVReg.isValid()) {
       if (!GR->getSPIRVTypeForVReg(ResVReg)) {
         const Type *RetTy = OrigRetTy;
@@ -607,11 +601,9 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                    GR->getPointerSize()));
       }
     }
-    auto instructionSet = canUseOpenCL ? SPIRV::InstructionSet::OpenCL_std
-                                       : SPIRV::InstructionSet::GLSL_std_450;
     if (auto Res =
-            SPIRV::lowerBuiltin(DemangledName, instructionSet, MIRBuilder,
-                                ResVReg, OrigRetTy, ArgVRegs, GR))
+            SPIRV::lowerBuiltin(DemangledName, ST->getPreferredInstructionSet(),
+                                MIRBuilder, ResVReg, OrigRetTy, ArgVRegs, GR))
       return *Res;
   }
 
