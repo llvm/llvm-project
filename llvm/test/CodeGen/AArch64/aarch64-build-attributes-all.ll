@@ -2,9 +2,9 @@
 ; RUN: llc %s -filetype=obj -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
 
 ; ASM:      .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
-; ASM-NEXT: .aeabi_attribute	Tag_Feature_BTI, 1
-; ASM-NEXT: .aeabi_attribute	Tag_Feature_PAC, 1
-; ASM-NEXT: .aeabi_attribute	Tag_Feature_GCS, 1
+; ASM-NEXT: .aeabi_attribute	0, 1 @ Tag_Feature_BTI
+; ASM-NEXT: .aeabi_attribute	1, 1 @ Tag_Feature_PAC
+; ASM-NEXT: .aeabi_attribute	2, 1 @ Tag_Feature_GCS
 
 ; ELF: Hex dump of section '.ARM.attributes':
 ; ELF-NEXT: 0x00000000 41230000 00616561 62695f66 65617475 A#...aeabi_featu

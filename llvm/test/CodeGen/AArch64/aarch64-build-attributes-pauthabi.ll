@@ -2,8 +2,8 @@
 ; RUN: llc %s -filetype=obj -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
 
 ; ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
-; ASM-NEXT: .aeabi_attribute	Tag_PAuth_Platform, 2
-; ASM-NEXT: .aeabi_attribute	Tag_PAuth_Schema, 31
+; ASM-NEXT: .aeabi_attribute	1, 2 @ Tag_PAuth_Platform
+; ASM-NEXT: .aeabi_attribute	2, 31 @ Tag_PAuth_Schema
 
 ; ELF: Hex dump of section '.ARM.attributes':
 ; ELF-NEXT: 0x00000000 41190000 00616561 62695f70 61757468 A....aeabi_pauth

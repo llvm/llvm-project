@@ -7947,7 +7947,12 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     }
   }
   Parser.Lex();
-  // Parsing finished, check for trailing tokens.
+
+  // Parsing finished, hereafter only accept comments; otherwise no trailing
+  // tokens.
+  if (Parser.getTok().is(llvm::AsmToken::At)) {
+    Parser.parseStringToEndOfStatement();
+  }
   if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
     Error(Parser.getTok().getLoc(), "unexpected token for AArch64 build "
                                     "attributes subsection header directive");
@@ -8070,7 +8075,12 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
     }
   }
   Parser.Lex();
-  // Parsing finished, check for trailing tokens.
+
+  // Parsing finished, hereafter only accept comments; otherwise no trailing
+  // tokens.
+  if (Parser.getTok().is(llvm::AsmToken::At)) {
+    Parser.parseStringToEndOfStatement();
+  }
   if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
     Error(Parser.getTok().getLoc(),
           "unexpected token for AArch64 build attributes tag and value "
@@ -8082,7 +8092,6 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
     getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, ValueInt, "",
                                       false);
   }
-
   if ("" != ValueStr) {
     getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, unsigned(-1),
                                       ValueStr, false);
