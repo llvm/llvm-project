@@ -663,7 +663,10 @@ typedef __char32_t char32_t;
 #    if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                                                     \
          __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500) ||                                                    \
         (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) &&                                                    \
-         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 130000)
+         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 130000) ||                                                   \
+        (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) &&                                                     \
+         __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 60000) ||                                                     \
+        (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 130000)
 #      define _LIBCPP_HAS_C11_ALIGNED_ALLOC 0
 #    else
 #      define _LIBCPP_HAS_C11_ALIGNED_ALLOC 1
