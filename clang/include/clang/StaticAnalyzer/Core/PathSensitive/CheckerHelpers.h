@@ -73,23 +73,6 @@ Nullability getNullabilityAnnotation(QualType Type);
 /// returned.
 std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP);
 
-class CachedMacroValue {
-public:
-  CachedMacroValue(StringRef MacroSpelling, const Preprocessor &PP)
-      : MacroValueOrFailure(tryExpandAsInteger(MacroSpelling, PP)) {}
-  explicit CachedMacroValue(int ConcreteValue)
-      : MacroValueOrFailure(ConcreteValue) {}
-
-  int valueOr(int Default) const {
-    return MacroValueOrFailure.value_or(Default);
-  }
-  bool hasValue() const { return MacroValueOrFailure.has_value(); }
-  int value() const { return MacroValueOrFailure.value(); }
-
-private:
-  std::optional<int> MacroValueOrFailure;
-};
-
 class OperatorKind {
   union {
     BinaryOperatorKind Bin;

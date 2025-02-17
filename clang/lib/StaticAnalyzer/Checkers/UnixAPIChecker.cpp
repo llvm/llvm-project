@@ -40,15 +40,15 @@ enum class OpenVariant {
   OpenAt
 };
 
-static CachedMacroValue getCreateFlagValue(const ASTContext &Ctx,
-                                           const Preprocessor &PP) {
-  CachedMacroValue MacroVal("O_CREAT", PP);
-  if (MacroVal.hasValue())
+static std::optional<int> getCreateFlagValue(const ASTContext &Ctx,
+                                             const Preprocessor &PP) {
+  std::optional<int> MacroVal = tryExpandAsInteger("O_CREAT", PP);
+  if (MacroVal.has_value())
     return MacroVal;
 
   // If we failed, fall-back to known values.
   if (Ctx.getTargetInfo().getTriple().getVendor() == llvm::Triple::Apple)
-    return CachedMacroValue{0x0200};
+    return {0x0200};
   return MacroVal;
 }
 
@@ -61,7 +61,7 @@ class UnixAPIMisuseChecker : public Checker<check::PreCall> {
   const BugType BT_pthreadOnce{this, "Improper use of 'pthread_once'",
                                categories::UnixAPI};
   const BugType BT_ArgumentNull{this, "NULL pointer", categories::UnixAPI};
-  const CachedMacroValue Val_O_CREAT;
+  const std::optional<int> Val_O_CREAT;
 
   ProgramStateRef
   EnsurePtrNotNull(SVal PtrVal, const Expr *PtrExpr, CheckerContext &C,
@@ -262,7 +262,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
     return;
   }
 
-  if (!Val_O_CREAT.hasValue()) {
+  if (!Val_O_CREAT.has_value()) {
     return;
   }
 
