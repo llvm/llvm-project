@@ -40,7 +40,7 @@ constexpr void compareViews(View v, std::initializer_list<int> list) {
   auto e2 = list.end();
   for (; b1 != e1 && b2 != e2;) {
     assert(*b1 == *b2);
-    ++b1; 
+    ++b1;
     ++b2;
   }
   assert(b1 == e1);
