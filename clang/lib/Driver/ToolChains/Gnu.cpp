@@ -546,11 +546,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString("--thinlto-remote-opt-tool=" +
                            Twine(ToolChain.getDriver().getClangProgramPath())));
 
-    for (const Arg *A : Args.filtered(options::OPT_Xdist)) {
-      A->claim();
-      CmdArgs.push_back(Args.MakeArgString("-mllvm=-thinlto-distributor-arg=" +
-                                           Twine(A->getValue())));
-    }
+    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+      CmdArgs.push_back(Args.MakeArgString("-mllvm=-thinlto-distributor-arg=" + A));
   }
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))

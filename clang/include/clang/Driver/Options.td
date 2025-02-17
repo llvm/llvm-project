@@ -969,7 +969,7 @@ def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   Visibility<[ClangOption, CLOption, FlangOption]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
-def Xdist : Separate<["-"], "Xdist">, Flags<[LinkOption]>,
+def Xthinlto_distributor_EQ : CommaJoined<["-"], "Xthinlto-distributor=">, Flags<[LinkOption]>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Pass <arg> to the ThinLTO distributor">,
   MetaVarName<"<arg>">, Group<Link_Group>;

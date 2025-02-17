@@ -3,8 +3,8 @@
 // REQUIRES: lld
 
 // RUN: echo "--target=x86_64-linux-gnu \
-// RUN:   -Xdist distarg1 \
-// RUN:   -Xdist distarg2 \
+// RUN:   -Xthinlto-distributor=distarg1 \
+// RUN:   -Xthinlto-distributor=distarg2,distarg3 \
 // RUN:   -fuse-ld=lld" > %t.rsp
 
 
@@ -17,16 +17,17 @@
 // CHECK-SAME: "--thinlto-remote-opt-tool={{.*}}clang
 // CHECK-SAME: "-mllvm=-thinlto-distributor-arg=distarg1"
 // CHECK-SAME: "-mllvm=-thinlto-distributor-arg=distarg2"
+// CHECK-SAME: "-mllvm=-thinlto-distributor-arg=distarg3"
 
 
 /// Check that options are not added without --thinlto-distributor= and
-/// that there is an unused option warning issued for -Xdist options. We
+/// that there is an unused option warning issued for -Xthinlto-distributor= options. We
 /// specify -flto here as these options should be unaffected by it.
 // RUN: %clang -### @%t.rsp -flto=thin %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefixes=NONE,NOMORE --implicit-check-not=warning
 
-// NONE: warning: argument unused during compilation: '-Xdist distarg1'
-// NONE: warning: argument unused during compilation: '-Xdist distarg2'
+// NONE: warning: argument unused during compilation: '-Xthinlto-distributor=distarg1'
+// NONE: warning: argument unused during compilation: '-Xthinlto-distributor=distarg2,distarg3'
 // NONE:     ld.lld
 // NOMORE-NOT: --thinlto-distributor=
 // NOMORE-NOT: --thinlto-remote-opt-tool=

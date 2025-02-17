@@ -8,7 +8,7 @@
 
 // RUN: %clang --target=x86_64-linux-gnu %s -shared -flto=thin \
 // RUN:   -fthinlto-distributor=%python \
-// RUN:   -Xdist %llvm_src_root/utils/dtlto/local.py \
+// RUN:   -Xthinlto-distributor=%llvm_src_root/utils/dtlto/local.py \
 // RUN:   --save-temps \
 // RUN:   -fuse-ld=lld \
 // RUN:   -nostdlib \

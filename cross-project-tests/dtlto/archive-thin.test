@@ -26,7 +26,7 @@
 # RUN:   %t.dir/foo.a %t.dir/lib/bar.a ../_start.a %t.dir/cat.a -Wl,--whole-archive,../dog.a \
 # RUN:   -flto=thin \
 # RUN:   -fthinlto-distributor=%python \
-# RUN:   -Xdist %llvm_src_root/utils/dtlto/local.py \
+# RUN:   -Xthinlto-distributor=%llvm_src_root/utils/dtlto/local.py \
 # RUN:   --save-temps \
 # RUN:   -fuse-ld=lld \
 # RUN:   -nostdlib \

@@ -258,13 +258,14 @@ DTLTO requires the LLD linker (``-fuse-ld=lld``).
    - Specifies the ``<path>`` to the distributor process executable for DTLTO.
    - If specified, ThinLTO backend compilations will be distributed by LLD.
 
-``-Xdist <arg>``
+``-Xthinlto-distributor=<arg>``
    - Pass ``<arg>`` to the distributor process (see ``-fthinlto-distributor=``).
    - Can be specified multiple times to pass multiple options.
+   - Can specify multiple options by separating them with commas.
 
 Examples:
-   - ``clang -flto=thin -fthinlto-distributor=incredibuild.exe -Xdist --verbose -fuse-ld=lld``
-   - ``clang -flto=thin -fthinlto-distributor=$(which python) -Xdist incredibuild.py -fuse-ld=lld``
+   - ``clang -flto=thin -fthinlto-distributor=incredibuild.exe -Xthinlto-distributor=--verbose,--j10 -fuse-ld=lld``
+   - ``clang -flto=thin -fthinlto-distributor=$(which python) -Xthinlto-distributor=incredibuild.py -fuse-ld=lld``
 
 If ``-fthinlto-distributor=`` is specified Clang supplies the path to a
 distributable optimization and code generation tool to LLD. Currently this tool

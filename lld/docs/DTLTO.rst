@@ -44,8 +44,8 @@ properties of the distribution system (as such additional input/output files may
 not be pushed to or fetched from distribution system nodes correctly). If such 
 options are required, then the distributor can be modified to accept switches 
 that specify additional input/output dependencies, and 
-``-Xdist``/``-thinlto-distributor-arg=`` can be used to pass such options through 
-to the distributor.
+``-mllvm -thinlto-distributor-arg=`` can be used to pass such options through to
+the distributor.
 
 Some LLD LTO options (e.g., ``--lto-sample-profile=<file>``) are supported. 
 Currently, other options are silently accepted but do not have the desired 
