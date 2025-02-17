@@ -3519,6 +3519,19 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[11], BK_Block);
   EXPECT_BRACE_KIND(Tokens[12], BK_Block);
 
+  Tokens = annotate("class foo {\n"
+                    "  foo() {}\n"
+                    "#if defined(_MSC_VER__clang____GNUC__FOO_) || \\\n"
+                    "    (defined(__GNUC__) && defined(FOO))\n"
+                    "  foo() {}\n"
+                    "#endif\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 36u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[7], BK_Block);
+  EXPECT_TOKEN(Tokens[26], tok::identifier, TT_CtorDtorDeclName);
+  EXPECT_TOKEN(Tokens[27], tok::l_paren, TT_FunctionDeclarationLParen);
+
   Tokens = annotate("a = class extends goog.a {};",
                     getGoogleStyle(FormatStyle::LK_JavaScript));
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
