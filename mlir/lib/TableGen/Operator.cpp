@@ -387,7 +387,8 @@ void Operator::populateTypeInferenceInfo(
   if (getTrait("::mlir::OpTrait::SameOperandsAndResultType")) {
     // Check for a non-variable length operand to use as the type anchor.
     auto *operandI = llvm::find_if(arguments, [](const Argument &arg) {
-      NamedTypeConstraint *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(arg);
+      NamedTypeConstraint *operand =
+          llvm::dyn_cast_if_present<NamedTypeConstraint *>(arg);
       return operand && !operand->isVariableLength();
     });
     if (operandI == arguments.end())
@@ -396,7 +397,7 @@ void Operator::populateTypeInferenceInfo(
     // All result types are inferred from the operand type.
     int operandIdx = operandI - arguments.begin();
     for (int i = 0; i < getNumResults(); ++i)
-      resultTypeMapping.emplace_back(operandIdx, "$_self");
+      resultTypeMapping.emplace_back(operandIdx, "$arg0");
 
     allResultsHaveKnownTypes = true;
     traits.push_back(Trait::create(inferTrait->getDefInit()));
@@ -424,12 +425,12 @@ void Operator::populateTypeInferenceInfo(
   for (auto [idx, infer] : llvm::enumerate(inference)) {
     if (getResult(idx).constraint.getBuilderCall()) {
       infer.sources.emplace_back(InferredResultType::mapResultIndex(idx),
-                                 "$_self");
+                                 "$arg0");
       infer.inferred = true;
     }
   }
 
-  // Use `AllTypesMatch` and `TypesMatchWith` operation traits to build the
+  // Use `AllTypesMatch` and `InferTypesFrom` operation traits to build the
   // result type inference graph.
   for (const Trait &trait : traits) {
     const Record &def = trait.getDef();
@@ -445,10 +446,11 @@ void Operator::populateTypeInferenceInfo(
       if (&traitDef->getDef() == inferTrait)
         return;
 
-    // The `TypesMatchWith` trait represents a 1 -> 1 type inference edge with a
+    // The `InferTypesFrom` trait represents a 1 -> 1 type inference edge with a
     // type transformer.
-    if (def.isSubClassOf("TypesMatchWith")) {
-      int target = argumentsAndResultsIndex.lookup(def.getValueAsString("rhs"));
+    if (def.isSubClassOf("InferTypesFrom")) {
+      int target =
+          argumentsAndResultsIndex.lookup(def.getValueAsString("target"));
       // Ignore operand type inference.
       if (InferredResultType::isArgIndex(target))
         continue;
@@ -457,8 +459,10 @@ void Operator::populateTypeInferenceInfo(
       // If the type of the result has already been inferred, do nothing.
       if (infer.inferred)
         continue;
-      int sourceIndex =
-          argumentsAndResultsIndex.lookup(def.getValueAsString("lhs"));
+      std::vector<StringRef> args = def.getValueAsListOfStrings("args");
+      assert(args.size() == 1 &&
+             "multiple arguments for result inference not yet supported.");
+      int sourceIndex = argumentsAndResultsIndex.lookup(args[0]);
       infer.sources.emplace_back(sourceIndex,
                                  def.getValueAsString("transformer").str());
       // Locally propagate inferredness.
@@ -493,7 +497,7 @@ void Operator::populateTypeInferenceInfo(
       for (int resultIndex : resultIndices) {
         ResultTypeInference &infer = inference[resultIndex];
         if (!infer.inferred) {
-          infer.sources.assign(1, {*fullyInferredIndex, "$_self"});
+          infer.sources.assign(1, {*fullyInferredIndex, "$arg0"});
           infer.inferred = true;
         }
       }
@@ -504,7 +508,7 @@ void Operator::populateTypeInferenceInfo(
           if (resultIndex == otherResultIndex)
             continue;
           inference[resultIndex].sources.emplace_back(
-              InferredResultType::unmapResultIndex(otherResultIndex), "$_self");
+              InferredResultType::unmapResultIndex(otherResultIndex), "$arg0");
         }
       }
     }

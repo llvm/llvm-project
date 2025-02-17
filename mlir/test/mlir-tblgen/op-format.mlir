@@ -4,6 +4,8 @@
 %i64 = "foo.op"() : () -> (i64)
 // CHECK: %[[I32:.*]] =
 %i32 = "foo.op"() : () -> (i32)
+// CHECK: %[[I64_I32_TUP:.*]]
+%i64_i32_tuple = "foo.op"() : () -> (tuple<i64, i32>)
 // CHECK: %[[MEMREF:.*]] =
 %memref = "foo.op"() : () -> (memref<1xf64>)
 
@@ -480,6 +482,13 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 
 // CHECK: test.format_types_match_context %[[I64]] : i64
 %ignored_res6 = test.format_types_match_context %i64 : i64
+
+//===----------------------------------------------------------------------===//
+// InferTypesFrom type inference
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.format_types_match_multiple_var
+%ignored_res6a = test.format_types_match_multiple_var %i64, %i64_i32_tuple  : i64 -> i32
 
 //===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference
