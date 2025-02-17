@@ -2474,19 +2474,29 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
   return getZExtOrTrunc(Op, SDLoc(Op), ShTy);
 }
 
-SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
-                                          SDValue Op2) {
-  EVT FullTy = Op2.getValueType();
+SDValue SelectionDAG::expandPartialReduceMLA(SDLoc DL, SDValue Acc,
+                                             SDValue Input1, SDValue Input2) {
+
+  EVT FullTy = Input1.getValueType();
+  unsigned Input2Opcode = Input2.getOpcode();
+
+  SDValue Input = Input1;
+  if ((Input2Opcode != ISD::SPLAT_VECTOR &&
+       Input2Opcode != ISD::BUILD_VECTOR) ||
+      !isOneConstant(Input2.getOperand(0)))
+    Input = getNode(ISD::MUL, DL, FullTy, Input1, Input2);
+
+  EVT ReducedTy = Acc.getValueType();
 
   unsigned Stride = ReducedTy.getVectorMinNumElements();
   unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
 
   // Collect all of the subvectors
-  std::deque<SDValue> Subvectors = {Op1};
+  std::deque<SDValue> Subvectors = {Acc};
   for (unsigned I = 0; I < ScaleFactor; I++) {
     auto SourceIndex = getVectorIdxConstant(I * Stride, DL);
     Subvectors.push_back(
-        getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {Op2, SourceIndex}));
+        getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {Input, SourceIndex}));
   }
 
   // Flatten the subvector tree

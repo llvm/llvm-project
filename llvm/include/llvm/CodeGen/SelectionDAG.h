@@ -1607,10 +1607,13 @@ public:
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
-  /// Create the DAG equivalent of vector_partial_reduce where Op1 and Op2 are
-  /// its operands and ReducedTY is the intrinsic's return type.
-  SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
-                              SDValue Op2);
+  /// Expands PARTIAL_REDUCE_S/UMLA nodes.
+  /// \p Acc Accumulator for where the result is stored for the partial
+  /// reduction operation.
+  /// \p Input1 First input for the partial reduction operation.
+  /// \p Input2 Second input for the partial reduction operation.
+  SDValue expandPartialReduceMLA(SDLoc DL, SDValue Acc, SDValue Input1,
+                                 SDValue Input2);
 
   /// Expands a node with multiple results to an FP or vector libcall. The
   /// libcall is expected to take all the operands of the \p Node followed by
