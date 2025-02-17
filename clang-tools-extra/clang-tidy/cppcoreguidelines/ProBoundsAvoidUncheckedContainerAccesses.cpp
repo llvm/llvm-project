@@ -111,10 +111,12 @@ void ProBoundsAvoidUncheckedContainerAccesses::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
       mapAnyOf(cxxOperatorCallExpr, cxxMemberCallExpr)
-          .with(callee(cxxMethodDecl(hasOverloadedOperatorName("[]"),
-                                     unless(matchers::matchesAnyListedName(
-                                         ExcludedClasses)))
-                           .bind("operator")))
+          .with(callee(
+              cxxMethodDecl(
+                  hasOverloadedOperatorName("[]"),
+                  anyOf(parameterCountIs(0), parameterCountIs(1)),
+                  unless(matchers::matchesAnyListedName(ExcludedClasses)))
+                  .bind("operator")))
           .bind("caller"),
       this);
 }
