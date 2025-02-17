@@ -176,6 +176,10 @@ Changes in existing checks
   <clang-tidy/checks/concurrency/mt-unsafe>` check by fixing a false positive
   where ``strerror`` was flagged as MT-unsafe.
 
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
+  fix false positives related to operator overloading and templates.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
@@ -233,10 +237,6 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
-
-- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
-  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
-  fix false positives related to operator overloading and templates.
 
 Removed checks
 ^^^^^^^^^^^^^^
