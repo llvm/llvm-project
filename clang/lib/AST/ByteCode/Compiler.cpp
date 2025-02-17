@@ -3029,7 +3029,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
     size_t NumElems = CAT->getZExtSize();
     const Function *Func = getFunction(E->getConstructor());
-    if (!Func || !Func->isConstexpr())
+    if (!Func)
       return false;
 
     // FIXME(perf): We're calling the constructor once per array element here,
