@@ -951,6 +951,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
 
+  if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(0)))) {
+    unsigned ZeroIdx = R.getOperand(0) == A ? 1 : 0;
+    return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(ZeroIdx));
+  }
+
   if (match(&R, m_Not(m_Not(m_VPValue(A)))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
 
