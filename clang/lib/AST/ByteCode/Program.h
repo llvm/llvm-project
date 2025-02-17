@@ -132,20 +132,22 @@ public:
   /// Context to manage declaration lifetimes.
   class DeclScope {
   public:
-    DeclScope(Program &P, const ValueDecl *VD) : P(P) {
-      P.startDeclaration(VD);
+    DeclScope(Program &P) : P(P), PrevDecl(P.CurrentDeclaration) {
+      ++P.LastDeclaration;
+      P.CurrentDeclaration = P.LastDeclaration;
     }
-    ~DeclScope() { P.endDeclaration(); }
+    ~DeclScope() { P.CurrentDeclaration = PrevDecl; }
 
   private:
     Program &P;
+    unsigned PrevDecl;
   };
 
   /// Returns the current declaration ID.
   std::optional<unsigned> getCurrentDecl() const {
     if (CurrentDeclaration == NoDeclaration)
-      return std::optional<unsigned>{};
-    return LastDeclaration;
+      return std::nullopt;
+    return CurrentDeclaration;
   }
 
 private:
@@ -218,20 +220,11 @@ private:
   }
 
   /// No declaration ID.
-  static constexpr unsigned NoDeclaration = (unsigned)-1;
+  static constexpr unsigned NoDeclaration = ~0u;
   /// Last declaration ID.
   unsigned LastDeclaration = 0;
   /// Current declaration ID.
   unsigned CurrentDeclaration = NoDeclaration;
-
-  /// Starts evaluating a declaration.
-  void startDeclaration(const ValueDecl *Decl) {
-    LastDeclaration += 1;
-    CurrentDeclaration = LastDeclaration;
-  }
-
-  /// Ends a global declaration.
-  void endDeclaration() { CurrentDeclaration = NoDeclaration; }
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
