@@ -406,7 +406,7 @@ public:
   ///
   /// e.g. %imm = S_MOV_B64 K[0:63]
   ///      USE %imm.sub1
-  /// This will return k[32:63]
+  /// This will return K[32:63]
   static std::optional<int64_t> extractSubregFromImm(int64_t ImmVal,
                                                      unsigned SubRegIndex);
 
