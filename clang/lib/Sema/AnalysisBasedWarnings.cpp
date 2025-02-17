@@ -544,10 +544,8 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
 namespace {
 
 struct CheckFallThroughDiagnostics {
-  unsigned diag_MaybeFallThrough_HasNoReturn;
-  unsigned diag_MaybeFallThrough_ReturnsNonVoid;
-  unsigned diag_AlwaysFallThrough_HasNoReturn;
-  unsigned diag_AlwaysFallThrough_ReturnsNonVoid;
+  unsigned diag_FallThrough_HasNoReturn;
+  unsigned diag_FallThrough_ReturnsNonVoid;
   unsigned diag_NeverFallThroughOrReturn;
   enum { Function, Block, Lambda, Coroutine } funMode;
   SourceLocation FuncLoc;
@@ -555,13 +553,9 @@ struct CheckFallThroughDiagnostics {
   static CheckFallThroughDiagnostics MakeForFunction(const Decl *Func) {
     CheckFallThroughDiagnostics D;
     D.FuncLoc = Func->getLocation();
-    D.diag_MaybeFallThrough_HasNoReturn =
+    D.diag_FallThrough_HasNoReturn =
       diag::warn_falloff_noreturn_function;
-    D.diag_MaybeFallThrough_ReturnsNonVoid =
-      diag::warn_maybe_falloff_nonvoid_function;
-    D.diag_AlwaysFallThrough_HasNoReturn =
-      diag::warn_falloff_noreturn_function;
-    D.diag_AlwaysFallThrough_ReturnsNonVoid =
+    D.diag_FallThrough_ReturnsNonVoid =
       diag::warn_falloff_nonvoid_function;
 
     // Don't suggest that virtual functions be marked "noreturn", since they
@@ -588,11 +582,8 @@ struct CheckFallThroughDiagnostics {
   static CheckFallThroughDiagnostics MakeForCoroutine(const Decl *Func) {
     CheckFallThroughDiagnostics D;
     D.FuncLoc = Func->getLocation();
-    D.diag_MaybeFallThrough_HasNoReturn = 0;
-    D.diag_MaybeFallThrough_ReturnsNonVoid =
-        diag::warn_maybe_falloff_nonvoid_coroutine;
-    D.diag_AlwaysFallThrough_HasNoReturn = 0;
-    D.diag_AlwaysFallThrough_ReturnsNonVoid =
+    D.diag_FallThrough_HasNoReturn = 0;
+    D.diag_FallThrough_ReturnsNonVoid =
         diag::warn_falloff_nonvoid_coroutine;
     D.diag_NeverFallThroughOrReturn = 0;
     D.funMode = Coroutine;
@@ -601,13 +592,9 @@ struct CheckFallThroughDiagnostics {
 
   static CheckFallThroughDiagnostics MakeForBlock() {
     CheckFallThroughDiagnostics D;
-    D.diag_MaybeFallThrough_HasNoReturn =
+    D.diag_FallThrough_HasNoReturn =
       diag::err_noreturn_block_has_return_expr;
-    D.diag_MaybeFallThrough_ReturnsNonVoid =
-      diag::err_maybe_falloff_nonvoid_block;
-    D.diag_AlwaysFallThrough_HasNoReturn =
-      diag::err_noreturn_block_has_return_expr;
-    D.diag_AlwaysFallThrough_ReturnsNonVoid =
+    D.diag_FallThrough_ReturnsNonVoid =
       diag::err_falloff_nonvoid_block;
     D.diag_NeverFallThroughOrReturn = 0;
     D.funMode = Block;
@@ -616,13 +603,9 @@ struct CheckFallThroughDiagnostics {
 
   static CheckFallThroughDiagnostics MakeForLambda() {
     CheckFallThroughDiagnostics D;
-    D.diag_MaybeFallThrough_HasNoReturn =
+    D.diag_FallThrough_HasNoReturn =
       diag::err_noreturn_lambda_has_return_expr;
-    D.diag_MaybeFallThrough_ReturnsNonVoid =
-      diag::warn_maybe_falloff_nonvoid_lambda;
-    D.diag_AlwaysFallThrough_HasNoReturn =
-      diag::err_noreturn_lambda_has_return_expr;
-    D.diag_AlwaysFallThrough_ReturnsNonVoid =
+    D.diag_FallThrough_ReturnsNonVoid =
       diag::warn_falloff_nonvoid_lambda;
     D.diag_NeverFallThroughOrReturn = 0;
     D.funMode = Lambda;
@@ -633,7 +616,7 @@ struct CheckFallThroughDiagnostics {
                         bool HasNoReturn) const {
     if (funMode == Function) {
       return (ReturnsVoid ||
-              D.isIgnored(diag::warn_maybe_falloff_nonvoid_function,
+              D.isIgnored(diag::warn_falloff_nonvoid_function,
                           FuncLoc)) &&
              (!HasNoReturn ||
               D.isIgnored(diag::warn_noreturn_function_has_return_expr,
@@ -643,8 +626,8 @@ struct CheckFallThroughDiagnostics {
     }
     if (funMode == Coroutine) {
       return (ReturnsVoid ||
-              D.isIgnored(diag::warn_maybe_falloff_nonvoid_function, FuncLoc) ||
-              D.isIgnored(diag::warn_maybe_falloff_nonvoid_coroutine,
+              D.isIgnored(diag::warn_falloff_nonvoid_function, FuncLoc) ||
+              D.isIgnored(diag::warn_falloff_nonvoid_coroutine,
                           FuncLoc)) &&
              (!HasNoReturn);
     }
@@ -716,15 +699,15 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
 
     case MaybeFallThrough:
       if (HasNoReturn)
-        EmitDiag(RBrace, CD.diag_MaybeFallThrough_HasNoReturn);
+        EmitDiag(RBrace, CD.diag_FallThrough_HasNoReturn);
       else if (!ReturnsVoid)
-        EmitDiag(RBrace, CD.diag_MaybeFallThrough_ReturnsNonVoid);
+        S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid) << 1;
       break;
     case AlwaysFallThrough:
       if (HasNoReturn)
-        EmitDiag(RBrace, CD.diag_AlwaysFallThrough_HasNoReturn);
+        EmitDiag(RBrace, CD.diag_FallThrough_HasNoReturn);
       else if (!ReturnsVoid)
-        EmitDiag(RBrace, CD.diag_AlwaysFallThrough_ReturnsNonVoid);
+        S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid) << 0;
       break;
     case NeverFallThroughOrReturn:
       if (ReturnsVoid && !HasNoReturn && CD.diag_NeverFallThroughOrReturn) {
