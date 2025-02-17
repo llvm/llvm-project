@@ -67,8 +67,6 @@ static cl::opt<unsigned int> MaxMemInstrCount(
 
 namespace {
 
-using LoopVector = SmallVector<Loop *, 8>;
-
 // TODO: Check if we can use a sparse matrix here.
 using CharMatrix = std::vector<std::vector<char>>;
 
@@ -83,6 +81,14 @@ static cl::opt<unsigned int> MinLoopNestDepth(
 static cl::opt<unsigned int> MaxLoopNestDepth(
     "loop-interchange-max-loop-nest-depth", cl::init(10), cl::Hidden,
     cl::desc("Maximum depth of loop nest considered for the transform"));
+
+// Whether to apply by default.
+// TODO: Once this pass is enabled by default, remove this option and use the
+// value of PipelineTuningOptions.
+static cl::opt<bool> OnlyWhenForced(
+    "loop-interchange-only-when-forced", cl::init(false), cl::ReallyHidden,
+    cl::desc(
+        "Apply interchanges only when explicitly specified metadata exists"));
 
 #ifndef NDEBUG
 static void printDepMatrix(CharMatrix &DepMatrix) {
@@ -233,7 +239,7 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
   return true;
 }
 
-static void populateWorklist(Loop &L, LoopVector &LoopList) {
+static void populateWorklist(Loop &L, SmallVectorImpl<Loop *> &LoopList) {
   LLVM_DEBUG(dbgs() << "Calling populateWorklist on Func: "
                     << L.getHeader()->getParent()->getName() << " Loop: %"
                     << L.getHeader()->getName() << '\n');
@@ -245,7 +251,7 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
     // nested.
     // Discard all loops above it added into Worklist.
     if (Vec->size() != 1) {
-      LoopList = {};
+      LoopList.clear();
       return;
     }
 
@@ -254,27 +260,6 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
     Vec = &CurrentLoop->getSubLoops();
   }
   LoopList.push_back(CurrentLoop);
-}
-
-static bool hasSupportedLoopDepth(SmallVectorImpl<Loop *> &LoopList,
-                                  OptimizationRemarkEmitter &ORE) {
-  unsigned LoopNestDepth = LoopList.size();
-  if (LoopNestDepth < MinLoopNestDepth || LoopNestDepth > MaxLoopNestDepth) {
-    LLVM_DEBUG(dbgs() << "Unsupported depth of loop nest " << LoopNestDepth
-                      << ", the supported range is [" << MinLoopNestDepth
-                      << ", " << MaxLoopNestDepth << "].\n");
-    Loop **OuterLoop = LoopList.begin();
-    ORE.emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
-                                      (*OuterLoop)->getStartLoc(),
-                                      (*OuterLoop)->getHeader())
-             << "Unsupported depth of loop nest, the supported range is ["
-             << std::to_string(MinLoopNestDepth) << ", "
-             << std::to_string(MaxLoopNestDepth) << "].\n";
-    });
-    return false;
-  }
-  return true;
 }
 
 static bool isComputableLoopNest(ScalarEvolution *SE,
@@ -298,6 +283,26 @@ static bool isComputableLoopNest(ScalarEvolution *SE,
 }
 
 namespace {
+
+/// LoopInterchangeList manages the list of loops and the range to which the
+/// interchange may be applied.
+struct LoopInterchangeList {
+  SmallVector<Loop *, 8> LoopList;
+  unsigned ListBegin = 0;
+  unsigned ListEnd = 0;
+
+  LoopInterchangeList(LoopNest &LN)
+      : LoopList(LN.getLoops()), ListBegin(0), ListEnd(LoopList.size()) {}
+
+  LoopInterchangeList(Loop &L) {
+    populateWorklist(L, LoopList);
+    ListBegin = 0;
+    ListEnd = LoopList.size();
+  }
+
+  void checkMetadata(bool OnlyWhenForced);
+  bool hasSupportedLoopDepth(OptimizationRemarkEmitter &ORE);
+};
 
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
 class LoopInterchangeLegality {
@@ -439,39 +444,38 @@ struct LoopInterchange {
   bool run(Loop *L) {
     if (L->getParentLoop())
       return false;
-    SmallVector<Loop *, 8> LoopList;
-    populateWorklist(*L, LoopList);
-    return processLoopList(LoopList);
+    LoopInterchangeList LIL(*L);
+    return processLoopList(LIL);
   }
 
-  bool run(LoopNest &LN) {
-    SmallVector<Loop *, 8> LoopList(LN.getLoops());
+  bool run(LoopInterchangeList &LIL) {
+    const auto &LoopList = LIL.LoopList;
     for (unsigned I = 1; I < LoopList.size(); ++I)
       if (LoopList[I]->getParentLoop() != LoopList[I - 1])
         return false;
-    return processLoopList(LoopList);
+    return processLoopList(LIL);
   }
 
-  unsigned selectLoopForInterchange(ArrayRef<Loop *> LoopList) {
+  unsigned selectLoopForInterchange(LoopInterchangeList &LIL) {
     // TODO: Add a better heuristic to select the loop to be interchanged based
     // on the dependence matrix. Currently we select the innermost loop.
-    return LoopList.size() - 1;
+    return LIL.ListEnd - 1;
   }
 
-  bool processLoopList(SmallVectorImpl<Loop *> &LoopList) {
+  bool processLoopList(LoopInterchangeList &LIL) {
     bool Changed = false;
 
     // Ensure proper loop nest depth.
-    assert(hasSupportedLoopDepth(LoopList, *ORE) &&
+    assert(LIL.hasSupportedLoopDepth(*ORE) &&
            "Unsupported depth of loop nest.");
 
-    unsigned LoopNestDepth = LoopList.size();
+    unsigned LoopNestDepth = LIL.LoopList.size();
 
     LLVM_DEBUG(dbgs() << "Processing LoopList of size = " << LoopNestDepth
                       << "\n");
 
     CharMatrix DependencyMatrix;
-    Loop *OuterMostLoop = *(LoopList.begin());
+    Loop *OuterMostLoop = *(LIL.LoopList.begin());
     if (!populateDependencyMatrix(DependencyMatrix, LoopNestDepth,
                                   OuterMostLoop, DI, SE, ORE)) {
       LLVM_DEBUG(dbgs() << "Populating dependency matrix failed\n");
@@ -488,7 +492,7 @@ struct LoopInterchange {
       return false;
     }
 
-    unsigned SelecLoopId = selectLoopForInterchange(LoopList);
+    unsigned SelectLoopId = selectLoopForInterchange(LIL);
     // Obtain the loop vector returned from loop cache analysis beforehand,
     // and put each <Loop, index> pair into a map for constant time query
     // later. Indices in loop vector reprsent the optimal order of the
@@ -504,19 +508,20 @@ struct LoopInterchange {
         CostMap[LoopCosts[i].first] = i;
       }
     }
+
     // We try to achieve the globally optimal memory access for the loopnest,
     // and do interchange based on a bubble-sort fasion. We start from
     // the innermost loop, move it outwards to the best possible position
     // and repeat this process.
-    for (unsigned j = SelecLoopId; j > 0; j--) {
+    for (unsigned j = LIL.ListEnd - LIL.ListBegin - 1; j > 0; j--) {
       bool ChangedPerIter = false;
-      for (unsigned i = SelecLoopId; i > SelecLoopId - j; i--) {
-        bool Interchanged = processLoop(LoopList[i], LoopList[i - 1], i, i - 1,
-                                        DependencyMatrix, CostMap);
+      for (unsigned i = SelectLoopId; i > SelectLoopId - j; i--) {
+        bool Interchanged = processLoop(LIL.LoopList[i], LIL.LoopList[i - 1], i,
+                                        i - 1, DependencyMatrix, CostMap);
         if (!Interchanged)
           continue;
         // Loops interchanged, update LoopList accordingly.
-        std::swap(LoopList[i - 1], LoopList[i]);
+        std::swap(LIL.LoopList[i - 1], LIL.LoopList[i]);
         // Update the DependencyMatrix
         interChangeDependencies(DependencyMatrix, i, i - 1);
 
@@ -526,6 +531,7 @@ struct LoopInterchange {
         ChangedPerIter |= Interchanged;
         Changed |= Interchanged;
       }
+
       // Early abort if there was no interchange during an entire round of
       // moving loops outwards.
       if (!ChangedPerIter)
@@ -571,6 +577,70 @@ struct LoopInterchange {
 };
 
 } // end anonymous namespace
+
+bool LoopInterchangeList::hasSupportedLoopDepth(
+    OptimizationRemarkEmitter &ORE) {
+  unsigned LoopNestDepth = ListEnd - ListBegin;
+  if (LoopNestDepth < MinLoopNestDepth || LoopNestDepth > MaxLoopNestDepth) {
+    LLVM_DEBUG(dbgs() << "Unsupported depth of loop nest " << LoopNestDepth
+                      << ", the supported range is [" << MinLoopNestDepth
+                      << ", " << MaxLoopNestDepth << "].\n");
+    Loop *OuterLoop = LoopList[ListBegin];
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
+                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getHeader())
+             << "Unsupported depth of loop nest, the supported range is ["
+             << std::to_string(MinLoopNestDepth) << ", "
+             << std::to_string(MaxLoopNestDepth) << "].\n";
+    });
+    return false;
+  }
+  return true;
+}
+
+// Check the metadata for interchange. The outermost one is taken into account
+// and nested ones are ignored. The metadata affects the entire loop nest such
+// that the outermost loop is the loop for which the metadata is specified. For
+// example, in the following example, the loop-interchange will be performed
+// only to the outermost two loops, and the second pragma is ignored.
+//
+// for (...)
+//   for (...)
+//     #pragma clang loop interchange(disable)
+//     for (...)
+//       #pragma clang loop interchange(enable)
+//       for (...)
+//         for (...)
+//           Stmt
+//
+void LoopInterchangeList::checkMetadata(bool OnlyWhenForced) {
+  ListBegin = 0;
+  ListEnd = LoopList.size();
+
+  for (unsigned I = 0; I != LoopList.size(); I++) {
+    Loop *L = LoopList[I];
+    auto Value = findStringMetadataForLoop(L, "llvm.loop.interchange.enable");
+    if (!Value)
+      continue;
+
+    const MDOperand *Op = *Value;
+    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
+    bool Enabled = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+    if (Enabled && OnlyWhenForced) {
+      ListBegin = I;
+    } else if (!Enabled && !OnlyWhenForced) {
+      ListEnd = I;
+    } else if (OnlyWhenForced) {
+      ListEnd = 0;
+    }
+    break;
+  }
+
+  LLVM_DEBUG(
+      dbgs() << "LoopInterchange will be applied to the range: [from, to]=["
+             << ListBegin << ", " << ListEnd - 1 << "]\n";);
+}
 
 bool LoopInterchangeLegality::containsUnsafeInstructions(BasicBlock *BB) {
   return any_of(*BB, [](const Instruction &I) {
@@ -1748,7 +1818,7 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
                                            LoopStandardAnalysisResults &AR,
                                            LPMUpdater &U) {
   Function &F = *LN.getParent();
-  SmallVector<Loop *, 8> LoopList(LN.getLoops());
+  LoopInterchangeList LIL(LN);
 
   if (MaxMemInstrCount < 1) {
     LLVM_DEBUG(dbgs() << "MaxMemInstrCount should be at least 1");
@@ -1757,13 +1827,18 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   OptimizationRemarkEmitter ORE(&F);
 
   // Ensure minimum depth of the loop nest to do the interchange.
-  if (!hasSupportedLoopDepth(LoopList, ORE))
+  if (!LIL.hasSupportedLoopDepth(ORE))
     return PreservedAnalyses::all();
   // Ensure computable loop nest.
-  if (!isComputableLoopNest(&AR.SE, LoopList)) {
+  if (!isComputableLoopNest(&AR.SE, LIL.LoopList)) {
     LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
     return PreservedAnalyses::all();
   }
+
+  LIL.checkMetadata(OnlyWhenForced);
+  // Ensure the depth again.
+  if (!LIL.hasSupportedLoopDepth(ORE))
+    return PreservedAnalyses::all();
 
   ORE.emit([&]() {
     return OptimizationRemarkAnalysis(DEBUG_TYPE, "Dependence",
@@ -1776,7 +1851,7 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   std::unique_ptr<CacheCost> CC =
       CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
 
-  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, CC, &ORE).run(LN))
+  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, CC, &ORE).run(LIL))
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);
   return getLoopPassPreservedAnalyses();
