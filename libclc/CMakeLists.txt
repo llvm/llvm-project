@@ -243,30 +243,30 @@ add_custom_command(
   OUTPUT convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
   DEPENDS ${script_loc} )
-add_custom_target( "generate_convert.cl" DEPENDS convert.cl )
-set_target_properties( "generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
+add_custom_target( generate-convert.cl DEPENDS convert.cl )
+set_target_properties( generate-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 add_custom_command(
   OUTPUT clc-convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} --clc > clc-convert.cl
   DEPENDS ${script_loc} )
-add_custom_target( "clc-generate_convert.cl" DEPENDS clc-convert.cl )
-set_target_properties( "clc-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
+add_custom_target( generate-clc-convert.cl DEPENDS clc-convert.cl )
+set_target_properties( generate-clc-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 
 if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS_TO_BUILD )
   add_custom_command(
     OUTPUT clspv-convert.cl
     COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
     DEPENDS ${script_loc} )
-  add_custom_target( "clspv-generate_convert.cl" DEPENDS clspv-convert.cl )
-  set_target_properties( "clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
+  add_custom_target( generate-clspv-convert.cl DEPENDS clspv-convert.cl )
+  set_target_properties( generate-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 
   add_custom_command(
     OUTPUT clc-clspv-convert.cl
     COMMAND ${Python3_EXECUTABLE} ${script_loc} --clc --clspv > clc-clspv-convert.cl
     DEPENDS ${script_loc} )
-  add_custom_target( "clc-clspv-generate_convert.cl" DEPENDS clc-clspv-convert.cl )
-  set_target_properties( "clc-clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Sourcegenning" )
+  add_custom_target( generate-clc-clspv-convert.cl DEPENDS clc-clspv-convert.cl )
+  set_target_properties( generate-clc-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 endif()
 
 enable_testing()
@@ -324,9 +324,11 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   if( NOT ARCH STREQUAL spirv AND NOT ARCH STREQUAL spirv64 )
     if( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
       list( APPEND opencl_gen_files clspv-convert.cl )
-    elseif ( NOT ENABLE_RUNTIME_SUBNORMAL )
+    else()
       list( APPEND opencl_gen_files convert.cl )
-      list( APPEND opencl_lib_files generic/lib/subnormal_use_default.ll )
+      if ( NOT ENABLE_RUNTIME_SUBNORMAL )
+        list( APPEND opencl_lib_files generic/lib/subnormal_use_default.ll )
+      endif()
     endif()
   endif()
 
