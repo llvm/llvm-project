@@ -69,6 +69,8 @@ public:
 
   /// Return the input IR BasicBlock corresponding to \p VPB. Returns nullptr if
   /// there is no such corresponding block.
+  /// FIXME: This is a temporary workaround to drive the createBlockInMask.
+  /// Remove once mask creation is done on VPlan.
   BasicBlock *getIRBBForVPB(const VPBlockBase *VPB) const {
     return VPB2IRBB.lookup(VPB);
   }

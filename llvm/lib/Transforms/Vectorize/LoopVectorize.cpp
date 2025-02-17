@@ -9414,6 +9414,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
       RecipeBuilder.createHeaderMask();
     } else if (NeedsMasks) {
+      // FIXME: At the moment, masks need to be placed at the beginning of the
+      // block, as blends introduced for phi nodes need to use it. The created
+      // blends should be sunk after the mask recipes.
       RecipeBuilder.createBlockInMask(HCFGBuilder.getIRBBForVPB(VPBB));
     }
 
@@ -9423,22 +9426,22 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       auto *UnderlyingValue = SingleDef->getUnderlyingValue();
       // Skip recipes that do not need transforming, including canonical IV,
       // wide canonical IV and VPInstructions without underlying values. The
-      // latter are added above by masking.
+      // latter are added above for masking.
       // FIXME: Migrate code relying on the underlying instruction from VPlan0
       // to construct recipes below to not use the underlying instruction.
-      if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe>(SingleDef) ||
+      if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe>(&R) ||
           (isa<VPInstruction>(&R) && !UnderlyingValue))
         continue;
 
       // FIXME: VPlan0, which models a copy of the original scalar loop, should
       // not use VPWidenPHIRecipe to model the phis.
-      assert(
-          (isa<VPWidenPHIRecipe>(SingleDef) || isa<VPInstruction>(SingleDef)) &&
-          UnderlyingValue && "unsupported recipe");
+      assert((isa<VPWidenPHIRecipe>(&R) || isa<VPInstruction>(&R)) &&
+             UnderlyingValue && "unsupported recipe");
 
-      if (match(&R, m_BranchOnCond(m_VPValue())) ||
-          (isa<VPInstruction>(&R) &&
-           cast<VPInstruction>(&R)->getOpcode() == Instruction::Switch)) {
+      if (isa<VPInstruction>(&R) &&
+          (cast<VPInstruction>(&R)->getOpcode() ==
+               VPInstruction::BranchOnCond ||
+           (cast<VPInstruction>(&R)->getOpcode() == Instruction::Switch))) {
         R.eraseFromParent();
         break;
       }
@@ -9498,7 +9501,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
     // Flatten the CFG in the loop. Masks for blocks have already been generated
     // and added to recipes as needed. To do so, first disconnect VPBB from its
-    // successors. Then connect VPBB to the previously visited$ VPBB.
+    // successors. Then connect VPBB to the previously visited VPBB.
     for (auto *Succ : to_vector(VPBB->getSuccessors()))
       VPBlockUtils::disconnectBlocks(VPBB, Succ);
     if (PrevVPBB)
