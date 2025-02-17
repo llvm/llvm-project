@@ -449,7 +449,7 @@ void initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(PassRegistry &);
 extern char &AMDGPUOpenCLEnqueuedBlockLoweringLegacyID;
 
 void initializeGCNNSAReassignLegacyPass(PassRegistry &);
-extern char &GCNNSAReassignLegacyID;
+extern char &GCNNSAReassignID;
 
 void initializeGCNPreRALongBranchRegLegacyPass(PassRegistry &);
 extern char &GCNPreRALongBranchRegID;

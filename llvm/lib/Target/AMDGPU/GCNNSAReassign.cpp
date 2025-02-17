@@ -110,7 +110,7 @@ INITIALIZE_PASS_END(GCNNSAReassignLegacy, DEBUG_TYPE, "GCN NSA Reassign", false,
 
 char GCNNSAReassignLegacy::ID = 0;
 
-char &llvm::GCNNSAReassignLegacyID = GCNNSAReassignLegacy::ID;
+char &llvm::GCNNSAReassignID = GCNNSAReassignLegacy::ID;
 
 bool GCNNSAReassignImpl::tryAssignRegisters(
     SmallVectorImpl<LiveInterval *> &Intervals, unsigned StartReg) const {

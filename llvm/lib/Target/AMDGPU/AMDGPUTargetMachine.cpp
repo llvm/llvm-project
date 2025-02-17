@@ -1521,7 +1521,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
 bool GCNPassConfig::addPreRewrite() {
   if (EnableRegReassign)
-    addPass(&GCNNSAReassignLegacyID);
+    addPass(&GCNNSAReassignID);
   return true;
 }
 
