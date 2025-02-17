@@ -1244,7 +1244,7 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
     if (FD &&
         ((FD->getReturnType()->isPointerOrReferenceType() &&
           isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType())) ||
-          isGLSPointerType(FD->getReturnType())))
+         isGLSPointerType(FD->getReturnType())))
       return Report;
 
     return Abandon;
