@@ -99,7 +99,7 @@ MPIImplTraits::getCommWorld(mlir::ModuleOp &moduleOp, const mlir::Location loc,
   // get external opaque struct pointer type
   auto commStructT =
       mlir::LLVM::LLVMStructType::getOpaque("ompi_communicator_t", context);
-  const char *name = "ompi_mpi_comm_world";
+  mlir::StringRef name = "ompi_mpi_comm_world";
 
   // make sure global op definition exists
   (void)getOrDefineExternalStruct(moduleOp, loc, rewriter, name, commStructT);
@@ -114,7 +114,7 @@ mlir::Value
 MPIImplTraits::getDataType(mlir::ModuleOp &moduleOp, const mlir::Location loc,
                            mlir::ConversionPatternRewriter &rewriter,
                            mlir::Type type) {
-  const char *mtype = nullptr;
+  mlir::StringRef mtype = nullptr;
   if (type.isF32())
     mtype = "ompi_mpi_float";
   else if (type.isF64())

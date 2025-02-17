@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,9 +15,6 @@ namespace mlir {
 
 class LLVMTypeConverter;
 class RewritePatternSet;
-
-#define GEN_PASS_DECL_MPITOLLVMCONVERSIONPASS
-#include "mlir/Conversion/Passes.h.inc"
 
 namespace mpi {
 
