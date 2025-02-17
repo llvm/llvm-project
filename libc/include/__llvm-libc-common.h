@@ -47,8 +47,10 @@
 #define __NOEXCEPT throw()
 #endif
 
-#undef LLVM_LIBC_CAST
-#define LLVM_LIBC_CAST(cast, type, value) (cast<type>(value))
+// This macro serves as a generic cast implementation for use in both C and C++,
+// similar to `__BIONIC_CAST` in Android.
+#undef __LLVM_LIBC_CAST
+#define __LLVM_LIBC_CAST(cast, type, value) (cast<type>(value))
 
 #else // not __cplusplus
 
@@ -88,8 +90,8 @@
 #undef _Returns_twice
 #define _Returns_twice __attribute__((returns_twice))
 
-#undef LLVM_LIBC_CAST
-#define LLVM_LIBC_CAST(cast, type, value) ((type)(value))
+#undef __LLVM_LIBC_CAST
+#define __LLVM_LIBC_CAST(cast, type, value) ((type)(value))
 
 #endif // __cplusplus
 
