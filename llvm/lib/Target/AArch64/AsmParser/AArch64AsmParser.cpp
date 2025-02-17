@@ -7870,8 +7870,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     IsOptional = AArch64BuildAttrs::getOptionalID(Optionality);
     if (AArch64BuildAttrs::OPTIONAL_NOT_FOUND == IsOptional) {
       Error(Parser.getTok().getLoc(),
-            AArch64BuildAttrs::getSubsectionOptionalUnknownError() + ": " +
-                Optionality);
+            AArch64BuildAttrs::getSubsectionOptionalUnknownError());
       return true;
     }
     if (SubsectionExists) {
@@ -7919,7 +7918,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     Type = AArch64BuildAttrs::getTypeID(Name);
     if (AArch64BuildAttrs::TYPE_NOT_FOUND == Type) {
       Error(Parser.getTok().getLoc(),
-            AArch64BuildAttrs::getSubsectionTypeUnknownError() + ": " + Name);
+            AArch64BuildAttrs::getSubsectionTypeUnknownError());
       return true;
     }
     if (SubsectionExists) {
