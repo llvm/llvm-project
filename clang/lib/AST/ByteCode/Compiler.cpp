@@ -29,7 +29,7 @@ namespace interp {
 template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
   DeclScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
-      : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P, VD),
+      : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P),
         OldInitializingDecl(Ctx->InitializingDecl) {
     Ctx->InitializingDecl = VD;
     Ctx->InitStack.push_back(InitLink::Decl(VD));
@@ -2707,7 +2707,8 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // For everyhing else, use local variables.
   if (SubExprT) {
-    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, /*IsConst=*/true,
+    bool IsConst = SubExpr->getType().isConstQualified();
+    unsigned LocalIndex = allocateLocalPrimitive(E, *SubExprT, IsConst,
                                                  /*IsExtended=*/true);
     if (!this->visit(SubExpr))
       return false;
@@ -3028,7 +3029,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
     size_t NumElems = CAT->getZExtSize();
     const Function *Func = getFunction(E->getConstructor());
-    if (!Func || !Func->isConstexpr())
+    if (!Func)
       return false;
 
     // FIXME(perf): We're calling the constructor once per array element here,

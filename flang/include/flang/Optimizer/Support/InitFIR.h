@@ -112,7 +112,7 @@ inline void registerMLIRPassesForFortranTools() {
   mlir::affine::registerAffineLoopTilingPass();
   mlir::affine::registerAffineDataCopyGenerationPass();
 
-  mlir::registerConvertAffineToStandardPass();
+  mlir::registerLowerAffinePass();
 }
 
 /// Register the interfaces needed to lower to LLVM IR.

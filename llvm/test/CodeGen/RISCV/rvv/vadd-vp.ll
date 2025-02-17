@@ -1442,11 +1442,12 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, <
 ; RV64-LABEL: vadd_vi_nxv32i32_evl_nx16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
-; RV64-NEXT:    vadd.vi v8, v8, -1, v0.t
 ; RV64-NEXT:    srli a0, a0, 2
 ; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v0, a0
+; RV64-NEXT:    vslidedown.vx v24, v0, a0
+; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; RV64-NEXT:    vadd.vi v8, v8, -1, v0.t
+; RV64-NEXT:    vmv1r.v v0, v24
 ; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma
 ; RV64-NEXT:    vadd.vi v16, v16, -1, v0.t
 ; RV64-NEXT:    ret

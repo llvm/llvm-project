@@ -51,14 +51,22 @@ static bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
       v, fir::GlobalOp::getTargetAttrName(globalOpName));
 }
 
-static mlir::Value getOriginalDef(mlir::Value v) {
+static mlir::Value
+getOriginalDef(mlir::Value v,
+               fir::AliasAnalysis::Source::Attributes &attributes,
+               bool &isCapturedInInternalProcedure) {
   mlir::Operation *defOp;
   bool breakFromLoop = false;
   while (!breakFromLoop && (defOp = v.getDefiningOp())) {
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
-        .Case<fir::DeclareOp, hlfir::DeclareOp>(
-            [&](auto op) { v = op.getMemref(); })
+        .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
+          v = op.getMemref();
+          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
+          attributes |= getAttrsFromVariable(varIf);
+          isCapturedInInternalProcedure |=
+              varIf.isCapturedInInternalProcedure();
+        })
         .Default([&](auto op) { breakFromLoop = true; });
   }
   return v;
@@ -600,7 +608,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             if (mlir::isa<fir::PointerType>(boxTy.getEleTy()))
               attributes.set(Attribute::Pointer);
 
-            auto def = getOriginalDef(op.getMemref());
+            auto def = getOriginalDef(op.getMemref(), attributes,
+                                      isCapturedInInternalProcedure);
             if (auto addrOfOp = def.template getDefiningOp<fir::AddrOfOp>()) {
               global = addrOfOp.getSymbol();
 
@@ -609,13 +618,13 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
 
               type = SourceKind::Global;
             }
-
-            // TODO: Add support to fir.alloca and fir.allocmem
-            // if (auto allocOp = def.template getDefiningOp<fir::AllocaOp>()) {
-            //   ...
-            // }
-
-            if (isDummyArgument(def)) {
+            // TODO: Add support to fir.allocmem
+            else if (auto allocOp =
+                         def.template getDefiningOp<fir::AllocaOp>()) {
+              v = def;
+              defOp = v.getDefiningOp();
+              type = SourceKind::Allocate;
+            } else if (isDummyArgument(def)) {
               defOp = nullptr;
               v = def;
             }
