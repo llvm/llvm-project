@@ -10,7 +10,7 @@ public:
   virtual void doit() = 0;
 };
 
-Base2 *b = nullptr;
+Base2 *b;
 
 class Derived1 : public Base1, public Base2 {
 public:
