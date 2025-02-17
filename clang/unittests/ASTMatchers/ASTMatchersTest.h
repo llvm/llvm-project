@@ -59,6 +59,11 @@ private:
   const std::unique_ptr<BoundNodesCallback> FindResultReviewer;
 };
 
+inline ArrayRef<TestLanguage> langCxx11() {
+  static const TestLanguage Result[] = {Lang_CXX11};
+  return ArrayRef<TestLanguage>(Result);
+}
+
 inline ArrayRef<TestLanguage> langCxx11OrLater() {
   static const TestLanguage Result[] = {Lang_CXX11, Lang_CXX14, Lang_CXX17,
                                         Lang_CXX20, Lang_CXX23};
@@ -91,9 +96,11 @@ testing::AssertionResult matchesConditionally(
     const Twine &Code, const T &AMatcher, bool ExpectMatch,
     ArrayRef<std::string> CompileArgs,
     const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
-    StringRef Filename = "input.cc") {
+    StringRef Filename = "input.cc",
+    MatchFinder::MatchFinderOptions Options =
+        MatchFinder::MatchFinderOptions()) {
   bool Found = false, DynamicFound = false;
-  MatchFinder Finder;
+  MatchFinder Finder(Options);
   VerifyMatch VerifyFound(nullptr, &Found);
   Finder.addMatcher(AMatcher, &VerifyFound);
   VerifyMatch VerifyDynamicFound(nullptr, &DynamicFound);
@@ -147,11 +154,13 @@ testing::AssertionResult matchesConditionally(
 template <typename T>
 testing::AssertionResult
 matchesConditionally(const Twine &Code, const T &AMatcher, bool ExpectMatch,
-                     ArrayRef<TestLanguage> TestLanguages) {
+                     ArrayRef<TestLanguage> TestLanguages,
+                     MatchFinder::MatchFinderOptions Options =
+                         MatchFinder::MatchFinderOptions()) {
   for (auto Lang : TestLanguages) {
     auto Result = matchesConditionally(
         Code, AMatcher, ExpectMatch, getCommandLineArgsForTesting(Lang),
-        FileContentMappings(), getFilenameForTesting(Lang));
+        FileContentMappings(), getFilenameForTesting(Lang), Options);
     if (!Result)
       return Result;
   }
@@ -162,8 +171,10 @@ matchesConditionally(const Twine &Code, const T &AMatcher, bool ExpectMatch,
 template <typename T>
 testing::AssertionResult
 matches(const Twine &Code, const T &AMatcher,
-        ArrayRef<TestLanguage> TestLanguages = {Lang_CXX11}) {
-  return matchesConditionally(Code, AMatcher, true, TestLanguages);
+        ArrayRef<TestLanguage> TestLanguages = {Lang_CXX11},
+        MatchFinder::MatchFinderOptions Options =
+            MatchFinder::MatchFinderOptions()) {
+  return matchesConditionally(Code, AMatcher, true, TestLanguages, Options);
 }
 
 template <typename T>

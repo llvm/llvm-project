@@ -1443,7 +1443,8 @@ bool MatchASTVisitor::objcClassIsDerivedFrom(
 }
 
 bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
-  if (!DeclNode) {
+  if (!DeclNode || (Options.ShouldTraverseDecl &&
+                    !(*Options.ShouldTraverseDecl)(*DeclNode))) {
     return true;
   }
 
