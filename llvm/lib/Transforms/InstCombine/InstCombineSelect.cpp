@@ -829,7 +829,10 @@ static Value *foldSelectICmpAndBinOp(const ICmpInst *IC, Value *TrueVal,
   if (NeedXor)
     V = Builder.CreateXor(V, *C2);
 
-  return Builder.CreateBinOp(BinOp->getOpcode(), Y, V);
+  auto *Res = Builder.CreateBinOp(BinOp->getOpcode(), Y, V);
+  if (auto *BO = dyn_cast<BinaryOperator>(Res))
+    BO->copyIRFlags(BinOp);
+  return Res;
 }
 
 /// Canonicalize a set or clear of a masked set of constant bits to
