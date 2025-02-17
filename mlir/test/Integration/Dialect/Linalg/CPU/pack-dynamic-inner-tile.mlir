@@ -8,7 +8,7 @@
 
 // RUN: rm -f %t && %{compile} && %{run} | FileCheck %s
 
-/// End-to-end test for tensor.pack where one of the inner tile sizes is
+/// End-to-end test for linalg.pack where one of the inner tile sizes is
 /// dynamic.
 
 func.func @main() {
@@ -38,7 +38,7 @@ func.func private @pack(%A: tensor<7x16xi32>) {
   %tile_size = arith.constant 8 : index
   %A_pack_empty = tensor.empty(%c1, %tile_size) : tensor<?x16x?x1xi32>
 
-  %A_pack = tensor.pack %A
+  %A_pack = linalg.pack %A
     padding_value(%pad_val : i32)
     inner_dims_pos = [0, 1]
     inner_tiles = [%tile_size, 1]
@@ -78,9 +78,9 @@ func.func private @pack(%A: tensor<7x16xi32>) {
 
 module @transforms attributes { transform.with_named_sequence } {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.consume}) {
-    %pack = transform.structured.match ops{["tensor.pack"]} in %module : (!transform.any_op) -> !transform.any_op
+    %pack = transform.structured.match ops{["linalg.pack"]} in %module : (!transform.any_op) -> !transform.any_op
 
-    // 1. Tile so that we can decompose tensor.pack into tensor.pad and other
+    // 1. Tile so that we can decompose linalg.pack into tensor.pad and other
     // Ops (see step 2)
     %tiled_pack_op_p, %loops:2 = transform.structured.tile_using_for %pack tile_sizes [1, 1]
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)

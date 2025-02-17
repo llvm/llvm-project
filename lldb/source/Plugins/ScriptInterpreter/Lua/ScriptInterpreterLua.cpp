@@ -289,7 +289,7 @@ bool ScriptInterpreterLua::BreakpointCallbackFunction(
   llvm::Expected<bool> BoolOrErr = lua.CallBreakpointCallback(
       baton, stop_frame_sp, bp_loc_sp, bp_option_data->m_extra_args_sp);
   if (llvm::Error E = BoolOrErr.takeError()) {
-    debugger.GetErrorStream() << toString(std::move(E));
+    *debugger.GetAsyncErrorStream() << toString(std::move(E));
     return true;
   }
 
@@ -316,7 +316,7 @@ bool ScriptInterpreterLua::WatchpointCallbackFunction(
   llvm::Expected<bool> BoolOrErr =
       lua.CallWatchpointCallback(baton, stop_frame_sp, wp_sp);
   if (llvm::Error E = BoolOrErr.takeError()) {
-    debugger.GetErrorStream() << toString(std::move(E));
+    *debugger.GetAsyncErrorStream() << toString(std::move(E));
     return true;
   }
 

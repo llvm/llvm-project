@@ -328,6 +328,25 @@ defm REDUX_SYNC_AND : REDUX_SYNC<"and", "b32", int_nvvm_redux_sync_and>;
 defm REDUX_SYNC_XOR : REDUX_SYNC<"xor", "b32", int_nvvm_redux_sync_xor>;
 defm REDUX_SYNC_OR : REDUX_SYNC<"or", "b32", int_nvvm_redux_sync_or>;
 
+multiclass REDUX_SYNC_F<string BinOp, string abs, string NaN> {
+  defvar intr_name = "int_nvvm_redux_sync_f" # BinOp # !subst(".", "_", abs) # !subst(".", "_", NaN);
+
+  def : NVPTXInst<(outs Float32Regs:$dst),
+                  (ins Float32Regs:$src, Int32Regs:$mask),
+                  "redux.sync." # BinOp # abs # NaN # ".f32 $dst, $src, $mask;",
+                  [(set f32:$dst, (!cast<Intrinsic>(intr_name) f32:$src, Int32Regs:$mask))]>,
+                  Requires<[hasPTX<86>, hasSM100a]>; 
+}
+
+defm REDUX_SYNC_FMIN : REDUX_SYNC_F<"min", "", "">;
+defm REDUX_SYNC_FMIN_ABS : REDUX_SYNC_F<"min", ".abs", "">;
+defm REDUX_SYNC_FMIN_NAN: REDUX_SYNC_F<"min", "", ".NaN">;
+defm REDUX_SYNC_FMIN_ABS_NAN: REDUX_SYNC_F<"min", ".abs", ".NaN">;
+defm REDUX_SYNC_FMAX : REDUX_SYNC_F<"max", "", "">;
+defm REDUX_SYNC_FMAX_ABS : REDUX_SYNC_F<"max", ".abs", "">;
+defm REDUX_SYNC_FMAX_NAN: REDUX_SYNC_F<"max", "", ".NaN">;
+defm REDUX_SYNC_FMAX_ABS_NAN: REDUX_SYNC_F<"max", ".abs", ".NaN">;
+
 } // isConvergent = true
 
 //-----------------------------------
@@ -739,6 +758,36 @@ foreach dim = [1, 2, 3, 4, 5] in {
       CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>;
   }
 }
+
+//Prefetch and Prefetchu 
+
+class PREFETCH_INTRS<string InstName> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr),
+          InstName # " [$addr];",
+          [(!cast<Intrinsic>(!strconcat("int_nvvm_",
+          !subst(".", "_", InstName))) i64:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+   
+
+def PREFETCH_L1 : PREFETCH_INTRS<"prefetch.L1">;
+def PREFETCH_L2 : PREFETCH_INTRS<"prefetch.L2">;
+def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1">;
+def PREFETCH_LOCAL_L1  : PREFETCH_INTRS<"prefetch.local.L1">;
+def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2">;
+def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2">;
+
+def PREFETCH_GLOBAL_L2_EVICT_NORMAL : NVPTXInst<(outs), (ins Int64Regs:$addr),
+                                      "prefetch.global.L2::evict_normal" # " [$addr];",
+                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evict_normal") i64:$addr)]>,
+                                      Requires<[hasPTX<80>, hasSM<90>]>;
+
+def PREFETCH_GLOBAL_L2_EVICT_LAST   : NVPTXInst<(outs), (ins Int64Regs:$addr),
+                                      "prefetch.global.L2::evict_last" # " [$addr];",
+                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evict_last") i64:$addr)]>,
+                                      Requires<[hasPTX<80>, hasSM<90>]>;
+
+
+def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
 
 //-----------------------------------
 // MBarrier Functions

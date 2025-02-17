@@ -23,7 +23,7 @@
 #include <optional>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTAMDGPUTOROCDL
+#define GEN_PASS_DEF_CONVERTAMDGPUTOROCDLPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -1037,8 +1037,8 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
 };
 
 struct ConvertAMDGPUToROCDLPass
-    : public impl::ConvertAMDGPUToROCDLBase<ConvertAMDGPUToROCDLPass> {
-  ConvertAMDGPUToROCDLPass() = default;
+    : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
+  using ConvertAMDGPUToROCDLPassBase::ConvertAMDGPUToROCDLPassBase;
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
@@ -1082,8 +1082,4 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(
            MFMAOpLowering, WMMAOpLowering, ExtPackedFp8OpLowering,
            PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering>(converter,
                                                                       chipset);
-}
-
-std::unique_ptr<Pass> mlir::createConvertAMDGPUToROCDLPass() {
-  return std::make_unique<ConvertAMDGPUToROCDLPass>();
 }

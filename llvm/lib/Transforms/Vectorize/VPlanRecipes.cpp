@@ -27,6 +27,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -284,13 +285,18 @@ InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode = std::nullopt;
-  VPRecipeBase *BinOpR = getOperand(0)->getDefiningRecipe();
+  VPValue *BinOp = getOperand(0);
 
   // If the partial reduction is predicated, a select will be operand 0 rather
   // than the binary op
   using namespace llvm::VPlanPatternMatch;
   if (match(getOperand(0), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
-    BinOpR = BinOpR->getOperand(1)->getDefiningRecipe();
+    BinOp = BinOp->getDefiningRecipe()->getOperand(1);
+
+  // If BinOp is a negation, use the side effect of match to assign the actual
+  // binary operation to BinOp
+  match(BinOp, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(BinOp)));
+  VPRecipeBase *BinOpR = BinOp->getDefiningRecipe();
 
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
     Opcode = std::make_optional(WidenR->getOpcode());
@@ -685,20 +691,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::ResumePhi: {
-    Value *IncomingFromVPlanPred =
-        State.get(getOperand(0), /* IsScalar */ true);
-    Value *IncomingFromOtherPreds =
-        State.get(getOperand(1), /* IsScalar */ true);
     auto *NewPhi =
         Builder.CreatePHI(State.TypeAnalysis.inferScalarType(this), 2, Name);
-    BasicBlock *VPlanPred =
-        State.CFG
-            .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getPredecessors()[0])];
-    NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
-      if (OtherPred == VPlanPred)
-        continue;
-      NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
+    for (const auto &[IncVPV, PredVPBB] :
+         zip(operands(), getParent()->getPredecessors())) {
+      Value *IncV = State.get(IncVPV, /* IsScalar */ true);
+      BasicBlock *PredBB = State.CFG.VPBB2IRBB.at(cast<VPBasicBlock>(PredVPBB));
+      NewPhi->addIncoming(IncV, PredBB);
     }
     return NewPhi;
   }
@@ -1170,7 +1169,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
     Arguments.push_back(V);
   }
 
-  Type *RetTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
+  Type *RetTy = toVectorizedTy(Ctx.Types.inferScalarType(this), VF);
   SmallVector<Type *> ParamTys;
   for (unsigned I = 0; I != getNumOperands(); ++I)
     ParamTys.push_back(
@@ -1476,6 +1475,14 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     break;
   }
+  case Instruction::ExtractValue: {
+    assert(getNumOperands() == 2 && "expected single level extractvalue");
+    Value *Op = State.get(getOperand(0));
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    Value *Extract = Builder.CreateExtractValue(Op, CI->getZExtValue());
+    State.set(this, Extract);
+    break;
+  }
   case Instruction::Freeze: {
     Value *Op = State.get(getOperand(0));
 
@@ -1576,6 +1583,10 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy,
                                           Ctx.CostKind);
+  }
+  case Instruction::ExtractValue: {
+    return Ctx.TTI.getInsertExtractValueCost(Instruction::ExtractValue,
+                                             Ctx.CostKind);
   }
   case Instruction::ICmp:
   case Instruction::FCmp: {
@@ -2922,10 +2933,21 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
-    VectorType *WideVecTy = VectorType::getDoubleElementsVectorType(VecTy);
-    return Builder.CreateIntrinsic(WideVecTy, Intrinsic::vector_interleave2,
-                                   Vals,
-                                   /*FMFSource=*/nullptr, Name);
+    assert(isPowerOf2_32(Factor) && "Unsupported interleave factor for "
+                                    "scalable vectors, must be power of 2");
+    SmallVector<Value *> InterleavingValues(Vals);
+    // When interleaving, the number of values will be shrunk until we have the
+    // single final interleaved value.
+    auto *InterleaveTy = cast<VectorType>(InterleavingValues[0]->getType());
+    for (unsigned Midpoint = Factor / 2; Midpoint > 0; Midpoint /= 2) {
+      InterleaveTy = VectorType::getDoubleElementsVectorType(InterleaveTy);
+      for (unsigned I = 0; I < Midpoint; ++I)
+        InterleavingValues[I] = Builder.CreateIntrinsic(
+            InterleaveTy, Intrinsic::vector_interleave2,
+            {InterleavingValues[I], InterleavingValues[Midpoint + I]},
+            /*FMFSource=*/nullptr, Name);
+    }
+    return InterleavingValues[0];
   }
 
   // Fixed length. Start by concatenating all vectors into a wide vector.
@@ -3011,15 +3033,11 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
                           &InterleaveFactor](Value *MaskForGaps) -> Value * {
     if (State.VF.isScalable()) {
       assert(!MaskForGaps && "Interleaved groups with gaps are not supported.");
-      assert(InterleaveFactor == 2 &&
+      assert(isPowerOf2_32(InterleaveFactor) &&
              "Unsupported deinterleave factor for scalable vectors");
       auto *ResBlockInMask = State.get(BlockInMask);
-      SmallVector<Value *, 2> Ops = {ResBlockInMask, ResBlockInMask};
-      auto *MaskTy = VectorType::get(State.Builder.getInt1Ty(),
-                                     State.VF.getKnownMinValue() * 2, true);
-      return State.Builder.CreateIntrinsic(
-          MaskTy, Intrinsic::vector_interleave2, Ops,
-          /*FMFSource=*/nullptr, "interleaved.mask");
+      SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
+      return interleaveVectors(State.Builder, Ops, "interleaved.mask");
     }
 
     if (!BlockInMask)
@@ -3059,22 +3077,48 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     ArrayRef<VPValue *> VPDefs = definedValues();
     const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
     if (VecTy->isScalableTy()) {
-      assert(InterleaveFactor == 2 &&
+      assert(isPowerOf2_32(InterleaveFactor) &&
              "Unsupported deinterleave factor for scalable vectors");
 
-        // Scalable vectors cannot use arbitrary shufflevectors (only splats),
-        // so must use intrinsics to deinterleave.
-      Value *DI = State.Builder.CreateIntrinsic(
-          Intrinsic::vector_deinterleave2, VecTy, NewLoad,
-          /*FMFSource=*/nullptr, "strided.vec");
-      unsigned J = 0;
-      for (unsigned I = 0; I < InterleaveFactor; ++I) {
+      // Scalable vectors cannot use arbitrary shufflevectors (only splats),
+      // so must use intrinsics to deinterleave.
+      SmallVector<Value *> DeinterleavedValues(InterleaveFactor);
+      DeinterleavedValues[0] = NewLoad;
+      // For the case of InterleaveFactor > 2, we will have to do recursive
+      // deinterleaving, because the current available deinterleave intrinsic
+      // supports only Factor of 2, otherwise it will bailout after first
+      // iteration.
+      // When deinterleaving, the number of values will double until we
+      // have "InterleaveFactor".
+      for (unsigned NumVectors = 1; NumVectors < InterleaveFactor;
+           NumVectors *= 2) {
+        // Deinterleave the elements within the vector
+        SmallVector<Value *> TempDeinterleavedValues(NumVectors);
+        for (unsigned I = 0; I < NumVectors; ++I) {
+          auto *DiTy = DeinterleavedValues[I]->getType();
+          TempDeinterleavedValues[I] = State.Builder.CreateIntrinsic(
+              Intrinsic::vector_deinterleave2, DiTy, DeinterleavedValues[I],
+              /*FMFSource=*/nullptr, "strided.vec");
+        }
+        // Extract the deinterleaved values:
+        for (unsigned I = 0; I < 2; ++I)
+          for (unsigned J = 0; J < NumVectors; ++J)
+            DeinterleavedValues[NumVectors * I + J] =
+                State.Builder.CreateExtractValue(TempDeinterleavedValues[J], I);
+      }
+
+#ifndef NDEBUG
+      for (Value *Val : DeinterleavedValues)
+        assert(Val && "NULL Deinterleaved Value");
+#endif
+      for (unsigned I = 0, J = 0; I < InterleaveFactor; ++I) {
         Instruction *Member = Group->getMember(I);
-
-        if (!Member)
+        Value *StridedVec = DeinterleavedValues[I];
+        if (!Member) {
+          // This value is not needed as it's not used
+          cast<Instruction>(StridedVec)->eraseFromParent();
           continue;
-
-        Value *StridedVec = State.Builder.CreateExtractValue(DI, I);
+        }
         // If this member has different type, cast the result type.
         if (Member->getType() != ScalarTy) {
           VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
@@ -3378,7 +3422,7 @@ void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   }
 
   const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
-  SCEVExpander Exp(SE, DL, "induction");
+  SCEVExpander Exp(SE, DL, "induction", /*PreserveLCSSA=*/true);
 
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
                                  &*State.Builder.GetInsertPoint());

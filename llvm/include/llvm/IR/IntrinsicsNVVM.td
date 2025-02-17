@@ -48,6 +48,7 @@
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
+def llvm_local_ptr_ty   : LLVMQualPointerType<5>;  // (local)ptr
 def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;  // (tensor memory)ptr
 
 //
@@ -4823,6 +4824,18 @@ def int_nvvm_redux_sync_xor : ClangBuiltin<"__nvvm_redux_sync_xor">,
 def int_nvvm_redux_sync_or : ClangBuiltin<"__nvvm_redux_sync_or">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
+            
+// redux.sync.op.{abs}.{NaN}.f32 dst, src, membermask;
+foreach binOp = ["min", "max"] in {
+  foreach abs = ["", "_abs"] in {
+    foreach NaN = ["", "_NaN"] in {
+      def int_nvvm_redux_sync_f # binOp # abs # NaN : 
+        ClangBuiltin<!strconcat("__nvvm_redux_sync_f", binOp, abs, NaN)>,
+        Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty],
+                  [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
+    }
+  }
+}
 
 //
 // WGMMA fence instructions
@@ -4998,6 +5011,30 @@ foreach dim = [1, 2, 3, 4, 5] in {
     }
   }
 }
+
+// Intrinsics for Prefetch and Prefetchu
+def int_nvvm_prefetch_L1 : Intrinsic<[], [llvm_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_L2 : Intrinsic<[], [llvm_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_global_L1 :  Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_global_L2 :  Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_local_L1 :  Intrinsic<[], [llvm_local_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_local_L2 :  Intrinsic<[], [llvm_local_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+  
+def int_nvvm_prefetch_global_L2_evict_normal: Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+def int_nvvm_prefetch_global_L2_evict_last: Intrinsic<[], [llvm_global_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+
+
+def int_nvvm_prefetchu_L1 : Intrinsic<[], [llvm_ptr_ty],
+  [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+
 
 // Intrinsics for Bulk Copy using TMA (non-tensor)
 // From Global to Shared Cluster

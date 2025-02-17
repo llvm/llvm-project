@@ -61,19 +61,6 @@ static LogicalResult checkConstantOperandTranspose(Operation *op) {
   return success();
 }
 
-static LogicalResult checkConstantOperandFullyConnected(Operation *op) {
-  if (auto fcOp = dyn_cast<tosa::FullyConnectedOp>(op)) {
-    DenseElementsAttr weight;
-    if (!matchPattern(fcOp.getWeight(), m_Constant(&weight)))
-      return op->emitOpError("weight of fully_connected is not constant");
-
-    DenseElementsAttr bias;
-    if (!matchPattern(fcOp.getBias(), m_Constant(&bias)))
-      return op->emitOpError("bias of fully_connected is not constant");
-  }
-  return success();
-}
-
 struct TosaLevel {
   int32_t MAX_RANK = 0;
   int32_t MAX_KERNEL = 0;
@@ -123,7 +110,6 @@ private:
   void populateConstantOperandChecks() {
     constCheckers.emplace_back(checkConstantOperandPad);
     constCheckers.emplace_back(checkConstantOperandTranspose);
-    constCheckers.emplace_back(checkConstantOperandFullyConnected);
   }
 
   bool levelCheckKernel(Operation *op, int32_t v,

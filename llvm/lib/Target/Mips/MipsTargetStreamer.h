@@ -58,8 +58,8 @@ public:
   virtual void emitDirectiveOptionPic0();
   virtual void emitDirectiveOptionPic2();
   virtual void emitDirectiveInsn();
-  virtual void emitFrame(unsigned StackReg, unsigned StackSize,
-                         unsigned ReturnReg);
+  virtual void emitFrame(MCRegister StackReg, unsigned StackSize,
+                         MCRegister ReturnReg);
   virtual void emitMask(unsigned CPUBitmask, int CPUTopSavedRegOff);
   virtual void emitFMask(unsigned FPUBitmask, int FPUTopSavedRegOff);
 
@@ -118,30 +118,31 @@ public:
   virtual void emitDirectiveModuleGINV();
   virtual void emitDirectiveModuleNoGINV();
 
-  void emitR(unsigned Opcode, unsigned Reg0, SMLoc IDLoc,
+  void emitR(unsigned Opcode, MCRegister Reg0, SMLoc IDLoc,
              const MCSubtargetInfo *STI);
   void emitII(unsigned Opcode, int16_t Imm1, int16_t Imm2, SMLoc IDLoc,
               const MCSubtargetInfo *STI);
-  void emitRX(unsigned Opcode, unsigned Reg0, MCOperand Op1, SMLoc IDLoc,
+  void emitRX(unsigned Opcode, MCRegister Reg0, MCOperand Op1, SMLoc IDLoc,
               const MCSubtargetInfo *STI);
-  void emitRI(unsigned Opcode, unsigned Reg0, int32_t Imm, SMLoc IDLoc,
+  void emitRI(unsigned Opcode, MCRegister Reg0, int32_t Imm, SMLoc IDLoc,
               const MCSubtargetInfo *STI);
-  void emitRR(unsigned Opcode, unsigned Reg0, unsigned Reg1, SMLoc IDLoc,
+  void emitRR(unsigned Opcode, MCRegister Reg0, MCRegister Reg1, SMLoc IDLoc,
               const MCSubtargetInfo *STI);
-  void emitRRX(unsigned Opcode, unsigned Reg0, unsigned Reg1, MCOperand Op2,
+  void emitRRX(unsigned Opcode, MCRegister Reg0, MCRegister Reg1, MCOperand Op2,
                SMLoc IDLoc, const MCSubtargetInfo *STI);
-  void emitRRR(unsigned Opcode, unsigned Reg0, unsigned Reg1, unsigned Reg2,
-               SMLoc IDLoc, const MCSubtargetInfo *STI);
-  void emitRRRX(unsigned Opcode, unsigned Reg0, unsigned Reg1, unsigned Reg2,
-                MCOperand Op3, SMLoc IDLoc, const MCSubtargetInfo *STI);
-  void emitRRI(unsigned Opcode, unsigned Reg0, unsigned Reg1, int16_t Imm,
-               SMLoc IDLoc, const MCSubtargetInfo *STI);
-  void emitRRIII(unsigned Opcode, unsigned Reg0, unsigned Reg1, int16_t Imm0,
-                 int16_t Imm1, int16_t Imm2, SMLoc IDLoc,
-                 const MCSubtargetInfo *STI);
-  void emitAddu(unsigned DstReg, unsigned SrcReg, unsigned TrgReg, bool Is64Bit,
+  void emitRRR(unsigned Opcode, MCRegister Reg0, MCRegister Reg1,
+               MCRegister Reg2, SMLoc IDLoc, const MCSubtargetInfo *STI);
+  void emitRRRX(unsigned Opcode, MCRegister Reg0, MCRegister Reg1,
+                MCRegister Reg2, MCOperand Op3, SMLoc IDLoc,
                 const MCSubtargetInfo *STI);
-  void emitDSLL(unsigned DstReg, unsigned SrcReg, int16_t ShiftAmount,
+  void emitRRI(unsigned Opcode, MCRegister Reg0, MCRegister Reg1, int16_t Imm,
+               SMLoc IDLoc, const MCSubtargetInfo *STI);
+  void emitRRIII(unsigned Opcode, MCRegister Reg0, MCRegister Reg1,
+                 int16_t Imm0, int16_t Imm1, int16_t Imm2, SMLoc IDLoc,
+                 const MCSubtargetInfo *STI);
+  void emitAddu(MCRegister DstReg, MCRegister SrcReg, MCRegister TrgReg,
+                bool Is64Bit, const MCSubtargetInfo *STI);
+  void emitDSLL(MCRegister DstReg, MCRegister SrcReg, int16_t ShiftAmount,
                 SMLoc IDLoc, const MCSubtargetInfo *STI);
   void emitEmptyDelaySlot(bool hasShortDelaySlot, SMLoc IDLoc,
                           const MCSubtargetInfo *STI);
@@ -154,12 +155,13 @@ public:
   /// temporary and is only called when the assembler temporary is required. It
   /// must handle the case where no assembler temporary is available (typically
   /// by reporting an error).
-  void emitStoreWithImmOffset(unsigned Opcode, unsigned SrcReg,
-                              unsigned BaseReg, int64_t Offset,
+  void emitStoreWithImmOffset(unsigned Opcode, MCRegister SrcReg,
+                              MCRegister BaseReg, int64_t Offset,
                               function_ref<unsigned()> GetATReg, SMLoc IDLoc,
                               const MCSubtargetInfo *STI);
-  void emitLoadWithImmOffset(unsigned Opcode, unsigned DstReg, unsigned BaseReg,
-                             int64_t Offset, unsigned TmpReg, SMLoc IDLoc,
+  void emitLoadWithImmOffset(unsigned Opcode, MCRegister DstReg,
+                             MCRegister BaseReg, int64_t Offset,
+                             MCRegister TmpReg, SMLoc IDLoc,
                              const MCSubtargetInfo *STI);
   void emitGPRestore(int Offset, SMLoc IDLoc, const MCSubtargetInfo *STI);
 
@@ -240,8 +242,8 @@ public:
   void emitDirectiveOptionPic0() override;
   void emitDirectiveOptionPic2() override;
   void emitDirectiveInsn() override;
-  void emitFrame(unsigned StackReg, unsigned StackSize,
-                 unsigned ReturnReg) override;
+  void emitFrame(MCRegister StackReg, unsigned StackSize,
+                 MCRegister ReturnReg) override;
   void emitMask(unsigned CPUBitmask, int CPUTopSavedRegOff) override;
   void emitFMask(unsigned FPUBitmask, int FPUTopSavedRegOff) override;
 
@@ -340,8 +342,8 @@ public:
   void emitDirectiveOptionPic0() override;
   void emitDirectiveOptionPic2() override;
   void emitDirectiveInsn() override;
-  void emitFrame(unsigned StackReg, unsigned StackSize,
-                 unsigned ReturnReg) override;
+  void emitFrame(MCRegister StackReg, unsigned StackSize,
+                 MCRegister ReturnReg) override;
   void emitMask(unsigned CPUBitmask, int CPUTopSavedRegOff) override;
   void emitFMask(unsigned FPUBitmask, int FPUTopSavedRegOff) override;
 

@@ -138,19 +138,6 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
       }
     }
     ```
-
-    To allow progressive lowering from the value world (a.k.a tensor values) to
-    the buffer world (a.k.a memref values), a `linalg.generic` op allows mixing
-    tensors and buffers operands and tensor results.
-
-    ```mlir
-    %C = linalg.generic #trait_attribute
-      ins(%A, %B : tensor<?x?xf32>, memref<?x?xf32, stride_specification>)
-      outs(%C : tensor<?x?xf32>)
-      {other-optional-attributes}
-      {region}
-      -> (tensor<?x?xf32>)
-    ```
   }];
 
   let arguments = (ins Variadic<AnyType>:$inputs,
@@ -606,7 +593,10 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     let arguments = (ins
       Variadic<AnyType>:$inputs,
       Variadic<AnyShaped>:$outputs,
-      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps,
+      DefaultValuedOptionalAttr<
+        AffineMapArrayAttr,
+        "MatmulOp::getDefaultIndexingMaps($_builder.getContext())"
+      >:$indexing_maps,
       DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
@@ -752,7 +742,8 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
   let arguments = (ins
     Variadic<AnyType>:$inputs,
     Variadic<AnyShaped>:$outputs,
-    AffineMapArrayAttr:$indexing_maps
+    AffineMapArrayAttr:$indexing_maps,
+    DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
   );
   let results = (outs Variadic<AnyShaped>:$result_tensors);
   // NB: The only reason this op has a region - and it get populated at op build

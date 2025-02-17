@@ -777,13 +777,13 @@ the transformed pseudo code of function ``alloc_buf()`` in the example below.
       size_t count;
    } sized_buf_t;
 
-   void alloc_buf(sized_buf_t *sbuf, sized_t nelems) {
+   void alloc_buf(sized_buf_t *sbuf, size_t nelems) {
       sbuf->buf = (int *)malloc(sizeof(int) * nelems);
       sbuf->count = nelems;
    }
 
    // Transformed pseudo code:
-   void alloc_buf(sized_buf_t *sbuf, sized_t nelems) {
+   void alloc_buf(sized_buf_t *sbuf, size_t nelems) {
       // Materialize RHS values:
       int *tmp_ptr = (int *)malloc(sizeof(int) * nelems);
       int tmp_count = nelems;

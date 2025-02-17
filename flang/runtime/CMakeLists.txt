@@ -16,6 +16,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CMAKE_CXX_EXTENSIONS OFF)
 
   set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  set(FLANG_RT_SOURCE_DIR "${FLANG_SOURCE_DIR}/../flang-rt")
 
   set(LLVM_COMMON_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../cmake")
   set(LLVM_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../llvm/cmake")
@@ -57,7 +58,30 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
     is mapped to long double, etc."
     )
+
+  option(FLANG_CUF_RUNTIME
+    "Compile CUDA Fortran runtime sources" OFF)
+  if (FLANG_CUF_RUNTIME)
+    find_package(CUDAToolkit REQUIRED)
+  endif()
 endif()
+
+# Runtime files are in Flang-RT's source dir.
+function (runtime_source_files outvar)
+  cmake_parse_arguments(ARG "" "SUBDIR" "" ${ARGN})
+
+  set(new_sources "")
+  foreach (source IN LISTS "${outvar}")
+    set(new_source "${FLANG_RT_SOURCE_DIR}/lib")
+    cmake_path(APPEND new_source "${ARG_SUBDIR}")
+    cmake_path(APPEND new_source "${source}")
+    list(APPEND new_sources "${new_source}")
+  endforeach ()
+  set("${outvar}" ${new_sources} PARENT_SCOPE)
+endfunction ()
+
+# Runtime includes are in Flang-RT's source dir.
+include_directories(BEFORE "${FLANG_RT_SOURCE_DIR}/include")
 
 set(linked_libraries "")
 
@@ -99,7 +123,16 @@ else()
   set(NO_LTO_FLAGS "")
 endif()
 
-configure_file(config.h.cmake config.h)
+# based on AddLLVM.cmake
+if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(NO_RTTI_FLAGS "-fno-exceptions -fno-rtti")
+elseif (MSVC)
+  set(NO_RTTI_FLAGS "/EHs-c- /GR-")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set(NO_RTTI_FLAGS "-qnoeh -qnortti")
+endif ()
+
+configure_file("${FLANG_RT_SOURCE_DIR}/cmake/config.h.cmake.in" config.h)
 # include_directories is used here instead of target_include_directories
 # because add_flang_library creates multiple objects (STATIC/SHARED, OBJECT)
 # with different names
@@ -107,6 +140,7 @@ include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR})
 
 append(${NO_LTO_FLAGS} CMAKE_C_FLAGS)
 append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
+append(${NO_RTTI_FLAGS} CMAKE_CXX_FLAGS)
 
 # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build,
 # to avoid an unwanted dependency on libstdc++/libc++.so.
@@ -189,6 +223,8 @@ include(AddFlangOffloadRuntime)
 
 # List of files that are buildable for all devices.
 set(supported_files
+  ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
+  ${FLANG_SOURCE_DIR}/lib/Decimal/decimal-to-binary.cpp
   ISO_Fortran_binding.cpp
   allocatable.cpp
   allocator-registry.cpp
@@ -240,6 +276,7 @@ set(supported_files
   unit.cpp
   utf.cpp
   )
+runtime_source_files(supported_files SUBDIR "runtime")
 
 enable_cuda_compilation(flang_rt "${supported_files}")
 enable_omp_offload_compilation("${supported_files}")
@@ -273,6 +310,8 @@ if (NOT TARGET flang_rt.quadmath)
     list(APPEND sources ${f128_sources})
   endif()
 endif()
+runtime_source_files(sources SUBDIR "runtime")
+
 
 if (NOT DEFINED MSVC)
   add_flang_library(flang_rt.runtime

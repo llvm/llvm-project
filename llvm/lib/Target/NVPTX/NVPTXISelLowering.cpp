@@ -989,6 +989,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16}, Expand);
   }
 
+  setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
+
   // No FPOW or FREM in PTX.
 
   // Now deduce the information based on the above mentioned
@@ -1604,6 +1606,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         StoreOperands.push_back(Chain);
         StoreOperands.push_back(
             DAG.getConstant(IsVAArg ? FirstVAArg : ParamCount, dl, MVT::i32));
+
+        if (!IsByVal && IsVAArg) {
+          // Align each part of the variadic argument to their type.
+          VAOffset = alignTo(VAOffset, DL.getABITypeAlign(EltVT.getTypeForEVT(
+                                           *DAG.getContext())));
+        }
 
         StoreOperands.push_back(DAG.getConstant(
             IsByVal ? CurOffset + VAOffset : (IsVAArg ? VAOffset : CurOffset),
@@ -2642,6 +2650,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
   case ISD::FRAMEADDR:
     return SDValue();
+  case ISD::ADDRSPACECAST:
+    return LowerADDRSPACECAST(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
@@ -2755,6 +2765,17 @@ SDValue NVPTXTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
 // This will prevent AsmPrinter from trying to print the jump tables itself.
 unsigned NVPTXTargetLowering::getJumpTableEncoding() const {
   return MachineJumpTableInfo::EK_Inline;
+}
+
+SDValue NVPTXTargetLowering::LowerADDRSPACECAST(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
+  unsigned SrcAS = N->getSrcAddressSpace();
+  unsigned DestAS = N->getDestAddressSpace();
+  if (SrcAS != llvm::ADDRESS_SPACE_GENERIC &&
+      DestAS != llvm::ADDRESS_SPACE_GENERIC)
+    return DAG.getUNDEF(Op.getValueType());
+  return Op;
 }
 
 // This function is almost a copy of SelectionDAG::expandVAArg().
