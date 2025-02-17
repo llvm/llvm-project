@@ -589,7 +589,6 @@ bool checkValidAfterDeviceType(
 // construct has been implemented.
 bool isDirectiveKindImplemented(OpenACCDirectiveKind DK) {
   return DK != OpenACCDirectiveKind::Declare &&
-         DK != OpenACCDirectiveKind::Atomic &&
          DK != OpenACCDirectiveKind::Routine;
 }
 
@@ -1360,7 +1359,6 @@ ExprResult CheckGangKernelsExpr(SemaOpenACC &S,
   }
   case OpenACCGangKind::Static:
     return CheckGangStaticExpr(S, E);
-    return ExprError();
   }
   llvm_unreachable("Unknown gang kind in gang kernels check");
 }

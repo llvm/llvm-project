@@ -411,3 +411,56 @@ header:
 exit:
   ret void
 }
+
+define void @swapped_predicate(i32 %n) {
+; Prove that (n s>= 1) ===> (0 s>= -n / 2).
+; CHECK-LABEL: 'swapped_predicate'
+; CHECK-NEXT:  Determining loop execution counts for: @swapped_predicate
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
+;
+entry:
+  %cmp1 = icmp sge i32 %n, 1
+  %n.div.2 = sdiv i32 %n, 2
+  call void @llvm.assume(i1 %cmp1)
+  br label %header
+
+header:
+  %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
+  %indvar.next = add i32 %indvar, 1
+  %minus.indvar = sub nsw i32 0, %indvar
+  %minus.n.div.2 = sub nsw i32 0, %n.div.2
+  %exitcond = icmp sge i32 %minus.indvar, %minus.n.div.2
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @swapped_predicate_neg(i32 %n) {
+; Prove that (n s>= 1) =\=> (-n / 2 s>= 0).
+; CHECK-LABEL: 'swapped_predicate_neg'
+; CHECK-NEXT:  Determining loop execution counts for: @swapped_predicate_neg
+; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %cmp1 = icmp sge i32 %n, 1
+  %n.div.2 = sdiv i32 %n, 2
+  call void @llvm.assume(i1 %cmp1)
+  br label %header
+
+header:
+  %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
+  %indvar.next = add i32 %indvar, 1
+  %minus.indvar = sub nsw i32 0, %indvar
+  %minus.n.div.2 = sub nsw i32 0, %n.div.2
+  %exitcond = icmp sge i32 %minus.n.div.2, %minus.indvar
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}

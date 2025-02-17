@@ -159,8 +159,6 @@ public:
   void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
   void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
 
-  bool needsResourceBindingInitFn();
-  llvm::Function *createResourceBindingInitFn();
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
 private:
@@ -173,9 +171,6 @@ private:
   void addBufferDecls(const DeclContext *DC, Buffer &CB);
   llvm::Triple::ArchType getArch();
   llvm::SmallVector<Buffer> Buffers;
-
-  llvm::SmallVector<std::pair<const VarDecl *, llvm::GlobalVariable *>>
-      ResourcesToBind;
 };
 
 } // namespace CodeGen

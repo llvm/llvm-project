@@ -284,8 +284,11 @@ koachan@protonmail.com (email), [koachan](https://github.com/koachan) (GitHub)
 
 #### SPIRV backend
 
-Ilia Diachkov \
-ilia.diachkov@gmail.com (email), [iliya-diyachkov](https://github.com/iliya-diyachkov) (GitHub)
+Vyacheslav Levytskyy \
+vyacheslav.levytskyy@intel.com, vyacheslav.levytskyy@gmail.com (email), [VyacheslavLevytskyy](https://github.com/VyacheslavLevytskyy) (GitHub)
+
+Nathan Gauër \
+brioche@google.com (email), [Keenuts](https://github.com/Keenuts) (GitHub)
 
 #### SystemZ backend
 
@@ -433,8 +436,8 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 
 #### Exception handling
 
-Anton Korobeynikov \
-anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
+Reid Kleckner \
+rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
 
 #### LLVM Buildbot
 
@@ -490,7 +493,7 @@ Hal Finkel (hfinkel@anl.gov, [hfinkel](https://github.com/hfinkel) -- AliasAnaly
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
-Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI, Windows codegen \
+Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI, Windows codegen, Exception handling \
 Benjamin Kramer (benny.kra@gmail.com, [d0k](https://github.com/d0k)) -- DWARF Parser \
 David Majnemer (david.majnemer@gmail.com, [majnemer](https://github.com/majnemer)) -- InstCombine, ConstantFold \
 Tim Northover (t.p.northover@gmail.com, [TNorthover](https://github.com/TNorthover)) -- AArch64 backend \

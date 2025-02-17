@@ -192,7 +192,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // Construct buffer descriptor from memref, attributes
     int64_t offset = 0;
     SmallVector<int64_t, 5> strides;
-    if (failed(getStridesAndOffset(memrefType, strides, offset)))
+    if (failed(memrefType.getStridesAndOffset(strides, offset)))
       return gpuOp.emitOpError("Can't lower non-stride-offset memrefs");
 
     MemRefDescriptor memrefDescriptor(memref);
@@ -343,7 +343,7 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
                << chipset.majorVersion;
 
       Location loc = op->getLoc();
-      rewriter.create<ROCDL::WaitcntOp>(loc, ldsOnlyBits);
+      rewriter.create<ROCDL::SWaitcntOp>(loc, ldsOnlyBits);
       rewriter.replaceOpWithNewOp<ROCDL::SBarrierOp>(op);
     } else {
       Location loc = op->getLoc();

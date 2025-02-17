@@ -940,6 +940,16 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::experimental_cttz_elts: {
+    EVT ArgVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    if (!getTLI()->shouldExpandCttzElements(ArgVT)) {
+      // This will consist of a SVE brkb and a cntp instruction. These
+      // typically have the same latency and half the throughput as a vector
+      // add instruction.
+      return 4;
+    }
+    break;
+  }
   default:
     break;
   }
@@ -1204,7 +1214,7 @@ static std::optional<Instruction *> instCombineSVEDup(InstCombiner &IC,
   auto *IdxTy = Type::getInt64Ty(II.getContext());
   auto *Insert = InsertElementInst::Create(
       II.getArgOperand(0), II.getArgOperand(2), ConstantInt::get(IdxTy, 0));
-  Insert->insertBefore(&II);
+  Insert->insertBefore(II.getIterator());
   Insert->takeName(&II);
 
   return IC.replaceInstUsesWith(II, Insert);
@@ -1357,7 +1367,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
     // The intrinsic is extracting lane 0 so use an extract instead.
     auto *IdxTy = Type::getInt64Ty(II.getContext());
     auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, 0));
-    Extract->insertBefore(&II);
+    Extract->insertBefore(II.getIterator());
     Extract->takeName(&II);
     return IC.replaceInstUsesWith(II, Extract);
   }
@@ -1393,7 +1403,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   // The intrinsic is extracting a fixed lane so use an extract instead.
   auto *IdxTy = Type::getInt64Ty(II.getContext());
   auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, Idx));
-  Extract->insertBefore(&II);
+  Extract->insertBefore(II.getIterator());
   Extract->takeName(&II);
   return IC.replaceInstUsesWith(II, Extract);
 }
@@ -1954,10 +1964,8 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
     Align Alignment =
         BasePtr->getPointerAlignment(II.getDataLayout());
 
-    Type *VecPtrTy = PointerType::getUnqual(Ty);
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
-    Ptr = IC.Builder.CreateBitCast(Ptr, VecPtrTy);
     CallInst *MaskedLoad =
         IC.Builder.CreateMaskedLoad(Ty, Ptr, Alignment, Mask, PassThru);
     MaskedLoad->takeName(&II);
@@ -1986,9 +1994,6 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
 
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
-    Type *VecPtrTy = PointerType::getUnqual(Ty);
-    Ptr = IC.Builder.CreateBitCast(Ptr, VecPtrTy);
-
     (void)IC.Builder.CreateMaskedStore(Val, Ptr, Alignment, Mask);
 
     return IC.eraseInstFromFunction(II);
@@ -2193,7 +2198,7 @@ static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
     NI = NI->getNextNonDebugInstruction();
     if (!NI) {
       if (auto *SuccBB = NIBB->getUniqueSuccessor())
-        NI = SuccBB->getFirstNonPHIOrDbgOrLifetime();
+        NI = &*SuccBB->getFirstNonPHIOrDbgOrLifetime();
       else
         break;
     }
@@ -4277,7 +4282,7 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // If mcpu is omitted, getProcFamily() returns AArch64Subtarget::Others, so by
   // checking for that case, we can ensure that the default behaviour is
   // unchanged
-  if (ST->getProcFamily() != AArch64Subtarget::Others &&
+  if (ST->getProcFamily() != AArch64Subtarget::Generic &&
       !ST->getSchedModel().isOutOfOrder()) {
     UP.Runtime = true;
     UP.Partial = true;
@@ -4678,7 +4683,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   InstructionCost Invalid = InstructionCost::getInvalid();
   InstructionCost Cost(TTI::TCC_Basic);
 
-  if (Opcode != Instruction::Add)
+  // Sub opcodes currently only occur in chained cases.
+  // Independent partial reduction subtractions are still costed as an add
+  if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
     return Invalid;
 
   if (InputTypeA != InputTypeB)
@@ -4687,13 +4694,25 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   EVT InputEVT = EVT::getEVT(InputTypeA);
   EVT AccumEVT = EVT::getEVT(AccumType);
 
-  if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
-    return Invalid;
-  if (VF.isFixed() && (!ST->isNeonAvailable() || !ST->hasDotProd()))
+  unsigned VFMinValue = VF.getKnownMinValue();
+
+  if (VF.isScalable()) {
+    if (!ST->isSVEorStreamingSVEAvailable())
+      return Invalid;
+
+    // Don't accept a partial reduction if the scaled accumulator is vscale x 1,
+    // since we can't lower that type.
+    unsigned Scale =
+        AccumEVT.getScalarSizeInBits() / InputEVT.getScalarSizeInBits();
+    if (VFMinValue == Scale)
+      return Invalid;
+  }
+  if (VF.isFixed() &&
+      (!ST->isNeonAvailable() || !ST->hasDotProd() || AccumEVT == MVT::i64))
     return Invalid;
 
   if (InputEVT == MVT::i8) {
-    switch (VF.getKnownMinValue()) {
+    switch (VFMinValue) {
     default:
       return Invalid;
     case 8:
@@ -4712,7 +4731,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   } else if (InputEVT == MVT::i16) {
     // FIXME: Allow i32 accumulator but increase cost, as we would extend
     //        it to i64.
-    if (VF.getKnownMinValue() != 8 || AccumEVT != MVT::i64)
+    if (VFMinValue != 8 || AccumEVT != MVT::i64)
       return Invalid;
   } else
     return Invalid;

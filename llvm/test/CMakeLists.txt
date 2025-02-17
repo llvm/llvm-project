@@ -1,6 +1,7 @@
 llvm_canonicalize_cmake_booleans(
   BUILD_SHARED_LIBS
   HAVE_OCAMLOPT
+  ENABLE_BACKTRACES
   LLVM_ENABLE_DIA_SDK
   LLVM_ENABLE_FFI
   LLVM_ENABLE_THREADS
@@ -231,6 +232,7 @@ if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
   list(APPEND LLVM_TEST_DEPENDS spirv-dis)
   list(APPEND LLVM_TEST_DEPENDS spirv-val)
   list(APPEND LLVM_TEST_DEPENDS spirv-as)
+  list(APPEND LLVM_TEST_DEPENDS spirv-link)
 endif()
 
 add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS})

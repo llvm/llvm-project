@@ -247,6 +247,13 @@ func.func @extract_0d(%a: vector<f32>) -> f32 {
   return %0 : f32
 }
 
+// CHECK-LABEL: @extract_poison_idx
+func.func @extract_poison_idx(%a: vector<4x5xf32>) -> f32 {
+  // CHECK-NEXT: vector.extract %{{.*}}[-1, 0] : f32 from vector<4x5xf32>
+  %0 = vector.extract %a[-1, 0] : f32 from vector<4x5xf32>
+  return %0 : f32
+}
+
 // CHECK-LABEL: @insert_element_0d
 func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
   // CHECK-NEXT: vector.insertelement %{{.*}}, %{{.*}}[] : vector<f32>
@@ -297,6 +304,13 @@ func.func @insert_0d(%a: f32, %b: vector<f32>, %c: vector<2x3xf32>) -> (vector<f
   // CHECK-NEXT: vector.insert %{{.*}}, %{{.*}}[0, 1] : vector<f32> into vector<2x3xf32>
   %2 = vector.insert %b,  %c[0, 1] : vector<f32> into vector<2x3xf32>
   return %1, %2 : vector<f32>, vector<2x3xf32>
+}
+
+// CHECK-LABEL: @insert_poison_idx
+func.func @insert_poison_idx(%a: vector<4x5xf32>, %b: f32) {
+  // CHECK-NEXT: vector.insert %{{.*}}, %{{.*}}[-1, 0] : f32 into vector<4x5xf32>
+  vector.insert %b, %a[-1, 0] : f32 into vector<4x5xf32>
+  return
 }
 
 // CHECK-LABEL: @outerproduct

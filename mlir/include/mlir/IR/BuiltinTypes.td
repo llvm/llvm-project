@@ -808,10 +808,52 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
 
+    /// Return "true" if the last N dimensions are contiguous.
+    ///
+    /// Examples:
+    ///   - memref<5x4x3x2xi8, strided<[24, 6, 2, 1]> is contiguous when
+    ///   considering both _all_ and _only_ the trailing 3 dims,
+    ///   - memref<5x4x3x2xi8, strided<[48, 6, 2, 1]> is _only_ contiguous when
+    ///   considering the trailing 3 dims.
+    ///
+    bool areTrailingDimsContiguous(int64_t n);
+
+    /// Return a version of this type with identity layout if it can be
+    /// determined statically that the layout is the canonical contiguous
+    /// strided layout. Otherwise pass the layout into `simplifyAffineMap`
+    /// and return a copy of this type with simplified layout.
+    MemRefType canonicalizeStridedLayout();
+
     /// [deprecated] Returns the memory space in old raw integer representation.
     /// New `Attribute getMemorySpace()` method should be used instead.
     unsigned getMemorySpaceAsInt() const;
 
+    /// Returns the strides of the MemRef if the layout map is in strided form.
+    /// MemRefs with a layout map in strided form include:
+    ///   1. empty or identity layout map, in which case the stride information
+    ///      is the canonical form computed from sizes;
+    ///   2. a StridedLayoutAttr layout;
+    ///   3. any other layout that be converted into a single affine map layout
+    ///      of the form `K + k0 * d0 + ... kn * dn`, where K and ki's are
+    ///      constants or symbols.
+    ///
+    /// A stride specification is a list of integer values that are either
+    /// static or dynamic (encoded with ShapedType::kDynamic). Strides encode
+    /// the distance in the number of elements between successive entries along
+    /// a particular dimension.
+    LogicalResult getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
+                                      int64_t &offset);
+
+    /// Wrapper around getStridesAndOffset(SmallVectorImpl<int64_t>, int64_t)
+    /// that will assert if the logical result is not succeeded.
+    std::pair<SmallVector<int64_t>, int64_t> getStridesAndOffset();
+
+    /// Return "true" if the layout is compatible with strided semantics.
+    bool isStrided();
+
+    /// Return "true" if the last dimension has a static unit stride. Also
+    /// return "true" for types with no strides.
+    bool isLastDimUnitStride();
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;

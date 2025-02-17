@@ -1027,6 +1027,9 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
     ContextScope.emplace(S, const_cast<DeclContext *>(cast<DeclContext>(RD)),
                          /*NewThisContext=*/false);
   }
+  EnterExpressionEvaluationContext UnevaluatedContext(
+      S, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
   ExprResult SubstConstr = S.SubstConstraintExprWithoutSatisfaction(
       const_cast<clang::Expr *>(ConstrExpr), MLTAL);
   if (SFINAE.hasErrorOccurred() || !SubstConstr.isUsable())

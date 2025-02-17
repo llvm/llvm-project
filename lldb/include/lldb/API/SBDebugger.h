@@ -42,12 +42,16 @@ public:
 
 class LLDB_API SBDebugger {
 public:
-  FLAGS_ANONYMOUS_ENUM(){
-      eBroadcastBitProgress = lldb::DebuggerBroadcastBit::eBroadcastBitProgress,
-      eBroadcastBitWarning = lldb::DebuggerBroadcastBit::eBroadcastBitWarning,
-      eBroadcastBitError = lldb::DebuggerBroadcastBit::eBroadcastBitError,
-      eBroadcastBitProgressCategory =
-          lldb::DebuggerBroadcastBit::eBroadcastBitProgressCategory,
+  FLAGS_ANONYMOUS_ENUM() {
+    eBroadcastBitProgress = lldb::DebuggerBroadcastBit::eBroadcastBitProgress,
+    eBroadcastBitWarning = lldb::DebuggerBroadcastBit::eBroadcastBitWarning,
+    eBroadcastBitError = lldb::DebuggerBroadcastBit::eBroadcastBitError,
+    eBroadcastBitProgressCategory =
+        lldb::DebuggerBroadcastBit::eBroadcastBitProgressCategory,
+    eBroadcastBitExternalProgress =
+        lldb::DebuggerBroadcastBit::eBroadcastBitExternalProgress,
+    eBroadcastBitExternalProgressCategory =
+        lldb::DebuggerBroadcastBit::eBroadcastBitExternalProgressCategory,
   };
   SBDebugger();
 

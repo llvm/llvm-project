@@ -233,6 +233,14 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
   return VT.changeVectorElementTypeToInteger();
 }
 
+bool X86TargetLowering::functionArgumentNeedsConsecutiveRegisters(
+    Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+    const DataLayout &DL) const {
+  // i128 split into i64 needs to be allocated to two consecutive registers,
+  // or spilled to the stack as a whole.
+  return Ty->isIntegerTy(128);
+}
+
 /// Helper for getByValTypeAlignment to determine
 /// the desired ByVal argument alignment.
 static void getMaxByValAlign(Type *Ty, Align &MaxAlign) {
@@ -1416,13 +1424,13 @@ static ArrayRef<MCPhysReg> get64BitArgumentGPRs(CallingConv::ID CallConv,
     static const MCPhysReg GPR64ArgRegsWin64[] = {
       X86::RCX, X86::RDX, X86::R8,  X86::R9
     };
-    return ArrayRef(std::begin(GPR64ArgRegsWin64), std::end(GPR64ArgRegsWin64));
+    return GPR64ArgRegsWin64;
   }
 
   static const MCPhysReg GPR64ArgRegs64Bit[] = {
     X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9
   };
-  return ArrayRef(std::begin(GPR64ArgRegs64Bit), std::end(GPR64ArgRegs64Bit));
+  return GPR64ArgRegs64Bit;
 }
 
 // FIXME: Get this from tablegen.
@@ -1448,7 +1456,7 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
     X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
     X86::XMM4, X86::XMM5, X86::XMM6, X86::XMM7
   };
-  return ArrayRef(std::begin(XMMArgRegs64Bit), std::end(XMMArgRegs64Bit));
+  return XMMArgRegs64Bit;
 }
 
 #ifndef NDEBUG
@@ -2318,12 +2326,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // shuffling arguments passed in memory.
   if (!IsSibcall && isTailCall) {
     // Force all the incoming stack arguments to be loaded from the stack
-    // before any new outgoing arguments are stored to the stack, because the
-    // outgoing stack slots may alias the incoming argument stack slots, and
-    // the alias isn't otherwise explicit. This is slightly more conservative
-    // than necessary, because it means that each store effectively depends
-    // on every argument instead of just those arguments it would clobber.
-    SDValue ArgChain = DAG.getStackArgumentTokenFactor(Chain);
+    // before any new outgoing arguments or the return address are stored to the
+    // stack, because the outgoing stack slots may alias the incoming argument
+    // stack slots, and the alias isn't otherwise explicit. This is slightly
+    // more conservative than necessary, because it means that each store
+    // effectively depends on every argument instead of just those arguments it
+    // would clobber.
+    Chain = DAG.getStackArgumentTokenFactor(Chain);
 
     SmallVector<SDValue, 8> MemOpChains2;
     SDValue FIN;
@@ -2365,13 +2374,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         Source = DAG.getNode(ISD::ADD, dl, getPointerTy(DAG.getDataLayout()),
                              StackPtr, Source);
 
-        MemOpChains2.push_back(CreateCopyOfByValArgument(Source, FIN,
-                                                         ArgChain,
-                                                         Flags, DAG, dl));
+        MemOpChains2.push_back(
+            CreateCopyOfByValArgument(Source, FIN, Chain, Flags, DAG, dl));
       } else {
         // Store relative to framepointer.
         MemOpChains2.push_back(DAG.getStore(
-            ArgChain, dl, Arg, FIN,
+            Chain, dl, Arg, FIN,
             MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI)));
       }
     }

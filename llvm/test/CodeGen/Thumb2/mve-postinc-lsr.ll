@@ -708,14 +708,14 @@ define ptr @signext(ptr %input_row, ptr %input_col, i16 zeroext %output_ch, i16 
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:  .LBB5_4: @ %for.cond.cleanup23
 ; CHECK-NEXT:    @ in Loop: Header=BB5_5 Depth=1
-; CHECK-NEXT:    add.w r0, r8, r10
 ; CHECK-NEXT:    ldr r1, [sp, #100]
+; CHECK-NEXT:    add.w r0, r8, r10
 ; CHECK-NEXT:    add r0, r6
 ; CHECK-NEXT:    add r0, r12
 ; CHECK-NEXT:    strb.w r0, [r1, r11]
 ; CHECK-NEXT:    add.w r11, r11, #1
-; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r11, r0
 ; CHECK-NEXT:    beq .LBB5_8
 ; CHECK-NEXT:  .LBB5_5: @ %for.body
@@ -933,14 +933,14 @@ define ptr @signext_optsize(ptr %input_row, ptr %input_col, i16 zeroext %output_
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:  .LBB6_7: @ %for.cond.cleanup23
 ; CHECK-NEXT:    @ in Loop: Header=BB6_3 Depth=1
-; CHECK-NEXT:    add.w r0, r8, r10
 ; CHECK-NEXT:    ldr r1, [sp, #100]
+; CHECK-NEXT:    add.w r0, r8, r10
 ; CHECK-NEXT:    add r0, r6
 ; CHECK-NEXT:    add r0, r12
 ; CHECK-NEXT:    strb.w r0, [r1, r11]
 ; CHECK-NEXT:    add.w r11, r11, #1
-; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r11, r0
 ; CHECK-NEXT:    bne .LBB6_3
 ; CHECK-NEXT:  .LBB6_8: @ %if.end

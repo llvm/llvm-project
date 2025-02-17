@@ -70,6 +70,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -79,6 +80,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
 #include <iterator>
@@ -120,6 +122,62 @@ findPrologueEnd(MachineFunction &MF, MachineBasicBlock::iterator &PrologueEnd) {
     }
   }
   return nullptr;
+}
+
+// Represents a basic block's relationship to the call frame. This metadata
+// reflects what the state *should* be, which may differ from the actual state
+// after final machine basic block layout.
+struct BlockFlags {
+  bool Reachable : 1;
+  bool StrongNoFrameOnEntry : 1;
+  bool HasFrameOnEntry : 1;
+  bool HasFrameOnExit : 1;
+  BlockFlags()
+      : Reachable(false), StrongNoFrameOnEntry(false), HasFrameOnEntry(false),
+        HasFrameOnExit(false) {}
+};
+
+// Most functions will have <= 32 basic blocks.
+using BlockFlagsVector = SmallVector<BlockFlags, 32>;
+
+// Computes the frame information for each block in the function. Frame info
+// for a block is inferred from its predecessors.
+static BlockFlagsVector
+computeBlockInfo(const MachineFunction &MF,
+                 const MachineBasicBlock *PrologueBlock) {
+  BlockFlagsVector BlockInfo(MF.getNumBlockIDs());
+  BlockInfo[0].Reachable = true;
+  BlockInfo[0].StrongNoFrameOnEntry = true;
+
+  // Compute the presence/absence of frame at each basic block.
+  ReversePostOrderTraversal<const MachineBasicBlock *> RPOT(&*MF.begin());
+  for (const MachineBasicBlock *MBB : RPOT) {
+    BlockFlags &Info = BlockInfo[MBB->getNumber()];
+
+    // Set to true if the current block contains the prologue or the epilogue,
+    // respectively.
+    bool HasPrologue = MBB == PrologueBlock;
+    bool HasEpilogue = false;
+
+    if (Info.HasFrameOnEntry || HasPrologue)
+      HasEpilogue = containsEpilogue(*MBB);
+
+    // If the function has a call frame at the entry of the current block or the
+    // current block contains the prologue, then the function has a call frame
+    // at the exit of the block, unless the block contains the epilogue.
+    Info.HasFrameOnExit = (Info.HasFrameOnEntry || HasPrologue) && !HasEpilogue;
+
+    // Set the successors' state on entry.
+    for (MachineBasicBlock *Succ : MBB->successors()) {
+      BlockFlags &SuccInfo = BlockInfo[Succ->getNumber()];
+      SuccInfo.Reachable = true;
+      SuccInfo.StrongNoFrameOnEntry |=
+          Info.StrongNoFrameOnEntry && !HasPrologue;
+      SuccInfo.HasFrameOnEntry = Info.HasFrameOnExit;
+    }
+  }
+
+  return BlockInfo;
 }
 
 // Represents the point within a basic block where we can insert an instruction.
@@ -181,13 +239,74 @@ static InsertionPoint cloneCfiPrologue(const InsertionPoint &PrologueEnd,
   return DstInsertPt;
 }
 
-bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
+// Fixes up the CFI instructions in a basic block to be consistent with the
+// intended frame state, adding or removing CFI instructions as necessary.
+// Returns true if a change was made and false otherwise.
+static bool
+fixupBlock(MachineBasicBlock &CurrBB, const BlockFlagsVector &BlockInfo,
+           SmallDenseMap<MBBSectionID, InsertionPoint> &InsertionPts,
+           const InsertionPoint &Prologue) {
+  const MachineFunction &MF = *CurrBB.getParent();
   const TargetFrameLowering &TFL = *MF.getSubtarget().getFrameLowering();
-  if (!TFL.enableCFIFixup(MF))
+  const BlockFlags &Info = BlockInfo[CurrBB.getNumber()];
+
+  if (!Info.Reachable)
     return false;
 
-  const unsigned NumBlocks = MF.getNumBlockIDs();
-  if (NumBlocks < 2)
+  // If we don't need to perform full CFI fix up, we only need to fix up the
+  // first basic block in the section.
+  if (!TFL.enableFullCFIFixup(MF) && !CurrBB.isBeginSection())
+    return false;
+
+  // If the previous block and the current block are in the same section,
+  // the frame info will propagate from the previous block to the current one.
+  const BlockFlags &PrevInfo =
+      BlockInfo[std::prev(CurrBB.getIterator())->getNumber()];
+  bool HasFrame = PrevInfo.HasFrameOnExit && !CurrBB.isBeginSection();
+  bool NeedsFrame = Info.HasFrameOnEntry && !Info.StrongNoFrameOnEntry;
+
+#ifndef NDEBUG
+  if (!Info.StrongNoFrameOnEntry) {
+    for (auto *Pred : CurrBB.predecessors()) {
+      const BlockFlags &PredInfo = BlockInfo[Pred->getNumber()];
+      assert((!PredInfo.Reachable ||
+              Info.HasFrameOnEntry == PredInfo.HasFrameOnExit) &&
+             "Inconsistent call frame state");
+    }
+  }
+#endif
+
+  if (HasFrame == NeedsFrame)
+    return false;
+
+  if (!NeedsFrame) {
+    // Reset to the state upon function entry.
+    TFL.resetCFIToInitialState(CurrBB);
+    return true;
+  }
+
+  // Reset to the "after prologue" state.
+  InsertionPoint &InsertPt = InsertionPts[CurrBB.getSectionID()];
+  if (InsertPt.MBB == nullptr) {
+    // CurBB is the first block in its section, so there is no "after
+    // prologue" state. Clone the CFI instructions from the prologue block
+    // to create it.
+    InsertPt = cloneCfiPrologue(Prologue, {&CurrBB, CurrBB.begin()});
+  } else {
+    // There's an earlier block known to have a stack frame. Insert a
+    // `.cfi_remember_state` instruction into that block and a
+    // `.cfi_restore_state` instruction at the beginning of the current
+    // block.
+    InsertPt = insertRememberRestorePair(InsertPt, {&CurrBB, CurrBB.begin()});
+  }
+  return true;
+}
+
+bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
+  if (!MF.getSubtarget().getFrameLowering()->enableCFIFixup(MF))
+    return false;
+
+  if (MF.getNumBlockIDs() < 2)
     return false;
 
   // Find the prologue and the point where we can issue the first
@@ -197,44 +316,7 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
   if (PrologueBlock == nullptr)
     return false;
 
-  struct BlockFlags {
-    bool Reachable : 1;
-    bool StrongNoFrameOnEntry : 1;
-    bool HasFrameOnEntry : 1;
-    bool HasFrameOnExit : 1;
-  };
-  SmallVector<BlockFlags, 32> BlockInfo(NumBlocks,
-                                        {false, false, false, false});
-  BlockInfo[0].Reachable = true;
-  BlockInfo[0].StrongNoFrameOnEntry = true;
-
-  // Compute the presence/absence of frame at each basic block.
-  ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
-  for (MachineBasicBlock *MBB : RPOT) {
-    BlockFlags &Info = BlockInfo[MBB->getNumber()];
-
-    // Set to true if the current block contains the prologue or the epilogue,
-    // respectively.
-    bool HasPrologue = MBB == PrologueBlock;
-    bool HasEpilogue = false;
-
-    if (Info.HasFrameOnEntry || HasPrologue)
-      HasEpilogue = containsEpilogue(*MBB);
-
-    // If the function has a call frame at the entry of the current block or the
-    // current block contains the prologue, then the function has a call frame
-    // at the exit of the block, unless the block contains the epilogue.
-    Info.HasFrameOnExit = (Info.HasFrameOnEntry || HasPrologue) && !HasEpilogue;
-
-    // Set the successors' state on entry.
-    for (MachineBasicBlock *Succ : MBB->successors()) {
-      BlockFlags &SuccInfo = BlockInfo[Succ->getNumber()];
-      SuccInfo.Reachable = true;
-      SuccInfo.StrongNoFrameOnEntry |=
-          Info.StrongNoFrameOnEntry && !HasPrologue;
-      SuccInfo.HasFrameOnEntry = Info.HasFrameOnExit;
-    }
-  }
+  BlockFlagsVector BlockInfo = computeBlockInfo(MF, PrologueBlock);
 
   // Walk the blocks of the function in "physical" order.
   // Every block inherits the frame state (as recorded in the unwind tables)
@@ -253,57 +335,10 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
   // No point starting before the prologue block.
   // TODO: the unwind tables will still be incorrect if an epilogue physically
   // preceeds the prologue.
-  MachineFunction::iterator CurrBB = std::next(PrologueBlock->getIterator());
-  bool HasFrame = BlockInfo[PrologueBlock->getNumber()].HasFrameOnExit;
-  while (CurrBB != MF.end()) {
-    const BlockFlags &Info = BlockInfo[CurrBB->getNumber()];
-    if (!Info.Reachable) {
-      ++CurrBB;
-      continue;
-    }
-
-#ifndef NDEBUG
-    if (!Info.StrongNoFrameOnEntry) {
-      for (auto *Pred : CurrBB->predecessors()) {
-        BlockFlags &PredInfo = BlockInfo[Pred->getNumber()];
-        assert((!PredInfo.Reachable ||
-                Info.HasFrameOnEntry == PredInfo.HasFrameOnExit) &&
-               "Inconsistent call frame state");
-      }
-    }
-#endif
-
-    // If the block is the first block in its section, then it doesn't have a
-    // frame on entry.
-    HasFrame &= !CurrBB->isBeginSection();
-    if (!Info.StrongNoFrameOnEntry && Info.HasFrameOnEntry && !HasFrame) {
-      // Reset to the "after prologue" state.
-
-      InsertionPoint &InsertPt = InsertionPts[CurrBB->getSectionID()];
-      if (InsertPt.MBB == nullptr) {
-        // CurBB is the first block in its section, so there is no "after
-        // prologue" state. Clone the CFI instructions from the prologue block
-        // to create it.
-        InsertPt = cloneCfiPrologue({PrologueBlock, PrologueEnd},
-                                    {&*CurrBB, CurrBB->begin()});
-      } else {
-        // There's an earlier block known to have a stack frame. Insert a
-        // `.cfi_remember_state` instruction into that block and a
-        // `.cfi_restore_state` instruction at the beginning of the current
-        // block.
-        InsertPt =
-            insertRememberRestorePair(InsertPt, {&*CurrBB, CurrBB->begin()});
-      }
-      Change = true;
-    } else if ((Info.StrongNoFrameOnEntry || !Info.HasFrameOnEntry) &&
-               HasFrame) {
-      // Reset to the state upon function entry.
-      TFL.resetCFIToInitialState(*CurrBB);
-      Change = true;
-    }
-
-    HasFrame = Info.HasFrameOnExit;
-    ++CurrBB;
+  for (MachineBasicBlock &MBB :
+       make_range(std::next(PrologueBlock->getIterator()), MF.end())) {
+    Change |=
+        fixupBlock(MBB, BlockInfo, InsertionPts, {PrologueBlock, PrologueEnd});
   }
 
   return Change;

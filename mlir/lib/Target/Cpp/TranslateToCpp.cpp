@@ -475,7 +475,10 @@ static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::SwitchOp switchOp) {
   raw_indented_ostream &os = emitter.ostream();
 
-  os << "\nswitch (" << emitter.getOrCreateName(switchOp.getArg()) << ") {";
+  os << "\nswitch (";
+  if (failed(emitter.emitOperand(switchOp.getArg())))
+    return failure();
+  os << ") {";
 
   for (auto pair : llvm::zip(switchOp.getCases(), switchOp.getCaseRegions())) {
     os << "\ncase " << std::get<0>(pair) << ": {\n";
@@ -1384,11 +1387,9 @@ LogicalResult CppEmitter::emitOperand(Value value) {
     // as they might be evaluated in the wrong order depending on the shape of
     // the expression tree.
     bool encloseInParenthesis = precedence.value() <= getExpressionPrecedence();
-    if (encloseInParenthesis) {
+    if (encloseInParenthesis)
       os << "(";
-      pushExpressionPrecedence(lowestPrecedence());
-    } else
-      pushExpressionPrecedence(precedence.value());
+    pushExpressionPrecedence(precedence.value());
 
     if (failed(emitOperation(*def, /*trailingSemicolon=*/false)))
       return failure();

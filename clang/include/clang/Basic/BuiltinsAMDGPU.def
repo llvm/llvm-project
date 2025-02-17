@@ -504,6 +504,8 @@ TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b128_v4i16, "V4sV4s*1", "nc", "gf
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b128_v4f16, "V4hV4h*1", "nc", "gfx12-insts,wavefrontsize64")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b128_v4bf16, "V4yV4y*1", "nc", "gfx12-insts,wavefrontsize64")
 
+TARGET_BUILTIN(__builtin_amdgcn_ds_bpermute_fi_b32, "iii", "nc", "gfx12-insts")
+
 //===----------------------------------------------------------------------===//
 // WMMA builtins.
 // Postfix w32 indicates the builtin requires wavefront size of 32.
