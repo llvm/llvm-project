@@ -97,6 +97,10 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
+  uint64_t getImmOpValueZibimm(const MCInst &MI, unsigned OpNo,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
+
   uint64_t getImmOpValue(const MCInst &MI, unsigned OpNo,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
@@ -542,6 +546,22 @@ RISCVMCCodeEmitter::getImmOpValueAsrN(const MCInst &MI, unsigned OpNo,
     return Res >> N;
   }
 
+  return getImmOpValue(MI, OpNo, Fixups, STI);
+}
+
+uint64_t
+RISCVMCCodeEmitter::getImmOpValueZibimm(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  if (MO.isImm()) {
+    uint64_t Res = MO.getImm();
+    if (Res >= 1 && Res <= 31)
+      return Res;
+    if (Res == (uint64_t)-1)
+      return 0;
+  }
   return getImmOpValue(MI, OpNo, Fixups, STI);
 }
 

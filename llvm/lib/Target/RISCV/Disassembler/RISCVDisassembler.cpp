@@ -457,6 +457,18 @@ static DecodeStatus decodeUImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
   return decodeUImmOperand<N>(Inst, Imm, Address, Decoder);
 }
 
+template <unsigned N>
+static DecodeStatus decodeUImmZibimmOperand(MCInst &Inst, uint32_t Imm,
+                                            int64_t Address,
+                                            const MCDisassembler *Decoder) {
+  assert(isUInt<N>(Imm) && "Invalid immediate");
+  if (Imm)
+    Inst.addOperand(MCOperand::createImm(Imm));
+  else
+    Inst.addOperand(MCOperand::createImm(-1));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus
 decodeUImmLog2XLenNonZeroOperand(MCInst &Inst, uint32_t Imm, int64_t Address,
                                  const MCDisassembler *Decoder) {

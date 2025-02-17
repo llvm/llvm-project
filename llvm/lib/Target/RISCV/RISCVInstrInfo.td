@@ -2249,6 +2249,7 @@ include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 include "RISCVInstrInfoZicfiss.td"
 include "RISCVInstrInfoZilsd.td"
+include "RISCVInstrInfoZibimm.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"

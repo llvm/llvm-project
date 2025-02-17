@@ -962,6 +962,10 @@ static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
   switch (Opc) {
   default:
     return RISCVCC::COND_INVALID;
+  case RISCV::BEQI:
+    return RISCVCC::COND_EQ;
+  case RISCV::BNEI:
+    return RISCVCC::COND_NE;
   case RISCV::BEQ:
     return RISCVCC::COND_EQ;
   case RISCV::BNE:
@@ -1039,14 +1043,31 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
+<<<<<<< HEAD
 unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC) {
+=======
+unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, RISCVCC::CondCode CC,
+                            bool Imm) {
+>>>>>>> 63ba04f2fad0 ([RISCV] Add Support of RISCV Zibimm Experimental Extension)
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
   case RISCVCC::COND_EQ:
+<<<<<<< HEAD
     return RISCV::BEQ;
   case RISCVCC::COND_NE:
     return RISCV::BNE;
+=======
+    return Imm ? (STI.hasStdExtZibimm()
+                      ? RISCV::BEQI
+                      : (STI.hasVendorXCVbi() ? RISCV::CV_BEQIMM : RISCV::BEQ))
+               : RISCV::BEQ;
+  case RISCVCC::COND_NE:
+    return Imm ? (STI.hasStdExtZibimm()
+                      ? RISCV::BNEI
+                      : (STI.hasVendorXCVbi() ? RISCV::CV_BNEIMM : RISCV::BNE))
+               : RISCV::BNE;
+>>>>>>> 63ba04f2fad0 ([RISCV] Add Support of RISCV Zibimm Experimental Extension)
   case RISCVCC::COND_LT:
     return RISCV::BLT;
   case RISCVCC::COND_GE:
@@ -1086,8 +1107,14 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC) {
   }
 }
 
+<<<<<<< HEAD
 const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC) const {
   return get(RISCVCC::getBrCond(CC));
+=======
+const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC,
+                                             bool Imm) const {
+  return get(RISCVCC::getBrCond(STI, CC, Imm));
+>>>>>>> 63ba04f2fad0 ([RISCV] Add Support of RISCV Zibimm Experimental Extension)
 }
 
 RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
@@ -1507,6 +1534,8 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   case RISCV::BGE:
   case RISCV::BLTU:
   case RISCV::BGEU:
+  case RISCV::BEQI:
+  case RISCV::BNEI:
   case RISCV::CV_BEQIMM:
   case RISCV::CV_BNEIMM:
   case RISCV::QC_BEQI:
@@ -2702,6 +2731,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           // clang-format on
         case RISCVOp::OPERAND_UIMM2_LSB0:
           Ok = isShiftedUInt<1, 1>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM5_ZIBIMM:
+          Ok = (isUInt<5>(Imm) && Imm != 0) || Imm == -1;
           break;
         case RISCVOp::OPERAND_UIMM5_LSB0:
           Ok = isShiftedUInt<4, 1>(Imm);
