@@ -8175,14 +8175,6 @@ static bool handleGuaranteedWellDefinedOps(const Instruction *I,
   return false;
 }
 
-void llvm::getGuaranteedWellDefinedOps(
-    const Instruction *I, SmallVectorImpl<const Value *> &Operands) {
-  handleGuaranteedWellDefinedOps(I, [&](const Value *V) {
-    Operands.push_back(V);
-    return false;
-  });
-}
-
 /// Enumerates all operands of \p I that are guaranteed to not be poison.
 template <typename CallableT>
 static bool handleGuaranteedNonPoisonOps(const Instruction *I,
