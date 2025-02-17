@@ -146,16 +146,8 @@ bool IODEF(OutputLogical)(Cookie cookie, bool truth) {
 
 } // namespace Fortran::runtime::io
 
-#if defined(_LIBCPP_VERBOSE_ABORT)
-// Provide own definition for `std::__libcpp_verbose_abort` to avoid dependency
-// on the version provided by libc++.
-
-#if !defined(_LIBCPP_VERBOSE_ABORT_NOEXCEPT)
-  #define _LIBCPP_VERBOSE_ABORT_NOEXCEPT
-#endif
-
-
-void std::__libcpp_verbose_abort(char const *format, ...) _LIBCPP_VERBOSE_ABORT_NOEXCEPT {
+void std::__libcpp_verbose_abort(char const *format, ...)
+    noexcept(noexcept(std::__libcpp_verbose_abort(""))) {
   va_list list;
   va_start(list, format);
   std::vfprintf(stderr, format, list);
