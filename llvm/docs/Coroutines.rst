@@ -1485,6 +1485,9 @@ so that the following logic can resume unwinding.  In a yield-once
 coroutine, reaching a non-unwind ``llvm.coro.end`` without having first
 reached a ``llvm.coro.suspend.retcon`` has undefined behavior.
 
+Note: allocas referenced after ``llvm.coro.end`` are never stored in the
+coroutine frame.
+
 The remainder of this section describes the behavior under switched-resume
 lowering.
 
