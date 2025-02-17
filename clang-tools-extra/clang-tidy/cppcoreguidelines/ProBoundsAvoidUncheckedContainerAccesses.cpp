@@ -26,8 +26,9 @@ ProBoundsAvoidUncheckedContainerAccesses::
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {
 
-  ExcludedClasses = clang::tidy::utils::options::parseStringList(
-      Options.get("ExcludeClasses", ""));
+  ExcludedClassesStr = Options.get("ExcludeClasses", "");
+  ExcludedClasses =
+      clang::tidy::utils::options::parseStringList(ExcludedClassesStr);
   ExcludedClasses.insert(ExcludedClasses.end(), DefaultExclusions.begin(),
                          DefaultExclusions.end());
   FixMode = Options.get("FixMode", None);
@@ -44,18 +45,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
     return;
   }
 
-  // Sum up the sizes of the defaults ( + semicolons), so we can remove them
-  // from the saved options
-  const size_t DefaultsStringLength =
-      std::transform_reduce(DefaultExclusions.begin(), DefaultExclusions.end(),
-                            DefaultExclusions.size(), std::plus<>(),
-                            [](llvm::StringRef Name) { return Name.size(); });
-
-  const std::string Serialized =
-      clang::tidy::utils::options::serializeStringList(ExcludedClasses);
-
-  Options.store(Opts, "ExcludeClasses",
-                Serialized.substr(0, Serialized.size() - DefaultsStringLength));
+  Options.store(Opts, "ExcludeClasses", ExcludedClassesStr);
 }
 
 // TODO: if at() is defined in another class in the class hierarchy of the class
