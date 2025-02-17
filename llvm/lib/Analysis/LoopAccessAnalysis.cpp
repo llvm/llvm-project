@@ -793,26 +793,6 @@ private:
 
 } // end anonymous namespace
 
-/// Check whether a pointer can participate in a runtime bounds check.
-/// If \p Assume, try harder to prove that we can compute the bounds of \p Ptr
-/// by adding run-time checks (overflow checks) if necessary.
-static bool hasComputableBounds(PredicatedScalarEvolution &PSE, Value *Ptr,
-                                const SCEV *PtrScev, Loop *L, bool Assume) {
-  // The bounds for loop-invariant pointer is trivial.
-  if (PSE.getSE()->isLoopInvariant(PtrScev, L))
-    return true;
-
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
-
-  if (!AR && Assume)
-    AR = PSE.getAsAddRec(Ptr);
-
-  if (!AR)
-    return false;
-
-  return AR->isAffine();
-}
-
 /// Try to compute the stride for \p AR. Used by getPtrStride.
 static std::optional<int64_t>
 getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
@@ -859,21 +839,9 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
                            PredicatedScalarEvolution &PSE, const Loop *L);
 
 /// Check whether a pointer address cannot wrap.
-static bool isNoWrap(PredicatedScalarEvolution &PSE,
-                     const DenseMap<Value *, const SCEV *> &Strides, Value *Ptr,
-                     Type *AccessTy, const Loop *L, bool Assume,
+static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
+                     Value *Ptr, Type *AccessTy, const Loop *L, bool Assume,
                      std::optional<int64_t> Stride = std::nullopt) {
-  const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
-  if (PSE.getSE()->isLoopInvariant(PtrScev, L))
-    return true;
-
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
-  if (!AR) {
-    if (!Assume)
-      return false;
-    AR = PSE.getAsAddRec(Ptr);
-  }
-
   // The address calculation must not wrap. Otherwise, a dependence could be
   // inverted.
   if (isNoWrapAddRec(Ptr, AR, PSE, L))
@@ -1143,14 +1111,27 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> TranslatedPtrs =
       findForkedPointer(PSE, StridesMap, Ptr, TheLoop);
 
+  /// Check whether all pointers can participate in a runtime bounds check. They
+  /// must either be invariant or AddRecs. If ShouldCheckWrap is true, they also
+  /// must not wrap.
   for (auto &P : TranslatedPtrs) {
-    if (!hasComputableBounds(PSE, Ptr, P.getPointer(), TheLoop, Assume))
+    // The bounds for loop-invariant pointer is trivial.
+    if (PSE.getSE()->isLoopInvariant(P.getPointer(), TheLoop))
+      continue;
+
+    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
+    if (!AR && Assume)
+      AR = PSE.getAsAddRec(Ptr);
+    if (!AR || !AR->isAffine())
       return false;
 
     // If there's only one option for Ptr, look it up after bounds and wrap
     // checking, because assumptions might have been added to PSE.
-    if (TranslatedPtrs.size() == 1)
-      P.setPointer(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
+    if (TranslatedPtrs.size() == 1) {
+      AR =
+          cast<SCEVAddRecExpr>(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
+      P.setPointer(AR);
+    }
 
     // When we run after a failing dependency check we have to make sure
     // we don't have wrapping pointers.
@@ -1159,7 +1140,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       if (TranslatedPtrs.size() > 1)
         return false;
 
-      if (!isNoWrap(PSE, StridesMap, Ptr, AccessTy, TheLoop, Assume))
+      if (!isNoWrap(PSE, AR, Ptr, AccessTy, TheLoop, Assume))
         return false;
     }
   }
@@ -1548,7 +1529,7 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   if (!ShouldCheckWrap || !Stride)
     return Stride;
 
-  if (isNoWrap(PSE, StridesMap, Ptr, AccessTy, Lp, Assume, Stride))
+  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, Assume, Stride))
     return Stride;
 
   LLVM_DEBUG(

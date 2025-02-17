@@ -8937,15 +8937,12 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
 
   unsigned ReductionOpcode = Reduction->getOpcode();
   if (ReductionOpcode == Instruction::Sub) {
-    VPBasicBlock *ParentBlock = Builder.getInsertBlock();
-    assert(ParentBlock && "Builder must have an insert block.");
-
     auto *const Zero = ConstantInt::get(Reduction->getType(), 0);
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getOrAddLiveIn(Zero));
     Ops.push_back(BinOp);
     BinOp = new VPWidenRecipe(*Reduction, make_range(Ops.begin(), Ops.end()));
-    ParentBlock->appendRecipe(BinOp->getDefiningRecipe());
+    Builder.insert(BinOp->getDefiningRecipe());
     ReductionOpcode = Instruction::Add;
   }
 
