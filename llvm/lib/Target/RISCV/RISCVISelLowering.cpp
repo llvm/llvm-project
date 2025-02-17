@@ -5593,6 +5593,20 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
         if (SDValue Src = getSingleShuffleSrc(VT, V1, V2))
           return getDeinterleaveShiftAndTrunc(DL, VT, Src, Factor, Index, DAG);
+        if (1 < count_if(Mask,
+                         [&Mask](int Idx) { return Idx < (int)Mask.size(); }) &&
+            1 < count_if(Mask, [&Mask](int Idx) {
+              return Idx >= (int)Mask.size();
+            })) {
+          // Narrow each source and concatenate them.
+          // FIXME: For small LMUL it is better to concatenate first.
+          MVT HalfVT = VT.getHalfNumVectorElementsVT();
+          SDValue Lo =
+              getDeinterleaveShiftAndTrunc(DL, HalfVT, V1, Factor, Index, DAG);
+          SDValue Hi =
+              getDeinterleaveShiftAndTrunc(DL, HalfVT, V2, Factor, Index, DAG);
+          return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+        }
       }
     }
   }

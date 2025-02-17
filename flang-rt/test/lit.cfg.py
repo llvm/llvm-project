@@ -92,7 +92,7 @@ config.substitutions.append(
     ("%include", os.path.join(config.flang_source_dir, "include"))
 )
 
-# Library path of libflang_rt.runtime.a (for lib search path when using non-Flang driver for linking)
+# Library path of libflang_rt.runtime.a/.so (for lib search path when using non-Flang driver for linking and LD_LIBRARY_PATH)
 config.substitutions.append(("%libdir", config.flang_rt_output_resource_lib_dir))
 
 # For CUDA offloading, additional steps (device linking) and libraries (cudart) are needed.
