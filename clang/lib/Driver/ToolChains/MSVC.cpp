@@ -232,6 +232,9 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_fprofile_sample_use_EQ))
+    CmdArgs.push_back(Args.MakeArgString(std::string("-lto-sample-profile:") +
+                                         A->getValue()));
   Args.AddAllArgValues(CmdArgs, options::OPT__SLASH_link);
 
   // Control Flow Guard checks
