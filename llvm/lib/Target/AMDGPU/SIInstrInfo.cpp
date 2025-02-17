@@ -3473,7 +3473,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       assert(UseMI.getOperand(1).getReg().isVirtual());
     }
 
-    MachineFunction *MF = UseMI.getParent()->getParent();
+    MachineFunction *MF = UseMI.getMF();
     const MCInstrDesc &NewMCID = get(NewOpc);
     const TargetRegisterClass *NewDefRC = getRegClass(NewMCID, 0, &RI, *MF);
 
