@@ -7099,10 +7099,11 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
   Function *KernelLaunchFunction = StaleCI->getCalledFunction();
 
   // StaleCI is the CallInst which is the call to the outlined
-  // target kernel launch function. If there are values that the
-  // outlined function uses then these are aggregated into a structure
-  // which is passed as the second argument. If not, then there's
-  // only one argument, the threadID. So, StaleCI can be
+  // target kernel launch function. If there are local live-in values
+  // that the outlined function uses then these are aggregated into a structure
+  // which is passed as the second argument. If there are no local live-in
+  // values or if all values used by the outlined kernel are global variables,
+  // then there's only one argument, the threadID. So, StaleCI can be
   //
   // %structArg = alloca { ptr, ptr }, align 8
   // %gep_ = getelementptr { ptr, ptr }, ptr %structArg, i32 0, i32 0
@@ -7140,6 +7141,8 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
   // host and device.
   assert((!HasShareds || (StaleCI->arg_size() == 2)) &&
          "StaleCI with shareds should have exactly two arguments.");
+
+  Value *ThreadId = ProxyFn->getArg(0);
   if (HasShareds) {
     auto *ArgStructAlloca = dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
     assert(ArgStructAlloca &&
@@ -7150,7 +7153,6 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
     AllocaInst *NewArgStructAlloca =
         Builder.CreateAlloca(ArgStructType, nullptr, "structArg");
     Value *TaskT = ProxyFn->getArg(1);
-    Value *ThreadId = ProxyFn->getArg(0);
     Value *SharedsSize =
         Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
 
@@ -7163,7 +7165,10 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
         LoadShared->getPointerAlignment(M.getDataLayout()), SharedsSize);
 
     Builder.CreateCall(KernelLaunchFunction, {ThreadId, NewArgStructAlloca});
+  } else {
+    Builder.CreateCall(KernelLaunchFunction, {ThreadId});
   }
+
   Builder.CreateRetVoid();
   return ProxyFn;
 }
@@ -7306,11 +7311,23 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
       Builder, AllocaIP, ToBeDeleted, TargetTaskAllocaIP, "global.tid", false));
 
   Builder.restoreIP(TargetTaskBodyIP);
-
   if (Error Err = TaskBodyCB(DeviceID, RTLoc, TargetTaskAllocaIP))
     return Err;
 
-  OI.ExitBB = Builder.saveIP().getBlock();
+  // The outliner (CodeExtractor) extract a sequence or vector of blocks that
+  // it is given. These blocks are enumerated by
+  // OpenMPIRBuilder::OutlineInfo::collectBlocks which expects the OI.ExitBlock
+  // to be outside the region. In other words, OI.ExitBlock is expected to be
+  // the start of the region after the outlining. We used to set OI.ExitBlock
+  // to the InsertBlock after TaskBodyCB is done. This is fine in most cases
+  // except when the task body is a single basic block. In that case,
+  // OI.ExitBlock is set to the single task body block and will get left out of
+  // the outlining process. So, simply create a new empty block to which we
+  // uncoditionally branch from where TaskBodyCB left off
+  OI.ExitBB = BasicBlock::Create(Builder.getContext(), "target.task.cont");
+  emitBlock(OI.ExitBB, Builder.GetInsertBlock()->getParent(),
+            /*IsFinished=*/true);
+
   OI.PostOutlineCB = [this, ToBeDeleted, Dependencies, HasNoWait,
                       DeviceID](Function &OutlinedFn) mutable {
     assert(OutlinedFn.getNumUses() == 1 &&
