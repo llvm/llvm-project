@@ -620,11 +620,11 @@ struct __fn {
     return views::all(std::forward<_Range>(__range));
   }
 
-  template <class... _Views>
-    requires(sizeof...(_Views) > 1) && (view<_Views> && ...) && __concatable<_Views...>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Views... __views) const
-      noexcept(noexcept(concat_view(std::forward<_Views>(__views)...))) {
-    return concat_view(std::forward<_Views>(__views)...);
+  template <class _FirstRange, class... _TailRanges>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_FirstRange&& __first, _TailRanges&&... __tail) 
+      noexcept(noexcept(concat_view(std::forward<_FirstRange>(__first), std::forward<_TailRanges>(__tail)...)))
+      -> decltype(concat_view(std::forward<_FirstRange>(__first), std::forward<_TailRanges>(__tail)...)) {
+    return concat_view(std::forward<_FirstRange>(__first), std::forward<_TailRanges>(__tail)...);
   }
 };
 } // namespace __concat
