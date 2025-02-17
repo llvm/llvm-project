@@ -315,9 +315,6 @@ ARMBaseRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   default:
     return 0;
   case ARM::tGPRRegClassID: {
-    // hasFP ends up calling getMaxCallFrameComputed() which may not be
-    // available when getPressureLimit() is called as part of
-    // ScheduleDAGRRList.
     bool HasFP = MF.getFrameInfo().isMaxCallFrameSizeComputed()
                  ? TFI->hasFP(MF) : true;
     return 5 - HasFP;
