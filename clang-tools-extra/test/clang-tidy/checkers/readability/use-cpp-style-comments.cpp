@@ -32,7 +32,7 @@ int complexCalculation = calculateSomething(); /* Result of complex calculation 
 
 // Nested comments and edge cases
 void edgeCaseFunction() {
-    int x = 10 /* First value */ + 20 /* Second value */;  // Inline comments should not transform
+    int x = 10 /* First value */ + 20 /* Second value */; // Inline comments should not transform
     
     /* Comment with special characters !@#$%^&*()_+ */
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use C++ style comments '//' instead of C style comments '/*...*/' [readability-use-cpp-style-comments]
@@ -44,7 +44,7 @@ void edgeCaseFunction() {
        and should preserve indentation when converted */
 // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use C++ style comments '//' instead of C style comments '/*...*/' [readability-use-cpp-style-comments]
 // CHECK-FIXES:     // This comment is indented
-// CHECK-FIXES:     // and should preserve indentation when converted
+// CHECK-FIXES: //     and should preserve indentation when converted
 
 // Complex function with mixed comment types
 void complexFunction() {
@@ -60,9 +60,21 @@ void complexFunction() {
 /* aaa 
     bbbb
     ccc */ int z = 1;
-// There is a text after the comment ends so it should be ignored.
+// There is a token after the comment ends so it should be ignored.
 
 int y = 10;/* aaa 
     bbbb
     ccc */ int z1 = 1;
-// There is a text after the comment ends so it should be ignored.
+// There is a token after the comment ends so it should be ignored.
+
+/*  aaa
+a    //  abc
+    bbb */
+// CHECK-MESSAGES: :[[@LINE-3]]:1: warning: use C++ style comments '//' instead of C style comments '/*...*/' [readability-use-cpp-style-comments]
+// CHECK-FIXES: //  aaa
+// CHECK-FIXES: //a    //  abc
+// CHECK-FIXES: //  bbb  
+
+int k1 = 49; /* aa //bbbb aa *///
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use C++ style comments '//' instead of C style comments '/*...*/' [readability-use-cpp-style-comments]
+// CHECK-FIXES: // aa //bbbb aa

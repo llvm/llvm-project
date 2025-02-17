@@ -49,3 +49,9 @@ Options
 
    A boolean option that determines whether Doxygen-style comments should be excluded.  
    By default, this option is set to ``false``.  
+
+.. option:: ExcludedComments
+
+   A regex pattern that allows specifying certain comments to exclude from transformation.
+   By default, this option is set to "^$", which means no comments are excluded.
+   You can provide a custom regex to exclude specific comments based on your needs.
