@@ -20,10 +20,8 @@ namespace llvm {
 struct NoActiveBlocksOption {};
 
 struct ActiveBlocksOption {
-protected:
   SmallSetVector<BasicBlock *, 4> ActiveBlocks;
-
-public:
+  SmallSetVector<BasicBlock *, 4> &getActiveBlocks() { return ActiveBlocks; }
   ActiveBlocksOption() = default;
 };
 
@@ -41,9 +39,11 @@ public:
 /// returned by operator*.
 template <bool EarlyFailure = true>
 class LockstepReverseIterator
-    : public std::conditional_t<EarlyFailure, NoActiveBlocksOption,
-                                ActiveBlocksOption> {
+    : private std::conditional_t<EarlyFailure, NoActiveBlocksOption,
+                                 ActiveBlocksOption> {
 private:
+  using Base = std::conditional_t<EarlyFailure, NoActiveBlocksOption,
+                                  ActiveBlocksOption>;
   ArrayRef<BasicBlock *> Blocks;
   SmallVector<Instruction *, 4> Insts;
   bool Fail;
@@ -89,8 +89,7 @@ public:
   // copying. And we cannot simply sort Blocks as they need to match the
   // corresponding Values.
   SmallSetVector<BasicBlock *, 4> &getActiveBlocks() {
-    static_assert(!EarlyFailure, "Unknown method");
-    return this->ActiveBlocks;
+    return Base::getActiveBlocks();
   }
 
   void restrictToBlocks(SmallSetVector<BasicBlock *, 4> &Blocks) {
@@ -105,9 +104,9 @@ public:
     }
   }
 
-  void operator--() {
+  LockstepReverseIterator &operator--() {
     if (Fail)
-      return;
+      return *this;
     SmallVector<Instruction *, 4> NewInsts;
     for (Instruction *Inst : Insts) {
       Instruction *Prev = Inst->getPrevNonDebugInstruction();
@@ -116,37 +115,38 @@ public:
           this->ActiveBlocks.remove(Inst->getParent());
         } else {
           Fail = true;
-          return;
+          return *this;
         }
       } else {
         NewInsts.push_back(Prev);
       }
     }
-    if (NewInsts.empty()) {
+    if (NewInsts.empty())
       Fail = true;
-      return;
-    }
-    Insts = NewInsts;
+    else
+      Insts = NewInsts;
+    return *this;
   }
 
-  void operator++() {
+  LockstepReverseIterator &operator++() {
+    static_assert(EarlyFailure, "Unknown method");
     if (Fail)
-      return;
+      return *this;
     SmallVector<Instruction *, 4> NewInsts;
     for (Instruction *Inst : Insts) {
       Instruction *Next = Inst->getNextNonDebugInstruction();
       // Already at end of block.
       if (!Next) {
         Fail = true;
-        return;
+        return *this;
       }
       NewInsts.push_back(Next);
     }
-    if (NewInsts.empty()) {
+    if (NewInsts.empty())
       Fail = true;
-      return;
-    }
-    Insts = NewInsts;
+    else
+      Insts = NewInsts;
+    return *this;
   }
 };
 
