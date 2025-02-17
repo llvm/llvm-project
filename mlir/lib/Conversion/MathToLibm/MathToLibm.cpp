@@ -20,7 +20,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTMATHTOLIBM
+#define GEN_PASS_DEF_CONVERTMATHTOLIBMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -212,7 +212,7 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
 
 namespace {
 struct ConvertMathToLibmPass
-    : public impl::ConvertMathToLibmBase<ConvertMathToLibmPass> {
+    : public impl::ConvertMathToLibmPassBase<ConvertMathToLibmPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -229,8 +229,4 @@ void ConvertMathToLibmPass::runOnOperation() {
   target.addIllegalDialect<math::MathDialect>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertMathToLibmPass() {
-  return std::make_unique<ConvertMathToLibmPass>();
 }
