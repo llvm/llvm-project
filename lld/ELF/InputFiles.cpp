@@ -18,8 +18,10 @@
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/ARMAttributeParser.h"
@@ -502,6 +504,7 @@ void ELFFileBase::init() {
 template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
   using Elf_Shdr = typename ELFT::Shdr;
   using Elf_Sym = typename ELFT::Sym;
+  using Elf_Phdr = typename ELFT::Phdr;
 
   // Initialize trivial attributes.
   const ELFFile<ELFT> &obj = getObj<ELFT>();
@@ -512,6 +515,10 @@ template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
   ArrayRef<Elf_Shdr> sections = CHECK2(obj.sections(), this);
   elfShdrs = sections.data();
   numELFShdrs = sections.size();
+
+  ArrayRef<Elf_Phdr> pHeaders = CHECK2(obj.program_headers(), this);
+  elfPhdrs = pHeaders.data();
+  numElfPhdrs = pHeaders.size();
 
   // Find a symbol table.
   const Elf_Shdr *symtabSec =
@@ -1418,6 +1425,21 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
   return verneeds;
 }
 
+// To determine if a shared file can support the AArch64 GCS extension, the program headers for the object
+// need to be read. This ensures when input options are read, appropriate warning/error messages can be
+// emitted depending on the user's command line options.
+template <typename ELFT>
+uint64_t SharedFile::parseGnuAttributes(const typename ELFT::PhdrRange headers) {
+  if(numElfPhdrs == 0)
+    return 0;
+  uint64_t attributes = 0;
+  for (unsigned i = 0; i < numElfPhdrs; i++)
+    if(headers[i].p_type == PT_GNU_PROPERTY && headers[i].p_flags & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+      attributes |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
+  return attributes;
+}
+
 // We do not usually care about alignments of data in shared object
 // files because the loader takes care of it. However, if we promote a
 // DSO symbol to point to .bss due to copy relocation, we need to keep
@@ -1528,6 +1550,7 @@ template <class ELFT> void SharedFile::parse() {
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
   std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
+  this->andFeatures = parseGnuAttributes<ELFT>(getELFPhdrs<ELFT>());
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use

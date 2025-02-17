@@ -206,6 +206,10 @@ public:
     return typename ELFT::ShdrRange(
         reinterpret_cast<const typename ELFT::Shdr *>(elfShdrs), numELFShdrs);
   }
+  template <typename ELFT> typename ELFT::PhdrRange getELFPhdrs() const {
+    return typename ELFT::PhdrRange(
+      reinterpret_cast<const typename ELFT::Phdr *>(elfPhdrs), numElfPhdrs);
+  }
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
     return typename ELFT::SymRange(
         reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numSymbols);
@@ -224,8 +228,10 @@ protected:
   StringRef stringTable;
   const void *elfShdrs = nullptr;
   const void *elfSyms = nullptr;
+  const void *elfPhdrs = nullptr;
   uint32_t numELFShdrs = 0;
   uint32_t firstGlobal = 0;
+  uint32_t numElfPhdrs = 0;
 
   // Below are ObjFile specific members.
 
@@ -364,6 +370,8 @@ private:
   template <typename ELFT>
   std::vector<uint32_t> parseVerneed(const llvm::object::ELFFile<ELFT> &obj,
                                      const typename ELFT::Shdr *sec);
+  template <typename ELFT>
+  uint64_t parseGnuAttributes(const typename ELFT::PhdrRange headers);
 };
 
 class BinaryFile : public InputFile {
