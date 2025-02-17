@@ -2132,7 +2132,7 @@ void PreRARematStage::finalizeGCNSchedStage() {
   // which case we do not want to rollback either (the rescheduling was already
   // reverted in PreRARematStage::shouldRevertScheduling in such cases).
   unsigned MaxOcc = std::max(AchievedOcc, DAG.MinOccupancy);
-  if (!IncreaseOccupancy || MaxOcc == TargetOcc)
+  if (!IncreaseOccupancy || MaxOcc >= TargetOcc)
     return;
 
   REMAT_DEBUG(dbgs() << "Rollbacking all rematerializations\n");
