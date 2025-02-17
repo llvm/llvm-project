@@ -466,7 +466,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
                             getReservedNumSGPRs(MF));
 }
 
-static unsigned getMaxNumPreloadedSGPRs() {
+unsigned GCNSubtarget::getMaxNumPreloadedSGPRs() const {
   using USI = GCNUserSGPRUsageInfo;
   // Max number of user SGPRs
   const unsigned MaxUserSGPRs =
@@ -496,10 +496,8 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
                             getReservedNumSGPRs(F));
 }
 
-unsigned
-GCNSubtarget::getBaseMaxNumVGPRs(const Function &F,
-                                 std::pair<unsigned, unsigned> NumVGPRBounds,
-                                 bool UnifiedRF) const {
+unsigned GCNSubtarget::getBaseMaxNumVGPRs(
+    const Function &F, std::pair<unsigned, unsigned> NumVGPRBounds) const {
   const auto &[Min, Max] = NumVGPRBounds;
 
   // Check if maximum number of VGPRs was explicitly requested using
@@ -510,7 +508,7 @@ GCNSubtarget::getBaseMaxNumVGPRs(const Function &F,
   unsigned Requested = F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", Max);
   if (!Requested)
     return Max;
-  if (UnifiedRF)
+  if (hasGFX90AInsts())
     Requested *= 2;
 
   // Make sure requested value is inside the range of possible VGPR usage.
@@ -520,15 +518,7 @@ GCNSubtarget::getBaseMaxNumVGPRs(const Function &F,
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
   std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
   return getBaseMaxNumVGPRs(
-      F, {getMinNumVGPRs(Waves.second), getMaxNumVGPRs(Waves.first)},
-      hasGFX90AInsts());
-}
-
-unsigned GCNSubtarget::getMaxNumArchVGPRs(const Function &F) const {
-  std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
-  return getBaseMaxNumVGPRs(
-      F, {getMinNumArchVGPRs(Waves.second), getMaxNumArchVGPRs(Waves.first)},
-      false);
+      F, {getMinNumVGPRs(Waves.second), getMaxNumVGPRs(Waves.first)});
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {

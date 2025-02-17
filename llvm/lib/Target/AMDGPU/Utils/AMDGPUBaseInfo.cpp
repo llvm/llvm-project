@@ -1240,36 +1240,28 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
   return 5;
 }
 
-unsigned getBaseMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
-                            unsigned TotalNumVGPRs,
-                            unsigned NumAddressableVGPRs) {
+unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
   assert(WavesPerEU != 0);
+
   unsigned MaxWavesPerEU = getMaxWavesPerEU(STI);
   if (WavesPerEU >= MaxWavesPerEU)
     return 0;
-  unsigned MinWavesPerEU =
-      getNumWavesPerEUWithNumVGPRs(STI, NumAddressableVGPRs);
+
+  unsigned TotNumVGPRs = getTotalNumVGPRs(STI);
+  unsigned AddrsableNumVGPRs = getAddressableNumVGPRs(STI);
+  unsigned Granule = getVGPRAllocGranule(STI);
+  unsigned MaxNumVGPRs = alignDown(TotNumVGPRs / WavesPerEU, Granule);
+
+  if (MaxNumVGPRs == alignDown(TotNumVGPRs / MaxWavesPerEU, Granule))
+    return 0;
+
+  unsigned MinWavesPerEU = getNumWavesPerEUWithNumVGPRs(STI, AddrsableNumVGPRs);
   if (WavesPerEU < MinWavesPerEU)
     return getMinNumVGPRs(STI, MinWavesPerEU);
 
-  unsigned Granule = getVGPRAllocGranule(STI);
-  unsigned MaxNumVGPRs = alignDown(TotalNumVGPRs / WavesPerEU, Granule);
-  if (MaxNumVGPRs == alignDown(TotalNumVGPRs / MaxWavesPerEU, Granule))
-    return 0;
-  unsigned MaxNumVGPRsNext =
-      alignDown(TotalNumVGPRs / (WavesPerEU + 1), Granule);
+  unsigned MaxNumVGPRsNext = alignDown(TotNumVGPRs / (WavesPerEU + 1), Granule);
   unsigned MinNumVGPRs = 1 + std::min(MaxNumVGPRs - Granule, MaxNumVGPRsNext);
-  return std::min(MinNumVGPRs, NumAddressableVGPRs);
-}
-
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
-  return getBaseMinNumVGPRs(STI, WavesPerEU, getTotalNumVGPRs(STI),
-                            getAddressableNumVGPRs(STI));
-}
-
-unsigned getMinNumArchVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
-  unsigned TotNumArchVGPRs = getAddressableNumArchVGPRs(STI);
-  return getBaseMinNumVGPRs(STI, WavesPerEU, TotNumArchVGPRs, TotNumArchVGPRs);
+  return std::min(MinNumVGPRs, AddrsableNumVGPRs);
 }
 
 unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
@@ -1279,12 +1271,6 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
                                    getVGPRAllocGranule(STI));
   unsigned AddressableNumVGPRs = getAddressableNumVGPRs(STI);
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
-}
-
-unsigned getMaxNumArchVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
-  assert(WavesPerEU != 0);
-  return alignDown(getAddressableNumArchVGPRs(STI) / WavesPerEU,
-                   getVGPRAllocGranule(STI));
 }
 
 unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
