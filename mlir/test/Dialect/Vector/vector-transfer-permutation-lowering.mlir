@@ -328,7 +328,7 @@ func.func @xfer_read_minor_identity_transposed_masked(
   %pad = arith.constant 0.000000e+00 : f32
 
   %res = vector.mask %mask {
-    vector.transfer_read %dest[%idx, %idx], %pad, %mask {
+    vector.transfer_read %dest[%idx, %idx], %pad {
     in_bounds = [true, true, true],
     permutation_map = affine_map<(d0, d1) -> (0, d1, d0)>
     } : tensor<?x?xf32>, vector<8x4x2xf32>
