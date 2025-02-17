@@ -84,8 +84,19 @@ class ARMCortexM4FAlignmentHazardRecognizer : public ScheduleHazardRecognizer {
   bool Advanced;
   bool EmittingNoop;
 
+  /// \param[in] F - The function.
+  /// \param[in] Loop - The containing loop, if any.
+  /// \param[out] MaxLookaheadInsts - Maximum number of instructions to scan
+  /// ahead. -1 disables nop emission. \param[out] RequiredHazardCount -
+  /// Required number of hazards observed in the lookahead to insert a nop.
+  using LookaheadCallback = void(const Function &F, const MachineLoop *Loop,
+                                 int &MaxLookaheadInsts,
+                                 int &RequiredHazardCount);
+  std::function<LookaheadCallback> GetLookahead;
+
 public:
-  ARMCortexM4FAlignmentHazardRecognizer(const MCSubtargetInfo &STI);
+  ARMCortexM4FAlignmentHazardRecognizer(const MCSubtargetInfo &STI,
+                                        LookaheadCallback CB);
 
   void Reset() override;
 

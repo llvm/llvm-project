@@ -277,32 +277,12 @@ void ARMBankConflictHazardRecognizer::RecedeCycle() { Accesses.clear(); }
 
 STATISTIC(NumNoops, "Number of noops inserted");
 
-static cl::opt<bool> LoopsOnly(DEBUG_TYPE "-loops-only", cl::Hidden,
-                               cl::init(true),
-                               cl::desc("Emit nops only in loops"));
-
-static cl::opt<bool>
-    InnermostLoopsOnly(DEBUG_TYPE "-innermost-loops-only", cl::Hidden,
-                       cl::init(true),
-                       cl::desc("Emit noops only in innermost loops"));
-
-static cl::opt<int> MaxLookaheadInsts(
-    DEBUG_TYPE "-max-lookahead", cl::Hidden, cl::init(6),
-    cl::desc(
-        "Maximum number of instructions to look ahead for a run of hazards"));
-
-static cl::opt<int>
-    RequiredHazardCount(DEBUG_TYPE "-reqd-hazard-count", cl::Hidden,
-                        cl::init(6),
-                        cl::desc("Number of hazards required to be observed in "
-                                 "a run before emitting a nop"));
-
 void ARMCortexM4FAlignmentHazardRecognizer::Reset() { Offset = 0; }
 
 ARMCortexM4FAlignmentHazardRecognizer::ARMCortexM4FAlignmentHazardRecognizer(
-    const MCSubtargetInfo &STI)
+    const MCSubtargetInfo &STI, LookaheadCallback CB)
     : STI(STI), MBB(nullptr), MF(nullptr), Offset(0), Advanced(false),
-      EmittingNoop(false) {
+      EmittingNoop(false), GetLookahead(CB) {
   MaxLookAhead = 1;
 }
 
@@ -404,31 +384,19 @@ unsigned ARMCortexM4FAlignmentHazardRecognizer::PreEmitNoops(SUnit *SU) {
 unsigned ARMCortexM4FAlignmentHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   const MachineBasicBlock *Parent = MI->getParent();
   const Function &F = Parent->getParent()->getFunction();
-  if (F.hasOptSize())
-    return 0;
-
   if (Parent != MBB) {
     Offset = 0;
     MBB = Parent;
   }
 
-  LLVM_DEBUG(MI->dump());
+  int MaxLookaheadInsts;
+  int RequiredHazardCount;
+  const MachineLoop *Loop = getLoopFor(MI);
+  GetLookahead(F, Loop, MaxLookaheadInsts, RequiredHazardCount);
+  if (MaxLookaheadInsts < 0)
+    return 0;
 
-  if (LoopsOnly) {
-    // This optimization is likely only critical in loops. Try to save code size
-    // elsewhere by avoiding it when we're not in an innermost loop.
-    if (const MachineLoop *Loop = getLoopFor(MI)) {
-      if (InnermostLoopsOnly && !Loop->isInnermost()) {
-        LLVM_DEBUG(dbgs() << "\toffset=0x" << utohexstr(Offset)
-                          << "\n\tnot in an innermost loop\n");
-        return 0;
-      }
-    } else if (LoopsOnly) {
-      LLVM_DEBUG(dbgs() << "\toffset=0x" << utohexstr(Offset)
-                        << "\n\tnot in a loop\n");
-      return 0;
-    }
-  }
+  LLVM_DEBUG(MI->dump());
 
   // Since one stall cycle is inserted for every three such instructions aligned
   // to an odd-halfword boundary, look for runs of 6 or more, at which point it

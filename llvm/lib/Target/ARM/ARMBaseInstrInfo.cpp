@@ -135,6 +135,50 @@ ARMBaseInstrInfo::CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
   return TargetInstrInfo::CreateTargetHazardRecognizer(STI, DAG);
 }
 
+namespace {
+cl::opt<bool> LoopsOnly("cortex-m4-alignment-hazard-rec-loops-only", cl::Hidden,
+                        cl::init(true), cl::desc("Emit nops only in loops"));
+
+cl::opt<bool>
+    InnermostLoopsOnly("cortex-m4-alignment-hazard-rec-innermost-loops-only",
+                       cl::Hidden, cl::init(true),
+                       cl::desc("Emit noops only in innermost loops"));
+
+cl::opt<int> MaxLookaheadInsts(
+    "cortex-m4-alignment-hazard-rec-max-lookahead", cl::Hidden, cl::init(6),
+    cl::desc(
+        "Maximum number of instructions to look ahead for a run of hazards"));
+
+cl::opt<int>
+    RequiredHazardCount("cortex-m4-alignment-hazard-rec-reqd-hazard-count",
+                        cl::Hidden, cl::init(6),
+                        cl::desc("Number of hazards required to be observed in "
+                                 "a run before emitting a nop"));
+
+void cortexM4FHazardLookahead(const Function &F, const MachineLoop *Loop,
+                              int &MaxLookaheadInsts,
+                              int &RequiredHazardCount) {
+  MaxLookaheadInsts = ::MaxLookaheadInsts;
+  RequiredHazardCount = ::RequiredHazardCount;
+  if (LoopsOnly) {
+    // This optimization is likely only critical in loops. Try to save code size
+    // elsewhere by avoiding it when we're not in an innermost loop.
+    if (Loop) {
+      if (InnermostLoopsOnly && !Loop->isInnermost()) {
+        MaxLookaheadInsts = -1;
+        return;
+      }
+    } else if (LoopsOnly) {
+      MaxLookaheadInsts = -1;
+      return;
+    }
+  }
+  if (F.hasOptSize())
+    MaxLookaheadInsts = -1;
+}
+
+} // anonymous namespace
+
 // Called during:
 // - pre-RA scheduling
 // - post-RA scheduling when FeatureUseMISched is set
@@ -154,7 +198,7 @@ ScheduleHazardRecognizer *ARMBaseInstrInfo::CreateTargetMIHazardRecognizer(
   if (Subtarget.hasCortexM4FAlignmentHazards() && !DAG->hasVRegLiveness())
     MHR->AddHazardRecognizer(
         std::make_unique<ARMCortexM4FAlignmentHazardRecognizer>(
-            DAG->MF.getSubtarget()));
+            DAG->MF.getSubtarget(), cortexM4FHazardLookahead));
 
   // Not inserting ARMHazardRecognizerFPMLx because that would change
   // legacy behavior
@@ -176,7 +220,7 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
   if (Subtarget.hasCortexM4FAlignmentHazards())
     MHR->AddHazardRecognizer(
         std::make_unique<ARMCortexM4FAlignmentHazardRecognizer>(
-            DAG->MF.getSubtarget()));
+            DAG->MF.getSubtarget(), cortexM4FHazardLookahead));
 
   auto BHR = TargetInstrInfo::CreateTargetPostRAHazardRecognizer(II, DAG);
   if (BHR)
@@ -189,7 +233,8 @@ ScheduleHazardRecognizer *ARMBaseInstrInfo::CreateTargetPostRAHazardRecognizer(
   if (!Subtarget.hasCortexM4FAlignmentHazards())
     return TargetInstrInfo::CreateTargetPostRAHazardRecognizer(MF);
 
-  return new ARMCortexM4FAlignmentHazardRecognizer(MF.getSubtarget());
+  return new ARMCortexM4FAlignmentHazardRecognizer(MF.getSubtarget(),
+                                                   cortexM4FHazardLookahead);
 }
 
 MachineInstr *
