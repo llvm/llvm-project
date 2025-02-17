@@ -20,8 +20,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MipsABIFlags.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
