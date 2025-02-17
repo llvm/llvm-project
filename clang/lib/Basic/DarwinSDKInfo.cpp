@@ -150,3 +150,23 @@ clang::parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath) {
   return llvm::make_error<llvm::StringError>("invalid SDKSettings.json",
                                              llvm::inconvertibleErrorCode());
 }
+
+// For certain platforms/environments almost all resources (e.g., headers) are
+// located in sub-directories, e.g., for DriverKit they live in
+// <SYSROOT>/System/DriverKit/usr/include (instead of <SYSROOT>/usr/include).
+StringRef clang::getSystemPrefix(const llvm::Triple &T) {
+  if (T.isDriverKit())
+    return "/System/DriverKit";
+  return "";
+}
+
+KnownSystemPaths clang::getCommonSystemPaths(llvm::Triple T) {
+  KnownSystemPaths CommonSysPaths = {"/System/Library/Frameworks",
+                                     "/System/Library/SubFrameworks"};
+
+  const StringRef Prefix = getSystemPrefix(T);
+  for (std::string &SysPath : CommonSysPaths)
+    SysPath = (Prefix + SysPath).str();
+
+  return CommonSysPaths;
+}
