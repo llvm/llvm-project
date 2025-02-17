@@ -8,8 +8,11 @@
 
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 namespace xegpu {
@@ -305,6 +308,56 @@ LogicalResult TensorDescType::verify(
   }
 
   return success();
+}
+
+// If tensor descriptor has a sg_map attribute it is used in SIMT mode. In this
+// mode, the distributed vector shape is given by the following criteria:
+//        wi_data_size = wi_data[0] × wi_data[1]
+//        subgroup_size = wi_layout[0] × wi_layout[1]
+//        distribution_unit_size = subgroup_size × wi_data_size
+//        tensor_size = tensor_desc[0] * .. * tensor_desc[r-1] * array_length
+//        n_distribution_units = tensor_size / distribution_unit_size
+// Given above definitions, the following conditions must be met:
+//        * tensor_desc[0] % (wi_layout[0] × wi_data[0]) == 0
+//        * tensor_desc[1] % (wi_layout[1] × wi_data[1]) == 0
+// Distributed vector shape must be: n_distribution_units × wi_data_size
+FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
+  auto sgMap = llvm::dyn_cast_if_present<SGMapAttr>(getSgMap());
+  // If no sg_map is provided, tensor desc is not used in SIMT mode.
+  if (!sgMap)
+    return failure();
+  // FIXME: Add support for scatter tensor descriptor.
+  auto scatterAttr =
+      llvm::dyn_cast_if_present<ScatterTensorDescAttr>(getEncoding());
+  if (scatterAttr)
+    return failure();
+
+  SmallVector<int64_t> wiData(sgMap.getWiData());
+  SmallVector<int64_t> wiLayout(sgMap.getWiLayout());
+  auto tdescShape = getShape();
+  // Tensor descriptor shape can be 1D. For the 1D case, outer dims of wiData
+  // and wiLayout must be 1.
+  if (tdescShape.size() == 1) {
+    if (wiData[0] != 1 || wiLayout[0] != 1)
+      return failure();
+    wiData = {wiData[1]};
+    wiLayout = {wiLayout[1]};
+  }
+  // Check if the tensor descriptor shape is distributable.
+  int64_t tensorSize = 1, sgSize = 1, wiDataSize = 1;
+  for (auto [tdescDim, wiDim, wiDataDim] :
+       llvm::zip_equal(tdescShape, wiLayout, wiData)) {
+    if (tdescDim % (wiDim * wiDataDim) != 0)
+      return failure();
+    tensorSize *= tdescDim;
+    sgSize *= wiDim;
+    wiDataSize *= wiDataDim;
+  }
+  // tensorSize must be adjusted for array_length.
+  tensorSize *= getArrayLength();
+
+  return VectorType::get({tensorSize / (sgSize * wiDataSize), wiDataSize},
+                         getElementType());
 }
 
 } // namespace xegpu

@@ -10,9 +10,12 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Support/LLVM.h"
 
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "xegpu"
 
@@ -71,43 +74,6 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
   auto kind = attr.getValue();
   return kind == CachePolicy::CACHED || kind == CachePolicy::UNCACHED ||
          kind == CachePolicy::WRITE_BACK || kind == CachePolicy::WRITE_THROUGH;
-}
-
-// Validations for nd instruction arguments is successful if any of these are
-// true:
-// - tensor descriptor and the output vector shapes exactly match.
-// - tensor descriptor has a sg_map attribute and the distributed vector shape
-//   matches the tensor descriptor shape when scaled using sg_map factors on
-//   each dimension.
-static bool isArgShapesValid(ArrayRef<int64_t> descShape,
-                             ArrayRef<int64_t> valShape, SGMapAttr sgMap) {
-  // Equal shapes with no distribution - no further verification needed.
-  if (descShape == valShape && !sgMap)
-    return true;
-
-  // Unknown distribution - cannot perform operation on partial shape.
-  if (!sgMap)
-    return false;
-
-  // Invalid rank or mixed rank usage.
-  size_t descRank = descShape.size();
-  if (descRank > 2 || valShape.size() != descRank)
-    return false;
-
-  // For 1D, SG map is guaranteed to be unit size in the outer dimension.
-  // Only take the distribution over the innermost dimension for validation.
-  ArrayRef<uint32_t> wiLayout = sgMap.getWiLayout();
-  SmallVector<uint32_t> mapLayout(wiLayout.begin(), wiLayout.end());
-  if (descRank == 1)
-    mapLayout = {wiLayout.back()};
-
-  for (const auto &[factor, dim, expected] :
-       llvm::zip_equal(mapLayout, valShape, descShape)) {
-    if (factor * dim != expected)
-      return false;
-  }
-
-  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -280,7 +246,8 @@ LogicalResult LoadNdOp::verify() {
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto array_len = tdescTy.getArrayLength();
-  auto tdescShape = getShapeOf(tdescTy);
+  // adjusted tensor descriptor shape tracks the expected shape of the result.
+  auto adjustedTdescShape = getShapeOf(tdescTy);
   auto valueShape = getShapeOf(valueTy);
 
   if (getTranspose()) {
@@ -292,7 +259,7 @@ LogicalResult LoadNdOp::verify() {
     });
 
     if (valid)
-      transpose(trans, tdescShape);
+      transpose(trans, adjustedTdescShape);
     else
       mlir::emitWarning(getLoc()) << "Invalid transpose attr. It is ignored.";
   }
@@ -301,8 +268,8 @@ LogicalResult LoadNdOp::verify() {
     if (tdescTy.getRank() == 2) {
       const int axis = 0;
       auto vnni_factor = valueShape.back();
-      tdescShape[axis] /= vnni_factor;
-      tdescShape.push_back(vnni_factor);
+      adjustedTdescShape[axis] /= vnni_factor;
+      adjustedTdescShape.push_back(vnni_factor);
     } else {
       mlir::emitWarning(getLoc())
           << "Invalid Packed Attr. It is ignored (available for 2D "
@@ -311,17 +278,35 @@ LogicalResult LoadNdOp::verify() {
   }
 
   if (array_len > 1) {
-    auto it = tdescShape.begin();
-    tdescShape.insert(it, array_len);
+    auto it = adjustedTdescShape.begin();
+    adjustedTdescShape.insert(it, array_len);
   }
-  auto sgMap = tdescTy.getSGMapAttr();
 
-  if (!isArgShapesValid(tdescShape, valueShape, sgMap))
-    return emitOpError() << "Result shape doesn't match TensorDesc shape."
-                         << "The expected shape is " << makeString(tdescShape)
-                         << ". But the given shape is "
-                         << makeString(valueShape) << ".\n";
-  return success();
+  auto sgMap = tdescTy.getSGMapAttr();
+  // sg_map not present means IR is in VC mode. In this case value shape must
+  // match adjusted tensor descriptor shape.
+  if (!sgMap)
+    return valueShape == adjustedTdescShape
+               ? success()
+               : emitOpError()
+                     << "Result shape " << makeString(valueShape)
+                     << " is not consistent with tensor descripter " << tdescTy;
+
+  // sg_map present means IR is in SIMT mode. In this case sg_map determines the
+  // value shape.
+  auto expectedValueShapeOrFailure = tdescTy.getDistributedVectorType();
+  if (failed(expectedValueShapeOrFailure))
+    return emitOpError() << "Failed to compute distributed vector shape for "
+                            "tensor descriptor "
+                         << tdescTy;
+
+  return valueTy == expectedValueShapeOrFailure.value()
+             ? success()
+             : emitOpError()
+                   << "Result shape " << makeString(valueShape)
+                   << " is not consistent with distributed vector shape "
+                   << makeString(expectedValueShapeOrFailure.value().getShape())
+                   << " for tensor descriptor " << tdescTy;
 }
 
 //===----------------------------------------------------------------------===//
@@ -351,14 +336,33 @@ LogicalResult StoreNdOp::verify() {
 
   auto tdescShape = getShapeOf(dstTy);
   auto valueShape = getShapeOf(valTy);
-  auto sgMap = dstTy.getSGMapAttr();
 
-  if (!isArgShapesValid(tdescShape, valueShape, sgMap))
-    return emitOpError() << "Result shape doesn't match TensorDesc shape."
-                         << "The expected shape is " << makeString(tdescShape)
-                         << ". But the given shape is "
-                         << makeString(valueShape) << ".\n";
-  return success();
+  auto sgMap = dstTy.getSGMapAttr();
+  // sg_map not present means IR is in VC mode. In this case value shape must
+  // match adjusted tensor descriptor shape.
+  if (!sgMap)
+    return valueShape == tdescShape
+               ? success()
+               : emitOpError()
+                     << "Result shape " << makeString(valueShape)
+                     << " is not consistent with tensor descripter shape "
+                     << makeString(tdescShape);
+
+  // sg_map present means IR is in SIMT mode. In this case sg_map determines the
+  // value shape.
+  auto expectedValueShapeOrFailure = dstTy.getDistributedVectorType();
+  if (failed(expectedValueShapeOrFailure))
+    return emitOpError() << "Failed to compute distributed vector shape for "
+                            "tensor descriptor "
+                         << dstTy;
+
+  return valTy == expectedValueShapeOrFailure.value()
+             ? success()
+             : emitOpError()
+                   << "Result shape " << makeString(valueShape)
+                   << " is not consistent with distributed vector shape "
+                   << makeString(expectedValueShapeOrFailure.value().getShape())
+                   << " for tensor descriptor " << dstTy;
 }
 
 //===----------------------------------------------------------------------===//
