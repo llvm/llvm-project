@@ -510,7 +510,8 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr4
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
@@ -520,28 +521,27 @@ body: |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD5:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD6:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD7:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD8:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD9:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD10:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD11:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD12:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD13:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD14:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD15:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD5:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD6:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD7:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD8:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD9:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD10:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD11:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD12:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD13:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD14:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD15:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ADD]](s32), [[ADD1]](s32), [[ADD2]](s32), [[ADD3]](s32), [[ADD4]](s32), [[ADD5]](s32), [[ADD6]](s32), [[ADD7]](s32), [[ADD8]](s32), [[ADD9]](s32), [[ADD10]](s32), [[ADD11]](s32), [[ADD12]](s32), [[ADD13]](s32), [[ADD14]](s32), [[ADD15]](s32)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF]](<16 x s32>), %bb.0, [[BUILD_VECTOR]](<16 x s32>), %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF1]](<16 x s32>), %bb.0, [[BUILD_VECTOR]](<16 x s32>), %bb.1
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[PHI]](<16 x s32>)
   bb.0:
     successors: %bb.1, %bb.2
@@ -576,7 +576,8 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<32 x s32>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<32 x s32>) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr4
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
@@ -586,44 +587,43 @@ body: |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD5:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD6:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD7:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD8:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD9:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD10:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD11:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD12:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD13:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD14:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD15:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD16:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD17:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD18:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD19:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD20:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD21:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD22:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD23:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD24:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD25:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD26:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD27:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD28:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD29:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD30:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD31:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD5:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD6:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD7:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD8:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD9:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD10:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD11:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD12:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD13:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD14:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD15:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD16:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD17:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD18:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD19:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD20:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD21:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD22:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD23:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD24:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD25:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD26:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD27:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD28:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD29:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD30:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD31:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[ADD]](s32), [[ADD1]](s32), [[ADD2]](s32), [[ADD3]](s32), [[ADD4]](s32), [[ADD5]](s32), [[ADD6]](s32), [[ADD7]](s32), [[ADD8]](s32), [[ADD9]](s32), [[ADD10]](s32), [[ADD11]](s32), [[ADD12]](s32), [[ADD13]](s32), [[ADD14]](s32), [[ADD15]](s32), [[ADD16]](s32), [[ADD17]](s32), [[ADD18]](s32), [[ADD19]](s32), [[ADD20]](s32), [[ADD21]](s32), [[ADD22]](s32), [[ADD23]](s32), [[ADD24]](s32), [[ADD25]](s32), [[ADD26]](s32), [[ADD27]](s32), [[ADD28]](s32), [[ADD29]](s32), [[ADD30]](s32), [[ADD31]](s32)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<32 x s32>) = G_PHI [[DEF]](<32 x s32>), %bb.0, [[BUILD_VECTOR]](<32 x s32>), %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<32 x s32>) = G_PHI [[DEF1]](<32 x s32>), %bb.0, [[BUILD_VECTOR]](<32 x s32>), %bb.1
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[PHI]](<32 x s32>)
   bb.0:
     successors: %bb.1, %bb.2
@@ -658,81 +658,81 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr4
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.1
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD5:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD6:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD7:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD8:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD9:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD10:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD11:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD12:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD13:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD14:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD15:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD16:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD17:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD18:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD19:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD20:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD21:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD22:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD23:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD24:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD25:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD26:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD27:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD28:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD29:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD30:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD31:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD32:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD33:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD34:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD35:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD36:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD37:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD38:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD39:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD40:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD41:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD42:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD43:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD44:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD45:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD46:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD47:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD48:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD49:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD50:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD51:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD52:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD53:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD54:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD55:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD56:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD57:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD58:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD59:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD60:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD61:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD62:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
-  ; CHECK-NEXT:   [[ADD63:%[0-9]+]]:_(s32) = G_ADD [[DEF1]], [[DEF1]]
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD5:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD6:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD7:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD8:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD9:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD10:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD11:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD12:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD13:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD14:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD15:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD16:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD17:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD18:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD19:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD20:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD21:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD22:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD23:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD24:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD25:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD26:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD27:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD28:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD29:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD30:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD31:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD32:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD33:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD34:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD35:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD36:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD37:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD38:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD39:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD40:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD41:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD42:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD43:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD44:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD45:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD46:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD47:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD48:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD49:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD50:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD51:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD52:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD53:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD54:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD55:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD56:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD57:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD58:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD59:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD60:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD61:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD62:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
+  ; CHECK-NEXT:   [[ADD63:%[0-9]+]]:_(s32) = G_ADD [[DEF]], [[DEF]]
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ADD]](s32), [[ADD1]](s32), [[ADD2]](s32), [[ADD3]](s32), [[ADD4]](s32), [[ADD5]](s32), [[ADD6]](s32), [[ADD7]](s32), [[ADD8]](s32), [[ADD9]](s32), [[ADD10]](s32), [[ADD11]](s32), [[ADD12]](s32), [[ADD13]](s32), [[ADD14]](s32), [[ADD15]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ADD16]](s32), [[ADD17]](s32), [[ADD18]](s32), [[ADD19]](s32), [[ADD20]](s32), [[ADD21]](s32), [[ADD22]](s32), [[ADD23]](s32), [[ADD24]](s32), [[ADD25]](s32), [[ADD26]](s32), [[ADD27]](s32), [[ADD28]](s32), [[ADD29]](s32), [[ADD30]](s32), [[ADD31]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ADD32]](s32), [[ADD33]](s32), [[ADD34]](s32), [[ADD35]](s32), [[ADD36]](s32), [[ADD37]](s32), [[ADD38]](s32), [[ADD39]](s32), [[ADD40]](s32), [[ADD41]](s32), [[ADD42]](s32), [[ADD43]](s32), [[ADD44]](s32), [[ADD45]](s32), [[ADD46]](s32), [[ADD47]](s32)
@@ -740,10 +740,10 @@ body: |
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF]](<16 x s32>), %bb.0, [[BUILD_VECTOR]](<16 x s32>), %bb.1
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF]](<16 x s32>), %bb.0, [[BUILD_VECTOR1]](<16 x s32>), %bb.1
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF]](<16 x s32>), %bb.0, [[BUILD_VECTOR2]](<16 x s32>), %bb.1
-  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF]](<16 x s32>), %bb.0, [[BUILD_VECTOR3]](<16 x s32>), %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF1]](<16 x s32>), %bb.0, [[BUILD_VECTOR]](<16 x s32>), %bb.1
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF1]](<16 x s32>), %bb.0, [[BUILD_VECTOR1]](<16 x s32>), %bb.1
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF1]](<16 x s32>), %bb.0, [[BUILD_VECTOR2]](<16 x s32>), %bb.1
+  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF1]](<16 x s32>), %bb.0, [[BUILD_VECTOR3]](<16 x s32>), %bb.1
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s32>) = G_CONCAT_VECTORS [[PHI]](<16 x s32>), [[PHI1]](<16 x s32>), [[PHI2]](<16 x s32>), [[PHI3]](<16 x s32>)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[CONCAT_VECTORS]](<64 x s32>)
   bb.0:

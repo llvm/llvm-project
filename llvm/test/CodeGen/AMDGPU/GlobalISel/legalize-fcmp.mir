@@ -241,8 +241,8 @@ body: |
     ; GFX7-LABEL: name: test_fcmp_v3s32
     ; GFX7: liveins: $vgpr0_vgpr1_vgpr2
     ; GFX7-NEXT: {{  $}}
-    ; GFX7-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX7-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX7-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX7-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; GFX7-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV]]
     ; GFX7-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV1]]
@@ -256,8 +256,8 @@ body: |
     ; GFX8-LABEL: name: test_fcmp_v3s32
     ; GFX8: liveins: $vgpr0_vgpr1_vgpr2
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX8-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; GFX8-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV]]
     ; GFX8-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV1]]
@@ -271,8 +271,8 @@ body: |
     ; GFX9-LABEL: name: test_fcmp_v3s32
     ; GFX9: liveins: $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; GFX9-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV]]
     ; GFX9-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[DEF]](s32), [[UV1]]
