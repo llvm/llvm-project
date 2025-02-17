@@ -51,6 +51,8 @@ protected:
   enum SubtargetEnum { M00, M10, M20, M30, M40, M60 };
   SubtargetEnum SubtargetKind = M00;
 
+  bool UseXGOT = false;
+
   enum FPKindEnum { M881, M882 };
   std::optional<FPKindEnum> FPUKind;
 
@@ -97,6 +99,8 @@ public:
   bool atLeastM68882() const { return hasFPU() && *FPUKind >= M882; }
 
   bool useSmallSection() const { return UseSmallSection; }
+
+  bool useXGOT() const { return UseXGOT; }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
