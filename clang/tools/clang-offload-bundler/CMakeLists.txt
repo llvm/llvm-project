@@ -12,6 +12,9 @@ add_clang_tool(clang-offload-bundler
   intrinsics_gen
   )
 
+setup_host_tool(clang-offload-bundler CLANG_OFFLOAD_BUNDLER
+  clang-offload-bundler_exe clang-offload-bundler_target)
+
 set(CLANG_OFFLOAD_BUNDLER_LIB_DEPS
   clangBasic
   clangDriver
