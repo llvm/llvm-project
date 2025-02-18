@@ -582,7 +582,7 @@ bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
     return true;
   }
 
-  LeftoverTy = LLT::scalar(LeftoverSize);
+  LeftoverTy = LLT::integer(LeftoverSize);
   // For irregular sizes, extract the individual parts.
   for (unsigned I = 0; I != NumParts; ++I) {
     Register NewReg = MRI.createGenericVirtualRegister(MainTy);

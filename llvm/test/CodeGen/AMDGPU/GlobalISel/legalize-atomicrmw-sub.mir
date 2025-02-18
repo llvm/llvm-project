@@ -12,11 +12,11 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[ATOMICRMW_SUB:%[0-9]+]]:_(s32) = G_ATOMICRMW_SUB [[COPY]](p1), [[COPY1]] :: (load store seq_cst (s32), addrspace 1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[ATOMICRMW_SUB:%[0-9]+]]:_(i32) = G_ATOMICRMW_SUB [[COPY]](p1), [[COPY1]] :: (load store seq_cst (i32), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = COPY $sgpr2
-    %2:_(s32) = G_ATOMICRMW_SUB %0, %1 :: (load store seq_cst (s32), addrspace 1)
+    %1:_(i32) = COPY $sgpr2
+    %2:_(i32) = G_ATOMICRMW_SUB %0(p1), %1 :: (load store seq_cst (i32), addrspace 1)
 ...
 
 ---
@@ -29,11 +29,11 @@ body: |
     ; CHECK: liveins: $sgpr0, $sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[ATOMICRMW_SUB:%[0-9]+]]:_(s32) = G_ATOMICRMW_SUB [[COPY]](p3), [[COPY1]] :: (load store seq_cst (s32), addrspace 3)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[ATOMICRMW_SUB:%[0-9]+]]:_(i32) = G_ATOMICRMW_SUB [[COPY]](p3), [[COPY1]] :: (load store seq_cst (i32), addrspace 3)
     %0:_(p3) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = G_ATOMICRMW_SUB %0, %1 :: (load store seq_cst (s32), addrspace 3)
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i32) = G_ATOMICRMW_SUB %0(p3), %1 :: (load store seq_cst (i32), addrspace 3)
 ...
 
 ---
@@ -46,11 +46,11 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[ATOMICRMW_SUB:%[0-9]+]]:_(s32) = G_ATOMICRMW_SUB [[COPY]](p1), [[COPY1]] :: (load store seq_cst (s32), addrspace 1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[ATOMICRMW_SUB:%[0-9]+]]:_(i32) = G_ATOMICRMW_SUB [[COPY]](p1), [[COPY1]] :: (load store seq_cst (i32), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = COPY $sgpr2
-    %2:_(s32) = G_ATOMICRMW_SUB %0, %1 :: (load store seq_cst (s32), addrspace 1)
+    %1:_(i32) = COPY $sgpr2
+    %2:_(i32) = G_ATOMICRMW_SUB %0(p1), %1 :: (load store seq_cst (i32), addrspace 1)
 ...
 
 ---
@@ -63,9 +63,9 @@ body: |
     ; CHECK: liveins: $sgpr0, $sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[ATOMICRMW_SUB:%[0-9]+]]:_(s32) = G_ATOMICRMW_SUB [[COPY]](p3), [[COPY1]] :: (load store seq_cst (s32), addrspace 3)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[ATOMICRMW_SUB:%[0-9]+]]:_(i32) = G_ATOMICRMW_SUB [[COPY]](p3), [[COPY1]] :: (load store seq_cst (i32), addrspace 3)
     %0:_(p3) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = G_ATOMICRMW_SUB %0, %1 :: (load store seq_cst (s32), addrspace 3)
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i32) = G_ATOMICRMW_SUB %0(p3), %1 :: (load store seq_cst (i32), addrspace 3)
 ...

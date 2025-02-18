@@ -3,8 +3,8 @@
 # RUN: FileCheck -check-prefix=ERR  %s < %t
 
 # ERR-NOT: remark:
-# ERR: remark: <unknown>:0:0: cannot select: G_BRCOND %1:sgpr(s1), %bb.1 (in function: brcond_sgpr)
-# ERR-NEXT: remark: <unknown>:0:0: cannot select: G_BRCOND %1:vgpr(s1), %bb.1 (in function: brcond_vgpr)
+# ERR: remark: <unknown>:0:0: cannot select: G_BRCOND %1:sgpr(i1), %bb.1 (in function: brcond_sgpr)
+# ERR-NEXT: remark: <unknown>:0:0: cannot select: G_BRCOND %1:vgpr(i1), %bb.1 (in function: brcond_vgpr)
 # ERR-NOT: remark:
 
 ---
@@ -28,14 +28,17 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = COPY $sgpr1
-    %2:sgpr(s32) = G_ICMP intpred(eq), %0, %1
-    G_BRCOND %2, %bb.1
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i32) = COPY $sgpr1
+    %2:sgpr(i32) = G_ICMP intpred(eq), %0(i32), %1
+    G_BRCOND %2(i32), %bb.1
 
   bb.1:
+
+
 
 ...
 
@@ -57,12 +60,15 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(s32) = G_IMPLICIT_DEF
-    G_BRCOND %0, %bb.1
+    %0:sgpr(i32) = G_IMPLICIT_DEF
+    G_BRCOND %0(i32), %bb.1
 
   bb.1:
+
+
 
 ...
 
@@ -91,17 +97,22 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = COPY $sgpr1
-    %2:sgpr(s32) = G_ICMP intpred(eq), %0, %1
-    G_BRCOND %2, %bb.1
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i32) = COPY $sgpr1
+    %2:sgpr(i32) = G_ICMP intpred(eq), %0(i32), %1
+    G_BRCOND %2(i32), %bb.1
     G_BR %bb.1
 
   bb.1:
+    successors: %bb.2(0x80000000)
 
   bb.2:
+
+
+
 
 ...
 
@@ -125,14 +136,17 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1
 
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_ICMP intpred(eq), %0, %1
-    G_BRCOND %2, %bb.1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vcc(i1) = G_ICMP intpred(eq), %0(i32), %1
+    G_BRCOND %2(i1), %bb.1
 
   bb.1:
+
+
 
 ...
 
@@ -149,19 +163,22 @@ body: |
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr0, $sgpr1
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-  ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-  ; GCN-NEXT:   G_BRCOND [[TRUNC]](s1), %bb.1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+  ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(i1) = G_TRUNC [[COPY]](i32)
+  ; GCN-NEXT:   G_BRCOND [[TRUNC]](i1), %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s1) = G_TRUNC %0
-    G_BRCOND %1, %bb.1
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i1) = G_TRUNC %0(i32)
+    G_BRCOND %1(i1), %bb.1
 
   bb.1:
+
+
 
 ...
 
@@ -178,19 +195,22 @@ body: |
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-  ; GCN-NEXT:   G_BRCOND [[TRUNC]](s1), %bb.1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+  ; GCN-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(i1) = G_TRUNC [[COPY]](i32)
+  ; GCN-NEXT:   G_BRCOND [[TRUNC]](i1), %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1
 
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s1) = G_TRUNC %0
-    G_BRCOND %1, %bb.1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i1) = G_TRUNC %0(i32)
+    G_BRCOND %1(i1), %bb.1
 
   bb.1:
+
+
 
 ...
 
@@ -214,14 +234,18 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1
 
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %0:vgpr(s32), %1:vgpr(s32)
-    G_BRCOND %2(s1), %bb.1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %3:vgpr(f32) = G_BITCAST %0(i32)
+    %2:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %3(f32), %1(i32)
+    G_BRCOND %2(i1), %bb.1
 
   bb.1:
+
+
 
 ...
 
@@ -249,18 +273,23 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = COPY $vgpr3
-    %4:vcc(s1) = G_ICMP intpred(eq), %0, %1
-    %5:vcc(s1) = G_FCMP floatpred(oeq), %2, %3
-    %6:vcc(s1) = G_AND %4, %5
-    G_BRCOND %6(s1), %bb.1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(i32) = COPY $vgpr2
+    %3:vgpr(i32) = COPY $vgpr3
+    %4:vcc(i1) = G_ICMP intpred(eq), %0(i32), %1
+    %7:vgpr(f32) = G_BITCAST %2(i32)
+    %8:vgpr(f32) = G_BITCAST %3(i32)
+    %5:vcc(i1) = G_FCMP floatpred(oeq), %7(f32), %8
+    %6:vcc(i1) = G_AND %4, %5
+    G_BRCOND %6(i1), %bb.1
 
   bb.1:
+
+
 
 ...
 
@@ -289,18 +318,21 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $sgpr0, $vgpr0, $vgpr1
 
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:sgpr(s32) = COPY $sgpr0
-    %3:sgpr(s1) = G_TRUNC %2(s32)
-    %4:vcc(s1) = COPY %3(s1)
-    %5:vcc(s1) = G_ICMP intpred(eq), %0, %1
-    %6:vcc(s1) = G_AND %5, %4
-    G_BRCOND %6(s1), %bb.1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:sgpr(i32) = COPY $sgpr0
+    %3:sgpr(i1) = G_TRUNC %2(i32)
+    %4:vcc(i1) = COPY %3(i1)
+    %5:vcc(i1) = G_ICMP intpred(eq), %0(i32), %1
+    %6:vcc(i1) = G_AND %5, %4
+    G_BRCOND %6(i1), %bb.1
 
   bb.1:
+
+
 
 ...
 
@@ -327,16 +359,19 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1
 
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_ICMP intpred(eq), %0, %1
-    %3:sgpr(s1) = G_CONSTANT i1 true
-    %4:vcc(s1) = COPY %3(s1)
-    %5:vcc(s1) = G_XOR %2, %4
-    G_BRCOND %5(s1), %bb.1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vcc(i1) = G_ICMP intpred(eq), %0(i32), %1
+    %3:sgpr(i1) = G_CONSTANT i1 true
+    %4:vcc(i1) = COPY %3(i1)
+    %5:vcc(i1) = G_XOR %2, %4
+    G_BRCOND %5(i1), %bb.1
 
   bb.1:
+
+
 
 ...

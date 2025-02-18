@@ -18,9 +18,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %1:sgpr(s32) = COPY $sgpr1
-    %2:sgpr(p3) = G_PTRMASK %0, %1
-    S_ENDPGM 0, implicit %2
+    %1:sgpr(i32) = COPY $sgpr1
+    %2:sgpr(p3) = G_PTRMASK %0, %1(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -41,9 +41,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32 -252645136
-    %1:sgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -252645136
+    %2:sgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -64,9 +64,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32 -1
-    %1:sgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -1
+    %2:sgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -87,9 +87,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32 0
-    %1:sgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 0
+    %2:sgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -110,9 +110,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32  -2147483648
-    %1:sgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -2147483648
+    %2:sgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -133,9 +133,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32  -1073741824
-    %1:sgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -1073741824
+    %2:sgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -156,9 +156,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32 -2
-    %1:sgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -2
+    %2:sgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -179,9 +179,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32 -4
-    %1:sgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -4
+    %2:sgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -202,9 +202,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32 -8
-    %1:sgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -8
+    %2:sgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -225,9 +225,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32 -16
-    %1:sgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -16
+    %2:sgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -248,9 +248,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32 -536870912
-    %1:sgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -536870912
+    %2:sgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -271,9 +271,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], [[COPY1]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B64_]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = COPY $sgpr2_sgpr3
-    %2:sgpr(p0) = G_PTRMASK %0, %1
-    S_ENDPGM 0, implicit %2
+    %1:sgpr(i64) = COPY $sgpr2_sgpr3
+    %2:sgpr(p0) = G_PTRMASK %0, %1(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -295,9 +295,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = G_CONSTANT i64 -1
-    %2:sgpr(p0) = G_PTRMASK %0, %1
-    S_ENDPGM 0, implicit %2
+    %1:sgpr(i64) = G_CONSTANT i64 -1
+    %2:sgpr(p0) = G_PTRMASK %0, %1(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -318,9 +318,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], [[S_MOV_B64_]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B64_]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = G_CONSTANT i64 0
-    %2:sgpr(p0) = G_PTRMASK %0, %1
-    S_ENDPGM 0, implicit %2
+    %1:sgpr(i64) = G_CONSTANT i64 0
+    %2:sgpr(p0) = G_PTRMASK %0, %1(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -341,9 +341,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], [[S_MOV_B]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B64_]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = G_CONSTANT i64 -1085102592571150096
-    %2:sgpr(p0) = G_PTRMASK %0, %1
-    S_ENDPGM 0, implicit %2
+    %1:sgpr(i64) = G_CONSTANT i64 -1085102592571150096
+    %2:sgpr(p0) = G_PTRMASK %0, %1(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -364,9 +364,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B64_]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %const:sgpr(s64) = G_CONSTANT i64 -9223372036854775808
-    %1:sgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i64) = G_CONSTANT i64 -9223372036854775808
+    %2:sgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -391,9 +391,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_AND_B32_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %const:sgpr(s64) = G_CONSTANT i64 -4294967296
-    %1:sgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i64) = G_CONSTANT i64 -4294967296
+    %2:sgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -414,9 +414,9 @@ body: |
     ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], %const, implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B64_]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %const:sgpr(s64) = G_CONSTANT i64 4294967296
-    %1:sgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i64) = G_CONSTANT i64 4294967296
+    %2:sgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -441,9 +441,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_AND_B32_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %const:sgpr(s64) = G_CONSTANT i64 -2
-    %1:sgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i64) = G_CONSTANT i64 -2
+    %2:sgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -468,9 +468,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_AND_B32_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %const:sgpr(s64) = G_CONSTANT i64 -4
-    %1:sgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i64) = G_CONSTANT i64 -4
+    %2:sgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -495,9 +495,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_AND_B32_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %const:sgpr(s64) = G_CONSTANT i64 -8
-    %1:sgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i64) = G_CONSTANT i64 -8
+    %2:sgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -522,9 +522,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_AND_B32_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %const:sgpr(s64) = G_CONSTANT i64 -16
-    %1:sgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i64) = G_CONSTANT i64 -16
+    %2:sgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -549,9 +549,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_AND_B32_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %const:sgpr(s64) = G_CONSTANT i64 -536870912
-    %1:sgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i64) = G_CONSTANT i64 -536870912
+    %2:sgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -572,9 +572,9 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
-    %const:vgpr(s32) = G_CONSTANT i32 -252645136
-    %1:vgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i32) = G_CONSTANT i32 -252645136
+    %2:vgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -595,9 +595,9 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
-    %const:vgpr(s32) = G_CONSTANT i32 -2
-    %1:vgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i32) = G_CONSTANT i32 -2
+    %2:vgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -618,9 +618,9 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
-    %const:vgpr(s32) = G_CONSTANT i32 -4
-    %1:vgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i32) = G_CONSTANT i32 -4
+    %2:vgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -641,9 +641,9 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
-    %const:vgpr(s32) = G_CONSTANT i32 -8
-    %1:vgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i32) = G_CONSTANT i32 -8
+    %2:vgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -664,9 +664,9 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
-    %const:vgpr(s32) = G_CONSTANT i32 -16
-    %1:vgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i32) = G_CONSTANT i32 -16
+    %2:vgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -687,9 +687,9 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY]], %const, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e64_]]
     %0:vgpr(p3) = COPY $vgpr0
-    %const:vgpr(s32) = G_CONSTANT i32 -536870912
-    %1:vgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i32) = G_CONSTANT i32 -536870912
+    %2:vgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -716,9 +716,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(p0) = G_PTRMASK %0, %1
-    S_ENDPGM 0, implicit %2
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(p0) = G_PTRMASK %0, %1(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -745,9 +745,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = G_CONSTANT i64 -1085102592571150096
-    %2:vgpr(p0) = G_PTRMASK %0, %1
-    S_ENDPGM 0, implicit %2
+    %1:vgpr(i64) = G_CONSTANT i64 -1085102592571150096
+    %2:vgpr(p0) = G_PTRMASK %0, %1(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -772,9 +772,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %const:vgpr(s64) = G_CONSTANT i64 -2
-    %1:vgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i64) = G_CONSTANT i64 -2
+    %2:vgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -799,9 +799,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %const:vgpr(s64) = G_CONSTANT i64 -4
-    %1:vgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i64) = G_CONSTANT i64 -4
+    %2:vgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -826,9 +826,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %const:vgpr(s64) = G_CONSTANT i64 -4
-    %1:vgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i64) = G_CONSTANT i64 -4
+    %2:vgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -853,9 +853,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %const:vgpr(s64) = G_CONSTANT i64 -16
-    %1:vgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i64) = G_CONSTANT i64 -16
+    %2:vgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -880,9 +880,9 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %const:vgpr(s64) = G_CONSTANT i64 -536870912
-    %1:vgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:vgpr(i64) = G_CONSTANT i64 -536870912
+    %2:vgpr(p0) = G_PTRMASK %0, %const(i64)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...
 
@@ -899,13 +899,13 @@ body: |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
-    ; CHECK-NEXT: %const:sgpr(s32) = G_CONSTANT i32 -4
-    ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p3) = G_PTRMASK [[COPY]], %const(s32)
+    ; CHECK-NEXT: %const:sgpr(i32) = G_CONSTANT i32 -4
+    ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p3) = G_PTRMASK [[COPY]], %const(i32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p3)
     %0:sgpr(p3) = COPY $sgpr0
-    %const:sgpr(s32) = G_CONSTANT i32 -4
-    %1:vgpr(p3) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -4
+    %2:vgpr(p3) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p3)
 
 ...
 
@@ -922,12 +922,12 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p0) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: %const:sgpr(s32) = G_CONSTANT i32 -4
-    ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p0) = G_PTRMASK [[COPY]], %const(s32)
+    ; CHECK-NEXT: %const:sgpr(i32) = G_CONSTANT i32 -4
+    ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p0) = G_PTRMASK [[COPY]], %const(i32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p0)
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %const:sgpr(s32) = G_CONSTANT i32 -4
-    %1:vgpr(p0) = G_PTRMASK %0, %const
-    S_ENDPGM 0, implicit %1
+    %const:sgpr(i32) = G_CONSTANT i32 -4
+    %2:vgpr(p0) = G_PTRMASK %0, %const(i32)
+    S_ENDPGM 0, implicit %2(p0)
 
 ...

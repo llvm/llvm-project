@@ -708,12 +708,22 @@ RegisterBankInfo::OperandsMapper::getNewVRegsEnd(unsigned StartIdx,
                                               : &NewVRegs[StartIdx + NumVal];
 }
 
+static LLT inferType(LLT OrigType,
+                     const RegisterBankInfo::PartialMapping &PartMap) {
+  if (PartMap.StartIdx == 0 && PartMap.Length == OrigType.getSizeInBits())
+    return OrigType;
+  // TODO: check if this is a full lane of a vector type and extract the
+  // element type.
+  return LLT::integer(PartMap.Length);
+}
+
 void RegisterBankInfo::OperandsMapper::createVRegs(unsigned OpIdx) {
   assert(OpIdx < getInstrMapping().getNumOperands() && "Out-of-bound access");
   iterator_range<SmallVectorImpl<Register>::iterator> NewVRegsForOpIdx =
       getVRegsMem(OpIdx);
   const ValueMapping &ValMapping = getInstrMapping().getOperandMapping(OpIdx);
   const PartialMapping *PartMap = ValMapping.begin();
+  LLT OrigType = getMRI().getType(getMI().getOperand(OpIdx).getReg());
   for (Register &NewVReg : NewVRegsForOpIdx) {
     assert(PartMap != ValMapping.end() && "Out-of-bound access");
     assert(NewVReg == 0 && "Register has already been created");
@@ -722,7 +732,8 @@ void RegisterBankInfo::OperandsMapper::createVRegs(unsigned OpIdx) {
     // of the instruction.
     // The rationale is that this generic code cannot guess how the
     // target plans to split the input type.
-    NewVReg = MRI.createGenericVirtualRegister(LLT::scalar(PartMap->Length));
+    LLT NewType = inferType(OrigType, *PartMap);
+    NewVReg = MRI.createGenericVirtualRegister(NewType);
     MRI.setRegBank(NewVReg, *PartMap->RegBank);
     ++PartMap;
   }

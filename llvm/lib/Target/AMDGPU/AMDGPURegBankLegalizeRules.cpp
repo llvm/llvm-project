@@ -43,13 +43,13 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
                            const MachineRegisterInfo &MRI) {
   switch (UniID) {
   case S1:
-    return MRI.getType(Reg) == LLT::scalar(1);
+    return MRI.getType(Reg).isScalar(1);
   case S16:
-    return MRI.getType(Reg) == LLT::scalar(16);
+    return MRI.getType(Reg).isScalar(16);
   case S32:
-    return MRI.getType(Reg) == LLT::scalar(32);
+    return MRI.getType(Reg).isScalar(32);
   case S64:
-    return MRI.getType(Reg) == LLT::scalar(64);
+    return MRI.getType(Reg).isScalar(64);
   case P1:
     return MRI.getType(Reg) == LLT::pointer(1, 64);
   case P3:
@@ -71,13 +71,13 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
   case B512:
     return MRI.getType(Reg).getSizeInBits() == 512;
   case UniS1:
-    return MRI.getType(Reg) == LLT::scalar(1) && MUI.isUniform(Reg);
+    return MRI.getType(Reg).isScalar(1) && MUI.isUniform(Reg);
   case UniS16:
-    return MRI.getType(Reg) == LLT::scalar(16) && MUI.isUniform(Reg);
+    return MRI.getType(Reg).isScalar(16) && MUI.isUniform(Reg);
   case UniS32:
-    return MRI.getType(Reg) == LLT::scalar(32) && MUI.isUniform(Reg);
+    return MRI.getType(Reg).isScalar(32) && MUI.isUniform(Reg);
   case UniS64:
-    return MRI.getType(Reg) == LLT::scalar(64) && MUI.isUniform(Reg);
+    return MRI.getType(Reg).isScalar(64) && MUI.isUniform(Reg);
   case UniP1:
     return MRI.getType(Reg) == LLT::pointer(1, 64) && MUI.isUniform(Reg);
   case UniP3:
@@ -99,11 +99,11 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
   case UniB512:
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isUniform(Reg);
   case DivS1:
-    return MRI.getType(Reg) == LLT::scalar(1) && MUI.isDivergent(Reg);
+    return MRI.getType(Reg).isScalar(1) && MUI.isDivergent(Reg);
   case DivS32:
-    return MRI.getType(Reg) == LLT::scalar(32) && MUI.isDivergent(Reg);
+    return MRI.getType(Reg).isScalar(32) && MUI.isDivergent(Reg);
   case DivS64:
-    return MRI.getType(Reg) == LLT::scalar(64) && MUI.isDivergent(Reg);
+    return MRI.getType(Reg).isScalar(64) && MUI.isDivergent(Reg);
   case DivP1:
     return MRI.getType(Reg) == LLT::pointer(1, 64) && MUI.isDivergent(Reg);
   case DivP3:
@@ -164,35 +164,33 @@ SetOfRulesForOpcode::SetOfRulesForOpcode(FastRulesTypes FastTypes)
     : FastTypes(FastTypes) {}
 
 UniformityLLTOpPredicateID LLTToId(LLT Ty) {
-  if (Ty == LLT::scalar(16))
+  if (Ty.isScalar(16))
     return S16;
-  if (Ty == LLT::scalar(32))
+  if (Ty.isScalar(32))
     return S32;
-  if (Ty == LLT::scalar(64))
+  if (Ty.isScalar(64))
     return S64;
-  if (Ty == LLT::fixed_vector(2, 16))
+  if (Ty.isFixedVector(2, 16))
     return V2S16;
-  if (Ty == LLT::fixed_vector(2, 32))
+  if (Ty.isFixedVector(2, 32))
     return V2S32;
-  if (Ty == LLT::fixed_vector(3, 32))
+  if (Ty.isFixedVector(3, 32))
     return V3S32;
-  if (Ty == LLT::fixed_vector(4, 32))
+  if (Ty.isFixedVector(4, 32))
     return V4S32;
   return _;
 }
 
 UniformityLLTOpPredicateID LLTToBId(LLT Ty) {
-  if (Ty == LLT::scalar(32) || Ty == LLT::fixed_vector(2, 16) ||
-      Ty == LLT::pointer(3, 32) || Ty == LLT::pointer(5, 32) ||
-      Ty == LLT::pointer(6, 32))
+  if (Ty.isScalar(32) || Ty.isFixedVector(2, 16) || Ty == LLT::pointer(3, 32) ||
+      Ty == LLT::pointer(5, 32) || Ty == LLT::pointer(6, 32))
     return B32;
-  if (Ty == LLT::scalar(64) || Ty == LLT::fixed_vector(2, 32) ||
-      Ty == LLT::fixed_vector(4, 16) || Ty == LLT::pointer(1, 64) ||
-      Ty == LLT::pointer(4, 64))
+  if (Ty.isScalar(64) || Ty.isFixedVector(2, 32) || Ty.isFixedVector(4, 16) ||
+      Ty == LLT::pointer(1, 64) || Ty == LLT::pointer(4, 64))
     return B64;
-  if (Ty == LLT::fixed_vector(3, 32))
+  if (Ty.isFixedVector(3, 32))
     return B96;
-  if (Ty == LLT::fixed_vector(4, 32))
+  if (Ty.isFixedVector(4, 32))
     return B128;
   return _;
 }

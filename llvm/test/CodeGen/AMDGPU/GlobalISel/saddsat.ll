@@ -2681,6 +2681,7 @@ define amdgpu_ps half @saddsat_i16_sv(i16 inreg %lhs, i16 %rhs) {
 ; GFX6-NEXT:    v_min_i32_e32 v0, s1, v0
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 16, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: saddsat_i16_sv:
@@ -2723,6 +2724,7 @@ define amdgpu_ps half @saddsat_i16_vs(i16 %lhs, i16 inreg %rhs) {
 ; GFX6-NEXT:    v_min_i32_e32 v1, v2, v1
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 16, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: saddsat_i16_vs:

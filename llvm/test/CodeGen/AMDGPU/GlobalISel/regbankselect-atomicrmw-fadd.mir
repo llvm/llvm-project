@@ -13,11 +13,13 @@ body: |
     ; CHECK: liveins: $sgpr0, $sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f32) = G_BITCAST [[COPY1]](i32)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[ATOMICRMW_FADD:%[0-9]+]]:vgpr(s32) = G_ATOMICRMW_FADD [[COPY2]](p3), [[COPY3]] :: (load store seq_cst (s32), addrspace 3)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(f32) = COPY [[BITCAST]](f32)
+    ; CHECK-NEXT: [[ATOMICRMW_FADD:%[0-9]+]]:vgpr(f32) = G_ATOMICRMW_FADD [[COPY2]](p3), [[COPY3]] :: (load store seq_cst (f32), addrspace 3)
     %0:_(p3) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = G_ATOMICRMW_FADD %0, %1 :: (load store seq_cst (s32), addrspace 3)
+    %1:_(i32) = COPY $sgpr1
+    %2:_(f32) = G_BITCAST %1(i32)
+    %3:_(f32) = G_ATOMICRMW_FADD %0(p3), %2 :: (load store seq_cst (f32), addrspace 3)
 ...

@@ -38,7 +38,8 @@ define <2 x i16> @v_sub_v2i16_fneg_lhs(<2 x half> %a, <2 x i16> %b) {
 ; GFX9-LABEL: v_sub_v2i16_fneg_lhs:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_sub_i16 v0, v0, v1 neg_lo:[1,0] neg_hi:[1,0]
+; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    v_pk_sub_i16 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_sub_v2i16_fneg_lhs:
@@ -53,13 +54,15 @@ define <2 x i16> @v_sub_v2i16_fneg_lhs(<2 x half> %a, <2 x i16> %b) {
 ; GFX10-LABEL: v_sub_v2i16_fneg_lhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_sub_i16 v0, v0, v1 neg_lo:[1,0] neg_hi:[1,0]
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX10-NEXT:    v_pk_sub_i16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_sub_v2i16_fneg_lhs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_sub_i16 v0, v0, v1 neg_lo:[1,0] neg_hi:[1,0]
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX11-NEXT:    v_pk_sub_i16 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
   %cast.neg.a = bitcast <2 x half> %neg.a to <2 x i16>
@@ -71,7 +74,8 @@ define <2 x i16> @v_sub_v2i16_fneg_rhs(<2 x i16> %a, <2 x half> %b) {
 ; GFX9-LABEL: v_sub_v2i16_fneg_rhs:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_sub_i16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX9-NEXT:    v_pk_sub_i16 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_sub_v2i16_fneg_rhs:
@@ -86,13 +90,15 @@ define <2 x i16> @v_sub_v2i16_fneg_rhs(<2 x i16> %a, <2 x half> %b) {
 ; GFX10-LABEL: v_sub_v2i16_fneg_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_sub_i16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
+; GFX10-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX10-NEXT:    v_pk_sub_i16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_sub_v2i16_fneg_rhs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_sub_i16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX11-NEXT:    v_pk_sub_i16 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.b = fneg <2 x half> %b
   %cast.neg.b = bitcast <2 x half> %neg.b to <2 x i16>
@@ -104,7 +110,9 @@ define <2 x i16> @v_sub_v2i16_fneg_lhs_fneg_rhs(<2 x half> %a, <2 x half> %b) {
 ; GFX9-LABEL: v_sub_v2i16_fneg_lhs_fneg_rhs:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_sub_i16 v0, v0, v1 neg_lo:[1,1] neg_hi:[1,1]
+; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX9-NEXT:    v_pk_sub_i16 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_sub_v2i16_fneg_lhs_fneg_rhs:
@@ -120,13 +128,17 @@ define <2 x i16> @v_sub_v2i16_fneg_lhs_fneg_rhs(<2 x half> %a, <2 x half> %b) {
 ; GFX10-LABEL: v_sub_v2i16_fneg_lhs_fneg_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_sub_i16 v0, v0, v1 neg_lo:[1,1] neg_hi:[1,1]
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX10-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX10-NEXT:    v_pk_sub_i16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_sub_v2i16_fneg_lhs_fneg_rhs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_sub_i16 v0, v0, v1 neg_lo:[1,1] neg_hi:[1,1]
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX11-NEXT:    v_pk_sub_i16 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
   %neg.b = fneg <2 x half> %b

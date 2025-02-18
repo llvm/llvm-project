@@ -1923,18 +1923,25 @@ static bool verifyAddrSpace(uint64_t AddrSpace) {
 }
 
 bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
-  if (Token.range().front() == 's' || Token.range().front() == 'p') {
+  if (Token.range().front() == 's' || Token.range().front() == 'i' ||
+      Token.range().front() == 'f' || Token.range().front() == 'p') {
     StringRef SizeStr = Token.range().drop_front();
     if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
-      return error("expected integers after 's'/'p' type character");
+      return error("expected integers after 's'/'i'/'f'/'p' type character");
   }
 
-  if (Token.range().front() == 's') {
+  if (Token.range().starts_with("bf")) {
+    StringRef SizeStr = Token.range().drop_front(2);
+    if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
+      return error("expected integers after 'bf' type string");
+  }
+
+  if (Token.range().front() == 's' || Token.range().front() == 'i') {
     auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
     if (ScalarSize) {
       if (!verifyScalarSize(ScalarSize))
         return error("invalid size for scalar type");
-      Ty = LLT::scalar(ScalarSize);
+      Ty = LLT::integer(ScalarSize);
     } else {
       Ty = LLT::token();
     }
@@ -1947,6 +1954,20 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
       return error("invalid address space number");
 
     Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
+    lex();
+    return false;
+  } else if (Token.range().front() == 'f') {
+    auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
+    if (!ScalarSize || !verifyScalarSize(ScalarSize))
+      return error("invalid size for scalar type");
+    Ty = LLT::floatingPoint(ScalarSize, LLT::FPVariant::IEEE_FLOAT);
+    lex();
+    return false;
+  } else if (Token.range().starts_with("bf")) {
+    auto ScalarSize = APSInt(Token.range().drop_front(2)).getZExtValue();
+    if (!ScalarSize || !verifyScalarSize(ScalarSize))
+      return error("invalid size for scalar type");
+    Ty = LLT::floatingPoint(ScalarSize, LLT::FPVariant::BRAIN_FLOAT);
     lex();
     return false;
   }
@@ -1985,18 +2006,21 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     return GetError();
   lex();
 
-  if (Token.range().front() != 's' && Token.range().front() != 'p')
+  if (Token.range().front() != 's' && Token.range().front() != 'i' &&
+      Token.range().front() != 'f' && Token.range().front() != 'p' &&
+      !Token.range().starts_with("bf"))
     return GetError();
 
-  StringRef SizeStr = Token.range().drop_front();
+  StringRef SizeStr =
+      Token.range().drop_front(Token.range().starts_with("bf") ? 2 : 1);
   if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
-    return error("expected integers after 's'/'p' type character");
+    return error("expected integers after 's'/'i'/'f'/'p' type character");
 
-  if (Token.range().front() == 's') {
+  if (Token.range().front() == 's' || Token.range().front() == 'i') {
     auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
     if (!verifyScalarSize(ScalarSize))
       return error("invalid size for scalar element in vector");
-    Ty = LLT::scalar(ScalarSize);
+    Ty = LLT::integer(ScalarSize);
   } else if (Token.range().front() == 'p') {
     const DataLayout &DL = MF.getDataLayout();
     uint64_t AS = APSInt(Token.range().drop_front()).getZExtValue();
@@ -2004,6 +2028,16 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
       return error("invalid address space number");
 
     Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
+  } else if (Token.range().front() == 'f') {
+    auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
+    if (!verifyScalarSize(ScalarSize))
+      return error("invalid size for float element in vector");
+    Ty = LLT::floatingPoint(ScalarSize, LLT::FPVariant::IEEE_FLOAT);
+  } else if (Token.range().starts_with("bf")) {
+    auto ScalarSize = APSInt(Token.range().drop_front(2)).getZExtValue();
+    if (!verifyScalarSize(ScalarSize))
+      return error("invalid size for bfloat element in vector");
+    Ty = LLT::floatingPoint(ScalarSize, LLT::FPVariant::BRAIN_FLOAT);
   } else
     return GetError();
   lex();
@@ -2021,12 +2055,14 @@ bool MIParser::parseTypedImmediateOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::Identifier));
   StringRef TypeStr = Token.range();
   if (TypeStr.front() != 'i' && TypeStr.front() != 's' &&
-      TypeStr.front() != 'p')
-    return error(
-        "a typed immediate operand should start with one of 'i', 's', or 'p'");
-  StringRef SizeStr = Token.range().drop_front();
+      TypeStr.front() != 'p' && TypeStr.front() != 'f' &&
+      !TypeStr.starts_with("bf"))
+    return error("a typed immediate operand should start with one of 'i', "
+                 "'s','f','bf', or 'p'");
+  StringRef SizeStr =
+      Token.range().drop_front(TypeStr.starts_with("bf") ? 2 : 1);
   if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
-    return error("expected integers after 'i'/'s'/'p' type character");
+    return error("expected integers after 'i'/'s'/'f'/'bf'/'p' type character");
 
   auto Loc = Token.location();
   lex();

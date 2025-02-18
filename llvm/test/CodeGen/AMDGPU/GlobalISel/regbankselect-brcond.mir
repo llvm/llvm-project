@@ -11,21 +11,23 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:vcc(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](i1), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   bb.0.entry:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    G_BRCOND %2, %bb.1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    G_BRCOND %2(i1), %bb.1
 
   bb.1:
+
 ...
 
 ---
@@ -37,23 +39,25 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:sgpr(i32) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(i1) = G_TRUNC [[ICMP]](i32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(i32) = G_ZEXT [[TRUNC]](i1)
+  ; CHECK-NEXT:   G_BRCOND [[ZEXT]](i32), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   bb.0.entry:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $sgpr0, $sgpr1
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    G_BRCOND %2, %bb.1
+
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    G_BRCOND %2(i1), %bb.1
 
   bb.1:
+
 ...
 
 ---
@@ -65,20 +69,22 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(i1) = G_TRUNC [[COPY]](i32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(i32) = G_ZEXT [[TRUNC]](i1)
+  ; CHECK-NEXT:   G_BRCOND [[ZEXT]](i32), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   bb.0.entry:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s1) = G_TRUNC %0
-    G_BRCOND %1, %bb.1
+
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i1) = G_TRUNC %0(i32)
+    G_BRCOND %1(i1), %bb.1
 
   bb.1:
+
 ...
 
 ---
@@ -90,20 +96,22 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[COPY1]](s1), %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(i1) = G_TRUNC [[COPY]](i32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(i1) = COPY [[TRUNC]](i1)
+  ; CHECK-NEXT:   G_BRCOND [[COPY1]](i1), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   bb.0.entry:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s1) = G_TRUNC %0
-    G_BRCOND %1, %bb.1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i1) = G_TRUNC %0(i32)
+    G_BRCOND %1(i1), %bb.1
 
   bb.1:
+
 ...
 
 
@@ -119,26 +127,31 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(i1) = G_TRUNC [[COPY]](i32)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[COPY1]](s1), %bb.1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(i1) = COPY [[TRUNC]](i1)
+  ; CHECK-NEXT:   G_BRCOND [[COPY1]](i1), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   bb.0.entry:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s1) = G_TRUNC %0
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i1) = G_TRUNC %0(i32)
 
   bb.1:
-    G_BRCOND %1, %bb.1
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+    G_BRCOND %1(i1), %bb.1
 
   bb.2:
+
+
 ...
 
 
@@ -152,26 +165,31 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[COPY1]](s1), %bb.1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(i1) = G_TRUNC [[COPY]](i32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(i1) = COPY [[TRUNC]](i1)
+  ; CHECK-NEXT:   G_BRCOND [[COPY1]](i1), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   bb.0.entry:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0
-    %0:_(s32) = COPY $vgpr0
+
+    %0:_(i32) = COPY $vgpr0
 
   bb.1:
-    %1:_(s1) = G_TRUNC %0
-    G_BRCOND %1, %bb.1
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+    %1:_(i1) = G_TRUNC %0(i32)
+    G_BRCOND %1(i1), %bb.1
 
   bb.2:
+
+
 ...
 
 # Extra instruction separates brcond from the condition def
@@ -184,26 +202,31 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(i1) = G_TRUNC [[COPY]](i32)
   ; CHECK-NEXT:   S_NOP 0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[COPY1]](s1), %bb.1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(i1) = COPY [[TRUNC]](i1)
+  ; CHECK-NEXT:   G_BRCOND [[COPY1]](i1), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   bb.0.entry:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0
-    %0:_(s32) = COPY $vgpr0
+
+    %0:_(i32) = COPY $vgpr0
 
   bb.1:
-    %1:_(s1) = G_TRUNC %0
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+    %1:_(i1) = G_TRUNC %0(i32)
     S_NOP 0
-    G_BRCOND %1, %bb.1
+    G_BRCOND %1(i1), %bb.1
 
   bb.2:
+
+
 ...
