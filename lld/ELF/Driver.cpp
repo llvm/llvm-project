@@ -404,8 +404,6 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
     if (ctx.arg.zGcs != GcsPolicy::Implicit)
       ErrAlways(ctx) << "-z gcs only supported on AArch64";
-    if (ctx.arg.zExecuteOnlyReport != "none")
-      ErrAlways(ctx) << "-z execute-only-report only supported on AArch64";
   }
 
   if (ctx.arg.emachine != EM_PPC64) {
@@ -1622,12 +1620,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  auto reports = {
-      std::make_pair("bti-report", &ctx.arg.zBtiReport),
-      std::make_pair("cet-report", &ctx.arg.zCetReport),
-      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
-      std::make_pair("gcs-report", &ctx.arg.zGcsReport),
-      std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
+                  std::make_pair("cet-report", &ctx.arg.zCetReport),
+                  std::make_pair("gcs-report", &ctx.arg.zGcsReport),
+                  std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');

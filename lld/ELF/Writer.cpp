@@ -64,7 +64,6 @@ private:
   void sortOrphanSections();
   void finalizeSections();
   void checkExecuteOnly();
-  void checkExecuteOnlyReport();
   void setReservedSymbolSections();
 
   SmallVector<std::unique_ptr<PhdrEntry>, 0> createPhdrs(Partition &part);
@@ -324,7 +323,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   // finalizeSections does that.
   finalizeSections();
   checkExecuteOnly();
-  checkExecuteOnlyReport();
 
   // If --compressed-debug-sections is specified, compress .debug_* sections.
   // Do it right now because it changes the size of output sections.
@@ -2177,34 +2175,6 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
           ErrAlways(ctx) << "cannot place " << isec << " into " << osec->name
                          << ": --execute-only does not support intermingling "
                             "data and code";
-}
-
-// Check that all input sections of .text have the SHF_AARCH64_PURECODE section
-// flag set.
-template <class ELFT> void Writer<ELFT>::checkExecuteOnlyReport() {
-  if (ctx.arg.emachine != EM_AARCH64 || ctx.arg.zExecuteOnlyReport == "none")
-    return;
-
-  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
-    if (cond)
-      return {ctx, DiagLevel::None};
-    if (config == "error")
-      return {ctx, DiagLevel::Err};
-    if (config == "warning")
-      return {ctx, DiagLevel::Warn};
-    return {ctx, DiagLevel::None};
-  };
-
-  SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : ctx.outputSections) {
-    if (osec->name != ".text")
-      continue;
-    for (InputSection *sec : getInputSections(*osec, storage))
-      reportUnless(ctx.arg.zExecuteOnlyReport,
-                   sec->flags & SHF_AARCH64_PURECODE)
-          << "-z execute-only-report: " << sec
-          << " does not have SHF_AARCH64_PURECODE flag set";
-  }
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
