@@ -91,16 +91,16 @@ void UseNumericLimitsCheck::check(const MatchFinder::MatchResult &Result) {
     MatchedDecl = BareMatchedDecl;
   }
 
-  // Only valid if unary operator is present
-  const UnaryOperator *UnaryOpExpr =
-      Result.Nodes.getNodeAs<UnaryOperator>("unary-op-exp");
-
   const llvm::APInt MatchedIntegerConstant = MatchedDecl->getValue();
 
   auto Fixer = [&](auto SourceValue, auto Value,
                    const std::string &Replacement) {
     SourceLocation Location = MatchedDecl->getExprLoc();
     SourceRange Range{MatchedDecl->getBeginLoc(), MatchedDecl->getEndLoc()};
+
+    // Only valid if unary operator is present
+    const UnaryOperator *UnaryOpExpr =
+        Result.Nodes.getNodeAs<UnaryOperator>("unary-op-exp");
 
     if (MatchedDecl == NegativeMatchedDecl && -SourceValue == Value) {
       Range = SourceRange(UnaryOpExpr->getBeginLoc(), UnaryOpExpr->getEndLoc());
@@ -113,10 +113,9 @@ void UseNumericLimitsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
 
-    diag(Location, "The constant " + std::to_string(SourceValue) +
-                       " is being utilized. "
-                       "Consider using " +
-                       Replacement + " instead")
+    diag(Location,
+         "The constant %0 is being utilized. Consider using %1 instead")
+        << std::to_string(SourceValue) << Replacement
         << FixItHint::CreateReplacement(Range, Replacement)
         << Inserter.createIncludeInsertion(
                Result.SourceManager->getFileID(Location), "<limits>");
