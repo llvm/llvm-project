@@ -203,9 +203,23 @@ static bool isShortenableAtTheEnd(Instruction *I) {
 /// Returns true if the beginning of this instruction can be safely shortened
 /// in length.
 static bool isShortenableAtTheBeginning(Instruction *I) {
-  // FIXME: Handle only memset for now. Supporting memcpy/memmove should be
-  // easily done by offsetting the source address.
-  return isa<AnyMemSetInst>(I);
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+    switch (II->getIntrinsicID()) {
+    default:
+      return false;
+    case Intrinsic::memset:
+    case Intrinsic::memcpy:
+    case Intrinsic::memset_inline:
+    case Intrinsic::memcpy_inline:
+    case Intrinsic::memcpy_element_unordered_atomic:
+    case Intrinsic::memset_element_unordered_atomic:
+      // Do shorten memory intrinsics.
+      // FIXME: Add memmove if it's also safe to transform.
+      return true;
+    }
+  }
+
+  return false;
 }
 
 static std::optional<TypeSize> getPointerSize(const Value *V,
@@ -644,6 +658,15 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
         DeadI->getIterator());
     NewDestGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
     DeadIntrinsic->setDest(NewDestGEP);
+
+    if (auto *MTI = dyn_cast<AnyMemTransferInst>(DeadIntrinsic)) {
+      Instruction *NewSrcGEP = GetElementPtrInst::CreateInBounds(
+          Type::getInt8Ty(DeadIntrinsic->getContext()), MTI->getRawSource(),
+          Indices, "", DeadI->getIterator());
+      NewSrcGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
+      MTI->setSource(NewSrcGEP);
+      MTI->setSourceAlignment(PrefAlign);
+    }
   }
 
   // Update attached dbg.assign intrinsics. Assume 8-bit byte.
