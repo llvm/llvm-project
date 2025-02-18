@@ -521,13 +521,6 @@ enum library_type {
   library_throughput
 };
 
-#if KMP_OS_LINUX
-enum clock_function_type {
-  clock_function_gettimeofday,
-  clock_function_clock_gettime
-};
-#endif /* KMP_OS_LINUX */
-
 #if KMP_MIC_SUPPORTED
 enum mic_type { non_mic, mic1, mic2, mic3, dummy };
 #endif
@@ -3544,11 +3537,6 @@ extern int __kmp_dispatch_num_buffers; /* max possible dynamic loops in
 extern int __kmp_hot_teams_mode;
 extern int __kmp_hot_teams_max_level;
 #endif
-
-#if KMP_OS_LINUX
-extern enum clock_function_type __kmp_clock_function;
-extern int __kmp_clock_function_param;
-#endif /* KMP_OS_LINUX */
 
 #if KMP_MIC_SUPPORTED
 extern enum mic_type __kmp_mic_type;
