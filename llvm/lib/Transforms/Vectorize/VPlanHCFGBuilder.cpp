@@ -75,7 +75,7 @@ public:
       : TheLoop(Lp), LI(LI), Plan(P) {}
 
   /// Build plain CFG for TheLoop  and connects it to Plan's entry.
-  void buildPlainCFG();
+  void buildPlainCFG(DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
 };
 } // anonymous namespace
 
@@ -242,10 +242,10 @@ bool PlainCFGBuilder::isExternalDef(Value *Val) {
     // Instruction definition is in outermost loop PH.
     return false;
 
-  // Check whether Instruction definition is in the loop exit.
-  BasicBlock *Exit = TheLoop->getUniqueExitBlock();
-  assert(Exit && "Expected loop with single exit.");
-  if (InstParent == Exit) {
+  // Check whether Instruction definition is in a loop exit.
+  SmallVector<BasicBlock *> ExitBlocks;
+  TheLoop->getExitBlocks(ExitBlocks);
+  if (is_contained(ExitBlocks, InstParent)) {
     // Instruction definition is in outermost loop exit.
     return false;
   }
@@ -288,6 +288,7 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                                   BasicBlock *BB) {
   VPIRBuilder.setInsertPoint(VPBB);
+  // TODO: Model and preserve debug intrinsics in VPlan.
   for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
     Instruction *Inst = &InstRef;
 
@@ -310,6 +311,14 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       }
 
       // Skip the rest of the Instruction processing for Branch instructions.
+      continue;
+    }
+
+    if (auto *SI = dyn_cast<SwitchInst>(Inst)) {
+      SmallVector<VPValue *> Ops = {getOrCreateVPOperand(SI->getCondition())};
+      for (auto Case : SI->cases())
+        Ops.push_back(getOrCreateVPOperand(Case.getCaseValue()));
+      VPIRBuilder.createNaryOp(Instruction::Switch, Ops, Inst);
       continue;
     }
 
@@ -339,7 +348,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 }
 
 // Main interface to build the plain CFG.
-void PlainCFGBuilder::buildPlainCFG() {
+void PlainCFGBuilder::buildPlainCFG(
+    DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
   // 0. Reuse the top-level region, vector-preheader and exit VPBBs from the
   // skeleton. These were created directly rather than via getOrCreateVPBB(),
   // revisit them now to update BB2VPBB. Note that header/entry and
@@ -428,6 +438,14 @@ void PlainCFGBuilder::buildPlainCFG() {
     // Set VPBB successors. We create empty VPBBs for successors if they don't
     // exist already. Recipes will be created when the successor is visited
     // during the RPO traversal.
+    if (auto *SI = dyn_cast<SwitchInst>(BB->getTerminator())) {
+      SmallVector<VPBlockBase *> Succs = {
+          getOrCreateVPBB(SI->getDefaultDest())};
+      for (auto Case : SI->cases())
+        Succs.push_back(getOrCreateVPBB(Case.getCaseSuccessor()));
+      VPBB->setSuccessors(Succs);
+      continue;
+    }
     auto *BI = cast<BranchInst>(BB->getTerminator());
     unsigned NumSuccs = succ_size(BB);
     if (NumSuccs == 1) {
@@ -481,11 +499,14 @@ void PlainCFGBuilder::buildPlainCFG() {
   // have a VPlan couterpart. Fix VPlan phi nodes by adding their corresponding
   // VPlan operands.
   fixPhiNodes();
+
+  for (const auto &[IRBB, VPB] : BB2VPBB)
+    VPB2IRBB[VPB] = IRBB;
 }
 
 void VPlanHCFGBuilder::buildPlainCFG() {
   PlainCFGBuilder PCFGBuilder(TheLoop, LI, Plan);
-  PCFGBuilder.buildPlainCFG();
+  PCFGBuilder.buildPlainCFG(VPB2IRBB);
 }
 
 // Public interface to build a H-CFG.
