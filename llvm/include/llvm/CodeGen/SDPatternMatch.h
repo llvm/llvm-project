@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_SDPATTERNMATCH_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -1151,23 +1152,17 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
 
     // J in Matches[I] iff sd_context_match(Leaves[I], Ctx,
     // std::get<J>(Patterns)) == true
-    SmallVector<SmallVector<size_t>> Matches(Leaves.size());
+    std::array<SmallBitVector, std::tuple_size_v<std::tuple<PatternTs...>>> Matches;
     for (size_t I = 0; I < Leaves.size(); I += 1) {
       SmallVector<bool> MatchResults;
       std::apply(
           [&](auto &...P) {
-            (MatchResults.emplace_back(sd_context_match(Leaves[I], Ctx, P)),
-             ...);
+            (Matches[I].push_back(sd_context_match(Leaves[I], Ctx, P)), ...);
           },
           Patterns);
-      for (size_t J = 0; J < MatchResults.size(); J += 1) {
-        if (MatchResults[J]) {
-          Matches[I].emplace_back(J);
-        }
-      }
     }
 
-    SmallVector<bool> Used(std::tuple_size_v<std::tuple<PatternTs...>>, false);
+    SmallBitVector Used(std::tuple_size_v<std::tuple<PatternTs...>>, false);
     return reassociatableMatchHelper(Matches, Used);
   }
 
@@ -1181,13 +1176,14 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
     }
   }
 
+  template <size_t N>
   [[nodiscard]] inline bool
-  reassociatableMatchHelper(const SmallVector<SmallVector<size_t>> &Matches,
-                            SmallVector<bool> &Used, size_t Curr = 0) {
+  reassociatableMatchHelper(const std::array<SmallBitVector, N> &Matches,
+                            SmallBitVector &Used, size_t Curr = 0) {
     if (Curr == Matches.size())
       return true;
-    for (auto Match : Matches[Curr]) {
-      if (Used[Match])
+    for (size_t Match = 0; Match < Matches[Curr].size(); Match += 1) {
+      if (!Matches[Curr][Match] || Used[Match])
         continue;
       Used[Match] = true;
       if (reassociatableMatchHelper(Matches, Used, Curr + 1))
