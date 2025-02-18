@@ -5924,9 +5924,10 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
   int LiteralLimit = !isVOP3(MI) || ST.hasVOP3Literal() ? 1 : 0;
   if (isVALU(MI) && usesConstantBus(MRI, *MO, OpInfo)) {
     if (!MO->isReg() && !isInlineConstant(*MO, OpInfo)) {
-      UsedLiteral = MO;
       if (!LiteralLimit--)
         return false;
+
+      UsedLiteral = MO;
     }
 
     SmallDenseSet<RegSubRegPair> SGPRsUsed;
