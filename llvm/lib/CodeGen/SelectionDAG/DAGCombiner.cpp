@@ -16145,7 +16145,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     // also recursively replace t184 by t150.
     SDValue MaybePoisonOperand = N->getOperand(0).getOperand(OpNo);
     // Don't replace every single UNDEF everywhere with frozen UNDEF, though.
-    if (MaybePoisonOperand.getOpcode() == ISD::UNDEF)
+    if (MaybePoisonOperand.isUndef())
       continue;
     // First, freeze each offending operand.
     SDValue FrozenMaybePoisonOperand = DAG.getFreeze(MaybePoisonOperand);
@@ -16173,7 +16173,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   SmallVector<SDValue> Ops(N0->ops());
   // Special-handle ISD::UNDEF, each single one of them can be it's own thing.
   for (SDValue &Op : Ops) {
-    if (Op.getOpcode() == ISD::UNDEF)
+    if (Op.isUndef())
       Op = DAG.getFreeze(Op);
   }
 
@@ -24289,7 +24289,7 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
     if (ISD::BITCAST == Op.getOpcode() &&
         !Op.getOperand(0).getValueType().isVector())
       Ops.push_back(Op.getOperand(0));
-    else if (ISD::UNDEF == Op.getOpcode())
+    else if (Op.isUndef())
       Ops.push_back(DAG.getNode(ISD::UNDEF, DL, SVT));
     else
       return SDValue();
@@ -24684,7 +24684,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   // fold (concat_vectors (BUILD_VECTOR A, B, ...), (BUILD_VECTOR C, D, ...))
   // -> (BUILD_VECTOR A, B, ..., C, D, ...)
   auto IsBuildVectorOrUndef = [](const SDValue &Op) {
-    return ISD::UNDEF == Op.getOpcode() || ISD::BUILD_VECTOR == Op.getOpcode();
+    return Op.isUndef() || ISD::BUILD_VECTOR == Op.getOpcode();
   };
   if (llvm::all_of(N->ops(), IsBuildVectorOrUndef)) {
     SmallVector<SDValue, 8> Opnds;
@@ -24708,7 +24708,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
       EVT OpVT = Op.getValueType();
       unsigned NumElts = OpVT.getVectorNumElements();
 
-      if (ISD::UNDEF == Op.getOpcode())
+      if (Op.isUndef())
         Opnds.append(NumElts, DAG.getUNDEF(MinVT));
 
       if (ISD::BUILD_VECTOR == Op.getOpcode()) {
