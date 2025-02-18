@@ -173,6 +173,11 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
 }
 
 void LoopTiling::runOnOperation() {
+  if (cacheSizeInKiB == 0) {
+    mlir::emitError(mlir::UnknownLoc::get(&Pass::getContext()),
+                    "illegal argument: 'cache-size' cannot be zero");
+    return signalPassFailure();
+  }
   // Bands of loops to tile.
   std::vector<SmallVector<AffineForOp, 6>> bands;
   getTileableBands(getOperation(), &bands);
