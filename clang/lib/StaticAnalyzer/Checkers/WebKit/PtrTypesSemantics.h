@@ -51,6 +51,9 @@ bool isRefCounted(const clang::CXXRecordDecl *Class);
 /// \returns true if \p Class is a CheckedPtr / CheckedRef, false if not.
 bool isCheckedPtr(const clang::CXXRecordDecl *Class);
 
+/// \returns true if \p Class is a RetainPtr, false if not.
+bool isRetainPtr(const clang::CXXRecordDecl *Class);
+
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::QualType T);
@@ -58,6 +61,10 @@ std::optional<bool> isUncounted(const clang::QualType T);
 /// \returns true if \p Class is CheckedPtr capable AND not checked, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUnchecked(const clang::QualType T);
+
+/// \returns true if \p Class is NS or CF objects AND not retained, false if
+/// not, std::nullopt if inconclusive.
+std::optional<bool> isUnretained(const clang::QualType T, bool IsARCEnabled);
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
@@ -77,11 +84,14 @@ std::optional<bool> isUncheckedPtr(const clang::QualType T);
 
 /// \returns true if \p T is either a raw pointer or reference to an uncounted
 /// or unchecked class, false if not, std::nullopt if inconclusive.
-std::optional<bool> isUnsafePtr(const QualType T);
+std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled);
 
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or its
 /// variant, false if not.
-bool isSafePtrType(const clang::QualType T);
+bool isRefOrCheckedPtrType(const clang::QualType T);
+
+/// \returns true if \p T is a RetainPtr, false if not.
+bool isRetainPtrType(const clang::QualType T);
 
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or
 /// unique_ptr, false if not.

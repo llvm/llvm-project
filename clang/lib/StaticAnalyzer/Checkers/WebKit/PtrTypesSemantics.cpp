@@ -13,6 +13,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include <optional>
 
 using namespace clang;
@@ -117,6 +118,10 @@ bool isRefType(const std::string &Name) {
          Name == "RefPtr" || Name == "RefPtrAllowingPartiallyDestroyed";
 }
 
+bool isRetainPtr(const std::string &Name) {
+  return Name == "RetainPtr";
+}
+
 bool isCheckedPtr(const std::string &Name) {
   return Name == "CheckedPtr" || Name == "CheckedRef";
 }
@@ -140,8 +145,15 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F) {
   return isCheckedPtr(safeGetName(F));
 }
 
+bool isCtorOfRetainPtr(const clang::FunctionDecl *F) {
+  const std::string &FunctionName = safeGetName(F);
+  return FunctionName == "RetainPtr" || FunctionName == "adoptNS" ||
+         FunctionName == "adoptCF";
+}
+
 bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
-  return isCtorOfRefCounted(F) || isCtorOfCheckedPtr(F);
+  return isCtorOfRefCounted(F) || isCtorOfCheckedPtr(F) ||
+         isCtorOfRetainPtr(F);
 }
 
 template <typename Predicate>
@@ -163,9 +175,14 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
   return false;
 }
 
-bool isSafePtrType(const clang::QualType T) {
+bool isRefOrCheckedPtrType(const clang::QualType T) {
   return isPtrOfType(
       T, [](auto Name) { return isRefType(Name) || isCheckedPtr(Name); });
+}
+
+bool isRetainPtrType(const clang::QualType T) {
+  return isPtrOfType(
+      T, [](auto Name) { return Name == "RetainPtr"; });
 }
 
 bool isOwnerPtrType(const clang::QualType T) {
@@ -193,6 +210,37 @@ std::optional<bool> isUnchecked(const QualType T) {
     }
   }
   return isUnchecked(T->getAsCXXRecordDecl());
+}
+
+std::optional<bool> isUnretained(const QualType T, bool IsARCEnabled) {
+  if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T)) {
+    if (auto *Decl = Subst->getAssociatedDecl()) {
+      if (isRetainPtr(safeGetName(Decl)))
+        return false;
+    }
+  }
+  if ((ento::cocoa::isCocoaObjectRef(T) && !IsARCEnabled) ||
+      ento::coreFoundation::isCFObjectRef(T))
+    return true;
+
+  // RetainPtr strips typedef for CF*Ref. Manually check for struct __CF* types.
+  auto CanonicalType = T.getCanonicalType();
+  auto *Type = CanonicalType.getTypePtrOrNull();
+  if (!Type)
+    return false;
+  auto Pointee = Type->getPointeeType();
+  auto *PointeeType = Pointee.getTypePtrOrNull();
+  if (!PointeeType)
+    return false;
+  auto *Record = PointeeType->getAsStructureType();
+  if (!Record)
+    return false;
+  auto *Decl = Record->getDecl();
+  if (!Decl)
+    return false;
+  auto TypeName = Decl->getName();
+  return TypeName.starts_with("__CF") || TypeName.starts_with("__CG") ||
+         TypeName.starts_with("__CM");
 }
 
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
@@ -230,16 +278,20 @@ std::optional<bool> isUncheckedPtr(const QualType T) {
   return false;
 }
 
-std::optional<bool> isUnsafePtr(const QualType T) {
+std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
       auto isUncountedPtr = isUncounted(CXXRD);
       auto isUncheckedPtr = isUnchecked(CXXRD);
-      if (isUncountedPtr && isUncheckedPtr)
-        return *isUncountedPtr || *isUncheckedPtr;
+      auto isUnretainedPtr = isUnretained(T, IsArcEnabled);
+      std::optional<bool> result;
       if (isUncountedPtr)
-        return *isUncountedPtr;
-      return isUncheckedPtr;
+        result = *isUncountedPtr;
+      if (isUncheckedPtr)
+        result = result ? *result || *isUncheckedPtr : *isUncheckedPtr;
+      if (isUnretainedPtr)
+        result = result ? *result || *isUnretainedPtr : *isUnretainedPtr;
+      return result;
     }
   }
   return false;
@@ -263,16 +315,24 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
          method == "impl"))
       return true;
 
+    if (className == "RetainPtr" && method == "get")
+      return true;
+
     // Ref<T> -> T conversion
     // FIXME: Currently allowing any Ref<T> -> whatever cast.
     if (isRefType(className)) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
-        return isUnsafePtr(maybeRefToRawOperator->getConversionType());
+        return isUnsafePtr(maybeRefToRawOperator->getConversionType(), false);
     }
 
     if (isCheckedPtr(className)) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
-        return isUnsafePtr(maybeRefToRawOperator->getConversionType());
+        return isUnsafePtr(maybeRefToRawOperator->getConversionType(), false);
+    }
+
+    if (className == "RetainPtr") {
+      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
+        return isUnsafePtr(maybeRefToRawOperator->getConversionType(), false);
     }
   }
   return false;
@@ -294,6 +354,13 @@ bool isCheckedPtr(const CXXRecordDecl *R) {
     const auto &ClassName = safeGetName(TmplR);
     return isCheckedPtr(ClassName);
   }
+  return false;
+}
+
+bool isRetainPtr(const CXXRecordDecl *R) {
+  assert(R);
+  if (auto *TmplR = R->getTemplateInstantiationPattern())
+    return safeGetName(TmplR) == "RetainPtr";
   return false;
 }
 

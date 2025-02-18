@@ -15,6 +15,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -81,7 +82,7 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) override {
     auto MethodName = safeGetName(MCE->getMethodDecl());
     if (MethodName == "swap" || MethodName == "leakRef" ||
-        MethodName == "releaseNonNull") {
+        MethodName == "releaseNonNull" || MethodName == "clear") {
       auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
       if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
         if (VarRef->getDecl() == Guardian)
@@ -173,10 +174,12 @@ public:
       : Bug(this, description, "WebKit coding guidelines") {}
 
   virtual std::optional<bool> isUnsafePtr(const QualType T) const = 0;
+  virtual bool isSafePtr(const CXXRecordDecl *) const = 0;
+  virtual bool isSafePtrType(const QualType) const = 0;
   virtual const char *ptrKind() const = 0;
 
-  void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
-                    BugReporter &BRArg) const {
+  virtual void checkASTDecl(const TranslationUnitDecl *TUD,
+                            AnalysisManager &MGR, BugReporter &BRArg) const {
     BR = &BRArg;
 
     // The calls to checkAST* from AnalysisConsumer don't
@@ -263,6 +266,12 @@ public:
     if (IsUncountedPtr && *IsUncountedPtr) {
       if (tryToFindPtrOrigin(
               Value, /*StopAtFirstRefCountedObj=*/false,
+              [&](const clang::CXXRecordDecl *Record) {
+                return isSafePtr(Record);
+              },
+              [&](const clang::QualType Type) {
+                return isSafePtrType(Type);
+              },
               [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
                 if (!InitArgOrigin || IsSafe)
                   return true;
@@ -292,8 +301,7 @@ public:
                           MaybeGuardianArgType->getAsCXXRecordDecl();
                       if (MaybeGuardianArgCXXRecord) {
                         if (MaybeGuardian->isLocalVarDecl() &&
-                            (isRefCounted(MaybeGuardianArgCXXRecord) ||
-                             isCheckedPtr(MaybeGuardianArgCXXRecord) ||
+                            (isSafePtr(MaybeGuardianArgCXXRecord) ||
                              isRefcountedStringsHack(MaybeGuardian)) &&
                             isGuardedScopeEmbeddedInGuardianScope(
                                 V, MaybeGuardian))
@@ -365,6 +373,12 @@ public:
   std::optional<bool> isUnsafePtr(const QualType T) const final {
     return isUncountedPtr(T);
   }
+  bool isSafePtr(const CXXRecordDecl *Record) const final {
+    return isRefCounted(Record) || isCheckedPtr(Record);
+  }
+  bool isSafePtrType(const QualType type) const final {
+    return isRefOrCheckedPtrType(type);
+  }
   const char *ptrKind() const final { return "uncounted"; }
 };
 
@@ -376,7 +390,37 @@ public:
   std::optional<bool> isUnsafePtr(const QualType T) const final {
     return isUncheckedPtr(T);
   }
+  bool isSafePtr(const CXXRecordDecl *Record) const final {
+    return isRefCounted(Record) || isCheckedPtr(Record);
+  }
+  bool isSafePtrType(const QualType type) const final {
+    return isRefOrCheckedPtrType(type);
+  }
   const char *ptrKind() const final { return "unchecked"; }
+};
+
+class UnretainedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
+  mutable bool IsARCEnabled{false};
+public:
+  UnretainedLocalVarsChecker()
+      : RawPtrRefLocalVarsChecker("Unretained raw pointer or reference not "
+                                  "provably backed by a RetainPtr") {}
+  std::optional<bool> isUnsafePtr(const QualType T) const final {
+    return isUnretained(T, IsARCEnabled);
+  }
+  bool isSafePtr(const CXXRecordDecl *Record) const final {
+    return isRetainPtr(Record);
+  }
+  bool isSafePtrType(const QualType type) const final {
+    return isRetainPtrType(type);
+  }
+  const char *ptrKind() const final { return "unretained"; }
+
+  void checkASTDecl(const TranslationUnitDecl *TUD,
+                    AnalysisManager &MGR, BugReporter &BRArg) const final {
+    IsARCEnabled = TUD->getLangOpts().ObjCAutoRefCount;
+    RawPtrRefLocalVarsChecker::checkASTDecl(TUD, MGR, BRArg);
+  }
 };
 
 } // namespace
@@ -394,5 +438,13 @@ void ento::registerUncheckedLocalVarsChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUncheckedLocalVarsChecker(const CheckerManager &) {
+  return true;
+}
+
+void ento::registerUnretainedLocalVarsChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnretainedLocalVarsChecker>();
+}
+
+bool ento::shouldRegisterUnretainedLocalVarsChecker(const CheckerManager &) {
   return true;
 }
