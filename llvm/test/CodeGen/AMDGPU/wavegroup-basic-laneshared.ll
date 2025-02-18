@@ -20,7 +20,7 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %src, ptr addrspace
 ; CHECK-NEXT:    s_add_co_i32 s5, s5, 1
 ; CHECK-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_mul_i32 s5, ttmp9, s5
-; CHECK-NEXT:    s_getreg_b32 s8, hwreg(HW_REG_IB_STS2, 6, 4)
+; CHECK-NEXT:    s_getreg_b32 s8, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
 ; CHECK-NEXT:    s_bfe_u32 s4, ttmp8, 0x20019
 ; CHECK-NEXT:    s_add_co_i32 s7, s7, s5
 ; CHECK-NEXT:    s_cmp_eq_u32 s8, 0

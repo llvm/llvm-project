@@ -25,7 +25,7 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wave
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, v1
 ; CHECK-NEXT:    s_mul_i32 s2, ttmp9, s7
-; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_IB_STS2, 6, 4)
+; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
 ; CHECK-NEXT:    s_add_co_i32 s6, s6, s2
 ; CHECK-NEXT:    s_cmp_eq_u32 s3, 0
 ; CHECK-NEXT:    v_mul_f32_e32 v3, 0x3d042108, v2

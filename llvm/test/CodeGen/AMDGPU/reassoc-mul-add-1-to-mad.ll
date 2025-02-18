@@ -5084,7 +5084,7 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ; GFX1300-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1300-NEXT:    s_mul_i32 s4, ttmp9, s8
 ; GFX1300-NEXT:    s_add_co_i32 s7, s7, s4
-; GFX1300-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 6, 4)
+; GFX1300-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_and_b32 s5, s6, 0xffff
 ; GFX1300-NEXT:    s_cmp_eq_u32 s4, 0
