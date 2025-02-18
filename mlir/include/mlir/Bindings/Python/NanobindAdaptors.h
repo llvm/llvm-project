@@ -349,6 +349,7 @@ public:
     thisClass = metaclass(derivedClassName, nanobind::make_tuple(superClass),
                           attributes);
     scope.attr(derivedClassName) = thisClass;
+    thisClass.attr("__module__") = scope.attr("__name__");
   }
 
   template <typename Func, typename... Extra>
