@@ -1656,12 +1656,28 @@ namespace ExprWithCleanups {
   static_assert(F == 1i, "");
 }
 
-namespace NullptrUpcast {
+namespace NullptrCast {
   struct A {};
   struct B : A { int n; };
+  constexpr A *na = nullptr;
   constexpr B *nb = nullptr;
   constexpr A &ra = *nb; // both-error {{constant expression}} \
                          // both-note {{cannot access base class of null pointer}}
+  constexpr B &rb = (B&)*na; // both-error {{constant expression}} \
+                             // both-note {{cannot access derived class of null pointer}}
+  constexpr bool test() {
+    auto a = (A*)(B*)nullptr;
+
+    return a == nullptr;
+  }
+  static_assert(test(), "");
+
+  constexpr bool test2() {
+    auto a = (B*)(A*)nullptr;
+
+    return a == nullptr;
+  }
+  static_assert(test2(), "");
 }
 
 namespace NonConst {
