@@ -1662,6 +1662,17 @@ TEST(ConstantRange, MakeAllowedICmpRegionEdgeCases) {
                   .isFullSet());
 }
 
+TEST(ConstantRange, MakeExactICmpRegion) {
+  for (unsigned Bits : {1, 4}) {
+    EnumerateAPInts(Bits, [](const APInt &N) {
+      for (auto Pred : ICmpInst::predicates()) {
+        EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(Pred, N),
+                  ConstantRange::makeSatisfyingICmpRegion(Pred, N));
+      };
+    });
+  }
+}
+
 TEST(ConstantRange, MakeSatisfyingICmpRegion) {
   ConstantRange LowHalf(APInt(8, 0), APInt(8, 128));
   ConstantRange HighHalf(APInt(8, 128), APInt(8, 0));

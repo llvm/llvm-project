@@ -134,21 +134,26 @@ void PlainCFGBuilder::fixPhiNodes() {
     if (isHeaderBB(Phi->getParent(), L)) {
       // For header phis, make sure the incoming value from the loop
       // predecessor is the first operand of the recipe.
-      assert(Phi->getNumOperands() == 2);
+      assert(Phi->getNumOperands() == 2 &&
+             "header phi must have exactly 2 operands");
       BasicBlock *LoopPred = L->getLoopPredecessor();
-      VPPhi->addIncoming(
-          getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopPred)),
-          BB2VPBB[LoopPred]);
+      VPPhi->addOperand(
+          getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopPred)));
       BasicBlock *LoopLatch = L->getLoopLatch();
-      VPPhi->addIncoming(
-          getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopLatch)),
-          BB2VPBB[LoopLatch]);
+      VPPhi->addOperand(
+          getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopLatch)));
       continue;
     }
 
-    for (unsigned I = 0; I != Phi->getNumOperands(); ++I)
-      VPPhi->addIncoming(getOrCreateVPOperand(Phi->getIncomingValue(I)),
-                         BB2VPBB[Phi->getIncomingBlock(I)]);
+    // Add operands for VPPhi in the order matching its predecessors in VPlan.
+    DenseMap<const VPBasicBlock *, VPValue *> VPPredToIncomingValue;
+    for (unsigned I = 0; I != Phi->getNumOperands(); ++I) {
+      VPPredToIncomingValue[BB2VPBB[Phi->getIncomingBlock(I)]] =
+          getOrCreateVPOperand(Phi->getIncomingValue(I));
+    }
+    for (VPBlockBase *Pred : VPPhi->getParent()->getPredecessors())
+      VPPhi->addOperand(
+          VPPredToIncomingValue.lookup(Pred->getExitingBasicBlock()));
   }
 }
 
