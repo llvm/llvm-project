@@ -24,6 +24,7 @@ class ThunkTest(TestBase):
             substrs=["stop reason = step in", "Derived2::doit"],
         )
 
+    @skipIfWindows
     def test_step_out_thunk(self):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "testit_debug")
