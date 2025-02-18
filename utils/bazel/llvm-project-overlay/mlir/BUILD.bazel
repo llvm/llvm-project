@@ -1729,11 +1729,17 @@ gentbl_cc_library(
     name = "EmitCOpsIncGen",
     tbl_outs = [
         (
-            ["-gen-dialect-decls"],
+            [
+                "-gen-dialect-decls",
+                "-dialect=emitc",
+            ],
             "include/mlir/Dialect/EmitC/IR/EmitCDialect.h.inc",
         ),
         (
-            ["-gen-dialect-defs"],
+            [
+                "-gen-dialect-defs",
+                "-dialect=emitc",
+            ],
             "include/mlir/Dialect/EmitC/IR/EmitCDialect.cpp.inc",
         ),
         (
