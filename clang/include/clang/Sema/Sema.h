@@ -234,8 +234,7 @@ void threadSafetyCleanup(BeforeSet *Cache);
 
 // FIXME: No way to easily map from TemplateTypeParmTypes to
 // TemplateTypeParmDecls, so we have this horrible PointerUnion.
-typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *,
-                                     ResolvedUnexpandedPackExpr *>,
+typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *>,
                   SourceLocation>
     UnexpandedParameterPack;
 
