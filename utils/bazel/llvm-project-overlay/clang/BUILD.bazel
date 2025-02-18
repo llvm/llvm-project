@@ -2,6 +2,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(
     "//:vars.bzl",
@@ -13,6 +15,16 @@ load(
 load("//:workspace_root.bzl", "workspace_root")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
+load(
+    "//config:cmakehelpers.bzl",
+    "cmakedefine",
+    "cmakedefine01_off",
+    "cmakedefine01_on",
+    "cmakedefine_sunset",
+    "cmakedefine_unset",
+    "cmakedefine_vset",
+    "cmakedefine_vunset",
+)
 load("//llvm:driver.bzl", "llvm_driver_cc_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
@@ -612,6 +624,49 @@ genrule(
         patch = LLVM_VERSION_PATCH,
         vers = PACKAGE_VERSION,
     ),
+)
+
+expand_template(
+    name = "config_h",
+    out = "include/clang/Config/config.h",
+    substitutions = (
+        {"${BUG_REPORT_URL}": "https://github.com/llvm/llvm-project/issues/"} |
+        cmakedefine01_on("CLANG_DEFAULT_PIE_ON_LINUX") |
+        {
+            "${CLANG_DEFAULT_LINKER}": "",
+            "${CLANG_DEFAULT_CXX_STDLIB}": "",
+            "${CLANG_DEFAULT_RTLIB}": "",
+            "${CLANG_DEFAULT_UNWINDLIB}": "",
+            "${CLANG_DEFAULT_OBJCOPY}": "objcopy",
+            "${CLANG_DEFAULT_OPENMP_RUNTIME}": "libomp",
+            "${CLANG_SYSTEMZ_DEFAULT_ARCH}": "z10",
+            "${CLANG_INSTALL_LIBDIR_BASENAME}": "lib",
+            "${CLANG_RESOURCE_DIR}": "",
+            "${C_INCLUDE_DIRS}": "",
+        } |
+        cmakedefine_sunset("CLANG_CONFIG_FILE_SYSTEM_DIR") |
+        cmakedefine_sunset("CLANG_CONFIG_FILE_USER_DIR") |
+        {
+            "${DEFAULT_SYSROOT}": "",
+            "${GCC_INSTALL_PREFIX}": "",
+        } |
+        cmakedefine_vunset("CLANG_HAVE_LIBXML") |
+        cmakedefine(
+            "CLANG_HAVE_RLIMITS",
+            disable = "@platforms//os:windows",
+        ) |
+        cmakedefine_vset("CLANG_HAVE_DLFCN_H") |
+        cmakedefine_vset("CLANG_HAVE_DLADDR") |
+        cmakedefine_sunset("HOST_LINK_VERSION") |
+        cmakedefine_unset("ENABLE_LINKER_BUILD_ID") |
+        cmakedefine01_on("ENABLE_X86_RELAX_RELOCATIONS") |
+        cmakedefine01_off("PPC_LINUX_DEFAULT_IEEELONGDOUBLE") |
+        cmakedefine01_off("CLANG_ENABLE_OBJC_REWRITER") |
+        cmakedefine01_on("CLANG_ENABLE_STATIC_ANALYZER") |
+        cmakedefine01_off("CLANG_SPAWN_CC1") |
+        cmakedefine01_off("CLANG_ENABLE_CIR")
+    ),
+    template = "include/clang/Config/config.h.cmake",
 )
 
 cc_library(
