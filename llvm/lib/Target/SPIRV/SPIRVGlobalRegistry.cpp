@@ -22,6 +22,9 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
@@ -1738,4 +1741,36 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVType *SpvType) const {
   }
   }
   return LLT::scalar(64);
+}
+
+void SPIRVGlobalRegistry::buildAssignPtr(IRBuilder<> &B, Type *ElemTy,
+                                         Value *Arg) {
+  Value *OfType = PoisonValue::get(ElemTy);
+  CallInst *AssignPtrTyCI = findAssignPtrTypeInstr(Arg);
+  Function *CurrF =
+      B.GetInsertBlock() ? B.GetInsertBlock()->getParent() : nullptr;
+  if (AssignPtrTyCI == nullptr ||
+      AssignPtrTyCI->getParent()->getParent() != CurrF) {
+    AssignPtrTyCI = buildIntrWithMD(
+        Intrinsic::spv_assign_ptr_type, {Arg->getType()}, OfType, Arg,
+        {B.getInt32(getPointerAddressSpace(Arg->getType()))}, B);
+    addDeducedElementType(AssignPtrTyCI, ElemTy);
+    addDeducedElementType(Arg, ElemTy);
+    addAssignPtrTypeInstr(Arg, AssignPtrTyCI);
+  } else {
+    updateAssignType(AssignPtrTyCI, Arg, OfType);
+  }
+}
+
+void SPIRVGlobalRegistry::updateAssignType(CallInst *AssignCI, Value *Arg,
+                                           Value *OfType) {
+  AssignCI->setArgOperand(1, buildMD(OfType));
+  if (cast<IntrinsicInst>(AssignCI)->getIntrinsicID() !=
+      Intrinsic::spv_assign_ptr_type)
+    return;
+
+  // update association with the pointee type
+  Type *ElemTy = OfType->getType();
+  addDeducedElementType(AssignCI, ElemTy);
+  addDeducedElementType(Arg, ElemTy);
 }
