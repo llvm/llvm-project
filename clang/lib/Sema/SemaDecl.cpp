@@ -16015,7 +16015,8 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
   llvm::DenseMap<const BlockDecl *, bool> EscapeInfo;
 
   auto IsOrNestedInEscapingBlock = [&](const BlockDecl *BD) {
-    if (auto It = EscapeInfo.find(BD); It != EscapeInfo.end())
+    auto [It, Inserted] = EscapeInfo.try_emplace(BD);
+    if (!Inserted)
       return It->second;
 
     bool R = false;
@@ -16028,7 +16029,7 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
       CurBD = CurBD->getParent()->getInnermostBlockDecl();
     } while (CurBD);
 
-    return EscapeInfo[BD] = R;
+    return It->second = R;
   };
 
   // If the location where 'self' is implicitly retained is inside a escaping

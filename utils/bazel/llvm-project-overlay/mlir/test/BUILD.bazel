@@ -425,6 +425,7 @@ cc_library(
         "//mlir:LLVMDialect",
         "//mlir:LLVMIRToLLVMTranslation",
         "//mlir:LinalgDialect",
+        "//mlir:LinalgInterfaces",
         "//mlir:LoopLikeInterface",
         "//mlir:MemorySlotInterfaces",
         "//mlir:Pass",
