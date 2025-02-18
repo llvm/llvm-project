@@ -608,7 +608,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __insert_assign_n_unchecked(_Iterator __first, difference_type __n, pointer __position) {
     for (pointer __end_position = __position + __n; __position != __end_position; ++__position, (void)++__first) {
-      __temp_value<value_type, _Allocator> __tmp(this->__alloc(), *__first);
+      __temp_value<value_type, _Allocator> __tmp(this->__alloc_, *__first);
       *__position = std::move(__tmp.get());
     }
   }
