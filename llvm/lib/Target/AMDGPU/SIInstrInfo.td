@@ -913,7 +913,7 @@ class VGPRImm <dag frag> : PatLeaf<frag, [{
 }
 
 def NegateImm : SDNodeXForm<imm, [{
-  return CurDAG->getConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 // TODO: When FP inline imm values work?

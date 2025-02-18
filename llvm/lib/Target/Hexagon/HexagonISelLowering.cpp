@@ -3491,7 +3491,7 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue P = Op.getOperand(0);
     switch (P.getOpcode()) {
     case HexagonISD::PTRUE:
-      return DCI.DAG.getConstant(-1, dl, ty(Op));
+      return DCI.DAG.getAllOnesConstant(dl, ty(Op));
     case HexagonISD::PFALSE:
       return getZero(dl, ty(Op), DCI.DAG);
     default:

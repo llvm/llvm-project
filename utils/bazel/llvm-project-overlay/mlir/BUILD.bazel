@@ -7763,7 +7763,6 @@ td_library(
     name = "TensorOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/Tensor/IR/TensorBase.td",
-        "include/mlir/Dialect/Tensor/IR/TensorInterfaces.td",
         "include/mlir/Dialect/Tensor/IR/TensorOps.td",
     ],
     includes = ["include"],
@@ -7813,23 +7812,6 @@ gentbl_cc_library(
     deps = [":TensorOpsTdFiles"],
 )
 
-gentbl_cc_library(
-    name = "TensorInterfacesIncGen",
-    tbl_outs = [
-        (
-            ["--gen-op-interface-decls"],
-            "include/mlir/Dialect/Tensor/IR/TensorInterfaces.h.inc",
-        ),
-        (
-            ["--gen-op-interface-defs"],
-            "include/mlir/Dialect/Tensor/IR/TensorInterfaces.cpp.inc",
-        ),
-    ],
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Tensor/IR/TensorInterfaces.td",
-    deps = [":TensorOpsTdFiles"],
-)
-
 cc_library(
     name = "TensorDialect",
     srcs = [
@@ -7859,13 +7841,13 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":LinalgInterfaces",
         ":LoopLikeInterface",
         ":ParallelCombiningOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
         ":Support",
-        ":TensorInterfacesIncGen",
         ":TensorOpsIncGen",
         ":TilingInterface",
         ":TransformDialectInterfaces",
@@ -11207,6 +11189,23 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "LinalgRelayoutOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.td",
+    deps = [":LinalgOpsTdFiles"],
+)
+
+gentbl_cc_library(
     name = "LinalgEnumsIncGen",
     tbl_outs = [
         (
@@ -11533,9 +11532,49 @@ cc_library(
 )
 
 cc_library(
+    name = "LinalgInterfaces",
+    srcs = [
+        "include/mlir/Dialect/Linalg/IR/Linalg.h",
+        "lib/Dialect/Linalg/IR/LinalgInterfaces.cpp",
+    ],
+    hdrs = ["include/mlir/Dialect/Linalg/IR/LinalgInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":ArithDialect",
+        ":ArithUtils",
+        ":BytecodeOpInterface",
+        ":ComplexDialect",
+        ":ControlFlowInterfaces",
+        ":CopyOpInterface",
+        ":DestinationStyleOpInterface",
+        ":DialectUtils",
+        ":IR",
+        ":InferTypeOpInterface",
+        ":LinalgEnumsIncGen",
+        ":LinalgInterfacesIncGen",
+        ":LinalgOpsIncGen",
+        ":LinalgRelayoutOpsIncGen",
+        ":LinalgStructuredOpsIncGen",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":TilingInterface",
+        ":ViewLikeInterface",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "LinalgDialect",
-    srcs = glob(["lib/Dialect/Linalg/IR/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/Linalg/IR/*.h"]),
+    srcs = [
+        "lib/Dialect/Linalg/IR/LinalgDialect.cpp",
+        "lib/Dialect/Linalg/IR/LinalgOps.cpp",
+        "lib/Dialect/Linalg/IR/ValueBoundsOpInterfaceImpl.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/IR/Linalg.h",
+        "include/mlir/Dialect/Linalg/IR/ValueBoundsOpInterfaceImpl.h",
+    ],
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -11554,9 +11593,10 @@ cc_library(
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":LinalgEnumsIncGen",
-        ":LinalgInterfacesIncGen",
+        ":LinalgInterfaces",
         ":LinalgNamedStructuredOpsYamlIncGen",
         ":LinalgOpsIncGen",
+        ":LinalgRelayoutOpsIncGen",
         ":LinalgStructuredOpsIncGen",
         ":MathDialect",
         ":MemRefDialect",
@@ -11568,6 +11608,7 @@ cc_library(
         ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
+        ":TensorUtils",
         ":TilingInterface",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
@@ -11599,6 +11640,7 @@ cc_library(
         ":IR",
         ":IndexDialect",
         ":LinalgDialect",
+        ":LinalgInterfaces",
         ":LinalgMatchOpsIncGen",
         ":LinalgTransformEnumsIncGen",
         ":LinalgTransformOpsIncGen",
@@ -11710,6 +11752,7 @@ cc_library(
         ":IR",
         ":IndexDialect",
         ":LinalgDialect",
+        ":LinalgInterfaces",
         ":LinalgPassIncGen",
         ":LinalgStructuredOpsIncGen",
         ":LinalgUtils",

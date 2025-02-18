@@ -927,3 +927,37 @@ body:             |
     S_ENDPGM 0, implicit %3
 
 ...
+
+---
+name:            constant_s_xor_b32_uses_subreg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_xor_b32_uses_subreg
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 47
+    ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]]
+    %0:sreg_64 = S_MOV_B64 32
+    %1:sreg_64 = S_MOV_B64 15
+    %2:sgpr_32 = S_XOR_B32 %0.sub0, %1.sub0, implicit-def dead $scc
+    %3:sgpr_32 = S_XOR_B32 %0.sub1, %1.sub1, implicit-def dead $scc
+    S_ENDPGM 0, implicit %2, implicit %3
+
+...
+
+---
+name:            constant_v_or_b32_uses_subreg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_v_or_b32_uses_subreg
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 268435455, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]], implicit [[V_MOV_B32_e32_1]]
+    %0:vreg_64 = V_MOV_B64_PSEUDO 18446744069683019775, implicit $exec
+    %1:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
+    %2:vgpr_32 = V_OR_B32_e32 %0.sub0, %1.sub0, implicit $exec
+    %3:vgpr_32 = V_OR_B32_e32 %0.sub1, %1.sub1, implicit $exec
+    S_ENDPGM 0, implicit %2, implicit %3
+
+...

@@ -57883,8 +57883,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case ISD::SIGN_EXTEND_VECTOR_INREG:
     case ISD::ZERO_EXTEND_VECTOR_INREG: {
       // TODO: Handle ANY_EXTEND combos with SIGN/ZERO_EXTEND.
-      if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
-          Subtarget.hasInt256() &&
+      if (!IsSplat && NumOps == 2 &&
+          ((VT.is256BitVector() && Subtarget.hasInt256()) ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
+            (EltSizeInBits >= 32 || Subtarget.useBWIRegs()))) &&
           Op0.getOperand(0).getValueType().is128BitVector() &&
           Op0.getOperand(0).getValueType() ==
               Ops[0].getOperand(0).getValueType()) {

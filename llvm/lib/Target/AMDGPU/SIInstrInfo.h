@@ -416,6 +416,15 @@ public:
 
   void removeModOperands(MachineInstr &MI) const;
 
+  /// Return the extracted immediate value in a subregister use from a constant
+  /// materialized in a super register.
+  ///
+  /// e.g. %imm = S_MOV_B64 K[0:63]
+  ///      USE %imm.sub1
+  /// This will return K[32:63]
+  static std::optional<int64_t> extractSubregFromImm(int64_t ImmVal,
+                                                     unsigned SubRegIndex);
+
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
