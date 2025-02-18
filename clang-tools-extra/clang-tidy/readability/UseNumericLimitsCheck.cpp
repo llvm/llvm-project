@@ -58,18 +58,45 @@ void UseNumericLimitsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseNumericLimitsCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      expr(anyOf(unaryOperator(hasOperatorName("-"),
-                               hasUnaryOperand(integerLiteral().bind(
-                                   "negative-integer-literal"))),
-                 unaryOperator(hasOperatorName("+"),
-                               hasUnaryOperand(integerLiteral().bind(
-                                   "positive-integer-literal"))),
-                 integerLiteral(unless(hasParent(unaryOperator(
-                                    hasAnyOperatorName("-", "+")))))
-                     .bind("bare-integer-literal")))
-          .bind("unary-op-exp"),
-      this);
+  auto PositiveIntegerMatcher = [](auto Value) {
+    return unaryOperator(
+        hasOperatorName("+"),
+        hasUnaryOperand(
+            integerLiteral(equals(Value)).bind("positive-integer-literal")));
+  };
+
+  auto NegativeIntegerMatcher = [](auto Value) {
+    return unaryOperator(
+        hasOperatorName("-"),
+        hasUnaryOperand(
+            integerLiteral(equals(-Value)).bind("negative-integer-literal")));
+  };
+
+  auto BareIntegerMatcher = [](auto Value) {
+    return integerLiteral(allOf(unless(hasParent(unaryOperator(
+                                    hasAnyOperatorName("-", "+")))),
+                                equals(Value)))
+        .bind("bare-integer-literal");
+  };
+
+  for (const auto &[Value, _] : SignedConstants) {
+    if (Value < 0) {
+      Finder->addMatcher(
+          expr(NegativeIntegerMatcher(Value)).bind("unary-op-exp"), this);
+    } else {
+      Finder->addMatcher(
+          expr(anyOf(PositiveIntegerMatcher(Value), BareIntegerMatcher(Value)))
+              .bind("unary-op-exp"),
+          this);
+    }
+  }
+
+  for (const auto &[Value, _] : UnsignedConstants) {
+    Finder->addMatcher(
+        expr(anyOf(PositiveIntegerMatcher(Value), BareIntegerMatcher(Value)))
+            .bind("unary-op-exp"),
+        this);
+  }
 }
 
 void UseNumericLimitsCheck::registerPPCallbacks(
