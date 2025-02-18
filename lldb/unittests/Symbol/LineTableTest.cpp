@@ -132,9 +132,7 @@ public:
   std::vector<std::unique_ptr<LineSequence>> Build() {
     return std::move(m_sequences);
   }
-  enum Terminal : bool {
-    Terminal = true;
-  };
+  enum Terminal : bool { Terminal = true };
   void Entry(addr_t addr, bool terminal = false) {
     LineTable::AppendLineEntryToSequence(
         m_seq_up.get(), addr, /*line=*/1, /*column=*/0,
@@ -200,11 +198,11 @@ TEST_F(LineTableTest, LowerAndUpperBound) {
   LineSequenceBuilder builder;
   builder.Entry(0);
   builder.Entry(10);
-  builder.Entry(20, Terminal);
+  builder.Entry(20, LineSequenceBuilder::Terminal);
   builder.Entry(20); // Starts right after the previous sequence.
-  builder.Entry(30, Terminal);
+  builder.Entry(30, LineSequenceBuilder::Terminal);
   builder.Entry(40); // Gap after the previous sequence.
-  builder.Entry(50, Terminal);
+  builder.Entry(50, LineSequenceBuilder::Terminal);
 
   llvm::Expected<FakeModuleFixture> fixture = CreateFakeModule(builder.Build());
   ASSERT_THAT_EXPECTED(fixture, llvm::Succeeded());
@@ -252,13 +250,13 @@ TEST_F(LineTableTest, LowerAndUpperBound) {
 
 TEST_F(LineTableTest, FindLineEntryByAddress) {
   LineSequenceBuilder builder;
-  builder.Entry(0, false);
-  builder.Entry(10, false);
-  builder.Entry(20, true);
-  builder.Entry(20, false); // Starts right after the previous sequence.
-  builder.Entry(30, true);
-  builder.Entry(40, false); // Gap after the previous sequence.
-  builder.Entry(50, true);
+  builder.Entry(0);
+  builder.Entry(10);
+  builder.Entry(20, LineSequenceBuilder::Terminal);
+  builder.Entry(20); // Starts right after the previous sequence.
+  builder.Entry(30, LineSequenceBuilder::Terminal);
+  builder.Entry(40); // Gap after the previous sequence.
+  builder.Entry(50, LineSequenceBuilder::Terminal);
 
   llvm::Expected<FakeModuleFixture> fixture = CreateFakeModule(builder.Build());
   ASSERT_THAT_EXPECTED(fixture, llvm::Succeeded());
