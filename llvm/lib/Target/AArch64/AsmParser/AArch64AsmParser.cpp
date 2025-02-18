@@ -7948,11 +7948,8 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
   }
   Parser.Lex();
 
-  // Parsing finished, hereafter only accept comments; otherwise no trailing
-  // tokens.
-  if (Parser.getTok().is(llvm::AsmToken::At)) {
-    Parser.parseStringToEndOfStatement();
-  }
+  // Parsing finished. Check for trailing characters (no need to check for
+  // comments; they are removed by the lexer).
   if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
     Error(Parser.getTok().getLoc(), "unexpected token for AArch64 build "
                                     "attributes subsection header directive");
@@ -8081,11 +8078,8 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   }
   Parser.Lex();
 
-  // Parsing finished, hereafter only accept comments; otherwise no trailing
-  // tokens.
-  if (Parser.getTok().is(llvm::AsmToken::At)) {
-    Parser.parseStringToEndOfStatement();
-  }
+  // Parsing finished. Check for trailing characters (no need to check for
+  // comments; they are removed by the lexer).
   if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
     Error(Parser.getTok().getLoc(),
           "unexpected token for AArch64 build attributes tag and value "

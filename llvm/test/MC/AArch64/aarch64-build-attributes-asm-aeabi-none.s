@@ -2,12 +2,12 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
 
 // ASM: .aeabi_subsection   aeabi_pauthabi, required, uleb128
-// ASM: .aeabi_attribute	1, 0 @ Tag_PAuth_Platform
-// ASM: .aeabi_attribute	2, 0 @ Tag_PAuth_Schema
+// ASM: .aeabi_attribute	1, 0 // Tag_PAuth_Platform
+// ASM: .aeabi_attribute	2, 0 // Tag_PAuth_Schema
 // ASM: .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
-// ASM: .aeabi_attribute    0, 0 @ Tag_Feature_BTI
-// ASM: .aeabi_attribute    1, 0 @ Tag_Feature_PAC
-// ASM: .aeabi_attribute    2, 0 @ Tag_Feature_GCS
+// ASM: .aeabi_attribute    0, 0 // Tag_Feature_BTI
+// ASM: .aeabi_attribute    1, 0 // Tag_Feature_PAC
+// ASM: .aeabi_attribute    2, 0 // Tag_Feature_GCS
 
 // ELF: Hex dump of section '.ARM.attributes':
 // ELF-NEXT: 0x00000000 41190000 00616561 62695f70 61757468 A....aeabi_pauth

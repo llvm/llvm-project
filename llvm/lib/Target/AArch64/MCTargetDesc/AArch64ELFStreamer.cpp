@@ -191,7 +191,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       case AArch64BuildAttrs::TAG_FEATURE_BTI:
       case AArch64BuildAttrs::TAG_FEATURE_GCS:
       case AArch64BuildAttrs::TAG_FEATURE_PAC:
-        OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value << "\t@ "
+        OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value << "\t// "
            << AArch64BuildAttrs::getFeatureAndBitsTagsStr(Tag);
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);
@@ -210,7 +210,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
         break;
       case AArch64BuildAttrs::TAG_PAUTH_PLATFORM:
       case AArch64BuildAttrs::TAG_PAUTH_SCHEMA:
-        OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value << "\t@ "
+        OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value << "\t// "
            << AArch64BuildAttrs::getPauthABITagsStr(Tag);
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);

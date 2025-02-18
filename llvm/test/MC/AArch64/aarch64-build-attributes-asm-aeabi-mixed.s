@@ -5,13 +5,13 @@
 // ASM: .aeabi_subsection	aeabi_subsection, optional, ntbs
 // ASM: .aeabi_subsection	subsection_b, required, uleb128
 // ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
-// ASM: .aeabi_attribute	1, 7 @ Tag_PAuth_Platform
-// ASM: .aeabi_attribute	2, 777 @ Tag_PAuth_Schema
-// ASM: .aeabi_attribute	1, 9	@ Tag_PAuth_Platform
+// ASM: .aeabi_attribute	1, 7 // Tag_PAuth_Platform
+// ASM: .aeabi_attribute	2, 777 // Tag_PAuth_Schema
+// ASM: .aeabi_attribute	1, 9	// Tag_PAuth_Platform
 // ASM: .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
-// ASM: .aeabi_attribute    0, 1 @ Tag_Feature_BTI
-// ASM: .aeabi_attribute    1, 1 @ Tag_Feature_PAC
-// ASM: .aeabi_attribute    2, 1 @ Tag_Feature_GCS
+// ASM: .aeabi_attribute    0, 1 // Tag_Feature_BTI
+// ASM: .aeabi_attribute    1, 1 // Tag_Feature_PAC
+// ASM: .aeabi_attribute    2, 1 // Tag_Feature_GCS
 // ASM: .aeabi_subsection	aeabi_subsection, optional, ntbs
 // ASM: .aeabi_attribute	5, "Value"
 // ASM: .aeabi_subsection	subsection_b, required, uleb128
