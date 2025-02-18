@@ -2618,6 +2618,10 @@ OpTrait::tosa::verifyTosaShapeOperatorWithSameRanks(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult tosa::ConstShapeOp::verify() {
+  // check one dimensional rank
+  auto valuesRank = getValue().getType().getRank();
+  if (valuesRank != 1)
+    return emitOpError("expect elements in attribute value with rank 1");
   // check that number of elements in value attr equal to rank of result shape
   auto count = getValue().getNumElements();
   auto rank = (cast<tosa::shapeType>(getResult().getType())).getRank();

@@ -6,6 +6,7 @@ add_flang_library(FIROpenACCSupport
 
   DEPENDS
   FIRBuilder
+  FIRCodeGen
   FIRDialect
   FIRDialectSupport
   FIRSupport
@@ -14,6 +15,7 @@ add_flang_library(FIROpenACCSupport
 
   LINK_LIBS
   FIRBuilder
+  FIRCodeGen
   FIRDialect
   FIRDialectSupport
   FIRSupport

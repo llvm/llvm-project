@@ -205,4 +205,7 @@
 /* Define if logf128 is available */
 #cmakedefine LLVM_HAS_LOGF128
 
+/* Define if building LLVM with LLVM_BUILD_TELEMETRY */
+#cmakedefine LLVM_BUILD_TELEMETRY ${LLVM_BUILD_TELEMETRY}
+
 #endif

@@ -54,10 +54,6 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   auto *DXILValMD = M.getOrInsertNamedMetadata(DXILValKey);
   DXILValMD->addOperand(Val);
 }
-void addDisableOptimizations(llvm::Module &M) {
-  StringRef Key = "dx.disable_optimizations";
-  M.addModuleFlag(llvm::Module::ModFlagBehavior::Override, Key, 1);
-}
 // cbuffer will be translated into global variable in special address space.
 // If translate into C,
 // cbuffer A {
@@ -171,8 +167,6 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
 
   generateGlobalCtorDtorCalls();
-  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-    addDisableOptimizations(M);
 
   const DataLayout &DL = M.getDataLayout();
 

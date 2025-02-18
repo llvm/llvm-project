@@ -89,14 +89,18 @@ void RTDEF(PointerAssociateLowerBounds)(Descriptor &pointer,
 void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
     const Descriptor &target, const Descriptor &bounds, const char *sourceFile,
     int sourceLine) {
-  pointer = target;
-  pointer.raw().attribute = CFI_attribute_pointer;
   Terminator terminator{sourceFile, sourceLine};
   SubscriptValue byteStride{/*captured from first dimension*/};
   std::size_t boundElementBytes{bounds.ElementBytes()};
   std::size_t boundsRank{
       static_cast<std::size_t>(bounds.GetDimension(1).Extent())};
-  pointer.raw().rank = boundsRank;
+  // We cannot just assign target into pointer descriptor, because
+  // the ranks may mismatch. Use target as a mold for initializing
+  // the pointer descriptor.
+  INTERNAL_CHECK(static_cast<std::size_t>(pointer.rank()) == boundsRank);
+  pointer.ApplyMold(target, boundsRank);
+  pointer.set_base_addr(target.raw().base_addr);
+  pointer.raw().attribute = CFI_attribute_pointer;
   for (unsigned j{0}; j < boundsRank; ++j) {
     auto &dim{pointer.GetDimension(j)};
     dim.SetBounds(GetInt64(bounds.ZeroBasedIndexedElement<const char>(2 * j),
@@ -114,13 +118,6 @@ void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
     terminator.Crash("PointerAssociateRemapping: too many elements in remapped "
                      "pointer (%zd > %zd)",
         pointer.Elements(), target.Elements());
-  }
-  if (auto *pointerAddendum{pointer.Addendum()}) {
-    if (const auto *targetAddendum{target.Addendum()}) {
-      if (const auto *derived{targetAddendum->derivedType()}) {
-        pointerAddendum->set_derivedType(derived);
-      }
-    }
   }
 }
 

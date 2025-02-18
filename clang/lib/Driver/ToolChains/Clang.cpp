@@ -2633,6 +2633,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   bool UseNoExecStack = false;
   bool Msa = false;
   const char *MipsTargetFeature = nullptr;
+  llvm::SmallVector<const char *> SparcTargetFeatures;
   StringRef ImplicitIt;
   for (const Arg *A :
        Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler,
@@ -2778,6 +2779,31 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         if (MipsTargetFeature)
           continue;
         break;
+
+      case llvm::Triple::sparc:
+      case llvm::Triple::sparcel:
+      case llvm::Triple::sparcv9:
+        if (Value == "--undeclared-regs") {
+          // LLVM already allows undeclared use of G registers, so this option
+          // becomes a no-op. This solely exists for GNU compatibility.
+          // TODO implement --no-undeclared-regs
+          continue;
+        }
+        SparcTargetFeatures =
+            llvm::StringSwitch<llvm::SmallVector<const char *>>(Value)
+                .Case("-Av8", {"-v8plus"})
+                .Case("-Av8plus", {"+v8plus", "+v9"})
+                .Case("-Av8plusa", {"+v8plus", "+v9", "+vis"})
+                .Case("-Av8plusb", {"+v8plus", "+v9", "+vis", "+vis2"})
+                .Case("-Av8plusd", {"+v8plus", "+v9", "+vis", "+vis2", "+vis3"})
+                .Case("-Av9", {"+v9"})
+                .Case("-Av9a", {"+v9", "+vis"})
+                .Case("-Av9b", {"+v9", "+vis", "+vis2"})
+                .Case("-Av9d", {"+v9", "+vis", "+vis2", "+vis3"})
+                .Default({});
+        if (!SparcTargetFeatures.empty())
+          continue;
+        break;
       }
 
       if (Value == "-force_cpusubtype_ALL") {
@@ -2881,6 +2907,10 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   if (MipsTargetFeature != nullptr) {
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(MipsTargetFeature);
+  }
+  for (const char *Feature : SparcTargetFeatures) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back(Feature);
   }
 
   // forward -fembed-bitcode to assmebler
@@ -7087,9 +7117,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // Forward -nogpulib to -cc1.
-  if (Args.hasArg(options::OPT_nogpulib))
-    CmdArgs.push_back("-nogpulib");
+  // Forward --no-offloadlib to -cc1.
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
+    CmdArgs.push_back("--no-offloadlib");
 
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
     CmdArgs.push_back(
@@ -9289,7 +9319,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--save-temps");
 
   // Pass in the C library for GPUs if present and not disabled.
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_r, options::OPT_nogpulib,
+  if (Args.hasFlag(options::OPT_offloadlib, OPT_no_offloadlib, true) &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_r,
                    options::OPT_nodefaultlibs, options::OPT_nolibc,
                    options::OPT_nogpulibc)) {
     forAllAssociatedToolChains(C, JA, getToolChain(), [&](const ToolChain &TC) {

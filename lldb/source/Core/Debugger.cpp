@@ -257,12 +257,11 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
         std::list<Status> errors;
         StreamString feedback_stream;
         if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
-          Stream &s = GetErrorStream();
-          for (auto &error : errors) {
-            s.Printf("%s\n", error.AsCString());
-          }
+          lldb::StreamSP s = GetAsyncErrorStream();
+          for (auto &error : errors)
+            s->Printf("%s\n", error.AsCString());
           if (feedback_stream.GetSize())
-            s.PutCString(feedback_stream.GetString());
+            s->PutCString(feedback_stream.GetString());
         }
       }
     }

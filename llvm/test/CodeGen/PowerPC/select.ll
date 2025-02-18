@@ -135,18 +135,22 @@ define i64 @f4_sge_0(i64 %x) {
 ;
 ; CHECK-32-LABEL: f4_sge_0:
 ; CHECK-32:       # %bb.0:
-; CHECK-32-NEXT:    mr r5, r4
+; CHECK-32-NEXT:    mr r6, r4
 ; CHECK-32-NEXT:    subfic r4, r4, 0
-; CHECK-32-NEXT:    mr r6, r3
 ; CHECK-32-NEXT:    cmpwi r3, -1
-; CHECK-32-NEXT:    subfze r3, r3
-; CHECK-32-NEXT:    bgt cr0, .LBB5_2
+; CHECK-32-NEXT:    subfze r5, r3
+; CHECK-32-NEXT:    ble cr0, .LBB5_3
 ; CHECK-32-NEXT:  # %bb.1:
-; CHECK-32-NEXT:    mr r3, r6
+; CHECK-32-NEXT:    ble cr0, .LBB5_4
 ; CHECK-32-NEXT:  .LBB5_2:
-; CHECK-32-NEXT:    bgtlr cr0
-; CHECK-32-NEXT:  # %bb.3:
-; CHECK-32-NEXT:    mr r4, r5
+; CHECK-32-NEXT:    mr r3, r5
+; CHECK-32-NEXT:    blr
+; CHECK-32-NEXT:  .LBB5_3:
+; CHECK-32-NEXT:    mr r4, r6
+; CHECK-32-NEXT:    bgt cr0, .LBB5_2
+; CHECK-32-NEXT:  .LBB5_4:
+; CHECK-32-NEXT:    mr r5, r3
+; CHECK-32-NEXT:    mr r3, r5
 ; CHECK-32-NEXT:    blr
   %c = icmp sge i64 %x, 0
   %x.neg = sub i64 0, %x
