@@ -280,9 +280,10 @@ def hasAnyLocale(config, locales):
     # spaces in argv words. Work around this by applying URL-style
     # %-encoding to the locale names, and undoing it in our test
     # program.
-    percent_encode = lambda s: ''.join(
-        "%{:02x}".format(c) if c in b' %\\"\'' or c >= 128 else chr(c)
-        for c in s.encode())
+    percent_encode = lambda s: "".join(
+        "%{:02x}".format(c) if c in b" %\\\"'" or c >= 128 else chr(c)
+        for c in s.encode()
+    )
 
     program = """
     #include <stddef.h>
@@ -314,8 +315,9 @@ def hasAnyLocale(config, locales):
       }
     #endif
   """
-    return programSucceeds(config, program, args=[
-        shlex.quote(percent_encode(l)) for l in locales])
+    return programSucceeds(
+        config, program, args=[shlex.quote(percent_encode(l)) for l in locales]
+    )
 
 
 @_memoizeExpensiveOperation(lambda c, flags="": (c.substitutions, c.environment, flags))
