@@ -67,10 +67,14 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f6cc7aa1522d (store newly inserted inst and its uniformity)
 =======
   case Intrinsic::amdgcn_readlane:
   case Intrinsic::amdgcn_ballot: {
+=======
+  case Intrinsic::amdgcn_readlane: {
+>>>>>>> cdb629c19b74 (handled ballot with icmp for trivial waterfall)
     Value *Src = II.getArgOperand(0);
     if (isDivergentUseWithNew(II.getOperandUse(0), UI, NewUMap))
 >>>>>>> b854d2fb61ff (added pass to llc pipeline, more test added)
