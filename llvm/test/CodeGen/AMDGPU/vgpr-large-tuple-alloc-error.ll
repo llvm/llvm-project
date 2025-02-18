@@ -33,16 +33,16 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX900-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    v_writelane_b32 v63, s36, 0
 ; GFX900-NEXT:    v_writelane_b32 v63, s37, 1
-; GFX900-NEXT:    v_writelane_b32 v63, s46, 2
-; GFX900-NEXT:    v_writelane_b32 v63, s47, 3
+; GFX900-NEXT:    v_writelane_b32 v63, s38, 2
+; GFX900-NEXT:    v_writelane_b32 v63, s39, 3
 ; GFX900-NEXT:    v_writelane_b32 v63, s48, 4
 ; GFX900-NEXT:    v_writelane_b32 v63, s49, 5
 ; GFX900-NEXT:    v_writelane_b32 v63, s50, 6
 ; GFX900-NEXT:    v_writelane_b32 v63, s51, 7
 ; GFX900-NEXT:    v_writelane_b32 v63, s52, 8
 ; GFX900-NEXT:    v_writelane_b32 v63, s53, 9
-; GFX900-NEXT:    v_writelane_b32 v63, s62, 10
-; GFX900-NEXT:    v_writelane_b32 v63, s63, 11
+; GFX900-NEXT:    v_writelane_b32 v63, s54, 10
+; GFX900-NEXT:    v_writelane_b32 v63, s55, 11
 ; GFX900-NEXT:    v_writelane_b32 v63, s64, 12
 ; GFX900-NEXT:    v_writelane_b32 v63, s65, 13
 ; GFX900-NEXT:    v_writelane_b32 v63, s66, 14
@@ -148,16 +148,16 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX900-NEXT:    v_readlane_b32 s66, v63, 14
 ; GFX900-NEXT:    v_readlane_b32 s65, v63, 13
 ; GFX900-NEXT:    v_readlane_b32 s64, v63, 12
-; GFX900-NEXT:    v_readlane_b32 s63, v63, 11
-; GFX900-NEXT:    v_readlane_b32 s62, v63, 10
+; GFX900-NEXT:    v_readlane_b32 s55, v63, 11
+; GFX900-NEXT:    v_readlane_b32 s54, v63, 10
 ; GFX900-NEXT:    v_readlane_b32 s53, v63, 9
 ; GFX900-NEXT:    v_readlane_b32 s52, v63, 8
 ; GFX900-NEXT:    v_readlane_b32 s51, v63, 7
 ; GFX900-NEXT:    v_readlane_b32 s50, v63, 6
 ; GFX900-NEXT:    v_readlane_b32 s49, v63, 5
 ; GFX900-NEXT:    v_readlane_b32 s48, v63, 4
-; GFX900-NEXT:    v_readlane_b32 s47, v63, 3
-; GFX900-NEXT:    v_readlane_b32 s46, v63, 2
+; GFX900-NEXT:    v_readlane_b32 s39, v63, 3
+; GFX900-NEXT:    v_readlane_b32 s38, v63, 2
 ; GFX900-NEXT:    v_readlane_b32 s37, v63, 1
 ; GFX900-NEXT:    v_readlane_b32 s36, v63, 0
 ; GFX900-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
@@ -204,16 +204,16 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX906-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX906-NEXT:    v_writelane_b32 v63, s36, 0
 ; GFX906-NEXT:    v_writelane_b32 v63, s37, 1
-; GFX906-NEXT:    v_writelane_b32 v63, s46, 2
-; GFX906-NEXT:    v_writelane_b32 v63, s47, 3
+; GFX906-NEXT:    v_writelane_b32 v63, s38, 2
+; GFX906-NEXT:    v_writelane_b32 v63, s39, 3
 ; GFX906-NEXT:    v_writelane_b32 v63, s48, 4
 ; GFX906-NEXT:    v_writelane_b32 v63, s49, 5
 ; GFX906-NEXT:    v_writelane_b32 v63, s50, 6
 ; GFX906-NEXT:    v_writelane_b32 v63, s51, 7
 ; GFX906-NEXT:    v_writelane_b32 v63, s52, 8
 ; GFX906-NEXT:    v_writelane_b32 v63, s53, 9
-; GFX906-NEXT:    v_writelane_b32 v63, s62, 10
-; GFX906-NEXT:    v_writelane_b32 v63, s63, 11
+; GFX906-NEXT:    v_writelane_b32 v63, s54, 10
+; GFX906-NEXT:    v_writelane_b32 v63, s55, 11
 ; GFX906-NEXT:    v_writelane_b32 v63, s64, 12
 ; GFX906-NEXT:    v_writelane_b32 v63, s65, 13
 ; GFX906-NEXT:    v_writelane_b32 v63, s66, 14
@@ -319,16 +319,16 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX906-NEXT:    v_readlane_b32 s66, v63, 14
 ; GFX906-NEXT:    v_readlane_b32 s65, v63, 13
 ; GFX906-NEXT:    v_readlane_b32 s64, v63, 12
-; GFX906-NEXT:    v_readlane_b32 s63, v63, 11
-; GFX906-NEXT:    v_readlane_b32 s62, v63, 10
+; GFX906-NEXT:    v_readlane_b32 s55, v63, 11
+; GFX906-NEXT:    v_readlane_b32 s54, v63, 10
 ; GFX906-NEXT:    v_readlane_b32 s53, v63, 9
 ; GFX906-NEXT:    v_readlane_b32 s52, v63, 8
 ; GFX906-NEXT:    v_readlane_b32 s51, v63, 7
 ; GFX906-NEXT:    v_readlane_b32 s50, v63, 6
 ; GFX906-NEXT:    v_readlane_b32 s49, v63, 5
 ; GFX906-NEXT:    v_readlane_b32 s48, v63, 4
-; GFX906-NEXT:    v_readlane_b32 s47, v63, 3
-; GFX906-NEXT:    v_readlane_b32 s46, v63, 2
+; GFX906-NEXT:    v_readlane_b32 s39, v63, 3
+; GFX906-NEXT:    v_readlane_b32 s38, v63, 2
 ; GFX906-NEXT:    v_readlane_b32 s37, v63, 1
 ; GFX906-NEXT:    v_readlane_b32 s36, v63, 0
 ; GFX906-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
@@ -374,16 +374,16 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX908-NEXT:    v_accvgpr_write_b32 a13, v61 ; Reload Reuse
 ; GFX908-NEXT:    v_writelane_b32 v62, s36, 0
 ; GFX908-NEXT:    v_writelane_b32 v62, s37, 1
-; GFX908-NEXT:    v_writelane_b32 v62, s46, 2
-; GFX908-NEXT:    v_writelane_b32 v62, s47, 3
+; GFX908-NEXT:    v_writelane_b32 v62, s38, 2
+; GFX908-NEXT:    v_writelane_b32 v62, s39, 3
 ; GFX908-NEXT:    v_writelane_b32 v62, s48, 4
 ; GFX908-NEXT:    v_writelane_b32 v62, s49, 5
 ; GFX908-NEXT:    v_writelane_b32 v62, s50, 6
 ; GFX908-NEXT:    v_writelane_b32 v62, s51, 7
 ; GFX908-NEXT:    v_writelane_b32 v62, s52, 8
 ; GFX908-NEXT:    v_writelane_b32 v62, s53, 9
-; GFX908-NEXT:    v_writelane_b32 v62, s62, 10
-; GFX908-NEXT:    v_writelane_b32 v62, s63, 11
+; GFX908-NEXT:    v_writelane_b32 v62, s54, 10
+; GFX908-NEXT:    v_writelane_b32 v62, s55, 11
 ; GFX908-NEXT:    v_writelane_b32 v62, s64, 12
 ; GFX908-NEXT:    v_writelane_b32 v62, s65, 13
 ; GFX908-NEXT:    v_writelane_b32 v62, s66, 14
@@ -493,16 +493,16 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX908-NEXT:    v_readlane_b32 s66, v62, 14
 ; GFX908-NEXT:    v_readlane_b32 s65, v62, 13
 ; GFX908-NEXT:    v_readlane_b32 s64, v62, 12
-; GFX908-NEXT:    v_readlane_b32 s63, v62, 11
-; GFX908-NEXT:    v_readlane_b32 s62, v62, 10
+; GFX908-NEXT:    v_readlane_b32 s55, v62, 11
+; GFX908-NEXT:    v_readlane_b32 s54, v62, 10
 ; GFX908-NEXT:    v_readlane_b32 s53, v62, 9
 ; GFX908-NEXT:    v_readlane_b32 s52, v62, 8
 ; GFX908-NEXT:    v_readlane_b32 s51, v62, 7
 ; GFX908-NEXT:    v_readlane_b32 s50, v62, 6
 ; GFX908-NEXT:    v_readlane_b32 s49, v62, 5
 ; GFX908-NEXT:    v_readlane_b32 s48, v62, 4
-; GFX908-NEXT:    v_readlane_b32 s47, v62, 3
-; GFX908-NEXT:    v_readlane_b32 s46, v62, 2
+; GFX908-NEXT:    v_readlane_b32 s39, v62, 3
+; GFX908-NEXT:    v_readlane_b32 s38, v62, 2
 ; GFX908-NEXT:    v_readlane_b32 s37, v62, 1
 ; GFX908-NEXT:    v_readlane_b32 s36, v62, 0
 ; GFX908-NEXT:    v_accvgpr_read_b32 v61, a13 ; Reload Reuse
@@ -548,16 +548,16 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX90a-NEXT:    v_accvgpr_write_b32 a14, v62 ; Reload Reuse
 ; GFX90a-NEXT:    v_writelane_b32 v63, s36, 0
 ; GFX90a-NEXT:    v_writelane_b32 v63, s37, 1
-; GFX90a-NEXT:    v_writelane_b32 v63, s46, 2
-; GFX90a-NEXT:    v_writelane_b32 v63, s47, 3
+; GFX90a-NEXT:    v_writelane_b32 v63, s38, 2
+; GFX90a-NEXT:    v_writelane_b32 v63, s39, 3
 ; GFX90a-NEXT:    v_writelane_b32 v63, s48, 4
 ; GFX90a-NEXT:    v_writelane_b32 v63, s49, 5
 ; GFX90a-NEXT:    v_writelane_b32 v63, s50, 6
 ; GFX90a-NEXT:    v_writelane_b32 v63, s51, 7
 ; GFX90a-NEXT:    v_writelane_b32 v63, s52, 8
 ; GFX90a-NEXT:    v_writelane_b32 v63, s53, 9
-; GFX90a-NEXT:    v_writelane_b32 v63, s62, 10
-; GFX90a-NEXT:    v_writelane_b32 v63, s63, 11
+; GFX90a-NEXT:    v_writelane_b32 v63, s54, 10
+; GFX90a-NEXT:    v_writelane_b32 v63, s55, 11
 ; GFX90a-NEXT:    v_writelane_b32 v63, s64, 12
 ; GFX90a-NEXT:    v_writelane_b32 v63, s65, 13
 ; GFX90a-NEXT:    v_writelane_b32 v63, s66, 14
@@ -663,16 +663,16 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX90a-NEXT:    v_readlane_b32 s66, v63, 14
 ; GFX90a-NEXT:    v_readlane_b32 s65, v63, 13
 ; GFX90a-NEXT:    v_readlane_b32 s64, v63, 12
-; GFX90a-NEXT:    v_readlane_b32 s63, v63, 11
-; GFX90a-NEXT:    v_readlane_b32 s62, v63, 10
+; GFX90a-NEXT:    v_readlane_b32 s55, v63, 11
+; GFX90a-NEXT:    v_readlane_b32 s54, v63, 10
 ; GFX90a-NEXT:    v_readlane_b32 s53, v63, 9
 ; GFX90a-NEXT:    v_readlane_b32 s52, v63, 8
 ; GFX90a-NEXT:    v_readlane_b32 s51, v63, 7
 ; GFX90a-NEXT:    v_readlane_b32 s50, v63, 6
 ; GFX90a-NEXT:    v_readlane_b32 s49, v63, 5
 ; GFX90a-NEXT:    v_readlane_b32 s48, v63, 4
-; GFX90a-NEXT:    v_readlane_b32 s47, v63, 3
-; GFX90a-NEXT:    v_readlane_b32 s46, v63, 2
+; GFX90a-NEXT:    v_readlane_b32 s39, v63, 3
+; GFX90a-NEXT:    v_readlane_b32 s38, v63, 2
 ; GFX90a-NEXT:    v_readlane_b32 s37, v63, 1
 ; GFX90a-NEXT:    v_readlane_b32 s36, v63, 0
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v62, a14 ; Reload Reuse

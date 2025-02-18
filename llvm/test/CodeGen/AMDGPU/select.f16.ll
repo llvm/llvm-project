@@ -1905,12 +1905,12 @@ define <16 x half> @v_vselect_v16f16(<16 x half> %a, <16 x half> %b, <16 x i32> 
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v16
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[18:19], 0, v17
-; VI-NEXT:    v_cmp_eq_u32_e64 s[38:39], 0, v29
+; VI-NEXT:    v_cmp_eq_u32_e64 s[40:41], 0, v29
 ; VI-NEXT:    v_lshrrev_b32_e32 v16, 16, v6
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v14
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v18
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[28:29], 0, v27
-; VI-NEXT:    v_cndmask_b32_e64 v16, v17, v16, s[38:39]
+; VI-NEXT:    v_cndmask_b32_e64 v16, v17, v16, s[40:41]
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v5
 ; VI-NEXT:    v_lshrrev_b32_e32 v18, 16, v13
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[20:21], 0, v19

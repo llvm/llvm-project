@@ -60,11 +60,11 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, killed $vgpr0
     ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr31, 1, killed $vgpr0
-    ; GCN-NEXT: $sgpr38_sgpr39 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; GCN-NEXT: $sgpr40_sgpr41 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: $sgpr28_sgpr29 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr1 = COPY $vgpr0
     ; GCN-NEXT: S_NOP 0, implicit $sgpr28_sgpr29
-    ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr38_sgpr39
+    ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr40_sgpr41
     ; GCN-NEXT: $sgpr30 = SI_RESTORE_S32_FROM_VGPR $vgpr1, 0
     ; GCN-NEXT: $sgpr31 = SI_RESTORE_S32_FROM_VGPR $vgpr1, 1
     ; GCN-NEXT: S_SETPC_B64 $sgpr30_sgpr31, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8_sgpr9_sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr15, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr20, implicit $sgpr21, implicit $sgpr22, implicit $sgpr23, implicit $sgpr24, implicit $sgpr25, implicit $sgpr26, implicit $sgpr27, implicit $vcc

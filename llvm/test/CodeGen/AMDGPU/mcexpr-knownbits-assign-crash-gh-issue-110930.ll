@@ -8,7 +8,7 @@
 ; CHECK-LABEL: I_Quit:
 ; CHECK: .set I_Quit.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; CHECK: .set I_Quit.num_agpr, max(0, amdgpu.max_num_agpr)
-; CHECK: .set I_Quit.numbered_sgpr, max(64, amdgpu.max_num_sgpr)
+; CHECK: .set I_Quit.numbered_sgpr, max(56, amdgpu.max_num_sgpr)
 ; CHECK: .set I_Quit.private_seg_size, 16
 ; CHECK: .set I_Quit.uses_vcc, 1
 ; CHECK: .set I_Quit.uses_flat_scratch, 1
@@ -80,7 +80,7 @@ define void @P_SetThingPosition() {
 ; CHECK-LABEL: P_SetupPsprites:
 ; CHECK: .set P_SetupPsprites.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; CHECK: .set P_SetupPsprites.num_agpr, max(0, amdgpu.max_num_agpr)
-; CHECK: .set P_SetupPsprites.numbered_sgpr, max(64, amdgpu.max_num_sgpr)
+; CHECK: .set P_SetupPsprites.numbered_sgpr, max(56, amdgpu.max_num_sgpr)
 ; CHECK: .set P_SetupPsprites.private_seg_size, 16
 ; CHECK: .set P_SetupPsprites.uses_vcc, 1
 ; CHECK: .set P_SetupPsprites.uses_flat_scratch, 1
@@ -128,7 +128,7 @@ define void @P_SpawnPlayer() {
 ; CHECK-LABEL: I_Error:
 ; CHECK: .set I_Error.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; CHECK: .set I_Error.num_agpr, max(0, amdgpu.max_num_agpr)
-; CHECK: .set I_Error.numbered_sgpr, max(64, amdgpu.max_num_sgpr)
+; CHECK: .set I_Error.numbered_sgpr, max(56, amdgpu.max_num_sgpr)
 ; CHECK: .set I_Error.private_seg_size, 16
 ; CHECK: .set I_Error.uses_vcc, 1
 ; CHECK: .set I_Error.uses_flat_scratch, 1
@@ -264,7 +264,7 @@ define ptr @P_SaveGameFile() {
 ; CHECK-LABEL: R_FlatNumForName:
 ; CHECK: .set R_FlatNumForName.num_vgpr, max(42, I_Error.num_vgpr)
 ; CHECK: .set R_FlatNumForName.num_agpr, max(0, I_Error.num_agpr)
-; CHECK: .set R_FlatNumForName.numbered_sgpr, max(64, I_Error.numbered_sgpr)
+; CHECK: .set R_FlatNumForName.numbered_sgpr, max(56, I_Error.numbered_sgpr)
 ; CHECK: .set R_FlatNumForName.private_seg_size, 16+(max(I_Error.private_seg_size))
 ; CHECK: .set R_FlatNumForName.uses_vcc, or(1, I_Error.uses_vcc)
 ; CHECK: .set R_FlatNumForName.uses_flat_scratch, or(0, I_Error.uses_flat_scratch)
@@ -279,7 +279,7 @@ define i32 @R_FlatNumForName() {
 ; CHECK-LABEL: R_TextureNumForName:
 ; CHECK: .set R_TextureNumForName.num_vgpr, max(42, R_FlatNumForName.num_vgpr)
 ; CHECK: .set R_TextureNumForName.num_agpr, max(0, R_FlatNumForName.num_agpr)
-; CHECK: .set R_TextureNumForName.numbered_sgpr, max(64, R_FlatNumForName.numbered_sgpr)
+; CHECK: .set R_TextureNumForName.numbered_sgpr, max(56, R_FlatNumForName.numbered_sgpr)
 ; CHECK: .set R_TextureNumForName.private_seg_size, 16+(max(R_FlatNumForName.private_seg_size))
 ; CHECK: .set R_TextureNumForName.uses_vcc, or(1, R_FlatNumForName.uses_vcc)
 ; CHECK: .set R_TextureNumForName.uses_flat_scratch, or(0, R_FlatNumForName.uses_flat_scratch)

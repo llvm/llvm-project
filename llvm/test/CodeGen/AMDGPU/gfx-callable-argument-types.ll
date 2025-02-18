@@ -9091,8 +9091,8 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v40, s35, 3
 ; GFX9-NEXT:    v_writelane_b32 v40, s36, 4
 ; GFX9-NEXT:    v_writelane_b32 v40, s37, 5
-; GFX9-NEXT:    v_writelane_b32 v40, s46, 6
-; GFX9-NEXT:    v_writelane_b32 v40, s47, 7
+; GFX9-NEXT:    v_writelane_b32 v40, s38, 6
+; GFX9-NEXT:    v_writelane_b32 v40, s39, 7
 ; GFX9-NEXT:    v_writelane_b32 v40, s48, 8
 ; GFX9-NEXT:    v_writelane_b32 v40, s49, 9
 ; GFX9-NEXT:    v_writelane_b32 v40, s50, 10
@@ -9100,25 +9100,25 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v40, s52, 12
 ; GFX9-NEXT:    v_writelane_b32 v40, s53, 13
 ; GFX9-NEXT:    s_addk_i32 s32, 0x800
-; GFX9-NEXT:    v_writelane_b32 v40, s62, 14
+; GFX9-NEXT:    v_writelane_b32 v40, s54, 14
 ; GFX9-NEXT:    s_mov_b32 s5, byval_align16_f64_arg@abs32@hi
 ; GFX9-NEXT:    s_mov_b32 s4, byval_align16_f64_arg@abs32@lo
-; GFX9-NEXT:    v_writelane_b32 v40, s63, 15
+; GFX9-NEXT:    v_writelane_b32 v40, s55, 15
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    v_readlane_b32 s63, v40, 15
-; GFX9-NEXT:    v_readlane_b32 s62, v40, 14
+; GFX9-NEXT:    v_readlane_b32 s55, v40, 15
+; GFX9-NEXT:    v_readlane_b32 s54, v40, 14
 ; GFX9-NEXT:    v_readlane_b32 s53, v40, 13
 ; GFX9-NEXT:    v_readlane_b32 s52, v40, 12
 ; GFX9-NEXT:    v_readlane_b32 s51, v40, 11
 ; GFX9-NEXT:    v_readlane_b32 s50, v40, 10
 ; GFX9-NEXT:    v_readlane_b32 s49, v40, 9
 ; GFX9-NEXT:    v_readlane_b32 s48, v40, 8
-; GFX9-NEXT:    v_readlane_b32 s47, v40, 7
-; GFX9-NEXT:    v_readlane_b32 s46, v40, 6
+; GFX9-NEXT:    v_readlane_b32 s39, v40, 7
+; GFX9-NEXT:    v_readlane_b32 s38, v40, 6
 ; GFX9-NEXT:    v_readlane_b32 s37, v40, 5
 ; GFX9-NEXT:    v_readlane_b32 s36, v40, 4
 ; GFX9-NEXT:    v_readlane_b32 s35, v40, 3
@@ -9159,27 +9159,27 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-NEXT:    v_writelane_b32 v40, s35, 3
 ; GFX10-NEXT:    v_writelane_b32 v40, s36, 4
 ; GFX10-NEXT:    v_writelane_b32 v40, s37, 5
-; GFX10-NEXT:    v_writelane_b32 v40, s46, 6
-; GFX10-NEXT:    v_writelane_b32 v40, s47, 7
+; GFX10-NEXT:    v_writelane_b32 v40, s38, 6
+; GFX10-NEXT:    v_writelane_b32 v40, s39, 7
 ; GFX10-NEXT:    v_writelane_b32 v40, s48, 8
 ; GFX10-NEXT:    v_writelane_b32 v40, s49, 9
 ; GFX10-NEXT:    v_writelane_b32 v40, s50, 10
 ; GFX10-NEXT:    v_writelane_b32 v40, s51, 11
 ; GFX10-NEXT:    v_writelane_b32 v40, s52, 12
 ; GFX10-NEXT:    v_writelane_b32 v40, s53, 13
-; GFX10-NEXT:    v_writelane_b32 v40, s62, 14
-; GFX10-NEXT:    v_writelane_b32 v40, s63, 15
+; GFX10-NEXT:    v_writelane_b32 v40, s54, 14
+; GFX10-NEXT:    v_writelane_b32 v40, s55, 15
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX10-NEXT:    v_readlane_b32 s63, v40, 15
-; GFX10-NEXT:    v_readlane_b32 s62, v40, 14
+; GFX10-NEXT:    v_readlane_b32 s55, v40, 15
+; GFX10-NEXT:    v_readlane_b32 s54, v40, 14
 ; GFX10-NEXT:    v_readlane_b32 s53, v40, 13
 ; GFX10-NEXT:    v_readlane_b32 s52, v40, 12
 ; GFX10-NEXT:    v_readlane_b32 s51, v40, 11
 ; GFX10-NEXT:    v_readlane_b32 s50, v40, 10
 ; GFX10-NEXT:    v_readlane_b32 s49, v40, 9
 ; GFX10-NEXT:    v_readlane_b32 s48, v40, 8
-; GFX10-NEXT:    v_readlane_b32 s47, v40, 7
-; GFX10-NEXT:    v_readlane_b32 s46, v40, 6
+; GFX10-NEXT:    v_readlane_b32 s39, v40, 7
+; GFX10-NEXT:    v_readlane_b32 s38, v40, 6
 ; GFX10-NEXT:    v_readlane_b32 s37, v40, 5
 ; GFX10-NEXT:    v_readlane_b32 s36, v40, 4
 ; GFX10-NEXT:    v_readlane_b32 s35, v40, 3
@@ -9215,29 +9215,29 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX11-NEXT:    v_writelane_b32 v40, s35, 3
 ; GFX11-NEXT:    v_writelane_b32 v40, s36, 4
 ; GFX11-NEXT:    v_writelane_b32 v40, s37, 5
-; GFX11-NEXT:    v_writelane_b32 v40, s46, 6
-; GFX11-NEXT:    v_writelane_b32 v40, s47, 7
+; GFX11-NEXT:    v_writelane_b32 v40, s38, 6
+; GFX11-NEXT:    v_writelane_b32 v40, s39, 7
 ; GFX11-NEXT:    v_writelane_b32 v40, s48, 8
 ; GFX11-NEXT:    v_writelane_b32 v40, s49, 9
 ; GFX11-NEXT:    v_writelane_b32 v40, s50, 10
 ; GFX11-NEXT:    v_writelane_b32 v40, s51, 11
 ; GFX11-NEXT:    v_writelane_b32 v40, s52, 12
 ; GFX11-NEXT:    v_writelane_b32 v40, s53, 13
-; GFX11-NEXT:    v_writelane_b32 v40, s62, 14
-; GFX11-NEXT:    v_writelane_b32 v40, s63, 15
+; GFX11-NEXT:    v_writelane_b32 v40, s54, 14
+; GFX11-NEXT:    v_writelane_b32 v40, s55, 15
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    scratch_store_b64 off, v[32:33], s32
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX11-NEXT:    v_readlane_b32 s63, v40, 15
-; GFX11-NEXT:    v_readlane_b32 s62, v40, 14
+; GFX11-NEXT:    v_readlane_b32 s55, v40, 15
+; GFX11-NEXT:    v_readlane_b32 s54, v40, 14
 ; GFX11-NEXT:    v_readlane_b32 s53, v40, 13
 ; GFX11-NEXT:    v_readlane_b32 s52, v40, 12
 ; GFX11-NEXT:    v_readlane_b32 s51, v40, 11
 ; GFX11-NEXT:    v_readlane_b32 s50, v40, 10
 ; GFX11-NEXT:    v_readlane_b32 s49, v40, 9
 ; GFX11-NEXT:    v_readlane_b32 s48, v40, 8
-; GFX11-NEXT:    v_readlane_b32 s47, v40, 7
-; GFX11-NEXT:    v_readlane_b32 s46, v40, 6
+; GFX11-NEXT:    v_readlane_b32 s39, v40, 7
+; GFX11-NEXT:    v_readlane_b32 s38, v40, 6
 ; GFX11-NEXT:    v_readlane_b32 s37, v40, 5
 ; GFX11-NEXT:    v_readlane_b32 s36, v40, 4
 ; GFX11-NEXT:    v_readlane_b32 s35, v40, 3
@@ -9273,29 +9273,29 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s35, 3
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s36, 4
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s37, 5
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s46, 6
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s47, 7
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s38, 6
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s39, 7
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s48, 8
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s49, 9
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s50, 10
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s51, 11
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s52, 12
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s53, 13
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s62, 14
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s63, 15
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s54, 14
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s55, 15
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-SCRATCH-NEXT:    scratch_store_dwordx2 off, v[32:33], s32
 ; GFX10-SCRATCH-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s63, v40, 15
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s62, v40, 14
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s55, v40, 15
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s54, v40, 14
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s53, v40, 13
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s52, v40, 12
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s51, v40, 11
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s50, v40, 10
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s49, v40, 9
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s48, v40, 8
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s47, v40, 7
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s46, v40, 6
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s39, v40, 7
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s38, v40, 6
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s37, v40, 5
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s36, v40, 4
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s35, v40, 3

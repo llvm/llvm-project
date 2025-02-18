@@ -202,18 +202,18 @@ define void @indirect_use_50_vgpr() #0 {
 }
 
 ; GCN-LABEL: {{^}}use_80_sgpr:
-; GCN:	.set use_80_sgpr.num_vgpr, 1
+; GCN:	.set use_80_sgpr.num_vgpr, 0
 ; GCN:	.set use_80_sgpr.num_agpr, 0
 ; GCN:	.set use_80_sgpr.numbered_sgpr, 80
-; GCN:	.set use_80_sgpr.private_seg_size, 8
+; GCN:	.set use_80_sgpr.private_seg_size, 0
 ; GCN:	.set use_80_sgpr.uses_vcc, 0
 ; GCN:	.set use_80_sgpr.uses_flat_scratch, 0
 ; GCN:	.set use_80_sgpr.has_dyn_sized_stack, 0
 ; GCN:	.set use_80_sgpr.has_recursion, 0
 ; GCN:	.set use_80_sgpr.has_indirect_call, 0
 ; GCN: TotalNumSgprs: 84
-; GCN: NumVgprs: 1
-; GCN: ScratchSize: 8
+; GCN: NumVgprs: 0
+; GCN: ScratchSize: 0
 define void @use_80_sgpr() #1 {
   call void asm sideeffect "", "~{s79}"() #0
   ret void
@@ -231,7 +231,7 @@ define void @use_80_sgpr() #1 {
 ; GCN:	.set indirect_use_80_sgpr.has_indirect_call, or(0, use_80_sgpr.has_indirect_call)
 ; GCN: TotalNumSgprs: 84
 ; GCN: NumVgprs: 41
-; GCN: ScratchSize: 24
+; GCN: ScratchSize: 16
 define void @indirect_use_80_sgpr() #1 {
   call void @use_80_sgpr()
   ret void
@@ -249,7 +249,7 @@ define void @indirect_use_80_sgpr() #1 {
 ; GCN:	.set indirect_2_level_use_80_sgpr.has_indirect_call, or(0, indirect_use_80_sgpr.has_indirect_call)
 ; GCN: TotalNumSgprs: 86
 ; GCN: NumVgprs: 41
-; GCN: ScratchSize: 24
+; GCN: ScratchSize: 16
 define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
   call void @indirect_use_80_sgpr()
   ret void
