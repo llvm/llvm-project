@@ -14,8 +14,8 @@
 #define LLVM_CODEGEN_SDPATTERNMATCH_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -1150,9 +1150,10 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
       return false;
     }
 
-    // J in Matches[I] iff sd_context_match(Leaves[I], Ctx,
+    // Matches[I][J] == true iff sd_context_match(Leaves[I], Ctx,
     // std::get<J>(Patterns)) == true
-    std::array<SmallBitVector, std::tuple_size_v<std::tuple<PatternTs...>>> Matches;
+    std::array<SmallBitVector, std::tuple_size_v<std::tuple<PatternTs...>>>
+        Matches;
     for (size_t I = 0; I < Leaves.size(); I += 1) {
       SmallVector<bool> MatchResults;
       std::apply(
