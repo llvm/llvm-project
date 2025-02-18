@@ -173,6 +173,7 @@ Bug Fixes to C++ Support
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
