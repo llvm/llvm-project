@@ -54,8 +54,6 @@ public:
                              const LocationContext *LCtx,
                              bool loadedFrom = false);
 
-  bool SuppressAddressSpaces = false;
-
   bool CheckNullDereference = false;
   bool CheckFixedDereference = false;
 
@@ -137,7 +135,7 @@ bool DereferenceChecker::suppressReport(CheckerContext &C,
   QualType Ty = E->getType();
   if (!Ty.hasAddressSpace())
     return false;
-  if (SuppressAddressSpaces)
+  if (C.getAnalysisManager().getAnalyzerOptions().ShouldSuppressAddressSpaces)
     return true;
 
   const llvm::Triple::ArchType Arch =
@@ -405,8 +403,6 @@ bool ento::shouldRegisterDereferenceModeling(const CheckerManager &) {
 void ento::registerNullDereferenceChecker(CheckerManager &Mgr) {
   auto *Chk = Mgr.getChecker<DereferenceChecker>();
   Chk->CheckNullDereference = true;
-  Chk->SuppressAddressSpaces = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
-      Mgr.getCurrentCheckerName(), "SuppressAddressSpaces");
   Chk->BT_Null.reset(new BugType(Mgr.getCurrentCheckerName(),
                                  "Dereference of null pointer",
                                  categories::LogicError));

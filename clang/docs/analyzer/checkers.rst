@@ -118,21 +118,6 @@ core.NullDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""
 Check for dereferences of null pointers.
 
-This checker specifically does
-not report null pointer dereferences for x86 and x86-64 targets when the
-address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
-segment). See `X86/X86-64 Language Extensions
-<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
-for reference.
-
-The ``SuppressAddressSpaces`` option suppresses
-warnings for null dereferences of all pointers with address spaces. You can
-disable this behavior with the option
-``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
-Value of this option is also used for checker
-:ref:`_alpha-core-FixedAddressDereference`.
-*Defaults to true*.
-
 .. code-block:: objc
 
  // C
@@ -171,6 +156,16 @@ Value of this option is also used for checker
    MyClass *obj = 0;
    obj->x = 1; // warn
  }
+
+Null pointer dereferences of pointers with address spaces are not always defined
+as error. Specifically on x86/x86-64 target if the pointer address space is
+256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS Segment), a null
+dereference is not defined as error. See `X86/X86-64 Language Extensions
+<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
+for reference. The ``suppress-all-address-spaces`` configuration option can be
+used to control if null dereferences with any address space or only with the
+specific x86 address spaces 256, 257, 258 are excluded from reporting as error.
+The default is all address spaces.
 
 .. _core-StackAddressEscape:
 
@@ -2926,6 +2921,9 @@ Check for assignment of a fixed address to a pointer.
 alpha.core.FixedAddressDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""""""""""""""""
 Check for dereferences of fixed addresses.
+A pointer contains a fixed address if it was set to a hard-coded value or it
+becomes otherwise obvious that at that point it can have only a single specific
+value.
 
 .. code-block:: c
 
@@ -2945,17 +2943,10 @@ Check for dereferences of fixed addresses.
    int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
  }
 
-Similarly to :ref:`_core-NullDereference`, the checker intentionally does
-not report dereferences for x86 and x86-64 targets when the
-address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
-Segment). (See `X86/X86-64 Language Extensions
-<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
-for reference.)
-
-If you want to disable this behavior, set the ``SuppressAddressSpaces`` option
-of checker ``core.NullDereference`` to false, like
-``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``. The value
-of this option is used for both checkers.
+The analyzer option ``suppress-all-address-spaces`` affects this checker. If it
+is set to true pointer dereferences with any address space are not reported as
+error. Otherwise only address spaces 256, 257, 258 on target x86/x86-64 are
+excluded from reporting as error. The default is all address spaces.
 
 .. _alpha-core-PointerArithm:
 

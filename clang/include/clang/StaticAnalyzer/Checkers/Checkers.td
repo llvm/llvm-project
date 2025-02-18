@@ -213,13 +213,6 @@ def DereferenceModeling : Checker<"DereferenceModeling">,
 
 def NullDereferenceChecker : Checker<"NullDereference">,
   HelpText<"Check for dereferences of null pointers">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "SuppressAddressSpaces",
-                  "Suppresses warning when pointer dereferences an address space",
-                  "true",
-                  Released>
-  ]>,
   Documentation<HasDocumentation>,
   Dependencies<[DereferenceModeling]>;
 
