@@ -1110,7 +1110,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
-      if (getLMUL(VT) == RISCVII::VLMUL::LMUL_8) {
+      if (getLMUL(VT) == RISCVVType::LMUL_8) {
         setOperationAction(ZvfhminZvfbfminPromoteOps, VT, Custom);
         setOperationAction(ZvfhminZvfbfminPromoteVPOps, VT, Custom);
       } else {
@@ -2361,25 +2361,25 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
   }
 }
 
-RISCVII::VLMUL RISCVTargetLowering::getLMUL(MVT VT) {
+RISCVVType::VLMUL RISCVTargetLowering::getLMUL(MVT VT) {
   if (VT.isRISCVVectorTuple()) {
     if (VT.SimpleTy >= MVT::riscv_nxv1i8x2 &&
         VT.SimpleTy <= MVT::riscv_nxv1i8x8)
-      return RISCVII::LMUL_F8;
+      return RISCVVType::LMUL_F8;
     if (VT.SimpleTy >= MVT::riscv_nxv2i8x2 &&
         VT.SimpleTy <= MVT::riscv_nxv2i8x8)
-      return RISCVII::LMUL_F4;
+      return RISCVVType::LMUL_F4;
     if (VT.SimpleTy >= MVT::riscv_nxv4i8x2 &&
         VT.SimpleTy <= MVT::riscv_nxv4i8x8)
-      return RISCVII::LMUL_F2;
+      return RISCVVType::LMUL_F2;
     if (VT.SimpleTy >= MVT::riscv_nxv8i8x2 &&
         VT.SimpleTy <= MVT::riscv_nxv8i8x8)
-      return RISCVII::LMUL_1;
+      return RISCVVType::LMUL_1;
     if (VT.SimpleTy >= MVT::riscv_nxv16i8x2 &&
         VT.SimpleTy <= MVT::riscv_nxv16i8x4)
-      return RISCVII::LMUL_2;
+      return RISCVVType::LMUL_2;
     if (VT.SimpleTy == MVT::riscv_nxv32i8x2)
-      return RISCVII::LMUL_4;
+      return RISCVVType::LMUL_4;
     llvm_unreachable("Invalid vector tuple type LMUL.");
   }
 
@@ -2392,56 +2392,54 @@ RISCVII::VLMUL RISCVTargetLowering::getLMUL(MVT VT) {
   default:
     llvm_unreachable("Invalid LMUL.");
   case 8:
-    return RISCVII::VLMUL::LMUL_F8;
+    return RISCVVType::LMUL_F8;
   case 16:
-    return RISCVII::VLMUL::LMUL_F4;
+    return RISCVVType::LMUL_F4;
   case 32:
-    return RISCVII::VLMUL::LMUL_F2;
+    return RISCVVType::LMUL_F2;
   case 64:
-    return RISCVII::VLMUL::LMUL_1;
+    return RISCVVType::LMUL_1;
   case 128:
-    return RISCVII::VLMUL::LMUL_2;
+    return RISCVVType::LMUL_2;
   case 256:
-    return RISCVII::VLMUL::LMUL_4;
+    return RISCVVType::LMUL_4;
   case 512:
-    return RISCVII::VLMUL::LMUL_8;
+    return RISCVVType::LMUL_8;
   }
 }
 
-unsigned RISCVTargetLowering::getRegClassIDForLMUL(RISCVII::VLMUL LMul) {
+unsigned RISCVTargetLowering::getRegClassIDForLMUL(RISCVVType::VLMUL LMul) {
   switch (LMul) {
   default:
     llvm_unreachable("Invalid LMUL.");
-  case RISCVII::VLMUL::LMUL_F8:
-  case RISCVII::VLMUL::LMUL_F4:
-  case RISCVII::VLMUL::LMUL_F2:
-  case RISCVII::VLMUL::LMUL_1:
+  case RISCVVType::LMUL_F8:
+  case RISCVVType::LMUL_F4:
+  case RISCVVType::LMUL_F2:
+  case RISCVVType::LMUL_1:
     return RISCV::VRRegClassID;
-  case RISCVII::VLMUL::LMUL_2:
+  case RISCVVType::LMUL_2:
     return RISCV::VRM2RegClassID;
-  case RISCVII::VLMUL::LMUL_4:
+  case RISCVVType::LMUL_4:
     return RISCV::VRM4RegClassID;
-  case RISCVII::VLMUL::LMUL_8:
+  case RISCVVType::LMUL_8:
     return RISCV::VRM8RegClassID;
   }
 }
 
 unsigned RISCVTargetLowering::getSubregIndexByMVT(MVT VT, unsigned Index) {
-  RISCVII::VLMUL LMUL = getLMUL(VT);
-  if (LMUL == RISCVII::VLMUL::LMUL_F8 ||
-      LMUL == RISCVII::VLMUL::LMUL_F4 ||
-      LMUL == RISCVII::VLMUL::LMUL_F2 ||
-      LMUL == RISCVII::VLMUL::LMUL_1) {
+  RISCVVType::VLMUL LMUL = getLMUL(VT);
+  if (LMUL == RISCVVType::LMUL_F8 || LMUL == RISCVVType::LMUL_F4 ||
+      LMUL == RISCVVType::LMUL_F2 || LMUL == RISCVVType::LMUL_1) {
     static_assert(RISCV::sub_vrm1_7 == RISCV::sub_vrm1_0 + 7,
                   "Unexpected subreg numbering");
     return RISCV::sub_vrm1_0 + Index;
   }
-  if (LMUL == RISCVII::VLMUL::LMUL_2) {
+  if (LMUL == RISCVVType::LMUL_2) {
     static_assert(RISCV::sub_vrm2_3 == RISCV::sub_vrm2_0 + 3,
                   "Unexpected subreg numbering");
     return RISCV::sub_vrm2_0 + Index;
   }
-  if (LMUL == RISCVII::VLMUL::LMUL_4) {
+  if (LMUL == RISCVVType::LMUL_4) {
     static_assert(RISCV::sub_vrm4_1 == RISCV::sub_vrm4_0 + 1,
                   "Unexpected subreg numbering");
     return RISCV::sub_vrm4_0 + Index;
@@ -3347,9 +3345,9 @@ static SDValue
 getVSlidedown(SelectionDAG &DAG, const RISCVSubtarget &Subtarget,
               const SDLoc &DL, EVT VT, SDValue Passthru, SDValue Op,
               SDValue Offset, SDValue Mask, SDValue VL,
-              unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
+              unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
   if (Passthru.isUndef())
-    Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+    Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
   SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
   SDValue Ops[] = {Passthru, Op, Offset, Mask, VL, PolicyOp};
   return DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VT, Ops);
@@ -3359,9 +3357,9 @@ static SDValue
 getVSlideup(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, const SDLoc &DL,
             EVT VT, SDValue Passthru, SDValue Op, SDValue Offset, SDValue Mask,
             SDValue VL,
-            unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
+            unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
   if (Passthru.isUndef())
-    Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+    Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
   SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
   SDValue Ops[] = {Passthru, Op, Offset, Mask, VL, PolicyOp};
   return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VT, Ops);
@@ -4245,13 +4243,13 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   InstructionCost PerSlideCost = 1;
   switch (RISCVTargetLowering::getLMUL(ContainerVT)) {
   default: break;
-  case RISCVII::VLMUL::LMUL_2:
+  case RISCVVType::LMUL_2:
     PerSlideCost = 2;
     break;
-  case RISCVII::VLMUL::LMUL_4:
+  case RISCVVType::LMUL_4:
     PerSlideCost = 4;
     break;
-  case RISCVII::VLMUL::LMUL_8:
+  case RISCVVType::LMUL_8:
     PerSlideCost = 8;
     break;
   }
@@ -4281,7 +4279,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           VT.getVectorElementType().getSizeInBits() <= Subtarget.getFLen()) &&
          "Illegal type which will result in reserved encoding");
 
-  const unsigned Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+  const unsigned Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
 
   SDValue Vec;
   UndefCount = 0;
@@ -4773,11 +4771,12 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
   auto TrueMask = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).first;
   // We slide up by the index that the subvector is being inserted at, and set
   // VL to the index + the number of elements being inserted.
-  unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED | RISCVII::MASK_AGNOSTIC;
+  unsigned Policy =
+      RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED | RISCVVType::MASK_AGNOSTIC;
   // If the we're adding a suffix to the in place vector, i.e. inserting right
   // up to the very end of it, then we don't actually care about the tail.
   if (NumSubElts + Index >= (int)NumElts)
-    Policy |= RISCVII::TAIL_AGNOSTIC;
+    Policy |= RISCVVType::TAIL_AGNOSTIC;
 
   InPlace = convertToScalableVector(ContainerVT, InPlace, DAG, Subtarget);
   ToInsert = convertToScalableVector(ContainerVT, ToInsert, DAG, Subtarget);
@@ -5570,7 +5569,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (LoV)
       Res = getVSlideup(DAG, Subtarget, DL, ContainerVT, Res, LoV,
                         DAG.getConstant(InvRotate, DL, XLenVT), TrueMask, VL,
-                        RISCVII::TAIL_AGNOSTIC);
+                        RISCVVType::TAIL_AGNOSTIC);
 
     return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
@@ -9457,10 +9456,10 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
       DAG.getNode(ISD::ADD, DL, XLenVT, Idx, DAG.getConstant(1, DL, XLenVT));
 
   // Use tail agnostic policy if Idx is the last index of Vec.
-  unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+  unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
   if (VecVT.isFixedLengthVector() && isa<ConstantSDNode>(Idx) &&
       Idx->getAsZExtVal() + 1 == VecVT.getVectorNumElements())
-    Policy = RISCVII::TAIL_AGNOSTIC;
+    Policy = RISCVVType::TAIL_AGNOSTIC;
   SDValue Slideup = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, ValInVec,
                                 Idx, Mask, InsertVL, Policy);
 
@@ -9740,7 +9739,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
       }
     }
     if (!I32VL) {
-      RISCVII::VLMUL Lmul = RISCVTargetLowering::getLMUL(VT);
+      RISCVVType::VLMUL Lmul = RISCVTargetLowering::getLMUL(VT);
       SDValue LMUL = DAG.getConstant(Lmul, DL, XLenVT);
       unsigned Sew = RISCVVType::encodeSEW(VT.getScalarSizeInBits());
       SDValue SEW = DAG.getConstant(Sew, DL, XLenVT);
@@ -9791,7 +9790,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
     if (MaskedOff.isUndef())
       return Vec;
     // TAMU
-    if (Policy == RISCVII::TAIL_AGNOSTIC)
+    if (Policy == RISCVVType::TAIL_AGNOSTIC)
       return DAG.getNode(RISCVISD::VMERGE_VL, DL, VT, Mask, Vec, MaskedOff,
                          DAG.getUNDEF(VT), AVL);
     // TUMA or TUMU: Currently we always emit tumu policy regardless of tuma.
@@ -10547,7 +10546,7 @@ static SDValue lowerReductionSeq(unsigned RVVOpcode, MVT ResVT,
         DAG.getNode(ISD::INSERT_SUBVECTOR, DL, M1VT, DAG.getUNDEF(M1VT),
                     InitialValue, DAG.getVectorIdxConstant(0, DL));
   SDValue PassThru = NonZeroAVL ? DAG.getUNDEF(M1VT) : InitialValue;
-  SDValue Policy = DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
+  SDValue Policy = DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT);
   SDValue Ops[] = {PassThru, Vec, InitialValue, Mask, VL, Policy};
   SDValue Reduction = DAG.getNode(RVVOpcode, DL, M1VT, Ops);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Reduction,
@@ -10807,9 +10806,9 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     SDValue VL = DAG.getConstant(EndIndex, DL, XLenVT);
 
     // Use tail agnostic policy if we're inserting over Vec's tail.
-    unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+    unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
     if (VecVT.isFixedLengthVector() && EndIndex == VecVT.getVectorNumElements())
-      Policy = RISCVII::TAIL_AGNOSTIC;
+      Policy = RISCVVType::TAIL_AGNOSTIC;
 
     // If we're inserting into the lowest elements, use a tail undisturbed
     // vmv.v.v.
@@ -10933,10 +10932,10 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   VL = DAG.getElementCount(DL, XLenVT, SubVecVT.getVectorElementCount());
 
   // Use tail agnostic policy if we're inserting over InterSubVT's tail.
-  unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+  unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
   if (Subtarget.expandVScale(EndIndex) ==
       Subtarget.expandVScale(InterSubVT.getVectorElementCount()))
-    Policy = RISCVII::TAIL_AGNOSTIC;
+    Policy = RISCVVType::TAIL_AGNOSTIC;
 
   // If we're inserting into the lowest elements, use a tail undisturbed
   // vmv.v.v.
@@ -11108,7 +11107,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   // was > M1 then the index would need to be a multiple of VLMAX, and so would
   // divide exactly.
   assert(RISCVVType::decodeVLMUL(getLMUL(ContainerSubVecVT)).second ||
-         getLMUL(ContainerSubVecVT) == RISCVII::VLMUL::LMUL_1);
+         getLMUL(ContainerSubVecVT) == RISCVVType::LMUL_1);
 
   // If the vector type is an LMUL-group type, extract a subvector equal to the
   // nearest full vector register type.
@@ -11719,7 +11718,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
                     DownOffset, TrueMask, UpOffset);
   return getVSlideup(DAG, Subtarget, DL, VecVT, SlideDown, V2, UpOffset,
                      TrueMask, DAG.getRegister(RISCV::X0, XLenVT),
-                     RISCVII::TAIL_AGNOSTIC);
+                     RISCVVType::TAIL_AGNOSTIC);
 }
 
 SDValue
@@ -11883,7 +11882,7 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     Ops.push_back(Mask);
   Ops.push_back(VL);
   if (IntID == Intrinsic::riscv_vle_mask)
-    Ops.push_back(DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT));
+    Ops.push_back(DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT));
 
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
 
@@ -11902,7 +11901,7 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     // overflow.
     if (IndexEltVT == MVT::i8 && VT.getVectorNumElements() > 256) {
       // FIXME: We need to do vector splitting manually for LMUL=8 cases.
-      assert(getLMUL(IndexVT) != RISCVII::LMUL_8);
+      assert(getLMUL(IndexVT) != RISCVVType::LMUL_8);
       IndexVT = IndexVT.changeVectorElementType(MVT::i16);
       UseVRGATHEREI16 = true;
     }
@@ -12698,7 +12697,7 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
       getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
                     Op1, DownOffset, Mask, UpOffset);
   SDValue Result = getVSlideup(DAG, Subtarget, DL, ContainerVT, SlideDown, Op2,
-                               UpOffset, Mask, EVL2, RISCVII::TAIL_AGNOSTIC);
+                               UpOffset, Mask, EVL2, RISCVVType::TAIL_AGNOSTIC);
 
   if (IsMaskVector) {
     // Truncate Result back to a mask vector (Result has same EVL as Op2)
@@ -12915,7 +12914,8 @@ SDValue RISCVTargetLowering::lowerVPStridedLoad(SDValue Op,
   }
   Ops.push_back(VPNode->getVectorLength());
   if (!IsUnmasked) {
-    SDValue Policy = DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
+    SDValue Policy =
+        DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT);
     Ops.push_back(Policy);
   }
 
@@ -13053,7 +13053,7 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
     Ops.push_back(Mask);
   Ops.push_back(VL);
   if (!IsUnmasked)
-    Ops.push_back(DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT));
+    Ops.push_back(DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT));
 
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
   SDValue Result =
@@ -19553,8 +19553,8 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::riscv_vsetvlimax: {
       bool HasAVL = IntNo == Intrinsic::riscv_vsetvli;
       unsigned VSEW = Op.getConstantOperandVal(HasAVL + 1);
-      RISCVII::VLMUL VLMUL =
-          static_cast<RISCVII::VLMUL>(Op.getConstantOperandVal(HasAVL + 2));
+      RISCVVType::VLMUL VLMUL =
+          static_cast<RISCVVType::VLMUL>(Op.getConstantOperandVal(HasAVL + 2));
       unsigned SEW = RISCVVType::decodeVSEW(VSEW);
       auto [LMul, Fractional] = RISCVVType::decodeVLMUL(VLMUL);
       uint64_t MaxVL = Subtarget.getRealMaxVLen() / SEW;
@@ -20168,7 +20168,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
 // Helper to find Masked Pseudo instruction from MC instruction, LMUL and SEW.
 static const RISCV::RISCVMaskedPseudoInfo *
-lookupMaskedIntrinsic(uint16_t MCOpcode, RISCVII::VLMUL LMul, unsigned SEW) {
+lookupMaskedIntrinsic(uint16_t MCOpcode, RISCVVType::VLMUL LMul, unsigned SEW) {
   const RISCVVInversePseudosTable::PseudoInfo *Inverse =
       RISCVVInversePseudosTable::getBaseInfo(MCOpcode, LMul, SEW);
   assert(Inverse && "Unexpected LMUL and SEW pair for instruction");
@@ -20211,7 +20211,7 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
                                      /*IsImp*/ true));
 
   // Emit a VFCVT_F_X
-  RISCVII::VLMUL LMul = RISCVII::getLMul(MI.getDesc().TSFlags);
+  RISCVVType::VLMUL LMul = RISCVII::getLMul(MI.getDesc().TSFlags);
   unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
   // There is no E8 variant for VFCVT_F_X.
   assert(Log2SEW >= 4);
@@ -23262,13 +23262,13 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
       Load->getModule(), IntrMaskIds[Factor - 2],
       {VecTupTy, Mask->getType(), EVL->getType()});
 
-  Value *Operands[] = {
-      PoisonVal,
-      Load->getArgOperand(0),
-      Mask,
-      EVL,
-      ConstantInt::get(XLenTy, RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC),
-      ConstantInt::get(XLenTy, Log2_64(SEW))};
+  Value *Operands[] = {PoisonVal,
+                       Load->getArgOperand(0),
+                       Mask,
+                       EVL,
+                       ConstantInt::get(XLenTy, RISCVVType::TAIL_AGNOSTIC |
+                                                    RISCVVType::MASK_AGNOSTIC),
+                       ConstantInt::get(XLenTy, Log2_64(SEW))};
 
   CallInst *VlsegN = Builder.CreateCall(VlsegNFunc, Operands);
 
