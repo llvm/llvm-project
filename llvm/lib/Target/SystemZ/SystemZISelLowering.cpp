@@ -6558,7 +6558,7 @@ static SDValue convertToF16(SDValue Op, SelectionDAG &DAG) {
                              DAG.getConstant(16, DL, MVT::i32));
   SDValue BCast = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Shft);
   SDValue F16Val =
-    DAG.getTargetExtractSubreg(SystemZ::subreg_h16, DL, MVT::f16, BCast);
+      DAG.getTargetExtractSubreg(SystemZ::subreg_h16, DL, MVT::f16, BCast);
   return F16Val;
 }
 
