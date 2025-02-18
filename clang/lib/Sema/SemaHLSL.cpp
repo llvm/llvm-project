@@ -2250,20 +2250,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (CheckVectorElementCallArgs(&SemaRef, TheCall))
       return true;
-
-    // check that the arguments are bools or, if vectors,
-    // vectors of bools
-    QualType ArgTy = TheCall->getArg(0)->getType();
-    if (const auto *VecTy = ArgTy->getAs<VectorType>()) {
-      ArgTy = VecTy->getElementType();
-    }
-    if (!getASTContext().hasSameUnqualifiedType(ArgTy,
-                                                getASTContext().BoolTy)) {
-      SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
-          << ArgTy << getASTContext().BoolTy << 1 << 0 << 0;
+    if (CheckScalarOrVector(&SemaRef, TheCall, getASTContext().BoolTy, 0))
       return true;
-    }
 
     ExprResult A = TheCall->getArg(0);
     QualType ArgTyA = A.get()->getType();

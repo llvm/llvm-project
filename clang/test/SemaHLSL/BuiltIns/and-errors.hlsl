@@ -17,11 +17,7 @@ bool2 test_mismatched_args(bool2 a, bool3 b) {
   // expected-error@-1 {{all arguments to '__builtin_hlsl_and' must have the same type}}
 }
 
-struct S {
-  bool a;
-};
-
-bool test_invalid_type_conversion(S s) {
-  return __builtin_hlsl_and(s, s);
-  // expected-error@-1{{passing 'S' to parameter of incompatible type 'bool'}}
+bool test_incorrect_type(int a) {
+  return __builtin_hlsl_and(a, a);
+  // expected-error@-1{{invalid operand of type 'int' where 'bool' or a vector of such type is required}}
 }
