@@ -261,3 +261,36 @@ subroutine teams_loop_can_be_parallel_for
     tid = omp_get_thread_num()
   END DO
 end subroutine
+
+! CHECK-LABEL: func.func @_QPteams_loop_cannot_be_parallel_for_4
+subroutine teams_loop_cannot_be_parallel_for_4
+  implicit none
+  integer :: iter, iter2, tid, val(20)
+
+  ! CHECK: omp.teams {
+
+  ! Verify the outer `loop` directive was mapped to only `distribute`.
+  ! CHECK-NOT: omp.parallel {{.*}}
+  ! CHECK:     omp.distribute {{.*}} {
+  ! CHECK-NEXT:  omp.loop_nest {{.*}} {
+
+  ! Verify the inner `loop` directive was mapped to a worksharing loop.
+  ! CHECK:         omp.wsloop {{.*}} {
+  ! CHECK:           omp.loop_nest {{.*}} {
+  ! CHECK:           }
+  ! CHECK:         }
+
+  ! CHECK:       }
+  ! CHECK:     }
+
+  ! CHECK: }
+  !$omp target teams loop map(tofrom:val)
+  DO iter = 1, 5
+    !$omp parallel
+    !$omp loop
+    DO iter2 = 1, 5
+      val(iter+iter2) = iter+iter2
+    END DO
+    !$omp end parallel
+  END DO
+end subroutine
