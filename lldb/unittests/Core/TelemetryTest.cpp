@@ -58,8 +58,9 @@ public:
     return llvm::Error::success();
   }
 
-  // Plugin interface
-  llvm::StringRef GetPluginName() override { return "FakeTelemetryPlugin"; }
+  llvm::StringRef GetInstanceName() const override {
+    return "FakeTelemetryPlugin";
+  }
 
   static void Initialize() {
     telemetry::TelemetryManager::setInstance(std::make_unique<FakePlugin>());
