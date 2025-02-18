@@ -194,6 +194,7 @@ def contract(
     fill_builtin_region(op.operation)
     return op
 
+
 def batch_matmul(
     *ins: Union[Operation, OpView, Value],
     outs: Sequence[Union[Operation, OpView, Value]],

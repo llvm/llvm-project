@@ -467,6 +467,7 @@ def testContractOp():
 
         print(module)
 
+
 # CHECK-LABEL: TEST: testBatchMatmulOp
 @run
 def testBatchMatmulOp():
