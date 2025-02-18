@@ -2,129 +2,123 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -passes=amdgpu-uniform-intrinsic-combine -S < %s | FileCheck %s -check-prefix=PASS-CHECK
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -passes=amdgpu-uniform-intrinsic-combine,instcombine,early-cse,simplifycfg -S < %s | FileCheck %s -check-prefix=DCE-CHECK
 
-define protected amdgpu_kernel void @trivial_waterfall() {
+define protected amdgpu_kernel void @trivial_waterfall(ptr addrspace(1) %out) {
 ; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall(
-; PASS-CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
 ; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
 ; PASS-CHECK:       [[WHILE]]:
-; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[NEW_DONE:%.*]], %[[IF:.*]] ]
+; PASS-CHECK-NEXT:    [[DONE1:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
+; PASS-CHECK-NEXT:    [[DONE:%.*]] = xor i1 [[DONE1]], true
 ; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
 ; PASS-CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[DONE]] to i64
 ; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 [[TMP0]], 0
 ; PASS-CHECK-NEXT:    br i1 [[IS_DONE]], label %[[EXIT:.*]], label %[[IF]]
 ; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    [[IS_ONE:%.*]] = icmp eq i1 [[DONE]], true
-; PASS-CHECK-NEXT:    [[NEW_DONE]] = select i1 [[IS_ONE]], i1 false, i1 [[DONE]]
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; PASS-CHECK-NEXT:    br label %[[WHILE]]
 ; PASS-CHECK:       [[EXIT]]:
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall(
-; DCE-CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; DCE-CHECK-NEXT:    ret void
 ;
 entry:
   br label %while
 
 while:
-  %done = phi i1 [ 1, %entry ], [ %new_done, %if ]
-  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
+  %done = phi i1 [ 0, %entry ], [ 1, %if ]
+  %not_done = xor i1 %done, true
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %not_done)
   %is_done = icmp eq i64 %ballot, 0
   br i1 %is_done, label %exit, label %if
 
 if:
-  %is_one = icmp eq i1 %done, 1
-  %new_done = select i1 %is_one, i1 0, i1 %done
+  store i32 5, ptr addrspace(1) %out
   br label %while
 
 exit:
   ret void
 }
 
-define protected amdgpu_kernel void @waterfall() {
+define protected amdgpu_kernel void @waterfall(ptr addrspace(1) %out) {
 ; PASS-CHECK-LABEL: define protected amdgpu_kernel void @waterfall(
-; PASS-CHECK-SAME: ) #[[ATTR0]] {
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
 ; PASS-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; PASS-CHECK-NEXT:    [[TMP1:%.*]] = tail call noundef i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP0]])
-; PASS-CHECK-NEXT:    br label %[[BB2:.*]]
-; PASS-CHECK:       [[BB2]]:
-; PASS-CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[TMP15:%.*]], %[[TMP14:.*]] ]
+; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
+; PASS-CHECK:       [[WHILE]]:
+; PASS-CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[NEW_DONE:%.*]], %[[TAIL:.*]] ]
 ; PASS-CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP3]], true
-; PASS-CHECK-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP4]] to i32
-; PASS-CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 asm sideeffect "", "=v,0"(i32 [[TMP5]]), !srcloc [[META0:![0-9]+]]
-; PASS-CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP6]], 0
-; PASS-CHECK-NEXT:    [[TMP8:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP7]])
+; PASS-CHECK-NEXT:    [[TMP8:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP4]])
 ; PASS-CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 0
-; PASS-CHECK-NEXT:    br i1 [[TMP9]], label %[[BB16:.*]], label %[[BB10:.*]]
-; PASS-CHECK:       [[BB10]]:
-; PASS-CHECK-NEXT:    br i1 [[TMP3]], label %[[TMP14]], label %[[BB11:.*]]
-; PASS-CHECK:       [[BB11]]:
+; PASS-CHECK-NEXT:    br i1 [[TMP9]], label %[[EXIT:.*]], label %[[IF:.*]]
+; PASS-CHECK:       [[IF]]:
 ; PASS-CHECK-NEXT:    [[TMP12:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP1]])
 ; PASS-CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP1]], [[TMP12]]
-; PASS-CHECK-NEXT:    br label %[[TMP14]]
-; PASS-CHECK:       [[TMP14]]:
-; PASS-CHECK-NEXT:    [[TMP15]] = phi i1 [ true, %[[BB10]] ], [ [[TMP13]], %[[BB11]] ]
-; PASS-CHECK-NEXT:    br label %[[BB2]], !llvm.loop [[LOOP1:![0-9]+]]
-; PASS-CHECK:       [[BB16]]:
+; PASS-CHECK-NEXT:    br i1 [[TMP13]], label %[[WORK:.*]], label %[[TAIL]]
+; PASS-CHECK:       [[WORK]]:
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    br label %[[TAIL]]
+; PASS-CHECK:       [[TAIL]]:
+; PASS-CHECK-NEXT:    [[NEW_DONE]] = phi i1 [ true, %[[WORK]] ], [ false, %[[IF]] ]
+; PASS-CHECK-NEXT:    br label %[[WHILE]]
+; PASS-CHECK:       [[EXIT]]:
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; DCE-CHECK-LABEL: define protected amdgpu_kernel void @waterfall(
-; DCE-CHECK-SAME: ) #[[ATTR0]] {
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; DCE-CHECK-NEXT:  [[ENTRY:.*]]:
 ; DCE-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; DCE-CHECK-NEXT:    br label %[[BB1:.*]]
-; DCE-CHECK:       [[BB1]]:
-; DCE-CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[TMP14:%.*]], %[[TMP13:.*]] ]
+; DCE-CHECK-NEXT:    br label %[[WHILE:.*]]
+; DCE-CHECK:       [[WHILE]]:
+; DCE-CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[TMP12:%.*]], %[[TAIL:.*]] ]
 ; DCE-CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
-; DCE-CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
-; DCE-CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 asm sideeffect "", "=v,0"(i32 [[TMP4]]) #[[ATTR4:[0-9]+]], !srcloc [[META0:![0-9]+]]
-; DCE-CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
-; DCE-CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[TMP6]])
+; DCE-CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[TMP3]])
 ; DCE-CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 0
-; DCE-CHECK-NEXT:    br i1 [[TMP8]], label %[[BB15:.*]], label %[[BB9:.*]]
-; DCE-CHECK:       [[BB9]]:
-; DCE-CHECK-NEXT:    br i1 [[TMP2]], label %[[TMP13]], label %[[BB10:.*]]
-; DCE-CHECK:       [[BB10]]:
+; DCE-CHECK-NEXT:    br i1 [[TMP8]], label %[[EXIT:.*]], label %[[IF:.*]]
+; DCE-CHECK:       [[IF]]:
 ; DCE-CHECK-NEXT:    [[TMP11:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP0]])
-; DCE-CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[TMP0]], [[TMP11]]
-; DCE-CHECK-NEXT:    br label %[[TMP13]]
-; DCE-CHECK:       [[TMP13]]:
-; DCE-CHECK-NEXT:    [[TMP14]] = phi i1 [ true, %[[BB9]] ], [ [[TMP12]], %[[BB10]] ]
-; DCE-CHECK-NEXT:    br label %[[BB1]], !llvm.loop [[LOOP1:![0-9]+]]
-; DCE-CHECK:       [[BB15]]:
+; DCE-CHECK-NEXT:    [[TMP12]] = icmp eq i32 [[TMP0]], [[TMP11]]
+; DCE-CHECK-NEXT:    br i1 [[TMP12]], label %[[WORK:.*]], label %[[TAIL]]
+; DCE-CHECK:       [[WORK]]:
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    br label %[[TAIL]]
+; DCE-CHECK:       [[TAIL]]:
+; DCE-CHECK-NEXT:    br label %[[WHILE]]
+; DCE-CHECK:       [[EXIT]]:
 ; DCE-CHECK-NEXT:    ret void
 ;
 entry:
   %1 = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-  %2 = tail call noundef i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %1)
-  br label %3
+  %tid = tail call noundef i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %1)
+  br label %while
 
-3:
-  %4 = phi i1 [ false, %entry ], [ %16, %15 ]
-  %5 = xor i1 %4, true
-  %6 = zext i1 %5 to i32
-  %7 = tail call i32 asm sideeffect "", "=v,0"(i32 %6) #3, !srcloc !6
-  %8 = icmp ne i32 %7, 0
-  %9 = tail call i64 @llvm.amdgcn.ballot.i64(i1 %8)
-  %10 = icmp eq i64 %9, 0
-  br i1 %10, label %17, label %11
+while:
+  %done = phi i1 [ false, %entry ], [ %new_done, %tail ]
+  %not_done = xor i1 %done, true
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %not_done)
+  %is_done = icmp eq i64 %ballot, 0
+  br i1 %is_done, label %exit, label %if
 
-11:
-  br i1 %4, label %15, label %12
+if:
+  %first_active_id = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 %tid)
+  %is_first_active_id = icmp eq i32 %tid, %first_active_id
+  br i1 %is_first_active_id, label %work, label %tail
 
-12:
-  %13 = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 %2)
-  %14 = icmp eq i32 %2, %13
-  br label %15
+work:
+  store i32 5, ptr addrspace(1) %out
+  br label %tail
 
-15:
-  %16 = phi i1 [ true, %11 ], [ %14, %12 ]
-  br label %3, !llvm.loop !7
+tail:
+  %new_done = phi i1 [ true, %work ], [ false, %if ]
+  br label %while
 
-17:
+exit:
   ret void
 }
 
@@ -133,12 +127,3 @@ declare i64 @llvm.amdgcn.ballot.i64(i1) #1
 !6 = !{i64 690}
 !7 = distinct !{!7, !8}
 !8 = !{!"llvm.loop.mustprogress"}
-;.
-; PASS-CHECK: [[META0]] = !{i64 690}
-; PASS-CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]]}
-; PASS-CHECK: [[META2]] = !{!"llvm.loop.mustprogress"}
-;.
-; DCE-CHECK: [[META0]] = !{i64 690}
-; DCE-CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]]}
-; DCE-CHECK: [[META2]] = !{!"llvm.loop.mustprogress"}
-;.

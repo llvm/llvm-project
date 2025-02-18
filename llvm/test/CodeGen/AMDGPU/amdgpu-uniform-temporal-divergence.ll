@@ -7,84 +7,44 @@ define amdgpu_cs void @temporal_divergence(ptr addrspace(1) %out, i32 %n) {
 ; PASS-CHECK-LABEL: define amdgpu_cs void @temporal_divergence(
 ; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
-; PASS-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
-; PASS-CHECK-NEXT:    [[VAL:%.*]] = alloca i32, align 4
-; PASS-CHECK-NEXT:    store i32 0, ptr [[VAL]], align 4
-; PASS-CHECK-NEXT:    [[TID_MOD:%.*]] = urem i32 [[TID]], 2
-; PASS-CHECK-NEXT:    [[IS_EVEN:%.*]] = icmp eq i32 [[TID_MOD]], 0
-; PASS-CHECK-NEXT:    br i1 [[IS_EVEN]], label %[[EXIT_LOOP:.*]], label %[[LOOP:.*]]
-; PASS-CHECK:       [[LOOP]]:
-; PASS-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; PASS-CHECK-NEXT:    [[VAL_LOADED:%.*]] = load i32, ptr [[VAL]], align 4
-; PASS-CHECK-NEXT:    [[VAL_UPDATED:%.*]] = add i32 [[VAL_LOADED]], [[I]]
-; PASS-CHECK-NEXT:    store i32 [[VAL_UPDATED]], ptr [[VAL]], align 4
+; PASS-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; PASS-CHECK-NEXT:    br label %[[H:.*]]
+; PASS-CHECK:       [[H]]:
+; PASS-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[H]] ]
 ; PASS-CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; PASS-CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
-; PASS-CHECK-NEXT:    br i1 [[LOOP_COND]], label %[[LOOP]], label %[[EXIT_LOOP]]
-; PASS-CHECK:       [[EXIT_LOOP]]:
-; PASS-CHECK-NEXT:    [[FINAL_VAL:%.*]] = load i32, ptr [[VAL]], align 4
-; PASS-CHECK-NEXT:    [[FIRST_LANE_VAL:%.*]] = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[FINAL_VAL]])
-; PASS-CHECK-NEXT:    store i32 [[FIRST_LANE_VAL]], ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp eq i32 [[TID]], 0
+; PASS-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[X:.*]], label %[[H]]
+; PASS-CHECK:       [[X]]:
+; PASS-CHECK-NEXT:    [[UNI_JOIN:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[I_NEXT]])
+; PASS-CHECK-NEXT:    [[JOIN_USER:%.*]] = add i32 [[I_NEXT]], 5
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; DCE-CHECK-LABEL: define amdgpu_cs void @temporal_divergence(
 ; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; DCE-CHECK-NEXT:  [[ENTRY:.*]]:
-; DCE-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
-; DCE-CHECK-NEXT:    [[VAL:%.*]] = alloca i32, align 4
-; DCE-CHECK-NEXT:    store i32 0, ptr [[VAL]], align 4
-; DCE-CHECK-NEXT:    [[TID_MOD:%.*]] = and i32 [[TID]], 1
-; DCE-CHECK-NEXT:    [[IS_EVEN:%.*]] = icmp eq i32 [[TID_MOD]], 0
-; DCE-CHECK-NEXT:    br i1 [[IS_EVEN]], label %[[EXIT_LOOP:.*]], label %[[LOOP:.*]]
-; DCE-CHECK:       [[LOOP]]:
-; DCE-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; DCE-CHECK-NEXT:    [[VAL_LOADED:%.*]] = load i32, ptr [[VAL]], align 4
-; DCE-CHECK-NEXT:    [[VAL_UPDATED:%.*]] = add i32 [[VAL_LOADED]], [[I]]
-; DCE-CHECK-NEXT:    store i32 [[VAL_UPDATED]], ptr [[VAL]], align 4
-; DCE-CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; DCE-CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
-; DCE-CHECK-NEXT:    br i1 [[LOOP_COND]], label %[[LOOP]], label %[[EXIT_LOOP]]
-; DCE-CHECK:       [[EXIT_LOOP]]:
-; DCE-CHECK-NEXT:    [[FINAL_VAL:%.*]] = load i32, ptr [[VAL]], align 4
-; DCE-CHECK-NEXT:    [[FIRST_LANE_VAL:%.*]] = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[FINAL_VAL]])
-; DCE-CHECK-NEXT:    store i32 [[FIRST_LANE_VAL]], ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; DCE-CHECK-NEXT:    br label %[[H:.*]]
+; DCE-CHECK:       [[H]]:
+; DCE-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp eq i32 [[TID]], 0
+; DCE-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[X:.*]], label %[[H]]
+; DCE-CHECK:       [[X]]:
 ; DCE-CHECK-NEXT:    ret void
 ;
 entry:
-  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %val = alloca i32, align 4
-  store i32 0, ptr %val, align 4
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  br label %H
 
-  ; Compute (tid % 2) to check if it is even
-  %tid_mod = urem i32 %tid, 2
-  %is_even = icmp eq i32 %tid_mod, 0
+H:
+  %uni.merge.h = phi i32 [ 0, %entry ], [ %uni.inc, %H ]
+  %uni.inc = add i32 %uni.merge.h, 1
+  %div.exitx = icmp eq i32 %tid, 0
+  br i1 %div.exitx, label %X, label %H ; divergent branch
 
-  ; If tid is even, jump directly to exit.loop
-  br i1 %is_even, label %exit.loop, label %loop
-
-loop:
-  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-  %val.loaded = load i32, ptr %val, align 4
-
-  ; Update value
-  %val.updated = add i32 %val.loaded, %i
-  store i32 %val.updated, ptr %val, align 4
-
-  ; Loop iteration
-  %i.next = add i32 %i, 1
-  %loop.cond = icmp ult i32 %i.next, %n
-  br i1 %loop.cond, label %loop, label %exit.loop
-
-exit.loop:
-  ; Read first lane's value
-  %final_val = load i32, ptr %val, align 4
-  %first_lane_val = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %final_val)
-
-  ; Store result in memory
-  store i32 %first_lane_val, ptr addrspace(1) %out, align 4
+X:
+  %uni.join = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %uni.inc)
+  %join.user = add i32 %uni.join, 5
   ret void
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.readfirstlane.i32(i32)
-
