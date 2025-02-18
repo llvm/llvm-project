@@ -1699,3 +1699,22 @@ namespace IgnoredMemberExpr {
   };
   static_assert(B{}.foo() == 0, "");
 }
+
+#if __cplusplus >= 202002L
+namespace DeadUpcast {
+  struct A {};
+  struct B : A{};
+  constexpr bool foo() {
+
+    B *pb;
+    {
+      B b;
+      pb = &b;
+    }
+    A *pa = pb;
+
+    return true;
+  }
+  static_assert(foo(), "");
+}
+#endif
