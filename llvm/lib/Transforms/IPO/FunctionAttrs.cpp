@@ -118,15 +118,30 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
                          ModRefInfo MR, AAResults &AAR) {
   // Ignore accesses to known-invariant or local memory.
   MR &= AAR.getModRefInfoMask(Loc, /*IgnoreLocal=*/true);
-  if (isNoModRef(MR))
+  if (isNoModRef(MR)) {
+    // Mask out errno, can never alias this known-invariant memory location.
+    ME -= ME.errnoMemOnly();
     return;
+  }
 
   const Value *UO = getUnderlyingObjectAggressive(Loc.Ptr);
-  if (isa<AllocaInst>(UO))
+  if (isa<AllocaInst>(UO)) {
+    ME -= ME.errnoMemOnly();
     return;
+  }
   if (isa<Argument>(UO)) {
     ME |= MemoryEffects::argMemOnly(MR);
     return;
+  }
+  if (auto *CI = dyn_cast<CallInst>(UO)) {
+    if (auto *Callee = CI->getCalledFunction()) {
+      static constexpr auto ErrnoFnNames = {"__errno_location", "_errno",
+                                            "__errno", "___errno"};
+      if (is_contained(ErrnoFnNames, Callee->getName())) {
+        ME |= MemoryEffects::errnoMemOnly(MR);
+        return;
+      }
+    }
   }
 
   // If it's not an identified object, it might be an argument.
@@ -250,7 +265,22 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
     if (I.isVolatile())
       ME |= MemoryEffects::inaccessibleMemOnly(MR);
 
+    // Refine memory effects for the given location.
     addLocAccess(ME, *Loc, MR, AAR);
+
+    // Last attempt if errnomem has not been inferred yet: accesses larger than
+    // integers cannot alias errno.
+    if (ME.getModRef(IRMemLocation::ErrnoMem) != ModRefInfo::NoModRef) {
+      if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
+        auto *Ty = isa<LoadInst>(I)
+                       ? I.getType()
+                       : cast<StoreInst>(I).getValueOperand()->getType();
+        if (!Ty->isPtrOrPtrVectorTy() &&
+            Loc->Size != MemoryLocation::UnknownSize &&
+            Loc->Size.getValue() > sizeof(int))
+          ME = ME.getWithoutLoc(IRMemLocation::ErrnoMem);
+      }
+    }
   }
 
   return {OrigME & ME, RecursiveArgME};
