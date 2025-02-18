@@ -405,7 +405,7 @@ struct CovMapSectionBase : Section {
   CovMapSectionBase() : Section(ChunkKind::CovMapBase) {}
 
   virtual void mapping(yaml::IO &IO) = 0;
-  virtual Error encode(raw_ostream &OS) const = 0;
+  virtual Error encode(raw_ostream &OS, endianness Endianness) const = 0;
 
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::CovMapBase;

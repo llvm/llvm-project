@@ -27,6 +27,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
@@ -211,9 +212,9 @@ struct CovFunTy {
   /// Depends on CovMap and SymTab(IPSK_names)
   Expected<uint64_t> decode(CovMapByRefTy &CovMapByRef, InstrProfSymtab *SymTab,
                             const ArrayRef<uint8_t> Content, uint64_t Offset,
-                            const DecoderParam &Param, bool IsLE = true);
+                            endianness Endianness, const DecoderParam &Param);
 
-  void encode(raw_ostream &OS) const;
+  void encode(raw_ostream &OS, endianness Endianness) const;
 };
 
 /// An element of CovMap array.
@@ -242,7 +243,7 @@ struct CovMapTy {
   StringRef getWD() const { return (WD ? *WD : StringRef()); }
 
   Expected<uint64_t> decode(const ArrayRef<uint8_t> Content, uint64_t Offset,
-                            const DecoderParam &Param, bool IsLE = true);
+                            endianness Endianness, const DecoderParam &Param);
 
   /// Generate Accumulated list with WD.
   /// Returns a single element {WD} if AccFiles is not given.
@@ -259,7 +260,7 @@ struct CovMapTy {
       const std::optional<ArrayRef<StringRef>> &AccFilesOpt = std::nullopt,
       bool Compress = false) const;
 
-  void encode(raw_ostream &OS) const;
+  void encode(raw_ostream &OS, endianness Endianness) const;
 };
 
 } // namespace llvm::coverage::yaml
@@ -326,12 +327,16 @@ LLVM_COVERAGE_YAML_ELEM_MAPPING(CovMapTy)
 namespace llvm::covmap {
 
 class Decoder {
+protected:
+  endianness Endianness;
+
 public:
+  Decoder(endianness Endianness) : Endianness(Endianness) {}
   virtual ~Decoder() {}
 
   /// Returns DecoderImpl.
   static std::unique_ptr<Decoder>
-  get(const coverage::yaml::DecoderParam &Param);
+  get(endianness Endianness, const coverage::yaml::DecoderParam &Param);
 
   /// Called from the Sections loop in advance of the final dump.
   /// Decoder predecodes Names and CovMap, and captures Contents of
@@ -355,11 +360,15 @@ public:
 };
 
 class Encoder {
+protected:
+  endianness Endianness;
+
 public:
+  Encoder(endianness Endianness) : Endianness(Endianness) {}
   virtual ~Encoder() {}
 
   /// Returns EncoderImpl.
-  static std::unique_ptr<Encoder> get();
+  static std::unique_ptr<Encoder> get(endianness Endianness);
 
   /// Called from the Sections loop.
   virtual void collect(ELFYAML::Chunk *Chunk) = 0;

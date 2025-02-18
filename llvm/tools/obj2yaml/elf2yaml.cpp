@@ -600,7 +600,7 @@ ELFDumper<ELFT>::dumpSections() {
   Param.Detailed = CovMapDetailed;
   Param.Raw = CovMapRaw;
   Param.dLoc = CovMapDLoc;
-  auto CovMapDecoder = covmap::Decoder::get(Param);
+  auto CovMapDecoder = covmap::Decoder::get(ELFT::Endianness, Param);
   if (covmap::Decoder::enabled) {
     // Look up covmap-related sections.
     for (const auto &Sec : Sections) {

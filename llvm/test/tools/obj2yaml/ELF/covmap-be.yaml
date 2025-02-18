@@ -1,0 +1,90 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: obj2yaml %t.o > %t.plain.yaml
+# RUN: obj2yaml --covmap-raw %t.o > %t.raw.yaml
+# RUN: obj2yaml --covmap --covmap-raw %t.o > %t.mixed.yaml
+# RUN: obj2yaml --covmap --covmap-dloc %t.o > %t.dloc.yaml
+# RUN: obj2yaml --covmap %t.o > %t.covmap.yaml
+# RUN: sed -E '/^(#.*)?$/d' %s | diff %t.covmap.yaml -
+# RUN: yaml2obj %t.plain.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.raw.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.mixed.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.dloc.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.covmap.yaml -o - | cmp %t.o -
+
+# FIXME: This is synthetically created. s/ELFDATA2LSB/ELF2DATAMSB/ s/EM_X86_64/EM_PPC64/
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2MSB
+  OSABI:           ELFOSABI_GNU
+  Type:            ET_REL
+  Machine:         EM_PPC64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            __llvm_covfun
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        _Z4funci
+        FuncHash:        0xAFC772D567676299
+        FilenamesRef:    0x70DA2CAFD8CE198E
+        Expressions:
+          - [ { Ref: 0 }, { Ref: 1 } ]
+          - [ { Add: 0 }, { Ref: 2 } ]
+          - [ { Add: 0 }, { Ref: 2 } ]
+          - [ { Add: 0 }, { Ref: 2 } ]
+          - [ { Ref: 0 }, { Ref: 2 } ]
+          - [ { Ref: 0 }, { Ref: 2 } ]
+          - [ { Ref: 0 }, { Ref: 2 } ]
+          - [ { Add: 0 }, { Ref: 5 } ]
+        Files:
+          - Index:           0
+            Filename:        func.cpp
+            Regions:
+              - { Loc: [ 3, 17, 14, 2 ], Ref: 0 }
+              - { Loc: [ 6, 6, 11, 4 ], Add: 0 }
+              - { Loc: [ 7, 9, 7, 13 ], Expansion: 1 }
+              - { Loc: [ 7, 23, 8, 7 ], isGap: true, Ref: 2 }
+              - { Loc: [ 8, 7, 8, 16 ], Ref: 2 }
+              - { Loc: [ 8, 17, 10, 5 ], isGap: true, Sub: 3 }
+              - { Loc: [ 9, 1, 9, 1 ], ExtTag: Skip }
+              - { Loc: [ 10, 5, 11, 4 ], Sub: 3 }
+              - { Loc: [ 11, 12, 11, 17 ], Sub: 3 }
+              - { Loc: [ 11, 12, 11, 17 ], Branch: [ { Ref: 1 }, { Sub: 6 } ] }
+              - { Loc: [ 11, 19, 12, 3 ], isGap: true, Sub: 6 }
+              - { Loc: [ 12, 3, 12, 11 ], Sub: 6 }
+              - { Loc: [ 12, 12, 13, 3 ], isGap: true, Tag: Zero }
+              - { Loc: [ 13, 3, 13, 12 ], Tag: Zero }
+          - Index:           1
+            Filename:        func.cpp
+            Regions:
+              - { Loc: [ 1, 17, 1, 41 ], Add: 0 }
+              - { Loc: [ 1, 18, 1, 32 ], Add: 0 }
+              - { Loc: [ 1, 18, 1, 40 ], Decision: { BIdx: 5, NCond: 3 } }
+              - { Loc: [ 1, 19, 1, 22 ], Add: 0 }
+              - { Loc: [ 1, 19, 1, 22 ], Branch: [ { Sub: 7 }, { Ref: 5 } ], MCDC: [ 1, 2, 3 ] }
+              - { Loc: [ 1, 26, 1, 31 ], Ref: 5 }
+              - { Loc: [ 1, 26, 1, 31 ], Branch: [ { Tag: Zero }, { Ref: 6 } ], MCDC: [ 3, 2, 0 ] }
+              - { Loc: [ 1, 36, 1, 40 ], Ref: 3 }
+              - { Loc: [ 1, 36, 1, 40 ], Branch: [ { Ref: 4 }, { Tag: Zero } ], MCDC: [ 2, 0, 0 ] }
+  - Name:            __llvm_covmap
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovMap:
+      - FilenamesRef:    0x70DA2CAFD8CE198E
+        Version:         6
+  - Name:            __llvm_prf_names
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
+    AddressAlign:    0x1
+    PrfNames:
+      - - _Z4funci
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            __llvm_covfun
+      - Name:            __llvm_covmap
+      - Name:            __llvm_prf_names
+...
