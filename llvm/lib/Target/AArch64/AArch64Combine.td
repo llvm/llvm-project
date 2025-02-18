@@ -155,6 +155,13 @@ def shuf_to_ins: GICombineRule <
   (apply [{ applyINS(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def perfect_shuffle: GICombineRule <
+  (defs root:$root),
+  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root,
+         [{ return matchPerfectShuffle(*${root}, MRI); }]),
+  (apply [{ applyPerfectShuffle(*${root}, MRI, B); }])
+>;
+
 def vashr_vlshr_imm_matchdata : GIDefMatchData<"int64_t">;
 def vashr_vlshr_imm : GICombineRule<
   (defs root:$root, vashr_vlshr_imm_matchdata:$matchinfo),
@@ -173,7 +180,8 @@ def form_duplane : GICombineRule <
 >;
 
 def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn, fullrev,
-                                              form_duplane, shuf_to_ins]>;
+                                              form_duplane, shuf_to_ins,
+                                              perfect_shuffle]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
 def vector_unmerge_lowering : GICombineRule <
