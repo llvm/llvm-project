@@ -407,6 +407,10 @@ private:
   /// always requires a symbol name.
   FlatSymbolRefAttr
   getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar);
+  /// Returns the global insertion point for the next global operation. If the
+  /// `globalInsertionOp` is set, the insertion point is placed after the
+  /// specified operation. Otherwise, it defaults to the start of the module.
+  OpBuilder::InsertionGuard setGlobalInsertionPoint();
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -416,8 +420,6 @@ private:
   Operation *constantInsertionOp = nullptr;
   /// Operation to insert the next global after.
   Operation *globalInsertionOp = nullptr;
-  /// Operation to insert the next alias after.
-  Operation *aliasInsertionOp = nullptr;
   /// Operation to insert comdat selector operations into.
   ComdatOp globalComdatOp = nullptr;
   /// The current context.

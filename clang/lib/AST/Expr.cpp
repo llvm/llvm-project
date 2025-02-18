@@ -203,7 +203,7 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
 }
 
 bool Expr::isFlexibleArrayMemberLike(
-    ASTContext &Ctx,
+    const ASTContext &Ctx,
     LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
     bool IgnoreTemplateOrMacroSubstitution) const {
   const Expr *E = IgnoreParens();
@@ -3672,7 +3672,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackIndexingExprClass:
   case HLSLOutArgExprClass:
   case OpenACCAsteriskSizeExprClass:
-  case ResolvedUnexpandedPackExprClass:
     // These never have a side-effect.
     return false;
 
