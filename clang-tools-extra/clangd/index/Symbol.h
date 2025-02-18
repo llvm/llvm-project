@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_H
 
+#include "SymbolDocumentation.h"
 #include "index/SymbolID.h"
 #include "index/SymbolLocation.h"
 #include "index/SymbolOrigin.h"
@@ -76,7 +77,7 @@ struct Symbol {
   /// Only set when the symbol is indexed for completion.
   llvm::StringRef CompletionSnippetSuffix;
   /// Documentation including comment for the symbol declaration.
-  llvm::StringRef Documentation;
+  SymbolDocumentationRef Documentation;
   /// Type when this symbol is used in an expression. (Short display form).
   /// e.g. return type of a function, or type of a variable.
   /// Only set when the symbol is indexed for completion.
@@ -174,7 +175,20 @@ template <typename Callback> void visitStrings(Symbol &S, const Callback &CB) {
   CB(S.TemplateSpecializationArgs);
   CB(S.Signature);
   CB(S.CompletionSnippetSuffix);
-  CB(S.Documentation);
+
+  CB(S.Documentation.Brief);
+  CB(S.Documentation.Returns);
+  for (auto &Note : S.Documentation.Notes)
+    CB(Note);
+  for (auto &Warning : S.Documentation.Warnings)
+    CB(Warning);
+  for (auto &ParamDoc : S.Documentation.Parameters) {
+    CB(ParamDoc.Name);
+    CB(ParamDoc.Description);
+  }
+  CB(S.Documentation.Description);
+  CB(S.Documentation.CommentText);
+
   CB(S.ReturnType);
   CB(S.Type);
   auto RawCharPointerCB = [&CB](const char *&P) {

@@ -8,6 +8,7 @@
 
 #include "Headers.h"
 #include "RIFF.h"
+#include "SymbolDocumentationMatchers.h"
 #include "index/Serialization.h"
 #include "support/Logger.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -49,7 +50,22 @@ CanonicalDeclaration:
     Line: 1
     Column: 1
 Flags:    129
-Documentation:    'Foo doc'
+Documentation:
+  Brief:       'Foo brief'
+  Returns:     'Foo returns'
+  Description: 'Foo description'
+  Notes:
+    - 'Foo note 1'
+    - 'Foo note 2'
+  Warnings:
+    - 'Foo warning 1'
+    - 'Foo warning 2'
+  Parameters:
+    - Name: 'param1'
+      Description: 'Foo param 1'
+    - Name: 'param2'
+      Description: 'Foo param 2'
+  CommentText: 'Full text would be here'
 ReturnType:    'int'
 IncludeHeaders:
   - Header:    'include1'
@@ -153,7 +169,20 @@ TEST(SerializationTest, YAMLConversions) {
 
   EXPECT_THAT(Sym1, qName("clang::Foo1"));
   EXPECT_EQ(Sym1.Signature, "");
-  EXPECT_EQ(Sym1.Documentation, "Foo doc");
+
+  SymbolDocumentationRef ExpectedDocumentation;
+  ExpectedDocumentation.Brief = "Foo brief";
+  ExpectedDocumentation.Returns = "Foo returns";
+  ExpectedDocumentation.Description = "Foo description";
+  ExpectedDocumentation.Notes = {"Foo note 1", "Foo note 2"};
+  ExpectedDocumentation.Warnings = {"Foo warning 1", "Foo warning 2"};
+  ExpectedDocumentation.Parameters = {
+      {"param1", "Foo param 1"},
+      {"param2", "Foo param 2"},
+  };
+  ExpectedDocumentation.CommentText = "Full text would be here";
+  EXPECT_THAT(Sym1.Documentation, matchesDoc(ExpectedDocumentation));
+
   EXPECT_EQ(Sym1.ReturnType, "int");
   EXPECT_EQ(StringRef(Sym1.CanonicalDeclaration.FileURI), "file:///path/foo.h");
   EXPECT_EQ(Sym1.Origin, SymbolOrigin::Static);

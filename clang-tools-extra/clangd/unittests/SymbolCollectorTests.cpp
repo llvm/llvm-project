@@ -53,7 +53,7 @@ MATCHER_P(labeled, Label, "") {
   return (arg.Name + arg.Signature).str() == Label;
 }
 MATCHER_P(returnType, D, "") { return arg.ReturnType == D; }
-MATCHER_P(doc, D, "") { return arg.Documentation == D; }
+MATCHER_P(doc, D, "") { return arg.Documentation.CommentText == D; }
 MATCHER_P(snippet, S, "") {
   return (arg.Name + arg.CompletionSnippetSuffix).str() == S;
 }

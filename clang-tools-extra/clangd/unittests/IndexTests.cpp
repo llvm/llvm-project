@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "SymbolDocumentationMatchers.h"
 #include "SyncAPI.h"
 #include "TestIndex.h"
 #include "TestTU.h"
@@ -391,7 +392,7 @@ TEST(MergeTest, Merge) {
   R.References = 2;
   L.Signature = "()";                   // present in left only
   R.CompletionSnippetSuffix = "{$1:0}"; // present in right only
-  R.Documentation = "--doc--";
+  R.Documentation = SymbolDocumentationRef::descriptionOnly("--doc--");
   L.Origin = SymbolOrigin::Preamble;
   R.Origin = SymbolOrigin::Static;
   R.Type = "expectedType";
@@ -402,7 +403,8 @@ TEST(MergeTest, Merge) {
   EXPECT_EQ(M.References, 3u);
   EXPECT_EQ(M.Signature, "()");
   EXPECT_EQ(M.CompletionSnippetSuffix, "{$1:0}");
-  EXPECT_EQ(M.Documentation, "--doc--");
+  EXPECT_THAT(M.Documentation,
+              matchesDoc(SymbolDocumentationRef::descriptionOnly("--doc--")));
   EXPECT_EQ(M.Type, "expectedType");
   EXPECT_EQ(M.Origin, SymbolOrigin::Preamble | SymbolOrigin::Static |
                           SymbolOrigin::Merge);
@@ -546,16 +548,18 @@ TEST(MergeIndexTest, NonDocumentation) {
   Symbol L, R;
   L.ID = R.ID = SymbolID("x");
   L.Definition.FileURI = "file:/x.h";
-  R.Documentation = "Forward declarations because x.h is too big to include";
+  R.Documentation = SymbolDocumentationRef::descriptionOnly(
+      "Forward declarations because x.h is too big to include");
   for (auto ClassLikeKind :
        {SymbolKind::Class, SymbolKind::Struct, SymbolKind::Union}) {
     L.SymInfo.Kind = ClassLikeKind;
-    EXPECT_EQ(mergeSymbol(L, R).Documentation, "");
+    ASSERT_TRUE(mergeSymbol(L, R).Documentation.empty());
   }
 
   L.SymInfo.Kind = SymbolKind::Function;
-  R.Documentation = "Documentation from non-class symbols should be included";
-  EXPECT_EQ(mergeSymbol(L, R).Documentation, R.Documentation);
+  R.Documentation = SymbolDocumentationRef::descriptionOnly(
+      "Documentation from non-class symbols should be included");
+  EXPECT_THAT(mergeSymbol(L, R).Documentation, matchesDoc(R.Documentation));
 }
 
 MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References, "") {

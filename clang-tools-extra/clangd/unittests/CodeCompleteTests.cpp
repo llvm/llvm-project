@@ -2649,9 +2649,9 @@ TEST(SignatureHelpTest, InstantiatedSignatures) {
 
 TEST(SignatureHelpTest, IndexDocumentation) {
   Symbol Foo0 = sym("foo", index::SymbolKind::Function, "@F@\\0#");
-  Foo0.Documentation = "doc from the index";
+  Foo0.Documentation.CommentText = "doc from the index";
   Symbol Foo1 = sym("foo", index::SymbolKind::Function, "@F@\\0#I#");
-  Foo1.Documentation = "doc from the index";
+  Foo1.Documentation.CommentText = "doc from the index";
   Symbol Foo2 = sym("foo", index::SymbolKind::Function, "@F@\\0#I#I#");
 
   StringRef Sig0 = R"cpp(

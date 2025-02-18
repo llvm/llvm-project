@@ -16,24 +16,25 @@
 
 #include "clang/Sema/CodeCompleteConsumer.h"
 
+#include "SymbolDocumentation.h"
+
 namespace clang {
 class ASTContext;
 
 namespace clangd {
 
-/// Gets a minimally formatted documentation comment of \p Result, with comment
-/// markers stripped. See clang::RawComment::getFormattedText() for the detailed
-/// explanation of how the comment text is transformed.
-/// Returns empty string when no comment is available.
+/// Gets the parsed doxygen documentation of \p Result.
+/// Returns an empty SymbolDocumentationOwned when no comment is available.
 /// If \p CommentsFromHeaders parameter is set, only comments from the main
 /// file will be returned. It is used to workaround crashes when parsing
 /// comments in the stale headers, coming from completion preamble.
-std::string getDocComment(const ASTContext &Ctx,
-                          const CodeCompletionResult &Result,
-                          bool CommentsFromHeaders);
+SymbolDocumentationOwned getDocumentation(const ASTContext &Ctx,
+                                          const CodeCompletionResult &Result,
+                                          bool CommentsFromHeaders);
 
-/// Similar to getDocComment, but returns the comment for a NamedDecl.
-std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &D);
+/// Similar to getDocumentation, but returns the comment for a NamedDecl.
+SymbolDocumentationOwned getDeclDocumentation(const ASTContext &Ctx,
+                                              const NamedDecl &D);
 
 /// Formats the signature for an item, as a display string and snippet.
 /// e.g. for const_reference std::vector<T>::at(size_type) const, this returns:

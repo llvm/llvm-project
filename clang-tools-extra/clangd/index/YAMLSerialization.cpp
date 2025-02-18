@@ -34,6 +34,7 @@ struct YIncludeHeaderWithReferences;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Symbol::IncludeHeaderWithReferences)
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Ref)
+LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::ParameterDocumentationRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(YIncludeHeaderWithReferences)
 
 namespace {
@@ -79,11 +80,13 @@ namespace yaml {
 using clang::clangd::FileDigest;
 using clang::clangd::IncludeGraph;
 using clang::clangd::IncludeGraphNode;
+using clang::clangd::ParameterDocumentationRef;
 using clang::clangd::Ref;
 using clang::clangd::RefKind;
 using clang::clangd::Relation;
 using clang::clangd::RelationKind;
 using clang::clangd::Symbol;
+using clang::clangd::SymbolDocumentationRef;
 using clang::clangd::SymbolID;
 using clang::clangd::SymbolLocation;
 using clang::index::SymbolInfo;
@@ -219,6 +222,28 @@ struct NormalizedIncludeHeaders {
     return Result;
   }
   llvm::SmallVector<YIncludeHeaderWithReferences, 1> Headers;
+};
+
+template <> struct MappingTraits<ParameterDocumentationRef> {
+  static void mapping(IO &IO, ParameterDocumentationRef &P) {
+    IO.mapRequired("Name", P.Name);
+    IO.mapRequired("Description", P.Description);
+  }
+};
+
+template <> struct MappingTraits<SymbolDocumentationRef> {
+  static void mapping(IO &IO, SymbolDocumentationRef &Doc) {
+    IO.mapOptional("Brief", Doc.Brief);
+    IO.mapOptional("Returns", Doc.Returns);
+
+    IO.mapOptional("Notes", Doc.Notes);
+    IO.mapOptional("Warnings", Doc.Warnings);
+
+    IO.mapOptional("Parameters", Doc.Parameters);
+
+    IO.mapOptional("Description", Doc.Description);
+    IO.mapOptional("CommentText", Doc.CommentText);
+  }
 };
 
 template <> struct MappingTraits<Symbol> {

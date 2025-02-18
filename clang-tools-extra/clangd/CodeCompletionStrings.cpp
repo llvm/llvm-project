@@ -80,39 +80,42 @@ bool shouldPatchPlaceholder0(CodeCompletionResult::ResultKind ResultKind,
 
 } // namespace
 
-std::string getDocComment(const ASTContext &Ctx,
-                          const CodeCompletionResult &Result,
-                          bool CommentsFromHeaders) {
+SymbolDocumentationOwned getDocumentation(const ASTContext &Ctx,
+                                          const CodeCompletionResult &Result,
+                                          bool CommentsFromHeaders) {
+  // FIXME: CommentsFromHeaders seems to be unused? Is this a bug?
+
   // FIXME: clang's completion also returns documentation for RK_Pattern if they
   // contain a pattern for ObjC properties. Unfortunately, there is no API to
   // get this declaration, so we don't show documentation in that case.
   if (Result.Kind != CodeCompletionResult::RK_Declaration)
-    return "";
-  return Result.getDeclaration() ? getDeclComment(Ctx, *Result.getDeclaration())
-                                 : "";
+    return {};
+  return Result.getDeclaration()
+             ? getDeclDocumentation(Ctx, *Result.getDeclaration())
+             : SymbolDocumentationOwned{};
 }
 
-std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
+SymbolDocumentationOwned getDeclDocumentation(const ASTContext &Ctx,
+                                              const NamedDecl &Decl) {
   if (isa<NamespaceDecl>(Decl)) {
     // Namespaces often have too many redecls for any particular redecl comment
     // to be useful. Moreover, we often confuse file headers or generated
     // comments with namespace comments. Therefore we choose to just ignore
     // the comments for namespaces.
-    return "";
+    return {};
   }
   const RawComment *RC = getCompletionComment(Ctx, &Decl);
   if (!RC)
-    return "";
+    return {};
   // Sanity check that the comment does not come from the PCH. We choose to not
   // write them into PCH, because they are racy and slow to load.
   assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
-  std::string Doc =
-      RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  if (!looksLikeDocComment(Doc))
-    return "";
-  // Clang requires source to be UTF-8, but doesn't enforce this in comments.
-  if (!llvm::json::isUTF8(Doc))
-    Doc = llvm::json::fixUTF8(Doc);
+
+  SymbolDocumentationOwned Doc = parseDoxygenComment(*RC, Ctx, &Decl);
+
+  if (!looksLikeDocComment(Doc.CommentText))
+    return {};
+
   return Doc;
 }
 

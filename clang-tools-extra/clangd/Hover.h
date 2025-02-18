@@ -11,6 +11,7 @@
 
 #include "ParsedAST.h"
 #include "Protocol.h"
+#include "SymbolDocumentation.h"
 #include "support/Markup.h"
 #include "clang/Index/IndexSymbol.h"
 #include <optional>
@@ -73,7 +74,7 @@ struct HoverInfo {
   std::string Provider;
   std::optional<Range> SymRange;
   index::SymbolKind Kind = index::SymbolKind::Unknown;
-  std::string Documentation;
+  SymbolDocumentationOwned Documentation;
   /// Source code containing the definition of the symbol.
   std::string Definition;
   const char *DefinitionLanguage = "cpp";

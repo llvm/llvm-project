@@ -283,6 +283,57 @@ SymbolLocation readLocation(Reader &Data,
   return Loc;
 }
 
+void writeSymbolDocumentation(const SymbolDocumentationRef &Doc,
+                              const StringTableOut &Strings,
+                              llvm::raw_ostream &OS) {
+  writeVar(Strings.index(Doc.Brief), OS);
+  writeVar(Strings.index(Doc.Returns), OS);
+
+  writeVar(Doc.Notes.size(), OS);
+  for (const auto &Note : Doc.Notes)
+    writeVar(Strings.index(Note), OS);
+
+  writeVar(Doc.Warnings.size(), OS);
+  for (const auto &Warning : Doc.Warnings)
+    writeVar(Strings.index(Warning), OS);
+
+  writeVar(Doc.Parameters.size(), OS);
+  for (const auto &ParamDoc : Doc.Parameters) {
+    writeVar(Strings.index(ParamDoc.Name), OS);
+    writeVar(Strings.index(ParamDoc.Description), OS);
+  }
+
+  writeVar(Strings.index(Doc.Description), OS);
+  writeVar(Strings.index(Doc.CommentText), OS);
+}
+
+SymbolDocumentationRef
+readSymbolDocumentation(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
+  SymbolDocumentationRef Doc;
+  Doc.Brief = Data.consumeString(Strings);
+  Doc.Returns = Data.consumeString(Strings);
+
+  if (!Data.consumeSize(Doc.Notes))
+    return Doc;
+  for (auto &Note : Doc.Notes)
+    Note = Data.consumeString(Strings);
+
+  if (!Data.consumeSize(Doc.Warnings))
+    return Doc;
+  for (auto &Warning : Doc.Warnings)
+    Warning = Data.consumeString(Strings);
+
+  if (!Data.consumeSize(Doc.Parameters))
+    return Doc;
+  for (auto &ParamDoc : Doc.Parameters)
+    ParamDoc = {Data.consumeString(Strings), Data.consumeString(Strings)};
+
+  Doc.Description = Data.consumeString(Strings);
+  Doc.CommentText = Data.consumeString(Strings);
+
+  return Doc;
+}
+
 IncludeGraphNode readIncludeGraphNode(Reader &Data,
                                       llvm::ArrayRef<llvm::StringRef> Strings) {
   IncludeGraphNode IGN;
@@ -325,7 +376,7 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
   OS.write(static_cast<uint8_t>(Sym.Flags));
   writeVar(Strings.index(Sym.Signature), OS);
   writeVar(Strings.index(Sym.CompletionSnippetSuffix), OS);
-  writeVar(Strings.index(Sym.Documentation), OS);
+  writeSymbolDocumentation(Sym.Documentation, Strings, OS);
   writeVar(Strings.index(Sym.ReturnType), OS);
   writeVar(Strings.index(Sym.Type), OS);
 
@@ -354,7 +405,7 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings,
   Sym.Origin = Origin;
   Sym.Signature = Data.consumeString(Strings);
   Sym.CompletionSnippetSuffix = Data.consumeString(Strings);
-  Sym.Documentation = Data.consumeString(Strings);
+  Sym.Documentation = readSymbolDocumentation(Data, Strings);
   Sym.ReturnType = Data.consumeString(Strings);
   Sym.Type = Data.consumeString(Strings);
   if (!Data.consumeSize(Sym.IncludeHeaders))
@@ -457,7 +508,7 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 20;
+constexpr static uint32_t Version = 21;
 
 llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
                                      SymbolOrigin Origin) {
