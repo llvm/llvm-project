@@ -14,7 +14,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; generic: +call-indirect-overlong, +multivalue, +mutable-globals, +reference-types, +sign-ext
 ; GENERIC-LABEL: .custom_section.target_features,"",@
-; GENERIC-NEXT: .int8  8
+; GENERIC-NEXT: .int8  9
 ; GENERIC-NEXT: .int8  43
 ; GENERIC-NEXT: .int8  11
 ; GENERIC-NEXT: .ascii  "bulk-memory"
@@ -24,6 +24,9 @@ target triple = "wasm32-unknown-unknown"
 ; GENERIC-NEXT: .int8  43
 ; GENERIC-NEXT: .int8  22
 ; GENERIC-NEXT: .ascii  "call-indirect-overlong"
+; GENERIC-NEXT: .int8  43
+; GENERIC-NEXT: .int8  14
+; GENERIC-NEXT: .ascii  "extended-const"
 ; GENERIC-NEXT: .int8  43
 ; GENERIC-NEXT: .int8  10
 ; GENERIC-NEXT: .ascii  "multivalue"

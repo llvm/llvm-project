@@ -168,6 +168,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["bulk-memory"] = true;
     Features["bulk-memory-opt"] = true;
     Features["call-indirect-overlong"] = true;
+    Features["extended-const"] = true;
     Features["multivalue"] = true;
     Features["mutable-globals"] = true;
     Features["nontrapping-fptoint"] = true;

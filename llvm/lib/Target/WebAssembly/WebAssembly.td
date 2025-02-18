@@ -123,9 +123,10 @@ def : ProcessorModel<"mvp", NoSchedModel, []>;
 // the importance of the features.
 def : ProcessorModel<"generic", NoSchedModel,
                       [FeatureBulkMemory, FeatureBulkMemoryOpt,
-                       FeatureCallIndirectOverlong, FeatureMultivalue,
-                       FeatureMutableGlobals, FeatureNontrappingFPToInt,
-                       FeatureReferenceTypes, FeatureSignExt]>;
+                       FeatureCallIndirectOverlong, FeatureExtendedConst,
+                       FeatureMultivalue, FeatureMutableGlobals,
+                       FeatureNontrappingFPToInt, FeatureReferenceTypes,
+                       FeatureSignExt]>;
 
 // Lime1: <https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1>
 def : ProcessorModel<"lime1", NoSchedModel,

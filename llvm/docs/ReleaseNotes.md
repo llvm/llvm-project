@@ -110,6 +110,13 @@ Changes to the RISC-V Backend
 Changes to the WebAssembly Backend
 ----------------------------------
 
+The default target CPU, "generic", now enables the `-mextended-const`
+flag, which correspond to the [Extended Const] proposal, which is
+[widely implemented in engines].
+
+[Extended Const]: https://github.com/WebAssembly/extended-const
+[widely implemented in engines]: https://webassembly.org/features/
+
 Changes to the Windows Target
 -----------------------------
 
