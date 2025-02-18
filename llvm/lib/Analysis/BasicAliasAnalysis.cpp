@@ -929,7 +929,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     return ModRefInfo::NoModRef;
 
   ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
-  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
+  ModRefInfo ErrnoMR = ME.getModRef(IRMemLocation::ErrnoMem);
+  ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
 
   // An identified function-local object that does not escape can only be
   // accessed via call arguments. Reduce OtherMR (which includes accesses to
@@ -970,6 +971,19 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   }
 
   ModRefInfo Result = ArgMR | OtherMR;
+
+  // Refine writes to errno memory. We can safely exclude the errno location if
+  // the given memory location is an alloca, the size of the memory access is
+  // larger than `sizeof(int)` or if TBAA proves it does not alias errno.
+  if ((ErrnoMR | OtherMR) != OtherMR) {
+    bool IsLocSizeUnknown = Loc.Size == MemoryLocation::UnknownSize;
+    if (ErrnoMR == ModRefInfo::Mod && !isa<AllocaInst>(Object) &&
+        (IsLocSizeUnknown ||
+         (!IsLocSizeUnknown && Loc.Size.getValue() <= sizeof(int))) &&
+        AAQI.AAR.aliasErrno(Loc, Call->getModule()) != AliasResult::NoAlias)
+      Result |= ErrnoMR;
+  }
+
   if (!isModAndRefSet(Result))
     return Result;
 
