@@ -122,40 +122,25 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
   typeError();
 }
 
-fir::ShapeShiftOp
-Fortran::lower::omp::getShapeShift(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value box,
-                                   bool cannotHaveNonDefaultLowerBounds) {
+fir::ShapeShiftOp Fortran::lower::omp::getShapeShift(fir::FirOpBuilder &builder,
+                                                     mlir::Location loc,
+                                                     mlir::Value box) {
   fir::SequenceType sequenceType = mlir::cast<fir::SequenceType>(
       hlfir::getFortranElementOrSequenceType(box.getType()));
   const unsigned rank = sequenceType.getDimension();
-
   llvm::SmallVector<mlir::Value> lbAndExtents;
   lbAndExtents.reserve(rank * 2);
-  mlir::Type idxTy = builder.getIndexType();
 
-  if (cannotHaveNonDefaultLowerBounds && !sequenceType.hasDynamicExtents()) {
-    // We don't need fir::BoxDimsOp if all of the extents are statically known
-    // and we can assume default lower bounds. This helps avoids reads from the
-    // mold arg.
-    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-    for (int64_t extent : sequenceType.getShape()) {
-      assert(extent != sequenceType.getUnknownExtent());
-      mlir::Value extentVal = builder.createIntegerConstant(loc, idxTy, extent);
-      lbAndExtents.push_back(one);
-      lbAndExtents.push_back(extentVal);
-    }
-  } else {
-    for (unsigned i = 0; i < rank; ++i) {
-      // TODO: ideally we want to hoist box reads out of the critical section.
-      // We could do this by having box dimensions in block arguments like
-      // OpenACC does
-      mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
-      auto dimInfo =
-          builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
-      lbAndExtents.push_back(dimInfo.getLowerBound());
-      lbAndExtents.push_back(dimInfo.getExtent());
-    }
+  mlir::Type idxTy = builder.getIndexType();
+  for (unsigned i = 0; i < rank; ++i) {
+    // TODO: ideally we want to hoist box reads out of the critical section.
+    // We could do this by having box dimensions in block arguments like
+    // OpenACC does
+    mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
+    auto dimInfo =
+        builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
+    lbAndExtents.push_back(dimInfo.getLowerBound());
+    lbAndExtents.push_back(dimInfo.getExtent());
   }
 
   auto shapeShiftTy = fir::ShapeShiftType::get(builder.getContext(), rank);
@@ -263,13 +248,12 @@ public:
       mlir::Type argType, mlir::Value scalarInitValue,
       mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
       mlir::Block *initBlock, mlir::Region &cleanupRegion,
-      DeclOperationKind kind, const Fortran::semantics::Symbol *sym,
-      bool cannotHaveLowerBounds)
+      DeclOperationKind kind, const Fortran::semantics::Symbol *sym)
       : converter{converter}, builder{converter.getFirOpBuilder()}, loc{loc},
         argType{argType}, scalarInitValue{scalarInitValue},
         allocatedPrivVarArg{allocatedPrivVarArg}, moldArg{moldArg},
         initBlock{initBlock}, cleanupRegion{cleanupRegion}, kind{kind},
-        sym{sym}, cannotHaveNonDefaultLowerBounds{cannotHaveLowerBounds} {
+        sym{sym} {
     valType = fir::unwrapRefType(argType);
   }
 
@@ -310,10 +294,6 @@ private:
 
   /// Any length parameters which have been fetched for the type
   mlir::SmallVector<mlir::Value> lenParams;
-
-  /// If the source variable being privatized definitely can't have non-default
-  /// lower bounds then we don't need to generate code to read them.
-  bool cannotHaveNonDefaultLowerBounds;
 
   void createYield(mlir::Value ret) {
     builder.create<mlir::omp::YieldOp>(loc, ret);
@@ -452,8 +432,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   // Special case for (possibly allocatable) arrays of polymorphic types
   // e.g. !fir.class<!fir.heap<!fir.array<?x!fir.type<>>>>
   if (source.isPolymorphic()) {
-    fir::ShapeShiftOp shape =
-        getShapeShift(builder, loc, source, cannotHaveNonDefaultLowerBounds);
+    fir::ShapeShiftOp shape = getShapeShift(builder, loc, source);
     mlir::Type arrayType = source.getElementOrSequenceType();
     mlir::Value allocatedArray = builder.create<fir::AllocMemOp>(
         loc, arrayType, /*typeparams=*/mlir::ValueRange{}, shape.getExtents());
@@ -492,8 +471,8 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   // Put the temporary inside of a box:
   // hlfir::genVariableBox doesn't handle non-default lower bounds
   mlir::Value box;
-  fir::ShapeShiftOp shapeShift = getShapeShift(builder, loc, getLoadedMoldArg(),
-                                               cannotHaveNonDefaultLowerBounds);
+  fir::ShapeShiftOp shapeShift =
+      getShapeShift(builder, loc, getLoadedMoldArg());
   mlir::Type boxType = getLoadedMoldArg().getType();
   if (mlir::isa<fir::BaseBoxType>(temp.getType()))
     // the box created by the declare form createTempFromMold is missing
@@ -628,10 +607,10 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     mlir::Type argType, mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
     mlir::Region &cleanupRegion, DeclOperationKind kind,
-    const Fortran::semantics::Symbol *sym, bool cannotHaveLowerBounds) {
+    const Fortran::semantics::Symbol *sym) {
   PopulateInitAndCleanupRegionsHelper helper(
       converter, loc, argType, scalarInitValue, allocatedPrivVarArg, moldArg,
-      initBlock, cleanupRegion, kind, sym, cannotHaveLowerBounds);
+      initBlock, cleanupRegion, kind, sym);
   helper.populateByRefInitAndCleanupRegions();
 
   // Often we load moldArg to check something (e.g. length parameters, shape)
