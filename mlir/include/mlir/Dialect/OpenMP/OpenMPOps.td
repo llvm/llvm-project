@@ -653,7 +653,7 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
     will be executed in parallel by threads in the current context. These
     iterations are spread across threads that already exist in the enclosing
     region.
-    
+
     The body region can only contain a single block which must contain a single
     operation. This operation must be another compatible loop wrapper or an
     `omp.loop_nest`.
@@ -1750,6 +1750,62 @@ def ScanOp : OpenMP_Op<"scan", [
 }
 
 //===----------------------------------------------------------------------===//
+// 2.19.7.3 Declare Mapper Directive
+//===----------------------------------------------------------------------===//
+def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
+    IsolatedFromAbove,
+    RecipeInterface,
+    SingleBlock,
+    Symbol
+  ]> {
+  let summary = "declare mapper directive";
+  let description = [{
+    The declare mapper directive declares a user-defined mapper for a given
+    type, and defines a mapper-identifier that can be used in a map clause.
+  }] # clausesDescription;
+
+  let arguments = (ins  SymbolNameAttr:$sym_name,
+                        TypeAttr:$type);
+
+  let regions = (region AnyRegion:$body);
+
+  let assemblyFormat = "$sym_name `:` $type $body attr-dict";
+
+  let extraClassDeclaration = [{
+    /// Get DeclareMapperInfoOp.
+    DeclareMapperInfoOp getDeclareMapperInfo(){
+      return cast<DeclareMapperInfoOp>(getRegion().getBlocks().front().getTerminator());
+    }
+
+    /// Get SymVal block argument
+    BlockArgument getSymVal(){
+      return getRegion().getArgument(0);
+    }
+  }];
+
+  let hasRegionVerifier = 1;
+}
+
+def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info", [
+    HasParent<"DeclareMapperOp">,
+    Terminator
+  ], clauses = [
+    OpenMP_MapClause
+  ]> {
+  let summary = "declare mapper info";
+  let description = [{
+    This Op is used to capture the map information related to it's
+    parent DeclareMapperOp.
+  }] # clausesDescription;
+
+  let builders = [
+    OpBuilder<(ins CArg<"const DeclareMapperInfoOperands &">:$clauses)>
+  ];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.19.5.7 declare reduction Directive
 //===----------------------------------------------------------------------===//
 
@@ -1861,7 +1917,7 @@ def MaskedOp : OpenMP_Op<"masked", clauses = [
   ], singleRegion = 1> {
   let summary = "masked construct";
   let description = [{
-    Masked construct allows to specify a structured block to be executed by a subset of 
+    Masked construct allows to specify a structured block to be executed by a subset of
     threads of the current team.
   }] # clausesDescription;
 
