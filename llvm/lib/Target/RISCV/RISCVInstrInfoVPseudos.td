@@ -122,6 +122,7 @@ def DecImm : SDNodeXForm<imm, [{
 
 defvar TAIL_AGNOSTIC = 1;
 defvar TU_MU = 0;
+defvar TA_MU = 1;
 defvar TA_MA = 3;
 
 //===----------------------------------------------------------------------===//
@@ -2029,7 +2030,6 @@ multiclass VPseudoVSFS_M {
       def "_M_" # mti.BX : VPseudoUnaryNoMaskNoPolicy<VR, VR, constraint>,
                            SchedUnary<"WriteVMSFSV", "ReadVMSFSV", mx,
                                       forcePassthruRead=true>;
-      let ForceTailAgnostic = true in
       def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMask<VR, VR, constraint,
                                                       sewop = sew_mask>,
                                      SchedUnary<"WriteVMSFSV", "ReadVMSFSV", mx,
@@ -4019,7 +4019,7 @@ class VPatMaskUnaryMask<string intrinsic_name,
                 (!cast<Instruction>(inst#"_M_"#mti.BX#"_MASK")
                 (mti.Mask VR:$passthru),
                 (mti.Mask VR:$rs2),
-                (mti.Mask VMV0:$vm), GPR:$vl, mti.Log2SEW, TU_MU)>;
+                (mti.Mask VMV0:$vm), GPR:$vl, mti.Log2SEW, TA_MU)>;
 
 class VPatUnaryAnyMask<string intrinsic,
                        string inst,
