@@ -12439,6 +12439,10 @@ def err_builtin_invalid_arg_type: Error <
   "an 'int'|"
   "a vector of floating points}1 (was %2)">;
 
+def err_builtin_trivially_relocate_invalid_arg_type: Error <
+  "argument%select{s|||}0 to '__builtin_trivially_relocate' must be"
+  "%select{a pointer|non-const|relocatable|the same}0">;
+
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
 def err_matrix_index_not_integer: Error<
