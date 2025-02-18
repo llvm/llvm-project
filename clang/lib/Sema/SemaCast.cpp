@@ -2778,37 +2778,45 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
                                   : CheckedConversionKind::CStyleCast;
 
   QualType SrcTy = SrcExpr.get()->getType();
-  // This case should not trigger on regular vector cast, vector truncation
-  if (Self.getLangOpts().HLSL &&
-      Self.HLSL().CanPerformElementwiseCast(SrcExpr.get(), DestType)) {
-    if (SrcTy->isConstantArrayType())
-      SrcExpr = Self.ImpCastExprToType(
-          SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
-          CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
-    Kind = CK_HLSLElementwiseCast;
-    return;
-  }
+  // HLSL has several unique forms of C-style casts which support aggregate to
+  // aggregate casting.
+  if (Self.getLangOpts().HLSL) {
+    // This case should not trigger on regular vector cast, vector truncation
+    if (Self.HLSL().CanPerformElementwiseCast(SrcExpr.get(), DestType)) {
+      if (SrcTy->isConstantArrayType())
+        SrcExpr = Self.ImpCastExprToType(
+            SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
+            CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
+      Kind = CK_HLSLElementwiseCast;
+      return;
+    }
 
-  // This case should not trigger on regular vector splat
-  // If the relative order of this and the HLSLElementWise cast checks
-  // are changed, it might change which cast handles what in a few cases
-  if (Self.getLangOpts().HLSL &&
-      Self.HLSL().CanPerformAggregateSplatCast(SrcExpr.get(), DestType)) {
-    const VectorType *VT = SrcTy->getAs<VectorType>();
-    // change splat from vec1 case to splat from scalar
-    if (VT && VT->getNumElements() == 1)
-      SrcExpr = Self.ImpCastExprToType(
-          SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
-          SrcExpr.get()->getValueKind(), nullptr, CCK);
-    // Inserting a scalar cast here allows for a simplified codegen in
-    // the case the destTy is a vector
-    if (const VectorType *DVT = DestType->getAs<VectorType>())
-      SrcExpr = Self.ImpCastExprToType(
-          SrcExpr.get(), DVT->getElementType(),
-          Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
-          SrcExpr.get()->getValueKind(), nullptr, CCK);
-    Kind = CK_HLSLAggregateSplatCast;
-    return;
+    // This case should not trigger on regular vector splat
+    // If the relative order of this and the HLSLElementWise cast checks
+    // are changed, it might change which cast handles what in a few cases
+    if (Self.HLSL().CanPerformAggregateSplatCast(SrcExpr.get(), DestType)) {
+      const VectorType *VT = SrcTy->getAs<VectorType>();
+      // change splat from vec1 case to splat from scalar
+      if (VT && VT->getNumElements() == 1)
+        SrcExpr = Self.ImpCastExprToType(
+            SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
+            SrcExpr.get()->getValueKind(), nullptr, CCK);
+      // Inserting a scalar cast here allows for a simplified codegen in
+      // the case the destTy is a vector
+      if (const VectorType *DVT = DestType->getAs<VectorType>())
+        SrcExpr = Self.ImpCastExprToType(
+            SrcExpr.get(), DVT->getElementType(),
+            Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
+            SrcExpr.get()->getValueKind(), nullptr, CCK);
+      Kind = CK_HLSLAggregateSplatCast;
+      return;
+    }
+    if (DestType->isArrayType()) {
+      Self.Diag(OpRange.getBegin(), diag::err_bad_cxx_cast_generic)
+          << 4 << SrcTy << DestType;
+      SrcExpr = ExprError();
+      return;
+    }
   }
 
   if (ValueKind == VK_PRValue && !DestType->isRecordType() &&
