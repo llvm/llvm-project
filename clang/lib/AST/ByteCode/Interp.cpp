@@ -1433,7 +1433,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     unsigned Offset = S.getContext().collectBaseOffset(
         InitialPointeeType->getAsRecordDecl(),
         OverriderPointeeType->getAsRecordDecl());
-    return GetPtrBasePop(S, OpPC, Offset);
+    return GetPtrBasePop(S, OpPC, Offset, /*IsNullOK=*/true);
   }
 
   return true;
