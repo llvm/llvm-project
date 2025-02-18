@@ -990,7 +990,12 @@ supported for the ``amdgcn`` target.
   the stride must be 0, the "add tid" flag must be 0, the swizzle enable bits
   must be off, and the extent must be measured in bytes. (On subtargets where
   bounds checking may be disabled, buffer fat pointers may choose to enable
-  it or not).
+  it or not). The cache swizzle support introduced in gfx942 may be used.
+
+  These pointers can be created by `addrspacecast` from a buffer resource
+  (`ptr addrspace(8)`) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
+  `ptr addrspace(7)` directly, which produces a buffer fat pointer with an initial
+  offset of 0 and prevents the address space cast from being rewritten away.
 
 **Buffer Resource**
   The buffer resource pointer, in address space 8, is the newer form
@@ -1026,6 +1031,12 @@ supported for the ``amdgcn`` target.
   The bits in the buffer descriptor must meet the following requirements:
   the stride is the size of a structured element, the "add tid" flag must be 0,
   and the swizzle enable bits must be off.
+
+  These pointers can be created by `addrspacecast` from a buffer resource
+  (`ptr addrspace(8)`) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
+  `ptr addrspace(9)` directly, which produces a buffer strided pointer whose initial
+  index and offset values are both 0. This prevents the address space cast from
+  being rewritten away.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
@@ -18213,6 +18224,9 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
+     ``.amdhsa_inst_pref_size``                               0                   GFX11-GFX12  Controls INST_PREF_SIZE in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table` or
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`
      ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in

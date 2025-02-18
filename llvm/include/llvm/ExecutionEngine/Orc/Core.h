@@ -1556,6 +1556,30 @@ public:
     EPC->getDispatcher().dispatch(std::move(T));
   }
 
+  /// Returns the bootstrap map.
+  const StringMap<std::vector<char>> &getBootstrapMap() const {
+    return EPC->getBootstrapMap();
+  }
+
+  /// Look up and SPS-deserialize a bootstrap map value.
+  template <typename T, typename SPSTagT>
+  Error getBootstrapMapValue(StringRef Key, std::optional<T> &Val) const {
+    return EPC->getBootstrapMapValue<T, SPSTagT>(Key, Val);
+  }
+
+  /// Returns the bootstrap symbol map.
+  const StringMap<ExecutorAddr> &getBootstrapSymbolsMap() const {
+    return EPC->getBootstrapSymbolsMap();
+  }
+
+  /// For each (ExecutorAddr&, StringRef) pair, looks up the string in the
+  /// bootstrap symbols map and writes its address to the ExecutorAddr if
+  /// found. If any symbol is not found then the function returns an error.
+  Error getBootstrapSymbols(
+      ArrayRef<std::pair<ExecutorAddr &, StringRef>> Pairs) const {
+    return EPC->getBootstrapSymbols(Pairs);
+  }
+
   /// Run a wrapper function in the executor.
   ///
   /// The wrapper function should be callable as:

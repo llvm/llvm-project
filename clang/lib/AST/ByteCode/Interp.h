@@ -1484,7 +1484,10 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.peek<Pointer>().atField(I);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
   Field.activate();
   Field.initialize();
@@ -1565,10 +1568,20 @@ inline bool GetPtrActiveThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   return true;
 }
 
-inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
+inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
+                             bool NullOK) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckNull(S, OpPC, Ptr, CSK_Derived))
+  if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
     return false;
+
+  if (!Ptr.isBlockPointer()) {
+    // FIXME: We don't have the necessary information in integral pointers.
+    // The Descriptor only has a record, but that does of course not include
+    // the potential derived classes of said record.
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
     return false;
   if (!CheckDowncast(S, OpPC, Ptr, Off))
@@ -1597,10 +1610,11 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   return true;
 }
 
-inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
+inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
+                          bool NullOK) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+  if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
 
   if (!Ptr.isBlockPointer()) {
@@ -2893,9 +2907,7 @@ inline bool Alloc(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   Block *B = Allocator.allocate(Desc, S.Ctx.getEvalID(),
                                 DynamicAllocator::Form::NonArray);
   assert(B);
-
   S.Stk.push<Pointer>(B);
-
   return true;
 }
 
@@ -2914,14 +2926,17 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     S.Stk.push<Pointer>(0, nullptr);
     return true;
   }
+  assert(NumElements.isPositive());
 
   DynamicAllocator &Allocator = S.getAllocator();
   Block *B =
       Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
                          S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
   assert(B);
-  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
-
+  if (NumElements.isZero())
+    S.Stk.push<Pointer>(B);
+  else
+    S.Stk.push<Pointer>(Pointer(B).atIndex(0));
   return true;
 }
 
@@ -2941,14 +2956,17 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     S.Stk.push<Pointer>(0, ElementDesc);
     return true;
   }
+  assert(NumElements.isPositive());
 
   DynamicAllocator &Allocator = S.getAllocator();
   Block *B =
       Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
                          S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
   assert(B);
-
-  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
+  if (NumElements.isZero())
+    S.Stk.push<Pointer>(B);
+  else
+    S.Stk.push<Pointer>(Pointer(B).atIndex(0));
 
   return true;
 }

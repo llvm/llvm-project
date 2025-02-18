@@ -103,6 +103,15 @@ if(CLANG_BUILD_EXAMPLES AND CLANG_PLUGIN_SUPPORT)
     )
 endif ()
 
+if(LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+  list(APPEND CLANG_TEST_DEPS
+    spirv-dis
+    spirv-val
+    spirv-as
+    spirv-link
+    )
+endif()    
+
 set(CLANG_TEST_PARAMS
   USE_Z3_SOLVER=0
   )

@@ -1490,6 +1490,11 @@ public:
     Attrs = Attrs.addRetAttribute(getContext(), Attr);
   }
 
+  /// Adds attributes to the return value.
+  void addRetAttrs(const AttrBuilder &B) {
+    Attrs = Attrs.addRetAttributes(getContext(), B);
+  }
+
   /// Adds the attribute to the indicated argument
   void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
     assert(ArgNo < arg_size() && "Out of bounds");
@@ -1500,6 +1505,12 @@ public:
   void addParamAttr(unsigned ArgNo, Attribute Attr) {
     assert(ArgNo < arg_size() && "Out of bounds");
     Attrs = Attrs.addParamAttribute(getContext(), ArgNo, Attr);
+  }
+
+  /// Adds attributes to the indicated argument
+  void addParamAttrs(unsigned ArgNo, const AttrBuilder &B) {
+    assert(ArgNo < arg_size() && "Out of bounds");
+    Attrs = Attrs.addParamAttributes(getContext(), ArgNo, B);
   }
 
   /// removes the attribute from the list of attributes.
@@ -1680,6 +1691,11 @@ public:
   bool doesNotCapture(unsigned OpNo) const {
     return capturesNothing(getCaptureInfo(OpNo));
   }
+
+  /// Returns whether the call has an argument that has an attribute like
+  /// captures(ret: address, provenance), where the return capture components
+  /// are not a subset of the other capture components.
+  bool hasArgumentWithAdditionalReturnCaptureComponents() const;
 
   /// Determine whether this argument is passed by value.
   bool isByValArgument(unsigned ArgNo) const {

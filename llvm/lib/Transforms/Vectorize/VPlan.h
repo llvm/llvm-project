@@ -1958,13 +1958,12 @@ public:
 #endif
 };
 
-/// A recipe for handling phis that are widened in the vector loop.
-/// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
-/// managed in the recipe directly.
+/// A recipe for widened phis. Incoming values are operands of the recipe and
+/// their operand index corresponds to the incoming predecessor block. If the
+/// recipe is placed in an entry block to a (non-replicate) region, it must have
+/// exactly 2 incoming values, the first from the predecessor of the region and
+/// the second from the exiting block of the region.
 class VPWidenPHIRecipe : public VPSingleDefRecipe {
-  /// List of incoming blocks. Only used in the VPlan native path.
-  SmallVector<VPBasicBlock *, 2> IncomingBlocks;
-
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
@@ -1991,14 +1990,8 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi.
-  void addIncoming(VPValue *IncomingV, VPBasicBlock *IncomingBlock) {
-    addOperand(IncomingV);
-    IncomingBlocks.push_back(IncomingBlock);
-  }
-
   /// Returns the \p I th incoming VPBasicBlock.
-  VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
+  VPBasicBlock *getIncomingBlock(unsigned I);
 
   /// Returns the \p I th incoming VPValue.
   VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
@@ -3664,8 +3657,8 @@ public:
     VFs.insert(VF);
   }
 
-  bool hasVF(ElementCount VF) { return VFs.count(VF); }
-  bool hasScalableVF() {
+  bool hasVF(ElementCount VF) const { return VFs.count(VF); }
+  bool hasScalableVF() const {
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
   }
 
@@ -3675,7 +3668,12 @@ public:
     return {VFs.begin(), VFs.end()};
   }
 
-  bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
+  bool hasScalarVFOnly() const {
+    bool HasScalarVFOnly = VFs.size() == 1 && VFs[0].isScalar();
+    assert(HasScalarVFOnly == hasVF(ElementCount::getFixed(1)) &&
+           "Plan with scalar VF should only have a single VF");
+    return HasScalarVFOnly;
+  }
 
   bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
 
@@ -3699,18 +3697,16 @@ public:
   ///  yet) for \p V.
   VPValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPValue of a null Value");
-    if (!Value2VPValue.count(V)) {
+    auto [It, Inserted] = Value2VPValue.try_emplace(V);
+    if (Inserted) {
       VPValue *VPV = new VPValue(V);
       VPLiveInsToFree.push_back(VPV);
       assert(VPV->isLiveIn() && "VPV must be a live-in.");
-      assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
-      Value2VPValue[V] = VPV;
+      It->second = VPV;
     }
 
-    assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
-    assert(Value2VPValue[V]->isLiveIn() &&
-           "Only live-ins should be in mapping");
-    return Value2VPValue[V];
+    assert(It->second->isLiveIn() && "Only live-ins should be in mapping");
+    return It->second;
   }
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.

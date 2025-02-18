@@ -143,6 +143,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVTargetObjectFile.cpp",
     "RISCVTargetTransformInfo.cpp",
     "RISCVVLOptimizer.cpp",
+    "RISCVVMV0Elimination.cpp",
     "RISCVVectorMaskDAGMutation.cpp",
     "RISCVVectorPeephole.cpp",
     "RISCVZacasABIFix.cpp",

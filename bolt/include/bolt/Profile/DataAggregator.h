@@ -94,7 +94,7 @@ private:
 
   /// Used for parsing specific pre-aggregated input files.
   struct AggregatedLBREntry {
-    enum Type : char { BRANCH = 0, FT, FT_EXTERNAL_ORIGIN };
+    enum Type : char { BRANCH = 0, FT, FT_EXTERNAL_ORIGIN, TRACE };
     Location From;
     Location To;
     uint64_t Count;
@@ -197,6 +197,10 @@ private:
 
   BoltAddressTranslation *BAT{nullptr};
 
+  /// Whether pre-aggregated profile needs to convert branch profile into call
+  /// to continuation fallthrough profile.
+  bool NeedsConvertRetProfileToCallCont{false};
+
   /// Update function execution profile with a recorded trace.
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
@@ -268,8 +272,7 @@ private:
                      uint64_t Mispreds);
 
   /// Register a \p Branch.
-  bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds,
-                bool IsPreagg);
+  bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
 
   /// Register a trace between two LBR entries supplied in execution order.
   bool doTrace(const LBREntry &First, const LBREntry &Second,
@@ -298,7 +301,7 @@ private:
   ErrorOr<PerfMemSample> parseMemSample();
 
   /// Parse pre-aggregated LBR samples created by an external tool
-  ErrorOr<AggregatedLBREntry> parseAggregatedLBREntry();
+  std::error_code parseAggregatedLBREntry();
 
   /// Parse either buildid:offset or just offset, representing a location in the
   /// binary. Used exclusively for pre-aggregated LBR samples.
@@ -384,14 +387,15 @@ private:
   /// memory.
   ///
   /// File format syntax:
-  /// {B|F|f} [<start_id>:]<start_offset> [<end_id>:]<end_offset> <count>
-  ///       [<mispred_count>]
+  /// {B|F|f|T} [<start_id>:]<start_offset> [<end_id>:]<end_offset> [<ft_end>]
+  ///       <count> [<mispred_count>]
   ///
   /// B - indicates an aggregated branch
   /// F - an aggregated fall-through
   /// f - an aggregated fall-through with external origin - used to disambiguate
   ///       between a return hitting a basic block head and a regular internal
   ///       jump to the block
+  /// T - an aggregated trace: branch with a fall-through (from, to, ft_end)
   ///
   /// <start_id> - build id of the object containing the start address. We can
   /// skip it for the main binary and use "X" for an unknown object. This will
@@ -401,6 +405,8 @@ private:
   /// main executable unless it's PIE) to the start address.
   ///
   /// <end_id>, <end_offset> - same for the end address.
+  ///
+  /// <ft_end> - same for the fallthrough_end address.
   ///
   /// <count> - total aggregated count of the branch or a fall-through.
   ///

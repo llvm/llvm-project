@@ -442,7 +442,7 @@ private:
 
   // Map a trivially rematerializable def to a list of regions at MinOccupancy
   // that has the defined reg as a live-in.
-  DenseMap<MachineInstr *, SmallVector<unsigned, 4>> RematDefToLiveInRegions;
+  MapVector<MachineInstr *, SmallVector<unsigned, 4>> RematDefToLiveInRegions;
 
   // Collect all trivially rematerializable VGPR instructions with a single def
   // and single use outside the defining block into RematerializableInsts.

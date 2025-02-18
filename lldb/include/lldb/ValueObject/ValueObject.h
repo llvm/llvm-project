@@ -865,6 +865,19 @@ public:
 
   virtual void SetLanguageFlags(uint64_t flags) { m_language_flags = flags; }
 
+  /// Returns the local buffer that this ValueObject points to if it's
+  /// available.
+  /// \return
+  ///     The local buffer if this value object's value points to a
+  ///     host address, and if that buffer can be determined. Otherwise, returns
+  ///     an empty ArrayRef.
+  ///
+  /// TODO: Because a ValueObject's Value can point to any arbitrary memory
+  /// location, it is possible that we can't find what what buffer we're
+  /// pointing to, and thus also can't know its size. See the comment in
+  /// Value::m_value for a more thorough explanation of why that is.
+  llvm::ArrayRef<uint8_t> GetLocalBuffer() const;
+
 protected:
   typedef ClusterManager<ValueObject> ValueObjectManager;
 

@@ -3839,6 +3839,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                             AlignmentCI, OffsetValue);
     return RValue::get(PtrValue);
   }
+  case Builtin::BI__builtin_assume_dereferenceable: {
+    const Expr *Ptr = E->getArg(0);
+    const Expr *Size = E->getArg(1);
+    Value *PtrValue = EmitScalarExpr(Ptr);
+    Value *SizeValue = EmitScalarExpr(Size);
+    if (SizeValue->getType() != IntPtrTy)
+      SizeValue =
+          Builder.CreateIntCast(SizeValue, IntPtrTy, false, "casted.size");
+    Builder.CreateDereferenceableAssumption(PtrValue, SizeValue);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
     if (E->getArg(0)->HasSideEffects(getContext()))
@@ -20712,9 +20723,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_bitop3_b16:
     return emitBuiltinWithOneOverloadedType<4>(*this, E,
                                                Intrinsic::amdgcn_bitop3);
-  case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc:
-    return emitBuiltinWithOneOverloadedType<4>(
-        *this, E, Intrinsic::amdgcn_make_buffer_rsrc);
+  case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc: {
+    // TODO: LLVM has this overloaded to allow for fat pointers, but since
+    // those haven't been plumbed through to Clang yet, default to creating the
+    // resource type.
+    SmallVector<Value *, 4> Args;
+    for (unsigned I = 0; I < 4; ++I)
+      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    llvm::PointerType *RetTy = llvm::PointerType::get(
+        Builder.getContext(), llvm::AMDGPUAS::BUFFER_RESOURCE);
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
+                                   {RetTy, Args[0]->getType()});
+    return Builder.CreateCall(F, Args);
+  }
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b8:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b16:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b32:
@@ -21011,6 +21032,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
               CI = Intrinsic::experimental_constrained_nearbyint; break;
       case 1: ID = Intrinsic::round;
               CI = Intrinsic::experimental_constrained_round; break;
+      case 4: ID = Intrinsic::roundeven;
+              CI = Intrinsic::experimental_constrained_roundeven; break;
       case 5: ID = Intrinsic::trunc;
               CI = Intrinsic::experimental_constrained_trunc; break;
       case 6: ID = Intrinsic::ceil;

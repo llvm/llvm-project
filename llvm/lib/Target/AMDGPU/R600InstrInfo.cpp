@@ -222,19 +222,18 @@ bool R600InstrInfo::readsLDSSrcReg(const MachineInstr &MI) const {
 }
 
 int R600InstrInfo::getSelIdx(unsigned Opcode, unsigned SrcIdx) const {
-  static const unsigned SrcSelTable[][2] = {
-    {R600::OpName::src0, R600::OpName::src0_sel},
-    {R600::OpName::src1, R600::OpName::src1_sel},
-    {R600::OpName::src2, R600::OpName::src2_sel},
-    {R600::OpName::src0_X, R600::OpName::src0_sel_X},
-    {R600::OpName::src0_Y, R600::OpName::src0_sel_Y},
-    {R600::OpName::src0_Z, R600::OpName::src0_sel_Z},
-    {R600::OpName::src0_W, R600::OpName::src0_sel_W},
-    {R600::OpName::src1_X, R600::OpName::src1_sel_X},
-    {R600::OpName::src1_Y, R600::OpName::src1_sel_Y},
-    {R600::OpName::src1_Z, R600::OpName::src1_sel_Z},
-    {R600::OpName::src1_W, R600::OpName::src1_sel_W}
-  };
+  static const R600::OpName SrcSelTable[][2] = {
+      {R600::OpName::src0, R600::OpName::src0_sel},
+      {R600::OpName::src1, R600::OpName::src1_sel},
+      {R600::OpName::src2, R600::OpName::src2_sel},
+      {R600::OpName::src0_X, R600::OpName::src0_sel_X},
+      {R600::OpName::src0_Y, R600::OpName::src0_sel_Y},
+      {R600::OpName::src0_Z, R600::OpName::src0_sel_Z},
+      {R600::OpName::src0_W, R600::OpName::src0_sel_W},
+      {R600::OpName::src1_X, R600::OpName::src1_sel_X},
+      {R600::OpName::src1_Y, R600::OpName::src1_sel_Y},
+      {R600::OpName::src1_Z, R600::OpName::src1_sel_Z},
+      {R600::OpName::src1_W, R600::OpName::src1_sel_W}};
 
   for (const auto &Row : SrcSelTable) {
     if (getOperandIdx(Opcode, Row[0]) == (int)SrcIdx) {
@@ -249,15 +248,15 @@ R600InstrInfo::getSrcs(MachineInstr &MI) const {
   SmallVector<std::pair<MachineOperand *, int64_t>, 3> Result;
 
   if (MI.getOpcode() == R600::DOT_4) {
-    static const unsigned OpTable[8][2] = {
-      {R600::OpName::src0_X, R600::OpName::src0_sel_X},
-      {R600::OpName::src0_Y, R600::OpName::src0_sel_Y},
-      {R600::OpName::src0_Z, R600::OpName::src0_sel_Z},
-      {R600::OpName::src0_W, R600::OpName::src0_sel_W},
-      {R600::OpName::src1_X, R600::OpName::src1_sel_X},
-      {R600::OpName::src1_Y, R600::OpName::src1_sel_Y},
-      {R600::OpName::src1_Z, R600::OpName::src1_sel_Z},
-      {R600::OpName::src1_W, R600::OpName::src1_sel_W},
+    static const R600::OpName OpTable[8][2] = {
+        {R600::OpName::src0_X, R600::OpName::src0_sel_X},
+        {R600::OpName::src0_Y, R600::OpName::src0_sel_Y},
+        {R600::OpName::src0_Z, R600::OpName::src0_sel_Z},
+        {R600::OpName::src0_W, R600::OpName::src0_sel_W},
+        {R600::OpName::src1_X, R600::OpName::src1_sel_X},
+        {R600::OpName::src1_Y, R600::OpName::src1_sel_Y},
+        {R600::OpName::src1_Z, R600::OpName::src1_sel_Z},
+        {R600::OpName::src1_W, R600::OpName::src1_sel_W},
     };
 
     for (const auto &Op : OpTable) {
@@ -273,10 +272,10 @@ R600InstrInfo::getSrcs(MachineInstr &MI) const {
     return Result;
   }
 
-  static const unsigned OpTable[3][2] = {
-    {R600::OpName::src0, R600::OpName::src0_sel},
-    {R600::OpName::src1, R600::OpName::src1_sel},
-    {R600::OpName::src2, R600::OpName::src2_sel},
+  static const R600::OpName OpTable[3][2] = {
+      {R600::OpName::src0, R600::OpName::src0_sel},
+      {R600::OpName::src1, R600::OpName::src1_sel},
+      {R600::OpName::src2, R600::OpName::src2_sel},
   };
 
   for (const auto &Op : OpTable) {
@@ -1238,19 +1237,14 @@ MachineInstrBuilder R600InstrInfo::buildDefaultInstruction(MachineBasicBlock &MB
   return MIB;
 }
 
-#define OPERAND_CASE(Label) \
-  case Label: { \
-    static const unsigned Ops[] = \
-    { \
-      Label##_X, \
-      Label##_Y, \
-      Label##_Z, \
-      Label##_W \
-    }; \
-    return Ops[Slot]; \
+#define OPERAND_CASE(Label)                                                    \
+  case Label: {                                                                \
+    static const R600::OpName Ops[] = {Label##_X, Label##_Y, Label##_Z,        \
+                                       Label##_W};                             \
+    return Ops[Slot];                                                          \
   }
 
-static unsigned getSlotedOps(unsigned  Op, unsigned Slot) {
+static R600::OpName getSlotedOps(R600::OpName Op, unsigned Slot) {
   switch (Op) {
   OPERAND_CASE(R600::OpName::update_exec_mask)
   OPERAND_CASE(R600::OpName::update_pred)
@@ -1292,21 +1286,21 @@ MachineInstr *R600InstrInfo::buildSlotOfVectorInstruction(
       getOperandIdx(MI->getOpcode(), getSlotedOps(R600::OpName::src1, Slot)));
   MachineInstr *MIB = buildDefaultInstruction(
       MBB, I, Opcode, DstReg, Src0.getReg(), Src1.getReg());
-  static const unsigned  Operands[14] = {
-    R600::OpName::update_exec_mask,
-    R600::OpName::update_pred,
-    R600::OpName::write,
-    R600::OpName::omod,
-    R600::OpName::dst_rel,
-    R600::OpName::clamp,
-    R600::OpName::src0_neg,
-    R600::OpName::src0_rel,
-    R600::OpName::src0_abs,
-    R600::OpName::src0_sel,
-    R600::OpName::src1_neg,
-    R600::OpName::src1_rel,
-    R600::OpName::src1_abs,
-    R600::OpName::src1_sel,
+  static const R600::OpName Operands[14] = {
+      R600::OpName::update_exec_mask,
+      R600::OpName::update_pred,
+      R600::OpName::write,
+      R600::OpName::omod,
+      R600::OpName::dst_rel,
+      R600::OpName::clamp,
+      R600::OpName::src0_neg,
+      R600::OpName::src0_rel,
+      R600::OpName::src0_abs,
+      R600::OpName::src0_sel,
+      R600::OpName::src1_neg,
+      R600::OpName::src1_rel,
+      R600::OpName::src1_abs,
+      R600::OpName::src1_sel,
   };
 
   MachineOperand &MO = MI->getOperand(getOperandIdx(MI->getOpcode(),
@@ -1314,7 +1308,7 @@ MachineInstr *R600InstrInfo::buildSlotOfVectorInstruction(
   MIB->getOperand(getOperandIdx(Opcode, R600::OpName::pred_sel))
       .setReg(MO.getReg());
 
-  for (unsigned Operand : Operands) {
+  for (R600::OpName Operand : Operands) {
     MachineOperand &MO = MI->getOperand(
         getOperandIdx(MI->getOpcode(), getSlotedOps(Operand, Slot)));
     assert (MO.isImm());
@@ -1340,15 +1334,16 @@ MachineInstr *R600InstrInfo::buildMovInstr(MachineBasicBlock *MBB,
   return buildDefaultInstruction(*MBB, I, R600::MOV, DstReg, SrcReg);
 }
 
-int R600InstrInfo::getOperandIdx(const MachineInstr &MI, unsigned Op) const {
+int R600InstrInfo::getOperandIdx(const MachineInstr &MI,
+                                 R600::OpName Op) const {
   return getOperandIdx(MI.getOpcode(), Op);
 }
 
-int R600InstrInfo::getOperandIdx(unsigned Opcode, unsigned Op) const {
+int R600InstrInfo::getOperandIdx(unsigned Opcode, R600::OpName Op) const {
   return R600::getNamedOperandIdx(Opcode, Op);
 }
 
-void R600InstrInfo::setImmOperand(MachineInstr &MI, unsigned Op,
+void R600InstrInfo::setImmOperand(MachineInstr &MI, R600::OpName Op,
                                   int64_t Imm) const {
   int Idx = getOperandIdx(MI, Op);
   assert(Idx != -1 && "Operand not supported for this instruction.");
@@ -1425,37 +1420,37 @@ MachineOperand &R600InstrInfo::getFlagOp(MachineInstr &MI, unsigned SrcIdx,
   return FlagOp;
 }
 
-void R600InstrInfo::addFlag(MachineInstr &MI, unsigned Operand,
+void R600InstrInfo::addFlag(MachineInstr &MI, unsigned SrcIdx,
                             unsigned Flag) const {
   unsigned TargetFlags = get(MI.getOpcode()).TSFlags;
   if (Flag == 0) {
     return;
   }
   if (HAS_NATIVE_OPERANDS(TargetFlags)) {
-    MachineOperand &FlagOp = getFlagOp(MI, Operand, Flag);
+    MachineOperand &FlagOp = getFlagOp(MI, SrcIdx, Flag);
     if (Flag == MO_FLAG_NOT_LAST) {
-      clearFlag(MI, Operand, MO_FLAG_LAST);
+      clearFlag(MI, SrcIdx, MO_FLAG_LAST);
     } else if (Flag == MO_FLAG_MASK) {
-      clearFlag(MI, Operand, Flag);
+      clearFlag(MI, SrcIdx, Flag);
     } else {
       FlagOp.setImm(1);
     }
   } else {
-      MachineOperand &FlagOp = getFlagOp(MI, Operand);
-      FlagOp.setImm(FlagOp.getImm() | (Flag << (NUM_MO_FLAGS * Operand)));
+    MachineOperand &FlagOp = getFlagOp(MI, SrcIdx);
+    FlagOp.setImm(FlagOp.getImm() | (Flag << (NUM_MO_FLAGS * SrcIdx)));
   }
 }
 
-void R600InstrInfo::clearFlag(MachineInstr &MI, unsigned Operand,
+void R600InstrInfo::clearFlag(MachineInstr &MI, unsigned SrcIdx,
                               unsigned Flag) const {
   unsigned TargetFlags = get(MI.getOpcode()).TSFlags;
   if (HAS_NATIVE_OPERANDS(TargetFlags)) {
-    MachineOperand &FlagOp = getFlagOp(MI, Operand, Flag);
+    MachineOperand &FlagOp = getFlagOp(MI, SrcIdx, Flag);
     FlagOp.setImm(0);
   } else {
     MachineOperand &FlagOp = getFlagOp(MI);
     unsigned InstFlags = FlagOp.getImm();
-    InstFlags &= ~(Flag << (NUM_MO_FLAGS * Operand));
+    InstFlags &= ~(Flag << (NUM_MO_FLAGS * SrcIdx));
     FlagOp.setImm(InstFlags);
   }
 }
