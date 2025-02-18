@@ -547,7 +547,7 @@ struct CheckFallThroughDiagnostics {
   unsigned diag_FallThrough_HasNoReturn = 0;
   unsigned diag_FallThrough_ReturnsNonVoid = 0;
   unsigned diag_NeverFallThroughOrReturn = 0;
-  unsigned funMode; // TODO: use diag::FunModes
+  unsigned FunMode; // TODO: use diag::FunModes
   SourceLocation FuncLoc;
 
   static CheckFallThroughDiagnostics MakeForFunction(const Decl *Func) {
@@ -570,7 +570,7 @@ struct CheckFallThroughDiagnostics {
     if (!isVirtualMethod && !isTemplateInstantiation)
       D.diag_NeverFallThroughOrReturn = diag::warn_suggest_noreturn_function;
 
-    D.funMode = diag::FunModes::Function;
+    D.FunMode = diag::FunModes::Function;
     return D;
   }
 
@@ -578,7 +578,7 @@ struct CheckFallThroughDiagnostics {
     CheckFallThroughDiagnostics D;
     D.FuncLoc = Func->getLocation();
     D.diag_FallThrough_ReturnsNonVoid = diag::warn_falloff_nonvoid;
-    D.funMode = diag::FunModes::Coroutine;
+    D.FunMode = diag::FunModes::Coroutine;
     return D;
   }
 
@@ -586,7 +586,7 @@ struct CheckFallThroughDiagnostics {
     CheckFallThroughDiagnostics D;
     D.diag_FallThrough_HasNoReturn = diag::err_noreturn_has_return_expr;
     D.diag_FallThrough_ReturnsNonVoid = diag::err_falloff_nonvoid;
-    D.funMode = diag::FunModes::Block;
+    D.FunMode = diag::FunModes::Block;
     return D;
   }
 
@@ -594,13 +594,13 @@ struct CheckFallThroughDiagnostics {
     CheckFallThroughDiagnostics D;
     D.diag_FallThrough_HasNoReturn = diag::err_noreturn_has_return_expr;
     D.diag_FallThrough_ReturnsNonVoid = diag::warn_falloff_nonvoid;
-    D.funMode = diag::FunModes::Lambda;
+    D.FunMode = diag::FunModes::Lambda;
     return D;
   }
 
   bool checkDiagnostics(DiagnosticsEngine &D, bool ReturnsVoid,
                         bool HasNoReturn) const {
-    if (funMode == diag::FunModes::Function) {
+    if (FunMode == diag::FunModes::Function) {
       return (ReturnsVoid ||
               D.isIgnored(diag::warn_falloff_nonvoid, FuncLoc)) &&
              (!HasNoReturn ||
@@ -608,7 +608,7 @@ struct CheckFallThroughDiagnostics {
              (!ReturnsVoid ||
               D.isIgnored(diag::warn_suggest_noreturn_block, FuncLoc));
     }
-    if (funMode == diag::FunModes::Coroutine) {
+    if (FunMode == diag::FunModes::Coroutine) {
       return (ReturnsVoid ||
               D.isIgnored(diag::warn_falloff_nonvoid, FuncLoc)) &&
              (!HasNoReturn);
@@ -681,15 +681,15 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
 
   case MaybeFallThrough:
     if (HasNoReturn)
-      EmitDiag(RBrace, CD.diag_FallThrough_HasNoReturn, CD.funMode);
+      EmitDiag(RBrace, CD.diag_FallThrough_HasNoReturn, CD.FunMode);
     else if (!ReturnsVoid)
-      S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid) << CD.funMode << 1;
+      S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid) << CD.FunMode << 1;
     break;
   case AlwaysFallThrough:
     if (HasNoReturn)
-      EmitDiag(RBrace, CD.diag_FallThrough_HasNoReturn, CD.funMode);
+      EmitDiag(RBrace, CD.diag_FallThrough_HasNoReturn, CD.FunMode);
     else if (!ReturnsVoid)
-      S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid) << CD.funMode << 0;
+      S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid) << CD.FunMode << 0;
     break;
   case NeverFallThroughOrReturn:
     if (ReturnsVoid && !HasNoReturn && CD.diag_NeverFallThroughOrReturn) {
