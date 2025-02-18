@@ -1,0 +1,20 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Check if do concurrent works inside cuf kernel directive
+
+program main
+  integer :: i, n
+  integer, managed :: a(3)
+  a(:) = -1
+  n = 3
+  n = n - 1
+  !$cuf kernel do
+  do concurrent(i=1:n)
+    a(i) = 1
+  end do
+end
+
+! CHECK: func.func @_QQmain() attributes {fir.bindc_name = "main"} {
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %{{.*}}#0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: cuf.kernel<<<*, *>>>
+! CHECK: %{{.*}} = fir.load %[[DECL]]#0 : !fir.ref<i32>
