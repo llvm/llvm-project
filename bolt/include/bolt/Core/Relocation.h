@@ -117,6 +117,9 @@ struct Relocation {
   /// Return code for a RELATIVE relocation
   static uint64_t getRelative();
 
+  /// Return code for a IRELATIVE relocation
+  static uint64_t getIRelative();
+
   /// Return true if this relocation is PC-relative. Return false otherwise.
   bool isPCRelative() const { return isPCRelative(Type); }
 
