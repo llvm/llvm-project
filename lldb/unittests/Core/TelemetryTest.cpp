@@ -92,7 +92,7 @@ TEST(TelemetryTest, PluginTest) {
             llvm::dyn_cast<lldb_private::FakeTelemetryInfo>(expected_entries[0])
                 ->msg);
 
-  ASSERT_EQ("FakeTelemetryPlugin", ins->GetPluginName());
+  ASSERT_EQ("FakeTelemetryPlugin", ins->GetInstanceName());
 }
 
 #endif // LLVM_BUILD_TELEMETRY
