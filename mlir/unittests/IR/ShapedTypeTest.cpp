@@ -282,6 +282,20 @@ TEST(ShapedTypeTest, RankedTensorTypeView) {
   ASSERT_TRUE(mlir::isa<RankedTensorType>(viewCreated));
   view = mlir::cast<TensorWithString>(viewCreated);
   EXPECT_EQ(view.getName(), "bob");
+
+  // Verify encoding clone methods.
+  EXPECT_EQ(unitEncodingRankedTensorType,
+            cast<RankedTensorType>(noEncodingRankedTensorType)
+                .cloneWithEncoding(unitAttr));
+  EXPECT_EQ(stringEncodingRankedTensorType,
+            cast<RankedTensorType>(noEncodingRankedTensorType)
+                .cloneWithEncoding(stringAttr));
+  EXPECT_EQ(
+      noEncodingRankedTensorType,
+      cast<RankedTensorType>(unitEncodingRankedTensorType).dropEncoding());
+  EXPECT_EQ(
+      noEncodingRankedTensorType,
+      cast<RankedTensorType>(stringEncodingRankedTensorType).dropEncoding());
 }
 
 } // namespace
