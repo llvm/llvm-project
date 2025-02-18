@@ -500,7 +500,7 @@ class ObjCARCOpt {
   /// is in fact used in the current function.
   unsigned UsedInThisFunction;
 
-  DenseMap<BasicBlock *, ColorVector> BlockEHColors;
+  BlockColorMapT BlockEHColors;
 
   bool OptimizeRetainRVCall(Function &F, Instruction *RetainRV);
   void OptimizeAutoreleaseRVCall(Function &F, Instruction *AutoreleaseRV,
