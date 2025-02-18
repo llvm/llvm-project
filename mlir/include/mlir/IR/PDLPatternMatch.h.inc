@@ -14,6 +14,7 @@
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 namespace mlir {
 //===----------------------------------------------------------------------===//
