@@ -1622,7 +1622,21 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
   MachineInstr *FirstMI = &*MBB->begin();
   if (InputReg.isVirtual()) {
     MachineInstr *DefInstr = MRI->getVRegDef(InputReg);
-    assert(DefInstr && DefInstr->isCopy());
+    // This condition catches some cases where a
+    // llvm.amdgcn.init.exec.from.input intrinsic's first argument comes from
+    // somewhere other than a (SGPR) function argument, which is forbidden.
+    if (!DefInstr || !DefInstr->isCopy() ||
+        (DefInstr->getNumOperands() == 2 && DefInstr->getOperand(1).isReg() &&
+         TRI->isVectorRegister(*MRI, DefInstr->getOperand(1).getReg()))) {
+      MachineFunction *MF = MBB->getParent();
+      DebugLoc DL = DefInstr->getDebugLoc();
+      DiagnosticInfoUnsupported IllegalArg(
+          MF->getFunction(), "EXEC must be initialized using function argument",
+          DL, DS_Error);
+      LLVMContext &C = MF->getFunction().getContext();
+      C.diagnose(IllegalArg);
+      return;
+    }
     if (DefInstr->getParent() == MBB) {
       if (DefInstr != FirstMI) {
         // If the `InputReg` is defined in current block, we also need to
