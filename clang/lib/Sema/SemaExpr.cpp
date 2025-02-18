@@ -23554,7 +23554,7 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
     auto *FPPE = cast<FunctionParmPackExpr>(E);
     // If any of the declarations in the pack is odr-used, then the expression
     // as a whole constitutes an odr-use.
-    for (VarDecl *D : *FPPE)
+    for (ValueDecl *D : *FPPE)
       if (IsPotentialResultOdrUsed(D))
         return ExprEmpty();
 
@@ -23829,7 +23829,7 @@ void Sema::CleanupVarDeclMarking() {
       MarkVarDeclODRUsed(cast<VarDecl>(ME->getMemberDecl()), ME->getMemberLoc(),
                          *this);
     } else if (auto *FP = dyn_cast<FunctionParmPackExpr>(E)) {
-      for (VarDecl *VD : *FP)
+      for (ValueDecl *VD : *FP)
         MarkVarDeclODRUsed(VD, FP->getParameterPackLocation(), *this);
     } else {
       llvm_unreachable("Unexpected expression");
@@ -24205,7 +24205,7 @@ void Sema::MarkMemberReferenced(MemberExpr *E) {
 }
 
 void Sema::MarkFunctionParmPackReferenced(FunctionParmPackExpr *E) {
-  for (VarDecl *VD : *E)
+  for (ValueDecl *VD : *E)
     MarkExprReferenced(*this, E->getParameterPackLocation(), VD, E, true,
                        RefsMinusAssignments);
 }
