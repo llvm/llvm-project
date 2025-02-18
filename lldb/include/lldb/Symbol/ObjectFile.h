@@ -82,13 +82,13 @@ public:
     eBinaryTypeInvalid = 0,
     eBinaryTypeUnknown,
     /// kernel binary
-    eBinaryTypeKernel, 
+    eBinaryTypeKernel,
     /// user process binary, dyld addr
-    eBinaryTypeUser,        
+    eBinaryTypeUser,
     /// user process binary, dyld_all_image_infos addr
-    eBinaryTypeUserAllImageInfos, 
+    eBinaryTypeUserAllImageInfos,
     /// standalone binary / firmware
-    eBinaryTypeStandalone         
+    eBinaryTypeStandalone
   };
 
   struct LoadableData {
