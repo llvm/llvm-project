@@ -556,12 +556,13 @@ RISCVMCCodeEmitter::getImmOpValueZibimm(const MCInst &MI, unsigned OpNo,
   const MCOperand &MO = MI.getOperand(OpNo);
 
   if (MO.isImm()) {
-    uint64_t Res = MO.getImm();
-    if (Res >= 1 && Res <= 31)
-      return Res;
-    if (Res == (uint64_t)-1)
+    int64_t Res = MO.getImm();
+    if (Res == -1)
       return 0;
+
+    return Res;
   }
+
   return getImmOpValue(MI, OpNo, Fixups, STI);
 }
 
