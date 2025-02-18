@@ -116,6 +116,8 @@ Changes to the LLVM IR
 Changes to LLVM infrastructure
 ------------------------------
 
+ * Two methods that use Instruction pointers as code positions (moveBefore, getFirstNonPHI) have been deprecated in favour of overloads and variants that use `BasicBlock::iterator`s instead. The pointer-flavoured methods will be removed in a future release. This work is part of the [RemoveDIs](https://llvm.org/docs/RemoveDIsDebugInfo.html) project, the documentation for which contains instructions for updating call-sites using the deprecated methods.
+
 Changes to building LLVM
 ------------------------
 
