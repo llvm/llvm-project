@@ -794,3 +794,18 @@ define i32 @select_bittest_to_shl_negative_test(i32 %x) {
   %res = add nuw nsw i32 %y, 2
   ret i32 %res
 }
+
+define i8 @select_bittest_to_xor(i8 %x) {
+; CHECK-LABEL: @select_bittest_to_xor(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[MASKSEL:%.*]] = xor i8 [[X]], -128
+; CHECK-NEXT:    ret i8 [[MASKSEL]]
+;
+  %cmp = icmp sgt i8 %x, -1
+  call void @use1(i1 %cmp)
+  %and = and i8 %x, 127
+  %or = or i8 %x, -128
+  %masksel = select i1 %cmp, i8 %or, i8 %and
+  ret i8 %masksel
+}
