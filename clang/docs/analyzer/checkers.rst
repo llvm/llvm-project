@@ -3669,7 +3669,7 @@ Here are some examples of situations that we warn about as they *might* be poten
     }
 
 alpha.webkit.UnretainedLocalVarsChecker
-""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""
 The goal of this rule is to make sure that any NS or CF local variable is backed by a RetainPtr with lifetime that is strictly larger than the scope of the unretained local variable. To be on the safe side we require the scope of an unretained variable to be embedded in the scope of Retainptr object that backs it.
 
 The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
