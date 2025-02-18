@@ -308,6 +308,10 @@ public:
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
 
+  llvm::StringRef GetDisabledBreakpointAnsiPrefix() const;
+
+  llvm::StringRef GetDisabledBreakpointAnsiSuffix() const;
+
   bool GetUseAutosuggestion() const;
 
   llvm::StringRef GetAutosuggestionAnsiPrefix() const;

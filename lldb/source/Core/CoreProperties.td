@@ -172,6 +172,16 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying progress in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the progress message.">;
+
+  def ShowDisabledBreakpointAnsiPrefix: Property<"disable-breakpoint-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When a disabled breakpoint is viewed in a color-enabled terminal, use the ANSI terminal code specified immediately before any disabled breakpoints.">;
+  def ShowDisabledBreakpointAnsiSuffix: Property<"disable-breakpoint-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When a disabled breakpoint is viewed in a color-enabled terminal, use the ANSI terminal code specified immediately after any disabled breakpoints.">;
+
   def UseSourceCache: Property<"use-source-cache", "Boolean">,
     Global,
     DefaultTrue,
