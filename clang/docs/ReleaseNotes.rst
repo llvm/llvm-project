@@ -164,6 +164,9 @@ Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  - Fixed crash when a parameter to the ``clang::annotate`` attribute evaluates to ``void``. See #GH119125
 
+- Clang now correctly matches plugin attributes with Microsoft ``[attribute]`` syntax.
+  (#GH86422)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 

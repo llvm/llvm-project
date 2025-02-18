@@ -5243,11 +5243,12 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
         IdentifierInfo *II = Tok.getIdentifierInfo();
         SourceLocation NameLoc = Tok.getLocation();
         ConsumeToken();
-        ParsedAttr::Kind AttrKind =
-            ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_Microsoft);
+
         // For HLSL we want to handle all attributes, but for MSVC compat, we
         // silently ignore unknown Microsoft attributes.
-        if (getLangOpts().HLSL || AttrKind != ParsedAttr::UnknownAttribute) {
+        int Attr = hasAttribute(AttributeCommonInfo::Syntax::AS_Microsoft,
+                                nullptr, II, getTargetInfo(), getLangOpts());
+        if (getLangOpts().HLSL || Attr != 0) {
           bool AttrParsed = false;
           if (Tok.is(tok::l_paren)) {
             CachedTokens OpenMPTokens;
