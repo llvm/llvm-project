@@ -48,7 +48,7 @@ constexpr void compareViews(View v, std::initializer_list<int> list) {
 }
 
 constexpr bool test() {
-  int arr[] = {0, 1, 2, 3};
+  int arr[]  = {0, 1, 2, 3};
   int arr2[] = {4, 5, 6, 7};
 
   {
