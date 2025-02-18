@@ -3910,7 +3910,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     FnRetType = FD->getReturnType();
     if (FD->hasAttrs())
       Attrs = &FD->getAttrs();
-    if (FD->isNoReturn())
+    if (FD->isNoReturn() && !getCurFunction()->isCoroutine())
       Diag(ReturnLoc, diag::warn_noreturn_function_has_return_expr) << FD;
     if (FD->isMain() && RetValExp)
       if (isa<CXXBoolLiteralExpr>(RetValExp))
