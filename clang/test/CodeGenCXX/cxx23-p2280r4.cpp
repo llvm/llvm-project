@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++23 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 %s -emit-llvm -o - | FileCheck %s
 
 extern int& s;
 
