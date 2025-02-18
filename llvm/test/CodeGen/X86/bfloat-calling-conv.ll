@@ -6,7 +6,7 @@
 ; RUN: llc -fast-isel=false -mtriple=x86_64-linux-unknown -mattr=+avxneconvert < %s | FileCheck -check-prefixes=AVXNECONVERT %s
 ; RUN: llc -fast-isel -mtriple=x86_64-linux-unknown -mattr=+avxneconvert < %s | FileCheck -check-prefixes=FAST_ISEL_AVXNECONVERT %s
 
-define bfloat @return_arg_bf16(bfloat %x, bfloat %y) #0 {
+define bfloat @return_arg_bf16(bfloat %x) #0 {
 ; SSE2-LABEL: return_arg_bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    retq
