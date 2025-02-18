@@ -2248,7 +2248,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSpArithx86_64Augmented) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   unwind_plan.SetSourceName("unit testing hand-created unwind plan");
-  unwind_plan.SetPlanValidAddressRange(sample_range);
+  unwind_plan.SetPlanValidAddressRanges({sample_range});
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
   row_sp = std::make_shared<UnwindPlan::Row>();
@@ -2335,7 +2335,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplex86_64Augmented) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   unwind_plan.SetSourceName("unit testing hand-created unwind plan");
-  unwind_plan.SetPlanValidAddressRange(sample_range);
+  unwind_plan.SetPlanValidAddressRanges({sample_range});
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
   row_sp = std::make_shared<UnwindPlan::Row>();
@@ -2413,7 +2413,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplei386ugmented) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   unwind_plan.SetSourceName("unit testing hand-created unwind plan");
-  unwind_plan.SetPlanValidAddressRange(sample_range);
+  unwind_plan.SetPlanValidAddressRanges({sample_range});
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
   row_sp = std::make_shared<UnwindPlan::Row>();
