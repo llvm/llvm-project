@@ -574,6 +574,27 @@ static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
   return ret;
 }
 
+static ReportPolicy getZGcsReport(Ctx &ctx, opt::InputArgList &args) {
+  ReportPolicy ret = ReportPolicy::None;
+
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "gcs-report") {
+      arg->claim();
+      if (kv.second == "none")
+        ret = ReportPolicy::None;
+      else if (kv.second == "warning")
+        ret = ReportPolicy::Warning;
+      else if (kv.second == "error")
+        ret = ReportPolicy::Error;
+      else
+        ErrAlways(ctx) << "unknown -z gcs-report= value: " << kv.second;
+    }
+  }
+
+  return ret;
+}
+
 // Report a warning for an unknown -z option.
 static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   // This function is called before getTarget(), when certain options are not
@@ -1548,6 +1569,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
   ctx.arg.zGcs = getZGcs(ctx, args);
+  ctx.arg.zGcsReport = getZGcsReport(ctx, args);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
   ctx.arg.zHazardplt = hasZOption(args, "hazardplt");
@@ -1620,12 +1642,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  auto reports = {
-      std::make_pair("bti-report", &ctx.arg.zBtiReport),
-      std::make_pair("cet-report", &ctx.arg.zCetReport),
-      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
-      std::make_pair("gcs-report", &ctx.arg.zGcsReport),
-      std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
+                  std::make_pair("cet-report", &ctx.arg.zCetReport),
+                  std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
+                  std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');

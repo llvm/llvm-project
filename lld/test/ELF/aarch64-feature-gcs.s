@@ -54,6 +54,11 @@
 
 # INVALID: error: unknown -z gcs= value: nonsense
 
+## An invalid gcs option should give an error
+# RUN: not ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs-report=nonsense 2>&1 | FileCheck --check-prefix=INVALID-GCS-REPORT %s
+
+# INVALID-GCS-REPORT: error: unknown -z gcs-report= value: nonsense
+
 #--- func1-gcs.s
 .section ".note.gnu.property", "a"
 .long 4
