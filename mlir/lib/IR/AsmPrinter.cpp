@@ -125,6 +125,7 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
+#include "mlir/IR/OpAsmAttrInterface.cpp.inc"
 #include "mlir/IR/OpAsmOpInterface.cpp.inc"
 #include "mlir/IR/OpAsmTypeInterface.cpp.inc"
 
@@ -1159,15 +1160,31 @@ template <typename T>
 void AliasInitializer::generateAlias(T symbol, InProgressAliasInfo &alias,
                                      bool canBeDeferred) {
   SmallString<32> nameBuffer;
-  for (const auto &interface : interfaces) {
-    OpAsmDialectInterface::AliasResult result =
-        interface.getAlias(symbol, aliasOS);
-    if (result == OpAsmDialectInterface::AliasResult::NoAlias)
-      continue;
-    nameBuffer = std::move(aliasBuffer);
-    assert(!nameBuffer.empty() && "expected valid alias name");
-    if (result == OpAsmDialectInterface::AliasResult::FinalAlias)
-      break;
+
+  OpAsmDialectInterface::AliasResult symbolInterfaceResult =
+      OpAsmDialectInterface::AliasResult::NoAlias;
+  if constexpr (std::is_base_of_v<Attribute, T>) {
+    if (auto symbolInterface = dyn_cast<OpAsmAttrInterface>(symbol)) {
+      symbolInterfaceResult = symbolInterface.getAlias(aliasOS);
+      if (symbolInterfaceResult !=
+          OpAsmDialectInterface::AliasResult::NoAlias) {
+        nameBuffer = std::move(aliasBuffer);
+        assert(!nameBuffer.empty() && "expected valid alias name");
+      }
+    }
+  }
+
+  if (symbolInterfaceResult != OpAsmDialectInterface::AliasResult::FinalAlias) {
+    for (const auto &interface : interfaces) {
+      OpAsmDialectInterface::AliasResult result =
+          interface.getAlias(symbol, aliasOS);
+      if (result == OpAsmDialectInterface::AliasResult::NoAlias)
+        continue;
+      nameBuffer = std::move(aliasBuffer);
+      assert(!nameBuffer.empty() && "expected valid alias name");
+      if (result == OpAsmDialectInterface::AliasResult::FinalAlias)
+        break;
+    }
   }
 
   if (nameBuffer.empty())
