@@ -789,12 +789,22 @@ public:
     return SplitInst;
   }
 
-  /// Split basic block at the instruction pointed to by II.
+  /// Split basic block at the instruction pointed to by II that is
+  /// not after any branch instructions in the basic block.
   /// All iterators pointing after II get invalidated.
   ///
   /// Return the new basic block that starts with the instruction
-  /// at the split point.
+  /// at the split point, which has been inserted at the end of the
+  /// current function.
   BinaryBasicBlock *splitAt(iterator II);
+
+  /// Split basic block in place at the instruction pointed to by II.
+  /// All iterators pointing after II get invalidated.
+  ///
+  /// Return the new basic block that starts with the instruction
+  /// at the split point, which has been inserted right after the
+  /// current basic block in the current function.
+  BinaryBasicBlock *splitInPlaceAt(iterator II);
 
   /// Set start offset of this basic block in the input binary.
   void setOffset(uint32_t Offset) { InputRange.first = Offset; };

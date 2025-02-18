@@ -27,6 +27,7 @@
 #include "bolt/Passes/MCF.h"
 #include "bolt/Passes/PLTCall.h"
 #include "bolt/Passes/PatchEntries.h"
+#include "bolt/Passes/RedirectNeverTakenJumps.h"
 #include "bolt/Passes/RegReAssign.h"
 #include "bolt/Passes/ReorderData.h"
 #include "bolt/Passes/ReorderFunctions.h"
@@ -150,6 +151,11 @@ static cl::opt<bool>
     PrintPeepholes("print-peepholes",
                    cl::desc("print functions after peephole optimization"),
                    cl::Hidden, cl::cat(BoltOptCategory));
+
+static cl::opt<bool> PrintRedirectNeverTaken(
+    "print-redirect-never-taken",
+    cl::desc("print functions after redirecting never taken jumps"), cl::Hidden,
+    cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     PrintPLT("print-plt", cl::desc("print functions after PLT optimization"),
@@ -466,6 +472,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // to make more sophisticated splitting decisions, like hot-warm-cold
   // splitting.
   Manager.registerPass(std::make_unique<SplitFunctions>(PrintSplit));
+
+  Manager.registerPass(
+      std::make_unique<RedirectNeverTakenJumps>(PrintRedirectNeverTaken));
 
   // Print final dyno stats right while CFG and instruction analysis are intact.
   Manager.registerPass(std::make_unique<DynoStatsPrintPass>(
