@@ -1344,7 +1344,6 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
           getKind() == StringLiteralKind::Unevaluated) &&
          "Only narrow string literals are currently supported");
 
-
   // Loop over all of the tokens in this string until we find the one that
   // contains the byte we're looking for.
   unsigned TokNo = 0;
