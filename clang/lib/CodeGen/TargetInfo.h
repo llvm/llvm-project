@@ -454,6 +454,23 @@ public:
   initBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                    llvm::AttrBuilder &FuncAttrs);
 
+  /// Returns true if an intrinsic should be emitted for a specific builtin. By
+  /// default, this disables emitting intrinsics for (non-prefixed) sincos
+  /// builtins, as on targets that do not set llvm::TargetSubtargetInfo::useAA()
+  /// the intrinsics can worsen codegen.
+  /// TODO: Remove once the intrinsic lowering works well for all targets.
+  virtual bool shouldUseIntrinsicsForBuiltin(unsigned BuiltinID) const {
+    switch (BuiltinID) {
+    case Builtin::BIsincos:
+    case Builtin::BIsincosf:
+    case Builtin::BIsincosl:
+      return false;
+    default:
+      break;
+    }
+    return true;
+  }
+
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);
 

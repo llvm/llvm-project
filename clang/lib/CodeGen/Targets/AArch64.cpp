@@ -181,6 +181,10 @@ public:
   bool wouldInliningViolateFunctionCallABI(
       const FunctionDecl *Caller, const FunctionDecl *Callee) const override;
 
+  bool shouldUseIntrinsicsForBuiltin(unsigned BuiltinID) const override {
+    return true;
+  }
+
 private:
   // Diagnose calls between functions with incompatible Streaming SVE
   // attributes.
