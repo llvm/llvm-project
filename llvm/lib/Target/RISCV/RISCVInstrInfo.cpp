@@ -193,7 +193,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
                                    const MachineBasicBlock &MBB,
                                    MachineBasicBlock::const_iterator MBBI,
                                    MachineBasicBlock::const_iterator &DefMBBI,
-                                   RISCVII::VLMUL LMul) {
+                                   RISCVVType::VLMUL LMul) {
   if (PreferWholeRegisterMove)
     return false;
 
@@ -223,7 +223,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
         if (!FirstVSetVLI) {
           FirstVSetVLI = true;
           unsigned FirstVType = MBBI->getOperand(2).getImm();
-          RISCVII::VLMUL FirstLMul = RISCVVType::getVLMUL(FirstVType);
+          RISCVVType::VLMUL FirstLMul = RISCVVType::getVLMUL(FirstVType);
           FirstSEW = RISCVVType::getSEW(FirstVType);
           // The first encountered vsetvli must have the same lmul as the
           // register class of COPY.
@@ -326,7 +326,7 @@ void RISCVInstrInfo::copyPhysRegVector(
     const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
     const TargetRegisterClass *RegClass) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
-  RISCVII::VLMUL LMul = RISCVRI::getLMul(RegClass->TSFlags);
+  RISCVVType::VLMUL LMul = RISCVRI::getLMul(RegClass->TSFlags);
   unsigned NF = RISCVRI::getNF(RegClass->TSFlags);
 
   uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
@@ -345,7 +345,7 @@ void RISCVInstrInfo::copyPhysRegVector(
 
   unsigned I = 0;
   auto GetCopyInfo = [&](uint16_t SrcEncoding, uint16_t DstEncoding)
-      -> std::tuple<RISCVII::VLMUL, const TargetRegisterClass &, unsigned,
+      -> std::tuple<RISCVVType::VLMUL, const TargetRegisterClass &, unsigned,
                     unsigned, unsigned> {
     if (ReversedCopy) {
       // For reversed copying, if there are enough aligned registers(8/4/2), we
@@ -357,40 +357,40 @@ void RISCVInstrInfo::copyPhysRegVector(
       uint16_t Diff = DstEncoding - SrcEncoding;
       if (I + 8 <= NumRegs && Diff >= 8 && SrcEncoding % 8 == 7 &&
           DstEncoding % 8 == 7)
-        return {RISCVII::LMUL_8, RISCV::VRM8RegClass, RISCV::VMV8R_V,
+        return {RISCVVType::LMUL_8, RISCV::VRM8RegClass, RISCV::VMV8R_V,
                 RISCV::PseudoVMV_V_V_M8, RISCV::PseudoVMV_V_I_M8};
       if (I + 4 <= NumRegs && Diff >= 4 && SrcEncoding % 4 == 3 &&
           DstEncoding % 4 == 3)
-        return {RISCVII::LMUL_4, RISCV::VRM4RegClass, RISCV::VMV4R_V,
+        return {RISCVVType::LMUL_4, RISCV::VRM4RegClass, RISCV::VMV4R_V,
                 RISCV::PseudoVMV_V_V_M4, RISCV::PseudoVMV_V_I_M4};
       if (I + 2 <= NumRegs && Diff >= 2 && SrcEncoding % 2 == 1 &&
           DstEncoding % 2 == 1)
-        return {RISCVII::LMUL_2, RISCV::VRM2RegClass, RISCV::VMV2R_V,
+        return {RISCVVType::LMUL_2, RISCV::VRM2RegClass, RISCV::VMV2R_V,
                 RISCV::PseudoVMV_V_V_M2, RISCV::PseudoVMV_V_I_M2};
       // Or we should do LMUL1 copying.
-      return {RISCVII::LMUL_1, RISCV::VRRegClass, RISCV::VMV1R_V,
+      return {RISCVVType::LMUL_1, RISCV::VRRegClass, RISCV::VMV1R_V,
               RISCV::PseudoVMV_V_V_M1, RISCV::PseudoVMV_V_I_M1};
     }
 
     // For forward copying, if source register encoding and destination register
     // encoding are aligned to 8/4/2, we can do a LMUL8/4/2 copying.
     if (I + 8 <= NumRegs && SrcEncoding % 8 == 0 && DstEncoding % 8 == 0)
-      return {RISCVII::LMUL_8, RISCV::VRM8RegClass, RISCV::VMV8R_V,
+      return {RISCVVType::LMUL_8, RISCV::VRM8RegClass, RISCV::VMV8R_V,
               RISCV::PseudoVMV_V_V_M8, RISCV::PseudoVMV_V_I_M8};
     if (I + 4 <= NumRegs && SrcEncoding % 4 == 0 && DstEncoding % 4 == 0)
-      return {RISCVII::LMUL_4, RISCV::VRM4RegClass, RISCV::VMV4R_V,
+      return {RISCVVType::LMUL_4, RISCV::VRM4RegClass, RISCV::VMV4R_V,
               RISCV::PseudoVMV_V_V_M4, RISCV::PseudoVMV_V_I_M4};
     if (I + 2 <= NumRegs && SrcEncoding % 2 == 0 && DstEncoding % 2 == 0)
-      return {RISCVII::LMUL_2, RISCV::VRM2RegClass, RISCV::VMV2R_V,
+      return {RISCVVType::LMUL_2, RISCV::VRM2RegClass, RISCV::VMV2R_V,
               RISCV::PseudoVMV_V_V_M2, RISCV::PseudoVMV_V_I_M2};
     // Or we should do LMUL1 copying.
-    return {RISCVII::LMUL_1, RISCV::VRRegClass, RISCV::VMV1R_V,
+    return {RISCVVType::LMUL_1, RISCV::VRRegClass, RISCV::VMV1R_V,
             RISCV::PseudoVMV_V_V_M1, RISCV::PseudoVMV_V_I_M1};
   };
   auto FindRegWithEncoding = [TRI](const TargetRegisterClass &RegClass,
                                    uint16_t Encoding) {
     MCRegister Reg = RISCV::V0 + Encoding;
-    if (RISCVRI::getLMul(RegClass.TSFlags) == RISCVII::LMUL_1)
+    if (RISCVRI::getLMul(RegClass.TSFlags) == RISCVVType::LMUL_1)
       return Reg;
     return TRI->getMatchingSuperReg(Reg, RISCV::sub_vrm1_0, &RegClass);
   };
@@ -2580,7 +2580,8 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
           break;
         case RISCVOp::OPERAND_VEC_POLICY:
-          Ok = (Imm & (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) == Imm;
+          Ok = (Imm &
+                (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC)) == Imm;
           break;
         case RISCVOp::OPERAND_SEW:
           Ok = (isUInt<5>(Imm) && RISCVVType::isValidSEW(1 << Imm));
@@ -2648,7 +2649,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
       return false;
     }
     uint64_t Policy = MI.getOperand(OpIdx).getImm();
-    if (Policy > (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) {
+    if (Policy > (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC)) {
       ErrInfo = "Invalid Policy Value";
       return false;
     }
@@ -3234,10 +3235,10 @@ std::string RISCVInstrInfo::createMIROperandComment(
   }
   case RISCVOp::OPERAND_VEC_POLICY:
     unsigned Policy = Op.getImm();
-    assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
+    assert(Policy <= (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC) &&
            "Invalid Policy Value");
-    OS << (Policy & RISCVII::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
-       << (Policy & RISCVII::MASK_AGNOSTIC ? "ma" : "mu");
+    OS << (Policy & RISCVVType::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
+       << (Policy & RISCVVType::MASK_AGNOSTIC ? "ma" : "mu");
     break;
   }
 
