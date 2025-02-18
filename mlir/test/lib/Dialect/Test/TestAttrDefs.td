@@ -395,4 +395,17 @@ def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
   let assemblyFormat = "`<` $file `*` $line `>`";
 }
 
+// Test attribute containing a slash token
+def SlashAttr: Test_Attr<"Slash">{
+  let mnemonic = "slash_attr";
+
+  let parameters = (
+    ins
+    "int":$lhs,
+    "int":$rhs
+  );
+
+  let hasCustomAssemblyFormat = 1;
+}
+
 #endif // TEST_ATTRDEFS
