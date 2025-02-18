@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace mlir::emitc;
@@ -165,6 +166,63 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
            << ")";
 
   return success();
+}
+
+/// Parse a format string and return a list of its parts.
+/// A part is either a StringRef that has to be printed as-is, or
+/// a Placeholder which requires printing the next operand of the VerbatimOp.
+/// In the format string, all `{}` are replaced by Placeholders, except if the
+/// `{` is escaped by `{{` - then it doesn't start a placeholder.
+template <class ArgType>
+FailureOr<SmallVector<ReplacementItem>>
+parseFormatString(StringRef toParse, ArgType fmtArgs,
+                  std::optional<llvm::function_ref<mlir::InFlightDiagnostic()>>
+                      emitError = {}) {
+  SmallVector<ReplacementItem> items;
+
+  // If there are not operands, the format string is not interpreted.
+  if (fmtArgs.empty()) {
+    items.push_back(toParse);
+    return items;
+  }
+
+  while (!toParse.empty()) {
+    size_t idx = toParse.find('{');
+    if (idx == StringRef::npos) {
+      // No '{'
+      items.push_back(toParse);
+      break;
+    }
+    if (idx > 0) {
+      // Take all chars excluding the '{'.
+      items.push_back(toParse.take_front(idx));
+      toParse = toParse.drop_front(idx);
+      continue;
+    }
+    if (toParse.size() < 2) {
+      return (*emitError)()
+             << "expected '}' after unescaped '{' at end of string";
+    }
+    // toParse contains at least two characters and starts with `{`.
+    char nextChar = toParse[1];
+    if (nextChar == '{') {
+      // Double '{{' -> '{' (escaping).
+      items.push_back(toParse.take_front(1));
+      toParse = toParse.drop_front(2);
+      continue;
+    }
+    if (nextChar == '}') {
+      items.push_back(Placeholder{});
+      toParse = toParse.drop_front(2);
+      continue;
+    }
+
+    if (emitError.has_value()) {
+      return (*emitError)() << "expected '}' after unescaped '{'";
+    }
+    return failure();
+  }
+  return items;
 }
 
 //===----------------------------------------------------------------------===//
@@ -907,6 +965,56 @@ LogicalResult emitc::SubscriptOp::verify() {
   // The operand has opaque type, so we can't assume anything about the number
   // or types of index operands.
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// VerbatimOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult emitc::VerbatimOp::verify() {
+  auto errorCallback = [&]() -> InFlightDiagnostic {
+    return this->emitOpError();
+  };
+  FailureOr<SmallVector<ReplacementItem>> fmt =
+      ::parseFormatString(getValue(), getFmtArgs(), errorCallback);
+  if (failed(fmt))
+    return failure();
+
+  size_t numPlaceholders = llvm::count_if(*fmt, [](ReplacementItem &item) {
+    return std::holds_alternative<Placeholder>(item);
+  });
+
+  if (numPlaceholders != getFmtArgs().size()) {
+    return emitOpError()
+           << "requires operands for each placeholder in the format string";
+  }
+  return success();
+}
+
+[[maybe_unused]] static ParseResult
+parseVariadicTypeFmtArgs(AsmParser &p, SmallVector<Type> &params) {
+  Type type;
+  if (p.parseType(type))
+    return failure();
+
+  params.push_back(type);
+  while (succeeded(p.parseOptionalComma())) {
+    if (p.parseType(type))
+      return failure();
+    params.push_back(type);
+  }
+
+  return success();
+}
+
+[[maybe_unused]] static void printVariadicTypeFmtArgs(AsmPrinter &p,
+                                                      ArrayRef<Type> params) {
+  llvm::interleaveComma(params, p, [&](Type type) { p.printType(type); });
+}
+
+FailureOr<SmallVector<ReplacementItem>> emitc::VerbatimOp::parseFormatString() {
+  // Error checking is done in verify.
+  return ::parseFormatString(getValue(), getFmtArgs());
 }
 
 //===----------------------------------------------------------------------===//
