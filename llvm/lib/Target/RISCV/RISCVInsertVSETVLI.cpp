@@ -1049,11 +1049,6 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
       MaskAgnostic = Policy & RISCVII::MASK_AGNOSTIC;
     }
 
-    // Some pseudo instructions force a tail agnostic policy despite having a
-    // tied def.
-    if (RISCVII::doesForceTailAgnostic(TSFlags))
-      TailAgnostic = true;
-
     if (!RISCVII::usesMaskPolicy(TSFlags))
       MaskAgnostic = true;
   }
