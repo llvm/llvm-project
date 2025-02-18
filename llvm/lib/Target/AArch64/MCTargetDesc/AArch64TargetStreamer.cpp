@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -214,18 +215,20 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
         return;
       }
       for (MCELFStreamer::AttributeItem &Item : SubSection.Content) {
+        // Tag already exists
         if (Item.Tag == Tag) {
-          if (!Override) {
-            if ((unsigned(-1) != Value && Item.IntValue != Value) ||
-                ("" != String && Item.StringValue != String)) {
-              assert(0 &&
-                     "Can not add AArch64 build attribute: An attribute with "
-                     "the same tag and a different value already exists");
-              return;
-            }
-            // Case Item.IntValue == Value is permited.
+          // New value for existing tag: update tag
+          if ((unsigned(-1) != Value && Item.IntValue != Value) ||
+              ("" != String && Item.StringValue != String)) {
+            Item.Type = unsigned(-1) != Value
+                            ? MCELFStreamer::AttributeItem::NumericAttribute
+                            : MCELFStreamer::AttributeItem::TextAttribute;
+            Item.IntValue = unsigned(-1) != Value ? Value : unsigned(-1);
+            Item.StringValue = unsigned(-1) != Value ? "" : String;
             return;
           }
+          // Same value for existing tag: do nothing
+          return;
         }
       }
       if (unsigned(-1) != Value)
