@@ -91,7 +91,6 @@ private:
                                const APInt &Value) const override {
     if (AArch64::GPR32RegClass.contains(Reg))
       return {loadImmediate(Reg, 32, Value)};
-    
     if (AArch64::GPR64RegClass.contains(Reg))
       return {loadImmediate(Reg, 64, Value)};
 
