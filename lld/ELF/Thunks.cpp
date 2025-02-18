@@ -1530,10 +1530,9 @@ static std::unique_ptr<Thunk> addThunkAArch64(Ctx &ctx, const InputSection &sec,
   bool mayNeedLandingPad =
       (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) &&
       !isAArch64BTILandingPad(ctx, s, a);
-  bool isPureCode = sec.getParent()->flags & SHF_AARCH64_PURECODE;
   if (ctx.arg.picThunk)
     return std::make_unique<AArch64ADRPThunk>(ctx, s, a, mayNeedLandingPad);
-  if (isPureCode)
+  if (sec.getParent()->flags & SHF_AARCH64_PURECODE)
     return std::make_unique<AArch64ABSXOLongThunk>(ctx, s, a,
                                                    mayNeedLandingPad);
   return std::make_unique<AArch64ABSLongThunk>(ctx, s, a, mayNeedLandingPad);
