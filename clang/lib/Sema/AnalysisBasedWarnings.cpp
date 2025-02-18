@@ -627,12 +627,10 @@ struct CheckFallThroughDiagnostics {
 static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
                                     QualType BlockType,
                                     const CheckFallThroughDiagnostics &CD,
-                                    AnalysisDeclContext &AC,
-                                    sema::FunctionScopeInfo *FSI) {
+                                    AnalysisDeclContext &AC) {
 
   bool ReturnsVoid = false;
   bool HasNoReturn = false;
-  bool IsCoroutine = FSI->isCoroutine();
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (const auto *CBody = dyn_cast<CoroutineBodyStmt>(Body))
@@ -661,35 +659,27 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
   if (CD.checkDiagnostics(Diags, ReturnsVoid, HasNoReturn))
       return;
   SourceLocation LBrace = Body->getBeginLoc(), RBrace = Body->getEndLoc();
-  auto EmitDiag = [&](SourceLocation Loc, unsigned DiagID, unsigned FunMode) {
-    if (IsCoroutine) {
-      if (DiagID != 0)
-        S.Diag(Loc, DiagID) << FSI->CoroutinePromise->getType();
-    } else {
-      S.Diag(Loc, DiagID) << FunMode;
-    }
-  };
 
   // cpu_dispatch functions permit empty function bodies for ICC compatibility.
   if (D->getAsFunction() && D->getAsFunction()->isCPUDispatchMultiVersion())
     return;
 
   // Either in a function body compound statement, or a function-try-block.
-  switch (CheckFallThrough(AC)) {
+  int FallThroughType = CheckFallThrough(AC);
+  switch (FallThroughType) {
   case UnknownFallThrough:
     break;
 
   case MaybeFallThrough:
-    if (HasNoReturn)
-      EmitDiag(RBrace, CD.diag_FallThrough_HasNoReturn, CD.FunMode);
-    else if (!ReturnsVoid)
-      S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid) << CD.FunMode << 1;
-    break;
   case AlwaysFallThrough:
-    if (HasNoReturn)
-      EmitDiag(RBrace, CD.diag_FallThrough_HasNoReturn, CD.FunMode);
-    else if (!ReturnsVoid)
-      S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid) << CD.FunMode << 0;
+    if (HasNoReturn && CD.diag_FallThrough_HasNoReturn != 0) {
+      S.Diag(RBrace, CD.diag_FallThrough_HasNoReturn) << CD.FunMode;
+    } else if (!ReturnsVoid && CD.diag_FallThrough_ReturnsNonVoid != 0) {
+      unsigned NotInAllControlPath =
+          FallThroughType == MaybeFallThrough ? 1 : 0;
+      S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid)
+          << CD.FunMode << NotInAllControlPath;
+    }
     break;
   case NeverFallThroughOrReturn:
     if (ReturnsVoid && !HasNoReturn && CD.diag_NeverFallThroughOrReturn) {
@@ -2730,7 +2720,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
                    : (fscope->isCoroutine()
                           ? CheckFallThroughDiagnostics::MakeForCoroutine(D)
                           : CheckFallThroughDiagnostics::MakeForFunction(D)));
-    CheckFallThroughForBody(S, D, Body, BlockType, CD, AC, fscope);
+    CheckFallThroughForBody(S, D, Body, BlockType, CD, AC);
   }
 
   // Warning: check for unreachable code
