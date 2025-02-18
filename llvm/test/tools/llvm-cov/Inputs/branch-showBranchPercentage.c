@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
   int i = 0;
   if (argc < 3)                       // CHECK: Branch ([[@LINE]]:7): [True: 16.67%, False: 83.33%]
   {
-    __llvm_profile_write_file();
+    (void)0;
     return 0;
   }
 
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     printf("loop\n");
   } while (i++ < 10);                 // CHECK: Branch ([[@LINE]]:12): [True: 90.91%, False: 9.09%]
 
-  __llvm_profile_write_file();
+  (void)b;
 
-  return b;
+  return 0;
 }

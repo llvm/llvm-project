@@ -90,11 +90,11 @@ void template_call(float FA2[2], float FA4[4], int IA3[3]) {
 
 // CHECK: [[Addr:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 0
 // CHECK: [[Tmp:%.*]] = load float, ptr [[Addr]]
-// CHECK: call void @_Z11template_fnIfEvT_(float noundef [[Tmp]])
+// CHECK: call void @_Z11template_fnIfEvT_(float noundef nofpclass(nan inf) [[Tmp]])
 
 // CHECK: [[Idx0:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 0
 // CHECK: [[Val0:%.*]] = load float, ptr [[Idx0]]
-// CHECK: [[Sum:%.*]] = fadd float [[Val0]], 5.000000e+00
+// CHECK: [[Sum:%.*]] = fadd reassoc nnan ninf nsz arcp afn float [[Val0]], 5.000000e+00
 // CHECK: [[Idx1:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 1
 // CHECK: store float [[Sum]], ptr [[Idx1]]
 

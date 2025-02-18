@@ -9,6 +9,7 @@
 #ifndef TEST_STD_CONTAINERS_VIEWS_MDSPAN_MINIMAL_ELEMENT_TYPE_H
 #define TEST_STD_CONTAINERS_VIEWS_MDSPAN_MINIMAL_ELEMENT_TYPE_H
 
+#include <cstddef>
 #include <memory>
 #include <type_traits>
 

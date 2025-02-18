@@ -8,6 +8,7 @@
 //
 // Target-independent, SSA-based data flow graph for register data flow (RDF).
 //
+#include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -18,7 +19,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/CodeGen/RDFRegisters.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -29,7 +29,6 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -1516,15 +1515,13 @@ void DataFlowGraph::linkRefUp(Instr IA, NodeAddr<T> TA, DefStack &DS) {
   for (auto I = DS.top(), E = DS.bottom(); I != E; I.down()) {
     RegisterRef QR = I->Addr->getRegRef(*this);
 
-    // Skip all defs that are aliased to any of the defs that we have already
-    // seen. If this completes a cover of RR, stop the stack traversal.
-    bool Alias = Defs.hasAliasOf(QR);
-    bool Cover = Defs.insert(QR).hasCoverOf(RR);
-    if (Alias) {
-      if (Cover)
-        break;
+    // Skip all defs that we have already seen.
+    // If this completes a cover of RR, stop the stack traversal.
+    bool Seen = Defs.hasCoverOf(QR);
+    if (Seen)
       continue;
-    }
+
+    bool Cover = Defs.insert(QR).hasCoverOf(RR);
 
     // The reaching def.
     Def RDA = *I;

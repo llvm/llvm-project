@@ -214,7 +214,11 @@
 #define TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT
 #endif
 
-#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_ALIGNED_ALLOCATION
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  ifdef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#    define TEST_HAS_NO_ALIGNED_ALLOCATION
+#  endif
+#elif defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_ALIGNED_ALLOCATION
 #  define TEST_HAS_NO_ALIGNED_ALLOCATION
 #elif TEST_STD_VER < 17 && (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606L)
 #  define TEST_HAS_NO_ALIGNED_ALLOCATION
@@ -261,6 +265,12 @@
 #endif
 
 #define TEST_IGNORE_NODISCARD (void)
+
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+// from-chars is a C++17 feature, so it's never available anyways
+#elif !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT
+#  define TEST_HAS_FROM_CHARS_FLOATING_POINT
+#endif
 
 namespace test_macros_detail {
 template <class T, class U>
@@ -387,25 +397,33 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #endif
 
 // Support for carving out parts of the test suite, like removing wide characters, etc.
-#if defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-#   define TEST_HAS_NO_WIDE_CHARACTERS
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_WIDE_CHARACTERS
+#  define TEST_HAS_NO_WIDE_CHARACTERS
 #endif
 
-#if defined(_LIBCPP_HAS_NO_UNICODE)
-#   define TEST_HAS_NO_UNICODE
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_UNICODE
+#  define TEST_HAS_NO_UNICODE
 #elif defined(_MSVC_EXECUTION_CHARACTER_SET) && _MSVC_EXECUTION_CHARACTER_SET != 65001
-#   define TEST_HAS_NO_UNICODE
+#  define TEST_HAS_NO_UNICODE
 #endif
 
-#if defined(_LIBCPP_VERSION) && _LIBCPP_HAS_OPEN_WITH_WCHAR
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
+#    define TEST_HAS_OPEN_WITH_WCHAR
+#  endif
+#elif defined(_LIBCPP_VERSION) && _LIBCPP_HAS_OPEN_WITH_WCHAR
 #  define TEST_HAS_OPEN_WITH_WCHAR
 #endif
 
-#if (defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_INT128) || defined(_MSVC_STL_VERSION)
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  ifdef _LIBCPP_HAS_NO_INT128
+#    define TEST_HAS_NO_INT128
+#  endif
+#elif (defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_INT128) || defined(_MSVC_STL_VERSION)
 #  define TEST_HAS_NO_INT128
 #endif
 
-#if defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_LOCALIZATION
 #  define TEST_HAS_NO_LOCALIZATION
 #endif
 
@@ -413,27 +431,34 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_CHAR8_T
 #endif
 
-#if defined(_LIBCPP_HAS_NO_THREADS)
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_THREADS
 #  define TEST_HAS_NO_THREADS
 #endif
 
-#if defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_FILESYSTEM
 #  define TEST_HAS_NO_FILESYSTEM
 #endif
 
-#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_C8RTOMB_MBRTOC8
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  ifdef _LIBCPP_HAS_NO_C8RTOMB_MBRTOC8
+#    define TEST_HAS_NO_C8RTOMB_MBRTOC8
+#  endif
+#elif defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_C8RTOMB_MBRTOC8
 #  define TEST_HAS_NO_C8RTOMB_MBRTOC8
 #endif
 
-#if defined(_LIBCPP_HAS_NO_RANDOM_DEVICE)
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_RANDOM_DEVICE
 #  define TEST_HAS_NO_RANDOM_DEVICE
 #endif
 
-#if defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+// This is a C++20 feature, so it's never available anyways
+#  define TEST_HAS_NO_EXPERIMENTAL_TZDB
+#elif defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_EXPERIMENTAL_TZDB
 #  define TEST_HAS_NO_EXPERIMENTAL_TZDB
 #endif
 
-#if defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_TIME_ZONE_DATABASE
 #  define TEST_HAS_NO_TIME_ZONE_DATABASE
 #endif
 
@@ -495,7 +520,9 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #endif
 
 // Clang-18 has support for deducing this, but it does not set the FTM.
-#if defined(_LIBCPP_VERSION) && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+// This is a C++20 featue, so we don't care whether the compiler could support it
+#elif defined(_LIBCPP_VERSION) && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
 #  define TEST_HAS_EXPLICIT_THIS_PARAMETER
 #endif
 
@@ -507,7 +534,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_CONSTEXPR_OPERATOR_NEW
 #endif
 
-#if __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
+#if defined(_MSC_VER) || __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
 #  define TEST_LONG_DOUBLE_IS_DOUBLE
 #endif
 

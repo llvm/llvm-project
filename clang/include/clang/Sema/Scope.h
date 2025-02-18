@@ -154,7 +154,8 @@ public:
     /// depth of recursion.
     LambdaScope = 0x8000000,
     /// This is the scope of an OpenACC Compute Construct, which restricts
-    /// jumping into/out of it.
+    /// jumping into/out of it. We also use this to represent 'combined'
+    /// constructs, since they have the same behavior.
     OpenACCComputeConstructScope = 0x10000000,
 
     /// This is a scope of type alias declaration.

@@ -272,7 +272,7 @@ func.func @dead_linalg_tensor(%arg0 : tensor<7x7xi32>, %arg1 : tensor<7x7xf32>,
 
 // -----
 
-func.func @propogate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
+func.func @propagate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
     %arg3 : index) -> tensor<?x?xf32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -285,7 +285,7 @@ func.func @propogate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
   %4 = tensor.insert_slice %arg0 into %1[%arg2, %arg3] [%2, %3] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
   return %4 : tensor<?x?xf32>
 }
-// CHECK-LABEL: func @propogate_casts
+// CHECK-LABEL: func @propagate_casts
 //       CHECK:   %[[INIT:.+]] = tensor.empty
 //       CHECK:   %[[FILL:.+]] = linalg.fill ins(%{{.+}}{{.*}}outs(%[[INIT]]
 //       CHECK:   %[[INSERTED:.+]] = tensor.insert_slice %{{.+}} into %[[FILL]]
@@ -373,7 +373,7 @@ func.func @fill_pack_general() -> tensor<1x1x8x4x4x8xi32>{
   %9 = tensor.empty() : tensor<1x1x16x64xi32>
   %extracted_slice_15 = tensor.extract_slice %9[0, 0, 0, 0] [1, 1, 16, 64] [1, 1, 1, 1] : tensor<1x1x16x64xi32> to tensor<1x1x16x64xi32>
   %16 = linalg.fill ins(%c0_i32 : i32) outs(%extracted_slice_15 : tensor<1x1x16x64xi32>) -> tensor<1x1x16x64xi32>
-  %0 = bufferization.to_tensor %alloc restrict writable : memref<1x1x8x4x4x8xi32>
+  %0 = bufferization.to_tensor %alloc restrict writable : memref<1x1x8x4x4x8xi32> to tensor<1x1x8x4x4x8xi32>
   %pack_18 = tensor.pack %16 outer_dims_perm = [0, 1, 3, 2] inner_dims_pos = [2, 3] inner_tiles = [4, 8] into %0 : tensor<1x1x16x64xi32> -> tensor<1x1x8x4x4x8xi32>
   return %pack_18 : tensor<1x1x8x4x4x8xi32>
 }
@@ -921,7 +921,7 @@ func.func @erase_non_identity_noop(%arg0 : tensor<?x?xf32>, %arg1: tensor<?x?xf3
   ^bb0(%in: f32, %out: f32):
     linalg.yield %in: f32
   } -> tensor<?x?xf32>
-  return %0 : tensor<?x?xf32> 
+  return %0 : tensor<?x?xf32>
 }
 
 // Do not erase ops with buffer semantics.
@@ -1073,8 +1073,8 @@ func.func @transpose_identity_perm(%input: tensor<16x32x64xf32>,
 
 // -----
 
-func.func @transpose_transpose_cancel(%input: tensor<5x4x3xf32>, 
-                                      %init1: tensor<4x3x5xf32>, 
+func.func @transpose_transpose_cancel(%input: tensor<5x4x3xf32>,
+                                      %init1: tensor<4x3x5xf32>,
                                       %init2: tensor<5x4x3xf32>) -> tensor<5x4x3xf32> {
   // CHECK-LABEL: @transpose_transpose_cancel
   //  CHECK-SAME:     %[[INPUT:[a-zA-Z0-9]+]]: tensor<5x4x3xf32>
@@ -1232,3 +1232,20 @@ func.func @transpose_buffer(%input: memref<?xf32>,
 //  CHECK-SAME:            %[[VAL_1:.*]]: memref<?xf32>) {
 //       CHECK:     linalg.transpose ins(%[[VAL_0]] : memref<?xf32>)
 //  CHECK-SAME:       outs(%[[VAL_1]] : memref<?xf32>) permutation = [0]
+
+// -----
+
+// This test checks linalg op has a recursive memory effect. Otherwise
+// linalg.map without a user would be DCEd.
+func.func @recursive_effect(%arg : tensor<1xf32>) {
+  %init = arith.constant dense<0.0> : tensor<1xf32>
+  %mapped = linalg.map ins(%arg:tensor<1xf32>) outs(%init :tensor<1xf32>)
+            (%in : f32) {
+              vector.print %in : f32
+              linalg.yield %in : f32
+            }
+  func.return
+}
+
+// CHECK-LABEL: @recursive_effect
+//       CHECK: linalg.map

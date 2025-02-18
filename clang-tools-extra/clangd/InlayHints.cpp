@@ -9,7 +9,6 @@
 #include "../clang-tidy/utils/DesignatedInitializers.h"
 #include "AST.h"
 #include "Config.h"
-#include "HeuristicResolver.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
@@ -27,6 +26,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -626,10 +626,15 @@ public:
 
   bool VisitLambdaExpr(LambdaExpr *E) {
     FunctionDecl *D = E->getCallOperator();
-    if (!E->hasExplicitResultType())
-      addReturnTypeHint(D, E->hasExplicitParameters()
-                               ? D->getFunctionTypeLoc().getRParenLoc()
-                               : E->getIntroducerRange().getEnd());
+    if (!E->hasExplicitResultType()) {
+      SourceLocation TypeHintLoc;
+      if (!E->hasExplicitParameters())
+        TypeHintLoc = E->getIntroducerRange().getEnd();
+      else if (auto FTL = D->getFunctionTypeLoc())
+        TypeHintLoc = FTL.getRParenLoc();
+      if (TypeHintLoc.isValid())
+        addReturnTypeHint(D, TypeHintLoc);
+    }
     return true;
   }
 

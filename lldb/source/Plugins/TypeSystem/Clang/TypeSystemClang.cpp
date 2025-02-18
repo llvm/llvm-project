@@ -1403,26 +1403,6 @@ static TemplateParameterList *CreateTemplateParameterList(
   return template_param_list;
 }
 
-std::string TypeSystemClang::PrintTemplateParams(
-    const TemplateParameterInfos &template_param_infos) {
-  llvm::SmallVector<NamedDecl *, 8> ignore;
-  clang::TemplateParameterList *template_param_list =
-      CreateTemplateParameterList(getASTContext(), template_param_infos,
-                                  ignore);
-  llvm::SmallVector<clang::TemplateArgument, 2> args(
-      template_param_infos.GetArgs());
-  if (template_param_infos.hasParameterPack()) {
-    llvm::ArrayRef<TemplateArgument> pack_args =
-        template_param_infos.GetParameterPackArgs();
-    args.append(pack_args.begin(), pack_args.end());
-  }
-  std::string str;
-  llvm::raw_string_ostream os(str);
-  clang::printTemplateArgumentList(os, args, GetTypePrintingPolicy(),
-                                   template_param_list);
-  return str;
-}
-
 clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     clang::FunctionDecl *func_decl,
@@ -2237,12 +2217,6 @@ ParmVarDecl *TypeSystemClang::CreateParameterDeclaration(
   return decl;
 }
 
-void TypeSystemClang::SetFunctionParameters(
-    FunctionDecl *function_decl, llvm::ArrayRef<ParmVarDecl *> params) {
-  if (function_decl)
-    function_decl->setParams(params);
-}
-
 CompilerType
 TypeSystemClang::CreateBlockPointerType(const CompilerType &function_type) {
   QualType block_type = m_ast_up->getBlockPointerType(
@@ -2770,6 +2744,19 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
     return GetCompleteQualType(
         ast, llvm::cast<clang::AttributedType>(qual_type)->getModifiedType(),
         allow_completion);
+
+  case clang::Type::MemberPointer:
+    // MS C++ ABI requires type of the class to be complete of which the pointee
+    // is a member.
+    if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
+      auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
+      if (MPT->getClass()->isRecordType())
+        GetCompleteRecordType(ast, clang::QualType(MPT->getClass(), 0),
+                              allow_completion);
+
+      return !qual_type.getTypePtr()->isIncompleteType();
+    }
+    break;
 
   default:
     break;
@@ -5029,62 +5016,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
       break;
 
     // ARM -- Scalable Vector Extension
-    case clang::BuiltinType::SveBool:
-    case clang::BuiltinType::SveBoolx2:
-    case clang::BuiltinType::SveBoolx4:
-    case clang::BuiltinType::SveCount:
-    case clang::BuiltinType::SveInt8:
-    case clang::BuiltinType::SveInt8x2:
-    case clang::BuiltinType::SveInt8x3:
-    case clang::BuiltinType::SveInt8x4:
-    case clang::BuiltinType::SveInt16:
-    case clang::BuiltinType::SveInt16x2:
-    case clang::BuiltinType::SveInt16x3:
-    case clang::BuiltinType::SveInt16x4:
-    case clang::BuiltinType::SveInt32:
-    case clang::BuiltinType::SveInt32x2:
-    case clang::BuiltinType::SveInt32x3:
-    case clang::BuiltinType::SveInt32x4:
-    case clang::BuiltinType::SveInt64:
-    case clang::BuiltinType::SveInt64x2:
-    case clang::BuiltinType::SveInt64x3:
-    case clang::BuiltinType::SveInt64x4:
-    case clang::BuiltinType::SveUint8:
-    case clang::BuiltinType::SveUint8x2:
-    case clang::BuiltinType::SveUint8x3:
-    case clang::BuiltinType::SveUint8x4:
-    case clang::BuiltinType::SveUint16:
-    case clang::BuiltinType::SveUint16x2:
-    case clang::BuiltinType::SveUint16x3:
-    case clang::BuiltinType::SveUint16x4:
-    case clang::BuiltinType::SveUint32:
-    case clang::BuiltinType::SveUint32x2:
-    case clang::BuiltinType::SveUint32x3:
-    case clang::BuiltinType::SveUint32x4:
-    case clang::BuiltinType::SveUint64:
-    case clang::BuiltinType::SveUint64x2:
-    case clang::BuiltinType::SveUint64x3:
-    case clang::BuiltinType::SveUint64x4:
-    case clang::BuiltinType::SveMFloat8:
-    case clang::BuiltinType::SveMFloat8x2:
-    case clang::BuiltinType::SveMFloat8x3:
-    case clang::BuiltinType::SveMFloat8x4:
-    case clang::BuiltinType::SveFloat16:
-    case clang::BuiltinType::SveBFloat16:
-    case clang::BuiltinType::SveBFloat16x2:
-    case clang::BuiltinType::SveBFloat16x3:
-    case clang::BuiltinType::SveBFloat16x4:
-    case clang::BuiltinType::SveFloat16x2:
-    case clang::BuiltinType::SveFloat16x3:
-    case clang::BuiltinType::SveFloat16x4:
-    case clang::BuiltinType::SveFloat32:
-    case clang::BuiltinType::SveFloat32x2:
-    case clang::BuiltinType::SveFloat32x3:
-    case clang::BuiltinType::SveFloat32x4:
-    case clang::BuiltinType::SveFloat64:
-    case clang::BuiltinType::SveFloat64x2:
-    case clang::BuiltinType::SveFloat64x3:
-    case clang::BuiltinType::SveFloat64x4:
+#define SVE_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/AArch64SVEACLETypes.def"
       break;
 
     // RISC-V V builtin types.
@@ -6795,12 +6728,12 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           llvm::StringRef field_name = field->getName();
           if (field_name.empty()) {
             CompilerType field_type = GetType(field->getType());
+            std::vector<uint32_t> save_indices = child_indexes;
             child_indexes.push_back(child_idx);
             if (field_type.GetIndexOfChildMemberWithName(
                     name, omit_empty_base_classes, child_indexes))
               return child_indexes.size();
-            child_indexes.pop_back();
-
+            child_indexes = std::move(save_indices);
           } else if (field_name == name) {
             // We have to add on the number of base classes to this index!
             child_indexes.push_back(
@@ -7494,6 +7427,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     bit_width = new (clang_ast)
         clang::IntegerLiteral(clang_ast, bitfield_bit_size_apint,
                               clang_ast.IntTy, clang::SourceLocation());
+    bit_width = clang::ConstantExpr::Create(
+        clang_ast, bit_width, APValue(llvm::APSInt(bitfield_bit_size_apint)));
   }
 
   clang::RecordDecl *record_decl = ast->GetAsRecordDecl(type);
@@ -7767,6 +7702,32 @@ void TypeSystemClang::SetFloatingInitializerForVariable(
       ast, init_value, true, qt.getUnqualifiedType(), SourceLocation()));
 }
 
+llvm::SmallVector<clang::ParmVarDecl *>
+TypeSystemClang::CreateParameterDeclarations(
+    clang::FunctionDecl *func, const clang::FunctionProtoType &prototype,
+    const llvm::SmallVector<llvm::StringRef> &parameter_names) {
+  assert(func);
+  assert(parameter_names.empty() ||
+         parameter_names.size() == prototype.getNumParams());
+
+  llvm::SmallVector<clang::ParmVarDecl *> params;
+  for (unsigned param_index = 0; param_index < prototype.getNumParams();
+       ++param_index) {
+    llvm::StringRef name =
+        !parameter_names.empty() ? parameter_names[param_index] : "";
+
+    auto *param =
+        CreateParameterDeclaration(func, /*owning_module=*/{}, name.data(),
+                                   GetType(prototype.getParamType(param_index)),
+                                   clang::SC_None, /*add_decl=*/false);
+    assert(param);
+
+    params.push_back(param);
+  }
+
+  return params;
+}
+
 clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
     const char *mangled_name, const CompilerType &method_clang_type,
@@ -7907,20 +7868,10 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
         getASTContext(), mangled_name, /*literal=*/false));
   }
 
-  // Populate the method decl with parameter decls
-
-  llvm::SmallVector<clang::ParmVarDecl *, 12> params;
-
-  for (unsigned param_index = 0; param_index < num_params; ++param_index) {
-    params.push_back(clang::ParmVarDecl::Create(
-        getASTContext(), cxx_method_decl, clang::SourceLocation(),
-        clang::SourceLocation(),
-        nullptr, // anonymous
-        method_function_prototype->getParamType(param_index), nullptr,
-        clang::SC_None, nullptr));
-  }
-
-  cxx_method_decl->setParams(llvm::ArrayRef<clang::ParmVarDecl *>(params));
+  // Parameters on member function declarations in DWARF generally don't
+  // have names, so we omit them when creating the ParmVarDecls.
+  cxx_method_decl->setParams(CreateParameterDeclarations(
+      cxx_method_decl, *method_function_prototype, /*parameter_names=*/{}));
 
   AddAccessSpecifierDecl(cxx_record_decl, getASTContext(),
                          GetCXXRecordDeclAccess(cxx_record_decl),
@@ -8595,7 +8546,7 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
   bool is_signed = false;
   underlying_type.IsIntegerType(is_signed);
 
-  llvm::APSInt value(enum_value_bit_size, is_signed);
+  llvm::APSInt value(enum_value_bit_size, !is_signed);
   value = enum_value;
 
   return AddEnumerationValueToEnumerationType(enum_type, decl, name, value);
@@ -9167,7 +9118,7 @@ ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
     clang::NamedDecl *nd =
         llvm::dyn_cast<NamedDecl>((clang::Decl *)opaque_decl);
     if (nd != nullptr)
-      return ConstString(nd->getDeclName().getAsString());
+      return ConstString(GetTypeNameForDecl(nd, /*qualified=*/false));
   }
   return ConstString();
 }

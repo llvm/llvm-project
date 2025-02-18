@@ -21,8 +21,6 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Lex/PreprocessorOptions.h"
 
 using namespace clang;
 using namespace CodeGen;

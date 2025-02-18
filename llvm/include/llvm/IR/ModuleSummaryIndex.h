@@ -302,6 +302,14 @@ template <> struct DenseMapInfo<ValueInfo> {
   static unsigned getHashValue(ValueInfo I) { return (uintptr_t)I.getRef(); }
 };
 
+// For optional hinted size reporting, holds a pair of the full stack id
+// (pre-trimming, from the full context in the profile), and the associated
+// total profiled size.
+struct ContextTotalSize {
+  uint64_t FullStackId;
+  uint64_t TotalSize;
+};
+
 /// Summary of memprof callsite metadata.
 struct CallsiteInfo {
   // Actual callee function.
@@ -408,9 +416,13 @@ struct AllocInfo {
   // Vector of MIBs in this memprof metadata.
   std::vector<MIBInfo> MIBs;
 
-  // If requested, keep track of total profiled sizes for each MIB. This will be
-  // a vector of the same length and order as the MIBs vector, if non-empty.
-  std::vector<uint64_t> TotalSizes;
+  // If requested, keep track of full stack contexts and total profiled sizes
+  // for each MIB. This will be a vector of the same length and order as the
+  // MIBs vector, if non-empty. Note that each MIB in the summary can have
+  // multiple of these as we trim the contexts when possible during matching.
+  // For hinted size reporting we, however, want the original pre-trimmed full
+  // stack context id for better correlation with the profile.
+  std::vector<std::vector<ContextTotalSize>> ContextSizeInfos;
 
   AllocInfo(std::vector<MIBInfo> MIBs) : MIBs(std::move(MIBs)) {
     Versions.push_back(0);
@@ -432,14 +444,18 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
   for (auto &M : AE.MIBs) {
     OS << "\t\t" << M << "\n";
   }
-  if (!AE.TotalSizes.empty()) {
-    OS << " TotalSizes per MIB:\n\t\t";
-    First = true;
-    for (uint64_t TS : AE.TotalSizes) {
-      if (!First)
-        OS << ", ";
-      First = false;
-      OS << TS << "\n";
+  if (!AE.ContextSizeInfos.empty()) {
+    OS << "\tContextSizeInfo per MIB:\n";
+    for (auto Infos : AE.ContextSizeInfos) {
+      OS << "\t\t";
+      bool FirstInfo = true;
+      for (auto [FullStackId, TotalSize] : Infos) {
+        if (!FirstInfo)
+          OS << ", ";
+        FirstInfo = false;
+        OS << "{ " << FullStackId << ", " << TotalSize << " }";
+      }
+      OS << "\n";
     }
   }
   return OS;
@@ -1299,7 +1315,7 @@ using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
 using TypeIdSummaryMapTy =
-    std::multimap<GlobalValue::GUID, std::pair<std::string, TypeIdSummary>>;
+    std::multimap<GlobalValue::GUID, std::pair<StringRef, TypeIdSummary>>;
 
 /// The following data structures summarize type metadata information.
 /// For type metadata overview see https://llvm.org/docs/TypeMetadata.html.
@@ -1335,6 +1351,9 @@ private:
   /// Holds strings for combined index, mapping to the corresponding module ID.
   ModulePathStringTableTy ModulePathStringTable;
 
+  BumpPtrAllocator TypeIdSaverAlloc;
+  UniqueStringSaver TypeIdSaver;
+
   /// Mapping from type identifier GUIDs to type identifier and its summary
   /// information. Produced by thin link.
   TypeIdSummaryMapTy TypeIdMap;
@@ -1343,7 +1362,7 @@ private:
   /// with that type identifier's metadata. Produced by per module summary
   /// analysis and consumed by thin link. For more information, see description
   /// above where TypeIdCompatibleVtableInfo is defined.
-  std::map<std::string, TypeIdCompatibleVtableInfo, std::less<>>
+  std::map<StringRef, TypeIdCompatibleVtableInfo, std::less<>>
       TypeIdCompatibleVtableMap;
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
@@ -1399,8 +1418,8 @@ private:
   /// True if some of the FunctionSummary contains a ParamAccess.
   bool HasParamAccess = false;
 
-  std::set<std::string> CfiFunctionDefs;
-  std::set<std::string> CfiFunctionDecls;
+  std::set<std::string, std::less<>> CfiFunctionDefs;
+  std::set<std::string, std::less<>> CfiFunctionDecls;
 
   // Used in cases where we want to record the name of a global, but
   // don't have the string owned elsewhere (e.g. the Strtab on a module).
@@ -1439,15 +1458,16 @@ public:
   // See HaveGVs variable comment.
   ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false,
                      bool UnifiedLTO = false)
-      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
-        UnifiedLTO(UnifiedLTO), Saver(Alloc) {}
+      : TypeIdSaver(TypeIdSaverAlloc), HaveGVs(HaveGVs),
+        EnableSplitLTOUnit(EnableSplitLTOUnit), UnifiedLTO(UnifiedLTO),
+        Saver(Alloc) {}
 
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 11;
+  static constexpr uint64_t BitcodeSummaryVersion = 12;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {
@@ -1647,11 +1667,19 @@ public:
     return I == OidGuidMap.end() ? 0 : I->second;
   }
 
-  std::set<std::string> &cfiFunctionDefs() { return CfiFunctionDefs; }
-  const std::set<std::string> &cfiFunctionDefs() const { return CfiFunctionDefs; }
+  std::set<std::string, std::less<>> &cfiFunctionDefs() {
+    return CfiFunctionDefs;
+  }
+  const std::set<std::string, std::less<>> &cfiFunctionDefs() const {
+    return CfiFunctionDefs;
+  }
 
-  std::set<std::string> &cfiFunctionDecls() { return CfiFunctionDecls; }
-  const std::set<std::string> &cfiFunctionDecls() const { return CfiFunctionDecls; }
+  std::set<std::string, std::less<>> &cfiFunctionDecls() {
+    return CfiFunctionDecls;
+  }
+  const std::set<std::string, std::less<>> &cfiFunctionDecls() const {
+    return CfiFunctionDecls;
+  }
 
   /// Add a global value summary for a value.
   void addGlobalValueSummary(const GlobalValue &GV,
@@ -1683,10 +1711,9 @@ public:
                        GlobalValue::GUID OrigGUID) {
     if (OrigGUID == 0 || ValueGUID == OrigGUID)
       return;
-    if (OidGuidMap.count(OrigGUID) && OidGuidMap[OrigGUID] != ValueGUID)
-      OidGuidMap[OrigGUID] = 0;
-    else
-      OidGuidMap[OrigGUID] = ValueGUID;
+    auto [It, Inserted] = OidGuidMap.try_emplace(OrigGUID, ValueGUID);
+    if (!Inserted && It->second != ValueGUID)
+      It->second = 0;
   }
 
   /// Find the summary for ValueInfo \p VI in module \p ModuleId, or nullptr if
@@ -1805,8 +1832,8 @@ public:
     for (auto &[GUID, TypeIdPair] : make_range(TidIter))
       if (TypeIdPair.first == TypeId)
         return TypeIdPair.second;
-    auto It = TypeIdMap.insert(
-        {GlobalValue::getGUID(TypeId), {std::string(TypeId), TypeIdSummary()}});
+    auto It = TypeIdMap.insert({GlobalValue::getGUID(TypeId),
+                                {TypeIdSaver.save(TypeId), TypeIdSummary()}});
     return It->second.second;
   }
 
@@ -1835,7 +1862,7 @@ public:
   /// the ThinLTO backends.
   TypeIdCompatibleVtableInfo &
   getOrInsertTypeIdCompatibleVtableSummary(StringRef TypeId) {
-    return TypeIdCompatibleVtableMap[std::string(TypeId)];
+    return TypeIdCompatibleVtableMap[TypeIdSaver.save(TypeId)];
   }
 
   /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap
@@ -1885,6 +1912,11 @@ public:
 
   /// Checks if we can import global variable from another module.
   bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs) const;
+
+  /// Same as above but checks whether the global var is importable as a
+  /// declaration.
+  bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs,
+                          bool &CanImportDecl) const;
 };
 
 /// GraphTraits definition to build SCC for the index

@@ -55,10 +55,10 @@ def V1UnitV0  : ProcResource<1>;  // FP/ASIMD 0
 def V1UnitV1  : ProcResource<1>;  // FP/ASIMD 1
 def V1UnitV2  : ProcResource<1>;  // FP/ASIMD 2
 def V1UnitV3  : ProcResource<1>;  // FP/ASIMD 3
+def V1UnitFlg : ProcResource<3>;  // Flags
 
 def V1UnitI   : ProcResGroup<[V1UnitS,
                               V1UnitM0, V1UnitM1]>;   // Integer units
-def V1UnitJ   : ProcResGroup<[V1UnitS, V1UnitM0]>;    // Integer 0-2 units
 def V1UnitM   : ProcResGroup<[V1UnitM0, V1UnitM1]>;   // Integer multicycle units
 def V1UnitL   : ProcResGroup<[V1UnitL01, V1UnitL2]>;  // Load units
 def V1UnitV   : ProcResGroup<[V1UnitV0, V1UnitV1,
@@ -98,13 +98,14 @@ def V1Write_0c_0Z : SchedWriteRes<[]>;
 
 def V1Write_1c_1B      : SchedWriteRes<[V1UnitB]>   { let Latency = 1; }
 def V1Write_1c_1I      : SchedWriteRes<[V1UnitI]>   { let Latency = 1; }
-def V1Write_1c_1J      : SchedWriteRes<[V1UnitJ]>   { let Latency = 1; }
+def V1Write_1c_1I_1Flg : SchedWriteRes<[V1UnitI, V1UnitFlg]>   { let Latency = 1; }
 def V1Write_4c_1L      : SchedWriteRes<[V1UnitL]>   { let Latency = 4; }
 def V1Write_6c_1L      : SchedWriteRes<[V1UnitL]>   { let Latency = 6; }
 def V1Write_1c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 1; }
 def V1Write_4c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 4; }
 def V1Write_6c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 6; }
 def V1Write_2c_1M      : SchedWriteRes<[V1UnitM]>   { let Latency = 2; }
+def V1Write_2c_1M_1Flg : SchedWriteRes<[V1UnitM, V1UnitFlg]>   { let Latency = 2; }
 def V1Write_3c_1M      : SchedWriteRes<[V1UnitM]>   { let Latency = 3; }
 def V1Write_4c_1M      : SchedWriteRes<[V1UnitM]>   { let Latency = 4; }
 def V1Write_1c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 1; }
@@ -595,7 +596,7 @@ def : InstRW<[V1Write_1c_1B], (instregex "^[CT]BN?Z[XW]$")>;
 def : SchedAlias<WriteI, V1Write_1c_1I>;
 
 // ALU, basic, flagset
-def : InstRW<[V1Write_1c_1J],
+def : InstRW<[V1Write_1c_1I_1Flg],
              (instregex "^(ADD|SUB)S[WX]r[ir]$",
                         "^(ADC|SBC)S[WX]r$",
                         "^ANDS[WX]ri$",
@@ -614,8 +615,8 @@ def              : SchedAlias<WriteISReg, V1WriteISReg>;
 // Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, flagset, LSR/ASR/ROR shift or LSL shift > 4
 def V1WriteISRegS : SchedWriteVariant<
-                      [SchedVar<IsCheapLSL,  [V1Write_1c_1J]>,
-                       SchedVar<NoSchedPred, [V1Write_2c_1M]>]>;
+                      [SchedVar<IsCheapLSL,  [V1Write_1c_1I_1Flg]>,
+                       SchedVar<NoSchedPred, [V1Write_2c_1M_1Flg]>]>;
 def               : InstRW<[V1WriteISRegS],
                            (instregex "^(ADD|SUB)S(([WX]r[sx])|Xrx64)$")>;
 
@@ -623,10 +624,10 @@ def               : InstRW<[V1WriteISRegS],
 def : InstRW<[V1Write_1c_1I], (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
 
 // Logical, shift, flagset
-def : InstRW<[V1Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
+def : InstRW<[V1Write_2c_1M_1Flg], (instregex "^(AND|BIC)S[WX]rs$")>;
 
 // Flag manipulation instructions
-def : InstRW<[V1Write_1c_1J], (instrs SETF8, SETF16, RMIF, CFINV)>;
+def : InstRW<[V1Write_1c_1I_1Flg], (instrs SETF8, SETF16, RMIF, CFINV)>;
 
 
 // Divide and multiply instructions
@@ -1015,16 +1016,34 @@ def : InstRW<[V1Write_3c_1V02], (instregex "^FCVTNv[24]i32$",
                                            "^FCVTXN(v[24]f32|v1i64)$")>;
 
 // ASIMD FP convert, other, D-form F32 and Q-form F64
-def : InstRW<[V1Write_3c_1V02], (instregex "^[FSU]CVT[AMNPZ][SU]v2f(32|64)$",
-                                           "^[SU]CVTFv2f(32|64)$")>;
+def : InstRW<[V1Write_3c_1V02], (instregex "^FCVT[AMNPZ][SU]v2f(32|64)$",
+                                           "^FCVT[AMNPZ][SU]v2i(32|64)_shift$",
+                                           "^FCVT[AMNPZ][SU]v1i64$",
+                                           "^FCVTZ[SU]d$",
+                                           "^[SU]CVTFv2f(32|64)$",
+                                           "^[SU]CVTFv2i(32|64)_shift$",
+                                           "^[SU]CVTFv1i64$",
+                                           "^[SU]CVTFd$")>;
 
 // ASIMD FP convert, other, D-form F16 and Q-form F32
-def : InstRW<[V1Write_4c_2V02], (instregex "^[FSU]CVT[AMNPZ][SU]v4f(16|32)$",
-                                           "^[SU]CVTFv4f(16|32)$")>;
+def : InstRW<[V1Write_4c_2V02], (instregex "^FCVT[AMNPZ][SU]v4f(16|32)$",
+                                           "^FCVT[AMNPZ][SU]v4i(16|32)_shift$",
+                                           "^FCVT[AMNPZ][SU]v1i32$",
+                                           "^FCVTZ[SU]s$",
+                                           "^[SU]CVTFv4f(16|32)$",
+                                           "^[SU]CVTFv4i(16|32)_shift$",
+                                           "^[SU]CVTFv1i32$",
+                                           "^[SU]CVTFs$")>;
 
 // ASIMD FP convert, other, Q-form F16
-def : InstRW<[V1Write_6c_4V02], (instregex "^[FSU]CVT[AMNPZ][SU]v8f16$",
-                                           "^[SU]CVTFv8f16$")>;
+def : InstRW<[V1Write_6c_4V02], (instregex "^FCVT[AMNPZ][SU]v8f16$",
+                                           "^FCVT[AMNPZ][SU]v8i16_shift$",
+                                           "^FCVT[AMNPZ][SU]v1f16$",
+                                           "^FCVTZ[SU]h$",
+                                           "^[SU]CVTFv8f16$",
+                                           "^[SU]CVTFv8i16_shift$",
+                                           "^[SU]CVTFv1i16$",
+                                           "^[SU]CVTFh$")>;
 
 // ASIMD FP divide, D-form, F16
 // ASIMD FP square root, D-form, F16

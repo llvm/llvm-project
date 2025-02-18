@@ -92,7 +92,7 @@ namespace Intrinsic {
   /// return the existing declaration.
   ///
   /// The \p Tys parameter is for intrinsics with overloaded types (e.g., those
-  /// using iAny, fAny, vAny, or iPTRAny).  For a declaration of an overloaded
+  /// using iAny, fAny, vAny, or pAny).  For a declaration of an overloaded
   /// intrinsic, Tys must provide exactly one type for each overloaded type in
   /// the intrinsic.
   Function *getOrInsertDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {});
@@ -111,13 +111,6 @@ namespace Intrinsic {
   /// This version supports overloaded intrinsics.
   Function *getDeclarationIfExists(Module *M, ID id, ArrayRef<Type *> Tys,
                                    FunctionType *FT = nullptr);
-
-  /// Looks up Name in NameTable via binary search. NameTable must be sorted
-  /// and all entries must start with "llvm.".  If NameTable contains an exact
-  /// match for Name or a prefix of Name followed by a dot, its index in
-  /// NameTable is returned. Otherwise, -1 is returned.
-  int lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
-                                StringRef Name, StringRef Target = "");
 
   /// Map a Clang builtin name to an intrinsic ID.
   ID getIntrinsicForClangBuiltin(StringRef TargetPrefix, StringRef BuiltinName);

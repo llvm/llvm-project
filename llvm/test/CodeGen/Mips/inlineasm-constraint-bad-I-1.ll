@@ -2,7 +2,7 @@
 ;This is a negative test. The constant value given for the constraint
 ;is greater than 16 bits.
 ;
-; RUN: not llc -march=mipsel < %s  2> %t
+; RUN: not llc -mtriple=mipsel < %s  2> %t
 ; RUN: FileCheck --check-prefix=CHECK-ERRORS < %t %s
 
 define i32 @main() nounwind {

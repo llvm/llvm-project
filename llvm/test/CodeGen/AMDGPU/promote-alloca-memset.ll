@@ -23,7 +23,7 @@ entry:
 define amdgpu_kernel void @memset_all_5(i64 %val) {
 ; CHECK-LABEL: @memset_all_5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> <i64 361700864190383365, i64 361700864190383365, i64 361700864190383365, i64 361700864190383365>, i64 [[VAL:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> splat (i64 361700864190383365), i64 [[VAL:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[VAL]], i32 1
 ; CHECK-NEXT:    ret void
 ;

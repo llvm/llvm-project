@@ -1537,6 +1537,93 @@ TEST(YAMLIO, TestReadWriteMySecondsSequence) {
   }
 }
 
+//===----------------------------------------------------------------------===//
+//  Test nested sequence
+//===----------------------------------------------------------------------===//
+using NestedStringSeq1 = llvm::SmallVector<std::string, 2>;
+using NestedStringSeq2 = std::array<NestedStringSeq1, 2>;
+using NestedStringSeq3 = std::vector<NestedStringSeq2>;
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(NestedStringSeq1)
+LLVM_YAML_IS_SEQUENCE_VECTOR(NestedStringSeq2)
+
+struct MappedStringSeq3 {
+  NestedStringSeq3 Seq3;
+};
+
+template <> struct llvm::yaml::MappingTraits<MappedStringSeq3> {
+  static void mapping(IO &io, MappedStringSeq3 &seq) {
+    io.mapRequired("Seq3", seq.Seq3);
+  }
+};
+
+using NestedIntSeq1 = std::array<int, 2>;
+using NestedIntSeq2 = std::array<NestedIntSeq1, 2>;
+using NestedIntSeq3 = std::array<NestedIntSeq2, 2>;
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(NestedIntSeq1)
+LLVM_YAML_IS_SEQUENCE_VECTOR(NestedIntSeq2)
+
+template <typename Ty> std::string ParseAndEmit(llvm::StringRef YAML) {
+  Ty seq3;
+  Input yin(YAML);
+  yin >> seq3;
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output yout(ostr);
+  yout << seq3;
+  return out;
+}
+
+TEST(YAMLIO, TestNestedSequence) {
+  {
+    llvm::StringRef Seq3YAML(R"YAML(---
+- - [ 1000, 1001 ]
+  - [ 1010, 1011 ]
+- - [ 1100, 1101 ]
+  - [ 1110, 1111 ]
+...
+)YAML");
+
+    std::string out = ParseAndEmit<NestedIntSeq3>(Seq3YAML);
+    EXPECT_EQ(out, Seq3YAML);
+  }
+
+  {
+    llvm::StringRef Seq3YAML(R"YAML(---
+- - - '000'
+    - '001'
+  - - '010'
+    - '011'
+- - - '100'
+    - '101'
+  - - '110'
+    - '111'
+...
+)YAML");
+
+    std::string out = ParseAndEmit<NestedStringSeq3>(Seq3YAML);
+    EXPECT_EQ(out, Seq3YAML);
+  }
+
+  {
+    llvm::StringRef Seq3YAML(R"YAML(---
+Seq3:
+  - - - '000'
+      - '001'
+    - - '010'
+      - '011'
+  - - - '100'
+      - '101'
+    - - '110'
+      - '111'
+...
+)YAML");
+
+    std::string out = ParseAndEmit<MappedStringSeq3>(Seq3YAML);
+    EXPECT_EQ(out, Seq3YAML);
+  }
+}
 
 //===----------------------------------------------------------------------===//
 //  Test dynamic typing
@@ -3366,20 +3453,38 @@ struct FixedArray {
   int values[4];
 };
 
+struct StdArray {
+  StdArray() {
+    // Initialize to int max as a sentinel value.
+    for (auto &v : values)
+      v = std::numeric_limits<int>::max();
+  }
+  std::array<int, 4> values;
+};
+
 namespace llvm {
 namespace yaml {
-  template <>
-  struct MappingTraits<FixedArray> {
-    static void mapping(IO &io, FixedArray& st) {
-      MutableArrayRef<int> array = st.values;
-      io.mapRequired("Values", array);
-    }
-  };
-}
-}
+template <> struct MappingTraits<FixedArray> {
+  static void mapping(IO &io, FixedArray &st) {
+    MutableArrayRef<int> array = st.values;
+    io.mapRequired("Values", array);
+  }
+};
+template <> struct MappingTraits<StdArray> {
+  static void mapping(IO &io, StdArray &st) {
+    io.mapRequired("Values", st.values);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
-TEST(YAMLIO, FixedSizeArray) {
-  FixedArray faval;
+using TestTypes = ::testing::Types<FixedArray, StdArray>;
+
+template <typename T> class YAMLIO : public testing::Test {};
+TYPED_TEST_SUITE(YAMLIO, TestTypes, );
+
+TYPED_TEST(YAMLIO, FixedSizeArray) {
+  TypeParam faval;
   Input yin("---\nValues:  [ 1, 2, 3, 4 ]\n...\n");
   yin >> faval;
 
@@ -3401,9 +3506,9 @@ TEST(YAMLIO, FixedSizeArray) {
   ASSERT_EQ(serialized, expected);
 }
 
-TEST(YAMLIO, FixedSizeArrayMismatch) {
+TYPED_TEST(YAMLIO, FixedSizeArrayMismatch) {
   {
-    FixedArray faval;
+    TypeParam faval;
     Input yin("---\nValues:  [ 1, 2, 3 ]\n...\n");
     yin >> faval;
 
@@ -3416,12 +3521,11 @@ TEST(YAMLIO, FixedSizeArrayMismatch) {
   }
 
   {
-    FixedArray faval;
+    TypeParam faval;
     Input yin("---\nValues:  [ 1, 2, 3, 4, 5 ]\n...\n");
     yin >> faval;
 
     // Error for too many elements.
     EXPECT_TRUE(!!yin.error());
   }
-
 }

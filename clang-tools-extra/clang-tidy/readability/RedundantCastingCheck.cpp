@@ -94,7 +94,7 @@ RedundantCastingCheck::RedundantCastingCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
-      IgnoreTypeAliases(Options.getLocalOrGlobal("IgnoreTypeAliases", false)) {}
+      IgnoreTypeAliases(Options.get("IgnoreTypeAliases", false)) {}
 
 void RedundantCastingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
@@ -108,6 +108,10 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
 
   auto BitfieldMemberExpr = memberExpr(member(fieldDecl(isBitField())));
 
+  const ast_matchers::internal::VariadicDynCastAllOfMatcher<
+      Stmt, CXXParenListInitExpr>
+      cxxParenListInitExpr; // NOLINT(readability-identifier-naming)
+
   Finder->addMatcher(
       explicitCastExpr(
           unless(hasCastKind(CK_ConstructorConversion)),
@@ -117,6 +121,7 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
           hasDestinationType(qualType().bind("dstType")),
           hasSourceExpression(anyOf(
               expr(unless(initListExpr()), unless(BitfieldMemberExpr),
+                   unless(cxxParenListInitExpr()),
                    hasType(qualType().bind("srcType")))
                   .bind("source"),
               initListExpr(unless(hasInit(1, expr())),

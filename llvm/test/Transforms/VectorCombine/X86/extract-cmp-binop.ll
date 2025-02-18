@@ -54,7 +54,7 @@ define i1 @icmp_xor_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: @icmp_xor_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A:%.*]], <i32 poison, i32 -8, i32 poison, i32 42>
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[TMP1]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[SHIFT]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -66,23 +66,31 @@ define i1 @icmp_xor_v4i32(<4 x i32> %a) {
   ret i1 %r
 }
 
+define i1 @icmp_samesign_xor_v4i32(<4 x i32> %a) {
+; CHECK-LABEL: @icmp_samesign_xor_v4i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A:%.*]], <i32 poison, i32 -8, i32 poison, i32 42>
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[SHIFT]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e1 = extractelement <4 x i32> %a, i32 3
+  %e2 = extractelement <4 x i32> %a, i32 1
+  %cmp1 = icmp samesign ugt i32 %e1, 42
+  %cmp2 = icmp sgt i32 %e2, -8
+  %r = xor i1 %cmp1, %cmp2
+  ret i1 %r
+}
+
 ; add is not canonical (should be xor), but that is ok.
 
 define i1 @icmp_add_v8i32(<8 x i32> %a) {
-; SSE-LABEL: @icmp_add_v8i32(
-; SSE-NEXT:    [[E1:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 7
-; SSE-NEXT:    [[E2:%.*]] = extractelement <8 x i32> [[A]], i32 2
-; SSE-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[E1]], 42
-; SSE-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[E2]], -8
-; SSE-NEXT:    [[R:%.*]] = add i1 [[CMP1]], [[CMP2]]
-; SSE-NEXT:    ret i1 [[R]]
-;
-; AVX-LABEL: @icmp_add_v8i32(
-; AVX-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i32> [[A:%.*]], <i32 poison, i32 poison, i32 -8, i32 poison, i32 poison, i32 poison, i32 poison, i32 42>
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <8 x i32> <i32 poison, i32 poison, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP2:%.*]] = add <8 x i1> [[TMP1]], [[SHIFT]]
-; AVX-NEXT:    [[R:%.*]] = extractelement <8 x i1> [[TMP2]], i64 2
-; AVX-NEXT:    ret i1 [[R]]
+; CHECK-LABEL: @icmp_add_v8i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i32> [[A:%.*]], <i32 poison, i32 poison, i32 -8, i32 poison, i32 poison, i32 poison, i32 poison, i32 42>
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <8 x i32> <i32 poison, i32 poison, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i1> [[SHIFT]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <8 x i1> [[TMP2]], i64 2
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e1 = extractelement <8 x i32> %a, i32 7
   %e2 = extractelement <8 x i32> %a, i32 2
@@ -131,7 +139,7 @@ define i1 @icmp_xor_v4i32_multiuse(<4 x i32> %a) {
 ; CHECK-NEXT:    call void @use(i32 [[E2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A]], <i32 poison, i32 -8, i32 poison, i32 42>
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[TMP1]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[SHIFT]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    call void @use(i1 [[R]])
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -141,6 +149,27 @@ define i1 @icmp_xor_v4i32_multiuse(<4 x i32> %a) {
   call void @use(i32 %e2)
   %cmp1 = icmp sgt i32 %e1, 42
   %cmp2 = icmp sgt i32 %e2, -8
+  %r = xor i1 %cmp1, %cmp2
+  call void @use(i1 %r)
+  ret i1 %r
+}
+
+define i1 @icmp_samesign_xor_v4i32_multiuse(<4 x i32> %a) {
+; CHECK-LABEL: @icmp_samesign_xor_v4i32_multiuse(
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 1
+; CHECK-NEXT:    call void @use(i32 [[E2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A]], <i32 poison, i32 -8, i32 poison, i32 42>
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[SHIFT]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
+; CHECK-NEXT:    call void @use(i1 [[R]])
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e1 = extractelement <4 x i32> %a, i32 3
+  %e2 = extractelement <4 x i32> %a, i32 1
+  call void @use(i32 %e2)
+  %cmp1 = icmp sgt i32 %e1, 42
+  %cmp2 = icmp samesign ugt i32 %e2, -8
   %r = xor i1 %cmp1, %cmp2
   call void @use(i1 %r)
   ret i1 %r
@@ -180,6 +209,25 @@ define i1 @different_preds(<4 x i32> %a) {
   %e2 = extractelement <4 x i32> %a, i32 2
   %cmp1 = icmp sgt i32 %e1, 42
   %cmp2 = icmp ugt i32 %e2, -8
+  %r = and i1 %cmp1, %cmp2
+  ret i1 %r
+}
+
+; Negative test with integer and fp predicates.
+
+define i1 @different_preds_typemismtach(<4 x float> %a, <4 x i32> %b) {
+; CHECK-LABEL: @different_preds_typemismtach(
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[A:%.*]], i32 1
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[B:%.*]], i32 2
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[E1]], 4.200000e+01
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 [[E2]], -8
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e1 = extractelement <4 x float> %a, i32 1
+  %e2 = extractelement <4 x i32> %b, i32 2
+  %cmp1 = fcmp ogt float %e1, 42.0
+  %cmp2 = icmp samesign ugt i32 %e2, -8
   %r = and i1 %cmp1, %cmp2
   ret i1 %r
 }

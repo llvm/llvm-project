@@ -2,14 +2,18 @@ include(ExternalProject)
 
 # llvm_ExternalProject_BuildCmd(out_var target)
 #   Utility function for constructing command lines for external project targets
-function(llvm_ExternalProject_BuildCmd out_var target bin_dir)
+function(llvm_ExternalProject_BuildCmd out_var target bin_dir stamp_dir)
   cmake_parse_arguments(ARG "" "CONFIGURATION" "" ${ARGN})
   if(NOT ARG_CONFIGURATION)
     set(ARG_CONFIGURATION "$<CONFIG>")
   endif()
   if (CMAKE_GENERATOR MATCHES "Make")
     # Use special command for Makefiles to support parallelism.
-    set(${out_var} "$(MAKE)" "-C" "${bin_dir}" "${target}" PARENT_SCOPE)
+    string(JOIN "@" make_cmd "$(MAKE)" "-C" "${bin_dir}" "${target}")
+    set(file_lock_script "${LLVM_CMAKE_DIR}/FileLock.cmake")
+    set(${out_var} ${CMAKE_COMMAND} "-DLOCK_FILE_PATH=${stamp_dir}/cmake.lock"
+                                    "-DCOMMAND=${make_cmd}"
+                                    "-P" "${file_lock_script}" PARENT_SCOPE)
   else()
     set(tool_args "${LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS}")
     if(NOT tool_args STREQUAL "")
@@ -409,7 +413,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(force_deps DEPENDS ${TOOLCHAIN_BINS})
   endif()
 
-  llvm_ExternalProject_BuildCmd(run_clean clean ${BINARY_DIR})
+  llvm_ExternalProject_BuildCmd(run_clean clean ${BINARY_DIR} ${STAMP_DIR})
   ExternalProject_Add_Step(${name} clean
     COMMAND ${run_clean}
     COMMENT "Cleaning ${name}..."
@@ -449,7 +453,7 @@ function(llvm_ExternalProject_Add name source_dir)
     else()
       set(external_target "${target}")
     endif()
-    llvm_ExternalProject_BuildCmd(build_runtime_cmd ${external_target} ${BINARY_DIR})
+    llvm_ExternalProject_BuildCmd(build_runtime_cmd ${external_target} ${BINARY_DIR} ${STAMP_DIR})
     add_custom_target(${target}
       COMMAND ${build_runtime_cmd}
       DEPENDS ${name}-configure

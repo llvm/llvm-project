@@ -1,0 +1,550 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_GNU
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            __llvm_covfun
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        simple_loops
+        FuncHash:        0x46D109C4436D1
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 7, 21, 8, 2 ], Ref: 0 }
+              - { dLoc: [ 2, 15, 0, 22 ], Ref: 1 }
+              - { dLoc: [ 0, 24, 0, 27 ], Ref: 2 }
+              - { dLoc: [ 0, 28, 0, 29 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 0, 29, 1, 4 ], Ref: 3 }
+              - { dLoc: [ 2, 3, 4, 2 ], Ref: 4 }
+              - { dLoc: [ 0, 10, 0, 15 ], Ref: 5 }
+              - { dLoc: [ 0, 16, 1, 5 ], isGap: true, Ref: 6 }
+              - { dLoc: [ 1, 5, 0, 8 ], Ref: 6 }
+              - { dLoc: [ 1, 3, 2, 2 ], Ref: 7 }
+              - { dLoc: [ 0, 6, 0, 8 ], Ref: 8 }
+              - { dLoc: [ 0, 16, 0, 24 ], Ref: 9 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+  - Name:            '__llvm_covfun (1)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        conditionals
+        FuncHash:        0x44113C165835D352
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 17, 21, 14, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 19, 0, 26 ], Ref: 1 }
+              - { dLoc: [ 0, 28, 0, 31 ], Ref: 2 }
+              - { dLoc: [ 0, 32, 0, 33 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 0, 33, 11, 4 ], Ref: 3 }
+              - { dLoc: [ 1, 9, 0, 14 ], Ref: 3 }
+              - { dLoc: [ 0, 15, 0, 16 ], isGap: true, Ref: 5 }
+              - { dLoc: [ 0, 16, 2, 6 ], Ref: 5 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 5 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 8 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 8 }
+              - { dLoc: [ 1, 6, 0, 12 ], isGap: true, Ref: 12 }
+              - { dLoc: [ 0, 12, 4, 6 ], Ref: 12 }
+              - { dLoc: [ 0, 16, 0, 21 ], Ref: 12 }
+              - { dLoc: [ 0, 22, 0, 23 ], isGap: true, Ref: 10 }
+              - { dLoc: [ 0, 23, 2, 6 ], Ref: 10 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 10 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 13 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 13 }
+              - { dLoc: [ 1, 6, 0, 12 ], isGap: true, Ref: 11 }
+              - { dLoc: [ 0, 12, 2, 6 ], Ref: 11 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 11 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 15 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 15 }
+              - { dLoc: [ 2, 1, 0, 98 ], ExtTag: Skip }
+              - { dLoc: [ 1, 5, 2, 4 ], Ref: 7 }
+              - { dLoc: [ 0, 9, 0, 10 ], Ref: 7 }
+              - { dLoc: [ 0, 9, 0, 15 ], Ref: 7 }
+              - { dLoc: [ 0, 14, 0, 15 ], Ref: 19 }
+              - { dLoc: [ 0, 16, 0, 17 ], isGap: true, Ref: 17 }
+              - { dLoc: [ 0, 17, 0, 19 ], Ref: 17 }
+              - { dLoc: [ 1, 5, 1, 4 ], Ref: 18 }
+              - { dLoc: [ 0, 9, 0, 10 ], Ref: 18 }
+              - { dLoc: [ 0, 9, 0, 15 ], Ref: 18 }
+              - { dLoc: [ 0, 14, 0, 15 ], Ref: 23 }
+              - { dLoc: [ 0, 16, 0, 17 ], isGap: true, Ref: 21 }
+              - { dLoc: [ 0, 17, 0, 19 ], Ref: 21 }
+              - { dLoc: [ 2, 1, 0, 1 ], ExtTag: Skip }
+  - Name:            '__llvm_covfun (2)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        early_exits
+        FuncHash:        0x27F9134B0E2D5C3D
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 33, 20, 24, 2 ], Ref: 0 }
+              - { dLoc: [ 2, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 7, 0, 8 ], Ref: 0 }
+              - { dLoc: [ 0, 9, 0, 10 ], isGap: true, Ref: 1 }
+              - { dLoc: [ 0, 10, 0, 12 ], Ref: 1 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 19, 2 ], Ref: 2 }
+              - { dLoc: [ 0, 10, 0, 17 ], Ref: 3 }
+              - { dLoc: [ 0, 18, 0, 19 ], isGap: true, Ref: 4 }
+              - { dLoc: [ 0, 19, 6, 4 ], Ref: 4 }
+              - { dLoc: [ 2, 9, 0, 15 ], Ref: 4 }
+              - { dLoc: [ 0, 16, 1, 7 ], isGap: true, Ref: 6 }
+              - { dLoc: [ 1, 7, 0, 12 ], Ref: 6 }
+              - { dLoc: [ 0, 13, 1, 5 ], isGap: true, Ref: 7 }
+              - { dLoc: [ 1, 5, 2, 4 ], Ref: 7 }
+              - { dLoc: [ 0, 9, 0, 14 ], Ref: 7 }
+              - { dLoc: [ 0, 15, 1, 7 ], isGap: true, Ref: 8 }
+              - { dLoc: [ 1, 7, 0, 15 ], Ref: 8 }
+              - { dLoc: [ 1, 4, 2, 3 ], isGap: true, Ref: 5 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 11, 2 ], Ref: 5 }
+              - { dLoc: [ 0, 7, 0, 8 ], Ref: 5 }
+              - { dLoc: [ 0, 9, 0, 10 ], isGap: true, Ref: 10 }
+              - { dLoc: [ 0, 10, 0, 12 ], Ref: 10 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 9, 2 ], Ref: 11 }
+              - { dLoc: [ 0, 6, 5, 4 ], Ref: 12 }
+              - { dLoc: [ 1, 9, 0, 15 ], Ref: 12 }
+              - { dLoc: [ 0, 16, 1, 7 ], isGap: true, Ref: 15 }
+              - { dLoc: [ 1, 7, 0, 13 ], Ref: 15 }
+              - { dLoc: [ 0, 14, 2, 7 ], isGap: true, Ref: 16 }
+              - { dLoc: [ 2, 7, 0, 10 ], Ref: 16 }
+              - { dLoc: [ 1, 12, 0, 19 ], Ref: 13 }
+              - { dLoc: [ 0, 21, 2, 3 ], isGap: true, Ref: 14 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 2, 2 ], Ref: 14 }
+              - { dLoc: [ 0, 7, 0, 8 ], Ref: 14 }
+              - { dLoc: [ 0, 9, 0, 10 ], isGap: true, Ref: 18 }
+              - { dLoc: [ 0, 10, 0, 12 ], Ref: 18 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+  - Name:            '__llvm_covfun (3)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        jumps
+        FuncHash:        0xD0E163345D499C1B
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 59, 14, 47, 2 ], Ref: 0 }
+              - { dLoc: [ 2, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 15, 0, 20 ], Ref: 1 }
+              - { dLoc: [ 0, 22, 0, 25 ], Ref: 2 }
+              - { dLoc: [ 0, 26, 0, 27 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 0, 27, 4, 4 ], Ref: 3 }
+              - { dLoc: [ 1, 20, 2, 5 ], isGap: true, Tag: Zero }
+              - { dLoc: [ 1, 1, 0, 35 ], ExtTag: Skip }
+              - { dLoc: [ 1, 5, 1, 4 ], Tag: Zero }
+              - { dLoc: [ 0, 9, 0, 10 ], Tag: Zero }
+              - { dLoc: [ 0, 11, 0, 12 ], isGap: true, Ref: 5 }
+              - { dLoc: [ 0, 12, 0, 14 ], Ref: 5 }
+              - { dLoc: [ 1, 4, 2, 1 ], isGap: true, Ref: 4 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 1, 38, 2 ], Ref: 7 }
+              - { dLoc: [ 1, 7, 0, 8 ], Ref: 7 }
+              - { dLoc: [ 0, 9, 0, 10 ], isGap: true, Ref: 8 }
+              - { dLoc: [ 0, 10, 0, 12 ], Ref: 8 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 0, 13 ], Ref: 9 }
+              - { dLoc: [ 0, 14, 2, 3 ], isGap: true, Ref: 9 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 33, 2 ], Tag: Zero }
+              - { dLoc: [ 0, 10, 0, 11 ], Ref: 10 }
+              - { dLoc: [ 0, 12, 0, 13 ], isGap: true, Ref: 11 }
+              - { dLoc: [ 0, 13, 3, 4 ], Ref: 11 }
+              - { dLoc: [ 1, 3, 2, 4 ], Ref: 13 }
+              - { dLoc: [ 1, 9, 0, 10 ], Ref: 13 }
+              - { dLoc: [ 0, 11, 0, 12 ], isGap: true, Ref: 14 }
+              - { dLoc: [ 0, 12, 0, 14 ], Ref: 14 }
+              - { dLoc: [ 2, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 0, 13 ], Ref: 12 }
+              - { dLoc: [ 0, 14, 1, 1 ], isGap: true, Ref: 12 }
+              - { dLoc: [ 1, 1, 27, 2 ], Ref: 16 }
+              - { dLoc: [ 1, 1, 26, 2 ], Ref: 17 }
+              - { dLoc: [ 1, 1, 25, 2 ], Ref: 18 }
+              - { dLoc: [ 2, 7, 0, 12 ], Ref: 18 }
+              - { dLoc: [ 0, 13, 1, 5 ], isGap: true, Ref: 19 }
+              - { dLoc: [ 1, 5, 0, 15 ], Ref: 19 }
+              - { dLoc: [ 0, 16, 2, 3 ], isGap: true, Ref: 20 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 20, 2 ], Ref: 20 }
+              - { dLoc: [ 0, 10, 0, 15 ], Ref: 21 }
+              - { dLoc: [ 0, 16, 0, 17 ], isGap: true, Ref: 22 }
+              - { dLoc: [ 0, 17, 10, 4 ], Ref: 22 }
+              - { dLoc: [ 1, 3, 9, 4 ], Ref: 24 }
+              - { dLoc: [ 1, 16, 6, 17 ], isGap: true, Tag: Zero }
+              - { dLoc: [ 1, 5, 1, 17 ], Ref: 26 }
+              - { dLoc: [ 1, 18, 1, 5 ], isGap: true, Tag: Zero }
+              - { dLoc: [ 1, 5, 1, 18 ], Ref: 27 }
+              - { dLoc: [ 1, 19, 1, 5 ], isGap: true, Tag: Zero }
+              - { dLoc: [ 1, 5, 1, 17 ], Ref: 28 }
+              - { dLoc: [ 3, 4, 2, 3 ], isGap: true, Ref: 23 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 8, 2 ], Ref: 23 }
+              - { dLoc: [ 0, 15, 0, 21 ], Ref: 29 }
+              - { dLoc: [ 0, 23, 0, 26 ], Ref: 30 }
+              - { dLoc: [ 0, 27, 0, 28 ], isGap: true, Ref: 31 }
+              - { dLoc: [ 0, 28, 6, 4 ], Ref: 31 }
+              - { dLoc: [ 1, 21, 2, 5 ], isGap: true, Tag: Zero }
+              - { dLoc: [ 1, 1, 0, 63 ], ExtTag: Skip }
+              - { dLoc: [ 1, 5, 3, 4 ], Tag: Zero }
+              - { dLoc: [ 0, 9, 0, 10 ], Tag: Zero }
+              - { dLoc: [ 0, 11, 0, 12 ], isGap: true, Ref: 33 }
+              - { dLoc: [ 0, 12, 0, 14 ], Ref: 33 }
+              - { dLoc: [ 1, 3, 2, 4 ], Ref: 35 }
+              - { dLoc: [ 1, 9, 0, 10 ], Ref: 35 }
+              - { dLoc: [ 0, 11, 0, 12 ], isGap: true, Ref: 36 }
+              - { dLoc: [ 0, 12, 0, 14 ], Ref: 36 }
+              - { dLoc: [ 2, 1, 0, 1 ], ExtTag: Skip }
+  - Name:            '__llvm_covfun (4)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        switches
+        FuncHash:        0x99A0C98383683E
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 108, 17, 37, 2 ], Ref: 0 }
+              - { dLoc: [ 2, 1, 1, 28 ], ExtTag: Skip }
+              - { dLoc: [ 2, 23, 2, 10 ], isGap: true, Tag: Zero }
+              - { dLoc: [ 1, 3, 1, 10 ], Ref: 2 }
+              - { dLoc: [ 2, 4, 2, 3 ], isGap: true, Ref: 1 }
+              - { dLoc: [ 1, 1, 0, 100 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 28, 2 ], Ref: 1 }
+              - { dLoc: [ 0, 63, 0, 70 ], Ref: 3 }
+              - { dLoc: [ 0, 72, 0, 75 ], Ref: 4 }
+              - { dLoc: [ 0, 76, 0, 77 ], isGap: true, Ref: 5 }
+              - { dLoc: [ 0, 77, 23, 4 ], Ref: 5 }
+              - { dLoc: [ 1, 25, 20, 15 ], isGap: true, Tag: Zero }
+              - { dLoc: [ 1, 5, 19, 15 ], Ref: 8 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 8 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 9 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 9 }
+              - { dLoc: [ 1, 1, 0, 21 ], ExtTag: Skip }
+              - { dLoc: [ 1, 5, 16, 15 ], Ref: 11 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 11 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 12 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 12 }
+              - { dLoc: [ 1, 7, 0, 12 ], Ref: 13 }
+              - { dLoc: [ 0, 13, 1, 5 ], isGap: true, Ref: 13 }
+              - { dLoc: [ 1, 5, 13, 15 ], Ref: 14 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 14 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 15 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 15 }
+              - { dLoc: [ 1, 7, 0, 15 ], Ref: 16 }
+              - { dLoc: [ 0, 16, 1, 5 ], isGap: true, Ref: 16 }
+              - { dLoc: [ 1, 5, 10, 15 ], Ref: 17 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 17 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 18 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 18 }
+              - { dLoc: [ 1, 7, 8, 15 ], Ref: 19 }
+              - { dLoc: [ 0, 18, 3, 17 ], isGap: true, Tag: Zero }
+              - { dLoc: [ 1, 7, 2, 17 ], Ref: 21 }
+              - { dLoc: [ 1, 13, 0, 14 ], Ref: 21 }
+              - { dLoc: [ 0, 15, 0, 16 ], isGap: true, Ref: 22 }
+              - { dLoc: [ 0, 16, 0, 18 ], Ref: 22 }
+              - { dLoc: [ 1, 9, 0, 17 ], Ref: 23 }
+              - { dLoc: [ 1, 8, 2, 5 ], isGap: true, Ref: 20 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 5, 2, 15 ], Ref: 24 }
+              - { dLoc: [ 1, 11, 0, 23 ], Ref: 24 }
+              - { dLoc: [ 0, 24, 1, 9 ], isGap: true, Ref: 25 }
+              - { dLoc: [ 1, 9, 0, 15 ], Ref: 25 }
+              - { dLoc: [ 2, 4, 3, 3 ], isGap: true, Ref: 6 }
+              - { dLoc: [ 1, 1, 1, 33 ], ExtTag: Skip }
+              - { dLoc: [ 2, 3, 2, 2 ], Ref: 6 }
+              - { dLoc: [ 0, 7, 0, 17 ], Ref: 6 }
+              - { dLoc: [ 0, 18, 0, 19 ], isGap: true, Ref: 27 }
+              - { dLoc: [ 0, 19, 0, 21 ], Ref: 27 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+  - Name:            '__llvm_covfun (5)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        big_switch
+        FuncHash:        0xB6695A86B856FFD6
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 147, 19, 31, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 19, 0, 25 ], Ref: 1 }
+              - { dLoc: [ 0, 27, 0, 30 ], Ref: 2 }
+              - { dLoc: [ 0, 31, 0, 32 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 0, 32, 28, 4 ], Ref: 3 }
+              - { dLoc: [ 1, 21, 25, 12 ], isGap: true, Tag: Zero }
+              - { dLoc: [ 1, 5, 24, 12 ], Ref: 6 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 6 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 7 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 7 }
+              - { dLoc: [ 1, 1, 0, 21 ], ExtTag: Skip }
+              - { dLoc: [ 1, 5, 21, 12 ], Ref: 9 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 9 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 10 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 10 }
+              - { dLoc: [ 1, 7, 0, 12 ], Ref: 11 }
+              - { dLoc: [ 0, 13, 1, 5 ], isGap: true, Ref: 11 }
+              - { dLoc: [ 1, 5, 18, 12 ], Ref: 12 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 12 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 13 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 13 }
+              - { dLoc: [ 1, 7, 0, 12 ], Ref: 14 }
+              - { dLoc: [ 0, 13, 3, 5 ], isGap: true, Ref: 14 }
+              - { dLoc: [ 1, 1, 1, 1 ], ExtTag: Skip }
+              - { dLoc: [ 2, 5, 13, 12 ], Ref: 15 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 15 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 16 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 16 }
+              - { dLoc: [ 1, 7, 0, 12 ], Ref: 17 }
+              - { dLoc: [ 0, 13, 1, 5 ], isGap: true, Ref: 17 }
+              - { dLoc: [ 1, 5, 10, 12 ], Ref: 18 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 18 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 19 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 19 }
+              - { dLoc: [ 1, 7, 0, 12 ], Ref: 20 }
+              - { dLoc: [ 0, 13, 3, 5 ], isGap: true, Ref: 20 }
+              - { dLoc: [ 1, 1, 1, 1 ], ExtTag: Skip }
+              - { dLoc: [ 2, 5, 5, 12 ], Ref: 21 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 21 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 22 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 22 }
+              - { dLoc: [ 1, 7, 0, 12 ], Ref: 23 }
+              - { dLoc: [ 0, 13, 1, 5 ], isGap: true, Ref: 23 }
+              - { dLoc: [ 1, 5, 2, 12 ], Ref: 24 }
+              - { dLoc: [ 1, 11, 0, 12 ], Ref: 24 }
+              - { dLoc: [ 0, 13, 0, 14 ], isGap: true, Ref: 25 }
+              - { dLoc: [ 0, 14, 0, 16 ], Ref: 25 }
+              - { dLoc: [ 1, 7, 0, 12 ], Ref: 26 }
+              - { dLoc: [ 3, 1, 0, 1 ], ExtTag: Skip }
+  - Name:            '__llvm_covfun (6)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        boolean_operators
+        FuncHash:        0x46CF38F3CE391
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 180, 26, 12, 2 ], Ref: 0 }
+              - { dLoc: [ 2, 19, 0, 26 ], Ref: 1 }
+              - { dLoc: [ 0, 28, 0, 31 ], Ref: 2 }
+              - { dLoc: [ 0, 32, 0, 33 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 0, 33, 8, 4 ], Ref: 3 }
+              - { dLoc: [ 1, 9, 0, 14 ], Ref: 3 }
+              - { dLoc: [ 0, 18, 0, 19 ], Ref: 5 }
+              - { dLoc: [ 1, 1, 0, 100 ], ExtTag: Skip }
+              - { dLoc: [ 1, 9, 0, 14 ], Ref: 3 }
+              - { dLoc: [ 0, 18, 0, 19 ], Ref: 7 }
+              - { dLoc: [ 1, 1, 0, 100 ], ExtTag: Skip }
+              - { dLoc: [ 1, 9, 0, 14 ], Ref: 3 }
+              - { dLoc: [ 0, 9, 0, 23 ], Ref: 3 }
+              - { dLoc: [ 0, 18, 0, 23 ], Ref: 11 }
+              - { dLoc: [ 0, 27, 0, 28 ], Ref: 9 }
+              - { dLoc: [ 1, 1, 0, 113 ], ExtTag: Skip }
+              - { dLoc: [ 1, 9, 0, 14 ], Ref: 3 }
+              - { dLoc: [ 0, 9, 0, 23 ], Ref: 3 }
+              - { dLoc: [ 0, 18, 0, 23 ], Ref: 15 }
+              - { dLoc: [ 0, 27, 0, 28 ], Ref: 13 }
+              - { dLoc: [ 2, 1, 0, 113 ], ExtTag: Skip }
+  - Name:            '__llvm_covfun (7)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        boolop_loops
+        FuncHash:        0xAC1EE72F5632D15F
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 194, 21, 13, 2 ], Ref: 0 }
+              - { dLoc: [ 2, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 10, 0, 11 ], Ref: 4 }
+              - { dLoc: [ 0, 10, 0, 21 ], Ref: 4 }
+              - { dLoc: [ 0, 15, 0, 21 ], Ref: 4 }
+              - { dLoc: [ 0, 22, 1, 5 ], isGap: true, Ref: 2 }
+              - { dLoc: [ 1, 5, 0, 8 ], Ref: 2 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 7, 2 ], Ref: 3 }
+              - { dLoc: [ 0, 10, 0, 17 ], Ref: 9 }
+              - { dLoc: [ 0, 10, 0, 28 ], Ref: 9 }
+              - { dLoc: [ 0, 21, 0, 28 ], Ref: 9 }
+              - { dLoc: [ 0, 29, 1, 5 ], isGap: true, Ref: 7 }
+              - { dLoc: [ 1, 5, 0, 8 ], Ref: 7 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 4, 2 ], Ref: 8 }
+              - { dLoc: [ 0, 17, 0, 18 ], Ref: 15 }
+              - { dLoc: [ 0, 17, 0, 28 ], Ref: 15 }
+              - { dLoc: [ 0, 22, 0, 28 ], Ref: 15 }
+              - { dLoc: [ 0, 30, 0, 33 ], Ref: 12 }
+              - { dLoc: [ 0, 34, 0, 35 ], Ref: 13 }
+              - { dLoc: [ 1, 1, 0, 104 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 2, 2 ], Ref: 14 }
+              - { dLoc: [ 0, 10, 0, 17 ], Ref: 21 }
+              - { dLoc: [ 0, 10, 0, 28 ], Ref: 21 }
+              - { dLoc: [ 0, 21, 0, 28 ], Ref: 21 }
+              - { dLoc: [ 0, 30, 0, 33 ], Ref: 18 }
+              - { dLoc: [ 0, 34, 0, 35 ], Ref: 19 }
+              - { dLoc: [ 1, 1, 0, 104 ], ExtTag: Skip }
+  - Name:            '__llvm_covfun (8)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        conditional_operator
+        FuncHash:        0xD6D0
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 209, 29, 7, 2 ], Ref: 0 }
+              - { dLoc: [ 2, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 11, 0, 17 ], Ref: 0 }
+              - { dLoc: [ 0, 19, 0, 20 ], isGap: true, Ref: 2 }
+              - { dLoc: [ 0, 20, 0, 21 ], Ref: 2 }
+              - { dLoc: [ 0, 24, 0, 25 ], Ref: 3 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 2, 2 ], Ref: 1 }
+              - { dLoc: [ 0, 11, 0, 12 ], Ref: 1 }
+              - { dLoc: [ 0, 16, 0, 17 ], Ref: 0 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+  - Name:            '__llvm_covfun (9)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        do_fallthrough
+        FuncHash:        0x78F0876298F0EA92
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 218, 23, 11, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 19, 0, 25 ], Ref: 1 }
+              - { dLoc: [ 0, 27, 0, 30 ], Ref: 2 }
+              - { dLoc: [ 0, 31, 0, 32 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 0, 32, 9, 4 ], Ref: 3 }
+              - { dLoc: [ 2, 8, 6, 6 ], Ref: 5 }
+              - { dLoc: [ 1, 1, 2, 77 ], ExtTag: Skip }
+              - { dLoc: [ 3, 11, 0, 16 ], Ref: 5 }
+              - { dLoc: [ 0, 17, 0, 18 ], isGap: true, Ref: 8 }
+              - { dLoc: [ 0, 18, 0, 23 ], Ref: 8 }
+              - { dLoc: [ 0, 24, 1, 7 ], isGap: true, Ref: 9 }
+              - { dLoc: [ 1, 7, 1, 6 ], Ref: 9 }
+              - { dLoc: [ 1, 14, 0, 19 ], Ref: 6 }
+  - Name:            '__llvm_covfun (10)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        main
+        FuncHash:        0x18
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 245, 40, 15, 2 ], Ref: 0 }
+  - Name:            '__llvm_covfun (11)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        'branch-c-general.c:static_func'
+        FuncHash:        0x46D1
+        FilenamesRef:    0x4F0FF417951E554C
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-c-general.c
+            Regions:
+              - { dLoc: [ 231, 27, 3, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 19, 0, 25 ], Ref: 1 }
+              - { dLoc: [ 0, 27, 0, 30 ], Ref: 2 }
+              - { dLoc: [ 0, 31, 0, 32 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 0, 32, 1, 4 ], Ref: 3 }
+  - Name:            __llvm_covmap
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovMap:
+      - FilenamesRef:    0x4F0FF417951E554C
+        Version:         6
+  - Name:            __llvm_prf_names
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
+    AddressAlign:    0x1
+    PrfNames:
+      - - simple_loops
+        - conditionals
+        - early_exits
+        - jumps
+        - switches
+        - big_switch
+        - boolean_operators
+        - boolop_loops
+        - conditional_operator
+        - do_fallthrough
+        - main
+        - 'branch-c-general.c:static_func'
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            __llvm_covfun
+      - Name:            '__llvm_covfun (1)'
+      - Name:            '__llvm_covfun (2)'
+      - Name:            '__llvm_covfun (3)'
+      - Name:            '__llvm_covfun (4)'
+      - Name:            '__llvm_covfun (5)'
+      - Name:            '__llvm_covfun (6)'
+      - Name:            '__llvm_covfun (7)'
+      - Name:            '__llvm_covfun (8)'
+      - Name:            '__llvm_covfun (9)'
+      - Name:            '__llvm_covfun (10)'
+      - Name:            '__llvm_covfun (11)'
+      - Name:            __llvm_covmap
+      - Name:            __llvm_prf_names
+...

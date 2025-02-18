@@ -336,6 +336,7 @@ private:
   std::unique_ptr<ClangTidyProfiling> Profiling;
   std::unique_ptr<ast_matchers::MatchFinder> Finder;
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
+  void anchor() override {};
 };
 
 } // namespace
@@ -645,9 +646,9 @@ void exportReplacements(const llvm::StringRef MainFilePath,
   YAML << TUD;
 }
 
-NamesAndOptions
+ChecksAndOptions
 getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
-  NamesAndOptions Result;
+  ChecksAndOptions Result;
   ClangTidyOptions Opts;
   Opts.Checks = "*";
   clang::tidy::ClangTidyContext Context(
@@ -660,7 +661,7 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
   }
 
   for (const auto &Factory : Factories)
-    Result.Names.insert(Factory.getKey());
+    Result.Checks.insert(Factory.getKey());
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
   SmallString<64> Buffer(AnalyzerCheckNamePrefix);
@@ -669,7 +670,7 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
            AllowEnablingAnalyzerAlphaCheckers)) {
     Buffer.truncate(DefSize);
     Buffer.append(AnalyzerCheck);
-    Result.Names.insert(Buffer);
+    Result.Checks.insert(Buffer);
   }
   for (std::string OptionName : {
 #define GET_CHECKER_OPTIONS

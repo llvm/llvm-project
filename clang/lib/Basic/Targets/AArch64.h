@@ -44,6 +44,7 @@ static const unsigned ARM64AddrSpaceMap[] = {
     static_cast<unsigned>(AArch64AddrSpace::ptr32_uptr),
     static_cast<unsigned>(AArch64AddrSpace::ptr64),
     0, // hlsl_groupshared
+    0, // hlsl_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -78,11 +79,11 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasBFloat16 = false;
   bool HasSVE2 = false;
   bool HasSVE2p1 = false;
-  bool HasSVE2AES = false;
+  bool HasSVEAES = false;
   bool HasSVE2SHA3 = false;
   bool HasSVE2SM4 = false;
   bool HasSVEB16B16 = false;
-  bool HasSVE2BitPerm = false;
+  bool HasSVEBitPerm = false;
   bool HasMatmulFP64 = false;
   bool HasMatmulFP32 = false;
   bool HasLSE = false;
@@ -137,8 +138,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  unsigned multiVersionSortPriority(StringRef Name) const override;
-  unsigned multiVersionFeatureCost() const override;
+  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;
@@ -307,6 +307,20 @@ private:
   void setDataLayout() override;
 };
 
+void getAppleMachOAArch64Defines(MacroBuilder &Builder, const LangOptions &Opts,
+                                 const llvm::Triple &Triple);
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOAArch64TargetInfo
+    : public AppleMachOTargetInfo<AArch64leTargetInfo> {
+public:
+  AppleMachOAArch64TargetInfo(const llvm::Triple &Triple,
+                              const TargetOptions &Opts);
+
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override;
+};
+
 class LLVM_LIBRARY_VISIBILITY DarwinAArch64TargetInfo
     : public DarwinTargetInfo<AArch64leTargetInfo> {
 public:
@@ -317,17 +331,6 @@ public:
  protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override;
-};
-
-// 64-bit RenderScript is aarch64
-class LLVM_LIBRARY_VISIBILITY RenderScript64TargetInfo
-    : public AArch64leTargetInfo {
-public:
-  RenderScript64TargetInfo(const llvm::Triple &Triple,
-                           const TargetOptions &Opts);
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
 };
 
 } // namespace targets

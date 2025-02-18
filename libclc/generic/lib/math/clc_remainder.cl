@@ -21,11 +21,14 @@
  */
 
 #include <clc/clc.h>
-
+#include <clc/clcmacro.h>
+#include <clc/integer/clc_clz.h>
+#include <clc/math/clc_floor.h>
+#include <clc/math/clc_subnormal_config.h>
+#include <clc/math/clc_trunc.h>
+#include <clc/math/math.h>
+#include <clc/shared/clc_max.h>
 #include <math/clc_remainder.h>
-#include "../clcmacro.h"
-#include "config.h"
-#include "math.h"
 
 _CLC_DEF _CLC_OVERLOAD float __clc_remainder(float x, float y)
 {
@@ -93,14 +96,14 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y)
     ulong xsgn = ux ^ ax;
     double dx = as_double(ax);
     int xexp = convert_int(ax >> EXPSHIFTBITS_DP64);
-    int xexp1 = 11 - (int) clz(ax & MANTBITS_DP64);
+    int xexp1 = 11 - (int) __clc_clz(ax & MANTBITS_DP64);
     xexp1 = xexp < 1 ? xexp1 : xexp;
 
     ulong uy = as_ulong(y);
     ulong ay = uy & ~SIGNBIT_DP64;
     double dy = as_double(ay);
     int yexp = convert_int(ay >> EXPSHIFTBITS_DP64);
-    int yexp1 = 11 - (int) clz(ay & MANTBITS_DP64);
+    int yexp1 = 11 - (int) __clc_clz(ay & MANTBITS_DP64);
     yexp1 = yexp < 1 ? yexp1 : yexp;
 
     int qsgn = ((ux ^ uy) & SIGNBIT_DP64) == 0UL ? 1 : -1;
@@ -113,7 +116,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y)
     // less than the mantissa of y, ntimes will be one too large
     // but it doesn't matter - it just means that we'll go round
     // the loop below one extra time.
-    int ntimes = max(0, (xexp1 - yexp1) / 53);
+    int ntimes = __clc_max(0, (xexp1 - yexp1) / 53);
     double w =  ldexp(dy, ntimes * 53);
     w = ntimes == 0 ? dy : w;
     double scale = ntimes == 0 ? 1.0 : 0x1.0p-53;
@@ -129,7 +132,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y)
 
     for (i = 0; i < ntimes; i++) {
         // Compute integral multiplier
-        t = trunc(dx / w);
+        t = __clc_trunc(dx / w);
 
         // Compute w * t in quad precision
         p = w * t;
@@ -148,7 +151,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y)
 
     // One more time
     // Variable todd says whether the integer t is odd or not
-    t = floor(dx / w);
+    t = __clc_floor(dx / w);
     long lt = (long)t;
     int todd = lt & 1;
 

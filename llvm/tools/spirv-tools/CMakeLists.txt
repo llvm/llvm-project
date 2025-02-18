@@ -66,7 +66,7 @@ endif ()
 
 if (SPIRV_AS)
   add_custom_target(spirv-as
-    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${SPIRV_VAL}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-as")
+    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${SPIRV_AS}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-as")
 else ()
   add_custom_target(spirv-as
     COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${BINARY_DIR}/tools/spirv-as${CMAKE_EXECUTABLE_SUFFIX}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/spirv-as${CMAKE_EXECUTABLE_SUFFIX}"

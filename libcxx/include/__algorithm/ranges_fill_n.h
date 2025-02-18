@@ -9,9 +9,11 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_FILL_N_H
 #define _LIBCPP___ALGORITHM_RANGES_FILL_N_H
 
+#include <__algorithm/fill_n.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,11 +31,7 @@ struct __fill_n {
   template <class _Type, output_iterator<const _Type&> _Iter>
   _LIBCPP_HIDE_FROM_ABI constexpr _Iter
   operator()(_Iter __first, iter_difference_t<_Iter> __n, const _Type& __value) const {
-    for (; __n != 0; --__n) {
-      *__first = __value;
-      ++__first;
-    }
-    return __first;
+    return std::__fill_n(std::move(__first), __n, __value);
   }
 };
 

@@ -36,13 +36,15 @@ module __fortran_ieee_exceptions
     ieee_all(*) = [ ieee_usual, ieee_underflow, ieee_inexact ]
 
   type, public :: ieee_modes_type ! Fortran 2018, 17.7
-    private ! opaque fenv.h femode_t data
+    private ! opaque fenv.h femode_t data; code will access only one component
     integer(kind=4) :: __data(_FORTRAN_RUNTIME_IEEE_FEMODE_T_EXTENT)
+    integer(kind=1), allocatable :: __allocatable_data(:)
   end type ieee_modes_type
 
   type, public :: ieee_status_type ! Fortran 2018, 17.7
-    private ! opaque fenv.h fenv_t data
+    private ! opaque fenv.h fenv_t data; code will access only one component
     integer(kind=4) :: __data(_FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT)
+    integer(kind=1), allocatable :: __allocatable_data(:)
   end type ieee_status_type
 
 ! Define specifics with 1 LOGICAL or REAL argument for generic G.

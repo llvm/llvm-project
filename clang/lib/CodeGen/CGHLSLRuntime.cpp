@@ -100,22 +100,6 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
       llvm::formatv("{0}{1}", Buf.Name, Buf.IsCBuffer ? ".cb." : ".tb."),
       GlobalValue::NotThreadLocal);
 
-  IRBuilder<> B(CBGV->getContext());
-  Value *ZeroIdx = B.getInt32(0);
-  // Replace Const use with CB use.
-  for (auto &[GV, Offset] : Buf.Constants) {
-    Value *GEP =
-        B.CreateGEP(Buf.LayoutStruct, CBGV, {ZeroIdx, B.getInt32(Offset)});
-
-    assert(Buf.LayoutStruct->getElementType(Offset) == GV->getValueType() &&
-           "constant type mismatch");
-
-    // Replace.
-    GV->replaceAllUsesWith(GEP);
-    // Erase GV.
-    GV->removeDeadConstantUsers();
-    GV->eraseFromParent();
-  }
   return CBGV;
 }
 
@@ -144,6 +128,7 @@ void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
   }
 
   auto *GV = cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(D));
+  GV->setExternallyInitialized(true);
   // Add debug info for constVal.
   if (CGDebugInfo *DI = CGM.getModuleDebugInfo())
     if (CGM.getCodeGenOpts().getDebugInfo() >=
@@ -306,6 +291,16 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
       continue;
 
     llvm::hlsl::ResourceClass RC = AttrResType->getAttrs().ResourceClass;
+    if (RC == llvm::hlsl::ResourceClass::UAV ||
+        RC == llvm::hlsl::ResourceClass::SRV)
+      // UAVs and SRVs have already been converted to use LLVM target types,
+      // we can disable generating of these resource annotations. This will
+      // enable progress on structured buffers with user defined types this
+      // resource annotations code does not handle and it crashes.
+      // This whole function is going to be removed as soon as cbuffers are
+      // converted to target types (llvm/llvm-project #114126).
+      return;
+
     bool IsROV = AttrResType->getAttrs().IsROV;
     llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
     llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
@@ -379,6 +374,15 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
         CGM.getIntrinsic(getThreadIdIntrinsic());
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
+  if (D.hasAttr<HLSLSV_GroupThreadIDAttr>()) {
+    llvm::Function *GroupThreadIDIntrinsic =
+        CGM.getIntrinsic(getGroupThreadIdIntrinsic());
+    return buildVectorInput(B, GroupThreadIDIntrinsic, Ty);
+  }
+  if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
+    llvm::Function *GroupIDIntrinsic = CGM.getIntrinsic(getGroupIdIntrinsic());
+    return buildVectorInput(B, GroupIDIntrinsic, Ty);
+  }
   assert(false && "Unhandled parameter attribute");
   return nullptr;
 }
@@ -404,6 +408,16 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", EntryFn);
   IRBuilder<> B(BB);
   llvm::SmallVector<Value *> Args;
+
+  SmallVector<OperandBundleDef, 1> OB;
+  if (CGM.shouldEmitConvergenceTokens()) {
+    assert(EntryFn->isConvergent());
+    llvm::Value *I = B.CreateIntrinsic(
+        llvm::Intrinsic::experimental_convergence_entry, {}, {});
+    llvm::Value *bundleArgs[] = {I};
+    OB.emplace_back("convergencectrl", bundleArgs);
+  }
+
   // FIXME: support struct parameters where semantics are on members.
   // See: https://github.com/llvm/llvm-project/issues/57874
   unsigned SRetOffset = 0;
@@ -419,7 +433,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     Args.push_back(emitInputSemantic(B, *PD, Param.getType()));
   }
 
-  CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args);
+  CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args, OB);
   CI->setCallingConv(Fn->getCallingConv());
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
@@ -474,14 +488,26 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   for (auto &F : M.functions()) {
     if (!F.hasFnAttribute("hlsl.shader"))
       continue;
-    IRBuilder<> B(&F.getEntryBlock(), F.getEntryBlock().begin());
-    for (auto *Fn : CtorFns)
-      B.CreateCall(FunctionCallee(Fn));
+    auto *Token = getConvergenceToken(F.getEntryBlock());
+    Instruction *IP = &*F.getEntryBlock().begin();
+    SmallVector<OperandBundleDef, 1> OB;
+    if (Token) {
+      llvm::Value *bundleArgs[] = {Token};
+      OB.emplace_back("convergencectrl", bundleArgs);
+      IP = Token->getNextNode();
+    }
+    IRBuilder<> B(IP);
+    for (auto *Fn : CtorFns) {
+      auto CI = B.CreateCall(FunctionCallee(Fn), {}, OB);
+      CI->setCallingConv(Fn->getCallingConv());
+    }
 
     // Insert global dtors before the terminator of the last instruction
     B.SetInsertPoint(F.back().getTerminator());
-    for (auto *Fn : DtorFns)
-      B.CreateCall(FunctionCallee(Fn));
+    for (auto *Fn : DtorFns) {
+      auto CI = B.CreateCall(FunctionCallee(Fn), {}, OB);
+      CI->setCallingConv(Fn->getCallingConv());
+    }
   }
 
   // No need to keep global ctors/dtors for non-lib profile after call to
@@ -495,87 +521,98 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   }
 }
 
+// Returns true if the type is an HLSL resource class
+static bool isResourceRecordType(const clang::Type *Ty) {
+  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
+}
+
+static void createResourceInitFn(CodeGenModule &CGM, const VarDecl *VD,
+                                 llvm::GlobalVariable *GV, unsigned Slot,
+                                 unsigned Space) {
+  LLVMContext &Ctx = CGM.getLLVMContext();
+  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(Ctx);
+
+  llvm::Function *InitResFunc = llvm::Function::Create(
+      llvm::FunctionType::get(CGM.VoidTy, false),
+      llvm::GlobalValue::InternalLinkage,
+      ("_init_resource_" + VD->getName()).str(), CGM.getModule());
+  InitResFunc->addFnAttr(llvm::Attribute::AlwaysInline);
+
+  llvm::BasicBlock *EntryBB =
+      llvm::BasicBlock::Create(Ctx, "entry", InitResFunc);
+  CGBuilderTy Builder(CGM, Ctx);
+  const DataLayout &DL = CGM.getModule().getDataLayout();
+  Builder.SetInsertPoint(EntryBB);
+
+  const HLSLAttributedResourceType *AttrResType =
+      HLSLAttributedResourceType::findHandleTypeOnResource(
+          VD->getType().getTypePtr());
+
+  // FIXME: Only simple declarations of resources are supported for now.
+  // Arrays of resources or resources in user defined classes are
+  // not implemented yet.
+  assert(AttrResType != nullptr &&
+         "Resource class must have a handle of HLSLAttributedResourceType");
+
+  llvm::Type *TargetTy =
+      CGM.getTargetCodeGenInfo().getHLSLType(CGM, AttrResType);
+  assert(TargetTy != nullptr &&
+         "Failed to convert resource handle to target type");
+
+  llvm::Value *Args[] = {
+      llvm::ConstantInt::get(CGM.IntTy, Space), /* reg_space */
+      llvm::ConstantInt::get(CGM.IntTy, Slot),  /* lower_bound */
+      // FIXME: resource arrays are not yet implemented
+      llvm::ConstantInt::get(CGM.IntTy, 1), /* range_size */
+      llvm::ConstantInt::get(CGM.IntTy, 0), /* index */
+      // FIXME: NonUniformResourceIndex bit is not yet implemented
+      llvm::ConstantInt::get(Int1Ty, false) /* non-uniform */
+  };
+  llvm::Value *CreateHandle = Builder.CreateIntrinsic(
+      /*ReturnType=*/TargetTy,
+      CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic(), Args, nullptr,
+      Twine(VD->getName()).concat("_h"));
+
+  llvm::Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, 0);
+  Builder.CreateAlignedStore(CreateHandle, HandleRef,
+                             HandleRef->getPointerAlignment(DL));
+  Builder.CreateRetVoid();
+
+  CGM.AddCXXGlobalInit(InitResFunc);
+}
+
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
                                               llvm::GlobalVariable *GV) {
-  // If the global variable has resource binding, add it to the list of globals
-  // that need resource binding initialization.
+
+  // If the global variable has resource binding, create an init function
+  // for the resource
   const HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
   if (!RBA)
+    // FIXME: collect unbound resources for implicit binding resolution later
+    // on?
     return;
 
-  if (!HLSLAttributedResourceType::findHandleTypeOnResource(
-          VD->getType().getTypePtr()))
+  if (!isResourceRecordType(VD->getType().getTypePtr()))
     // FIXME: Only simple declarations of resources are supported for now.
     // Arrays of resources or resources in user defined classes are
     // not implemented yet.
     return;
 
-  ResourcesToBind.emplace_back(VD, GV);
+  createResourceInitFn(CGM, VD, GV, RBA->getSlotNumber(),
+                       RBA->getSpaceNumber());
 }
 
-bool CGHLSLRuntime::needsResourceBindingInitFn() {
-  return !ResourcesToBind.empty();
-}
+llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
+  if (!CGM.shouldEmitConvergenceTokens())
+    return nullptr;
 
-llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
-  // No resources to bind
-  assert(needsResourceBindingInitFn() && "no resources to bind");
-
-  LLVMContext &Ctx = CGM.getLLVMContext();
-  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(Ctx);
-
-  llvm::Function *InitResBindingsFunc =
-      llvm::Function::Create(llvm::FunctionType::get(CGM.VoidTy, false),
-                             llvm::GlobalValue::InternalLinkage,
-                             "_init_resource_bindings", CGM.getModule());
-
-  llvm::BasicBlock *EntryBB =
-      llvm::BasicBlock::Create(Ctx, "entry", InitResBindingsFunc);
-  CGBuilderTy Builder(CGM, Ctx);
-  const DataLayout &DL = CGM.getModule().getDataLayout();
-  Builder.SetInsertPoint(EntryBB);
-
-  for (const auto &[VD, GV] : ResourcesToBind) {
-    for (Attr *A : VD->getAttrs()) {
-      HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
-      if (!RBA)
-        continue;
-
-      const HLSLAttributedResourceType *AttrResType =
-          HLSLAttributedResourceType::findHandleTypeOnResource(
-              VD->getType().getTypePtr());
-
-      // FIXME: Only simple declarations of resources are supported for now.
-      // Arrays of resources or resources in user defined classes are
-      // not implemented yet.
-      assert(AttrResType != nullptr &&
-             "Resource class must have a handle of HLSLAttributedResourceType");
-
-      llvm::Type *TargetTy =
-          CGM.getTargetCodeGenInfo().getHLSLType(CGM, AttrResType);
-      assert(TargetTy != nullptr &&
-             "Failed to convert resource handle to target type");
-
-      auto *Space = llvm::ConstantInt::get(CGM.IntTy, RBA->getSpaceNumber());
-      auto *Slot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
-      // FIXME: resource arrays are not yet implemented
-      auto *Range = llvm::ConstantInt::get(CGM.IntTy, 1);
-      auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
-      // FIXME: NonUniformResourceIndex bit is not yet implemented
-      auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
-      llvm::Value *Args[] = {Space, Slot, Range, Index, NonUniform};
-
-      llvm::Value *CreateHandle = Builder.CreateIntrinsic(
-          /*ReturnType=*/TargetTy, getCreateHandleFromBindingIntrinsic(), Args,
-          nullptr, Twine(VD->getName()).concat("_h"));
-
-      llvm::Value *HandleRef =
-          Builder.CreateStructGEP(GV->getValueType(), GV, 0);
-      Builder.CreateAlignedStore(CreateHandle, HandleRef,
-                                 HandleRef->getPointerAlignment(DL));
+  auto E = BB.end();
+  for (auto I = BB.begin(); I != E; ++I) {
+    auto *II = dyn_cast<llvm::IntrinsicInst>(&*I);
+    if (II && llvm::isConvergenceControlIntrinsic(II->getIntrinsicID())) {
+      return II;
     }
   }
-
-  Builder.CreateRetVoid();
-  return InitResBindingsFunc;
+  llvm_unreachable("Convergence token should have been emitted.");
+  return nullptr;
 }

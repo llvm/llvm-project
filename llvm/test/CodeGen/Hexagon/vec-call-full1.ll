@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-DAG: v{{[0-9]+}} = vmem(r{{[0-9]+}}+#0)
 ; CHECK-DAG: v{{[0-9]+}} = vmem(r{{[0-9]+}}+#0)

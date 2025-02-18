@@ -984,6 +984,18 @@ TEST_F(SortIncludesTest, SortAndDeduplicateIncludes) {
                     "#include <c>\n"
                     "#include <b>"));
 
+  verifyFormat("/* COPYRIGHT *\\\n"
+               "\\* (C) 2024  */\n"
+               "\n"
+               "#include <a>\n"
+               "#include <b>",
+               sort("/* COPYRIGHT *\\\n"
+                    "\\* (C) 2024  */\n"
+                    "\n"
+                    "#include <b>\n"
+                    "#include <a>\n"
+                    "#include <b>"));
+
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Merge;
   verifyFormat("#include <a>\n"
                "#include <b>\n"

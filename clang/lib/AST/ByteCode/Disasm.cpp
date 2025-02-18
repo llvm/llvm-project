@@ -33,7 +33,7 @@
 using namespace clang;
 using namespace clang::interp;
 
-template <typename T> inline T ReadArg(Program &P, CodePtr &OpPC) {
+template <typename T> inline static T ReadArg(Program &P, CodePtr &OpPC) {
   if constexpr (std::is_pointer_v<T>) {
     uint32_t ID = OpPC.read<uint32_t>();
     return reinterpret_cast<T>(P.getNativePointer(ID));
@@ -58,6 +58,12 @@ inline IntegralAP<false> ReadArg<IntegralAP<false>>(Program &P, CodePtr &OpPC) {
 template <>
 inline IntegralAP<true> ReadArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
   IntegralAP<true> I = IntegralAP<true>::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
+}
+
+template <> inline FixedPoint ReadArg<FixedPoint>(Program &P, CodePtr &OpPC) {
+  FixedPoint I = FixedPoint::deserialize(*OpPC);
   OpPC += align(I.bytesToSerialize());
   return I;
 }
@@ -368,10 +374,10 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
   case LValue: {
     assert(Source);
     QualType SourceType;
-    if (const auto *D = Source.dyn_cast<const Decl *>()) {
+    if (const auto *D = dyn_cast<const Decl *>(Source)) {
       if (const auto *VD = dyn_cast<ValueDecl>(D))
         SourceType = VD->getType();
-    } else if (const auto *E = Source.dyn_cast<const Expr *>()) {
+    } else if (const auto *E = dyn_cast<const Expr *>(Source)) {
       SourceType = E->getType();
     }
 

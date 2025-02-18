@@ -52,6 +52,26 @@ bool arm::isARMAProfile(const llvm::Triple &Triple) {
   return llvm::ARM::parseArchProfile(Arch) == llvm::ARM::ProfileKind::A;
 }
 
+/// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
+bool arm::isARMEABIBareMetal(const llvm::Triple &Triple) {
+  auto arch = Triple.getArch();
+  if (arch != llvm::Triple::arm && arch != llvm::Triple::thumb &&
+      arch != llvm::Triple::armeb && arch != llvm::Triple::thumbeb)
+    return false;
+
+  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
+    return false;
+
+  if (Triple.getOS() != llvm::Triple::UnknownOS)
+    return false;
+
+  if (Triple.getEnvironment() != llvm::Triple::EABI &&
+      Triple.getEnvironment() != llvm::Triple::EABIHF)
+    return false;
+
+  return true;
+}
+
 // Get Arch/CPU from args.
 void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
                                 llvm::StringRef &CPU, bool FromAs) {
@@ -423,14 +443,13 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
     case llvm::Triple::MuslEABIHF:
     case llvm::Triple::EABIHF:
       return FloatABI::Hard;
+    case llvm::Triple::Android:
     case llvm::Triple::GNUEABI:
     case llvm::Triple::GNUEABIT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::EABI:
       // EABI is always AAPCS, and if it was not marked 'hard', it's softfp
       return FloatABI::SoftFP;
-    case llvm::Triple::Android:
-      return (SubArch >= 7) ? FloatABI::SoftFP : FloatABI::Soft;
     default:
       return FloatABI::Invalid;
     }
@@ -627,7 +646,7 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
     (void)getARMFPUFeatures(D, WaFPU->first, Args, WaFPU->second, Features);
   } else if (FPUArg) {
     FPUKind = getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
-  } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) >= 7) {
+  } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) == 7) {
     const char *AndroidFPU = "neon";
     FPUKind = llvm::ARM::parseFPU(AndroidFPU);
     if (!llvm::ARM::getFPUFeatures(FPUKind, Features))
@@ -639,11 +658,19 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
         CPUArgFPUKind != llvm::ARM::FK_INVALID ? CPUArgFPUKind : ArchArgFPUKind;
     (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
   } else {
+    bool Generic = true;
     if (!ForAS) {
       std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);
+      if (CPU != "generic")
+        Generic = false;
       llvm::ARM::ArchKind ArchKind =
           arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
       FPUKind = llvm::ARM::getDefaultFPU(CPU, ArchKind);
+      (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
+    }
+    if (Generic && (Triple.isOSWindows() || Triple.isOSDarwin()) &&
+        getARMSubArchVersionNumber(Triple) >= 7) {
+      FPUKind = llvm::ARM::parseFPU("neon");
       (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
     }
   }
@@ -727,6 +754,15 @@ fp16_fml_fallthrough:
     else
       Features.push_back("-crc");
   }
+
+  // Invalid value of the __ARM_FEATURE_MVE macro when an explicit -mfpu= option
+  // disables MVE-FP -mfpu=fpv5-d16 or -mfpu=fpv5-sp-d16 disables the scalar
+  // half-precision floating-point operations feature. Therefore, because the
+  // M-profile Vector Extension (MVE) floating-point feature requires the scalar
+  // half-precision floating-point operations, this option also disables the MVE
+  // floating-point feature: -mve.fp
+  if (FPUKind == llvm::ARM::FK_FPV5_D16 || FPUKind == llvm::ARM::FK_FPV5_SP_D16)
+    Features.push_back("-mve.fp");
 
   // For Arch >= ARMv8.0 && A or R profile:  crypto = sha2 + aes
   // Rather than replace within the feature vector, determine whether each
@@ -908,6 +944,10 @@ fp16_fml_fallthrough:
       if (VersionNum < 6 ||
           Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
         Features.push_back("+strict-align");
+    } else if (Triple.getVendor() == llvm::Triple::Apple &&
+               Triple.isOSBinFormatMachO()) {
+      // Firmwares on Apple platforms are strict-align by default.
+      Features.push_back("+strict-align");
     } else if (VersionNum < 7 ||
                Triple.getSubArch() ==
                    llvm::Triple::SubArchType::ARMSubArch_v6m ||

@@ -96,7 +96,7 @@ public:
     // This structure holds all attributes, accounting for their string /
     // numeric value, so we can later emit them in declaration order, keeping
     // all in the same vector.
-    enum {
+    enum Types {
       HiddenAttribute = 0,
       NumericAttribute,
       TextAttribute,
@@ -105,6 +105,17 @@ public:
     unsigned Tag;
     unsigned IntValue;
     std::string StringValue;
+    AttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
+        : Type(Ty), Tag(Tg), IntValue(IV), StringValue(SV) {}
+  };
+
+  /// ELF object attributes subsection support
+  struct AttributeSubSection {
+    bool IsActive;
+    StringRef VendorName;
+    unsigned IsOptional;
+    unsigned ParameterType;
+    SmallVector<AttributeItem, 64> Content;
   };
 
   // Attributes that are added and managed entirely by target.
@@ -119,13 +130,23 @@ public:
                              unsigned Type, MCSection *&AttributeSection) {
     createAttributesSection(Vendor, Section, Type, AttributeSection, Contents);
   }
+  void
+  emitAttributesSection(MCSection *&AttributeSection, const Twine &Section,
+                        unsigned Type,
+                        SmallVector<AttributeSubSection, 64> &SubSectionVec) {
+    createAttributesWithSubsection(AttributeSection, Section, Type,
+                                   SubSectionVec);
+  }
 
 private:
   AttributeItem *getAttributeItem(unsigned Attribute);
-  size_t calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec);
+  size_t calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) const;
   void createAttributesSection(StringRef Vendor, const Twine &Section,
                                unsigned Type, MCSection *&AttributeSection,
                                SmallVector<AttributeItem, 64> &AttrsVec);
+  void createAttributesWithSubsection(
+      MCSection *&AttributeSection, const Twine &Section, unsigned Type,
+      SmallVector<AttributeSubSection, 64> &SubSectionVec);
 
   // GNU attributes that will get emitted at the end of the asm file.
   SmallVector<AttributeItem, 64> GNUAttributes;

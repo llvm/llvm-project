@@ -21,13 +21,9 @@ using namespace clang;
 using namespace clang::targets;
 
 static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsNVPTX.def"
+#include "clang/Basic/BuiltinsNVPTX.inc"
 };
 
 const char *const NVPTXTargetInfo::GCCRegNames[] = {"r0"};
@@ -205,9 +201,11 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX909:
       case OffloadArch::GFX90a:
       case OffloadArch::GFX90c:
+      case OffloadArch::GFX9_4_GENERIC:
       case OffloadArch::GFX940:
       case OffloadArch::GFX941:
       case OffloadArch::GFX942:
+      case OffloadArch::GFX950:
       case OffloadArch::GFX10_1_GENERIC:
       case OffloadArch::GFX1010:
       case OffloadArch::GFX1011:
@@ -229,6 +227,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX1150:
       case OffloadArch::GFX1151:
       case OffloadArch::GFX1152:
+      case OffloadArch::GFX1153:
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
@@ -282,6 +281,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_90a:
         return "900";
       case OffloadArch::SM_100:
+      case OffloadArch::SM_100a:
         return "1000";
       }
       llvm_unreachable("unhandled OffloadArch");
@@ -289,6 +289,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CUDA_ARCH__", CUDAArchCode);
     if (GPU == OffloadArch::SM_90a)
       Builder.defineMacro("__CUDA_ARCH_FEAT_SM90_ALL", "1");
+    if (GPU == OffloadArch::SM_100a)
+      Builder.defineMacro("__CUDA_ARCH_FEAT_SM100_ALL", "1");
   }
 }
 

@@ -55,8 +55,8 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
     for (unsigned i = 0; i < CBI->getNumSuccessors(); i++) {
       auto *Succ = CBI->getSuccessor(i);
       if (!Succ->getSinglePredecessor()) {
-        assert(isCriticalEdge(II, i) && "Expected a critical edge!");
-        [[maybe_unused]] BasicBlock *BB = SplitCriticalEdge(II, i);
+        assert(isCriticalEdge(CBI, i) && "Expected a critical edge!");
+        [[maybe_unused]] BasicBlock *BB = SplitCriticalEdge(CBI, i);
         assert(BB && "Unable to split critical edge.");
       }
     }

@@ -1,7 +1,7 @@
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+micromips \
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=+micromips \
 ; RUN:   -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=MM32
-; RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips \
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -mattr=+micromips \
 ; RUN:   -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=MM32
 

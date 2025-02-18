@@ -895,7 +895,7 @@ bool EarlyIfConverter::shouldConvertIf() {
         if (!MO.isReg() || !MO.isUse())
           return false;
         Register Reg = MO.getReg();
-        if (Register::isPhysicalRegister(Reg))
+        if (Reg.isPhysical())
           return false;
 
         MachineInstr *Def = MRI->getVRegDef(Reg);
@@ -906,7 +906,7 @@ bool EarlyIfConverter::shouldConvertIf() {
                  if (!MO.isReg() || !MO.isUse())
                    return false;
                  Register Reg = MO.getReg();
-                 if (Register::isPhysicalRegister(Reg))
+                 if (Reg.isPhysical())
                    return false;
 
                  MachineInstr *Def = MRI->getVRegDef(Reg);
@@ -1119,9 +1119,6 @@ bool EarlyIfConverter::run(MachineFunction &MF) {
 PreservedAnalyses
 EarlyIfConverterPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineLoopInfo &LI = MFAM.getResult<MachineLoopAnalysis>(MF);
   MachineTraceMetrics &MTM = MFAM.getResult<MachineTraceMetricsAnalysis>(MF);

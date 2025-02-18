@@ -20,7 +20,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
 

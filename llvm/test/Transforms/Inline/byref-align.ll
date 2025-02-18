@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; should be inserted.
 define void @byref_callee(ptr align(128) byref(float) nocapture %a, ptr %b) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@byref_callee
-; CHECK-SAME: (ptr nocapture byref(float) align 128 [[A:%.*]], ptr [[B:%.*]]) [[ATTR0:#.*]] {
+; CHECK-SAME: (ptr byref(float) align 128 captures(none) [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[B_IDX:%.*]] = getelementptr inbounds float, ptr [[B]], i64 8
@@ -26,7 +26,7 @@ entry:
 
 define void @byref_caller(ptr nocapture align 64 %a, ptr %b) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@byref_caller
-; CHECK-SAME: (ptr nocapture align 64 [[A:%.*]], ptr [[B:%.*]]) [[ATTR0]] {
+; CHECK-SAME: (ptr align 64 captures(none) [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 128) ]
 ; CHECK-NEXT:    [[LOAD_I:%.*]] = load float, ptr [[A]], align 4

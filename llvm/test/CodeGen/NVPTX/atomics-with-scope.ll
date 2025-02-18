@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_60 | FileCheck %s -check-prefixes=CHECK,CHECK32
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 | FileCheck %s
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_60 | FileCheck %s -check-prefixes=CHECK,CHECK32
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_60 | FileCheck %s
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
 
 ; CHECK-LABEL: .func test_atomics_scope(
 define void @test_atomics_scope(ptr %fp, float %f,

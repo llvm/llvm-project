@@ -11,10 +11,9 @@ declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 define i32 @foo(i32 %guard, ...) {
 ; CHECK-LABEL: @foo
 ; CHECK:    [[TMP1:%.*]] = load {{.*}} @__msan_va_arg_overflow_size_tls
-; CHECK:    [[TMP2:%.*]] = add i64 0, [[TMP1]]
-; CHECK:    [[TMP3:%.*]] = alloca {{.*}} [[TMP2]]
-; CHECK:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 [[TMP2]], i1 false)
-; CHECK:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 800)
+; CHECK:    [[TMP3:%.*]] = alloca {{.*}} [[TMP1]]
+; CHECK:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 [[TMP1]], i1 false)
+; CHECK:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP3]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP4]], i1 false)
 ;
   %vl = alloca ptr, align 8

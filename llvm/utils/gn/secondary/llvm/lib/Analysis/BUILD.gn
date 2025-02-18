@@ -68,6 +68,8 @@ static_library("Analysis") {
     "InstructionPrecedenceTracking.cpp",
     "InstructionSimplify.cpp",
     "InteractiveModelRunner.cpp",
+    "KernelInfo.cpp",
+    "LastRunTrackingAnalysis.cpp",
     "LazyBlockFrequencyInfo.cpp",
     "LazyBranchProbabilityInfo.cpp",
     "LazyCallGraph.cpp",

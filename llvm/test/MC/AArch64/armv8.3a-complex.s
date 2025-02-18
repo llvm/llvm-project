@@ -1,5 +1,6 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+complxnum,+fullfp16 -o - %s 2>%t | FileCheck %s
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.3a,+fullfp16 -o - %s 2>%t | FileCheck %s
+.text
 fcmla v0.4h, v1.4h, v2.4h, #0
 fcmla v0.8h, v1.8h, v2.8h, #0
 fcmla v0.2s, v1.2s, v2.2s, #0

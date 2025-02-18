@@ -15,9 +15,10 @@ file at compile-time.
 Goal and usage
 ==============
 
-Users of sanitizer tools, such as :doc:`AddressSanitizer`, :doc:`ThreadSanitizer`
-or :doc:`MemorySanitizer` may want to disable or alter some checks for
-certain source-level entities to:
+Users of sanitizer tools, such as :doc:`AddressSanitizer`,
+:doc:`HardwareAssistedAddressSanitizerDesign`, :doc:`ThreadSanitizer`,
+:doc:`MemorySanitizer` or :doc:`UndefinedBehaviorSanitizer` may want to disable
+or alter some checks for certain source-level entities to:
 
 * speedup hot function, which is known to be correct;
 * ignore a function that does some low-level magic (e.g. walks through the
@@ -47,6 +48,60 @@ Example
   # AddressSanitizer prints an error report.
   $ clang -fsanitize=address -fsanitize-ignorelist=ignorelist.txt foo.c ; ./a.out
   # No error report here.
+
+Usage with UndefinedBehaviorSanitizer
+=====================================
+
+``unsigned-integer-overflow``, ``signed-integer-overflow``,
+``implicit-signed-integer-truncation``,
+``implicit-unsigned-integer-truncation``, and ``enum`` sanitizers support the
+ability to adjust instrumentation based on type.
+
+By default, supported sanitizers will have their instrumentation disabled for
+types specified within an ignorelist.
+
+.. code-block:: bash
+
+  $ cat foo.c
+  void foo() {
+    int a = 2147483647; // INT_MAX
+    ++a;                // Normally, an overflow with -fsanitize=signed-integer-overflow
+  }
+  $ cat ignorelist.txt
+  [signed-integer-overflow]
+  type:int
+  $ clang -fsanitize=signed-integer-overflow -fsanitize-ignorelist=ignorelist.txt foo.c ; ./a.out
+  # no signed-integer-overflow error
+
+For example, supplying the above ``ignorelist.txt`` to
+``-fsanitize-ignorelist=ignorelist.txt`` disables overflow sanitizer
+instrumentation for arithmetic operations containing values of type ``int``.
+
+The ``=sanitize`` category is also supported. Any types assigned to the
+``sanitize`` category will have their sanitizer instrumentation remain. If the
+same type appears within or across ignorelists with different categories the
+``sanitize`` category takes precedence -- regardless of order.
+
+With this, one may disable instrumentation for some or all types and
+specifically allow instrumentation for one or many types -- including types
+created via ``typedef``. This is a way to achieve a sort of "allowlist" for
+supported sanitizers.
+
+.. code-block:: bash
+
+  $ cat ignorelist.txt
+  [implicit-signed-integer-truncation]
+  type:*
+  type:T=sanitize
+
+  $ cat foo.c
+  typedef char T;
+  typedef char U;
+  void foo(int toobig) {
+    T a = toobig;    // instrumented
+    U b = toobig;    // not instrumented
+    char c = toobig; // also not instrumented
+  }
 
 Format
 ======

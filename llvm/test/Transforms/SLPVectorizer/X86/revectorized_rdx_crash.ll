@@ -12,67 +12,67 @@
 ; iteration (it was matched and vectorized, which added a use of a deleted
 ; instruction)
 
-define void @test() {
+define void @test(i1 %arg, ptr %p) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_END:%.*]], label [[FOR_COND_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_END:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
-; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [100 x i32], ptr undef, i64 0, i64 2
-; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [100 x i32], ptr undef, i64 0, i64 3
+; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 2
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[I]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i32 [[TMP1]], undef
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[I1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[TMP3]], undef
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[OP_RDX3]], 2
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 undef, [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 0, [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[OP_RDX2]], 2
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX]], [[TMP5]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[OP_RDX1]], [[FOR_COND_PREHEADER]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[OP_RDX1]], [[FOR_COND_PREHEADER]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %if.end, label %for.cond.preheader
+  br i1 %arg, label %if.end, label %for.cond.preheader
 
 for.cond.preheader:                               ; preds = %entry
-  %i = getelementptr inbounds [100 x i32], ptr undef, i64 0, i64 2
-  %i1 = getelementptr inbounds [100 x i32], ptr undef, i64 0, i64 3
-  %i2 = getelementptr inbounds [100 x i32], ptr undef, i64 0, i64 4
-  %i3 = getelementptr inbounds [100 x i32], ptr undef, i64 0, i64 5
-  %i4 = getelementptr inbounds [100 x i32], ptr undef, i64 0, i64 6
+  %i = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 2
+  %i1 = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 3
+  %i2 = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 4
+  %i3 = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 5
+  %i4 = getelementptr inbounds [100 x i32], ptr %p, i64 0, i64 6
   %ld0 = load i32, ptr %i, align 8
   %ld1 = load i32, ptr %i1, align 4
   %ld2 = load i32, ptr %i2, align 16
   %ld3 = load i32, ptr %i3, align 4
-  %i5 = add i32 undef, undef
+  %i5 = add i32 0, 0
   %i6 = add i32 %i5, %ld3
   %i7 = add i32 %i6, %ld2
   %i8 = add i32 %i7, %ld1
   %i9 = add i32 %i8, %ld0
-  %i10 = add i32 %i9, undef
+  %i10 = add i32 %i9, 0
   %i11 = add i32 %i9, %i10
   %ld4 = load i32, ptr %i1, align 4
   %ld5 = load i32, ptr %i2, align 16
   %ld6 = load i32, ptr %i3, align 4
   %ld7 = load i32, ptr %i4, align 8
-  %i12 = add i32 undef, undef
+  %i12 = add i32 0, 0
   %i13 = add i32 %i12, %ld7
   %i14 = add i32 %i13, %ld6
   %i15 = add i32 %i14, %ld5
   %i16 = add i32 %i15, %ld4
-  %i17 = add i32 %i16, undef
+  %i17 = add i32 %i16, 0
   %i18 = add i32 %i17, %i11
   %i19 = add i32 %i17, %i18
-  %i20 = add i32 undef, %i19
-  %i21 = add i32 undef, %i20
-  %i22 = add i32 undef, %i21
-  %i23 = add i32 undef, %i22
+  %i20 = add i32 0, %i19
+  %i21 = add i32 0, %i20
+  %i22 = add i32 0, %i21
+  %i23 = add i32 0, %i22
   br label %if.end
 
 if.end:                                           ; preds = %for.cond.preheader, %entry
-  %r = phi i32 [ %i23, %for.cond.preheader ], [ undef, %entry ]
+  %r = phi i32 [ %i23, %for.cond.preheader ], [ 0, %entry ]
   ret void
 }

@@ -13,65 +13,63 @@ Sections:
     AddressAlign:    0x8
     CovFun:
       - FuncName:        _Z4testbbbb
-        Signature:       0xA3CF38E491
+        FuncHash:        0xA3CF38E491
         FilenamesRef:    0x6FEA48B53A6E82A8
-        Filenames:
-          - mcdc-const.cpp
         Expressions:
           - [ { Ref: 0 }, { Ref: 5 } ]
           - [ { Ref: 7 }, { Ref: 8 } ]
-        Records:
-          - { File: 0, dLoc: [ 10, 43, 4, 2 ], Ref: 0 }
-          - { File: 0, dLoc: [ 1, 1, 0, 1 ], Skip: {  } }
-          - { File: 0, dLoc: [ 1, 7, 0, 15 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 7, 0, 27 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 7, 0, 32 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 7, 0, 32 ], Decision: { BIdx: 11, NCond: 5 } }
-          - { File: 0, dLoc: [ 0, 8, 0, 9 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 8, 0, 9 ], Branch: { True: { Ref: 5 }, False: { Sub: 0 }, MCDC: [ 1, 4, 3 ] } }
-          - { File: 0, dLoc: [ 0, 13, 0, 14 ], Ref: 5 }
-          - { File: 0, dLoc: [ 0, 13, 0, 14 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 4, 0, 3 ] } }
-          - { File: 0, dLoc: [ 0, 19, 0, 27 ], Ref: 4 }
-          - { File: 0, dLoc: [ 0, 20, 0, 21 ], Ref: 4 }
-          - { File: 0, dLoc: [ 0, 20, 0, 21 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 3, 5, 2 ] } }
-          - { File: 0, dLoc: [ 0, 25, 0, 26 ], Ref: 7 }
-          - { File: 0, dLoc: [ 0, 25, 0, 26 ], Branch: { True: { Ref: 8 }, False: { Sub: 1 }, MCDC: [ 5, 0, 2 ] } }
-          - { File: 0, dLoc: [ 0, 31, 0, 32 ], Ref: 2 }
-          - { File: 0, dLoc: [ 0, 31, 0, 32 ], Branch: { True: { Zero: {  } }, False: { Zero: {  } }, MCDC: [ 2, 0, 0 ] } }
-          - { File: 0, dLoc: [ 0, 33, 1, 5 ], isGap: true, Ref: 1 }
-          - { File: 0, dLoc: [ 1, 5, 0, 36 ], Ref: 1 }
+        Files:
+          - Index:           0
+            Filename:        mcdc-const.cpp
+            Regions:
+              - { dLoc: [ 10, 43, 4, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 7, 0, 15 ], Ref: 0 }
+              - { dLoc: [ 0, 7, 0, 27 ], Ref: 0 }
+              - { dLoc: [ 0, 7, 0, 32 ], Ref: 0 }
+              - { dLoc: [ 0, 7, 0, 32 ], Decision: { BIdx: 11, NCond: 5 } }
+              - { dLoc: [ 0, 8, 0, 9 ], Ref: 0 }
+              - { dLoc: [ 0, 8, 0, 9 ], Branch: [ { Ref: 5 }, { Sub: 0 } ], MCDC: [ 1, 4, 3 ] }
+              - { dLoc: [ 0, 13, 0, 14 ], Ref: 5 }
+              - { dLoc: [ 0, 13, 0, 14 ], Branch: [ { Tag: Zero }, { Tag: Zero } ], MCDC: [ 4, 0, 3 ] }
+              - { dLoc: [ 0, 19, 0, 27 ], Ref: 4 }
+              - { dLoc: [ 0, 20, 0, 21 ], Ref: 4 }
+              - { dLoc: [ 0, 20, 0, 21 ], Branch: [ { Tag: Zero }, { Tag: Zero } ], MCDC: [ 3, 5, 2 ] }
+              - { dLoc: [ 0, 25, 0, 26 ], Ref: 7 }
+              - { dLoc: [ 0, 25, 0, 26 ], Branch: [ { Ref: 8 }, { Sub: 1 } ], MCDC: [ 5, 0, 2 ] }
+              - { dLoc: [ 0, 31, 0, 32 ], Ref: 2 }
+              - { dLoc: [ 0, 31, 0, 32 ], Branch: [ { Tag: Zero }, { Tag: Zero } ], MCDC: [ 2, 0, 0 ] }
+              - { dLoc: [ 0, 33, 1, 5 ], isGap: true, Ref: 1 }
+              - { dLoc: [ 1, 5, 0, 36 ], Ref: 1 }
   - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovFun:
       - FuncName:        main
-        Signature:       0x18
+        FuncHash:        0x18
         FilenamesRef:    0x6FEA48B53A6E82A8
-        Filenames:
-          - mcdc-const.cpp
         Expressions:     []
-        Records:
-          - { File: 0, dLoc: [ 17, 1, 9, 2 ], Ref: 0 }
-          - { File: 0, dLoc: [ 5, 1, 0, 1 ], Skip: {  } }
-          - { File: 0, dLoc: [ 2, 1, 0, 1 ], Skip: {  } }
+        Files:
+          - Index:           0
+            Filename:        mcdc-const.cpp
+            Regions:
+              - { dLoc: [ 17, 1, 9, 2 ], Ref: 0 }
+              - { dLoc: [ 5, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 2, 1, 0, 1 ], ExtTag: Skip }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovMap:
-      - Version:         6
-        FnBlobHash:      0x6FEA48B53A6E82A8
-        Filenames:
-          - mcdc-const.cpp
+      - FilenamesRef:    0x6FEA48B53A6E82A8
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
     AddressAlign:    0x1
     PrfNames:
-      - Names:
-          - _Z4testbbbb
-          - main
+      - - _Z4testbbbb
+        - main
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab
@@ -79,24 +77,4 @@ Sections:
       - Name:            '__llvm_covfun (1)'
       - Name:            __llvm_covmap
       - Name:            __llvm_prf_names
-      - Name:            .symtab
-Symbols:
-  - Name:            __llvm_covmap
-    Type:            STT_SECTION
-    Section:         __llvm_covmap
-  - Name:            __llvm_prf_names
-    Type:            STT_SECTION
-    Section:         __llvm_prf_names
-  - Name:            __covrec_92FEBEFF6DCBC98Au
-    Type:            STT_OBJECT
-    Section:         __llvm_covfun
-    Binding:         STB_WEAK
-    Size:            0xA2
-    Other:           [ STV_HIDDEN ]
-  - Name:            __covrec_DB956436E78DD5FAu
-    Type:            STT_OBJECT
-    Section:         '__llvm_covfun (1)'
-    Binding:         STB_WEAK
-    Size:            0x2F
-    Other:           [ STV_HIDDEN ]
 ...

@@ -23,7 +23,9 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
@@ -571,6 +573,12 @@ bool M68kInstrInfo::ExpandPUSH_POP(MachineInstrBuilder &MIB,
 }
 
 bool M68kInstrInfo::ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const {
+  if (MIB->getOpcode() == M68k::MOV8cd) {
+    // Promote used register to the next class
+    MachineOperand &Opd = MIB->getOperand(1);
+    Opd.setReg(getRegisterInfo().getMatchingSuperReg(
+        Opd.getReg(), M68k::MxSubRegIndex8Lo, &M68k::DR16RegClass));
+  }
 
   // Replace the pseudo instruction with the real one
   if (IsToCCR)
@@ -578,11 +586,6 @@ bool M68kInstrInfo::ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const {
   else
     // FIXME M68010 or later is required
     MIB->setDesc(get(M68k::MOV16dc));
-
-  // Promote used register to the next class
-  auto &Opd = MIB->getOperand(1);
-  Opd.setReg(getRegisterInfo().getMatchingSuperReg(
-      Opd.getReg(), M68k::MxSubRegIndex8Lo, &M68k::DR16RegClass));
 
   return true;
 }
@@ -757,13 +760,27 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   bool ToSR = DstReg == M68k::SR;
 
   if (FromCCR) {
-    assert(M68k::DR8RegClass.contains(DstReg) &&
-           "Need DR8 register to copy CCR");
-    Opc = M68k::MOV8dc;
+    if (M68k::DR8RegClass.contains(DstReg)) {
+      Opc = M68k::MOV8dc;
+    } else if (M68k::DR16RegClass.contains(DstReg)) {
+      Opc = M68k::MOV16dc;
+    } else if (M68k::DR32RegClass.contains(DstReg)) {
+      Opc = M68k::MOV16dc;
+    } else {
+      LLVM_DEBUG(dbgs() << "Cannot copy CCR to " << RI.getName(DstReg) << '\n');
+      llvm_unreachable("Invalid register for MOVE from CCR");
+    }
   } else if (ToCCR) {
-    assert(M68k::DR8RegClass.contains(SrcReg) &&
-           "Need DR8 register to copy CCR");
-    Opc = M68k::MOV8cd;
+    if (M68k::DR8RegClass.contains(SrcReg)) {
+      Opc = M68k::MOV8cd;
+    } else if (M68k::DR16RegClass.contains(SrcReg)) {
+      Opc = M68k::MOV16cd;
+    } else if (M68k::DR32RegClass.contains(SrcReg)) {
+      Opc = M68k::MOV16cd;
+    } else {
+      LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to CCR\n");
+      llvm_unreachable("Invalid register for MOVE to CCR");
+    }
   } else if (FromSR || ToSR)
     llvm_unreachable("Cannot emit SR copy instruction");
 
@@ -827,7 +844,8 @@ bool M68kInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 void M68kInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
   assert(MFI.getObjectSize(FrameIndex) >= TRI->getSpillSize(*RC) &&
          "Stack slot is too small to store");
@@ -845,7 +863,8 @@ void M68kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          Register DstReg, int FrameIndex,
                                          const TargetRegisterClass *RC,
                                          const TargetRegisterInfo *TRI,
-                                         Register VReg) const {
+                                         Register VReg,
+                                         MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
   assert(MFI.getObjectSize(FrameIndex) >= TRI->getSpillSize(*RC) &&
          "Stack slot is too small to load");

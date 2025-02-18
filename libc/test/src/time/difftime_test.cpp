@@ -8,15 +8,12 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/time/difftime.h"
-#include "src/time/time_utils.h"
+#include "src/time/time_constants.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-using LIBC_NAMESPACE::time_utils::TimeConstants;
-
 TEST(LlvmLibcDifftime, SmokeTest) {
-  time_t t1_seconds = TimeConstants::SECONDS_PER_HOUR;
+  time_t t1_seconds = LIBC_NAMESPACE::time_constants::SECONDS_PER_HOUR;
   time_t t2_seconds = 0;
 
   LIBC_NAMESPACE::fputil::FPBits<long double> expected_fp =

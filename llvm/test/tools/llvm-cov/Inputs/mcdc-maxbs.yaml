@@ -13,11 +13,8 @@ Sections:
     AddressAlign:    0x8
     CovFun:
       - FuncName:        sub
-        Signature:       0x48352A6636FC7EC6
+        FuncHash:        0x48352A6636FC7EC6
         FilenamesRef:    0xF513BD425F33BADE
-        Filenames:
-          - mcdc-maxbs.c
-          - mcdc-maxbs.c
         Expressions:
           - [ { Ref: 0 }, { Ref: 1 } ]
           - [ { Sub: 0 }, { Ref: 5 } ]
@@ -26,66 +23,69 @@ Sections:
           - [ { Ref: 7 }, { Ref: 8 } ]
           - [ { Ref: 0 }, { Ref: 2 } ]
           - [ { Ref: 2 }, { Ref: 3 } ]
-        Records:
-          - { File: 0, dLoc: [ 3, 16, 3, 2 ], Ref: 0 }
-          - { File: 0, dLoc: [ 1, 7, 0, 12 ], Expansion: 1 }
-          - { File: 0, dLoc: [ 0, 26, 0, 27 ], isGap: true, Ref: 1 }
-          - { File: 0, dLoc: [ 0, 27, 0, 35 ], Ref: 1 }
-          - { File: 0, dLoc: [ 0, 36, 1, 3 ], isGap: true, Sub: 0 }
-          - { File: 0, dLoc: [ 1, 3, 0, 60 ], Sub: 0 }
-          - { File: 0, dLoc: [ 0, 11, 0, 33 ], Sub: 0 }
-          - { File: 0, dLoc: [ 0, 11, 0, 59 ], Decision: { BIdx: 10, NCond: 4 } }
-          - { File: 0, dLoc: [ 0, 12, 0, 20 ], Sub: 0 }
-          - { File: 0, dLoc: [ 0, 12, 0, 20 ], Branch: { True: { Ref: 5 }, False: { Sub: 1 }, MCDC: [ 1, 3, 2 ] } }
-          - { File: 0, dLoc: [ 0, 24, 0, 32 ], Ref: 5 }
-          - { File: 0, dLoc: [ 0, 24, 0, 32 ], Branch: { True: { Ref: 6 }, False: { Sub: 2 }, MCDC: [ 3, 0, 2 ] } }
-          - { File: 0, dLoc: [ 0, 37, 0, 59 ], Ref: 4 }
-          - { File: 0, dLoc: [ 0, 38, 0, 46 ], Ref: 4 }
-          - { File: 0, dLoc: [ 0, 38, 0, 46 ], Branch: { True: { Ref: 7 }, False: { Sub: 3 }, MCDC: [ 2, 4, 0 ] } }
-          - { File: 0, dLoc: [ 0, 50, 0, 58 ], Ref: 7 }
-          - { File: 0, dLoc: [ 0, 50, 0, 58 ], Branch: { True: { Ref: 8 }, False: { Sub: 4 }, MCDC: [ 4, 0, 0 ] } }
-          - { File: 1, dLoc: [ 1, 22, 0, 48 ], Ref: 0 }
-          - { File: 1, dLoc: [ 0, 23, 0, 33 ], Ref: 0 }
-          - { File: 1, dLoc: [ 0, 23, 0, 47 ], Decision: { BIdx: 3, NCond: 2 } }
-          - { File: 1, dLoc: [ 0, 23, 0, 33 ], Branch: { True: { Ref: 2 }, False: { Sub: 5 }, MCDC: [ 1, 2, 0 ] } }
-          - { File: 1, dLoc: [ 0, 37, 0, 47 ], Ref: 2 }
-          - { File: 1, dLoc: [ 0, 37, 0, 47 ], Branch: { True: { Ref: 3 }, False: { Sub: 6 }, MCDC: [ 2, 0, 0 ] } }
+        Files:
+          - Index:           0
+            Filename:        mcdc-maxbs.c
+            Regions:
+              - { dLoc: [ 3, 16, 3, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 7, 0, 12 ], Expansion: 1 }
+              - { dLoc: [ 0, 26, 0, 27 ], isGap: true, Ref: 1 }
+              - { dLoc: [ 0, 27, 0, 35 ], Ref: 1 }
+              - { dLoc: [ 0, 36, 1, 3 ], isGap: true, Sub: 0 }
+              - { dLoc: [ 1, 3, 0, 60 ], Sub: 0 }
+              - { dLoc: [ 0, 11, 0, 33 ], Sub: 0 }
+              - { dLoc: [ 0, 11, 0, 59 ], Decision: { BIdx: 10, NCond: 4 } }
+              - { dLoc: [ 0, 12, 0, 20 ], Sub: 0 }
+              - { dLoc: [ 0, 12, 0, 20 ], Branch: [ { Ref: 5 }, { Sub: 1 } ], MCDC: [ 1, 3, 2 ] }
+              - { dLoc: [ 0, 24, 0, 32 ], Ref: 5 }
+              - { dLoc: [ 0, 24, 0, 32 ], Branch: [ { Ref: 6 }, { Sub: 2 } ], MCDC: [ 3, 0, 2 ] }
+              - { dLoc: [ 0, 37, 0, 59 ], Ref: 4 }
+              - { dLoc: [ 0, 38, 0, 46 ], Ref: 4 }
+              - { dLoc: [ 0, 38, 0, 46 ], Branch: [ { Ref: 7 }, { Sub: 3 } ], MCDC: [ 2, 4, 0 ] }
+              - { dLoc: [ 0, 50, 0, 58 ], Ref: 7 }
+              - { dLoc: [ 0, 50, 0, 58 ], Branch: [ { Ref: 8 }, { Sub: 4 } ], MCDC: [ 4, 0, 0 ] }
+          - Index:           1
+            Filename:        mcdc-maxbs.c
+            Regions:
+              - { dLoc: [ 1, 22, 0, 48 ], Ref: 0 }
+              - { dLoc: [ 0, 23, 0, 33 ], Ref: 0 }
+              - { dLoc: [ 0, 23, 0, 47 ], Decision: { BIdx: 3, NCond: 2 } }
+              - { dLoc: [ 0, 23, 0, 33 ], Branch: [ { Ref: 2 }, { Sub: 5 } ], MCDC: [ 1, 2, 0 ] }
+              - { dLoc: [ 0, 37, 0, 47 ], Ref: 2 }
+              - { dLoc: [ 0, 37, 0, 47 ], Branch: [ { Ref: 3 }, { Sub: 6 } ], MCDC: [ 2, 0, 0 ] }
   - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovFun:
       - FuncName:        main
-        Signature:       0x1835C
+        FuncHash:        0x1835C
         FilenamesRef:    0xF513BD425F33BADE
-        Filenames:
-          - mcdc-maxbs.c
         Expressions:
           - [ { Ref: 0 }, { Ref: 1 } ]
-        Records:
-          - { File: 0, dLoc: [ 11, 1, 2, 2 ], Ref: 0 }
-          - { File: 0, dLoc: [ 1, 11, 0, 16 ], Ref: 0 }
-          - { File: 0, dLoc: [ 0, 11, 0, 16 ], Branch: { True: { Ref: 1 }, False: { Sub: 0 } } }
-          - { File: 0, dLoc: [ 0, 18, 0, 19 ], isGap: true, Ref: 1 }
-          - { File: 0, dLoc: [ 0, 19, 0, 25 ], Ref: 1 }
-          - { File: 0, dLoc: [ 0, 28, 0, 29 ], Sub: 0 }
+        Files:
+          - Index:           0
+            Filename:        mcdc-maxbs.c
+            Regions:
+              - { dLoc: [ 11, 1, 2, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 11, 0, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 11, 0, 16 ], Branch: [ { Ref: 1 }, { Sub: 0 } ] }
+              - { dLoc: [ 0, 18, 0, 19 ], isGap: true, Ref: 1 }
+              - { dLoc: [ 0, 19, 0, 25 ], Ref: 1 }
+              - { dLoc: [ 0, 28, 0, 29 ], Sub: 0 }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
     CovMap:
-      - Version:         6
-        FnBlobHash:      0xF513BD425F33BADE
-        Filenames:
-          - mcdc-maxbs.c
+      - FilenamesRef:    0xF513BD425F33BADE
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
     AddressAlign:    0x1
     PrfNames:
-      - Names:
-          - sub
-          - main
+      - - sub
+        - main
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab
@@ -93,24 +93,4 @@ Sections:
       - Name:            '__llvm_covfun (1)'
       - Name:            __llvm_covmap
       - Name:            __llvm_prf_names
-      - Name:            .symtab
-Symbols:
-  - Name:            __llvm_covmap
-    Type:            STT_SECTION
-    Section:         __llvm_covmap
-  - Name:            __llvm_prf_names
-    Type:            STT_SECTION
-    Section:         __llvm_prf_names
-  - Name:            __covrec_F9AC5E923EDC688Au
-    Type:            STT_OBJECT
-    Section:         __llvm_covfun
-    Binding:         STB_WEAK
-    Size:            0xCD
-    Other:           [ STV_HIDDEN ]
-  - Name:            __covrec_DB956436E78DD5FAu
-    Type:            STT_OBJECT
-    Section:         '__llvm_covfun (1)'
-    Binding:         STB_WEAK
-    Size:            0x46
-    Other:           [ STV_HIDDEN ]
 ...

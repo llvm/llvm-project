@@ -1,0 +1,124 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_GNU
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            __llvm_covfun
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        main
+        FuncHash:        0x29244A491292458
+        FilenamesRef:    0x6BBCABDA409AED26
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-templates.cpp
+            Regions:
+              - { dLoc: [ 29, 12, 9, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 7, 0, 19 ], Ref: 0 }
+              - { dLoc: [ 0, 20, 1, 5 ], isGap: true, Ref: 1 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 1 }
+              - { dLoc: [ 1, 3, 6, 2 ], Ref: 2 }
+              - { dLoc: [ 0, 7, 0, 23 ], Ref: 2 }
+              - { dLoc: [ 0, 24, 1, 5 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 3 }
+              - { dLoc: [ 1, 3, 4, 2 ], Ref: 4 }
+              - { dLoc: [ 0, 7, 0, 23 ], Ref: 4 }
+              - { dLoc: [ 0, 24, 1, 5 ], isGap: true, Ref: 5 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 5 }
+              - { dLoc: [ 1, 3, 1, 11 ], Ref: 6 }
+  - Name:            '__llvm_covfun (1)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        _Z4funcIiEiT_
+        FuncHash:        0x292613611
+        FilenamesRef:    0x6BBCABDA409AED26
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-templates.cpp
+            Regions:
+              - { dLoc: [ 13, 15, 6, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 6, 0, 7 ], Ref: 0 }
+              - { dLoc: [ 0, 8, 1, 5 ], isGap: true, Ref: 1 }
+              - { dLoc: [ 1, 5, 0, 13 ], Ref: 1 }
+              - { dLoc: [ 0, 14, 2, 5 ], isGap: true, Ref: 2 }
+              - { dLoc: [ 2, 5, 0, 13 ], Ref: 2 }
+              - { dLoc: [ 0, 14, 1, 3 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 1, 3, 1, 2 ], Ref: 3 }
+  - Name:            '__llvm_covfun (2)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        _Z4funcIbEiT_
+        FuncHash:        0x292613611
+        FilenamesRef:    0x6BBCABDA409AED26
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-templates.cpp
+            Regions:
+              - { dLoc: [ 13, 15, 6, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 6, 0, 7 ], Ref: 0 }
+              - { dLoc: [ 0, 8, 1, 5 ], isGap: true, Ref: 1 }
+              - { dLoc: [ 1, 5, 0, 13 ], Ref: 1 }
+              - { dLoc: [ 0, 14, 2, 5 ], isGap: true, Ref: 2 }
+              - { dLoc: [ 2, 5, 0, 13 ], Ref: 2 }
+              - { dLoc: [ 0, 14, 1, 3 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 1, 3, 1, 2 ], Ref: 3 }
+  - Name:            '__llvm_covfun (3)'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovFun:
+      - FuncName:        _Z4funcIfEiT_
+        FuncHash:        0x292613611
+        FilenamesRef:    0x6BBCABDA409AED26
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-templates.cpp
+            Regions:
+              - { dLoc: [ 13, 15, 6, 2 ], Ref: 0 }
+              - { dLoc: [ 1, 6, 0, 7 ], Ref: 0 }
+              - { dLoc: [ 0, 8, 1, 5 ], isGap: true, Ref: 1 }
+              - { dLoc: [ 1, 5, 0, 13 ], Ref: 1 }
+              - { dLoc: [ 0, 14, 2, 5 ], isGap: true, Ref: 2 }
+              - { dLoc: [ 2, 5, 0, 13 ], Ref: 2 }
+              - { dLoc: [ 0, 14, 1, 3 ], isGap: true, Ref: 3 }
+              - { dLoc: [ 1, 3, 1, 2 ], Ref: 3 }
+  - Name:            __llvm_covmap
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_GNU_RETAIN ]
+    AddressAlign:    0x8
+    CovMap:
+      - FilenamesRef:    0x6BBCABDA409AED26
+        Version:         6
+  - Name:            __llvm_prf_names
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
+    AddressAlign:    0x1
+    PrfNames:
+      - - main
+        - _Z4funcIiEiT_
+        - _Z4funcIbEiT_
+        - _Z4funcIfEiT_
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            __llvm_covfun
+      - Name:            '__llvm_covfun (1)'
+      - Name:            '__llvm_covfun (2)'
+      - Name:            '__llvm_covfun (3)'
+      - Name:            __llvm_covmap
+      - Name:            __llvm_prf_names
+...

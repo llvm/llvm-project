@@ -20,6 +20,9 @@ end subroutine
 ! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
 
 ! CHECK-NEXT:   %[[PRIV_ALLOC:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "var1", pinned, uniq_name = "_QFdelayed_privatization_pointerEvar1"}
+! CHECK-NEXT:   %[[NULL:.*]] = fir.zero_bits !fir.ptr<i32>
+! CHECK-NEXT:   %[[INIT:.*]] = fir.embox %[[NULL]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
+! CHECK-NEXT:   fir.store %[[INIT]] to %[[PRIV_ALLOC]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]]
 ! CHECK-NEXT:   omp.yield(%[[PRIV_DECL]]#0 : [[TYPE]])
 

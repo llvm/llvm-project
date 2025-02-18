@@ -51,8 +51,8 @@ declare i32 @_Z3hoov() nounwind ssp optsize
 ; CHECK-LABEL:  _OUTLINED_FUNCTION_PROLOG_FRAME48_x30x29x19x20d8d9d10d11:
 ; CHECK:      stp     d11, d10, [sp, #-48]!
 ; CHECK-NEXT: stp     d9, d8, [sp, #16]
-; CHECK-NEXT: stp     x20, x19, [sp, #32]
 ; CHECK-NEXT: add     x29, sp, #48
+; CHECK-NEXT: stp     x20, x19, [sp, #32]
 ; CHECK-NEXT: ret
 
 ; CHECK-LABEL: _OUTLINED_FUNCTION_EPILOG_TAIL_x30x29x19x20d8d9d10d11:
@@ -69,8 +69,8 @@ declare i32 @_Z3hoov() nounwind ssp optsize
 ; CHECK-LINUX-LABEL:  OUTLINED_FUNCTION_PROLOG_FRAME32_x19x20x30x29d8d9d10d11:
 ; CHECK-LINUX:      stp     d11, d10, [sp, #-32]!
 ; CHECK-LINUX-NEXT: stp     d9, d8, [sp, #16]
-; CHECK-LINUX-NEXT: stp     x20, x19, [sp, #48]
 ; CHECK-LINUX-NEXT: add     x29, sp, #32
+; CHECK-LINUX-NEXT: stp     x20, x19, [sp, #48]
 ; CHECK-LINUX-NEXT: ret
 
 ; CHECK-LINUX-LABEL: OUTLINED_FUNCTION_EPILOG_TAIL_x19x20x30x29d8d9d10d11:

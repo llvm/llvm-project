@@ -21,7 +21,6 @@
 
 #include "AMDGPUUnifyDivergentExitNodes.h"
 #include "AMDGPU.h"
-#include "SIDefines.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"

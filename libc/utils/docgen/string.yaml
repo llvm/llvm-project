@@ -1,0 +1,94 @@
+functions:
+  memccpy:
+    c-definition: 7.26.2.2
+    in-latest-posix: ''
+  memchr:
+    c-definition: 7.26.5.2
+    in-latest-posix: ''
+  memcmp:
+    c-definition: 7.26.4.1
+    in-latest-posix: ''
+  memcpy:
+    c-definition: 7.26.2.1
+    in-latest-posix: ''
+  memmove:
+    c-definition: 7.26.2.3
+    in-latest-posix: ''
+  mempcpy:
+    c-definition: 'TODO: glibc extension'
+  memset:
+    c-definition: 7.26.6.1
+    in-latest-posix: ''
+  memset_explicit:
+    c-definition: 7.26.6.2
+  stpcpy:
+    in-latest-posix: ''
+  stpncpy:
+    in-latest-posix: ''
+  strcat:
+    c-definition: 7.26.3.1
+    in-latest-posix: ''
+  strchr:
+    c-definition: 7.26.5.3
+    in-latest-posix: ''
+  strcmp:
+    c-definition: 7.26.4.2
+    in-latest-posix: ''
+  strcoll:
+    c-definition: 7.26.4.3
+    in-latest-posix: ''
+  strcoll_l:
+    in-latest-posix: ''
+  strcpy:
+    c-definition: 7.26.2.4
+    in-latest-posix: ''
+  strcspn:
+    c-definition: 7.26.5.4
+    in-latest-posix: ''
+  strdup:
+    c-definition: 7.26.2.6
+    in-latest-posix: ''
+  strerror:
+    c-definition: 7.26.6.3
+    in-latest-posix: ''
+  strlen:
+    c-definition: 7.26.6.4
+    in-latest-posix: ''
+  strncat:
+    c-definition: 7.26.3.2
+    in-latest-posix: ''
+  strncmp:
+    c-definition: 7.26.4.4
+    in-latest-posix: ''
+  strncpy:
+    c-definition: 7.26.2.5
+    in-latest-posix: ''
+  strndup:
+    c-definition: 7.26.2.7
+    in-latest-posix: ''
+  strpbrk:
+    c-definition: 7.26.5.5
+    in-latest-posix: ''
+  strrchr:
+    c-definition: 7.26.5.6
+    in-latest-posix: ''
+  strspn:
+    c-definition: 7.26.5.7
+    in-latest-posix: ''
+  strstr:
+    c-definition: 7.26.5.8
+    in-latest-posix: ''
+  strtok:
+    c-definition: 7.26.5.9
+    in-latest-posix: ''
+  strtok_r:
+    in-latest-posix: ''
+  strxfrm:
+    c-definition: 7.26.4.5
+    in-latest-posix: ''
+  strxfrm_l:
+    in-latest-posix: ''
+macros:
+  __STDC_VERSION_STRING_H__:
+    c-definition: 7.26.1
+

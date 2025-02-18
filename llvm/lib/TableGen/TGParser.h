@@ -131,7 +131,7 @@ public:
   }
 
   void addVar(StringRef Name, const Init *I) {
-    bool Ins = Vars.insert(std::make_pair(std::string(Name), I)).second;
+    bool Ins = Vars.try_emplace(std::string(Name), I).second;
     (void)Ins;
     assert(Ins && "Local variable already exists");
   }
@@ -248,9 +248,9 @@ private: // Semantic analysis methods.
 
   using ArgValueHandler = std::function<void(const Init *, const Init *)>;
   bool resolveArguments(
-      Record *Rec, ArrayRef<const ArgumentInit *> ArgValues, SMLoc Loc,
+      const Record *Rec, ArrayRef<const ArgumentInit *> ArgValues, SMLoc Loc,
       ArgValueHandler ArgValueHandler = [](const Init *, const Init *) {});
-  bool resolveArgumentsOfClass(MapResolver &R, Record *Rec,
+  bool resolveArgumentsOfClass(MapResolver &R, const Record *Rec,
                                ArrayRef<const ArgumentInit *> ArgValues,
                                SMLoc Loc);
   bool resolveArgumentsOfMultiClass(SubstStack &Substs, MultiClass *MC,
@@ -296,7 +296,8 @@ private:  // Parser methods.
   void ParseValueList(SmallVectorImpl<const Init *> &Result, Record *CurRec,
                       const RecTy *ItemType = nullptr);
   bool ParseTemplateArgValueList(SmallVectorImpl<const ArgumentInit *> &Result,
-                                 Record *CurRec, Record *ArgsRec);
+                                 SmallVectorImpl<SMLoc> &ArgLocs,
+                                 Record *CurRec, const Record *ArgsRec);
   void ParseDagArgList(
       SmallVectorImpl<std::pair<const Init *, const StringInit *>> &Result,
       Record *CurRec);
@@ -316,12 +317,13 @@ private:  // Parser methods.
   const Init *ParseOperationCond(Record *CurRec, const RecTy *ItemType);
   const RecTy *ParseOperatorType();
   const Init *ParseObjectName(MultiClass *CurMultiClass);
-  Record *ParseClassID();
+  const Record *ParseClassID();
   MultiClass *ParseMultiClassID();
   bool ApplyLetStack(Record *CurRec);
   bool ApplyLetStack(RecordsEntry &Entry);
   bool CheckTemplateArgValues(SmallVectorImpl<const ArgumentInit *> &Values,
-                              SMLoc Loc, Record *ArgsRec);
+                              ArrayRef<SMLoc> ValuesLocs,
+                              const Record *ArgsRec);
 };
 
 } // end namespace llvm

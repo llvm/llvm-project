@@ -42,8 +42,8 @@ define i32 @v_or_i32_disjoint(i32 %a, i32 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   %9:vgpr_32 = disjoint V_OR_B32_e64 [[COPY1]], [[COPY]], implicit $exec
-  ; CHECK-NEXT:   $vgpr0 = COPY %9
+  ; CHECK-NEXT:   %10:vgpr_32 = disjoint V_OR_B32_e64 [[COPY1]], [[COPY]], implicit $exec
+  ; CHECK-NEXT:   $vgpr0 = COPY %10
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %result = or disjoint i32 %a, %b
   ret i32 %result
@@ -58,10 +58,10 @@ define <2 x i32> @v_or_v2i32_disjoint(<2 x i32> %a, <2 x i32> %b) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   %11:vgpr_32 = disjoint V_OR_B32_e64 [[COPY3]], [[COPY1]], implicit $exec
-  ; CHECK-NEXT:   %12:vgpr_32 = disjoint V_OR_B32_e64 [[COPY2]], [[COPY]], implicit $exec
-  ; CHECK-NEXT:   $vgpr0 = COPY %11
-  ; CHECK-NEXT:   $vgpr1 = COPY %12
+  ; CHECK-NEXT:   %12:vgpr_32 = disjoint V_OR_B32_e64 [[COPY3]], [[COPY1]], implicit $exec
+  ; CHECK-NEXT:   %13:vgpr_32 = disjoint V_OR_B32_e64 [[COPY2]], [[COPY]], implicit $exec
+  ; CHECK-NEXT:   $vgpr0 = COPY %12
+  ; CHECK-NEXT:   $vgpr1 = COPY %13
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %result = or disjoint <2 x i32> %a, %b
   ret <2 x i32> %result

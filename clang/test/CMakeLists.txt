@@ -5,7 +5,6 @@ llvm_canonicalize_cmake_booleans(
   CLANG_BUILD_EXAMPLES
   CLANG_BUILT_STANDALONE
   CLANG_DEFAULT_PIE_ON_LINUX
-  CLANG_ENABLE_ARCMT
   CLANG_ENABLE_STATIC_ANALYZER
   CLANG_PLUGIN_SUPPORT
   CLANG_SPAWN_CC1
@@ -80,6 +79,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-nvlink-wrapper
   clang-offload-bundler
   clang-offload-packager
+  clang-sycl-linker
   diagtool
   hmaptool
   )
@@ -90,13 +90,6 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
     clang-extdef-mapping
     )
 endif()
-
-if (CLANG_ENABLE_ARCMT)
-  list(APPEND CLANG_TEST_DEPS
-    arcmt-test
-    c-arcmt-test
-  )
-endif ()
 
 if(CLANG_BUILD_EXAMPLES AND CLANG_PLUGIN_SUPPORT)
   list(APPEND CLANG_TEST_DEPS

@@ -123,11 +123,11 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     Module &M = *II->getModule();
 
     // Create a noop.frame struct type.
-    StructType *FrameTy = StructType::create(C, "NoopCoro.Frame");
     auto *FnTy = FunctionType::get(Type::getVoidTy(C), Builder.getPtrTy(0),
                                    /*isVarArg=*/false);
     auto *FnPtrTy = Builder.getPtrTy(0);
-    FrameTy->setBody({FnPtrTy, FnPtrTy});
+    StructType *FrameTy =
+        StructType::create({FnPtrTy, FnPtrTy}, "NoopCoro.Frame");
 
     // Create a Noop function that does nothing.
     Function *NoopFn =

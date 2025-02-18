@@ -10,6 +10,8 @@
 
 // void swap(array& a);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <array>
 #include <cassert>
 

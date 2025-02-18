@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=amdgcn -verify-misched < %s | FileCheck --check-prefixes=GENERIC %s
 ; RUN: llc -mtriple=amdgcn -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GENERIC-GCNTRACKERS %s
 
-; GCN Trackers are sensitive to minor changes in RP, and will avoid scheduling certain instructions, which, if scheduled, 
+; GCN Trackers are sensitive to minor changes in RP, and will avoid scheduling certain instructions, which, if scheduled,
 ; allow scheduling of other instructions which reduce RP
 
 ; CHECK-LABEL: {{^}}return_72xi32:
@@ -20,8 +20,8 @@
 
 
 ; CHECK-LABEL: {{^}}call_72xi32:
-; GFX11-PAL:    NumSgprs: 35
-; GFX11-PAL-GCNTRACKERS:    NumSgprs: 35
+; GFX11-PAL:    NumSgprs: 37
+; GFX11-PAL-GCNTRACKERS:    NumSgprs: 37
 ; GFX11-PAL:    NumVgprs: 64
 ; GFX11-PAL-GCNTRACKERS:    NumVgprs: 64
 ; GFX11-PAL:    ScratchSize: 2780
@@ -44,9 +44,9 @@ entry:
 ; CHECK-LABEL: {{^}}global_extload_v16f16_to_v16f64:
 ; TONGA:    NumSgprs: 96
 ; TONGA-GCNTRACKERS:    NumSgprs: 96
-; TONGA:    NumVgprs: 33
-; TONGA-GCNTRACKERS:    NumVgprs: 25
-; TONGA:    Occupancy: 7
+; TONGA:    NumVgprs: 21
+; TONGA-GCNTRACKERS:    NumVgprs: 23
+; TONGA:    Occupancy: 8
 ; TONGA-GCNTRACKERS:    Occupancy: 8
 
 
@@ -59,11 +59,11 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 
 ; CHECK-LABEL: {{^}}constant_zextload_v64i16_to_v64i32:
 ; GENERIC:    NumSgprs: 71
-; GENERIC-GCNTRACKERS:    NumSgprs: 54
-; GENERIC:    NumVgprs: 16
-; GENERIC-GCNTRACKERS:    NumVgprs: 16
+; GENERIC-GCNTRACKERS:    NumSgprs: 45
+; GENERIC:    NumVgprs: 20
+; GENERIC-GCNTRACKERS:    NumVgprs: 20
 ; GENERIC:    Occupancy: 7
-; GENERIC-GCNTRACKERS:    Occupancy: 8
+; GENERIC-GCNTRACKERS:    Occupancy: 10
 
 define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(ptr addrspace(1) %out, ptr addrspace(4) %in) {
   %load = load <64 x i16>, ptr addrspace(4) %in
@@ -73,8 +73,8 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(ptr addrspace(1) %
 }
 
 ; CHECK-LABEL: {{^}}excess_soft_clause_reg_pressure:
-; GFX908:    NumSgprs: 56
-; GFX908-GCNTRACKERS:    NumSgprs: 56
+; GFX908:    NumSgprs: 64
+; GFX908-GCNTRACKERS:    NumSgprs: 64
 ; GFX908:    NumVgprs: 43
 ; GFX908-GCNTRACKERS:    NumVgprs: 39
 ; GFX908:    Occupancy: 5

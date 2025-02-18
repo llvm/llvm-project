@@ -11,6 +11,15 @@
 
 #include "mlir/IR/Types.h"
 
+namespace llvm {
+struct fltSemantics;
+} // namespace llvm
+
+namespace mlir {
+class FloatType;
+class MLIRContext;
+} // namespace mlir
+
 #include "mlir/IR/BuiltinTypeInterfaces.h.inc"
 
 #endif // MLIR_IR_BUILTINTYPEINTERFACES_H

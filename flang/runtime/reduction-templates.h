@@ -81,9 +81,13 @@ inline RT_API_ATTRS void DoTotalReduction(const Descriptor &x, int dim,
 template <TypeCategory CAT, int KIND, typename ACCUMULATOR>
 inline RT_API_ATTRS CppTypeFor<CAT, KIND> GetTotalReduction(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask,
-    ACCUMULATOR &&accumulator, const char *intrinsic) {
+    ACCUMULATOR &&accumulator, const char *intrinsic,
+    bool allowUnsignedForInteger = false) {
   Terminator terminator{source, line};
-  RUNTIME_CHECK(terminator, TypeCode(CAT, KIND) == x.type());
+  RUNTIME_CHECK(terminator,
+      TypeCode(CAT, KIND) == x.type() ||
+          (CAT == TypeCategory::Integer && allowUnsignedForInteger &&
+              TypeCode(TypeCategory::Unsigned, KIND) == x.type()));
   using CppType = CppTypeFor<CAT, KIND>;
   DoTotalReduction<CppType>(x, dim, mask, accumulator, intrinsic, terminator);
   if constexpr (std::is_void_v<CppType>) {

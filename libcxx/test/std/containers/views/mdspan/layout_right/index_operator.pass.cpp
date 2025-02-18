@@ -23,9 +23,10 @@
 // Preconditions:
 //   * extents_type::index-cast(i) is a multidimensional index in extents_.
 
-#include <mdspan>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <mdspan>
 #include <span> // dynamic_extent
 #include <type_traits>
 

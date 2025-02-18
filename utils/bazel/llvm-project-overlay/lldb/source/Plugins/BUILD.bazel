@@ -337,6 +337,7 @@ cc_library(
         ":PluginTypeSystemClangHeaders",
         ":SymbolFileDWARFProperties",
         "//clang:ast",
+        "//clang:basic",
         "//lldb:Core",
         "//lldb:ExpressionHeaders",
         "//lldb:Headers",

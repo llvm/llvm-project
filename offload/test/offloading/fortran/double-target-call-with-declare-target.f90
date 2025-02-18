@@ -1,7 +1,6 @@
-! Offloading test with two target regions mapping the same
-! declare target Fortran array and writing some values to
-! it before checking the host correctly receives the
-! correct updates made on the device.
+! Offloading test with two target regions mapping the same declare target
+! Fortran array and writing some values to it before checking the host
+! correctly receives the correct updates made on the device.
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

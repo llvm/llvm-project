@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 
 ; CHECK-LABEL: bl_imm:
 ; CHECK: ldw [[R0:r[0-9]+]], cp

@@ -1,12 +1,10 @@
 // Test visualization of branch taken percentages
 
-// RUN: rm -rf %t.html.dir
-// RUN: yaml2obj %S/Inputs/branch-showBranchPercentage.yaml -o %t.o
 // RUN: llvm-profdata merge %S/Inputs/branch-showBranchPercentage.proftext -o %t.profdata
-// RUN: llvm-cov show --show-branches=percent %t.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %S/Inputs/branch-showBranchPercentage.c
+// RUN: llvm-cov show --show-branches=percent %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %S/Inputs/branch-showBranchPercentage.c
 
 // RUN: llvm-profdata merge %S/Inputs/branch-showBranchPercentage.proftext -o %t.profdata
-// RUN: llvm-cov show --show-branches=percent %t.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs -format html -o %t.html.dir
+// RUN: llvm-cov show --show-branches=percent %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs -format html -o %t.html.dir
 
 // Test html output.
 // RUN: FileCheck -check-prefix=HTML -input-file=%t.html.dir/coverage/tmp/branch-showBranchPercentage.c.html %s
@@ -24,4 +22,3 @@
 // HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}20.00%,{{.*}}80.00%]
 // HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}0.00%,{{.*}}100.00%]
 // HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}60.00%,{{.*}}40.00%]
-// HTML: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>{{.*}}90.91%,{{.*}}9.09%]

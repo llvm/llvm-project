@@ -9,8 +9,6 @@
 #include "LibCxx.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
@@ -18,6 +16,8 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -111,7 +111,8 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   // that wraps a std::pair. Peel away the internal wrapper type - whose
   // structure is of no value to users, to expose the std::pair. This
   // matches the structure returned by the std::map synthetic provider.
-  if (isUnorderedMap(m_backend.GetTypeName())) {
+  if (isUnorderedMap(
+          m_backend.GetCompilerType().GetCanonicalType().GetTypeName())) {
     std::string name;
     CompilerType field_type =
         element_type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);

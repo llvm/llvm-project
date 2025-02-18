@@ -997,3 +997,10 @@ overhead in unoptimized builds and leaving some of the adoption mistakes to be
 caught only at run time. This is not a fundamental limitation, however, because
 incrementally adding necessary static analysis will allow us to catch issues
 early on and remove unnecessary bounds checks in unoptimized builds.
+
+Try it out
+==========
+
+Your feedback on the programming model is valuable. You may want to follow the
+instruction in :doc:`BoundsSafetyAdoptionGuide` to play with ``-fbounds-safety``
+and please send your feedback to `Yeoul Na <mailto:yeoul_na@apple.com>`_.

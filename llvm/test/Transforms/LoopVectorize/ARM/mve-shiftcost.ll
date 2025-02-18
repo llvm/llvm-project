@@ -8,8 +8,8 @@ target triple = "thumbv8.1m.main-none-none-eabi"
 ; CHECK-LABEL: test
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %and515 = shl i32 %l41, 3
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF 1 For instruction:   %l45 = and i32 %and515, 131072
-; CHECK-COST: LV: Found an estimated cost of 2 for VF 4 For instruction:   %and515 = shl i32 %l41, 3
-; CHECK-COST: LV: Found an estimated cost of 2 for VF 4 For instruction:   %l45 = and i32 %and515, 131072
+; CHECK-COST: Cost of 2 for VF 4: WIDEN ir<%and515> = shl ir<%l41>, ir<3>
+; CHECK-COST: Cost of 2 for VF 4: WIDEN ir<%l45> = and ir<%and515>, ir<131072>
 ; CHECK-NOT: vector.body
 
 define void @test(ptr %src, i32 %N) #0 {

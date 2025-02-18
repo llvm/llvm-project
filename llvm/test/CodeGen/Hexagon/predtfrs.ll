@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-expand-condsets=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-expand-condsets=0 < %s | FileCheck %s
 
 ; CHECK: cmp.gt
 ; CHECK-NOT: r1 = p0

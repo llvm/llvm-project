@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -198,13 +199,12 @@ static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
   return nullptr;
 }
 
-class ReferencedDeclsVisitor
-    : public AnalysisASTVisitor<ReferencedDeclsVisitor> {
+class ReferencedDeclsVisitor : public AnalysisASTVisitor {
 public:
   ReferencedDeclsVisitor(ReferencedDecls &Referenced)
       : Referenced(Referenced) {}
 
-  void TraverseConstructorInits(const CXXConstructorDecl *Ctor) {
+  void traverseConstructorInits(const CXXConstructorDecl *Ctor) {
     for (const CXXCtorInitializer *Init : Ctor->inits()) {
       if (Init->isMemberInitializer()) {
         Referenced.Fields.insert(Init->getMember());
@@ -225,21 +225,21 @@ public:
     }
   }
 
-  bool VisitDecl(Decl *D) {
+  bool VisitDecl(Decl *D) override {
     insertIfGlobal(*D, Referenced.Globals);
     insertIfLocal(*D, Referenced.Locals);
     insertIfFunction(*D, Referenced.Functions);
     return true;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     insertIfGlobal(*E->getDecl(), Referenced.Globals);
     insertIfLocal(*E->getDecl(), Referenced.Locals);
     insertIfFunction(*E->getDecl(), Referenced.Functions);
     return true;
   }
 
-  bool VisitCXXMemberCallExpr(CXXMemberCallExpr *C) {
+  bool VisitCXXMemberCallExpr(CXXMemberCallExpr *C) override {
     // If this is a method that returns a member variable but does nothing else,
     // model the field of the return value.
     if (MemberExpr *E = getMemberForAccessor(*C))
@@ -248,7 +248,7 @@ public:
     return true;
   }
 
-  bool VisitMemberExpr(MemberExpr *E) {
+  bool VisitMemberExpr(MemberExpr *E) override {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();
     insertIfGlobal(*VD, Referenced.Globals);
@@ -258,14 +258,14 @@ public:
     return true;
   }
 
-  bool VisitInitListExpr(InitListExpr *InitList) {
+  bool VisitInitListExpr(InitListExpr *InitList) override {
     if (InitList->getType()->isRecordType())
       for (const auto *FD : getFieldsForInitListExpr(InitList))
         Referenced.Fields.insert(FD);
     return true;
   }
 
-  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *ParenInitList) {
+  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *ParenInitList) override {
     if (ParenInitList->getType()->isRecordType())
       for (const auto *FD : getFieldsForInitListExpr(ParenInitList))
         Referenced.Fields.insert(FD);
@@ -281,7 +281,29 @@ ReferencedDecls getReferencedDecls(const FunctionDecl &FD) {
   ReferencedDeclsVisitor Visitor(Result);
   Visitor.TraverseStmt(FD.getBody());
   if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&FD))
-    Visitor.TraverseConstructorInits(CtorDecl);
+    Visitor.traverseConstructorInits(CtorDecl);
+
+  // If analyzing a lambda call operator, collect all captures of parameters (of
+  // the surrounding function). This collects them even if they are not
+  // referenced in the body of the lambda call operator. Non-parameter local
+  // variables that are captured are already collected into
+  // `ReferencedDecls.Locals` when traversing the call operator body, but we
+  // collect parameters here to avoid needing to check at each referencing node
+  // whether the parameter is a lambda capture from a surrounding function or is
+  // a parameter of the current function. If it becomes necessary to limit this
+  // set to the parameters actually referenced in the body, alternative
+  // optimizations can be implemented to minimize duplicative work.
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(&FD);
+      Method && isLambdaCallOperator(Method)) {
+    for (const auto &Capture : Method->getParent()->captures()) {
+      if (Capture.capturesVariable()) {
+        if (const auto *Param =
+                dyn_cast<ParmVarDecl>(Capture.getCapturedVar())) {
+          Result.LambdaCapturedParams.insert(Param);
+        }
+      }
+    }
+  }
 
   return Result;
 }

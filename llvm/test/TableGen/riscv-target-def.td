@@ -81,6 +81,9 @@ class RISCVProcessorModel<string n,
                           string default_march = "">
     :  ProcessorModel<n, m, f, tunef> {
   string DefaultMarch = default_march;
+  int MVendorID = 0;
+  int MArchID = 0;
+  int MImpID = 0;
 }
 
 class RISCVTuneProcessorModel<string n,
@@ -160,13 +163,13 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK:      #endif // GET_SUPPORTED_PROFILES
 
 // CHECK:      #ifndef PROC
-// CHECK-NEXT: #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN, FAST_VECTOR_UNALIGN)
+// CHECK-NEXT: #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN, FAST_VECTOR_UNALIGN, MVENDORID, MARCHID, MIMPID)
 // CHECK-NEXT: #endif
 
-// CHECK:      PROC(GENERIC_RV32, {"generic-rv32"}, {"rv32i2p1"}, 0, 0)
-// CHECK-NEXT: PROC(GENERIC_RV64, {"generic-rv64"}, {"rv64i2p1"}, 0, 0)
-// CHECK-NEXT: PROC(ROCKET_RV32, {"rocket-rv32"}, {"rv32i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0, 0)
-// CHECK-NEXT: PROC(ROCKET_RV64, {"rocket-rv64"}, {"rv64i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0, 0)
+// CHECK:      PROC(GENERIC_RV32, {"generic-rv32"}, {"rv32i2p1"}, 0, 0, 0x00000000, 0x0000000000000000, 0x0000000000000000)
+// CHECK-NEXT: PROC(GENERIC_RV64, {"generic-rv64"}, {"rv64i2p1"}, 0, 0, 0x00000000, 0x0000000000000000, 0x0000000000000000)
+// CHECK-NEXT: PROC(ROCKET_RV32, {"rocket-rv32"}, {"rv32i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0, 0, 0x00000000, 0x0000000000000000, 0x0000000000000000)
+// CHECK-NEXT: PROC(ROCKET_RV64, {"rocket-rv64"}, {"rv64i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0, 0, 0x00000000, 0x0000000000000000, 0x0000000000000000)
 
 // CHECK: #undef PROC
 

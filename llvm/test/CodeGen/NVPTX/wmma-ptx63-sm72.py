@@ -4,10 +4,10 @@
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT
 # RUN: FileCheck %t-ptx63-sm_72.ll < %t-ptx63-sm_72.ll \
 # RUN:           --check-prefixes=INTRINSICS,NOSUBINT,NOMMA,NODOUBLE,NOALTFLOAT,NOLDMATRIX
-# RUN: llc < %t-ptx63-sm_72.ll -march=nvptx64 -mcpu=sm_72 -mattr=+ptx63 \
+# RUN: llc < %t-ptx63-sm_72.ll -mtriple=nvptx64 -mcpu=sm_72 -mattr=+ptx63 \
 # RUN:           | FileCheck %t-ptx63-sm_72.ll
 # RUN: %if ptxas-10.0 %{                                                  \
-# RUN:   llc < %t-ptx63-sm_72.ll -march=nvptx64 -mcpu=sm_72 -mattr=+ptx63 \
+# RUN: llc < %t-ptx63-sm_72.ll -mtriple=nvptx64 -mcpu=sm_72 -mattr=+ptx63 \
 # RUN:           | %ptxas-verify -arch=sm_72                              \
 # RUN: %}
 

@@ -225,7 +225,7 @@ struct LlvmLibcExhaustiveMathTest
     std::cout << "-- Testing for FE_TOWARDZERO in range [0x" << std::hex
               << start << ", 0x" << stop << ") --" << std::dec << std::endl;
     test_full_range(mpfr::RoundingMode::TowardZero, start, stop);
-  };
+  }
 
   void test_full_range_all_roundings(StorageType x_start, StorageType x_stop,
                                      StorageType y_start, StorageType y_stop) {
@@ -252,7 +252,7 @@ struct LlvmLibcExhaustiveMathTest
               << ", 0x" << y_stop << ") --" << std::dec << std::endl;
     test_full_range(mpfr::RoundingMode::TowardZero, x_start, x_stop, y_start,
                     y_stop);
-  };
+  }
 };
 
 template <typename FloatType, mpfr::Operation Op, UnaryOp<FloatType> Func>

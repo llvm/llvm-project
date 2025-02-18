@@ -14,6 +14,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -39,10 +42,16 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT: Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.body>:
+; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME]]> from scalar.ph)
+; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -50,6 +59,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -76,10 +88,16 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT: Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.body>:
+; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME]]> from scalar.ph)
+; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -92,6 +110,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -118,10 +139,16 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT: Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.body>:
+; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -129,6 +156,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -155,10 +185,16 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT: Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.body>:
+; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME]]> from scalar.ph)
+; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -170,6 +206,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -196,10 +235,16 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT: Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.body>:
+; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -207,6 +252,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -233,10 +281,16 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup>:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:  EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT: Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.body>:
+; CHECK-NEXT:   IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME]]> from scalar.ph)
+; CHECK:        IR   %exitcond = icmp eq i64 %indvars.iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<for.cond.cleanup>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -308,7 +362,7 @@ define void @test_v2_v4m(ptr noalias %a, ptr readonly %b) #3 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i64> @foo_vector_fixed4_mask(<4 x i64> [[WIDE_LOAD]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i64> @foo_vector_fixed4_mask(<4 x i64> [[WIDE_LOAD]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    store <4 x i64> [[TMP3]], ptr [[TMP5]], align 8

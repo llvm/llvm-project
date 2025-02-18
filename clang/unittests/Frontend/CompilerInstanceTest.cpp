@@ -13,6 +13,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -53,7 +54,8 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
   const char *Args[] = {"clang", VFSArg.c_str(), "-xc++", "-"};
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          new DiagnosticOptions());
 
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
@@ -87,8 +89,9 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
       DiagnosticsOS, new DiagnosticOptions());
   CompilerInstance Instance;
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags = Instance.createDiagnostics(
-      DiagOpts, DiagPrinter.get(), /*ShouldOwnClient=*/false);
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      Instance.createDiagnostics(*llvm::vfs::getRealFileSystem(), DiagOpts,
+                                 DiagPrinter.get(), /*ShouldOwnClient=*/false);
 
   Diags->Report(diag::err_expected) << "no crash";
   ASSERT_EQ(DiagnosticOutput, "error: expected no crash\n");

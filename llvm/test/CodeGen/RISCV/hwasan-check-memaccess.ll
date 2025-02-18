@@ -14,7 +14,9 @@ define ptr @f2(ptr %x0, ptr %x1) {
 ; CHECK-NEXT:    mv t0, a1
 ; CHECK-NEXT:    call __hwasan_check_x10_2_short
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; COMPRESS-LABEL: f2:
@@ -26,7 +28,9 @@ define ptr @f2(ptr %x0, ptr %x1) {
 ; COMPRESS-NEXT:    c.mv t0, a1
 ; COMPRESS-NEXT:    call __hwasan_check_x10_2_short
 ; COMPRESS-NEXT:    c.ldsp ra, 8(sp) # 8-byte Folded Reload
+; COMPRESS-NEXT:    .cfi_restore ra
 ; COMPRESS-NEXT:    c.addi sp, 16
+; COMPRESS-NEXT:    .cfi_def_cfa_offset 0
 ; COMPRESS-NEXT:    c.jr ra
   call void @llvm.hwasan.check.memaccess.shortgranules(ptr %x1, ptr %x0, i32 2)
   ret ptr %x0
