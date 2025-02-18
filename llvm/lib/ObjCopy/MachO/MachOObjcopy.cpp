@@ -360,6 +360,12 @@ static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
 static Expected<Section &> findSection(StringRef SecName, Object &O) {
   StringRef SegName;
   std::tie(SegName, SecName) = SecName.split(",");
+  if (O.Header.FileType == MachO::HeaderFileType::MH_OBJECT) {
+    for (const auto& LC : O.LoadCommands)
+      for (const auto& Sec : LC.Sections)
+        if (Sec->Segname == SegName && Sec->Sectname == SecName)
+          return *Sec;
+  }
   auto FoundSeg =
       llvm::find_if(O.LoadCommands, [SegName](const LoadCommand &LC) {
         return LC.getSegmentName() == SegName;
