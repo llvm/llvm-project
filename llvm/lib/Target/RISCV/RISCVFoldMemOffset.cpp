@@ -67,13 +67,6 @@ public:
     return *this;
   }
 
-  FoldableOffset &operator-=(int64_t RHS) {
-    if (!Offset)
-      Offset = 0;
-    Offset = (uint64_t)*Offset - (uint64_t)RHS;
-    return *this;
-  }
-
   int64_t operator*() { return *Offset; }
 };
 
