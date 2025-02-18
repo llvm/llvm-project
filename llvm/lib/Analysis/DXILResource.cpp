@@ -771,11 +771,11 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
 }
 
 SmallVector<dxil::ResourceBindingInfo>
-DXILBindingMap::findCreationInfo(const Value *Key) const {
+DXILBindingMap::findByUse(const Value *Key) const {
   if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
     SmallVector<dxil::ResourceBindingInfo> Children;
     for (const Value *V : Phi->operands()) {
-      Children.append(findCreationInfo(V));
+      Children.append(findByUse(V));
     }
     return Children;
   }
@@ -803,7 +803,7 @@ DXILBindingMap::findCreationInfo(const Value *Key) const {
     if (V->getType() != UseType)
       continue;
 
-    Children.append(findCreationInfo(V));
+    Children.append(findByUse(V));
   }
 
   return Children;

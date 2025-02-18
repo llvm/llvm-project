@@ -73,7 +73,7 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
       const Value *Handle = CI->getArgOperand(0);
-      const auto Bindings = DBM.findCreationInfo(Handle);
+      const auto Bindings = DBM.findByUse(Handle);
       ASSERT_EQ(Bindings.size(), 1u)
           << "Handle should resolve into one resource";
 
@@ -123,7 +123,7 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
       const Value *Handle = CI->getArgOperand(0);
-      const auto Bindings = DBM.findCreationInfo(Handle);
+      const auto Bindings = DBM.findByUse(Handle);
       ASSERT_EQ(Bindings.size(), 1u)
           << "Handle should resolve into one resource";
 
@@ -176,7 +176,7 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
       const Value *Handle = CI->getArgOperand(0);
-      const auto Bindings = DBM.findCreationInfo(Handle);
+      const auto Bindings = DBM.findByUse(Handle);
       ASSERT_EQ(Bindings.size(), 4u)
           << "Handle should resolve into four resources";
 
@@ -256,7 +256,7 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
       const Value *Handle = CI->getArgOperand(0);
-      const auto Bindings = DBM.findCreationInfo(Handle);
+      const auto Bindings = DBM.findByUse(Handle);
       ASSERT_EQ(Bindings.size(), 2u)
           << "Handle should resolve into four resources";
 
