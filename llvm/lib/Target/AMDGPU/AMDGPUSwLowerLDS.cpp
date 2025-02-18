@@ -668,19 +668,16 @@ Value *AMDGPUSwLowerLDS::getTranslatedGlobalMemoryPtrOfLDS(Value *LoadMallocPtr,
                                                            Value *LDSPtr) {
   assert(LDSPtr && "Invalid LDS pointer operand");
   Type *LDSPtrType = LDSPtr->getType();
-  auto &Ctx = M.getContext();
-  const auto &DL = M.getDataLayout();
-  auto *IntPtrTy = DL.getIntPtrType(Ctx, AMDGPUAS::LOCAL_ADDRESS);
+  LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
+  Type *IntTy = DL.getIntPtrType(Ctx, AMDGPUAS::LOCAL_ADDRESS);
   if (auto *VecPtrTy = dyn_cast<VectorType>(LDSPtrType)) {
     // Handle vector of pointers
     ElementCount NumElements = VecPtrTy->getElementCount();
-    Type *IntVecTy = VectorType::get(IntPtrTy, NumElements);
-    Value *PtrToInt = IRB.CreatePtrToInt(LDSPtr, IntVecTy);
-    // Create vector of pointers to global address space
-    return IRB.CreateInBoundsGEP(IRB.getInt8Ty(), LoadMallocPtr, PtrToInt);
+    IntTy = VectorType::get(IntTy, NumElements);
   }
-  Value *PtrToInt = IRB.CreatePtrToInt(LDSPtr, IntPtrTy);
-  return IRB.CreateInBoundsGEP(IRB.getInt8Ty(), LoadMallocPtr, {PtrToInt});
+  Value *GepIndex = IRB.CreatePtrToInt(LDSPtr, IntTy);
+  return IRB.CreateInBoundsGEP(IRB.getInt8Ty(), LoadMallocPtr, {GepIndex});
 }
 
 void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
