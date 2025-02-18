@@ -48,14 +48,28 @@ constexpr void compareViews(View v, std::initializer_list<int> list) {
 }
 
 constexpr bool test() {
-  int buff[] = {0, 1, 2, 3, 4, 5, 6, 7};
+  int arr[] = {0, 1, 2, 3};
+  int arr2[] = {4, 5, 6, 7};
 
   {
-    Range range(buff, buff + 8);
+    Range range(arr, arr + 4);
 
     {
       decltype(auto) result = std::views::concat(range);
+      compareViews(result, {0, 1, 2, 3});
+      ASSERT_SAME_TYPE(decltype(std::views::all(range)), decltype(result));
+    }
+  }
+
+  {
+    Range first(arr, arr + 4);
+    Range tail(arr2, arr2 + 4);
+
+    {
+      decltype(auto) result = std::views::concat(first, tail);
       compareViews(result, {0, 1, 2, 3, 4, 5, 6, 7});
+      using Type = std::ranges::concat_view<Range, Range>;
+      ASSERT_SAME_TYPE(Type, decltype(result));
     }
   }
 
