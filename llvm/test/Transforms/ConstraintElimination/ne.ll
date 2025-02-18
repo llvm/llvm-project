@@ -423,3 +423,87 @@ define i1 @assume_4b(i64 %a, i64 %b) {
   %ret = icmp sle i64 %a, %b
   ret i1 %ret
 }
+
+define i1 @sle_and_ne_imply_slt(i8 %a) {
+; CHECK-LABEL: @sle_and_ne_imply_slt(
+; CHECK-NEXT:    [[SLE:%.*]] = icmp sle i8 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[SLE]], label [[LESS_OR_EQUAL:%.*]], label [[EXIT:%.*]]
+; CHECK:       less_or_equal:
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[A]], 0
+; CHECK-NEXT:    br i1 [[NE]], label [[NOT_EQUAL:%.*]], label [[EXIT]]
+; CHECK:       not_equal:
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[SLT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %sle = icmp sle i8 %a, 0
+  br i1 %sle, label %less_or_equal, label %exit
+
+less_or_equal:
+  %ne = icmp ne i8 %a, 0
+  br i1 %ne, label %not_equal, label %exit
+
+not_equal:
+  %slt = icmp slt i8 %a, 0
+  ret i1 %slt
+
+exit:
+  ret i1 0
+}
+
+define i1 @sge_and_ne_imply_sgt(i8 %a) {
+; CHECK-LABEL: @sge_and_ne_imply_sgt(
+; CHECK-NEXT:    [[SGE:%.*]] = icmp sge i8 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[SGE]], label [[GREATER_OR_EQUAL:%.*]], label [[EXIT:%.*]]
+; CHECK:       greater_or_equal:
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[A]], 0
+; CHECK-NEXT:    br i1 [[NE]], label [[NOT_EQUAL:%.*]], label [[EXIT]]
+; CHECK:       not_equal:
+; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[SGT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %sge = icmp sge i8 %a, 0
+  br i1 %sge, label %greater_or_equal, label %exit
+
+greater_or_equal:
+  %ne = icmp ne i8 %a, 0
+  br i1 %ne, label %not_equal, label %exit
+
+not_equal:
+  %sgt = icmp sgt i8 %a, 0
+  ret i1 %sgt
+
+exit:
+  ret i1 0
+}
+
+define i1 @sge_and_ne_imply_sgt_opposite_successor(i8 %a) {
+; CHECK-LABEL: @sge_and_ne_imply_sgt_opposite_successor(
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[SLT]], label [[EXIT:%.*]], label [[GREATER_OR_EQUAL:%.*]]
+; CHECK:       greater_or_equal:
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    br i1 [[EQ]], label [[EXIT]], label [[NOT_EQUAL:%.*]]
+; CHECK:       not_equal:
+; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[SGT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %slt = icmp slt i8 %a, 0
+  br i1 %slt, label %exit, label %greater_or_equal
+
+greater_or_equal:
+  %eq = icmp eq i8 %a, 0
+  br i1 %eq, label %exit, label %not_equal
+
+not_equal:
+  %sgt = icmp sgt i8 %a, 0
+  ret i1 %sgt
+
+exit:
+  ret i1 0
+}
