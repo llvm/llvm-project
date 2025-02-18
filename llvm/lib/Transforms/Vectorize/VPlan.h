@@ -441,8 +441,28 @@ public:
   bool mayHaveSideEffects() const;
 
   /// Returns true for PHI-like recipes.
-  bool isPhi() const {
+  virtual bool isPhi() const {
+    assert(getVPDefID() != VPInstructionSC &&
+           "VPInstructions implement this function themselves");
     return getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC;
+  }
+
+  /// Returns true for PHI-like recipes that exists in vector loop header basic
+  /// block
+  virtual bool isHeaderPhi() const {
+    assert(getVPDefID() != VPInstructionSC &&
+           "VPInstructions implement this function themselves");
+    return (getVPDefID() >= VPFirstHeaderPHISC &&
+            getVPDefID() <= VPLastHeaderPHISC) ||
+           getVPDefID() == VPWidenPHISC;
+  }
+
+  /// Returns true for PHI-like recipes that generate their own backedge
+  virtual bool isPhiThatGeneratesBackedge() const {
+    assert(getVPDefID() != VPInstructionSC &&
+           "VPInstructions implement this function themselves");
+    return getVPDefID() == VPWidenPHISC ||
+           getVPDefID() == VPConditionalScalarAssignmentHeaderPHISC;
   }
 
   /// Returns true if the recipe may read from memory.
@@ -536,6 +556,9 @@ public:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPScalarCastSC:
     case VPRecipeBase::VPPartialReductionSC:
+    case VPRecipeBase::VPConditionalScalarAssignmentHeaderPHISC:
+    case VPRecipeBase::VPConditionalScalarAssignmentDataUpdateSC:
+    case VPRecipeBase::VPConditionalScalarAssignmentExtractScalarSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
@@ -882,6 +905,8 @@ public:
     // Extracts the first active lane of a vector, where the first operand is
     // the predicate, and the second operand is the vector to extract.
     ExtractFirstActive,
+    ConditionalScalarAssignmentMaskPhi,
+    ConditionalScalarAssignmentMaskSel,
   };
 
 private:
@@ -1024,6 +1049,16 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+
+  /// Returns true for PHI-like recipes.
+  bool isPhi() const override;
+
+  /// Returns true for PHI-like recipes that exists in vector loop header basic
+  /// block
+  bool isHeaderPhi() const override;
+
+  /// Returns true for PHI-like recipes that generate their own backedge
+  bool isPhiThatGeneratesBackedge() const override;
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during
@@ -2553,6 +2588,136 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
+};
+
+class VPConditionalScalarAssignmentHeaderPHIRecipe final
+    : public VPHeaderPHIRecipe {
+public:
+  VPConditionalScalarAssignmentHeaderPHIRecipe(PHINode *Phi,
+                                               VPValue &VPInitData)
+      : VPHeaderPHIRecipe(VPDef::VPConditionalScalarAssignmentHeaderPHISC, Phi,
+                          &VPInitData) {}
+
+  ~VPConditionalScalarAssignmentHeaderPHIRecipe() override = default;
+
+  VPConditionalScalarAssignmentHeaderPHIRecipe *clone() override {
+    return new VPConditionalScalarAssignmentHeaderPHIRecipe(
+        cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
+  }
+
+  VPValue *NewData = nullptr;
+
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  VP_CLASSOF_IMPL(VPDef::VPConditionalScalarAssignmentHeaderPHISC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPDefID() == VPDef::VPConditionalScalarAssignmentHeaderPHISC;
+  }
+
+  VPValue *getVPInitData() { return getOperand(0); }
+
+  void setDataUpdate(VPValue *V) { NewData = V; }
+
+  VPValue *getVPNewData() { return NewData; }
+};
+
+class VPConditionalScalarAssignmentDataUpdateRecipe final
+    : public VPSingleDefRecipe {
+public:
+  VPConditionalScalarAssignmentDataUpdateRecipe(SelectInst *SI,
+                                                ArrayRef<VPValue *> Operands)
+      : VPSingleDefRecipe(VPDef::VPConditionalScalarAssignmentDataUpdateSC,
+                          Operands, SI) {}
+
+  ~VPConditionalScalarAssignmentDataUpdateRecipe() override = default;
+
+  VPConditionalScalarAssignmentDataUpdateRecipe *clone() override {
+    SmallVector<VPValue *> Ops(operands());
+    return new VPConditionalScalarAssignmentDataUpdateRecipe(
+        cast<SelectInst>(getUnderlyingInstr()), Ops);
+  }
+
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  VP_CLASSOF_IMPL(VPDef::VPConditionalScalarAssignmentDataUpdateSC)
+
+  VPValue *getVPDataPhi() const { return getOperand(0); }
+
+  // The condition from the original select statement
+  VPValue *getVPCond() const { return getOperand(1); }
+
+  // The true value from the original select statement
+  VPValue *getVPTrue() const { return getOperand(2); }
+
+  // The false value from the original select statement
+  VPValue *getVPFalse() const { return getOperand(3); }
+
+  // We combine the setters so we can be sure NewMask is before AnyOf
+  // in the operands list, so the getters can be sure which operand numbers
+  // to get.
+  void setVPNewMaskAndVPAnyOf(VPValue *NewMask, VPValue *AnyOf) {
+    addOperand(NewMask);
+    addOperand(AnyOf);
+  }
+
+  VPValue *getVPNewMask() const { return getOperand(4); }
+
+  VPValue *getVPAnyOf() const { return getOperand(5); }
+};
+
+class VPConditionalScalarAssignmentExtractScalarRecipe final
+    : public VPSingleDefRecipe {
+  SmallVector<PHINode *> PhisToFix;
+
+public:
+  VPConditionalScalarAssignmentExtractScalarRecipe(
+      ArrayRef<VPValue *> Operands, SmallVector<PHINode *> PhisToFix)
+      : VPSingleDefRecipe(VPDef::VPConditionalScalarAssignmentExtractScalarSC,
+                          Operands),
+        PhisToFix(PhisToFix) {}
+
+  ~VPConditionalScalarAssignmentExtractScalarRecipe() override = default;
+
+  VPConditionalScalarAssignmentExtractScalarRecipe *clone() override {
+    SmallVector<VPValue *> Ops(operands());
+    return new VPConditionalScalarAssignmentExtractScalarRecipe(Ops, PhisToFix);
+  }
+
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  VP_CLASSOF_IMPL(VPDef::VPConditionalScalarAssignmentExtractScalarSC)
+
+  VPValue *getVPInitScalar() const { return getOperand(0); }
+  VPValue *getVPMaskSel() const { return getOperand(1); }
+  VPValue *getVPDataSel() const { return getOperand(2); }
 };
 
 /// VPPredInstPHIRecipe is a recipe for generating the phi nodes needed when

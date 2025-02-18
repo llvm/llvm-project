@@ -712,6 +712,24 @@ Value *VPInstruction::generate(VPTransformState &State) {
         Builder.getInt64Ty(), Mask, true, "first.active.lane");
     return Builder.CreateExtractElement(Vec, Ctz, "early.exit.value");
   }
+  case VPInstruction::ConditionalScalarAssignmentMaskPhi: {
+    BasicBlock *PreheaderBB = State.CFG.getPreheaderBBFor(this);
+    Value *InitMask = State.get(getOperand(0));
+    PHINode *MaskPhi =
+        State.Builder.CreatePHI(InitMask->getType(), 2, "csa.mask.phi");
+    MaskPhi->addIncoming(InitMask, PreheaderBB);
+    State.set(this, MaskPhi);
+    return MaskPhi;
+  }
+  case VPInstruction::ConditionalScalarAssignmentMaskSel: {
+    Value *WidenedCond = State.get(getOperand(0));
+    Value *MaskPhi = State.get(getOperand(1));
+    Value *AnyOf = State.get(getOperand(2), /*NeedsScalar=*/true);
+    Value *MaskSel =
+        State.Builder.CreateSelect(AnyOf, WidenedCond, MaskPhi, "csa.mask.sel");
+    cast<PHINode>(MaskPhi)->addIncoming(MaskSel, State.CFG.PrevBB);
+    return MaskSel;
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -760,6 +778,18 @@ bool VPInstruction::isVectorToScalar() const {
 
 bool VPInstruction::isSingleScalar() const {
   return getOpcode() == VPInstruction::ResumePhi;
+}
+
+bool VPInstruction::isPhi() const {
+  return getOpcode() == VPInstruction::ConditionalScalarAssignmentMaskPhi;
+}
+
+bool VPInstruction::isHeaderPhi() const {
+  return getOpcode() == VPInstruction::ConditionalScalarAssignmentMaskPhi;
+}
+
+bool VPInstruction::isPhiThatGeneratesBackedge() const {
+  return getOpcode() == VPInstruction::ConditionalScalarAssignmentMaskPhi;
 }
 
 #if !defined(NDEBUG)
@@ -940,6 +970,11 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractFirstActive:
     O << "extract-first-active";
+  case VPInstruction::ConditionalScalarAssignmentMaskPhi:
+    O << "csa-mask-phi";
+    break;
+  case VPInstruction::ConditionalScalarAssignmentMaskSel:
+    O << "csa-mask-sel";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -2505,6 +2540,207 @@ void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
   O << " to " << *ResultTy;
 }
 #endif
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPConditionalScalarAssignmentHeaderPHIRecipe::print(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+  printAsOperand(O, SlotTracker);
+  O << " = csa-data-phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPConditionalScalarAssignmentHeaderPHIRecipe::execute(
+    VPTransformState &State) {
+  // PrevBB is this BB
+  IRBuilder<>::InsertPointGuard Guard(State.Builder);
+  State.Builder.SetInsertPoint(State.CFG.PrevBB->getFirstNonPHI());
+
+  Value *InitData = State.get(getVPInitData(), 0);
+  PHINode *DataPhi =
+      State.Builder.CreatePHI(InitData->getType(), 2, "csa.data.phi");
+  BasicBlock *PreheaderBB = State.CFG.getPreheaderBBFor(this);
+  DataPhi->addIncoming(InitData, PreheaderBB);
+  // Note: We didn't add Incoming for the new data since
+  // VPConditionalScalarAssignmentDataUpdateRecipe may not have been executed.
+  // We let VPConditionalScalarAssignmentDataUpdateRecipe::execute add the
+  // incoming operand to DataPhi.
+
+  State.set(this, DataPhi);
+}
+
+InstructionCost VPConditionalScalarAssignmentHeaderPHIRecipe::computeCost(
+    ElementCount VF, VPCostContext &Ctx) const {
+  // FIXME: These costs should be moved into VPInstruction::computeCost. We put
+  // them here for now since there is no VPInstruction::computeCost support.
+
+  if (VF.isScalar())
+    return 0;
+
+  InstructionCost C = 0;
+  auto *VTy = VectorType::get(Ctx.Types.inferScalarType(this), VF);
+  const TargetTransformInfo &TTI = Ctx.TTI;
+  // ConditionalScalarAssignmentInitMask
+  C += TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VTy);
+  // ConditionalScalarAssignmentInitData
+  C += TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VTy);
+  return C;
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPConditionalScalarAssignmentDataUpdateRecipe::print(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+  printAsOperand(O, SlotTracker);
+  O << " = csa-data-update ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPConditionalScalarAssignmentDataUpdateRecipe::execute(
+    VPTransformState &State) {
+  Value *AnyOf = State.get(getVPAnyOf(), /*NeedsScalar=*/true);
+  Value *DataUpdate = getVPDataPhi() == getVPTrue() ? State.get(getVPFalse())
+                                                    : State.get(getVPTrue());
+  PHINode *DataPhi = cast<PHINode>(State.get(getVPDataPhi()));
+  Value *DataSel =
+      State.Builder.CreateSelect(AnyOf, DataUpdate, DataPhi, "csa.data.sel");
+
+  DataPhi->addIncoming(DataSel, State.CFG.PrevBB);
+
+  State.set(this, DataSel);
+}
+
+InstructionCost VPConditionalScalarAssignmentDataUpdateRecipe::computeCost(
+    ElementCount VF, VPCostContext &Ctx) const {
+  if (VF.isScalar())
+    return 0;
+
+  InstructionCost C = 0;
+  auto *VTy = VectorType::get(Ctx.Types.inferScalarType(this), VF);
+  auto *MaskTy = VectorType::get(IntegerType::getInt1Ty(VTy->getContext()), VF);
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  const TargetTransformInfo &TTI = Ctx.TTI;
+
+  // Data Update
+  C += TTI.getCmpSelInstrCost(Instruction::Select, VTy, MaskTy,
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+  // FIXME: These costs should be moved into VPInstruction::computeCost. We put
+  // them here for now since they are related to updating the data and there is
+  // no VPInstruction::computeCost support at the moment.
+
+  // AnyOf
+  C += TTI.getArithmeticReductionCost(Instruction::Or, VTy, std::nullopt,
+                                      CostKind);
+  // VPVLSel
+  C += TTI.getCmpSelInstrCost(Instruction::Select, VTy, MaskTy,
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  // MaskUpdate
+  C += TTI.getCmpSelInstrCost(Instruction::Select, MaskTy, MaskTy,
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  return C;
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPConditionalScalarAssignmentExtractScalarRecipe::print(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+  printAsOperand(O, SlotTracker);
+  O << " = CSA-EXTRACT-SCALAR ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPConditionalScalarAssignmentExtractScalarRecipe::execute(
+    VPTransformState &State) {
+  IRBuilder<>::InsertPointGuard Guard(State.Builder);
+  State.Builder.SetInsertPoint(State.CFG.ExitBB->getFirstNonPHI());
+
+  Value *InitScalar = getVPInitScalar()->getLiveInIRValue();
+  Value *MaskSel = State.get(getVPMaskSel());
+  Value *DataSel = State.get(getVPDataSel());
+
+  Value *LastIdx = nullptr;
+  Value *IndexVec = State.Builder.CreateStepVector(
+      VectorType::get(State.Builder.getInt32Ty(), State.VF), "csa.step");
+  Value *NegOne = ConstantInt::get(IndexVec->getType()->getScalarType(), -1);
+
+  // Get a vector where the elements are zero when the last active mask is
+  // false and the index in the vector when the mask is true.
+  Value *ActiveLaneIdxs = State.Builder.CreateSelect(
+      MaskSel, IndexVec, ConstantAggregateZero::get(IndexVec->getType()));
+  // Get the last active index in the mask. When no lanes in the mask are
+  // active, vector.umax will have value 0. Take the additional step to set
+  // LastIdx as -1 in this case to avoid the case of lane 0 of the mask being
+  // inactive, which would also cause the reduction to have value 0.
+  Value *MaybeLastIdx = State.Builder.CreateIntMaxReduce(ActiveLaneIdxs);
+  Value *IsLaneZeroActive =
+      State.Builder.CreateExtractElement(MaskSel, static_cast<uint64_t>(0));
+  Value *Zero = ConstantInt::get(MaybeLastIdx->getType(), 0);
+  Value *MaybeLastIdxEQZero = State.Builder.CreateICmpEQ(MaybeLastIdx, Zero);
+  Value *And = State.Builder.CreateAnd(IsLaneZeroActive, MaybeLastIdxEQZero);
+  LastIdx = State.Builder.CreateSelect(And, Zero, NegOne);
+
+  Value *ExtractFromVec =
+      State.Builder.CreateExtractElement(DataSel, LastIdx, "csa.extract");
+  Value *LastIdxGEZero = State.Builder.CreateICmpSGE(LastIdx, Zero);
+  Value *ChooseFromVecOrInit =
+      State.Builder.CreateSelect(LastIdxGEZero, ExtractFromVec, InitScalar);
+
+  for (PHINode *Phi : PhisToFix)
+    Phi->addIncoming(ChooseFromVecOrInit, State.CFG.ExitBB);
+
+  State.set(this, ChooseFromVecOrInit, /*IsScalar=*/true);
+}
+
+InstructionCost VPConditionalScalarAssignmentExtractScalarRecipe::computeCost(
+    ElementCount VF, VPCostContext &Ctx) const {
+  if (VF.isScalar())
+    return 0;
+
+  InstructionCost C = 0;
+  auto *VTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
+  auto *Int32VTy =
+      VectorType::get(IntegerType::getInt32Ty(VTy->getContext()), VF);
+  auto *MaskTy = VectorType::get(IntegerType::getInt1Ty(VTy->getContext()), VF);
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  const TargetTransformInfo &TTI = Ctx.TTI;
+
+  ArrayRef<Value *> Args;
+  IntrinsicCostAttributes CostAttrs(Intrinsic::stepvector, Int32VTy, Args);
+  // StepVector
+  C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+  // NegOneSplat
+  C += TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, Int32VTy);
+  // ActiveLaneIdxs
+  C += TTI.getCmpSelInstrCost(Instruction::Select, MaskTy, MaskTy,
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  // MaybeLastIdx
+  C += TTI.getMinMaxReductionCost(Intrinsic::smax, Int32VTy, FastMathFlags(),
+                                  CostKind);
+  // IsLaneZeroActive
+  C += TTI.getVectorInstrCost(Instruction::ExtractElement, MaskTy, CostKind);
+  // MaybeLastIdxEQZero
+  C += TTI.getCmpSelInstrCost(Instruction::ICmp, Int32VTy, MaskTy,
+                              CmpInst::ICMP_EQ, CostKind);
+  // And
+  C += TTI.getArithmeticInstrCost(Instruction::And, MaskTy->getScalarType(),
+                                  CostKind);
+  // LastIdx
+  C += TTI.getCmpSelInstrCost(Instruction::Select, VTy, MaskTy,
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  // ExtractFromVec
+  C += TTI.getVectorInstrCost(Instruction::ExtractElement, VTy, CostKind);
+  // LastIdxGEZero
+  C += TTI.getCmpSelInstrCost(Instruction::ICmp, Int32VTy, MaskTy,
+                              CmpInst::ICMP_SGE, CostKind);
+  // ChooseFromVecOrInit
+  C += TTI.getCmpSelInstrCost(Instruction::Select, VTy, MaskTy,
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  return C;
+}
 
 void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   assert(State.Lane && "Branch on Mask works only on single instance.");

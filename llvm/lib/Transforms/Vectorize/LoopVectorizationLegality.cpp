@@ -83,6 +83,10 @@ static cl::opt<bool> EnableHistogramVectorization(
     "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
     cl::desc("Enables autovectorization of some loops containing histograms"));
 
+static cl::opt<bool> EnableConditionalScalarAssignment(
+    "enable-csa-vectorization", cl::init(false), cl::Hidden,
+    cl::desc("Control whether loop vectorization is enabled"));
+
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
 
@@ -749,6 +753,18 @@ bool LoopVectorizationLegality::setupOuterLoopInductions() {
   return llvm::all_of(Header->phis(), IsSupportedPhi);
 }
 
+void LoopVectorizationLegality::addConditionalScalarAssignmentPhi(
+    PHINode *Phi, const ConditionalScalarAssignmentDescriptor &Desc,
+    SmallPtrSetImpl<Value *> &AllowedExit) {
+  assert(Desc.isValid() &&
+         "Expected Valid ConditionalScalarAssignmentDescriptor");
+  LLVM_DEBUG(
+      dbgs() << "LV: found legal conditional scalar assignment opportunity"
+             << *Phi << "\n");
+  AllowedExit.insert(Phi);
+  ConditionalScalarAssignments.insert({Phi, Desc});
+}
+
 /// Checks if a function is scalarizable according to the TLI, in
 /// the sense that it should be vectorized and then expanded in
 /// multiple scalar calls. This is represented in the
@@ -878,12 +894,25 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
-        // As a last resort, coerce the PHI to a AddRec expression
-        // and re-try classifying it a an induction PHI.
+        // Try to coerce the PHI to a AddRec expression and re-try classifying
+        // it a an induction PHI.
         if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
             !IsDisallowedStridedPointerInduction(ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
           continue;
+        }
+
+        // Check if the PHI can be classified as a conditional scalar assignment
+        // PHI.
+        if (EnableConditionalScalarAssignment ||
+            (TTI->enableConditionalScalarAssignmentVectorization() &&
+             EnableConditionalScalarAssignment.getNumOccurrences() == 0)) {
+          ConditionalScalarAssignmentDescriptor Desc;
+          if (ConditionalScalarAssignmentDescriptor::
+                  isConditionalScalarAssignmentPhi(Phi, TheLoop, Desc)) {
+            addConditionalScalarAssignmentPhi(Phi, Desc, AllowedExit);
+            continue;
+          }
         }
 
         reportVectorizationFailure("Found an unidentified PHI",
@@ -1878,11 +1907,15 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   for (const auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
 
+  SmallPtrSet<const Value *, 8> CSALiveOuts;
+  for (const auto &CSA : getConditionalScalarAssignments())
+    CSALiveOuts.insert(CSA.second.getAssignment());
+
   // TODO: handle non-reduction outside users when tail is folded by masking.
   for (auto *AE : AllowedExit) {
     // Check that all users of allowed exit values are inside the loop or
-    // are the live-out of a reduction.
-    if (ReductionLiveOuts.count(AE))
+    // are the live-out of a reduction or conditional scalar assignment.
+    if (ReductionLiveOuts.count(AE) || CSALiveOuts.count(AE))
       continue;
     for (User *U : AE->users()) {
       Instruction *UI = cast<Instruction>(U);

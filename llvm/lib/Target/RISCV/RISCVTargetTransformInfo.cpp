@@ -2583,6 +2583,11 @@ bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) {
   return true;
 }
 
+bool RISCVTTIImpl::enableConditionalScalarAssignmentVectorization() const {
+  return ST->hasVInstructions() &&
+         ST->getProcFamily() == RISCVSubtarget::SiFive7;
+}
+
 bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
   auto *VTy = dyn_cast<VectorType>(DataTy);
   if (!VTy || VTy->isScalableTy())

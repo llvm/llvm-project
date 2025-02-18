@@ -175,6 +175,8 @@ const char LLVMLoopVectorizeFollowupEpilogue[] =
 STATISTIC(LoopsVectorized, "Number of loops vectorized");
 STATISTIC(LoopsAnalyzed, "Number of loops analyzed for vectorization");
 STATISTIC(LoopsEpilogueVectorized, "Number of epilogues vectorized");
+STATISTIC(ConditionalScalarAssignmentsVectorized,
+          "Number of conditional scalar assignments vectorized");
 
 static cl::opt<bool> EnableEpilogueVectorization(
     "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
@@ -4504,6 +4506,9 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPEVLBasedIVPHISC:
       case VPDef::VPPredInstPHISC:
       case VPDef::VPBranchOnMaskSC:
+      case VPRecipeBase::VPConditionalScalarAssignmentDataUpdateSC:
+      case VPRecipeBase::VPConditionalScalarAssignmentExtractScalarSC:
+      case VPRecipeBase::VPConditionalScalarAssignmentHeaderPHISC:
         continue;
       case VPDef::VPReductionSC:
       case VPDef::VPActiveLaneMaskPHISC:
@@ -7447,9 +7452,18 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
 /// not have corresponding recipes in \p Plan and are not marked to be ignored
 /// in \p CostCtx. This means the VPlan contains simplification that the legacy
 /// cost-model did not account for.
-static bool planContainsAdditionalSimplifications(VPlan &Plan,
-                                                  VPCostContext &CostCtx,
-                                                  Loop *TheLoop) {
+static bool
+planContainsAdditionalSimplifications(VPlan &Plan, VPCostContext &CostCtx,
+                                      Loop *TheLoop,
+                                      LoopVectorizationLegality &Legal) {
+
+  // CSA cost is more complicated since there is significant overhead in the
+  // preheader and middle block. It also contains recipes that are not backed by
+  // underlying instructions in the original loop. This makes it difficult to
+  // model in the legacy cost model.
+  if (!Legal.getConditionalScalarAssignments().empty())
+    return true;
+
   // First collect all instructions for the recipes in Plan.
   auto GetInstructionForCost = [](const VPRecipeBase *R) -> Instruction * {
     if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
@@ -7578,9 +7592,9 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
           BestPlan.getMiddleBlock();
   assert((BestFactor.Width == LegacyVF.Width || PlanForEarlyExitLoop ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
-                                                CostCtx, OrigLoop) ||
+                                                CostCtx, OrigLoop, *Legal) ||
           planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
-                                                CostCtx, OrigLoop)) &&
+                                                CostCtx, OrigLoop, *Legal)) &&
          " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
@@ -8876,9 +8890,6 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
       return Recipe;
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
-    assert((Legal->isReductionVariable(Phi) ||
-            Legal->isFixedOrderRecurrence(Phi)) &&
-           "can only widen reductions and fixed-order recurrences here");
     VPValue *StartV = Operands[0];
     if (Legal->isReductionVariable(Phi)) {
       const RecurrenceDescriptor &RdxDesc =
@@ -8892,12 +8903,29 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc, *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor);
-    } else {
+    } else if (Legal->isFixedOrderRecurrence(Phi)) {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
       // recurrences in the chain, the fixed order recurrence should be modeled
       // directly, enabling more efficient codegen.
       PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
+    } else if (Legal->isConditionalScalarAssignmentPhi(Phi)) {
+      VPValue *InitScalar = Plan.getOrAddLiveIn(
+          Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
+
+      // Don't build full CSA for VF=ElementCount::getFixed(1)
+      bool IsScalarVF = LoopVectorizationPlanner::getDecisionAndClampRange(
+          [&](ElementCount VF) { return VF.isScalar(); }, Range);
+
+      // When the VF=getFixed(1), InitData is just InitScalar.
+      VPValue *InitData =
+          IsScalarVF ? InitScalar
+                     : getVPValueOrAddLiveIn(PoisonValue::get(Phi->getType()));
+      PhiRecipe =
+          new VPConditionalScalarAssignmentHeaderPHIRecipe(Phi, *InitData);
+    } else {
+      llvm_unreachable("can only widen reductions, fixed-order recurrences, "
+                       "and conditional scalar assignments here");
     }
 
     PhisToFix.push_back(PhiRecipe);
@@ -8934,6 +8962,26 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
                                 make_range(Operands.begin(), Operands.end()));
 
   if (auto *SI = dyn_cast<SelectInst>(Instr)) {
+    auto *CSADescIt =
+        find_if(Legal->getConditionalScalarAssignments(), [&](auto CSA) {
+          return ConditionalScalarAssignmentDescriptor::
+              isConditionalScalarAssignmentSelect(CSA.second, SI);
+        });
+    if (CSADescIt != Legal->getConditionalScalarAssignments().end()) {
+      for (VPRecipeBase &R :
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+        if (auto PhiR =
+                dyn_cast<VPConditionalScalarAssignmentHeaderPHIRecipe>(&R)) {
+          if (PhiR->getUnderlyingInstr() == CSADescIt->first) {
+            auto *R = new VPConditionalScalarAssignmentDataUpdateRecipe(
+                SI, {PhiR, Operands[0], Operands[1], Operands[2]});
+            PhiR->setDataUpdate(R);
+            return R;
+          }
+        }
+      }
+    }
+
     return new VPWidenSelectRecipe(
         *SI, make_range(Operands.begin(), Operands.end()));
   }
@@ -8982,6 +9030,76 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
   }
   return new VPPartialReductionRecipe(ReductionOpcode, BinOp, Accumulator,
                                       Reduction);
+}
+
+/// Add ConditionalScalarAssignment Recipes that must occur after each
+/// instruction in the input IR is processed and introduced into VPlan.
+static void addConditionalScalarAssignmentPostprocessRecipes(
+    VPRecipeBuilder &RecipeBuilder,
+    const LoopVectorizationLegality::ConditionalScalarAssignmentList &CSAs,
+    VPBasicBlock *MiddleVPBB, DebugLoc DL, VFRange &Range, VPlan &Plan,
+    Loop *OrigLoop) {
+  // Don't vectorize conditional scalar assignment for
+  // VF=ElementCount::getFixed(1)
+  if (LoopVectorizationPlanner::getDecisionAndClampRange(
+          [&](ElementCount VF) { return VF.isScalar(); }, Range))
+    return;
+
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (const auto &CSA : CSAs) {
+    // Build the MaskPhi recipe.
+    auto *VPInitMask = RecipeBuilder.getVPValueOrAddLiveIn(
+        ConstantInt::getFalse(Type::getInt1Ty(CSA.first->getContext())));
+    VPBuilder B;
+    B.setInsertPoint(Header, Header->getFirstNonPhi());
+    auto *VPMaskPhi = B.createConditionalScalarAssignmentMaskPhi(
+        VPInitMask, DL, "csa.mask.phi");
+    B.clearInsertionPoint();
+
+    auto GetVPValue = [&](Value *I) {
+      return RecipeBuilder.getRecipe(cast<Instruction>(I))->getVPSingleValue();
+    };
+    VPConditionalScalarAssignmentDataUpdateRecipe *VPDataUpdate =
+        cast<VPConditionalScalarAssignmentDataUpdateRecipe>(
+            cast<VPConditionalScalarAssignmentHeaderPHIRecipe>(
+                GetVPValue(CSA.first))
+                ->getVPNewData());
+
+    // The CSA optimization wants to use a condition such that when it is
+    // true, a new value is assigned. However, it is possible that a true lane
+    // in WidenedCond corresponds to selection of the initial value instead.
+    // In that case, we must use the negation of WidenedCond.
+    // i.e. select cond new_val old_val versus select cond.not old_val new_val
+    assert(CSA.second.getCond() &&
+           "CSADescriptor must know how to describe the condition");
+    VPValue *WidenedCond = GetVPValue(CSA.second.getCond());
+    VPValue *CondToUse = WidenedCond;
+    if (CSA.second.getAssignment()->getTrueValue() == CSA.first) {
+      auto *VPNotCond = B.createNot(WidenedCond, DL);
+      VPNotCond->insertBefore(VPDataUpdate);
+      CondToUse = VPNotCond;
+    }
+
+    auto *VPAnyOf = B.createAnyOf(CondToUse, DL, "csa.cond.anyof");
+    VPAnyOf->insertBefore(VPDataUpdate);
+
+    auto *VPMaskSel = B.createConditionalScalarAssignmentMaskSel(
+        CondToUse, VPMaskPhi, VPAnyOf, DL, "csa.mask.sel");
+    VPMaskSel->insertAfter(VPAnyOf);
+
+    VPDataUpdate->setVPNewMaskAndVPAnyOf(VPMaskSel, VPAnyOf);
+    VPValue *VPInitScalar = Plan.getOrAddLiveIn(
+        CSA.first->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
+    SmallVector<PHINode *> PhiToFix;
+    for (User *U : VPDataUpdate->getUnderlyingValue()->users())
+      if (auto *Phi = dyn_cast<PHINode>(U);
+          Phi && Phi->getParent() == OrigLoop->getUniqueExitBlock())
+        PhiToFix.emplace_back(Phi);
+    VPConditionalScalarAssignmentExtractScalarRecipe *ExtractScalarRecipe =
+        new VPConditionalScalarAssignmentExtractScalarRecipe(
+            {VPInitScalar, VPMaskSel, VPDataUpdate}, PhiToFix);
+    MiddleVPBB->insert(ExtractScalarRecipe, MiddleVPBB->getFirstNonPhi());
+  }
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -9115,6 +9233,8 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
              "should only skip truncated wide inductions");
       continue;
     }
+    if (isa<VPConditionalScalarAssignmentHeaderPHIRecipe>(VectorPhiR))
+      continue;
 
     // The backedge value provides the value to resume coming out of a loop,
     // which for FORs is a vector whose last element needs to be extracted. The
@@ -9459,6 +9579,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     VPBB = cast<VPBasicBlock>(VPBB->getSingleSuccessor());
   }
 
+  addConditionalScalarAssignmentPostprocessRecipes(
+      RecipeBuilder, Legal->getConditionalScalarAssignments(), MiddleVPBB, DL,
+      Range, *Plan, OrigLoop);
+
   // After here, VPBB should not be used.
   VPBB = nullptr;
 
@@ -9612,7 +9736,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
                                 Builder);
   for (auto &R : Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
+    if (isa<VPCanonicalIVPHIRecipe>(&R) ||
+        isa<VPConditionalScalarAssignmentHeaderPHIRecipe>(&R))
       continue;
     auto *HeaderR = cast<VPHeaderPHIRecipe>(&R);
     RecipeBuilder.setRecipe(HeaderR->getUnderlyingInstr(), HeaderR);
@@ -10252,7 +10377,8 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   SmallPtrSet<PHINode *, 2> EpiWidenedPhis;
   for (VPRecipeBase &R :
        EpiPlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
+    if (isa<VPCanonicalIVPHIRecipe>(&R) ||
+        isa<VPConditionalScalarAssignmentHeaderPHIRecipe>(&R))
       continue;
     EpiWidenedPhis.insert(
         cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
@@ -10781,6 +10907,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         auto ExpandedSCEVs = LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF,
                                              *BestMainPlan, MainILV, DT, false);
         ++LoopsVectorized;
+        ConditionalScalarAssignmentsVectorized +=
+            LVL.getConditionalScalarAssignments().size();
 
         // Second pass vectorizes the epilogue and adjusts the control flow
         // edges from the first pass.
@@ -10804,6 +10932,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                PSI, Checks, BestPlan);
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
+        ConditionalScalarAssignmentsVectorized +=
+            LVL.getConditionalScalarAssignments().size();
 
         // Add metadata to disable runtime unrolling a scalar loop when there
         // are no runtime checks about strides and memory. A scalar loop that is
