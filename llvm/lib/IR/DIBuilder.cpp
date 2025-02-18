@@ -462,8 +462,9 @@ DIDerivedType *DIBuilder::createTemplateTypeParameterAsType(DIScope *Context,
                                                             StringRef Name,
                                                             DIType *Ty) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_template_type_parameter,
-                            Name, nullptr, 0, Context, Ty, 0, 0, 0, std::nullopt,
-                            std::nullopt, DINode::FlagZero, nullptr);
+                            Name, nullptr, 0, Context, Ty, 0, 0, 0,
+                            std::nullopt, std::nullopt, DINode::FlagZero,
+                            nullptr);
 }
 
 DITemplateTypeParameter *

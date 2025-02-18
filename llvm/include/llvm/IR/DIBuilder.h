@@ -550,11 +550,11 @@ namespace llvm {
                                                          StringRef Name,
                                                          DIType *Ty,
                                                          bool IsDefault);
-     /// \param Scope        Scope in which this type is defined.
+    /// \param Scope        Scope in which this type is defined.
     /// \param Name         Type parameter name.
     /// \param Ty           Parameter type.
     DIDerivedType *createTemplateTypeParameterAsType(DIScope *Scope,
-		                                     StringRef Name,
+                                                     StringRef Name,
                                                      DIType *Ty);
 
     /// Create debugging information for template

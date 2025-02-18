@@ -3672,7 +3672,7 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const CodeGenModule &CGM) {
       T = cast<MacroQualifiedType>(T)->getUnderlyingType();
       break;
     case Type::SubstTemplateTypeParm:
-       if (CGM.getCodeGenOpts().DebugTemplateParameterAsType)
+      if (CGM.getCodeGenOpts().DebugTemplateParameterAsType)
         return C.getQualifiedType(T.getTypePtr(), Quals);
       T = cast<SubstTemplateTypeParmType>(T)->getReplacementType();
       break;
