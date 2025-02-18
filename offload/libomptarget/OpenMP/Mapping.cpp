@@ -156,9 +156,9 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
 
     if (!LR.Flags.IsContained && Upper != HDTTMap->end()) {
       LR.TPR.setEntry(Upper->HDTT, OwnedTPR);
-      // This is a special case: HP is not really contained in a mapped
-      // region, but it's contained in the extended mapped region, which
-      // suffices to get the mapping of the base pointer.
+      // This is a special case: HP is not really contained in the mapped
+      // address range, but it's contained in the extended address range,
+      // which suffices to get the mapping of the base pointer.
       // We know that HP < LR.TPR.getEntry()->HstPtrBegin
       LR.Flags.IsContained = HP >= LR.TPR.getEntry()->HstPtrBase;
     }
@@ -168,7 +168,7 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
       // We know that HP >= LR.TPR.getEntry()->HstPtrBegin
       LR.Flags.IsContained = HP < LR.TPR.getEntry()->HstPtrEnd &&
                              (HP + Size) <= LR.TPR.getEntry()->HstPtrEnd;
-      // Does it extend beyond the mapped region?
+      // Does it extend beyond the mapped address range?
       LR.Flags.ExtendsAfter = HP < LR.TPR.getEntry()->HstPtrEnd &&
                               (HP + Size) > LR.TPR.getEntry()->HstPtrEnd;
     }
@@ -176,10 +176,10 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
     if (!(LR.Flags.IsContained || LR.Flags.ExtendsAfter) &&
         Upper != HDTTMap->end()) {
       LR.TPR.setEntry(Upper->HDTT, OwnedTPR);
-      // Does it extend into an already mapped region?
+      // Does it extend into an already mapped address range?
       // We know that HP < LR.TPR.getEntry()->HstPtrBegin
       LR.Flags.ExtendsBefore = (HP + Size) > LR.TPR.getEntry()->HstPtrBegin;
-      // Does it extend beyond the mapped region?
+      // Does it extend beyond the mapped address range?
       LR.Flags.ExtendsAfter = HP < LR.TPR.getEntry()->HstPtrEnd &&
                               (HP + Size) > LR.TPR.getEntry()->HstPtrEnd;
     }
