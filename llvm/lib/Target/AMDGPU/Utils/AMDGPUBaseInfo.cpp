@@ -132,7 +132,7 @@ unsigned getKmcntBitWidth(unsigned VersionMajor) {
 
 /// \returns Xcnt bit width.
 unsigned getXcntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
-  return VersionMajor == 12 && VersionMinor == 1 ? 5 : 0;
+  return VersionMajor == 12 && VersionMinor == 5 ? 6 : 0;
 }
 
 /// \returns shift for Loadcnt/Storecnt in combined S_WAIT instructions.
