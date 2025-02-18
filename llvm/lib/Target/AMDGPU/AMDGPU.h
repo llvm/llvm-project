@@ -493,8 +493,8 @@ extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
 void initializeAMDGPUUniformIntrinsicCombineLegacyPass(PassRegistry &);
 extern char &AMDGPUUniformIntrinsicCombineLegacyPassID;
-FunctionPass *createAMDGPUUniformIntrinsicCombineLegacyPass(
-    const AMDGPUTargetMachine *TM = nullptr);
+FunctionPass *createAMDGPUUniformIntrinsicCombineLegacyPass();
+
 struct AMDGPUUniformIntrinsicCombinePass
     : public PassInfoMixin<AMDGPUUniformIntrinsicCombinePass> {
   const AMDGPUTargetMachine &TM;

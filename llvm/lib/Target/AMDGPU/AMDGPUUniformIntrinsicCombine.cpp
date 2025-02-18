@@ -37,9 +37,7 @@ namespace {
 class AMDGPUUniformIntrinsicCombineLegacy : public FunctionPass {
 public:
   static char ID;
-  const AMDGPUTargetMachine *AMDGPUTM;
-  AMDGPUUniformIntrinsicCombineLegacy(const AMDGPUTargetMachine *TM)
-      : FunctionPass(ID), AMDGPUTM(TM) {
+  AMDGPUUniformIntrinsicCombineLegacy() : FunctionPass(ID) {
     initializeAMDGPUUniformIntrinsicCombineLegacyPass(
         *PassRegistry::getPassRegistry());
   }
@@ -114,12 +112,52 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
   switch (IID) {
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
-  case Intrinsic::amdgcn_readlane:
-  case Intrinsic::amdgcn_ballot: {
+  case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
+    // Check if the argument is uniform
     if (UI->isUniform(II.getOperandUse(0))) {
+      LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << "\n");
       II.replaceAllUsesWith(Src);
       return true;
+    }
+    break;
+  }
+  case Intrinsic::amdgcn_ballot: {
+    Value *Src = II.getArgOperand(0);
+    // Check if the argument is uniform and has a direct `icmp eq` use of the
+    // ballot result.
+    // %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cond)
+    // %is_done = icmp eq i64 %ballot, 0
+    // This means we are checking if *all lanes* in the ballot result are
+    // inactive.
+    if (UI->isUniform(II.getOperandUse(0))) {
+      LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << "\n");
+
+      // Look for a direct `icmp eq` use of the ballot result.
+      auto It = llvm::find_if(II.users(), [&](User *U) {
+        return match(U, m_ICmp(m_Specific(&II), m_Zero()));
+      });
+
+      // Check if a match was found
+      if (It != II.user_end()) {
+        // Extract the matching `icmp` instruction
+        ICmpInst *ICmp = dyn_cast<ICmpInst>(*It);
+        if (!ICmp)
+          break; // Safety check
+
+        IRBuilder<> Builder(ICmp);
+
+        // Convert ballot argument to match `icmp` operand type (i64)
+        Value *ConvertedSrc =
+            Builder.CreateZExtOrTrunc(Src, ICmp->getOperand(1)->getType());
+
+        LLVM_DEBUG(dbgs() << "Replacing ballot result in icmp: " << *ICmp
+                          << " with " << *ConvertedSrc << "\n");
+
+        // Replace `%ballot` in `icmp` with `ConvertedSrc`
+        ICmp->setOperand(0, ConvertedSrc);
+        return true;
+      }
     }
     break;
   }
@@ -134,7 +172,6 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(AMDGPUUniformIntrinsicCombineLegacy, DEBUG_TYPE,
                     "AMDGPU uniformIntrinsic Combine", false, false)
 
-FunctionPass *llvm::createAMDGPUUniformIntrinsicCombineLegacyPass(
-    const AMDGPUTargetMachine *TM) {
-  return new AMDGPUUniformIntrinsicCombineLegacy(TM);
+FunctionPass *llvm::createAMDGPUUniformIntrinsicCombineLegacyPass() {
+  return new AMDGPUUniformIntrinsicCombineLegacy();
 }
