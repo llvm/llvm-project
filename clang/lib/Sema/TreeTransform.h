@@ -9547,6 +9547,17 @@ TreeTransform<Derived>::TransformOMPTileDirective(OMPTileDirective *D) {
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPStripeDirective(OMPStripeDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPUnrollDirective(OMPUnrollDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
@@ -13661,7 +13672,7 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
       Desig.AddDesignator(
           Designator::CreateArrayDesignator(Index.get(), D.getLBracketLoc()));
 
-      ExprChanged = ExprChanged || Init.get() != E->getArrayIndex(D);
+      ExprChanged = ExprChanged || Index.get() != E->getArrayIndex(D);
       ArrayExprs.push_back(Index.get());
       continue;
     }

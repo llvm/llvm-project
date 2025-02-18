@@ -920,16 +920,23 @@ void CodeGenAction::generateLLVMIR() {
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
 
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
   // Set mcmodel level LLVM module flags
   std::optional<llvm::CodeModel::Model> cm = getCodeModel(opts.CodeModel);
   if (cm.has_value()) {
-    const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
     llvmModule->setCodeModel(*cm);
     if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
         triple.getArch() == llvm::Triple::x86_64) {
       llvmModule->setLargeDataThreshold(opts.LargeDataThreshold);
     }
   }
+
+  if (triple.isRISCV() && !targetOpts.abi.empty())
+    llvmModule->addModuleFlag(
+        llvm::Module::Error, "target-abi",
+        llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>

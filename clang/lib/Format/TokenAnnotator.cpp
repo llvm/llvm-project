@@ -1313,7 +1313,7 @@ private:
     switch (bool IsIf = false; Tok->Tok.getKind()) {
     case tok::plus:
     case tok::minus:
-      if (!Tok->Previous && Line.MustBeDeclaration)
+      if (!Tok->getPreviousNonComment() && Line.MustBeDeclaration)
         Tok->setType(TT_ObjCMethodSpecifier);
       break;
     case tok::colon:

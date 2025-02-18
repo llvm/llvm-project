@@ -2822,12 +2822,13 @@ SDValue SITargetLowering::LowerFormalArguments(
   const Function &Fn = MF.getFunction();
   FunctionType *FType = MF.getFunction().getFunctionType();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  bool IsError = false;
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isGraphics(CallConv)) {
     DiagnosticInfoUnsupported NoGraphicsHSA(
         Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
     DAG.getContext()->diagnose(NoGraphicsHSA);
-    return DAG.getEntryNode();
+    IsError = true;
   }
 
   SmallVector<ISD::InputArg, 16> Splits;
@@ -2936,7 +2937,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   for (unsigned i = 0, e = Ins.size(), ArgIdx = 0; i != e; ++i) {
     const ISD::InputArg &Arg = Ins[i];
-    if (Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) {
+    if ((Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) || IsError) {
       InVals.push_back(DAG.getUNDEF(Arg.VT));
       continue;
     }
@@ -7340,11 +7341,8 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   // global <-> flat are no-ops and never emitted.
 
-  const MachineFunction &MF = DAG.getMachineFunction();
-  DiagnosticInfoUnsupported InvalidAddrSpaceCast(
-      MF.getFunction(), "invalid addrspacecast", SL.getDebugLoc());
-  DAG.getContext()->diagnose(InvalidAddrSpaceCast);
-
+  // Invalid casts are poison.
+  // TODO: Should return poison
   return DAG.getUNDEF(Op->getValueType(0));
 }
 

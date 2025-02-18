@@ -187,6 +187,8 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       PreInits = LD->getPreInits();
     } else if (const auto *Tile = dyn_cast<OMPTileDirective>(&S)) {
       PreInits = Tile->getPreInits();
+    } else if (const auto *Stripe = dyn_cast<OMPStripeDirective>(&S)) {
+      PreInits = Stripe->getPreInits();
     } else if (const auto *Unroll = dyn_cast<OMPUnrollDirective>(&S)) {
       PreInits = Unroll->getPreInits();
     } else if (const auto *Reverse = dyn_cast<OMPReverseDirective>(&S)) {
@@ -2893,6 +2895,12 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
 void CodeGenFunction::EmitOMPTileDirective(const OMPTileDirective &S) {
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII TileScope(*this, &S);
+  EmitStmt(S.getTransformedStmt());
+}
+
+void CodeGenFunction::EmitOMPStripeDirective(const OMPStripeDirective &S) {
+  // Emit the de-sugared statement.
+  OMPTransformDirectiveScopeRAII StripeScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
 }
 

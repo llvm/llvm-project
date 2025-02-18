@@ -1713,8 +1713,8 @@ define signext i32 @umulo3.i32(i32 signext %0, i32 signext %1, ptr %2) {
 ; RV64-NEXT:    mulhu a0, a0, a1
 ; RV64-NEXT:    srli a1, a0, 32
 ; RV64-NEXT:    snez a1, a1
-; RV64-NEXT:    sw a1, 0(a2)
 ; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    sw a1, 0(a2)
 ; RV64-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: umulo3.i32:
@@ -1733,8 +1733,8 @@ define signext i32 @umulo3.i32(i32 signext %0, i32 signext %1, ptr %2) {
 ; RV64ZBA-NEXT:    mul a3, a0, a1
 ; RV64ZBA-NEXT:    srli a3, a3, 32
 ; RV64ZBA-NEXT:    snez a3, a3
-; RV64ZBA-NEXT:    sw a3, 0(a2)
 ; RV64ZBA-NEXT:    mulw a0, a0, a1
+; RV64ZBA-NEXT:    sw a3, 0(a2)
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV32ZICOND-LABEL: umulo3.i32:
@@ -1753,8 +1753,8 @@ define signext i32 @umulo3.i32(i32 signext %0, i32 signext %1, ptr %2) {
 ; RV64ZICOND-NEXT:    mulhu a0, a0, a1
 ; RV64ZICOND-NEXT:    srli a1, a0, 32
 ; RV64ZICOND-NEXT:    snez a1, a1
-; RV64ZICOND-NEXT:    sw a1, 0(a2)
 ; RV64ZICOND-NEXT:    sext.w a0, a0
+; RV64ZICOND-NEXT:    sw a1, 0(a2)
 ; RV64ZICOND-NEXT:    ret
   %4 = tail call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %0, i32 %1)
   %5 = extractvalue { i32, i1 } %4, 1

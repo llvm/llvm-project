@@ -743,8 +743,8 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV64-NEXT:    addi a1, sp, 64
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a1)
-; RV64-NEXT:    sext.w s2, a0
 ; RV64-NEXT:    flw fa0, 124(sp)
+; RV64-NEXT:    sext.w s2, a0
 ; RV64-NEXT:    mv a0, s2
 ; RV64-NEXT:    call __powisf2
 ; RV64-NEXT:    fsw fa0, 188(sp)
@@ -1188,8 +1188,8 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV64-NEXT:    addi a1, sp, 64
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a1)
-; RV64-NEXT:    sext.w s2, a0
 ; RV64-NEXT:    fld fa0, 120(sp)
+; RV64-NEXT:    sext.w s2, a0
 ; RV64-NEXT:    mv a0, s2
 ; RV64-NEXT:    call __powidf2
 ; RV64-NEXT:    fsd fa0, 184(sp)

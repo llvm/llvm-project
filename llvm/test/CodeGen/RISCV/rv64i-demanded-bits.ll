@@ -169,9 +169,9 @@ define signext i32 @andi_srliw(i32 signext %0, ptr %1, i32 signext %2) {
 ; CHECK-LABEL: andi_srliw:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, -8
-; CHECK-NEXT:    srliw a0, a0, 3
-; CHECK-NEXT:    sw a0, 0(a1)
+; CHECK-NEXT:    srliw a4, a0, 3
 ; CHECK-NEXT:    addw a0, a3, a2
+; CHECK-NEXT:    sw a4, 0(a1)
 ; CHECK-NEXT:    ret
   %4 = and i32 %0, -8
   %5 = lshr i32 %0, 3

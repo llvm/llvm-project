@@ -17,17 +17,17 @@ define void @test(ptr %addr) {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; CHECK-NEXT:    csrrs a1, vlenb, zero
 ; CHECK-NEXT:    vl1re64.v v8, (a0)
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    add a3, a0, a1
+; CHECK-NEXT:    slli a2, a1, 1
+; CHECK-NEXT:    add a3, a0, a2
 ; CHECK-NEXT:    vl1re64.v v9, (a3)
-; CHECK-NEXT:    slli a3, a1, 1
-; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    add a1, a3, a1
 ; CHECK-NEXT:    vl1re64.v v10, (a0)
-; CHECK-NEXT:    add a3, a2, a3
-; CHECK-NEXT:    vs1r.v v8, (a2)
-; CHECK-NEXT:    vs1r.v v10, (a3)
-; CHECK-NEXT:    vs1r.v v9, (a1)
+; CHECK-NEXT:    add a2, a3, a2
+; CHECK-NEXT:    vs1r.v v8, (a3)
+; CHECK-NEXT:    vs1r.v v9, (a2)
+; CHECK-NEXT:    vs1r.v v10, (a1)
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0

@@ -787,8 +787,8 @@ define i64 @bset_trailing_ones_i64_mask(i64 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, -1
 ; CHECK-NEXT:    andi a3, a0, 63
-; CHECK-NEXT:    sll a0, a2, a0
 ; CHECK-NEXT:    addi a1, a3, -32
+; CHECK-NEXT:    sll a0, a2, a0
 ; CHECK-NEXT:    bltz a1, .LBB43_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    sll a2, a2, a3
@@ -815,8 +815,8 @@ define i64 @bset_trailing_ones_i64_no_mask(i64 %a) nounwind {
 ; CHECK-LABEL: bset_trailing_ones_i64_no_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    sll a1, a1, a0
 ; CHECK-NEXT:    addi a2, a0, -32
+; CHECK-NEXT:    sll a1, a1, a0
 ; CHECK-NEXT:    bltz a2, .LBB44_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1

@@ -1356,13 +1356,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return Cost * LT.first;
     break;
   }
-  case Intrinsic::vp_fneg: {
-    std::optional<unsigned> FOp =
-        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-    assert(FOp.has_value());
-    return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
-    break;
-  }
   case Intrinsic::vp_select: {
     Intrinsic::ID IID = ICA.getID();
     std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);

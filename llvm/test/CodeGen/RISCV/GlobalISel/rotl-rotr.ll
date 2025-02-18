@@ -782,8 +782,8 @@ define i32 @rotr_32_mask_or_64_or_32(i32 %x, i32 %y) nounwind {
 define i64 @rotl_64_mask(i64 %x, i64 %y) nounwind {
 ; RV32I-LABEL: rotl_64_mask:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    neg a4, a2
 ; RV32I-NEXT:    li a5, 32
+; RV32I-NEXT:    neg a4, a2
 ; RV32I-NEXT:    bltu a2, a5, .LBB10_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    li a3, 0
@@ -837,8 +837,8 @@ define i64 @rotl_64_mask(i64 %x, i64 %y) nounwind {
 ;
 ; RV32ZBB-LABEL: rotl_64_mask:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    neg a4, a2
 ; RV32ZBB-NEXT:    li a5, 32
+; RV32ZBB-NEXT:    neg a4, a2
 ; RV32ZBB-NEXT:    bltu a2, a5, .LBB10_2
 ; RV32ZBB-NEXT:  # %bb.1:
 ; RV32ZBB-NEXT:    li a3, 0
@@ -892,8 +892,8 @@ define i64 @rotl_64_mask(i64 %x, i64 %y) nounwind {
 ;
 ; RV32XTHEADBB-LABEL: rotl_64_mask:
 ; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    neg a4, a2
 ; RV32XTHEADBB-NEXT:    li a5, 32
+; RV32XTHEADBB-NEXT:    neg a4, a2
 ; RV32XTHEADBB-NEXT:    bltu a2, a5, .LBB10_2
 ; RV32XTHEADBB-NEXT:  # %bb.1:
 ; RV32XTHEADBB-NEXT:    li a3, 0
