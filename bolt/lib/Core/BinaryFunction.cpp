@@ -1434,9 +1434,8 @@ Error BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else if (BC.isAArch64() || BC.isRISCV()) {
+    } else if (BC.isRISCV()) {
       // Check if there's a relocation associated with this instruction.
-      bool UsedReloc = false;
       for (auto Itr = Relocations.lower_bound(Offset),
                 ItrE = Relocations.lower_bound(Offset + Size);
            Itr != ItrE; ++Itr) {
@@ -1461,24 +1460,6 @@ Error BinaryFunction::disassemble() {
             Relocation.Type);
         (void)Result;
         assert(Result && "cannot replace immediate with relocation");
-
-        // For aarch64, if we replaced an immediate with a symbol from a
-        // relocation, we mark it so we do not try to further process a
-        // pc-relative operand. All we need is the symbol.
-        UsedReloc = true;
-      }
-
-      if (!BC.isRISCV() && MIB->hasPCRelOperand(Instruction) && !UsedReloc) {
-        if (auto NewE = handleErrors(
-                handlePCRelOperand(Instruction, AbsoluteInstrAddr, Size),
-                [&](const BOLTError &E) -> Error {
-                  if (E.isFatal())
-                    return Error(std::make_unique<BOLTError>(std::move(E)));
-                  if (!E.getMessage().empty())
-                    E.log(BC.errs());
-                  return Error::success();
-                }))
-          return Error(std::move(NewE));
       }
     }
 
