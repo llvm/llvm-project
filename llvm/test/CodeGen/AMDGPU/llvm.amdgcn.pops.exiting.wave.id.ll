@@ -113,20 +113,20 @@ exit:
 define amdgpu_ps void @test_call(ptr addrspace(1) inreg %ptr) {
 ; GFX9-SDAG-LABEL: test_call:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
-; GFX9-SDAG-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
-; GFX9-SDAG-NEXT:    s_mov_b32 s38, -1
-; GFX9-SDAG-NEXT:    s_mov_b32 s39, 0xe00000
-; GFX9-SDAG-NEXT:    s_add_u32 s36, s36, s2
-; GFX9-SDAG-NEXT:    s_addc_u32 s37, s37, 0
+; GFX9-SDAG-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
+; GFX9-SDAG-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
+; GFX9-SDAG-NEXT:    s_mov_b32 s50, -1
+; GFX9-SDAG-NEXT:    s_mov_b32 s51, 0xe00000
+; GFX9-SDAG-NEXT:    s_add_u32 s48, s48, s2
+; GFX9-SDAG-NEXT:    s_addc_u32 s49, s49, 0
 ; GFX9-SDAG-NEXT:    s_getpc_b64 s[0:1]
 ; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, foo@gotpcrel32@lo+4
 ; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, foo@gotpcrel32@hi+12
 ; GFX9-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, src_pops_exiting_wave_id
-; GFX9-SDAG-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; GFX9-SDAG-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[8:9], 36
-; GFX9-SDAG-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; GFX9-SDAG-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX9-SDAG-NEXT:    s_mov_b32 s32, 0
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -135,20 +135,20 @@ define amdgpu_ps void @test_call(ptr addrspace(1) inreg %ptr) {
 ;
 ; GFX9-GISEL-LABEL: test_call:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
-; GFX9-GISEL-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
-; GFX9-GISEL-NEXT:    s_mov_b32 s38, -1
-; GFX9-GISEL-NEXT:    s_mov_b32 s39, 0xe00000
-; GFX9-GISEL-NEXT:    s_add_u32 s36, s36, s2
-; GFX9-GISEL-NEXT:    s_addc_u32 s37, s37, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
+; GFX9-GISEL-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
+; GFX9-GISEL-NEXT:    s_mov_b32 s50, -1
+; GFX9-GISEL-NEXT:    s_mov_b32 s51, 0xe00000
+; GFX9-GISEL-NEXT:    s_add_u32 s48, s48, s2
+; GFX9-GISEL-NEXT:    s_addc_u32 s49, s49, 0
 ; GFX9-GISEL-NEXT:    s_getpc_b64 s[0:1]
 ; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, foo@gotpcrel32@lo+4
 ; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, foo@gotpcrel32@hi+12
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s2, src_pops_exiting_wave_id
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GFX9-GISEL-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; GFX9-GISEL-NEXT:    s_mov_b64 s[0:1], s[48:49]
+; GFX9-GISEL-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[8:9], 36
 ; GFX9-GISEL-NEXT:    s_mov_b32 s32, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -157,12 +157,12 @@ define amdgpu_ps void @test_call(ptr addrspace(1) inreg %ptr) {
 ;
 ; GFX10-LABEL: test_call:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
-; GFX10-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
-; GFX10-NEXT:    s_mov_b32 s38, -1
-; GFX10-NEXT:    s_mov_b32 s39, 0x31c16000
-; GFX10-NEXT:    s_add_u32 s36, s36, s2
-; GFX10-NEXT:    s_addc_u32 s37, s37, 0
+; GFX10-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
+; GFX10-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
+; GFX10-NEXT:    s_mov_b32 s50, -1
+; GFX10-NEXT:    s_mov_b32 s51, 0x31c16000
+; GFX10-NEXT:    s_add_u32 s48, s48, s2
+; GFX10-NEXT:    s_addc_u32 s49, s49, 0
 ; GFX10-NEXT:    s_getpc_b64 s[0:1]
 ; GFX10-NEXT:    s_add_u32 s0, s0, foo@gotpcrel32@lo+4
 ; GFX10-NEXT:    s_addc_u32 s1, s1, foo@gotpcrel32@hi+12
@@ -171,8 +171,8 @@ define amdgpu_ps void @test_call(ptr addrspace(1) inreg %ptr) {
 ; GFX10-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
 ; GFX10-NEXT:    s_mov_b32 s32, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GFX10-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; GFX10-NEXT:    s_mov_b64 s[0:1], s[48:49]
+; GFX10-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX10-NEXT:    s_endpgm

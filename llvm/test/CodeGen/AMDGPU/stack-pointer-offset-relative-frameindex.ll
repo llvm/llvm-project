@@ -11,12 +11,12 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF-LABEL: kernel_background_evaluate:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_load_dword s0, s[4:5], 0x24
-; MUBUF-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
-; MUBUF-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
-; MUBUF-NEXT:    s_mov_b32 s38, -1
-; MUBUF-NEXT:    s_mov_b32 s39, 0x31c16000
-; MUBUF-NEXT:    s_add_u32 s36, s36, s11
-; MUBUF-NEXT:    s_addc_u32 s37, s37, 0
+; MUBUF-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
+; MUBUF-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
+; MUBUF-NEXT:    s_mov_b32 s50, -1
+; MUBUF-NEXT:    s_mov_b32 s51, 0x31c16000
+; MUBUF-NEXT:    s_add_u32 s48, s48, s11
+; MUBUF-NEXT:    s_addc_u32 s49, s49, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 0
@@ -27,8 +27,8 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF-NEXT:    s_mov_b32 s32, 0xc0000
 ; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, s0
-; MUBUF-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; MUBUF-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; MUBUF-NEXT:    s_mov_b64 s[0:1], s[48:49]
+; MUBUF-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; MUBUF-NEXT:    s_and_saveexec_b32 s0, vcc_lo
@@ -37,12 +37,12 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 0x4004
 ; MUBUF-NEXT:    s_mov_b32 s0, 0x41c64e6d
 ; MUBUF-NEXT:    s_clause 0x1
-; MUBUF-NEXT:    buffer_load_dword v1, v0, s[36:39], 0 offen
-; MUBUF-NEXT:    buffer_load_dword v2, v0, s[36:39], 0 offen offset:4
+; MUBUF-NEXT:    buffer_load_dword v1, v0, s[48:51], 0 offen
+; MUBUF-NEXT:    buffer_load_dword v2, v0, s[48:51], 0 offen offset:4
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_add_nc_u32_e32 v0, v2, v1
 ; MUBUF-NEXT:    v_mad_u64_u32 v[0:1], s0, v0, s0, 0x3039
-; MUBUF-NEXT:    buffer_store_dword v0, v0, s[36:39], 0 offen
+; MUBUF-NEXT:    buffer_store_dword v0, v0, s[48:51], 0 offen
 ; MUBUF-NEXT:  .LBB0_2: ; %shader_eval_surface.exit
 ; MUBUF-NEXT:    s_endpgm
 ;

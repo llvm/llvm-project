@@ -91,7 +91,11 @@ def CSR_AMDGPU_AGPRs : CalleeSavedRegs<
 >;
 
 def CSR_AMDGPU_SGPRs : CalleeSavedRegs<
-  (sequence "SGPR%u", 30, 105)
+  (add (sequence "SGPR%u", 30, 37),
+       (sequence "SGPR%u", 46, 53),
+       (sequence "SGPR%u", 62, 69),
+       (sequence "SGPR%u", 78, 85),
+       (sequence "SGPR%u", 94, 105))
 >;
 
 def CSR_AMDGPU_SI_Gfx_SGPRs : CalleeSavedRegs<

@@ -9,15 +9,15 @@ declare void @foo()
 define amdgpu_kernel void @kernel() {
 ; GCN-LABEL: kernel:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
-; GCN-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
-; GCN-NEXT:    s_mov_b32 s38, -1
+; GCN-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
+; GCN-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
+; GCN-NEXT:    s_mov_b32 s50, -1
 ; GCN-NEXT:    ; implicit-def: $vgpr40 : SGPR spill to VGPR lane
-; GCN-NEXT:    s_mov_b32 s39, 0xe00000
+; GCN-NEXT:    s_mov_b32 s51, 0xe00000
 ; GCN-NEXT:    v_writelane_b32 v40, s4, 0
-; GCN-NEXT:    s_add_u32 s36, s36, s11
+; GCN-NEXT:    s_add_u32 s48, s48, s11
 ; GCN-NEXT:    v_writelane_b32 v40, s5, 1
-; GCN-NEXT:    s_addc_u32 s37, s37, 0
+; GCN-NEXT:    s_addc_u32 s49, s49, 0
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GCN-NEXT:    v_readlane_b32 s0, v40, 0
 ; GCN-NEXT:    s_mov_b32 s13, s9
@@ -34,9 +34,9 @@ define amdgpu_kernel void @kernel() {
 ; GCN-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GCN-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; GCN-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; GCN-NEXT:    v_or3_b32 v31, v0, v1, v2
-; GCN-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; GCN-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
