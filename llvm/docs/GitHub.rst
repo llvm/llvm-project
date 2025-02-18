@@ -437,12 +437,14 @@ Releases
 
 Backporting Fixes to the Release Branches
 -----------------------------------------
-You can use special comments on issues or pull requests to make backport
-requests for the release branches.  To do this, after your pull reuest has been
-merged:
 
-1. Edit "Milestone" at the right side of the isssue or pull request
-   to say "LLVM X.Y Release"
+Issues
+^^^^^^
+
+You can use special comments on issues to make backport requests for the
+release branches.  To do this:
+
+1. Edit "Milestone" at the right side of the issue to say "LLVM X.Y Release"
 
 2. Add a comment to it in the following format:
 
@@ -459,6 +461,20 @@ will be created with the specified commits.
 If a commit you want to backport does not apply cleanly, you may resolve
 the conflicts locally and then create a pull request against the release
 branch.  Just make sure to add the release milestone to the pull request.
+
+
+Pull Requests
+^^^^^^^^^^^^^
+
+If you add the current Release Milestone to a pull request, then a backport
+request will be made automatically without the need to add any additional
+comments like you must do for issues.  You can even add the Milestone after
+the pull request has been merged and the backport request will still automatically
+be created.
+
+If for some reason the automation doesn't work, you may also manually request a
+backport by following the same steps listed above for issues.
+
 
 Getting admin access to CI infrastructure
 =========================================
