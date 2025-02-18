@@ -2624,10 +2624,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
-    if (I.arg_size() == 2) {
-      assert(I.getArgOperand(1)->getType()->isVectorTy());
-      assert(ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType()));
-    }
+    if (I.arg_size() == 2)
+      assert(I.getArgOperand(0)->getType() == I.getArgOperand(1)->getType());
 
     [[maybe_unused]] FixedVectorType *ReturnType =
         cast<FixedVectorType>(I.getType());
@@ -2676,10 +2674,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       if (ReinterpretShadowTy)
         SecondArgShadow =
             IRB.CreateBitCast(SecondArgShadow, ReinterpretShadowTy);
-      assert((cast<FixedVectorType>(SecondArgShadow->getType())
-                  ->getNumElements()) %
-                 2 ==
-             0);
 
       EvenShadow =
           IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, EvenMask);
