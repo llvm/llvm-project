@@ -87,7 +87,7 @@ TEST(TelemetryTest, PluginTest) {
   entry.msg = "";
 
   ASSERT_THAT_ERROR(ins->dispatch(&entry), ::llvm::Succeeded());
-  ASSERT_EQ(1, expected_entries.size());
+  ASSERT_EQ(1U, expected_entries.size());
   EXPECT_EQ("In FakePlugin",
             llvm::dyn_cast<lldb_private::FakeTelemetryInfo>(expected_entries[0])
                 ->msg);
