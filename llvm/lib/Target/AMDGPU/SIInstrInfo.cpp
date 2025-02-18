@@ -1330,8 +1330,6 @@ Register SIInstrInfo::insertNE(MachineBasicBlock *MBB,
 bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
                                           const Register Reg,
                                           int64_t &ImmVal) const {
-  // TODO: Handle all the special cases handled in SIShrinkInstructions
-  // (e.g. s_brev_b32 imm -> reverse(imm))
   switch (MI.getOpcode()) {
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::S_MOV_B32:
@@ -1344,6 +1342,28 @@ bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
     const MachineOperand &Src0 = MI.getOperand(1);
     if (Src0.isImm()) {
       ImmVal = Src0.getImm();
+      return MI.getOperand(0).getReg() == Reg;
+    }
+
+    return false;
+  }
+  case AMDGPU::S_BREV_B32:
+  case AMDGPU::V_BFREV_B32_e32:
+  case AMDGPU::V_BFREV_B32_e64: {
+    const MachineOperand &Src0 = MI.getOperand(1);
+    if (Src0.isImm()) {
+      ImmVal = static_cast<int64_t>(reverseBits<int32_t>(Src0.getImm()));
+      return MI.getOperand(0).getReg() == Reg;
+    }
+
+    return false;
+  }
+  case AMDGPU::S_NOT_B32:
+  case AMDGPU::V_NOT_B32_e32:
+  case AMDGPU::V_NOT_B32_e64: {
+    const MachineOperand &Src0 = MI.getOperand(1);
+    if (Src0.isImm()) {
+      ImmVal = static_cast<int64_t>(~static_cast<int32_t>(Src0.getImm()));
       return MI.getOperand(0).getReg() == Reg;
     }
 
