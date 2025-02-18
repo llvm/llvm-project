@@ -396,7 +396,7 @@ Lowering of the new operations (after all the optimizations) might be done in a 
 
 ### Optimization passes
 
-[TBD] describe in more details optimization passes listed in [Overview](###overview). Define their place in the pipeline (e.g. with relation to FIR inlining).
+[TBD] describe in more details optimization passes listed in [Overview](#overview). Define their place in the pipeline (e.g. with relation to FIR inlining).
 
 #### Loop versioning
 
