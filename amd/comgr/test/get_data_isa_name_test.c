@@ -86,8 +86,6 @@ static isa_features_t IsaFeatures[] = {
   {"amdgcn-amd-amdhsa--gfx909",          false,     false,     none,       true,      none,       false},
   {"amdgcn-amd-amdhsa--gfx90a",          false,     true,      none,       true,      none,       false},
   {"amdgcn-amd-amdhsa--gfx90c",          true,      false,     none,       true,      off,        false},
-  {"amdgcn-amd-amdhsa--gfx940",          false,     true,      none,       true,      none,       false},
-  {"amdgcn-amd-amdhsa--gfx941",          false,     true,      none,       true,      none,       false},
   {"amdgcn-amd-amdhsa--gfx942",          false,     true,      none,       true,      none,       false},
   {"amdgcn-amd-amdhsa--gfx950",          false,     true,      none,       true,      none,       false},
   {"amdgcn-amd-amdhsa--gfx1010",         false,     false,     none,       true,      none,       false},
