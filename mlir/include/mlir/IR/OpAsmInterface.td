@@ -127,6 +127,13 @@ def OpAsmTypeInterface : TypeInterface<"OpAsmTypeInterface"> {
       "void", "getAsmName",
       (ins "::mlir::OpAsmSetNameFn":$setNameFn), "", ";"
     >,
+    InterfaceMethod<[{
+        Get a name to use when generating an alias for this type.
+      }],
+      "::mlir::OpAsmDialectInterface::AliasResult", "getAlias",
+      (ins "::llvm::raw_ostream&":$os), "",
+      "return ::mlir::OpAsmDialectInterface::AliasResult::NoAlias;"
+    >,
   ];
 }
 
