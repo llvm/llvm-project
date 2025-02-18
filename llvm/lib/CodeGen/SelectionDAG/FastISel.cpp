@@ -1443,7 +1443,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     const DbgDefInst &DDI = *cast<DbgDefInst>(II);
     const Value *Referrer = DDI.getReferrer();
     assert(Referrer);
-    if (const auto *UV = dyn_cast<UndefValue>(Referrer)) {
+    if (isa<UndefValue>(Referrer)) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(TargetOpcode::DBG_DEF))
           .addMetadata(DDI.getLifetime())

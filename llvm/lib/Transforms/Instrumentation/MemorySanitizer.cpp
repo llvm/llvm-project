@@ -3402,7 +3402,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       S2_ext = IRB.CreateBitCast(S2_ext, getMMXVectorTy(64));
     }
 
-    Function *ShadowFn = Intrinsic::getDeclaration(
+    Function *ShadowFn = Intrinsic::getOrInsertDeclaration(
         F.getParent(), getSignedPackIntrinsic(I.getIntrinsicID()));
 
     Value *S =

@@ -2018,7 +2018,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
             if (ProcessedLifetimes.insert(L).second) {
               if (auto *AddCU = dyn_cast<DICompileUnit>(GV->getScope())) {
                 AddCULifetimeMap[AddCU].push_back(L);
-              } else if (auto *AddNS = dyn_cast<DINamespace>(GV->getScope())) {
+              } else if (isa<DINamespace>(GV->getScope())) {
                 // FIXME(KZHURAVL): Properly support DINamespace.
               } else if (auto *AddSP = dyn_cast<DISubprogram>(GV->getScope())) {
                 SPLifetimeMap[AddSP].push_back(L);

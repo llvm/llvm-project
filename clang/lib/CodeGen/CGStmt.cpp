@@ -560,6 +560,7 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
 
     Address XteamRedSumArg1 = GetAddrOfLocalVar((*Args)[RVI.ArgPos]);
     llvm::Value *DTeamVals = Builder.CreateLoad(XteamRedSumArg1);
+    (void)DTeamVals;
 
     Address XteamRedSumArg3 = GetAddrOfLocalVar((*Args)[RVI.ArgPos + 2]);
     llvm::Value *DScanStorage = Builder.CreateLoad(XteamRedSumArg3);
@@ -850,9 +851,6 @@ void CodeGenFunction::EmitXteamScanPhaseTwo(const ForStmt *FStmt,
       DSegmentVals = DScanStorage;
     }
 
-    const Expr *OrigRedVarExpr = RVI.RedVarExpr;
-    const DeclRefExpr *DRE = cast<DeclRefExpr>(OrigRedVarExpr);
-    Address OrigRedVarAddr = EmitLValue(DRE).getAddress();
     RT.getXteamScanPhaseTwo(*this, Builder.CreateLoad(RVI.RedVarAddr),
                             SegmentSize, DTeamVals, DScanStorage, DSegmentVals,
                             ThreadStartIdx, BlockSize, IsInclusiveScan);

@@ -689,7 +689,8 @@ FunctionCallee OpenMPIRBuilder::unsignedGetOrCreateAtomicCASRuntimeFunction(
 
   assert(Fn && "Failed to create custom OpenMP atomic CAS runtime function");
   // Cast the function to the expected type if necessary
-  Constant *C = ConstantExpr::getBitCast(Fn, FnTy->getPointerTo());
+  Constant *C = ConstantExpr::getBitCast(
+      Fn, llvm::PointerType::get(Fn->getContext(), /*AddressSpace=*/0));
   return {FnTy, C};
 }
 

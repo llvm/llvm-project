@@ -1144,7 +1144,8 @@ public:
         if (Temp.getElementType() != TempAddr.emitRawPointer(CGF)->getType())
           Temp = Address(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                              Temp.emitRawPointer(CGF),
-                             TempAddr.emitRawPointer(CGF)->getType()->getPointerTo()),
+                             llvm::PointerType::get(CGF.getLLVMContext(),
+                                                    /*AddressSpace=*/0)),
                          CGF.Int8Ty, TempAddr.getAlignment());
         CGF.Builder.CreateStore(TempAddr.emitRawPointer(CGF), Temp);
         TempAddr = Temp;
