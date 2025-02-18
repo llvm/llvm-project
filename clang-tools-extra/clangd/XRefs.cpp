@@ -439,8 +439,11 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
         continue;
       }
     }
-    // Special case: - (void)^method; should jump to all overrides. Note that an
+    // Special case: - (void)^method; should jump to overrides. Note that an
     // Objective-C method can override a parent class or protocol.
+    //
+    // FIXME: Support jumping from a protocol decl to overrides on go-to
+    // definition.
     if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D)) {
       if (TouchedIdentifier &&
           objcMethodIsTouched(SM, OMD, TouchedIdentifier->location())) {
@@ -1333,6 +1336,21 @@ void getOverriddenMethods(const CXXMethodDecl *CMD,
   }
 }
 
+// Recursively finds all the overridden methods of `OMD` in complete type
+// hierarchy.
+void getOverriddenMethods(const ObjCMethodDecl *OMD,
+                          llvm::DenseSet<SymbolID> &OverriddenMethods) {
+  if (!OMD)
+    return;
+  llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
+  OMD->getOverriddenMethods(Overrides);
+  for (const ObjCMethodDecl *Base : Overrides) {
+    if (auto ID = getSymbolID(Base))
+      OverriddenMethods.insert(ID);
+    getOverriddenMethods(Base, OverriddenMethods);
+  }
+}
+
 std::optional<std::string>
 stringifyContainerForMainFileRef(const Decl *Container) {
   // FIXME We might also want to display the signature here
@@ -1473,10 +1491,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
         // protocol, we should be sure to report references to those.
         if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(ND)) {
           OverriddenBy.Subjects.insert(getSymbolID(OMD));
-          llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
-          OMD->getOverriddenMethods(Overrides);
-          for (const auto *Override : Overrides)
-            OverriddenMethods.insert(getSymbolID(Override));
+          getOverriddenMethods(OMD, OverriddenMethods);
         }
       }
     }

@@ -413,14 +413,21 @@ TEST(LocateSymbol, FindOverrides) {
 
 TEST(LocateSymbol, FindOverridesObjC) {
   auto Code = Annotations(R"objc(
-    @interface Foo
+    @protocol Fooey
+    - (void)foo;
+    @end
+    @interface Base
+    - (void)foo;
+    @end
+    @interface Foo : Base<Fooey>
     - (void)$1[[foo]];
     @end
 
     @interface Bar : Foo
+    - (void)$2[[foo]];
     @end
     @implementation Bar
-    - (void)$2[[fo^o]] {}
+    - (void)$3[[fo^o]] {}
     @end
   )objc");
   TestTU TU = TestTU::withCode(Code.code());
@@ -429,7 +436,31 @@ TEST(LocateSymbol, FindOverridesObjC) {
   EXPECT_THAT(
       locateSymbolAt(AST, Code.point(), TU.index().get()),
       UnorderedElementsAre(sym("foo", Code.range("1"), std::nullopt),
-                           sym("foo", Code.range("2"), Code.range("2"))));
+                           sym("foo", Code.range("2"), Code.range("3"))));
+}
+
+TEST(LocateSymbol, ObjCNoOverridesOnUsage) {
+  auto Code = Annotations(R"objc(
+    @interface Foo
+    - (void)foo;
+    @end
+
+    @interface Bar : Foo
+    - (void)$1[[foo]];
+    @end
+    @implementation Bar
+    - (void)$2[[foo]] {}
+    @end
+    void doSomething(Bar *bar) {
+      [bar fo^o];
+    }
+  )objc");
+  TestTU TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-xobjective-c++");
+  auto AST = TU.build();
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point(), TU.index().get()),
+      UnorderedElementsAre(sym("foo", Code.range("1"), Code.range("2"))));
 }
 
 TEST(LocateSymbol, WithIndexPreferredLocation) {
@@ -2357,6 +2388,27 @@ TEST(FindReferences, RefsToBaseMethod) {
           B->$(test)[[func]]();
           D->$(test)[[fu^nc]]();
         })cpp";
+  checkFindRefs(Test, /*UseIndex=*/true);
+}
+
+TEST(FindReferences, RefsToBaseMethodObjC) {
+  llvm::StringRef Test =
+      R"objc(
+        @interface BaseBase
+        - (void)$(BaseBase)[[func]];
+        @end
+        @interface Base : BaseBase
+        - (void)$(Base)[[func]];
+        @end
+        @interface Derived : Base
+        - (void)$decl(Derived)[[fu^nc]];
+        @end
+        void test(BaseBase *bb, Base *b, Derived *d) {
+          // refs to overridden methods in complete type hierarchy are reported.
+          [bb $(test)[[func]]];
+          [b $(test)[[func]]];
+          [d $(test)[[fu^nc]]];
+        })objc";
   checkFindRefs(Test, /*UseIndex=*/true);
 }
 
