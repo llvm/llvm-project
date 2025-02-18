@@ -123,7 +123,7 @@ void AMDGPUMCInstLower::lowerT16D16Helper(const MachineInstr *MI,
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   const auto *Info = AMDGPU::getT16D16Helper(Opcode);
 
-  uint16_t OpName = AMDGPU::OpName::OPERAND_LAST;
+  llvm::AMDGPU::OpName OpName;
   if (TII->isDS(Opcode)) {
     if (MI->mayLoad())
       OpName = llvm::AMDGPU::OpName::vdst;
