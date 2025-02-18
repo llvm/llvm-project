@@ -11,6 +11,8 @@
 // template <class Iter>
 //   iterator insert(const_iterator position, Iter first, Iter last);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <vector>
 #include <cassert>
 #include <cstddef>
