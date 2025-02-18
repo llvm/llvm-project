@@ -922,6 +922,20 @@ namespace NonConstexprArrayCtor {
                          // both-note {{in call to}}
 }
 
+namespace ArrayBaseCast {
+  struct A {};
+  struct B : A {};
+  constexpr bool test() {
+    B *b = new B[2];
+
+    A* a = b;
+
+    delete[] b;
+    return true;
+  }
+  static_assert(test());
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}
