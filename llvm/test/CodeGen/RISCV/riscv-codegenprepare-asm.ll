@@ -50,8 +50,8 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    blez a1, .LBB1_7
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    andi a2, a1, 1
 ; CHECK-NEXT:    li a3, 1
+; CHECK-NEXT:    andi a2, a1, 1
 ; CHECK-NEXT:    bne a1, a3, .LBB1_3
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    li a3, 0

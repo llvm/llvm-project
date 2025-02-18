@@ -96,9 +96,9 @@ declare <32 x double> @llvm.vp.fpext.v32f64.v32f32(<32 x float>, <32 x i1>, i32)
 define <32 x double> @vfpext_v32f32_v32f64(<32 x float> %a, <32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfpext_v32f32_v32f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v16, v0, 2
-; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:

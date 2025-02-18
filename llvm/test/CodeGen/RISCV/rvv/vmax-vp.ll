@@ -1077,11 +1077,12 @@ define <vscale x 32 x i32> @vmax_vx_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, i
 ; RV64-LABEL: vmax_vx_nxv32i32_evl_nx16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
-; RV64-NEXT:    vmax.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    srli a1, a1, 2
 ; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v0, a1
+; RV64-NEXT:    vslidedown.vx v24, v0, a1
+; RV64-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
+; RV64-NEXT:    vmax.vx v8, v8, a0, v0.t
+; RV64-NEXT:    vmv1r.v v0, v24
 ; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma
 ; RV64-NEXT:    vmax.vx v16, v16, a0, v0.t
 ; RV64-NEXT:    ret

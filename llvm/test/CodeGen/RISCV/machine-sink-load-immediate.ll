@@ -319,8 +319,8 @@ define signext i32 @branch_dispatch(i8 %a) {
 ; CHECK-NEXT:    li a1, 70
 ; CHECK-NEXT:    beq a0, a1, .LBB3_9
 ; CHECK-NEXT:  # %bb.3: # %case.3
-; CHECK-NEXT:    li s0, 23
 ; CHECK-NEXT:    li a1, 234
+; CHECK-NEXT:    li s0, 23
 ; CHECK-NEXT:    beq a0, a1, .LBB3_10
 ; CHECK-NEXT:  # %bb.4: # %case.4
 ; CHECK-NEXT:    beqz a0, .LBB3_11

@@ -34,8 +34,10 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s2, 4(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    .cfi_offset s1, -8
+; RV32-NEXT:    .cfi_offset s2, -12
 ; RV32-NEXT:    add t3, a0, t3
 ; RV32-NEXT:    add t4, a2, t4
 ; RV32-NEXT:    add s0, a4, t5
@@ -73,8 +75,8 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    # in Loop: Header=BB0_10 Depth=1
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a2, a2, a3
-; RV32-NEXT:    add a4, a4, a5
 ; RV32-NEXT:    addi t0, t0, 1
+; RV32-NEXT:    add a4, a4, a5
 ; RV32-NEXT:    beq t0, a7, .LBB0_16
 ; RV32-NEXT:  .LBB0_10: # %for.cond1.preheader.us
 ; RV32-NEXT:    # =>This Loop Header: Depth=1
@@ -100,17 +102,17 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    add s0, a2, t6
 ; RV32-NEXT:    add s1, a4, t6
 ; RV32-NEXT:    vl2r.v v8, (s0)
-; RV32-NEXT:    add s0, t6, t2
+; RV32-NEXT:    add s0, a0, t6
 ; RV32-NEXT:    vl2r.v v10, (s1)
-; RV32-NEXT:    sltu s1, s0, t6
-; RV32-NEXT:    add t5, t5, s1
-; RV32-NEXT:    add t6, a0, t6
+; RV32-NEXT:    add s1, t6, t2
+; RV32-NEXT:    sltu t6, s1, t6
+; RV32-NEXT:    add t5, t5, t6
+; RV32-NEXT:    xor t6, s1, t4
 ; RV32-NEXT:    vaaddu.vv v8, v8, v10
-; RV32-NEXT:    vs2r.v v8, (t6)
-; RV32-NEXT:    xor t6, s0, t4
-; RV32-NEXT:    or s1, t6, t5
-; RV32-NEXT:    mv t6, s0
-; RV32-NEXT:    bnez s1, .LBB0_13
+; RV32-NEXT:    or s2, t6, t5
+; RV32-NEXT:    vs2r.v v8, (s0)
+; RV32-NEXT:    mv t6, s1
+; RV32-NEXT:    bnez s2, .LBB0_13
 ; RV32-NEXT:  # %bb.14: # %middle.block
 ; RV32-NEXT:    # in Loop: Header=BB0_10 Depth=1
 ; RV32-NEXT:    beq t4, a6, .LBB0_9
@@ -119,25 +121,27 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    # => This Inner Loop Header: Depth=2
 ; RV32-NEXT:    add t5, a2, t4
 ; RV32-NEXT:    add t6, a4, t4
+; RV32-NEXT:    add s0, a0, t4
 ; RV32-NEXT:    lbu t5, 0(t5)
 ; RV32-NEXT:    lbu t6, 0(t6)
-; RV32-NEXT:    add t5, t5, t6
-; RV32-NEXT:    add t6, a0, t4
 ; RV32-NEXT:    addi t4, t4, 1
+; RV32-NEXT:    seqz s1, t4
+; RV32-NEXT:    add t3, t3, s1
+; RV32-NEXT:    add t5, t5, t6
+; RV32-NEXT:    xor t6, t4, a6
 ; RV32-NEXT:    addi t5, t5, 1
 ; RV32-NEXT:    srli t5, t5, 1
-; RV32-NEXT:    sb t5, 0(t6)
-; RV32-NEXT:    seqz t5, t4
-; RV32-NEXT:    xor t6, t4, a6
-; RV32-NEXT:    add t3, t3, t5
-; RV32-NEXT:    or t5, t6, t3
-; RV32-NEXT:    bnez t5, .LBB0_15
+; RV32-NEXT:    or t6, t6, t3
+; RV32-NEXT:    sb t5, 0(s0)
+; RV32-NEXT:    bnez t6, .LBB0_15
 ; RV32-NEXT:    j .LBB0_9
 ; RV32-NEXT:  .LBB0_16:
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    .cfi_restore s1
+; RV32-NEXT:    .cfi_restore s2
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:  .LBB0_17: # %for.cond.cleanup
@@ -432,16 +436,16 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64-NEXT:    add s0, a2, a6
 ; RV64-NEXT:    add t6, a4, a6
 ; RV64-NEXT:    csrr t0, vlenb
-; RV64-NEXT:    slli t2, t1, 32
-; RV64-NEXT:    slli t1, t0, 1
-; RV64-NEXT:    srli t2, t2, 32
-; RV64-NEXT:    mul t3, a1, t2
-; RV64-NEXT:    add t5, t5, t3
-; RV64-NEXT:    mul t3, a3, t2
-; RV64-NEXT:    mul t2, a5, t2
-; RV64-NEXT:    add s0, s0, t3
-; RV64-NEXT:    add t6, t6, t2
 ; RV64-NEXT:    li t2, 32
+; RV64-NEXT:    slli t1, t1, 32
+; RV64-NEXT:    srli t3, t1, 32
+; RV64-NEXT:    mul t1, a1, t3
+; RV64-NEXT:    add t5, t5, t1
+; RV64-NEXT:    mul t1, a3, t3
+; RV64-NEXT:    add s0, s0, t1
+; RV64-NEXT:    slli t1, t0, 1
+; RV64-NEXT:    mul t3, a5, t3
+; RV64-NEXT:    add t6, t6, t3
 ; RV64-NEXT:    mv t4, t1
 ; RV64-NEXT:    bltu t2, t1, .LBB0_4
 ; RV64-NEXT:  # %bb.3: # %for.cond1.preheader.us.preheader

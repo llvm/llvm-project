@@ -1195,6 +1195,13 @@ def OMP_Tile : Directive<"tile"> {
   let association = AS_Loop;
   let category = CA_Executable;
 }
+def OMP_Stripe : Directive<"stripe"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Sizes, 60>,
+  ];
+  let association = AS_Loop;
+  let category = CA_Executable;
+}
 def OMP_Unknown : Directive<"unknown"> {
   let isDefault = true;
   let association = AS_None;

@@ -1607,6 +1607,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         StoreOperands.push_back(
             DAG.getConstant(IsVAArg ? FirstVAArg : ParamCount, dl, MVT::i32));
 
+        if (!IsByVal && IsVAArg) {
+          // Align each part of the variadic argument to their type.
+          VAOffset = alignTo(VAOffset, DL.getABITypeAlign(EltVT.getTypeForEVT(
+                                           *DAG.getContext())));
+        }
+
         StoreOperands.push_back(DAG.getConstant(
             IsByVal ? CurOffset + VAOffset : (IsVAArg ? VAOffset : CurOffset),
             dl, MVT::i32));

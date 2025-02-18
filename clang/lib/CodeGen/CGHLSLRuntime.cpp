@@ -14,9 +14,11 @@
 
 #include "CGHLSLRuntime.h"
 #include "CGDebugInfo.h"
+#include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
@@ -53,10 +55,6 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   StringRef DXILValKey = "dx.valver";
   auto *DXILValMD = M.getOrInsertNamedMetadata(DXILValKey);
   DXILValMD->addOperand(Val);
-}
-void addDisableOptimizations(llvm::Module &M) {
-  StringRef Key = "dx.disable_optimizations";
-  M.addModuleFlag(llvm::Module::ModFlagBehavior::Override, Key, 1);
 }
 // cbuffer will be translated into global variable in special address space.
 // If translate into C,
@@ -171,8 +169,6 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
 
   generateGlobalCtorDtorCalls();
-  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-    addDisableOptimizations(M);
 
   const DataLayout &DL = M.getDataLayout();
 
@@ -622,4 +618,34 @@ llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
   }
   llvm_unreachable("Convergence token should have been emitted.");
   return nullptr;
+}
+
+class OpaqueValueVisitor : public RecursiveASTVisitor<OpaqueValueVisitor> {
+public:
+  llvm::SmallPtrSet<OpaqueValueExpr *, 8> OVEs;
+  OpaqueValueVisitor() {}
+
+  bool VisitOpaqueValueExpr(OpaqueValueExpr *E) {
+    OVEs.insert(E);
+    return true;
+  }
+};
+
+void CGHLSLRuntime::emitInitListOpaqueValues(CodeGenFunction &CGF,
+                                             InitListExpr *E) {
+
+  typedef CodeGenFunction::OpaqueValueMappingData OpaqueValueMappingData;
+  OpaqueValueVisitor Visitor;
+  Visitor.TraverseStmt(E);
+  for (auto *OVE : Visitor.OVEs) {
+    if (CGF.isOpaqueValueEmitted(OVE))
+      continue;
+    if (OpaqueValueMappingData::shouldBindAsLValue(OVE)) {
+      LValue LV = CGF.EmitLValue(OVE->getSourceExpr());
+      OpaqueValueMappingData::bind(CGF, OVE, LV);
+    } else {
+      RValue RV = CGF.EmitAnyExpr(OVE->getSourceExpr());
+      OpaqueValueMappingData::bind(CGF, OVE, RV);
+    }
+  }
 }
