@@ -62,7 +62,7 @@ static void bm_vector_bool(std::string operation_name, Operation copy) {
 
 int main(int argc, char** argv) {
   auto std_copy    = [](auto first, auto last, auto out) { return std::copy(first, last, out); };
-  auto ranges_copy = [](auto first, auto last, auto out) { return std::ranges::copy(first, last, out); };
+  auto ranges_copy = std::ranges::copy;
 
   // std::copy
   bm_general<std::vector<int>>("std::copy(vector<int>)", std_copy);

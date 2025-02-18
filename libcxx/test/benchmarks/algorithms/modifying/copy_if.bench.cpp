@@ -76,9 +76,7 @@ void bm_copy_entire_range(std::string operation_name, Operation copy_if) {
 
 int main(int argc, char** argv) {
   auto std_copy_if    = [](auto first, auto last, auto out, auto pred) { return std::copy_if(first, last, out, pred); };
-  auto ranges_copy_if = [](auto first, auto last, auto out, auto pred) {
-    return std::ranges::copy_if(first, last, out, pred);
-  };
+  auto ranges_copy_if = std::ranges::copy_if;
 
   // std::copy_if
   bm_copy_every_other_element<std::vector<int>>("std::copy_if(vector<int>) (every other)", std_copy_if);

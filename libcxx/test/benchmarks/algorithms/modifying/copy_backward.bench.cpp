@@ -62,9 +62,7 @@ static void bm_vector_bool(std::string operation_name, Operation copy_backward) 
 
 int main(int argc, char** argv) {
   auto std_copy_backward    = [](auto first, auto last, auto out) { return std::copy_backward(first, last, out); };
-  auto ranges_copy_backward = [](auto first, auto last, auto out) {
-    return std::ranges::copy_backward(first, last, out);
-  };
+  auto ranges_copy_backward = std::ranges::copy_backward;
 
   // std::copy
   bm_general<std::vector<int>>("std::copy_backward(vector<int>)", std_copy_backward);

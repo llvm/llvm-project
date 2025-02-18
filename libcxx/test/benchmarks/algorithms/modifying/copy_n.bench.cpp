@@ -61,7 +61,7 @@ static void bm_vector_bool(std::string operation_name, Operation copy_n) {
 
 int main(int argc, char** argv) {
   auto std_copy_n    = [](auto first, auto n, auto out) { return std::copy_n(first, n, out); };
-  auto ranges_copy_n = [](auto first, auto n, auto out) { return std::ranges::copy_n(first, n, out); };
+  auto ranges_copy_n = std::ranges::copy_n;
 
   // std::copy_n
   bm_general<std::vector<int>>("std::copy_n(vector<int>)", std_copy_n);
