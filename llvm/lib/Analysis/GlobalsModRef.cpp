@@ -713,7 +713,8 @@ static bool isNonEscapingGlobalNoAliasWithLoad(const GlobalValue *GV,
 // active, or to be forced to operate as a module pass that cannot co-exist
 // with an alias analysis such as GMR.
 bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
-                                                 const Value *V) {
+                                                 const Value *V,
+                                                 const Instruction *CtxI) {
   // In order to know that the underlying object cannot alias the
   // non-addr-taken global, we must know that it would have to be an escape.
   // Thus if the underlying object is a function argument, a load from
@@ -760,6 +761,18 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
       // escaping, so we can immediately classify those as not aliasing any
       // non-addr-taken globals.
       continue;
+    }
+
+    // A non-addr-taken global cannot alias with any non-pointer value.
+    if (!Input->getType()->isPointerTy())
+      continue;
+
+    if (CtxI) {
+      // Null pointer cannot alias with a non-addr-taken global.
+      const Function *F = CtxI->getFunction();
+      if (const ConstantPointerNull *CPN = dyn_cast<ConstantPointerNull>(Input))
+        if (!NullPointerIsDefined(F, CPN->getType()->getAddressSpace()))
+          continue;
     }
 
     // Recurse through a limited number of selects, loads and PHIs. This is an
@@ -820,7 +833,7 @@ bool GlobalsAAResult::invalidate(Module &, const PreservedAnalyses &PA,
 /// address of the global isn't taken.
 AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
                                    const MemoryLocation &LocB,
-                                   AAQueryInfo &AAQI, const Instruction *) {
+                                   AAQueryInfo &AAQI, const Instruction *CtxI) {
   // Get the base object these pointers point to.
   const Value *UV1 =
       getUnderlyingObject(LocA.Ptr->stripPointerCastsForAliasAnalysis());
@@ -856,7 +869,7 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
     if ((GV1 || GV2) && GV1 != GV2) {
       const GlobalValue *GV = GV1 ? GV1 : GV2;
       const Value *UV = GV1 ? UV2 : UV1;
-      if (isNonEscapingGlobalNoAlias(GV, UV))
+      if (isNonEscapingGlobalNoAlias(GV, UV, CtxI))
         return AliasResult::NoAlias;
     }
 
@@ -920,7 +933,7 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
         !all_of(Objects, [&](const Value *V) {
           return this->alias(MemoryLocation::getBeforeOrAfter(V),
                              MemoryLocation::getBeforeOrAfter(GV), AAQI,
-                             nullptr) == AliasResult::NoAlias;
+                             Call) == AliasResult::NoAlias;
         }))
       return ConservativeResult;
 
