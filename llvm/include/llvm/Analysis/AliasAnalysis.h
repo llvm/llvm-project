@@ -572,6 +572,7 @@ public:
   // relationship holds through the entire function.
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI, const Instruction *CtxI = nullptr);
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
 
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals = false);
@@ -718,6 +719,11 @@ public:
                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
                             const Instruction *CtxI) = 0;
 
+  /// Returns an AliasResult indicating whether a specific memory location
+  /// aliases errno.
+  virtual AliasResult aliasErrno(const MemoryLocation &Loc,
+                                 const Module *M) = 0;
+
   /// @}
   //===--------------------------------------------------------------------===//
   /// \name Simple mod/ref information
@@ -779,6 +785,10 @@ public:
     return Result.alias(LocA, LocB, AAQI, CtxI);
   }
 
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) override {
+    return Result.aliasErrno(Loc, M);
+  }
+
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals) override {
     return Result.getModRefInfoMask(Loc, AAQI, IgnoreLocals);
@@ -831,6 +841,10 @@ protected:
 public:
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI, const Instruction *I) {
+    return AliasResult::MayAlias;
+  }
+
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) {
     return AliasResult::MayAlias;
   }
 
