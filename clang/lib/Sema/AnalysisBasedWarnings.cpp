@@ -547,7 +547,7 @@ struct CheckFallThroughDiagnostics {
   unsigned diag_FallThrough_HasNoReturn;
   unsigned diag_FallThrough_ReturnsNonVoid;
   unsigned diag_NeverFallThroughOrReturn;
-  enum { Function = 0, Block, Lambda, Coroutine } funMode;
+  unsigned funMode; // TODO: use diag::FunModes
   SourceLocation FuncLoc;
 
   static CheckFallThroughDiagnostics MakeForFunction(const Decl *Func) {
@@ -572,7 +572,7 @@ struct CheckFallThroughDiagnostics {
     else
       D.diag_NeverFallThroughOrReturn = 0;
 
-    D.funMode = Function;
+    D.funMode = diag::FunModes::Function;
     return D;
   }
 
@@ -582,7 +582,7 @@ struct CheckFallThroughDiagnostics {
     D.diag_FallThrough_HasNoReturn = 0;
     D.diag_FallThrough_ReturnsNonVoid = diag::warn_falloff_nonvoid;
     D.diag_NeverFallThroughOrReturn = 0;
-    D.funMode = Coroutine;
+    D.funMode = diag::FunModes::Coroutine;
     return D;
   }
 
@@ -591,7 +591,7 @@ struct CheckFallThroughDiagnostics {
     D.diag_FallThrough_HasNoReturn = diag::err_noreturn_has_return_expr;
     D.diag_FallThrough_ReturnsNonVoid = diag::err_falloff_nonvoid;
     D.diag_NeverFallThroughOrReturn = 0;
-    D.funMode = Block;
+    D.funMode = diag::FunModes::Block;
     return D;
   }
 
@@ -600,13 +600,13 @@ struct CheckFallThroughDiagnostics {
     D.diag_FallThrough_HasNoReturn = diag::err_noreturn_has_return_expr;
     D.diag_FallThrough_ReturnsNonVoid = diag::warn_falloff_nonvoid;
     D.diag_NeverFallThroughOrReturn = 0;
-    D.funMode = Lambda;
+    D.funMode = diag::FunModes::Lambda;
     return D;
   }
 
   bool checkDiagnostics(DiagnosticsEngine &D, bool ReturnsVoid,
                         bool HasNoReturn) const {
-    if (funMode == Function) {
+    if (funMode == diag::FunModes::Function) {
       return (ReturnsVoid ||
               D.isIgnored(diag::warn_falloff_nonvoid, FuncLoc)) &&
              (!HasNoReturn ||
@@ -615,7 +615,7 @@ struct CheckFallThroughDiagnostics {
              (!ReturnsVoid ||
               D.isIgnored(diag::warn_suggest_noreturn_block, FuncLoc));
     }
-    if (funMode == Coroutine) {
+    if (funMode == diag::FunModes::Coroutine) {
       return (ReturnsVoid ||
               D.isIgnored(diag::warn_falloff_nonvoid, FuncLoc)) &&
              (!HasNoReturn);
