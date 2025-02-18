@@ -23,8 +23,10 @@
 
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
+// clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "llvm/ADT/Twine.h"
 
 // Raw CAPI type casters need to be declared before use, so always include them
@@ -435,7 +437,7 @@ public:
                           const nanobind::object &superCls,
                           GetTypeIDFunctionTy getTypeIDFunction = nullptr)
       : pure_subclass(scope, typeClassName, superCls) {
-    // Casting constructor. Note that it hard, if not impossible, to properly
+    // Casting constructor. Note that it is hard, if not impossible, to properly
     // call chain to parent `__init__` in nanobind due to its special handling
     // for init functions that don't have a fully constructed self-reference,
     // which makes it impossible to forward it to `__init__` of a superclass.
@@ -516,7 +518,7 @@ public:
                      const nanobind::object &superCls,
                      GetTypeIDFunctionTy getTypeIDFunction = nullptr)
       : pure_subclass(scope, typeClassName, superCls) {
-    // Casting constructor. Note that it hard, if not impossible, to properly
+    // Casting constructor. Note that it is hard, if not impossible, to properly
     // call chain to parent `__init__` in nanobind due to its special handling
     // for init functions that don't have a fully constructed self-reference,
     // which makes it impossible to forward it to `__init__` of a superclass.
@@ -598,7 +600,7 @@ public:
                       IsAFunctionTy isaFunction,
                       const nanobind::object &superCls)
       : pure_subclass(scope, valueClassName, superCls) {
-    // Casting constructor. Note that it hard, if not impossible, to properly
+    // Casting constructor. Note that it is hard, if not impossible, to properly
     // call chain to parent `__init__` in nanobind due to its special handling
     // for init functions that don't have a fully constructed self-reference,
     // which makes it impossible to forward it to `__init__` of a superclass.
