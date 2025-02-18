@@ -38,8 +38,7 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV32-NEXT:    vcpop.m a7, v10
 ; RV32-NEXT:    vsetvli zero, a7, e32, m2, ta, ma
 ; RV32-NEXT:    vse32.v v12, (a0)
-; RV32-NEXT:    slli a7, a7, 26
-; RV32-NEXT:    srli a7, a7, 24
+; RV32-NEXT:    slli a7, a7, 2
 ; RV32-NEXT:    or t0, t0, a6
 ; RV32-NEXT:    add a0, a0, a7
 ; RV32-NEXT:    mv a7, t1
@@ -101,8 +100,7 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV64-NEXT:    vcpop.m a7, v10
 ; RV64-NEXT:    vsetvli zero, a7, e32, m2, ta, ma
 ; RV64-NEXT:    vse32.v v12, (a0)
-; RV64-NEXT:    slli a7, a7, 58
-; RV64-NEXT:    srli a7, a7, 56
+; RV64-NEXT:    slli a7, a7, 2
 ; RV64-NEXT:    add a0, a0, a7
 ; RV64-NEXT:    bne a6, a5, .LBB0_4
 ; RV64-NEXT:  # %bb.5: # %middle.block

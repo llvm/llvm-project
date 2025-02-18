@@ -7,7 +7,6 @@ define i32 @test(<8 x i1> %mask) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 255
 ; CHECK-NEXT:    ret
     %1 = bitcast <8 x i1> %mask to i8
     %2 = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 %1)
