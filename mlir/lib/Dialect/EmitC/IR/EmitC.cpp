@@ -991,8 +991,8 @@ LogicalResult emitc::VerbatimOp::verify() {
   return success();
 }
 
-static ParseResult parseVariadicTypeFmtArgs(AsmParser &p,
-                                            SmallVector<Type> &params) {
+[[maybe_unused]] static ParseResult
+parseVariadicTypeFmtArgs(AsmParser &p, SmallVector<Type> &params) {
   Type type;
   if (p.parseType(type))
     return failure();
@@ -1007,7 +1007,8 @@ static ParseResult parseVariadicTypeFmtArgs(AsmParser &p,
   return success();
 }
 
-static void printVariadicTypeFmtArgs(AsmPrinter &p, ArrayRef<Type> params) {
+[[maybe_unused]] static void printVariadicTypeFmtArgs(AsmPrinter &p,
+                                                      ArrayRef<Type> params) {
   llvm::interleaveComma(params, p, [&](Type type) { p.printType(type); });
 }
 
