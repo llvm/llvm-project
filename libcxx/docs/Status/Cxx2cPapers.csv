@@ -117,5 +117,5 @@
 "`P2846R6 <https://wg21.link/P2846R6>`__","``reserve_hint``: Eagerly reserving memory for not-quite-sized lazy ranges","2025-02 (Hagenberg)","","",""
 "`P3471R4 <https://wg21.link/P3471R4>`__","Standard Library Hardening","2025-02 (Hagenberg)","","",""
 "`P0447R28 <https://wg21.link/P0447R28>`__","Introduction of ``std::hive`` to the standard library","2025-02 (Hagenberg)","","",""
-"`P3019R14 <https://wg21.link/P3019R14>`__","indirect and polymorphic: Vocabulary Types for Composite Class Design","2025-02 (Hagenberg)","","",""
+"`P3019R14 <https://wg21.link/P3019R14>`__","``indirect`` and ``polymorphic``: Vocabulary Types for Composite Class Design","2025-02 (Hagenberg)","","",""
 "","","","","",""

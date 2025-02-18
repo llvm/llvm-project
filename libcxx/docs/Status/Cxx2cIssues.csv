@@ -116,7 +116,7 @@
 "`LWG4172 <https://wg21.link/4172>`__","``unique_lock`` self-move-assignment is broken","2025-02 (Hagenberg)","","",""
 "`LWG4175 <https://wg21.link/4175>`__","``get_env()`` specified in terms of ``as_const()`` but this doesn't work with rvalue senders","2025-02 (Hagenberg)","","",""
 "`LWG4179 <https://wg21.link/4179>`__","Wrong range in ``[alg.search]``","2025-02 (Hagenberg)","","",""
-"`LWG4186 <https://wg21.link/4186>`__","``regex_traits::transform_primary`` mistakenly detects typeid of a function","2025-02 (Hagenberg)","","",""
+"`LWG4186 <https://wg21.link/4186>`__","``regex_traits::transform_primary`` mistakenly detects ``typeid`` of a function","2025-02 (Hagenberg)","","",""
 "`LWG4189 <https://wg21.link/4189>`__","``cache_latest_view`` should be freestanding","2025-02 (Hagenberg)","","",""
 "`LWG4191 <https://wg21.link/4191>`__","P1467 changed the return type of ``pow(complex<float>, int)``","2025-02 (Hagenberg)","","",""
 "`LWG4196 <https://wg21.link/4196>`__","Complexity of ``inplace_merge()`` is incorrect","2025-02 (Hagenberg)","","",""
