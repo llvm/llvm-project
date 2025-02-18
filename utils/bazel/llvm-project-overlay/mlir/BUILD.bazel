@@ -97,6 +97,14 @@ gentbl_cc_library(
     name = "OpAsmInterfaceIncGen",
     tbl_outs = [
         (
+            ["-gen-attr-interface-decls"],
+            "include/mlir/IR/OpAsmAttrInterface.h.inc",
+        ),
+        (
+            ["-gen-attr-interface-defs"],
+            "include/mlir/IR/OpAsmAttrInterface.cpp.inc",
+        ),
+        (
             ["-gen-op-interface-decls"],
             "include/mlir/IR/OpAsmOpInterface.h.inc",
         ),
