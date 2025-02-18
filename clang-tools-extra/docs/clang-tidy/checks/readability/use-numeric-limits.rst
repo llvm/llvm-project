@@ -21,3 +21,11 @@ After:
   void foo() {
     int32_t a = std::numeric_limits<int32_t>::max();
   }
+
+Options
+-------
+
+.. option:: IncludeStyle
+
+   A string specifying which include-style is used, `llvm` or `google`. Default
+   is `llvm`.

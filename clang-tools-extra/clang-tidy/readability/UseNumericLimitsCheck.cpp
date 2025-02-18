@@ -53,6 +53,10 @@ UseNumericLimitsCheck::UseNumericLimitsCheck(StringRef Name,
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()) {}
 
+void UseNumericLimitsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
+}
+
 void UseNumericLimitsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       expr(anyOf(unaryOperator(hasOperatorName("-"),
