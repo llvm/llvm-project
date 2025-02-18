@@ -18,6 +18,8 @@
 #include "llvm/ADT/ilist_node_base.h"
 #include "llvm/ADT/ilist_node_options.h"
 
+#include <type_traits>
+
 namespace llvm {
 
 namespace ilist_detail {
@@ -147,9 +149,8 @@ public:
   ///
   /// This requires sentinel tracking to be explicitly enabled.  Use the
   /// ilist_sentinel_tracking<true> option to get this API.
+  template <typename = std::enable_if_t<OptionsT::is_sentinel_tracking_explicit>>
   bool isSentinel() const {
-    static_assert(OptionsT::is_sentinel_tracking_explicit,
-                  "Use ilist_sentinel_tracking<true> to enable isSentinel()");
     return node_base_type::isSentinel();
   }
 };
