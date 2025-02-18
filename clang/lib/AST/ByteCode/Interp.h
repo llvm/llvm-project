@@ -2915,13 +2915,17 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     S.Stk.push<Pointer>(0, nullptr);
     return true;
   }
+  assert(NumElements.isPositive());
 
   DynamicAllocator &Allocator = S.getAllocator();
   Block *B =
       Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
                          S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
   assert(B);
-  S.Stk.push<Pointer>(B);
+  if (NumElements.isZero())
+    S.Stk.push<Pointer>(B);
+  else
+    S.Stk.push<Pointer>(Pointer(B).atIndex(0));
   return true;
 }
 
@@ -2941,13 +2945,18 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     S.Stk.push<Pointer>(0, ElementDesc);
     return true;
   }
+  assert(NumElements.isPositive());
 
   DynamicAllocator &Allocator = S.getAllocator();
   Block *B =
       Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
                          S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
   assert(B);
-  S.Stk.push<Pointer>(B);
+  if (NumElements.isZero())
+    S.Stk.push<Pointer>(B);
+  else
+    S.Stk.push<Pointer>(Pointer(B).atIndex(0));
+
   return true;
 }
 
