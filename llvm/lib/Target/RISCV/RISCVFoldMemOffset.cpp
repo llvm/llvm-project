@@ -62,17 +62,15 @@ public:
 
   FoldableOffset &operator+=(int64_t RHS) {
     if (!Offset)
-      Offset = RHS;
-    else
-      Offset = (uint64_t)*Offset + (uint64_t)RHS;
+      Offset = 0;
+    Offset = (uint64_t)*Offset + (uint64_t)RHS;
     return *this;
   }
 
   FoldableOffset &operator-=(int64_t RHS) {
     if (!Offset)
-      Offset = -(uint64_t)RHS;
-    else
-      Offset = (uint64_t)*Offset - (uint64_t)RHS;
+      Offset = 0;
+    Offset = (uint64_t)*Offset - (uint64_t)RHS;
     return *this;
   }
 
@@ -245,9 +243,7 @@ bool RISCVFoldMemOffset::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getFunction().hasOptSize())
     return false;
 
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
-  const RISCVInstrInfo &TII = *ST.getInstrInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
@@ -277,10 +273,7 @@ bool RISCVFoldMemOffset::runOnMachineFunction(MachineFunction &MF) {
       for (auto [MemMI, NewOffset] : FoldableInstrs)
         MemMI->getOperand(2).setImm(NewOffset);
 
-      // Replace ADDI with a copy.
-      BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::COPY))
-          .add(MI.getOperand(0))
-          .add(MI.getOperand(1));
+      MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
       MI.eraseFromParent();
     }
   }

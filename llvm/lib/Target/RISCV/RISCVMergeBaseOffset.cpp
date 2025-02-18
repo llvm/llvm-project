@@ -238,13 +238,6 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     foldOffset(Hi, Lo, TailAdd, Offset);
     OffsetTail.eraseFromParent();
     return true;
-  } else if (OffsetTail.getOpcode() == RISCV::COPY &&
-             OffsetTail.getOperand(1).getReg() == RISCV::X0) {
-    // Fold mem offset can leave copies from X0 in place of an ADDI and they
-    // might not have been eliminated yet.
-    foldOffset(Hi, Lo, TailAdd, 0);
-    OffsetTail.eraseFromParent();
-    return true;
   }
   return false;
 }
