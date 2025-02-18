@@ -61,7 +61,8 @@ public:
       }
 
       bool shouldCheckThis() {
-        auto result = !ClsType.isNull() ? isUnsafePtr(ClsType, false) : std::nullopt;
+        auto result =
+            !ClsType.isNull() ? isUnsafePtr(ClsType, false) : std::nullopt;
         return result && *result;
       }
 

@@ -118,9 +118,7 @@ bool isRefType(const std::string &Name) {
          Name == "RefPtr" || Name == "RefPtrAllowingPartiallyDestroyed";
 }
 
-bool isRetainPtr(const std::string &Name) {
-  return Name == "RetainPtr";
-}
+bool isRetainPtr(const std::string &Name) { return Name == "RetainPtr"; }
 
 bool isCheckedPtr(const std::string &Name) {
   return Name == "CheckedPtr" || Name == "CheckedRef";
@@ -152,8 +150,7 @@ bool isCtorOfRetainPtr(const clang::FunctionDecl *F) {
 }
 
 bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
-  return isCtorOfRefCounted(F) || isCtorOfCheckedPtr(F) ||
-         isCtorOfRetainPtr(F);
+  return isCtorOfRefCounted(F) || isCtorOfCheckedPtr(F) || isCtorOfRetainPtr(F);
 }
 
 template <typename Predicate>
@@ -181,8 +178,7 @@ bool isRefOrCheckedPtrType(const clang::QualType T) {
 }
 
 bool isRetainPtrType(const clang::QualType T) {
-  return isPtrOfType(
-      T, [](auto Name) { return Name == "RetainPtr"; });
+  return isPtrOfType(T, [](auto Name) { return Name == "RetainPtr"; });
 }
 
 bool isOwnerPtrType(const clang::QualType T) {

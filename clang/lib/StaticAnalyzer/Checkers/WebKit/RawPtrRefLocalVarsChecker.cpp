@@ -14,8 +14,8 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMapContext.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -269,9 +269,7 @@ public:
               [&](const clang::CXXRecordDecl *Record) {
                 return isSafePtr(Record);
               },
-              [&](const clang::QualType Type) {
-                return isSafePtrType(Type);
-              },
+              [&](const clang::QualType Type) { return isSafePtrType(Type); },
               [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
                 if (!InitArgOrigin || IsSafe)
                   return true;
@@ -401,6 +399,7 @@ public:
 
 class UnretainedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
   mutable bool IsARCEnabled{false};
+
 public:
   UnretainedLocalVarsChecker()
       : RawPtrRefLocalVarsChecker("Unretained raw pointer or reference not "
@@ -416,8 +415,8 @@ public:
   }
   const char *ptrKind() const final { return "unretained"; }
 
-  void checkASTDecl(const TranslationUnitDecl *TUD,
-                    AnalysisManager &MGR, BugReporter &BRArg) const final {
+  void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
+                    BugReporter &BRArg) const final {
     IsARCEnabled = TUD->getLangOpts().ObjCAutoRefCount;
     RawPtrRefLocalVarsChecker::checkASTDecl(TUD, MGR, BRArg);
   }

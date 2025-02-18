@@ -142,31 +142,28 @@ public:
   }
 
   bool isPtrOriginSafe(const Expr *Arg) const {
-    return tryToFindPtrOrigin(Arg, /*StopAtFirstRefCountedObj=*/true,
-                              [&](const clang::CXXRecordDecl *Record) {
-                                return isSafePtr(Record);
-                              },
-                              [&](const clang::QualType T) {
-                                return isSafePtrType(T);
-                              },
-                              [&](const clang::Expr *ArgOrigin, bool IsSafe) {
-                                if (IsSafe)
-                                  return true;
-                                if (isa<CXXNullPtrLiteralExpr>(ArgOrigin)) {
-                                  // foo(nullptr)
-                                  return true;
-                                }
-                                if (isa<IntegerLiteral>(ArgOrigin)) {
-                                  // FIXME: Check the value.
-                                  // foo(NULL)
-                                  return true;
-                                }
-                                if (isASafeCallArg(ArgOrigin))
-                                  return true;
-                                if (EFA.isACallToEnsureFn(ArgOrigin))
-                                  return true;
-                                return false;
-                              });
+    return tryToFindPtrOrigin(
+        Arg, /*StopAtFirstRefCountedObj=*/true,
+        [&](const clang::CXXRecordDecl *Record) { return isSafePtr(Record); },
+        [&](const clang::QualType T) { return isSafePtrType(T); },
+        [&](const clang::Expr *ArgOrigin, bool IsSafe) {
+          if (IsSafe)
+            return true;
+          if (isa<CXXNullPtrLiteralExpr>(ArgOrigin)) {
+            // foo(nullptr)
+            return true;
+          }
+          if (isa<IntegerLiteral>(ArgOrigin)) {
+            // FIXME: Check the value.
+            // foo(NULL)
+            return true;
+          }
+          if (isASafeCallArg(ArgOrigin))
+            return true;
+          if (EFA.isACallToEnsureFn(ArgOrigin))
+            return true;
+          return false;
+        });
   }
 
   bool shouldSkipCall(const CallExpr *CE) const {
