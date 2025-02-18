@@ -160,14 +160,14 @@ enum class RootElementFlag : uint32_t {
 };
 
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
-enum class RootParameterType: uint32_t {
+enum class RootParameterType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
 ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
-enum class ShaderVisibilityFlag: uint32_t {
+enum class ShaderVisibilityFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
@@ -566,21 +566,40 @@ struct RootConstants {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
   uint32_t Num32BitValues;
+
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(Num32BitValues);
+  }
 };
 
 struct RootParameter {
-dxbc::RootParameterType ParameterType;
-union {
-  RootConstants Constants;
-};
-dxbc::ShaderVisibilityFlag ShaderVisibility;
+  dxbc::RootParameterType ParameterType;
+  union {
+    RootConstants Constants;
+  };
+  dxbc::ShaderVisibilityFlag ShaderVisibility;
+
+  void swapBytes() {
+    sys::swapByteOrder(ParameterType);
+    sys::swapByteOrder(ShaderVisibility);
+    switch (ParameterType) {
+
+    case RootParameterType::Constants32Bit:
+      Constants.swapBytes();
+      break;
+    }
+  }
 };
 
 struct RootSignatureHeader {
   uint32_t Version = 2;
   uint32_t Flags = 0;
+  void swapBytes() {
+    // nothing to swap
+  }
 };
-            
 
 struct RootSignatureValidations {
 

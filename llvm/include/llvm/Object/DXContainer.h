@@ -22,6 +22,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
+#include <cstdint>
 #include <variant>
 
 namespace llvm {
@@ -126,6 +127,8 @@ private:
   uint32_t StaticSamplersOffset;
   uint32_t Flags;
 
+  SmallVector<dxbc::RootParameter> Parameters;
+
 public:
   RootSignature() {}
 
@@ -135,6 +138,7 @@ public:
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
+  SmallVector<dxbc::RootParameter> getParameters() const { return Parameters; }
   uint32_t getFlags() const { return Flags; }
 };
 

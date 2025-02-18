@@ -201,12 +201,11 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << indent(Space) << "Flags: " << format_hex(RS.Header.Flags, 8) << ":\n";
     OS << indent(Space) << "Version: " << RS.Header.Version << ":\n";
     OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << ":\n";
-    OS << indent(Space) << "RootParametersOffset: " << RS.Parameters.size_in_bytes()
-       << ":\n";
-    OS << indent(Space) << "NumStaticSamplers: " << 0
-       << ":\n";
-    OS << indent(Space) << "StaticSamplersOffset: " << sizeof(RS.Header) + RS.Parameters.size_in_bytes()
-       << ":\n";
+    OS << indent(Space)
+       << "RootParametersOffset: " << RS.Parameters.size_in_bytes() << ":\n";
+    OS << indent(Space) << "NumStaticSamplers: " << 0 << ":\n";
+    OS << indent(Space) << "StaticSamplersOffset: "
+       << sizeof(RS.Header) + RS.Parameters.size_in_bytes() << ":\n";
     Space--;
     // end root signature header
   }

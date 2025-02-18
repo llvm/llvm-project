@@ -35,6 +35,7 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
       NumStaticSamplers(Data.getNumStaticSamplers()),
       StaticSamplersOffset(Data.getStaticSamplersOffset()) {
   uint32_t Flags = Data.getFlags();
+  Parameters = Data.getParameters();
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -218,26 +219,25 @@ void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-void MappingTraits<dxbc::RootConstants>::mapping(
-  IO &IO, dxbc::RootConstants &C) {
-    IO.mapRequired("Num32BitValues", C.Num32BitValues);
-    IO.mapRequired("RegisterSpace", C.RegisterSpace);
-    IO.mapRequired("ShaderRegister", C.ShaderRegister);
+void MappingTraits<dxbc::RootConstants>::mapping(IO &IO,
+                                                 dxbc::RootConstants &C) {
+  IO.mapRequired("Num32BitValues", C.Num32BitValues);
+  IO.mapRequired("RegisterSpace", C.RegisterSpace);
+  IO.mapRequired("ShaderRegister", C.ShaderRegister);
+}
 
+void MappingTraits<dxbc::RootParameter>::mapping(IO &IO,
+                                                 dxbc::RootParameter &P) {
+  IO.mapRequired("ParameterType", P.ParameterType);
+  IO.mapRequired("ShaderVisibility", P.ShaderVisibility);
+  switch (P.ParameterType) {
+
+  case dxbc::RootParameterType::Constants32Bit:
+    IO.mapRequired("Constants", P.Constants);
+
+    break;
   }
-
-void MappingTraits<dxbc::RootParameter>::mapping(
-  IO &IO, dxbc::RootParameter &P) {
-    IO.mapRequired("ParameterType", P.ParameterType);
-    IO.mapRequired("ShaderVisibility", P.ShaderVisibility);
-    switch (P.ParameterType) {
-
-    case dxbc::RootParameterType::Constants32Bit:
-      IO.mapRequired("Constants", P.Constants);
-
-      break;
-    }
-  }
+}
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
@@ -343,15 +343,15 @@ void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
 }
 
 void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
-  IO &IO, dxbc::RootParameterType &Value) {
-for (const auto &E : dxbc::getRootParameterTypes())
-  IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO &IO, dxbc::RootParameterType &Value) {
+  for (const auto &E : dxbc::getRootParameterTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::ShaderVisibilityFlag>::enumeration(
-  IO &IO, dxbc::ShaderVisibilityFlag &Value) {
-for (const auto &E : dxbc::getShaderVisibilityFlags())
-  IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO &IO, dxbc::ShaderVisibilityFlag &Value) {
+  for (const auto &E : dxbc::getShaderVisibilityFlags())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
 } // namespace yaml
