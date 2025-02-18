@@ -43,6 +43,7 @@
 ; CHECK-NEXT: occupancy:       10
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT: needIdx0Restore: false
 ; CHECK-NEXT: longBranchReservedReg: '$sgpr2_sgpr3'
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: body:
