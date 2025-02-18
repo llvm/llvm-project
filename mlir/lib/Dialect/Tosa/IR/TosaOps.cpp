@@ -566,26 +566,9 @@ static void buildTransConvOpWithQuantInfo(
   result.addTypes(finalOutputType);
 }
 
-/// The tosa.fully_connected op has its own builder as it does not have
-/// strides/dilation/padding.
-static void buildFCOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                                   Type outputType, Value input, Value weight,
-                                   Value bias) {
-
-  result.addOperands({input, weight, bias});
-  auto quantAttr = ::buildConvOpQuantizationAttr(builder, input, weight);
-  if (quantAttr) {
-    result.addAttribute("quantization_info", quantAttr);
-    result.addTypes(
-        buildConvOpResultTypeInfo(builder, outputType, input, weight));
-  } else {
-    result.addTypes(outputType);
-  }
-}
-
-/// The tosa.matmul op is also intended to be generated where a
-/// fully_connected op must be constructed where the weight is not a constant.
-/// In this case, the fully_connected op must be expressed using matmul.
+/// The tosa.matmul op is also intended to be generated where a fully_connected
+/// op must be constructed where the weight is not a constant. In this case,
+/// the fully_connected op must be expressed using matmul.
 /// TODO: Add link to the leglization document explaining this.
 static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
                                        OperationState &result, Type outputType,
@@ -887,76 +870,6 @@ bool tosa::EqualOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   if (l.size() != r.size() || l.size() != 1)
     return false;
   return succeeded(verifyCompatibleShape(l[0], r[0]));
-}
-
-LogicalResult tosa::FullyConnectedOp::inferReturnTypeComponents(
-    MLIRContext *context, ::std::optional<Location> location,
-    FullyConnectedOp::Adaptor adaptor,
-    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ShapeAdaptor inputShape(adaptor.getInput().getType());
-  ShapeAdaptor weightShape(adaptor.getWeight().getType());
-  ShapeAdaptor biasShape(adaptor.getBias().getType());
-
-  // All shapes are dynamic.
-  SmallVector<int64_t> outShape;
-  outShape.resize(2, ShapedType::kDynamic);
-
-  if (inputShape.hasRank()) {
-    outShape[0] = inputShape.getDimSize(0);
-  }
-
-  if (weightShape.hasRank()) {
-    outShape[1] = weightShape.getDimSize(0);
-  }
-
-  if (biasShape.hasRank()) {
-    outShape[1] = outShape[1] == ShapedType::kDynamic ? biasShape.getDimSize(0)
-                                                      : outShape[1];
-  }
-
-  inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
-  return success();
-}
-
-LogicalResult FullyConnectedOp::verify() {
-  // All TOSA conv ops have an input() and weight().
-  auto inputType = llvm::dyn_cast<RankedTensorType>(getInput().getType());
-
-  RankedTensorType weightType =
-      llvm::dyn_cast<RankedTensorType>(getWeight().getType());
-
-  // Must be ranked tensor types
-  if (!inputType) {
-    emitOpError("expect a ranked tensor for input, got ") << getInput();
-    return failure();
-  }
-  if (!weightType) {
-    emitOpError("expect a ranked tensor for weight, got ") << getWeight();
-    return failure();
-  }
-
-  auto inputEType = inputType.getElementType();
-  auto weightEType = weightType.getElementType();
-
-  bool inputIsQuant = !llvm::isa<FloatType>(inputEType);
-  bool weightIsQuant = !llvm::isa<FloatType>(weightEType);
-
-  // Either both must be quantized or both unquantized.
-  if (inputIsQuant != weightIsQuant) {
-    emitOpError(
-        "expect both input and weight to be float or not together, got ")
-        << inputEType << " and " << weightEType;
-    return failure();
-  }
-
-  // Quantized type must have constructed the quantizationattr, and unquantized
-  // types should not have a quantizationattr.
-  if ((inputIsQuant && !getInputZp()) || (!inputIsQuant && getInputZp())) {
-    emitOpError("input zero point is required for quantized type, and not "
-                "allowed for float type");
-    return failure();
-  }
-  return success();
 }
 
 LogicalResult tosa::MatMulOp::inferReturnTypeComponents(

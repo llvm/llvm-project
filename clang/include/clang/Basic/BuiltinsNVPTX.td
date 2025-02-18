@@ -669,6 +669,14 @@ def __nvvm_redux_sync_umax : NVPTXBuiltinSMAndPTX<"unsigned int(unsigned int, in
 def __nvvm_redux_sync_and : NVPTXBuiltinSMAndPTX<"int(int, int)", SM_80, PTX70>;
 def __nvvm_redux_sync_xor : NVPTXBuiltinSMAndPTX<"int(int, int)", SM_80, PTX70>;
 def __nvvm_redux_sync_or : NVPTXBuiltinSMAndPTX<"int(int, int)", SM_80, PTX70>;
+def __nvvm_redux_sync_fmin : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmin_abs : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmin_NaN : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmin_abs_NaN : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmax : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmax_abs : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmax_NaN : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmax_abs_NaN : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
 
 // Membar
 
