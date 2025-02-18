@@ -11,7 +11,7 @@
 ; CHECK-NEXT: .amdhsa_group_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_private_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_kernarg_size 0
-; CHECK-NEXT: ; INST_PREF_SIZE 0
+; CHECK-NEXT: .amdhsa_inst_pref_size 0
 ; CHECK-NEXT: ; GLG_EN 0
 ; CHECK-NEXT: .amdhsa_named_barrier_count 0
 ; CHECK-NEXT: ; ENABLE_DYNAMIC_VGPR 0
@@ -55,6 +55,7 @@
 .amdhsa_kernel kernel
   .amdhsa_next_free_vgpr 32
   .amdhsa_next_free_sgpr 32
+  .amdhsa_inst_pref_size 0
 .end_amdhsa_kernel
 
 ;--- 2.s
@@ -66,7 +67,7 @@
 ; CHECK-NEXT: .amdhsa_group_segment_fixed_size 393216
 ; CHECK-NEXT: .amdhsa_private_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_kernarg_size 0
-; CHECK-NEXT: ; INST_PREF_SIZE 0
+; CHECK-NEXT: .amdhsa_inst_pref_size 63
 ; CHECK-NEXT: ; GLG_EN 0
 ; CHECK-NEXT: .amdhsa_named_barrier_count 7
 ; CHECK-NEXT: ; ENABLE_DYNAMIC_VGPR 0
@@ -112,4 +113,5 @@
   .amdhsa_next_free_vgpr 32
   .amdhsa_next_free_sgpr 32
   .amdhsa_named_barrier_count 7
+  .amdhsa_inst_pref_size 63
 .end_amdhsa_kernel

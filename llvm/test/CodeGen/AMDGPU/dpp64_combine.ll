@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A,DPP64-GFX9 -DCTL=row_newbcast
-; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9,GFX940 -DCTL=row_newbcast
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9,GFX942 -DCTL=row_newbcast
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS -DCTL=row_share
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS -DCTL=row_share
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1250 -DCTL=row_share
@@ -98,7 +98,7 @@ define amdgpu_kernel void @dpp_mul_row_share(ptr addrspace(1) %arg) {
 ; DPP64: v_mov_b32_dpp
 ; GFX90A: v_add_co_u32_e32
 ; GFX90A: v_addc_co_u32_e32
-; GFX940: v_lshl_add_u64
+; GFX942: v_lshl_add_u64
 ; GFX10PLUS: v_mov_b32_dpp
 ; GFX10PLUS: v_add_co_u32
 ; GFX10PLUS: v_add_co_ci_u32_e32

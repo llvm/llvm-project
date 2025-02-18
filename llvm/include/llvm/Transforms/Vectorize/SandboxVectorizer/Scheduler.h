@@ -30,8 +30,23 @@ namespace llvm::sandboxir {
 class PriorityCmp {
 public:
   bool operator()(const DGNode *N1, const DGNode *N2) {
-    // TODO: This should be a hierarchical comparator.
-    return N1->getInstruction()->comesBefore(N2->getInstruction());
+    // Given that the DAG does not model dependencies such that PHIs are always
+    // at the top, or terminators always at the bottom, we need to force the
+    // priority here in the comparator of the ready list container.
+    auto *I1 = N1->getInstruction();
+    auto *I2 = N2->getInstruction();
+    bool IsTerm1 = I1->isTerminator();
+    bool IsTerm2 = I2->isTerminator();
+    if (IsTerm1 != IsTerm2)
+      // Terminators have the lowest priority.
+      return IsTerm1 > IsTerm2;
+    bool IsPHI1 = isa<PHINode>(I1);
+    bool IsPHI2 = isa<PHINode>(I2);
+    if (IsPHI1 != IsPHI2)
+      // PHIs have the highest priority.
+      return IsPHI1 < IsPHI2;
+    // Otherwise rely on the instruction order.
+    return I2->comesBefore(I1);
   }
 };
 

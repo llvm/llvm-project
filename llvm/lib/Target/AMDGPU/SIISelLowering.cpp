@@ -2546,9 +2546,61 @@ SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
   return ArgValue;
 }
 
+SDValue SITargetLowering::getGlobalWorkGroupId(
+    SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const {
+  // WorkGroupIdXYZ = ClusterId == 0 ?
+  //   ClusterIdXYZ :
+  //   ClusterIdXYZ * (ClusterMaxIdXYZ + 1) + ClusterWorkGroupIdXYZ
+  SDValue ClusterIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterIdPV);
+  SDLoc SL(ClusterIdXYZ);
+  using namespace AMDGPU::Hwreg;
+  SDValue ClusterIdField =
+      DAG.getTargetConstant(HwregEncoding::encode(ID_IB_STS2, 6, 4), SL, VT);
+  SDNode *GetReg =
+      DAG.getMachineNode(AMDGPU::S_GETREG_B32, SL, VT, ClusterIdField);
+  SDValue ClusterId(GetReg, 0);
+  SDValue ClusterMaxIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterMaxIdPV);
+  SDValue One = DAG.getConstant(1, SL, VT);
+  SDValue ClusterSizeXYZ = DAG.getNode(ISD::ADD, SL, VT, ClusterMaxIdXYZ, One);
+  SDValue ClusterWorkGroupIdXYZ =
+      getPreloadedValue(DAG, MFI, VT, ClusterWorkGroupIdPV);
+  SDValue GlobalIdXYZ =
+      DAG.getNode(ISD::ADD, SL, VT, ClusterWorkGroupIdXYZ,
+                  DAG.getNode(ISD::MUL, SL, VT, ClusterIdXYZ, ClusterSizeXYZ));
+  SDValue Zero = DAG.getConstant(0, SL, VT);
+  return DAG.getNode(ISD::SELECT_CC, SL, VT, ClusterId, Zero, ClusterIdXYZ,
+                     GlobalIdXYZ, DAG.getCondCode(ISD::SETEQ));
+}
+
 SDValue SITargetLowering::getPreloadedValue(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
+  // Return the global position in the grid where clusters are supported.
+  if (Subtarget->hasClusters()) {
+    switch (PVID) {
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
+      return getGlobalWorkGroupId(
+          DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_X,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
+      return getGlobalWorkGroupId(
+          DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_Y,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
+      return getGlobalWorkGroupId(
+          DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_Z,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z,
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
+    default:
+      break;
+    }
+  }
+
   const ArgDescriptor *Reg = nullptr;
   const TargetRegisterClass *RC;
   LLT Ty;
@@ -2581,16 +2633,19 @@ SDValue SITargetLowering::getPreloadedValue(
   if (Subtarget->hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (PVID) {
+    case AMDGPUFunctionArgInfo::CLUSTER_ID_X:
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Reg = &WorkGroupIDX;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
+    case AMDGPUFunctionArgInfo::CLUSTER_ID_Y:
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
       Reg = &WorkGroupIDY;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
+    case AMDGPUFunctionArgInfo::CLUSTER_ID_Z:
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
       Reg = &WorkGroupIDZ;
       RC = &AMDGPU::SReg_32RegClass;
@@ -3268,12 +3323,13 @@ SDValue SITargetLowering::LowerFormalArguments(
   const Function &Fn = MF.getFunction();
   FunctionType *FType = MF.getFunction().getFunctionType();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  bool IsError = false;
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isGraphics(CallConv)) {
     DiagnosticInfoUnsupported NoGraphicsHSA(
         Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
     DAG.getContext()->diagnose(NoGraphicsHSA);
-    return DAG.getEntryNode();
+    IsError = true;
   }
 
   SmallVector<ISD::InputArg, 16> Splits;
@@ -3382,7 +3438,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   for (unsigned i = 0, e = Ins.size(), ArgIdx = 0; i != e; ++i) {
     const ISD::InputArg &Arg = Ins[i];
-    if (Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) {
+    if ((Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) || IsError) {
       InVals.push_back(DAG.getUNDEF(Arg.VT));
       continue;
     }
@@ -8276,11 +8332,8 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   // global <-> flat are no-ops and never emitted.
 
-  const MachineFunction &MF = DAG.getMachineFunction();
-  DiagnosticInfoUnsupported InvalidAddrSpaceCast(
-      MF.getFunction(), "invalid addrspacecast", SL.getDebugLoc());
-  DAG.getContext()->diagnose(InvalidAddrSpaceCast);
-
+  // Invalid casts are poison.
+  // TODO: Should return poison
   return DAG.getUNDEF(Op->getValueType(0));
 }
 
@@ -9635,6 +9688,11 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   if (MaxID == 0)
     return DAG.getConstant(0, SL, MVT::i32);
 
+  // It's undefined behavior if a function marked with the amdgpu-no-*
+  // attributes uses the corresponding intrinsic.
+  if (!Arg)
+    return DAG.getUNDEF(Op->getValueType(0));
+
   // Wavegroup launch mode needs to compute workitem id
   if (AMDGPU::getWavegroupEnable(MF.getFunction())) {
     return buildWorkitemIdWavegroupModeISel(DAG, Op, Dim);
@@ -9855,6 +9913,21 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_workgroup_id_z:
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_cluster_id_x:
+    return Subtarget->hasGFX1250Insts()
+               ? getPreloadedValue(DAG, *MFI, VT,
+                                   AMDGPUFunctionArgInfo::CLUSTER_ID_X)
+               : DAG.getUNDEF(VT);
+  case Intrinsic::amdgcn_cluster_id_y:
+    return Subtarget->hasGFX1250Insts()
+               ? getPreloadedValue(DAG, *MFI, VT,
+                                   AMDGPUFunctionArgInfo::CLUSTER_ID_Y)
+               : DAG.getUNDEF(VT);
+  case Intrinsic::amdgcn_cluster_id_z:
+    return Subtarget->hasGFX1250Insts()
+               ? getPreloadedValue(DAG, *MFI, VT,
+                                   AMDGPUFunctionArgInfo::CLUSTER_ID_Z)
+               : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_id_x:
     return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(

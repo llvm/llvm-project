@@ -654,29 +654,29 @@ v_cvt_pk_f32_fp8_e32 v[2:3], 3
 v_cvt_pk_f32_fp8_e32 v[2:3], v3
 // GFX1250: v_cvt_pk_f32_fp8_e32 v[2:3], v3         ; encoding: [0x03,0xdd,0x04,0x7e]
 
-v_sat_pk_i4_i8 v1, v2
-// GFX1250: v_sat_pk_i4_i8_e32 v1, v2               ; encoding: [0x02,0xe7,0x02,0x7e]
+v_sat_pk4_i4_i8 v1, v2
+// GFX1250: v_sat_pk4_i4_i8_e32 v1, v2               ; encoding: [0x02,0xe7,0x02,0x7e]
 
-v_sat_pk_i4_i8 v1, s2
-// GFX1250: v_sat_pk_i4_i8_e32 v1, s2               ; encoding: [0x02,0xe6,0x02,0x7e]
+v_sat_pk4_i4_i8 v1, s2
+// GFX1250: v_sat_pk4_i4_i8_e32 v1, s2               ; encoding: [0x02,0xe6,0x02,0x7e]
 
-v_sat_pk_i4_i8 v1, 2
-// GFX1250: v_sat_pk_i4_i8_e32 v1, 2                ; encoding: [0x82,0xe6,0x02,0x7e]
+v_sat_pk4_i4_i8 v1, 2
+// GFX1250: v_sat_pk4_i4_i8_e32 v1, 2                ; encoding: [0x82,0xe6,0x02,0x7e]
 
-v_sat_pk_i4_i8 v1, 0x1234
-// GFX1250: v_sat_pk_i4_i8_e32 v1, 0x1234           ; encoding: [0xff,0xe6,0x02,0x7e,0x34,0x12,0x00,0x00]
+v_sat_pk4_i4_i8 v1, 0x1234
+// GFX1250: v_sat_pk4_i4_i8_e32 v1, 0x1234           ; encoding: [0xff,0xe6,0x02,0x7e,0x34,0x12,0x00,0x00]
 
-v_sat_pk_u4_u8 v1, v2
-// GFX1250: v_sat_pk_u4_u8_e32 v1, v2               ; encoding: [0x02,0xe9,0x02,0x7e]
+v_sat_pk4_u4_u8 v1, v2
+// GFX1250: v_sat_pk4_u4_u8_e32 v1, v2               ; encoding: [0x02,0xe9,0x02,0x7e]
 
-v_sat_pk_u4_u8 v1, s2
-// GFX1250: v_sat_pk_u4_u8_e32 v1, s2               ; encoding: [0x02,0xe8,0x02,0x7e]
+v_sat_pk4_u4_u8 v1, s2
+// GFX1250: v_sat_pk4_u4_u8_e32 v1, s2               ; encoding: [0x02,0xe8,0x02,0x7e]
 
-v_sat_pk_u4_u8 v1, 2
-// GFX1250: v_sat_pk_u4_u8_e32 v1, 2                ; encoding: [0x82,0xe8,0x02,0x7e]
+v_sat_pk4_u4_u8 v1, 2
+// GFX1250: v_sat_pk4_u4_u8_e32 v1, 2                ; encoding: [0x82,0xe8,0x02,0x7e]
 
-v_sat_pk_u4_u8 v1, 0x1234
-// GFX1250: v_sat_pk_u4_u8_e32 v1, 0x1234           ; encoding: [0xff,0xe8,0x02,0x7e,0x34,0x12,0x00,0x00]
+v_sat_pk4_u4_u8 v1, 0x1234
+// GFX1250: v_sat_pk4_u4_u8_e32 v1, 0x1234           ; encoding: [0xff,0xe8,0x02,0x7e,0x34,0x12,0x00,0x00]
 
 v_permlane16_swap_b32 v1, v2
 // GFX1250: v_permlane16_swap_b32_e32 v1, v2        ; encoding: [0x02,0x93,0x02,0x7e]

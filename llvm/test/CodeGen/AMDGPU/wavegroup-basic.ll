@@ -17,21 +17,28 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wave
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; CHECK-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
-; CHECK-NEXT:    s_lshl_b32 s4, ttmp9, 8
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    s_and_b32 s6, ttmp6, 15
+; CHECK-NEXT:    s_getreg_b32 s5, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_bfe_u32 s4, ttmp8, 0x20019
 ; CHECK-NEXT:    v_lshl_or_b32 v1, s0, 5, v0
+; CHECK-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    s_add_co_i32 s7, s0, 1
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
-; CHECK-NEXT:    s_bfe_u32 s2, ttmp8, 0x20019
-; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_lshl_b32 s2, s2, 6
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, v1
-; CHECK-NEXT:    s_or_b32 s2, s4, s2
-; CHECK-NEXT:    s_lshl_b32 s3, s3, 5
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    s_or_b32 s2, s2, s3
+; CHECK-NEXT:    s_mul_i32 s2, ttmp9, s7
+; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_IB_STS2, 6, 4)
+; CHECK-NEXT:    s_add_co_i32 s6, s6, s2
+; CHECK-NEXT:    s_cmp_eq_u32 s3, 0
 ; CHECK-NEXT:    v_mul_f32_e32 v3, 0x3d042108, v2
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    s_cselect_b32 s2, ttmp9, s6
+; CHECK-NEXT:    s_lshl_b32 s3, s4, 6
+; CHECK-NEXT:    s_lshl_b32 s2, s2, 8
+; CHECK-NEXT:    s_lshl_b32 s4, s5, 5
 ; CHECK-NEXT:    v_trunc_f32_e32 v3, v3
+; CHECK-NEXT:    s_or_b32 s2, s2, s3
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    s_or_b32 s2, s2, s4
 ; CHECK-NEXT:    v_fmamk_f32 v2, v3, 0xc1f80000, v2
 ; CHECK-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -39,12 +46,13 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wave
 ; CHECK-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, 0, v3, vcc_lo
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_mul_lo_u32 v2, v2, 31
-; CHECK-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_sub_nc_u32 v1, v1, v2
+; CHECK-NEXT:    v_sub_nc_u32_e32 v1, v1, v2
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_and_b32_e32 v1, 0x7ff, v1
 ; CHECK-NEXT:    v_or3_b32 v0, s2, v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
+; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; CHECK-NEXT:    s_endpgm
 entry:
   %wg_x = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -98,6 +106,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; KERNEL-NEXT:         .amdhsa_workgroup_processor_mode 1
 ; KERNEL-NEXT:         .amdhsa_memory_ordered 1
 ; KERNEL-NEXT:         .amdhsa_forward_progress 0
+; KERNEL-NEXT:         .amdhsa_inst_pref_size 0
 ; KERNEL-NEXT:         .amdhsa_round_robin_scheduling 0
 
 ; KERNEL:      {{^}}amdhsa.kernels:

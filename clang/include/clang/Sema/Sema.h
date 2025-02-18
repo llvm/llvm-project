@@ -232,8 +232,7 @@ void threadSafetyCleanup(BeforeSet *Cache);
 
 // FIXME: No way to easily map from TemplateTypeParmTypes to
 // TemplateTypeParmDecls, so we have this horrible PointerUnion.
-typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *,
-                                     ResolvedUnexpandedPackExpr *>,
+typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *>,
                   SourceLocation>
     UnexpandedParameterPack;
 
@@ -3669,6 +3668,7 @@ public:
   /// cause problems if the variable is mutable, its initialization is
   /// effectful, or its address is taken.
   bool GloballyUniqueObjectMightBeAccidentallyDuplicated(const VarDecl *Dcl);
+  void DiagnoseUniqueObjectDuplication(const VarDecl *Dcl);
 
   /// AddInitializerToDecl - Adds the initializer Init to the
   /// declaration dcl. If DirectInit is true, this is C++ direct

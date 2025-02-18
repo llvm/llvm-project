@@ -6,7 +6,7 @@ define amdgpu_cs void @test_swc_reorder(i64 %arg){
 ; GFX13-LABEL: test_swc_reorder:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    swc_reorder v0, v[0:1]
-; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_wait_swccnt 0x0
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.swc.reorder(i64 %arg)
@@ -29,7 +29,7 @@ define amdgpu_cs void @test_swc_reorder_swap(i64 %arg){
 ; GFX13-LABEL: test_swc_reorder_swap:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    swc_reorder_swap v0, v[0:1]
-; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_wait_swccnt 0x0
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.swc.reorder.swap(i64 %arg)
@@ -41,7 +41,7 @@ define amdgpu_cs void @test_swc_reorder_swap_resume(){
 ; GFX13-LABEL: test_swc_reorder_swap_resume:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    swc_reorder_swap_resume v0
-; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_wait_swccnt 0x0
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.swc.reorder.swap.resume()
@@ -53,7 +53,7 @@ define amdgpu_cs void @test_swc_get_exchange_state(){
 ; GFX13-LABEL: test_swc_get_exchange_state:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    swc_get_exchange_state v0
-; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_wait_swccnt 0x0
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.swc.get.exchange.state()

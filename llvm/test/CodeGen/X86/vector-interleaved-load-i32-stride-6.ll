@@ -201,8 +201,8 @@ define void @load_i32_stride6_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-FCP-NEXT:    vmovdqa (%rdi), %xmm4
 ; AVX512-FCP-NEXT:    vmovdqa 32(%rdi), %xmm5
 ; AVX512-FCP-NEXT:    vpermi2d %xmm5, %xmm4, %xmm3
-; AVX512-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm6 = [3,5,0,0]
-; AVX512-FCP-NEXT:    vpermi2d %xmm5, %xmm4, %xmm6
+; AVX512-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm6 = [7,1,0,0]
+; AVX512-FCP-NEXT:    vpermi2d %xmm4, %xmm5, %xmm6
 ; AVX512-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [4,2,0,0]
 ; AVX512-FCP-NEXT:    vblendps {{.*#+}} ymm1 = mem[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512-FCP-NEXT:    vpermps %ymm1, %ymm4, %ymm4
@@ -260,8 +260,8 @@ define void @load_i32_stride6_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rdi), %xmm4
 ; AVX512DQ-FCP-NEXT:    vmovdqa 32(%rdi), %xmm5
 ; AVX512DQ-FCP-NEXT:    vpermi2d %xmm5, %xmm4, %xmm3
-; AVX512DQ-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm6 = [3,5,0,0]
-; AVX512DQ-FCP-NEXT:    vpermi2d %xmm5, %xmm4, %xmm6
+; AVX512DQ-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm6 = [7,1,0,0]
+; AVX512DQ-FCP-NEXT:    vpermi2d %xmm4, %xmm5, %xmm6
 ; AVX512DQ-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [4,2,0,0]
 ; AVX512DQ-FCP-NEXT:    vblendps {{.*#+}} ymm1 = mem[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512DQ-FCP-NEXT:    vpermps %ymm1, %ymm4, %ymm4
@@ -319,8 +319,8 @@ define void @load_i32_stride6_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-FCP-NEXT:    vmovdqa (%rdi), %xmm4
 ; AVX512BW-FCP-NEXT:    vmovdqa 32(%rdi), %xmm5
 ; AVX512BW-FCP-NEXT:    vpermi2d %xmm5, %xmm4, %xmm3
-; AVX512BW-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm6 = [3,5,0,0]
-; AVX512BW-FCP-NEXT:    vpermi2d %xmm5, %xmm4, %xmm6
+; AVX512BW-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm6 = [7,1,0,0]
+; AVX512BW-FCP-NEXT:    vpermi2d %xmm4, %xmm5, %xmm6
 ; AVX512BW-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [4,2,0,0]
 ; AVX512BW-FCP-NEXT:    vblendps {{.*#+}} ymm1 = mem[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512BW-FCP-NEXT:    vpermps %ymm1, %ymm4, %ymm4
@@ -378,8 +378,8 @@ define void @load_i32_stride6_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa (%rdi), %xmm4
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa 32(%rdi), %xmm5
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2d %xmm5, %xmm4, %xmm3
-; AVX512DQ-BW-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm6 = [3,5,0,0]
-; AVX512DQ-BW-FCP-NEXT:    vpermi2d %xmm5, %xmm4, %xmm6
+; AVX512DQ-BW-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm6 = [7,1,0,0]
+; AVX512DQ-BW-FCP-NEXT:    vpermi2d %xmm4, %xmm5, %xmm6
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [4,2,0,0]
 ; AVX512DQ-BW-FCP-NEXT:    vblendps {{.*#+}} ymm1 = mem[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512DQ-BW-FCP-NEXT:    vpermps %ymm1, %ymm4, %ymm4

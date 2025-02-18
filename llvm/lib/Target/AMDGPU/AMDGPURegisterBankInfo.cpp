@@ -4688,8 +4688,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_bf6_f16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_fp6_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_bf6_bf16:
-    case Intrinsic::amdgcn_cvt_sat_pk_i4_i8:
-    case Intrinsic::amdgcn_cvt_sat_pk_u4_u8:
+    case Intrinsic::amdgcn_sat_pk4_i4_i8:
+    case Intrinsic::amdgcn_sat_pk4_u4_u8:
     case Intrinsic::amdgcn_fmed3:
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_cubema:
@@ -4868,24 +4868,32 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_perm_pk16_b8_u4:
     case Intrinsic::amdgcn_convolve_bf16_bf16_1x1:
     case Intrinsic::amdgcn_convolve_bf16_bf16_3x3:
-    case Intrinsic::amdgcn_convolve_f16_bf8_1x1:
-    case Intrinsic::amdgcn_convolve_f16_bf8_3x3:
+    case Intrinsic::amdgcn_convolve_f16_bf8_fp8_1x1:
+    case Intrinsic::amdgcn_convolve_f16_bf8_bf8_1x1:
+    case Intrinsic::amdgcn_convolve_f16_bf8_fp8_3x3:
+    case Intrinsic::amdgcn_convolve_f16_bf8_bf8_3x3:
     case Intrinsic::amdgcn_convolve_f16_f16_1x1:
     case Intrinsic::amdgcn_convolve_f16_f16_3x3:
-    case Intrinsic::amdgcn_convolve_f16_fp8_1x1:
-    case Intrinsic::amdgcn_convolve_f16_fp8_3x3:
+    case Intrinsic::amdgcn_convolve_f16_fp8_fp8_1x1:
+    case Intrinsic::amdgcn_convolve_f16_fp8_bf8_1x1:
+    case Intrinsic::amdgcn_convolve_f16_fp8_fp8_3x3:
+    case Intrinsic::amdgcn_convolve_f16_fp8_bf8_3x3:
     case Intrinsic::amdgcn_convolve_f16_iu4_1x1:
     case Intrinsic::amdgcn_convolve_f16_iu4_3x3:
     case Intrinsic::amdgcn_convolve_f16_iu8_1x1:
     case Intrinsic::amdgcn_convolve_f16_iu8_3x3:
     case Intrinsic::amdgcn_convolve_f32_bf16_1x1:
     case Intrinsic::amdgcn_convolve_f32_bf16_3x3:
-    case Intrinsic::amdgcn_convolve_f32_bf8_1x1:
-    case Intrinsic::amdgcn_convolve_f32_bf8_3x3:
+    case Intrinsic::amdgcn_convolve_f32_bf8_fp8_1x1:
+    case Intrinsic::amdgcn_convolve_f32_bf8_bf8_1x1:
+    case Intrinsic::amdgcn_convolve_f32_bf8_fp8_3x3:
+    case Intrinsic::amdgcn_convolve_f32_bf8_bf8_3x3:
     case Intrinsic::amdgcn_convolve_f32_f16_1x1:
     case Intrinsic::amdgcn_convolve_f32_f16_3x3:
-    case Intrinsic::amdgcn_convolve_f32_fp8_1x1:
-    case Intrinsic::amdgcn_convolve_f32_fp8_3x3:
+    case Intrinsic::amdgcn_convolve_f32_fp8_fp8_1x1:
+    case Intrinsic::amdgcn_convolve_f32_fp8_bf8_1x1:
+    case Intrinsic::amdgcn_convolve_f32_fp8_fp8_3x3:
+    case Intrinsic::amdgcn_convolve_f32_fp8_bf8_3x3:
     case Intrinsic::amdgcn_convolve_f32_iu4_1x1:
     case Intrinsic::amdgcn_convolve_f32_iu4_3x3:
     case Intrinsic::amdgcn_convolve_f32_iu8_1x1:

@@ -92,14 +92,14 @@ public:
       VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
     }
 
-    const uint16_t Mods[2][3] = {
+    const AMDGPU::OpName Mods[2][3] = {
         {AMDGPU::OpName::src0X_modifiers, AMDGPU::OpName::vsrc1X_modifiers,
          AMDGPU::OpName::vsrc2X_modifiers},
         {AMDGPU::OpName::src0Y_modifiers, AMDGPU::OpName::vsrc1Y_modifiers,
          AMDGPU::OpName::vsrc2Y_modifiers}};
-    const uint16_t SrcMods[3] = {AMDGPU::OpName::src0_modifiers,
-                                 AMDGPU::OpName::src1_modifiers,
-                                 AMDGPU::OpName::src2_modifiers};
+    const AMDGPU::OpName SrcMods[3] = {AMDGPU::OpName::src0_modifiers,
+                                       AMDGPU::OpName::src1_modifiers,
+                                       AMDGPU::OpName::src2_modifiers};
     const unsigned VOPDOpc = VOPDInst->getOpcode();
 
     for (auto CompIdx : VOPD::COMPONENTS) {

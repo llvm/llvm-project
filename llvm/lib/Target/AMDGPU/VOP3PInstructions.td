@@ -195,51 +195,13 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
               DSTCLAMP.NONE)>;
 
   def : GCNPat <
-    (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
-                           (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
-                           (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))),
-    (mixlo_inst $src0_modifiers, $src0,
-                $src1_modifiers, $src1,
-                $src2_modifiers, $src2,
-                DSTCLAMP.NONE,
-                (i32 (IMPLICIT_DEF)))
-  >;
-
-  // FIXME: Special case handling for maxhi (especially for clamp)
-  // because dealing with the write to high half of the register is
-  // difficult.
-  def : GCNPat <
-    (build_vector VT:$elt0, (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
-                                                   (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
-                                                   (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers)))))),
-    (vecVT (mixhi_inst $src0_modifiers, $src0,
-                       $src1_modifiers, $src1,
-                       $src2_modifiers, $src2,
-                       DSTCLAMP.NONE,
-                       VGPR_32:$elt0))
-  >;
-
-  def : GCNPat <
-    (build_vector
-      VT:$elt0,
-      (AMDGPUclamp (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
-                                          (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
-                                          (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))))),
-    (vecVT (mixhi_inst $src0_modifiers, $src0,
-                       $src1_modifiers, $src1,
-                       $src2_modifiers, $src2,
-                       DSTCLAMP.ENABLE,
-                       VGPR_32:$elt0))
-  >;
-
-  def : GCNPat <
     (AMDGPUclamp (build_vector
       (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$lo_src0, i32:$lo_src0_modifiers)),
-                             (f32 (VOP3PMadMixModsPat VT:$lo_src1, i32:$lo_src1_modifiers)),
-                             (f32 (VOP3PMadMixModsPat VT:$lo_src2, i32:$lo_src2_modifiers))))),
+                        (f32 (VOP3PMadMixModsPat VT:$lo_src1, i32:$lo_src1_modifiers)),
+                        (f32 (VOP3PMadMixModsPat VT:$lo_src2, i32:$lo_src2_modifiers))))),
       (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$hi_src0, i32:$hi_src0_modifiers)),
-                             (f32 (VOP3PMadMixModsPat VT:$hi_src1, i32:$hi_src1_modifiers)),
-                             (f32 (VOP3PMadMixModsPat VT:$hi_src2, i32:$hi_src2_modifiers))))))),
+                        (f32 (VOP3PMadMixModsPat VT:$hi_src1, i32:$hi_src1_modifiers)),
+                        (f32 (VOP3PMadMixModsPat VT:$hi_src2, i32:$hi_src2_modifiers))))))),
     (vecVT (mixhi_inst $hi_src0_modifiers, $hi_src0,
                        $hi_src1_modifiers, $hi_src1,
                        $hi_src2_modifiers, $hi_src2,
@@ -263,13 +225,93 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
 
   def : GCNPat <
     (build_vector VT:$elt0, (VT (fpround (fmul (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
-                                         (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers)))))),
+                                          (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers)))))),
     (vecVT (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
                        (i32 0), (i32 0),
                        DSTCLAMP.NONE,
                        VGPR_32:$elt0))
   >;
+
+  def : GCNPat <
+    (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+                           (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
+                           (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))),
+    (mixlo_inst $src0_modifiers, $src0,
+                $src1_modifiers, $src1,
+                $src2_modifiers, $src2,
+                DSTCLAMP.NONE,
+                (i32 (IMPLICIT_DEF)))
+  >;
+
+  // FIXME: Special case handling for maxhi (especially for clamp)
+  // because dealing with the write to high half of the register is
+  // difficult.
+  foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+  let True16Predicate = p in {
+
+  def : GCNPat <
+    (build_vector VT:$elt0, (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+                                                   (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
+                                                   (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers)))))),
+    (vecVT (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       $src2_modifiers, $src2,
+                       DSTCLAMP.NONE,
+                       VGPR_32:$elt0))
+  >;
+
+  def : GCNPat <
+    (build_vector
+      VT:$elt0,
+      (AMDGPUclamp (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+                                     (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
+                                     (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))))),
+    (vecVT (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       $src2_modifiers, $src2,
+                       DSTCLAMP.ENABLE,
+                       VGPR_32:$elt0))
+  >;
+
+  } // end True16Predicate
+
+  let True16Predicate = UseRealTrue16Insts in {
+  def : GCNPat <
+    (build_vector (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+                           (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
+                           (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))), VT:$elt1),
+    (vecVT (mixlo_inst $src0_modifiers, $src0,
+                $src1_modifiers, $src1,
+                $src2_modifiers, $src2,
+                DSTCLAMP.NONE,
+                (REG_SEQUENCE VGPR_32, (VT (IMPLICIT_DEF)), lo16, $elt1, hi16)))
+  >;
+
+  def : GCNPat <
+    (build_vector VT:$elt0, (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+                                              (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
+                                              (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers)))))),
+    (vecVT (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       $src2_modifiers, $src2,
+                       DSTCLAMP.NONE,
+                       (REG_SEQUENCE VGPR_32, $elt0, lo16, (VT (IMPLICIT_DEF)), hi16)))
+  >;
+
+  def : GCNPat <
+    (build_vector
+      VT:$elt0,
+      (AMDGPUclamp (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+                                     (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
+                                     (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))))),
+    (vecVT (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       $src2_modifiers, $src2,
+                       DSTCLAMP.ENABLE,
+                       (REG_SEQUENCE VGPR_32, $elt0, lo16, (VT (IMPLICIT_DEF)), hi16)))
+  >;
+  } // end True16Predicate
 }
 
 class MinimumMaximumByMinimum3Maximum3VOP3P<SDPatternOperator node,
@@ -283,7 +325,8 @@ def : MinimumMaximumByMinimum3Maximum3VOP3P<fminimum, V_PK_MINIMUM3_F16>;
 def : MinimumMaximumByMinimum3Maximum3VOP3P<fmaximum, V_PK_MAXIMUM3_F16>;
 }
 
-let SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals] in {
+let SubtargetPredicate = HasMadMixInsts in {
+let OtherPredicates = [NoFP32Denormals] in {
 
 // These are VOP3a-like opcodes which accept no omod.
 // Size of src arguments (16/32) is controlled by op_sel.
@@ -303,7 +346,8 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 }
 
 defm : MadFmaMixPats<fmad, V_MAD_MIX_F32, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
-} // End SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals]
+} // OtherPredicates = [NoFP32Denormals]
+} // End SubtargetPredicate = HasMadMixInsts
 
 
 // Essentially the same as the mad_mix versions

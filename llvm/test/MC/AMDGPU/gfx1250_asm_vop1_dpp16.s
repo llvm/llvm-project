@@ -685,18 +685,18 @@ v_cvt_f16_fp8 v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf fi:1
 // GFX1250: v_cvt_f16_fp8_dpp v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf fi:1 ; encoding: [0xfa,0xee,0x02,0x7e,0x02,0x39,0x04,0xff]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_sat_pk_i4_i8 v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf
-// GFX1250: v_sat_pk_i4_i8_dpp v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xe6,0x02,0x7e,0x02,0x39,0x00,0xff]
+v_sat_pk4_i4_i8 v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf
+// GFX1250: v_sat_pk4_i4_i8_dpp v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xe6,0x02,0x7e,0x02,0x39,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_sat_pk_i4_i8 v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf fi:1
-// GFX1250: v_sat_pk_i4_i8_dpp v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf fi:1 ; encoding: [0xfa,0xe6,0x02,0x7e,0x02,0x39,0x04,0xff]
+v_sat_pk4_i4_i8 v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf fi:1
+// GFX1250: v_sat_pk4_i4_i8_dpp v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf fi:1 ; encoding: [0xfa,0xe6,0x02,0x7e,0x02,0x39,0x04,0xff]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_sat_pk_u4_u8 v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf
-// GFX1250: v_sat_pk_u4_u8_dpp v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xe8,0x02,0x7e,0x02,0x39,0x00,0xff]
+v_sat_pk4_u4_u8 v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf
+// GFX1250: v_sat_pk4_u4_u8_dpp v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xe8,0x02,0x7e,0x02,0x39,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_sat_pk_u4_u8 v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf fi:1
-// GFX1250: v_sat_pk_u4_u8_dpp v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf fi:1 ; encoding: [0xfa,0xe8,0x02,0x7e,0x02,0x39,0x04,0xff]
+v_sat_pk4_u4_u8 v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf fi:1
+// GFX1250: v_sat_pk4_u4_u8_dpp v1, v2 quad_perm:[1,2,3,0] row_mask:0xf bank_mask:0xf fi:1 ; encoding: [0xfa,0xe8,0x02,0x7e,0x02,0x39,0x04,0xff]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU

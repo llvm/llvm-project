@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
+#define GET_INSTRINFO_OPERAND_ENUM
 #include "R600GenInstrInfo.inc"
 
 namespace llvm {
@@ -287,21 +288,21 @@ public:
   /// Get the index of Op in the MachineInstr.
   ///
   /// \returns -1 if the Instruction does not contain the specified \p Op.
-  int getOperandIdx(const MachineInstr &MI, unsigned Op) const;
+  int getOperandIdx(const MachineInstr &MI, R600::OpName Op) const;
 
   /// Get the index of \p Op for the given Opcode.
   ///
   /// \returns -1 if the Instruction does not contain the specified \p Op.
-  int getOperandIdx(unsigned Opcode, unsigned Op) const;
+  int getOperandIdx(unsigned Opcode, R600::OpName Op) const;
 
   /// Helper function for setting instruction flag values.
-  void setImmOperand(MachineInstr &MI, unsigned Op, int64_t Imm) const;
+  void setImmOperand(MachineInstr &MI, R600::OpName Op, int64_t Imm) const;
 
-  ///Add one of the MO_FLAG* flags to the specified \p Operand.
-  void addFlag(MachineInstr &MI, unsigned Operand, unsigned Flag) const;
+  /// Add one of the MO_FLAG* flags to the operand at \p SrcIdx.
+  void addFlag(MachineInstr &MI, unsigned SrcIdx, unsigned Flag) const;
 
-  ///Determine if the specified \p Flag is set on this \p Operand.
-  bool isFlagSet(const MachineInstr &MI, unsigned Operand, unsigned Flag) const;
+  /// Determine if the specified \p Flag is set on operand at \p SrcIdx.
+  bool isFlagSet(const MachineInstr &MI, unsigned SrcIdx, unsigned Flag) const;
 
   /// \param SrcIdx The register source to set the flag on (e.g src0, src1, src2)
   /// \param Flag The flag being set.
@@ -311,7 +312,7 @@ public:
                             unsigned Flag = 0) const;
 
   /// Clear the specified flag on the instruction.
-  void clearFlag(MachineInstr &MI, unsigned Operand, unsigned Flag) const;
+  void clearFlag(MachineInstr &MI, unsigned SrcIdx, unsigned Flag) const;
 
   // Helper functions that check the opcode for status information
   bool isRegisterStore(const MachineInstr &MI) const {

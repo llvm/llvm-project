@@ -135,6 +135,11 @@ unsigned getXcntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
   return VersionMajor == 12 && VersionMinor == 1 ? 5 : 0;
 }
 
+/// \returns Swccnt bit width.
+unsigned getSwccntBitWidth(unsigned VersionMajor) {
+  return VersionMajor >= 13 ? 2 : 0;
+}
+
 /// \returns shift for Loadcnt/Storecnt in combined S_WAIT instructions.
 unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 8 : 0;
@@ -1709,6 +1714,10 @@ unsigned getKmcntBitMask(const IsaVersion &Version) {
 
 unsigned getXcntBitMask(const IsaVersion &Version) {
   return (1 << getXcntBitWidth(Version.Major, Version.Minor)) - 1;
+}
+
+unsigned getSwccntBitMask(const IsaVersion &Version) {
+  return (1 << getSwccntBitWidth(Version.Major)) - 1;
 }
 
 unsigned getStorecntBitMask(const IsaVersion &Version) {
@@ -3404,8 +3413,8 @@ const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
-#define GET_Gfx10BufferFormat_IMPL
-#define GET_Gfx11PlusBufferFormat_IMPL
+#define GET_Gfx10Gfx13PlusBufferFormat_IMPL
+#define GET_Gfx11Gfx12BufferFormat_IMPL
 
 #include "AMDGPUGenSearchableTables.inc"
 
@@ -3423,20 +3432,21 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
                                                   uint8_t NumFormat,
                                                   const MCSubtargetInfo &STI) {
-  return isGFX11Plus(STI)
-             ? getGfx11PlusBufferFormatInfo(BitsPerComp, NumComponents,
-                                            NumFormat)
-             : isGFX10(STI) ? getGfx10BufferFormatInfo(BitsPerComp,
-                                                       NumComponents, NumFormat)
-                            : getGfx9BufferFormatInfo(BitsPerComp,
-                                                      NumComponents, NumFormat);
+  return isGFX13Plus(STI) || isGFX10(STI)
+             ? getGfx10Gfx13PlusBufferFormatInfo(BitsPerComp, NumComponents,
+                                                 NumFormat)
+         : isGFX11Plus(STI)
+             ? getGfx11Gfx12BufferFormatInfo(BitsPerComp, NumComponents,
+                                             NumFormat)
+             : getGfx9BufferFormatInfo(BitsPerComp, NumComponents, NumFormat);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI) {
-  return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
-                          : isGFX10(STI) ? getGfx10BufferFormatInfo(Format)
-                                         : getGfx9BufferFormatInfo(Format);
+  return isGFX13Plus(STI) || isGFX10(STI)
+             ? getGfx10Gfx13PlusBufferFormatInfo(Format)
+         : isGFX11Plus(STI) ? getGfx11Gfx12BufferFormatInfo(Format)
+                            : getGfx9BufferFormatInfo(Format);
 }
 
 const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
@@ -3487,49 +3497,55 @@ MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
   return RC->getRegister(Idx | (MSBs << 8));
 }
 
-std::pair<const unsigned *, const unsigned *>
-getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
+std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
+getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 
 #define DEFAULT_VALUES_3                                                       \
-  AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::OPERAND_LAST,                  \
-      AMDGPU::OpName::OPERAND_LAST
-  static const unsigned VOPOps[7] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
-                                     AMDGPU::OpName::src2, AMDGPU::OpName::vdst,
-                                     DEFAULT_VALUES_3};
-  static const unsigned VDSOps[7] = {
+  AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::NUM_OPERAND_NAMES,        \
+      AMDGPU::OpName::NUM_OPERAND_NAMES
+  static const AMDGPU::OpName VOPOps[7] = {
+      AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2,
+      AMDGPU::OpName::vdst, DEFAULT_VALUES_3};
+  static const AMDGPU::OpName VDSOps[7] = {
       AMDGPU::OpName::addr, AMDGPU::OpName::data0, AMDGPU::OpName::data1,
       AMDGPU::OpName::vdst, DEFAULT_VALUES_3};
-  static const unsigned FLATOps[7] = {
+  static const AMDGPU::OpName FLATOps[7] = {
       AMDGPU::OpName::vaddr, AMDGPU::OpName::vdata,
-      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdst, DEFAULT_VALUES_3};
-  static const unsigned BUFOps[7] = {
-      AMDGPU::OpName::vaddr, AMDGPU::OpName::OPERAND_LAST,
-      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdata, DEFAULT_VALUES_3};
-  static const unsigned VIMGOps[7] = {
+      AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdst,
+      DEFAULT_VALUES_3};
+  static const AMDGPU::OpName BUFOps[7] = {
+      AMDGPU::OpName::vaddr, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdata,
+      DEFAULT_VALUES_3};
+  static const AMDGPU::OpName VIMGOps[7] = {
       AMDGPU::OpName::vaddr0, AMDGPU::OpName::vaddr1, AMDGPU::OpName::vaddr2,
       AMDGPU::OpName::vdata, DEFAULT_VALUES_3};
-  static const unsigned VEXPOps[7] = {
-      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::OPERAND_LAST,
-      AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::OPERAND_LAST,
+  static const AMDGPU::OpName VEXPOps[7] = {
+      AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::NUM_OPERAND_NAMES,
       DEFAULT_VALUES_3};
 
   // For VOPD instructions MSB of a corresponding Y component operand VGPR
   // address is supposed to match X operand, otherwise VOPD shall not be
   // combined.
-  static const unsigned VOPDOpsX[7] = {
+  static const AMDGPU::OpName VOPDOpsX[7] = {
       AMDGPU::OpName::src0X, AMDGPU::OpName::vsrc1X, AMDGPU::OpName::vsrc2X,
       AMDGPU::OpName::vdstX, DEFAULT_VALUES_3};
-  static const unsigned VOPDOpsY[7] = {
+  static const AMDGPU::OpName VOPDOpsY[7] = {
       AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vsrc2Y,
       AMDGPU::OpName::vdstY, DEFAULT_VALUES_3};
 
   // Most VOPM instructions use srcN, where N is integer, but WMMA use different
   // naming scheme.
-  static const unsigned VOPMWMMAOps[7] = {
-      AMDGPU::OpName::vdst, AMDGPU::OpName::srcC, AMDGPU::OpName::srcA,
-      AMDGPU::OpName::srcB, AMDGPU::OpName::src3, AMDGPU::OpName::src4,
-      AMDGPU::OpName::OPERAND_LAST};
-  static const unsigned VOPMOtherOps[7] = {
+  static const AMDGPU::OpName VOPMWMMAOps[7] = {
+      AMDGPU::OpName::vdst,
+      AMDGPU::OpName::srcC,
+      AMDGPU::OpName::srcA,
+      AMDGPU::OpName::srcB,
+      AMDGPU::OpName::src3,
+      AMDGPU::OpName::src4,
+      AMDGPU::OpName::NUM_OPERAND_NAMES};
+  static const AMDGPU::OpName VOPMOtherOps[7] = {
       AMDGPU::OpName::vdst, AMDGPU::OpName::src0, AMDGPU::OpName::src1,
       AMDGPU::OpName::src2, AMDGPU::OpName::src3, AMDGPU::OpName::src4,
       AMDGPU::OpName::src5};

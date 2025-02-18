@@ -223,8 +223,8 @@ private:
   /// takes second array \p Ops2 for VOPD. If provided and an operand from \p
   /// Ops is not a VGPR, then \p Ops2 is checked.
   void lowerInstrOrBundle(MachineInstr &MI, MachineInstr *CoreMI,
-                          const unsigned Ops[OpNum],
-                          const unsigned *Ops2 = nullptr);
+                          const AMDGPU::OpName Ops[OpNum],
+                          const AMDGPU::OpName *Ops2 = nullptr);
 
   /// Lower V_LOAD/STORE_IDX to one or several V_MOV_B32 instructions and update
   /// the mode. MII is updated to point to the last V_MOV inserted.
@@ -435,10 +435,9 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
   MI.eraseFromParent();
 }
 
-void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
-                                                 MachineInstr *CoreMI,
-                                                 const unsigned Ops[OpNum],
-                                                 const unsigned *Ops2) {
+void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
+    MachineInstr &MI, MachineInstr *CoreMI, const AMDGPU::OpName Ops[OpNum],
+    const AMDGPU::OpName *Ops2) {
   bool IsBundleWithGPRIndexing = CoreMI != nullptr;
   if (!CoreMI)
     CoreMI = &MI;

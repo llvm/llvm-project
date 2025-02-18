@@ -775,7 +775,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
           RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
                        OutContext, IsLocal)
               ->getVariableValue(),
-          getFunctionCodeSize(MF), MFI);
+          CurrentProgramInfo.getFunctionCodeSize(MF), MFI);
       return false;
     }
 
@@ -784,7 +784,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
         CurrentProgramInfo.NumArchVGPR,
         STM.hasMAIInsts() ? CurrentProgramInfo.NumAccVGPR : nullptr,
         CurrentProgramInfo.NumVGPR, CurrentProgramInfo.NumSGPR,
-        CurrentProgramInfo.ScratchSize, getFunctionCodeSize(MF), MFI);
+        CurrentProgramInfo.ScratchSize,
+        CurrentProgramInfo.getFunctionCodeSize(MF), MFI);
 
     OutStreamer->emitRawComment(
       " FloatMode: " + Twine(CurrentProgramInfo.FloatMode), false);
@@ -922,27 +923,6 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
       if (TSTargetID->getSramEccSetting() == IsaInfo::TargetIDSetting::Any)
         TSTargetID->setSramEccSetting(STMTargetID.getSramEccSetting());
   }
-}
-
-uint64_t AMDGPUAsmPrinter::getFunctionCodeSize(const MachineFunction &MF) const {
-  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
-  const SIInstrInfo *TII = STM.getInstrInfo();
-
-  uint64_t CodeSize = 0;
-
-  for (const MachineBasicBlock &MBB : MF) {
-    for (const MachineInstr &MI : MBB) {
-      // TODO: CodeSize should account for multiple functions.
-
-      // TODO: Should we count size of debug info?
-      if (MI.isDebugInstr())
-        continue;
-
-      CodeSize += TII->getInstSizeInBytes(MI);
-    }
-  }
-
-  return CodeSize;
 }
 
 // AccumOffset computed for the MCExpr equivalent of:

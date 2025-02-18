@@ -19,6 +19,10 @@
 #include <functional>
 #include <utility>
 
+// Pull in OpName enum definition and getNamedOperandIdx() declaration.
+#define GET_INSTRINFO_OPERAND_ENUM
+#include "AMDGPUGenInstrInfo.inc"
+
 struct amd_kernel_code_t;
 
 namespace llvm {
@@ -401,10 +405,7 @@ template <typename... Fields> struct EncodingFields {
 };
 
 LLVM_READONLY
-int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
-
-LLVM_READONLY
-inline bool hasNamedOperand(uint64_t Opcode, uint64_t NamedIdx) {
+inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
   return getNamedOperandIdx(Opcode, NamedIdx) != -1;
 }
 
@@ -1065,6 +1066,7 @@ struct Waitcnt {
   unsigned BvhCnt = ~0u;    // gfx12+ only.
   unsigned KmCnt = ~0u;     // gfx12+ only.
   unsigned XCnt = ~0u;      // gfx1250.
+  unsigned Swccnt = ~0u;    // gfx13+ only.
   unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
   unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
 
@@ -1076,17 +1078,17 @@ struct Waitcnt {
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
-          unsigned VaVdst, unsigned VmVsrc)
+          unsigned Swccnt, unsigned VaVdst, unsigned VmVsrc)
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
         SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt),
-        VaVdst(VaVdst), VmVsrc(VmVsrc) {}
+        Swccnt(Swccnt), VaVdst(VaVdst), VmVsrc(VmVsrc) {}
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {
     return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
            SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || VaVdst != ~0u ||
-           VmVsrc != ~0u || XCnt != ~0u;
+           VmVsrc != ~0u || XCnt != ~0u || Swccnt != ~0u;
   }
 
   bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
@@ -1101,7 +1103,8 @@ struct Waitcnt {
         std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
         std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
         std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt),
-        std::min(VaVdst, Other.VaVdst), std::min(VmVsrc, Other.VmVsrc));
+        std::min(Swccnt, Other.Swccnt), std::min(VaVdst, Other.VaVdst),
+        std::min(VmVsrc, Other.VmVsrc));
   }
 };
 
@@ -1216,6 +1219,10 @@ unsigned getXcntBitMask(const IsaVersion &Version);
 /// STOREcnt and VScnt are the same counter, the name used
 /// depends on the ISA version.
 unsigned getStorecntBitMask(const IsaVersion &Version);
+
+/// \returns SWCcnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support SWCcnt.
+unsigned getSwccntBitMask(const IsaVersion &Version);
 
 // The following are only meaningful on targets that support
 // S_WAIT_LOADCNT_DSCNT and S_WAIT_STORECNT_DSCNT.
@@ -1724,8 +1731,8 @@ MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
 // Returns a table for the opcode with a given \p Desc to map the VGPR MSB
 // set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2
 // maps, one for X and one for Y component.
-std::pair<const unsigned *, const unsigned *>
-getVGPRLoweringOperandTables(const MCInstrDesc& Desc);
+std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
+getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
 
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
