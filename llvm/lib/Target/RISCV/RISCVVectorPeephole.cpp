@@ -466,15 +466,20 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
       RISCVII::hasVecPolicyOp(MCID.TSFlags);
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
   const MCInstrDesc &MaskedMCID = TII->get(MI.getOpcode());
-  assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ==
-             RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
-         "Masked and unmasked pseudos are inconsistent");
+  assert((RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ||
+          !RISCVII::hasVecPolicyOp(MCID.TSFlags)) &&
+         "Unmasked pseudo has policy but masked pseudo doesn't?");
   assert(HasPolicyOp == HasPassthru && "Unexpected pseudo structure");
   assert(!(HasPassthru && !RISCVII::isFirstDefTiedToFirstUse(MaskedMCID)) &&
          "Unmasked with passthru but masked with no passthru?");
   (void)HasPolicyOp;
 
   MI.setDesc(MCID);
+
+  // Drop the policy operand if unmasked doesn't need it.
+  if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) &&
+      !RISCVII::hasVecPolicyOp(MCID.TSFlags))
+    MI.removeOperand(RISCVII::getVecPolicyOpNum(MaskedMCID));
 
   // TODO: Increment all MaskOpIdxs in tablegen by num of explicit defs?
   unsigned MaskOpIdx = I->MaskOpIdx + MI.getNumExplicitDefs();
