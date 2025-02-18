@@ -12521,11 +12521,11 @@ def err_builtin_is_within_lifetime_invalid_arg : Error<
 
 def err_builtin_invalid_arg_type: Error<
   "%ordinal0 argument must be a"
-  "%select{| scalar| vector| vector,| vector of| scalar or vector of}1"
+  "%select{| scalar| vector| matrix| vector,| vector of| scalar or vector of}1"
   "%select{| integer| signed integer| unsigned integer| 'int'|"
-  " matrix| pointer to a valid matrix element}2"
+  " pointer to a valid matrix element}2"
   "%plural{0:|:%plural{0:|: or}2}3"
-  "%select{| floating-point}3 %plural{[0,3]:type|:types}1 (was %4)">;
+  "%select{| floating-point}3 %plural{[0,4]:type|:types}1 (was %4)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
