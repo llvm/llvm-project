@@ -1284,6 +1284,36 @@ llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
   return id;
 }
 
+#define TCGEN05_COMMIT_IMPL(cg, is_shared, mc)                                 \
+  is_shared ? llvm::Intrinsic::nvvm_tcgen05_commit##mc##_shared##_##cg         \
+            : llvm::Intrinsic::nvvm_tcgen05_commit##mc##_##cg
+
+#define GET_TCGEN05_COMMIT_ID(cta_group, is_shared, has_mc)                    \
+  has_mc ? TCGEN05_COMMIT_IMPL(cta_group, is_shared, _mc)                      \
+         : TCGEN05_COMMIT_IMPL(cta_group, is_shared, )
+
+llvm::Intrinsic::ID
+Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
+                                       LLVM::ModuleTranslation &mt,
+                                       llvm::SmallVector<llvm::Value *> &args) {
+  auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
+  unsigned AS = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
+                    .getAddressSpace();
+  bool isShared = AS == NVVMMemorySpace::kSharedMemorySpace;
+  bool hasMulticast = curOp.getMulticastMask() ? true : false;
+  bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+
+  auto id = is2CTAMode ? GET_TCGEN05_COMMIT_ID(cg2, isShared, hasMulticast)
+                       : GET_TCGEN05_COMMIT_ID(cg1, isShared, hasMulticast);
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(curOp.getAddr()));
+  if (hasMulticast)
+    args.push_back(mt.lookupValue(curOp.getMulticastMask()));
+
+  return id;
+}
+
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
 /// have ConstantRangeAttr.
 static void nvvmInferResultRanges(Operation *op, Value result,

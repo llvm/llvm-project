@@ -150,15 +150,6 @@ def Tosa_TransConvOpQuantInfoBuilder : OpBuilder<
                                   outputShape, acc_type);
   }]>;
 
-// The tosa.fully_connected op has its own builder as it does not have
-// strides/dilation/padding.
-def Tosa_FCOpQuantInfoBuilder : OpBuilder<
-  (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias),
-  [{
-    buildFCOpWithQuantInfo($_builder, $_state, outputType,
-                           input, weight, bias);
-  }]>;
-
 // The tosa.matmul op is also intended to be generated where a fully_connected
 // op must be constructed where the weight is not a constant. In this case,
 // the fully_connected op must be expressed using matmul.

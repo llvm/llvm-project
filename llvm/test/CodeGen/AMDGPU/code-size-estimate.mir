@@ -18,3 +18,16 @@ body:             |
   $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   V_MOV_B32_indirect_write undef $vgpr0, undef $vgpr3, implicit $exec, implicit $m0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3(tied-def 4)
 ...
+
+# CHECK: meta:                                   ; @meta
+# CHECK: ; wave barrier
+# CHECK: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
+# CHECK: ; codeLenInByte = 4
+---
+name:            meta
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+  WAVE_BARRIER
+...

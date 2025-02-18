@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*darwin.*}}
+
 // RUN: %clang --target=x86_64-unknown-linux-gnu -x cuda %s -Xarch_nvptx64 -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
 // RUN: %clang -x cuda %s -Xarch_device -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
 // RUN: %clang -x hip %s -Xarch_amdgcn -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s

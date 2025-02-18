@@ -977,6 +977,24 @@ define i32 @range_15_31_top27(i32 %x) {
   ret i32 %res
 }
 
+define i1 @not_cond_use(i8 %x) {
+; CHECK-LABEL: @not_cond_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    tail call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[RVAL]]
+;
+  %cmp = icmp eq i8 %x, 0
+  tail call void @use(i1 %cmp)
+  %not = xor i1 %cmp, true
+  tail call void @llvm.assume(i1 %not)
+  %rval = icmp eq i8 %x, 0
+  ret i1 %rval
+}
+
+declare void @use(i1)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

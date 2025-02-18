@@ -1224,6 +1224,9 @@ def : ProcessorAlias<"apple-s5", "apple-a12">;
 
 def : ProcessorModel<"apple-a13", CycloneModel, ProcessorFeatures.AppleA13,
                      [TuneAppleA13]>;
+def : ProcessorAlias<"apple-s6", "apple-a13">;
+def : ProcessorAlias<"apple-s7", "apple-a13">;
+def : ProcessorAlias<"apple-s8", "apple-a13">;
 
 def : ProcessorModel<"apple-a14", CycloneModel, ProcessorFeatures.AppleA14,
                      [TuneAppleA14]>;
@@ -1236,12 +1239,15 @@ def : ProcessorAlias<"apple-m2", "apple-a15">;
 def : ProcessorModel<"apple-a16", CycloneModel, ProcessorFeatures.AppleA16,
                      [TuneAppleA16]>;
 def : ProcessorAlias<"apple-m3", "apple-a16">;
+def : ProcessorAlias<"apple-s9", "apple-a16">;
+def : ProcessorAlias<"apple-s10", "apple-a16">;
 
 def : ProcessorModel<"apple-a17", CycloneModel, ProcessorFeatures.AppleA17,
                      [TuneAppleA17]>;
 
 def : ProcessorModel<"apple-m4", CycloneModel, ProcessorFeatures.AppleM4,
                      [TuneAppleM4]>;
+def : ProcessorAlias<"apple-a18", "apple-m4">;
 
 // Alias for the latest Apple processor model supported by LLVM.
 def : ProcessorAlias<"apple-latest", "apple-m4">;

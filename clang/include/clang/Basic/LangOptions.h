@@ -648,9 +648,12 @@ public:
 
   // Define accessors/mutators for language options of enumeration type.
 #define LANGOPT(Name, Bits, Default, Description)
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-  Type get##Name() const { return static_cast<Type>(Name); } \
-  void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)                   \
+  Type get##Name() const { return static_cast<Type>(Name); }                   \
+  void set##Name(Type Value) {                                                 \
+    assert(static_cast<unsigned>(Value) < (1u << Bits));                       \
+    Name = static_cast<unsigned>(Value);                                       \
+  }
 #include "clang/Basic/LangOptions.def"
 
   /// Are we compiling a module?
@@ -959,11 +962,14 @@ public:
   void applyChanges(FPOptionsOverride FPO);
 
   // We can define most of the accessors automatically:
+  // TODO: consider enforcing the assertion that value fits within bits
+  // statically.
 #define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
   TYPE get##NAME() const {                                                     \
     return static_cast<TYPE>((Value & NAME##Mask) >> NAME##Shift);             \
   }                                                                            \
   void set##NAME(TYPE value) {                                                 \
+    assert(storage_type(value) < (1u << WIDTH));                               \
     Value = (Value & ~NAME##Mask) | (storage_type(value) << NAME##Shift);      \
   }
 #include "clang/Basic/FPOptions.def"

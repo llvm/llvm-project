@@ -372,6 +372,53 @@ define i32 @test15e(i32 %X) {
   ret i32 %t3
 }
 
+;; (a & 128) ? 256 : 0
+define i32 @test15e_extra_use(i32 %X) {
+; CHECK-LABEL: @test15e_extra_use(
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 128
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[T1]], 1
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t1 = and i32 %X, 128
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i32 256, i32 0
+  call void @use1(i1 %t2)
+  ret i32 %t3
+}
+
+;; (a & 128) ? 256 : 0
+define i32 @test15e_zext(i8 %X) {
+; CHECK-LABEL: @test15e_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[TMP2]], 1
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t1 = and i8 %X, 128
+  %t2 = icmp ne i8 %t1, 0
+  %t3 = select i1 %t2, i32 256, i32 0
+  ret i32 %t3
+}
+
+;; (a & 128) ? 256 : 0
+define i32 @test15e_zext_extra_use(i8 %X) {
+; CHECK-LABEL: @test15e_zext_extra_use(
+; CHECK-NEXT:    [[T2:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[TMP2]], 1
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t1 = and i8 %X, 128
+  %t2 = icmp ne i8 %t1, 0
+  %t3 = select i1 %t2, i32 256, i32 0
+  call void @use1(i1 %t2)
+  ret i32 %t3
+}
+
 ;; (a & 128) ? 0 : 256
 define i32 @test15f(i32 %X) {
 ; CHECK-LABEL: @test15f(
@@ -384,6 +431,38 @@ define i32 @test15f(i32 %X) {
   %t2 = icmp ne i32 %t1, 0
   %t3 = select i1 %t2, i32 0, i32 256
   ret i32 %t3
+}
+
+;; (a & 128) ? 0 : 256
+define i32 @test15f_extra_use(i32 %X) {
+; CHECK-LABEL: @test15f_extra_use(
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 128
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[T1]], 1
+; CHECK-NEXT:    [[T3:%.*]] = xor i32 [[TMP1]], 256
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t1 = and i32 %X, 128
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i32 0, i32 256
+  call void @use1(i1 %t2)
+  ret i32 %t3
+}
+
+;; (a & 128) ? 0 : 256
+define i16 @test15f_trunc(i32 %X) {
+; CHECK-LABEL: @test15f_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i16 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP2]], 256
+; CHECK-NEXT:    [[T3:%.*]] = xor i16 [[TMP3]], 256
+; CHECK-NEXT:    ret i16 [[T3]]
+;
+  %t1 = and i32 %X, 128
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i16 0, i16 256
+  ret i16 %t3
 }
 
 ;; (a & 8) ? -1 : -9

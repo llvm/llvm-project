@@ -52,8 +52,7 @@ def main():
     )
     args = parser.parse_args()
 
-    [yaml_file] = args.yaml_file
-    files_read = {yaml_file}
+    files_read = set()
 
     def write_depfile():
         if not args.depfile:
@@ -63,18 +62,39 @@ def main():
         with open(args.depfile, "w") as depfile:
             depfile.write(f"{args.output}: {deps}\n")
 
-    header = load_yaml_file(yaml_file, HeaderFile, args.entry_point)
+    def load_yaml(path):
+        files_read.add(path)
+        return load_yaml_file(path, HeaderFile, args.entry_point)
 
-    if not header.template_file:
-        print(f"{yaml_file}: Missing header_template", sys.stderr)
-        return 2
+    merge_from_files = dict()
+
+    def merge_from(paths):
+        for path in paths:
+            # Load each file exactly once, in case of redundant merges.
+            if path in merge_from_files:
+                continue
+            header = load_yaml(path)
+            merge_from_files[path] = header
+            merge_from(path.parent / f for f in header.merge_yaml_files)
+
+    # Load the main file first.
+    [yaml_file] = args.yaml_file
+    header = load_yaml(yaml_file)
+
+    # Now load all the merge_yaml_files, and any transitive merge_yaml_files.
+    merge_from(yaml_file.parent / f for f in header.merge_yaml_files)
+
+    # Merge in all those files' contents.
+    for merge_from_path, merge_from_header in merge_from_files.items():
+        if merge_from_header.name is not None:
+            print(f"{merge_from_path!s}: Merge file cannot have header field", stderr)
+            return 2
+        header.merge(merge_from_header)
 
     # The header_template path is relative to the containing YAML file.
-    template_path = yaml_file.parent / header.template_file
+    template = header.template(yaml_file.parent, files_read)
 
-    files_read.add(template_path)
-    with open(template_path) as template:
-        contents = fill_public_api(header.public_api(), template.read())
+    contents = fill_public_api(header.public_api(), template)
 
     write_depfile()
 

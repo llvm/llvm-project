@@ -1337,6 +1337,10 @@ const EnumEntry<unsigned> ElfXCoreSectionFlags[] = {
   ENUM_ENT(XCORE_SHF_DP_SECTION, "")
 };
 
+const EnumEntry<unsigned> ElfAArch64SectionFlags[] = {
+  ENUM_ENT(SHF_AARCH64_PURECODE, "y")
+};
+
 const EnumEntry<unsigned> ElfARMSectionFlags[] = {
   ENUM_ENT(SHF_ARM_PURECODE, "y")
 };
@@ -1375,6 +1379,10 @@ getSectionFlagsForTarget(unsigned EOSAbi, unsigned EMachine) {
     break;
   }
   switch (EMachine) {
+  case EM_AARCH64:
+    Ret.insert(Ret.end(), std::begin(ElfAArch64SectionFlags),
+               std::end(ElfAArch64SectionFlags));
+    break;
   case EM_ARM:
     Ret.insert(Ret.end(), std::begin(ElfARMSectionFlags),
                std::end(ElfARMSectionFlags));
@@ -4104,7 +4112,7 @@ static void printSectionDescription(formatted_raw_ostream &OS,
 
   if (EMachine == EM_X86_64)
     OS << ", l (large)";
-  else if (EMachine == EM_ARM)
+  else if (EMachine == EM_ARM || EMachine == EM_AARCH64)
     OS << ", y (purecode)";
 
   OS << ", p (processor specific)\n";
@@ -6829,6 +6837,16 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
       reportWarning(createError(".stack_sizes (" + describe(*StackSizesELFSec) +
                                 ") does not have a corresponding "
                                 "relocation section"),
+                    FileName);
+      continue;
+    }
+
+    // We might end up with relocations in CREL here. If we do, report a
+    // warning since we do not currently support them.
+    if (RelocSec->sh_type == ELF::SHT_CREL) {
+      reportWarning(createError(".stack_sizes (" + describe(*StackSizesELFSec) +
+                                ") has a corresponding CREL relocation "
+                                "section, which is not currently supported"),
                     FileName);
       continue;
     }
