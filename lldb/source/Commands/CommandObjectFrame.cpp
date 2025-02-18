@@ -152,6 +152,7 @@ protected:
       return;
     }
 
+    result.SetValueObjectSP(valobj_sp);
     DumpValueObjectOptions::DeclPrintingHelper helper =
         [&valobj_sp](ConstString type, ConstString var,
                      const DumpValueObjectOptions &opts,

@@ -165,6 +165,12 @@ public:
     return m_diagnostic_indent;
   }
 
+  lldb::ValueObjectSP GetValueObjectSP() const { return m_value_object_sp; }
+
+  void SetValueObjectSP(lldb::ValueObjectSP value_object_sp) {
+    m_value_object_sp = value_object_sp;
+  }
+
   lldb::ReturnStatus GetStatus() const;
 
   void SetStatus(lldb::ReturnStatus status);
@@ -196,6 +202,9 @@ private:
   std::optional<uint16_t> m_diagnostic_indent;
 
   lldb::ReturnStatus m_status = lldb::eReturnStatusStarted;
+
+  /// An optional return ValueObjectSP.
+  lldb::ValueObjectSP m_value_object_sp;
 
   bool m_did_change_process_state = false;
   bool m_suppress_immediate_output = false;
