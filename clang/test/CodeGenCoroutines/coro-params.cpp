@@ -61,7 +61,7 @@ struct MoveAndCopy {
 
 struct [[clang::trivial_abi]] TrivialABI {
   int val;
-  TrivialABI(MoveAndCopy&&) noexcept;
+  TrivialABI(TrivialABI&&) noexcept;
   ~TrivialABI();
 };
 
@@ -82,9 +82,7 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam, TrivialABI trivialParam) 
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(ptr {{[^,]*}} %[[McCopy]], ptr noundef nonnull align 4 dereferenceable(4) %[[McParam]]) #
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(
-  // CHECK-NEXT: call void @llvm.memcpy
-  // CHECK-SAME: %[[TrivialCopy]]
-  // CHECK-SAME: %[[TrivialAlloca]]
+  // CHECK-NEXT: call void @_ZN10TrivialABIC1EOS_(ptr {{[^,]*}} %[[TrivialCopy]], ptr {{[^,]*}} %[[TrivialAlloca]])
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: invoke void @_ZNSt16coroutine_traitsIJvi8MoveOnly11MoveAndCopy10TrivialABIEE12promise_typeC1Ev(
 
