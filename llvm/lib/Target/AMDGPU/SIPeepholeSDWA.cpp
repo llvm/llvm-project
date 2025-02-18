@@ -88,38 +88,6 @@ public:
 
 using namespace AMDGPU::SDWA;
 
-/// Combine an SDWA instruction's existing SDWA selection \p Sel with
-/// the SDWA selection \p OperandSel of its operand. If the selections
-/// are compatible, return the combined selection, otherwise return a
-/// nullopt.
-/// For example, if we have Sel = BYTE_0 Sel and OperandSel = WORD_1:
-///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
-std::optional<SdwaSel> combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
-  if (Sel == SdwaSel::DWORD)
-    return OperandSel;
-
-  if (Sel == OperandSel || OperandSel == SdwaSel::DWORD)
-    return Sel;
-
-  if (Sel == SdwaSel::WORD_1 || Sel == SdwaSel::BYTE_2 ||
-      Sel == SdwaSel::BYTE_3)
-    return {};
-
-  if (OperandSel == SdwaSel::WORD_0)
-    return Sel;
-
-  if (OperandSel == SdwaSel::WORD_1) {
-    if (Sel == SdwaSel::BYTE_0)
-      return SdwaSel::BYTE_2;
-    if (Sel == SdwaSel::BYTE_1)
-      return SdwaSel::BYTE_3;
-    if (Sel == SdwaSel::WORD_0)
-      return SdwaSel::WORD_1;
-  }
-
-  return {};
-}
-
 class SDWAOperand {
 private:
   MachineOperand *Target; // Operand that would be used in converted instruction
@@ -355,6 +323,38 @@ static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
 
   // Ignore implicit defs.
   return nullptr;
+}
+
+/// Combine an SDWA instruction's existing SDWA selection \p Sel with
+/// the SDWA selection \p OperandSel of its operand. If the selections
+/// are compatible, return the combined selection, otherwise return a
+/// nullopt.
+/// For example, if we have Sel = BYTE_0 Sel and OperandSel = WORD_1:
+///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
+static std::optional<SdwaSel> combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
+  if (Sel == SdwaSel::DWORD)
+    return OperandSel;
+
+  if (Sel == OperandSel || OperandSel == SdwaSel::DWORD)
+    return Sel;
+
+  if (Sel == SdwaSel::WORD_1 || Sel == SdwaSel::BYTE_2 ||
+      Sel == SdwaSel::BYTE_3)
+    return {};
+
+  if (OperandSel == SdwaSel::WORD_0)
+    return Sel;
+
+  if (OperandSel == SdwaSel::WORD_1) {
+    if (Sel == SdwaSel::BYTE_0)
+      return SdwaSel::BYTE_2;
+    if (Sel == SdwaSel::BYTE_1)
+      return SdwaSel::BYTE_3;
+    if (Sel == SdwaSel::WORD_0)
+      return SdwaSel::WORD_1;
+  }
+
+  return {};
 }
 
 uint64_t SDWASrcOperand::getSrcMods(const SIInstrInfo *TII,
