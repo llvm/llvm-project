@@ -314,6 +314,7 @@ void MacOSKeychainAPIChecker::checkPreStmt(const CallExpr *CE,
     RegionArgIsBad = true;
   }
 
+  assert(ArgSM);
   // Is the argument to the call being tracked?
   const AllocationState *AS = State->get<AllocatedData>(ArgSM);
   if (!AS)

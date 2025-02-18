@@ -128,13 +128,18 @@ static std::optional<unsigned> findOneNVVMAnnotation(const GlobalValue *gv,
   auto &AC = getAnnotationCache();
   std::lock_guard<sys::Mutex> Guard(AC.Lock);
   const Module *m = gv->getParent();
-  if (AC.Cache.find(m) == AC.Cache.end())
+  auto ACIt = AC.Cache.find(m);
+  if (ACIt == AC.Cache.end())
     cacheAnnotationFromMD(m, gv);
-  else if (AC.Cache[m].find(gv) == AC.Cache[m].end())
+  else if (ACIt->second.find(gv) == ACIt->second.end())
     cacheAnnotationFromMD(m, gv);
-  if (AC.Cache[m][gv].find(prop) == AC.Cache[m][gv].end())
+  // Look up AC.Cache[m][gv] again because cacheAnnotationFromMD may have
+  // inserted the entry.
+  auto &KVP = AC.Cache[m][gv];
+  auto It = KVP.find(prop);
+  if (It == KVP.end())
     return std::nullopt;
-  return AC.Cache[m][gv][prop][0];
+  return It->second[0];
 }
 
 static bool findAllNVVMAnnotation(const GlobalValue *gv,
@@ -143,13 +148,18 @@ static bool findAllNVVMAnnotation(const GlobalValue *gv,
   auto &AC = getAnnotationCache();
   std::lock_guard<sys::Mutex> Guard(AC.Lock);
   const Module *m = gv->getParent();
-  if (AC.Cache.find(m) == AC.Cache.end())
+  auto ACIt = AC.Cache.find(m);
+  if (ACIt == AC.Cache.end())
     cacheAnnotationFromMD(m, gv);
-  else if (AC.Cache[m].find(gv) == AC.Cache[m].end())
+  else if (ACIt->second.find(gv) == ACIt->second.end())
     cacheAnnotationFromMD(m, gv);
-  if (AC.Cache[m][gv].find(prop) == AC.Cache[m][gv].end())
+  // Look up AC.Cache[m][gv] again because cacheAnnotationFromMD may have
+  // inserted the entry.
+  auto &KVP = AC.Cache[m][gv];
+  auto It = KVP.find(prop);
+  if (It == KVP.end())
     return false;
-  retval = AC.Cache[m][gv][prop];
+  retval = It->second;
   return true;
 }
 
@@ -177,6 +187,13 @@ static bool argHasNVVMAnnotation(const Value &Val,
     }
   }
   return false;
+}
+
+static std::optional<unsigned> getFnAttrParsedInt(const Function &F,
+                                                  StringRef Attr) {
+  return F.hasFnAttribute(Attr)
+             ? std::optional(F.getFnAttributeAsParsedInteger(Attr))
+             : std::nullopt;
 }
 
 bool isParamGridConstant(const Value &V) {
@@ -277,7 +294,7 @@ std::optional<unsigned> getClusterDimz(const Function &F) {
 }
 
 std::optional<unsigned> getMaxClusterRank(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxclusterrank");
+  return getFnAttrParsedInt(F, "nvvm.maxclusterrank");
 }
 
 std::optional<unsigned> getReqNTIDx(const Function &F) {
@@ -303,11 +320,11 @@ std::optional<unsigned> getReqNTID(const Function &F) {
 }
 
 std::optional<unsigned> getMinCTASm(const Function &F) {
-  return findOneNVVMAnnotation(&F, "minctasm");
+  return getFnAttrParsedInt(F, "nvvm.minctasm");
 }
 
 std::optional<unsigned> getMaxNReg(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxnreg");
+  return getFnAttrParsedInt(F, "nvvm.maxnreg");
 }
 
 MaybeAlign getAlign(const Function &F, unsigned Index) {

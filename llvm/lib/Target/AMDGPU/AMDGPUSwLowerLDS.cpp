@@ -948,12 +948,13 @@ Constant *AMDGPUSwLowerLDS::getAddressesOfVariablesInKernel(
 
   SmallVector<Constant *> Elements;
   for (auto *GV : Variables) {
-    if (!LDSParams.LDSToReplacementIndicesMap.contains(GV)) {
+    auto It = LDSParams.LDSToReplacementIndicesMap.find(GV);
+    if (It == LDSParams.LDSToReplacementIndicesMap.end()) {
       Elements.push_back(
           PoisonValue::get(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS)));
       continue;
     }
-    auto &Indices = LDSParams.LDSToReplacementIndicesMap[GV];
+    auto &Indices = It->second;
     Constant *GEPIdx[] = {ConstantInt::get(Int32Ty, Indices[0]),
                           ConstantInt::get(Int32Ty, Indices[1]),
                           ConstantInt::get(Int32Ty, Indices[2])};

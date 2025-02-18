@@ -446,6 +446,7 @@ protected:
   friend class SBModule;
   friend class SBTarget;
   friend class SBThread;
+  friend class SBType;
   friend class SBTypeStaticField;
   friend class SBTypeSummary;
   friend class SBValueList;

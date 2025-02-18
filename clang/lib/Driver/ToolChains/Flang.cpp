@@ -261,11 +261,18 @@ void Flang::AddPPCTargetArgs(const ArgList &Args,
 
 void Flang::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
   const llvm::Triple &Triple = getToolChain().getTriple();
+
+  StringRef ABIName = riscv::getRISCVABI(Args, Triple);
+  if (ABIName == "lp64" || ABIName == "lp64f" || ABIName == "lp64d")
+    CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
+  else
+    D.Diag(diag::err_drv_unsupported_option_argument) << "-mabi=" << ABIName;
+
   // Handle -mrvv-vector-bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_mrvv_vector_bits_EQ)) {
     StringRef Val = A->getValue();
-    const Driver &D = getToolChain().getDriver();
 
     // Get minimum VLen from march.
     unsigned MinVLen = 0;
@@ -557,7 +564,8 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
       CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
-    if (Args.hasArg(options::OPT_nogpulib))
+    if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                      true))
       CmdArgs.push_back("-nogpulib");
   }
 

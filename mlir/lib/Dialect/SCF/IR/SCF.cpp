@@ -15,7 +15,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -395,40 +394,6 @@ std::optional<SmallVector<OpFoldResult>> ForOp::getLoopUpperBounds() {
 }
 
 std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }
-
-/// Moves the op out of the loop with a guard that checks if the loop has at
-/// least one iteration.
-void ForOp::moveOutOfLoopWithGuard(Operation *op) {
-  IRRewriter rewriter(this->getContext());
-  OpBuilder::InsertionGuard insertGuard(rewriter);
-  rewriter.setInsertionPoint(this->getOperation());
-  Location loc = this->getLoc();
-  arith::CmpIOp cmpIOp = rewriter.create<arith::CmpIOp>(
-      loc, arith::CmpIPredicate::ult, this->getLowerBound(),
-      this->getUpperBound());
-  // Create the trip-count check.
-  scf::YieldOp thenYield;
-  scf::IfOp ifOp = rewriter.create<scf::IfOp>(
-      loc, cmpIOp,
-      [&](OpBuilder &builder, Location loc) {
-        thenYield = builder.create<scf::YieldOp>(loc, op->getResults());
-      },
-      [&](OpBuilder &builder, Location loc) {
-        SmallVector<Value> poisonResults;
-        poisonResults.reserve(op->getResults().size());
-        for (Type type : op->getResults().getTypes()) {
-          ub::PoisonOp poisonOp =
-              rewriter.create<ub::PoisonOp>(loc, type, nullptr);
-          poisonResults.push_back(poisonOp);
-        }
-        builder.create<scf::YieldOp>(loc, poisonResults);
-      });
-  for (auto [opResult, ifOpResult] :
-       llvm::zip_equal(op->getResults(), ifOp->getResults()))
-    rewriter.replaceAllUsesExcept(opResult, ifOpResult, thenYield);
-  // Move the op into the then block.
-  rewriter.moveOpBefore(op, thenYield);
-}
 
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// it can be determined that the loop has a single iteration.
@@ -878,9 +843,8 @@ namespace {
 // 3) The iter arguments have no use and the corresponding (operation) results
 // have no use.
 //
-// These arguments must be defined outside of
-// the ForOp region and can just be forwarded after simplifying the op inits,
-// yields and returns.
+// These arguments must be defined outside of the ForOp region and can just be
+// forwarded after simplifying the op inits, yields and returns.
 //
 // The implementation uses `inlineBlockBefore` to steal the content of the
 // original ForOp and avoid cloning.
@@ -906,6 +870,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     newIterArgs.reserve(forOp.getInitArgs().size());
     newYieldValues.reserve(numResults);
     newResultValues.reserve(numResults);
+    DenseMap<std::pair<Value, Value>, std::pair<Value, Value>> initYieldToArg;
     for (auto [init, arg, result, yielded] :
          llvm::zip(forOp.getInitArgs(),       // iter from outside
                    forOp.getRegionIterArgs(), // iter inside region
@@ -919,13 +884,32 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
       // result has no use.
       bool forwarded = (arg == yielded) || (init == yielded) ||
                        (arg.use_empty() && result.use_empty());
-      keepMask.push_back(!forwarded);
-      canonicalize |= forwarded;
       if (forwarded) {
+        canonicalize = true;
+        keepMask.push_back(false);
         newBlockTransferArgs.push_back(init);
         newResultValues.push_back(init);
         continue;
       }
+
+      // Check if a previous kept argument always has the same values for init
+      // and yielded values.
+      if (auto it = initYieldToArg.find({init, yielded});
+          it != initYieldToArg.end()) {
+        canonicalize = true;
+        keepMask.push_back(false);
+        auto [sameArg, sameResult] = it->second;
+        rewriter.replaceAllUsesWith(arg, sameArg);
+        rewriter.replaceAllUsesWith(result, sameResult);
+        // The replacement value doesn't matter because there are no uses.
+        newBlockTransferArgs.push_back(init);
+        newResultValues.push_back(init);
+        continue;
+      }
+
+      // This value is kept.
+      initYieldToArg.insert({{init, yielded}, {arg, result}});
+      keepMask.push_back(true);
       newIterArgs.push_back(init);
       newYieldValues.push_back(yielded);
       newBlockTransferArgs.push_back(Value()); // placeholder with null value
@@ -3429,8 +3413,9 @@ ParseResult scf::WhileOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (functionType.getNumInputs() != operands.size()) {
     return parser.emitError(typeLoc)
-           << "expected as many input types as operands " << "(expected "
-           << operands.size() << " got " << functionType.getNumInputs() << ")";
+           << "expected as many input types as operands "
+           << "(expected " << operands.size() << " got "
+           << functionType.getNumInputs() << ")";
   }
 
   // Resolve input operands.
