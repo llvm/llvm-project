@@ -384,7 +384,7 @@ public:
       }
     }
 
-    auto &BS = BlockState[&MBB];
+    BlockHazardState &BS = BlockState[&MBB];
     bool Changed = State != BS.Out;
     if (Emit) {
       assert(!Changed && "Hazard state should not change on emit pass");
