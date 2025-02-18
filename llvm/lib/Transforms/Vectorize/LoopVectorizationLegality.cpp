@@ -1072,9 +1072,9 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
 /// Find histogram operations that match high-level code in loops:
 /// \code
-/// buckets[indices[i]] = UpdateOpeartor(buckets[indices[i]], Val);
+/// buckets[indices[i]] = UpdateOperator(buckets[indices[i]], Val);
 /// \endcode
-/// When updateOperator can be add, sub, add.sat, umin, umax, sub.
+/// When updateOperator can be add, sub, add.sat, umin, umax.
 ///
 /// It matches a pattern starting from \p HSt, which Stores to the 'buckets'
 /// array the computed histogram. It uses a update instruction to update all
@@ -1090,8 +1090,8 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
                           SmallVectorImpl<HistogramInfo> &Histograms) {
 
   Instruction *HPtrInstr = nullptr;
-  Instruction *HInstr = nullptr;
-  if (!match(HSt, m_Store(m_Instruction(HInstr), m_Instruction(HPtrInstr))))
+  Instruction *HUpdateOp = nullptr;
+  if (!match(HSt, m_Store(m_Instruction(HUpdateOp), m_Instruction(HPtrInstr))))
     return false;
 
   // BinOp must be an Add or a Sub modifying the bucket value by a
@@ -1099,13 +1099,13 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
   // FIXME: We assume the loop invariant term is on the RHS.
   //        Fine for an immediate/constant, but maybe not a generic value?
   Value *HIncVal = nullptr;
-  if (!match(HInstr, m_Add(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
-      !match(HInstr, m_Sub(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
-      !match(HInstr, m_Intrinsic<Intrinsic::uadd_sat>(
+  if (!match(HUpdateOp, m_Add(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
+      !match(HUpdateOp, m_Sub(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
+      !match(HUpdateOp, m_Intrinsic<Intrinsic::uadd_sat>(
                          m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
-      !match(HInstr, m_Intrinsic<Intrinsic::umax>(m_Load(m_Specific(HPtrInstr)),
+      !match(HUpdateOp, m_Intrinsic<Intrinsic::umax>(m_Load(m_Specific(HPtrInstr)),
                                                   m_Value(HIncVal))) &&
-      !match(HInstr, m_Intrinsic<Intrinsic::umin>(m_Load(m_Specific(HPtrInstr)),
+      !match(HUpdateOp, m_Intrinsic<Intrinsic::umin>(m_Load(m_Specific(HPtrInstr)),
                                                   m_Value(HIncVal))))
     return false;
 
@@ -1148,15 +1148,15 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
 
   // Ensure we'll have the same mask by checking that all parts of the histogram
   // (gather load, update, scatter store) are in the same block.
-  LoadInst *IndexedLoad = cast<LoadInst>(HInstr->getOperand(0));
+  LoadInst *IndexedLoad = cast<LoadInst>(HUpdateOp->getOperand(0));
   BasicBlock *LdBB = IndexedLoad->getParent();
-  if (LdBB != HInstr->getParent() || LdBB != HSt->getParent())
+  if (LdBB != HUpdateOp->getParent() || LdBB != HSt->getParent())
     return false;
 
   LLVM_DEBUG(dbgs() << "LV: Found histogram for: " << *HSt << "\n");
 
   // Store the operations that make up the histogram.
-  Histograms.emplace_back(IndexedLoad, HInstr, HSt);
+  Histograms.emplace_back(IndexedLoad, HUpdateOp, HSt);
   return true;
 }
 

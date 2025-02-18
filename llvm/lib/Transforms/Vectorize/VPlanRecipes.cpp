@@ -1297,29 +1297,27 @@ void VPHistogramRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN-HISTOGRAM buckets: ";
   getOperand(0)->printAsOperand(O, SlotTracker);
 
-  std::string UpdateMsg;
   if (isa<BinaryOperator>(UpdateInst)) {
     if (Opcode == Instruction::Sub)
-      UpdateMsg = ", dec: ";
+      O << ", dec: ";
     else {
-      UpdateMsg = ", inc: ";
+      O << ", inc: ";
     }
   } else {
     switch (cast<IntrinsicInst>(UpdateInst)->getIntrinsicID()) {
     case Intrinsic::uadd_sat:
-      UpdateMsg = ", saturated inc: ";
+      O << ", saturated inc: ";
       break;
     case Intrinsic::umax:
-      UpdateMsg = ", max: ";
+      O << ", max: ";
       break;
     case Intrinsic::umin:
-      UpdateMsg = ", min: ";
+      O << ", min: ";
       break;
     default:
       llvm_unreachable("Found Ilegal update instruction for histogram");
     }
   }
-  O << UpdateMsg;
   getOperand(1)->printAsOperand(O, SlotTracker);
 
   if (VPValue *Mask = getMask()) {
