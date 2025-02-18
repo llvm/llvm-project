@@ -1779,6 +1779,7 @@ static bool generateGetQueryInst(const SPIRV::IncomingCall *Call,
   SPIRV::BuiltIn::BuiltIn Value =
       SPIRV::lookupGetBuiltin(Call->Builtin->Name, Call->Builtin->Set)->Value;
   uint64_t IsDefault = (Value == SPIRV::BuiltIn::GlobalSize ||
+                        Value == SPIRV::BuiltIn::NumWorkgroups ||
                         Value == SPIRV::BuiltIn::WorkgroupSize ||
                         Value == SPIRV::BuiltIn::EnqueuedWorkgroupSize);
   return genWorkgroupQuery(Call, MIRBuilder, GR, Value, IsDefault ? 1 : 0);
