@@ -108,6 +108,10 @@ public:
   /// Returns the default compilation target: `CompilationTarget::Fatbin`.
   static CompilationTarget getDefaultCompilationTarget();
 
+  /// Returns a tokenization of the command line options.
+  static std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+  tokenizeCmdOptions(const std::string &cmdOptions);
+
 protected:
   /// Derived classes must use this constructor to initialize `typeID` to the
   /// appropiate value: ie. `TargetOptions(TypeID::get<DerivedClass>())`.
