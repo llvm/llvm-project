@@ -790,7 +790,7 @@ DXILBindingMap::findCreationInfo(const Value *Key) const {
     const auto *It = find(CI);
     assert(It != Infos.end() && "HandleFromBinding must be in resource map");
     return {*It};
-    }
+  }
   default:
     break;
   }

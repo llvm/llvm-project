@@ -451,7 +451,8 @@ public:
   /// ambiguous so mulitple creation instructions may be returned. The resulting
   /// ResourceBindingInfo can be used to depuplicate unique handles that
   /// reference the same resource
-  SmallVector<dxil::ResourceBindingInfo> findCreationInfo(const Value *Key) const;
+  SmallVector<dxil::ResourceBindingInfo>
+  findCreationInfo(const Value *Key) const;
 
   const_iterator find(const CallInst *Key) const {
     auto Pos = CallMap.find(Key);
