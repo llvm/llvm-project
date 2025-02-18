@@ -772,8 +772,7 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
 
 SmallVector<dxil::ResourceBindingInfo>
 DXILBindingMap::findByUse(const Value *Key) const {
-  const PHINode *Phi = dyn_cast<PHINode>(Key);
-  if (Phi) {
+  if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
     SmallVector<dxil::ResourceBindingInfo> Children;
     for (const Value *V : Phi->operands()) {
       Children.append(findByUse(V));
@@ -782,9 +781,8 @@ DXILBindingMap::findByUse(const Value *Key) const {
   }
 
   const CallInst *CI = dyn_cast<CallInst>(Key);
-  if (!CI) {
+  if (!CI)
     return {};
-  }
 
   const Type *UseType = CI->getType();
 
@@ -794,9 +792,8 @@ DXILBindingMap::findByUse(const Value *Key) const {
   case Intrinsic::not_intrinsic: {
     SmallVector<dxil::ResourceBindingInfo> Children;
     for (const Value *V : CI->args()) {
-      if (V->getType() != UseType) {
+      if (V->getType() != UseType)
         continue;
-      }
 
       Children.append(findByUse(V));
     }
@@ -806,8 +803,7 @@ DXILBindingMap::findByUse(const Value *Key) const {
   // Found the create, return the binding
   case Intrinsic::dx_resource_handlefrombinding:
     const auto *It = find(CI);
-    if (It == Infos.end())
-      return {};
+    assert(It != Infos.end() && "HandleFromBinding must be in resource map");
     return {*It};
   }
 

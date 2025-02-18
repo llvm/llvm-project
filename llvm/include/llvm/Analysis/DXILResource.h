@@ -446,8 +446,11 @@ public:
     return Pos == CallMap.end() ? Infos.end() : (Infos.begin() + Pos->second);
   }
 
-  // Resoloves the use of a resource handle into the unique description of that
-  // resource by deduping calls to create.
+  /// Resolves a resource handle into a vector of ResourceBindingInfos that
+  /// represent the possible unique creations of the handle. Certain cases are
+  /// ambiguous so mulitple creation points may be returned. The resulting
+  /// ResourceBindingInfo can be used to depuplicate unique handles that
+  /// reference the same resource
   SmallVector<dxil::ResourceBindingInfo> findByUse(const Value *Key) const;
 
   const_iterator find(const CallInst *Key) const {

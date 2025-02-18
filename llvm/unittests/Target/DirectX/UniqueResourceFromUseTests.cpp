@@ -71,11 +71,8 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
     unsigned CalledResources = 0;
 
     for (const User *U : F.users()) {
-      const CallInst *CI = dyn_cast<CallInst>(U);
-      ASSERT_TRUE(CI) << "All users of @a.func must be CallInst";
-
+      const CallInst *CI = cast<CallInst>(U);
       const Value *Handle = CI->getArgOperand(0);
-
       const auto Bindings = DBM.findByUse(Handle);
       ASSERT_EQ(Bindings.size(), 1u)
           << "Handle should resolve into one resource";
@@ -124,11 +121,8 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
     unsigned CalledResources = 0;
 
     for (const User *U : F.users()) {
-      const CallInst *CI = dyn_cast<CallInst>(U);
-      ASSERT_TRUE(CI) << "All users of @a.func must be CallInst";
-
+      const CallInst *CI = cast<CallInst>(U);
       const Value *Handle = CI->getArgOperand(0);
-
       const auto Bindings = DBM.findByUse(Handle);
       ASSERT_EQ(Bindings.size(), 1u)
           << "Handle should resolve into one resource";
@@ -180,11 +174,8 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
     unsigned CalledResources = 0;
 
     for (const User *U : F.users()) {
-      const CallInst *CI = dyn_cast<CallInst>(U);
-      ASSERT_TRUE(CI) << "All users of @a.func must be CallInst";
-
+      const CallInst *CI = cast<CallInst>(U);
       const Value *Handle = CI->getArgOperand(0);
-
       const auto Bindings = DBM.findByUse(Handle);
       ASSERT_EQ(Bindings.size(), 4u)
           << "Handle should resolve into four resources";
@@ -263,11 +254,8 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
     unsigned CalledResources = 0;
 
     for (const User *U : F.users()) {
-      const CallInst *CI = dyn_cast<CallInst>(U);
-      ASSERT_TRUE(CI) << "All users of @a.func must be CallInst";
-
+      const CallInst *CI = cast<CallInst>(U);
       const Value *Handle = CI->getArgOperand(0);
-
       const auto Bindings = DBM.findByUse(Handle);
       ASSERT_EQ(Bindings.size(), 2u)
           << "Handle should resolve into four resources";
