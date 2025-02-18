@@ -65,13 +65,13 @@ private:
 /// Represents the EMUL and EEW of a MachineOperand.
 struct OperandInfo {
   // Represent as 1,2,4,8, ... and fractional indicator. This is because
-  // EMUL can take on values that don't map to RISCVII::VLMUL values exactly.
+  // EMUL can take on values that don't map to RISCVVType::VLMUL values exactly.
   // For example, a mask operand can have an EMUL less than MF8.
   std::optional<std::pair<unsigned, bool>> EMUL;
 
   unsigned Log2EEW;
 
-  OperandInfo(RISCVII::VLMUL EMUL, unsigned Log2EEW)
+  OperandInfo(RISCVVType::VLMUL EMUL, unsigned Log2EEW)
       : EMUL(RISCVVType::decodeVLMUL(EMUL)), Log2EEW(Log2EEW) {}
 
   OperandInfo(std::pair<unsigned, bool> EMUL, unsigned Log2EEW)
@@ -141,7 +141,7 @@ static raw_ostream &operator<<(raw_ostream &OS,
 /// SEW are from the TSFlags of MI.
 static std::pair<unsigned, bool>
 getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
-  RISCVII::VLMUL MIVLMUL = RISCVII::getLMul(MI.getDesc().TSFlags);
+  RISCVVType::VLMUL MIVLMUL = RISCVII::getLMul(MI.getDesc().TSFlags);
   auto [MILMUL, MILMULIsFractional] = RISCVVType::decodeVLMUL(MIVLMUL);
   unsigned MILog2SEW =
       MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
