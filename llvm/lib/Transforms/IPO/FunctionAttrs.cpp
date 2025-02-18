@@ -651,9 +651,9 @@ struct ArgumentUsesSummary {
   SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 16> UsesPerBlock;
 };
 
-ArgumentAccessInfo getArgmentAccessInfo(const Instruction *I,
-                                        const ArgumentUse &ArgUse,
-                                        const DataLayout &DL) {
+ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
+                                         const ArgumentUse &ArgUse,
+                                         const DataLayout &DL) {
   auto GetTypeAccessRange =
       [&DL](Type *Ty,
             std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
@@ -805,7 +805,7 @@ ArgumentUsesSummary collectArgumentUsesPerBlock(Argument &A, Function &F) {
     }
 
     auto *I = cast<Instruction>(U);
-    bool HasWrite = UpdateUseInfo(I, getArgmentAccessInfo(I, ArgUse, DL));
+    bool HasWrite = UpdateUseInfo(I, getArgumentAccessInfo(I, ArgUse, DL));
 
     Result.HasAnyWrite |= HasWrite;
 

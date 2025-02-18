@@ -7,6 +7,7 @@
 # ==-------------------------------------------------------------------------==#
 
 import re
+from functools import total_ordering
 from type import Type
 
 
@@ -36,6 +37,7 @@ KEYWORDS = [
 NONIDENTIFIER = re.compile("[^a-zA-Z0-9_]+")
 
 
+@total_ordering
 class Function:
     def __init__(
         self, return_type, name, arguments, standards, guard=None, attributes=[]
@@ -50,6 +52,15 @@ class Function:
         self.standards = standards
         self.guard = guard
         self.attributes = attributes or []
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def __hash__(self):
+        return self.name.__hash__()
 
     def signature_types(self):
         def collapse(type_string):
@@ -70,4 +81,12 @@ class Function:
     def __str__(self):
         attrs_str = "".join(f"{attr} " for attr in self.attributes)
         arguments_str = ", ".join(self.arguments) if self.arguments else "void"
-        return attrs_str + f"{self.return_type} {self.name}({arguments_str})"
+        # The rendering of the return type may look like `int` or it may look
+        # like `int *` (and other examples).  For `int`, a space is always
+        # needed to separate the tokens.  For `int *`, no whitespace matters to
+        # the syntax one way or the other, but an extra space between `*` and
+        # the function identifier is not the canonical style.
+        type_str = str(self.return_type)
+        if type_str[-1].isalnum() or type_str[-1] == "_":
+            type_str += " "
+        return attrs_str + type_str + self.name + "(" + arguments_str + ")"

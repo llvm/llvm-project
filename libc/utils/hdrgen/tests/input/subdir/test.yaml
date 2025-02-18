@@ -1,9 +1,17 @@
 header: subdir/test.h
-header_template: test.h.def
+standards:
+  - bsd
 functions:
   - name: func
     return_type: type_a
     arguments:
       - type: type_b
+  - name: gnufunc
+    return_type: void
+    arguments:
+      - type: type_a
     standards:
-      - stdc
+      - gnu
+  - name: ptrfunc
+    return_type: int *
+    arguments: []
