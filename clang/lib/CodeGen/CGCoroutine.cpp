@@ -855,6 +855,16 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // Create parameter copies. We do it before creating a promise, since an
     // evolution of coroutine TS may allow promise constructor to observe
     // parameter copies.
+    for (const ParmVarDecl *Parm : FnArgs) {
+      // If the original param is in an alloca, exclude it from the coroutine
+      // frame. The parameter copy will be part of the frame.
+      Address ParmAddr = GetAddrOfLocalVar(Parm);
+      if (auto *ParmAlloca =
+              dyn_cast<llvm::AllocaInst>(ParmAddr.getBasePointer())) {
+        ParmAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                                llvm::MDNode::get(CGM.getLLVMContext(), {}));
+      }
+    }
     for (auto *PM : S.getParamMoves()) {
       EmitStmt(PM);
       ParamReplacer.addCopy(cast<DeclStmt>(PM));
