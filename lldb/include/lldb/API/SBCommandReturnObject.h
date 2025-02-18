@@ -136,7 +136,7 @@ public:
 
   void SetError(const char *error_cstr);
 
-  lldb::SBValue GetReturnValue(lldb::DynamicValueType use_dynamic);
+  lldb::SBValueList GetValues(lldb::DynamicValueType use_dynamic);
 
 protected:
   friend class SBCommandInterpreter;

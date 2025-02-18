@@ -206,7 +206,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         expr, exe_scope, valobj_sp, eval_options, &fixed_expression);
 
     if (valobj_sp)
-      result.SetValueObjectSP(valobj_sp);
+      result.GetValueObjectList().Append(valobj_sp);
 
     // Record the position of the expression in the command.
     std::optional<uint16_t> indent;

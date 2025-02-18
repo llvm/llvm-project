@@ -34,8 +34,8 @@ class TestSBCommandReturnObject(TestBase):
         self.assertTrue(res.Succeeded())
         self.assertEqual(res.GetCommand(), "help help")
 
-        value = res.GetReturnValue(lldb.eNoDynamicValues)
-        self.assertFalse(value)
+        value_list = res.GetValues(lldb.eNoDynamicValues)
+        self.assertEqual(value_list.GetSize(), 0)
 
     def test_get_value(self):
         res = lldb.SBCommandReturnObject()
@@ -43,6 +43,6 @@ class TestSBCommandReturnObject(TestBase):
         ci.HandleCommand("p 1 + 1", res)
         self.assertTrue(res.Succeeded())
 
-        value = res.GetReturnValue(lldb.eNoDynamicValues)
-        self.assertTrue(value)
-        self.assertEqual(value.GetValue(), "2")
+        value_list = res.GetValues(lldb.eNoDynamicValues)
+        self.assertEqual(value_list.GetSize(), 1)
+        self.assertEqual(value_list.GetValueAtIndex(0).GetValue(), "2")

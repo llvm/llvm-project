@@ -13,11 +13,13 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBValue.h"
+#include "lldb/API/SBValueList.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/lldb-forward.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -358,11 +360,17 @@ void SBCommandReturnObject::SetError(const char *error_cstr) {
     ref().AppendError(error_cstr);
 }
 
-SBValue
-SBCommandReturnObject::GetReturnValue(lldb::DynamicValueType use_dynamic) {
+SBValueList
+SBCommandReturnObject::GetValues(lldb::DynamicValueType use_dynamic) {
   LLDB_INSTRUMENT_VA(this, use_dynamic);
 
-  SBValue sb_value;
-  sb_value.SetSP(ref().GetValueObjectSP(), use_dynamic);
-  return sb_value;
+  SBValueList value_list;
+  for (ValueObjectSP value_object_sp :
+       ref().GetValueObjectList().GetObjects()) {
+    SBValue value_sb;
+    value_sb.SetSP(value_object_sp, use_dynamic);
+    value_list.Append(value_sb);
+  }
+
+  return value_list;
 }
