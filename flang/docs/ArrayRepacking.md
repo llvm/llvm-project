@@ -398,6 +398,14 @@ Lowering of the new operations (after all the optimizations) might be done in a 
 
 [TBD] describe in more details optimization passes listed in [Overview](###overview). Define their place in the pipeline (e.g. with relation to FIR inlining).
 
+#### Loop versioning
+
+There is an existing optimization pass (controlled via `-f[no-]version-loops-for-stride`) that creates specialized versions of the loop nests which process assumed-shape dummy arrays. The pass adds a dynamic check for the array(s) contiguity (in the innermost dimension) and exposes the contiguity by rewriting the array(s) accesses via raw pointer references. This transformation may enable more unit-stride vectorization. The pass is beneficial only if the actual array argument is contiguous in the innermost dimension.
+
+The array repacking is targeting better data cache utilization, and is not intended to enable more unit-strided vectorization for the assumed-shape arrays. At the same time, combining array repacking with the loop versioning may provide better performance for programs where the actual array arguments are non-contiguous, but then their repacked copies can be accessed using unit strides.
+
+In cases where `fir.pack_array` is statically known to produce a copy that is contiguous in the innermost dimension, the loop versioning pass can skip the generation of the dynamic checks.
+
 ### Driver: user options
 
 The following user options are proposed:
