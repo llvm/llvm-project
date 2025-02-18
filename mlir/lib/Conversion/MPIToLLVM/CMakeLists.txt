@@ -22,7 +22,6 @@ add_mlir_conversion_library(MLIRMPIToLLVM
 )
 
 if(MPI_C_HEADER_DIR)
-  # cmake_path(REMOVE_FILENAME MPI_C_HEADER_DIR)
   message(STATUS "found MPI_C_HEADER_DIR: ${MPI_C_HEADER_DIR}")
   target_include_directories(obj.MLIRMPIToLLVM PRIVATE ${MPI_C_HEADER_DIR})
   target_compile_definitions(obj.MLIRMPIToLLVM PUBLIC FOUND_MPI_C_HEADER=1)
