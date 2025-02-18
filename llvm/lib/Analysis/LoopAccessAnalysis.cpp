@@ -1128,6 +1128,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
 
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> TranslatedPtrs =
       findForkedPointer(PSE, StridesMap, Ptr, TheLoop);
+  assert(!TranslatedPtrs.empty() && "must have some translated pointers");
 
   /// Check whether all pointers can participate in a runtime bounds check. They
   /// must either be invariant or AddRecs. If ShouldCheckWrap is true, they also
