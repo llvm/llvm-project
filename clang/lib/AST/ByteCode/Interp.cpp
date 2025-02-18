@@ -1063,7 +1063,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return false;
     }
 
-    if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
+    if (!Ptr.isRoot() || Ptr.isOnePastEnd() ||
+        (Ptr.isArrayElement() && Ptr.getIndex() != 0)) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
           << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
