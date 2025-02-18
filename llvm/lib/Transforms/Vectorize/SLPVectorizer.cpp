@@ -12130,6 +12130,30 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
       }))
     return true;
 
+  // Do not vectorize small tree of phis only, if all vector phis are also
+  // gathered.
+  if (!ForReduction && SLPCostThreshold.getNumOccurrences() &&
+      VectorizableTree.size() <= Limit &&
+      all_of(VectorizableTree,
+             [&](const std::unique_ptr<TreeEntry> &TE) {
+               return (TE->isGather() &&
+                       (!TE->hasState() ||
+                        TE->getOpcode() != Instruction::ExtractElement) &&
+                       count_if(TE->Scalars, IsaPred<ExtractElementInst>) <=
+                           Limit) ||
+                      (TE->hasState() &&
+                       (TE->getOpcode() == Instruction::InsertElement ||
+                        (TE->getOpcode() == Instruction::PHI &&
+                         all_of(TE->Scalars, [&](Value *V) {
+                           return isa<PoisonValue>(V) || MustGather.contains(V);
+                         }))));
+             }) &&
+      any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return TE->State == TreeEntry::Vectorize &&
+               TE->getOpcode() == Instruction::PHI;
+      }))
+    return true;
+
   // We can vectorize the tree if its size is greater than or equal to the
   // minimum size specified by the MinTreeSize command line option.
   if (VectorizableTree.size() >= MinTreeSize)
