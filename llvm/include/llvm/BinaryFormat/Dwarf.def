@@ -268,6 +268,7 @@ HANDLE_DW_TAG(0x5111, ALTIUM_rom, 0, ALTIUM, DW_KIND_NONE)
 
 // LLVM
 HANDLE_DW_TAG(0x6000, LLVM_annotation, 0, LLVM, DW_KIND_NONE)
+HANDLE_DW_TAG(0x6001, LLVM_func_args_changed, 0, LLVM, DW_KIND_NONE)
 
 // Green Hills.
 HANDLE_DW_TAG(0x8004, GHS_namespace, 0, GHS, DW_KIND_NONE)
@@ -624,6 +625,7 @@ HANDLE_DW_AT(0x3e09, LLVM_ptrauth_authenticates_null_values, 0, LLVM)
 HANDLE_DW_AT(0x3e0a, LLVM_ptrauth_authentication_mode, 0, LLVM)
 HANDLE_DW_AT(0x3e0b, LLVM_num_extra_inhabitants, 0, LLVM)
 HANDLE_DW_AT(0x3e0c, LLVM_stmt_sequence, 0, LLVM)
+HANDLE_DW_AT(0x3e0d, LLVM_func_retval_removed, 0, LLVM)
 
 // Apple extensions.
 

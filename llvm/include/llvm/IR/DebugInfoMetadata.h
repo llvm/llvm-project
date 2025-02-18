@@ -1907,6 +1907,11 @@ public:
 
   DIScope *getScope() const { return cast_or_null<DIScope>(getRawScope()); }
 
+  void setArgChanged() { SPFlags |= SPFlagArgChanged; }
+  bool getArgChanged() const { return SPFlags & SPFlagArgChanged; }
+  void setRetvalRemoved() { SPFlags |= SPFlagRetvalRemoved; }
+  bool getRetvalRemoved() const { return SPFlags & SPFlagRetvalRemoved; }
+
   StringRef getName() const { return getStringOperand(2); }
   StringRef getLinkageName() const { return getStringOperand(3); }
   /// Only used by clients of CloneFunction, and only right after the cloning.
