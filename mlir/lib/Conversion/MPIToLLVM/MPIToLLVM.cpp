@@ -6,36 +6,207 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define MPICH_SKIP_MPICXX 1
+#define OMPI_SKIP_MPICXX 1
+#ifdef FOUND_MPI_C_HEADER
 // This must go first (MPI gets confused otherwise)
-#include "MPIImplTraits.h"
+#include <mpi.h>
+#else // not FOUND_MPI_C_HEADER
+//
+// Copyright (C) by Argonne National Laboratory
+//    See COPYRIGHT in top-level directory
+//    of MPICH source repository.
+//
+typedef int MPI_Comm;
+#define MPI_COMM_WORLD ((MPI_Comm)0x44000000)
 
+typedef int MPI_Datatype;
+#define MPI_FLOAT ((MPI_Datatype)0x4c00040a)
+#define MPI_DOUBLE ((MPI_Datatype)0x4c00080b)
+#define MPI_INT8_T ((MPI_Datatype)0x4c000137)
+#define MPI_INT16_T ((MPI_Datatype)0x4c000238)
+#define MPI_INT32_T ((MPI_Datatype)0x4c000439)
+#define MPI_INT64_T ((MPI_Datatype)0x4c00083a)
+#define MPI_UINT8_T ((MPI_Datatype)0x4c00013b)
+#define MPI_UINT16_T ((MPI_Datatype)0x4c00023c)
+#define MPI_UINT32_T ((MPI_Datatype)0x4c00043d)
+#define MPI_UINT64_T ((MPI_Datatype)0x4c00083e)
+
+typedef struct MPI_Status;
+#define MPI_STATUS_IGNORE (MPI_Status *)1
+
+#define _MPI_FALLBACK_DEFS 1
+#endif // FOUND_MPI_C_HEADER
+
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/MPIToLLVM/MPIToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
-
-#include <mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h>
+#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 
-// TODO: this was copied from GPUOpsLowering.cpp:288
-// is this okay, or should this be moved to some common file?
+namespace {
+
+template <typename Op, typename... Args>
+static Op getOrDefineGlobal(mlir::ModuleOp &moduleOp, const Location loc,
+                            ConversionPatternRewriter &rewriter, StringRef name,
+                            Args &&...args) {
+  Op ret;
+  if (!(ret = moduleOp.lookupSymbol<Op>(name))) {
+    ConversionPatternRewriter::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(moduleOp.getBody());
+    ret = rewriter.template create<Op>(loc, std::forward<Args>(args)...);
+  }
+  return ret;
+}
+
 static LLVM::LLVMFuncOp getOrDefineFunction(ModuleOp &moduleOp,
                                             const Location loc,
                                             ConversionPatternRewriter &rewriter,
                                             StringRef name,
                                             LLVM::LLVMFunctionType type) {
-  LLVM::LLVMFuncOp ret;
-  if (!(ret = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(name))) {
-    ConversionPatternRewriter::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(moduleOp.getBody());
-    ret = rewriter.create<LLVM::LLVMFuncOp>(loc, name, type,
-                                            LLVM::Linkage::External);
-  }
-  return ret;
+  return getOrDefineGlobal<LLVM::LLVMFuncOp>(
+      moduleOp, loc, rewriter, name, name, type, LLVM::Linkage::External);
 }
 
-namespace {
+// ****************************************************************************
+// When lowering the mpi dialect to functions calls certain details
+// differ between various MPI implementations. This class will provide
+// these depending on the MPI implementation that got included.
+struct MPIImplTraits {
+  // get/create MPI_COMM_WORLD as a mlir::Value
+  static mlir::Value getCommWorld(mlir::ModuleOp &moduleOp,
+                                  const mlir::Location loc,
+                                  mlir::ConversionPatternRewriter &rewriter);
+  // get/create MPI datatype as a mlir::Value which corresponds to the given
+  // mlir::Type
+  static mlir::Value getDataType(mlir::ModuleOp &moduleOp,
+                                 const mlir::Location loc,
+                                 mlir::ConversionPatternRewriter &rewriter,
+                                 mlir::Type type);
+};
+
+// ****************************************************************************
+// Intel MPI/MPICH
+#if defined(IMPI_DEVICE_EXPORT) || defined(_MPI_FALLBACK_DEFS)
+
+mlir::Value
+MPIImplTraits::getCommWorld(mlir::ModuleOp &moduleOp, const mlir::Location loc,
+                            mlir::ConversionPatternRewriter &rewriter) {
+  return rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI32Type(),
+                                                 MPI_COMM_WORLD);
+}
+
+mlir::Value
+MPIImplTraits::getDataType(mlir::ModuleOp &moduleOp, const mlir::Location loc,
+                           mlir::ConversionPatternRewriter &rewriter,
+                           mlir::Type type) {
+  int32_t mtype = 0;
+  if (type.isF32())
+    mtype = MPI_FLOAT;
+  else if (type.isF64())
+    mtype = MPI_DOUBLE;
+  else if (type.isInteger(64) && !type.isUnsignedInteger())
+    mtype = MPI_INT64_T;
+  else if (type.isInteger(64))
+    mtype = MPI_UINT64_T;
+  else if (type.isInteger(32) && !type.isUnsignedInteger())
+    mtype = MPI_INT32_T;
+  else if (type.isInteger(32))
+    mtype = MPI_UINT32_T;
+  else if (type.isInteger(16) && !type.isUnsignedInteger())
+    mtype = MPI_INT16_T;
+  else if (type.isInteger(16))
+    mtype = MPI_UINT16_T;
+  else if (type.isInteger(8) && !type.isUnsignedInteger())
+    mtype = MPI_INT8_T;
+  else if (type.isInteger(8))
+    mtype = MPI_UINT8_T;
+  else
+    assert(false && "unsupported type");
+  return rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI32Type(),
+                                                 mtype);
+}
+
+// ****************************************************************************
+// OpenMPI
+#elif defined(OPEN_MPI) && OPEN_MPI == 1
+
+static mlir::LLVM::GlobalOp
+getOrDefineExternalStruct(mlir::ModuleOp &moduleOp, const mlir::Location loc,
+                          mlir::ConversionPatternRewriter &rewriter,
+                          mlir::StringRef name,
+                          mlir::LLVM::LLVMStructType type) {
+
+  return getOrDefineGlobal<mlir::LLVM::GlobalOp>(
+      moduleOp, loc, rewriter, name, type, /*isConstant=*/false,
+      mlir::LLVM::Linkage::External, name,
+      /*value=*/mlir::Attribute(), /*alignment=*/0, 0);
+}
+
+mlir::Value
+MPIImplTraits::getCommWorld(mlir::ModuleOp &moduleOp, const mlir::Location loc,
+                            mlir::ConversionPatternRewriter &rewriter) {
+  auto context = rewriter.getContext();
+  // get external opaque struct pointer type
+  auto commStructT =
+      mlir::LLVM::LLVMStructType::getOpaque("ompi_communicator_t", context);
+  mlir::StringRef name = "ompi_mpi_comm_world";
+
+  // make sure global op definition exists
+  (void)getOrDefineExternalStruct(moduleOp, loc, rewriter, name, commStructT);
+
+  // get address of symbol
+  return rewriter.create<mlir::LLVM::AddressOfOp>(
+      loc, mlir::LLVM::LLVMPointerType::get(context),
+      mlir::SymbolRefAttr::get(context, name));
+}
+
+mlir::Value
+MPIImplTraits::getDataType(mlir::ModuleOp &moduleOp, const mlir::Location loc,
+                           mlir::ConversionPatternRewriter &rewriter,
+                           mlir::Type type) {
+  mlir::StringRef mtype = nullptr;
+  if (type.isF32())
+    mtype = "ompi_mpi_float";
+  else if (type.isF64())
+    mtype = "ompi_mpi_double";
+  else if (type.isInteger(64) && !type.isUnsignedInteger())
+    mtype = "ompi_mpi_int64_t";
+  else if (type.isInteger(64))
+    mtype = "ompi_mpi_uint64_t";
+  else if (type.isInteger(32) && !type.isUnsignedInteger())
+    mtype = "ompi_mpi_int32_t";
+  else if (type.isInteger(32))
+    mtype = "ompi_mpi_uint32_t";
+  else if (type.isInteger(16) && !type.isUnsignedInteger())
+    mtype = "ompi_mpi_int16_t";
+  else if (type.isInteger(16))
+    mtype = "ompi_mpi_uint16_t";
+  else if (type.isInteger(8) && !type.isUnsignedInteger())
+    mtype = "ompi_mpi_int8_t";
+  else if (type.isInteger(8))
+    mtype = "ompi_mpi_uint8_t";
+  else
+    assert(false && "unsupported type");
+
+  auto context = rewriter.getContext();
+  // get external opaque struct pointer type
+  auto commStructT = mlir::LLVM::LLVMStructType::getOpaque(
+      "ompi_predefined_datatype_t", context);
+  // make sure global op definition exists
+  (void)getOrDefineExternalStruct(moduleOp, loc, rewriter, mtype, commStructT);
+  // get address of symbol
+  return rewriter.create<mlir::LLVM::AddressOfOp>(
+      loc, mlir::LLVM::LLVMPointerType::get(context),
+      mlir::SymbolRefAttr::get(context, mtype));
+}
+
+#else
+#error "Unsupported MPI implementation"
+#endif
 
 //===----------------------------------------------------------------------===//
 // InitOpLowering
@@ -48,7 +219,7 @@ struct InitOpLowering : public ConvertOpToLLVMPattern<mpi::InitOp> {
   matchAndRewrite(mpi::InitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // get loc
-    auto loc = op.getLoc();
+    Location loc = op.getLoc();
 
     // ptrType `!llvm.ptr`
     Type ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
@@ -86,7 +257,7 @@ struct FinalizeOpLowering : public ConvertOpToLLVMPattern<mpi::FinalizeOp> {
   matchAndRewrite(mpi::FinalizeOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // get loc
-    auto loc = op.getLoc();
+    Location loc = op.getLoc();
 
     // grab a reference to the global module op:
     auto moduleOp = op->getParentOfType<ModuleOp>();
@@ -115,9 +286,9 @@ struct CommRankOpLowering : public ConvertOpToLLVMPattern<mpi::CommRankOp> {
   matchAndRewrite(mpi::CommRankOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // get some helper vars
-    auto loc = op.getLoc();
-    auto context = rewriter.getContext();
-    auto i32 = rewriter.getI32Type();
+    Location loc = op.getLoc();
+    MLIRContext *context = rewriter.getContext();
+    Type i32 = rewriter.getI32Type();
 
     // ptrType `!llvm.ptr`
     Type ptrType = LLVM::LLVMPointerType::get(context);
@@ -126,7 +297,7 @@ struct CommRankOpLowering : public ConvertOpToLLVMPattern<mpi::CommRankOp> {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
     // get MPI_COMM_WORLD
-    auto commWorld = MPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
+    Value commWorld = MPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
 
     // LLVM Function type representing `i32 MPI_Comm_rank(ptr, ptr)`
     auto rankFuncType =
@@ -170,12 +341,12 @@ struct SendOpLowering : public ConvertOpToLLVMPattern<mpi::SendOp> {
   matchAndRewrite(mpi::SendOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // get some helper vars
-    auto loc = op.getLoc();
-    auto context = rewriter.getContext();
-    auto i32 = rewriter.getI32Type();
-    auto i64 = rewriter.getI64Type();
-    auto memRef = adaptor.getRef();
-    auto elemType = op.getRef().getType().getElementType();
+    Location loc = op.getLoc();
+    MLIRContext *context = rewriter.getContext();
+    Type i32 = rewriter.getI32Type();
+    Type i64 = rewriter.getI64Type();
+    Value memRef = adaptor.getRef();
+    Type elemType = op.getRef().getType().getElementType();
 
     // ptrType `!llvm.ptr`
     Type ptrType = LLVM::LLVMPointerType::get(context);
@@ -184,22 +355,17 @@ struct SendOpLowering : public ConvertOpToLLVMPattern<mpi::SendOp> {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
     // get MPI_COMM_WORLD, dataType and pointer
-    auto dataPtr =
-        rewriter.create<LLVM::ExtractValueOp>(loc, ptrType, memRef, 1)
-            .getResult();
-    auto offset =
-        rewriter.create<LLVM::ExtractValueOp>(loc, i64, memRef, 2).getResult();
+    Value dataPtr =
+        rewriter.create<LLVM::ExtractValueOp>(loc, ptrType, memRef, 1);
+    Value offset = rewriter.create<LLVM::ExtractValueOp>(loc, i64, memRef, 2);
     dataPtr =
-        rewriter.create<LLVM::GEPOp>(loc, ptrType, elemType, dataPtr, offset)
-            .getResult();
-    auto size =
-        rewriter
-            .create<LLVM::ExtractValueOp>(loc, memRef, ArrayRef<int64_t>{3, 0})
-            .getResult();
-    size = rewriter.create<LLVM::TruncOp>(loc, i32, size).getResult();
-    auto dataType =
+        rewriter.create<LLVM::GEPOp>(loc, ptrType, elemType, dataPtr, offset);
+    Value size = rewriter.create<LLVM::ExtractValueOp>(loc, memRef,
+                                                       ArrayRef<int64_t>{3, 0});
+    size = rewriter.create<LLVM::TruncOp>(loc, i32, size);
+    Value dataType =
         MPIImplTraits::getDataType(moduleOp, loc, rewriter, elemType);
-    auto commWorld = MPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
+    Value commWorld = MPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
 
     // LLVM Function type representing `i32 MPI_send(data, count, datatype, dst,
     // tag, comm)`
@@ -235,12 +401,12 @@ struct RecvOpLowering : public ConvertOpToLLVMPattern<mpi::RecvOp> {
   matchAndRewrite(mpi::RecvOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // get some helper vars
-    auto loc = op.getLoc();
-    auto context = rewriter.getContext();
-    auto i32 = rewriter.getI32Type();
-    auto i64 = rewriter.getI64Type();
-    auto memRef = adaptor.getRef();
-    auto elemType = op.getRef().getType().getElementType();
+    Location loc = op.getLoc();
+    MLIRContext *context = rewriter.getContext();
+    Type i32 = rewriter.getI32Type();
+    Type i64 = rewriter.getI64Type();
+    Value memRef = adaptor.getRef();
+    Type elemType = op.getRef().getType().getElementType();
 
     // ptrType `!llvm.ptr`
     Type ptrType = LLVM::LLVMPointerType::get(context);
@@ -249,29 +415,21 @@ struct RecvOpLowering : public ConvertOpToLLVMPattern<mpi::RecvOp> {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
     // get MPI_COMM_WORLD, dataType, status_ignore and pointer
-    auto dataPtr =
-        rewriter.create<LLVM::ExtractValueOp>(loc, ptrType, memRef, 1)
-            .getResult();
-    auto offset =
-        rewriter.create<LLVM::ExtractValueOp>(loc, i64, memRef, 2).getResult();
+    Value dataPtr =
+        rewriter.create<LLVM::ExtractValueOp>(loc, ptrType, memRef, 1);
+    Value offset = rewriter.create<LLVM::ExtractValueOp>(loc, i64, memRef, 2);
     dataPtr =
-        rewriter.create<LLVM::GEPOp>(loc, ptrType, elemType, dataPtr, offset)
-            .getResult();
-    auto size =
-        rewriter
-            .create<LLVM::ExtractValueOp>(loc, memRef, ArrayRef<int64_t>{3, 0})
-            .getResult();
-    size = rewriter.create<LLVM::TruncOp>(loc, i32, size).getResult();
-    auto dataType =
+        rewriter.create<LLVM::GEPOp>(loc, ptrType, elemType, dataPtr, offset);
+    Value size = rewriter.create<LLVM::ExtractValueOp>(loc, memRef,
+                                                       ArrayRef<int64_t>{3, 0});
+    size = rewriter.create<LLVM::TruncOp>(loc, i32, size);
+    Value dataType =
         MPIImplTraits::getDataType(moduleOp, loc, rewriter, elemType);
-    auto commWorld = MPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
-    auto statusIgnore =
-        rewriter
-            .create<LLVM::ConstantOp>(
-                loc, i64, reinterpret_cast<int64_t>(MPI_STATUS_IGNORE))
-            .getResult();
-    statusIgnore = rewriter.create<LLVM::IntToPtrOp>(loc, ptrType, statusIgnore)
-                       .getResult();
+    Value commWorld = MPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
+    Value statusIgnore = rewriter.create<LLVM::ConstantOp>(
+        loc, i64, reinterpret_cast<int64_t>(MPI_STATUS_IGNORE));
+    statusIgnore =
+        rewriter.create<LLVM::IntToPtrOp>(loc, ptrType, statusIgnore);
 
     // LLVM Function type representing `i32 MPI_Recv(data, count, datatype, dst,
     // tag, comm)`

@@ -17,14 +17,12 @@ func.func @mpi_test(%arg0: memref<100xf32>) {
   // CHECK: [[v5:%.*]] = llvm.insertvalue [[varg4]], [[v4]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
   // CHECK: [[v6:%.*]] = llvm.mlir.zero : !llvm.ptr
   // CHECK: [[v7:%.*]] = llvm.call @MPI_Init([[v6]], [[v6]]) : (!llvm.ptr, !llvm.ptr) -> i32
-  // CHECK: [[v8:%.*]] = builtin.unrealized_conversion_cast [[v7]] : i32 to !mpi.retval
   %0 = mpi.init : !mpi.retval
 
   // CHECK: [[v9:%.*]] = llvm.mlir.
   // CHECK: [[v10:%.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: [[v11:%.*]] = llvm.alloca [[v10]] x i32 : (i32) -> !llvm.ptr
   // CHECK: [[v12:%.*]] = llvm.call @MPI_Comm_rank([[v9]], [[v11]]) : ({{.+}}, !llvm.ptr) -> i32
-  // CHECK: [[v13:%.*]] = builtin.unrealized_conversion_cast [[v12]] : i32 to !mpi.retval
   // CHECK: [[v14:%.*]] = llvm.load [[v11]] : !llvm.ptr -> i32
   %retval, %rank = mpi.comm_rank : !mpi.retval, i32
 
@@ -75,9 +73,5 @@ func.func @mpi_test(%arg0: memref<100xf32>) {
   // CHECK: llvm.call @MPI_Finalize() : () -> i32
   %3 = mpi.finalize : !mpi.retval
 
-  // CHECK: mpi.retval_check
-  %4 = mpi.retval_check %retval = <MPI_SUCCESS> : i1
-  // CEHCK: mpi.error_class
-  %5 = mpi.error_class %0 : !mpi.retval
   return
 }
