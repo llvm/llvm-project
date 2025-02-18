@@ -13,7 +13,7 @@
 // WITHOUT-NEXT:    store i32 0, ptr [[START]], align 4, !tbaa [[TBAA2]]
 // WITHOUT-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @foo(
-// CHECK-SAME: ptr noundef writeonly [[START:%.*]], ptr noundef writeonly [[END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef writeonly captures(address) [[START:%.*]], ptr noundef writeonly captures(address) [[END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[END]], i64 -4
 // CHECK-NEXT:    [[BOUND_PTR_ARITH3:%.*]] = getelementptr i8, ptr [[START]], i64 4
@@ -46,7 +46,7 @@ void foo(int *__ended_by(end) start, int * end) {
 // WITHOUT-NEXT:    store i32 0, ptr [[BOUND_PTR_ARITH3]], align 4, !tbaa [[TBAA2]]
 // WITHOUT-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @bar(
-// CHECK-SAME: ptr noundef writeonly [[START:%.*]], ptr noundef writeonly [[END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(address) [[START:%.*]], ptr noundef writeonly captures(address) [[END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[START]], i64 4
 // CHECK-NEXT:    [[BOUND_PTR_ARITH3:%.*]] = getelementptr i8, ptr [[END]], i64 -4
