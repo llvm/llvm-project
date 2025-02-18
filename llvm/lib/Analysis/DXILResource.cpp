@@ -771,11 +771,11 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
 }
 
 SmallVector<dxil::ResourceBindingInfo>
-DXILBindingMap::findByUse(const Value *Key) const {
+DXILBindingMap::findCreationInfo(const Value *Key) const {
   if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
     SmallVector<dxil::ResourceBindingInfo> Children;
     for (const Value *V : Phi->operands()) {
-      Children.append(findByUse(V));
+      Children.append(findCreationInfo(V));
     }
     return Children;
   }
@@ -784,30 +784,29 @@ DXILBindingMap::findByUse(const Value *Key) const {
   if (!CI)
     return {};
 
-  const Type *UseType = CI->getType();
-
   switch (CI->getIntrinsicID()) {
-  // Check if any of the parameters are the resource we are following. If so
-  // keep searching
-  case Intrinsic::not_intrinsic: {
-    SmallVector<dxil::ResourceBindingInfo> Children;
-    for (const Value *V : CI->args()) {
-      if (V->getType() != UseType)
-        continue;
-
-      Children.append(findByUse(V));
-    }
-
-    return Children;
-  }
   // Found the create, return the binding
-  case Intrinsic::dx_resource_handlefrombinding:
+  case Intrinsic::dx_resource_handlefrombinding: {
     const auto *It = find(CI);
     assert(It != Infos.end() && "HandleFromBinding must be in resource map");
     return {*It};
+    }
+  default:
+    break;
   }
 
-  return {};
+  // Check if any of the parameters are the resource we are following. If so
+  // keep searching. If none of them are return an empty list
+  const Type *UseType = CI->getType();
+  SmallVector<dxil::ResourceBindingInfo> Children;
+  for (const Value *V : CI->args()) {
+    if (V->getType() != UseType)
+      continue;
+
+    Children.append(findCreationInfo(V));
+  }
+
+  return Children;
 }
 
 //===----------------------------------------------------------------------===//
