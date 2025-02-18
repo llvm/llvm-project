@@ -39,8 +39,6 @@ public:
 
   /// Lower a MachineInstr to an MCInst
   void lower(const MachineInstr *MI, MCInst &OutMI) const;
-
-  void lowerT16D16Helper(const MachineInstr *MI, MCInst &OutMI) const;
 };
 
 namespace {
