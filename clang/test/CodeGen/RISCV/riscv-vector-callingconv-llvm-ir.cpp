@@ -39,11 +39,14 @@ void test_vls_no_cc(__attribute__((vector_size(16))) int arg) {}
 // CHECK-LLVM: define dso_local riscv_vls_cc(128) void @_Z25test_vls_default_abi_vlenDv4_i(<vscale x 2 x i32> noundef %arg.coerce)
 [[riscv::vls_cc]] void test_vls_default_abi_vlen(__attribute__((vector_size(16))) int arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @_Z45test_vls_default_abi_vlen_unsupported_featureDv8_DF16_(<vscale x 4 x i16> noundef %arg.coerce)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @_Z45test_vls_default_abi_vlen_unsupported_featureDv8_DF16_(<vscale x 8 x i8> noundef %arg.coerce)
 [[riscv::vls_cc]] void test_vls_default_abi_vlen_unsupported_feature(__attribute__((vector_size(16))) _Float16 arg) {}
 
-// CHECK-LLVM-ZVE32X: define dso_local riscv_vls_cc(128) void @_Z52test_vls_default_abi_vlen_unsupported_feature_zve32xDv4_f(<vscale x 2 x i32> noundef %arg.coerce)
+// CHECK-LLVM-ZVE32X: define dso_local riscv_vls_cc(128) void @_Z52test_vls_default_abi_vlen_unsupported_feature_zve32xDv4_f(<vscale x 8 x i8> noundef %arg.coerce)
 [[riscv::vls_cc]] void test_vls_default_abi_vlen_unsupported_feature_zve32x(__attribute__((vector_size(16))) float arg) {}
+
+// CHECK-LLVM-ZVE32X: define dso_local riscv_vls_cc(128) void @_Z55test_vls_default_abi_vlen_unsupported_feature_no_zve64xDv2_m(<vscale x 8 x i8> noundef %arg.coerce)
+[[riscv::vls_cc]] void test_vls_default_abi_vlen_unsupported_feature_no_zve64x(__attribute__((vector_size(16))) uint64_t arg) {}
 
 // CHECK-LLVM: define dso_local riscv_vls_cc(256) void @_Z21test_vls_256_abi_vlenDv4_i(<vscale x 1 x i32> noundef %arg.coerce)
 [[riscv::vls_cc(256)]] void test_vls_256_abi_vlen(__attribute__((vector_size(16))) int arg) {}

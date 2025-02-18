@@ -120,42 +120,23 @@ void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   default:
     ABIVLen = 0;
     break;
-  case CallingConv::CC_RISCVVLSCall_32:
-    ABIVLen = 32;
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CallingConv::CC_RISCVVLSCall_##ABI_VLEN:                                \
+    ABIVLen = ABI_VLEN;                                                        \
     break;
-  case CallingConv::CC_RISCVVLSCall_64:
-    ABIVLen = 64;
-    break;
-  case CallingConv::CC_RISCVVLSCall_128:
-    ABIVLen = 128;
-    break;
-  case CallingConv::CC_RISCVVLSCall_256:
-    ABIVLen = 256;
-    break;
-  case CallingConv::CC_RISCVVLSCall_512:
-    ABIVLen = 512;
-    break;
-  case CallingConv::CC_RISCVVLSCall_1024:
-    ABIVLen = 1024;
-    break;
-  case CallingConv::CC_RISCVVLSCall_2048:
-    ABIVLen = 2048;
-    break;
-  case CallingConv::CC_RISCVVLSCall_4096:
-    ABIVLen = 4096;
-    break;
-  case CallingConv::CC_RISCVVLSCall_8192:
-    ABIVLen = 8192;
-    break;
-  case CallingConv::CC_RISCVVLSCall_16384:
-    ABIVLen = 16384;
-    break;
-  case CallingConv::CC_RISCVVLSCall_32768:
-    ABIVLen = 32768;
-    break;
-  case CallingConv::CC_RISCVVLSCall_65536:
-    ABIVLen = 65536;
-    break;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
   }
   QualType RetTy = FI.getReturnType();
   if (!getCXXABI().classifyReturnType(FI))
@@ -466,7 +447,7 @@ bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
   // Otherwise, pass the struct indirectly.
 
   if (llvm::StructType *STy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty))) {
-    int NumElts = STy->getStructNumElements();
+    unsigned NumElts = STy->getStructNumElements();
     if (NumElts > 8)
       return false;
 
@@ -522,7 +503,7 @@ bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
     // Check array of fixed-length vector and turn it into scalable vector type
     // if legal.
     if (auto *ArrTy = dyn_cast<llvm::ArrayType>(FirstEltTy)) {
-      int NumArrElt = ArrTy->getNumElements();
+      unsigned NumArrElt = ArrTy->getNumElements();
       if (NumArrElt > 8)
         return false;
 
@@ -595,17 +576,6 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
     //    * (RVVBitsPerBlock / EltSize)
     ResType = llvm::ScalableVectorType::get(EltType, NumElts / VScale->first);
   } else {
-    // If the corresponding extension is not supported, just make it an i32
-    // vector.
-    const TargetInfo &TI = getContext().getTargetInfo();
-    if ((EltType->isHalfTy() && !TI.hasFeature("zvfhmin")) ||
-        (EltType->isBFloatTy() && !TI.hasFeature("zvfbfmin")) ||
-        (EltType->isFloatTy() && !TI.hasFeature("zve32f")) ||
-        (EltType->isDoubleTy() && !TI.hasFeature("zve64d")) ||
-        EltType->isIntegerTy(128))
-      EltType =
-          llvm::Type::getIntNTy(getVMContext(), EltType->getScalarSizeInBits());
-
     // Check registers needed <= 8.
     if ((EltType->getScalarSizeInBits() * NumElts / ABIVLen) > 8)
       return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
@@ -615,6 +585,23 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
     ResType = llvm::ScalableVectorType::get(
         EltType,
         llvm::divideCeil(NumElts * llvm::RISCV::RVVBitsPerBlock, ABIVLen));
+
+    // If the corresponding extension is not supported, just make it an i8
+    // vector with same LMUL.
+    const TargetInfo &TI = getContext().getTargetInfo();
+    if ((EltType->isHalfTy() && !TI.hasFeature("zvfhmin")) ||
+        (EltType->isBFloatTy() && !TI.hasFeature("zvfbfmin")) ||
+        (EltType->isFloatTy() && !TI.hasFeature("zve32f")) ||
+        (EltType->isDoubleTy() && !TI.hasFeature("zve64d")) ||
+        (EltType->isIntegerTy(64) && !TI.hasFeature("zve64x")) ||
+        EltType->isIntegerTy(128)) {
+      // The number of elements needs to be at least 1.
+      ResType = llvm::ScalableVectorType::get(
+          llvm::Type::getInt8Ty(getVMContext()),
+          llvm::divideCeil(EltType->getScalarSizeInBits() * NumElts *
+                               llvm::RISCV::RVVBitsPerBlock,
+                           8 * ABIVLen));
+    }
   }
 
   return ABIArgInfo::getDirect(ResType);
@@ -726,7 +713,11 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     return ABIArgInfo::getDirect();
   }
 
-  if (const VectorType *VT = Ty->getAs<VectorType>()) {
+  // TODO: _BitInt is not handled yet in VLS calling convention since _BitInt
+  // ABI is also not merged yet in RISCV:
+  // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/pull/419
+  if (const VectorType *VT = Ty->getAs<VectorType>();
+      VT && !VT->getElementType()->isBitIntType()) {
     if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
         VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
         VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
