@@ -836,6 +836,15 @@ public:
         // Get 'srcNode' from which to attempt fusion into 'dstNode'.
         auto *srcNode = mdg->getNode(srcId);
         auto srcAffineForOp = cast<AffineForOp>(srcNode->op);
+
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Trying to fuse producer loop nest " << srcId
+                   << " with consumer loop nest " << dstId << "\n");
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Producer loop nest:\n"
+                   << *srcNode->op << "\n and consumer loop nest:\n"
+                   << *dstNode->op << '\n');
+
         LLVM_DEBUG(llvm::dbgs() << "Evaluating src loop " << srcId
                                 << " for dst loop " << dstId << "\n");
 
@@ -904,9 +913,11 @@ public:
               affine::canFuseLoops(srcAffineForOp, dstAffineForOp,
                                    /*dstLoopDepth=*/i + numSurroundingLoops,
                                    &depthSliceUnions[i - 1], strategy);
-
-          if (result.value == FusionResult::Success)
+          if (result.value == FusionResult::Success) {
             maxLegalFusionDepth = i;
+            LLVM_DEBUG(llvm::dbgs()
+                       << "Found valid slice for depth: " << i << '\n');
+          }
         }
 
         if (maxLegalFusionDepth == 0) {

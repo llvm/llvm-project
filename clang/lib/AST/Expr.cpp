@@ -203,7 +203,7 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
 }
 
 bool Expr::isFlexibleArrayMemberLike(
-    ASTContext &Ctx,
+    const ASTContext &Ctx,
     LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
     bool IgnoreTemplateOrMacroSubstitution) const {
   const Expr *E = IgnoreParens();
@@ -1968,6 +1968,7 @@ bool CastExpr::CastConsistency() const {
   case CK_HLSLArrayRValue:
   case CK_HLSLVectorTruncation:
   case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
   CheckNoBasePath:
     assert(path_empty() && "Cast kind should not have a base path!");
     break;
@@ -3671,7 +3672,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackIndexingExprClass:
   case HLSLOutArgExprClass:
   case OpenACCAsteriskSizeExprClass:
-  case ResolvedUnexpandedPackExprClass:
     // These never have a side-effect.
     return false;
 

@@ -687,6 +687,11 @@ void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
     CBEntry.second(I, WhereIt);
 }
 
+void Context::runSetUseCallbacks(const Use &U, Value *NewSrc) {
+  for (auto &CBEntry : SetUseCallbacks)
+    CBEntry.second(U, NewSrc);
+}
+
 // An arbitrary limit, to check for accidental misuse. We expect a small number
 // of callbacks to be registered at a time, but we can increase this number if
 // we discover we needed more.
@@ -730,6 +735,19 @@ void Context::unregisterMoveInstrCallback(CallbackID ID) {
   [[maybe_unused]] bool Erased = MoveInstrCallbacks.erase(ID);
   assert(Erased &&
          "Callback ID not found in MoveInstrCallbacks during deregistration");
+}
+
+Context::CallbackID Context::registerSetUseCallback(SetUseCallback CB) {
+  assert(SetUseCallbacks.size() <= MaxRegisteredCallbacks &&
+         "SetUseCallbacks size limit exceeded");
+  CallbackID ID{NextCallbackID++};
+  SetUseCallbacks[ID] = CB;
+  return ID;
+}
+void Context::unregisterSetUseCallback(CallbackID ID) {
+  [[maybe_unused]] bool Erased = SetUseCallbacks.erase(ID);
+  assert(Erased &&
+         "Callback ID not found in SetUseCallbacks during deregistration");
 }
 
 } // namespace llvm::sandboxir

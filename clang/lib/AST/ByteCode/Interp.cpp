@@ -1063,7 +1063,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return false;
     }
 
-    if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
+    if (!Ptr.isRoot() || Ptr.isOnePastEnd() ||
+        (Ptr.isArrayElement() && Ptr.getIndex() != 0)) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
           << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
@@ -1432,7 +1433,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     unsigned Offset = S.getContext().collectBaseOffset(
         InitialPointeeType->getAsRecordDecl(),
         OverriderPointeeType->getAsRecordDecl());
-    return GetPtrBasePop(S, OpPC, Offset);
+    return GetPtrBasePop(S, OpPC, Offset, /*IsNullOK=*/true);
   }
 
   return true;

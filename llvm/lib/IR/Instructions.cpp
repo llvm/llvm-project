@@ -711,6 +711,20 @@ CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {
   return OBU.isDeoptOperandBundle() ? CaptureInfo::none() : CaptureInfo::all();
 }
 
+bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
+  for (unsigned I = 0, E = arg_size(); I < E; ++I) {
+    if (!getArgOperand(I)->getType()->isPointerTy())
+      continue;
+
+    CaptureInfo CI = getParamAttributes(I).getCaptureInfo();
+    if (auto *Fn = dyn_cast<Function>(getCalledOperand()))
+      CI &= Fn->getAttributes().getParamAttrs(I).getCaptureInfo();
+    if (capturesAnything(CI.getRetComponents() & ~CI.getOtherComponents()))
+      return true;
+  }
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 //                        CallInst Implementation
 //===----------------------------------------------------------------------===//

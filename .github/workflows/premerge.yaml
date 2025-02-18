@@ -144,7 +144,7 @@ jobs:
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           bash .ci/monolithic-windows.sh "${{ steps.vars.outputs.windows-projects }}" "${{ steps.vars.outputs.windows-check-targets }}"
 
-  permerge-check-macos:
+  premerge-check-macos:
     runs-on: macos-14
     if: >-
       github.repository_owner == 'llvm' &&
