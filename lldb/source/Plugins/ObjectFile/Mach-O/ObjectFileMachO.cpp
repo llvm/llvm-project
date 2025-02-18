@@ -5624,9 +5624,13 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
       // struct main_bin_spec
       // {
       //     uint32_t version;       // currently 2
-      //     uint32_t type;          // 0 == unspecified, 1 == kernel,
+      //     uint32_t type;          // 0 == unspecified,
+      //                             // 1 == kernel
       //                             // 2 == user process,
+      //                                     dyld mach-o binary addr
       //                             // 3 == standalone binary
+      //                             // 4 == user process,
+      //                             //      dyld_all_image_infos addr
       //     uint64_t address;       // UINT64_MAX if address not specified
       //     uint64_t slide;         // slide, UINT64_MAX if unspecified
       //                             // 0 if no slide needs to be applied to
@@ -5677,6 +5681,7 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
           // convert the "main bin spec" type into our
           // ObjectFile::BinaryType enum
           const char *typestr = "unrecognized type";
+          type = eBinaryTypeInvalid;
           switch (binspec_type) {
           case 0:
             type = eBinaryTypeUnknown;
@@ -5693,6 +5698,10 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
           case 3:
             type = eBinaryTypeStandalone;
             typestr = "standalone";
+            break;
+          case 4:
+            type = eBinaryTypeUserAllImageInfos;
+            typestr = "userland dyld_all_image_infos";
             break;
           }
           LLDB_LOGF(log,
