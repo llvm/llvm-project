@@ -734,6 +734,10 @@ private:
   SDValue lowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lower_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSTRICT_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lower_INT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSTRICT_INT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerLoadF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerStoreF16(SDValue Op, SelectionDAG &DAG) const;
 

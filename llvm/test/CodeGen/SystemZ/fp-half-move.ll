@@ -4,21 +4,17 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z16 -verify-machineinstrs \
 ; RUN:   | FileCheck %s  --check-prefix=VECTOR
 ;
-; Test moves between i16 and half.
+; Test moves (bitcasts) between i16 and half.
 
 define half @f1(ptr %ptr) {
-; CHECK-LABEL: f1:
 ; NOVEC-LABEL: f1:
 ; NOVEC:       # %bb.0:
-; NOVEC-NEXT:    aghi %r15, -168
-; NOVEC-NEXT:    .cfi_def_cfa_offset 328
-; NOVEC-NEXT:    llh %r0, 0(%r2)
-; NOVEC-NEXT:    oill %r0, 255
+; NOVEC-NEXT:    lh %r0, 0(%r2)
 ; NOVEC-NEXT:    sll %r0, 16
+; NOVEC-NEXT:    oilh %r0, 255
 ; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
 ; NOVEC-NEXT:    ldgr %f0, %r0
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h killed $f0d
-; NOVEC-NEXT:    aghi %r15, 168
 ; NOVEC-NEXT:    br %r14
 ;
 ; VECTOR-LABEL: f1:
@@ -33,21 +29,34 @@ define half @f1(ptr %ptr) {
   ret half %res
 }
 
-define void @f2(half %val, ptr %ptr) {
-; CHECK-LABEL: f1:
+define half @f2(i16 %Arg) {
 ; NOVEC-LABEL: f2:
 ; NOVEC:       # %bb.0:
-; NOVEC-NEXT:    aghi %r15, -168
-; NOVEC-NEXT:    .cfi_def_cfa_offset 328
+; NOVEC-NEXT:    sll %r2, 16
+; NOVEC-NEXT:    risbhg %r0, %r2, 0, 159, 32
+; NOVEC-NEXT:    ldgr %f0, %r0
+; NOVEC-NEXT:    # kill: def $f0h killed $f0h killed $f0d
+; NOVEC-NEXT:    br %r14
+;
+; VECTOR-LABEL: f2:
+; VECTOR:       # %bb.0:
+; VECTOR-NEXT:    vlvgh %v0, %r2, 0
+; VECTOR-NEXT:    br %r14
+  %res = bitcast i16 %Arg to half
+  ret half %res
+}
+
+define void @f3(half %val, ptr %ptr) {
+; NOVEC-LABEL: f3:
+; NOVEC:       # %bb.0:
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h def $f0d
 ; NOVEC-NEXT:    lgdr %r0, %f0
 ; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
 ; NOVEC-NEXT:    srl %r0, 16
 ; NOVEC-NEXT:    stc %r0, 0(%r2)
-; NOVEC-NEXT:    aghi %r15, 168
 ; NOVEC-NEXT:    br %r14
 ;
-; VECTOR-LABEL: f2:
+; VECTOR-LABEL: f3:
 ; VECTOR:       # %bb.0:
 ; VECTOR-NEXT:    vlgvh %r0, %v0, 0
 ; VECTOR-NEXT:    stc %r0, 0(%r2)
@@ -56,4 +65,21 @@ define void @f2(half %val, ptr %ptr) {
   %trunc = trunc i16 %res to i8
   store i8 %trunc, ptr %ptr
   ret void
+}
+
+define i16 @f4(half %Arg) {
+; NOVEC-LABEL: f4:
+; NOVEC:       # %bb.0:
+; NOVEC-NEXT:    # kill: def $f0h killed $f0h def $f0d
+; NOVEC-NEXT:    lgdr %r0, %f0
+; NOVEC-NEXT:    risblg %r2, %r0, 0, 159, 32
+; NOVEC-NEXT:    srl %r2, 16
+; NOVEC-NEXT:    br %r14
+;
+; VECTOR-LABEL: f4:
+; VECTOR:       # %bb.0:
+; VECTOR-NEXT:    vlgvh %r2, %v0, 0
+; VECTOR-NEXT:    br %r14
+  %res = bitcast half %Arg to i16
+  ret i16 %res
 }

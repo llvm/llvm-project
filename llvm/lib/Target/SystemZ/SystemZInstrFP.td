@@ -245,7 +245,7 @@ let Uses = [FPC], mayRaiseFPException = 1, Predicates = [FeatureFPExtension] in 
   def CXGBRA : TernaryRRFe<"cxgbra", 0xB3A6, FP128, GR64>;
 }
 
-// Convert am unsigned integer register value to a floating-point one.
+// Convert an unsigned integer register value to a floating-point one.
 let Predicates = [FeatureFPExtension] in {
   let Uses = [FPC], mayRaiseFPException = 1 in {
     def CELFBR : TernaryRRFe<"celfbr", 0xB390, FP32,  GR32>;

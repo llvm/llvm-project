@@ -226,23 +226,25 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SMUL_LOHI, VT, Custom);
       setOperationAction(ISD::UMUL_LOHI, VT, Custom);
 
-      // Only z196 and above have native support for conversions to unsigned.
-      // On z10, promoting to i64 doesn't generate an inexact condition for
-      // values that are outside the i32 range but in the i64 range, so use
-      // the default expansion.
-      if (!Subtarget.hasFPExtension())
-        setOperationAction(ISD::FP_TO_UINT, VT, Expand);
-
-      // Mirror those settings for STRICT_FP_TO_[SU]INT.  Note that these all
-      // default to Expand, so need to be modified to Legal where appropriate.
-      setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Legal);
-      if (Subtarget.hasFPExtension())
-        setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Legal);
-
-      // And similarly for STRICT_[SU]INT_TO_FP.
-      setOperationAction(ISD::STRICT_SINT_TO_FP, VT, Legal);
-      if (Subtarget.hasFPExtension())
-        setOperationAction(ISD::STRICT_UINT_TO_FP, VT, Legal);
+      // The fp<=>int conversions are all Legal except for f16 and unsigned
+      // on z10 - only z196 and above have native support for conversions to
+      // unsigned. The Custom handlings for all these nodes only modify f16
+      // cases.
+      for (auto Op : {ISD::FP_TO_SINT, ISD::SINT_TO_FP, ISD::STRICT_FP_TO_SINT,
+                      ISD::STRICT_SINT_TO_FP})
+        setOperationAction(Op, VT, Custom);
+      // On z10, promoting the result to i64 doesn't generate an inexact
+      // condition for values that are outside the i32 range but in the i64
+      // range, so use the default expansion.
+      for (auto Op : {ISD::FP_TO_UINT, ISD::STRICT_FP_TO_UINT})
+        setOperationAction(Op, VT,
+                           Subtarget.hasFPExtension() ? Custom : Expand);
+      for (auto Op : {ISD::UINT_TO_FP, ISD::STRICT_UINT_TO_FP}) {
+        // Handle unsigned 32-bit input types as signed 64-bit types on z10.
+        auto ActionZ10 = VT == MVT::i32 ? Promote : Expand;
+        setOperationAction(Op, VT,
+                           Subtarget.hasFPExtension() ? Custom : ActionZ10);
+      }
     }
   }
 
@@ -340,15 +342,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // Traps are legal, as we will convert them to "j .+2".
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
-
-  // z10 has instructions for signed but not unsigned FP conversion.
-  // Handle unsigned 32-bit types as signed 64-bit types.
-  if (!Subtarget.hasFPExtension()) {
-    setOperationAction(ISD::UINT_TO_FP, MVT::i32, Promote);
-    setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
-    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Promote);
-    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i64, Expand);
-  }
 
   // We have native support for a 64-bit CTLZ, via FLOGR.
   setOperationAction(ISD::CTLZ, MVT::i32, Promote);
@@ -556,10 +549,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(Op, MVT::f16, Subtarget.hasVector() ? Legal : Custom);
     setOperationAction(ISD::FP_ROUND, MVT::f16, LibCall);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, LibCall);
-    // Use LEFR_16/LFER_16 for f16 <-> i16 bitcasts with vector support,
-    // otherwise fall back to do it via memory.
-    if (Subtarget.hasVector())
-      setOperationAction(ISD::BITCAST, MVT::i16, Custom);
+    setOperationAction(ISD::BITCAST, MVT::i16, Custom);
+    setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
   }
 
   for (unsigned I = MVT::FIRST_FP_VALUETYPE;
@@ -6548,6 +6539,59 @@ SDValue SystemZTargetLowering::lowerFP_EXTEND(SDValue Op,
   return SDValue(); // Let legalizer emit the libcall.
 }
 
+SDValue SystemZTargetLowering::lower_FP_TO_INT(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDValue In = Op.getOperand(0);
+  if (In.getSimpleValueType() != MVT::f16)
+    return Op; // Legal
+
+  // f16: Extend to f32 before the operation.
+  SDLoc DL(Op);
+  SDValue InF32 = DAG.getFPExtendOrRound(In, SDLoc(In), MVT::f32);
+  return DAG.getNode(Op->getOpcode(), DL, Op.getSimpleValueType(), InF32);
+}
+
+SDValue SystemZTargetLowering::lowerSTRICT_FP_TO_INT(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue In = Op.getOperand(1);
+
+  if (In.getSimpleValueType() != MVT::f16)
+    return Op; // Legal
+
+  // f16: Extend to f32 before the operation.
+  SDLoc DL(Op);
+  SDValue InF32 = DAG.getFPExtendOrRound(In, SDLoc(In), MVT::f32);
+  return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), {Chain, InF32});
+}
+
+SDValue SystemZTargetLowering::lower_INT_TO_FP(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  if (Op.getSimpleValueType() != MVT::f16)
+    return Op; // Legal
+
+  // f16: first do the operation to f32 and then round to f16.
+  SDLoc DL(Op);
+  SDValue F32Conv =
+      DAG.getNode(Op->getOpcode(), DL, MVT::f32, Op->getOperand(0));
+  return DAG.getFPExtendOrRound(F32Conv, DL, MVT::f16);
+}
+
+SDValue SystemZTargetLowering::lowerSTRICT_INT_TO_FP(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  if (Op.getSimpleValueType() != MVT::f16)
+    return Op; // Legal
+
+  // f16: first do the operation to f32 and then round to f16.
+  SDLoc DL(Op);
+  SDValue F32Conv =
+      DAG.getNode(Op->getOpcode(), DL, DAG.getVTList(MVT::f32, MVT::Other),
+                  {Op->getOperand(0), Op->getOperand(1)});
+  SDValue F16Res = DAG.getFPExtendOrRound(F32Conv, DL, MVT::f16);
+  return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(), F16Res,
+                     F32Conv.getValue(1));
+}
+
 // Shift the lower 2 bytes of Op to the left in order to insert into the
 // upper 2 bytes of the FP register.
 static SDValue convertToF16(SDValue Op, SelectionDAG &DAG) {
@@ -6648,6 +6692,8 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
     TDCMask |= SystemZ::TDCMASK_ZERO_MINUS;
   SDValue TDCMaskV = DAG.getConstant(TDCMask, DL, MVT::i64);
 
+  if (Arg.getSimpleValueType() == MVT::f16)
+    Arg = DAG.getFPExtendOrRound(Arg, SDLoc(Arg), MVT::f32);
   SDValue Intr = DAG.getNode(SystemZISD::TDC, DL, ResultVT, Arg, TDCMaskV);
   return getCCResult(DAG, Intr);
 }
@@ -6803,6 +6849,18 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_EXTEND:
   case ISD::STRICT_FP_EXTEND:
     return lowerFP_EXTEND(Op, DAG);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return lower_FP_TO_INT(Op, DAG);
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+    return lowerSTRICT_FP_TO_INT(Op, DAG);
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    return lower_INT_TO_FP(Op, DAG);
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+    return lowerSTRICT_INT_TO_FP(Op, DAG);
   case ISD::LOAD:
     return lowerLoadF16(Op, DAG);
   case ISD::STORE:
@@ -6930,19 +6988,28 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
     break;
   }
   case ISD::BITCAST: {
+    if (useSoftFloat())
+      return;
     SDLoc DL(N);
     SDValue Src = N->getOperand(0);
     EVT SrcVT = Src.getValueType();
     EVT ResVT = N->getValueType(0);
-    if (ResVT == MVT::i128 && SrcVT == MVT::f128 && !useSoftFloat())
+    if (ResVT == MVT::i128 && SrcVT == MVT::f128)
       Results.push_back(expandBitCastF128ToI128(DAG, Src, DL));
     else if (SrcVT == MVT::i16 && ResVT == MVT::f16) {
       SDValue In32 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
-      Results.push_back(
-          SDValue(DAG.getMachineNode(SystemZ::LEFR_16, DL, MVT::f16, In32), 0));
+      SDValue Res =
+          Subtarget.hasVector()
+              ? SDValue(
+                    DAG.getMachineNode(SystemZ::LEFR_16, DL, MVT::f16, In32), 0)
+              : convertToF16(In32, DAG);
+      Results.push_back(Res);
     } else if (SrcVT == MVT::f16 && ResVT == MVT::i16) {
       SDValue ExtractedI32 =
-          SDValue(DAG.getMachineNode(SystemZ::LFER_16, DL, MVT::i32, Src), 0);
+          Subtarget.hasVector()
+              ? SDValue(DAG.getMachineNode(SystemZ::LFER_16, DL, MVT::i32, Src),
+                        0)
+              : convertFromF16(Src, DL, DAG);
       Results.push_back(DAG.getZExtOrTrunc(ExtractedI32, DL, ResVT));
     }
     break;
