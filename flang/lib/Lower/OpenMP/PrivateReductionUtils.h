@@ -55,13 +55,11 @@ void populateByRefInitAndCleanupRegions(
     mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
     mlir::Region &cleanupRegion, DeclOperationKind kind,
-    const Fortran::semantics::Symbol *sym = nullptr,
-    bool cannotHaveNonDefaultLowerBounds = false);
+    const Fortran::semantics::Symbol *sym = nullptr);
 
 /// Generate a fir::ShapeShift op describing the provided boxed array.
 fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Value box,
-                                bool cannotHaveNonDefaultLowerBounds = false);
+                                mlir::Value box);
 
 } // namespace omp
 } // namespace lower
