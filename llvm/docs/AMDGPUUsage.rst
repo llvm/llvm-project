@@ -990,7 +990,12 @@ supported for the ``amdgcn`` target.
   the stride must be 0, the "add tid" flag must be 0, the swizzle enable bits
   must be off, and the extent must be measured in bytes. (On subtargets where
   bounds checking may be disabled, buffer fat pointers may choose to enable
-  it or not).
+  it or not). The cache swizzle support introduced in gfx942 may be used.
+
+  These pointers can be created by `addrspacecast` from a buffer resource
+  (`ptr addrspace(8)`) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
+  `ptr addrspace(7)` directly, which produces a buffer fat pointer with an initial
+  offset of 0 and prevents the address space cast from being rewritten away.
 
 **Buffer Resource**
   The buffer resource pointer, in address space 8, is the newer form
@@ -1026,6 +1031,12 @@ supported for the ``amdgcn`` target.
   The bits in the buffer descriptor must meet the following requirements:
   the stride is the size of a structured element, the "add tid" flag must be 0,
   and the swizzle enable bits must be off.
+
+  These pointers can be created by `addrspacecast` from a buffer resource
+  (`ptr addrspace(8)`) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
+  `ptr addrspace(9)` directly, which produces a buffer strided pointer whose initial
+  index and offset values are both 0. This prevents the address space cast from
+  being rewritten away.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
