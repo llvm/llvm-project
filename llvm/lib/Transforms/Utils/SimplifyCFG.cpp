@@ -3290,13 +3290,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // count.
   unsigned SpeculatedInstructions = 0;
 
-  // By default the number of instructions that may be speculatively executed is
-  // one. Whenever `extract oneuse(op.with.overflow),1` pattern is found,
-  // we increase this threshold to the size of the pattern (how many instructions
-  // are there in that pattern).
-
-  unsigned MaxSpeculatedInstructionsToHoist = 1;
-
   // In case we have found a cheap pattern, we don't want to do cost checking
   // anymore. We are sure we want to hoist the pattern. To know, that we are
   // only hoisting the cheap pattern only and not other expensive instructions
@@ -3343,10 +3336,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     // In that case hoist these two instructions out of this basic block, and
     // let later optimizations take care of the unnecessary zero checks.
     WithOverflowInst *OverflowI;
-    if (match(&I, m_ExtractValue<1>(m_OneUse(m_WithOverflowInst(OverflowI))))) {
-      MaxSpeculatedInstructionsToHoist = 2;
+    if (match(&I, m_ExtractValue<1>(m_OneUse(m_WithOverflowInst(OverflowI)))))
       PartialInst = true;
-    }
     // Not count load/store into cost if target supports conditional faulting
     // b/c it's cheap to speculate it.
     if (IsSafeCheapLoadStore)
@@ -3369,7 +3360,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
     // The number of instructions to be speculatively executed is limited.
     // This limit is dependent on the found patterns.
-    if (SpeculatedInstructions > MaxSpeculatedInstructionsToHoist)
+    if (SpeculatedInstructions > (PartialInst ? 2 : 1))
       return false;
 
     // Store the store speculation candidate.
