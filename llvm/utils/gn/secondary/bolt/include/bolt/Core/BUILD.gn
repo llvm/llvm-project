@@ -1,0 +1,6 @@
+import("//llvm/lib/Target/write_target_def_file.gni")
+
+write_target_def_file("TargetConfig.def") {
+  key = "BOLT_ENUM_TARGETS"
+  value = "BOLT_TARGET"
+}

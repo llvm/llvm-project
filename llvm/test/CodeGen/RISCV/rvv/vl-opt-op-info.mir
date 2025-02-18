@@ -1116,10 +1116,10 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_passthru_use
     ; CHECK: %x:vrnov0 = PseudoVMAND_MM_B8 $noreg, $noreg, 1, 0 /* e8 */
-    ; CHECK-NEXT: %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */, 1
     ; CHECK-NEXT: %z:vr = PseudoVMAND_MM_B8 %y, $noreg, 1, 0 /* e8 */
     %x:vrnov0 = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0 /* e1 */
-    %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */
+    %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */, 1
     %z:vr = PseudoVMAND_MM_B8 %y, $noreg, 1, 0 /* e1 */
 ...
 ---
@@ -1128,10 +1128,10 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_passthru_use_incompatible_eew
     ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */, 1
     ; CHECK-NEXT: %z:vr = PseudoVMAND_MM_B8 %y, $noreg, 1, 0 /* e8 */
     %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
-    %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */
+    %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */, 1
     %z:vr = PseudoVMAND_MM_B8 %y, $noreg, 1, 0 /* e1 */
 ...
 ---
@@ -1140,10 +1140,10 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_passthru_use_incompatible_emul
     ; CHECK: %x:vrnov0 = PseudoVMAND_MM_B16 $noreg, $noreg, -1, 0 /* e8 */
-    ; CHECK-NEXT: %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */
+    ; CHECK-NEXT: %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */, 1
     ; CHECK-NEXT: %z:vr = PseudoVMAND_MM_B8 %y, $noreg, 1, 0 /* e8 */
     %x:vrnov0 = PseudoVMAND_MM_B16 $noreg, $noreg, -1, 0 /* e1 */
-    %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */
+    %y:vrnov0 = PseudoVMSEQ_VV_M1_MASK %x, $noreg, $noreg, $noreg, 1, 3 /* e8 */, 1
     %z:vr = PseudoVMAND_MM_B8 %y, $noreg, 1, 0 /* e1 */
 ...
 ---
