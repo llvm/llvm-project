@@ -1173,7 +1173,7 @@ void baz_pr8440(int n)
 // Support direct accesses to non-null memory.  Reported in:
 //  PR 5272
 int test_direct_address_load(void) {
-  int *p = (int*) 0x4000;
+  int *p = (int*) 0x4000; // expected-warning{{Using a fixed address is not portable}}
   return *p; // no-warning
 }
 
