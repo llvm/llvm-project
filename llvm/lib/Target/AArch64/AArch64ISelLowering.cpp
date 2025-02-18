@@ -11780,8 +11780,9 @@ SDValue AArch64TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   if (Align && *Align > MinSlotSize) {
     VAList = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
                          DAG.getConstant(Align->value() - 1, DL, PtrVT));
-    VAList = DAG.getNode(ISD::AND, DL, PtrVT, VAList,
-                         DAG.getConstant(-(int64_t)Align->value(), DL, PtrVT));
+    VAList =
+        DAG.getNode(ISD::AND, DL, PtrVT, VAList,
+                    DAG.getSignedConstant(-(int64_t)Align->value(), DL, PtrVT));
   }
 
   Type *ArgTy = VT.getTypeForEVT(*DAG.getContext());
@@ -16147,8 +16148,9 @@ AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(SDValue Op,
     Chain = SP.getValue(1);
     SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
     if (Align)
-      SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
-                       DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
+      SP =
+          DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
+                      DAG.getSignedConstant(-(uint64_t)Align->value(), dl, VT));
     Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
     SDValue Ops[2] = {SP, Chain};
     return DAG.getMergeValues(Ops, dl);
@@ -16185,7 +16187,7 @@ AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(SDValue Op,
   SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
   if (Align)
     SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
-                     DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
+                     DAG.getSignedConstant(-(uint64_t)Align->value(), dl, VT));
   Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
 
   Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
@@ -16213,7 +16215,7 @@ AArch64TargetLowering::LowerInlineDYNAMIC_STACKALLOC(SDValue Op,
   SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
   if (Align)
     SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
-                     DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
+                     DAG.getSignedConstant(-(uint64_t)Align->value(), dl, VT));
 
   // Set the real SP to the new value with a probing loop.
   Chain = DAG.getNode(AArch64ISD::PROBED_ALLOCA, dl, MVT::Other, Chain, SP);
@@ -21485,7 +21487,7 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
 
   if (IsRightShift && ShiftAmount <= -1 && ShiftAmount >= -(int)ElemBits) {
     Op = DAG.getNode(Opcode, dl, VT, Op,
-                     DAG.getConstant(-ShiftAmount, dl, MVT::i32));
+                     DAG.getSignedConstant(-ShiftAmount, dl, MVT::i32));
     if (N->getValueType(0) == MVT::i64)
       Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Op,
                        DAG.getConstant(0, dl, MVT::i64));
@@ -27364,10 +27366,10 @@ static void ReplaceATOMIC_LOAD_128Results(SDNode *N,
     SDLoc dl(Val128);
     Val2x64.first =
         DAG.getNode(ISD::XOR, dl, MVT::i64,
-                    DAG.getConstant(-1ULL, dl, MVT::i64), Val2x64.first);
+                    DAG.getAllOnesConstant(dl, MVT::i64), Val2x64.first);
     Val2x64.second =
         DAG.getNode(ISD::XOR, dl, MVT::i64,
-                    DAG.getConstant(-1ULL, dl, MVT::i64), Val2x64.second);
+                    DAG.getAllOnesConstant(dl, MVT::i64), Val2x64.second);
   }
 
   SDValue Ops[] = {Val2x64.first, Val2x64.second, Ptr, Chain};
