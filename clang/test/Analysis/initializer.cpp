@@ -254,6 +254,191 @@ void foo() {
 }
 } // namespace CXX17_aggregate_construction
 
+namespace newexpr_init_list_initialization {
+struct S {
+  int foo;
+  int bar;
+};
+void none_designated() {
+  S *s = new S{13,1};
+  clang_analyzer_eval(13 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == s->bar); // expected-warning{{TRUE}}
+  delete s;
+}
+void none_designated_swapped() {
+  S *s = new S{1,13};
+  clang_analyzer_eval(1 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(13 == s->bar); // expected-warning{{TRUE}}
+  delete s;
+}
+void one_designated_one_not() {
+  S *s = new S{ 1, .bar = 13 };
+  clang_analyzer_eval(1 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(13 == s->bar); // expected-warning{{TRUE}}
+  delete s;
+}
+void all_designated() {
+  S *s = new S{
+      .foo = 13,
+      .bar = 1,
+  };
+  clang_analyzer_eval(13 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == s->bar); // expected-warning{{TRUE}}
+  delete s;
+}
+void non_designated_array_of_aggr_struct() {
+  S *s = new S[2] { {1, 2}, {3, 4} };
+  clang_analyzer_eval(1 == s[0].foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == s[0].bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == s[1].foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(4 == s[1].bar); // expected-warning{{TRUE}}
+  delete[] s;
+}
+
+struct WithGaps {
+  int foo;
+  int bar;
+  int baz;
+};
+void out_of_order_designated_initializers_with_gaps() {
+  WithGaps *s = new WithGaps{
+    .foo = 13,
+    .baz = 1,
+  };
+  clang_analyzer_eval(13 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == s->bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == s->baz); // expected-warning{{TRUE}}
+  delete s;
+}
+
+// https://eel.is/c++draft/dcl.init.aggr#note-6:
+// Static data members, non-static data members of anonymous
+// union members, and unnamed bit-fields are not considered
+// elements of the aggregate.
+struct NonConsideredFields {
+  int i;
+  static int s;
+  int j;
+  int :17;
+  int k;
+};
+void considered_fields_initd() {
+  auto S = new NonConsideredFields { 1, 2, 3 };
+  clang_analyzer_eval(1 == S->i); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == S->j); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == S->k); // expected-warning{{TRUE}}
+  delete S;
+}
+
+class PubClass {
+public:
+  int foo;
+  int bar;
+};
+void public_class_designated_initializers() {
+  S *s = new S{
+      .foo = 13,
+      .bar = 1,
+  };
+  clang_analyzer_eval(13 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == s->bar); // expected-warning{{TRUE}}
+  delete s;
+}
+
+union UnionTestTy {
+  int x;
+  char y;
+};
+void new_expr_aggr_init_union_no_designator() {
+  UnionTestTy *u = new UnionTestTy{};
+  clang_analyzer_eval(0 == u->x); // expected-warning{{UNKNOWN}} TODO: should be TRUE
+  clang_analyzer_eval(u->y); // expected-warning{{UNKNOWN}} TODO: should be undefined, warning
+  delete u;
+}
+void new_expr_aggr_init_union_designated_first_field() {
+  UnionTestTy *u = new UnionTestTy{ .x = 14 };
+  clang_analyzer_eval(14 == u->x); // expected-warning{{UNKNOWN}} TODO: should be TRUE
+  clang_analyzer_eval(u->y); // expected-warning{{UNKNOWN}} TODO: should be undefined, warning
+  delete u;
+}
+void new_expr_aggr_init_union_designated_non_first_field() {
+  UnionTestTy *u = new UnionTestTy{ .y = 3 };
+  clang_analyzer_eval(3 == u->y); // expected-warning{{UNKNOWN}} TODO: should be TRUE
+  clang_analyzer_eval(u->x); // expected-warning{{UNKNOWN}} TODO: should be undefined, warning
+  delete u;
+}
+
+union UnionTestTyWithDefaultMemberInit {
+  int x;
+  char y = 14;
+};
+void union_with_default_member_init_empty_init_list() {
+  auto U = new UnionTestTyWithDefaultMemberInit{};
+  // clang_analyzer_eval(14 == U->y); // TODO: Should be true
+  clang_analyzer_eval(U->x); // expected-warning{{UNKNOWN}} TODO: should be undefined, warning
+  delete U;
+}
+
+struct Inner {
+  int bar;
+};
+struct Nested {
+  int foo;
+  Inner inner;
+  int baz;
+};
+void nested_aggregates() {
+  auto N = new Nested{};
+  clang_analyzer_eval(0 == N->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N->baz); // expected-warning{{TRUE}}
+
+  auto N1 = new Nested{1};
+  clang_analyzer_eval(1 == N1->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N1->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N1->baz); // expected-warning{{TRUE}}
+
+  auto N2 = new Nested{.baz = 14};
+  clang_analyzer_eval(0 == N->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(14 == N->baz); // expected-warning{{FALSE}} TODO: Should be TRUE
+
+  auto N3 = new Nested{1,2,3};
+  clang_analyzer_eval(1 == N1->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == N1->inner.bar); // expected-warning{{FALSE}} TODO: Should be TRUE
+  clang_analyzer_eval(3 == N1->baz); // expected-warning{{FALSE}} TODO: Should be TRUE
+
+  auto N4 = new Nested{1, {}, 3};
+  clang_analyzer_eval(1 == N1->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N1->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == N1->baz); // expected-warning{{FALSE}} TODO: Should be TRUE
+
+  auto N5 = new Nested{{},{},{}};
+  clang_analyzer_eval(0 == N1->foo); // expected-warning{{FALSE}} TODO: Should be TRUE
+  clang_analyzer_eval(0 == N1->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N1->baz); // expected-warning{{TRUE}}
+
+  auto N6 = new Nested{1, {.bar = 2}, 3};
+  clang_analyzer_eval(1 == N1->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == N1->inner.bar); // expected-warning{{FALSE}} TODO: Should be TRUE
+  clang_analyzer_eval(3 == N1->baz); // expected-warning{{FALSE}} TODO: Should be TRUE
+
+  auto N7 = new Nested{1, {2}, 3};
+  clang_analyzer_eval(1 == N1->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == N1->inner.bar); // expected-warning{{FALSE}} TODO: Should be TRUE
+  clang_analyzer_eval(3 == N1->baz); // expected-warning{{FALSE}} TODO: Should be TRUE
+
+  delete N;
+  delete N1;
+  delete N2;
+  delete N3;
+  delete N4;
+  delete N5;
+  delete N6;
+  delete N7;
+}
+} // namespace newexpr_init_list_initialization
+
 namespace CXX17_transparent_init_list_exprs {
 class A {};
 
