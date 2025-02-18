@@ -200,9 +200,8 @@ parseFormatString(StringRef toParse, ArgType fmtArgs,
       continue;
     }
     if (toParse.size() < 2) {
-      // '{' is last character
-      items.push_back(toParse);
-      break;
+      return (*emitError)()
+             << "expected '}' after unescaped '{' at end of string";
     }
     // toParse contains at least two characters and starts with `{`.
     char nextChar = toParse[1];
