@@ -235,10 +235,9 @@ define void @fadd_fcmp_select_copy(<vscale x 4 x float> %v, <vscale x 4 x i1> %c
 ;
 ; VLOPT-LABEL: fadd_fcmp_select_copy:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v8
 ; VLOPT-NEXT:    fmv.w.x fa5, zero
-; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmflt.vf v10, v8, fa5
 ; VLOPT-NEXT:    vmand.mm v10, v0, v10
 ; VLOPT-NEXT:    vse32.v v8, (a0)
