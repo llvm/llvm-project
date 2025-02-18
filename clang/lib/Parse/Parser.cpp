@@ -1163,6 +1163,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
       switch(TKind) {
       case DeclSpec::TST_class:
       case DeclSpec::TST_coroutine:
+      case DeclSpec::TST_task:
         return 5;
       case DeclSpec::TST_struct:
         return 6;

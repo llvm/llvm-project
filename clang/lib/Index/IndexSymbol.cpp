@@ -113,6 +113,7 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::Union; break;
     case TagTypeKind::Class:
     case TagTypeKind::Coroutine:
+    case TagTypeKind::Task:
       Info.Kind = SymbolKind::Class;
       Info.Lang = SymbolLanguage::CXX;
       break;

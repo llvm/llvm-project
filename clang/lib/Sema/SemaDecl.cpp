@@ -658,6 +658,8 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
         return DeclSpec::TST_class;
       case TagTypeKind::Coroutine:
         return DeclSpec::TST_coroutine;
+      case TagTypeKind::Task:
+        return DeclSpec::TST_task;
       case TagTypeKind::Enum:
         return DeclSpec::TST_enum;
       }
@@ -822,6 +824,7 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
     StringRef FixItTagName;
     switch (Tag->getTagKind()) {
     case TagTypeKind::Coroutine:
+    case TagTypeKind::Task:
     case TagTypeKind::Class:
       FixItTagName = "class ";
       break;
@@ -4993,6 +4996,7 @@ static unsigned GetDiagnosticTypeSpecifierID(const DeclSpec &DS) {
   switch (T) {
   case DeclSpec::TST_class:
   case DeclSpec::TST_coroutine:
+  case DeclSpec::TST_task:
     return 0;
   case DeclSpec::TST_struct:
     return 1;
@@ -5024,6 +5028,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   TagDecl *Tag = nullptr;
   if (DS.getTypeSpecType() == DeclSpec::TST_class ||
       DS.getTypeSpecType() == DeclSpec::TST_coroutine ||
+      DS.getTypeSpecType() == DeclSpec::TST_task ||
       DS.getTypeSpecType() == DeclSpec::TST_struct ||
       DS.getTypeSpecType() == DeclSpec::TST_interface ||
       DS.getTypeSpecType() == DeclSpec::TST_union ||
@@ -5249,6 +5254,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     DeclSpec::TST TypeSpecType = DS.getTypeSpecType();
     if (TypeSpecType == DeclSpec::TST_class ||
         TypeSpecType == DeclSpec::TST_coroutine ||
+        TypeSpecType == DeclSpec::TST_task ||
         TypeSpecType == DeclSpec::TST_struct ||
         TypeSpecType == DeclSpec::TST_interface ||
         TypeSpecType == DeclSpec::TST_union ||
@@ -16806,6 +16812,7 @@ TypedefDecl *Sema::ParseTypedefDecl(Scope *S, Declarator &D, QualType T,
   case TST_interface:
   case TST_union:
   case TST_coroutine:
+  case TST_task:
   case TST_class: {
     TagDecl *tagFromDeclSpec = cast<TagDecl>(D.getDeclSpec().getRepAsDecl());
     setTagNameForLinkagePurposes(tagFromDeclSpec, NewTD);
@@ -16912,6 +16919,7 @@ Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
   case TagTypeKind::Interface:
   case TagTypeKind::Class:
   case TagTypeKind::Coroutine:
+  case TagTypeKind::Task:
     return getLangOpts().CPlusPlus ? NTK_NonClass : NTK_NonStruct;
   case TagTypeKind::Union:
     return NTK_NonUnion;

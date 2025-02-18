@@ -3245,6 +3245,7 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
     break;
   case TagTypeKind::Class:
   case TagTypeKind::Coroutine:
+  case TagTypeKind::Task:
     Out << 'V';
     break;
   case TagTypeKind::Enum:

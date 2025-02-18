@@ -68,6 +68,7 @@ enum CXCursorKind clang_getTemplateCursorKind(CXCursor C) {
         return CXCursor_StructDecl;
       case TagTypeKind::Class:
       case TagTypeKind::Coroutine:
+      case TagTypeKind::Task:
         return CXCursor_ClassDecl;
       case TagTypeKind::Union:
         return CXCursor_UnionDecl;
