@@ -11,6 +11,16 @@
 
 namespace omptest {
 
+namespace util {
+
+/// String manipulation helper function. Takes up to 8 bytes of data and returns
+/// their hexadecimal representation as string. The data can be expanded to the
+/// given size in bytes and will by default be prefixed with '0x'.
+std::string makeHexString(uint64_t Data, bool IsPointer = true,
+                          size_t DataBytes = 0, bool ShowHexBase = true);
+
+} // namespace util
+
 namespace internal {
 // clang-format off
 event_class_w_custom_body(AssertionSyncPoint,                                  \
