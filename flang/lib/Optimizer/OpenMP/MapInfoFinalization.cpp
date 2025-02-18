@@ -184,6 +184,7 @@ class MapInfoFinalizationPass
         /*members=*/mlir::SmallVector<mlir::Value>{},
         /*membersIndex=*/mlir::ArrayAttr{}, bounds,
         builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
+        /*mapperId*/ mlir::FlatSymbolRefAttr(),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         /*name=*/builder.getStringAttr(""),
@@ -329,7 +330,8 @@ class MapInfoFinalizationPass
             builder.getIntegerAttr(
                 builder.getIntegerType(64, false),
                 getDescriptorMapType(op.getMapType().value_or(0), target)),
-            op.getMapCaptureTypeAttr(), op.getNameAttr(),
+            /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getMapCaptureTypeAttr(),
+            op.getNameAttr(),
             /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
     op->erase();
@@ -623,6 +625,7 @@ class MapInfoFinalizationPass
                   /*members=*/mlir::ValueRange{},
                   /*members_index=*/mlir::ArrayAttr{},
                   /*bounds=*/bounds, op.getMapTypeAttr(),
+                  /*mapperId*/ mlir::FlatSymbolRefAttr(),
                   builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
                       mlir::omp::VariableCaptureKind::ByRef),
                   builder.getStringAttr(op.getNameAttr().strref() + "." +

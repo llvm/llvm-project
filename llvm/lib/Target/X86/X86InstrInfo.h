@@ -310,8 +310,9 @@ public:
   /// operand to the LEA instruction.
   bool classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                       unsigned LEAOpcode, bool AllowSP, Register &NewSrc,
-                      bool &isKill, MachineOperand &ImplicitOp,
-                      LiveVariables *LV, LiveIntervals *LIS) const;
+                      unsigned &NewSrcSubReg, bool &isKill,
+                      MachineOperand &ImplicitOp, LiveVariables *LV,
+                      LiveIntervals *LIS) const;
 
   /// convertToThreeAddress - This method must be implemented by targets that
   /// set the M_CONVERTIBLE_TO_3_ADDR flag.  When this flag is set, the target

@@ -32,9 +32,11 @@ static cl::opt<std::string> UserDefinedPassPipeline(
 SandboxVectorizerPass::SandboxVectorizerPass() : FPM("fpm") {
   if (UserDefinedPassPipeline == DefaultPipelineMagicStr) {
     // TODO: Add passes to the default pipeline. It currently contains:
-    //       - the bottom-up-vectorizer pass
+    //       - Seed collection, which creates seed regions and runs the pipeline
+    //         - Bottom-up Vectorizer pass that starts from a seed
+    //         - Accept or revert IR state pass
     FPM.setPassPipeline(
-        "bottom-up-vec<tr-accept-or-revert>",
+        "seed-collection<bottom-up-vec,tr-accept-or-revert>",
         sandboxir::SandboxVectorizerPassBuilder::createFunctionPass);
   } else {
     // Create the user-defined pipeline.
