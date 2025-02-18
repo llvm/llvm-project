@@ -328,7 +328,8 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MICROMIPS_JALR;
   }
 
-  llvm_unreachable("invalid fixup kind!");
+  Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
+  return ELF::R_MIPS_NONE;
 }
 
 /// Sort relocation table entries by offset except where another order is

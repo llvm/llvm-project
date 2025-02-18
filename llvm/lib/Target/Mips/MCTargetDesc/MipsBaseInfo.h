@@ -26,7 +26,8 @@ namespace llvm {
 /// instruction info tracks.
 ///
 namespace MipsII {
-  /// Target Operand Flag enum.
+/// Target Operand Flag enum.
+// clang-format off
   enum TOF {
     //===------------------------------------------------------------------===//
     // Mips Specific MachineOperand flags.
@@ -100,7 +101,7 @@ namespace MipsII {
     MO_DLLIMPORT = 0x20,
   };
 
-  enum {
+enum {
     //===------------------------------------------------------------------===//
     // Instruction encodings.  These are the standard/most common forms for
     // Mips instructions.
@@ -132,13 +133,18 @@ namespace MipsII {
     /// HasFCCRegOperand - Instruction uses an $fcc<x> register.
     HasFCCRegOperand = 1 << 6
 
-  };
+};
+// clang-format on
 
-  enum OperandType : unsigned {
-    OPERAND_FIRST_MIPS_MEM_IMM = MCOI::OPERAND_FIRST_TARGET,
-    OPERAND_MEM_SIMM9 = OPERAND_FIRST_MIPS_MEM_IMM,
-    OPERAND_LAST_MIPS_MEM_IMM = OPERAND_MEM_SIMM9
-  };
+enum OperandType : unsigned {
+  OPERAND_FIRST_MIPS_MEM_IMM = MCOI::OPERAND_FIRST_TARGET,
+  OPERAND_MEM_SIMM9 = OPERAND_FIRST_MIPS_MEM_IMM,
+  OPERAND_LAST_MIPS_MEM_IMM = OPERAND_MEM_SIMM9
+};
+
+static inline unsigned getFormat(uint64_t TSFlags) {
+  return TSFlags & FormMask;
+}
 }
 
 inline static MCRegister getMSARegFromFReg(MCRegister Reg) {
