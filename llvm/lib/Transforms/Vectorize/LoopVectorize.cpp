@@ -9378,7 +9378,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   VPRegionBlock *LoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
-  VPBasicBlock *VPBB = HeaderVPBB;
   BasicBlock *HeaderBB = OrigLoop->getHeader();
   bool NeedsMasks =
       CM.foldTailByMasking() ||
@@ -9508,9 +9507,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
     PrevVPBB = VPBB;
   }
-
-  // After here, VPBB should not be used.
-  VPBB = nullptr;
 
   assert(isa<VPRegionBlock>(Plan->getVectorLoopRegion()) &&
          !Plan->getVectorLoopRegion()->getEntryBasicBlock()->empty() &&
