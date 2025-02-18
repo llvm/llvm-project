@@ -22,4 +22,4 @@ size_t strftime_l(char *__restrict buffer, size_t count,
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STRING_STRCOLL_L_H
+#endif // LLVM_LIBC_SRC_TIME_STRFTIME_L_H
