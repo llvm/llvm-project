@@ -311,9 +311,9 @@ void out_of_order_designated_initializers_with_gaps() {
   delete s;
 }
 
-// https://eel.is/c++draft/dcl.init.aggr#note-6: 
-// Static data members, non-static data members of anonymous 
-// union members, and unnamed bit-fields are not considered 
+// https://eel.is/c++draft/dcl.init.aggr#note-6:
+// Static data members, non-static data members of anonymous
+// union members, and unnamed bit-fields are not considered
 // elements of the aggregate.
 struct NonConsideredFields {
   int i;
