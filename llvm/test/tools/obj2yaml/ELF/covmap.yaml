@@ -4,7 +4,7 @@
 # RUN: obj2yaml --covmap --covmap-raw %t.o | tee %t.mixed.yaml | FileCheck %s --check-prefixes=CHECK,COVMAP,RAW,DET,LOC,DLOC
 # RUN: obj2yaml --covmap --covmap-dloc %t.o | tee %t.dloc.yaml | FileCheck %s --check-prefixes=CHECK,COVMAP,DET,DETONLY,DLOC
 # RUN: obj2yaml --covmap %t.o | tee %t.covmap.yaml | FileCheck %s --check-prefixes=CHECK,COVMAP,DET,DETONLY,LOC
-# RUN: sed -E '/^(#.*)?$/d' %s | diff -c %t.covmap.yaml -
+# RUN: sed -E '/^(#.*)?$/d' %s | diff %t.covmap.yaml -
 # RUN: yaml2obj %t.plain.yaml -o - | cmp %t.o -
 # RUN: yaml2obj %t.raw.yaml -o - | cmp %t.o -
 # RUN: yaml2obj %t.mixed.yaml -o - | cmp %t.o -
