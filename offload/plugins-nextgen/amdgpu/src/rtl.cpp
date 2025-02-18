@@ -2911,7 +2911,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
             "LIBOMPTARGET_AMDGPU_BIG_JUMP_LOOP_TEAMS_PER_CU", 0),
         OMPX_BigJumpLoopMaxTotalTeams(
             "LIBOMPTARGET_AMDGPU_BIG_JUMP_LOOP_MAX_TOTAL_TEAMS", 1024 * 1024),
-        OMPX_LowTripCount("LIBOMPTARGET_AMDGPU_LOW_TRIPCOUNT", 4000),
+        OMPX_LowTripCount("LIBOMPTARGET_AMDGPU_LOW_TRIPCOUNT", 9000),
         OMPX_SmallBlockSize("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32),
         OMPX_NumBlocksForLowTripcount("LIBOMPTARGET_BLOCKS_FOR_LOW_TRIP_COUNT",
                                       0),
@@ -4376,8 +4376,8 @@ private:
       // If this value needs to go above UINT_MAX, consider
       // adding sizeof(size_t) check to avoid unpleasant truncation
       // surprises where size_t is still 32bit.
-      constexpr size_t Almost2Gig = 2000000000u;
-      return Almost2Gig;
+      constexpr size_t Almost3Gig = 3000000000u;
+      return Almost3Gig;
     }
     return 0;
   }
