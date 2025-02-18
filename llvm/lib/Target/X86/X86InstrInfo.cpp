@@ -1318,7 +1318,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
     if (Src == Src2) {
       // ADD8rr/ADD16rr killed %reg1028, %reg1028
       // just a single insert_subreg.
-      addRegReg(MIB, InRegLEA, true, InRegLEA, false);
+      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA, false,
+                X86::NoSubRegister);
     } else {
       if (Subtarget.is64Bit())
         InRegLEA2 = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -1331,7 +1332,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
       InsMI2 = BuildMI(MBB, &*MIB, MI.getDebugLoc(), get(TargetOpcode::COPY))
                    .addReg(InRegLEA2, RegState::Define, SubReg)
                    .addReg(Src2, getKillRegState(IsKill2), Src2SubReg);
-      addRegReg(MIB, InRegLEA, true, InRegLEA2, true);
+      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA2, true,
+                X86::NoSubRegister);
     }
     if (LV && IsKill2 && InsMI2)
       LV->replaceKillInstruction(Src2, MI, *InsMI2);
@@ -1589,6 +1591,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       // the first call inserted a COPY from Src2 and marked it as killed.
       isKill = isKill2;
       SrcReg = SrcReg2;
+      SrcSubReg = SrcSubReg2;
     } else {
       if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
                           isKill, ImplicitOp, LV, LIS))
@@ -1601,7 +1604,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     if (ImplicitOp2.getReg() != 0)
       MIB.add(ImplicitOp2);
 
-    NewMI = addRegReg(MIB, SrcReg, isKill, SrcReg2, isKill2); // FIXME: Subregs
+    NewMI =
+        addRegReg(MIB, SrcReg, isKill, SrcSubReg, SrcReg2, isKill2, SrcSubReg2);
 
     // Add kills if classifyLEAReg created a new register.
     if (LV) {
