@@ -70,6 +70,13 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   return Error::success();
 }
 
+std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
+TelemetryManager *TelemetryManager::getInstance() { return g_instance.get(); }
+
+void TelemetryManager::setInstance(std::unique_ptr<TelemetryManager> manager) {
+  g_instance = std::move(manager);
+}
+
 } // namespace telemetry
 } // namespace lldb_private
 
