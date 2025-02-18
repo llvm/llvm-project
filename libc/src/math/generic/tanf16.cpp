@@ -19,9 +19,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-constexpr size_t N_EXCEPTS = 9;
+static constexpr size_t N_EXCEPTS = 9;
 
-constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANF16_EXCEPTS{{
+static constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANF16_EXCEPTS{{
     // (input, RZ output, RU offset, RD offset, RN offset)
     {0x2894, 0x2894, 1, 0, 1},
     {0x3091, 0x3099, 1, 0, 0},
