@@ -714,7 +714,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   }
 
   // TODO: _BitInt is not handled yet in VLS calling convention since _BitInt
-  // ABI is also not merged yet in RISCV:
+  // ABI is also not merged yet in RISC-V:
   // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/pull/419
   if (const VectorType *VT = Ty->getAs<VectorType>();
       VT && !VT->getElementType()->isBitIntType()) {
