@@ -13,7 +13,6 @@
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 
 using namespace llvm;
 using namespace llvm::hlsl;

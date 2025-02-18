@@ -8,6 +8,8 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 using namespace clang;
@@ -79,6 +81,10 @@ public:
   // resulting MDNode to the nvvm.annotations MDNode.
   static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
                               int Operand);
+
+  static void
+  addGridConstantNVVMMetadata(llvm::GlobalValue *GV,
+                              const SmallVectorImpl<int> &GridConstantArgs);
 
 private:
   static void emitBuiltinSurfTexDeviceCopy(CodeGenFunction &CGF, LValue Dst,
@@ -186,14 +192,18 @@ ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
         return ABIArgInfo::getDirect(
             CGInfo.getCUDADeviceBuiltinTextureDeviceType());
     }
-    return getNaturalAlignIndirect(Ty, /* byval */ true);
+    return getNaturalAlignIndirect(
+        Ty, /* AddrSpace */ getDataLayout().getAllocaAddrSpace(),
+        /* byval */ true);
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>()) {
     if ((EIT->getNumBits() > 128) ||
         (!getContext().getTargetInfo().hasInt128Type() &&
          EIT->getNumBits() > 64))
-      return getNaturalAlignIndirect(Ty, /* byval */ true);
+      return getNaturalAlignIndirect(
+          Ty, /* AddrSpace */ getDataLayout().getAllocaAddrSpace(),
+          /* byval */ true);
   }
 
   return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
@@ -240,7 +250,8 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
   }
 
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-  if (!FD) return;
+  if (!FD)
+    return;
 
   llvm::Function *F = cast<llvm::Function>(GV);
 
@@ -251,7 +262,7 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
     if (FD->hasAttr<OpenCLKernelAttr>()) {
       // OpenCL __kernel functions get kernel metadata
       // Create !{<func-ref>, metadata !"kernel", i32 1} node
-      addNVVMMetadata(F, "kernel", 1);
+      F->setCallingConv(llvm::CallingConv::PTX_Kernel);
       // And kernel functions are not subject to inlining
       F->addFnAttr(llvm::Attribute::NoInline);
     }
@@ -263,8 +274,14 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
     // __global__ functions cannot be called from the device, we do not
     // need to set the noinline attribute.
     if (FD->hasAttr<CUDAGlobalAttr>()) {
+      SmallVector<int, 10> GCI;
+      for (auto IV : llvm::enumerate(FD->parameters()))
+        if (IV.value()->hasAttr<CUDAGridConstantAttr>())
+          // For some reason arg indices are 1-based in NVVM
+          GCI.push_back(IV.index() + 1);
       // Create !{<func-ref>, metadata !"kernel", i32 1} node
-      addNVVMMetadata(F, "kernel", 1);
+      F->setCallingConv(llvm::CallingConv::PTX_Kernel);
+      addGridConstantNVVMMetadata(F, GCI);
     }
     if (CUDALaunchBoundsAttr *Attr = FD->getAttr<CUDALaunchBoundsAttr>())
       M.handleCUDALaunchBoundsAttr(F, Attr);
@@ -272,7 +289,7 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
 
   // Attach kernel metadata directly if compiling for NVPTX.
   if (FD->hasAttr<NVPTXKernelAttr>()) {
-    addNVVMMetadata(F, "kernel", 1);
+    F->setCallingConv(llvm::CallingConv::PTX_Kernel);
   }
 }
 
@@ -284,10 +301,34 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,
   // Get "nvvm.annotations" metadata node
   llvm::NamedMDNode *MD = M->getOrInsertNamedMetadata("nvvm.annotations");
 
-  llvm::Metadata *MDVals[] = {
+  SmallVector<llvm::Metadata *, 5> MDVals = {
       llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, Name),
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), Operand))};
+
+  // Append metadata to nvvm.annotations
+  MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
+}
+
+void NVPTXTargetCodeGenInfo::addGridConstantNVVMMetadata(
+    llvm::GlobalValue *GV, const SmallVectorImpl<int> &GridConstantArgs) {
+
+  llvm::Module *M = GV->getParent();
+  llvm::LLVMContext &Ctx = M->getContext();
+
+  // Get "nvvm.annotations" metadata node
+  llvm::NamedMDNode *MD = M->getOrInsertNamedMetadata("nvvm.annotations");
+
+  SmallVector<llvm::Metadata *, 5> MDVals = {llvm::ConstantAsMetadata::get(GV)};
+  if (!GridConstantArgs.empty()) {
+    SmallVector<llvm::Metadata *, 10> GCM;
+    for (int I : GridConstantArgs)
+      GCM.push_back(llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), I)));
+    MDVals.append({llvm::MDString::get(Ctx, "grid_constant"),
+                   llvm::MDNode::get(Ctx, GCM)});
+  }
+
   // Append metadata to nvvm.annotations
   MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
 }
@@ -309,7 +350,7 @@ NVPTXTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
   return llvm::ConstantExpr::getAddrSpaceCast(
       llvm::ConstantPointerNull::get(NPT), PT);
 }
-}
+} // namespace
 
 void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
                                                const CUDALaunchBoundsAttr *Attr,
@@ -338,11 +379,8 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
     if (MinBlocks > 0) {
       if (MinBlocksVal)
         *MinBlocksVal = MinBlocks.getExtValue();
-      if (F) {
-        // Create !{<func-ref>, metadata !"minctasm", i32 <val>} node
-        NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "minctasm",
-                                                MinBlocks.getExtValue());
-      }
+      if (F)
+        F->addFnAttr("nvvm.minctasm", llvm::utostr(MinBlocks.getExtValue()));
     }
   }
   if (Attr->getMaxBlocks()) {
@@ -351,11 +389,9 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
     if (MaxBlocks > 0) {
       if (MaxClusterRankVal)
         *MaxClusterRankVal = MaxBlocks.getExtValue();
-      if (F) {
-        // Create !{<func-ref>, metadata !"maxclusterrank", i32 <val>} node
-        NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxclusterrank",
-                                                MaxBlocks.getExtValue());
-      }
+      if (F)
+        F->addFnAttr("nvvm.maxclusterrank",
+                     llvm::utostr(MaxBlocks.getExtValue()));
     }
   }
 }

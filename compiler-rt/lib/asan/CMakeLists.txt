@@ -141,7 +141,7 @@ append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
 # LLVM turns /OPT:ICF back on when LLVM_ENABLE_PDBs is set
 # we _REALLY_ need to turn it back off for ASAN, because the way
 # asan emulates weak functions from DLLs requires NOICF
-append_list_if(MSVC "/DEBUG;/OPT:NOICF" ASAN_DYNAMIC_LINK_FLAGS)
+append_list_if(MSVC "LINKER:/DEBUG;LINKER:/OPT:NOICF" ASAN_DYNAMIC_LINK_FLAGS)
 
 set(ASAN_DYNAMIC_LIBS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
@@ -260,7 +260,6 @@ else()
       STATIC
       ARCHS ${ASAN_SUPPORTED_ARCH}
       OBJECT_LIBS RTAsan_cxx
-                  RTUbsan_cxx
       CFLAGS ${ASAN_CFLAGS}
       DEFS ${ASAN_COMMON_DEFINITIONS}
       PARENT_TARGET asan)

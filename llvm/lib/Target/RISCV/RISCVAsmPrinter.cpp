@@ -19,14 +19,13 @@
 #include "RISCV.h"
 #include "RISCVConstantPoolValue.h"
 #include "RISCVMachineFunctionInfo.h"
-#include "RISCVTargetMachine.h"
+#include "RISCVRegisterInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
@@ -113,6 +112,12 @@ private:
   void emitAttributes(const MCSubtargetInfo &SubtargetInfo);
 
   void emitNTLHint(const MachineInstr *MI);
+
+  // XRay Support
+  void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr *MI);
+  void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr *MI);
+  void LowerPATCHABLE_TAIL_CALL(const MachineInstr *MI);
+  void emitSled(const MachineInstr *MI, SledKind Kind);
 
   bool lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
 };
@@ -317,6 +322,22 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return LowerPATCHPOINT(*OutStreamer, SM, *MI);
   case TargetOpcode::STATEPOINT:
     return LowerSTATEPOINT(*OutStreamer, SM, *MI);
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
+    // patchable-function-entry is handled in lowerToMCInst
+    // Therefore, we break out of the switch statement if we encounter it here.
+    const Function &F = MI->getParent()->getParent()->getFunction();
+    if (F.hasFnAttribute("patchable-function-entry"))
+      break;
+
+    LowerPATCHABLE_FUNCTION_ENTER(MI);
+    return;
+  }
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+    LowerPATCHABLE_FUNCTION_EXIT(MI);
+    return;
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    LowerPATCHABLE_TAIL_CALL(MI);
+    return;
   }
 
   MCInst OutInst;
@@ -347,6 +368,13 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'i': // Literal 'i' if operand is not a register.
       if (!MO.isReg())
         OS << 'i';
+      return false;
+    case 'N': // Print the register encoding as an integer (0-31)
+      if (!MO.isReg())
+        return true;
+
+      const RISCVRegisterInfo *TRI = STI->getRegisterInfo();
+      OS << TRI->getEncodingValue(MO.getReg());
       return false;
     }
   }
@@ -447,9 +475,69 @@ bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   SetupMachineFunction(MF);
   emitFunctionBody();
 
+  // Emit the XRay table
+  emitXRayTable();
+
   if (EmittedOptionArch)
     RTS.emitDirectiveOptionPop();
   return false;
+}
+
+void RISCVAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr *MI) {
+  emitSled(MI, SledKind::FUNCTION_ENTER);
+}
+
+void RISCVAsmPrinter::LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr *MI) {
+  emitSled(MI, SledKind::FUNCTION_EXIT);
+}
+
+void RISCVAsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr *MI) {
+  emitSled(MI, SledKind::TAIL_CALL);
+}
+
+void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
+  // We want to emit the jump instruction and the nops constituting the sled.
+  // The format is as follows:
+  // .Lxray_sled_N
+  //   ALIGN
+  //   J .tmpN
+  //   21 or 33 C.NOP instructions
+  // .tmpN
+
+  // The following variable holds the count of the number of NOPs to be patched
+  // in for XRay instrumentation during compilation.
+  // Note that RV64 and RV32 each has a sled of 68 and 44 bytes, respectively.
+  // Assuming we're using JAL to jump to .tmpN, then we only need
+  // (68 - 4)/2 = 32 NOPs for RV64 and (44 - 4)/2 = 20 for RV32. However, there
+  // is a chance that we'll use C.JAL instead, so an additional NOP is needed.
+  const uint8_t NoopsInSledCount =
+      MI->getParent()->getParent()->getSubtarget<RISCVSubtarget>().is64Bit()
+          ? 33
+          : 21;
+
+  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+  auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->emitLabel(CurSled);
+  auto Target = OutContext.createTempSymbol();
+
+  const MCExpr *TargetExpr = MCSymbolRefExpr::create(
+      Target, MCSymbolRefExpr::VariantKind::VK_None, OutContext);
+
+  // Emit "J bytes" instruction, which jumps over the nop sled to the actual
+  // start of function.
+  EmitToStreamer(
+      *OutStreamer,
+      MCInstBuilder(RISCV::JAL).addReg(RISCV::X0).addExpr(TargetExpr));
+
+  // Emit NOP instructions
+  for (int8_t I = 0; I < NoopsInSledCount; ++I)
+    EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::ADDI)
+                                     .addReg(RISCV::X0)
+                                     .addReg(RISCV::X0)
+                                     .addImm(0));
+
+  OutStreamer->emitLabel(Target);
+  recordSled(CurSled, *MI, Kind, 2);
 }
 
 void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
@@ -1001,7 +1089,7 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   bool hasVLOutput = RISCV::isFaultFirstLoad(*MI);
   for (unsigned OpNo = 0; OpNo != NumOps; ++OpNo) {
     const MachineOperand &MO = MI->getOperand(OpNo);
-    // Skip vl ouput. It should be the second output.
+    // Skip vl output. It should be the second output.
     if (hasVLOutput && OpNo == 1)
       continue;
 

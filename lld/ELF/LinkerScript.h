@@ -186,7 +186,7 @@ public:
         sortOuter(SortSectionPolicy::Default),
         sortInner(SortSectionPolicy::Default) {}
 
-  bool excludesFile(const InputFile *file) const;
+  bool excludesFile(const InputFile &file) const;
 
   StringMatcher sectionPat;
   SortSectionPolicy sortOuter;
@@ -194,6 +194,7 @@ public:
 };
 
 class InputSectionDescription : public SectionCommand {
+  enum class MatchType { Trivial, WholeArchive, ArchivesExcluded } matchType;
   SingleStringMatcher filePat;
 
   // Cache of the most recent input argument and result of matchesFile().
@@ -202,17 +203,31 @@ class InputSectionDescription : public SectionCommand {
 public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
                           uint64_t withoutFlags = 0, StringRef classRef = {})
-      : SectionCommand(InputSectionKind), filePat(filePattern),
-        classRef(classRef), withFlags(withFlags), withoutFlags(withoutFlags) {
+      : SectionCommand(InputSectionKind), matchType(MatchType::Trivial),
+        filePat(filePattern), classRef(classRef), withFlags(withFlags),
+        withoutFlags(withoutFlags) {
     assert((filePattern.empty() || classRef.empty()) &&
            "file pattern and class reference are mutually exclusive");
+
+    // The matching syntax for whole archives and files outside of an archive
+    // can't be handled by SingleStringMatcher, and instead are handled
+    // manually within matchesFile()
+    if (!filePattern.empty()) {
+      if (filePattern.back() == ':') {
+        matchType = MatchType::WholeArchive;
+        filePat = filePattern.drop_back();
+      } else if (filePattern.front() == ':') {
+        matchType = MatchType::ArchivesExcluded;
+        filePat = filePattern.drop_front();
+      }
+    }
   }
 
   static bool classof(const SectionCommand *c) {
     return c->kind == InputSectionKind;
   }
 
-  bool matchesFile(const InputFile *file) const;
+  bool matchesFile(const InputFile &file) const;
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
@@ -299,6 +314,7 @@ class LinkerScript final {
   };
 
   Ctx &ctx;
+  SmallVector<std::unique_ptr<OutputDesc>, 0> descPool;
   llvm::DenseMap<llvm::CachedHashStringRef, OutputDesc *> nameToOutputSection;
 
   StringRef getOutputSectionName(const InputSectionBase *s) const;
@@ -332,12 +348,15 @@ class LinkerScript final {
   // LinkerScript.
   AddressState *state = nullptr;
 
-  OutputSection *aether;
+  std::unique_ptr<OutputSection> aether;
 
   uint64_t dot = 0;
 
 public:
-  LinkerScript(Ctx &ctx) : ctx(ctx) {}
+  // OutputSection may be incomplete. Avoid inline ctor/dtor.
+  LinkerScript(Ctx &ctx);
+  ~LinkerScript();
+
   OutputDesc *createOutputSection(StringRef name, StringRef location);
   OutputDesc *getOrCreateOutputSection(StringRef name);
 
@@ -353,14 +372,14 @@ public:
   void adjustOutputSections();
   void adjustSectionsAfterSorting();
 
-  SmallVector<PhdrEntry *, 0> createPhdrs();
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> createPhdrs();
   bool needsInterpSection();
 
   bool shouldKeep(InputSectionBase *s);
   std::pair<const OutputSection *, const Defined *> assignAddresses();
   bool spillSections();
   void erasePotentialSpillSections();
-  void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
+  void allocateHeaders(SmallVector<std::unique_ptr<PhdrEntry>, 0> &phdrs);
   void processSectionCommands();
   void processSymbolAssignments();
   void declareSymbols();
@@ -389,7 +408,7 @@ public:
   // Returns true if the PROVIDE symbol should be added to the link.
   // A PROVIDE symbol is added to the link only if it satisfies an
   // undefined reference.
-  static bool shouldAddProvideSym(Ctx &, StringRef symName);
+  bool shouldAddProvideSym(StringRef symName);
 
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;
@@ -433,6 +452,8 @@ public:
   //
   // then provideMap should contain the mapping: 'v' -> ['a', 'b', 'c']
   llvm::MapVector<StringRef, SmallVector<StringRef, 0>> provideMap;
+  // Store defined symbols that should ignore PROVIDE commands.
+  llvm::DenseSet<Symbol *> unusedProvideSyms;
 
   // List of potential spill locations (PotentialSpillSection) for an input
   // section.

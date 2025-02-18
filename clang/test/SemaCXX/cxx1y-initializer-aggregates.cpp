@@ -115,3 +115,14 @@ namespace nested_union {
   // of Test3, or we should exclude f(Test3) as a candidate.
   static_assert(f({1}) == 2, ""); // expected-error {{call to 'f' is ambiguous}}
 }
+
+// Fix crash issue https://github.com/llvm/llvm-project/issues/112560.
+// Make sure clang compiles the following code without crashing:
+namespace GH112560 {
+union U {
+  int f = ; // expected-error {{expected expression}}
+};
+void foo() {
+  U g{};
+}
+} // namespace GH112560

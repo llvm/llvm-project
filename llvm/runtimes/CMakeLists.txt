@@ -230,7 +230,7 @@ foreach(entry ${runtimes})
 endforeach()
 
 function(runtime_default_target)
-  cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;PREFIXES" ${ARGN})
+  cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;PREFIXES;EXTRA_ARGS" ${ARGN})
 
   include(${LLVM_BINARY_DIR}/runtimes/Components.cmake OPTIONAL)
   set(SUB_CHECK_TARGETS ${SUB_CHECK_TARGETS} PARENT_SCOPE)
@@ -270,13 +270,16 @@ function(runtime_default_target)
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
+                                      -DCMAKE_Fortran_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${RUNTIMES_CMAKE_ARGS}
                                       ${ARG_CMAKE_ARGS}
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
-                                                CUDA # For runtimes that may look for the CUDA SDK (libc, offload)
+                                                CUDA CMAKE_CUDA # For runtimes that may look for the CUDA compiler and/or SDK (libc, offload, flang-rt)
+                                                FFI # offload uses libffi
+                                                FLANG_RUNTIME # Shared between Flang and Flang-RT
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
                                          ${test_targets}
@@ -286,7 +289,7 @@ function(runtime_default_target)
                            USE_TOOLCHAIN
                            TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
                            FOLDER "Runtimes"
-                           ${EXTRA_ARGS})
+                           ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 endfunction()
 
 # runtime_register_target(name)
@@ -403,6 +406,7 @@ function(runtime_register_target name)
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
+                                      -DCMAKE_Fortran_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                       -DLLVM_RUNTIMES_TARGET=${name}
@@ -462,10 +466,13 @@ if(build_runtimes)
   # together in a single CMake invocation.
   set(extra_deps "")
   set(extra_cmake_args "")
+  set(extra_args "")
 
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
+                clang-offload-packager
+                flang
                 count
                 lld
                 lli
@@ -520,24 +527,6 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
-  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND
-      (LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD))
-    if(LIBC_HDRGEN_EXE)
-      set(hdrgen_exe ${LIBC_HDRGEN_EXE})
-    else()
-      if(TARGET ${LIBC_TABLEGEN_EXE})
-        set(hdrgen_exe $<TARGET_FILE:${LIBC_TABLEGEN_EXE}>)
-      else()
-        set(hdrgen_exe ${LIBC_TABLEGEN_EXE})
-      endif()
-      set(hdrgen_deps ${LIBC_TABLEGEN_TARGET})
-    endif()
-    if(NOT hdrgen_exe)
-      message(FATAL_ERROR "libc-hdrgen executable missing")
-    endif()
-    list(APPEND extra_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}")
-    list(APPEND extra_deps ${hdrgen_deps})
-  endif()
   if(LLVM_LIBC_GPU_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
     if("libc" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES)
@@ -566,19 +555,24 @@ if(build_runtimes)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
+  if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    list(APPEND extra_args ENABLE_FORTRAN)
+  endif ()
 
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
       DEPENDS ${builtins_dep} ${extra_deps}
       CMAKE_ARGS ${extra_cmake_args}
-      PREFIXES ${prefixes})
+      PREFIXES ${prefixes}
+      EXTRA_ARGS ${extra_args})
     set(test_targets check-runtimes)
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
         DEPENDS ${builtins_dep} ${extra_deps}
         CMAKE_ARGS ${extra_cmake_args}
-        PREFIXES ${prefixes})
+        PREFIXES ${prefixes}
+        EXTRA_ARGS ${extra_args})
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
       add_custom_target(runtimes)
@@ -625,7 +619,7 @@ if(build_runtimes)
       runtime_register_target(${name}
         DEPENDS ${builtins_dep_name} ${extra_deps}
         CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args}
-        EXTRA_ARGS TARGET_TRIPLE ${name})
+        EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
     endforeach()
 
     foreach(multilib ${LLVM_RUNTIME_MULTILIBS})
@@ -635,8 +629,9 @@ if(build_runtimes)
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
                      -DLLVM_RUNTIMES_PREFIX=${name}/
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
+                     ${extra_cmake_args}
           BASE_NAME ${name}
-          EXTRA_ARGS TARGET_TRIPLE ${name})
+          EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
       endforeach()
     endforeach()
   endif()

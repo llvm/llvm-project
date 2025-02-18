@@ -60,7 +60,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -70,7 +69,6 @@
 #include <cassert>
 #include <cctype>
 #include <cstddef>
-#include <iterator>
 #include <limits>
 
 using namespace llvm;
@@ -125,6 +123,8 @@ static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
     return CPUType::ARMNT;
   case Triple::ArchType::aarch64:
     return CPUType::ARM64;
+  case Triple::ArchType::mipsel:
+    return CPUType::MIPS;
   default:
     report_fatal_error("target architecture doesn't map to a CodeView CPUType");
   }

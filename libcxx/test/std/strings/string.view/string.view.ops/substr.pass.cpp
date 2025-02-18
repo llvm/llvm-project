@@ -16,10 +16,11 @@
 // Effects: Determines the effective length rlen of the string to reference as the smaller of n and size() - pos.
 // Returns: basic_string_view(data()+pos, rlen).
 
-#include <string_view>
 #include <algorithm>
-#include <stdexcept>
 #include <cassert>
+#include <cstddef>
+#include <stdexcept>
+#include <string_view>
 
 #include "test_macros.h"
 

@@ -30,6 +30,10 @@
       "value": false,
       "doc": "Use the same mode for double and long double in printf."
     },
+    "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320": {
+      "value": false,
+      "doc": "Use an alternative printf float implementation based on 320-bit floats"
+    },
     "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
       "value": false,
       "doc": "Disable printing fixed point values in printf and friends."
@@ -87,6 +91,10 @@
     "LIBC_CONF_MATH_OPTIMIZATIONS": {
       "value": 0,
       "doc": "Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST."
+    },
+    "LIBC_CONF_FREXP_INF_NAN_EXPONENT": {
+      "value": "",
+      "doc": "The value written back to the second parameter when calling frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified.  Configue an explicit exp value for Inf/NaN inputs."
     }
   },
   "qsort": {

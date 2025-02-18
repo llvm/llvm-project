@@ -25,8 +25,8 @@ define i32 @xor1(i32 %x) {
 ;
 define <2 x i32> @xor1_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @xor1_vec(
-; CHECK-NEXT:    [[AND_RA:%.*]] = and <2 x i32> [[X:%.*]], <i32 435, i32 435>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[AND_RA]], <i32 435, i32 435>
+; CHECK-NEXT:    [[AND_RA:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 435)
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[AND_RA]], splat (i32 435)
 ; CHECK-NEXT:    ret <2 x i32> [[XOR]]
 ;
   %or = or <2 x i32> %x, <i32 123, i32 123>
@@ -54,7 +54,7 @@ define i32 @xor2(i32 %x, i32 %y) {
 ; Real testing case : (x & 123) ^ y ^ (x & 345) => (x & 435) ^ y
 define <2 x i32> @xor2_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @xor2_vec(
-; CHECK-NEXT:    [[AND_RA:%.*]] = and <2 x i32> [[X:%.*]], <i32 435, i32 435>
+; CHECK-NEXT:    [[AND_RA:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 435)
 ; CHECK-NEXT:    [[XOR2:%.*]] = xor <2 x i32> [[AND_RA]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[XOR2]]
 ;
@@ -85,8 +85,8 @@ define i32 @xor3(i32 %x, i32 %y) {
 ;  c3 = ~c1 ^ c2
 define <2 x i32> @xor3_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @xor3_vec(
-; CHECK-NEXT:    [[AND_RA:%.*]] = and <2 x i32> [[X:%.*]], <i32 -436, i32 -436>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[Y:%.*]], <i32 123, i32 123>
+; CHECK-NEXT:    [[AND_RA:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -436)
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[Y:%.*]], splat (i32 123)
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor <2 x i32> [[XOR]], [[AND_RA]]
 ; CHECK-NEXT:    ret <2 x i32> [[XOR1]]
 ;
@@ -114,8 +114,8 @@ define i32 @xor4(i32 %x, i32 %y) {
 ; Test rule: (x | c1) ^ c2 = (x & ~c1) ^ (c1 ^ c2)
 define <2 x i32> @xor4_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @xor4_vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 -124, i32 -124>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[Y:%.*]], <i32 435, i32 435>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -124)
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[Y:%.*]], splat (i32 435)
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor <2 x i32> [[XOR]], [[AND]]
 ; CHECK-NEXT:    ret <2 x i32> [[XOR1]]
 ;
@@ -149,7 +149,7 @@ define i32 @xor_special1(i32 %x, i32 %y) {
 ;  (x | c1) ^ (x & ~c1) = c1
 define <2 x i32> @xor_special1_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @xor_special1_vec(
-; CHECK-NEXT:    [[XOR1:%.*]] = xor <2 x i32> [[Y:%.*]], <i32 123, i32 123>
+; CHECK-NEXT:    [[XOR1:%.*]] = xor <2 x i32> [[Y:%.*]], splat (i32 123)
 ; CHECK-NEXT:    ret <2 x i32> [[XOR1]]
 ;
   %or = or <2 x i32> %x, <i32 123, i32 123>
@@ -178,7 +178,7 @@ define i32 @xor_special2(i32 %x, i32 %y) {
 ;  (x | c1) ^ (x & c1) = x ^ c1
 define <2 x i32> @xor_special2_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @xor_special2_vec(
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[X:%.*]], <i32 123, i32 123>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[X:%.*]], splat (i32 123)
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor <2 x i32> [[XOR]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[XOR1]]
 ;

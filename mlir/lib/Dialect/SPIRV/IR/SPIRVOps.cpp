@@ -917,7 +917,7 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the function signature.
   bool isVariadic = false;
-  if (function_interface_impl::parseFunctionSignature(
+  if (function_interface_impl::parseFunctionSignatureWithArguments(
           parser, /*allowVariadic=*/false, entryArgs, isVariadic, resultTypes,
           resultAttrs))
     return failure();
@@ -940,7 +940,7 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Add the attributes to the function arguments.
   assert(resultAttrs.size() == resultTypes.size());
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, result, entryArgs, resultAttrs, getArgAttrsAttrName(result.name),
       getResAttrsAttrName(result.name));
 
@@ -1252,33 +1252,6 @@ LogicalResult spirv::GlobalVariableOp::verify() {
 //===----------------------------------------------------------------------===//
 // spirv.INTEL.SubgroupBlockRead
 //===----------------------------------------------------------------------===//
-
-ParseResult spirv::INTELSubgroupBlockReadOp::parse(OpAsmParser &parser,
-                                                   OperationState &result) {
-  // Parse the storage class specification
-  spirv::StorageClass storageClass;
-  OpAsmParser::UnresolvedOperand ptrInfo;
-  Type elementType;
-  if (parseEnumStrAttr(storageClass, parser) || parser.parseOperand(ptrInfo) ||
-      parser.parseColon() || parser.parseType(elementType)) {
-    return failure();
-  }
-
-  auto ptrType = spirv::PointerType::get(elementType, storageClass);
-  if (auto valVecTy = llvm::dyn_cast<VectorType>(elementType))
-    ptrType = spirv::PointerType::get(valVecTy.getElementType(), storageClass);
-
-  if (parser.resolveOperand(ptrInfo, ptrType, result.operands)) {
-    return failure();
-  }
-
-  result.addTypes(elementType);
-  return success();
-}
-
-void spirv::INTELSubgroupBlockReadOp::print(OpAsmPrinter &printer) {
-  printer << " " << getPtr() << " : " << getType();
-}
 
 LogicalResult spirv::INTELSubgroupBlockReadOp::verify() {
   if (failed(verifyBlockReadWritePtrAndValTypes(*this, getPtr(), getValue())))
@@ -1726,6 +1699,55 @@ LogicalResult spirv::TransposeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.MatrixTimesVector
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::MatrixTimesVectorOp::verify() {
+  auto matrixType = llvm::cast<spirv::MatrixType>(getMatrix().getType());
+  auto vectorType = llvm::cast<VectorType>(getVector().getType());
+  auto resultType = llvm::cast<VectorType>(getType());
+
+  if (matrixType.getNumColumns() != vectorType.getNumElements())
+    return emitOpError("matrix columns (")
+           << matrixType.getNumColumns() << ") must match vector operand size ("
+           << vectorType.getNumElements() << ")";
+
+  if (resultType.getNumElements() != matrixType.getNumRows())
+    return emitOpError("result size (")
+           << resultType.getNumElements() << ") must match the matrix rows ("
+           << matrixType.getNumRows() << ")";
+
+  if (matrixType.getElementType() != resultType.getElementType())
+    return emitOpError("matrix and result element types must match");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.VectorTimesMatrix
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::VectorTimesMatrixOp::verify() {
+  auto vectorType = llvm::cast<VectorType>(getVector().getType());
+  auto matrixType = llvm::cast<spirv::MatrixType>(getMatrix().getType());
+  auto resultType = llvm::cast<VectorType>(getType());
+
+  if (matrixType.getNumRows() != vectorType.getNumElements())
+    return emitOpError("number of components in vector must equal the number "
+                       "of components in each column in matrix");
+
+  if (resultType.getNumElements() != matrixType.getNumColumns())
+    return emitOpError("number of columns in matrix must equal the number of "
+                       "components in result");
+
+  if (matrixType.getElementType() != resultType.getElementType())
+    return emitOpError("matrix must be a matrix with the same component type "
+                       "as the component type in result");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.MatrixTimesMatrix
 //===----------------------------------------------------------------------===//
 
@@ -2018,6 +2040,45 @@ LogicalResult spirv::ImageDrefGatherOp::verify() {
   auto operandArguments = getOperandArguments();
 
   return verifyImageOperands(*this, attr, operandArguments);
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ImageWriteOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::ImageWriteOp::verify() {
+  ImageType imageType = cast<ImageType>(getImage().getType());
+  Type sampledType = imageType.getElementType();
+  ImageSamplerUseInfo samplerInfo = imageType.getSamplerUseInfo();
+
+  if (!llvm::is_contained({spirv::ImageSamplerUseInfo::SamplerUnknown,
+                           spirv::ImageSamplerUseInfo::NoSampler},
+                          samplerInfo)) {
+    return emitOpError(
+        "the sampled operand of the underlying image must be 0 or 2");
+  }
+
+  // TODO: Do we need check for: "If the Arrayed operand is 1, then additional
+  // capabilities may be required; e.g., ImageCubeArray, or ImageMSArray."?
+
+  if (imageType.getDim() == spirv::Dim::SubpassData) {
+    return emitOpError(
+        "the Dim operand of the underlying image must not be SubpassData");
+  }
+
+  Type texelType = getElementTypeOrSelf(getTexel());
+  if (!isa<NoneType>(sampledType) && texelType != sampledType) {
+    return emitOpError(
+        "the texel component type must match the image sampled type");
+  }
+
+  // TODO: Ideally it should be somewhere verified that "The Image Format must
+  // not be Unknown, unless the StorageImageWriteWithoutFormat Capability was
+  // declared." This function however may not be the suitable place for such
+  // verification.
+
+  return verifyImageOperands(*this, getImageOperandsAttr(),
+                             getOperandArguments());
 }
 
 //===----------------------------------------------------------------------===//

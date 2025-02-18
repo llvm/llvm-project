@@ -52,8 +52,8 @@ public:
     return Feature == "pnacl";
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
+    return {};
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

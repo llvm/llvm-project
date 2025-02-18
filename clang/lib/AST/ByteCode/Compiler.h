@@ -51,9 +51,13 @@ public:
     K_Temp = 2,
     K_Decl = 3,
     K_Elem = 5,
+    K_RVO = 6,
+    K_InitList = 7
   };
 
   static InitLink This() { return InitLink{K_This}; }
+  static InitLink InitList() { return InitLink{K_InitList}; }
+  static InitLink RVO() { return InitLink{K_RVO}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
     IL.Offset = Offset;
@@ -205,6 +209,7 @@ public:
   bool VisitCXXNewExpr(const CXXNewExpr *E);
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
   bool VisitBlockExpr(const BlockExpr *E);
+  bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -304,7 +309,7 @@ protected:
   std::optional<unsigned>
   allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
                 const ValueDecl *ExtendingDecl = nullptr);
-  unsigned allocateTemporary(const Expr *E);
+  std::optional<unsigned> allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
@@ -325,6 +330,7 @@ private:
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
+  bool visitZeroArrayInitializer(QualType T, const Expr *E);
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
@@ -370,11 +376,14 @@ private:
                              const BinaryOperator *E);
   bool emitRecordDestruction(const Record *R, SourceInfo Loc);
   bool emitDestruction(const Descriptor *Desc, SourceInfo Loc);
+  bool emitDummyPtr(const DeclTy &D, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+  bool emitBuiltinBitCast(const CastExpr *E);
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
+  bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
 
   bool checkLiteralType(const Expr *E);
 

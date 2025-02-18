@@ -340,46 +340,38 @@ struct X86Operand final : public MCParsedAsmOperand {
     return Mem.IndexReg >= LowR && Mem.IndexReg <= HighR;
   }
 
+  bool isMem32_RC128() const {
+    return isMem32() && isMemIndexReg(X86::XMM0, X86::XMM15);
+  }
   bool isMem64_RC128() const {
     return isMem64() && isMemIndexReg(X86::XMM0, X86::XMM15);
   }
-  bool isMem128_RC128() const {
-    return isMem128() && isMemIndexReg(X86::XMM0, X86::XMM15);
+  bool isMem32_RC256() const {
+    return isMem32() && isMemIndexReg(X86::YMM0, X86::YMM15);
   }
-  bool isMem128_RC256() const {
-    return isMem128() && isMemIndexReg(X86::YMM0, X86::YMM15);
-  }
-  bool isMem256_RC128() const {
-    return isMem256() && isMemIndexReg(X86::XMM0, X86::XMM15);
-  }
-  bool isMem256_RC256() const {
-    return isMem256() && isMemIndexReg(X86::YMM0, X86::YMM15);
+  bool isMem64_RC256() const {
+    return isMem64() && isMemIndexReg(X86::YMM0, X86::YMM15);
   }
 
+  bool isMem32_RC128X() const {
+    return isMem32() && X86II::isXMMReg(Mem.IndexReg);
+  }
   bool isMem64_RC128X() const {
     return isMem64() && X86II::isXMMReg(Mem.IndexReg);
   }
-  bool isMem128_RC128X() const {
-    return isMem128() && X86II::isXMMReg(Mem.IndexReg);
+  bool isMem32_RC256X() const {
+    return isMem32() && X86II::isYMMReg(Mem.IndexReg);
   }
-  bool isMem128_RC256X() const {
-    return isMem128() && X86II::isYMMReg(Mem.IndexReg);
+  bool isMem64_RC256X() const {
+    return isMem64() && X86II::isYMMReg(Mem.IndexReg);
   }
-  bool isMem256_RC128X() const {
-    return isMem256() && X86II::isXMMReg(Mem.IndexReg);
+  bool isMem32_RC512() const {
+    return isMem32() && X86II::isZMMReg(Mem.IndexReg);
   }
-  bool isMem256_RC256X() const {
-    return isMem256() && X86II::isYMMReg(Mem.IndexReg);
+  bool isMem64_RC512() const {
+    return isMem64() && X86II::isZMMReg(Mem.IndexReg);
   }
-  bool isMem256_RC512() const {
-    return isMem256() && X86II::isZMMReg(Mem.IndexReg);
-  }
-  bool isMem512_RC256X() const {
-    return isMem512() && X86II::isYMMReg(Mem.IndexReg);
-  }
-  bool isMem512_RC512() const {
-    return isMem512() && X86II::isZMMReg(Mem.IndexReg);
-  }
+
   bool isMem512_GR16() const {
     if (!isMem512())
       return false;
@@ -618,6 +610,37 @@ struct X86Operand final : public MCParsedAsmOperand {
     case X86::K6:
     case X86::K7:
       Reg = X86::K6_K7;
+      break;
+    }
+    Inst.addOperand(MCOperand::createReg(Reg));
+  }
+
+  bool isTILEPair() const {
+    return Kind == Register &&
+           X86MCRegisterClasses[X86::TILERegClassID].contains(getReg());
+  }
+
+  void addTILEPairOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    unsigned Reg = getReg();
+    switch (Reg) {
+    default:
+      llvm_unreachable("Invalid tile register!");
+    case X86::TMM0:
+    case X86::TMM1:
+      Reg = X86::TMM0_TMM1;
+      break;
+    case X86::TMM2:
+    case X86::TMM3:
+      Reg = X86::TMM2_TMM3;
+      break;
+    case X86::TMM4:
+    case X86::TMM5:
+      Reg = X86::TMM4_TMM5;
+      break;
+    case X86::TMM6:
+    case X86::TMM7:
+      Reg = X86::TMM6_TMM7;
       break;
     }
     Inst.addOperand(MCOperand::createReg(Reg));

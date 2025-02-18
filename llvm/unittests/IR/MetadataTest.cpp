@@ -115,9 +115,10 @@ protected:
     return ConstantAsMetadata::get(getConstant());
   }
   DIType *getCompositeType() {
-    return DICompositeType::getDistinct(
-        Context, dwarf::DW_TAG_structure_type, "", nullptr, 0, nullptr, nullptr,
-        32, 32, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr, "");
+    return DICompositeType::getDistinct(Context, dwarf::DW_TAG_structure_type,
+                                        "", nullptr, 0, nullptr, nullptr, 32,
+                                        32, 0, DINode::FlagZero, nullptr, 0,
+                                        std::nullopt, nullptr, nullptr, "");
   }
   Function *getFunction(StringRef Name) {
     return Function::Create(
@@ -1772,44 +1773,48 @@ TEST_F(DIEnumeratorTest, getWithLargeValues) {
 typedef MetadataTest DIBasicTypeTest;
 
 TEST_F(DIBasicTypeTest, get) {
-  auto *N =
-      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33, 26, 7,
-                        DINode::FlagZero);
+  auto *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
+                             26, 7, 100, DINode::FlagZero);
   EXPECT_EQ(dwarf::DW_TAG_base_type, N->getTag());
   EXPECT_EQ("special", N->getName());
   EXPECT_EQ(33u, N->getSizeInBits());
   EXPECT_EQ(26u, N->getAlignInBits());
   EXPECT_EQ(7u, N->getEncoding());
   EXPECT_EQ(0u, N->getLine());
+  EXPECT_EQ(100u, N->getNumExtraInhabitants());
   EXPECT_EQ(DINode::FlagZero, N->getFlags());
   EXPECT_EQ(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagZero));
+                                26, 7, 100, DINode::FlagZero));
 
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type,
-                                "special", 33, 26, 7, DINode::FlagZero));
-  EXPECT_NE(N,
-            DIBasicType::get(Context, dwarf::DW_TAG_base_type, "s", 33, 26, 7,
-                              DINode::FlagZero));
+                                "special", 33, 26, 7, 100, DINode::FlagZero));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "s", 33, 26,
+                                7, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 32,
-                                26, 7, DINode::FlagZero));
+                                26, 7, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                25, 7, DINode::FlagZero));
+                                25, 7, 100, DINode::FlagZero));
+
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 6, DINode::FlagZero));
+                                26, 7, 99, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagBigEndian));
+                                26, 6, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagLittleEndian));
+                                26, 7, 100, DINode::FlagBigEndian));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
+                                26, 7, 100, DINode::FlagLittleEndian));
 
   TempDIBasicType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
 }
 
 TEST_F(DIBasicTypeTest, getWithLargeValues) {
-  auto *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special",
-                             UINT64_MAX, UINT32_MAX - 1, 7, DINode::FlagZero);
+  auto *N =
+      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", UINT64_MAX,
+                       UINT32_MAX - 1, 7, UINT32_MAX, DINode::FlagZero);
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
   EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
+  EXPECT_EQ(UINT32_MAX, N->getNumExtraInhabitants());
 }
 
 TEST_F(DIBasicTypeTest, getUnspecified) {
@@ -1829,7 +1834,7 @@ typedef MetadataTest DITypeTest;
 TEST_F(DITypeTest, clone) {
   // Check that DIType has a specialized clone that returns TempDIType.
   DIType *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "int", 32, 32,
-                               dwarf::DW_ATE_signed, DINode::FlagZero);
+                               0, dwarf::DW_ATE_signed, DINode::FlagZero);
 
   TempDIType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -1997,11 +2002,12 @@ TEST_F(DICompositeTypeTest, get) {
   DIType *VTableHolder = getCompositeType();
   MDTuple *TemplateParams = getTuple();
   StringRef Identifier = "some id";
+  std::optional<uint32_t> EnumKind = 1;
 
-  auto *N = DICompositeType::get(Context, Tag, Name, File, Line, Scope,
-                                 BaseType, SizeInBits, AlignInBits,
-                                 OffsetInBits, Flags, Elements, RuntimeLang,
-                                 VTableHolder, TemplateParams, Identifier);
+  auto *N = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, Elements, RuntimeLang, EnumKind, VTableHolder,
+      TemplateParams, Identifier);
   EXPECT_EQ(Tag, N->getTag());
   EXPECT_EQ(Name, N->getName());
   EXPECT_EQ(File, N->getFile());
@@ -2017,84 +2023,91 @@ TEST_F(DICompositeTypeTest, get) {
   EXPECT_EQ(VTableHolder, N->getVTableHolder());
   EXPECT_EQ(TemplateParams, N->getTemplateParams().get());
   EXPECT_EQ(Identifier, N->getIdentifier());
+  EXPECT_EQ(EnumKind, N->getEnumKind());
 
-  EXPECT_EQ(N, DICompositeType::get(Context, Tag, Name, File, Line, Scope,
-                                    BaseType, SizeInBits, AlignInBits,
-                                    OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, TemplateParams, Identifier));
+  EXPECT_EQ(N, DICompositeType::get(
+                   Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+                   AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
+                   EnumKind, VTableHolder, TemplateParams, Identifier));
 
   EXPECT_NE(N, DICompositeType::get(Context, Tag + 1, Name, File, Line, Scope,
                                     BaseType, SizeInBits, AlignInBits,
                                     OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, TemplateParams, Identifier));
-  EXPECT_NE(N, DICompositeType::get(Context, Tag, "abc", File, Line, Scope,
-                                    BaseType, SizeInBits, AlignInBits,
-                                    OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, TemplateParams, Identifier));
+                                    EnumKind, VTableHolder, TemplateParams,
+                                    Identifier));
+  EXPECT_NE(N, DICompositeType::get(
+                   Context, Tag, "abc", File, Line, Scope, BaseType, SizeInBits,
+                   AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
+                   EnumKind, VTableHolder, TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(Context, Tag, Name, getFile(), Line, Scope,
                                     BaseType, SizeInBits, AlignInBits,
                                     OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, TemplateParams, Identifier));
+                                    EnumKind, VTableHolder, TemplateParams,
+                                    Identifier));
   EXPECT_NE(N, DICompositeType::get(Context, Tag, Name, File, Line + 1, Scope,
                                     BaseType, SizeInBits, AlignInBits,
                                     OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, TemplateParams, Identifier));
-  EXPECT_NE(N, DICompositeType::get(
-                   Context, Tag, Name, File, Line, getSubprogram(), BaseType,
-                   SizeInBits, AlignInBits, OffsetInBits, Flags, Elements,
-                   RuntimeLang, VTableHolder, TemplateParams, Identifier));
-  EXPECT_NE(N, DICompositeType::get(
-                   Context, Tag, Name, File, Line, Scope, getBasicType("other"),
-                   SizeInBits, AlignInBits, OffsetInBits, Flags, Elements,
-                   RuntimeLang, VTableHolder, TemplateParams, Identifier));
+                                    EnumKind, VTableHolder, TemplateParams,
+                                    Identifier));
+  EXPECT_NE(N, DICompositeType::get(Context, Tag, Name, File, Line,
+                                    getSubprogram(), BaseType, SizeInBits,
+                                    AlignInBits, OffsetInBits, Flags, Elements,
+                                    RuntimeLang, EnumKind, VTableHolder,
+                                    TemplateParams, Identifier));
+  EXPECT_NE(N, DICompositeType::get(Context, Tag, Name, File, Line, Scope,
+                                    getBasicType("other"), SizeInBits,
+                                    AlignInBits, OffsetInBits, Flags, Elements,
+                                    RuntimeLang, EnumKind, VTableHolder,
+                                    TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(Context, Tag, Name, File, Line, Scope,
                                     BaseType, SizeInBits + 1, AlignInBits,
                                     OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, TemplateParams, Identifier));
-  EXPECT_NE(N, DICompositeType::get(Context, Tag, Name, File, Line, Scope,
-                                    BaseType, SizeInBits, AlignInBits + 1,
-                                    OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, TemplateParams, Identifier));
+                                    EnumKind, VTableHolder, TemplateParams,
+                                    Identifier));
+  EXPECT_NE(N, DICompositeType::get(
+                   Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+                   AlignInBits + 1, OffsetInBits, Flags, Elements, RuntimeLang,
+                   EnumKind, VTableHolder, TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(
                    Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                    AlignInBits, OffsetInBits + 1, Flags, Elements, RuntimeLang,
-                   VTableHolder, TemplateParams, Identifier));
+                   EnumKind, VTableHolder, TemplateParams, Identifier));
   DINode::DIFlags FlagsPOne = static_cast<DINode::DIFlags>(Flags + 1);
   EXPECT_NE(N, DICompositeType::get(
                    Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                    AlignInBits, OffsetInBits, FlagsPOne, Elements, RuntimeLang,
-                   VTableHolder, TemplateParams, Identifier));
+                   EnumKind, VTableHolder, TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(
                    Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                    AlignInBits, OffsetInBits, Flags, getTuple(), RuntimeLang,
-                   VTableHolder, TemplateParams, Identifier));
+                   EnumKind, VTableHolder, TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(
                    Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                    AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang + 1,
-                   VTableHolder, TemplateParams, Identifier));
+                   EnumKind, VTableHolder, TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(
                    Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                    AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-                   getCompositeType(), TemplateParams, Identifier));
-  EXPECT_NE(N, DICompositeType::get(Context, Tag, Name, File, Line, Scope,
-                                    BaseType, SizeInBits, AlignInBits,
-                                    OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, getTuple(), Identifier));
-  EXPECT_NE(N, DICompositeType::get(Context, Tag, Name, File, Line, Scope,
-                                    BaseType, SizeInBits, AlignInBits,
-                                    OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, TemplateParams, "other"));
+                   EnumKind, getCompositeType(), TemplateParams, Identifier));
+  EXPECT_NE(N, DICompositeType::get(
+                   Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+                   AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
+                   EnumKind, VTableHolder, getTuple(), Identifier));
+  EXPECT_NE(N, DICompositeType::get(
+                   Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+                   AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
+                   EnumKind, VTableHolder, TemplateParams, "other"));
 
   // Be sure that missing identifiers get null pointers.
   EXPECT_FALSE(DICompositeType::get(Context, Tag, Name, File, Line, Scope,
                                     BaseType, SizeInBits, AlignInBits,
                                     OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, TemplateParams, "")
+                                    EnumKind, VTableHolder, TemplateParams, "")
                    ->getRawIdentifier());
   EXPECT_FALSE(DICompositeType::get(Context, Tag, Name, File, Line, Scope,
                                     BaseType, SizeInBits, AlignInBits,
                                     OffsetInBits, Flags, Elements, RuntimeLang,
-                                    VTableHolder, TemplateParams)
+                                    EnumKind, VTableHolder, TemplateParams)
                    ->getRawIdentifier());
 
   TempDICompositeType Temp = N->clone();
@@ -2114,14 +2127,15 @@ TEST_F(DICompositeTypeTest, getWithLargeValues) {
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
   MDTuple *Elements = getTuple();
   unsigned RuntimeLang = 6;
+  std::optional<uint32_t> EnumKind = 1;
   DIType *VTableHolder = getCompositeType();
   MDTuple *TemplateParams = getTuple();
   StringRef Identifier = "some id";
 
-  auto *N = DICompositeType::get(Context, Tag, Name, File, Line, Scope,
-                                 BaseType, SizeInBits, AlignInBits,
-                                 OffsetInBits, Flags, Elements, RuntimeLang,
-                                 VTableHolder, TemplateParams, Identifier);
+  auto *N = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, Elements, RuntimeLang, EnumKind, VTableHolder,
+      TemplateParams, Identifier);
   EXPECT_EQ(SizeInBits, N->getSizeInBits());
   EXPECT_EQ(AlignInBits, N->getAlignInBits());
   EXPECT_EQ(OffsetInBits, N->getOffsetInBits());
@@ -2139,11 +2153,13 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   uint64_t OffsetInBits = 4;
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
   unsigned RuntimeLang = 6;
+  std::optional<uint32_t> EnumKind = 1;
   StringRef Identifier = "some id";
 
-  auto *N = DICompositeType::get(
-      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier);
+  auto *N = DICompositeType::get(Context, Tag, Name, File, Line, Scope,
+                                 BaseType, SizeInBits, AlignInBits,
+                                 OffsetInBits, Flags, nullptr, RuntimeLang,
+                                 EnumKind, nullptr, nullptr, Identifier);
 
   auto *Elements = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getElements().get());
@@ -2184,6 +2200,7 @@ TEST_F(DICompositeTypeTest, variant_part) {
   uint64_t OffsetInBits = 4;
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
   unsigned RuntimeLang = 6;
+  std::optional<uint32_t> EnumKind = 1;
   StringRef Identifier = "some id";
   DIDerivedType *Discriminator = cast<DIDerivedType>(getDerivedType());
   DIDerivedType *Discriminator2 = cast<DIDerivedType>(getDerivedType());
@@ -2192,22 +2209,22 @@ TEST_F(DICompositeTypeTest, variant_part) {
 
   auto *N = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      Discriminator);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, Discriminator);
 
   // Test the hashing.
   auto *Same = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      Discriminator);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, Discriminator);
   auto *Other = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      Discriminator2);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, Discriminator2);
   auto *NoDisc = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr);
 
   EXPECT_EQ(N, Same);
   EXPECT_NE(Same, Other);
@@ -2229,6 +2246,7 @@ TEST_F(DICompositeTypeTest, dynamicArray) {
   uint64_t OffsetInBits = 4;
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(3);
   unsigned RuntimeLang = 6;
+  std::optional<uint32_t> EnumKind = 1;
   StringRef Identifier = "some id";
   DIType *Type = getDerivedType();
   Metadata *DlVar1 = DILocalVariable::get(Context, Scope, "dl_var1", File, 8,
@@ -2253,18 +2271,18 @@ TEST_F(DICompositeTypeTest, dynamicArray) {
   ConstantAsMetadata *RankConst2 = ConstantAsMetadata::get(RankInt2);
   auto *N1 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DlVar1);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DlVar1);
 
   auto *Same1 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DlVar1);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DlVar1);
 
   auto *Other1 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DlVar2);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DlVar2);
 
   EXPECT_EQ(N1, Same1);
   EXPECT_NE(Same1, Other1);
@@ -2272,18 +2290,18 @@ TEST_F(DICompositeTypeTest, dynamicArray) {
 
   auto *N2 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DataLocation1);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DataLocation1);
 
   auto *Same2 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DataLocation1);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DataLocation1);
 
   auto *Other2 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DataLocation2);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DataLocation2);
 
   EXPECT_EQ(N2, Same2);
   EXPECT_NE(Same2, Other2);
@@ -2291,18 +2309,18 @@ TEST_F(DICompositeTypeTest, dynamicArray) {
 
   auto *N3 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DataLocation1, nullptr, nullptr, Rank1);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DataLocation1, nullptr, nullptr, Rank1);
 
   auto *Same3 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DataLocation1, nullptr, nullptr, Rank1);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DataLocation1, nullptr, nullptr, Rank1);
 
   auto *Other3 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DataLocation1, nullptr, nullptr, Rank2);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DataLocation1, nullptr, nullptr, Rank2);
 
   EXPECT_EQ(N3, Same3);
   EXPECT_NE(Same3, Other3);
@@ -2310,18 +2328,18 @@ TEST_F(DICompositeTypeTest, dynamicArray) {
 
   auto *N4 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DataLocation1, nullptr, nullptr, RankConst1);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DataLocation1, nullptr, nullptr, RankConst1);
 
   auto *Same4 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DataLocation1, nullptr, nullptr, RankConst1);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DataLocation1, nullptr, nullptr, RankConst1);
 
   auto *Other4 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
-      nullptr, DataLocation1, nullptr, nullptr, RankConst2);
+      OffsetInBits, Flags, nullptr, RuntimeLang, EnumKind, nullptr, nullptr,
+      Identifier, nullptr, DataLocation1, nullptr, nullptr, RankConst2);
 
   EXPECT_EQ(N4, Same4);
   EXPECT_NE(Same4, Other4);
@@ -3537,12 +3555,12 @@ TEST_F(DIExpressionTest, Fold) {
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);
 
-  // Test a left shift greater than 64.
+  // Test a left shift greater than 63.
   Ops.clear();
   Ops.push_back(dwarf::DW_OP_constu);
   Ops.push_back(1);
   Ops.push_back(dwarf::DW_OP_constu);
-  Ops.push_back(65);
+  Ops.push_back(64);
   Ops.push_back(dwarf::DW_OP_shl);
   Expr = DIExpression::get(Context, Ops);
   E = Expr->foldConstantMath();
@@ -3550,17 +3568,17 @@ TEST_F(DIExpressionTest, Fold) {
   ResOps.push_back(dwarf::DW_OP_constu);
   ResOps.push_back(1);
   ResOps.push_back(dwarf::DW_OP_constu);
-  ResOps.push_back(65);
+  ResOps.push_back(64);
   ResOps.push_back(dwarf::DW_OP_shl);
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);
 
-  // Test a right shift greater than 64.
+  // Test a right shift greater than 63.
   Ops.clear();
   Ops.push_back(dwarf::DW_OP_constu);
   Ops.push_back(1);
   Ops.push_back(dwarf::DW_OP_constu);
-  Ops.push_back(65);
+  Ops.push_back(64);
   Ops.push_back(dwarf::DW_OP_shr);
   Expr = DIExpression::get(Context, Ops);
   E = Expr->foldConstantMath();
@@ -3568,7 +3586,7 @@ TEST_F(DIExpressionTest, Fold) {
   ResOps.push_back(dwarf::DW_OP_constu);
   ResOps.push_back(1);
   ResOps.push_back(dwarf::DW_OP_constu);
-  ResOps.push_back(65);
+  ResOps.push_back(64);
   ResOps.push_back(dwarf::DW_OP_shr);
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);

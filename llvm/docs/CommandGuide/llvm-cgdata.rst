@@ -11,15 +11,13 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-The :program:llvm-cgdata utility parses raw codegen data embedded
-in compiled binary files and merges them into a single .cgdata file.
-It can also inspect and manipulate .cgdata files.
-Currently, the tool supports saving and restoring outlined hash trees,
-enabling global function outlining across modules, allowing for more
-efficient function outlining in subsequent compilations.
-The design is extensible, allowing for the incorporation of additional
-codegen summaries and optimization techniques, such as global function
-merging, in the future.
+The :program:llvm-cgdata utility parses raw codegen data embedded in compiled
+binary files and merges them into a single .cgdata file. It can also inspect
+and manipulate .cgdata files. Currently, the tool supports saving and restoring
+outlined hash trees and stable function maps, allowing for more efficient
+function outlining and function merging across modules in subsequent
+compilations. The design is extensible, allowing for the incorporation of
+additional codegen summaries and optimization techniques.
 
 COMMANDS
 --------

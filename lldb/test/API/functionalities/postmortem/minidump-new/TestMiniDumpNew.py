@@ -524,3 +524,23 @@ class MiniDumpNewTestCase(TestBase):
             self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
             stop_description = thread.GetStopDescription(256)
             self.assertIn("SIGSEGV", stop_description)
+
+    def test_breakpoint_on_minidump(self):
+        """
+        Test that LLDB breakpoints are recorded in Minidumps
+        """
+        yaml = "linux-x86_64-exceptiondescription.yaml"
+        core = self.getBuildArtifact("breakpoint.core.dmp")
+        self.yaml2obj(yaml, core)
+        try:
+            # Create a target with the object file we just created from YAML
+            target = self.dbg.CreateTarget(None)
+            self.assertTrue(target, VALID_TARGET)
+            process = target.LoadCore(core)
+            self.assertTrue(process, VALID_PROCESS)
+            thread = process.GetThreadAtIndex(0)
+            stop_reason = thread.GetStopDescription(256)
+            self.assertIn("breakpoint 1.1", stop_reason)
+        finally:
+            if os.path.isfile(core):
+                os.unlink(core)

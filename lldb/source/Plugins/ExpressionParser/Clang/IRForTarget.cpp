@@ -66,7 +66,7 @@ static llvm::Value *FindEntryInstruction(llvm::Function *function) {
   if (function->empty())
     return nullptr;
 
-  return function->getEntryBlock().getFirstNonPHIOrDbg();
+  return &*function->getEntryBlock().getFirstNonPHIOrDbg();
 }
 
 IRForTarget::IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map,
@@ -361,7 +361,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     // there's nothing to put into its equivalent persistent variable.
 
     BasicBlock &entry_block(llvm_function.getEntryBlock());
-    Instruction *first_entry_instruction(entry_block.getFirstNonPHIOrDbg());
+    Instruction *first_entry_instruction(&*entry_block.getFirstNonPHIOrDbg());
 
     if (!first_entry_instruction)
       return false;
@@ -378,8 +378,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
     Constant *initializer = result_global->getInitializer();
 
-    StoreInst *synthesized_store =
-        new StoreInst(initializer, new_result_global, first_entry_instruction);
+    StoreInst *synthesized_store = new StoreInst(
+        initializer, new_result_global, first_entry_instruction->getIterator());
 
     LLDB_LOG(log, "Synthesized result store \"{0}\"\n",
              PrintValue(synthesized_store));
@@ -413,9 +413,8 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
         "CFStringCreateWithBytes");
 
     bool missing_weak = false;
-    CFStringCreateWithBytes_addr =
-        m_execution_unit.FindSymbol(g_CFStringCreateWithBytes_str, 
-                                    missing_weak);
+    CFStringCreateWithBytes_addr = m_execution_unit.FindSymbol(
+        g_CFStringCreateWithBytes_str, missing_weak);
     if (CFStringCreateWithBytes_addr == LLDB_INVALID_ADDRESS || missing_weak) {
       LLDB_LOG(log, "Couldn't find CFStringCreateWithBytes in the target");
 
@@ -514,7 +513,8 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
            m_CFStringCreateWithBytes, CFSCWB_arguments,
            "CFStringCreateWithBytes",
            llvm::cast<Instruction>(
-               m_entry_instruction_finder.GetValue(function)));
+               m_entry_instruction_finder.GetValue(function))
+               ->getIterator());
      });
 
  if (!UnfoldConstant(ns_str, nullptr, CFSCWB_Caller, m_entry_instruction_finder,
@@ -821,7 +821,7 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
 
   CallInst *srN_call =
       CallInst::Create(m_sel_registerName, _objc_meth_var_name_,
-                       "sel_registerName", selector_load);
+                       "sel_registerName", selector_load->getIterator());
 
   // Replace the load with the call in all users
 
@@ -914,8 +914,9 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   // Now, since the variable is a pointer variable, we will drop in a load of
   // that pointer variable.
 
-  LoadInst *persistent_load = new LoadInst(persistent_global->getValueType(),
-                                           persistent_global, "", alloc);
+  LoadInst *persistent_load =
+      new LoadInst(persistent_global->getValueType(), persistent_global, "",
+                   alloc->getIterator());
 
   LLDB_LOG(log, "Replacing \"{0}\" with \"{1}\"", PrintValue(alloc),
            PrintValue(persistent_load));
@@ -1341,8 +1342,10 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
 
                 return new BitCastInst(
                     value_maker.GetValue(function), constant_expr->getType(),
-                    "", llvm::cast<Instruction>(
-                            entry_instruction_finder.GetValue(function)));
+                    "",
+                    llvm::cast<Instruction>(
+                        entry_instruction_finder.GetValue(function))
+                        ->getIterator());
               });
 
           if (!UnfoldConstant(constant_expr, llvm_function, bit_cast_maker,
@@ -1376,7 +1379,8 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
                 return GetElementPtrInst::Create(
                     gep->getSourceElementType(), ptr, indices, "",
                     llvm::cast<Instruction>(
-                        entry_instruction_finder.GetValue(function)));
+                        entry_instruction_finder.GetValue(function))
+                        ->getIterator());
               });
 
           if (!UnfoldConstant(constant_expr, llvm_function,
@@ -1501,7 +1505,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   LLDB_LOG(log, "Arg: \"{0}\"", PrintValue(argument));
 
   BasicBlock &entry_block(llvm_function.getEntryBlock());
-  Instruction *FirstEntryInstruction(entry_block.getFirstNonPHIOrDbg());
+  Instruction *FirstEntryInstruction(&*entry_block.getFirstNonPHIOrDbg());
 
   if (!FirstEntryInstruction) {
     m_error_stream.Printf("Internal error [IRForTarget]: Couldn't find the "
@@ -1556,12 +1560,14 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
             Type *int8Ty = Type::getInt8Ty(function->getContext());
             ConstantInt *offset_int(
                 ConstantInt::get(offset_type, offset, true));
-            GetElementPtrInst *get_element_ptr = GetElementPtrInst::Create(
-                int8Ty, argument, offset_int, "", entry_instruction);
+            GetElementPtrInst *get_element_ptr =
+                GetElementPtrInst::Create(int8Ty, argument, offset_int, "",
+                                          entry_instruction->getIterator());
 
             if (name == m_result_name && !m_result_is_pointer) {
-              LoadInst *load = new LoadInst(value->getType(), get_element_ptr,
-                                            "", entry_instruction);
+              LoadInst *load =
+                  new LoadInst(value->getType(), get_element_ptr, "",
+                               entry_instruction->getIterator());
 
               return load;
             } else {

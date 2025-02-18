@@ -218,7 +218,7 @@ define void @supernode_scheduling_cross_block(ptr %Aarray, ptr %Barray, ptr %Sar
 ; ENABLED-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
 ; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
 ; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[B1]], i32 1
-; ENABLED-NEXT:    [[TMP2:%.*]] = fadd fast <2 x double> [[TMP1]], <double 2.000000e+00, double 2.000000e+00>
+; ENABLED-NEXT:    [[TMP2:%.*]] = fadd fast <2 x double> [[TMP1]], splat (double 2.000000e+00)
 ; ENABLED-NEXT:    br label [[BB:%.*]]
 ; ENABLED:       bb:
 ; ENABLED-NEXT:    [[A1:%.*]] = load double, ptr [[IDXA1]], align 8

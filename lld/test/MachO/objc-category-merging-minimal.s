@@ -1,4 +1,7 @@
 # REQUIRES: aarch64
+# UNSUPPORTED: system-windows
+#   due to awk usage
+
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
 ############ Test merging multiple categories into a single category ############
@@ -27,6 +30,19 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o MyBaseClassSwiftExtension.o MyBaseClassSwiftExtension.s
 # RUN: %lld -no_objc_relative_method_lists -arch arm64 -dylib -o merge_base_class_swift_minimal_yes_merge.dylib -objc_category_merging MyBaseClassSwiftExtension.o merge_base_class_minimal.o
 # RUN: llvm-objdump --objc-meta-data --macho merge_base_class_swift_minimal_yes_merge.dylib | FileCheck %s --check-prefixes=YES_MERGE_INTO_BASE_SWIFT
+
+############ Test merging skipped due to invalid category name ############
+# Modify __OBJC_$_CATEGORY_MyBaseClass_$_Category01's name to point to L_OBJC_IMAGE_INFO+3
+# RUN: awk '/^__OBJC_\$_CATEGORY_MyBaseClass_\$_Category01:/ { print; getline; sub(/^[ \t]*\.quad[ \t]+l_OBJC_CLASS_NAME_$/, "\t.quad\tL_OBJC_IMAGE_INFO+3"); print; next } { print }' merge_cat_minimal.s > merge_cat_minimal_bad_name.s
+
+# Assemble the modified source
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal_bad_name.o merge_cat_minimal_bad_name.s
+
+# Run lld and check for the specific warning
+# RUN: %no-fatal-warnings-lld -arch arm64 -dylib -objc_category_merging -o merge_cat_minimal_merge.dylib a64_fakedylib.dylib merge_cat_minimal_bad_name.o 2>&1 | FileCheck %s --check-prefix=MERGE_WARNING
+
+# Check that lld emitted the warning about skipping category merging
+MERGE_WARNING: warning: ObjC category merging skipped for class symbol' _OBJC_CLASS_$_MyBaseClass'
 
 #### Check merge categories enabled ###
 # Check that the original categories are not there

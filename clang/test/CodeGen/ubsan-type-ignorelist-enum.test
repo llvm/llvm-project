@@ -1,0 +1,33 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=enum -fsanitize-ignorelist=%t/ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --implicit-check-not="call void @__ubsan_handle"
+
+//--- ignorelist
+[enum]
+type:IgnoreEnum
+
+//--- test.cpp
+enum IgnoreEnum {
+  A,
+  B,
+  C,
+};
+
+// CHECK-LABEL: define dso_local noundef i32 @_Z6ignore10IgnoreEnum
+int ignore(IgnoreEnum v) {
+  return v;
+}
+
+
+enum CheckEnum {
+  X,
+  Y,
+  Z,
+};
+
+// CHECK-LABEL: define dso_local noundef i32 @_Z5check9CheckEnum
+// CHECK: call void @__ubsan_handle_load_invalid_value_abort
+int check(CheckEnum v) {
+  return v;
+}

@@ -45,6 +45,9 @@
 // CHECK: TypedefDecl {{.*}} implicit __SVBfloat16_t '__SVBfloat16_t'
 // CHECK-NEXT: -BuiltinType {{.*}} '__SVBfloat16_t'
 
+// CHECK: TypedefDecl {{.*}} implicit __SVMfloat8_t '__SVMfloat8_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVMfloat8_t'
+
 // CHECK: TypedefDecl {{.*}} implicit __SVBool_t '__SVBool_t'
 // CHECK-NEXT: -BuiltinType {{.*}} '__SVBool_t'
 

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertExpr.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Common/unwrap.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/real.h"
@@ -52,6 +51,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "flang/Support/default-kinds.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -194,7 +194,7 @@ enum class ConstituentSemantics {
 /// Convert parser's INTEGER relational operators to MLIR.  TODO: using
 /// unordered, but we may want to cons ordered in certain situation.
 static mlir::arith::CmpIPredicate
-translateRelational(Fortran::common::RelationalOperator rop) {
+translateSignedRelational(Fortran::common::RelationalOperator rop) {
   switch (rop) {
   case Fortran::common::RelationalOperator::LT:
     return mlir::arith::CmpIPredicate::slt;
@@ -210,6 +210,25 @@ translateRelational(Fortran::common::RelationalOperator rop) {
     return mlir::arith::CmpIPredicate::sge;
   }
   llvm_unreachable("unhandled INTEGER relational operator");
+}
+
+static mlir::arith::CmpIPredicate
+translateUnsignedRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::arith::CmpIPredicate::ult;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::arith::CmpIPredicate::ule;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::arith::CmpIPredicate::eq;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::arith::CmpIPredicate::ne;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::arith::CmpIPredicate::ugt;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::arith::CmpIPredicate::uge;
+  }
+  llvm_unreachable("unhandled UNSIGNED relational operator");
 }
 
 /// Convert parser's REAL relational operators to MLIR.
@@ -793,16 +812,28 @@ public:
 
   template <typename OpTy>
   mlir::Value createCompareOp(mlir::arith::CmpIPredicate pred,
-                              const ExtValue &left, const ExtValue &right) {
-    if (const fir::UnboxedValue *lhs = left.getUnboxed())
-      if (const fir::UnboxedValue *rhs = right.getUnboxed())
-        return builder.create<OpTy>(getLoc(), pred, *lhs, *rhs);
+                              const ExtValue &left, const ExtValue &right,
+                              std::optional<int> unsignedKind = std::nullopt) {
+    if (const fir::UnboxedValue *lhs = left.getUnboxed()) {
+      if (const fir::UnboxedValue *rhs = right.getUnboxed()) {
+        auto loc = getLoc();
+        if (unsignedKind) {
+          mlir::Type signlessType = converter.genType(
+              Fortran::common::TypeCategory::Integer, *unsignedKind);
+          mlir::Value lhsSL = builder.createConvert(loc, signlessType, *lhs);
+          mlir::Value rhsSL = builder.createConvert(loc, signlessType, *rhs);
+          return builder.create<OpTy>(loc, pred, lhsSL, rhsSL);
+        }
+        return builder.create<OpTy>(loc, pred, *lhs, *rhs);
+      }
+    }
     fir::emitFatalError(getLoc(), "array compare should be handled in genarr");
   }
   template <typename OpTy, typename A>
-  mlir::Value createCompareOp(const A &ex, mlir::arith::CmpIPredicate pred) {
+  mlir::Value createCompareOp(const A &ex, mlir::arith::CmpIPredicate pred,
+                              std::optional<int> unsignedKind = std::nullopt) {
     ExtValue left = genval(ex.left());
-    return createCompareOp<OpTy>(pred, left, genval(ex.right()));
+    return createCompareOp<OpTy>(pred, left, genval(ex.right()), unsignedKind);
   }
 
   template <typename OpTy>
@@ -1050,6 +1081,18 @@ public:
   }
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
+                      Fortran::common::TypeCategory::Unsigned, KIND>> &op) {
+    auto loc = getLoc();
+    mlir::Type signlessType =
+        converter.genType(Fortran::common::TypeCategory::Integer, KIND);
+    mlir::Value input = genunbox(op.left());
+    mlir::Value signless = builder.createConvert(loc, signlessType, input);
+    mlir::Value zero = genIntegerConstant<KIND>(builder.getContext(), 0);
+    mlir::Value neg = builder.create<mlir::arith::SubIOp>(loc, zero, signless);
+    return builder.createConvert(loc, input.getType(), neg);
+  }
+  template <int KIND>
+  ExtValue genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Real, KIND>> &op) {
     return builder.create<mlir::arith::NegFOp>(getLoc(), genunbox(op.left()));
   }
@@ -1065,7 +1108,7 @@ public:
     mlir::Value lhs = fir::getBase(left);
     mlir::Value rhs = fir::getBase(right);
     assert(lhs.getType() == rhs.getType() && "types must be the same");
-    return builder.create<OpTy>(getLoc(), lhs, rhs);
+    return builder.createUnsigned<OpTy>(getLoc(), lhs.getType(), lhs, rhs);
   }
 
   template <typename OpTy, typename A>
@@ -1083,15 +1126,19 @@ public:
   }
 
   GENBIN(Add, Integer, mlir::arith::AddIOp)
+  GENBIN(Add, Unsigned, mlir::arith::AddIOp)
   GENBIN(Add, Real, mlir::arith::AddFOp)
   GENBIN(Add, Complex, fir::AddcOp)
   GENBIN(Subtract, Integer, mlir::arith::SubIOp)
+  GENBIN(Subtract, Unsigned, mlir::arith::SubIOp)
   GENBIN(Subtract, Real, mlir::arith::SubFOp)
   GENBIN(Subtract, Complex, fir::SubcOp)
   GENBIN(Multiply, Integer, mlir::arith::MulIOp)
+  GENBIN(Multiply, Unsigned, mlir::arith::MulIOp)
   GENBIN(Multiply, Real, mlir::arith::MulFOp)
   GENBIN(Multiply, Complex, fir::MulcOp)
   GENBIN(Divide, Integer, mlir::arith::DivSIOp)
+  GENBIN(Divide, Unsigned, mlir::arith::DivUIOp)
   GENBIN(Divide, Real, mlir::arith::DivFOp)
 
   template <int KIND>
@@ -1200,8 +1247,14 @@ public:
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Integer, KIND>> &op) {
-    return createCompareOp<mlir::arith::CmpIOp>(op,
-                                                translateRelational(op.opr));
+    return createCompareOp<mlir::arith::CmpIOp>(
+        op, translateSignedRelational(op.opr));
+  }
+  template <int KIND>
+  ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
+                      Fortran::common::TypeCategory::Unsigned, KIND>> &op) {
+    return createCompareOp<mlir::arith::CmpIOp>(
+        op, translateUnsignedRelational(op.opr), KIND);
   }
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
@@ -1217,7 +1270,7 @@ public:
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
                       Fortran::common::TypeCategory::Character, KIND>> &op) {
-    return createCharCompare(op, translateRelational(op.opr));
+    return createCharCompare(op, translateSignedRelational(op.opr));
   }
 
   ExtValue
@@ -1574,7 +1627,7 @@ public:
     mlir::Location loc = getLoc();
     mlir::Value addr = fir::getBase(array);
     mlir::Type arrTy = fir::dyn_cast_ptrEleTy(addr.getType());
-    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
     mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(eleTy));
     mlir::Type refTy = builder.getRefType(eleTy);
     mlir::Value base = builder.createConvert(loc, seqTy, addr);
@@ -1659,7 +1712,7 @@ public:
     mlir::Location loc = getLoc();
     mlir::Value addr = fir::getBase(exv);
     mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(addr.getType());
-    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
     mlir::Type refTy = builder.getRefType(eleTy);
     mlir::IndexType idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value> arrayCoorArgs;
@@ -2852,10 +2905,11 @@ public:
       }
     }
 
-    ExtValue result =
+    auto loweredResult =
         Fortran::lower::genCallOpAndResult(loc, converter, symMap, stmtCtx,
                                            caller, callSiteType, resultType)
             .first;
+    auto &result = std::get<ExtValue>(loweredResult);
 
     // Sync pointers and allocatables that may have been modified during the
     // call.
@@ -4145,7 +4199,7 @@ private:
     mlir::Location loc = getLoc();
     return [=, builder = &converter.getFirOpBuilder()](IterSpace iters) {
       mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(tmp.getType());
-      auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+      auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
       mlir::Type eleRefTy = builder->getRefType(eleTy);
       mlir::IntegerType i1Ty = builder->getI1Type();
       // Adjust indices for any shift of the origin of the array.
@@ -4881,10 +4935,12 @@ private:
             [&](const auto &) { return fir::getBase(exv); });
         caller.placeInput(argIface, arg);
       }
-      return Fortran::lower::genCallOpAndResult(loc, converter, symMap,
-                                                getElementCtx(), caller,
-                                                callSiteType, retTy)
-          .first;
+      Fortran::lower::LoweredResult res =
+          Fortran::lower::genCallOpAndResult(loc, converter, symMap,
+                                             getElementCtx(), caller,
+                                             callSiteType, retTy)
+              .first;
+      return std::get<ExtValue>(res);
     };
   }
 
@@ -5100,18 +5156,34 @@ private:
       return fir::substBase(val, newBase);
     };
   }
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Integer, KIND>> &x) {
+  template <Fortran::common::TypeCategory CAT, int KIND>
+  CC genarrIntNeg(
+      const Fortran::evaluate::Expr<Fortran::evaluate::Type<CAT, KIND>> &left) {
     mlir::Location loc = getLoc();
-    auto f = genarr(x.left());
+    auto f = genarr(left);
     return [=](IterSpace iters) -> ExtValue {
       mlir::Value val = fir::getBase(f(iters));
       mlir::Type ty =
           converter.genType(Fortran::common::TypeCategory::Integer, KIND);
       mlir::Value zero = builder.createIntegerConstant(loc, ty, 0);
+      if constexpr (CAT == Fortran::common::TypeCategory::Unsigned) {
+        mlir::Value signless = builder.createConvert(loc, ty, val);
+        mlir::Value neg =
+            builder.create<mlir::arith::SubIOp>(loc, zero, signless);
+        return builder.createConvert(loc, val.getType(), neg);
+      }
       return builder.create<mlir::arith::SubIOp>(loc, zero, val);
     };
+  }
+  template <int KIND>
+  CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
+                Fortran::common::TypeCategory::Integer, KIND>> &x) {
+    return genarrIntNeg(x.left());
+  }
+  template <int KIND>
+  CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
+                Fortran::common::TypeCategory::Unsigned, KIND>> &x) {
+    return genarrIntNeg(x.left());
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
@@ -5144,7 +5216,8 @@ private:
     return [=](IterSpace iters) -> ExtValue {
       mlir::Value left = fir::getBase(lambda(iters));
       mlir::Value right = fir::getBase(rf(iters));
-      return builder.create<OP>(loc, left, right);
+      assert(left.getType() == right.getType() && "types must be the same");
+      return builder.createUnsigned<OP>(loc, left.getType(), left, right);
     };
   }
 
@@ -5157,15 +5230,19 @@ private:
   }
 
   GENBIN(Add, Integer, mlir::arith::AddIOp)
+  GENBIN(Add, Unsigned, mlir::arith::AddIOp)
   GENBIN(Add, Real, mlir::arith::AddFOp)
   GENBIN(Add, Complex, fir::AddcOp)
   GENBIN(Subtract, Integer, mlir::arith::SubIOp)
+  GENBIN(Subtract, Unsigned, mlir::arith::SubIOp)
   GENBIN(Subtract, Real, mlir::arith::SubFOp)
   GENBIN(Subtract, Complex, fir::SubcOp)
   GENBIN(Multiply, Integer, mlir::arith::MulIOp)
+  GENBIN(Multiply, Unsigned, mlir::arith::MulIOp)
   GENBIN(Multiply, Real, mlir::arith::MulFOp)
   GENBIN(Multiply, Complex, fir::MulcOp)
   GENBIN(Divide, Integer, mlir::arith::DivSIOp)
+  GENBIN(Divide, Unsigned, mlir::arith::DivUIOp)
   GENBIN(Divide, Real, mlir::arith::DivFOp)
 
   template <int KIND>
@@ -5759,7 +5836,7 @@ private:
         return fir::BoxValue(embox, lbounds, nonDeferredLenParams);
       };
     }
-    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getElementType();
     if (isReferentiallyOpaque()) {
       // Semantics are an opaque reference to an array.
       // This case forwards a continuation that will generate the address
@@ -6546,13 +6623,21 @@ private:
   //===--------------------------------------------------------------------===//
 
   template <typename OP, typename PRED, typename A>
-  CC createCompareOp(PRED pred, const A &x) {
+  CC createCompareOp(PRED pred, const A &x,
+                     std::optional<int> unsignedKind = std::nullopt) {
     mlir::Location loc = getLoc();
     auto lf = genarr(x.left());
     auto rf = genarr(x.right());
     return [=](IterSpace iters) -> ExtValue {
       mlir::Value lhs = fir::getBase(lf(iters));
       mlir::Value rhs = fir::getBase(rf(iters));
+      if (unsignedKind) {
+        mlir::Type signlessType = converter.genType(
+            Fortran::common::TypeCategory::Integer, *unsignedKind);
+        mlir::Value lhsSL = builder.createConvert(loc, signlessType, lhs);
+        mlir::Value rhsSL = builder.createConvert(loc, signlessType, rhs);
+        return builder.create<OP>(loc, pred, lhsSL, rhsSL);
+      }
       return builder.create<OP>(loc, pred, lhs, rhs);
     };
   }
@@ -6570,12 +6655,19 @@ private:
   template <int KIND>
   CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
                 Fortran::common::TypeCategory::Integer, KIND>> &x) {
-    return createCompareOp<mlir::arith::CmpIOp>(translateRelational(x.opr), x);
+    return createCompareOp<mlir::arith::CmpIOp>(
+        translateSignedRelational(x.opr), x);
+  }
+  template <int KIND>
+  CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
+                Fortran::common::TypeCategory::Unsigned, KIND>> &x) {
+    return createCompareOp<mlir::arith::CmpIOp>(
+        translateUnsignedRelational(x.opr), x, KIND);
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
                 Fortran::common::TypeCategory::Character, KIND>> &x) {
-    return createCompareCharOp(translateRelational(x.opr), x);
+    return createCompareCharOp(translateSignedRelational(x.opr), x);
   }
   template <int KIND>
   CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<

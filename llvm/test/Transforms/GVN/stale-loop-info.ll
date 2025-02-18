@@ -13,7 +13,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; Function Attrs: argmemonly
 declare void @snork.1(ptr) local_unnamed_addr #0
 
-define hidden zeroext i1 @eggs(ptr %arg, i1 %arg2) unnamed_addr align 2 {
+define hidden zeroext i1 @eggs(ptr %arg, i1 %arg2, i1 %arg3) unnamed_addr align 2 {
 bb:
   br i1 %arg2, label %bb14, label %bb3
 
@@ -25,7 +25,7 @@ bb6:                                              ; preds = %bb12, %bb3
   br label %bb7
 
 bb7:                                              ; preds = %bb6
-  br i1 undef, label %bb11, label %bb8
+  br i1 %arg3, label %bb11, label %bb8
 
 bb8:                                              ; preds = %bb7
   %tmp9 = load ptr, ptr %tmp, align 8

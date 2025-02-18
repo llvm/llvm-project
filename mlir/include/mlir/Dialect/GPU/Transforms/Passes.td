@@ -95,7 +95,9 @@ def GpuModuleToBinaryPass
     Option<"cmdOptions", "opts", "std::string", [{""}],
            "Command line options to pass to the tools.">,
     Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
-           "The target representation of the compilation process.">
+           "The target representation of the compilation process.">,
+    Option<"elfSection", "section", "std::string", [{""}],
+           "ELF section where binary is to be located.">
   ];
 }
 
@@ -141,6 +143,9 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            "Enable flush to zero for denormals.">,
     ListOption<"linkLibs", "l", "std::string",
            "Extra bitcode libraries paths to link to.">,
+    Option<"cmdOptions", "ptxas-cmd-options", "std::string",
+           /*default=*/ [{""}],
+           "Command line options passed to downstream compiler">,
   ];
 }
 

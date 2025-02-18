@@ -18,6 +18,19 @@ program allocate_tree
     allocate(w, xarray(4), zarray(t, z))
 end program allocate_tree
 
+!CHECK: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
+!CHECK-NEXT: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
+!CHECK-NEXT: | | | AttrSpec -> Allocatable
+!CHECK-NEXT: | | | EntityDecl
+!CHECK-NEXT: | | | | Name = 'w'
+!CHECK-NEXT: | | | EntityDecl
+!CHECK-NEXT: | | | | Name = 'xarray'
+!CHECK-NEXT: | | | | ArraySpec -> DeferredShapeSpecList -> int = '1'
+!CHECK-NEXT: | | | EntityDecl
+!CHECK-NEXT: | | | | Name = 'zarray'
+!CHECK-NEXT: | | | | ArraySpec -> DeferredShapeSpecList -> int = '2'
+
+
 !CHECK: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPExecutableAllocate
 !CHECK-NEXT: | | | Verbatim
 !CHECK-NEXT: | | | OmpClauseList ->

@@ -24,7 +24,8 @@
       (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                 \
       defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||              \
       defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                 \
-      defined HANDLE_DW_END || defined HANDLE_DW_SECT)
+      defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                       \
+      defined HANDLE_DW_APPLE_ENUM_KIND)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -144,6 +145,10 @@
 
 #ifndef HANDLE_DW_SECT
 #define HANDLE_DW_SECT(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_APPLE_ENUM_KIND
+#define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null, 2, DWARF, DW_KIND_NONE)
@@ -617,6 +622,8 @@ HANDLE_DW_AT(0x3e07, LLVM_apinotes, 0, APPLE)
 HANDLE_DW_AT(0x3e08, LLVM_ptrauth_isa_pointer, 0, LLVM)
 HANDLE_DW_AT(0x3e09, LLVM_ptrauth_authenticates_null_values, 0, LLVM)
 HANDLE_DW_AT(0x3e0a, LLVM_ptrauth_authentication_mode, 0, LLVM)
+HANDLE_DW_AT(0x3e0b, LLVM_num_extra_inhabitants, 0, LLVM)
+HANDLE_DW_AT(0x3e0c, LLVM_stmt_sequence, 0, LLVM)
 
 // Apple extensions.
 
@@ -636,6 +643,7 @@ HANDLE_DW_AT(0x3fed, APPLE_property, 0, APPLE)
 HANDLE_DW_AT(0x3fee, APPLE_objc_direct, 0, APPLE)
 HANDLE_DW_AT(0x3fef, APPLE_sdk, 0, APPLE)
 HANDLE_DW_AT(0x3ff0, APPLE_origin, 0, APPLE)
+HANDLE_DW_AT(0x3ff1, APPLE_enum_kind, 0, APPLE)
 
 // Attribute form encodings.
 HANDLE_DW_FORM(0x01, addr, 2, DWARF)
@@ -728,7 +736,7 @@ HANDLE_DW_OP(0x24, shl, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x25, shr, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x26, shra, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x27, xor, 0, 2, 2, DWARF)
-HANDLE_DW_OP(0x28, bra, 1, 0, 2, DWARF)
+HANDLE_DW_OP(0x28, bra, 1, 1, 2, DWARF)
 HANDLE_DW_OP(0x29, eq, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x2a, ge, 0, 2, 2, DWARF)
 HANDLE_DW_OP(0x2b, gt, 0, 2, 2, DWARF)
@@ -965,6 +973,7 @@ HANDLE_DW_LANG(0x0036, HLSL, 0, 0, DWARF)
 HANDLE_DW_LANG(0x0037, OpenCL_CPP, 0, 0, DWARF)
 HANDLE_DW_LANG(0x0038, CPP_for_OpenCL, 0, 0, DWARF)
 HANDLE_DW_LANG(0x0039, SYCL, 0, 0, DWARF)
+HANDLE_DW_LANG(0x003d, Metal, 0, 0, DWARF)
 HANDLE_DW_LANG(0x0040, Ruby, 0, 0, DWARF)
 HANDLE_DW_LANG(0x0041, Move, 0, 0, DWARF)
 HANDLE_DW_LANG(0x0042, Hylo, 0, 0, DWARF)
@@ -1030,6 +1039,7 @@ HANDLE_DW_LNAME(0x0025, SYCL, "SYCL", 0) // YYYYRR
 HANDLE_DW_LNAME(0x0026, Ruby, "Ruby", 0) // VVMMPP
 HANDLE_DW_LNAME(0x0027, Move, "Move", 0) // YYYYMM
 HANDLE_DW_LNAME(0x0028, Hylo, "Hylo", 0)
+HANDLE_DW_LNAME(0x002c, Metal, "Metal", 0) // VVMMPP
 
 // DWARF attribute type encodings.
 HANDLE_DW_ATE(0x01, address, 2, DWARF)
@@ -1238,6 +1248,7 @@ HANDLE_DW_CFA(0x16, val_expression)
 // Vendor extensions:
 HANDLE_DW_CFA_PRED(0x1d, MIPS_advance_loc8, SELECT_MIPS64)
 HANDLE_DW_CFA_PRED(0x2d, GNU_window_save, SELECT_SPARC)
+HANDLE_DW_CFA_PRED(0x2c, AARCH64_negate_ra_state_with_pc, SELECT_AARCH64)
 HANDLE_DW_CFA_PRED(0x2d, AARCH64_negate_ra_state, SELECT_AARCH64)
 HANDLE_DW_CFA_PRED(0x2e, GNU_args_size, SELECT_X86)
 // Heterogeneous Debugging Extension defined at
@@ -1263,6 +1274,11 @@ HANDLE_DW_APPLE_PROPERTY(0x800, unsafe_unretained)
 HANDLE_DW_APPLE_PROPERTY(0x1000, nullability)
 HANDLE_DW_APPLE_PROPERTY(0x2000, null_resettable)
 HANDLE_DW_APPLE_PROPERTY(0x4000, class)
+
+// Enum kinds.
+// Keep in sync with EnumExtensibilityAttr::Kind.
+HANDLE_DW_APPLE_ENUM_KIND(0x00, Closed)
+HANDLE_DW_APPLE_ENUM_KIND(0x01, Open)
 
 // DWARF v5 Unit Types.
 HANDLE_DW_UT(0x01, compile)
@@ -1362,3 +1378,4 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_IDX
 #undef HANDLE_DW_END
 #undef HANDLE_DW_SECT
+#undef HANDLE_DW_APPLE_ENUM_KIND

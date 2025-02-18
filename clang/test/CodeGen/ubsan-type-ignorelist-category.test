@@ -1,0 +1,98 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+
+// Verify ubsan doesn't emit checks for ignorelisted types
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/int.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=INT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/nosection.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=INT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/nosan-same-as-no-category.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=INT
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/myty.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=MYTY
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=implicit-signed-integer-truncation,implicit-unsigned-integer-truncation -fsanitize-ignorelist=%t/trunc.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=TRUNC
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=implicit-signed-integer-truncation,implicit-unsigned-integer-truncation -fsanitize-ignorelist=%t/docs.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=TRUNC2
+
+//--- int.ignorelist
+[{unsigned-integer-overflow,signed-integer-overflow}]
+type:int
+
+//--- nosection.ignorelist
+type:int
+
+//--- nosan-same-as-no-category.ignorelist
+type:int
+
+//--- myty.ignorelist
+[{unsigned-integer-overflow,signed-integer-overflow}]
+type:*
+type:myty=sanitize
+
+//--- trunc.ignorelist
+[{implicit-signed-integer-truncation,implicit-unsigned-integer-truncation}]
+type:char
+type:unsigned char
+
+//--- docs.ignorelist
+[implicit-signed-integer-truncation]
+type:*
+type:T=sanitize
+
+//--- test.cpp
+// INT-LABEL: ignore_int
+void ignore_int(int A, int B, unsigned C, unsigned D, long E) {
+// INT: llvm.uadd.with.overflow.i32
+  (void)(C+D);
+// INT-NOT: llvm.sadd.with.overflow.i32
+  (void)(A+B);
+// INT: llvm.sadd.with.overflow.i64
+  (void)(++E);
+}
+
+
+typedef unsigned long myty;
+typedef myty derivative;
+// INT-LABEL: ignore_all_except_myty
+// MYTY-LABEL: ignore_all_except_myty
+void ignore_all_except_myty(myty A, myty B, int C, unsigned D, derivative E) {
+// MYTY-NOT: llvm.sadd.with.overflow.i32
+  (void)(++C);
+
+// MYTY-NOT: llvm.uadd.with.overflow.i32
+  (void)(D+D);
+
+// MYTY-NOT: llvm.umul.with.overflow.i64
+  (void)(E*2);
+
+// MYTY: llvm.uadd.with.overflow.i64
+  (void)(A+B);
+}
+
+// INT-LABEL: truncation
+// MYTY-LABEL: truncation
+// TRUNC-LABEL: truncation
+void truncation(char A, int B, unsigned char C, short D) {
+// TRUNC-NOT: %handler.implicit_conversion
+  A = B;
+// TRUNC-NOT: %handler.implicit_conversion
+  A = C;
+// TRUNC-NOT: %handler.implicit_conversion
+  C = B;
+
+// TRUNC: %handler.implicit_conversion
+  D = B;
+
+  (void)A;
+  (void)D;
+}
+
+
+// Matches the example from clang/docs/SanitizerSpecialCaseList.rst
+typedef char T;
+typedef char U;
+// TRUNC2-LABEL: docs_example
+void docs_example(int toobig) {
+// TRUNC2: %handler.implicit_conversion
+  T a = toobig;
+// TRUNC2-NOT: %handler.implicit_conversion
+  U b = toobig;
+// TRUNC2-NOT: %handler.implicit_conversion
+  char c = toobig;
+}
+

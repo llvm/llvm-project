@@ -39,6 +39,7 @@
 ; CHECK-NEXT:       RISC-V DAG->DAG Pattern Instruction Selection
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Local Stack Slot Allocation
+; CHECK-NEXT:       RISC-V VMV0 Elimination
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass
@@ -68,6 +69,7 @@
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata
+; CHECK-NEXT:       Insert CFI remember/restore state instructions
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Stack Frame Layout Analysis

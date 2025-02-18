@@ -242,13 +242,13 @@ opt<std::string> FallbackStyle{
     init(clang::format::DefaultFallbackStyle),
 };
 
-opt<int> EnableFunctionArgSnippets{
+opt<std::string> EnableFunctionArgSnippets{
     "function-arg-placeholders",
     cat(Features),
     desc("When disabled (0), completions contain only parentheses for "
          "function calls. When enabled (1), completions also contain "
          "placeholders for method parameters"),
-    init(-1),
+    init("-1"),
 };
 
 opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
@@ -604,7 +604,7 @@ const char TestScheme::TestDir[] = "/clangd-test";
 
 std::unique_ptr<SymbolIndex>
 loadExternalIndex(const Config::ExternalIndexSpec &External,
-                  AsyncTaskRunner *Tasks) {
+                  AsyncTaskRunner *Tasks, bool SupportContainedRefs) {
   static const trace::Metric RemoteIndexUsed("used_remote_index",
                                              trace::Metric::Value, "address");
   switch (External.Kind) {
@@ -620,8 +620,9 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
         External.Location);
     auto NewIndex = std::make_unique<SwapIndex>(std::make_unique<MemIndex>());
     auto IndexLoadTask = [File = External.Location,
-                          PlaceHolder = NewIndex.get()] {
-      if (auto Idx = loadIndex(File, SymbolOrigin::Static, /*UseDex=*/true))
+                          PlaceHolder = NewIndex.get(), SupportContainedRefs] {
+      if (auto Idx = loadIndex(File, SymbolOrigin::Static, /*UseDex=*/true,
+                               SupportContainedRefs))
         PlaceHolder->reset(std::move(Idx));
     };
     if (Tasks) {
@@ -633,6 +634,22 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
     return std::move(NewIndex);
   }
   llvm_unreachable("Invalid ExternalIndexKind.");
+}
+
+std::optional<bool> shouldEnableFunctionArgSnippets() {
+  std::string Val = EnableFunctionArgSnippets;
+  // Accept the same values that a bool option parser would, but also accept
+  // -1 to indicate "unspecified", in which case the ArgumentListsPolicy
+  // config option will be respected.
+  if (Val == "1" || Val == "true" || Val == "True" || Val == "TRUE")
+    return true;
+  if (Val == "0" || Val == "false" || Val == "False" || Val == "FALSE")
+    return false;
+  if (Val != "-1")
+    elog("Value specified by --function-arg-placeholders is invalid. Provide a "
+         "boolean value or leave unspecified to use ArgumentListsPolicy from "
+         "config instead.");
+  return std::nullopt;
 }
 
 class FlagsConfigProvider : public config::Provider {
@@ -695,10 +712,9 @@ public:
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
 
-    if (EnableFunctionArgSnippets >= 0) {
-      ArgumentLists = EnableFunctionArgSnippets
-                          ? Config::ArgumentListsPolicy::FullPlaceholders
-                          : Config::ArgumentListsPolicy::Delimiters;
+    if (std::optional<bool> Enable = shouldEnableFunctionArgSnippets()) {
+      ArgumentLists = *Enable ? Config::ArgumentListsPolicy::FullPlaceholders
+                              : Config::ArgumentListsPolicy::Delimiters;
     }
 
     Frag = [=](const config::Params &, Config &C) {
@@ -909,7 +925,12 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.BackgroundIndexPriority = BackgroundIndexPriority;
   Opts.ReferencesLimit = ReferencesLimit;
   Opts.Rename.LimitFiles = RenameFileLimit;
-  auto PAI = createProjectAwareIndex(loadExternalIndex, Sync);
+  auto PAI = createProjectAwareIndex(
+      [SupportContainedRefs = Opts.EnableOutgoingCalls](
+          const Config::ExternalIndexSpec &External, AsyncTaskRunner *Tasks) {
+        return loadExternalIndex(External, Tasks, SupportContainedRefs);
+      },
+      Sync);
   Opts.StaticIndex = PAI.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.MemoryCleanup = getMemoryCleanupFunction();

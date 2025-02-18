@@ -48,6 +48,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <assert.h>
@@ -164,7 +165,7 @@ static bool processHeaderPhiOperands(BasicBlock *Header, BasicBlock *Latch,
 // Move the phi operands of Header from Latch out of AftBlocks to InsertLoc.
 static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
                                               BasicBlock *Latch,
-                                              Instruction *InsertLoc,
+                                              BasicBlock::iterator InsertLoc,
                                               BasicBlockSet &AftBlocks) {
   // We need to ensure we move the instructions in the correct order,
   // starting with the earliest required instruction and moving forward.
@@ -241,7 +242,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     if (!UnrollRuntimeLoopRemainder(L, Count, /*AllowExpensiveTripCount*/ false,
                                     /*UseEpilogRemainder*/ true,
                                     UnrollRemainder, /*ForgetAllSCEV*/ false,
-                                    LI, SE, DT, AC, TTI, true, EpilogueLoop)) {
+                                    LI, SE, DT, AC, TTI, true,
+                                    SCEVCheapExpansionBudget, EpilogueLoop)) {
       LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; remainder loop could not be "
                            "generated when assuming runtime trip count\n");
       return LoopUnrollResult::Unmodified;
@@ -327,7 +329,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Move any instructions from fore phi operands from AftBlocks into Fore.
   moveHeaderPhiOperandsToForeBlocks(
-      Header, LatchBlock, ForeBlocksLast[0]->getTerminator(), AftBlocks);
+      Header, LatchBlock, ForeBlocksLast[0]->getTerminator()->getIterator(),
+      AftBlocks);
 
   // The current on-the-fly SSA update requires blocks to be processed in
   // reverse postorder so that LastValueMap contains the correct value at each
@@ -392,8 +395,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
       }
 
       // Update our running maps of newest clones
-      PrevItValueMap[New] = (It == 1 ? *BB : LastValueMap[*BB]);
-      LastValueMap[*BB] = New;
+      auto &Last = LastValueMap[*BB];
+      PrevItValueMap[New] = (It == 1 ? *BB : Last);
+      Last = New;
       for (ValueToValueMapTy::iterator VI = VMap.begin(), VE = VMap.end();
            VI != VE; ++VI) {
         PrevItValueMap[VI->second] =
@@ -706,7 +710,7 @@ static bool checkDependency(Instruction *Src, Instruction *Dst,
   //   (0,0,>=,*,*)
   // Now, the dependency is not necessarily non-negative anymore, i.e.
   // unroll-and-jam may violate correctness.
-  std::unique_ptr<Dependence> D = DI.depends(Src, Dst, true);
+  std::unique_ptr<Dependence> D = DI.depends(Src, Dst);
   if (!D)
     return true;
   assert(D->isOrdered() && "Expected an output, flow or anti dep.");

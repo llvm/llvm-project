@@ -612,6 +612,28 @@ class DebugCommunication(object):
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
+    def request_breakpointLocations(
+        self, file_path, line, end_line=None, column=None, end_column=None
+    ):
+        (dir, base) = os.path.split(file_path)
+        source_dict = {"name": base, "path": file_path}
+        args_dict = {}
+        args_dict["source"] = source_dict
+        if line is not None:
+            args_dict["line"] = line
+        if end_line is not None:
+            args_dict["endLine"] = end_line
+        if column is not None:
+            args_dict["column"] = column
+        if end_column is not None:
+            args_dict["endColumn"] = end_column
+        command_dict = {
+            "command": "breakpointLocations",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_configurationDone(self):
         command_dict = {
             "command": "configurationDone",
@@ -793,8 +815,6 @@ class DebugCommunication(object):
             args_dict["env"] = env
         if stopOnEntry:
             args_dict["stopOnEntry"] = stopOnEntry
-        if disableASLR:
-            args_dict["disableASLR"] = disableASLR
         if disableSTDIO:
             args_dict["disableSTDIO"] = disableSTDIO
         if shellExpandArguments:
@@ -829,6 +849,7 @@ class DebugCommunication(object):
         if customThreadFormat:
             args_dict["customThreadFormat"] = customThreadFormat
 
+        args_dict["disableASLR"] = disableASLR
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
         args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
@@ -852,6 +873,8 @@ class DebugCommunication(object):
     def request_stepIn(self, threadId, targetId, granularity="statement"):
         if self.exit_status is not None:
             raise ValueError("request_stepIn called after process exited")
+        if threadId is None:
+            threadId = self.get_thread_id()
         args_dict = {
             "threadId": threadId,
             "targetId": targetId,
@@ -912,18 +935,14 @@ class DebugCommunication(object):
                     breakpoint_data = data[i]
                 bp = {"line": line}
                 if breakpoint_data is not None:
-                    if "condition" in breakpoint_data and breakpoint_data["condition"]:
+                    if breakpoint_data.get("condition"):
                         bp["condition"] = breakpoint_data["condition"]
-                    if (
-                        "hitCondition" in breakpoint_data
-                        and breakpoint_data["hitCondition"]
-                    ):
+                    if breakpoint_data.get("hitCondition"):
                         bp["hitCondition"] = breakpoint_data["hitCondition"]
-                    if (
-                        "logMessage" in breakpoint_data
-                        and breakpoint_data["logMessage"]
-                    ):
+                    if breakpoint_data.get("logMessage"):
                         bp["logMessage"] = breakpoint_data["logMessage"]
+                    if breakpoint_data.get("column"):
+                        bp["column"] = breakpoint_data["column"]
                 breakpoints.append(bp)
             args_dict["breakpoints"] = breakpoints
 
@@ -1267,7 +1286,7 @@ def run_vscode(dbg, args, options):
 def main():
     parser = optparse.OptionParser(
         description=(
-            "A testing framework for the Visual Studio Code Debug " "Adaptor protocol"
+            "A testing framework for the Visual Studio Code Debug Adaptor protocol"
         )
     )
 

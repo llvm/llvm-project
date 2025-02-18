@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H
 
@@ -36,14 +42,6 @@ first_non_whitespace(const char *__restrict src,
   return src + src_cur;
 }
 
-LIBC_INLINE int b36_char_to_int(char input) {
-  if (isdigit(input))
-    return input - '0';
-  if (isalpha(input))
-    return (input | 32) + 10 - 'a';
-  return 0;
-}
-
 // checks if the next 3 characters of the string pointer are the start of a
 // hexadecimal number. Does not advance the string pointer.
 LIBC_INLINE bool
@@ -51,7 +49,7 @@ is_hex_start(const char *__restrict src,
              size_t src_len = cpp::numeric_limits<size_t>::max()) {
   if (src_len < 3)
     return false;
-  return *src == '0' && (*(src + 1) | 32) == 'x' && isalnum(*(src + 2)) &&
+  return *src == '0' && tolower(*(src + 1)) == 'x' && isalnum(*(src + 2)) &&
          b36_char_to_int(*(src + 2)) < 16;
 }
 
@@ -73,6 +71,11 @@ LIBC_INLINE int infer_base(const char *__restrict src, size_t src_len) {
   return 10;
 }
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 // Takes a pointer to a string and the base to convert to. This function is used
 // as the backend for all of the string to int functions.
 template <class T>
@@ -115,7 +118,8 @@ strtointeger(const char *__restrict src, int base,
                    : cpp::numeric_limits<T>::max();
   ResultType const abs_max =
       (is_positive ? cpp::numeric_limits<T>::max() : NEGATIVE_MAX);
-  ResultType const abs_max_div_by_base = abs_max / base;
+  ResultType const abs_max_div_by_base =
+      static_cast<ResultType>(abs_max / base);
 
   while (src_cur < src_len && isalnum(src[src_cur])) {
     int cur_digit = b36_char_to_int(src[src_cur]);

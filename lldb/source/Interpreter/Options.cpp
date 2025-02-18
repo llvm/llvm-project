@@ -138,46 +138,6 @@ void Options::OptionsSetUnion(const OptionSet &set_a, const OptionSet &set_b,
   }
 }
 
-bool Options::VerifyOptions(CommandReturnObject &result) {
-  bool options_are_valid = false;
-
-  int num_levels = GetRequiredOptions().size();
-  if (num_levels) {
-    for (int i = 0; i < num_levels && !options_are_valid; ++i) {
-      // This is the correct set of options if:  1). m_seen_options contains
-      // all of m_required_options[i] (i.e. all the required options at this
-      // level are a subset of m_seen_options); AND 2). { m_seen_options -
-      // m_required_options[i] is a subset of m_options_options[i] (i.e. all
-      // the rest of m_seen_options are in the set of optional options at this
-      // level.
-
-      // Check to see if all of m_required_options[i] are a subset of
-      // m_seen_options
-      if (IsASubset(GetRequiredOptions()[i], m_seen_options)) {
-        // Construct the set difference: remaining_options = {m_seen_options} -
-        // {m_required_options[i]}
-        OptionSet remaining_options;
-        OptionsSetDiff(m_seen_options, GetRequiredOptions()[i],
-                       remaining_options);
-        // Check to see if remaining_options is a subset of
-        // m_optional_options[i]
-        if (IsASubset(remaining_options, GetOptionalOptions()[i]))
-          options_are_valid = true;
-      }
-    }
-  } else {
-    options_are_valid = true;
-  }
-
-  if (options_are_valid) {
-    result.SetStatus(eReturnStatusSuccessFinishNoResult);
-  } else {
-    result.AppendError("invalid combination of options for the given command");
-  }
-
-  return options_are_valid;
-}
-
 // This is called in the Options constructor, though we could call it lazily if
 // that ends up being a performance problem.
 
@@ -251,12 +211,9 @@ Option *Options::GetLongOptions() {
       m_getopt_table[i].flag = nullptr;
       m_getopt_table[i].val = short_opt;
 
-      if (option_seen.find(short_opt) == option_seen.end()) {
-        option_seen[short_opt] = i;
-      } else if (short_opt) {
+      auto [pos, inserted] = option_seen.try_emplace(short_opt, i);
+      if (!inserted && short_opt) {
         m_getopt_table[i].val = 0;
-        std::map<int, uint32_t>::const_iterator pos =
-            option_seen.find(short_opt);
         StreamString strm;
         if (defs[i].HasShortOption())
           Debugger::ReportError(
@@ -593,13 +550,50 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
   strm.SetIndentLevel(save_indent_level);
 }
 
+llvm::Error Options::VerifyOptions() {
+  bool options_are_valid = false;
+
+  int num_levels = GetRequiredOptions().size();
+  if (num_levels) {
+    for (int i = 0; i < num_levels && !options_are_valid; ++i) {
+      // This is the correct set of options if:  1). m_seen_options contains
+      // all of m_required_options[i] (i.e. all the required options at this
+      // level are a subset of m_seen_options); AND 2). { m_seen_options -
+      // m_required_options[i] is a subset of m_options_options[i] (i.e. all
+      // the rest of m_seen_options are in the set of optional options at this
+      // level.
+
+      // Check to see if all of m_required_options[i] are a subset of
+      // m_seen_options
+      if (IsASubset(GetRequiredOptions()[i], m_seen_options)) {
+        // Construct the set difference: remaining_options = {m_seen_options} -
+        // {m_required_options[i]}
+        OptionSet remaining_options;
+        OptionsSetDiff(m_seen_options, GetRequiredOptions()[i],
+                       remaining_options);
+        // Check to see if remaining_options is a subset of
+        // m_optional_options[i]
+        if (IsASubset(remaining_options, GetOptionalOptions()[i]))
+          options_are_valid = true;
+      }
+    }
+  } else {
+    options_are_valid = true;
+  }
+
+  if (!options_are_valid)
+    return llvm::createStringError(
+        "invalid combination of options for the given command");
+
+  return llvm::Error::success();
+}
+
 // This function is called when we have been given a potentially incomplete set
 // of options, such as when an alias has been defined (more options might be
 // added at at the time the alias is invoked).  We need to verify that the
 // options in the set m_seen_options are all part of a set that may be used
 // together, but m_seen_options may be missing some of the "required" options.
-
-bool Options::VerifyPartialOptions(CommandReturnObject &result) {
+llvm::Error Options::VerifyPartialOptions() {
   bool options_are_valid = false;
 
   int num_levels = GetRequiredOptions().size();
@@ -616,7 +610,11 @@ bool Options::VerifyPartialOptions(CommandReturnObject &result) {
     }
   }
 
-  return options_are_valid;
+  if (!options_are_valid)
+    return llvm::createStringError(
+        "invalid combination of options for the given command");
+
+  return llvm::Error::success();
 }
 
 bool Options::HandleOptionCompletion(CompletionRequest &request,

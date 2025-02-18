@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 ; CHECK: r{{[0-9]*}} = add(##g0,asl(r{{[0-9]*}},#2))
 
 %s.0 = type { i16, i8 }

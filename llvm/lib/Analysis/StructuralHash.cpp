@@ -21,14 +21,33 @@ using namespace llvm;
 PreservedAnalyses StructuralHashPrinterPass::run(Module &M,
                                                  ModuleAnalysisManager &MAM) {
   OS << "Module Hash: "
-     << format("%016" PRIx64, StructuralHash(M, EnableDetailedStructuralHash))
+     << format("%016" PRIx64,
+               StructuralHash(M, Options != StructuralHashOptions::None))
      << "\n";
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
-    OS << "Function " << F.getName() << " Hash: "
-       << format("%016" PRIx64, StructuralHash(F, EnableDetailedStructuralHash))
-       << "\n";
+    if (Options == StructuralHashOptions::CallTargetIgnored) {
+      auto IgnoreOp = [&](const Instruction *I, unsigned OpndIdx) {
+        return I->getOpcode() == Instruction::Call &&
+               isa<Constant>(I->getOperand(OpndIdx));
+      };
+      auto FuncHashInfo = StructuralHashWithDifferences(F, IgnoreOp);
+      OS << "Function " << F.getName()
+         << " Hash: " << format("%016" PRIx64, FuncHashInfo.FunctionHash)
+         << "\n";
+      for (auto &[IndexPair, OpndHash] : *FuncHashInfo.IndexOperandHashMap) {
+        auto [InstIndex, OpndIndex] = IndexPair;
+        OS << "\tIgnored Operand Hash: " << format("%016" PRIx64, OpndHash)
+           << " at (" << InstIndex << "," << OpndIndex << ")\n";
+      }
+    } else {
+      OS << "Function " << F.getName() << " Hash: "
+         << format(
+                "%016" PRIx64,
+                StructuralHash(F, Options == StructuralHashOptions::Detailed))
+         << "\n";
+    }
   }
   return PreservedAnalyses::all();
 }

@@ -47,7 +47,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
       break;
 
     int64_t currTargetShape = targetShape[targetDim];
-    while (sourceDim < sourceShape.size() &&
+    while (sourceDim < (sourceShape.size() - 1) &&
            sourceShape[sourceDim] != ShapedType::kDynamic &&
            prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape) {
       prodOfCollapsedDims *= sourceShape[sourceDim];
@@ -482,4 +482,14 @@ PackingMetadata mlir::computePackingMetadata(int64_t packedRank,
     ++i;
   }
   return res;
+}
+
+OpFoldResult mlir::reshapeConstantSource(DenseElementsAttr source,
+                                         TensorType result,
+                                         std::optional<Attribute> cst) {
+  if (source && source.isSplat() && result.hasStaticShape() &&
+      (!cst.has_value() || source.getSplatValue<Attribute>() == cst.value()))
+    return source.resizeSplat(result);
+
+  return {};
 }

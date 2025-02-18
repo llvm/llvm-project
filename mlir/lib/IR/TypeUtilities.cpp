@@ -141,8 +141,8 @@ LogicalResult mlir::verifyCompatibleShapes(TypeRange types) {
   }
 
   // Remove all unranked shapes
-  auto shapes = llvm::to_vector<8>(llvm::make_filter_range(
-      shapedTypes, [](auto shapedType) { return shapedType.hasRank(); }));
+  auto shapes = llvm::filter_to_vector<8>(
+      shapedTypes, [](auto shapedType) { return shapedType.hasRank(); });
   if (shapes.empty())
     return success();
 

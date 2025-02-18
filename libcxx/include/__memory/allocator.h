@@ -11,17 +11,19 @@
 #define _LIBCPP___MEMORY_ALLOCATOR_H
 
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
 #include <__memory/allocate_at_least.h>
 #include <__memory/allocator_traits.h>
+#include <__new/allocate.h>
+#include <__new/exceptions.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/is_volatile.h>
 #include <__utility/forward.h>
-#include <cstddef>
-#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -100,7 +102,7 @@ public:
     if (__libcpp_is_constant_evaluated()) {
       return static_cast<_Tp*>(::operator new(__n * sizeof(_Tp)));
     } else {
-      return static_cast<_Tp*>(std::__libcpp_allocate(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
+      return std::__libcpp_allocate<_Tp>(__element_count(__n));
     }
   }
 
@@ -115,7 +117,7 @@ public:
     if (__libcpp_is_constant_evaluated()) {
       ::operator delete(__p);
     } else {
-      std::__libcpp_deallocate((void*)__p, __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
+      std::__libcpp_deallocate<_Tp>(__p, __element_count(__n));
     }
   }
 

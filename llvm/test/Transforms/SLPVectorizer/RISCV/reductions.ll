@@ -149,7 +149,7 @@ entry:
 define i64 @red_strided_ld_16xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_strided_ld_16xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr align 8 [[PTR:%.*]], i64 16, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 16)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr align 8 [[PTR:%.*]], i64 16, <16 x i1> splat (i1 true), i32 16)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> [[TMP0]])
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
@@ -341,13 +341,12 @@ define void @reduce_or_2() {
 ; ZVFHMIN-NEXT:    [[TMP3:%.*]] = icmp ult <16 x i64> [[TMP2]], zeroinitializer
 ; ZVFHMIN-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 6
 ; ZVFHMIN-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
-; ZVFHMIN-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
-; ZVFHMIN-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP5]])
-; ZVFHMIN-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; ZVFHMIN-NEXT:    [[RDX_OP:%.*]] = or <16 x i1> [[TMP3]], [[TMP5]]
+; ZVFHMIN-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[RDX_OP]])
 ; ZVFHMIN-NEXT:    br i1 [[OP_RDX]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; ZVFHMIN:       8:
+; ZVFHMIN:       7:
 ; ZVFHMIN-NEXT:    ret void
-; ZVFHMIN:       9:
+; ZVFHMIN:       8:
 ; ZVFHMIN-NEXT:    ret void
 ;
 ; ZVL128-LABEL: @reduce_or_2(
@@ -356,13 +355,12 @@ define void @reduce_or_2() {
 ; ZVL128-NEXT:    [[TMP3:%.*]] = icmp ult <16 x i64> [[TMP2]], zeroinitializer
 ; ZVL128-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 6
 ; ZVL128-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
-; ZVL128-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
-; ZVL128-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP5]])
-; ZVL128-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; ZVL128-NEXT:    [[RDX_OP:%.*]] = or <16 x i1> [[TMP3]], [[TMP5]]
+; ZVL128-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[RDX_OP]])
 ; ZVL128-NEXT:    br i1 [[OP_RDX]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; ZVL128:       8:
+; ZVL128:       7:
 ; ZVL128-NEXT:    ret void
-; ZVL128:       9:
+; ZVL128:       8:
 ; ZVL128-NEXT:    ret void
 ;
 ; ZVL256-LABEL: @reduce_or_2(
@@ -371,13 +369,12 @@ define void @reduce_or_2() {
 ; ZVL256-NEXT:    [[TMP3:%.*]] = icmp ult <16 x i64> [[TMP2]], zeroinitializer
 ; ZVL256-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 6
 ; ZVL256-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
-; ZVL256-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
-; ZVL256-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP5]])
-; ZVL256-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; ZVL256-NEXT:    [[RDX_OP:%.*]] = or <16 x i1> [[TMP3]], [[TMP5]]
+; ZVL256-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[RDX_OP]])
 ; ZVL256-NEXT:    br i1 [[OP_RDX]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; ZVL256:       8:
+; ZVL256:       7:
 ; ZVL256-NEXT:    ret void
-; ZVL256:       9:
+; ZVL256:       8:
 ; ZVL256-NEXT:    ret void
 ;
 ; ZVL512-LABEL: @reduce_or_2(
@@ -877,20 +874,10 @@ entry:
 define i64 @red_zext_ld_4xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_zext_ld_4xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD0:%.*]] = load i8, ptr [[PTR:%.*]], align 1
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[LD0]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
-; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[ZEXT_1:%.*]] = zext i8 [[LD1]] to i64
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i64 [[ZEXT]], [[ZEXT_1]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 2
-; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[GEP_1]], align 1
-; CHECK-NEXT:    [[ZEXT_2:%.*]] = zext i8 [[LD2]] to i64
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i64 [[ADD_1]], [[ZEXT_2]]
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 3
-; CHECK-NEXT:    [[LD3:%.*]] = load i8, ptr [[GEP_2]], align 1
-; CHECK-NEXT:    [[ZEXT_3:%.*]] = zext i8 [[LD3]] to i64
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw nsw i64 [[ADD_2]], [[ZEXT_3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
+; CHECK-NEXT:    [[ADD_3:%.*]] = zext i16 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[ADD_3]]
 ;
 entry:

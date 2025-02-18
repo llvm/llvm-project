@@ -271,6 +271,17 @@ ParseResult Parser::parseToken(Token::Kind expectedToken,
   return emitWrongTokenError(message);
 }
 
+/// Parses a quoted string token if present.
+ParseResult Parser::parseOptionalString(std::string *string) {
+  if (!getToken().is(Token::string))
+    return failure();
+
+  if (string)
+    *string = getToken().getStringValue();
+  consumeToken();
+  return success();
+}
+
 /// Parse an optional integer value from the stream.
 OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   // Parse `false` and `true` keywords as 0 and 1 respectively.
@@ -347,34 +358,58 @@ OptionalParseResult Parser::parseOptionalDecimalInteger(APInt &result) {
   return success();
 }
 
+ParseResult Parser::parseFloatFromLiteral(std::optional<APFloat> &result,
+                                          const Token &tok, bool isNegative,
+                                          const llvm::fltSemantics &semantics) {
+  // Check for a floating point value.
+  if (tok.is(Token::floatliteral)) {
+    auto val = tok.getFloatingPointValue();
+    if (!val)
+      return emitError(tok.getLoc()) << "floating point value too large";
+
+    result.emplace(isNegative ? -*val : *val);
+    bool unused;
+    result->convert(semantics, APFloat::rmNearestTiesToEven, &unused);
+    return success();
+  }
+
+  // Check for a hexadecimal float value.
+  if (tok.is(Token::integer))
+    return parseFloatFromIntegerLiteral(result, tok, isNegative, semantics);
+
+  return emitError(tok.getLoc()) << "expected floating point literal";
+}
+
 /// Parse a floating point value from an integer literal token.
-ParseResult Parser::parseFloatFromIntegerLiteral(
-    std::optional<APFloat> &result, const Token &tok, bool isNegative,
-    const llvm::fltSemantics &semantics, size_t typeSizeInBits) {
-  SMLoc loc = tok.getLoc();
+ParseResult
+Parser::parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
+                                     const Token &tok, bool isNegative,
+                                     const llvm::fltSemantics &semantics) {
   StringRef spelling = tok.getSpelling();
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
   if (!isHex) {
-    return emitError(loc, "unexpected decimal integer literal for a "
-                          "floating point value")
+    return emitError(tok.getLoc(), "unexpected decimal integer literal for a "
+                                   "floating point value")
                .attachNote()
            << "add a trailing dot to make the literal a float";
   }
   if (isNegative) {
-    return emitError(loc, "hexadecimal float literal should not have a "
-                          "leading minus");
+    return emitError(tok.getLoc(),
+                     "hexadecimal float literal should not have a "
+                     "leading minus");
   }
 
   APInt intValue;
   tok.getSpelling().getAsInteger(isHex ? 0 : 10, intValue);
-  if (intValue.getActiveBits() > typeSizeInBits)
-    return emitError(loc, "hexadecimal float constant out of range for type");
+  auto typeSizeInBits = APFloat::semanticsSizeInBits(semantics);
+  if (intValue.getActiveBits() > typeSizeInBits) {
+    return emitError(tok.getLoc(),
+                     "hexadecimal float constant out of range for type");
+  }
 
   APInt truncatedValue(typeSizeInBits, intValue.getNumWords(),
                        intValue.getRawData());
-
   result.emplace(semantics, truncatedValue);
-
   return success();
 }
 
@@ -388,15 +423,25 @@ ParseResult Parser::parseOptionalKeyword(StringRef *keyword) {
   return success();
 }
 
+ParseResult Parser::parseOptionalKeywordOrString(std::string *result) {
+  StringRef keyword;
+  if (succeeded(parseOptionalKeyword(&keyword))) {
+    *result = keyword.str();
+    return success();
+  }
+
+  return parseOptionalString(result);
+}
+
 //===----------------------------------------------------------------------===//
 // Resource Parsing
 
 FailureOr<AsmDialectResourceHandle>
 Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
-                            StringRef &name) {
+                            std::string &name) {
   assert(dialect && "expected valid dialect interface");
   SMLoc nameLoc = getToken().getLoc();
-  if (failed(parseOptionalKeyword(&name)))
+  if (failed(parseOptionalKeywordOrString(&name)))
     return emitError("expected identifier key for 'resource' entry");
   auto &resources = getState().symbols.dialectResources;
 
@@ -427,7 +472,7 @@ Parser::parseResourceHandle(Dialect *dialect) {
     return emitError() << "dialect '" << dialect->getNamespace()
                        << "' does not expect resource handles";
   }
-  StringRef resourceName;
+  std::string resourceName;
   return parseResourceHandle(interface, resourceName);
 }
 
@@ -2138,7 +2183,7 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   if (auto *op = llvm::dyn_cast_if_present<Operation *>(opOrArgument))
     op->setLoc(directLoc);
   else
-    opOrArgument.get<BlockArgument>().setLoc(directLoc);
+    cast<BlockArgument>(opOrArgument).setLoc(directLoc);
   return success();
 }
 
@@ -2506,8 +2551,8 @@ private:
 /// textual format.
 class ParsedResourceEntry : public AsmParsedResourceEntry {
 public:
-  ParsedResourceEntry(StringRef key, SMLoc keyLoc, Token value, Parser &p)
-      : key(key), keyLoc(keyLoc), value(value), p(p) {}
+  ParsedResourceEntry(std::string key, SMLoc keyLoc, Token value, Parser &p)
+      : key(std::move(key)), keyLoc(keyLoc), value(value), p(p) {}
   ~ParsedResourceEntry() override = default;
 
   StringRef getKey() const final { return key; }
@@ -2583,7 +2628,7 @@ public:
   }
 
 private:
-  StringRef key;
+  std::string key;
   SMLoc keyLoc;
   Token value;
   Parser &p;
@@ -2712,7 +2757,7 @@ ParseResult TopLevelOperationParser::parseDialectResourceFileMetadata() {
     return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
       // Parse the name of the resource entry.
       SMLoc keyLoc = getToken().getLoc();
-      StringRef key;
+      std::string key;
       if (failed(parseResourceHandle(handler, key)) ||
           parseToken(Token::colon, "expected ':'"))
         return failure();
@@ -2739,8 +2784,8 @@ ParseResult TopLevelOperationParser::parseExternalResourceFileMetadata() {
     return parseCommaSeparatedListUntil(Token::r_brace, [&]() -> ParseResult {
       // Parse the name of the resource entry.
       SMLoc keyLoc = getToken().getLoc();
-      StringRef key;
-      if (failed(parseOptionalKeyword(&key)))
+      std::string key;
+      if (failed(parseOptionalKeywordOrString(&key)))
         return emitError(
             "expected identifier key for 'external_resources' entry");
       if (parseToken(Token::colon, "expected ':'"))

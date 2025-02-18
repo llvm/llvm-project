@@ -161,7 +161,7 @@ static void instrumentAddressImpl(Module &M, IRBuilder<> &IRB,
   size_t AccessSizeIndex = TypeStoreSizeToSizeIndex(TypeStoreSize);
   Type *ShadowTy = IntegerType::get(M.getContext(),
                                     std::max(8U, TypeStoreSize >> AsanScale));
-  Type *ShadowPtrTy = PointerType::get(ShadowTy, 0);
+  Type *ShadowPtrTy = PointerType::get(M.getContext(), 0);
   Value *AddrLong = IRB.CreatePtrToInt(Addr, IntptrTy);
   Value *ShadowPtr =
       memToShadow(M, IRB, IntptrTy, AddrLong, AsanScale, AsanOffset);
@@ -178,7 +178,6 @@ static void instrumentAddressImpl(Module &M, IRBuilder<> &IRB,
       generateCrashCode(M, IRB, IntptrTy, CrashTerm, AddrLong, IsWrite,
                         AccessSizeIndex, SizeArgument, Recover);
   Crash->setDebugLoc(OrigIns->getDebugLoc());
-  return;
 }
 
 void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,

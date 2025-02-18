@@ -1,0 +1,29 @@
+# RUN: llc -o /dev/null %s -mtriple=s390x-linux-gnu -mcpu=z16 \
+# RUN:   -verify-machineinstrs -run-pass=register-coalescer
+
+# The LOCMux below produces a dead definition and will be turned into
+# a KILL instruction (by LiveRangeEdit::eliminateDeadDef()). When this
+# happens, the MemoryOperand must also be removed as this is required
+# by the machine verifier.
+
+---
+name:            fun
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r2d
+  
+    %3:addr64bit = COPY killed $r2d
+  
+  bb.1:
+    %5:grx32bit = LMux killed %3, 0, $noreg :: (load (s32))
+    CHIMux killed %5, 0, implicit-def $cc
+    %7:grx32bit = LHIMux 0
+    %1:grx32bit = COPY killed %7
+    %1:grx32bit = LOCMux %1, undef %8:addr64bit, 0, 14, 6, implicit killed $cc :: (load (s32))
+    dead %0:grx32bit = COPY killed %1
+  
+  bb.2:
+    J %bb.2
+
+...

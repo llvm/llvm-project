@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -40,22 +39,17 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -77,9 +71,12 @@ STATISTIC(StrtabBytes, "Total size of SHT_STRTAB sections");
 STATISTIC(SymtabBytes, "Total size of SHT_SYMTAB sections");
 STATISTIC(RelocationBytes, "Total size of relocation sections");
 STATISTIC(DynsymBytes, "Total size of SHT_DYNSYM sections");
-STATISTIC(DebugBytes, "Total size of debug info sections");
+STATISTIC(
+    DebugBytes,
+    "Total size of debug info sections (not including those written to .dwo)");
 STATISTIC(UnwindBytes, "Total size of unwind sections");
 STATISTIC(OtherBytes, "Total size of uncategorized sections");
+STATISTIC(DwoBytes, "Total size of sections written to .dwo file");
 
 } // namespace stats
 
@@ -975,7 +972,9 @@ void ELFWriter::writeSectionHeaders(const MCAssembler &Asm) {
       return Section->getFlags() & Flag;
     };
 
-    if (Section->getName().starts_with(".debug")) {
+    if (Mode == DwoOnly) {
+      stats::DwoBytes += Size;
+    } else if (Section->getName().starts_with(".debug")) {
       stats::DebugBytes += Size;
     } else if (Section->getName().starts_with(".eh_frame")) {
       stats::UnwindBytes += Size;
@@ -1225,7 +1224,8 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
       continue;
     }
 
-    if (Renames.count(&Symbol) && Renames[&Symbol] != Alias) {
+    if (auto It = Renames.find(&Symbol);
+        It != Renames.end() && It->second != Alias) {
       Asm.getContext().reportError(S.Loc, Twine("multiple versions for ") +
                                               Symbol.getName());
       continue;

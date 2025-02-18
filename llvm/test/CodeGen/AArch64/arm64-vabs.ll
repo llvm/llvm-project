@@ -2,15 +2,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck -check-prefixes=CHECK,CHECK-SD %s
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for abs_8b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_16b
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_4h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for abs_1d_honestly
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fabds
+; CHECK-GI:  warning: Instruction selection used fallback path for fabds
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fabdd
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uabd_i64
 
@@ -451,8 +443,8 @@ define i32 @sabd8h_rdx(<8 x i16> %a, <8 x i16> %b) {
 define i32 @uabdl4s_rdx_i32(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: uabdl4s_rdx_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uabdl.4s v0, v0, v1
-; CHECK-SD-NEXT:    addv.4s s0, v0
+; CHECK-SD-NEXT:    uabd.4h v0, v0, v1
+; CHECK-SD-NEXT:    uaddlv.4h s0, v0
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1047,21 +1039,37 @@ define <4 x i32> @abs_4s(ptr %A) nounwind {
 }
 
 define <1 x i64> @abs_1d(<1 x i64> %A) nounwind {
-; CHECK-LABEL: abs_1d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    abs d0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: abs_1d:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    abs d0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abs_1d:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    neg x8, x8
+; CHECK-GI-NEXT:    cmp x9, #0
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fcsel d0, d0, d1, gt
+; CHECK-GI-NEXT:    ret
   %abs = call <1 x i64> @llvm.aarch64.neon.abs.v1i64(<1 x i64> %A)
   ret <1 x i64> %abs
 }
 
 define i64 @abs_1d_honestly(i64 %A) nounwind {
-; CHECK-LABEL: abs_1d_honestly:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    abs d0, d0
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: abs_1d_honestly:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov d0, x0
+; CHECK-SD-NEXT:    abs d0, d0
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abs_1d_honestly:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmp x0, #0
+; CHECK-GI-NEXT:    cneg x0, x0, le
+; CHECK-GI-NEXT:    ret
   %abs = call i64 @llvm.aarch64.neon.abs.i64(i64 %A)
   ret i64 %abs
 }

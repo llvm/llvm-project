@@ -77,17 +77,15 @@ unsigned X86Disassembler::getMemOperandSize(const Record *MemRec) {
 /// @param init - A reference to the BitsInit to be decoded.
 /// @return     - The field, with the first bit in the BitsInit as the lowest
 ///               order bit.
-static uint8_t byteFromBitsInit(BitsInit &init) {
+static uint8_t byteFromBitsInit(const BitsInit &init) {
   int width = init.getNumBits();
 
   assert(width <= 8 && "Field is too large for uint8_t!");
 
-  int index;
   uint8_t mask = 0x01;
-
   uint8_t ret = 0;
 
-  for (index = 0; index < width; index++) {
+  for (int index = 0; index < width; index++) {
     if (cast<BitInit>(init.getBit(index))->getValue())
       ret |= mask;
 
@@ -104,7 +102,7 @@ static uint8_t byteFromBitsInit(BitsInit &init) {
 /// @param name - The name of the field in the record.
 /// @return     - The field, as translated by byteFromBitsInit().
 static uint8_t byteFromRec(const Record *rec, StringRef name) {
-  BitsInit *bits = rec->getValueAsBitsInit(name);
+  const BitsInit *bits = rec->getValueAsBitsInit(name);
   return byteFromBitsInit(*bits);
 }
 
@@ -1149,21 +1147,19 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("VK4Pair", TYPE_VK_PAIR)
   TYPE("VK8Pair", TYPE_VK_PAIR)
   TYPE("VK16Pair", TYPE_VK_PAIR)
+  TYPE("vx32mem", TYPE_MVSIBX)
   TYPE("vx64mem", TYPE_MVSIBX)
-  TYPE("vx128mem", TYPE_MVSIBX)
-  TYPE("vx256mem", TYPE_MVSIBX)
-  TYPE("vy128mem", TYPE_MVSIBY)
-  TYPE("vy256mem", TYPE_MVSIBY)
+  TYPE("vy32mem", TYPE_MVSIBY)
+  TYPE("vy64mem", TYPE_MVSIBY)
+  TYPE("vx32xmem", TYPE_MVSIBX)
   TYPE("vx64xmem", TYPE_MVSIBX)
-  TYPE("vx128xmem", TYPE_MVSIBX)
-  TYPE("vx256xmem", TYPE_MVSIBX)
-  TYPE("vy128xmem", TYPE_MVSIBY)
-  TYPE("vy256xmem", TYPE_MVSIBY)
-  TYPE("vy512xmem", TYPE_MVSIBY)
-  TYPE("vz256mem", TYPE_MVSIBZ)
-  TYPE("vz512mem", TYPE_MVSIBZ)
+  TYPE("vy32xmem", TYPE_MVSIBY)
+  TYPE("vy64xmem", TYPE_MVSIBY)
+  TYPE("vz32mem", TYPE_MVSIBZ)
+  TYPE("vz64mem", TYPE_MVSIBZ)
   TYPE("BNDR", TYPE_BNDR)
   TYPE("TILE", TYPE_TMM)
+  TYPE("TILEPair", TYPE_TMM_PAIR)
   errs() << "Unhandled type string " << s << "\n";
   llvm_unreachable("Unhandled type string");
 }
@@ -1245,6 +1241,7 @@ RecognizableInstr::rmRegisterEncodingFromString(const std::string &s,
   ENCODING("VK64", ENCODING_RM)
   ENCODING("BNDR", ENCODING_RM)
   ENCODING("TILE", ENCODING_RM)
+  ENCODING("TILEPair", ENCODING_RM)
   errs() << "Unhandled R/M register encoding " << s << "\n";
   llvm_unreachable("Unhandled R/M register encoding");
 }
@@ -1294,6 +1291,7 @@ RecognizableInstr::roRegisterEncodingFromString(const std::string &s,
   ENCODING("VK64WM", ENCODING_REG)
   ENCODING("BNDR", ENCODING_REG)
   ENCODING("TILE", ENCODING_REG)
+  ENCODING("TILEPair", ENCODING_REG)
   errs() << "Unhandled reg/opcode register encoding " << s << "\n";
   llvm_unreachable("Unhandled reg/opcode register encoding");
 }
@@ -1324,6 +1322,7 @@ RecognizableInstr::vvvvRegisterEncodingFromString(const std::string &s,
   ENCODING("VK32", ENCODING_VVVV)
   ENCODING("VK64", ENCODING_VVVV)
   ENCODING("TILE", ENCODING_VVVV)
+  ENCODING("TILEPair", ENCODING_VVVV)
   errs() << "Unhandled VEX.vvvv register encoding " << s << "\n";
   llvm_unreachable("Unhandled VEX.vvvv register encoding");
 }
@@ -1370,19 +1369,16 @@ RecognizableInstr::memoryEncodingFromString(const std::string &s,
   ENCODING("anymem", ENCODING_RM)
   ENCODING("opaquemem", ENCODING_RM)
   ENCODING("sibmem", ENCODING_SIB)
+  ENCODING("vx32mem", ENCODING_VSIB)
   ENCODING("vx64mem", ENCODING_VSIB)
-  ENCODING("vx128mem", ENCODING_VSIB)
-  ENCODING("vx256mem", ENCODING_VSIB)
-  ENCODING("vy128mem", ENCODING_VSIB)
-  ENCODING("vy256mem", ENCODING_VSIB)
+  ENCODING("vy32mem", ENCODING_VSIB)
+  ENCODING("vy64mem", ENCODING_VSIB)
+  ENCODING("vx32xmem", ENCODING_VSIB)
   ENCODING("vx64xmem", ENCODING_VSIB)
-  ENCODING("vx128xmem", ENCODING_VSIB)
-  ENCODING("vx256xmem", ENCODING_VSIB)
-  ENCODING("vy128xmem", ENCODING_VSIB)
-  ENCODING("vy256xmem", ENCODING_VSIB)
-  ENCODING("vy512xmem", ENCODING_VSIB)
-  ENCODING("vz256mem", ENCODING_VSIB)
-  ENCODING("vz512mem", ENCODING_VSIB)
+  ENCODING("vy32xmem", ENCODING_VSIB)
+  ENCODING("vy64xmem", ENCODING_VSIB)
+  ENCODING("vz32mem", ENCODING_VSIB)
+  ENCODING("vz64mem", ENCODING_VSIB)
   errs() << "Unhandled memory encoding " << s << "\n";
   llvm_unreachable("Unhandled memory encoding");
 }

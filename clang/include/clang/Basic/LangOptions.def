@@ -160,7 +160,6 @@ LANGOPT(GNUAsm            , 1, 1, "GNU-style inline assembly")
 LANGOPT(Coroutines        , 1, 0, "C++20 coroutines")
 LANGOPT(CoroAlignedAllocation, 1, 0, "prefer Aligned Allocation according to P2014 Option 2")
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
-LANGOPT(RelaxedTemplateTemplateArgs, 1, 1, "C++17 relaxed matching of template template arguments")
 LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
 LANGOPT(RetainSubstTemplateTypeParmTypeAstNodes, 1, 0, "retain SubstTemplateTypeParmType nodes in the AST's representation of alias template specializations")
 
@@ -178,6 +177,7 @@ LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
 LANGOPT(PointerAuthInitFiniAddressDiscrimination, 1, 0,
         "incorporate address discrimination in authenticated function pointers in init/fini arrays")
 LANGOPT(PointerAuthELFGOT, 1, 0, "authenticate pointers from GOT")
+LANGOPT(AArch64JumpTableHardening, 1, 0, "use hardened lowering for jump-table dispatch")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, "experimental late parsing of attributes")
@@ -238,7 +238,7 @@ BENIGN_LANGOPT(NoSignedZero      , 1, 0, "Permit Floating Point optimization wit
 BENIGN_LANGOPT(AllowRecip        , 1, 0, "Permit Floating Point reciprocal")
 BENIGN_LANGOPT(ApproxFunc        , 1, 0, "Permit Floating Point approximation")
 
-ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 2, CX_None, "Enable use of range reduction for complex arithmetics.")
+ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 3, CX_None, "Enable use of range reduction for complex arithmetics.")
 
 BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
 
@@ -280,7 +280,6 @@ LANGOPT(OpenMPNoNestedParallelism  , 1, 0, "Assume that no thread in a parallel 
 LANGOPT(OpenMPOffloadMandatory  , 1, 0, "Assert that offloading is mandatory and do not create a host fallback.")
 LANGOPT(OpenMPForceUSM     , 1, 0, "Enable OpenMP unified shared memory mode via compiler.")
 LANGOPT(NoGPULib  , 1, 0, "Indicate a build without the standard GPU libraries.")
-LANGOPT(RenderScript      , 1, 0, "RenderScript")
 
 LANGOPT(HLSL, 1, 0, "HLSL")
 ENUM_LANGOPT(HLSLVersion, HLSLLangStd, 16, HLSL_Unset, "HLSL Version")
@@ -366,6 +365,7 @@ LANGOPT(ObjCDisableDirectMethodsForTesting, 1, 0,
 LANGOPT(CFProtectionBranch , 1, 0, "Control-Flow Branch Protection enabled")
 ENUM_LANGOPT(CFBranchLabelScheme, CFBranchLabelSchemeKind, 2, CFBranchLabelSchemeKind::Default,
              "Control-Flow Branch Protection Label Scheme")
+LANGOPT(CFProtectionReturn, 1, 0, "Control-Flow Return Protection enabled")
 LANGOPT(FakeAddressSpaceMap , 1, 0, "OpenCL fake address space map")
 ENUM_LANGOPT(AddressSpaceMapMangling , AddrSpaceMapMangling, 2, ASMM_Target, "OpenCL address space map mangling mode")
 LANGOPT(IncludeDefaultHeader, 1, 0, "Include default header file for OpenCL")
@@ -407,6 +407,7 @@ VALUE_LANGOPT(TrivialAutoVarInitMaxSize, 32, 0,
              "stop trivial automatic variable initialization if var size exceeds the specified size (in bytes). Must be greater than 0.")
 ENUM_LANGOPT(SignedOverflowBehavior, SignedOverflowBehaviorTy, 2, SOB_Undefined,
              "signed integer overflow handling")
+LANGOPT(PointerOverflowDefined, 1, 0, "make pointer overflow defined")
 ENUM_LANGOPT(ThreadModel  , ThreadModelKind, 2, ThreadModelKind::POSIX, "Thread Model")
 
 BENIGN_LANGOPT(ArrowDepth, 32, 256,
@@ -431,7 +432,7 @@ LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 
 LANGOPT(XLPragmaPack, 1, 0, "IBM XL #pragma pack handling")
 
-LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
+COMPATIBLE_LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
 
 LANGOPT(APINotes, 1, 0, "use external API notes")
 LANGOPT(APINotesModules, 1, 0, "use module-based external API notes")
@@ -531,6 +532,8 @@ BENIGN_LANGOPT(CheckConstexprFunctionBodies, 1, 1,
                "be used in a constant expression.")
 
 LANGOPT(BoundsSafety, 1, 0, "Bounds safety extension for C")
+
+LANGOPT(PreserveVec3Type, 1, 0, "Preserve 3-component vector type")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT

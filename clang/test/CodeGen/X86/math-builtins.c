@@ -38,6 +38,31 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // NO__ERRNO-NEXT: [[FREXP_F128_0:%.+]] = extractvalue { fp128, i32 } [[FREXP_F128]], 0
 
 
+// NO__ERRNO: [[SINCOS_F64:%.+]] = call { double, double } @llvm.sincos.f64(double %{{.+}})
+// NO__ERRNO-NEXT: [[SINCOS_F64_0:%.+]] = extractvalue { double, double } [[SINCOS_F64]], 0
+// NO__ERRNO-NEXT: [[SINCOS_F64_1:%.+]] = extractvalue { double, double } [[SINCOS_F64]], 1
+// NO__ERRNO-NEXT: store double [[SINCOS_F64_0]], ptr %{{.+}}, align 8
+// NO__ERRNO-NEXT: store double [[SINCOS_F64_1]], ptr %{{.+}}, align 8
+
+// NO__ERRNO: [[SINCOS_F32:%.+]] = call { float, float } @llvm.sincos.f32(float %{{.+}})
+// NO__ERRNO-NEXT: [[SINCOS_F32_0:%.+]] = extractvalue { float, float } [[SINCOS_F32]], 0
+// NO__ERRNO-NEXT: [[SINCOS_F32_1:%.+]] = extractvalue { float, float } [[SINCOS_F32]], 1
+// NO__ERRNO-NEXT: store float [[SINCOS_F32_0]], ptr %{{.+}}, align 4
+// NO__ERRNO-NEXT: store float [[SINCOS_F32_1]], ptr %{{.+}}, align 4
+
+// NO__ERRNO: [[SINCOS_F80:%.+]] = call { x86_fp80, x86_fp80 } @llvm.sincos.f80(x86_fp80 %{{.+}})
+// NO__ERRNO-NEXT: [[SINCOS_F80_0:%.+]] = extractvalue { x86_fp80, x86_fp80 } [[SINCOS_F80]], 0
+// NO__ERRNO-NEXT: [[SINCOS_F80_1:%.+]] = extractvalue { x86_fp80, x86_fp80 } [[SINCOS_F80]], 1
+// NO__ERRNO-NEXT: store x86_fp80 [[SINCOS_F80_0]], ptr %{{.+}}, align 16
+// NO__ERRNO-NEXT: store x86_fp80 [[SINCOS_F80_1]], ptr %{{.+}}, align 16
+
+// NO__ERRNO: [[SINCOS_F128:%.+]] = call { fp128, fp128 } @llvm.sincos.f128(fp128 %{{.+}})
+// NO__ERRNO-NEXT: [[SINCOS_F128_0:%.+]] = extractvalue { fp128, fp128 } [[SINCOS_F128]], 0
+// NO__ERRNO-NEXT: [[SINCOS_F128_1:%.+]] = extractvalue { fp128, fp128 } [[SINCOS_F128]], 1
+// NO__ERRNO-NEXT: store fp128 [[SINCOS_F128_0]], ptr %{{.+}}, align 16
+// NO__ERRNO-NEXT: store fp128 [[SINCOS_F128_1]], ptr %{{.+}}, align 16
+
+
 // HAS_ERRNO: declare double @fmod(double noundef, double noundef) [[NOT_READNONE:#[0-9]+]]
 // HAS_ERRNO: declare float @fmodf(float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @fmodl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
@@ -45,10 +70,10 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_atan2(f,f);    __builtin_atan2f(f,f) ;  __builtin_atan2l(f, f); __builtin_atan2f128(f,f);
 
-// NO__ERRNO: declare double @atan2(double noundef, double noundef) [[READNONE:#[0-9]+]]
-// NO__ERRNO: declare float @atan2f(float noundef, float noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[READNONE]]
-// NO__ERRNO: declare fp128 @atan2f128(fp128 noundef, fp128 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.atan2.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
+// NO__ERRNO: declare float @llvm.atan2.f32(float, float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.atan2.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @llvm.atan2.f128(fp128, fp128) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @atan2(double noundef, double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @atan2f(float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
@@ -56,7 +81,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_copysign(f,f); __builtin_copysignf(f,f); __builtin_copysignl(f,f); __builtin_copysignf128(f,f);
 
-// NO__ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
+// NO__ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare fp128 @llvm.copysign.f128(fp128, fp128) [[READNONE_INTRINSIC]]
@@ -179,7 +204,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_acosh(f);      __builtin_acoshf(f);     __builtin_acoshl(f);  __builtin_acoshf128(f);
 
-// NO__ERRNO: declare double @acosh(double noundef) [[READNONE]]
+// NO__ERRNO: declare double @acosh(double noundef) [[READNONE:#[0-9]+]]
 // NO__ERRNO: declare float @acoshf(float noundef) [[READNONE]]
 // NO__ERRNO: declare x86_fp80 @acoshl(x86_fp80 noundef) [[READNONE]]
 // NO__ERRNO: declare fp128 @acoshf128(fp128 noundef) [[READNONE]]
@@ -665,6 +690,16 @@ __builtin_sinh(f);       __builtin_sinhf(f);      __builtin_sinhl(f); __builtin_
 // HAS_ERRNO: declare x86_fp80 @sinhl(x86_fp80 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare fp128 @sinhf128(fp128 noundef) [[NOT_READNONE]]
 
+__builtin_sincos(f,d,d); __builtin_sincosf(f,fp,fp); __builtin_sincosl(f,l,l); __builtin_sincosf128(f,l,l);
+// NO__ERRNO: declare { double, double } @llvm.sincos.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { float, float } @llvm.sincos.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { x86_fp80, x86_fp80 } @llvm.sincos.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { fp128, fp128 } @llvm.sincos.f128(fp128) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare void @sincos(double noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare void @sincosf(float noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare void @sincosl(x86_fp80 noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare void @sincosf128(fp128 noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
+
 __builtin_sqrt(f);       __builtin_sqrtf(f);      __builtin_sqrtl(f); __builtin_sqrtf128(f);
 
 // NO__ERRNO: declare double @llvm.sqrt.f64(double) [[READNONE_INTRINSIC]]
@@ -721,10 +756,10 @@ __builtin_trunc(f);      __builtin_truncf(f);     __builtin_truncl(f); __builtin
 // HAS_ERRNO: declare fp128 @llvm.trunc.f128(fp128) [[READNONE_INTRINSIC]]
 };
 
-// NO__ERRNO: attributes [[READNONE]] = { {{.*}}memory(none){{.*}} }
 // NO__ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}memory(none){{.*}} }
 // NO__ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
 // NO__ERRNO: attributes [[PURE]] = { {{.*}}memory(read){{.*}} }
+// NO__ERRNO: attributes [[READNONE]] = { {{.*}}memory(none){{.*}} }
 
 // HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
 // HAS_ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}memory(none){{.*}} }
@@ -733,4 +768,3 @@ __builtin_trunc(f);      __builtin_truncf(f);     __builtin_truncl(f); __builtin
 
 // HAS_ERRNO_GNU: attributes [[READNONE_INTRINSIC]] = { {{.*}}memory(none){{.*}} }
 // HAS_ERRNO_WIN: attributes [[READNONE_INTRINSIC]] = { {{.*}}memory(none){{.*}} }
-

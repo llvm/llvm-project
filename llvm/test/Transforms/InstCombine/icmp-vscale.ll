@@ -94,7 +94,7 @@ define i1 @vscale_ule_max() vscale_range(4,8) {
 define i1 @vscale_ult_max() vscale_range(4,8) {
 ; CHECK-LABEL: @vscale_ult_max(
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i16 @llvm.vscale.i16()
-; CHECK-NEXT:    [[RES:%.*]] = icmp ult i16 [[VSCALE]], 8
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign ult i16 [[VSCALE]], 8
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %vscale = call i16 @llvm.vscale.i16()
@@ -114,7 +114,7 @@ define i1 @vscale_uge_min() vscale_range(4,8) {
 define i1 @vscale_ugt_min() vscale_range(4,8) {
 ; CHECK-LABEL: @vscale_ugt_min(
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i16 @llvm.vscale.i16()
-; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i16 [[VSCALE]], 4
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign ugt i16 [[VSCALE]], 4
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %vscale = call i16 @llvm.vscale.i16()

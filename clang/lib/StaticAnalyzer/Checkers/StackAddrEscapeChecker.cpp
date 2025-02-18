@@ -54,8 +54,8 @@ private:
                                   CheckerContext &C) const;
   void checkAsyncExecutedBlockCaptures(const BlockDataRegion &B,
                                        CheckerContext &C) const;
-  void EmitStackError(CheckerContext &C, const MemRegion *R,
-                      const Expr *RetE) const;
+  void EmitReturnLeakError(CheckerContext &C, const MemRegion *LeakedRegion,
+                           const Expr *RetE) const;
   bool isSemaphoreCaptured(const BlockDecl &B) const;
   static SourceRange genName(raw_ostream &os, const MemRegion *R,
                              ASTContext &Ctx);
@@ -78,7 +78,7 @@ SourceRange StackAddrEscapeChecker::genName(raw_ostream &os, const MemRegion *R,
     const CompoundLiteralExpr *CL = CR->getLiteralExpr();
     os << "stack memory associated with a compound literal "
           "declared on line "
-       << SM.getExpansionLineNumber(CL->getBeginLoc()) << " returned to caller";
+       << SM.getExpansionLineNumber(CL->getBeginLoc());
     range = CL->getSourceRange();
   } else if (const auto *AR = dyn_cast<AllocaRegion>(R)) {
     const Expr *ARE = AR->getExpr();
@@ -147,9 +147,22 @@ StackAddrEscapeChecker::getCapturedStackRegions(const BlockDataRegion &B,
   return Regions;
 }
 
-void StackAddrEscapeChecker::EmitStackError(CheckerContext &C,
-                                            const MemRegion *R,
-                                            const Expr *RetE) const {
+static void EmitReturnedAsPartOfError(llvm::raw_ostream &OS, SVal ReturnedVal,
+                                      const MemRegion *LeakedRegion) {
+  if (const MemRegion *ReturnedRegion = ReturnedVal.getAsRegion()) {
+    if (isa<BlockDataRegion>(ReturnedRegion)) {
+      OS << " is captured by a returned block";
+      return;
+    }
+  }
+
+  // Generic message
+  OS << " returned to caller";
+}
+
+void StackAddrEscapeChecker::EmitReturnLeakError(CheckerContext &C,
+                                                 const MemRegion *R,
+                                                 const Expr *RetE) const {
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
     return;
@@ -157,11 +170,15 @@ void StackAddrEscapeChecker::EmitStackError(CheckerContext &C,
     BT_returnstack = std::make_unique<BugType>(
         CheckNames[CK_StackAddrEscapeChecker],
         "Return of address to stack-allocated memory");
+
   // Generate a report for this bug.
   SmallString<128> buf;
   llvm::raw_svector_ostream os(buf);
+
+  // Error message formatting
   SourceRange range = genName(os, R, C.getASTContext());
-  os << " returned to caller";
+  EmitReturnedAsPartOfError(os, C.getSVal(RetE), R);
+
   auto report =
       std::make_unique<PathSensitiveBugReport>(*BT_returnstack, os.str(), N);
   report->addRange(RetE->getSourceRange());
@@ -209,30 +226,6 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
   }
 }
 
-void StackAddrEscapeChecker::checkReturnedBlockCaptures(
-    const BlockDataRegion &B, CheckerContext &C) const {
-  for (const MemRegion *Region : getCapturedStackRegions(B, C)) {
-    if (isNotInCurrentFrame(Region, C))
-      continue;
-    ExplodedNode *N = C.generateNonFatalErrorNode();
-    if (!N)
-      continue;
-    if (!BT_capturedstackret)
-      BT_capturedstackret = std::make_unique<BugType>(
-          CheckNames[CK_StackAddrEscapeChecker],
-          "Address of stack-allocated memory is captured");
-    SmallString<128> Buf;
-    llvm::raw_svector_ostream Out(Buf);
-    SourceRange Range = genName(Out, Region, C.getASTContext());
-    Out << " is captured by a returned block";
-    auto Report = std::make_unique<PathSensitiveBugReport>(*BT_capturedstackret,
-                                                           Out.str(), N);
-    if (Range.isValid())
-      Report->addRange(Range);
-    C.emitReport(std::move(Report));
-  }
-}
-
 void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
                                           CheckerContext &C) const {
   if (!ChecksEnabled[CK_StackAddrAsyncEscapeChecker])
@@ -247,6 +240,117 @@ void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
   }
 }
 
+/// A visitor made for use with a ScanReachableSymbols scanner, used
+/// for finding stack regions within an SVal that live on the current
+/// stack frame of the given checker context. This visitor excludes
+/// NonParamVarRegion that data is bound to in a BlockDataRegion's
+/// bindings, since these are likely uninteresting, e.g., in case a
+/// temporary is constructed on the stack, but it captures values
+/// that would leak.
+class FindStackRegionsSymbolVisitor final : public SymbolVisitor {
+  CheckerContext &Ctxt;
+  const StackFrameContext *PoppedStackFrame;
+  SmallVectorImpl<const MemRegion *> &EscapingStackRegions;
+
+public:
+  explicit FindStackRegionsSymbolVisitor(
+      CheckerContext &Ctxt,
+      SmallVectorImpl<const MemRegion *> &StorageForStackRegions)
+      : Ctxt(Ctxt), PoppedStackFrame(Ctxt.getStackFrame()),
+        EscapingStackRegions(StorageForStackRegions) {}
+
+  bool VisitSymbol(SymbolRef sym) override { return true; }
+
+  bool VisitMemRegion(const MemRegion *MR) override {
+    SaveIfEscapes(MR);
+
+    if (const BlockDataRegion *BDR = MR->getAs<BlockDataRegion>())
+      return VisitBlockDataRegionCaptures(BDR);
+
+    return true;
+  }
+
+private:
+  void SaveIfEscapes(const MemRegion *MR) {
+    const StackSpaceRegion *SSR =
+        MR->getMemorySpace()->getAs<StackSpaceRegion>();
+
+    if (!SSR)
+      return;
+
+    const StackFrameContext *CapturedSFC = SSR->getStackFrame();
+    if (CapturedSFC == PoppedStackFrame ||
+        PoppedStackFrame->isParentOf(CapturedSFC))
+      EscapingStackRegions.push_back(MR);
+  }
+
+  bool VisitBlockDataRegionCaptures(const BlockDataRegion *BDR) {
+    for (auto Var : BDR->referenced_vars()) {
+      SVal Val = Ctxt.getState()->getSVal(Var.getCapturedRegion());
+      const MemRegion *Region = Val.getAsRegion();
+      if (Region) {
+        SaveIfEscapes(Region);
+        VisitMemRegion(Region);
+      }
+    }
+
+    return false;
+  }
+};
+
+/// Given some memory regions that are flagged by FindStackRegionsSymbolVisitor,
+/// this function filters out memory regions that are being returned that are
+/// likely not true leaks:
+/// 1. If returning a block data region that has stack memory space
+/// 2. If returning a constructed object that has stack memory space
+static SmallVector<const MemRegion *> FilterReturnExpressionLeaks(
+    const SmallVectorImpl<const MemRegion *> &MaybeEscaped, CheckerContext &C,
+    const Expr *RetE, SVal &RetVal) {
+
+  SmallVector<const MemRegion *> WillEscape;
+
+  const MemRegion *RetRegion = RetVal.getAsRegion();
+
+  // Returning a record by value is fine. (In this case, the returned
+  // expression will be a copy-constructor, possibly wrapped in an
+  // ExprWithCleanups node.)
+  if (const ExprWithCleanups *Cleanup = dyn_cast<ExprWithCleanups>(RetE))
+    RetE = Cleanup->getSubExpr();
+  bool IsConstructExpr =
+      isa<CXXConstructExpr>(RetE) && RetE->getType()->isRecordType();
+
+  // The CK_CopyAndAutoreleaseBlockObject cast causes the block to be copied
+  // so the stack address is not escaping here.
+  bool IsCopyAndAutoreleaseBlockObj = false;
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
+    IsCopyAndAutoreleaseBlockObj =
+        isa_and_nonnull<BlockDataRegion>(RetRegion) &&
+        ICE->getCastKind() == CK_CopyAndAutoreleaseBlockObject;
+  }
+
+  for (const MemRegion *MR : MaybeEscaped) {
+    if (RetRegion == MR && (IsCopyAndAutoreleaseBlockObj || IsConstructExpr))
+      continue;
+
+    WillEscape.push_back(MR);
+  }
+
+  return WillEscape;
+}
+
+/// For use in finding regions that live on the checker context's current
+/// stack frame, deep in the SVal representing the return value.
+static SmallVector<const MemRegion *>
+FindEscapingStackRegions(CheckerContext &C, const Expr *RetE, SVal RetVal) {
+  SmallVector<const MemRegion *> FoundStackRegions;
+
+  FindStackRegionsSymbolVisitor Finder(C, FoundStackRegions);
+  ScanReachableSymbols Scanner(C.getState(), Finder);
+  Scanner.scan(RetVal);
+
+  return FilterReturnExpressionLeaks(FoundStackRegions, C, RetE, RetVal);
+}
+
 void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
                                           CheckerContext &C) const {
   if (!ChecksEnabled[CK_StackAddrEscapeChecker])
@@ -258,34 +362,12 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
   RetE = RetE->IgnoreParens();
 
   SVal V = C.getSVal(RetE);
-  const MemRegion *R = V.getAsRegion();
-  if (!R)
-    return;
 
-  if (const BlockDataRegion *B = dyn_cast<BlockDataRegion>(R))
-    checkReturnedBlockCaptures(*B, C);
+  SmallVector<const MemRegion *> EscapedStackRegions =
+      FindEscapingStackRegions(C, RetE, V);
 
-  if (!isa<StackSpaceRegion>(R->getMemorySpace()) || isNotInCurrentFrame(R, C))
-    return;
-
-  // Returning a record by value is fine. (In this case, the returned
-  // expression will be a copy-constructor, possibly wrapped in an
-  // ExprWithCleanups node.)
-  if (const ExprWithCleanups *Cleanup = dyn_cast<ExprWithCleanups>(RetE))
-    RetE = Cleanup->getSubExpr();
-  if (isa<CXXConstructExpr>(RetE) && RetE->getType()->isRecordType())
-    return;
-
-  // The CK_CopyAndAutoreleaseBlockObject cast causes the block to be copied
-  // so the stack address is not escaping here.
-  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
-    if (isa<BlockDataRegion>(R) &&
-        ICE->getCastKind() == CK_CopyAndAutoreleaseBlockObject) {
-      return;
-    }
-  }
-
-  EmitStackError(C, R, RetE);
+  for (const MemRegion *ER : EscapedStackRegions)
+    EmitReturnLeakError(C, ER, RetE);
 }
 
 static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {

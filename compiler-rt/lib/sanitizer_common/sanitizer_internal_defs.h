@@ -203,6 +203,12 @@ typedef __SIZE_TYPE__ usize;
 typedef uptr usize;
 #endif
 
+#if defined(__s390__) && !defined(__s390x__)
+typedef long ssize;
+#else
+typedef sptr ssize;
+#endif
+
 typedef u64 tid_t;
 
 // ----------- ATTENTION -------------

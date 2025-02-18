@@ -49,6 +49,20 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %mul_flag = llvm.mul %arg0, %arg0 overflow<nsw, nuw> : i32
   %shl_flag = llvm.shl %arg0, %arg0 overflow<nuw, nsw> : i32
 
+// Integer exact flag.
+// CHECK: {{.*}} = llvm.sdiv exact %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.udiv exact %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.ashr exact %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.lshr exact %[[I32]], %[[I32]] : i32
+  %sdiv_flag = llvm.sdiv exact %arg0, %arg0 : i32
+  %udiv_flag = llvm.udiv exact %arg0, %arg0 : i32
+  %ashr_flag = llvm.ashr exact %arg0, %arg0 : i32
+  %lshr_flag = llvm.lshr exact %arg0, %arg0 : i32
+
+// Integer disjoint flag.
+// CHECK: {{.*}} = llvm.or disjoint %[[I32]], %[[I32]] : i32
+  %or_flag = llvm.or disjoint %arg0, %arg0 : i32
+
 // Floating point binary operations.
 //
 // CHECK: {{.*}} = llvm.fadd %[[FLOAT]], %[[FLOAT]] : f32
@@ -315,6 +329,36 @@ func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   llvm.return
 }
 
+// CHECK-LABEL: @nneg_casts
+// CHECK-SAME: (%[[I32:.*]]: i32, %[[I64:.*]]: i64, %[[V4I32:.*]]: vector<4xi32>, %[[V4I64:.*]]: vector<4xi64>, %[[PTR:.*]]: !llvm.ptr)
+func.func @nneg_casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
+                %arg3: vector<4xi64>, %arg4: !llvm.ptr) {
+// CHECK:  = llvm.zext nneg %[[I32]] : i32 to i64
+  %0 = llvm.zext nneg %arg0 : i32 to i64
+// CHECK:  = llvm.zext nneg %[[V4I32]] : vector<4xi32> to vector<4xi64>
+  %4 = llvm.zext nneg %arg2 : vector<4xi32> to vector<4xi64>
+// CHECK:  = llvm.uitofp nneg %[[I32]] : i32 to f32
+  %7 = llvm.uitofp nneg %arg0 : i32 to f32
+  llvm.return
+}
+
+// CHECK-LABEL: @casts_overflow
+// CHECK-SAME: (%[[I32:.*]]: i32, %[[I64:.*]]: i64, %[[V4I32:.*]]: vector<4xi32>, %[[V4I64:.*]]: vector<4xi64>, %[[PTR:.*]]: !llvm.ptr)
+func.func @casts_overflow(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
+            %arg3: vector<4xi64>, %arg4: !llvm.ptr) {
+// CHECK:  = llvm.trunc %[[I64]] overflow<nsw> : i64 to i56
+  %0 = llvm.trunc %arg1 overflow<nsw> : i64 to i56
+// CHECK:  = llvm.trunc %[[I64]] overflow<nuw> : i64 to i56
+  %1 = llvm.trunc %arg1 overflow<nuw> : i64 to i56
+// CHECK:  = llvm.trunc %[[I64]] overflow<nsw, nuw> : i64 to i56
+  %2 = llvm.trunc %arg1 overflow<nsw, nuw> : i64 to i56
+// CHECK:  = llvm.trunc %[[I64]] overflow<nsw, nuw> : i64 to i56
+  %3 = llvm.trunc %arg1 overflow<nuw, nsw> : i64 to i56
+// CHECK:  = llvm.trunc %[[V4I64]] overflow<nsw> : vector<4xi64> to vector<4xi56>
+  %4 = llvm.trunc %arg3 overflow<nsw> : vector<4xi64> to vector<4xi56>
+  llvm.return
+}
+
 // CHECK-LABEL: @vect
 func.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32, %arg3: !llvm.vec<2 x ptr>) {
 // CHECK:  = llvm.extractelement {{.*}} : vector<4xf32>
@@ -444,6 +488,20 @@ func.func @invariant_load(%ptr : !llvm.ptr) -> i32 {
   // CHECK: llvm.load %{{.+}} invariant {alignment = 4 : i64} : !llvm.ptr -> i32
   %0 = llvm.load %ptr invariant {alignment = 4 : i64} : !llvm.ptr -> i32
   func.return %0 : i32
+}
+
+// CHECK-LABEL: @invariant_group_load
+func.func @invariant_group_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: llvm.load %{{.+}} invariant_group {alignment = 4 : i64} : !llvm.ptr -> i32
+  %0 = llvm.load %ptr invariant_group {alignment = 4 : i64} : !llvm.ptr -> i32
+  func.return %0 : i32
+}
+
+// CHECK-LABEL: @invariant_group_store
+func.func @invariant_group_store(%val: i32, %ptr : !llvm.ptr) {
+  // CHECK: llvm.store %{{.+}}, %{{.+}} invariant_group : i32, !llvm.ptr
+  llvm.store %val, %ptr invariant_group : i32, !llvm.ptr
+  func.return
 }
 
 llvm.mlir.global external constant @_ZTIi() : !llvm.ptr
@@ -632,6 +690,16 @@ llvm.func @invariant(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @invariant_group_intrinsics
+// CHECK-SAME: %[[P:.+]]: !llvm.ptr
+llvm.func @invariant_group_intrinsics(%p: !llvm.ptr) {
+  // CHECK: %{{.+}} = llvm.intr.launder.invariant.group %[[P]] : !llvm.ptr
+  %1 = llvm.intr.launder.invariant.group %p : !llvm.ptr
+  // CHECK: %{{.+}} = llvm.intr.strip.invariant.group %[[P]] : !llvm.ptr
+  %2 = llvm.intr.strip.invariant.group %p : !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @vararg_func
 llvm.func @vararg_func(%arg0: i32, ...) {
   // CHECK: %[[C:.*]] = llvm.mlir.constant(1 : i32)
@@ -679,6 +747,16 @@ llvm.func @stackrestore(%arg0: !llvm.ptr)  {
 llvm.func @experimental_noalias_scope_decl() {
   // CHECK: llvm.intr.experimental.noalias.scope.decl #{{.*}}
   llvm.intr.experimental.noalias.scope.decl #alias_scope
+  llvm.return
+}
+
+#alias_scope_domain2 = #llvm.alias_scope_domain<id = "domainid", description = "The domain">
+#alias_scope2 = #llvm.alias_scope<id = "stringid", domain = #alias_scope_domain2, description = "The domain">
+
+// CHECK-LABEL: @experimental_noalias_scope_with_string_id
+llvm.func @experimental_noalias_scope_with_string_id() {
+  // CHECK: llvm.intr.experimental.noalias.scope.decl #{{.*}}
+  llvm.intr.experimental.noalias.scope.decl #alias_scope2
   llvm.return
 }
 
@@ -835,4 +913,76 @@ llvm.func @test_call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
   // CHECK: llvm.call_intrinsic "llvm.assume"(%{{.+}}) ["align"(%{{.+}}, %{{.+}} : !llvm.ptr, i32)] : (i1) -> ()
   llvm.call_intrinsic "llvm.assume"(%0) ["align"(%arg0, %1 : !llvm.ptr, i32)] : (i1) -> ()
   llvm.return
+}
+
+// CHECK-LABEL: @test_assume_intr_no_opbundle
+llvm.func @test_assume_intr_no_opbundle(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  // CHECK: llvm.intr.assume %0 : i1
+  llvm.intr.assume %0 : i1
+  llvm.return
+}
+
+// CHECK-LABEL: @test_assume_intr_empty_opbundle
+llvm.func @test_assume_intr_empty_opbundle(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  // CHECK: llvm.intr.assume %0 : i1
+  llvm.intr.assume %0 [] : i1
+  llvm.return
+}
+
+// CHECK-LABEL: @test_assume_intr_with_opbundles
+llvm.func @test_assume_intr_with_opbundles(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  %3 = llvm.mlir.constant(4 : i32) : i32
+  // CHECK: llvm.intr.assume %0 ["tag1"(%1, %2 : i32, i32), "tag2"(%3 : i32)] : i1
+  llvm.intr.assume %0 ["tag1"(%1, %2 : i32, i32), "tag2"(%3 : i32)] : i1
+  llvm.return
+}
+
+llvm.func @somefunc(i32, !llvm.ptr)
+
+// CHECK-LABEL: llvm.func @test_call_arg_attrs_direct(
+// CHECK-SAME:    %[[VAL_0:.*]]: i32,
+// CHECK-SAME:    %[[VAL_1:.*]]: !llvm.ptr)
+llvm.func @test_call_arg_attrs_direct(%arg0: i32, %arg1: !llvm.ptr) {
+  // CHECK: llvm.call @somefunc(%[[VAL_0]], %[[VAL_1]]) : (i32, !llvm.ptr {llvm.byval = i64}) -> ()
+  llvm.call @somefunc(%arg0, %arg1) : (i32, !llvm.ptr {llvm.byval = i64}) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_call_arg_attrs_indirect(
+// CHECK-SAME:    %[[VAL_0:.*]]: i16,
+// CHECK-SAME:    %[[VAL_1:.*]]: !llvm.ptr
+llvm.func @test_call_arg_attrs_indirect(%arg0: i16, %arg1: !llvm.ptr) -> i16 {
+  // CHECK: llvm.call tail %[[VAL_1]](%[[VAL_0]]) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  %0 = llvm.call tail %arg1(%arg0) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  llvm.return %0 : i16
+}
+
+// CHECK-LABEL:   llvm.func @test_invoke_arg_attrs(
+// CHECK-SAME:      %[[VAL_0:.*]]: i16) attributes {personality = @__gxx_personality_v0} {
+llvm.func @test_invoke_arg_attrs(%arg0: i16) attributes { personality = @__gxx_personality_v0 } {
+  // CHECK:  llvm.invoke @somefunc(%[[VAL_0]]) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> ()
+  llvm.invoke @somefunc(%arg0) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> ()
+^bb1:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK-LABEL:   llvm.func @test_invoke_arg_attrs_indirect(
+// CHECK-SAME:      %[[VAL_0:.*]]: i16,
+// CHECK-SAME:      %[[VAL_1:.*]]: !llvm.ptr) -> i16 attributes {personality = @__gxx_personality_v0} {
+llvm.func @test_invoke_arg_attrs_indirect(%arg0: i16, %arg1: !llvm.ptr) -> i16 attributes { personality = @__gxx_personality_v0 } {
+  // CHECK: llvm.invoke %[[VAL_1]](%[[VAL_0]]) to ^bb2 unwind ^bb1 : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  %0 = llvm.invoke %arg1(%arg0) to ^bb2 unwind ^bb1 : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+^bb1:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return %0 : i16
+^bb2:
+  llvm.return %0 : i16
 }

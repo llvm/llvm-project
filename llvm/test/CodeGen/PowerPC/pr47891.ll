@@ -55,9 +55,9 @@ define dso_local void @poly2_lshift1(ptr nocapture %p) local_unnamed_addr #0 {
 ; CHECK-NEXT:    std r6, 56(r3)
 ; CHECK-NEXT:    rotldi r6, r7, 1
 ; CHECK-NEXT:    xxswapd vs0, vs0
+; CHECK-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-NEXT:    rldimi r6, r5, 1, 0
 ; CHECK-NEXT:    std r6, 64(r3)
-; CHECK-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i64, ptr %p, align 8

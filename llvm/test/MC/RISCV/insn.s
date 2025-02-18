@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+f -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+f -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
-# RUN: llvm-mc %s -triple riscv64 -mattr=+f -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple riscv64 -mattr=+f -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+f < %s \
 # RUN:     | llvm-objdump --mattr=+f -M no-aliases -d -r - \
@@ -184,6 +184,16 @@ target:
 # CHECK-ASM: encoding: [0xbf,0xff,0xff,0xff,0xff,0xff,0xff,0xff]
 # CHECK-OBJ: <unknown>
 .insn 0x8, 0xffffffffffffffbf
+
+# CHECK-ASM: .insn 0x4, 3971
+# CHECK-ASM: encoding: [0x83,0x0f,0x00,0x00]
+# CHECK-OBJ: lb t6, 0x0(zero)
+.insn 0x2 + 0x2, 0x3 | (31 << 7)
+
+# CHECK-ASM: .insn 0x8, -576460752303423297
+# CHECK-ASM: encoding: [0xbf,0x00,0x00,0x00,0x00,0x00,0x00,0xf8]
+# CHECK-OBJ: <unknown>
+.insn 0x4 * 0x2, 0xbf | (31 << 59)
 
 odd_lengths:
 # CHECK-ASM-LABEL: odd_lengths:

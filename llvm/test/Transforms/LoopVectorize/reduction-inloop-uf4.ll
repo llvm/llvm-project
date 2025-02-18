@@ -16,9 +16,9 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 32
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 32
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
@@ -79,13 +79,13 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP104:%.*]], [[PRED_LOAD_CONTINUE36]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP107:%.*]], [[PRED_LOAD_CONTINUE36]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP110:%.*]], [[PRED_LOAD_CONTINUE36]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
-; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult <4 x i64> [[VEC_IND]], <i64 257, i64 257, i64 257, i64 257>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i64> [[STEP_ADD]], <i64 257, i64 257, i64 257, i64 257>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i64> [[STEP_ADD1]], <i64 257, i64 257, i64 257, i64 257>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i64> [[STEP_ADD2]], <i64 257, i64 257, i64 257, i64 257>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 12)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 257)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i64> [[STEP_ADD]], splat (i64 257)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i64> [[STEP_ADD_2]], splat (i64 257)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i64> [[STEP_ADD_3]], splat (i64 257)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
@@ -257,8 +257,8 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP108:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP98]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP109:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP108]])
 ; CHECK-NEXT:    [[TMP110]] = add i32 [[TMP109]], [[VEC_PHI6]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 16, i64 16, i64 16, i64 16>
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP111:%.*]] = icmp eq i64 [[INDEX_NEXT]], 272
 ; CHECK-NEXT:    br i1 [[TMP111]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
@@ -302,7 +302,7 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -16
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i32> poison, i32 [[COND:%.*]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLATINSERT7]], <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLATINSERT7]], splat (i32 7)
 ; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i1> [[TMP4]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -314,9 +314,9 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP112:%.*]], [[PRED_LOAD_CONTINUE38]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP115:%.*]], [[PRED_LOAD_CONTINUE38]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP118:%.*]], [[PRED_LOAD_CONTINUE38]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
-; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <4 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8>
-; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <4 x i64> [[VEC_IND]], <i64 12, i64 12, i64 12, i64 12>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 12)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
@@ -484,20 +484,20 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE38]]
 ; CHECK:       pred.load.continue35:
 ; CHECK-NEXT:    [[TMP106:%.*]] = phi <4 x i32> [ [[TMP100]], [[PRED_LOAD_CONTINUE36]] ], [ [[TMP105]], [[PRED_LOAD_IF37]] ]
-; CHECK-NEXT:    [[TMP107:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP34]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP107:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP34]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP108:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP107]])
 ; CHECK-NEXT:    [[TMP109]] = mul i32 [[TMP108]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP110:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> [[TMP58]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP110:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> [[TMP58]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP111:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP110]])
 ; CHECK-NEXT:    [[TMP112]] = mul i32 [[TMP111]], [[VEC_PHI4]]
-; CHECK-NEXT:    [[TMP113:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[TMP82]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP113:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[TMP82]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP114:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP113]])
 ; CHECK-NEXT:    [[TMP115]] = mul i32 [[TMP114]], [[VEC_PHI5]]
-; CHECK-NEXT:    [[TMP116:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP106]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP116:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP106]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP117:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP116]])
 ; CHECK-NEXT:    [[TMP118]] = mul i32 [[TMP117]], [[VEC_PHI6]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 16, i64 16, i64 16, i64 16>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP119:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP119]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:

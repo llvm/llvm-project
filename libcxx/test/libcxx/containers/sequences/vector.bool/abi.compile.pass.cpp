@@ -8,8 +8,8 @@
 
 // UNSUPPORTED: libcpp-abi-no-compressed-pair-padding
 
-#include <vector>
 #include <cstdint>
+#include <vector>
 
 #include "min_allocator.h"
 #include "test_allocator.h"

@@ -143,10 +143,6 @@ public:
 
   File &GetErrorFile() { return m_error_stream_sp->GetFile(); }
 
-  StreamFile &GetOutputStream() { return *m_output_stream_sp; }
-
-  StreamFile &GetErrorStream() { return *m_error_stream_sp; }
-
   repro::DataRecorder *GetInputRecorder();
 
   Status SetInputString(const char *data);
@@ -279,6 +275,10 @@ public:
   uint64_t GetTerminalWidth() const;
 
   bool SetTerminalWidth(uint64_t term_width);
+
+  uint64_t GetTerminalHeight() const;
+
+  bool SetTerminalHeight(uint64_t term_height);
 
   llvm::StringRef GetPrompt() const;
 

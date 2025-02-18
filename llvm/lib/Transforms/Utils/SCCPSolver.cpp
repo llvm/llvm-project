@@ -147,6 +147,16 @@ static bool refineInstruction(SCCPSolver &Solver,
         Changed = true;
       }
     }
+  } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&Inst)) {
+    if (GEP->hasNoUnsignedWrap() || !GEP->hasNoUnsignedSignedWrap())
+      return false;
+
+    if (all_of(GEP->indices(),
+               [&](Value *V) { return GetRange(V).isAllNonNegative(); })) {
+      GEP->setNoWrapFlags(GEP->getNoWrapFlags() |
+                          GEPNoWrapFlags::noUnsignedWrap());
+      Changed = true;
+    }
   }
 
   return Changed;
@@ -630,10 +640,7 @@ private:
   }
 
   // Add U as additional user of V.
-  void addAdditionalUser(Value *V, User *U) {
-    auto Iter = AdditionalUsers.insert({V, {}});
-    Iter.first->second.insert(U);
-  }
+  void addAdditionalUser(Value *V, User *U) { AdditionalUsers[V].insert(U); }
 
   // Mark I's users as changed, including AdditionalUsers.
   void markUsersAsChanged(Value *I) {
@@ -1924,6 +1931,12 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       }
 
       return (void)mergeInValue(IV, &CB, CopyOfVal);
+    }
+
+    if (II->getIntrinsicID() == Intrinsic::vscale) {
+      unsigned BitWidth = CB.getType()->getScalarSizeInBits();
+      const ConstantRange Result = getVScaleRange(II->getFunction(), BitWidth);
+      return (void)mergeInValue(II, ValueLatticeElement::getRange(Result));
     }
 
     if (ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {

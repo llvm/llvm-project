@@ -57,7 +57,7 @@ subroutine vec_ctf_test_i8i1(arg1)
 
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[carg:.*]] = sitofp <2 x i64> %[[arg1]] to <2 x double>
-! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], <double 1.250000e-01, double 1.250000e-01>
+! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], splat (double 1.250000e-01)
 ! LLVMIR: store <2 x double> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_ctf_test_i8i1
 
@@ -69,7 +69,7 @@ subroutine vec_ctf_test_i8i2(arg1)
 
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[carg:.*]] = sitofp <2 x i64> %[[arg1]] to <2 x double>
-! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], <double 1.250000e-01, double 1.250000e-01>
+! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], splat (double 1.250000e-01)
 ! LLVMIR: store <2 x double> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_ctf_test_i8i2
 
@@ -81,7 +81,7 @@ subroutine vec_ctf_test_i8i4(arg1)
 
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[carg:.*]] = sitofp <2 x i64> %[[arg1]] to <2 x double>
-! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], <double 1.250000e-01, double 1.250000e-01>
+! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], splat (double 1.250000e-01)
 ! LLVMIR: store <2 x double> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_ctf_test_i8i4
 
@@ -93,7 +93,7 @@ subroutine vec_ctf_test_i8i8(arg1)
 
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[carg:.*]] = sitofp <2 x i64> %[[arg1]] to <2 x double>
-! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], <double 1.250000e-01, double 1.250000e-01>
+! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], splat (double 1.250000e-01)
 ! LLVMIR: store <2 x double> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_ctf_test_i8i8
 
@@ -149,7 +149,7 @@ subroutine vec_ctf_test_u8i1(arg1)
 
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[carg:.*]] = uitofp <2 x i64> %[[arg1]] to <2 x double>
-! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], <double 1.250000e-01, double 1.250000e-01>
+! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], splat (double 1.250000e-01)
 ! LLVMIR: store <2 x double> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_ctf_test_u8i1
 
@@ -161,7 +161,7 @@ subroutine vec_ctf_test_u8i2(arg1)
 
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[carg:.*]] = uitofp <2 x i64> %[[arg1]] to <2 x double>
-! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], <double 1.250000e-01, double 1.250000e-01>
+! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], splat (double 1.250000e-01)
 ! LLVMIR: store <2 x double> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_ctf_test_u8i2
 
@@ -173,7 +173,7 @@ subroutine vec_ctf_test_u8i4(arg1)
 
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[carg:.*]] = uitofp <2 x i64> %[[arg1]] to <2 x double>
-! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], <double 1.250000e-01, double 1.250000e-01>
+! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], splat (double 1.250000e-01)
 ! LLVMIR: store <2 x double> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_ctf_test_u8i4
 
@@ -185,7 +185,7 @@ subroutine vec_ctf_test_u8i8(arg1)
 
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[carg:.*]] = uitofp <2 x i64> %[[arg1]] to <2 x double>
-! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], <double 1.250000e-01, double 1.250000e-01>
+! LLVMIR: %[[r:.*]] = fmul <2 x double> %[[carg]], splat (double 1.250000e-01)
 ! LLVMIR: store <2 x double> %[[r]], ptr %{{.*}}, align 16
 end subroutine vec_ctf_test_u8i8
 

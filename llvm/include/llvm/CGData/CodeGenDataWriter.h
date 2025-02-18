@@ -15,6 +15,7 @@
 
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/StableFunctionMapRecord.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 
@@ -57,6 +58,9 @@ class CodeGenDataWriter {
   /// The outlined hash tree to be written.
   OutlinedHashTreeRecord HashTreeRecord;
 
+  /// The stable function map to be written.
+  StableFunctionMapRecord FunctionMapRecord;
+
   /// A bit mask describing the kind of the codegen data.
   CGDataKind DataKind = CGDataKind::Unknown;
 
@@ -64,8 +68,11 @@ public:
   CodeGenDataWriter() = default;
   ~CodeGenDataWriter() = default;
 
-  /// Add the outlined hash tree record. The input Record is released.
+  /// Add the outlined hash tree record. The input hash tree is released.
   void addRecord(OutlinedHashTreeRecord &Record);
+
+  /// Add the stable function map record. The input function map is released.
+  void addRecord(StableFunctionMapRecord &Record);
 
   /// Write the codegen data to \c OS
   Error write(raw_fd_ostream &OS);
@@ -81,10 +88,18 @@ public:
     return static_cast<uint32_t>(DataKind) &
            static_cast<uint32_t>(CGDataKind::FunctionOutlinedHashTree);
   }
+  /// Return true if the header indicates the data has a stable function map.
+  bool hasStableFunctionMap() const {
+    return static_cast<uint32_t>(DataKind) &
+           static_cast<uint32_t>(CGDataKind::StableFunctionMergingMap);
+  }
 
 private:
   /// The offset of the outlined hash tree in the file.
   uint64_t OutlinedHashTreeOffset;
+
+  /// The offset of the stable function map in the file.
+  uint64_t StableFunctionMapOffset;
 
   /// Write the codegen data header to \c COS
   Error writeHeader(CGDataOStream &COS);

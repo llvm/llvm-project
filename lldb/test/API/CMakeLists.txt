@@ -52,14 +52,25 @@ set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_TOOLS_BINARY_DIR}/dsymutil${CMAKE_EXECUTA
 if(LLDB_TEST_MAKE)
   set(LLDB_DEFAULT_TEST_MAKE ${LLDB_TEST_MAKE})
 else()
-  find_program(LLDB_DEFAULT_TEST_MAKE make gmake)
+  # Prefer gmake as it will be a version of GNU make. 'make' could be GNU compatible or not.
+  set(MAKE_NAMES "gmake" "make")
+  find_program(LLDB_DEFAULT_TEST_MAKE NAMES ${MAKE_NAMES})
   if(LLDB_DEFAULT_TEST_MAKE)
     message(STATUS "Found make: ${LLDB_DEFAULT_TEST_MAKE}")
+    execute_process(COMMAND ${LLDB_DEFAULT_TEST_MAKE} --version OUTPUT_VARIABLE MAKE_VERSION
+           ERROR_QUIET)
+    if(NOT MAKE_VERSION MATCHES "^GNU Make")
+      message(WARNING "'make' tool ${LLDB_DEFAULT_TEST_MAKE} may not be GNU make compatible. "
+             "Some tests may fail to build. Provide a GNU compatible 'make' tool by setting "
+             "LLDB_TEST_MAKE.")
+    endif()
   else()
-    message(STATUS "Not found: make")
-    message(SEND_ERROR
-          "LLDB tests require 'make' tool. Please pass via `LLDB_TEST_MAKE` "
-          "(or otherwise disable tests with `LLDB_INCLUDE_TESTS=OFF`)")
+    list(JOIN "${MAKE_NAMES}" " " MAKE_NAMES_SPACES)
+    string(REPLACE ";" " " MAKE_NAMES_SPACES "${MAKE_NAMES}")
+    message(STATUS "Did not find one of: ${MAKE_NAMES_SPACES}")
+    message(WARNING
+          "Many LLDB API tests require a 'make' tool. Please provide it in Path "
+          "or pass via LLDB_TEST_MAKE.")
   endif()
 endif()
 
@@ -94,14 +105,6 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   if (NOT LLDB_TEST_HIDE_CONSOLE_WINDOWS)
     set(LLDB_TEST_COMMON_ARGS_VAR ${LLDB_TEST_COMMON_ARGS_VAR} --show-inferior-console)
   endif()
-endif()
-
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
-  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
-    --env ARCHIVER=${CMAKE_AR} --env OBJCOPY=${CMAKE_OBJCOPY})
-else()
-  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
-    --env OBJCOPY=${LLVM_TOOLS_BINARY_DIR}/llvm-objcopy${CMAKE_EXECUTABLE_SUFFIX})
 endif()
 
 if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")

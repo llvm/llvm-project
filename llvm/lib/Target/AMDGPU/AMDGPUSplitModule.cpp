@@ -46,22 +46,18 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -153,7 +149,8 @@ static constexpr unsigned InvalidPID = -1;
 /// \param Dem denominator
 /// \returns a printable object to print (Num/Dem) using "%0.2f".
 static auto formatRatioOf(CostType Num, CostType Dem) {
-  return format("%0.2f", (static_cast<double>(Num) / Dem) * 100);
+  CostType DemOr1 = Dem ? Dem : 1;
+  return format("%0.2f", (static_cast<double>(Num) / DemOr1) * 100);
 }
 
 /// Checks whether a given function is non-copyable.
@@ -161,13 +158,12 @@ static auto formatRatioOf(CostType Num, CostType Dem) {
 /// Non-copyable functions cannot be cloned into multiple partitions, and only
 /// one copy of the function can be present across all partitions.
 ///
-/// External functions fall into this category. If we were to clone them, we
-/// would end up with multiple symbol definitions and a very unhappy linker.
+/// Kernel functions and external functions fall into this category. If we were
+/// to clone them, we would end up with multiple symbol definitions and a very
+/// unhappy linker.
 static bool isNonCopyable(const Function &F) {
-  assert(AMDGPU::isEntryFunctionCC(F.getCallingConv())
-             ? F.hasExternalLinkage()
-             : true && "Kernel w/o external linkage?");
-  return F.hasExternalLinkage() || !F.isDefinitionExact();
+  return F.hasExternalLinkage() || !F.isDefinitionExact() ||
+         AMDGPU::isEntryFunctionCC(F.getCallingConv());
 }
 
 /// If \p GV has local linkage, make it external + hidden.
@@ -482,6 +478,29 @@ void SplitGraph::Node::visitAllDependencies(
   }
 }
 
+/// Checks if \p I has MD_callees and if it does, parse it and put the function
+/// in \p Callees.
+///
+/// \returns true if there was metadata and it was parsed correctly. false if
+/// there was no MD or if it contained unknown entries and parsing failed.
+/// If this returns false, \p Callees will contain incomplete information
+/// and must not be used.
+static bool handleCalleesMD(const Instruction &I,
+                            SetVector<Function *> &Callees) {
+  auto *MD = I.getMetadata(LLVMContext::MD_callees);
+  if (!MD)
+    return false;
+
+  for (const auto &Op : MD->operands()) {
+    Function *Callee = mdconst::extract_or_null<Function>(Op);
+    if (!Callee)
+      return false;
+    Callees.insert(Callee);
+  }
+
+  return true;
+}
+
 void SplitGraph::buildGraph(CallGraph &CG) {
   SplitModuleTimer SMT("buildGraph", "graph construction");
   LLVM_DEBUG(
@@ -519,28 +538,38 @@ void SplitGraph::buildGraph(CallGraph &CG) {
                  Fn.printAsOperand(dbgs());
                  dbgs() << " - analyzing function\n");
 
-      bool HasIndirectCall = false;
+      SetVector<Function *> KnownCallees;
+      bool HasUnknownIndirectCall = false;
       for (const auto &Inst : instructions(Fn)) {
         // look at all calls without a direct callee.
-        if (const auto *CB = dyn_cast<CallBase>(&Inst);
-            CB && !CB->getCalledFunction()) {
-          // inline assembly can be ignored, unless InlineAsmIsIndirectCall is
-          // true.
-          if (CB->isInlineAsm()) {
-            LLVM_DEBUG(dbgs() << "    found inline assembly\n");
-            continue;
-          }
+        const auto *CB = dyn_cast<CallBase>(&Inst);
+        if (!CB || CB->getCalledFunction())
+          continue;
 
-          // everything else is handled conservatively.
-          HasIndirectCall = true;
-          break;
+        // inline assembly can be ignored, unless InlineAsmIsIndirectCall is
+        // true.
+        if (CB->isInlineAsm()) {
+          LLVM_DEBUG(dbgs() << "    found inline assembly\n");
+          continue;
         }
+
+        if (handleCalleesMD(Inst, KnownCallees))
+          continue;
+        // If we failed to parse any !callees MD, or some was missing,
+        // the entire KnownCallees list is now unreliable.
+        KnownCallees.clear();
+
+        // Everything else is handled conservatively. If we fall into the
+        // conservative case don't bother analyzing further.
+        HasUnknownIndirectCall = true;
+        break;
       }
 
-      if (HasIndirectCall) {
+      if (HasUnknownIndirectCall) {
         LLVM_DEBUG(dbgs() << "    indirect call found\n");
         FnsWithIndirectCalls.push_back(&Fn);
-      }
+      } else if (!KnownCallees.empty())
+        DirectCallees.insert(KnownCallees.begin(), KnownCallees.end());
     }
 
     Node &N = getNode(Cache, Fn);
@@ -1071,10 +1100,10 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       if (Entry.CostExcludingGraphEntryPoints > LargeClusterThreshold) {
         // Check if the amount of code in common makes it worth it.
         assert(SimilarDepsCost && Entry.CostExcludingGraphEntryPoints);
-        const double Ratio =
-            SimilarDepsCost / Entry.CostExcludingGraphEntryPoints;
+        const double Ratio = static_cast<double>(SimilarDepsCost) /
+                             Entry.CostExcludingGraphEntryPoints;
         assert(Ratio >= 0.0 && Ratio <= 1.0);
-        if (LargeFnOverlapForMerge > Ratio) {
+        if (Ratio > LargeFnOverlapForMerge) {
           // For debug, just print "L", so we'll see "L3=P3" for instance, which
           // will mean we reached max depth and chose P3 based on this
           // heuristic.

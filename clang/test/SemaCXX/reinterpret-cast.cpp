@@ -302,3 +302,77 @@ void reinterpret_cast_allowlist () {
   (void)reinterpret_cast<unsigned char&>(b);
   (void)*reinterpret_cast<unsigned char*>(&b);
 }
+
+namespace templated {
+template <typename TARGETTYPE, typename UATYPE>
+void cast_uninstantiated() {
+  const UATYPE* data;
+  (void)*reinterpret_cast<const TARGETTYPE*>(data); // no warning
+}
+
+
+template <typename TARGETTYPE, typename UATYPE>
+void cast_instantiated_badly() {
+  const UATYPE* data;
+  (void)*reinterpret_cast<const TARGETTYPE*>(data); // expected-warning {{dereference of type 'const int *' that was reinterpret_cast from type 'const float *' has undefined behavior}}
+}
+
+template <typename TARGETTYPE, typename UATYPE>
+void cast_instantiated_well() {
+  const UATYPE* data;
+  (void)*reinterpret_cast<const TARGETTYPE*>(data); // no warning
+}
+
+template <typename TARGETTYPE>
+void cast_one_tmpl_arg_uninstantiated() {
+  const int* data;
+  (void)*reinterpret_cast<const TARGETTYPE*>(data); // no warning
+}
+
+template <typename TARGETTYPE>
+void cast_one_tmpl_arg_instantiated_badly() {
+  const float* data;
+  (void)*reinterpret_cast<const TARGETTYPE*>(data); // expected-warning {{dereference of type 'const int *' that was reinterpret_cast from type 'const float *' has undefined behavior}}
+}
+
+template <typename TARGETTYPE>
+void cast_one_tmpl_arg_instantiated_well() {
+  const float* data;
+  (void)*reinterpret_cast<const TARGETTYPE*>(data); // no warning
+}
+
+template <int size>
+void cast_nontype_template_true_positive_noninstantiated() {
+  const float *data;
+  const int arr[size];
+  (void)*reinterpret_cast<const int*>(data); // expected-warning {{dereference of type 'const int *' that was reinterpret_cast from type 'const float *' has undefined behavior}}
+}
+
+template <int size>
+void cast_nontype_template_true_negative_noninstantiated() {
+  const int data[size];
+  (void)*reinterpret_cast<const int*>(data); // no warning
+}
+
+void top() {
+  cast_instantiated_badly<int, float>();
+  // expected-note@-1 {{in instantiation of function template specialization 'templated::cast_instantiated_badly<int, float>' requested here}}
+  cast_instantiated_well<int, int>();
+  cast_one_tmpl_arg_instantiated_badly<int>();
+  // expected-note@-1 {{in instantiation of function template specialization 'templated::cast_one_tmpl_arg_instantiated_badly<int>' requested here}}
+  cast_one_tmpl_arg_instantiated_well<float>();
+}
+
+template<typename T, typename U>
+void cast_template_dependent_type_noninstantiated(T** x)
+{
+    (void)*reinterpret_cast<U**>(x);
+}
+
+template<typename T, typename U>
+void cast_template_dependent_member_type_noninstantiated(typename T::X x)
+{
+    (void)*reinterpret_cast<typename U::Y>(x);
+}
+
+} // namespace templated

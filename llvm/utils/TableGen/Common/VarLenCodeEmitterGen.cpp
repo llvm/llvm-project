@@ -100,7 +100,8 @@ public:
 
 // Get the name of custom encoder or decoder, if there is any.
 // Returns `{encoder name, decoder name}`.
-static std::pair<StringRef, StringRef> getCustomCoders(ArrayRef<Init *> Args) {
+static std::pair<StringRef, StringRef>
+getCustomCoders(ArrayRef<const Init *> Args) {
   std::pair<StringRef, StringRef> Result;
   for (const auto *Arg : Args) {
     const auto *DI = dyn_cast<DagInit>(Arg);
@@ -187,8 +188,8 @@ void VarLenInst::buildRec(const DagInit *DI) {
       PrintFatalError(TheDef->getLoc(),
                       "Expecting at least 3 arguments for `slice`");
     HasDynamicSegment = true;
-    Init *OperandName = DI->getArg(0), *HiBit = DI->getArg(1),
-         *LoBit = DI->getArg(2);
+    const Init *OperandName = DI->getArg(0), *HiBit = DI->getArg(1),
+               *LoBit = DI->getArg(2);
     if (!isa<StringInit>(OperandName) || !isa<IntInit>(HiBit) ||
         !isa<IntInit>(LoBit))
       PrintFatalError(TheDef->getLoc(), "Invalid argument types for `slice`");
@@ -211,7 +212,7 @@ void VarLenInst::buildRec(const DagInit *DI) {
 
     if (NeedSwap) {
       // Normalization: Hi bit should always be the second argument.
-      Init *const NewArgs[] = {OperandName, LoBit, HiBit};
+      const Init *const NewArgs[] = {OperandName, LoBit, HiBit};
       Segments.push_back({NumBits,
                           DagInit::get(DI->getOperator(), nullptr, NewArgs, {}),
                           CustomEncoder, CustomDecoder});
@@ -241,7 +242,7 @@ void VarLenCodeEmitterGen::run(raw_ostream &OS) {
         for (const auto [Mode, EncodingDef] : EBM) {
           Modes.insert({Mode, "_" + HWM.getMode(Mode).Name.str()});
           const RecordVal *RV = EncodingDef->getValue("Inst");
-          DagInit *DI = cast<DagInit>(RV->getValue());
+          const DagInit *DI = cast<DagInit>(RV->getValue());
           VarLenInsts[R].insert({Mode, VarLenInst(DI, RV)});
         }
         continue;

@@ -475,7 +475,7 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  5      20    2.00    *                   vgatherqps	%xmm0, (%rax,%ymm1,2), %xmm2
 # CHECK-NEXT:  1      3     1.00                        vinserti128	$1, %xmm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      7     0.50    *                   vinserti128	$1, (%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      7     0.50    *                   vmovntdqa	(%rax), %ymm0
+# CHECK-NEXT:  2      8     0.50    *                   vmovntdqa	(%rax), %ymm0
 # CHECK-NEXT:  2      4     1.00                        vmpsadbw	$1, %ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  3      11    1.00    *                   vmpsadbw	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vpabsb	%ymm0, %ymm2
@@ -778,7 +778,7 @@ vpxor           (%rax), %ymm1, %ymm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     110.33 116.33 98.00  98.00  2.50   137.33  -     2.50   2.50   2.50
+# CHECK-NEXT:  -      -     110.67 116.67 98.00  98.00  2.50   137.67  -     2.50   2.50   2.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -797,7 +797,7 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     1.33   0.33   2.00   2.00    -     1.33    -      -      -      -     vgatherqps	%xmm0, (%rax,%ymm1,2), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vinserti128	$1, %xmm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vinserti128	$1, (%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -     vmovntdqa	(%rax), %ymm0
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -      -      -     vmovntdqa	(%rax), %ymm0
 # CHECK-NEXT:  -      -      -     0.50    -      -      -     1.50    -      -      -      -     vmpsadbw	$1, %ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     1.50    -      -      -      -     vmpsadbw	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -      -      -     vpabsb	%ymm0, %ymm2

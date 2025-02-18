@@ -11,18 +11,29 @@ add_flang_library(FIRCodeGen
   TypeConverter.cpp
 
   DEPENDS
+  CUFAttrs
   FIRDialect
   FIROptCodeGenPassIncGen
   CGOpsIncGen
 
   LINK_LIBS
+  CUFAttrs
   FIRAnalysis
   FIRBuilder
   FIRDialect
   FIRDialectSupport
   FIRSupport
+
+  LINK_COMPONENTS
+  AsmParser
+  AsmPrinter
+  Remarks
+  TargetParser
+
+  MLIR_LIBS
   MLIRComplexToLLVM
   MLIRComplexToStandard
+  MLIRGPUDialect
   MLIRMathToFuncs
   MLIRMathToLLVM
   MLIRMathToLibm
@@ -33,10 +44,4 @@ add_flang_library(FIRCodeGen
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
   MLIRVectorToLLVM
-
-  LINK_COMPONENTS
-  AsmParser
-  AsmPrinter
-  Remarks
-  TargetParser
 )

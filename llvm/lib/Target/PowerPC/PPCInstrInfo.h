@@ -17,6 +17,7 @@
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
@@ -285,6 +286,9 @@ public:
   bool isZExt32To64(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::ZExt32To64;
   }
+  bool isMemriOp(unsigned Opcode) const {
+    return get(Opcode).TSFlags & PPCII::MemriOp;
+  }
 
   static bool isSameClassPhysRegCopy(unsigned Opcode) {
     unsigned CopyOpcodes[] = {PPC::OR,        PPC::OR8,   PPC::FMR,
@@ -457,12 +461,11 @@ public:
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // Emits a register spill without updating the register class for vector
   // registers. This ensures that when we spill a vector register the
@@ -473,11 +476,11 @@ public:
                                 const TargetRegisterClass *RC,
                                 const TargetRegisterInfo *TRI) const;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // Emits a register reload without updating the register class for vector
   // registers. This ensures that when we reload a vector register the
@@ -625,6 +628,10 @@ public:
                       const MachineRegisterInfo *MRI) const {
     return isSignOrZeroExtended(Reg, 0, MRI).second;
   }
+  void promoteInstr32To64ForElimEXTSW(const Register &Reg,
+                                      MachineRegisterInfo *MRI,
+                                      unsigned BinOpDepth,
+                                      LiveVariables *LV) const;
 
   bool convertToImmediateForm(MachineInstr &MI,
                               SmallSet<Register, 4> &RegsToUpdate,

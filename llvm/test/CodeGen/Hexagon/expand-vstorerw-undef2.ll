@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 ; REQUIRES: asserts
 
 ; Dead defs may still appear live in LivePhysRegs, leading to an expansion

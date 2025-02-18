@@ -13,6 +13,7 @@
 #include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StreamTee.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -30,17 +31,29 @@ public:
 
   ~CommandReturnObject() = default;
 
-  /// Format any inline diagnostics with an indentation of \c indent.
-  llvm::StringRef GetInlineDiagnosticString(unsigned indent);
+  /// Get the command as the user typed it. Empty string if commands were run on
+  /// behalf of lldb.
+  const std::string &GetCommand() const { return m_command; }
 
-  llvm::StringRef GetOutputString() {
+  void SetCommand(std::string command) { m_command = std::move(command); }
+
+  /// Format any inline diagnostics with an indentation of \c indent.
+  std::string GetInlineDiagnosticString(unsigned indent) const;
+
+  llvm::StringRef GetOutputString() const {
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
       return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
     return llvm::StringRef();
   }
 
-  llvm::StringRef GetErrorString();
+  /// Return the errors as a string.
+  ///
+  /// If \c with_diagnostics is true, all diagnostics are also
+  /// rendered into the string. Otherwise the expectation is that they
+  /// are fetched with \ref GetInlineDiagnosticString().
+  std::string GetErrorString(bool with_diagnostics = true) const;
+  StructuredData::ObjectSP GetErrorData();
 
   Stream &GetOutputStream() {
     // Make sure we at least have our normal string stream output stream
@@ -88,11 +101,11 @@ public:
     m_err_stream.SetStreamAtIndex(eImmediateStreamIndex, stream_sp);
   }
 
-  lldb::StreamSP GetImmediateOutputStream() {
+  lldb::StreamSP GetImmediateOutputStream() const {
     return m_out_stream.GetStreamAtIndex(eImmediateStreamIndex);
   }
 
-  lldb::StreamSP GetImmediateErrorStream() {
+  lldb::StreamSP GetImmediateErrorStream() const {
     return m_err_stream.GetStreamAtIndex(eImmediateStreamIndex);
   }
 
@@ -101,6 +114,11 @@ public:
   void AppendMessage(llvm::StringRef in_string);
 
   void AppendMessageWithFormat(const char *format, ...)
+      __attribute__((format(printf, 2, 3)));
+
+  void AppendNote(llvm::StringRef in_string);
+
+  void AppendNoteWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
   void AppendWarning(llvm::StringRef in_string);
@@ -118,6 +136,11 @@ public:
   template <typename... Args>
   void AppendMessageWithFormatv(const char *format, Args &&... args) {
     AppendMessage(llvm::formatv(format, std::forward<Args>(args)...).str());
+  }
+
+  template <typename... Args>
+  void AppendNoteWithFormatv(const char *format, Args &&...args) {
+    AppendNote(llvm::formatv(format, std::forward<Args>(args)...).str());
   }
 
   template <typename... Args>
@@ -165,10 +188,11 @@ public:
 private:
   enum { eStreamStringIndex = 0, eImmediateStreamIndex = 1 };
 
+  std::string m_command;
+
   StreamTee m_out_stream;
   StreamTee m_err_stream;
   std::vector<DiagnosticDetail> m_diagnostics;
-  StreamString m_diag_stream;
   std::optional<uint16_t> m_diagnostic_indent;
 
   lldb::ReturnStatus m_status = lldb::eReturnStatusStarted;
@@ -178,6 +202,7 @@ private:
 
   /// If true, then the input handle from the debugger will be hooked up.
   bool m_interactive = true;
+  bool m_colors;
 };
 
 } // namespace lldb_private

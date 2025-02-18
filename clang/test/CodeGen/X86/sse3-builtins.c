@@ -5,6 +5,7 @@
 
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/sse3-intrinsics-fast-isel.ll
 
@@ -63,34 +64,18 @@ __m128d test_mm_movedup_pd(__m128d A) {
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> zeroinitializer
   return _mm_movedup_pd(A);
 }
+TEST_CONSTEXPR(match_m128d(_mm_movedup_pd((__m128d){+7.0, -7.0}), +7.0, +7.0));
 
 __m128 test_mm_movehdup_ps(__m128 A) {
   // CHECK-LABEL: test_mm_movehdup_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
   return _mm_movehdup_ps(A);
 }
+TEST_CONSTEXPR(match_m128(_mm_movehdup_ps((__m128){+1.0f,-1.0f,+2.0f,+4.0f}), -1.0f, -1.0f, +4.0f, +4.0f));
 
 __m128 test_mm_moveldup_ps(__m128 A) {
   // CHECK-LABEL: test_mm_moveldup_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   return _mm_moveldup_ps(A);
 }
-
-// Test constexpr handling.
-#if defined(__cplusplus) && (__cplusplus >= 201103L)
-
-void test_constexpr() {
-  constexpr __m128d kd1 {+7.0,-7.0};
-  constexpr __m128 kf1 {+1.0f,-1.0f,+2.0f,+4.0f};
-
-  constexpr __m128d v_mm_movedup_pd = _mm_movedup_pd(kd1);
-  static_assert(v_mm_movedup_pd[0] == +7.0 && v_mm_movedup_pd[1] == +7.0);
-
-  constexpr __m128 v_mm_movehdup_ps = _mm_movehdup_ps(kf1);
-  static_assert(v_mm_movehdup_ps[0] == -1.0f && v_mm_movehdup_ps[1] == -1.0f && v_mm_movehdup_ps[2] == +4.0f && v_mm_movehdup_ps[3] == +4.0f);
-
-  constexpr __m128 v_mm_moveldup_ps = _mm_moveldup_ps(kf1);
-  static_assert(v_mm_moveldup_ps[0] == +1.0f && v_mm_moveldup_ps[1] == +1.0f && v_mm_moveldup_ps[2] == +2.0f && v_mm_moveldup_ps[3] == +2.0f);
-}
-
-#endif
+TEST_CONSTEXPR(match_m128(_mm_moveldup_ps((__m128){+1.0f,-1.0f,+2.0f,+4.0f}), +1.0f, +1.0f, +2.0f, +2.0f));

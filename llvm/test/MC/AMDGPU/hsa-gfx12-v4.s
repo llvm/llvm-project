@@ -33,7 +33,7 @@
 // complete
 // OBJDUMP-NEXT: 0040 01000000 01000000 08000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00000000
+// OBJDUMP-NEXT: 0060 00000000 00000000 00000000 f00f0000
 // OBJDUMP-NEXT: 0070 015021e4 1f0f007f 5e040000 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
@@ -47,7 +47,6 @@
 // OBJDUMP-NEXT: 00f0 00000c60 80000000 00040000 00000000
 
 .text
-// ASM: .text
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1200"
 // ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx1200"
@@ -121,6 +120,7 @@ disabled_user_sgpr:
   .amdhsa_workgroup_processor_mode 1
   .amdhsa_memory_ordered 1
   .amdhsa_forward_progress 1
+  .amdhsa_inst_pref_size 255
   .amdhsa_round_robin_scheduling 1
   .amdhsa_exception_fp_ieee_invalid_op 1
   .amdhsa_exception_fp_denorm_src 1
@@ -159,6 +159,7 @@ disabled_user_sgpr:
 // ASM-NEXT: .amdhsa_workgroup_processor_mode 1
 // ASM-NEXT: .amdhsa_memory_ordered 1
 // ASM-NEXT: .amdhsa_forward_progress 1
+// ASM-NEXT: .amdhsa_inst_pref_size 255
 // ASM-NEXT: .amdhsa_round_robin_scheduling 1
 // ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op 1
 // ASM-NEXT: .amdhsa_exception_fp_denorm_src 1

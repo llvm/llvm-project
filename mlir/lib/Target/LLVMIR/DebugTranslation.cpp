@@ -151,7 +151,7 @@ DebugTranslation::translateTemporaryImpl(DICompositeTypeAttr attr) {
       attr.getAlignInBits(),
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
-      /*Elements=*/nullptr, /*RuntimeLang=*/0,
+      /*Elements=*/nullptr, /*RuntimeLang=*/0, /*EnumKind=*/std::nullopt,
       /*VTableHolder=*/nullptr);
 }
 
@@ -187,7 +187,7 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
       getMDTupleOrNull(attr.getElements()),
-      /*RuntimeLang=*/0, /*VTableHolder=*/nullptr,
+      /*RuntimeLang=*/0, /*EnumKind*/ std::nullopt, /*VTableHolder=*/nullptr,
       /*TemplateParams=*/nullptr, /*Identifier=*/nullptr,
       /*Discriminator=*/nullptr,
       getExpressionAttrOrNull(attr.getDataLocation()),
@@ -404,6 +404,33 @@ llvm::DICommonBlock *DebugTranslation::translateImpl(DICommonBlockAttr attr) {
                                   translate(attr.getFile()), attr.getLine());
 }
 
+llvm::DIGenericSubrange *
+DebugTranslation::translateImpl(DIGenericSubrangeAttr attr) {
+  auto getMetadataOrNull = [&](Attribute attr) -> llvm::Metadata * {
+    if (!attr)
+      return nullptr;
+
+    llvm::Metadata *metadata =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(attr)
+            .Case([&](LLVM::DIExpressionAttr expr) {
+              return translateExpression(expr);
+            })
+            .Case([&](LLVM::DILocalVariableAttr local) {
+              return translate(local);
+            })
+            .Case<>([&](LLVM::DIGlobalVariableAttr global) {
+              return translate(global);
+            })
+            .Default([&](Attribute attr) { return nullptr; });
+    return metadata;
+  };
+  return llvm::DIGenericSubrange::get(llvmCtx,
+                                      getMetadataOrNull(attr.getCount()),
+                                      getMetadataOrNull(attr.getLowerBound()),
+                                      getMetadataOrNull(attr.getUpperBound()),
+                                      getMetadataOrNull(attr.getStride()));
+}
+
 llvm::DISubroutineType *
 DebugTranslation::translateImpl(DISubroutineTypeAttr attr) {
   // Concatenate the result and argument types into a single array.
@@ -437,11 +464,11 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
     node = TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
                .Case<DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
                      DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
-                     DIGlobalVariableAttr, DIImportedEntityAttr, DILabelAttr,
-                     DILexicalBlockAttr, DILexicalBlockFileAttr,
-                     DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
-                     DINullTypeAttr, DIStringTypeAttr, DISubprogramAttr,
-                     DISubrangeAttr, DISubroutineTypeAttr>(
+                     DIGenericSubrangeAttr, DIGlobalVariableAttr,
+                     DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
+                     DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+                     DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
+                     DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
                    [&](auto attr) { return translateImpl(attr); });
 
   if (node && !node->isTemporary())

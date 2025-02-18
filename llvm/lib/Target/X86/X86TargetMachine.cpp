@@ -19,7 +19,6 @@
 #include "X86Subtarget.h"
 #include "X86TargetObjectFile.h"
 #include "X86TargetTransformInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -35,7 +34,6 @@
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -65,7 +63,7 @@ static cl::opt<bool>
                      cl::desc("Enable the tile register allocation pass"),
                      cl::init(true), cl::Hidden);
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   // Register the target.
   RegisterTargetMachine<X86TargetMachine> X(getTheX86_32Target());
   RegisterTargetMachine<X86TargetMachine> Y(getTheX86_64Target());
@@ -235,11 +233,9 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(
-          T, computeDataLayout(TT), TT, CPU, FS, Options,
-          getEffectiveRelocModel(TT, JIT, RM),
-          getEffectiveX86CodeModel(TT, CM, JIT),
-          OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, JIT, RM),
+                               getEffectiveX86CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
   // On PS4/PS5, the "return address" of a 'noreturn' call must still be within
   // the calling function. Note that this also includes __stack_chk_fail,
@@ -376,6 +372,22 @@ bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
   return SrcAS < 256 && DestAS < 256;
 }
 
+void X86TargetMachine::reset() { SubtargetMap.clear(); }
+
+ScheduleDAGInstrs *
+X86TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  DAG->addMutation(createX86MacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+X86TargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  DAG->addMutation(createX86MacroFusionDAGMutation());
+  return DAG;
+}
+
 //===----------------------------------------------------------------------===//
 // X86 TTI query.
 //===----------------------------------------------------------------------===//
@@ -399,20 +411,6 @@ public:
 
   X86TargetMachine &getX86TargetMachine() const {
     return getTM<X86TargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    DAG->addMutation(createX86MacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-    DAG->addMutation(createX86MacroFusionDAGMutation());
-    return DAG;
   }
 
   void addIRPasses() override;
@@ -536,7 +534,7 @@ bool X86PassConfig::addGlobalInstructionSelect() {
 }
 
 bool X86PassConfig::addILPOpts() {
-  addPass(&EarlyIfConverterID);
+  addPass(&EarlyIfConverterLegacyID);
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
   addPass(createX86CmovConverterPass());

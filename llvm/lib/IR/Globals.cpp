@@ -18,6 +18,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -110,6 +111,12 @@ bool GlobalValue::isInterposable() const {
 }
 
 bool GlobalValue::canBenefitFromLocalAlias() const {
+  if (isTagged()) {
+    // Cannot create local aliases to MTE tagged globals. The address of a
+    // tagged global includes a tag that is assigned by the loader in the
+    // GOT.
+    return false;
+  }
   // See AsmPrinter::getSymbolPreferLocal(). For a deduplicate comdat kind,
   // references to a discarded local symbol from outside the group are not
   // allowed, so avoid the local alias.
@@ -278,6 +285,24 @@ void GlobalObject::setSection(StringRef S) {
   // Update the HasSectionHashEntryBit. Setting the section to the empty string
   // means this global no longer has a section.
   setGlobalObjectFlag(HasSectionHashEntryBit, !S.empty());
+}
+
+void GlobalObject::setSectionPrefix(StringRef Prefix) {
+  MDBuilder MDB(getContext());
+  setMetadata(LLVMContext::MD_section_prefix,
+              MDB.createGlobalObjectSectionPrefix(Prefix));
+}
+
+std::optional<StringRef> GlobalObject::getSectionPrefix() const {
+  if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
+    [[maybe_unused]] StringRef MDName =
+        cast<MDString>(MD->getOperand(0))->getString();
+    assert((MDName == "section_prefix" ||
+            (isa<Function>(this) && MDName == "function_section_prefix")) &&
+           "Metadata not match");
+    return cast<MDString>(MD->getOperand(1))->getString();
+  }
+  return std::nullopt;
 }
 
 bool GlobalValue::isNobuiltinFnDef() const {

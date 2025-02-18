@@ -34,6 +34,11 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
  build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
  )
 
+if (MSVC)
+  message(FATAL_ERROR "Libc++abi can't be built for MSVC targets, and doing so is pointless anyway because such "
+                      "targets must use the MS C++ ABI, and libc++abi provides the Itanium C++ ABI.")
+endif()
+
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
@@ -222,8 +227,7 @@ set(LIBCXXABI_CXX_FLAGS "")
 set(LIBCXXABI_COMPILE_FLAGS "")
 set(LIBCXXABI_LINK_FLAGS "")
 set(LIBCXXABI_LIBRARIES "")
-set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
-    "Additional Compile only flags which can be provided in cache")
+set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING "See documentation LIBCXX_ADDITIONAL_COMPILE_FLAGS")
 set(LIBCXXABI_ADDITIONAL_LIBRARIES "" CACHE STRING
     "Additional libraries libc++abi is linked to which can be provided in cache")
 
@@ -259,6 +263,49 @@ if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   string(REPLACE "-stdlib=libc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
+
+function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
+  set(SANITIZER_FLAGS)
+  set(USE_SANITIZER "${USE_SANITIZER}")
+  # NOTE: LLVM_USE_SANITIZER checks for a UNIX like system instead of MSVC.
+  # But we don't have LLVM_ON_UNIX so checking for MSVC is the best we can do.
+  if (USE_SANITIZER AND NOT MSVC)
+    append_flags_if_supported(SANITIZER_FLAGS "-fno-omit-frame-pointer")
+    append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
+
+    if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND
+            NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")
+      append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
+    endif()
+    if (USE_SANITIZER STREQUAL "Address")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address")
+    elseif (USE_SANITIZER STREQUAL "HWAddress")
+      append_flags(SANITIZER_FLAGS "-fsanitize=hwaddress")
+    elseif (USE_SANITIZER MATCHES "Memory(WithOrigins)?")
+      append_flags(SANITIZER_FLAGS -fsanitize=memory)
+      if (USE_SANITIZER STREQUAL "MemoryWithOrigins")
+        append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
+      endif()
+    elseif (USE_SANITIZER STREQUAL "Undefined")
+      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
+    elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
+            USE_SANITIZER STREQUAL "Undefined;Address")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
+    elseif (USE_SANITIZER STREQUAL "Thread")
+      append_flags(SANITIZER_FLAGS -fsanitize=thread)
+    elseif (USE_SANITIZER STREQUAL "DataFlow")
+      append_flags(SANITIZER_FLAGS -fsanitize=dataflow)
+    else()
+      message(WARNING "Unsupported value of LLVM_USE_SANITIZER: ${USE_SANITIZER}")
+    endif()
+  elseif(USE_SANITIZER AND MSVC)
+    message(WARNING "LLVM_USE_SANITIZER is not supported on this platform.")
+  endif()
+  set(${OUT_VAR} "${SANITIZER_FLAGS}" PARENT_SCOPE)
+endfunction()
+
+get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
+list(APPEND LIBCXXABI_COMPILE_FLAGS ${SANITIZER_FLAGS})
 
 # Let the library headers know they are currently being used to build the
 # library.

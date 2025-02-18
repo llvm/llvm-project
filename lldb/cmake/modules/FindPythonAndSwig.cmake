@@ -64,3 +64,9 @@ else()
                                       Python3_EXECUTABLE
                                       LLDB_ENABLE_SWIG)
 endif()
+
+set(LLDB_RECOMMENDED_PYTHON "3.8")
+if(PYTHONANDSWIG_FOUND AND "${Python3_VERSION}" VERSION_LESS "${LLDB_RECOMMENDED_PYTHON}")
+  message(WARNING "Using Python ${Python3_VERSION}. ${LLDB_RECOMMENDED_PYTHON} "
+                  "is recommended and will be required from LLDB 21.")
+endif()

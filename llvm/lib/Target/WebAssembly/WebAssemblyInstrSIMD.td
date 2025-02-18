@@ -708,7 +708,7 @@ defm "" : ReplaceLane<I64x2, 30>;
 defm "" : ReplaceLane<F32x4, 32>;
 defm "" : ReplaceLane<F64x2, 34>;
 
-// For now use an instrinsic for f16x8.replace_lane instead of ReplaceLane above
+// For now use an intrinsic for f16x8.replace_lane instead of ReplaceLane above
 // since LLVM IR generated with half type arguments is not well supported and
 // creates conversions from f16->f32.
 defm REPLACE_LANE_F16x8 :
@@ -1147,11 +1147,15 @@ def : Pat<(wasm_shr_u
 }
 
 // Widening dot product: i32x4.dot_i16x8_s
+def dot_t : SDTypeProfile<1, 2, [SDTCisVT<0, v4i32>, SDTCisVT<1, v8i16>, SDTCisVT<2, v8i16>]>;
+def wasm_dot : SDNode<"WebAssemblyISD::DOT", dot_t>;
 let isCommutable = 1 in
 defm DOT : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
                   [(set V128:$dst, (int_wasm_dot V128:$lhs, V128:$rhs))],
                   "i32x4.dot_i16x8_s\t$dst, $lhs, $rhs", "i32x4.dot_i16x8_s",
                   186>;
+def : Pat<(wasm_dot V128:$lhs, V128:$rhs),
+          (DOT $lhs, $rhs)>;
 
 // Extending multiplication: extmul_{low,high}_P, extmul_high
 def extend_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;

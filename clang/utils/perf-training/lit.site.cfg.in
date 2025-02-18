@@ -8,6 +8,9 @@ config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@"
 config.test_source_root = "@CLANG_PGO_TRAINING_DATA@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_exe = "@Python3_EXECUTABLE@"
+config.cmake_exe = "@CMAKE_COMMAND@"
+config.llvm_src_dir ="@CMAKE_SOURCE_DIR@"
+config.cmake_generator ="@CMAKE_GENERATOR@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CLANG_SOURCE_DIR@/utils/perf-training/lit.cfg")

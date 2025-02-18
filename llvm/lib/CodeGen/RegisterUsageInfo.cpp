@@ -16,8 +16,10 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,12 +34,12 @@ static cl::opt<bool> DumpRegUsage(
     "print-regusage", cl::init(false), cl::Hidden,
     cl::desc("print register usage details collected for analysis."));
 
-INITIALIZE_PASS(PhysicalRegisterUsageInfo, "reg-usage-info",
+INITIALIZE_PASS(PhysicalRegisterUsageInfoWrapperLegacy, "reg-usage-info",
                 "Register Usage Information Storage", false, true)
 
-char PhysicalRegisterUsageInfo::ID = 0;
+char PhysicalRegisterUsageInfoWrapperLegacy::ID = 0;
 
-void PhysicalRegisterUsageInfo::setTargetMachine(const LLVMTargetMachine &TM) {
+void PhysicalRegisterUsageInfo::setTargetMachine(const TargetMachine &TM) {
   this->TM = &TM;
 }
 
@@ -96,4 +98,27 @@ void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
     }
     OS << "\n";
   }
+}
+
+bool PhysicalRegisterUsageInfo::invalidate(
+    Module &M, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<PhysicalRegisterUsageAnalysis>();
+  return !PAC.preservedWhenStateless();
+}
+
+AnalysisKey PhysicalRegisterUsageAnalysis::Key;
+PhysicalRegisterUsageInfo
+PhysicalRegisterUsageAnalysis::run(Module &M, ModuleAnalysisManager &) {
+  PhysicalRegisterUsageInfo PRUI;
+  PRUI.doInitialization(M);
+  return PRUI;
+}
+
+PreservedAnalyses
+PhysicalRegisterUsageInfoPrinterPass::run(Module &M,
+                                          ModuleAnalysisManager &AM) {
+  auto *PRUI = &AM.getResult<PhysicalRegisterUsageAnalysis>(M);
+  PRUI->print(OS, &M);
+  return PreservedAnalyses::all();
 }

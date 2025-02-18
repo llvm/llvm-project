@@ -210,7 +210,7 @@ end subroutine
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi eq, %[[VAL_5]], %[[VAL_6]] : i64
 ! CHECK:           fir.if %[[VAL_7]] {
-! CHECK:             %[[VAL_13:.*]] = fir.call @_FortranAReportFatalUserError
+! CHECK:             fir.call @_FortranAReportFatalUserError
 ! CHECK:           }
 ! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<*:none>>>>
 ! CHECK:           %[[VAL_15:.*]] = fir.box_elesize %[[VAL_14]] : (!fir.class<!fir.ptr<!fir.array<*:none>>>) -> i32
