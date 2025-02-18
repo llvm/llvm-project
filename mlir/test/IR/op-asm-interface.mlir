@@ -58,3 +58,17 @@ func.func @block_argument_name_from_op_asm_type_interface_asmprinter() {
   }
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Test OpAsmAttrInterface
+//===----------------------------------------------------------------------===//
+
+// CHECK: #op_asm_attr_interface_test
+#attr = #test.op_asm_attr_interface<value = "test">
+
+func.func @test_op_asm_attr_interface() {
+  %1 = "test.result_name_from_type"() {attr = #attr} : () -> !test.op_asm_type_interface
+  return
+}

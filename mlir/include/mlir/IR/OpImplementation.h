@@ -1825,6 +1825,7 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 //===--------------------------------------------------------------------===//
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
+#include "mlir/IR/OpAsmAttrInterface.h.inc"
 #include "mlir/IR/OpAsmOpInterface.h.inc"
 #include "mlir/IR/OpAsmTypeInterface.h.inc"
 
