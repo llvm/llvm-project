@@ -126,7 +126,7 @@ template <view _View>
   requires __range_with_movable_references<_View>
 template <bool _Const>
 class enumerate_view<_View>::__iterator {
-  _LIBCPP_NODEBUG using _Base = __maybe_const<_Const, _View>;
+  using _Base _LIBCPP_NODEBUG = __maybe_const<_Const, _View>;
 
   static consteval auto __get_iterator_concept() {
     if constexpr (random_access_range<_Base>) {
@@ -149,7 +149,7 @@ public:
   using value_type        = tuple<difference_type, range_value_t<_Base>>;
 
 private:
-  _LIBCPP_NODEBUG using __reference_type = tuple<difference_type, range_reference_t<_Base>>;
+  using _LIBCPP_NODEBUG __reference_type = tuple<difference_type, range_reference_t<_Base>>;
 
   iterator_t<_Base> __current_ = iterator_t<_Base>();
   difference_type __pos_       = 0;
@@ -277,7 +277,7 @@ template <view _View>
   requires __range_with_movable_references<_View>
 template <bool _Const>
 class enumerate_view<_View>::__sentinel {
-  _LIBCPP_NODEBUG using _Base = __maybe_const<_Const, _View>;
+  using _LIBCPP_NODEBUG _Base = __maybe_const<_Const, _View>;
 
   sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
