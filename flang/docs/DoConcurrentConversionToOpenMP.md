@@ -126,6 +126,53 @@ see the "Data environment" section below.
 See `flang/test/Transforms/DoConcurrent/loop_nest_test.f90` for more examples
 of what is and is not detected as a perfect loop nest.
 
+### Single-range loops
+
+Given the following loop:
+```fortran
+  do concurrent(i=1:n)
+    a(i) = i * i
+  end do
+```
+
+#### Mapping to `host`
+
+Mapping this loop to the `host`, generates MLIR operations of the following
+structure:
+
+```
+%4 = fir.address_of(@_QFEa) ...
+%6:2 = hlfir.declare %4 ...
+
+omp.parallel {
+  // Allocate private copy for `i`.
+  // TODO Use delayed privatization.
+  %19 = fir.alloca i32 {bindc_name = "i"}
+  %20:2 = hlfir.declare %19 {uniq_name = "_QFEi"} ...
+
+  omp.wsloop {
+    omp.loop_nest (%arg0) : index = (%21) to (%22) inclusive step (%c1_2) {
+      %23 = fir.convert %arg0 : (index) -> i32
+      // Use the privatized version of `i`.
+      fir.store %23 to %20#1 : !fir.ref<i32>
+      ...
+
+      // Use "shared" SSA value of `a`.
+      %42 = hlfir.designate %6#0
+      hlfir.assign %35 to %42
+      ...
+      omp.yield
+    }
+    omp.terminator
+  }
+  omp.terminator
+}
+```
+
+#### Mapping to `device`
+
+<!-- TODO -->
+
 <!--
 More details about current status will be added along with relevant parts of the
 implementation in later upstreaming patches.
