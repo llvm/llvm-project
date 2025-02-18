@@ -1003,6 +1003,13 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   return DBuilder.createBasicType(BTName, Size, Encoding);
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const SubstTemplateTypeParmType *Ty,
+                                      llvm::DIFile *U) {
+  llvm::DIType *debugType = getOrCreateType(Ty->getReplacementType(), U);
+  return DBuilder.createTemplateTypeParameterAsType(
+      U, Ty->getReplacedParameter()->getName(), debugType);
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
 
   StringRef Name = Ty->isUnsigned() ? "unsigned _BitInt" : "_BitInt";
@@ -3611,7 +3618,8 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
                                /*Scope=*/TrapSP, /*InlinedAt=*/TrapLocation);
 }
 
-static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
+static QualType UnwrapTypeForDebugInfo(QualType T, const CodeGenModule &CGM) {
+  const ASTContext &C = CGM.getContext();
   Qualifiers Quals;
   do {
     Qualifiers InnerQuals = T.getLocalQualifiers();
@@ -3664,6 +3672,8 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
       T = cast<MacroQualifiedType>(T)->getUnderlyingType();
       break;
     case Type::SubstTemplateTypeParm:
+       if (CGM.getCodeGenOpts().DebugTemplateParameterAsType)
+        return C.getQualifiedType(T.getTypePtr(), Quals);
       T = cast<SubstTemplateTypeParmType>(T)->getReplacementType();
       break;
     case Type::Auto:
@@ -3690,7 +3700,7 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
 }
 
 llvm::DIType *CGDebugInfo::getTypeOrNull(QualType Ty) {
-  assert(Ty == UnwrapTypeForDebugInfo(Ty, CGM.getContext()));
+  assert(Ty == UnwrapTypeForDebugInfo(Ty, CGM));
   auto It = TypeCache.find(Ty.getAsOpaquePtr());
   if (It != TypeCache.end()) {
     // Verify that the debug info still exists.
@@ -3729,7 +3739,7 @@ llvm::DIType *CGDebugInfo::getOrCreateType(QualType Ty, llvm::DIFile *Unit) {
   });
 
   // Unwrap the type as needed for debug information.
-  Ty = UnwrapTypeForDebugInfo(Ty, CGM.getContext());
+  Ty = UnwrapTypeForDebugInfo(Ty, CGM);
 
   if (auto *T = getTypeOrNull(Ty))
     return T;
@@ -3866,6 +3876,9 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::Decltype:
   case Type::PackIndexing:
   case Type::UnaryTransform:
+    if (Ty->getTypeClass() == Type::SubstTemplateTypeParm &&
+        CGM.getCodeGenOpts().DebugTemplateParameterAsType)
+      return CreateType(cast<SubstTemplateTypeParmType>(Ty), Unit);
     break;
   }
 

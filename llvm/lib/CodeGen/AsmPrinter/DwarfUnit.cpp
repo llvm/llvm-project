@@ -520,6 +520,8 @@ void DwarfUnit::addTemplateParams(DIE &Buffer, DINodeArray TParams) {
       constructTemplateTypeParameterDIE(Buffer, TTP);
     else if (auto *TVP = dyn_cast<DITemplateValueParameter>(Element))
       constructTemplateValueParameterDIE(Buffer, TVP);
+    else if (auto *TDT = dyn_cast<DIDerivedType>(Element))
+      createTypeDIE(TDT->getScope(), Buffer, TDT);
   }
 }
 

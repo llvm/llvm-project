@@ -9028,3 +9028,8 @@ def wasm_opt : Flag<["--"], "wasm-opt">,
   Group<m_Group>,
   HelpText<"Enable the wasm-opt optimizer (default)">,
   MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;
+defm debug_template_parameter_as_type
+    : BoolFOption<"debug-template-parameter-as-type",
+                  CodeGenOpts<"DebugTemplateParameterAsType">,
+                  DefaultFalse, PosFlag<SetTrue>, NegFlag<SetFalse>,
+                  BothFlags<[], [CC1Option]>>;

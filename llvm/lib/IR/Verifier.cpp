@@ -1241,6 +1241,7 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
               N.getTag() == dwarf::DW_TAG_inheritance ||
               N.getTag() == dwarf::DW_TAG_friend ||
               N.getTag() == dwarf::DW_TAG_set_type ||
+	      N.getTag() == dwarf::DW_TAG_template_type_parameter ||
               N.getTag() == dwarf::DW_TAG_template_alias,
           "invalid tag", &N);
   if (N.getTag() == dwarf::DW_TAG_ptr_to_member_type) {
@@ -1288,8 +1289,11 @@ void Verifier::visitTemplateParams(const MDNode &N, const Metadata &RawParams) {
   auto *Params = dyn_cast<MDTuple>(&RawParams);
   CheckDI(Params, "invalid template params", &N, &RawParams);
   for (Metadata *Op : Params->operands()) {
-    CheckDI(Op && isa<DITemplateParameter>(Op), "invalid template parameter",
-            &N, Params, Op);
+	  CheckDI(((Op) && (isa<DITemplateParameter>(Op))) ||
+                ((isa<DIDerivedType>(Op)) &&
+                 (dyn_cast<DIDerivedType>(Op)->getTag() ==
+                  dwarf::DW_TAG_template_type_parameter)),
+            "invalid template parameter", &N, Params, Op);
   }
 }
 
