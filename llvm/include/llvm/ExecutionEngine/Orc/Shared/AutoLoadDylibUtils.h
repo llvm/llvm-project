@@ -29,6 +29,27 @@ constexpr uint32_t log2u(std::uint32_t n) {
   return (n > 1) ? 1 + log2u(n >> 1) : 0;
 }
 
+extern const char *const kEnvDelim;
+
+enum class SplitMode {
+  PruneNonExistant, ///< Don't add non-existant paths into output
+  FailNonExistant,  ///< Fail on any non-existant paths
+  AllowNonExistant  ///< Add all paths whether they exist or not
+};
+
+/// Collect the constituant paths from a PATH string.
+/// /bin:/usr/bin:/usr/local/bin -> {/bin, /usr/bin, /usr/local/bin}
+bool SplitPaths(llvm::StringRef PathStr,
+                llvm::SmallVectorImpl<llvm::StringRef> &Paths,
+                SplitMode Mode = SplitMode::PruneNonExistant,
+                llvm::StringRef Delim = kEnvDelim, bool Verbose = false);
+
+///
+bool GetSystemLibraryPaths(llvm::SmallVectorImpl<std::string> &Paths);
+
+/// Returns a normalized version of the given Path
+std::string NormalizePath(const std::string &Path);
+
 class BloomFilter {
 private:
   static constexpr int Bits = 8 * sizeof(uint64_t);

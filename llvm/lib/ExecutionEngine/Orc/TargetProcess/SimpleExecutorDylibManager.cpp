@@ -10,8 +10,6 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
-#include <dlfcn.h>
-
 #define DEBUG_TYPE "orc"
 
 namespace llvm {
@@ -129,7 +127,9 @@ SimpleExecutorDylibManager::resolve(const RemoteSymbolLookupSet &L) {
           return H.takeError();
 
         DylibLookup->addLoadedLib(canonicalLoadedLib);
-        void *Addr = dlsym(H.get().toPtr<void *>(), DemangledSymName);
+
+        sys::DynamicLibrary Dl(H.get().toPtr<void *>());
+        void *Addr = Dl.getAddressOfSymbol(DemangledSymName);
         if (!Addr)
           return make_error<StringError>(Twine("Missing definition for ") +
                                              DemangledSymName,

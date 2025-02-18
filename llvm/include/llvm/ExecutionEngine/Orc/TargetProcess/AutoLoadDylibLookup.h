@@ -22,14 +22,6 @@ namespace llvm {
 namespace orc {
 class DynamicLoader;
 
-#if defined(LLVM_ON_UNIX)
-const char *const kEnvDelim = ":";
-#elif defined(_WIN32)
-const char *const kEnvDelim = ";";
-#else
-#error "Unknown platform (environmental delimiter)"
-#endif
-
 class AutoLoadDynamicLibraryLookup {
 public:
   /// Describes the library search paths.
@@ -139,15 +131,6 @@ public:
 
   void BuildGlobalBloomFilter(BloomFilter &Filter) const;
 };
-
-enum class SplitMode {
-  PruneNonExistant, ///< Don't add non-existant paths into output
-  FailNonExistant,  ///< Fail on any non-existant paths
-  AllowNonExistant  ///< Add all paths whether they exist or not
-};
-
-bool SplitPaths(StringRef PathStr, SmallVectorImpl<StringRef> &Paths,
-                SplitMode Mode, StringRef Delim, bool Verbose = false);
 
 } // end namespace orc
 } // end namespace llvm

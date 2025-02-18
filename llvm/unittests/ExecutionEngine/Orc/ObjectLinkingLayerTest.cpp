@@ -315,6 +315,9 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
       }
       Complete(std::vector<tpctypes::LookupResult>{1, Result});
     }
+
+    void resolveSymbolsAsync(ArrayRef<SymbolLookupSet> Request,
+                             ResolveSymbolsCompleteFn F) override {}
   };
 
   ExecutionSession ES{std::make_unique<TestEPC>()};

@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMOrcShared
   AllocationActions.cpp
+  AutoLoadDylibUtils.cpp
   MachOObjectFormat.cpp
   ObjectFormats.cpp
   OrcError.cpp
