@@ -256,6 +256,8 @@ public:
   /// conventions.
   LLVM_ABI static bool isCallingConvCCompatible(CallBase *CI);
   LLVM_ABI static bool isCallingConvCCompatible(Function *Callee);
+
+  LLVM_ABI bool isErrnoLocationFunction(Function *F) const;
 };
 
 /// Provides information about what library functions are available for
@@ -600,6 +602,10 @@ public:
   /// Check if the function "F" is listed in a library known to LLVM.
   bool isKnownVectorFunctionInLibrary(StringRef F) const {
     return this->isFunctionVectorizable(F);
+  }
+
+  bool isErrnoLocationFunction(Function *F) const {
+    return Impl->isErrnoLocationFunction(F);
   }
 };
 

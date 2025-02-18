@@ -1909,7 +1909,9 @@ bool DevirtModule::tryVirtualConstProp(
       return false;
 
     if (Fn->isDeclaration() ||
-        !computeFunctionBodyMemoryAccess(*Fn, FAM.getResult<AAManager>(*Fn))
+        !computeFunctionBodyMemoryAccess(
+             *Fn, FAM.getResult<AAManager>(*Fn),
+             FAM.getResult<TargetLibraryAnalysis>(*Fn))
              .doesNotAccessMemory() ||
         Fn->arg_empty() || !Fn->arg_begin()->use_empty() ||
         Fn->getReturnType() != RetType)
