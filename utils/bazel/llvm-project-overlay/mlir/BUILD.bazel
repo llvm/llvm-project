@@ -11560,7 +11560,7 @@ cc_library(
         ":Support",
         ":TilingInterface",
         ":ViewLikeInterface",
-        "//third_party/llvm/llvm-project/llvm:Support",
+        "//llvm:Support",
     ],
 )
 
