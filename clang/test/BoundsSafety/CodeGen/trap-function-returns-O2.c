@@ -5,7 +5,7 @@
 #include <ptrcheck.h>
 
 // X86_64-LABEL: define dso_local i32 @foo(
-// X86_64-SAME: ptr noundef readonly [[BAR:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// X86_64-SAME: ptr noundef readonly captures(address) [[BAR:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // X86_64-NEXT:  entry:
 // X86_64-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[COUNT]] to i64
 // X86_64-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[BAR]], i64 [[IDX_EXT]]

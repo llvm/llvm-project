@@ -772,7 +772,7 @@ void assign_via_ptr_from_sbon(struct sbon* ptr, int new_count,
 }
 
 // CHECK-LABEL: define dso_local void @assign_operator_from_sbon(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readnone [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readnone captures(address_is_null) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne ptr [[NEW_PTR]], null, !annotation [[META22]]
 // CHECK-NEXT:    [[CMP_NOT48:%.*]] = icmp slt i32 [[NEW_COUNT]], 0
@@ -795,7 +795,7 @@ void assign_operator_from_sbon(int new_count,
 
 
 // CHECK-LABEL: define dso_local void @local_var_init_from_sbon(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readnone [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readnone captures(address_is_null) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne ptr [[NEW_PTR]], null, !annotation [[META22]]
 // CHECK-NEXT:    [[CMP_NOT46:%.*]] = icmp slt i32 [[NEW_COUNT]], 0
@@ -867,7 +867,7 @@ struct sbon return_sbon_from_sbon(int new_count,
 }
 
 // CHECK-LABEL: define dso_local void @construct_not_used_from_sbon(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readnone [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readnone captures(address_is_null) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne ptr [[NEW_PTR]], null, !annotation [[META22]]
 // CHECK-NEXT:    [[CMP_NOT46:%.*]] = icmp slt i32 [[NEW_COUNT]], 0

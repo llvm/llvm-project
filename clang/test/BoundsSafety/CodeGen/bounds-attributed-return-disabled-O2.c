@@ -17,7 +17,7 @@ int *__counted_by(count) cb_in_from_bidi(int count, int *__bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local noundef ptr @cb_in_from_single(
-// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readnone returned [[P:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -26,7 +26,7 @@ int *__counted_by(count) cb_in_from_single(int count, int *__single p) {
 }
 
 // CHECK-LABEL: define dso_local noundef ptr @cb_out_from_single(
-// CHECK-SAME: ptr noundef readnone captures(none) [[COUNT:%.*]], ptr noundef readnone returned [[P:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[COUNT:%.*]], ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -35,7 +35,7 @@ int *__counted_by(*count) cb_out_from_single(int *count, int *__single p) {
 }
 
 // CHECK-LABEL: define dso_local noundef ptr @cbn_in_from_single(
-// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readnone returned [[P:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret ptr [[P]]
 //
