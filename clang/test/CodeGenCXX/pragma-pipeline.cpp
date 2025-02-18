@@ -36,6 +36,15 @@ void pipeline_disabled_on_nested_loop(int *List, int Length, int Value) {
   }
 }
 
+void pipeline_enabled(int *List, int Length, int Value) {
+// CHECK-LABEL: define {{.*}} @_Z16pipeline_enabled
+#pragma clang loop pipeline(enable)
+  for (int i = 0; i < Length; i++) {
+    // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_5:.*]]
+    List[i] = Value;
+  }
+}
+
 // CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], [[MP:![0-9]+]], ![[PIPELINE_DISABLE:.*]]}
 // CHECK: ![[PIPELINE_DISABLE]] = !{!"llvm.loop.pipeline.disable", i1 true}
 
@@ -45,3 +54,6 @@ void pipeline_disabled_on_nested_loop(int *List, int Length, int Value) {
 // CHECK: ![[PIPELINE_II_10]] = !{!"llvm.loop.pipeline.initiationinterval", i32 10}
 
 // CHECK: ![[LOOP_4]] = distinct !{![[LOOP_4]], [[MP]], ![[PIPELINE_DISABLE]]}
+
+// CHECK: ![[LOOP_5]] = distinct !{![[LOOP_5]], [[MP]], ![[PIPELINE_ENABLE:.*]]}
+// CHECK: ![[PIPELINE_ENABLE]] = !{!"llvm.loop.pipeline.enable"}
