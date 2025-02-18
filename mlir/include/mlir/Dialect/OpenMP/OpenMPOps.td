@@ -1023,6 +1023,7 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
                        OptionalAttr<IndexListArrayAttr>:$members_index,
                        Variadic<OpenMP_MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<UI64Attr>:$map_type,
+                       OptionalAttr<FlatSymbolRefAttr>:$mapper_id,
                        OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
                        OptionalAttr<StrAttr>:$name,
                        DefaultValuedAttr<BoolAttr, "false">:$partial_map);
@@ -1076,6 +1077,8 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
     - 'map_type': OpenMP map type for this map capture, for example: from, to and
        always. It's a bitfield composed of the OpenMP runtime flags stored in
        OpenMPOffloadMappingFlags.
+    - 'mapper_id': OpenMP mapper map type modifier for this map capture. It's used to
+       specify a user defined mapper to be used for mapping.
     - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
        this can affect how the variable is lowered.
     - `name`: Holds the name of variable as specified in user clause (including bounds).
@@ -1087,6 +1090,7 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
     `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
     oilist(
         `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
+      | `mapper` `(` $mapper_id `)`
       | `map_clauses` `(` custom<MapClause>($map_type) `)`
       | `capture` `(` custom<CaptureType>($map_capture_type) `)`
       | `members` `(` $members `:` custom<MembersIndex>($members_index) `:` type($members) `)`
