@@ -2596,7 +2596,7 @@ private:
         (!NextNonComment && !Line.InMacroBody) ||
         (NextNonComment &&
          (NextNonComment->isPointerOrReference() ||
-          NextNonComment->is(tok::string_literal) ||
+          NextNonComment->isOneOf(TT_ClassHeadName, tok::string_literal) ||
           (Line.InPragmaDirective && NextNonComment->is(tok::identifier))))) {
       return false;
     }
@@ -6198,8 +6198,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                 FormatStyle::PAS_Right &&
             (!Right.Next || Right.Next->isNot(TT_FunctionDeclarationName)));
   }
-  if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName) ||
-      Right.is(tok::kw_operator)) {
+  if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
+                    TT_ClassHeadName, tok::kw_operator)) {
     return true;
   }
   if (Left.is(TT_PointerOrReference))
