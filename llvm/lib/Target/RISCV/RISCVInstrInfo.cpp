@@ -4337,6 +4337,7 @@ RISCVInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   return std::make_unique<RISCVPipelinerLoopInfo>(LHS, RHS, Cond);
 }
 
+// FIXME: We should remove this if we have a default generic scheduling model.
 bool RISCVInstrInfo::isHighLatencyDef(int Opc) const {
   unsigned RVVMCOpcode = RISCV::getRVVMCOpcode(Opc);
   Opc = RVVMCOpcode ? RVVMCOpcode : Opc;
