@@ -136,6 +136,9 @@ enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
 // For -z gcs=
 enum class GcsPolicy { Implicit, Never, Always };
 
+// For -z gcs-report=
+enum class GcsReportPolicy { None, Warning, Error };
+
 struct SymbolVersion {
   llvm::StringRef name;
   bool isExternCpp;
@@ -228,7 +231,6 @@ struct Config {
   StringRef zBtiReport = "none";
   StringRef zCetReport = "none";
   StringRef zPauthReport = "none";
-  StringRef zGcsReport = "none";
   StringRef zExecuteOnlyReport = "none";
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
@@ -394,6 +396,7 @@ struct Config {
   UnresolvedPolicy unresolvedSymbolsInShlib;
   Target2Policy target2;
   GcsPolicy zGcs;
+  GcsReportPolicy zGcsReport;
   bool power10Stubs;
   ARMVFPArgKind armVFPArgs = ARMVFPArgKind::Default;
   BuildIdKind buildId = BuildIdKind::None;

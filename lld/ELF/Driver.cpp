@@ -400,7 +400,7 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z bti-report only supported on AArch64";
     if (ctx.arg.zPauthReport != "none")
       ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
-    if (ctx.arg.zGcsReport != "none")
+    if (ctx.arg.zGcsReport != GcsReportPolicy::None)
       ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
     if (ctx.arg.zGcs != GcsPolicy::Implicit)
       ErrAlways(ctx) << "-z gcs only supported on AArch64";
@@ -571,6 +571,27 @@ static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
         ErrAlways(ctx) << "unknown -z gcs= value: " << kv.second;
     }
   }
+  return ret;
+}
+
+static GcsReportPolicy getZGcsReport(Ctx &ctx, opt::InputArgList &args) {
+  GcsReportPolicy ret = GcsReportPolicy::None;
+
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "gcs-report") {
+      arg->claim();
+      if (kv.second == "none")
+        ret = GcsReportPolicy::None;
+      else if (kv.second == "warning")
+        ret = GcsReportPolicy::Warning;
+      else if (kv.second == "error")
+        ret = GcsReportPolicy::Error;
+      else
+        ErrAlways(ctx) << "unknown -z gcs-report= value: " << kv.second;
+    }
+  }
+
   return ret;
 }
 
@@ -1553,6 +1574,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
   ctx.arg.zGcs = getZGcs(ctx, args);
+  ctx.arg.zGcsReport = getZGcsReport(ctx, args);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
   ctx.arg.zHazardplt = hasZOption(args, "hazardplt");
@@ -1625,12 +1647,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  auto reports = {
-      std::make_pair("bti-report", &ctx.arg.zBtiReport),
-      std::make_pair("cet-report", &ctx.arg.zCetReport),
-      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
-      std::make_pair("gcs-report", &ctx.arg.zGcsReport),
-      std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
+                  std::make_pair("cet-report", &ctx.arg.zCetReport),
+                  std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
+                  std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -2832,6 +2852,16 @@ static void readSecurityNotes(Ctx &ctx) {
       return {ctx, DiagLevel::None};
     return report(config);
   };
+  auto reportGcsPolicy = [&](GcsReportPolicy config, bool cond) -> ELFSyncStream {
+    if (cond)
+      return {ctx, DiagLevel::None};
+    StringRef configString = "none";
+    if(config == GcsReportPolicy::Warning)
+      configString = "warning";
+    else if (config == GcsReportPolicy::Error)
+      configString = "error";
+    return report(configString);
+  };
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
@@ -2841,7 +2871,7 @@ static void readSecurityNotes(Ctx &ctx) {
         << ": -z bti-report: file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
 
-    reportUnless(ctx.arg.zGcsReport,
+    reportGcsPolicy(ctx.arg.zGcsReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
         << f
         << ": -z gcs-report: file does not have "
