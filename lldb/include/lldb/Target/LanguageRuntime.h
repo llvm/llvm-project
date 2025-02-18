@@ -219,9 +219,6 @@ public:
     return false;
   }
 
-  // FIXME: This should be upstreamed into llvm.org, but only
-  // SwiftLanguageRuntime overrides this. That means that upstreaming in its
-  // current form would be introducing dead code into llvm.org
   virtual bool IsSymbolARuntimeThunk(const Symbol &symbol) { return false; }
 
   // Given the name of a runtime symbol (e.g. in Objective-C, an ivar offset
