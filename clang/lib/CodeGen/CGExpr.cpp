@@ -139,9 +139,9 @@ void CodeGenFunction::EmitBoundsSafetyBoundsCheck(
 
   if (Upper) {
     if (getLangOpts().hasNewBoundsSafetyCheck(LangOptions::BS_CHK_AccessSize) &&
-        ElemTy->isSized()) {
-      // For sized types take the size of a potential access into account.
-      // For something like:
+        ElemTy->isSized() && CGM.getDataLayout().getTypeStoreSize(ElemTy) > 1) {
+      // For sized types larger than 1 byte take the size of a potential access
+      // into account. For something like:
       //
       // T* ptr;
       //
@@ -164,15 +164,24 @@ void CodeGenFunction::EmitBoundsSafetyBoundsCheck(
       EmitBoundsSafetyTrapCheck(Builder.CreateICmpULE(Ptr, OnePastTheEndPtr),
                               BNS_TRAP_PTR_GT_UPPER_BOUND, TrapCtx);
     } else {
-      // Legacy path and path for unsized types (e.g. function types).
+      // Path where the size of the access is assumed to be 1 byte. This is used
+      // for
+      //
+      // * 1-byte access when `BS_CHK_AccessSize` enabled.
+      // * unsized types (e.g. function types)
+      // * Legacy bounds checks (i.e. `BS_CHK_AccessSize` is disabled).
+      //
       // In this case for something like
       //
       // T* ptr;
       //
       // We assume that `sizeof(T)` is 1. In this case
       //
-      // `ptr.ptr + sizeof(T) <= ptr.upper` simplifies to
+      // 1. The `ptr.ptr + 1` overflow check is unnecessary and so we skip
+      // emitting it.
+      // 2. The `ptr.ptr + sizeof(T) <= ptr.upper` check simplifies to
       // `ptr.ptr < ptr.upper`.
+      //
       BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_GE_UPPER_BOUND);
       llvm::Value *Check = Builder.CreateICmpULT(Ptr, Upper);
       EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_PTR_GE_UPPER_BOUND, TrapCtx);

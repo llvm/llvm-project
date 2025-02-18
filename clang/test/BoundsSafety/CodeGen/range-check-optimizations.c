@@ -693,26 +693,12 @@ void count_ptr_relations(int *__counted_by(n) arg, unsigned n) {
 
 // CHECK-LABEL: @ptrinc0(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[INLEN:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF:%.*]], i64 [[IDX_EXT]]
-// CHECK-NEXT:    [[CMP7_NOT:%.*]] = icmp eq i32 [[INLEN]], 0
-// CHECK-NEXT:    br i1 [[CMP7_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
-// CHECK:       while.body:
-// CHECK-NEXT:    [[INC_09:%.*]] = phi i32 [ [[INC3:%.*]], [[CONT2:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-// CHECK-NEXT:    [[CURRENTBUF_SROA_0_08:%.*]] = phi ptr [ [[TMP0:%.*]], [[CONT2]] ], [ [[BUF]], [[ENTRY]] ]
-// CHECK-NEXT:    [[TMP0]] = getelementptr i8, ptr [[CURRENTBUF_SROA_0_08]], i64 1, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[CURRENTBUF_SROA_0_08]], [[TMP0]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT2]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
-// CHECK:       trap:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont2:
-// CHECK-NEXT:    store i8 0, ptr [[CURRENTBUF_SROA_0_08]], align 1, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[INC3]] = add nuw i32 [[INC_09]], 1
-// CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC3]], [[INLEN]]
-// CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], {{!llvm.loop ![0-9]+}}
+// CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp eq i32 [[INLEN:%.*]], 0
+// CHECK-NEXT:    br i1 [[CMP5_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
+// CHECK:       while.body.preheader:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[INLEN]] to i64
+// CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 1 [[BUF:%.*]], i8 0, i64 [[TMP0]], i1 false), {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    br label [[WHILE_END]]
 // CHECK:       while.end:
 // CHECK-NEXT:    ret void
 //
@@ -732,24 +718,22 @@ void ptrinc0(char *__counted_by(inLen) buf,
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[INLEN:%.*]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF:%.*]], i64 [[IDX_EXT]]
-// CHECK-NEXT:    [[CMP_NOT6:%.*]] = icmp eq i32 [[INLEN]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT6]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
+// CHECK-NEXT:    [[CMP_NOT4:%.*]] = icmp eq i32 [[INLEN]], 0
+// CHECK-NEXT:    br i1 [[CMP_NOT4]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
 // CHECK:       while.body:
-// CHECK-NEXT:    [[CURRENTLEN_08:%.*]] = phi i32 [ [[DEC:%.*]], [[CONT2:%.*]] ], [ [[INLEN]], [[ENTRY:%.*]] ]
-// CHECK-NEXT:    [[CURRENTBUF_SROA_0_07:%.*]] = phi ptr [ [[TMP0:%.*]], [[CONT2]] ], [ [[BUF]], [[ENTRY]] ]
-// CHECK-NEXT:    [[TMP0]] = getelementptr i8, ptr [[CURRENTBUF_SROA_0_07]], i64 1, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[CURRENTBUF_SROA_0_07]], [[TMP0]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[CURRENTBUF_SROA_0_07]], [[BUF]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND3:%.*]] = and i1 [[TMP3]], [[OR_COND]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND3]], label [[CONT2]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CURRENTLEN_06:%.*]] = phi i32 [ [[DEC:%.*]], [[CONT1:%.*]] ], [ [[INLEN]], [[ENTRY:%.*]] ]
+// CHECK-NEXT:    [[CURRENTBUF_SROA_0_05:%.*]] = phi ptr [ [[BOUND_PTR_ARITH:%.*]], [[CONT1]] ], [ [[BUF]], [[ENTRY]] ]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[CURRENTBUF_SROA_0_05]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[CURRENTBUF_SROA_0_05]], [[BUF]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont2:
-// CHECK-NEXT:    store i8 0, ptr [[CURRENTBUF_SROA_0_07]], align 1, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[DEC]] = add i32 [[CURRENTLEN_08]], -1
+// CHECK:       cont1:
+// CHECK-NEXT:    store i8 0, ptr [[CURRENTBUF_SROA_0_05]], align 1, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[DEC]] = add i32 [[CURRENTLEN_06]], -1
+// CHECK-NEXT:    [[BOUND_PTR_ARITH]] = getelementptr i8, ptr [[CURRENTBUF_SROA_0_05]], i64 1
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
 // CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], {{!llvm.loop ![0-9]+}}
 // CHECK:       while.end:
