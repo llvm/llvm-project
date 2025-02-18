@@ -3,4 +3,7 @@
 
 // RUN: %clang -### --target=aarch64-unknown-linux-gnu -x assembler -mexecute-only %s -c -### 2>&1 \
 // RUN:    | FileCheck %s --check-prefix=CHECK-NO-EXECUTE-ONLY-ASM
+// RUN: %clang -### --multi-lib-config=%S/Inputs/multilib/empty.yaml --sysroot= \
+// RUN:     --target=aarch64-none-elf -x assembler -mexecute-only %s -c -### 2>&1 \
+// RUN:    | FileCheck %s --check-prefix=CHECK-NO-EXECUTE-ONLY-ASM
 // CHECK-NO-EXECUTE-ONLY-ASM: warning: argument unused during compilation: '-mexecute-only'

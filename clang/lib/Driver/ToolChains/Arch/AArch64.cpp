@@ -196,7 +196,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
                                        const llvm::Triple &Triple,
                                        const ArgList &Args,
                                        std::vector<StringRef> &Features,
-                                       bool ForAS) {
+                                       bool ForAS, bool ForMultilib) {
   Arg *A;
   bool success = true;
   llvm::StringRef WaMArch;
@@ -334,7 +334,9 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
 
   // Generate execute-only output (no data access to code sections).
   // This only makes sense for the compiler, not for the assembler.
-  if (!ForAS) {
+  // It's not needed for multilib selection and may hide an unused
+  // argument diagnostic if the code is always run.
+  if (!ForAS && !ForMultilib) {
     if (Arg *A = Args.getLastArg(options::OPT_mexecute_only,
                                  options::OPT_mno_execute_only)) {
       if (A->getOption().matches(options::OPT_mexecute_only)) {
