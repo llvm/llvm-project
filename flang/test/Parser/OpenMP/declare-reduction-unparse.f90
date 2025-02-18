@@ -2,7 +2,6 @@
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp %s | FileCheck --check-prefix="PARSE-TREE" %s
 !CHECK-LABEL: program main
 program main
-  use omp_lib
   integer :: my_var
   !CHECK: !$OMP DECLARE REDUCTION (my_add_red:INTEGER: omp_out=omp_out+omp_in
   !CHECK-NEXT: ) INITIALIZER(OMP_PRIV = 0_4)

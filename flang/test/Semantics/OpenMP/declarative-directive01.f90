@@ -89,12 +89,11 @@ end module m2
 ! 2.16 declare-reduction
 
 subroutine declare_red_1()
-  use omp_lib
   integer :: my_var
   !$omp declare reduction (my_add_red : integer : omp_out = omp_out + omp_in) initializer (omp_priv=0)
   my_var = 0
   !$omp parallel reduction (my_add_red : my_var) num_threads(4)
-  my_var = omp_get_thread_num() + 1
+  my_var = 1
   !$omp end parallel
   print *, "sum of thread numbers is ", my_var
 end subroutine declare_red_1
