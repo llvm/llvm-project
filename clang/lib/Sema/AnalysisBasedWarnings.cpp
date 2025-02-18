@@ -665,20 +665,19 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
     return;
 
   // Either in a function body compound statement, or a function-try-block.
-  int FallThroughType = CheckFallThrough(AC);
-  switch (FallThroughType) {
+  switch (int FallThroughType = CheckFallThrough(AC)) {
   case UnknownFallThrough:
     break;
 
   case MaybeFallThrough:
   case AlwaysFallThrough:
-    if (HasNoReturn && CD.diag_FallThrough_HasNoReturn != 0) {
-      S.Diag(RBrace, CD.diag_FallThrough_HasNoReturn) << CD.FunMode;
-    } else if (!ReturnsVoid && CD.diag_FallThrough_ReturnsNonVoid != 0) {
-      unsigned NotInAllControlPath =
-          FallThroughType == MaybeFallThrough ? 1 : 0;
+    if (HasNoReturn) {
+      if (CD.diag_FallThrough_HasNoReturn)
+        S.Diag(RBrace, CD.diag_FallThrough_HasNoReturn) << CD.FunMode;
+    } else if (!ReturnsVoid && CD.diag_FallThrough_ReturnsNonVoid) {
+      bool NotInAllControlPaths = FallThroughType == MaybeFallThrough;
       S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid)
-          << CD.FunMode << NotInAllControlPath;
+          << CD.FunMode << NotInAllControlPaths;
     }
     break;
   case NeverFallThroughOrReturn:
