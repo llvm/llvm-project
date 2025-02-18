@@ -15,6 +15,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/IndexDataConsumer.h"
+#include "clang/Sema/HeuristicResolver.h"
 
 using namespace clang;
 using namespace index;
@@ -24,6 +25,17 @@ static bool isGeneratedDecl(const Decl *D) {
     return attr->getGeneratedDeclaration();
   }
   return false;
+}
+
+IndexingContext::IndexingContext(IndexingOptions IndexOpts,
+                                 IndexDataConsumer &DataConsumer)
+    : IndexOpts(IndexOpts), DataConsumer(DataConsumer) {}
+
+IndexingContext::~IndexingContext() = default;
+
+void IndexingContext::setASTContext(ASTContext &ctx) {
+  Ctx = &ctx;
+  Resolver = Ctx ? std::make_unique<HeuristicResolver>(*Ctx) : nullptr;
 }
 
 bool IndexingContext::shouldIndex(const Decl *D) {
