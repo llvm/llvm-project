@@ -432,8 +432,7 @@ define i1 @sle_and_ne_imply_slt(i8 %a) {
 ; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[A]], 0
 ; CHECK-NEXT:    br i1 [[NE]], label [[NOT_EQUAL:%.*]], label [[EXIT]]
 ; CHECK:       not_equal:
-; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[A]], 0
-; CHECK-NEXT:    ret i1 [[SLT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -460,8 +459,7 @@ define i1 @sge_and_ne_imply_sgt(i8 %a) {
 ; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[A]], 0
 ; CHECK-NEXT:    br i1 [[NE]], label [[NOT_EQUAL:%.*]], label [[EXIT]]
 ; CHECK:       not_equal:
-; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[A]], 0
-; CHECK-NEXT:    ret i1 [[SGT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -488,8 +486,7 @@ define i1 @sge_and_ne_imply_sgt_opposite_successor(i8 %a) {
 ; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[A]], 0
 ; CHECK-NEXT:    br i1 [[EQ]], label [[EXIT]], label [[NOT_EQUAL:%.*]]
 ; CHECK:       not_equal:
-; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[A]], 0
-; CHECK-NEXT:    ret i1 [[SGT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ;

@@ -1086,6 +1086,20 @@ void State::addInfoForInductions(BasicBlock &BB) {
 void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
 
+  auto addConditionFact = [&](DomTreeNode *DTN, CmpPredicate Pred, Value *Op0,
+                              Value *Op1) {
+    WorkList.emplace_back(FactOrCheck::getConditionFact(DTN, Pred, Op0, Op1));
+    // In the case of NE zero, we can deduce SLT if SLE and SGT if SGE.
+    if (Pred == CmpInst::ICMP_NE && match(Op1, m_Zero())) {
+      ConditionTy Precond = {CmpInst::ICMP_SLE, Op0, Op1};
+      WorkList.emplace_back(FactOrCheck::getConditionFact(
+          DTN, CmpInst::ICMP_SLT, Op0, Op1, Precond));
+      Precond = {CmpInst::ICMP_SGE, Op0, Op1};
+      WorkList.emplace_back(FactOrCheck::getConditionFact(
+          DTN, CmpInst::ICMP_SGT, Op0, Op1, Precond));
+    }
+  };
+
   // True as long as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
@@ -1112,8 +1126,7 @@ void State::addInfoFor(BasicBlock &BB) {
       if (GuaranteedToExecute) {
         // The assume is guaranteed to execute when BB is entered, hence Cond
         // holds on entry to BB.
-        WorkList.emplace_back(FactOrCheck::getConditionFact(
-            DT.getNode(I.getParent()), Pred, A, B));
+        addConditionFact(DT.getNode(I.getParent()), Pred, A, B);
       } else {
         WorkList.emplace_back(
             FactOrCheck::getInstFact(DT.getNode(I.getParent()), &I));
@@ -1154,8 +1167,8 @@ void State::addInfoFor(BasicBlock &BB) {
       Value *V = Case.getCaseValue();
       if (!canAddSuccessor(BB, Succ))
         continue;
-      WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(Succ), CmpInst::ICMP_EQ, Switch->getCondition(), V));
+      addConditionFact(DT.getNode(Succ), CmpInst::ICMP_EQ,
+                       Switch->getCondition(), V);
     }
     return;
   }
@@ -1191,10 +1204,10 @@ void State::addInfoFor(BasicBlock &BB) {
       while (!CondWorkList.empty()) {
         Value *Cur = CondWorkList.pop_back_val();
         if (auto *Cmp = dyn_cast<ICmpInst>(Cur)) {
-          WorkList.emplace_back(FactOrCheck::getConditionFact(
-              DT.getNode(Successor),
-              IsOr ? Cmp->getInverseCmpPredicate() : Cmp->getCmpPredicate(),
-              Cmp->getOperand(0), Cmp->getOperand(1)));
+          addConditionFact(DT.getNode(Successor),
+                           IsOr ? Cmp->getInverseCmpPredicate()
+                                : Cmp->getCmpPredicate(),
+                           Cmp->getOperand(0), Cmp->getOperand(1));
           continue;
         }
         if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
@@ -1216,13 +1229,12 @@ void State::addInfoFor(BasicBlock &BB) {
   if (!CmpI)
     return;
   if (canAddSuccessor(BB, Br->getSuccessor(0)))
-    WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(0)), CmpI->getCmpPredicate(),
-        CmpI->getOperand(0), CmpI->getOperand(1)));
+    addConditionFact(DT.getNode(Br->getSuccessor(0)), CmpI->getCmpPredicate(),
+                     CmpI->getOperand(0), CmpI->getOperand(1));
   if (canAddSuccessor(BB, Br->getSuccessor(1)))
-    WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(1)), CmpI->getInverseCmpPredicate(),
-        CmpI->getOperand(0), CmpI->getOperand(1)));
+    addConditionFact(DT.getNode(Br->getSuccessor(1)),
+                     CmpI->getInverseCmpPredicate(), CmpI->getOperand(0),
+                     CmpI->getOperand(1));
 }
 
 #ifndef NDEBUG
