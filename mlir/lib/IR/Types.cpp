@@ -44,7 +44,7 @@ bool Type::isF128() const { return llvm::isa<Float128Type>(*this); }
 
 bool Type::isFloat() const { return llvm::isa<FloatType>(*this); }
 
-/// Return true if this is an integer type with the specified width.
+/// Return true if this is a float type with the specified width.
 bool Type::isFloat(unsigned width) const {
   if (auto fltTy = llvm::dyn_cast<FloatType>(*this))
     return fltTy.getWidth() == width;
