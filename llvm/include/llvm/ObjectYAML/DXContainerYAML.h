@@ -84,7 +84,6 @@ struct RootSignatureYamlDesc {
 
   SmallVector<dxbc::RootParameter> Parameters;
 
-
   uint32_t getEncodedFlags();
 
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -269,13 +268,11 @@ template <> struct MappingTraits<DXContainerYAML::RootSignatureYamlDesc> {
 };
 
 template <> struct MappingTraits<dxbc::RootParameter> {
-  static void mapping(IO &IO,
-    dxbc::RootParameter &P);
+  static void mapping(IO &IO, dxbc::RootParameter &P);
 };
 
 template <> struct MappingTraits<dxbc::RootConstants> {
-  static void mapping(IO &IO,
-    dxbc::RootConstants &C);
+  static void mapping(IO &IO, dxbc::RootConstants &C);
 };
 
 } // namespace yaml

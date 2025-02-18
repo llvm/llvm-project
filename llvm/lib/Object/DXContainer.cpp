@@ -12,6 +12,8 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <cstddef>
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -247,6 +249,7 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
 }
 
 Error DirectX::RootSignature::parse(StringRef Data) {
+  const char *Begin = Data.begin();
   const char *Current = Data.begin();
 
   // Root Signature headers expects 6 integers to be present.
@@ -287,6 +290,37 @@ Error DirectX::RootSignature::parse(StringRef Data) {
     return validationFailed("unsupported root signature flag value read: " +
                             llvm::Twine(FValue));
   Flags = FValue;
+
+  Current = Begin + RootParametersOffset;
+  for (uint32_t It = 0; It < NumParameters; It++) {
+    dxbc::RootParameter NewParam;
+
+    NewParam.ParameterType =
+        support::endian::read<dxbc::RootParameterType,
+                              llvm::endianness::little>(Current);
+    Current += sizeof(dxbc::RootParameterType);
+
+    NewParam.ShaderVisibility =
+        support::endian::read<dxbc::ShaderVisibilityFlag,
+                              llvm::endianness::little>(Current);
+    Current += sizeof(dxbc::ShaderVisibilityFlag);
+
+    uint32_t Offset =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    switch (NewParam.ParameterType) {
+
+    case dxbc::RootParameterType::Constants32Bit: {
+      if (Error Err = readStruct(Data, Current, NewParam.Constants))
+        return Err;
+      if (sys::IsBigEndianHost)
+        NewParam.Constants.swapBytes();
+    } break;
+    }
+
+    Parameters.push_back(NewParam);
+  }
 
   return Error::success();
 }
