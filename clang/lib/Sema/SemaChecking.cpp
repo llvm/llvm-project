@@ -1919,6 +1919,54 @@ static ExprResult BuiltinIsWithinLifetime(Sema &S, CallExpr *TheCall) {
         << 0;
     return ExprError();
   }
+  return TheCall;
+}
+
+static ExprResult BuiltinTriviallyRelocate(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 3))
+    return ExprError();
+
+  QualType ArgTy = TheCall->getArg(0)->getType();
+  if (!ArgTy->isPointerType() || ArgTy.getCVRQualifiers() != 0) {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_trivially_relocate_invalid_arg_type)
+        << /*a pointer*/ 0;
+    return ExprError();
+  }
+
+  QualType T = ArgTy->getPointeeType();
+  if (S.RequireCompleteType(TheCall->getBeginLoc(), T,
+                            diag::err_incomplete_type))
+    return ExprError();
+
+  if (T.isConstQualified() ||
+      !T.isCppTriviallyRelocatableType(S.getASTContext())) {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_trivially_relocate_invalid_arg_type)
+        << (T.isConstQualified() ? /*non-const*/ 1 : /*relocatable*/ 2);
+    return ExprError();
+  }
+
+  TheCall->setType(ArgTy);
+
+  QualType Dest = TheCall->getArg(1)->getType();
+  if (Dest.getCanonicalType() != ArgTy.getCanonicalType()) {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_trivially_relocate_invalid_arg_type)
+        << /*the same*/ 3;
+    return ExprError();
+  }
+
+  Expr *SizeExpr = TheCall->getArg(2);
+  ExprResult Size = S.DefaultLvalueConversion(SizeExpr);
+  if (Size.isInvalid())
+    return ExprError();
+
+  Size = S.tryConvertExprToType(Size.get(), S.getASTContext().getSizeType());
+  if (Size.isInvalid())
+    return ExprError();
+  SizeExpr = Size.get();
+  TheCall->setArg(2, SizeExpr);
 
   return TheCall;
 }
@@ -2384,6 +2432,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinLaunder(*this, TheCall);
   case Builtin::BI__builtin_is_within_lifetime:
     return BuiltinIsWithinLifetime(*this, TheCall);
+  case Builtin::BI__builtin_trivially_relocate:
+    return BuiltinTriviallyRelocate(*this, TheCall);
+
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:

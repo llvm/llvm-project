@@ -761,7 +761,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_explicit_this_parameter", "202110L");
   }
 
-  // We provide those C++23 features as extensions in earlier language modes, so
+  // We provide those C++2b features as extensions in earlier language modes, so
   // we also define their feature test macros.
   if (LangOpts.CPlusPlus11)
     Builder.defineMacro("__cpp_static_call_operator", "202207L");
@@ -772,6 +772,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   Builder.defineMacro("__cpp_pack_indexing", "202311L");
   Builder.defineMacro("__cpp_deleted_function", "202403L");
   Builder.defineMacro("__cpp_variadic_friend", "202403L");
+  Builder.defineMacro("__cpp_trivial_relocatability", "202502L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");

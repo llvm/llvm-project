@@ -1071,6 +1071,9 @@ def err_access_specifier_interface : Error<
 def err_duplicate_class_virt_specifier : Error<
   "class already marked '%0'">;
 
+def err_duplicate_class_relocation_specifier : Error<
+  "class already marked %select{'trivially_relocatable_if_eligible'|'replaceable_if_eligible'}0">;
+
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
 

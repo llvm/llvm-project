@@ -103,13 +103,16 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       HasConstexprDefaultConstructor(false),
       DefaultedDestructorIsConstexpr(true),
       HasNonLiteralTypeFieldsOrBases(false), StructuralIfLiteral(true),
-      UserProvidedDefaultConstructor(false), DeclaredSpecialMembers(0),
+      UserProvidedDefaultConstructor(false), UserProvidedMoveAssignment(false),
+      UserProvidedCopyAssignment(false), ExplicitlyDeletedMoveAssignment(false),
+      DeclaredSpecialMembers(0),
       ImplicitCopyConstructorCanHaveConstParamForVBase(true),
       ImplicitCopyConstructorCanHaveConstParamForNonVBase(true),
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false),
-      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsLambda(false),
+      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false),
+      IsTriviallyRelocatable(false), IsReplaceable(false), IsLambda(false),
       IsParsingBaseSpecifiers(false), ComputedVisibleConversions(false),
       HasODRHash(false), Definition(D) {}
 
@@ -1556,7 +1559,10 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
     if (DD->isNoReturn())
       data().IsAnyDestructorNoReturn = true;
   }
-
+  if (SMKind == SMF_CopyAssignment)
+    data().UserProvidedCopyAssignment = MD->isUserProvided();
+  else if (SMKind == SMF_MoveAssignment)
+    data().UserProvidedMoveAssignment = MD->isUserProvided();
   if (!MD->isImplicit() && !MD->isUserProvided()) {
     // This method is user-declared but not user-provided. We can't work
     // out whether it's trivial yet (not until we get to the end of the
@@ -1578,6 +1584,9 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
     if (!MD->isUserProvided())
       data().DeclaredNonTrivialSpecialMembersForCall |= SMKind;
   }
+
+  if (MD->isDeleted() && SMKind == SMF_MoveAssignment)
+    data().ExplicitlyDeletedMoveAssignment = true;
 }
 
 void CXXRecordDecl::finishedDefaultedOrDeletedMember(CXXMethodDecl *D) {
@@ -1605,8 +1614,11 @@ void CXXRecordDecl::finishedDefaultedOrDeletedMember(CXXMethodDecl *D) {
       data().HasIrrelevantDestructor = false;
   } else if (D->isCopyAssignmentOperator())
     SMKind |= SMF_CopyAssignment;
-  else if (D->isMoveAssignmentOperator())
+  else if (D->isMoveAssignmentOperator()) {
     SMKind |= SMF_MoveAssignment;
+    if (!D->isIneligibleOrNotSelected() && D->isDeleted())
+      data().ExplicitlyDeletedMoveAssignment = true;
+  }
 
   // Update which trivial / non-trivial special members we have.
   // addedMember will have skipped this step for this member.
