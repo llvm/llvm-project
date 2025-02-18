@@ -1752,7 +1752,8 @@ enum class StringLiteralKind {
   UTF8,
   UTF16,
   UTF32,
-  Unevaluated
+  Unevaluated,
+  Binary
 };
 
 /// StringLiteral - This represents a string literal expression, e.g. "foo"
@@ -4965,9 +4966,9 @@ public:
       assert(EExpr && CurOffset != ULLONG_MAX &&
              "trying to dereference an invalid iterator");
       IntegerLiteral *N = EExpr->FakeChildNode;
-      StringRef DataRef = EExpr->Data->BinaryData->getBytes();
       N->setValue(*EExpr->Ctx,
-                  llvm::APInt(N->getValue().getBitWidth(), DataRef[CurOffset],
+                  llvm::APInt(N->getValue().getBitWidth(),
+                              EExpr->Data->BinaryData->getCodeUnit(CurOffset),
                               N->getType()->isSignedIntegerType()));
       // We want to return a reference to the fake child node in the
       // EmbedExpr, not the local variable N.
