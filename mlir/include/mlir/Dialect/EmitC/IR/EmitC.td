@@ -1269,10 +1269,29 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     }
     #endif
     ```
+
+    If the `emitc.verbatim` op has operands, then the `value` is interpreted as
+    format string, where `{}` is a placeholder for an operand in their order.
+    For example, `emitc.verbatim "#pragma my src={} dst={}" %src, %dest : i32, i32`
+    would be emitted as `#pragma my src=a dst=b` if `%src` became `a` and
+    `%dest` became `b` in the C code.
+    `{{` in the format string is interpreted as a single `{` and doesn't introduce
+    a placeholder.
   }];
 
-  let arguments = (ins StrAttr:$value);
-  let assemblyFormat = "$value attr-dict";
+  let extraClassDeclaration = [{
+    FailureOr<SmallVector<::mlir::emitc::ReplacementItem>> parseFormatString();
+  }];
+
+  let arguments = (ins StrAttr:$value, Variadic<EmitCType>:$fmtArgs);
+
+  let builders = [OpBuilder<(ins "::mlir::StringAttr":$value),
+                            [{ build($_builder, $_state, value, {}); }]>];
+  let builders = [OpBuilder<(ins "::llvm::StringRef":$value),
+                            [{ build($_builder, $_state, value, {}); }]>];
+  let hasVerifier = 1;
+  let assemblyFormat =
+      "$value (`args` $fmtArgs^ `:` type($fmtArgs))? attr-dict";
 }
 
 def EmitC_AssignOp : EmitC_Op<"assign", []> {
