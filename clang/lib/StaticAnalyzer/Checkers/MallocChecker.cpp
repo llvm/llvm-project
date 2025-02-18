@@ -668,7 +668,8 @@ private:
   [[nodiscard]] ProgramStateRef
   FreeMemAux(CheckerContext &C, const CallEvent &Call, ProgramStateRef State,
              unsigned Num, bool Hold, bool &IsKnownToBeAllocated,
-             AllocationFamily Family, bool ReturnsNullOnFailure = false) const;
+             AllocationFamily Family, bool Invalidate = true,
+             bool ReturnsNullOnFailure = false) const;
 
   /// Models memory deallocation.
   ///
@@ -694,7 +695,8 @@ private:
   [[nodiscard]] ProgramStateRef
   FreeMemAux(CheckerContext &C, const Expr *ArgExpr, const CallEvent &Call,
              ProgramStateRef State, bool Hold, bool &IsKnownToBeAllocated,
-             AllocationFamily Family, bool ReturnsNullOnFailure = false,
+             AllocationFamily Family, bool Invalidate = true,
+             bool ReturnsNullOnFailure = false,
              std::optional<SVal> ArgValOpt = {}) const;
 
   // TODO: Needs some refactoring, as all other deallocation modeling
@@ -1477,9 +1479,10 @@ void MallocChecker::preGetdelim(ProgramStateRef State, const CallEvent &Call,
   // We do not need this value here, as FreeMemAux will take care
   // of reporting any violation of the preconditions.
   bool IsKnownToBeAllocated = false;
-  State = FreeMemAux(C, Call.getArgExpr(0), Call, State, false,
-                     IsKnownToBeAllocated, AllocationFamily(AF_Malloc), false,
-                     LinePtr);
+  State =
+      FreeMemAux(C, Call.getArgExpr(0), Call, State, false,
+                 IsKnownToBeAllocated, AllocationFamily(AF_Malloc),
+                 /*Invalidate=*/false, /*ReturnsNullOnFailure=*/false, LinePtr);
   if (State)
     C.addTransition(State);
 }
@@ -1796,6 +1799,7 @@ void MallocChecker::checkPostObjCMessage(const ObjCMethodCall &Call,
   ProgramStateRef State = FreeMemAux(C, Call.getArgExpr(0), Call, C.getState(),
                                      /*Hold=*/true, IsKnownToBeAllocatedMemory,
                                      AllocationFamily(AF_Malloc),
+                                     /*Invalidate=*/false,
                                      /*ReturnsNullOnFailure=*/true);
 
   C.addTransition(State);
@@ -1989,12 +1993,11 @@ ProgramStateRef MallocChecker::FreeMemAttr(CheckerContext &C,
   return State;
 }
 
-ProgramStateRef MallocChecker::FreeMemAux(CheckerContext &C,
-                                          const CallEvent &Call,
-                                          ProgramStateRef State, unsigned Num,
-                                          bool Hold, bool &IsKnownToBeAllocated,
-                                          AllocationFamily Family,
-                                          bool ReturnsNullOnFailure) const {
+ProgramStateRef
+MallocChecker::FreeMemAux(CheckerContext &C, const CallEvent &Call,
+                          ProgramStateRef State, unsigned Num, bool Hold,
+                          bool &IsKnownToBeAllocated, AllocationFamily Family,
+                          bool Invalidate, bool ReturnsNullOnFailure) const {
   if (!State)
     return nullptr;
 
@@ -2002,7 +2005,8 @@ ProgramStateRef MallocChecker::FreeMemAux(CheckerContext &C,
     return nullptr;
 
   return FreeMemAux(C, Call.getArgExpr(Num), Call, State, Hold,
-                    IsKnownToBeAllocated, Family, ReturnsNullOnFailure);
+                    IsKnownToBeAllocated, Family, Invalidate,
+                    ReturnsNullOnFailure);
 }
 
 /// Checks if the previous call to free on the given symbol failed - if free
@@ -2137,12 +2141,11 @@ static void printExpectedDeallocName(raw_ostream &os, AllocationFamily Family) {
   }
 }
 
-ProgramStateRef
-MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
-                          const CallEvent &Call, ProgramStateRef State,
-                          bool Hold, bool &IsKnownToBeAllocated,
-                          AllocationFamily Family, bool ReturnsNullOnFailure,
-                          std::optional<SVal> ArgValOpt) const {
+ProgramStateRef MallocChecker::FreeMemAux(
+    CheckerContext &C, const Expr *ArgExpr, const CallEvent &Call,
+    ProgramStateRef State, bool Hold, bool &IsKnownToBeAllocated,
+    AllocationFamily Family, bool Invalidate, bool ReturnsNullOnFailure,
+    std::optional<SVal> ArgValOpt) const {
 
   if (!State)
     return nullptr;
@@ -2302,13 +2305,15 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
   // that.
   assert(!RsBase || (RsBase && RsBase->getAllocationFamily() == Family));
 
-  // Assume that after memory is freed, it contains unknown values. This
-  // conforts languages standards, since reading from freed memory is considered
-  // UB and may result in arbitrary value.
-  State = State->invalidateRegions({location}, Call.getOriginExpr(),
-                                   C.blockCount(), C.getLocationContext(),
-                                   /*CausesPointerEscape=*/false,
-                                   /*InvalidatedSymbols=*/nullptr);
+  if (Invalidate) {
+    // Assume that after memory is freed, it contains unknown values. This
+    // conforts languages standards, since reading from freed memory is
+    // considered UB and may result in arbitrary value.
+    State = State->invalidateRegions({location}, Call.getOriginExpr(),
+                                     C.blockCount(), C.getLocationContext(),
+                                     /*CausesPointerEscape=*/false,
+                                     /*InvalidatedSymbols=*/nullptr);
+  }
 
   // Normal free.
   if (Hold)
