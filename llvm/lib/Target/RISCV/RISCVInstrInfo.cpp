@@ -3679,52 +3679,6 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
 }
 
-bool RISCVInstrInfo::isHighLatencyDef(int Opc) const {
-  switch (Opc) {
-  default:
-    return false;
-    // Integer div/rem.
-  case RISCV::DIV:
-  case RISCV::DIVW:
-  case RISCV::DIVU:
-  case RISCV::DIVUW:
-  case RISCV::REM:
-  case RISCV::REMW:
-  case RISCV::REMU:
-  case RISCV::REMUW:
-  // Floating-point div/rem/sqrt.
-  case RISCV::FDIV_H:
-  case RISCV::FDIV_S:
-  case RISCV::FDIV_D:
-  case RISCV::FDIV_H_INX:
-  case RISCV::FDIV_S_INX:
-  case RISCV::FDIV_D_INX:
-  case RISCV::FDIV_D_IN32X:
-  case RISCV::FSQRT_H:
-  case RISCV::FSQRT_S:
-  case RISCV::FSQRT_D:
-  case RISCV::FSQRT_H_INX:
-  case RISCV::FSQRT_S_INX:
-  case RISCV::FSQRT_D_INX:
-  case RISCV::FSQRT_D_IN32X:
-    // Integer div/rem.
-  case CASE_VFMA_OPCODE_VV(DIV):
-  case CASE_VFMA_OPCODE_VV(DIVU):
-  case CASE_VFMA_OPCODE_VV(REM):
-  case CASE_VFMA_OPCODE_VV(REMU):
-  // case CASE_VFMA_OPCODE_VX(DIV):
-  // case CASE_VFMA_OPCODE_VX(DIVU):
-  // case CASE_VFMA_OPCODE_VX(REM):
-  // case CASE_VFMA_OPCODE_VX(REMU):
-  // Vector floating-point div/sqrt.
-  case CASE_VFMA_OPCODE_VV(FDIV):
-  // case CASE_VFMA_OPCODE_VF(FRDIV):
-  // case CASE_VFMA_OPCODE_VV(FSQRT):
-  // case CASE_VFMA_OPCODE_VV(FRSQRT7):
-    return true;
-  }
-}
-
 #undef CASE_RVV_OPCODE_UNMASK_LMUL
 #undef CASE_RVV_OPCODE_MASK_LMUL
 #undef CASE_RVV_OPCODE_LMUL
@@ -4381,4 +4335,53 @@ RISCVInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
     return nullptr;
 
   return std::make_unique<RISCVPipelinerLoopInfo>(LHS, RHS, Cond);
+}
+
+bool RISCVInstrInfo::isHighLatencyDef(int Opc) const {
+  unsigned RVVMCOpcode = RISCV::getRVVMCOpcode(Opc);
+  Opc = RVVMCOpcode ? RVVMCOpcode : Opc;
+  switch (Opc) {
+  default:
+    return false;
+  // Integer div/rem.
+  case RISCV::DIV:
+  case RISCV::DIVW:
+  case RISCV::DIVU:
+  case RISCV::DIVUW:
+  case RISCV::REM:
+  case RISCV::REMW:
+  case RISCV::REMU:
+  case RISCV::REMUW:
+  // Floating-point div/sqrt.
+  case RISCV::FDIV_H:
+  case RISCV::FDIV_S:
+  case RISCV::FDIV_D:
+  case RISCV::FDIV_H_INX:
+  case RISCV::FDIV_S_INX:
+  case RISCV::FDIV_D_INX:
+  case RISCV::FDIV_D_IN32X:
+  case RISCV::FSQRT_H:
+  case RISCV::FSQRT_S:
+  case RISCV::FSQRT_D:
+  case RISCV::FSQRT_H_INX:
+  case RISCV::FSQRT_S_INX:
+  case RISCV::FSQRT_D_INX:
+  case RISCV::FSQRT_D_IN32X:
+  // Vector integer div/rem
+  case RISCV::VDIV_VV:
+  case RISCV::VDIV_VX:
+  case RISCV::VDIVU_VV:
+  case RISCV::VDIVU_VX:
+  case RISCV::VREM_VV:
+  case RISCV::VREM_VX:
+  case RISCV::VREMU_VV:
+  case RISCV::VREMU_VX:
+  // Vector floating-point div/sqrt.
+  case RISCV::VFDIV_VV:
+  case RISCV::VFDIV_VF:
+  case RISCV::VFRDIV_VF:
+  case RISCV::VFSQRT_V:
+  case RISCV::VFRSQRT7_V:
+    return true;
+  }
 }
