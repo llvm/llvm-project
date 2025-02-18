@@ -2474,35 +2474,6 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
   return getZExtOrTrunc(Op, SDLoc(Op), ShTy);
 }
 
-SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
-                                          SDValue Op2) {
-  EVT FullTy = Op2.getValueType();
-
-  unsigned Stride = ReducedTy.getVectorMinNumElements();
-  unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
-
-  // Collect all of the subvectors
-  std::deque<SDValue> Subvectors = {Op1};
-  for (unsigned I = 0; I < ScaleFactor; I++) {
-    auto SourceIndex = getVectorIdxConstant(I * Stride, DL);
-    Subvectors.push_back(
-        getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {Op2, SourceIndex}));
-  }
-
-  // Flatten the subvector tree
-  while (Subvectors.size() > 1) {
-    Subvectors.push_back(
-        getNode(ISD::ADD, DL, ReducedTy, {Subvectors[0], Subvectors[1]}));
-    Subvectors.pop_front();
-    Subvectors.pop_front();
-  }
-
-  assert(Subvectors.size() == 1 &&
-         "There should only be one subvector after tree flattening");
-
-  return Subvectors[0];
-}
-
 /// Given a store node \p StoreNode, return true if it is safe to fold that node
 /// into \p FPNode, which expands to a library call with output pointers.
 static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
@@ -7881,6 +7852,28 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.isUndef() || N2.isUndef())
       return N3;
 
+    break;
+  }
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA: {
+    [[maybe_unused]] EVT AccVT = N1.getValueType();
+    [[maybe_unused]] EVT Input1VT = N2.getValueType();
+    [[maybe_unused]] EVT Input2VT = N3.getValueType();
+    assert(Input1VT.isVector() && Input1VT == Input2VT &&
+           "Expected the second and third operands of the PARTIAL_REDUCE_MLA "
+           "node to have the same type!");
+    assert(VT.isVector() && VT == AccVT &&
+           "Expected the first operand of the PARTIAL_REDUCE_MLA node to have "
+           "the same type as its result!");
+    assert(Input1VT.getVectorElementCount().hasKnownScalarFactor(
+               AccVT.getVectorElementCount()) &&
+           "Expected the element count of the second and third operands of the "
+           "PARTIAL_REDUCE_MLA node to be a positive integer multiple of the "
+           "element count of the first operand and the result!");
+    assert(N2.getScalarValueSizeInBits() <= N1.getScalarValueSizeInBits() &&
+           "Expected the second and third operands of the PARTIAL_REDUCE_MLA "
+           "node to have an element type which is the same as or smaller than "
+           "the element type of the first operand and result!");
     break;
   }
   }

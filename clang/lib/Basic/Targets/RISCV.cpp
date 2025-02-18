@@ -238,6 +238,9 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     else
       Builder.defineMacro("__riscv_32e");
   }
+
+  if (Opts.CFProtectionReturn && ISAInfo->hasExtension("zicfiss"))
+    Builder.defineMacro("__riscv_shadow_stack");
 }
 
 static constexpr int NumRVVBuiltins =
