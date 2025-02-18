@@ -29028,6 +29028,11 @@ TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesAlways) {
                Style);
 }
 
+TEST_F(FormatTest, BreakBeforeClassName) {
+  verifyFormat("class ABSL_ATTRIBUTE_TRIVIAL_ABI ABSL_NULLABILITY_COMPATIBLE\n"
+               "    ArenaSafeUniquePtr {};");
+}
+
 } // namespace
 } // namespace test
 } // namespace format
