@@ -466,10 +466,13 @@ public:
     thisClass.attr("__new__") = newCf;
 
     // 'isinstance' method.
+    static const char kIsinstanceSig[] =
+        "def isinstance(other_attribute: " MAKE_MLIR_PYTHON_QUALNAME(
+            "ir") ".Attribute) -> bool";
     def_staticmethod(
         "isinstance",
         [isaFunction](MlirAttribute other) { return isaFunction(other); },
-        nanobind::arg("other_attribute"));
+        nanobind::arg("other_attribute"), nanobind::sig(kIsinstanceSig));
     def("__repr__", [superCls, captureTypeName](nanobind::object self) {
       return nanobind::repr(superCls(self))
           .attr("replace")(superCls.attr("__name__"), captureTypeName);
@@ -543,13 +546,17 @@ public:
     thisClass.attr("__new__") = newCf;
 
     // 'isinstance' method.
+    static const char kIsinstanceSig[] =
+        "def isinstance(other_type: " MAKE_MLIR_PYTHON_QUALNAME(
+            "ir") ".Type) -> bool";
     def_staticmethod(
         "isinstance",
         [isaFunction](MlirType other) { return isaFunction(other); },
-        nanobind::arg("other_type"));
+        nanobind::arg("other_type"), nanobind::sig(kIsinstanceSig));
     def("__repr__", [superCls, captureTypeName](nanobind::object self) {
-      return nanobind::repr(superCls(self))
-          .attr("replace")(superCls.attr("__name__"), captureTypeName);
+      return nanobind::cast<std::string>(
+          nanobind::repr(superCls(self))
+              .attr("replace")(superCls.attr("__name__"), captureTypeName));
     });
     if (getTypeIDFunction) {
       // 'get_static_typeid' method.
@@ -621,10 +628,13 @@ public:
     thisClass.attr("__new__") = newCf;
 
     // 'isinstance' method.
+    static const char kIsinstanceSig[] =
+        "def isinstance(other_value: " MAKE_MLIR_PYTHON_QUALNAME(
+            "ir") ".Value) -> bool";
     def_staticmethod(
         "isinstance",
         [isaFunction](MlirValue other) { return isaFunction(other); },
-        nanobind::arg("other_value"));
+        nanobind::arg("other_value"), nanobind::sig(kIsinstanceSig));
   }
 };
 
