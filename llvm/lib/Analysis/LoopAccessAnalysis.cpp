@@ -42,13 +42,12 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
@@ -66,7 +65,6 @@
 #include <vector>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "loop-accesses"
 
@@ -2815,50 +2813,25 @@ bool LoopAccessInfo::isInvariant(Value *V) const {
   return SE->isLoopInvariant(S, TheLoop);
 }
 
-/// Find the operand of the GEP that should be checked for consecutive
-/// stores. This ignores trailing indices that have no effect on the final
-/// pointer.
-static unsigned getGEPInductionOperand(const GetElementPtrInst *Gep) {
-  const DataLayout &DL = Gep->getDataLayout();
-  unsigned LastOperand = Gep->getNumOperands() - 1;
-  TypeSize GEPAllocSize = DL.getTypeAllocSize(Gep->getResultElementType());
-
-  // Walk backwards and try to peel off zeros.
-  while (LastOperand > 1 && match(Gep->getOperand(LastOperand), m_Zero())) {
-    // Find the type we're currently indexing into.
-    gep_type_iterator GEPTI = gep_type_begin(Gep);
-    std::advance(GEPTI, LastOperand - 2);
-
-    // If it's a type with the same allocation size as the result of the GEP we
-    // can peel off the zero index.
-    TypeSize ElemSize = GEPTI.isStruct()
-                            ? DL.getTypeAllocSize(GEPTI.getIndexedType())
-                            : GEPTI.getSequentialElementStride(DL);
-    if (ElemSize != GEPAllocSize)
-      break;
-    --LastOperand;
-  }
-
-  return LastOperand;
-}
-
-/// If the argument is a GEP, then returns the operand identified by
-/// getGEPInductionOperand. However, if there is some other non-loop-invariant
-/// operand, it returns that instead.
-static Value *stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
+/// If \p Ptr is a GEP, which has a loop-variant operand, return that operand.
+/// Otherwise, return \p Ptr.
+static Value *getLoopVariantGEPOperand(Value *Ptr, ScalarEvolution *SE,
+                                       Loop *Lp) {
   auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   if (!GEP)
     return Ptr;
 
-  unsigned InductionOperand = getGEPInductionOperand(GEP);
-
-  // Check that all of the gep indices are uniform except for our induction
-  // operand.
-  for (unsigned I = 0, E = GEP->getNumOperands(); I != E; ++I)
-    if (I != InductionOperand &&
-        !SE->isLoopInvariant(SE->getSCEV(GEP->getOperand(I)), Lp))
-      return Ptr;
-  return GEP->getOperand(InductionOperand);
+  Value *V = Ptr;
+  for (const Use &U : GEP->operands()) {
+    if (!SE->isLoopInvariant(SE->getSCEV(U), Lp)) {
+      if (V == Ptr)
+        V = U;
+      else
+        // There must be exactly one loop-variant operand.
+        return Ptr;
+    }
+  }
+  return V;
 }
 
 /// Get the stride of a pointer access in a loop. Looks for symbolic
@@ -2873,7 +2846,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   // pointer, otherwise, we are analyzing the index.
   Value *OrigPtr = Ptr;
 
-  Ptr = stripGetElementPtr(Ptr, SE, Lp);
+  Ptr = getLoopVariantGEPOperand(Ptr, SE, Lp);
   const SCEV *V = SE->getSCEV(Ptr);
 
   if (Ptr != OrigPtr)

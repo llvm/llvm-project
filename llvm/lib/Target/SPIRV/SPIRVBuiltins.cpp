@@ -216,6 +216,7 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
   // Check if the extracted name begins with:
   // - "__spirv_ImageSampleExplicitLod"
   // - "__spirv_ImageRead"
+  // - "__spirv_ImageWrite"
   // - "__spirv_ImageQuerySizeLod"
   // - "__spirv_UDotKHR"
   // - "__spirv_SDotKHR"
@@ -233,20 +234,21 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
   // - "__spirv_SConvert"
   // - "__spirv_FConvert"
   // - "__spirv_SatConvert"
-  // and contains return type information at the end "_R<type>".
+  // and maybe contains return type information at the end "_R<type>".
   // If so, extract the plain builtin name without the type information.
   static const std::regex SpvWithR(
-      "(__spirv_(ImageSampleExplicitLod|ImageRead|ImageQuerySizeLod|UDotKHR|"
+      "(__spirv_(ImageSampleExplicitLod|ImageRead|ImageWrite|ImageQuerySizeLod|"
+      "UDotKHR|"
       "SDotKHR|SUDotKHR|SDotAccSatKHR|UDotAccSatKHR|SUDotAccSatKHR|"
       "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|"
       "SubgroupImageMediaBlockReadINTEL|SubgroupImageMediaBlockWriteINTEL|"
       "Convert|"
-      "UConvert|SConvert|FConvert|SatConvert).*)_R[^_]*_?(\\w+)?.*");
+      "UConvert|SConvert|FConvert|SatConvert)[^_]*)(_R[^_]*_?(\\w+)?.*)?");
   std::smatch Match;
   if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 1) {
     std::ssub_match SubMatch;
     if (DecorationId && Match.size() > 3) {
-      SubMatch = Match[3];
+      SubMatch = Match[4];
       *DecorationId = demangledPostfixToDecorationId(SubMatch.str());
     }
     SubMatch = Match[1];
@@ -1779,6 +1781,7 @@ static bool generateGetQueryInst(const SPIRV::IncomingCall *Call,
   SPIRV::BuiltIn::BuiltIn Value =
       SPIRV::lookupGetBuiltin(Call->Builtin->Name, Call->Builtin->Set)->Value;
   uint64_t IsDefault = (Value == SPIRV::BuiltIn::GlobalSize ||
+                        Value == SPIRV::BuiltIn::NumWorkgroups ||
                         Value == SPIRV::BuiltIn::WorkgroupSize ||
                         Value == SPIRV::BuiltIn::EnqueuedWorkgroupSize);
   return genWorkgroupQuery(Call, MIRBuilder, GR, Value, IsDefault ? 1 : 0);
@@ -1931,6 +1934,9 @@ static bool generateReadImageInst(const StringRef DemangledCall,
                                   const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpImageRead, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
   Register Image = Call->Arguments[0];
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   bool HasOclSampler = DemangledCall.contains_insensitive("ocl_sampler");
@@ -2010,6 +2016,9 @@ static bool generateReadImageInst(const StringRef DemangledCall,
 static bool generateWriteImageInst(const SPIRV::IncomingCall *Call,
                                    MachineIRBuilder &MIRBuilder,
                                    SPIRVGlobalRegistry *GR) {
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpImageWrite, Call,
+                              Register(0));
   MIRBuilder.buildInstr(SPIRV::OpImageWrite)
       .addUse(Call->Arguments[0])  // Image.
       .addUse(Call->Arguments[1])  // Coordinate.
