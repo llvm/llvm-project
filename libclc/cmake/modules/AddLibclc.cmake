@@ -351,8 +351,9 @@ function(add_libclc_builtin_set)
   add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
   set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
 
-  # nvptx-- targets don't include workitem builtins
-  if( NOT ARG_TRIPLE MATCHES ".*ptx.*--$" )
+  # nvptx-- targets don't include workitem builtins, and clspv targets don't
+  # include all OpenCL builtins
+  if( NOT ARG_ARCH MATCHES "^(nvptx|clspv)(64)?$" )
     add_test( NAME external-calls-${obj_suffix}
       COMMAND ./check_external_calls.sh ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} ${LLVM_TOOLS_BINARY_DIR}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
