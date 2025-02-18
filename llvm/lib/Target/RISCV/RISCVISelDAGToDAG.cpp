@@ -1838,13 +1838,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         return;
       }
 
+      SDValue PolicyOp =
+          CurDAG->getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT);
+
       if (IsCmpConstant) {
         SDValue Imm =
             selectImm(CurDAG, SDLoc(Src2), XLenVT, CVal - 1, *Subtarget);
 
         ReplaceNode(Node, CurDAG->getMachineNode(
                               VMSGTMaskOpcode, DL, VT,
-                              {MaskedOff, Src1, Imm, Mask, VL, SEW}));
+                              {MaskedOff, Src1, Imm, Mask, VL, SEW, PolicyOp}));
         return;
       }
 
@@ -1853,10 +1856,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // The result is mask undisturbed.
       // We use the same instructions to emulate mask agnostic behavior, because
       // the agnostic result can be either undisturbed or all 1.
-      SDValue Cmp = SDValue(
-          CurDAG->getMachineNode(VMSLTMaskOpcode, DL, VT,
-                                 {MaskedOff, Src1, Src2, Mask, VL, SEW}),
-          0);
+      SDValue Cmp = SDValue(CurDAG->getMachineNode(VMSLTMaskOpcode, DL, VT,
+                                                   {MaskedOff, Src1, Src2, Mask,
+                                                    VL, SEW, PolicyOp}),
+                            0);
       // vmxor.mm vd, vd, v0 is used to update active value.
       ReplaceNode(Node, CurDAG->getMachineNode(VMXOROpcode, DL, VT,
                                                {Cmp, Mask, VL, MaskSEW}));
@@ -3792,9 +3795,9 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
   const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
   const bool MaskedHasPassthru = RISCVII::isFirstDefTiedToFirstUse(MaskedMCID);
 
-  assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ==
-         RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
-         "Masked and unmasked pseudos are inconsistent");
+  assert((RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ||
+          !RISCVII::hasVecPolicyOp(MCID.TSFlags)) &&
+         "Unmasked pseudo has policy but masked pseudo doesn't?");
   assert(RISCVII::hasVecPolicyOp(MCID.TSFlags) == HasPassthru &&
          "Unexpected pseudo structure");
   assert(!(HasPassthru && !MaskedHasPassthru) &&
@@ -3803,10 +3806,17 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
   SmallVector<SDValue, 8> Ops;
   // Skip the passthru operand at index 0 if the unmasked don't have one.
   bool ShouldSkip = !HasPassthru && MaskedHasPassthru;
+  bool DropPolicy = !RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
+                    RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags);
+  bool HasChainOp =
+      N->getOperand(N->getNumOperands() - 1).getValueType() == MVT::Other;
+  unsigned LastOpNum = N->getNumOperands() - 1 - HasChainOp;
   for (unsigned I = ShouldSkip, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask
     SDValue Op = N->getOperand(I);
     if (I == MaskOpIdx)
+      continue;
+    if (DropPolicy && I == LastOpNum)
       continue;
     Ops.push_back(Op);
   }
