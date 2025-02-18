@@ -40,13 +40,13 @@ struct StructTypeStorage;
 /// There are three possible formats for this type:
 ///
 ///  - Identified and complete structs: unique name and a known body.
-///  - Identified and incomplete structs: unique name and unkonwn body.
+///  - Identified and incomplete structs: unique name and unknown body.
 ///  - Anonymous structs: no name and a known body.
 ///
 /// Identified structs are uniqued by their name, and anonymous structs are
 /// uniqued by their body. This means that two anonymous structs with the same
 /// body will be the same type, and two identified structs with the same name
-/// will be the same type. Attempting to build a struct with a existing name,
+/// will be the same type. Attempting to build a struct with an existing name,
 /// but a different body will result in an error.
 ///
 /// A few examples:
@@ -57,7 +57,7 @@ struct StructTypeStorage;
 ///     !anonymous = !cir.struct<struct {!cir.int<u, 8>}>
 /// ```
 ///
-/// Incomplete structs are mutable, meaning the can be later completed with a
+/// Incomplete structs are mutable, meaning they can be later completed with a
 /// body automatically updating in place every type in the code that uses the
 /// incomplete struct. Mutability allows for recursive types to be represented,
 /// meaning the struct can have members that refer to itself. This is useful for
@@ -83,7 +83,7 @@ public:
 
   enum RecordKind : uint32_t { Class, Union, Struct };
 
-  /// Create a identified and complete struct type.
+  /// Create an identified and complete struct type.
   static StructType get(mlir::MLIRContext *context,
                         llvm::ArrayRef<mlir::Type> members,
                         mlir::StringAttr name, bool packed, bool padded,
@@ -94,7 +94,7 @@ public:
              mlir::StringAttr name, bool packed, bool padded, RecordKind kind,
              ASTRecordDeclInterface ast = {});
 
-  /// Create a identified and incomplete struct type.
+  /// Create an identified and incomplete struct type.
   static StructType get(mlir::MLIRContext *context, mlir::StringAttr name,
                         RecordKind kind);
   static StructType
@@ -102,7 +102,7 @@ public:
              mlir::MLIRContext *context, mlir::StringAttr name,
              RecordKind kind);
 
-  /// Create a anonymous struct type (always complete).
+  /// Create an anonymous struct type (always complete).
   static StructType get(mlir::MLIRContext *context,
                         llvm::ArrayRef<mlir::Type> members, bool packed,
                         bool padded, RecordKind kind,
