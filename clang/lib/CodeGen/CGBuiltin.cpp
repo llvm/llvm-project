@@ -2937,21 +2937,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad())
     BuiltinID = mutateLongDoubleBuiltin(BuiltinID);
 
-  const unsigned BuiltinIDIfEmitIntrinsics = [&] {
-    // If the builtin has been declared explicitly with an assembler label,
-    // disable the specialized emitting below. Ideally we should communicate the
-    // rename in IR, or at least avoid generating the intrinsic calls that are
-    // likely to get lowered to the renamed library functions.
-    if (FD->hasAttr<AsmLabelAttr>())
-      return 0U;
-
-    // If the target requests not to use intrinsics for a builtin, disable the
-    // specialized emitting below.
-    if (!getTargetHooks().shouldUseIntrinsicsForBuiltin(BuiltinID))
-      return 0U;
-
-    return BuiltinID;
-  }();
+  // If the builtin has been declared explicitly with an assembler label,
+  // disable the specialized emitting below. Ideally we should communicate the
+  // rename in IR, or at least avoid generating the intrinsic calls that are
+  // likely to get lowered to the renamed library functions.
+  const unsigned BuiltinIDIfNoAsmLabel =
+      FD->hasAttr<AsmLabelAttr>() ? 0 : BuiltinID;
 
   std::optional<bool> ErrnoOverriden;
   // ErrnoOverriden is true if math-errno is overriden via the
@@ -3044,7 +3035,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           ConstWithoutErrnoOrExceptions && ErrnoOverridenToFalseWithOpt;
   }
   if (GenerateIntrinsics) {
-    switch (BuiltinIDIfEmitIntrinsics) {
+    switch (BuiltinIDIfNoAsmLabel) {
     case Builtin::BIacos:
     case Builtin::BIacosf:
     case Builtin::BIacosl:
@@ -3524,7 +3515,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
   };
 
-  switch (BuiltinIDIfEmitIntrinsics) {
+  switch (BuiltinIDIfNoAsmLabel) {
   default: break;
   case Builtin::BI__builtin___CFStringMakeConstantString:
   case Builtin::BI__builtin___NSStringMakeConstantString:
@@ -3654,7 +3645,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzg: {
-    bool HasFallback = BuiltinIDIfEmitIntrinsics == Builtin::BI__builtin_ctzg &&
+    bool HasFallback = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_ctzg &&
                        E->getNumArgs() > 1;
 
     Value *ArgValue =
@@ -3686,7 +3677,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzg: {
-    bool HasFallback = BuiltinIDIfEmitIntrinsics == Builtin::BI__builtin_clzg &&
+    bool HasFallback = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_clzg &&
                        E->getNumArgs() > 1;
 
     Value *ArgValue =
@@ -4356,7 +4347,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Ty = VecTy->getElementType();
     bool IsSigned = Ty->isSignedIntegerType();
     unsigned Opc;
-    if (BuiltinIDIfEmitIntrinsics == Builtin::BI__builtin_elementwise_add_sat)
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_add_sat)
       Opc = IsSigned ? llvm::Intrinsic::sadd_sat : llvm::Intrinsic::uadd_sat;
     else
       Opc = IsSigned ? llvm::Intrinsic::ssub_sat : llvm::Intrinsic::usub_sat;

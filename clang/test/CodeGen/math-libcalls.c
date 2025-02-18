@@ -660,17 +660,6 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_MAYTRAP: declare float @llvm.experimental.constrained.sinh.f32(
 // HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.sinh.f80(
 
-sincos(f, d, d);       sincosf(f, fp, fp);        sincosl(f, l, l);
-
-// NO__ERRNO: declare void @sincos(double noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare void @sincosf(float noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare void @sincosl(x86_fp80 noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
-// HAS__ERRNO: declare void @sincos(double noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
-// HAS__ERRNO: declare void @sincosf(float noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
-// HAS__ERRNO: declare void @sincosl(x86_fp80 noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare void @sincos(double noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare void @sincosf(float noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare void @sincosl(x86_fp80 noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
 
   sqrt(f);       sqrtf(f);      sqrtl(f);
 
