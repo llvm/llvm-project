@@ -5087,8 +5087,16 @@ public:
     return static_cast<HLSLBufferDecl *>(const_cast<DeclContext *>(DC));
   }
 
-  // Iterator for the buffer decls. Concatenates the list of decls parented
-  // by this HLSLBufferDecl with the list of default buffer decls.
+  // Iterator for the buffer decls. For constant buffers explicitly declared
+  // with `cbuffer` keyword this will the list of decls parented by this
+  // HLSLBufferDecl (equal to `decls()`).
+  // For implicit $Globals buffer this will be the list of default buffer
+  // declarations stored in DefaultBufferDecls plus the implicit layout
+  // struct (the only child of HLSLBufferDecl in this case).
+  //
+  // The iterator uses llvm::concat_iterator to concatenate the lists
+  // `decls()` and `DefaultBufferDecls`. For non-default buffers
+  // `DefaultBufferDecls` is always empty.
   using buffer_decl_iterator =
       llvm::concat_iterator<Decl *const, SmallVector<Decl *>::const_iterator,
                             decl_iterator>;

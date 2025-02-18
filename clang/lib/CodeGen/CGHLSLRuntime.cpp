@@ -150,6 +150,7 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
     llvm::Type *LayoutType = *ElemIt++;
 
     // FIXME: handle resources in cbuffer user-defined structs
+    // Issue llvm/wg-hlsl#175
 
     // create global variable for the constant and to metadata list
     GlobalVariable *ElemGV =
