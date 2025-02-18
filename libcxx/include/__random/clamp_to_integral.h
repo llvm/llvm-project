@@ -10,7 +10,10 @@
 #define _LIBCPP___RANDOM_CLAMP_TO_INTEGRAL_H
 
 #include <__config>
-#include <cmath>
+#include <__math/rounding_functions.h>
+#include <__type_traits/is_floating_point.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_same.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -44,7 +47,7 @@ template <class _IntT, class _RealT>
 _LIBCPP_HIDE_FROM_ABI _IntT __clamp_to_integral(_RealT __r) _NOEXCEPT {
   using _Lim            = numeric_limits<_IntT>;
   const _IntT __max_val = __max_representable_int_for_float<_IntT, _RealT>();
-  if (__r >= ::nextafter(static_cast<_RealT>(__max_val), INFINITY)) {
+  if (__r >= __math::nextafter(static_cast<_RealT>(__max_val), numeric_limits<_RealT>::infinity())) {
     return _Lim::max();
   } else if (__r <= _Lim::lowest()) {
     return _Lim::min();

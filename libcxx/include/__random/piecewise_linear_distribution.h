@@ -12,11 +12,11 @@
 #include <__algorithm/upper_bound.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__math/roots.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
 #include <__vector/comparison.h>
 #include <__vector/vector.h>
-#include <cmath>
 #include <initializer_list>
 #include <iosfwd>
 
@@ -256,7 +256,8 @@ _RealType piecewise_linear_distribution<_RealType>::operator()(_URNG& __g, const
     return __u / __dk + __bk;
   const result_type __bk1    = __p.__b_[__k + 1];
   const result_type __deltab = __bk1 - __bk;
-  return (__bk * __dk1 - __bk1 * __dk + std::sqrt(__deltab * (__deltab * __dk * __dk + 2 * __deltad * __u))) / __deltad;
+  return (__bk * __dk1 - __bk1 * __dk + __math::sqrt(__deltab * (__deltab * __dk * __dk + 2 * __deltad * __u))) /
+         __deltad;
 }
 
 template <class _CharT, class _Traits, class _RT>
