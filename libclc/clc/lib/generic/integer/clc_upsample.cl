@@ -8,8 +8,7 @@
     return (large_hi << (BGENTYPE)GENSIZE) | large_lo;                         \
   }
 
-#define __CLC_UPSAMPLE_IMPL_ALL_VEC_SIZES(BGENTYPE, GENTYPE, UGENTYPE,         \
-                                          GENSIZE)                             \
+#define __CLC_UPSAMPLE_IMPL_ALL_TYS(BGENTYPE, GENTYPE, UGENTYPE, GENSIZE)      \
   __CLC_UPSAMPLE_IMPL(BGENTYPE, GENTYPE, UGENTYPE, GENSIZE)                    \
   __CLC_UPSAMPLE_IMPL(BGENTYPE##2, GENTYPE##2, UGENTYPE##2, GENSIZE)           \
   __CLC_UPSAMPLE_IMPL(BGENTYPE##3, GENTYPE##3, UGENTYPE##3, GENSIZE)           \
@@ -18,14 +17,15 @@
   __CLC_UPSAMPLE_IMPL(BGENTYPE##16, GENTYPE##16, UGENTYPE##16, GENSIZE)
 
 #define __CLC_UPSAMPLE_TYPES()                                                 \
-  __CLC_UPSAMPLE_IMPL_ALL_VEC_SIZES(short, char, uchar, 8)                     \
-  __CLC_UPSAMPLE_IMPL_ALL_VEC_SIZES(ushort, uchar, uchar, 8)                   \
-  __CLC_UPSAMPLE_IMPL_ALL_VEC_SIZES(int, short, ushort, 16)                    \
-  __CLC_UPSAMPLE_IMPL_ALL_VEC_SIZES(uint, ushort, ushort, 16)                  \
-  __CLC_UPSAMPLE_IMPL_ALL_VEC_SIZES(long, int, uint, 32)                       \
-  __CLC_UPSAMPLE_IMPL_ALL_VEC_SIZES(ulong, uint, uint, 32)
+  __CLC_UPSAMPLE_IMPL_ALL_TYS(short, char, uchar, 8)                           \
+  __CLC_UPSAMPLE_IMPL_ALL_TYS(ushort, uchar, uchar, 8)                         \
+  __CLC_UPSAMPLE_IMPL_ALL_TYS(int, short, ushort, 16)                          \
+  __CLC_UPSAMPLE_IMPL_ALL_TYS(uint, ushort, ushort, 16)                        \
+  __CLC_UPSAMPLE_IMPL_ALL_TYS(long, int, uint, 32)                             \
+  __CLC_UPSAMPLE_IMPL_ALL_TYS(ulong, uint, uint, 32)
 
 __CLC_UPSAMPLE_TYPES()
 
 #undef __CLC_UPSAMPLE_TYPES
+#undef __CLC_UPSAMPLE_IMPL_ALL_TYS
 #undef __CLC_UPSAMPLE_IMPL
