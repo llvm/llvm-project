@@ -544,9 +544,9 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
 namespace {
 
 struct CheckFallThroughDiagnostics {
-  unsigned diag_FallThrough_HasNoReturn;
-  unsigned diag_FallThrough_ReturnsNonVoid;
-  unsigned diag_NeverFallThroughOrReturn;
+  unsigned diag_FallThrough_HasNoReturn = 0;
+  unsigned diag_FallThrough_ReturnsNonVoid = 0;
+  unsigned diag_NeverFallThroughOrReturn = 0;
   unsigned funMode; // TODO: use diag::FunModes
   SourceLocation FuncLoc;
 
@@ -569,8 +569,6 @@ struct CheckFallThroughDiagnostics {
 
     if (!isVirtualMethod && !isTemplateInstantiation)
       D.diag_NeverFallThroughOrReturn = diag::warn_suggest_noreturn_function;
-    else
-      D.diag_NeverFallThroughOrReturn = 0;
 
     D.funMode = diag::FunModes::Function;
     return D;
@@ -579,9 +577,7 @@ struct CheckFallThroughDiagnostics {
   static CheckFallThroughDiagnostics MakeForCoroutine(const Decl *Func) {
     CheckFallThroughDiagnostics D;
     D.FuncLoc = Func->getLocation();
-    D.diag_FallThrough_HasNoReturn = 0;
     D.diag_FallThrough_ReturnsNonVoid = diag::warn_falloff_nonvoid;
-    D.diag_NeverFallThroughOrReturn = 0;
     D.funMode = diag::FunModes::Coroutine;
     return D;
   }
@@ -590,7 +586,6 @@ struct CheckFallThroughDiagnostics {
     CheckFallThroughDiagnostics D;
     D.diag_FallThrough_HasNoReturn = diag::err_noreturn_has_return_expr;
     D.diag_FallThrough_ReturnsNonVoid = diag::err_falloff_nonvoid;
-    D.diag_NeverFallThroughOrReturn = 0;
     D.funMode = diag::FunModes::Block;
     return D;
   }
@@ -599,7 +594,6 @@ struct CheckFallThroughDiagnostics {
     CheckFallThroughDiagnostics D;
     D.diag_FallThrough_HasNoReturn = diag::err_noreturn_has_return_expr;
     D.diag_FallThrough_ReturnsNonVoid = diag::warn_falloff_nonvoid;
-    D.diag_NeverFallThroughOrReturn = 0;
     D.funMode = diag::FunModes::Lambda;
     return D;
   }
