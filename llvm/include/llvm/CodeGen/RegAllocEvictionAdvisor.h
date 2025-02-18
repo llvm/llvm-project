@@ -248,16 +248,9 @@ public:
 
     bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
                     MachineFunctionAnalysisManager::Invalidator &Inv) {
-      auto PAC = PA.getChecker<RegAllocEvictionAdvisorAnalysis>();
-      // If we are in default mode, the provider is always valid.
-      if (Provider->getAdvisorMode() ==
-          RegAllocEvictionAdvisorProvider::AdvisorMode::Default)
-        return !PAC.preservedWhenStateless();
-      // MBFI and Loops are used in release and development modes, so check
-      // those.
-      return !PAC.preservedWhenStateless() ||
-             Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA) ||
-             Inv.invalidate<MachineLoopAnalysis>(MF, PA);
+      // Provider is stateless and constructed only once. Do not get
+      // invalidated.
+      return false;
     }
   };
 
