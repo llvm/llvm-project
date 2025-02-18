@@ -7720,8 +7720,6 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
     values.add(VTablePtr);
   }
 
-  values.add(llvm::ConstantExpr::getInBoundsGetElementPtr(
-      VTableGV->getValueType(), VTableGV, VTableIdx));
   values.add(GetClassName(ClassName));
   values.add(GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition));
 
