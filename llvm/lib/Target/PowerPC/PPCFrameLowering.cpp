@@ -2344,8 +2344,8 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
 
     for (auto &CalleeSaveReg : CSI) {
       MCPhysReg Reg = CalleeSaveReg.getReg();
-      MCRegister Lower = RegInfo->getSubReg(Reg, 1);
-      MCRegister Higher = RegInfo->getSubReg(Reg, 2);
+      MCRegister Lower = RegInfo->getSubReg(Reg, PPC::sub_32);
+      MCRegister Higher = RegInfo->getSubReg(Reg, PPC::sub_32_hi_phony);
 
       if ( // Check only for SuperRegs.
           Lower &&
