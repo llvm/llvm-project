@@ -16,13 +16,18 @@ addiu $4, $5, .L0-.L1
 addiu $4, $5, .L2-.L1
 addiu $4, $5, .L2-.L0+0
 
+# CHECK:      andi $4, $5, 0xffff
+# CHECK:      slti $4, $5, -0x1
+andi $4, $5, v65535 # uimm16
+slti $4, $5, v65535 # simm16
+
 .ifdef ERR
-# ERR: :[[#@LINE+1]]:1: error: fixup value out of range [-32768, 65535]
+# ERR: :[[#@LINE+1]]:15: error: fixup value out of range [-32768, 65535]
 addiu $4, $5, v_32769
-# ERR: :[[#@LINE+1]]:1: error: fixup value out of range [-32768, 65535]
+# ERR: :[[#@LINE+1]]:21: error: fixup value out of range [-32768, 65535]
 addiu $4, $5, v65535+1
 
-# ERR: [[#@LINE+1]]:1: error: fixup value out of range [-32768, 65535]
+# ERR: [[#@LINE+1]]:18: error: fixup value out of range [-32768, 65535]
 addiu $4, $5, .L2-.L0+1
 .endif
 

@@ -735,7 +735,7 @@ unsigned MipsMCCodeEmitter::getImmOpValue(const MCInst &MI, const MCOperand &MO,
   unsigned MIFrm = MipsII::getFormat(MCII.get(MI.getOpcode()).TSFlags);
   if (!isa<MCTargetExpr>(Expr) && MIFrm == MipsII::FrmI) {
     Fixups.push_back(MCFixup::create(
-        0, Expr, MCFixupKind(Mips::fixup_Mips_AnyImm16), MI.getLoc()));
+        0, Expr, MCFixupKind(Mips::fixup_Mips_AnyImm16), Expr->getLoc()));
     return 0;
   }
   return getExprOpValue(Expr, Fixups, STI);
