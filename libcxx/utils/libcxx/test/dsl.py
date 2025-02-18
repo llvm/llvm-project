@@ -274,14 +274,38 @@ def hasAnyLocale(config, locales):
     %{exec} -- this means that the command may be executed on a remote host
     depending on the %{exec} substitution.
     """
+
+    # Some locale names contain spaces, and some embedded use cases
+    # (in particular picolibc under Arm semihosting) can't support
+    # spaces in argv words. Work around this by applying URL-style
+    # %-encoding to the locale names, and undoing it in our test
+    # program.
+    percent_encode = lambda s: ''.join(
+        "%{:02x}".format(c) if c in b' %\\"\'' or c >= 128 else chr(c)
+        for c in s.encode())
+
     program = """
     #include <stddef.h>
     #if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_LOCALIZATION
       int main(int, char**) { return 1; }
     #else
+      #include <stdlib.h>
       #include <locale.h>
       int main(int argc, char** argv) {
         for (int i = 1; i < argc; i++) {
+          // %-decode argv[i] in place
+          for (char *p = argv[i], *q = argv[i]; *p; p++) {
+            if (*p == '%') {
+              char hex[3];
+              hex[0] = *++p;
+              hex[1] = *++p;
+              hex[2] = '\\0';
+              *q++ = (char)strtoul(hex, NULL, 0);
+            } else {
+              *q++ = *p;
+            }
+          }
+          // Try to set the locale
           if (::setlocale(LC_ALL, argv[i]) != NULL) {
             return 0;
           }
@@ -290,7 +314,8 @@ def hasAnyLocale(config, locales):
       }
     #endif
   """
-    return programSucceeds(config, program, args=[shlex.quote(l) for l in locales])
+    return programSucceeds(config, program, args=[
+        shlex.quote(percent_encode(l)) for l in locales])
 
 
 @_memoizeExpensiveOperation(lambda c, flags="": (c.substitutions, c.environment, flags))
