@@ -4123,7 +4123,6 @@ private:
     Type *SourceTy = GEPI.getSourceElementType();
     // We only handle arguments, constants, and static allocas here, so we can
     // insert GEPs at the end of the entry block.
-    IRB.SetInsertPoint(GEPI.getFunction()->getEntryBlock().getTerminator());
     for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
       Value *Op = Phi->getIncomingValue(I);
       BasicBlock *BB = Phi->getIncomingBlock(I);
@@ -4132,6 +4131,7 @@ private:
         NewGEP = NewPhi->getIncomingValue(NI);
       } else {
         SmallVector<Value *> NewOps = GetNewOps(Op);
+        IRB.SetInsertPoint(BB->getTerminator());
         NewGEP =
             IRB.CreateGEP(SourceTy, NewOps[0], ArrayRef(NewOps).drop_front(),
                           Phi->getName() + ".sroa.gep", GEPI.getNoWrapFlags());

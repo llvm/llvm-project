@@ -767,7 +767,6 @@ define void @PR20822(i1 %c1, i1 %c2, ptr %ptr) {
 ; CHECK-LABEL: @PR20822(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[F1_SROA_GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[PTR:%.*]], i32 0, i32 0
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_END:%.*]], label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -775,6 +774,7 @@ define void @PR20822(i1 %c1, i1 %c2, ptr %ptr) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ poison, [[FOR_COND]] ]
 ; CHECK-NEXT:    br i1 [[C2:%.*]], label [[IF_THEN5:%.*]], label [[IF_THEN2:%.*]]
 ; CHECK:       if.then2:
+; CHECK-NEXT:    [[F1_SROA_GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[PTR:%.*]], i32 0, i32 0
 ; CHECK-NEXT:    br label [[IF_THEN5]]
 ; CHECK:       if.then5:
 ; CHECK-NEXT:    [[F1_SROA_PHI:%.*]] = phi ptr [ [[F1_SROA_GEP]], [[IF_THEN2]] ], [ [[F_SROA_0]], [[IF_END]] ]

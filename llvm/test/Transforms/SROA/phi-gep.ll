@@ -644,9 +644,9 @@ define i1 @test_phi_mem2reg_entry_block_alloca_not_at_beginning(i1 %arg) {
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr i64, ptr [[ALLOCA]], i64 1
-; CHECK-NEXT:    [[PHI_SROA_GEP1:%.*]] = getelementptr i64, ptr [[ALLOCA]], i64 2
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
+; CHECK-NEXT:    [[PHI_SROA_GEP1:%.*]] = getelementptr i64, ptr [[ALLOCA]], i64 2
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi ptr [ [[PHI_SROA_GEP]], [[BB:%.*]] ], [ [[PHI_SROA_GEP1]], [[BB2]] ]
@@ -706,9 +706,9 @@ define i64 @test_unfold_phi_duplicate_phi_entry(ptr %arg, i8 %arg1, i1 %arg2) {
 ; CHECK-LABEL: @test_unfold_phi_duplicate_phi_entry(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[ALLOCA_SROA_0:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr i64, ptr [[ARG:%.*]], i64 1
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB5:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb3:
+; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr i64, ptr [[ARG:%.*]], i64 1
 ; CHECK-NEXT:    switch i8 [[ARG1:%.*]], label [[BB4:%.*]] [
 ; CHECK-NEXT:      i8 0, label [[BB5]]
 ; CHECK-NEXT:      i8 1, label [[BB5]]
