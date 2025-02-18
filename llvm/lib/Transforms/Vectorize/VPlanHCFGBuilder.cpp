@@ -134,7 +134,8 @@ void PlainCFGBuilder::fixPhiNodes() {
     if (isHeaderBB(Phi->getParent(), L)) {
       // For header phis, make sure the incoming value from the loop
       // predecessor is the first operand of the recipe.
-      assert(Phi->getNumOperands() == 2);
+      assert(Phi->getNumOperands() == 2 &&
+             "header phi must have exactly 2 operands");
       BasicBlock *LoopPred = L->getLoopPredecessor();
       VPPhi->addOperand(
           getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopPred)));
