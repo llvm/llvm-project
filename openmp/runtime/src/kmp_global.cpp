@@ -242,11 +242,6 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     // of public intel extension schedules
 };
 
-#if KMP_OS_LINUX
-enum clock_function_type __kmp_clock_function;
-int __kmp_clock_function_param;
-#endif /* KMP_OS_LINUX */
-
 #if KMP_MIC_SUPPORTED
 enum mic_type __kmp_mic_type = non_mic;
 #endif
