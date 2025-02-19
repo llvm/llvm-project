@@ -97,6 +97,11 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
 #endif
 }
 
+template<typename T>
+struct is_arithmetic {
+  static const bool Value = __is_arithmetic(T);
+};
+
 } // namespace __detail
 } // namespace hlsl
 #endif //_HLSL_HLSL_DETAILS_H_
