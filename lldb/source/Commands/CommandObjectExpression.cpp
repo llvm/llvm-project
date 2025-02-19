@@ -458,6 +458,8 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   }
 
   if (result_valobj_sp) {
+    result.GetValueObjectList().Append(result_valobj_sp);
+
     Format format = m_format_options.GetFormat();
 
     if (result_valobj_sp->GetError().Success()) {
