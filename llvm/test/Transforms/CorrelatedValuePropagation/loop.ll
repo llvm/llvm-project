@@ -2,7 +2,7 @@
 ; RUN: opt -passes=correlated-propagation -S %s | FileCheck %s
 
 define i64 @test_self_loop(i64 %x, i1 %cond) {
-; CHECK-LABEL: define range(i64 0, -9223372036854775808) i64 @test_self_loop(
+; CHECK-LABEL: define range(i64 0, 576460752303423488) i64 @test_self_loop(
 ; CHECK-SAME: i64 [[X:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp ugt i64 [[X]], 576460752303423487
@@ -13,10 +13,9 @@ define i64 @test_self_loop(i64 %x, i1 %cond) {
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND2]], label %[[COMMON_RET]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[X]], i64 1)
 ; CHECK-NEXT:    br label %[[COMMON_RET]]
 ; CHECK:       [[COMMON_RET]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[SMAX]], %[[EXIT]] ], [ 0, %[[INDIRECT]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[X]], %[[EXIT]] ], [ 0, %[[INDIRECT]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
