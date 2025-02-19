@@ -42,12 +42,11 @@ int main(int argc, char** argv) {
             std::vector<ValueType> out(size);
 
             for ([[maybe_unused]] auto _ : st) {
-              auto result = remove_copy(c.begin(), c.end(), out.begin(), x);
-              benchmark::DoNotOptimize(result);
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(out);
               benchmark::DoNotOptimize(x);
-              benchmark::ClobberMemory();
+              auto result = remove_copy(c.begin(), c.end(), out.begin(), x);
+              benchmark::DoNotOptimize(result);
             }
           })
           ->Arg(32)
@@ -81,12 +80,11 @@ int main(int argc, char** argv) {
             std::vector<ValueType> out(size);
 
             for ([[maybe_unused]] auto _ : st) {
-              auto result = remove_copy(c.begin(), c.end(), out.begin(), x);
-              benchmark::DoNotOptimize(result);
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(out);
               benchmark::DoNotOptimize(x);
-              benchmark::ClobberMemory();
+              auto result = remove_copy(c.begin(), c.end(), out.begin(), x);
+              benchmark::DoNotOptimize(result);
             }
           })
           ->Arg(32)

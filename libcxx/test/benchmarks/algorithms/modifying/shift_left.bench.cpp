@@ -36,10 +36,9 @@ int main(int argc, char** argv) {
             auto const n = 9 * (size / 10); // shift all but 10% of the range
 
             for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
               auto result = shift_left(c.begin(), c.end(), n);
               benchmark::DoNotOptimize(result);
-              benchmark::DoNotOptimize(c);
-              benchmark::ClobberMemory();
             }
           })
           ->Arg(32)

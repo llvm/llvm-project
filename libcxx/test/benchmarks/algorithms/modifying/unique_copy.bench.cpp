@@ -40,10 +40,10 @@ int main(int argc, char** argv) {
             std::vector<ValueType> out(size);
 
             for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              benchmark::DoNotOptimize(out);
               auto result = unique_copy(c.begin(), c.end(), out.begin());
               benchmark::DoNotOptimize(result);
-              benchmark::DoNotOptimize(c);
-              benchmark::ClobberMemory();
             }
           })
           ->Arg(32)
@@ -81,10 +81,10 @@ int main(int argc, char** argv) {
             std::vector<ValueType> out(size);
 
             for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              benchmark::DoNotOptimize(out);
               auto result = unique_copy(c.begin(), c.end(), out.begin());
               benchmark::DoNotOptimize(result);
-              benchmark::DoNotOptimize(c);
-              benchmark::ClobberMemory();
             }
           })
           ->Arg(32)

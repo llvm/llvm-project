@@ -44,16 +44,15 @@ int main(int argc, char** argv) {
             std::fill_n(std::back_inserter(c), size / 2, y);
 
             for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              benchmark::DoNotOptimize(z);
               auto pred = [&x](auto& element) {
                 benchmark::DoNotOptimize(element);
                 return element == x;
               };
               replace_if(c.begin(), c.end(), pred, z);
-              std::swap(x, z);
               benchmark::DoNotOptimize(c);
-              benchmark::DoNotOptimize(x);
-              benchmark::DoNotOptimize(z);
-              benchmark::ClobberMemory();
+              std::swap(x, z);
             }
           })
           ->Arg(32)
@@ -85,16 +84,15 @@ int main(int argc, char** argv) {
             }
 
             for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              benchmark::DoNotOptimize(z);
               auto pred = [&x](auto& element) {
                 benchmark::DoNotOptimize(element);
                 return element == x;
               };
               replace_if(c.begin(), c.end(), pred, z);
-              std::swap(x, z);
               benchmark::DoNotOptimize(c);
-              benchmark::DoNotOptimize(x);
-              benchmark::DoNotOptimize(z);
-              benchmark::ClobberMemory();
+              std::swap(x, z);
             }
           })
           ->Arg(32)

@@ -45,12 +45,11 @@ int main(int argc, char** argv) {
             };
 
             for ([[maybe_unused]] auto _ : st) {
-              auto result = transform(c1.begin(), c1.end(), c2.begin(), c2.end(), out.begin(), f);
-              benchmark::DoNotOptimize(result);
-              benchmark::DoNotOptimize(out);
               benchmark::DoNotOptimize(c1);
               benchmark::DoNotOptimize(c2);
-              benchmark::ClobberMemory();
+              benchmark::DoNotOptimize(out);
+              auto result = transform(c1.begin(), c1.end(), c2.begin(), c2.end(), out.begin(), f);
+              benchmark::DoNotOptimize(result);
             }
           })
           ->Arg(32)

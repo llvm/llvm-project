@@ -27,16 +27,16 @@ int main(int argc, char** argv) {
   {
     auto bm = []<class Container>(std::string name, auto move_backward) {
       benchmark::RegisterBenchmark(name, [move_backward](auto& st) {
-        std::size_t const n = st.range(0);
-        using ValueType     = typename Container::value_type;
-        Container c1(n), c2(n);
-        std::generate_n(c1.begin(), n, [] { return Generate<ValueType>::random(); });
+        std::size_t const size = st.range(0);
+        using ValueType        = typename Container::value_type;
+        Container c1(size), c2(size);
+        std::generate_n(c1.begin(), size, [] { return Generate<ValueType>::random(); });
 
         Container* in  = &c1;
         Container* out = &c2;
         for ([[maybe_unused]] auto _ : st) {
-          benchmark::DoNotOptimize(c1);
-          benchmark::DoNotOptimize(c2);
+          benchmark::DoNotOptimize(in);
+          benchmark::DoNotOptimize(out);
           auto result = move_backward(in->begin(), in->end(), out->end());
           benchmark::DoNotOptimize(result);
           std::swap(in, out);
@@ -55,24 +55,19 @@ int main(int argc, char** argv) {
   {
     auto bm = []<bool Aligned>(std::string name, auto move_backward) {
       benchmark::RegisterBenchmark(name, [move_backward](auto& st) {
-        std::size_t const n = st.range(0);
-        std::vector<bool> c1(n, true);
-        std::vector<bool> c2(n, false);
+        std::size_t const size = st.range(0);
+        std::vector<bool> c1(size, true);
+        std::vector<bool> c2(size, false);
 
         std::vector<bool>* in  = &c1;
         std::vector<bool>* out = &c2;
         for (auto _ : st) {
-          auto first1 = in->begin();
-          auto last1  = in->end();
-          auto last2  = out->end();
-          if constexpr (Aligned) {
-            benchmark::DoNotOptimize(move_backward(first1, last1, last2));
-          } else {
-            benchmark::DoNotOptimize(move_backward(first1, last1 - 4, last2));
-          }
-          std::swap(in, out);
           benchmark::DoNotOptimize(in);
           benchmark::DoNotOptimize(out);
+          auto last   = Aligned ? in->end() : in->end() - 4;
+          auto result = move_backward(in->begin(), last, out->end());
+          benchmark::DoNotOptimize(result);
+          std::swap(in, out);
         }
       })->Range(64, 1 << 20);
     };

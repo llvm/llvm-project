@@ -39,20 +39,17 @@ int main(int argc, char** argv) {
             std::fill_n(std::back_inserter(c), size / 2, x);
             std::fill_n(std::back_inserter(c), size / 2, y);
 
-            auto pred = [&](auto& element) {
-              benchmark::DoNotOptimize(element);
-              return element == x;
-            };
-
             std::vector<ValueType> out(size);
 
             for ([[maybe_unused]] auto _ : st) {
-              auto result = remove_copy_if(c.begin(), c.end(), out.begin(), pred);
-              benchmark::DoNotOptimize(result);
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(out);
-              benchmark::DoNotOptimize(x);
-              benchmark::ClobberMemory();
+              auto pred = [&x](auto& element) {
+                benchmark::DoNotOptimize(element);
+                return element == x;
+              };
+              auto result = remove_copy_if(c.begin(), c.end(), out.begin(), pred);
+              benchmark::DoNotOptimize(result);
             }
           })
           ->Arg(32)
@@ -83,20 +80,17 @@ int main(int argc, char** argv) {
               c.push_back(i % 2 == 0 ? x : y);
             }
 
-            auto pred = [&](auto& element) {
-              benchmark::DoNotOptimize(element);
-              return element == x;
-            };
-
             std::vector<ValueType> out(size);
 
             for ([[maybe_unused]] auto _ : st) {
-              auto result = remove_copy_if(c.begin(), c.end(), out.begin(), pred);
-              benchmark::DoNotOptimize(result);
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(out);
-              benchmark::DoNotOptimize(x);
-              benchmark::ClobberMemory();
+              auto pred = [&](auto& element) {
+                benchmark::DoNotOptimize(element);
+                return element == x;
+              };
+              auto result = remove_copy_if(c.begin(), c.end(), out.begin(), pred);
+              benchmark::DoNotOptimize(result);
             }
           })
           ->Arg(32)
