@@ -293,8 +293,8 @@ static RValue emitBinaryAtomic(CIRGenFunction &CGF, cir::AtomicFetchKind kind,
 
 static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
                                    cir::AtomicFetchKind atomicOpkind,
-                                   const CallExpr *e,
-                                   cir::BinOpKind binopKind) {
+                                   const CallExpr *e, cir::BinOpKind binopKind,
+                                   bool invert = false) {
   mlir::Value val;
   mlir::Type valueType;
   clang::QualType typ = e->getType();
@@ -302,12 +302,10 @@ static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
       makeBinaryAtomicValue(cgf, atomicOpkind, e, &val, &valueType);
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
   result = builder.create<cir::BinOp>(result.getLoc(), binopKind, result, val);
+  if (invert)
+    result = builder.create<cir::UnaryOp>(result.getLoc(),
+                                          cir::UnaryOpKind::Not, result);
   result = emitFromInt(cgf, result, typ, valueType);
-  // FIXME: Some callers of this function expect the result to be inverted,
-  // which would need invert flag passed in and do the inversion here like
-  // traditional clang code gen does. When we implment those caller builtins
-  // we should implement the inversion here.
-  assert(!MissingFeatures::emitBinaryAtomicPostHasInvert());
   return RValue::get(result);
 }
 
@@ -1841,7 +1839,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_nand_and_fetch_4:
   case Builtin::BI__sync_nand_and_fetch_8:
   case Builtin::BI__sync_nand_and_fetch_16:
-    llvm_unreachable("BI__sync_nand_and_fetch like NYI");
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Nand, E,
+                                cir::BinOpKind::And, true);
 
   case Builtin::BI__sync_val_compare_and_swap_1:
   case Builtin::BI__sync_val_compare_and_swap_2:
