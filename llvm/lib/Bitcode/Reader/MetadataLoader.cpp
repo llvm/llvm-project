@@ -1229,13 +1229,13 @@ static Value *getValueFwdRef(BitcodeReaderValueList &ValueList, unsigned Idx,
 
   // This is a reference to a no longer supported constant expression.
   // Pretend that the constant was deleted, which will replace metadata
-  // references with undef.
+  // references with poison.
   // TODO: This is a rather indirect check. It would be more elegant to use
   // a separate ErrorInfo for constant materialization failure and thread
   // the error reporting through getValueFwdRef().
   if (Idx < ValueList.size() && ValueList[Idx] &&
       ValueList[Idx]->getType() == Ty)
-    return UndefValue::get(Ty);
+    return PoisonValue::get(Ty);
 
   return nullptr;
 }
