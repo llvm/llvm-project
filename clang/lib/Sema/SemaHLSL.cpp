@@ -2558,6 +2558,29 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
     break;
   }
+
+    case Builtin::BI__builtin_hlsl_or: {
+      if (SemaRef.checkArgCount(TheCall, 2))
+        return true;
+     if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+       return true;
+
+    //Ensure input parameter type is bool
+     ExprResult A = TheCall->getArg(0);
+     QualType ArgTyA = A.get()->getType();
+     ExprResult B = TheCall->getArg(1);
+     QualType ArgTyB = B.get()->getType();
+     if (!ArgTyA->isBooleanType() || !ArgTyB->isBooleanType()) {
+       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                    diag::err_typecheck_convert_incompatible)
+           << ArgTyA << SemaRef.Context.BoolTy << 1 << 0 << 0;
+       return true;
+     }
+    // Ensure input expr type is a scalar/vector and the same as the return type
+     if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+       return true;
+     break;
+   }
   }
   return false;
 }

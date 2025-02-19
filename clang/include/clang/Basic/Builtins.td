@@ -98,7 +98,7 @@ def AcoshF128 : Builtin {
 }
 
 def AsinF16F128 : Builtin, F16F128MathTemplate {
-  let Spellings = ["__builtin_asin"];
+  let Spellings = ["__builtin_asin"];   
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T)";
@@ -1237,6 +1237,7 @@ def NondetermenisticValue : Builtin {
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
+
 
 def ElementwiseAbs : Builtin {
   let Spellings = ["__builtin_elementwise_abs"];
@@ -4967,6 +4968,11 @@ def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_group_memory_barrier_with_group_sync"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void()";
+}
+def HLSLOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_or"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 // Builtins for XRay.
