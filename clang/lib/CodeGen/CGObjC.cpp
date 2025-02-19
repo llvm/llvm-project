@@ -781,19 +781,15 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
                 OMD->getLocation(), StartLoc);
 
   if (OMD->isDirectMethod()) {
-    if (CGM.getLangOpts().ObjCRuntime.isNeXTFamily()) {
-      // Having `InnerFn` indicates that we are generating a nil check thunk.
-      // In that case our job is done here.
-      if (InnerFn)
-        return;
-      if (CGM.shouldHaveNilCheckThunk(OMD))
-        // Go generate  a nil check thunk around `Fn`
-        CodeGenFunction(CGM, /*InnerFn=*/Fn).GenerateObjCDirectThunk(OMD, CD);
-      CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
-    } else {
-      // For GNU family, since GNU Step2 also supports direct methods now.
-      CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
-    }
+    // Having `InnerFn` indicates that we are generating a nil check thunk.
+    // In that case our job is done here.
+    if (InnerFn)
+      return;
+    // Only NeXTFamily can have nil check thunk.
+    if (CGM.shouldHaveNilCheckThunk(OMD))
+      // Go generate  a nil check thunk around `Fn`
+      CodeGenFunction(CGM, /*InnerFn=*/Fn).GenerateObjCDirectThunk(OMD, CD);
+    CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
   }
 
   // In ARC, certain methods get an extra cleanup.
