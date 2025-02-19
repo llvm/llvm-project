@@ -7,8 +7,11 @@
 ; RUN: opt %s -S -module-summary -o - | llvm-as -o - | llvm-dis -o - | FileCheck %s
 
 ;; These summary entries should get numbered differently.
+;; When virtual function elimination is not enabled (the default case),
+;; there is no need to generate typeidCompatibleVTable entries for virtual functions.
 ; CHECK: ^2 = gv: (name: "_ZTS1A"
 ; CHECK: ^6 = typeidCompatibleVTable: (name: "_ZTS1A"
+; CHECK-NOT: typeidCompatibleVTable: (name: "_ZTSM1AFivE.virtual"
 
 ; ModuleID = 'thinlto-vtable-summary2.cc'
 source_filename = "thinlto-vtable-summary2.cc"

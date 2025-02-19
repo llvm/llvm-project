@@ -814,7 +814,7 @@ static void computeVTableFuncs(ModuleSummaryIndex &Index,
 /// Record vtable definition \p V for each type metadata it references.
 static void
 recordTypeIdCompatibleVtableReferences(ModuleSummaryIndex &Index,
-                                       const GlobalVariable &V,
+                                       const GlobalVariable &V, const bool VFE,
                                        SmallVectorImpl<MDNode *> &Types) {
   for (MDNode *Type : Types) {
     auto TypeID = Type->getOperand(1).get();
@@ -824,16 +824,21 @@ recordTypeIdCompatibleVtableReferences(ModuleSummaryIndex &Index,
             cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
             ->getZExtValue();
 
-    if (auto *TypeId = dyn_cast<MDString>(TypeID))
-      Index.getOrInsertTypeIdCompatibleVtableSummary(TypeId->getString())
-          .push_back({Offset, Index.getOrInsertValueInfo(&V)});
+    if (auto *TypeId = dyn_cast<MDString>(TypeID)) {
+      StringRef TypeIdStr = TypeId->getString();
+      // Skip virtual function entries if VFE is not enabled.
+      if (!VFE && TypeIdStr.ends_with(".virtual"))
+        continue;
+      Index.getOrInsertTypeIdCompatibleVtableSummary(TypeIdStr).push_back(
+          {Offset, Index.getOrInsertValueInfo(&V)});
+    }
   }
 }
 
 static void computeVariableSummary(ModuleSummaryIndex &Index,
                                    const GlobalVariable &V,
                                    DenseSet<GlobalValue::GUID> &CantBePromoted,
-                                   const Module &M,
+                                   const Module &M, const bool VFE,
                                    SmallVectorImpl<MDNode *> &Types) {
   SetVector<ValueInfo, SmallVector<ValueInfo, 0>> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
@@ -858,7 +863,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
       computeVTableFuncs(Index, V, M, VTableFuncs);
 
       // Record this vtable definition for each type metadata it references.
-      recordTypeIdCompatibleVtableReferences(Index, V, Types);
+      recordTypeIdCompatibleVtableReferences(Index, V, VFE, Types);
     }
   }
 
@@ -911,20 +916,25 @@ static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
       Summary->setLive(true);
 }
 
+// If \p M has a integer module flag with \p Name, returns true if the value is
+// non-zero and false if the value is zero. If the module flag does not exist,
+// returns \p Default.
+static bool getModuleFlag(const Module &M, StringRef Name,
+                          bool Default = false) {
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Name)))
+    return MD->getZExtValue() != 0;
+  return Default;
+}
+
 ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
     ProfileSummaryInfo *PSI,
     std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   assert(PSI);
-  bool EnableSplitLTOUnit = false;
-  bool UnifiedLTO = false;
-  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("EnableSplitLTOUnit")))
-    EnableSplitLTOUnit = MD->getZExtValue();
-  if (auto *MD =
-          mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("UnifiedLTO")))
-    UnifiedLTO = MD->getZExtValue();
+  const bool EnableSplitLTOUnit = getModuleFlag(M, "EnableSplitLTOUnit");
+  const bool UnifiedLTO = getModuleFlag(M, "UnifiedLTO");
+
   ModuleSummaryIndex Index(/*HaveGVs=*/true, EnableSplitLTOUnit, UnifiedLTO);
 
   // Identify the local values in the llvm.used and llvm.compiler.used sets,
@@ -1014,10 +1024,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
         });
   }
 
-  bool IsThinLTO = true;
-  if (auto *MD =
-          mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("ThinLTO")))
-    IsThinLTO = MD->getZExtValue();
+  const bool IsThinLTO = getModuleFlag(M, "ThinLTO", /*Default=*/true);
 
   // Compute summaries for all functions defined in module, and save in the
   // index.
@@ -1042,13 +1049,15 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                            CantBePromoted, IsThinLTO, GetSSICallback);
   }
 
+  const bool VFE = getModuleFlag(M, "Virtual Function Elim");
+
   // Compute summaries for all variables defined in module, and save in the
   // index.
   SmallVector<MDNode *, 2> Types;
   for (const GlobalVariable &G : M.globals()) {
     if (G.isDeclaration())
       continue;
-    computeVariableSummary(Index, G, CantBePromoted, M, Types);
+    computeVariableSummary(Index, G, CantBePromoted, M, VFE, Types);
   }
 
   // Compute summaries for all aliases defined in module, and save in the
