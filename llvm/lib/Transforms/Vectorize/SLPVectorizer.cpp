@@ -5991,7 +5991,7 @@ bool BoUpSLP::isProfitableToReorder() const {
       !VectorizableTree.front()->isGather() &&
       (VectorizableTree.front()->getOpcode() == Instruction::Store ||
        VectorizableTree.front()->getOpcode() == Instruction::PHI ||
-       (VectorizableTree.front()->getVectorFactor() == TinyVF &&
+       (VectorizableTree.front()->getVectorFactor() <= TinyVF &&
         (VectorizableTree.front()->getOpcode() == Instruction::PtrToInt ||
          VectorizableTree.front()->getOpcode() == Instruction::ICmp))) &&
       VectorizableTree.front()->ReorderIndices.empty()) {
