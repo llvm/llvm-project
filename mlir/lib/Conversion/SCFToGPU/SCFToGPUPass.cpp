@@ -34,7 +34,7 @@ namespace {
 // walk the function recursively to avoid considering nested loops.
 struct ForLoopMapper
     : public impl::ConvertAffineForToGPUPassBase<ForLoopMapper> {
-  using ConvertAffineForToGPUPassBase::ConvertAffineForToGPUPassBase;
+  using Base::Base;
 
   void runOnOperation() override {
     for (Operation &op : llvm::make_early_inc_range(
