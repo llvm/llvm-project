@@ -170,6 +170,7 @@ Bug Fixes to C++ Support
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
+- Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
