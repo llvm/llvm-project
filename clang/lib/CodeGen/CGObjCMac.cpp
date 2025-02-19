@@ -3946,9 +3946,8 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
   bool ReceiverCanBeNull = true;
   auto selfAddr = CGF.GetAddrOfLocalVar(OMD->getSelfDecl());
   auto selfValue = Builder.CreateLoad(selfAddr);
-  bool shouldHaveNilCheckThunk =
-      CGF.CGM.shouldHaveNilCheckThunk(OMD) bool isNilCheckThunk =
-          shouldHaveNilCheckThunk && CGF.InnerFn;
+  bool shouldHaveNilCheckThunk = CGF.CGM.shouldHaveNilCheckThunk(OMD);
+  bool isNilCheckThunk = shouldHaveNilCheckThunk && CGF.InnerFn;
 
   // Generate:
   //
@@ -3992,8 +3991,7 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
 
   // Only emit nil check if this is a nil check thunk or the method
   // decides that its receiver can be null
-  if (isNilCheckThunk ||
-      (!CGF.CGM.shouldHaveNilCheckThunk(OMD) && ReceiverCanBeNull)) {
+  if (isNilCheckThunk || (!shouldHaveNilCheckThunk && ReceiverCanBeNull)) {
     llvm::BasicBlock *SelfIsNilBlock =
         CGF.createBasicBlock("objc_direct_method.self_is_nil");
     llvm::BasicBlock *ContBlock =
