@@ -11,10 +11,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <cstddef>
-#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -331,7 +328,6 @@ Error DirectX::RootSignature::parse(StringRef Data) {
     } break;
     case dxbc::RootParameterType::Empty:
       llvm_unreachable("Invalid value for RootParameterType");
-      break;
     }
 
     Parameters.push_back(NewParam);

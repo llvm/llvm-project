@@ -7,27 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/DXContainerRootSignature.h"
-#include "llvm/ADT/bit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
-#include <sys/types.h>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
 
 void RootSignatureDesc::write(raw_ostream &OS) const {
+  // Root signature header in dxcontainer has 6 uint_32t values.
   const uint32_t HeaderSize = 24;
   const uint32_t ParameterByteSize = Parameters.size_in_bytes();
+  const uint32_t NumParametes = Parameters.size();
+  const uint32_t Zero = 0;
 
   // Writing header information
   support::endian::write(OS, Header.Version, llvm::endianness::little);
-  support::endian::write(OS, (uint32_t)Parameters.size(),
-                         llvm::endianness::little);
+  support::endian::write(OS, NumParametes, llvm::endianness::little);
   support::endian::write(OS, HeaderSize, llvm::endianness::little);
-  support::endian::write(OS, ((uint32_t)0), llvm::endianness::little);
-  // TODO: this value means nothing right now...
+
+  // Static samplers still not implemented
+  support::endian::write(OS, Zero, llvm::endianness::little);
   support::endian::write(OS, ParameterByteSize + HeaderSize,
                          llvm::endianness::little);
 

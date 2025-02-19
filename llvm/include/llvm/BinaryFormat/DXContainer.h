@@ -14,11 +14,9 @@
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <cstdint>
 #include <stdint.h>
 
 namespace llvm {
@@ -579,7 +577,7 @@ struct RootConstants {
 struct RootParameter {
   dxbc::RootParameterType ParameterType;
   union {
-    RootConstants Constants;
+    dxbc::RootConstants Constants;
   };
   dxbc::ShaderVisibilityFlag ShaderVisibility;
 
@@ -594,7 +592,6 @@ struct RootParameter {
     sys::swapByteOrder(ParameterType);
     sys::swapByteOrder(ShaderVisibility);
     switch (ParameterType) {
-
     case RootParameterType::Constants32Bit:
       Constants.swapBytes();
       break;

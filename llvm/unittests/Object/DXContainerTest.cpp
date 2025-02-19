@@ -14,7 +14,6 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::object;
