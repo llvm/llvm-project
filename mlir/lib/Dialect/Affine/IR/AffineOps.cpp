@@ -3918,14 +3918,24 @@ LogicalResult AffineParallelOp::verify() {
   }
 
   unsigned expectedNumLBResults = 0;
-  for (APInt v : getLowerBoundsGroups())
-    expectedNumLBResults += v.getZExtValue();
+  for (APInt v : getLowerBoundsGroups()) {
+    unsigned results = v.getZExtValue();
+    if (results == 0)
+      return emitOpError()
+             << "expected lower bound map to have at least one result";
+    expectedNumLBResults += results;
+  }
   if (expectedNumLBResults != getLowerBoundsMap().getNumResults())
     return emitOpError() << "expected lower bounds map to have "
                          << expectedNumLBResults << " results";
   unsigned expectedNumUBResults = 0;
-  for (APInt v : getUpperBoundsGroups())
-    expectedNumUBResults += v.getZExtValue();
+  for (APInt v : getUpperBoundsGroups()) {
+    unsigned results = v.getZExtValue();
+    if (results == 0)
+      return emitOpError()
+             << "expected upper bound map to have at least one result";
+    expectedNumUBResults += results;
+  }
   if (expectedNumUBResults != getUpperBoundsMap().getNumResults())
     return emitOpError() << "expected upper bounds map to have "
                          << expectedNumUBResults << " results";

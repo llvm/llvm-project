@@ -7704,6 +7704,48 @@ defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<Int64Regs, "shared", "2">;
 defm TCGEN05_COMMIT_S32_CG1 : TCGEN05_COMMIT_INTR<Int32Regs, "shared", "1">;
 defm TCGEN05_COMMIT_S32_CG2 : TCGEN05_COMMIT_INTR<Int32Regs, "shared", "2">;
 
+multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins Int32Regs:$tmem_addr),
+             !strconcat("tcgen05.shift.cta_group::", num, ".down [$tmem_addr];"),
+             [(Intr Int32Regs:$tmem_addr)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_SHIFT_CG1: TCGEN05_SHIFT_INTR<"1", int_nvvm_tcgen05_shift_down_cg1>;
+defm TCGEN05_SHIFT_CG2: TCGEN05_SHIFT_INTR<"2", int_nvvm_tcgen05_shift_down_cg2>;
+
+multiclass TCGEN05_CP_INTR<string shape, string src_fmt, string mc = ""> {
+  defvar dst_fmt = !if(!eq(src_fmt, ""), "", ".b8x16");
+  defvar fmt_asm = StrJoin<".", [dst_fmt, src_fmt]>.ret;
+  defvar fmt_intr = StrJoin<"_", [src_fmt]>.ret;
+
+  defvar shape_mc_asm = StrJoin<".", [shape, mc]>.ret;
+  defvar shape_mc_intr = !subst("::", "_", !subst(".", "_", shape_mc_asm));
+
+  defvar intr_prefix = StrJoin<"_", ["int_nvvm_tcgen05_cp", shape_mc_intr, fmt_intr]>.ret;
+  defvar IntrCG1 = !cast<Intrinsic>(intr_prefix # "_cg1");
+  defvar IntrCG2 = !cast<Intrinsic>(intr_prefix # "_cg2");
+
+  def NAME # _cg1 : NVPTXInst<(outs),
+                    (ins Int32Regs:$tmem_addr, Int64Regs:$sdesc),
+                    "tcgen05.cp.cta_group::1." # shape_mc_asm # fmt_asm # " [$tmem_addr], $sdesc;",
+                    [(IntrCG1 Int32Regs:$tmem_addr, Int64Regs:$sdesc)]>,
+                    Requires<[hasTcgen05Instructions]>;
+  def NAME # _cg2 : NVPTXInst<(outs),
+                    (ins Int32Regs:$tmem_addr, Int64Regs:$sdesc),
+                    "tcgen05.cp.cta_group::2." # shape_mc_asm # fmt_asm # " [$tmem_addr], $sdesc;",
+                    [(IntrCG2 Int32Regs:$tmem_addr, Int64Regs:$sdesc)]>,
+                    Requires<[hasTcgen05Instructions]>;
+}
+
+foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
+  defm TCGEN05_CP_128x256b # src_fmt : TCGEN05_CP_INTR<"128x256b", src_fmt>;
+  defm TCGEN05_CP_4x256b # src_fmt   : TCGEN05_CP_INTR<"4x256b", src_fmt>;
+  defm TCGEN05_CP_128x128b # src_fmt : TCGEN05_CP_INTR<"128x128b", src_fmt>;
+  defm TCGEN05_CP_64x128_1 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::02_13">;
+  defm TCGEN05_CP_64x128_2 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::01_23">;
+  defm TCGEN05_CP_32x128 # src_fmt   : TCGEN05_CP_INTR<"32x128b", src_fmt, "warpx4">;
+}
 } // isConvergent
 
 let hasSideEffects = 1 in {

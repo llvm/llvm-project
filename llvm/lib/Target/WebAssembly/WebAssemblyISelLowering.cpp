@@ -377,11 +377,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   setMaxAtomicSizeInBitsSupported(64);
 
-  // Override the __gnu_f2h_ieee/__gnu_h2f_ieee names so that the f32 name is
-  // consistent with the f64 and f128 names.
-  setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
-  setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
-
   // Define the emscripten name for return address helper.
   // TODO: when implementing other Wasm backends, make this generic or only do
   // this on emscripten depending on what they end up doing.

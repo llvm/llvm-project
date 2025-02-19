@@ -1549,9 +1549,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.useRVVForFixedLengthVectors())
     setTargetDAGCombine(ISD::BITCAST);
 
-  setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
-  setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
-
   // Disable strict node mutation.
   IsStrictFPEnabled = true;
   EnableExtLdPromotion = true;
@@ -19460,6 +19457,11 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 
     // Only known if known in both the LHS and RHS.
     Known = Known.intersectWith(Known2);
+    break;
+  }
+  case RISCVISD::VCPOP_VL: {
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
+    Known.Zero.setBitsFrom(Known2.countMaxActiveBits());
     break;
   }
   case RISCVISD::CZERO_EQZ:

@@ -239,7 +239,7 @@ static constexpr CustomOperand Operands[] = {
   // Register numbers reused in GFX13+
   {{"HW_REG_WAVE_GROUP_INFO"},     ID_WAVE_GROUP_INFO,     isGFX13Plus},
 
-  // GFX940 specific registers
+  // GFX942 specific registers
   {{"HW_REG_XCC_ID"},                 ID_XCC_ID,                 isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA"},  ID_SQ_PERF_SNAPSHOT_DATA,  isGFX940},
   {{"HW_REG_SQ_PERF_SNAPSHOT_DATA1"}, ID_SQ_PERF_SNAPSHOT_DATA1, isGFX940},

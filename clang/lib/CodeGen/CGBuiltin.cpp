@@ -859,6 +859,24 @@ static void emitSincosBuiltin(CodeGenFunction &CGF, const CallExpr *E,
   StoreCos->setMetadata(LLVMContext::MD_noalias, AliasScopeList);
 }
 
+static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+                                    llvm::Intrinsic::ID IntrinsicID) {
+  llvm::Value *Val = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *IntPartDest = CGF.EmitScalarExpr(E->getArg(1));
+
+  llvm::Value *Call =
+      CGF.Builder.CreateIntrinsic(IntrinsicID, {Val->getType()}, Val);
+
+  llvm::Value *FractionalResult = CGF.Builder.CreateExtractValue(Call, 0);
+  llvm::Value *IntegralResult = CGF.Builder.CreateExtractValue(Call, 1);
+
+  QualType DestPtrType = E->getArg(1)->getType()->getPointeeType();
+  LValue IntegralLV = CGF.MakeNaturalAlignAddrLValue(IntPartDest, DestPtrType);
+  CGF.EmitStoreOfScalar(IntegralResult, IntegralLV);
+
+  return FractionalResult;
+}
+
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
   Function *F = CGF.CGM.getIntrinsic(Intrinsic::fabs, V->getType());
@@ -3377,11 +3395,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::sinh, Intrinsic::experimental_constrained_sinh));
 
+    case Builtin::BIsincos:
+    case Builtin::BIsincosf:
+    case Builtin::BIsincosl:
     case Builtin::BI__builtin_sincos:
     case Builtin::BI__builtin_sincosf:
     case Builtin::BI__builtin_sincosf16:
     case Builtin::BI__builtin_sincosl:
     case Builtin::BI__builtin_sincosf128:
+      if (Builder.getIsFPConstrained())
+        break; // TODO: Emit constrained sincos intrinsic once one exists.
       emitSincosBuiltin(*this, E, Intrinsic::sincos);
       return RValue::get(nullptr);
 
@@ -4107,6 +4130,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_frexpf128:
   case Builtin::BI__builtin_frexpf16:
     return RValue::get(emitFrexpBuiltin(*this, E, Intrinsic::frexp));
+  case Builtin::BImodf:
+  case Builtin::BImodff:
+  case Builtin::BImodfl:
+  case Builtin::BI__builtin_modf:
+  case Builtin::BI__builtin_modff:
+  case Builtin::BI__builtin_modfl:
+    if (Builder.getIsFPConstrained())
+      break; // TODO: Emit constrained modf intrinsic once one exists.
+    return RValue::get(emitModfBuiltin(*this, E, Intrinsic::modf));
   case Builtin::BI__builtin_isgreater:
   case Builtin::BI__builtin_isgreaterequal:
   case Builtin::BI__builtin_isless:

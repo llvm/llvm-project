@@ -584,7 +584,7 @@ enum Id { // HwRegCode, (6) [5:0]
   // Register numbers reused in GFX13+
   ID_WAVE_GROUP_INFO = 27,
 
-  // GFX940 specific registers
+  // GFX94* specific registers
   ID_XCC_ID = 20,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
