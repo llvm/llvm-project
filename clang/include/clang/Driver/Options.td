@@ -942,7 +942,9 @@ def Xarch__
   CPU, triple architecture, or offloading host and device. It is most useful
   for separating behavior undesirable on one of the targets when combining many
   compilation jobs, as is commong with offloading. For example, -Xarch_x86_64,
-  -Xarch_gfx90a, and -Xarch_device are all valid selectors.}]>,
+  -Xarch_gfx90a, and -Xarch_device are all valid selectors. -Xarch_device will
+  forward the argument to the offloading device while -Xarch_host will target
+  the host system, which can be used to suppress incompatible GPU arguments.}]>,
       MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
   HelpText<"Pass <arg> to the CUDA/HIP host compilation">, MetaVarName<"<arg>">;
