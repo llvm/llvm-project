@@ -186,9 +186,52 @@ Decl *SemaObjC::ActOnProperty(Scope *S, SourceLocation AtLoc,
   bool isReadWrite = ((Attributes & ObjCPropertyAttribute::kind_readwrite) ||
                       // default is readwrite!
                       !(Attributes & ObjCPropertyAttribute::kind_readonly));
+  ObjCContainerDecl *ClassDecl = cast<ObjCContainerDecl>(SemaRef.CurContext);
+
+  // If the property is in a category, check the name of the category to
+  // see if we're supposed to be using a prefix on the property name.
+  if (ObjCCategoryDecl *Cat = dyn_cast<ObjCCategoryDecl>(ClassDecl)) {
+    ObjCInterfaceDecl *Interface = Cat->getClassInterface();
+    if (!SemaRef.getSourceManager().isInSystemHeader(AtLoc) &&
+        ValidateObjCPublicName(Interface->getName()) != ObjCNameAllowed) {
+      SourceLocation GetterLoc = ODS.getGetterName()
+                                     ? ODS.getGetterNameLoc()
+                                     : FD.D.getSourceRange().getBegin();
+      switch (ValidateObjCForeignCategorySelector(GetterSel)) {
+      case ObjCNameUnprefixed:
+        Diag(GetterLoc, diag::warn_objc_unprefixed_category_method_name);
+        break;
+      case ObjCNameNotAllowed:
+        Diag(GetterLoc, diag::warn_objc_bad_category_method_name_prefix);
+        break;
+      case ObjCNameForbidden:
+        Diag(GetterLoc, diag::warn_objc_forbidden_category_method_name_prefix);
+        break;
+      case ObjCNameAllowed:
+        break;
+      }
+
+      if (ODS.getSetterName()) {
+        SourceLocation SetterLoc = ODS.getSetterNameLoc();
+        switch (ValidateObjCForeignCategorySelector(SetterSel)) {
+        case ObjCNameUnprefixed:
+          Diag(SetterLoc, diag::warn_objc_unprefixed_category_method_name);
+          break;
+        case ObjCNameNotAllowed:
+          Diag(SetterLoc, diag::warn_objc_bad_category_method_name_prefix);
+          break;
+        case ObjCNameForbidden:
+          Diag(SetterLoc,
+               diag::warn_objc_forbidden_category_method_name_prefix);
+          break;
+        case ObjCNameAllowed:
+          break;
+        }
+      }
+    }
+  }
 
   // Proceed with constructing the ObjCPropertyDecls.
-  ObjCContainerDecl *ClassDecl = cast<ObjCContainerDecl>(SemaRef.CurContext);
   ObjCPropertyDecl *Res = nullptr;
   if (ObjCCategoryDecl *CDecl = dyn_cast<ObjCCategoryDecl>(ClassDecl)) {
     if (CDecl->IsClassExtension()) {
