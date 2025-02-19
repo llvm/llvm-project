@@ -13,6 +13,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 #include <mutex>
 #include <memory>
@@ -361,6 +362,39 @@ static void SetMemberOwningModule(clang::Decl *member,
     }
 }
 
+/// Creates a dummy main file for the given SourceManager.
+/// This file only serves as a container for include locations to other
+/// FileIDs that are put into this type system (either by the ASTImporter
+/// or when TypeSystemClang generates source locations for declarations).
+/// This file is not reflected to disk.
+static clang::FileID CreateDummyMainFile(clang::SourceManager &sm,
+                                         clang::FileManager &fm) {
+  llvm::StringRef main_file_path = "<LLDB Dummy Main File>";
+  // The file contents are empty and should never be seen by the user. The new
+  // line is just there to not throw off any line counting logic that might
+  // expect files to end with a newline.
+  llvm::StringRef main_file_contents = "\n";
+  const time_t mod_time = 0;
+  const off_t file_size = static_cast<off_t>(main_file_contents.size());
+
+  // Create a virtual FileEntry for our dummy file.
+  auto fe = fm.getVirtualFileRef(main_file_path, file_size, mod_time);
+
+  // Overwrite the file buffer with our empty file contents.
+  llvm::SmallVector<char, 64> buffer;
+  buffer.append(main_file_contents.begin(), main_file_contents.end());
+  auto file_contents = std::make_unique<llvm::SmallVectorMemoryBuffer>(
+      std::move(buffer), main_file_path);
+  sm.overrideFileContents(fe, std::move(file_contents));
+
+  // Create the actual file id for the FileEntry and set it as the main file.
+  clang::FileID fid =
+      sm.createFileID(fe, SourceLocation(), clang::SrcMgr::C_User);
+  sm.setMainFileID(fid);
+
+  return fid;
+}
+
 char TypeSystemClang::ID;
 
 bool TypeSystemClang::IsOperator(llvm::StringRef name,
@@ -691,6 +725,11 @@ void TypeSystemClang::CreateASTContext() {
 
   m_diagnostic_consumer_up = std::make_unique<NullDiagnosticConsumer>();
   m_ast_up->getDiagnostics().setClient(m_diagnostic_consumer_up.get(), false);
+
+  // Set up the MainFileID of this ASTContext. All other FileIDs created
+  // by this TypeSystem will act as-if included into this dummy main file.
+  auto fid = CreateDummyMainFile(*m_source_manager_up, *m_file_manager_up);
+  assert(m_ast_up->getSourceManager().getMainFileID() == fid);
 
   // This can be NULL if we don't know anything about the architecture or if
   // the target for an architecture isn't enabled in the llvm/clang that we
