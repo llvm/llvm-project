@@ -1482,13 +1482,26 @@ public:
     return false;
   }
 
+  bool Pre(const parser::OmpReductionInitializerProc &x) {
+    auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
+    auto &name = std::get<parser::Name>(procDes.u);
+    auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
+    if (!symbol) {
+      symbol = &MakeSymbol(context().globalScope(), name.source, Attrs{});
+      Resolve(name, *symbol);
+    }
+    return true;
+  }
+
   bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
     AddOmpSourceRange(x.source);
     parser::OmpClauseList emptyList{std::list<parser::OmpClause>{}};
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
         emptyList);
-    Walk(std::get<std::optional<parser::OmpReductionInitializerClause>>(x.t));
+    auto &init =
+        std::get<std::optional<parser::OmpReductionInitializerClause>>(x.t);
+    Walk(init);
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
@@ -1741,7 +1754,6 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const parser::OmpClauseList &clauses) {
-  BeginDeclTypeSpec();
   const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
   if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
     if (auto *name{std::get_if<parser::Name>(&procDes->u)}) {
@@ -1749,7 +1761,6 @@ void OmpVisitor::ProcessReductionSpecifier(
           &MakeSymbol(*name, MiscDetails{MiscDetails::Kind::ConstructName});
     }
   }
-  EndDeclTypeSpec();
   // Creating a new scope in case the combiner expression (or clauses) use
   // reerved identifiers, like "omp_in". This is a temporary solution until
   // we deal with these in a more thorough way.
