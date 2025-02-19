@@ -111,15 +111,16 @@ foo128:
   .asciz "foo"
   .size mystr, 3
 
-# S = 0x21016c, A = 0x4
-# R = ((S + A) & 0xFF8) << 6 = 0x00005c00
-# 0x00005c00 | 0x3dc00274 = 0x3dc05e74
+# S = 210180, A = 0x4
+# R = ((S + A) & 0xFF8) << 6 = 0x00006000
+# 0x00006000 | 0x3dc00274 = 0x3dc06274
 # CHECK: Disassembly of section .R_AARCH64_LDST128_ABS_LO12_NC:
 # CHECK-EMPTY:
 # CHECK: <ldst128>:
 # CHECK:   210180:       3dc06674     	 ldr	   q20, [x19, #400]
 #foo128:
-#   210170:       66 6f 6f 00     .word
+# CHECK: <foo128>:
+# CHECK-NEXT:  210190:       66 6f 6f 00     .word
 
 .section .R_AARCH64_LDST16_ABS_LO12_NC,"ax",@progbits
 ldst16:
