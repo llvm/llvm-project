@@ -40,7 +40,7 @@ void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
   OS << '[';
   OS << ClassName;
   if (CategoryName)
-    OS << "(" << CategoryName.value() << ")";
+    OS << "(" << *CategoryName << ")";
   OS << " ";
   OS << MethodName;
   OS << ']';
