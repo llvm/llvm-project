@@ -23,6 +23,7 @@ using namespace llvm::ELF;
 
 namespace opts {
 extern cl::opt<std::string> ReadPerfEvents;
+extern cl::opt<bool> ArmSPE;
 } // namespace opts
 
 namespace llvm {
@@ -38,6 +39,8 @@ struct PerfSpeEventsTestHelper : public testing::Test {
   }
 
 protected:
+  using LBREntry = DataAggregator::LBREntry;
+
   void initalizeLLVM() {
     llvm::InitializeAllTargetInfos();
     llvm::InitializeAllTargetMCs();
@@ -88,6 +91,45 @@ protected:
 
     return SampleSize == DA.BasicSamples.size();
   }
+
+  /// Compare LBREntries
+  bool checkLBREntry(const LBREntry &Lhs, const LBREntry &Rhs) {
+    return Lhs.From == Rhs.From && Lhs.To == Rhs.To &&
+           Lhs.Mispred == Rhs.Mispred;
+  }
+
+  /// Parse and check SPE brstack as LBR
+  void parseAndCheckBrstackEvents(
+      uint64_t PID,
+      const std::vector<SmallVector<LBREntry, 2>> &ExpectedSamples) {
+    int NumSamples = 0;
+
+    DataAggregator DA("<pseudo input>");
+    DA.ParsingBuf = opts::ReadPerfEvents;
+    DA.BC = BC.get();
+    DataAggregator::MMapInfo MMap;
+    DA.BinaryMMapInfo.insert(std::make_pair(PID, MMap));
+
+    // Process buffer.
+    while (DA.hasData()) {
+      ErrorOr<DataAggregator::PerfBranchSample> SampleRes =
+          DA.parseBranchSample();
+      if (std::error_code EC = SampleRes.getError())
+        EXPECT_NE(EC, std::errc::no_such_process);
+
+      DataAggregator::PerfBranchSample &Sample = SampleRes.get();
+      EXPECT_EQ(Sample.LBR.size(), ExpectedSamples[NumSamples].size());
+
+      // Check the parsed LBREntries.
+      const auto *ActualIter = Sample.LBR.begin();
+      const auto *ExpectIter = ExpectedSamples[NumSamples].begin();
+      while (ActualIter != Sample.LBR.end() &&
+             ExpectIter != ExpectedSamples[NumSamples].end())
+        EXPECT_TRUE(checkLBREntry(*ActualIter++, *ExpectIter++));
+
+      ++NumSamples;
+    }
+  }
 };
 
 } // namespace bolt
@@ -111,6 +153,33 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranches) {
       "1234          instructions:              e002    e001\n";
 
   EXPECT_TRUE(checkEvents(1234, 10, {"branches-spe:"}));
+}
+
+TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
+  // Check perf input with SPE branch events as brstack format.
+  // Example collection command:
+  // ```
+  // perf record -e 'arm_spe_0/branch_filter=1/u' -- BINARY
+  // ```
+  // How Bolt extracts the branch events:
+  // ```
+  // perf script -F pid,brstack --itrace=bl
+  // ```
+
+  opts::ArmSPE = true;
+  opts::ReadPerfEvents = "  1234  0xa001/0xa002/PN/-/-/10/COND/-\n"
+                         "  1234  0xb001/0xb002/P/-/-/4/RET/-\n"
+                         "  1234  0xc001/0xc002/P/-/-/13/-/-\n"
+                         "  1234  0xd001/0xd002/M/-/-/7/RET/-\n"
+                         "  1234  0xe001/0xe002/P/-/-/14/RET/-\n"
+                         "  1234  0xf001/0xf002/MN/-/-/8/COND/-\n";
+
+  std::vector<SmallVector<LBREntry, 2>> ExpectedSamples = {
+      {{{0xa001, 0xa002, false}}}, {{{0xb001, 0xb002, false}}},
+      {{{0xc001, 0xc002, false}}}, {{{0xd001, 0xd002, true}}},
+      {{{0xe001, 0xe002, false}}}, {{{0xf001, 0xf002, true}}},
+  };
+  parseAndCheckBrstackEvents(1234, ExpectedSamples);
 }
 
 TEST_F(PerfSpeEventsTestHelper, SpeBranchesAndCycles) {
