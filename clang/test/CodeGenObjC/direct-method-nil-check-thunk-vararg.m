@@ -3,8 +3,11 @@
 // RUN:   -O0 -S -emit-llvm %s -o - | FileCheck %s
 
 
-#include <stdio.h>
 #include <stdarg.h>
+
+int vprintf(const char * restrict format, va_list ap);
+#define NULL ((void *)0)
+
 __attribute__((objc_root_class))
 @interface Root
 - (void)printWithFormat:(const char *)format, ... __attribute__((objc_direct, visibility("default")));
