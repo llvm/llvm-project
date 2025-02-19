@@ -804,7 +804,7 @@ NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
     QualType T, TypeSourceInfo *TInfo, ArrayRef<QualType> ExpandedTypes,
     ArrayRef<TypeSourceInfo *> ExpandedTInfos) {
   AutoType *AT = TInfo->getType()->getContainedAutoType();
-  bool const HasConstraint = AT && AT->isConstrained();
+  const bool HasConstraint = AT && AT->isConstrained();
   auto *NTTP =
       new (C, DC,
            additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
