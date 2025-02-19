@@ -14,4 +14,8 @@ TEST(LlvmLibcGetPidTest, GetCurrSID) {
   pid_t sid = LIBC_NAMESPACE::getsid(0);
   ASSERT_NE(sid, -1);
   ASSERT_ERRNO_SUCCESS();
+
+  pid_t nonexist_sid = LIBC_NAMESPACE::getsid(999999);
+  ASSERT_EQ(nonexist_sid, -1);
+  ASSERT_ERRNO_FAILURE();
 }
