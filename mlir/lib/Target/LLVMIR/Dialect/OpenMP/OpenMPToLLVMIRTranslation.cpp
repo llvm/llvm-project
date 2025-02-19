@@ -5170,7 +5170,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 static void updateDebugInfoForDeclareTargetVariables(
     LLVM::GlobalOp globalOp, LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *M = moduleTranslation.getLLVMModule();
-  if (!((llvm::Triple(M->getTargetTriple())).isAMDGPU()))
+  if (!llvm::Triple(M->getTargetTriple()).isAMDGPU())
     return;
 
   llvm::GlobalVariable *GV = M->getGlobalVariable(globalOp.getSymName());
