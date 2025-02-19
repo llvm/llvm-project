@@ -7948,8 +7948,7 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
   }
   Parser.Lex();
 
-  // Parsing finished. Check for trailing characters (no need to check for
-  // comments; they are removed by the lexer).
+  // Parsing finished, check for trailing tokens.
   if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
     Error(Parser.getTok().getLoc(), "unexpected token for AArch64 build "
                                     "attributes subsection header directive");
@@ -7992,10 +7991,6 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   } else if (Parser.getTok().is(AsmToken::Identifier)) {
     TagStr = Parser.getTok().getIdentifier();
     switch (ActiveSubsectionID) {
-    default:
-      // Should not happen
-      assert(0 && "Subsection name error");
-      break;
     case AArch64BuildAttrs::VENDOR_UNKNOWN:
       // Tag was provided as an unrecognized string instead of an unsigned
       // integer
@@ -8078,8 +8073,7 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   }
   Parser.Lex();
 
-  // Parsing finished. Check for trailing characters (no need to check for
-  // comments; they are removed by the lexer).
+  // Parsing finished. Check for trailing tokens.
   if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
     Error(Parser.getTok().getLoc(),
           "unexpected token for AArch64 build attributes tag and value "
