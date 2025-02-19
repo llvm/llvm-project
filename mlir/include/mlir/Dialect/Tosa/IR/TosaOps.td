@@ -315,6 +315,7 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
   ];
 
   let builders = [Tosa_MatMulOpQuantInfoBuilder];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -349,6 +350,7 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d"> {
   ];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1479,6 +1481,7 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
 
   let hasCanonicalizeMethod = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let assemblyFormat = [{
     operands attr-dict `:` `(` type($input1) `,` type($input2) `,` type($input3)
@@ -1854,6 +1857,7 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat"> {
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Returns true when two result types are compatible for this op;
@@ -2110,6 +2114,8 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
   ];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2143,6 +2149,8 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
   ];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
