@@ -27,18 +27,28 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/X86TargetParser.h"
 
 #include <cstdio>
 
 using namespace Fortran::frontend;
 
-/// Print supported cpus of the given target.
-static int printSupportedCPUs(llvm::StringRef triple) {
+/// Instantiate llvm::Target based on triple
+static const llvm::Target* getTarget(llvm::StringRef triple) {
   std::string error;
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(triple, error);
   if (!target) {
     llvm::errs() << error;
+  }
+
+  return target;
+}
+
+/// Print supported cpus of the given target.
+static int printSupportedCPUs(llvm::StringRef triple) {
+  const llvm::Target *target = getTarget(triple);
+  if (!target) {
     return 1;
   }
 
@@ -48,6 +58,27 @@ static int printSupportedCPUs(llvm::StringRef triple) {
       target->createTargetMachine(triple, "", "+cpuhelp", targetOpts,
                                   std::nullopt));
   return 0;
+}
+
+/// Check that given CPU is valid for given target.
+static bool checkSupportedCPU(llvm::StringRef str_cpu, llvm::StringRef str_triple) {
+  // If can create tareg from triple, then it's a valid triple
+  const llvm::Target *target = getTarget(str_triple);
+  if (!target) {
+    return false;
+  }
+
+  // TODO: only support check for x86_64 for now
+  llvm::Triple triple{str_triple};
+  if (triple.getArch() == llvm::Triple::x86_64) {
+    const bool only64bit{true};
+    llvm::X86::CPUKind x86cpu = llvm::X86::parseArchX86(str_cpu, only64bit);
+    return x86cpu != llvm::X86::CK_None;
+  }
+  else {
+    // TODO: only support check for x86_64 for now. Anything else passes.
+    return true;
+  }
 }
 
 int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
@@ -81,6 +112,10 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   // --print-supported-cpus takes priority over the actual compilation.
   if (flang->getFrontendOpts().printSupportedCPUs)
     return printSupportedCPUs(flang->getInvocation().getTargetOpts().triple);
+
+  // Check that requested CPU can be properly supported
+  if (!checkSupportedCPU(flang->getInvocation().getTargetOpts().cpu, flang->getInvocation().getTargetOpts().triple))
+    return 1;
 
   diagsBuffer->flushDiagnostics(flang->getDiagnostics());
 
