@@ -3,7 +3,7 @@
 bugprone-unintended-char-ostream-output
 =======================================
 
-Finds unintended character output from `unsigned char` and `signed char` to an
+Finds unintended character output from ``unsigned char`` and ``signed char`` to an
 ``ostream``.
 
 Normally, when ``unsigned char (uint8_t)`` or ``signed char (int8_t)`` is used, it

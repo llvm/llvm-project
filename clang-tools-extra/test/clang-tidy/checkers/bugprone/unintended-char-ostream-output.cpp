@@ -23,7 +23,6 @@ basic_ostream<char, _Traits> &operator<<(basic_ostream<char, _Traits> &,
 
 using ostream = basic_ostream<char>;
 
-
 } // namespace std
 
 class A : public std::ostream {};

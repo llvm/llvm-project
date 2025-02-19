@@ -94,7 +94,7 @@ New checks
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
-  Finds unintended character output from `unsigned char` and `signed char` to an
+  Finds unintended character output from ``unsigned char`` and ``signed char`` to an
   ostream.
 
 New check aliases
