@@ -202,6 +202,10 @@ struct MPIImplTraits {
     if (strAttr && strAttr.getValue() == "OpenMPI") {
       return OMPI;
     }
+    if (!strAttr || strAttr.getValue() != "MPICH") {
+      moduleOp.emitWarning("Unknown \"MPI:Implementation\" specified in DLTI, "
+                           "defaulting to MPICH");
+    }
     return MPICH;
   }
 
