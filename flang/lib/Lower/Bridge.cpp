@@ -3074,8 +3074,7 @@ private:
     llvm::SmallVector<mlir::Value> ivValues;
     Fortran::lower::pft::Evaluation *loopEval =
         &getEval().getFirstNestedEvaluation();
-    bool isDoConcurrent = outerDoConstruct->IsDoConcurrent();
-    if (isDoConcurrent) {
+    if (outerDoConstruct->IsDoConcurrent()) {
       // Handle DO CONCURRENT
       locs.push_back(
           genLocation(Fortran::parser::FindSourceLocation(outerDoConstruct)));
@@ -3103,25 +3102,18 @@ private:
 
         if (const auto &expr =
                 std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
-                    control.t)) {
+                    control.t))
           step = fir::getBase(
               genExprValue(*Fortran::semantics::GetExpr(*expr), stmtCtx));
-        } else {
+        else
           step = builder->create<mlir::arith::ConstantIndexOp>(
               loc, 1); // Use index type directly
-        }
 
         // Ensure lb, ub, and step are of index type using fir.convert
         auto indexType = builder->getIndexType();
-        if (lb.getType() != indexType) {
-          lb = builder->create<fir::ConvertOp>(loc, indexType, lb);
-        }
-        if (ub.getType() != indexType) {
-          ub = builder->create<fir::ConvertOp>(loc, indexType, ub);
-        }
-        if (step.getType() != indexType) {
-          step = builder->create<fir::ConvertOp>(loc, indexType, step);
-        }
+        lb = builder->create<fir::ConvertOp>(loc, indexType, lb);
+        ub = builder->create<fir::ConvertOp>(loc, indexType, ub);
+        step = builder->create<fir::ConvertOp>(loc, indexType, step);
 
         lbs.push_back(lb);
         ubs.push_back(ub);
