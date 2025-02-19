@@ -3481,7 +3481,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
   if (InnerFn) {
     // Don't emit any arg except for `self` if we are in a thunk function.
     // We still need self for nil check, other arguments aren't used in this
-    // function and thus is not needed. Avoid emitting them also prevents
+    // function and thus are not needed. Avoid emitting them also prevents
     // accidental release/retain.
     EmitParmDecl(*Args[0], ArgVals[0], 1);
   } else if (getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {

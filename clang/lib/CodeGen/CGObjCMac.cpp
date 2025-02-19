@@ -1060,15 +1060,6 @@ public:
   void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
                                     const ObjCMethodDecl *OMD,
                                     const ObjCContainerDecl *CD) override;
-  /// We split `GenerateDirectMethodPrologue` into the following two functions.
-  /// The motivation is that nil check thunk function does the nil check, it
-  /// definitely doesn't need _cmd.
-  void GenerateObjCDirectNilCheck(CodeGenFunction &CGF,
-                                  const ObjCMethodDecl *OMD,
-                                  const ObjCContainerDecl *CD) override;
-  /// The inner function can decide if it needs `_cmd` for itself.
-  void GenerateCmdIfNecessary(CodeGenFunction &CGF,
-                              const ObjCMethodDecl *OMD) override;
 
   void GenerateProtocol(const ObjCProtocolDecl *PD) override;
 
@@ -3929,92 +3920,6 @@ llvm::Function *CGObjCCommonMac::GenerateDirectMethod(
   return Fn;
 }
 
-void CGObjCCommonMac::GenerateObjCDirectNilCheck(CodeGenFunction &CGF,
-                                                 const ObjCMethodDecl *OMD,
-                                                 const ObjCContainerDecl *CD) {
-  auto &Builder = CGF.Builder;
-  bool ReceiverCanBeNull = true;
-  auto selfAddr = CGF.GetAddrOfLocalVar(OMD->getSelfDecl());
-  auto selfValue = Builder.CreateLoad(selfAddr);
-
-  // Generate:
-  //
-  // /* for class methods only to force class lazy initialization */
-  // self = [self self];
-  //
-  // /* unless the receiver is never NULL */
-  // if (self == nil) {
-  //     return (ReturnType){ };
-  // }
-
-  if (OMD->isClassMethod()) {
-    const ObjCInterfaceDecl *OID = cast<ObjCInterfaceDecl>(CD);
-    assert(OID &&
-           "GenerateDirectMethod() should be called with the Class Interface");
-    Selector SelfSel = GetNullarySelector("self", CGM.getContext());
-    auto ResultType = CGF.getContext().getObjCIdType();
-    RValue result;
-    CallArgList Args;
-
-    // TODO: If this method is inlined, the caller might know that `self` is
-    // already initialized; for example, it might be an ordinary Objective-C
-    // method which always receives an initialized `self`, or it might have just
-    // forced initialization on its own.
-    //
-    // We should find a way to eliminate this unnecessary initialization in such
-    // cases in LLVM.
-    result = GeneratePossiblySpecializedMessageSend(
-        CGF, ReturnValueSlot(), ResultType, SelfSel, selfValue, Args, OID,
-        nullptr, true);
-    Builder.CreateStore(result.getScalarVal(), selfAddr);
-
-    // Nullable `Class` expressions cannot be messaged with a direct method
-    // so the only reason why the receive can be null would be because
-    // of weak linking.
-    ReceiverCanBeNull = isWeakLinkedClass(OID);
-  }
-
-  if (ReceiverCanBeNull) {
-    llvm::BasicBlock *SelfIsNilBlock =
-        CGF.createBasicBlock("objc_direct_method.self_is_nil");
-    llvm::BasicBlock *ContBlock =
-        CGF.createBasicBlock("objc_direct_method.cont");
-
-    // if (self == nil) {
-    auto selfTy = cast<llvm::PointerType>(selfValue->getType());
-    auto Zero = llvm::ConstantPointerNull::get(selfTy);
-
-    llvm::MDBuilder MDHelper(CGM.getLLVMContext());
-    Builder.CreateCondBr(Builder.CreateICmpEQ(selfValue, Zero), SelfIsNilBlock,
-                         ContBlock, MDHelper.createBranchWeights(1, 1 << 20));
-
-    CGF.EmitBlock(SelfIsNilBlock);
-
-    //   return (ReturnType){ };
-    auto retTy = OMD->getReturnType();
-    Builder.SetInsertPoint(SelfIsNilBlock);
-    if (!retTy->isVoidType()) {
-      CGF.EmitNullInitialization(CGF.ReturnValue, retTy);
-    }
-    CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
-    // }
-
-    CGF.EmitBlock(ContBlock);
-    Builder.SetInsertPoint(ContBlock);
-  }
-}
-void CGObjCCommonMac::GenerateCmdIfNecessary(CodeGenFunction &CGF,
-                                             const ObjCMethodDecl *OMD) {
-  // only synthesize _cmd if it's referenced
-  if (OMD->getCmdDecl()->isUsed()) {
-    // `_cmd` is not a parameter to direct methods, so storage must be
-    // explicitly declared for it.
-    CGF.EmitVarDecl(*OMD->getCmdDecl());
-    CGF.Builder.CreateStore(GetSelector(CGF, OMD),
-                            CGF.GetAddrOfLocalVar(OMD->getCmdDecl()));
-  }
-}
-
 void CGObjCCommonMac::GenerateDirectMethodPrologue(
     CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
     const ObjCContainerDecl *CD) {
@@ -4022,6 +3927,9 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
   bool ReceiverCanBeNull = true;
   auto selfAddr = CGF.GetAddrOfLocalVar(OMD->getSelfDecl());
   auto selfValue = Builder.CreateLoad(selfAddr);
+  bool shouldHaveNilCheckThunk =
+      CGF.CGM.shouldHaveNilCheckThunk(OMD) bool isNilCheckThunk =
+          shouldHaveNilCheckThunk && CGF.InnerFn;
 
   // Generate:
   //
@@ -4063,7 +3971,10 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     ReceiverCanBeNull = isWeakLinkedClass(OID);
   }
 
-  if (ReceiverCanBeNull) {
+  // Only emit nil check if this is a nil check thunk or the method
+  // decides that its receiver can be null
+  if (isNilCheckThunk ||
+      (!CGF.CGM.shouldHaveNilCheckThunk(OMD) && ReceiverCanBeNull)) {
     llvm::BasicBlock *SelfIsNilBlock =
         CGF.createBasicBlock("objc_direct_method.self_is_nil");
     llvm::BasicBlock *ContBlock =
@@ -4093,14 +4004,19 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     Builder.SetInsertPoint(ContBlock);
   }
 
-  // only synthesize _cmd if it's referenced
-  if (OMD->getCmdDecl()->isUsed()) {
+  // Only synthesize _cmd if it's referenced
+  // However, a nil check thunk doesn't need _cmd even if it's referenced
+  if (!isNilCheckThunk && OMD->getCmdDecl()->isUsed()) {
     // `_cmd` is not a parameter to direct methods, so storage must be
     // explicitly declared for it.
     CGF.EmitVarDecl(*OMD->getCmdDecl());
     Builder.CreateStore(GetSelector(CGF, OMD),
                         CGF.GetAddrOfLocalVar(OMD->getCmdDecl()));
   }
+
+  // It's possible that selfValue is never used.
+  if (selfValue->use_empty())
+    selfValue->eraseFromParent();
 }
 
 llvm::GlobalVariable *
