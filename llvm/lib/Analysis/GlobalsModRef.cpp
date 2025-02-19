@@ -767,13 +767,14 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
     if (!Input->getType()->isPointerTy())
       continue;
 
-    if (CtxI) {
-      // Null pointer cannot alias with a non-addr-taken global.
-      const Function *F = CtxI->getFunction();
-      if (const ConstantPointerNull *CPN = dyn_cast<ConstantPointerNull>(Input))
+    if (CtxI)
+      if (const ConstantPointerNull *CPN =
+              dyn_cast<ConstantPointerNull>(Input)) {
+        // Null pointer cannot alias with a non-addr-taken global.
+        const Function *F = CtxI->getFunction();
         if (!NullPointerIsDefined(F, CPN->getType()->getAddressSpace()))
           continue;
-    }
+      }
 
     // Recurse through a limited number of selects, loads and PHIs. This is an
     // arbitrary depth of 4, lower numbers could be used to fix compile time
