@@ -192,9 +192,12 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
   OS << "Root Signature Definitions"
      << "\n";
   uint8_t Space = 0;
-  for (const auto &P : RSDMap) {
-    const auto &[Function, RSD] = P;
-    OS << "Definition for '" << Function->getName() << "':\n";
+  for (const Function &F : M) {
+    auto It = RSDMap.find(&F);
+    if (It == RSDMap.end())
+      continue;
+    const auto &RS = It->second;
+    OS << "Definition for '" << F.getName() << "':\n";
 
     // start root signature header
     Space++;
