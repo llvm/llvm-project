@@ -1,4 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output \
+; RUN: -polly-region-expansion-profitability-check=0 < %s 2>&1 | FileCheck %s
 
 ; CHECK: Valid Region for Scop: next => bb3
 ;
