@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENFUNCTION_H
-#define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENFUNCTION_H
+#ifndef CLANG_LIB_CIR_CODEGEN_CIRGENFUNCTION_H
+#define CLANG_LIB_CIR_CODEGEN_CIRGENFUNCTION_H
 
 #include "CIRGenBuilder.h"
 #include "CIRGenModule.h"
@@ -25,6 +25,10 @@
 
 #include "llvm/ADT/ScopedHashTable.h"
 
+namespace {
+class ScalarExprEmitter;
+} // namespace
+
 namespace clang::CIRGen {
 
 class CIRGenFunction : public CIRGenTypeCache {
@@ -32,6 +36,7 @@ public:
   CIRGenModule &cgm;
 
 private:
+  friend class ::ScalarExprEmitter;
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
@@ -58,11 +63,11 @@ public:
     return convertType(getContext().getTypeDeclType(T));
   }
 
-  ///  Return the cir::TypeEvaluationKind of QualType \c T.
-  static cir::TypeEvaluationKind getEvaluationKind(clang::QualType T);
+  ///  Return the cir::TypeEvaluationKind of QualType \c type.
+  static cir::TypeEvaluationKind getEvaluationKind(clang::QualType type);
 
-  static bool hasScalarEvaluationKind(clang::QualType T) {
-    return getEvaluationKind(T) == cir::TEK_Scalar;
+  static bool hasScalarEvaluationKind(clang::QualType type) {
+    return getEvaluationKind(type) == cir::TEK_Scalar;
   }
 
   CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
@@ -94,12 +99,14 @@ public:
   };
 
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
-  mlir::Location getLoc(clang::SourceLocation SLoc);
-  mlir::Location getLoc(clang::SourceRange SLoc);
+  mlir::Location getLoc(clang::SourceLocation srcLoc);
+  mlir::Location getLoc(clang::SourceRange srcLoc);
   mlir::Location getLoc(mlir::Location lhs, mlir::Location rhs);
 
-  void finishFunction(SourceLocation EndLoc);
-  mlir::LogicalResult emitFunctionBody(const clang::Stmt *Body);
+  const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
+
+  void finishFunction(SourceLocation endLoc);
+  mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
@@ -122,8 +129,8 @@ public:
                            cir::FuncType funcType);
 
   /// Emit code for the start of a function.
-  /// \param Loc       The location to be associated with the function.
-  /// \param StartLoc  The location of the function body.
+  /// \param loc       The location to be associated with the function.
+  /// \param startLoc  The location of the function body.
   void startFunction(clang::GlobalDecl gd, clang::QualType retTy,
                      cir::FuncOp fn, cir::FuncType funcType,
                      clang::SourceLocation loc, clang::SourceLocation startLoc);

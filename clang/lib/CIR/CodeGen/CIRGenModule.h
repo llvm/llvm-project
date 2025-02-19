@@ -73,6 +73,7 @@ public:
   CIRGenBuilderTy &getBuilder() { return builder; }
   clang::ASTContext &getASTContext() const { return astContext; }
   CIRGenTypes &getTypes() { return genTypes; }
+  const clang::LangOptions &getLangOpts() const { return langOpts; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
 
   /// Helpers to convert the presumed location of Clang's SourceLocation to an

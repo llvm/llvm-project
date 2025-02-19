@@ -102,11 +102,10 @@ mlir::Location CIRGenFunction::getLoc(SourceLocation srcLoc) {
     StringRef filename = pLoc.getFilename();
     return mlir::FileLineColLoc::get(builder.getStringAttr(filename),
                                      pLoc.getLine(), pLoc.getColumn());
-  } else {
-    // Do our best...
-    assert(currSrcLoc && "expected to inherit some source location");
-    return *currSrcLoc;
   }
+  // Do our best...
+  assert(currSrcLoc && "expected to inherit some source location");
+  return *currSrcLoc;
 }
 
 mlir::Location CIRGenFunction::getLoc(SourceRange srcLoc) {
@@ -118,10 +117,10 @@ mlir::Location CIRGenFunction::getLoc(SourceRange srcLoc) {
     SmallVector<mlir::Location, 2> locs = {beg, end};
     mlir::Attribute metadata;
     return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
-  } else if (currSrcLoc) {
+  }
+  if (currSrcLoc) {
     return *currSrcLoc;
   }
-
   // We're brave, but time to give up.
   return builder.getUnknownLoc();
 }
@@ -168,15 +167,33 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   SourceLocRAIIObject fnLoc{*this, loc.isValid() ? getLoc(loc)
                                                  : builder.getUnknownLoc()};
 
-  mlir::Block *entryBB = fn.addEntryBlock();
-  builder.setInsertionPointToStart(entryBB);
+  // This will be used once more code is upstreamed.
+  [[maybe_unused]] mlir::Block *entryBB = fn.addEntryBlock();
 
   startFunction(gd, funcDecl->getReturnType(), fn, funcType, loc,
                 bodyRange.getBegin());
-  if (mlir::failed(emitFunctionBody(body))) {
-    fn.erase();
-    return nullptr;
-  }
+
+  if (isa<CXXDestructorDecl>(funcDecl))
+    getCIRGenModule().errorNYI(bodyRange, "C++ destructor definition");
+  else if (isa<CXXConstructorDecl>(funcDecl))
+    getCIRGenModule().errorNYI(bodyRange, "C++ constructor definition");
+  else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
+           funcDecl->hasAttr<CUDAGlobalAttr>())
+    getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
+  else if (isa<CXXMethodDecl>(funcDecl) &&
+           cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker())
+    getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
+  else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
+           (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
+            cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator()))
+    getCIRGenModule().errorNYI(bodyRange, "Default assignment operator");
+  else if (body) {
+    if (mlir::failed(emitFunctionBody(body))) {
+      fn.erase();
+      return nullptr;
+    }
+  } else
+    llvm_unreachable("no definition for normal function");
 
   // This code to insert a cir.return or cir.trap at the end of the function is
   // temporary until the function return code, including
