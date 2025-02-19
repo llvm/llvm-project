@@ -858,93 +858,140 @@ public:
   virtual ~InterchangeableInstruction() = default;
 };
 
-class BinOpIsNoOp final : public InterchangeableInstruction {
+class InterchangeableBinOp final : public InterchangeableInstruction {
+  using MaskType = std::uint_fast8_t;
   constexpr static std::initializer_list<unsigned> SupportedOp = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
       Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
-  SmallVector<unsigned> CandidateOp = SupportedOp;
+  // from high to low bit: Xor Or And Sub Add Mul AShr Shl
+  MaskType Mask = 0b11111111;
+
+  static MaskType opcodeToMask(unsigned Opcode) {
+    switch (Opcode) {
+    case Instruction::Shl:
+      return 0b1;
+    case Instruction::AShr:
+      return 0b10;
+    case Instruction::Mul:
+      return 0b100;
+    case Instruction::Add:
+      return 0b1000;
+    case Instruction::Sub:
+      return 0b10000;
+    case Instruction::And:
+      return 0b100000;
+    case Instruction::Or:
+      return 0b1000000;
+    case Instruction::Xor:
+      return 0b10000000;
+    }
+    llvm_unreachable("Unsupported opcode.");
+  }
+
+  bool tryAnd(MaskType X) {
+    if (Mask & X) {
+      Mask &= X;
+      return true;
+    }
+    return false;
+  }
 
 public:
   using InterchangeableInstruction::InterchangeableInstruction;
   bool isSame(Instruction *I) override {
     unsigned Opcode = I->getOpcode();
-    if (!is_contained(SupportedOp, Opcode))
+    if (!binary_search(SupportedOp, Opcode))
       return false;
     ConstantInt *CI = isBinOpWithConstantInt(I);
     if (CI) {
+      const APInt &Op1Int = CI->getValue();
       switch (Opcode) {
-      case Instruction::Mul:
-        if (CI->getValue().isOne())
+      case Instruction::Shl:
+        if (Op1Int.isZero())
           return true;
+        return tryAnd(0b101);
+      case Instruction::Mul:
+        if (Op1Int.isOne())
+          return true;
+        if (Op1Int.isPowerOf2())
+          return tryAnd(0b101);
         break;
       case Instruction::And:
-        if (CI->getValue().isAllOnes())
+        if (Op1Int.isAllOnes())
           return true;
         break;
       default:
-        if (CI->getValue().isZero())
+        if (Op1Int.isZero())
           return true;
+        break;
       }
     }
-    if (is_contained(CandidateOp, Opcode)) {
-      CandidateOp = {Opcode};
-      return true;
-    }
-    return false;
+    return tryAnd(opcodeToMask(Opcode));
   }
   unsigned getInterchangeableInstructionOpcode() override {
-    assert(!CandidateOp.empty() && "Cannot find interchangeable instruction.");
-    if (is_contained(CandidateOp, MainOp->getOpcode()))
-      return MainOp->getOpcode();
-    return CandidateOp[0];
+    unsigned Opcode = MainOp->getOpcode();
+    if (Mask & opcodeToMask(Opcode))
+      return Opcode;
+    if (Mask & 0b1)
+      return Instruction::Shl;
+    if (Mask & 0b10)
+      return Instruction::AShr;
+    if (Mask & 0b100)
+      return Instruction::Mul;
+    if (Mask & 0b1000)
+      return Instruction::Add;
+    if (Mask & 0b10000)
+      return Instruction::Sub;
+    if (Mask & 0b100000)
+      return Instruction::And;
+    if (Mask & 0b1000000)
+      return Instruction::Or;
+    if (Mask & 0b10000000)
+      return Instruction::Xor;
+    llvm_unreachable("Cannot find interchangeable instruction.");
   }
   SmallVector<Value *>
   getInterchangeableInstructionOps(Instruction *I) override {
-    assert(is_contained(SupportedOp, I->getOpcode()) &&
-           "Not supported opcode.");
-    return {MainOp->getOperand(0),
-            ConstantInt::get(MainOp->getOperand(1)->getType(),
-                             I->getOpcode() == Instruction::Mul)};
-  }
-};
-
-class MulAndShlWithConstantInt final : public InterchangeableInstruction {
-  constexpr static std::initializer_list<unsigned> SupportedOp = {
-      Instruction::Mul, Instruction::Shl};
-  SmallVector<unsigned> CandidateOp = SupportedOp;
-
-public:
-  using InterchangeableInstruction::InterchangeableInstruction;
-  bool isSame(Instruction *I) override {
-    unsigned Opcode = I->getOpcode();
-    if (!is_contained(SupportedOp, Opcode))
-      return false;
-    ConstantInt *CI = isBinOpWithConstantInt(I);
-    if (CI && (Opcode != Instruction::Mul || CI->getValue().isPowerOf2()))
-      return true;
-    if (is_contained(CandidateOp, Opcode)) {
-      CandidateOp = {Opcode};
-      return true;
-    }
-    return false;
-  }
-  unsigned getInterchangeableInstructionOpcode() override {
-    assert(!CandidateOp.empty() && "Cannot find interchangeable instruction.");
-    if (is_contained(CandidateOp, MainOp->getOpcode()))
-      return MainOp->getOpcode();
-    return CandidateOp[0];
-  }
-  SmallVector<Value *>
-  getInterchangeableInstructionOps(Instruction *I) override {
-    assert(is_contained(SupportedOp, I->getOpcode()));
-    if (MainOp->getOpcode() == I->getOpcode())
+    unsigned ToOpcode = I->getOpcode();
+    assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
+    unsigned FromOpcode = MainOp->getOpcode();
+    if (FromOpcode == ToOpcode)
       return SmallVector<Value *>(MainOp->operands());
     const APInt &Op1Int = isBinOpWithConstantInt(MainOp)->getValue();
+    unsigned Op1IntBitWidth = Op1Int.getBitWidth();
+    APInt RHSV;
+    switch (FromOpcode) {
+    case Instruction::Shl:
+      if (ToOpcode == Instruction::Mul) {
+        RHSV = APInt::getOneBitSet(Op1IntBitWidth, Op1Int.getZExtValue());
+      } else {
+        assert(Op1Int.isZero() && "Cannot convert the instruction.");
+        RHSV = ToOpcode == Instruction::And ? APInt::getAllOnes(Op1IntBitWidth)
+                                            : APInt::getZero(Op1IntBitWidth);
+      }
+      break;
+    case Instruction::Mul:
+      assert(Op1Int.isPowerOf2() && "Cannot convert the instruction.");
+      if (ToOpcode == Instruction::Shl) {
+        RHSV = APInt(Op1IntBitWidth, Op1Int.logBase2());
+      } else {
+        assert(Op1Int.isOne() && "Cannot convert the instruction.");
+        RHSV = ToOpcode == Instruction::And ? APInt::getAllOnes(Op1IntBitWidth)
+                                            : APInt::getZero(Op1IntBitWidth);
+      }
+      break;
+    case Instruction::And:
+      assert(Op1Int.isAllOnes() && "Cannot convert the instruction.");
+      RHSV = ToOpcode == Instruction::Mul
+                 ? APInt::getOneBitSet(Op1IntBitWidth, 0)
+                 : APInt::getZero(Op1IntBitWidth);
+      break;
+    default:
+      RHSV = APInt::getZero(Op1IntBitWidth);
+      break;
+    }
     return {MainOp->getOperand(0),
-            ConstantInt::get(MainOp->getOperand(1)->getType(),
-                             I->getOpcode() == Instruction::Mul
-                                 ? (1 << Op1Int.getZExtValue())
-                                 : Op1Int.logBase2())};
+            ConstantInt::get(MainOp->getOperand(1)->getType(), RHSV)};
   }
 };
 
@@ -952,10 +999,8 @@ static SmallVector<std::unique_ptr<InterchangeableInstruction>>
 getInterchangeableInstruction(Instruction *MainOp) {
   SmallVector<std::unique_ptr<InterchangeableInstruction>> Candidate;
   Candidate.push_back(std::make_unique<InterchangeableInstruction>(MainOp));
-  if (MainOp->isBinaryOp()) {
-    Candidate.push_back(std::make_unique<BinOpIsNoOp>(MainOp));
-    Candidate.push_back(std::make_unique<MulAndShlWithConstantInt>(MainOp));
-  }
+  if (MainOp->isBinaryOp())
+    Candidate.push_back(std::make_unique<InterchangeableBinOp>(MainOp));
   return Candidate;
 }
 
