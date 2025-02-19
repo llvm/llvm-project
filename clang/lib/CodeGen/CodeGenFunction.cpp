@@ -80,6 +80,7 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, llvm::Function *Inner,
   InnerFn = Inner;
   assert(InnerFn && "The inner function provided should not be null");
 }
+
 CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
     : CodeGenTypeCache(cgm), CGM(cgm), Target(cgm.getTarget()),
       Builder(cgm, cgm.getModule().getContext(), llvm::ConstantFolder(),
