@@ -24,6 +24,7 @@
 #include "MoveOnly.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 class PaddedBase {
 public:
@@ -115,7 +116,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::bidirectional_iterator_list<int*>(), TestOutIters());
   if (TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED)
     types::for_each(types::bidirectional_iterator_list<std::unique_ptr<int>*>(), Test1OutIters());
-
   { // Make sure that padding bits aren't copied
     Derived src(1, 2, 3);
     Derived dst(4, 5, 6);
@@ -125,16 +125,13 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(dst.b_ == 2);
     assert(dst.c_ == 6);
   }
-
   { // Make sure that overlapping ranges can be copied
     int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::move_backward(a, a + 7, a + 10);
     int expected[] = {1, 2, 3, 1, 2, 3, 4, 5, 6, 7};
     assert(std::equal(a, a + 10, expected));
   }
-
-  // Make sure that the algorithm works with move-only types
-  {
+  { // Make sure that the algorithm works with move-only types
     // When non-trivial
     {
       MoveOnly from[3] = {1, 2, 3};
