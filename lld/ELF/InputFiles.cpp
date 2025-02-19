@@ -1425,16 +1425,19 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
   return verneeds;
 }
 
-// To determine if a shared file can support the AArch64 GCS extension, the program headers for the object
-// need to be read. This ensures when input options are read, appropriate warning/error messages can be
-// emitted depending on the user's command line options.
+// To determine if a shared file can support the AArch64 GCS extension, the
+// program headers for the object need to be read. This ensures when input
+// options are read, appropriate warning/error messages can be emitted depending
+// on the user's command line options.
 template <typename ELFT>
-uint64_t SharedFile::parseGnuAttributes(const typename ELFT::PhdrRange headers) {
-  if(numElfPhdrs == 0)
+uint64_t
+SharedFile::parseGnuAttributes(const typename ELFT::PhdrRange headers) {
+  if (numElfPhdrs == 0)
     return 0;
   uint64_t attributes = 0;
   for (unsigned i = 0; i < numElfPhdrs; i++)
-    if(headers[i].p_type == PT_GNU_PROPERTY && headers[i].p_flags & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+    if (headers[i].p_type == PT_GNU_PROPERTY &&
+        headers[i].p_flags & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
       attributes |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 
   return attributes;

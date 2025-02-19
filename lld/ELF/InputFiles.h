@@ -208,7 +208,7 @@ public:
   }
   template <typename ELFT> typename ELFT::PhdrRange getELFPhdrs() const {
     return typename ELFT::PhdrRange(
-      reinterpret_cast<const typename ELFT::Phdr *>(elfPhdrs), numElfPhdrs);
+        reinterpret_cast<const typename ELFT::Phdr *>(elfPhdrs), numElfPhdrs);
   }
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
     return typename ELFT::SymRange(
