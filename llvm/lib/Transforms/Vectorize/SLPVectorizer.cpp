@@ -12415,68 +12415,48 @@ InstructionCost BoUpSLP::getSpillCost() {
   InstructionCost Cost = 0;
 
   SmallPtrSet<const TreeEntry *, 4> LiveEntries;
-  const TreeEntry *Prev = nullptr;
 
-  // The entries in VectorizableTree are not necessarily ordered by their
-  // position in basic blocks. Collect them and order them by dominance so later
-  // instructions are guaranteed to be visited first. For instructions in
-  // different basic blocks, we only scan to the beginning of the block, so
-  // their order does not matter, as long as all instructions in a basic block
-  // are grouped together. Using dominance ensures a deterministic order.
-  SmallVector<TreeEntry *, 16> OrderedEntries;
-  for (const auto &TEPtr : VectorizableTree) {
-    if (TEPtr->isGather())
+  const TreeEntry *Root = VectorizableTree.front().get();
+  BasicBlock *RootBB = cast<Instruction>(Root->Scalars[0])->getParent();
+
+  // Compute what nodes are reachable from the leaves to the roots
+  df_iterator_default_set<const BasicBlock *> ReachableFromLeaves;
+  for (auto &TE : VectorizableTree) {
+    if (TE->isGather())
       continue;
-    OrderedEntries.push_back(TEPtr.get());
+    auto *BB = getLastInstructionInBundle(TE.get()).getParent();
+    for (const BasicBlock *X : depth_first_ext(BB, ReachableFromLeaves))
+      ReachableFromLeaves.insert(X);
   }
-  llvm::stable_sort(OrderedEntries, [&](const TreeEntry *TA,
-                                        const TreeEntry *TB) {
-    Instruction &A = getLastInstructionInBundle(TA);
-    Instruction &B = getLastInstructionInBundle(TB);
-    auto *NodeA = DT->getNode(A.getParent());
-    auto *NodeB = DT->getNode(B.getParent());
-    assert(NodeA && "Should only process reachable instructions");
-    assert(NodeB && "Should only process reachable instructions");
-    assert((NodeA == NodeB) == (NodeA->getDFSNumIn() == NodeB->getDFSNumIn()) &&
-           "Different nodes should have different DFS numbers");
-    if (NodeA != NodeB)
-      return NodeA->getDFSNumIn() > NodeB->getDFSNumIn();
-    return B.comesBefore(&A);
-  });
 
-  for (const TreeEntry *TE : OrderedEntries) {
-    if (!Prev) {
-      Prev = TE;
+  DenseSet<const BasicBlock *> Reachable;
+  for (const BasicBlock *X : inverse_depth_first(RootBB))
+    Reachable.insert(X);
+  set_intersect(Reachable, ReachableFromLeaves);
+
+  DenseSet<const TreeEntry *> Defined;
+
+  // Iterate the tree from the root, post order so that all uses appear before
+  // definitions.
+  // TODO: LiveEntries are shared across all paths, so this may overestimate.
+  for (BasicBlock *BB : post_order(RootBB->getParent())) {
+    if (!Reachable.contains(BB))
       continue;
-    }
 
-    LiveEntries.erase(Prev);
-    for (unsigned I : seq<unsigned>(Prev->getNumOperands())) {
-      const TreeEntry *Op = getVectorizedOperand(Prev, I);
-      if (!Op)
-        continue;
-      assert(!Op->isGather() && "Expected vectorized operand.");
-      LiveEntries.insert(Op);
-    }
-
-    LLVM_DEBUG({
-      dbgs() << "SLP: #LV: " << LiveEntries.size();
-      for (auto *X : LiveEntries)
-        X->dump();
-      dbgs() << ", Looking at ";
-      TE->dump();
-    });
-
-    // Now find the sequence of instructions between PrevInst and Inst.
-    unsigned NumCalls = 0;
-    const Instruction *PrevInst = &getLastInstructionInBundle(Prev);
-    BasicBlock::const_reverse_iterator
-        InstIt = ++getLastInstructionInBundle(TE).getIterator().getReverse(),
-        PrevInstIt = PrevInst->getIterator().getReverse();
-    while (InstIt != PrevInstIt) {
-      if (PrevInstIt == PrevInst->getParent()->rend()) {
-        PrevInstIt = getLastInstructionInBundle(TE).getParent()->rbegin();
-        continue;
+    for (Instruction &I : reverse(*BB)) {
+      for (const auto *TE : getTreeEntries(&I)) {
+        if (TE->isGather())
+          continue;
+        LiveEntries.erase(TE);
+        Defined.insert(TE);
+        for (unsigned Idx : seq<unsigned>(TE->getNumOperands())) {
+          const TreeEntry *Op = getVectorizedOperand(TE, Idx);
+          if (!Op)
+            continue;
+          assert(!Op->isGather() && "Expected vectorized operand.");
+          if (!Defined.contains(Op))
+            LiveEntries.insert(Op);
+        }
       }
 
       auto NoCallIntrinsic = [this](const Instruction *I) {
@@ -12497,26 +12477,24 @@ InstructionCost BoUpSLP::getSpillCost() {
       // Debug information does not impact spill cost.
       // Vectorized calls, represented as vector intrinsics, do not impact spill
       // cost.
-      if (const auto *CB = dyn_cast<CallBase>(&*PrevInstIt);
-          CB && !NoCallIntrinsic(CB) && !isVectorized(CB))
-        NumCalls++;
+      if (const auto *CB = dyn_cast<CallBase>(&I);
+          CB && !NoCallIntrinsic(CB) && !isVectorized(CB)) {
+        SmallVector<Type *, 4> EntriesTypes;
+        for (const TreeEntry *TE : LiveEntries) {
+          auto *ScalarTy = TE->getMainOp()->getType();
+          auto It = MinBWs.find(TE);
+          if (It != MinBWs.end())
+            ScalarTy =
+                IntegerType::get(ScalarTy->getContext(), It->second.first);
+          EntriesTypes.push_back(
+              getWidenedType(ScalarTy, TE->getVectorFactor()));
+        }
 
-      ++PrevInstIt;
-    }
-
-    if (NumCalls) {
-      SmallVector<Type *, 4> EntriesTypes;
-      for (const TreeEntry *TE : LiveEntries) {
-        auto *ScalarTy = TE->getMainOp()->getType();
-        auto It = MinBWs.find(TE);
-        if (It != MinBWs.end())
-          ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
-        EntriesTypes.push_back(getWidenedType(ScalarTy, TE->getVectorFactor()));
+        LLVM_DEBUG(dbgs() << "SLP: " << LiveEntries.size()
+                          << " entries alive over call:" << I << "\n");
+        Cost += TTI->getCostOfKeepingLiveOverCall(EntriesTypes);
       }
-      Cost += NumCalls * TTI->getCostOfKeepingLiveOverCall(EntriesTypes);
     }
-
-    Prev = TE;
   }
 
   return Cost;
