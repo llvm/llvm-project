@@ -947,7 +947,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   if (term && !strcmp(term, "dumb"))
     SetUseColor(false);
   // Turn off use-color if we don't write to a terminal with color support.
-  if (!GetOutputFile().GetIsTerminalWithColors())
+  if (!GetOutputFileSP()->GetIsTerminalWithColors())
     SetUseColor(false);
 
   if (Diagnostics::Enabled()) {
@@ -1321,11 +1321,13 @@ bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
 }
 
 StreamSP Debugger::GetAsyncOutputStream() {
-  return std::make_shared<StreamAsynchronousIO>(*this, true, GetUseColor());
+  return std::make_shared<StreamAsynchronousIO>(*this,
+                                                StreamAsynchronousIO::STDOUT);
 }
 
 StreamSP Debugger::GetAsyncErrorStream() {
-  return std::make_shared<StreamAsynchronousIO>(*this, false, GetUseColor());
+  return std::make_shared<StreamAsynchronousIO>(*this,
+                                                StreamAsynchronousIO::STDERR);
 }
 
 void Debugger::RequestInterrupt() {
@@ -1678,7 +1680,7 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
   } else if (log_file.empty()) {
     log_handler_sp =
-        CreateLogHandler(log_handler_kind, GetOutputFile().GetDescriptor(),
+        CreateLogHandler(log_handler_kind, GetOutputFileSP()->GetDescriptor(),
                          /*should_close=*/false, buffer_size);
   } else {
     auto pos = m_stream_handlers.find(log_file);
@@ -2111,8 +2113,8 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // Determine whether the current output file is an interactive terminal with
   // color support. We assume that if we support ANSI escape codes we support
   // vt100 escape codes.
-  File &file = GetOutputFile();
-  if (!file.GetIsInteractive() || !file.GetIsTerminalWithColors())
+  FileSP file_sp = GetOutputFileSP();
+  if (!file_sp->GetIsInteractive() || !file_sp->GetIsTerminalWithColors())
     return;
 
   StreamSP output = GetAsyncOutputStream();

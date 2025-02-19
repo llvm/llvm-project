@@ -45,8 +45,8 @@ public:
         m_script_interpreter(script_interpreter),
         m_active_io_handler(active_io_handler) {
     llvm::cantFail(m_script_interpreter.GetLua().ChangeIO(
-        debugger.GetOutputFile().GetStream(),
-        debugger.GetErrorFile().GetStream()));
+        debugger.GetOutputFileSP()->GetStream(),
+        debugger.GetErrorFileSP()->GetStream()));
     llvm::cantFail(m_script_interpreter.EnterSession(debugger.GetID()));
   }
 
