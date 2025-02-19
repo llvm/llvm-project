@@ -15,6 +15,7 @@
 #include "mlir/Conversion/MPIToLLVM/MPIToLLVM.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -184,29 +185,53 @@ struct OMPIImplTraits {
 //===----------------------------------------------------------------------===//
 // When lowering the mpi dialect to functions calls certain details
 // differ between various MPI implementations. This class will provide
-// these in a gnereic way, depending on the MPI implementation that got
-// included.
+// these in a generic way, depending on the MPI implementation that got
+// selected by the DLTI attribute on the module.
 //===----------------------------------------------------------------------===//
 struct MPIImplTraits {
+  enum MPIImpl { MPICH, OMPI };
+
+  // Get the MPI implementation from a DLTI attribute on the module.
+  // Default to MPICH (and ABI compatible).
+  static MPIImpl getMPIImpl(mlir::ModuleOp &moduleOp) {
+    auto attr = dlti::query(*&moduleOp, {"MPI:Implementation"}, true);
+    if (failed(attr)) {
+      return MPICH;
+    }
+    auto strAttr = dyn_cast<StringAttr>(attr.value());
+    if (strAttr && strAttr.getValue() == "OpenMPI") {
+      return OMPI;
+    }
+    return MPICH;
+  }
+
   // get/create MPI_COMM_WORLD as a mlir::Value
   static mlir::Value getCommWorld(mlir::ModuleOp &moduleOp,
                                   const mlir::Location loc,
                                   mlir::ConversionPatternRewriter &rewriter) {
-    // TODO: dispatch based on the MPI implementation
+    if (MPIImplTraits::getMPIImpl(moduleOp) == OMPI) {
+      return OMPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
+    }
     return MPICHImplTraits::getCommWorld(moduleOp, loc, rewriter);
   }
+
   // Get the MPI_STATUS_IGNORE value (typically a pointer type).
-  static intptr_t getStatusIgnore() {
-    // TODO: dispatch based on the MPI implementation
+  static intptr_t getStatusIgnore(mlir::ModuleOp &moduleOp) {
+    if (MPIImplTraits::getMPIImpl(moduleOp) == OMPI) {
+      return OMPIImplTraits::getStatusIgnore();
+    }
     return MPICHImplTraits::getStatusIgnore();
   }
+
   // get/create MPI datatype as a mlir::Value which corresponds to the given
   // mlir::Type
   static mlir::Value getDataType(mlir::ModuleOp &moduleOp,
                                  const mlir::Location loc,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  mlir::Type type) {
-    // TODO: dispatch based on the MPI implementation
+    if (MPIImplTraits::getMPIImpl(moduleOp) == OMPI) {
+      return OMPIImplTraits::getDataType(moduleOp, loc, rewriter, type);
+    }
     return MPICHImplTraits::getDataType(moduleOp, loc, rewriter, type);
   }
 };
@@ -430,7 +455,7 @@ struct RecvOpLowering : public ConvertOpToLLVMPattern<mpi::RecvOp> {
         MPIImplTraits::getDataType(moduleOp, loc, rewriter, elemType);
     Value commWorld = MPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
     Value statusIgnore = rewriter.create<LLVM::ConstantOp>(
-        loc, i64, MPIImplTraits::getStatusIgnore());
+        loc, i64, MPIImplTraits::getStatusIgnore(moduleOp));
     statusIgnore =
         rewriter.create<LLVM::IntToPtrOp>(loc, ptrType, statusIgnore);
 

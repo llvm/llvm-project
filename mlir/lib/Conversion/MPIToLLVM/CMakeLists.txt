@@ -11,6 +11,7 @@ add_mlir_conversion_library(MLIRMPIToLLVM
   Core
 
   LINK_LIBS PUBLIC
+  MLIRDLTIDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRMPIDialect
