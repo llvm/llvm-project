@@ -932,9 +932,18 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
-def Xarch__ : JoinedAndSeparate<["-"], "Xarch_">, Flags<[NoXarchOption]>,
-  HelpText<"Pass <arg> to the compiliation if the target matches <arch>">,
-  MetaVarName<"<arch> <arg>">;
+def Xarch__
+    : JoinedAndSeparate<["-"], "Xarch_">,
+      Flags<[NoXarchOption]>,
+      HelpText<"Pass <arg> to the compiliation if the target matches <arch>">,
+      DocBrief<
+          [{Specifies that the argument should only be used if the compileation
+  target matches the specified architecture. This can be used with the target
+  CPU, triple architecture, or offloading host and device. This is most useful
+  for separating behavior undesirable on one of the targets when combining many
+  compilation jobs, as is commong with offloading. For example, -Xarch_x86_64,
+  -Xarch_gfx90a, and -Xarch_device are all valid selectors.}]>,
+      MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
   HelpText<"Pass <arg> to the CUDA/HIP host compilation">, MetaVarName<"<arg>">;
 def Xarch_device : Separate<["-"], "Xarch_device">, Flags<[NoXarchOption]>,
