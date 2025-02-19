@@ -62,13 +62,17 @@ getOriginalDef(mlir::Value v,
     mlir::Type ty = defOp->getResultTypes()[0];
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
-        .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
-          v = op.getMemref();
-          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
-          attributes |= getAttrsFromVariable(varIf);
-          isCapturedInInternalProcedure |=
-              varIf.isCapturedInInternalProcedure();
-        })
+        .Case<fir::DeclareOp, hlfir::DeclareOp, fir::cg::XDeclareOp>(
+            [&](auto op) {
+              v = op.getMemref();
+              auto varIf =
+                  llvm::dyn_cast<fir::FortranVariableOpInterface>(defOp);
+              if (varIf) {
+                attributes |= getAttrsFromVariable(varIf);
+                isCapturedInInternalProcedure |=
+                    varIf.isCapturedInInternalProcedure();
+              }
+            })
         .Case<fir::CoordinateOp>([&](auto op) {
           if (fir::AliasAnalysis::isPointerReference(ty))
             attributes.set(fir::AliasAnalysis::Attribute::Pointer);
