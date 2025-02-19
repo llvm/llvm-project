@@ -2837,8 +2837,8 @@ void CommandInterpreter::HandleCommandsFromFile(
   }
 
   if (flags & eHandleCommandFlagPrintResult) {
-    debugger.GetOutputFile().Printf("Executing commands in '%s'.\n",
-                                    cmd_file_path.c_str());
+    debugger.GetOutputFileSP()->Printf("Executing commands in '%s'.\n",
+                                       cmd_file_path.c_str());
   }
 
   // Used for inheriting the right settings when "command source" might
