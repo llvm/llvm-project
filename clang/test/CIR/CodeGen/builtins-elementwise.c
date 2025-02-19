@@ -36,3 +36,24 @@ void test_builtin_elementwise_abs(vint4 vi4, int i, float f, double d,
     // LLVM: {{%.*}} = call <4 x double> @llvm.fabs.v4f64(<4 x double> {{%.*}})
     vd4 = __builtin_elementwise_abs(vd4);
 }
+
+void test_builtin_elementwise_acos(float f, double d, vfloat4 vf4,
+                                   vdouble4  vd4) {
+  // CIR-LABEL: test_builtin_elementwise_acos
+  // LLVM-LABEL: test_builtin_elementwise_acos
+  // CIR: {{%.*}} = cir.llvm.intrinsic "acos" {{%.*}} : (!cir.float) -> !cir.float
+  // LLVM: {{%.*}} = call float @llvm.acos.f32(float {{%.*}})
+  f = __builtin_elementwise_acos(f);
+
+  // CIR: {{%.*}} = cir.llvm.intrinsic "acos" {{%.*}} : (!cir.double) -> !cir.double
+  // LLVM: {{%.*}} = call double @llvm.acos.f64(double {{%.*}})
+  d = __builtin_elementwise_acos(d);
+
+  // CIR: {{%.*}} = cir.llvm.intrinsic "acos" {{%.*}} : (!cir.vector<!cir.float x 4>) -> !cir.vector<!cir.float x 4>
+  // LLVM: {{%.*}} = call <4 x float> @llvm.acos.v4f32(<4 x float> {{%.*}})
+  vf4 = __builtin_elementwise_acos(vf4);
+
+  // CIR: {{%.*}} = cir.llvm.intrinsic "acos" {{%.*}} : (!cir.vector<!cir.double x 4>) -> !cir.vector<!cir.double x 4>
+  // LLVM: {{%.*}} = call <4 x double> @llvm.acos.v4f64(<4 x double> {{%.*}})
+  vd4 = __builtin_elementwise_acos(vd4);
+}

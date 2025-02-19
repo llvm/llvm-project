@@ -1356,8 +1356,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     mlir::Value result = call->getResult(0);
     return RValue::get(result);
   }
-  case Builtin::BI__builtin_elementwise_acos:
-    llvm_unreachable("BI__builtin_elementwise_acos NYI");
+  case Builtin::BI__builtin_elementwise_acos: {
+    return emitBuiltinWithOneOverloadedType<1>(E, "acos");
+  }
   case Builtin::BI__builtin_elementwise_asin:
     llvm_unreachable("BI__builtin_elementwise_asin NYI");
   case Builtin::BI__builtin_elementwise_atan:
