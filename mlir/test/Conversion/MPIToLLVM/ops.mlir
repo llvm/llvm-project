@@ -1,5 +1,7 @@
 // RUN: mlir-opt -convert-to-llvm %s | FileCheck %s
 
+module attributes { mpi.dlti = #dlti.map<"MPI:Implemention" = "Intel"> } {
+
 // CHECK: llvm.func @MPI_Finalize() -> i32
 // CHECK: llvm.func @MPI_Recv(!llvm.ptr, i32, {{.+}}, i32, i32, {{.+}}, !llvm.ptr) -> i32
 // CHECK: llvm.func @MPI_Send(!llvm.ptr, i32, {{.+}}, i32, i32, {{.+}}) -> i32
@@ -74,4 +76,5 @@ func.func @mpi_test(%arg0: memref<100xf32>) {
   %3 = mpi.finalize : !mpi.retval
 
   return
+}
 }
