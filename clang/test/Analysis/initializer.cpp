@@ -351,20 +351,20 @@ union UnionTestTy {
 };
 void new_expr_aggr_init_union_no_designator() {
   UnionTestTy *u = new UnionTestTy{};
-  clang_analyzer_eval(0 == u->x); // expected-warning{{UNKNOWN}} TODO: should be TRUE
-  clang_analyzer_eval(u->y); // expected-warning{{UNKNOWN}} TODO: should be undefined, warning
+  clang_analyzer_eval(0 == u->x); // expected-warning{{UNKNOWN}} FIXME: should be TRUE
+  clang_analyzer_eval(u->y); // expected-warning{{UNKNOWN}} FIXME: should be undefined, warning
   delete u;
 }
 void new_expr_aggr_init_union_designated_first_field() {
   UnionTestTy *u = new UnionTestTy{ .x = 14 };
-  clang_analyzer_eval(14 == u->x); // expected-warning{{UNKNOWN}} TODO: should be TRUE
-  clang_analyzer_eval(u->y); // expected-warning{{UNKNOWN}} TODO: should be undefined, warning
+  clang_analyzer_eval(14 == u->x); // expected-warning{{UNKNOWN}} FIXME: should be TRUE
+  clang_analyzer_eval(u->y); // expected-warning{{UNKNOWN}} FIXME: should be undefined, warning
   delete u;
 }
 void new_expr_aggr_init_union_designated_non_first_field() {
   UnionTestTy *u = new UnionTestTy{ .y = 3 };
-  clang_analyzer_eval(3 == u->y); // expected-warning{{UNKNOWN}} TODO: should be TRUE
-  clang_analyzer_eval(u->x); // expected-warning{{UNKNOWN}} TODO: should be undefined, warning
+  clang_analyzer_eval(3 == u->y); // expected-warning{{UNKNOWN}} FIXME: should be TRUE
+  clang_analyzer_eval(u->x); // expected-warning{{UNKNOWN}} FIXME: should be undefined, warning
   delete u;
 }
 
@@ -374,8 +374,8 @@ union UnionTestTyWithDefaultMemberInit {
 };
 void union_with_default_member_init_empty_init_list() {
   auto U = new UnionTestTyWithDefaultMemberInit{};
-  // clang_analyzer_eval(14 == U->y); // TODO: Should be true
-  clang_analyzer_eval(U->x); // expected-warning{{UNKNOWN}} TODO: should be undefined, warning
+  // clang_analyzer_eval(14 == U->y); // FIXME: Should be true
+  clang_analyzer_eval(U->x); // expected-warning{{UNKNOWN}} FIXME: should be undefined, warning
   delete U;
 }
 
