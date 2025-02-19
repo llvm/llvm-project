@@ -36,10 +36,6 @@ Potentially Breaking Changes
 
 - The Objective-C ARC migrator (ARCMigrate) has been removed.
 
-- ``-Wreturn-type`` now defaults to an error in all language modes; like other
-  warnings, it can be reverted to just being a warning by specifying
-  ``-Wno-error=return-type``.
-
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 

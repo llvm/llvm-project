@@ -717,7 +717,7 @@ def warn_falloff_nonvoid : Warning<
   "non-void "
   "%enum_select<FalloffFunctionKind>{%Function{function}|%Block{block}|%Lambda{lambda}|%Coroutine{coroutine}}0"
   " does not return a value%select{| in all control paths}1">,
-  InGroup<ReturnType>, DefaultError;
+  InGroup<ReturnType>;
 def err_falloff_nonvoid : Error<
   "non-void %select{function|block|lambda|coroutine}0 "
   "does not return a value%select{| in all control paths}1">;
