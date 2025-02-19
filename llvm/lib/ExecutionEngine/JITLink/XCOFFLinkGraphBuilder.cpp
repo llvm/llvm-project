@@ -40,79 +40,6 @@ XCOFFLinkGraphBuilder::XCOFFLinkGraphBuilder(
           std::string(Obj.getFileName()), std::move(SSP), std::move(TT),
           std::move(Features), std::move(GetEdgeKindName))) {}
 
-static raw_ostream &debugStorageMappingClass(raw_ostream &OS,
-                                             XCOFF::StorageMappingClass XMC) {
-  switch (XMC) {
-  // Read Only Classes
-  case XCOFF::StorageMappingClass::XMC_PR:
-    OS << "XMC_PR (Program Code)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_RO:
-    OS << "XMC_RO (Read Only Constant)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_DB:
-    OS << "XMC_DB (Debug Dictionary Table)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_GL:
-    OS << "XMC_GL (Global Linkage)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_XO:
-    OS << "XMC_XO (Extended Operation)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_SV:
-    OS << "XMC_SV (Supervisor Call 32-bit)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_SV64:
-    OS << "XMC_SV64 (Supervisor Call 64-bit)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_SV3264:
-    OS << "XMC_SV3264 (Supervisor Call 32/64-bit)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_TI:
-    OS << "XMC_TI (Traceback Index)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_TB:
-    OS << "XMC_TB (Traceback Table)";
-    break;
-
-  // Read Write Classes
-  case XCOFF::StorageMappingClass::XMC_RW:
-    OS << "XMC_RW (Read Write Data)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_TC0:
-    OS << "XMC_TC0 (TOC Anchor)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_TC:
-    OS << "XMC_TC (General TOC item)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_TD:
-    OS << "XMC_TD (Scalar TOC Data)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_DS:
-    OS << "XMC_DS (Descriptor)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_UA:
-    OS << "XMC_UA (Unclassified)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_BS:
-    OS << "XMC_BS (BSS)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_UC:
-    OS << "XMC_UC (Unnamed Fortran Common)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_TL:
-    OS << "XMC_TL (Thread-local)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_UL:
-    OS << "XMC_UL (Uninitialized Thread-local)";
-    break;
-  case XCOFF::StorageMappingClass::XMC_TE:
-    OS << "XMC_TE (TOC End Symbol)";
-    break;
-  }
-  return OS;
-}
-
 static llvm::raw_ostream &debugStorageClass(llvm::raw_ostream &OS,
                                             XCOFF::StorageClass SC) {
   switch (SC) {
@@ -278,47 +205,6 @@ static llvm::raw_ostream &debugStorageClass(llvm::raw_ostream &OS,
     // Reserved
   case XCOFF::StorageClass::C_TCSYM:
     OS << "C_TCSYM (Reserved)";
-    break;
-  }
-  return OS;
-}
-
-static raw_ostream &debugSymbolType(llvm::raw_ostream &OS,
-                                    XCOFF::SymbolType Type) {
-  switch (Type) {
-  case XCOFF::SymbolType::XTY_ER:
-    OS << "XTY_ER (External reference)";
-    break;
-  case XCOFF::SymbolType::XTY_SD:
-    OS << "XTY_SD (Csect definition - initialized storage)";
-    break;
-  case XCOFF::SymbolType::XTY_LD:
-    OS << "XTY_LD (Label definition)";
-    break;
-  case XCOFF::SymbolType::XTY_CM:
-    OS << "XTY_CM (Common csect definition - uninitialized)";
-    break;
-  }
-  return OS;
-}
-
-static raw_ostream &debugVisibilityType(llvm::raw_ostream &OS,
-                                        XCOFF::VisibilityType Vis) {
-  switch (Vis) {
-  case XCOFF::VisibilityType::SYM_V_UNSPECIFIED:
-    OS << "SYM_V_UNSPECIFIED";
-    break;
-  case XCOFF::VisibilityType::SYM_V_INTERNAL:
-    OS << "SYM_V_INTERNAL";
-    break;
-  case XCOFF::VisibilityType::SYM_V_HIDDEN:
-    OS << "SYM_V_HIDDEN";
-    break;
-  case XCOFF::VisibilityType::SYM_V_PROTECTED:
-    OS << "SYM_V_PROTECTED";
-    break;
-  case XCOFF::VisibilityType::SYM_V_EXPORTED:
-    OS << "SYM_V_EXPORTED";
     break;
   }
   return OS;
@@ -491,6 +377,7 @@ Error XCOFFLinkGraphBuilder::processCsectsAndSymbols() {
       else
         S = Scope::Local;
     }
+    
 
     // TODO(HJ): not sure what is Scope::SideEffectsOnly
     Linkage L = Weak ? Linkage::Weak : Linkage::Strong;
@@ -548,9 +435,6 @@ Error XCOFFLinkGraphBuilder::processRelocations() {
       case XCOFF::R_POS:
         B->addEdge(ppc64::EdgeKind_ppc64::Pointer64, TargetBlockOffset, *S, 0);
         break;
-      case XCOFF::R_TOC:
-        B->addEdge(ppc64::EdgeKind_ppc64::TOC, TargetBlockOffset, *S, 0);
-        break;
       default:
         SmallString<16> RelocType;
         Relocation.getTypeName(RelocType);
@@ -576,11 +460,6 @@ Expected<std::unique_ptr<LinkGraph>> XCOFFLinkGraphBuilder::buildGraph() {
     return Err;
   if (auto Err = processRelocations())
     return Err;
-
-  outs() << "\n  Ouput of LinkGraph: \n\n";
-  outs() << "==================================\n";
-  G->dump(outs());
-  outs() << "==================================\n";
 
   return std::move(G);
 }

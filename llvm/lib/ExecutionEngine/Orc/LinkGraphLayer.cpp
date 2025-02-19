@@ -86,6 +86,9 @@ JITSymbolFlags LinkGraphLayer::getJITSymbolFlagsForSymbol(Symbol &Sym) {
   if (Sym.isCallable())
     Flags |= JITSymbolFlags::Callable;
 
+  LLVM_DEBUG(dbgs() << " Symbol Flag for " << Sym.getName()
+                    << formatv(" {0:x}\n", Flags.getRawFlagsValue()));
+
   return Flags;
 }
 

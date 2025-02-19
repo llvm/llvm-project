@@ -308,10 +308,11 @@ public:
   /// If Body returns true then the element just passed in is removed from the
   /// set. If Body returns false then the element is retained.
   template <typename BodyFn>
-  auto forEachWithRemoval(BodyFn &&Body) -> std::enable_if_t<
-      std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
-                                 std::declval<SymbolLookupFlags>())),
-                   bool>::value> {
+  auto forEachWithRemoval(BodyFn &&Body)
+      -> std::enable_if_t<
+          std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
+                                     std::declval<SymbolLookupFlags>())),
+                       bool>::value> {
     UnderlyingVector::size_type I = 0;
     while (I != Symbols.size()) {
       const auto &Name = Symbols[I].first;
@@ -330,11 +331,12 @@ public:
   /// returns true then the element just passed in is removed from the set. If
   /// Body returns false then the element is retained.
   template <typename BodyFn>
-  auto forEachWithRemoval(BodyFn &&Body) -> std::enable_if_t<
-      std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
-                                 std::declval<SymbolLookupFlags>())),
-                   Expected<bool>>::value,
-      Error> {
+  auto forEachWithRemoval(BodyFn &&Body)
+      -> std::enable_if_t<
+          std::is_same<decltype(Body(std::declval<const SymbolStringPtr &>(),
+                                     std::declval<SymbolLookupFlags>())),
+                       Expected<bool>>::value,
+          Error> {
     UnderlyingVector::size_type I = 0;
     while (I != Symbols.size()) {
       const auto &Name = Symbols[I].first;
@@ -525,6 +527,7 @@ public:
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() { return SSP; }
   const std::string &getModuleName() const { return ModuleName; }
   const SymbolNameVector &getSymbols() const { return Symbols; }
+
 private:
   std::shared_ptr<SymbolStringPool> SSP;
   std::string ModuleName;
@@ -535,7 +538,8 @@ private:
 /// symbols that are not claimed by the module's associated
 /// MaterializationResponsibility. If this error is returned it is indicative of
 /// a broken transformation / compiler / object cache.
-class UnexpectedSymbolDefinitions : public ErrorInfo<UnexpectedSymbolDefinitions> {
+class UnexpectedSymbolDefinitions
+    : public ErrorInfo<UnexpectedSymbolDefinitions> {
 public:
   static char ID;
 
@@ -548,6 +552,7 @@ public:
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() { return SSP; }
   const std::string &getModuleName() const { return ModuleName; }
   const SymbolNameVector &getSymbols() const { return Symbols; }
+
 private:
   std::shared_ptr<SymbolStringPool> SSP;
   std::string ModuleName;
@@ -693,6 +698,10 @@ private:
       : JD(RT->getJITDylib()), RT(std::move(RT)),
         SymbolFlags(std::move(SymbolFlags)), InitSymbol(std::move(InitSymbol)) {
     assert(!this->SymbolFlags.empty() && "Materializing nothing?");
+    for (auto &KV : this->SymbolFlags) {
+      dbgs() << "@@@ Init MR " << KV.first << " "
+             << format_hex(KV.second.getRawFlagsValue(), 8) << "\n";
+    }
   }
 
   JITDylib &JD;
@@ -800,7 +809,6 @@ public:
   ///        resolved.
   bool isComplete() const { return OutstandingSymbolsCount == 0; }
 
-
 private:
   void handleComplete(ExecutionSession &ES);
 
@@ -899,8 +907,8 @@ class JITDylib : public ThreadSafeRefCountedBase<JITDylib>,
   friend class ExecutionSession;
   friend class Platform;
   friend class MaterializationResponsibility;
-public:
 
+public:
   JITDylib(const JITDylib &) = delete;
   JITDylib &operator=(const JITDylib &) = delete;
   JITDylib(JITDylib &&) = delete;
@@ -1104,7 +1112,7 @@ public:
 
 private:
   using AsynchronousSymbolQuerySet =
-    std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
+      std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
 
   using AsynchronousSymbolQueryList =
       std::vector<std::shared_ptr<AsynchronousSymbolQuery>>;
@@ -1160,6 +1168,7 @@ private:
     const AsynchronousSymbolQueryList &pendingQueries() const {
       return PendingQueries;
     }
+
   private:
     AsynchronousSymbolQueryList PendingQueries;
   };
@@ -1355,13 +1364,13 @@ public:
   using ErrorReporter = unique_function<void(Error)>;
 
   /// Send a result to the remote.
-  using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;
+  using SendResultFunction =
+      unique_function<void(shared::WrapperFunctionResult)>;
 
   /// An asynchronous wrapper-function callable from the executor via
   /// jit-dispatch.
   using JITDispatchHandlerFunction = unique_function<void(
-      SendResultFunction SendResult,
-      const char *ArgData, size_t ArgSize)>;
+      SendResultFunction SendResult, const char *ArgData, size_t ArgSize)>;
 
   /// A map associating tag names with asynchronous wrapper function
   /// implementations in the JIT.
@@ -1589,8 +1598,7 @@ public:
   /// \endcode{.cpp}
   ///
   /// The given OnComplete function will be called to return the result.
-  template <typename... ArgTs>
-  void callWrapperAsync(ArgTs &&... Args) {
+  template <typename... ArgTs> void callWrapperAsync(ArgTs &&...Args) {
     EPC->callWrapperAsync(std::forward<ArgTs>(Args)...);
   }
 
@@ -1635,9 +1643,9 @@ public:
   /// (using registerJITDispatchHandler) and called from the executor.
   template <typename SPSSignature, typename HandlerT>
   static JITDispatchHandlerFunction wrapAsyncWithSPS(HandlerT &&H) {
-    return [H = std::forward<HandlerT>(H)](
-               SendResultFunction SendResult,
-               const char *ArgData, size_t ArgSize) mutable {
+    return [H = std::forward<HandlerT>(H)](SendResultFunction SendResult,
+                                           const char *ArgData,
+                                           size_t ArgSize) mutable {
       shared::WrapperFunction<SPSSignature>::handleAsync(ArgData, ArgSize, H,
                                                          std::move(SendResult));
     };
@@ -1742,8 +1750,8 @@ private:
       unique_function<void(Expected<SymbolFlagsMap>)> OnComplete);
 
   // State machine functions for MaterializationResponsibility.
-  void OL_destroyMaterializationResponsibility(
-      MaterializationResponsibility &MR);
+  void
+  OL_destroyMaterializationResponsibility(MaterializationResponsibility &MR);
   SymbolNameSet OL_getRequestedSymbols(const MaterializationResponsibility &MR);
   Error OL_notifyResolved(MaterializationResponsibility &MR,
                           const SymbolMap &Symbols);
@@ -1965,12 +1973,13 @@ inline MaterializationResponsibility::~MaterializationResponsibility() {
   getExecutionSession().OL_destroyMaterializationResponsibility(*this);
 }
 
-inline SymbolNameSet MaterializationResponsibility::getRequestedSymbols() const {
+inline SymbolNameSet
+MaterializationResponsibility::getRequestedSymbols() const {
   return getExecutionSession().OL_getRequestedSymbols(*this);
 }
 
-inline Error MaterializationResponsibility::notifyResolved(
-    const SymbolMap &Symbols) {
+inline Error
+MaterializationResponsibility::notifyResolved(const SymbolMap &Symbols) {
   return getExecutionSession().OL_notifyResolved(*this, Symbols);
 }
 
@@ -1979,8 +1988,8 @@ inline Error MaterializationResponsibility::notifyEmitted(
   return getExecutionSession().OL_notifyEmitted(*this, EmittedDeps);
 }
 
-inline Error MaterializationResponsibility::defineMaterializing(
-    SymbolFlagsMap SymbolFlags) {
+inline Error
+MaterializationResponsibility::defineMaterializing(SymbolFlagsMap SymbolFlags) {
   return getExecutionSession().OL_defineMaterializing(*this,
                                                       std::move(SymbolFlags));
 }
