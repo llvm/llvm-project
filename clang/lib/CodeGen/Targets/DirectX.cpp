@@ -8,7 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "CodeGenModule.h"
-#include "HLSLTargetInfo.h"
+#include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/SmallVector.h"
@@ -24,26 +24,15 @@ using namespace clang::CodeGen;
 
 namespace {
 
-class DirectXTargetCodeGenInfo : public CommonHLSLTargetCodeGenInfo {
+class DirectXTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   DirectXTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
-      : CommonHLSLTargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
+      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
   llvm::Type *getHLSLType(
       CodeGenModule &CGM, const Type *T,
       const SmallVector<unsigned> *Packoffsets = nullptr) const override;
-
-  llvm::Type *getHLSLLayoutType(CodeGenModule &CGM,
-                                llvm::StructType *LayoutStructTy,
-                                SmallVector<unsigned> Layout) const override;
 };
-
-llvm::Type *DirectXTargetCodeGenInfo::getHLSLLayoutType(
-    CodeGenModule &CGM, llvm::StructType *LayoutStructTy,
-    SmallVector<unsigned> Layout) const {
-  return llvm::TargetExtType::get(CGM.getLLVMContext(), "dx.Layout",
-                                  {LayoutStructTy}, Layout);
-}
 
 llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     CodeGenModule &CGM, const Type *Ty,
@@ -80,8 +69,9 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     if (ContainedTy.isNull() || !ContainedTy->isStructureType())
       return nullptr;
 
-    llvm::Type *BufferLayoutTy = this->createHLSLBufferLayoutType(
-        CGM, ContainedTy->getAsStructureType(), Packoffsets);
+    llvm::Type *BufferLayoutTy =
+        HLSLBufferLayoutBuilder(CGM, "dx.Layout")
+            .createLayoutType(ContainedTy->getAsStructureType(), Packoffsets);
     if (!BufferLayoutTy)
       return nullptr;
 

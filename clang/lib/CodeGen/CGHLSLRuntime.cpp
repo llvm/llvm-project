@@ -14,10 +14,12 @@
 
 #include "CGHLSLRuntime.h"
 #include "CGDebugInfo.h"
+#include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/SmallVector.h"
@@ -103,12 +105,8 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
 
   // get the layout struct from constant buffer target type
   llvm::Type *BufType = BufGV->getValueType();
-  assert(isa<llvm::TargetExtType>(BufType) &&
-         "expected target type for HLSL buffer resource");
   llvm::Type *BufLayoutType =
       cast<llvm::TargetExtType>(BufType)->getTypeParameter(0);
-  assert(isa<llvm::TargetExtType>(BufLayoutType) &&
-         "expected target type for buffer layout struct");
   llvm::StructType *LayoutStruct = cast<llvm::StructType>(
       cast<llvm::TargetExtType>(BufLayoutType)->getTypeParameter(0));
 
@@ -139,9 +137,13 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
         // Emit static and groupshared variables and resource classes inside
         // cbuffer as regular globals
         CGM.EmitGlobal(VD);
+      } else {
+        // Anything else that is not in the hlsl_constant address space must be
+        // an empty struct or a zero-sized array and can be ignored
+        assert(BufDecl->getASTContext().getTypeSize(VDTy) == 0 &&
+               "constant buffer decl with non-zero sized type outside of "
+               "hlsl_constant address space");
       }
-      // Anything else that is not in the hlsl_constant address space must be
-      // an empty struct or a zero-sized array and can be ignored
       continue;
     }
 
@@ -149,8 +151,8 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
            "number of elements in layout struct does not match");
     llvm::Type *LayoutType = *ElemIt++;
 
-    // FIXME: handle resources in cbuffer user-defined structs
-    // Issue llvm/wg-hlsl#175
+    // FIXME: handle resources inside user defined structs
+    // (llvm/wg-hlsl#175)
 
     // create global variable for the constant and to metadata list
     GlobalVariable *ElemGV =
@@ -159,7 +161,6 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
   }
   assert(ElemIt == LayoutStruct->element_end() &&
          "number of elements in layout struct does not match");
-  // set the size of the buffer
 
   // add buffer metadata to the module
   CGM.getModule()
@@ -233,12 +234,13 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   const HLSLResourceBindingAttr *RBA =
       BufDecl->getAttr<HLSLResourceBindingAttr>();
   // FIXME: handle implicit binding if no binding attribute is found
+  // (llvm/llvm-project#110722)
   if (RBA)
     createResourceInitFn(CGM, BufGV, RBA->getSlotNumber(),
                          RBA->getSpaceNumber());
 }
 
-llvm::Type *
+llvm::TargetExtType *
 CGHLSLRuntime::getHLSLBufferLayoutType(const RecordType *StructType) {
   const auto Entry = LayoutTypes.find(StructType);
   if (Entry != LayoutTypes.end())
@@ -247,7 +249,7 @@ CGHLSLRuntime::getHLSLBufferLayoutType(const RecordType *StructType) {
 }
 
 void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
-                                            llvm::Type *LayoutTy) {
+                                            llvm::TargetExtType *LayoutTy) {
   assert(getHLSLBufferLayoutType(StructType) == nullptr &&
          "layout type for this struct already exist");
   LayoutTypes[StructType] = LayoutTy;
@@ -678,4 +680,34 @@ llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
   }
   llvm_unreachable("Convergence token should have been emitted.");
   return nullptr;
+}
+
+class OpaqueValueVisitor : public RecursiveASTVisitor<OpaqueValueVisitor> {
+public:
+  llvm::SmallPtrSet<OpaqueValueExpr *, 8> OVEs;
+  OpaqueValueVisitor() {}
+
+  bool VisitOpaqueValueExpr(OpaqueValueExpr *E) {
+    OVEs.insert(E);
+    return true;
+  }
+};
+
+void CGHLSLRuntime::emitInitListOpaqueValues(CodeGenFunction &CGF,
+                                             InitListExpr *E) {
+
+  typedef CodeGenFunction::OpaqueValueMappingData OpaqueValueMappingData;
+  OpaqueValueVisitor Visitor;
+  Visitor.TraverseStmt(E);
+  for (auto *OVE : Visitor.OVEs) {
+    if (CGF.isOpaqueValueEmitted(OVE))
+      continue;
+    if (OpaqueValueMappingData::shouldBindAsLValue(OVE)) {
+      LValue LV = CGF.EmitLValue(OVE->getSourceExpr());
+      OpaqueValueMappingData::bind(CGF, OVE, LV);
+    } else {
+      RValue RV = CGF.EmitAnyExpr(OVE->getSourceExpr());
+      OpaqueValueMappingData::bind(CGF, OVE, RV);
+    }
+  }
 }

@@ -245,8 +245,8 @@ ScriptInterpreterIORedirect::ScriptInterpreterIORedirect(
       if (outfile_handle)
         ::setbuf(outfile_handle, nullptr);
 
-      result->SetImmediateOutputFile(debugger.GetOutputStreamSP()->GetFileSP());
-      result->SetImmediateErrorFile(debugger.GetErrorStreamSP()->GetFileSP());
+      result->SetImmediateOutputFile(debugger.GetOutputFileSP());
+      result->SetImmediateErrorFile(debugger.GetErrorFileSP());
     }
   }
 

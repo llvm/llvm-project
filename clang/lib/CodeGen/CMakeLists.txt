@@ -106,6 +106,7 @@ add_clang_library(clangCodeGen
   ConstantInitBuilder.cpp
   CoverageMappingGen.cpp
   ItaniumCXXABI.cpp
+  HLSLBufferLayoutBuilder.cpp
   LinkInModulesPass.cpp
   MacroPPCallbacks.cpp
   MicrosoftCXXABI.cpp
@@ -124,7 +125,6 @@ add_clang_library(clangCodeGen
   Targets/CSKY.cpp
   Targets/DirectX.cpp
   Targets/Hexagon.cpp
-  Targets/HLSLTargetInfo.cpp
   Targets/Lanai.cpp
   Targets/LoongArch.cpp
   Targets/M68k.cpp

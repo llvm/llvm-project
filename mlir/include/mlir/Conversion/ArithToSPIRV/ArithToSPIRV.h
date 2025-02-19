@@ -18,7 +18,7 @@ class SPIRVTypeConverter;
 class RewritePatternSet;
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTARITHTOSPIRV
+#define GEN_PASS_DECL_CONVERTARITHTOSPIRVPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace arith {
