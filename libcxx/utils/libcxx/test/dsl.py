@@ -275,14 +275,11 @@ def hasAnyLocale(config, locales):
     depending on the %{exec} substitution.
     """
 
-    # Some locale names contain spaces, and some embedded use cases
-    # (in particular picolibc under Arm semihosting) can't support
-    # spaces in argv words. Work around this by applying URL-style
-    # %-encoding to the locale names, and undoing it in our test
-    # program.
-    percent_encode = lambda s: "".join(
-        "%{:02x}".format(c) if c in b" %\\\"'" or c >= 128 else chr(c)
-        for c in s.encode()
+    # Convert the locale names into C string literals, by escaping \
+    # and " and wrapping each one in double quotes.
+    name_string_literals = ", ".join(
+        '"' + locale.replace("\\", r'\\').replace("\"", r'\"') + '"'
+        for locale in locales
     )
 
     program = """
@@ -290,34 +287,21 @@ def hasAnyLocale(config, locales):
     #if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_LOCALIZATION
       int main(int, char**) { return 1; }
     #else
-      #include <stdlib.h>
       #include <locale.h>
-      int main(int argc, char** argv) {
-        for (int i = 1; i < argc; i++) {
-          // %-decode argv[i] in place
-          for (char *p = argv[i], *q = argv[i]; *p; p++) {
-            if (*p == '%') {
-              char hex[3];
-              hex[0] = *++p;
-              hex[1] = *++p;
-              hex[2] = '\\0';
-              *q++ = (char)strtoul(hex, NULL, 0);
-            } else {
-              *q++ = *p;
-            }
-          }
-          // Try to set the locale
-          if (::setlocale(LC_ALL, argv[i]) != NULL) {
+      static const char *const test_locale_names[] = {
+          """ + name_string_literals + """, nullptr,
+      };
+      int main() {
+        for (size_t i = 0; test_locale_names[i]; i++) {
+          if (::setlocale(LC_ALL, test_locale_names[i]) != NULL) {
             return 0;
           }
         }
         return 1;
       }
     #endif
-  """
-    return programSucceeds(
-        config, program, args=[shlex.quote(percent_encode(l)) for l in locales]
-    )
+    """
+    return programSucceeds(config, program)
 
 
 @_memoizeExpensiveOperation(lambda c, flags="": (c.substitutions, c.environment, flags))
