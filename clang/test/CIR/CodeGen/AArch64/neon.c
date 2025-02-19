@@ -15219,13 +15219,32 @@ int64_t test_vshrd_n_s64(int64_t a) {
 //   return vrshr_n_u64(a, 1);
 // }
 
-// NYI-LABEL: @test_vsrad_n_s64(
-// NYI:   [[SHRD_N:%.*]] = ashr i64 %b, 63
-// NYI:   [[TMP0:%.*]] = add i64 %a, [[SHRD_N]]
-// NYI:   ret i64 [[TMP0]]
-// int64_t test_vsrad_n_s64(int64_t a, int64_t b) {
-//   return (int64_t)vsrad_n_s64(a, b, 63);
-// }
+
+int64_t test_vsrad_n_s64(int64_t a, int64_t b) {
+  return (int64_t)vsrad_n_s64(a, b, 63);
+
+  // CIR-LABEL: vsrad_n_s64
+  // CIR: [[ASHR:%.*]] = cir.shift(right, {{%.*}} : !s64i, {{%.*}} : !s64i) -> !s64i
+  // CIR: {{.*}} = cir.binop(add, {{.*}}, [[ASHR]]) : !s64i
+
+  // LLVM-LABEL: test_vsrad_n_s64(
+  // LLVM: [[SHRD_N:%.*]] = ashr i64 %1, 63
+  // LLVM: [[TMP0:%.*]] = add i64 %0, [[SHRD_N]]
+  // LLVM: ret i64 [[TMP0]]
+}
+
+int64_t test_vsrad_n_s64_2(int64_t a, int64_t b) {
+  return (int64_t)vsrad_n_s64(a, b, 64);
+
+  // CIR-LABEL: vsrad_n_s64
+  // CIR: [[ASHR:%.*]] = cir.shift(right, {{%.*}} : !s64i, {{%.*}} : !s64i) -> !s64i
+  // CIR: {{.*}} = cir.binop(add, {{.*}}, [[ASHR]]) : !s64i
+
+  // LLVM-LABEL: test_vsrad_n_s64_2(
+  // LLVM: [[SHRD_N:%.*]] = ashr i64 %1, 63
+  // LLVM: [[TMP0:%.*]] = add i64 %0, [[SHRD_N]]
+  // LLVM: ret i64 [[TMP0]]
+}
 
 int64x1_t test_vsra_n_s64(int64x1_t a, int64x1_t b) {
   return vsra_n_s64(a, b, 1);
