@@ -20,15 +20,14 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-int main(int, char**)
-{
-    std::priority_queue<MoveOnly> q;
-    q.push(1);
-    assert(q.top() == 1);
-    q.push(3);
-    assert(q.top() == 3);
-    q.push(2);
-    assert(q.top() == 3);
+int main(int, char**) {
+  std::priority_queue<MoveOnly> q;
+  q.push(1);
+  assert(q.top() == 1);
+  q.push(3);
+  assert(q.top() == 3);
+  q.push(2);
+  assert(q.top() == 3);
 
   return 0;
 }

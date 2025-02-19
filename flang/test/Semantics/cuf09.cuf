@@ -192,3 +192,16 @@ program main
      enddo
   enddo
 end
+
+subroutine host1()
+  integer, device :: a(32)
+  integer :: i, j
+
+  !$cuf kernel do(1) <<<*,32>>>
+  do i = 1, 32
+    a(i) = a(i) * 2.0
+    !ERROR: 'syncthreads' may not be called in device code
+    call syncthreads() ! missing explicit use cudadevice
+    a(i) = a(i) + a(j) - 34.0
+  end do
+end 

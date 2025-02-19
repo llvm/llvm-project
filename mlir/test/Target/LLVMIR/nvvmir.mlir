@@ -623,27 +623,25 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"cluster_max_blocks", i32 8}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxclusterrank"="8" }
+
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = 16} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.minctasm"="16" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="16" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>,
@@ -651,13 +649,12 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="32" "nvvm.minctasm"="16" }
 // CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"maxnreg", i32 32}
 // CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
-// CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 
 // -----
 // CHECK: define ptx_kernel void @kernel_func
@@ -771,5 +768,15 @@ llvm.func @nvvm_griddepcontrol_wait() {
 llvm.func @nvvm_griddepcontrol_launch_dependents() {
   // CHECK: call void @llvm.nvvm.griddepcontrol.launch.dependents()
   nvvm.griddepcontrol.launch.dependents
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_mapa
+llvm.func @nvvm_mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
+  // CHECK-LLVM: call ptr @llvm.nvvm.mapa(ptr %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr
+  // CHECK-LLVM: call ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<3>
   llvm.return
 }

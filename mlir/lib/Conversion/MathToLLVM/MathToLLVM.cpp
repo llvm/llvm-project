@@ -39,6 +39,7 @@ using CeilOpLowering = ConvertFMFMathToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
     ConvertFMFMathToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
 using CosOpLowering = ConvertFMFMathToLLVMPattern<math::CosOp, LLVM::CosOp>;
+using CoshOpLowering = ConvertFMFMathToLLVMPattern<math::CoshOp, LLVM::CoshOp>;
 using CtPopFOpLowering =
     VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp>;
 using Exp2OpLowering = ConvertFMFMathToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
@@ -58,9 +59,12 @@ using RoundEvenOpLowering =
 using RoundOpLowering =
     ConvertFMFMathToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
 using SinOpLowering = ConvertFMFMathToLLVMPattern<math::SinOp, LLVM::SinOp>;
+using SinhOpLowering = ConvertFMFMathToLLVMPattern<math::SinhOp, LLVM::SinhOp>;
 using SqrtOpLowering = ConvertFMFMathToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 using FTruncOpLowering =
     ConvertFMFMathToLLVMPattern<math::TruncOp, LLVM::FTruncOp>;
+using TanOpLowering = ConvertFMFMathToLLVMPattern<math::TanOp, LLVM::TanOp>;
+using TanhOpLowering = ConvertFMFMathToLLVMPattern<math::TanhOp, LLVM::TanhOp>;
 
 // A `CtLz/CtTz/absi(a)` is converted into `CtLz/CtTz/absi(a, false)`.
 template <typename MathOp, typename LLVMOp>
@@ -300,9 +304,9 @@ struct ConvertMathToLLVMPass
 
 void mlir::populateMathToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    bool approximateLog1p) {
+    bool approximateLog1p, PatternBenefit benefit) {
   if (approximateLog1p)
-    patterns.add<Log1pOpLowering>(converter);
+    patterns.add<Log1pOpLowering>(converter, benefit);
   // clang-format off
   patterns.add<
     AbsFOpLowering,
@@ -310,6 +314,7 @@ void mlir::populateMathToLLVMConversionPatterns(
     CeilOpLowering,
     CopySignOpLowering,
     CosOpLowering,
+    CoshOpLowering,
     CountLeadingZerosOpLowering,
     CountTrailingZerosOpLowering,
     CtPopFOpLowering,
@@ -327,9 +332,12 @@ void mlir::populateMathToLLVMConversionPatterns(
     RoundOpLowering,
     RsqrtOpLowering,
     SinOpLowering,
+    SinhOpLowering,
     SqrtOpLowering,
-    FTruncOpLowering
-  >(converter);
+    FTruncOpLowering,
+    TanOpLowering,
+    TanhOpLowering
+  >(converter, benefit);
   // clang-format on
 }
 

@@ -1219,6 +1219,20 @@ protected:
     SourceLocation Loc;
   };
 
+  class ConvertVectorExprBitfields {
+    friend class ConvertVectorExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    //
+    /// This is only meaningful for operations on floating point
+    /// types when additional values need to be in trailing storage.
+    /// It is 0 otherwise.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasFPFeatures : 1;
+  };
+
   union {
     // Same order as in StmtNodes.td.
     // Statements
@@ -1297,6 +1311,7 @@ protected:
 
     // Clang Extensions
     OpaqueValueExprBitfields OpaqueValueExprBits;
+    ConvertVectorExprBitfields ConvertVectorExprBits;
   };
 
 public:

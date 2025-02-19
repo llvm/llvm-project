@@ -22,7 +22,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,6 +35,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <optional>
+#include <set>
 
 #define DEBUG_TYPE "bp-section-orderer"
 
@@ -46,7 +47,7 @@ template <class D> struct BPOrdererTraits;
 
 template <class D> struct BPOrderer {
   using Section = typename BPOrdererTraits<D>::Section;
-  using Symbol = typename BPOrdererTraits<D>::Symbol;
+  using Defined = typename BPOrdererTraits<D>::Defined;
 
   // Compute a section order using the Balanced Partitioning algorithm.
   //
@@ -56,13 +57,17 @@ template <class D> struct BPOrderer {
   //   program startup.
   // * compressionSortStartupFunctions: if profilePath is specified, allocate
   //   extra utility vertices to prioritize nearby function similarity.
-  static auto
-  computeOrder(llvm::StringRef profilePath, bool forFunctionCompression,
-               bool forDataCompression, bool compressionSortStartupFunctions,
-               bool verbose, llvm::ArrayRef<Section *> sections,
-               const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
-                   &rootSymbolToSectionIdxs)
+  auto computeOrder(llvm::StringRef profilePath, bool forFunctionCompression,
+                    bool forDataCompression,
+                    bool compressionSortStartupFunctions, bool verbose,
+                    llvm::ArrayRef<Section *> sections,
+                    const DenseMap<CachedHashStringRef, std::set<unsigned>>
+                        &rootSymbolToSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
+
+  std::optional<StringRef> static getResolvedLinkageName(StringRef name) {
+    return {};
+  }
 };
 } // namespace lld
 
@@ -73,7 +78,7 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     ArrayRef<const typename D::Section *> sections,
     const DenseMap<const void *, uint64_t> &sectionToIdx,
     ArrayRef<unsigned> sectionIdxs,
-    DenseMap<unsigned, SmallVector<unsigned>> *duplicateSectionIdxs,
+    DenseMap<unsigned, SmallVector<unsigned, 0>> *duplicateSectionIdxs,
     BPFunctionNode::UtilityNodeT &maxUN) {
   TimeTraceScope timeScope("Build nodes for compression");
 
@@ -88,7 +93,7 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     hashes.clear();
   }
 
-  DenseMap<uint64_t, unsigned> hashFrequency;
+  MapVector<uint64_t, unsigned> hashFrequency;
   for (auto &[sectionIdx, hashes] : sectionHashes)
     for (auto hash : hashes)
       ++hashFrequency[hash];
@@ -97,10 +102,11 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     // Merge sections that are nearly identical
     SmallVector<std::pair<unsigned, SmallVector<uint64_t>>> newSectionHashes;
     DenseMap<uint64_t, unsigned> wholeHashToSectionIdx;
+    unsigned threshold = sectionHashes.size() > 10000 ? 5 : 0;
     for (auto &[sectionIdx, hashes] : sectionHashes) {
       uint64_t wholeHash = 0;
       for (auto hash : hashes)
-        if (hashFrequency[hash] > 5)
+        if (hashFrequency[hash] > threshold)
           wholeHash ^= hash;
       auto [it, wasInserted] =
           wholeHashToSectionIdx.insert(std::make_pair(wholeHash, sectionIdx));
@@ -141,11 +147,14 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
   return sectionUns;
 }
 
-/// Symbols can be appended with "(.__uniq.xxxx)?.llvm.yyyy" where "xxxx" and
-/// "yyyy" are numbers that could change between builds. We need to use the
-/// root symbol name before this suffix so these symbols can be matched with
-/// profiles which may have different suffixes.
+/// Symbols can be appended with "(.__uniq.xxxx)?(.llvm.yyyy)?(.Tgm)?" where
+/// "xxxx" and "yyyy" are numbers that could change between builds, and .Tgm is
+/// the global merge functions suffix
+/// (see GlobalMergeFunc::MergingInstanceSuffix). We need to use the root symbol
+/// name before this suffix so these symbols can be matched with profiles which
+/// may have different suffixes.
 inline StringRef getRootSymbol(StringRef name) {
+  name.consume_back(".Tgm");
   auto [P0, S0] = name.rsplit(".llvm.");
   auto [P1, S1] = P0.rsplit(".__uniq.");
   return P1;
@@ -156,7 +165,7 @@ auto BPOrderer<D>::computeOrder(
     StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose,
     ArrayRef<Section *> sections,
-    const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
+    const DenseMap<CachedHashStringRef, std::set<unsigned>>
         &rootSymbolToSectionIdxs) -> DenseMap<const Section *, int> {
   TimeTraceScope timeScope("Setup Balanced Partitioning");
   DenseMap<const void *, uint64_t> sectionToIdx;
@@ -257,7 +266,7 @@ auto BPOrderer<D>::computeOrder(
 
   // Map a section index (order directly) to a list of duplicate section indices
   // (not ordered directly).
-  DenseMap<unsigned, SmallVector<unsigned>> duplicateSectionIdxs;
+  DenseMap<unsigned, SmallVector<unsigned, 0>> duplicateSectionIdxs;
   auto unsForFunctionCompression = getUnsForCompression<D>(
       sections, sectionToIdx, sectionIdxsForFunctionCompression,
       &duplicateSectionIdxs, maxUN);
@@ -357,7 +366,7 @@ auto BPOrderer<D>::computeOrder(
       const uint64_t pageSize = (1 << 14);
       uint64_t currentAddress = 0;
       for (const auto *isec : orderedSections) {
-        for (auto *sym : D::getSymbols(*isec)) {
+        for (auto *sym : static_cast<D *>(this)->getSymbols(*isec)) {
           uint64_t startAddress = currentAddress + D::getSymValue(*sym);
           uint64_t endAddress = startAddress + D::getSymSize(*sym);
           uint64_t firstPage = startAddress / pageSize;

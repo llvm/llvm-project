@@ -18,14 +18,12 @@ using namespace clang;
 using namespace clang::interp;
 
 unsigned Program::getOrCreateNativePointer(const void *Ptr) {
-  auto It = NativePointerIndices.find(Ptr);
-  if (It != NativePointerIndices.end())
-    return It->second;
+  auto [It, Inserted] =
+      NativePointerIndices.try_emplace(Ptr, NativePointers.size());
+  if (Inserted)
+    NativePointers.push_back(Ptr);
 
-  unsigned Idx = NativePointers.size();
-  NativePointers.push_back(Ptr);
-  NativePointerIndices[Ptr] = Idx;
-  return Idx;
+  return It->second;
 }
 
 const void *Program::getNativePointer(unsigned Idx) {
@@ -35,6 +33,7 @@ const void *Program::getNativePointer(unsigned Idx) {
 unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
   const size_t CharWidth = S->getCharByteWidth();
   const size_t BitWidth = CharWidth * Ctx.getCharBit();
+  unsigned StringLength = S->getLength();
 
   PrimType CharType;
   switch (CharWidth) {
@@ -55,15 +54,15 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
     Base = S;
 
   // Create a descriptor for the string.
-  Descriptor *Desc = allocateDescriptor(Base, CharType, Descriptor::GlobalMD,
-                                        S->getLength() + 1,
-                                        /*isConst=*/true,
-                                        /*isTemporary=*/false,
-                                        /*isMutable=*/false);
+  Descriptor *Desc =
+      allocateDescriptor(Base, CharType, Descriptor::GlobalMD, StringLength + 1,
+                         /*isConst=*/true,
+                         /*isTemporary=*/false,
+                         /*isMutable=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
-  unsigned I = Globals.size();
+  unsigned GlobalIndex = Globals.size();
   unsigned Sz = Desc->getAllocSize();
   auto *G = new (Allocator, Sz) Global(Ctx.getEvalID(), Desc, /*isStatic=*/true,
                                        /*isExtern=*/false);
@@ -74,33 +73,32 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
 
   // Construct the string in storage.
   const Pointer Ptr(G->block());
-  for (unsigned I = 0, N = S->getLength(); I <= N; ++I) {
-    Pointer Field = Ptr.atIndex(I).narrow();
-    const uint32_t CodePoint = I == N ? 0 : S->getCodeUnit(I);
+  for (unsigned I = 0; I <= StringLength; ++I) {
+    Pointer Field = Ptr.atIndex(I);
+    const uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
     switch (CharType) {
     case PT_Sint8: {
       using T = PrimConv<PT_Sint8>::T;
       Field.deref<T>() = T::from(CodePoint, BitWidth);
-      Field.initialize();
       break;
     }
     case PT_Uint16: {
       using T = PrimConv<PT_Uint16>::T;
       Field.deref<T>() = T::from(CodePoint, BitWidth);
-      Field.initialize();
       break;
     }
     case PT_Uint32: {
       using T = PrimConv<PT_Uint32>::T;
       Field.deref<T>() = T::from(CodePoint, BitWidth);
-      Field.initialize();
       break;
     }
     default:
       llvm_unreachable("unsupported character type");
     }
   }
-  return I;
+  Ptr.initialize();
+
+  return GlobalIndex;
 }
 
 Pointer Program::getPtrGlobal(unsigned Idx) const {
@@ -434,8 +432,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         return allocateDescriptor(D, *T, MDSize, IsTemporary,
                                   Descriptor::UnknownSize{});
       } else {
-        const Descriptor *Desc = createDescriptor(D, ElemTy.getTypePtr(),
-                                                  MDSize, IsConst, IsTemporary);
+        const Descriptor *Desc = createDescriptor(
+            D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!Desc)
           return nullptr;
         return allocateDescriptor(D, Desc, MDSize, IsTemporary,
@@ -453,15 +451,21 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
   // Complex types - represented as arrays of elements.
   if (const auto *CT = Ty->getAs<ComplexType>()) {
-    PrimType ElemTy = *Ctx.classify(CT->getElementType());
-    return allocateDescriptor(D, ElemTy, MDSize, 2, IsConst, IsTemporary,
+    std::optional<PrimType> ElemTy = Ctx.classify(CT->getElementType());
+    if (!ElemTy)
+      return nullptr;
+
+    return allocateDescriptor(D, *ElemTy, MDSize, 2, IsConst, IsTemporary,
                               IsMutable);
   }
 
   // Same with vector types.
   if (const auto *VT = Ty->getAs<VectorType>()) {
-    PrimType ElemTy = *Ctx.classify(VT->getElementType());
-    return allocateDescriptor(D, ElemTy, MDSize, VT->getNumElements(), IsConst,
+    std::optional<PrimType> ElemTy = Ctx.classify(VT->getElementType());
+    if (!ElemTy)
+      return nullptr;
+
+    return allocateDescriptor(D, *ElemTy, MDSize, VT->getNumElements(), IsConst,
                               IsTemporary, IsMutable);
   }
 

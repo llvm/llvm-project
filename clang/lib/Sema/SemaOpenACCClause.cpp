@@ -589,7 +589,6 @@ bool checkValidAfterDeviceType(
 // construct has been implemented.
 bool isDirectiveKindImplemented(OpenACCDirectiveKind DK) {
   return DK != OpenACCDirectiveKind::Declare &&
-         DK != OpenACCDirectiveKind::Atomic &&
          DK != OpenACCDirectiveKind::Routine;
 }
 

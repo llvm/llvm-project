@@ -45,16 +45,11 @@ module Clang_Basic {
   textual header "clang/Basic/BuiltinsAMDGPU.def"
   textual header "clang/Basic/BuiltinsARM.def"
   textual header "clang/Basic/BuiltinsHexagonMapCustomDep.def"
-  textual header "clang/Basic/BuiltinsLoongArch.def"
   textual header "clang/Basic/BuiltinsLoongArchBase.def"
   textual header "clang/Basic/BuiltinsLoongArchLASX.def"
   textual header "clang/Basic/BuiltinsLoongArchLSX.def"
   textual header "clang/Basic/BuiltinsMips.def"
-  textual header "clang/Basic/BuiltinsNEON.def"
   textual header "clang/Basic/BuiltinsPPC.def"
-  textual header "clang/Basic/BuiltinsRISCVVector.def"
-  textual header "clang/Basic/BuiltinsSME.def"
-  textual header "clang/Basic/BuiltinsSVE.def"
   textual header "clang/Basic/BuiltinsSystemZ.def"
   textual header "clang/Basic/BuiltinsVE.def"
   textual header "clang/Basic/BuiltinsVEVL.gen.def"
@@ -113,6 +108,8 @@ module Clang_Diagnostics {
   module Parse { header "clang/Basic/DiagnosticParse.h" export * }
   module Serialization { header "clang/Serialization/SerializationDiagnostic.h" export * }
   module Refactoring { header "clang/Tooling/Refactoring/RefactoringDiagnostic.h" export * }
+
+  textual header "clang/Basic/AllDiagnosticKinds.inc"
 }
 
 module Clang_Driver {
@@ -138,7 +135,16 @@ module Clang_Frontend {
 
 module Clang_FrontendTool { requires cplusplus umbrella "clang/FrontendTool" module * { export * } }
 module Clang_Index { requires cplusplus umbrella "clang/Index" module * { export * } }
-module Clang_Lex { requires cplusplus umbrella "clang/Lex" module * { export * } }
+
+module Clang_Lex {
+  requires cplusplus
+  umbrella "clang/Lex"
+
+  textual header "clang/Lex/HLSLRootSignatureTokenKinds.def"
+
+  module * { export * }
+}
+
 module Clang_Parse { requires cplusplus umbrella "clang/Parse" module * { export * } }
 module Clang_Rewrite { requires cplusplus umbrella "clang/Rewrite/Core" module * { export * } }
 module Clang_RewriteFrontend { requires cplusplus umbrella "clang/Rewrite/Frontend" module * { export * } }
