@@ -1138,7 +1138,7 @@ public:
     insert(__m.begin(), __m.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~map() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~map() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
@@ -1826,7 +1826,9 @@ public:
     insert(__m.begin(), __m.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~multimap() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~multimap() {
+    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
+  }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
