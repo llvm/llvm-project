@@ -189,11 +189,6 @@ public:
                     bool IsMainAnalysis)
       : ParentTy(P), CBFactory(&CBFactory), IsMainAnalysis(IsMainAnalysis) {}
 
-  RegionBindingsRef add(key_type_ref K, data_type_ref D) const {
-    return RegionBindingsRef(static_cast<const ParentTy *>(this)->add(K, D),
-                             *CBFactory, IsMainAnalysis);
-  }
-
   RegionBindingsRef removeCluster(const MemRegion *BaseRegion) const {
     return RegionBindingsRef(ParentTy::remove(BaseRegion), *CBFactory,
                              IsMainAnalysis);
@@ -323,6 +318,10 @@ public:
   }
 
   LLVM_DUMP_METHOD void dump() const { printJson(llvm::errs()); }
+
+protected:
+  RegionBindingsRef addBindingInternal(const MemRegion *BaseRegion,
+                                       data_type_ref D) const;
 };
 } // end anonymous namespace
 
@@ -360,7 +359,7 @@ public:
   addWithoutDecreasingLimit(const MemRegion *BaseRegion,
                             data_type_ref BindingKeyAndValue) const {
     return BoundedRegionBindingsRef{
-        RegionBindingsRef::add(BaseRegion, BindingKeyAndValue),
+        RegionBindingsRef::addBindingInternal(BaseRegion, BindingKeyAndValue),
         EscapedValuesDuringBind, BindingsLeft};
   }
 
@@ -414,6 +413,13 @@ RegionBindingsRef::getDefaultBinding(const MemRegion *R) const {
   return V ? std::optional<SVal>(*V) : std::nullopt;
 }
 
+RegionBindingsRef
+RegionBindingsRef::addBindingInternal(const MemRegion *BaseRegion,
+                                      data_type_ref D) const {
+  return RegionBindingsRef(ParentTy::add(BaseRegion, D), *CBFactory,
+                           IsMainAnalysis);
+}
+
 RegionBindingsRef RegionBindingsRef::addBinding(BindingKey K, SVal V) const {
   const MemRegion *Base = K.getBaseRegion();
 
@@ -421,7 +427,7 @@ RegionBindingsRef RegionBindingsRef::addBinding(BindingKey K, SVal V) const {
   ClusterBindings Cluster =
       (ExistingCluster ? *ExistingCluster : CBFactory->getEmptyMap());
 
-  return add(Base, CBFactory->add(Cluster, K, V));
+  return addBindingInternal(Base, CBFactory->add(Cluster, K, V));
 }
 
 RegionBindingsRef RegionBindingsRef::addBinding(const MemRegion *R,
@@ -451,7 +457,7 @@ RegionBindingsRef RegionBindingsRef::removeBinding(BindingKey K) {
   ClusterBindings NewCluster = CBFactory->remove(*Cluster, K);
   if (NewCluster.isEmpty())
     return removeCluster(Base);
-  return add(Base, NewCluster);
+  return addBindingInternal(Base, NewCluster);
 }
 
 RegionBindingsRef RegionBindingsRef::removeBinding(const MemRegion *R,
