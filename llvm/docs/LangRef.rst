@@ -11721,8 +11721,9 @@ As a corollary, the only pointer in bounds of the null pointer in the default
 address space is the null pointer itself.
 
 These rules are based on the assumption that no allocated object may cross
-the unsigned address space boundary, and no allocated object may be larger
-than half the pointer index type space.
+the unsigned address space boundary, the pointer after the object must be valid,
+and no allocated object may be larger than half the pointer index type space
+- 1.
 
 If ``inbounds`` is present on a ``getelementptr`` instruction, the ``nusw``
 attribute will be automatically set as well. For this reason, the ``nusw``
