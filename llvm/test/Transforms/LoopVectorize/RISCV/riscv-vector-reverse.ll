@@ -38,7 +38,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
-; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: %1 = load i32, ptr %arrayidx, align 4
+; CHECK-NEXT:  LV: Found an estimated cost of 8 for VF vscale x 4 For instruction: %1 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:  LV: Found an estimated cost of 2 for VF vscale x 4 For instruction: %add9 = add i32 %1, 1
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: store i32 %add9, ptr %arrayidx3, align 4
@@ -80,9 +80,9 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
-; CHECK-NEXT:  Live-in vp<%0> = VF
-; CHECK-NEXT:  Live-in vp<%1> = VF * UF
-; CHECK-NEXT:  Live-in vp<%2> = vector-trip-count
+; CHECK-NEXT:  Live-in vp<[[VF:%.+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  vp<%3> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
@@ -97,20 +97,20 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<%6> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      vp<%7> = DERIVED-IV ir<%n> + vp<%6> * ir<-1>
-; CHECK-NEXT:      vp<%8> = SCALAR-STEPS vp<%7>, ir<-1>, vp<%0>
-; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<%8>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:      vp<%9> = vector-end-pointer inbounds ir<%arrayidx>, vp<%0>
-; CHECK-NEXT:      WIDEN ir<%1> = load vp<%9>
-; CHECK-NEXT:      WIDEN ir<%add9> = add ir<%1>, ir<1>
-; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<%10> = vector-end-pointer inbounds ir<%arrayidx3>, vp<%0>
-; CHECK-NEXT:      WIDEN store vp<%10>, ir<%add9>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%6>, vp<%1>
-; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%2>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:      CLONE ir<[[IDX:%.+]]> = add nsw vp<[[STEPS]]>, ir<-1>
+; CHECK-NEXT:      CLONE ir<[[ZEXT_IDX:%.+]]> = zext ir<[[IDX]]>
+; CHECK-NEXT:      CLONE ir<[[LD_IDX:%.+]]> = getelementptr inbounds ir<%B>, ir<[[ZEXT_IDX]]>
+; CHECK-NEXT:      vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>
+; CHECK-NEXT:      WIDEN ir<[[LD:%.+]]> = load vp<[[LD_PTR]]>, stride = ir<-4>, runtimeVF = vp<[[VF]]>
+; CHECK-NEXT:      WIDEN ir<[[ADD:%.+]]> = add ir<[[LD]]>, ir<1>
+; CHECK-NEXT:      CLONE ir<[[ST_IDX:%.+]]> = getelementptr inbounds ir<%A>, ir<[[ZEXT_IDX]]>
+; CHECK-NEXT:      vp<[[ST_PTR:%.+]]> = vector-end-pointer inbounds ir<[[ST_IDX]]>, vp<[[VF]]>
+; CHECK-NEXT:      WIDEN store vp<[[ST_PTR]]>, ir<[[ADD]]>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
@@ -147,7 +147,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
-; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: %1 = load i32, ptr %arrayidx, align 4
+; CHECK-NEXT:  LV: Found an estimated cost of 8 for VF vscale x 4 For instruction: %1 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:  LV: Found an estimated cost of 2 for VF vscale x 4 For instruction: %add9 = add i32 %1, 1
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: store i32 %add9, ptr %arrayidx3, align 4
@@ -178,7 +178,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: The target has 31 registers of RISCV::GPRRC register class
 ; CHECK-NEXT:  LV: The target has 32 registers of RISCV::VRRC register class
 ; CHECK-NEXT:  LV: Loop does not require scalar epilogue
-; CHECK-NEXT:  LV: Loop cost is 24
+; CHECK-NEXT:  LV: Loop cost is 23
 ; CHECK-NEXT:  LV: IC is 1
 ; CHECK-NEXT:  LV: VF is vscale x 4
 ; CHECK-NEXT:  LV: Not Interleaving.
@@ -189,9 +189,9 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%18> = VF
-; CHECK-NEXT:  Live-in ir<%18>.1 = VF * UF
-; CHECK-NEXT:  Live-in ir<%n.vec> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<[[VF:%.+]]> = VF
+; CHECK-NEXT:  Live-in ir<[[VF]]>.1 = VF * UF
+; CHECK-NEXT:  Live-in ir<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  Live-in ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
@@ -232,19 +232,19 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
-; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    vp<%3> = DERIVED-IV ir<%n> + vp<%index> * ir<-1>
-; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<%3>, ir<-1>
-; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
-; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:    vp<%4> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
-; CHECK-NEXT:    WIDEN ir<%19> = load vp<%4>
-; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%19>, ir<1>
-; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    vp<%5> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
-; CHECK-NEXT:    WIDEN store vp<%5>, ir<%add9>
-; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
-; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
+; CHECK-NEXT:   vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:   CLONE ir<[[IDX:%.+]]> = add nsw vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:   CLONE ir<[[ZEXT_IDX:%.+]]> = zext ir<[[IDX]]>
+; CHECK-NEXT:   CLONE ir<[[LD_IDX:%.+]]> = getelementptr inbounds ir<%B>, ir<[[ZEXT_IDX]]>
+; CHECK-NEXT:   vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>
+; CHECK-NEXT:   WIDEN ir<[[LD:%.+]]> = load vp<[[LD_PTR]]>, stride = ir<-4>, runtimeVF = ir<[[VF]]>
+; CHECK-NEXT:   WIDEN ir<[[ADD:%.+]]> = add ir<[[LD]]>, ir<1>
+; CHECK-NEXT:   CLONE ir<[[ST_IDX:%.+]]> = getelementptr inbounds ir<%A>, ir<[[ZEXT_IDX]]>
+; CHECK-NEXT:   vp<[[ST_PTR:%.+]]> = vector-end-pointer inbounds ir<[[ST_IDX]]>, ir<[[VF]]>
+; CHECK-NEXT:   WIDEN store vp<[[ST_PTR]]>, ir<[[ADD]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VF]]>.1
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VEC_TC]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
@@ -333,25 +333,21 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    %21 = add nsw i32 %offset.idx, -1
 ; CHECK-NEXT:    %22 = zext i32 %21 to i64
 ; CHECK-NEXT:    %23 = getelementptr inbounds i32, ptr %B, i64 %22
-; CHECK-NEXT:    %24 = mul i64 0, %18
-; CHECK-NEXT:    %25 = sub i64 %18, 1
-; CHECK-NEXT:    %26 = mul i64 -1, %25
-; CHECK-NEXT:    %27 = getelementptr inbounds i32, ptr %23, i64 %24
-; CHECK-NEXT:    %28 = getelementptr inbounds i32, ptr %27, i64 %26
-; CHECK-NEXT:    %wide.load = load <vscale x 4 x i32>, ptr %28, align 4
-; CHECK-NEXT:    %reverse = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %wide.load)
-; CHECK-NEXT:    %29 = add <vscale x 4 x i32> %reverse, splat (i32 1)
-; CHECK-NEXT:    %30 = getelementptr inbounds i32, ptr %A, i64 %22
-; CHECK-NEXT:    %31 = mul i64 0, %18
-; CHECK-NEXT:    %32 = sub i64 %18, 1
-; CHECK-NEXT:    %33 = mul i64 -1, %32
-; CHECK-NEXT:    %34 = getelementptr inbounds i32, ptr %30, i64 %31
-; CHECK-NEXT:    %35 = getelementptr inbounds i32, ptr %34, i64 %33
-; CHECK-NEXT:    %reverse4 = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %29)
-; CHECK-NEXT:    store <vscale x 4 x i32> %reverse4, ptr %35, align 4
+; CHECK-NEXT:    %24 = getelementptr inbounds i32, ptr %23, i32 0
+; CHECK-NEXT:    %25 = trunc i64 %18 to i32
+; CHECK-NEXT:    %wide.strided.load = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 %24, i64 -4, <vscale x 4 x i1> splat (i1 true), i32 %25)
+; CHECK-NEXT:    %26 = add <vscale x 4 x i32> %wide.strided.load, splat (i32 1)
+; CHECK-NEXT:    %27 = getelementptr inbounds i32, ptr %A, i64 %22
+; CHECK-NEXT:    %28 = mul i64 0, %18
+; CHECK-NEXT:    %29 = sub i64 %18, 1
+; CHECK-NEXT:    %30 = mul i64 -1, %29
+; CHECK-NEXT:    %31 = getelementptr inbounds i32, ptr %27, i64 %28
+; CHECK-NEXT:    %32 = getelementptr inbounds i32, ptr %31, i64 %30
+; CHECK-NEXT:    %reverse = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %26)
+; CHECK-NEXT:    store <vscale x 4 x i32> %reverse, ptr %32, align 4
 ; CHECK-NEXT:    %index.next = add nuw i64 %index, %18
-; CHECK-NEXT:    %36 = icmp eq i64 %index.next, %n.vec
-; CHECK-NEXT:    br i1 %36, <null operand!>, label %vector.body
+; CHECK-NEXT:    %33 = icmp eq i64 %index.next, %n.vec
+; CHECK-NEXT:    br i1 %33, <null operand!>, label %vector.body
 ; CHECK-NEXT:  LV: created middle.block
 ; CHECK-NEXT:  LV: draw edge from vector.body
 ; CHECK-NEXT:  LV: vectorizing VPBB: middle.block in BB: middle.block
@@ -368,7 +364,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: filled BB:
 ; CHECK-NEXT:  scalar.ph: ; preds = %vector.memcheck, %vector.scevcheck, %for.body.preheader
 ; CHECK-NEXT:    %bc.resume.val = phi i64 [ %19, %middle.block ], [ %0, %for.body.preheader ], [ %0, %vector.scevcheck ], [ %0, %vector.memcheck ]
-; CHECK-NEXT:    %bc.resume.val5 = phi i32 [ %20, %middle.block ], [ %n, %for.body.preheader ], [ %n, %vector.scevcheck ], [ %n, %vector.memcheck ]
+; CHECK-NEXT:    %bc.resume.val4 = phi i32 [ %20, %middle.block ], [ %n, %for.body.preheader ], [ %n, %vector.scevcheck ], [ %n, %vector.memcheck ]
 ; CHECK-NEXT:    br label %for.body
 ; CHECK-NEXT:  LV: draw edge from middle.block
 ; CHECK-NEXT:  LV: draw edge from for.body.preheader
@@ -378,12 +374,12 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: filled BB:
 ; CHECK-NEXT:  for.body: ; preds = %for.body, %scalar.ph
 ; CHECK-NEXT:    %indvars.iv = phi i64 [ %bc.resume.val, %scalar.ph ], [ %indvars.iv.next, %for.body ]
-; CHECK-NEXT:    %i.0.in8 = phi i32 [ %bc.resume.val5, %scalar.ph ], [ %i.0, %for.body ]
+; CHECK-NEXT:    %i.0.in8 = phi i32 [ %bc.resume.val4, %scalar.ph ], [ %i.0, %for.body ]
 ; CHECK-NEXT:    %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:    %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
-; CHECK-NEXT:    %37 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    %add9 = add i32 %37, 1
+; CHECK-NEXT:    %34 = load i32, ptr %arrayidx, align 4
+; CHECK-NEXT:    %add9 = add i32 %34, 1
 ; CHECK-NEXT:    %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %idxprom
 ; CHECK-NEXT:    store i32 %add9, ptr %arrayidx3, align 4
 ; CHECK-NEXT:    %cmp = icmp ugt i64 %indvars.iv, 1
@@ -449,7 +445,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
-; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: %1 = load float, ptr %arrayidx, align 4
+; CHECK-NEXT:  LV: Found an estimated cost of 8 for VF vscale x 4 For instruction: %1 = load float, ptr %arrayidx, align 4
 ; CHECK-NEXT:  LV: Found an estimated cost of 4 for VF vscale x 4 For instruction: %conv1 = fadd float %1, 1.000000e+00
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: store float %conv1, ptr %arrayidx3, align 4
@@ -491,9 +487,9 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
-; CHECK-NEXT:  Live-in vp<%0> = VF
-; CHECK-NEXT:  Live-in vp<%1> = VF * UF
-; CHECK-NEXT:  Live-in vp<%2> = vector-trip-count
+; CHECK-NEXT:  Live-in vp<[[VF:%.+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  vp<%3> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
@@ -508,20 +504,20 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<%6> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      vp<%7> = DERIVED-IV ir<%n> + vp<%6> * ir<-1>
-; CHECK-NEXT:      vp<%8> = SCALAR-STEPS vp<%7>, ir<-1>, vp<%0>
-; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<%8>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:      vp<%9> = vector-end-pointer inbounds ir<%arrayidx>, vp<%0>
-; CHECK-NEXT:      WIDEN ir<%1> = load vp<%9>
-; CHECK-NEXT:      WIDEN ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
-; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<%10> = vector-end-pointer inbounds ir<%arrayidx3>, vp<%0>
-; CHECK-NEXT:      WIDEN store vp<%10>, ir<%conv1>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%6>, vp<%1>
-; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%2>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:      CLONE ir<[[IDX:%.+]]> = add nsw vp<[[STEPS]]>, ir<-1>
+; CHECK-NEXT:      CLONE ir<[[ZEXT_IDX:%.+]]> = zext ir<[[IDX]]>
+; CHECK-NEXT:      CLONE ir<[[LD_IDX:%.+]]> = getelementptr inbounds ir<%B>, ir<[[ZEXT_IDX]]>
+; CHECK-NEXT:      vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>
+; CHECK-NEXT:      WIDEN ir<[[LD:%.+]]> = load vp<[[LD_PTR]]>, stride = ir<-4>, runtimeVF = vp<[[VF]]>
+; CHECK-NEXT:      WIDEN ir<[[ADD:%.+]]> = fadd ir<[[LD]]>, ir<1.000000e+00>
+; CHECK-NEXT:      CLONE ir<[[ST_IDX:%.+]]> = getelementptr inbounds ir<%A>, ir<[[ZEXT_IDX]]>
+; CHECK-NEXT:      vp<[[ST_PTR:%.+]]> = vector-end-pointer inbounds ir<[[ST_IDX]]>, vp<[[VF]]>
+; CHECK-NEXT:      WIDEN store vp<[[ST_PTR]]>, ir<[[ADD]]>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
@@ -558,7 +554,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
-; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: %1 = load float, ptr %arrayidx, align 4
+; CHECK-NEXT:  LV: Found an estimated cost of 8 for VF vscale x 4 For instruction: %1 = load float, ptr %arrayidx, align 4
 ; CHECK-NEXT:  LV: Found an estimated cost of 4 for VF vscale x 4 For instruction: %conv1 = fadd float %1, 1.000000e+00
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: store float %conv1, ptr %arrayidx3, align 4
@@ -589,7 +585,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: The target has 31 registers of RISCV::GPRRC register class
 ; CHECK-NEXT:  LV: The target has 32 registers of RISCV::VRRC register class
 ; CHECK-NEXT:  LV: Loop does not require scalar epilogue
-; CHECK-NEXT:  LV: Loop cost is 26
+; CHECK-NEXT:  LV: Loop cost is 25
 ; CHECK-NEXT:  LV: IC is 1
 ; CHECK-NEXT:  LV: VF is vscale x 4
 ; CHECK-NEXT:  LV: Not Interleaving.
@@ -600,9 +596,9 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%18> = VF
-; CHECK-NEXT:  Live-in ir<%18>.1 = VF * UF
-; CHECK-NEXT:  Live-in ir<%n.vec> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<[[VF:%.+]]> = VF
+; CHECK-NEXT:  Live-in ir<[[VF]]>.1 = VF * UF
+; CHECK-NEXT:  Live-in ir<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  Live-in ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
@@ -643,19 +639,19 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
-; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    vp<%3> = DERIVED-IV ir<%n> + vp<%index> * ir<-1>
-; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<%3>, ir<-1>
-; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
-; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:    vp<%4> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
-; CHECK-NEXT:    WIDEN ir<%19> = load vp<%4>
-; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%19>, ir<1.000000e+00>
-; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    vp<%5> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
-; CHECK-NEXT:    WIDEN store vp<%5>, ir<%conv1>
-; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
-; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
+; CHECK-NEXT:    vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:    CLONE ir<[[IDX:%.+]]> = add nsw vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:    CLONE ir<[[ZEXT_IDX:%.+]]> = zext ir<[[IDX]]>
+; CHECK-NEXT:    CLONE ir<[[LD_IDX:%.+]]> = getelementptr inbounds ir<%B>, ir<[[ZEXT_IDX]]>
+; CHECK-NEXT:    vp<[[LD_PTR:%.+]]> = vector-pointer ir<[[LD_IDX]]>
+; CHECK-NEXT:    WIDEN ir<[[LD:%.+]]> = load vp<[[LD_PTR]]>, stride = ir<-4>, runtimeVF = ir<[[VF]]>
+; CHECK-NEXT:    WIDEN ir<[[ADD:%.+]]> = fadd ir<[[LD]]>, ir<1.000000e+00>
+; CHECK-NEXT:    CLONE ir<[[ST_IDX:%.+]]> = getelementptr inbounds ir<%A>, ir<[[ZEXT_IDX]]>
+; CHECK-NEXT:    vp<[[ST_PTR:%.+]]> = vector-end-pointer inbounds ir<[[ST_IDX]]>, ir<[[VF]]>
+; CHECK-NEXT:    WIDEN store vp<[[ST_PTR]]>, ir<[[ADD]]>
+; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VF]]>.1
+; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VEC_TC]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
@@ -744,25 +740,21 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    %21 = add nsw i32 %offset.idx, -1
 ; CHECK-NEXT:    %22 = zext i32 %21 to i64
 ; CHECK-NEXT:    %23 = getelementptr inbounds float, ptr %B, i64 %22
-; CHECK-NEXT:    %24 = mul i64 0, %18
-; CHECK-NEXT:    %25 = sub i64 %18, 1
-; CHECK-NEXT:    %26 = mul i64 -1, %25
-; CHECK-NEXT:    %27 = getelementptr inbounds float, ptr %23, i64 %24
-; CHECK-NEXT:    %28 = getelementptr inbounds float, ptr %27, i64 %26
-; CHECK-NEXT:    %wide.load = load <vscale x 4 x float>, ptr %28, align 4
-; CHECK-NEXT:    %reverse = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %wide.load)
-; CHECK-NEXT:    %29 = fadd <vscale x 4 x float> %reverse, splat (float 1.000000e+00)
-; CHECK-NEXT:    %30 = getelementptr inbounds float, ptr %A, i64 %22
-; CHECK-NEXT:    %31 = mul i64 0, %18
-; CHECK-NEXT:    %32 = sub i64 %18, 1
-; CHECK-NEXT:    %33 = mul i64 -1, %32
-; CHECK-NEXT:    %34 = getelementptr inbounds float, ptr %30, i64 %31
-; CHECK-NEXT:    %35 = getelementptr inbounds float, ptr %34, i64 %33
-; CHECK-NEXT:    %reverse4 = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %29)
-; CHECK-NEXT:    store <vscale x 4 x float> %reverse4, ptr %35, align 4
+; CHECK-NEXT:    %24 = getelementptr inbounds float, ptr %23, i32 0
+; CHECK-NEXT:    %25 = trunc i64 %18 to i32
+; CHECK-NEXT:    %wide.strided.load = call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.p0.i64(ptr align 4 %24, i64 -4, <vscale x 4 x i1> splat (i1 true), i32 %25)
+; CHECK-NEXT:    %26 = fadd <vscale x 4 x float> %wide.strided.load, splat (float 1.000000e+00)
+; CHECK-NEXT:    %27 = getelementptr inbounds float, ptr %A, i64 %22
+; CHECK-NEXT:    %28 = mul i64 0, %18
+; CHECK-NEXT:    %29 = sub i64 %18, 1
+; CHECK-NEXT:    %30 = mul i64 -1, %29
+; CHECK-NEXT:    %31 = getelementptr inbounds float, ptr %27, i64 %28
+; CHECK-NEXT:    %32 = getelementptr inbounds float, ptr %31, i64 %30
+; CHECK-NEXT:    %reverse = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %26)
+; CHECK-NEXT:    store <vscale x 4 x float> %reverse, ptr %32, align 4
 ; CHECK-NEXT:    %index.next = add nuw i64 %index, %18
-; CHECK-NEXT:    %36 = icmp eq i64 %index.next, %n.vec
-; CHECK-NEXT:    br i1 %36, <null operand!>, label %vector.body
+; CHECK-NEXT:    %33 = icmp eq i64 %index.next, %n.vec
+; CHECK-NEXT:    br i1 %33, <null operand!>, label %vector.body
 ; CHECK-NEXT:  LV: created middle.block
 ; CHECK-NEXT:  LV: draw edge from vector.body
 ; CHECK-NEXT:  LV: vectorizing VPBB: middle.block in BB: middle.block
@@ -779,7 +771,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: filled BB:
 ; CHECK-NEXT:  scalar.ph: ; preds = %vector.memcheck, %vector.scevcheck, %for.body.preheader
 ; CHECK-NEXT:    %bc.resume.val = phi i64 [ %19, %middle.block ], [ %0, %for.body.preheader ], [ %0, %vector.scevcheck ], [ %0, %vector.memcheck ]
-; CHECK-NEXT:    %bc.resume.val5 = phi i32 [ %20, %middle.block ], [ %n, %for.body.preheader ], [ %n, %vector.scevcheck ], [ %n, %vector.memcheck ]
+; CHECK-NEXT:    %bc.resume.val4 = phi i32 [ %20, %middle.block ], [ %n, %for.body.preheader ], [ %n, %vector.scevcheck ], [ %n, %vector.memcheck ]
 ; CHECK-NEXT:    br label %for.body
 ; CHECK-NEXT:  LV: draw edge from middle.block
 ; CHECK-NEXT:  LV: draw edge from for.body.preheader
@@ -789,12 +781,12 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: filled BB:
 ; CHECK-NEXT:  for.body: ; preds = %for.body, %scalar.ph
 ; CHECK-NEXT:    %indvars.iv = phi i64 [ %bc.resume.val, %scalar.ph ], [ %indvars.iv.next, %for.body ]
-; CHECK-NEXT:    %i.0.in8 = phi i32 [ %bc.resume.val5, %scalar.ph ], [ %i.0, %for.body ]
+; CHECK-NEXT:    %i.0.in8 = phi i32 [ %bc.resume.val4, %scalar.ph ], [ %i.0, %for.body ]
 ; CHECK-NEXT:    %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:    %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
-; CHECK-NEXT:    %37 = load float, ptr %arrayidx, align 4
-; CHECK-NEXT:    %conv1 = fadd float %37, 1.000000e+00
+; CHECK-NEXT:    %34 = load float, ptr %arrayidx, align 4
+; CHECK-NEXT:    %conv1 = fadd float %34, 1.000000e+00
 ; CHECK-NEXT:    %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
 ; CHECK-NEXT:    store float %conv1, ptr %arrayidx3, align 4
 ; CHECK-NEXT:    %cmp = icmp ugt i64 %indvars.iv, 1
