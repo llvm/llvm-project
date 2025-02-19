@@ -83,7 +83,7 @@ public:
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
     mlir::ModuleOp MlirModule = Gen->getModule();
-    mlir::MLIRContext &MlirCtx = Gen->getContext();
+    mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (OutputStream && MlirModule) {
