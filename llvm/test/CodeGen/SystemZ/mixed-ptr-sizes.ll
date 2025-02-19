@@ -332,9 +332,7 @@ define signext i32 @setlength() {
 ; CHECK: lgr     [[MALLOC:[0-9]+]],3
 ; CHECK: basr    7,6
 ; CHECK: lgr     [[LENGTH:[0-9]+]],3
-; CHECK: la      [[ADDR:[0-9]+]],4([[MALLOC]])
-; CHECK: llgtr   [[ADDR]],[[ADDR]]
-; CHECK: stg     [[LENGTH]],0([[ADDR]])
+; CHECK: stg     [[LENGTH]],4([[MALLOC]])
 entry:
   %call = tail call ptr @__malloc31(i64 noundef 8)
   %call1 = tail call signext i32 @foo()
@@ -357,7 +355,7 @@ define signext i32 @setlength2() {
 ; CHECK: basr    7,6
 ; CHECK: lgr     [[LENGTH:[0-9]+]],3
 ; CHECK: ahi     [[MALLOC]],4
-; CHECK: llgtr   [[ADDR]],[[MALLOC]]
+; CHECK: llgtr   [[ADDR:[0-9]+]],[[MALLOC]]
 ; CHECK: stg     [[LENGTH]],0([[ADDR]])
 entry:
   %call = tail call ptr addrspace(1) @domalloc(i64 noundef 8)
