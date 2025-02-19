@@ -2258,20 +2258,37 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
   ];
 
   defvar opExtraClassDeclaration = [{
-    mlir::Value getInductionVar() { return getBody()->getArgument(0); }
     mlir::OpBuilder getBodyBuilder() {
       return mlir::OpBuilder(getBody(), std::prev(getBody()->end()));
     }
+
+    /// Region argument accessors.
+    mlir::Value getInductionVar() { return getBody()->getArgument(0); }
     mlir::Block::BlockArgListType getRegionIterArgs() {
-      return getBody()->getArguments().drop_front();
+      // 1 for skipping the induction variable.
+      return getBody()->getArguments().slice(1, getNumIterOperands());
     }
+    mlir::Block::BlockArgListType getRegionPrivateArgs() {
+     return getBody()->getArguments().slice(1 + getNumIterOperands(),
+                                            numPrivateBlockArgs());
+    }
+
+    /// Operation operand accessors.
     mlir::Operation::operand_range getIterOperands() {
       return getOperands()
-          .drop_front(getNumControlOperands() + getNumReduceOperands());
+          .slice(getNumControlOperands() + getNumReduceOperands(),
+                 getNumIterOperands());
     }
     llvm::MutableArrayRef<mlir::OpOperand> getInitsMutable() {
       return getOperation()->getOpOperands()
-          .drop_front(getNumControlOperands() + getNumReduceOperands());
+          .slice(getNumControlOperands() + getNumReduceOperands(),
+                 getNumIterOperands());
+    }
+    mlir::Operation::operand_range getPrivateOperands() {
+      return getOperands()
+          .slice(getNumControlOperands() + getNumReduceOperands()
+                                         + getNumIterOperands(),
+                 numPrivateBlockArgs());
     }
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }

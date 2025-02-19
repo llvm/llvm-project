@@ -2688,8 +2688,9 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
 
   // Parse the optional initial iteration arguments.
   llvm::SmallVector<mlir::OpAsmParser::Argument> regionArgs;
-  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> iterOperands;
   llvm::SmallVector<mlir::Type> argTypes;
+
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> iterOperands;
   bool prependCount = false;
   regionArgs.push_back(inductionVariable);
 
@@ -2714,15 +2715,6 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
     prependCount = true;
   }
 
-  // Set the operandSegmentSizes attribute
-  result.addAttribute(getOperandSegmentSizeAttr(),
-                      builder.getDenseI32ArrayAttr(
-                          {1, 1, 1, static_cast<int32_t>(reduceOperands.size()),
-                           static_cast<int32_t>(iterOperands.size()), 0}));
-
-  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
-    return mlir::failure();
-
   // Induction variable.
   if (prependCount)
     result.addAttribute(DoLoopOp::getFinalValueAttrName(result.name),
@@ -2731,15 +2723,77 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
     argTypes.push_back(indexType);
   // Loop carried variables
   argTypes.append(result.types.begin(), result.types.end());
-  // Parse the body region.
-  auto *body = result.addRegion();
+
   if (regionArgs.size() != argTypes.size())
     return parser.emitError(
         parser.getNameLoc(),
         "mismatch in number of loop-carried values and defined values");
+
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> privateOperands;
+  if (succeeded(parser.parseOptionalKeyword("private"))) {
+    std::size_t oldArgTypesSize = argTypes.size();
+    if (failed(parser.parseLParen()))
+      return mlir::failure();
+
+    llvm::SmallVector<mlir::SymbolRefAttr> privateSymbolVec;
+    if (failed(parser.parseCommaSeparatedList([&]() {
+          if (failed(parser.parseAttribute(privateSymbolVec.emplace_back())))
+            return mlir::failure();
+
+          if (parser.parseOperand(privateOperands.emplace_back()) ||
+              parser.parseArrow() ||
+              parser.parseArgument(regionArgs.emplace_back()))
+            return mlir::failure();
+
+          return mlir::success();
+        })))
+      return mlir::failure();
+
+    if (failed(parser.parseColon()))
+      return mlir::failure();
+
+    if (failed(parser.parseCommaSeparatedList([&]() {
+          if (failed(parser.parseType(argTypes.emplace_back())))
+            return mlir::failure();
+
+          return mlir::success();
+        })))
+      return mlir::failure();
+
+    if (regionArgs.size() != argTypes.size())
+      return parser.emitError(parser.getNameLoc(),
+                              "mismatch in number of private arg and types");
+
+    if (failed(parser.parseRParen()))
+      return mlir::failure();
+
+    for (auto operandType : llvm::zip_equal(
+             privateOperands, llvm::drop_begin(argTypes, oldArgTypesSize)))
+      if (parser.resolveOperand(std::get<0>(operandType),
+                                std::get<1>(operandType), result.operands))
+        return mlir::failure();
+
+    llvm::SmallVector<mlir::Attribute> symbolAttrs(privateSymbolVec.begin(),
+                                                   privateSymbolVec.end());
+    result.addAttribute(getPrivateSymsAttrName(result.name),
+                        builder.getArrayAttr(symbolAttrs));
+  }
+
+  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
+    return mlir::failure();
+
+  // Set the operandSegmentSizes attribute
+  result.addAttribute(getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr(
+                          {1, 1, 1, static_cast<int32_t>(reduceOperands.size()),
+                           static_cast<int32_t>(iterOperands.size()),
+                           static_cast<int32_t>(privateOperands.size())}));
+
   for (size_t i = 0, e = regionArgs.size(); i != e; ++i)
     regionArgs[i].type = argTypes[i];
 
+  // Parse the body region.
+  auto *body = result.addRegion();
   if (parser.parseRegion(*body, regionArgs))
     return mlir::failure();
 
@@ -2833,9 +2887,25 @@ void fir::DoLoopOp::print(mlir::OpAsmPrinter &p) {
     p << " -> " << getResultTypes();
     printBlockTerminators = true;
   }
-  p.printOptionalAttrDictWithKeyword(
-      (*this)->getAttrs(),
-      {"unordered", "finalValue", "reduceAttrs", "operandSegmentSizes"});
+
+  if (numPrivateBlockArgs() > 0) {
+    p << " private(";
+    llvm::interleaveComma(llvm::zip_equal(getPrivateSymsAttr(),
+                                          getPrivateVars(),
+                                          getRegionPrivateArgs()),
+                          p, [&](auto it) {
+                            p << std::get<0>(it) << " " << std::get<1>(it)
+                              << " -> " << std::get<2>(it);
+                          });
+    p << " : ";
+    llvm::interleaveComma(getPrivateVars(), p,
+                          [&](auto it) { p << it.getType(); });
+    p << ")";
+  }
+
+  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
+                                     {"unordered", "finalValue", "reduceAttrs",
+                                      "operandSegmentSizes", "private_syms"});
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 printBlockTerminators);
