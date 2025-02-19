@@ -330,6 +330,15 @@ void considered_fields_initd() {
   delete S;
 }
 
+enum Enum : int {
+};
+// FIXME: uncomment when CSA supports list init of enums
+void list_init_enum() {
+  // Enum *E = new Enum{53};
+  // clang_analyzer_eval(53 == *E); // should be TRUE
+  // delete E;
+}
+
 class PubClass {
 public:
   int foo;
