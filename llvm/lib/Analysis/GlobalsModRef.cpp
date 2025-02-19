@@ -721,6 +721,12 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
   // a global, or the return of a function, it cannot alias. We can also
   // recurse through PHI nodes and select nodes provided all of their inputs
   // resolve to one of these known-escaping roots.
+
+  // A non-addr-taken global cannot alias with any non-pointer value.
+  // Check this early and exit.
+  if (!Input->getType()->isPointerTy())
+    continue;
+
   SmallPtrSet<const Value *, 8> Visited;
   SmallVector<const Value *, 8> Inputs;
   Visited.insert(V);
@@ -763,13 +769,8 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
       continue;
     }
 
-    // A non-addr-taken global cannot alias with any non-pointer value.
-    if (!Input->getType()->isPointerTy())
-      continue;
-
     if (CtxI)
-      if (const ConstantPointerNull *CPN =
-              dyn_cast<ConstantPointerNull>(Input)) {
+      if (auto *CPN = dyn_cast<ConstantPointerNull>(Input)) {
         // Null pointer cannot alias with a non-addr-taken global.
         const Function *F = CtxI->getFunction();
         if (!NullPointerIsDefined(F, CPN->getType()->getAddressSpace()))
