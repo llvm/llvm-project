@@ -937,7 +937,7 @@ def Xarch__
       Flags<[NoXarchOption]>,
       HelpText<"Pass <arg> to the compiliation if the target matches <arch>">,
       DocBrief<
-          [{Specifies that the argument should only be used if the compileation
+          [{Specifies that the argument should only be used if the compilation
   target matches the specified architecture. This can be used with the target
   CPU, triple architecture, or offloading host and device. This is most useful
   for separating behavior undesirable on one of the targets when combining many
