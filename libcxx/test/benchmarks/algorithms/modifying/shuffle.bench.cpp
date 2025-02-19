@@ -35,9 +35,9 @@ int main(int argc, char** argv) {
             std::mt19937 rng;
 
             for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
               shuffle(c.begin(), c.end(), rng);
               benchmark::DoNotOptimize(c);
-              benchmark::ClobberMemory();
             }
           })
           ->Arg(32)

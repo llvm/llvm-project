@@ -51,11 +51,9 @@ int main(int argc, char** argv) {
 
             while (st.KeepRunningBatch(BatchSize)) {
               for (std::size_t i = 0; i != BatchSize; ++i) {
+                benchmark::DoNotOptimize(c[i]);
                 auto result = remove_if(c[i].begin(), c[i].end(), pred);
                 benchmark::DoNotOptimize(result);
-                benchmark::DoNotOptimize(c[i]);
-                benchmark::DoNotOptimize(x);
-                benchmark::ClobberMemory();
               }
 
               st.PauseTiming();
@@ -111,11 +109,9 @@ int main(int argc, char** argv) {
 
             while (st.KeepRunningBatch(BatchSize)) {
               for (std::size_t i = 0; i != BatchSize; ++i) {
+                benchmark::DoNotOptimize(c[i]);
                 auto result = remove_if(c[i].begin(), c[i].end(), pred);
                 benchmark::DoNotOptimize(result);
-                benchmark::DoNotOptimize(c[i]);
-                benchmark::DoNotOptimize(x);
-                benchmark::ClobberMemory();
               }
 
               st.PauseTiming();

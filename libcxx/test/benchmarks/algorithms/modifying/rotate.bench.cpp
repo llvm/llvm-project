@@ -35,10 +35,9 @@ int main(int argc, char** argv) {
 
             auto middle = std::next(c.begin(), size / 2);
             for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
               auto result = rotate(c.begin(), middle, c.end());
               benchmark::DoNotOptimize(result);
-              benchmark::DoNotOptimize(c);
-              benchmark::ClobberMemory();
             }
           })
           ->Arg(32)

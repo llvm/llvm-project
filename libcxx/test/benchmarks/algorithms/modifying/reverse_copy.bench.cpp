@@ -34,9 +34,10 @@ int main(int argc, char** argv) {
         std::vector<ValueType> out(size);
 
         for ([[maybe_unused]] auto _ : st) {
-          reverse_copy(c.begin(), c.end(), out.begin());
           benchmark::DoNotOptimize(c);
-          benchmark::ClobberMemory();
+          benchmark::DoNotOptimize(out);
+          auto result = reverse_copy(c.begin(), c.end(), out.begin());
+          benchmark::DoNotOptimize(result);
         }
       })->Range(8, 1 << 15);
     };

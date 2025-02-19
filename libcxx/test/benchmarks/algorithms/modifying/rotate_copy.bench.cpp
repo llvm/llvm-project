@@ -39,10 +39,10 @@ int main(int argc, char** argv) {
 
             auto middle = std::next(c.begin(), size / 2);
             for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              benchmark::DoNotOptimize(out);
               auto result = rotate_copy(c.begin(), middle, c.end(), out.begin());
               benchmark::DoNotOptimize(result);
-              benchmark::DoNotOptimize(c);
-              benchmark::ClobberMemory();
             }
           })
           ->Arg(32)

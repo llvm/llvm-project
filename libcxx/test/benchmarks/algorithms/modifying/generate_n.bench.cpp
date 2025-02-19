@@ -34,11 +34,12 @@ int main(int argc, char** argv) {
             ValueType x     = Generate<ValueType>::random();
 
             for ([[maybe_unused]] auto _ : st) {
-              auto f = [&x] { return x; };
-              generate_n(c.begin(), size, f);
               benchmark::DoNotOptimize(c);
-              benchmark::DoNotOptimize(x);
-              benchmark::ClobberMemory();
+              generate_n(c.begin(), size, [&x] {
+                benchmark::DoNotOptimize(x);
+                return x;
+              });
+              benchmark::DoNotOptimize(c);
             }
           })
           ->Arg(32)

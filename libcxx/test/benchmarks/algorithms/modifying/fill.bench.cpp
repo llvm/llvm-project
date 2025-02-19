@@ -36,12 +36,11 @@ int main(int argc, char** argv) {
             Container c(size, y);
 
             for ([[maybe_unused]] auto _ : st) {
-              fill(c.begin(), c.end(), x);
-              std::swap(x, y);
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(x);
-              benchmark::DoNotOptimize(y);
-              benchmark::ClobberMemory();
+              fill(c.begin(), c.end(), x);
+              benchmark::DoNotOptimize(c);
+              std::swap(x, y);
             }
           })
           ->Arg(32)
@@ -66,12 +65,11 @@ int main(int argc, char** argv) {
         std::vector<bool> c(size, y);
 
         for ([[maybe_unused]] auto _ : st) {
-          fill(c.begin(), c.end(), x);
-          std::swap(x, y);
           benchmark::DoNotOptimize(c);
           benchmark::DoNotOptimize(x);
-          benchmark::DoNotOptimize(y);
-          benchmark::ClobberMemory();
+          fill(c.begin(), c.end(), x);
+          benchmark::DoNotOptimize(c);
+          std::swap(x, y);
         }
       })->Range(64, 1 << 20);
     };

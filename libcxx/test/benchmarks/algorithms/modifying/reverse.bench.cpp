@@ -32,9 +32,9 @@ int main(int argc, char** argv) {
         std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
 
         for ([[maybe_unused]] auto _ : st) {
+          benchmark::DoNotOptimize(c);
           reverse(c.begin(), c.end());
           benchmark::DoNotOptimize(c);
-          benchmark::ClobberMemory();
         }
       })->Range(8, 1 << 15);
     };

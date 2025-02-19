@@ -41,11 +41,10 @@ int main(int argc, char** argv) {
             std::mt19937 rng;
 
             for ([[maybe_unused]] auto _ : st) {
-              auto result = sample(c.begin(), c.end(), out.begin(), n, rng);
-              benchmark::DoNotOptimize(result);
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(out);
-              benchmark::ClobberMemory();
+              auto result = sample(c.begin(), c.end(), out.begin(), n, rng);
+              benchmark::DoNotOptimize(result);
             }
           })
           ->Arg(32)
