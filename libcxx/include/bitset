@@ -329,6 +329,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __bitset<_N_words, _Siz
   for (; __n >= __bits_per_word; ++__p, __n -= __bits_per_word)
     *__p = ~*__p;
   // do last partial word
+  // Ensure trailing padding bits are zeroed as part of the ABI for consistent hashing behavior. std::hash<bitset>
+  // assumes trailing bits are zeroed; otherwise, identical bitsets could hash differently.
   if (__n > 0)
     *__p ^= (__storage_type(1) << __n) - 1;
 }
