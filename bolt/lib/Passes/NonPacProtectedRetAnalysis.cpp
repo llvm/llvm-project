@@ -261,6 +261,16 @@ protected:
     if (BC.MIB->isCall(Point))
       Written.set();
     else
+      // FIXME: `getWrittenRegs` only sets the register directly written in the
+      // instruction, and the smaller aliasing registers. It does not set the
+      // larger aliasing registers. To also set the larger aliasing registers,
+      // we'd have to call `getClobberedRegs`.
+      // It is unclear if there is any test case which shows a different
+      // behaviour between using `getWrittenRegs` vs `getClobberedRegs`. We'd
+      // first would like to see such a test case before making a decision
+      // on whether using `getClobberedRegs` below would be better.
+      // Also see the discussion on this at
+      // https://github.com/llvm/llvm-project/pull/122304#discussion_r1939511909
       BC.MIB->getWrittenRegs(Point, Written);
     Next.NonAutClobRegs |= Written;
     // Keep track of this instruction if it writes to any of the registers we
@@ -271,6 +281,10 @@ protected:
 
     ErrorOr<MCPhysReg> AutReg = BC.MIB->getAuthenticatedReg(Point);
     if (AutReg && *AutReg != BC.MIB->getNoRegister()) {
+      // FIXME: should we use `OnlySmaller=false` below? See similar
+      // FIXME about `getWrittenRegs` above and further discussion about this
+      // at
+      // https://github.com/llvm/llvm-project/pull/122304#discussion_r1939515516
       Next.NonAutClobRegs.reset(
           BC.MIB->getAliases(*AutReg, /*OnlySmaller=*/true));
       if (TrackingLastInsts && isTrackingReg(*AutReg))
