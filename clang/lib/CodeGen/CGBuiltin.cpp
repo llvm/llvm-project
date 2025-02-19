@@ -19490,8 +19490,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     if (NumElements == 4) {
       return Builder.CreateShuffleVector(LowSum, HighSumPlusCarry,
-                                           ArrayRef<int>{0, 2, 1, 3},
-                                           "hlsl.AddUint64");
+                                         ArrayRef<int>{0, 2, 1, 3},
+                                         "hlsl.AddUint64");
     }
 
     llvm::Value *Result = PoisonValue::get(OpA->getType());
