@@ -5931,11 +5931,21 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
   if (!MO)
     MO = &MI.getOperand(OpIdx);
 
-  int ConstantBusLimit = ST.getConstantBusLimit(MI.getOpcode());
-  int LiteralLimit = !isVOP3(MI) || ST.hasVOP3Literal() ? 1 : 0;
-  if (isVALU(MI) && usesConstantBus(MRI, *MO, OpInfo)) {
-    if (!MO->isReg() && !isInlineConstant(*MO, OpInfo) && !LiteralLimit--)
-      return false;
+  const bool IsInlineConst = !MO->isReg() && isInlineConstant(*MO, OpInfo);
+
+  if (isVALU(MI) && !IsInlineConst && usesConstantBus(MRI, *MO, OpInfo)) {
+    const MachineOperand *UsedLiteral = nullptr;
+
+    int ConstantBusLimit = ST.getConstantBusLimit(MI.getOpcode());
+    int LiteralLimit = !isVOP3(MI) || ST.hasVOP3Literal() ? 1 : 0;
+
+    // TODO: Be more permissive with frame indexes.
+    if (!MO->isReg() && !isInlineConstant(*MO, OpInfo)) {
+      if (!LiteralLimit--)
+        return false;
+
+      UsedLiteral = MO;
+    }
 
     SmallDenseSet<RegSubRegPair> SGPRsUsed;
     if (MO->isReg())
@@ -5956,15 +5966,31 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
         }
       } else if (AMDGPU::isSISrcOperand(InstDesc, i) &&
                  !isInlineConstant(Op, InstDesc.operands()[i])) {
+        // The same literal may be used multiple times.
+        if (!UsedLiteral)
+          UsedLiteral = &Op;
+        else if (UsedLiteral->isIdenticalTo(Op))
+          continue;
+
         if (!LiteralLimit--)
           return false;
         if (--ConstantBusLimit <= 0)
           return false;
       }
     }
-  } else if (ST.hasNoF16PseudoScalarTransInlineConstants() && !MO->isReg() &&
-             isF16PseudoScalarTrans(MI.getOpcode()) &&
-             isInlineConstant(*MO, OpInfo)) {
+  } else if (!IsInlineConst && !MO->isReg() && isSALU(MI)) {
+    // There can be at most one literal operand, but it can be repeated.
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      if (i == OpIdx)
+        continue;
+      const MachineOperand &Op = MI.getOperand(i);
+      if (!Op.isReg() && !Op.isFI() &&
+          !isInlineConstant(Op, InstDesc.operands()[i]) &&
+          !Op.isIdenticalTo(*MO))
+        return false;
+    }
+  } else if (IsInlineConst && ST.hasNoF16PseudoScalarTransInlineConstants() &&
+             isF16PseudoScalarTrans(MI.getOpcode())) {
     return false;
   }
 

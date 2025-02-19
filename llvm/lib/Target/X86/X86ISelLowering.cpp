@@ -38940,13 +38940,17 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
   }
 
   // Match against a ANY/SIGN/ZERO_EXTEND_VECTOR_INREG instruction.
-  // TODO: Add 512-bit vector support (split AVX512F and AVX512BW).
-  if (AllowIntDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSE41()) ||
-                         (MaskVT.is256BitVector() && Subtarget.hasInt256()))) {
+  if (AllowIntDomain &&
+      ((MaskVT.is128BitVector() && Subtarget.hasSSE41()) ||
+       (MaskVT.is256BitVector() && Subtarget.hasInt256()) ||
+       (MaskVT.is512BitVector() && Subtarget.useAVX512Regs()))) {
     unsigned MaxScale = 64 / MaskEltSize;
     bool UseSign = V1.getScalarValueSizeInBits() == MaskEltSize &&
                    DAG.ComputeNumSignBits(V1) == MaskEltSize;
     for (unsigned Scale = 2; Scale <= MaxScale; Scale *= 2) {
+      // Skip 512-bit VPMOV?XBW on non-AVX512BW targets.
+      if (Scale == 2 && MaskVT == MVT::v64i8 && !Subtarget.useBWIRegs())
+        continue;
       bool MatchAny = true;
       bool MatchZero = true;
       bool MatchSign = UseSign;
@@ -41642,23 +41646,28 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
   case X86ISD::PSHUFD:
   case X86ISD::PSHUFHW:
   case X86ISD::PSHUFLW:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMI:
   case X86ISD::VPERMILPI: {
-    if (N.getOperand(0).getValueType() == ShuffleVT &&
-        N->isOnlyUserOf(N.getOperand(0).getNode())) {
-      SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
+    unsigned SrcIdx = Opc == X86ISD::VPERMV ? 1 : 0;
+    if (N.getOperand(SrcIdx).getValueType() == ShuffleVT &&
+        N->isOnlyUserOf(N.getOperand(SrcIdx).getNode())) {
+      SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(SrcIdx));
       unsigned SrcOpcode = N0.getOpcode();
       EVT OpVT = N0.getValueType();
       if (TLI.isBinOp(SrcOpcode) && IsSafeToMoveShuffle(N0, SrcOpcode)) {
         SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
         SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
-        bool FoldShuf = Opc != X86ISD::VPERMI;
+        bool FoldShuf = Opc != X86ISD::VPERMI && Opc != X86ISD::VPERMV;
         if (IsMergeableWithShuffle(Op00, FoldShuf) ||
             IsMergeableWithShuffle(Op01, FoldShuf)) {
           SDValue LHS, RHS;
           Op00 = DAG.getBitcast(ShuffleVT, Op00);
           Op01 = DAG.getBitcast(ShuffleVT, Op01);
-          if (N.getNumOperands() == 2) {
+          if (Opc == X86ISD::VPERMV) {
+            LHS = DAG.getNode(Opc, DL, ShuffleVT, N.getOperand(0), Op00);
+            RHS = DAG.getNode(Opc, DL, ShuffleVT, N.getOperand(0), Op01);
+          } else if (N.getNumOperands() == 2) {
             LHS = DAG.getNode(Opc, DL, ShuffleVT, Op00, N.getOperand(1));
             RHS = DAG.getNode(Opc, DL, ShuffleVT, Op01, N.getOperand(1));
           } else {
@@ -41674,11 +41683,13 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
       if (SrcOpcode == ISD::SINT_TO_FP && IsSafeToMoveShuffle(N0, SrcOpcode) &&
           OpVT.getScalarSizeInBits() ==
               N0.getOperand(0).getScalarValueSizeInBits()) {
-        SDValue Op00 = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
-        SDValue Res =
-            N.getNumOperands() == 2
-                ? DAG.getNode(Opc, DL, ShuffleVT, Op00, N.getOperand(1))
-                : DAG.getNode(Opc, DL, ShuffleVT, Op00);
+        SDValue Res = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
+        if (Opc == X86ISD::VPERMV)
+          Res = DAG.getNode(Opc, DL, ShuffleVT, N.getOperand(0), Res);
+        else if (N.getNumOperands() == 2)
+          Res = DAG.getNode(Opc, DL, ShuffleVT, Res, N.getOperand(1));
+        else
+          Res = DAG.getNode(Opc, DL, ShuffleVT, Res);
         Res = DAG.getBitcast(N0.getOperand(0).getValueType(), Res);
         return DAG.getBitcast(ShuffleVT, DAG.getNode(SrcOpcode, DL, OpVT, Res));
       }

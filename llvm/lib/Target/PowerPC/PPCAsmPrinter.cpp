@@ -984,7 +984,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Get the offset from the GOT Base Register to the GOT
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
     if (Subtarget->isSecurePlt() && isPositionIndependent() ) {
-      unsigned PICR = TmpInst.getOperand(0).getReg();
+      MCRegister PICR = TmpInst.getOperand(0).getReg();
       MCSymbol *BaseSymbol = OutContext.getOrCreateSymbol(
           M->getPICLevel() == PICLevel::SmallPIC ? "_GLOBAL_OFFSET_TABLE_"
                                                  : ".LTOC");

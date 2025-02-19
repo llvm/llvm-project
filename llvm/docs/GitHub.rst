@@ -438,7 +438,7 @@ Releases
 Backporting Fixes to the Release Branches
 -----------------------------------------
 You can use special comments on issues or pull requests to make backport
-requests for the release branches.  To do this, after your pull reuest has been
+requests for the release branches.  To do this, after your pull request has been
 merged:
 
 1. Edit "Milestone" at the right side of the isssue or pull request
