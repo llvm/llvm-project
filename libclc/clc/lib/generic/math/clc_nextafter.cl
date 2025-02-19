@@ -1,5 +1,6 @@
 #include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
+#include <clc/math/clc_fabs.h>
 #include <clc/relational/clc_isnan.h>
 
 // This file provides OpenCL C implementations of __clc_nextafter for
@@ -12,15 +13,14 @@
                                                     FLOAT_TYPE y) {            \
     const UINT_TYPE sign_bit = (UINT_TYPE)1                                    \
                                << (sizeof(INT_TYPE_SCALAR) * 8 - 1);           \
-    const UINT_TYPE sign_bit_mask = sign_bit - (UINT_TYPE)1;                   \
     UINT_TYPE ix = CLC_AS_TYPE(UINT_TYPE)(x);                                  \
-    UINT_TYPE ax = ix & sign_bit_mask;                                         \
+    FLOAT_TYPE absx = __clc_fabs(x);                                           \
     UINT_TYPE mxu = sign_bit - ix;                                             \
     INT_TYPE mx = CLC_AS_TYPE(INT_TYPE)(mxu);                                  \
     mx = CLC_AS_TYPE(INT_TYPE)(ix) < (INT_TYPE)0 ? mx                          \
                                                  : CLC_AS_TYPE(INT_TYPE)(ix);  \
     UINT_TYPE iy = CLC_AS_TYPE(UINT_TYPE)(y);                                  \
-    UINT_TYPE ay = iy & sign_bit_mask;                                         \
+    FLOAT_TYPE absy = __clc_fabs(y);                                           \
     UINT_TYPE myu = sign_bit - iy;                                             \
     INT_TYPE my = CLC_AS_TYPE(INT_TYPE)(myu);                                  \
     my = CLC_AS_TYPE(INT_TYPE)(iy) < (INT_TYPE)0 ? my                          \
@@ -32,7 +32,11 @@
             : CLC_AS_TYPE(UINT_TYPE)(t);                                       \
     r = __clc_isnan(x) ? ix : r;                                               \
     r = __clc_isnan(y) ? iy : r;                                               \
-    r = ((ax | ay) == (UINT_TYPE)0 || ix == iy) ? iy : r;                      \
+    r = ((CLC_AS_TYPE(UINT_TYPE)(absx) | CLC_AS_TYPE(UINT_TYPE)(absy)) ==      \
+             (UINT_TYPE)0 ||                                                   \
+         ix == iy)                                                             \
+            ? iy                                                               \
+            : r;                                                               \
     return CLC_AS_TYPE(FLOAT_TYPE)(r);                                         \
   }
 
