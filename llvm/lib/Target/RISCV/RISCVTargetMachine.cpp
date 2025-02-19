@@ -311,12 +311,7 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 ScheduleDAGInstrs *
 RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
   ScheduleDAGMI *DAG = nullptr;
-  const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-  bool EnableLoadStoreClusteringForLoadStoreOpt =
-      !ST.getMacroFusions().empty() && ST.useLoadStorePairs();
-
-  if (EnablePostMISchedLoadStoreClustering ||
-      EnableLoadStoreClusteringForLoadStoreOpt) {
+  if (EnablePostMISchedLoadStoreClustering) {
     DAG = createGenericSchedPostRA(C);
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));

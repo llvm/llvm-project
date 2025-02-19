@@ -63,11 +63,11 @@ static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
     cl::desc("Set minimum number of entries to use a jump table on RISCV"));
 
 static cl::opt<bool> UseMIPSLoadStorePairsOpt(
-    "riscv-mips-load-store-pairs",
+    "use-riscv-mips-load-store-pairs",
     cl::desc("Enable the load/store pair optimization pass"), cl::init(false),
     cl::Hidden);
 
-static cl::opt<bool> UseCCMovInsn("riscv-ccmov",
+static cl::opt<bool> UseCCMovInsn("use-riscv-ccmov",
                                   cl::desc("Use 'mips.ccmov' instruction"),
                                   cl::init(true), cl::Hidden);
 

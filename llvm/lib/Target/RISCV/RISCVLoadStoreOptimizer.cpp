@@ -34,7 +34,7 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-load-store-opt"
 #define RISCV_LOAD_STORE_OPT_NAME "RISC-V Load / Store Optimizer"
 
-// The LdStLimit limits number of basic blocks how far we search for load/store
+// The LdStLimit limits number of instructions how far we search for load/store
 // pairs.
 static cl::opt<unsigned> LdStLimit("riscv-load-store-scan-limit", cl::init(128),
                                    cl::Hidden);
@@ -82,7 +82,6 @@ private:
   const RISCVInstrInfo *TII;
   const RISCVRegisterInfo *TRI;
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
-  bool EnableLoadStorePairs = false;
 };
 } // end anonymous namespace
 
@@ -94,8 +93,7 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
   const RISCVSubtarget &Subtarget = Fn.getSubtarget<RISCVSubtarget>();
-  EnableLoadStorePairs = Subtarget.useLoadStorePairs();
-  if (!EnableLoadStorePairs)
+  if (!Subtarget.useLoadStorePairs())
     return false;
 
   bool MadeChange = false;
@@ -330,6 +328,10 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                                     bool MergeForward) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
+  // If NextI is the second of the two instructions to be merged, we need
+  // to skip one further. Either way we merge will invalidate the iterator,
+  // and we don't need to scan the new instruction, as it's a pairwise
+  // instruction, which we're not considering for further action anyway.
   if (NextI == Paired)
     NextI = next_nodbg(NextI, E);
 
@@ -370,7 +372,7 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     First = InsertionPoint;
   }
 
-  if (EnableLoadStorePairs && tryConvertToLdStPair(First, Second)) {
+  if (tryConvertToLdStPair(First, Second)) {
     LLVM_DEBUG(dbgs() << "Pairing load/store:\n    ");
     LLVM_DEBUG(prev_nodbg(NextI, MBB.begin())->print(dbgs()));
   }
