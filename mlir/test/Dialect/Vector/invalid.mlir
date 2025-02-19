@@ -768,6 +768,16 @@ func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
 
 // -----
 
+ func.func @extract_strided_slice() -> () {
+  // expected-error@+1 {{expected input vector rank to match target shape rank}}
+  %0 = arith.constant dense<1.000000e+00> : vector<24x2x2xf32>
+  %1 = vector.extract_strided_slice %0 {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]}:
+         vector<24x2x2xf32> to vector<2x2xf32>
+  return
+}
+
+// -----
+
 #contraction_accesses = [
   affine_map<(b0, f0, f1, c0, c1) -> (c0, b0, c1, f0)>,
   affine_map<(b0, f0, f1, c0, c1) -> (b0, c1, c0, f1)>,
