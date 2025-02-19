@@ -19,86 +19,85 @@
 #include "benchmark/benchmark.h"
 #include "../../GenerateInput.h"
 
-// Create a sequence of the form xxxxxxxxxxyyyyyyyyyy, replace
-// into zzzzzzzzzzzyyyyyyyyyy and then back.
-//
-// This measures the performance of replace() when replacing a large
-// contiguous sequence of equal values.
-template <class Container, class Operation>
-void bm_prefix(std::string operation_name, Operation replace) {
-  auto bench = [replace](auto& st) {
-    std::size_t const size = st.range(0);
-    using ValueType        = typename Container::value_type;
-    Container c;
-    ValueType x = Generate<ValueType>::random();
-    ValueType y = Generate<ValueType>::random();
-    ValueType z = Generate<ValueType>::random();
-    std::fill_n(std::back_inserter(c), size / 2, x);
-    std::fill_n(std::back_inserter(c), size / 2, y);
-
-    for ([[maybe_unused]] auto _ : st) {
-      replace(c.begin(), c.end(), x, z);
-      std::swap(x, z);
-      benchmark::DoNotOptimize(c);
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(z);
-      benchmark::ClobberMemory();
-    }
-  };
-  benchmark::RegisterBenchmark(operation_name, bench)->Arg(32)->Arg(1024)->Arg(8192);
-}
-
-// Sprinkle elements to replace inside the range, like xyxyxyxyxyxyxyxyxyxy.
-template <class Container, class Operation>
-void bm_sprinkled(std::string operation_name, Operation replace) {
-  auto bench = [replace](auto& st) {
-    std::size_t const size = st.range(0);
-    using ValueType        = typename Container::value_type;
-    Container c;
-    ValueType x = Generate<ValueType>::random();
-    ValueType y = Generate<ValueType>::random();
-    ValueType z = Generate<ValueType>::random();
-    for (std::size_t i = 0; i != size; ++i) {
-      c.push_back(i % 2 == 0 ? x : y);
-    }
-
-    for ([[maybe_unused]] auto _ : st) {
-      replace(c.begin(), c.end(), x, z);
-      std::swap(x, z);
-      benchmark::DoNotOptimize(c);
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(z);
-      benchmark::ClobberMemory();
-    }
-  };
-  benchmark::RegisterBenchmark(operation_name, bench)->Arg(32)->Arg(1024)->Arg(8192);
-}
-
 int main(int argc, char** argv) {
-  auto std_replace    = [](auto first, auto last, auto old, auto new_) { return std::replace(first, last, old, new_); };
-  auto ranges_replace = [](auto first, auto last, auto old, auto new_) {
-    return std::ranges::replace(first, last, old, new_);
-  };
+  auto std_replace = [](auto first, auto last, auto old, auto new_) { return std::replace(first, last, old, new_); };
 
-  // std::replace
-  bm_prefix<std::vector<int>>("std::replace(vector<int>) (prefix)", std_replace);
-  bm_sprinkled<std::vector<int>>("std::replace(vector<int>) (sprinkled)", std_replace);
+  // Create a sequence of the form xxxxxxxxxxyyyyyyyyyy, replace
+  // into zzzzzzzzzzzyyyyyyyyyy and then back.
+  //
+  // This measures the performance of replace() when replacing a large
+  // contiguous sequence of equal values.
+  {
+    auto bm = []<class Container>(std::string name, auto replace) {
+      benchmark::RegisterBenchmark(
+          name,
+          [replace](auto& st) {
+            std::size_t const size = st.range(0);
+            using ValueType        = typename Container::value_type;
+            Container c;
+            ValueType x = Generate<ValueType>::random();
+            ValueType y = Generate<ValueType>::random();
+            ValueType z = Generate<ValueType>::random();
+            std::fill_n(std::back_inserter(c), size / 2, x);
+            std::fill_n(std::back_inserter(c), size / 2, y);
 
-  bm_prefix<std::deque<int>>("std::replace(deque<int>) (prefix)", std_replace);
-  bm_sprinkled<std::deque<int>>("std::replace(deque<int>) (sprinkled)", std_replace);
+            for ([[maybe_unused]] auto _ : st) {
+              replace(c.begin(), c.end(), x, z);
+              std::swap(x, z);
+              benchmark::DoNotOptimize(c);
+              benchmark::DoNotOptimize(x);
+              benchmark::DoNotOptimize(z);
+              benchmark::ClobberMemory();
+            }
+          })
+          ->Arg(32)
+          ->Arg(1024)
+          ->Arg(8192);
+    };
+    bm.operator()<std::vector<int>>("std::replace(vector<int>) (prefix)", std_replace);
+    bm.operator()<std::deque<int>>("std::replace(deque<int>) (prefix)", std_replace);
+    bm.operator()<std::list<int>>("std::replace(list<int>) (prefix)", std_replace);
+    bm.operator()<std::vector<int>>("rng::replace(vector<int>) (prefix)", std::ranges::replace);
+    bm.operator()<std::deque<int>>("rng::replace(deque<int>) (prefix)", std::ranges::replace);
+    bm.operator()<std::list<int>>("rng::replace(list<int>) (prefix)", std::ranges::replace);
+  }
 
-  bm_prefix<std::list<int>>("std::replace(list<int>) (prefix)", std_replace);
-  bm_sprinkled<std::list<int>>("std::replace(list<int>) (sprinkled)", std_replace);
+  // Sprinkle elements to replace inside the range, like xyxyxyxyxyxyxyxyxyxy.
+  {
+    auto bm = []<class Container>(std::string name, auto replace) {
+      benchmark::RegisterBenchmark(
+          name,
+          [replace](auto& st) {
+            std::size_t const size = st.range(0);
+            using ValueType        = typename Container::value_type;
+            Container c;
+            ValueType x = Generate<ValueType>::random();
+            ValueType y = Generate<ValueType>::random();
+            ValueType z = Generate<ValueType>::random();
+            for (std::size_t i = 0; i != size; ++i) {
+              c.push_back(i % 2 == 0 ? x : y);
+            }
 
-  // ranges::replace
-  bm_prefix<std::vector<int>>("ranges::replace(vector<int>) (prefix)", ranges_replace);
-  bm_sprinkled<std::vector<int>>("ranges::replace(vector<int>) (sprinkled)", ranges_replace);
-
-  bm_prefix<std::deque<int>>("ranges::replace(deque<int>) (prefix)", ranges_replace);
-  bm_sprinkled<std::deque<int>>("ranges::replace(deque<int>) (sprinkled)", ranges_replace);
-
-  bm_prefix<std::list<int>>("ranges::replace(list<int>) (prefix)", ranges_replace);
-  bm_sprinkled<std::list<int>>("ranges::replace(list<int>) (sprinkled)", ranges_replace);
+            for ([[maybe_unused]] auto _ : st) {
+              replace(c.begin(), c.end(), x, z);
+              std::swap(x, z);
+              benchmark::DoNotOptimize(c);
+              benchmark::DoNotOptimize(x);
+              benchmark::DoNotOptimize(z);
+              benchmark::ClobberMemory();
+            }
+          })
+          ->Arg(32)
+          ->Arg(1024)
+          ->Arg(8192);
+    };
+    bm.operator()<std::vector<int>>("std::replace(vector<int>) (sprinkled)", std_replace);
+    bm.operator()<std::deque<int>>("std::replace(deque<int>) (sprinkled)", std_replace);
+    bm.operator()<std::list<int>>("std::replace(list<int>) (sprinkled)", std_replace);
+    bm.operator()<std::vector<int>>("rng::replace(vector<int>) (sprinkled)", std::ranges::replace);
+    bm.operator()<std::deque<int>>("rng::replace(deque<int>) (sprinkled)", std::ranges::replace);
+    bm.operator()<std::list<int>>("rng::replace(list<int>) (sprinkled)", std::ranges::replace);
+  }
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

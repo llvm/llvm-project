@@ -19,40 +19,34 @@
 #include "benchmark/benchmark.h"
 #include "../../GenerateInput.h"
 
-template <class Container, class Operation>
-void bm(std::string operation_name, Operation reverse_copy) {
-  auto bench = [reverse_copy](auto& st) {
-    std::size_t const size = st.range(0);
-    using ValueType        = typename Container::value_type;
-    Container c;
-    std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
-
-    std::vector<ValueType> out(size);
-
-    for ([[maybe_unused]] auto _ : st) {
-      reverse_copy(c.begin(), c.end(), out.begin());
-      benchmark::DoNotOptimize(c);
-      benchmark::ClobberMemory();
-    }
-  };
-  benchmark::RegisterBenchmark(operation_name, bench)->Range(8, 1 << 15);
-}
-
 int main(int argc, char** argv) {
-  auto std_reverse_copy    = [](auto first, auto last, auto out) { return std::reverse_copy(first, last, out); };
-  auto ranges_reverse_copy = [](auto first, auto last, auto out) {
-    return std::ranges::reverse_copy(first, last, out);
-  };
+  auto std_reverse_copy = [](auto first, auto last, auto out) { return std::reverse_copy(first, last, out); };
 
-  // std::reverse_copy
-  bm<std::vector<int>>("std::reverse_copy(vector<int>)", std_reverse_copy);
-  bm<std::deque<int>>("std::reverse_copy(deque<int>)", std_reverse_copy);
-  bm<std::list<int>>("std::reverse_copy(list<int>)", std_reverse_copy);
+  // {std,ranges}::reverse_copy(normal container)
+  {
+    auto bm = []<class Container>(std::string name, auto reverse_copy) {
+      benchmark::RegisterBenchmark(name, [reverse_copy](auto& st) {
+        std::size_t const size = st.range(0);
+        using ValueType        = typename Container::value_type;
+        Container c;
+        std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
 
-  // ranges::reverse_copy
-  bm<std::vector<int>>("ranges::reverse_copy(vector<int>)", ranges_reverse_copy);
-  bm<std::deque<int>>("ranges::reverse_copy(deque<int>)", ranges_reverse_copy);
-  bm<std::list<int>>("ranges::reverse_copy(list<int>)", ranges_reverse_copy);
+        std::vector<ValueType> out(size);
+
+        for ([[maybe_unused]] auto _ : st) {
+          reverse_copy(c.begin(), c.end(), out.begin());
+          benchmark::DoNotOptimize(c);
+          benchmark::ClobberMemory();
+        }
+      })->Range(8, 1 << 15);
+    };
+    bm.operator()<std::vector<int>>("std::reverse_copy(vector<int>)", std_reverse_copy);
+    bm.operator()<std::deque<int>>("std::reverse_copy(deque<int>)", std_reverse_copy);
+    bm.operator()<std::list<int>>("std::reverse_copy(list<int>)", std_reverse_copy);
+    bm.operator()<std::vector<int>>("rng::reverse_copy(vector<int>)", std::ranges::reverse_copy);
+    bm.operator()<std::deque<int>>("rng::reverse_copy(deque<int>)", std::ranges::reverse_copy);
+    bm.operator()<std::list<int>>("rng::reverse_copy(list<int>)", std::ranges::reverse_copy);
+  }
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
