@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-llvm -fopenmp  -fopenmp-is-target-device -debug-info-kind=standalone %s -o - | FileCheck  %s
+! RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-llvm -fopenmp -fopenmp-is-target-device -debug-info-kind=standalone %s -o - | FileCheck  %s
 
 subroutine fff(x, y)
   implicit none
@@ -12,10 +12,16 @@ subroutine fff(x, y)
 
 end subroutine fff
 
-!CHECK: define{{.*}}amdgpu_kernel void @[[FN:[0-9a-zA_Z_]+]]({{.*}}){{.*}}!dbg ![[SP:[0-9]+]]
-!CHECK: #dbg_declare({{.*}}, ![[X:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
-!CHECK: #dbg_declare({{.*}}, ![[Y:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
-!CHECK: }
+! CHECK: define{{.*}}amdgpu_kernel void @[[FN:[0-9a-zA_Z_]+]](ptr %0, ptr %[[ARG1:[0-9]+]], ptr %[[ARG2:[0-9]+]]){{.*}}!dbg ![[SP:[0-9]+]]
+! CHECK-DAG: store ptr %[[ARG1]], ptr %[[CAST1:[0-9]+]]{{.*}}
+! CHECK-DAG: %[[CAST1]] = addrspacecast ptr addrspace(5) %[[AL1:[0-9]+]]
+! CHECK-DAG: %[[AL1]] = alloca{{.*}}
+! CHECK-DAG: store ptr %[[ARG2]], ptr %[[CAST2:[0-9]+]]{{.*}}
+! CHECK-DAG: %[[CAST2]] = addrspacecast ptr addrspace(5) %[[AL2:[0-9]+]]
+! CHECK-DAG: %[[AL2]] = alloca{{.*}}
+! CHECK-DAG: #dbg_declare(ptr %[[CAST1]], ![[X:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
+! CHECK-DAG: #dbg_declare(ptr %[[CAST2]], ![[Y:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
+! CHECK: }
 
 ! CHECK-DAG: ![[SP]] = {{.*}}!DISubprogram(name: "[[FN]]"{{.*}})
 ! CHECK-DAG: ![[X]] = !DILocalVariable(name: "x", arg: 2, scope: ![[SP]]{{.*}}type: ![[INT:[0-9]+]])

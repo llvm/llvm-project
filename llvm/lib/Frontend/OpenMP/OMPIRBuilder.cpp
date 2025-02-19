@@ -7037,13 +7037,13 @@ static void FixupDebugInfoForOutlinedFunction(
       // snippet) as location of variable. The AMDGPU backend drops the debug
       // info for variable in such cases. So we change the location to alloca
       // instead.
-      bool passByRef = false;
+      bool PassByRef = false;
       llvm::Type *locType = nullptr;
       for (auto Loc : DR->location_ops()) {
         locType = Loc->getType();
         if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Loc)) {
           DR->replaceVariableLocationOp(Loc, Load->getPointerOperand());
-          passByRef = true;
+          PassByRef = true;
         }
       }
       // Add DIOps based expression. Note that we generate an extra indirection
@@ -7060,8 +7060,8 @@ static void FixupDebugInfoForOutlinedFunction(
       // This is similar to what clang does.
       // 2. Use double indirection and keep the original type. It will show up
       // in debugger as "x=5". This approached is used here as it is
-      // consisten with the normal fortran parameters display.
-      if (passByRef)
+      // consistent with the normal fortran parameters display.
+      if (PassByRef)
         ExprBuilder.append<llvm::DIOp::Deref>(Builder.getPtrTy(defaultAS));
       ExprBuilder.append<llvm::DIOp::Deref>(locType);
       DR->setExpression(ExprBuilder.intoExpression());
