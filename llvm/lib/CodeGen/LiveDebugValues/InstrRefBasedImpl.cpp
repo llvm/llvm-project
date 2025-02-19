@@ -3734,6 +3734,15 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   VTracker = nullptr;
   TTracker = nullptr;
 
+  if (MTracker->NumSlotIdxes >= StackSlotIdxesLimit) {
+    LLVM_DEBUG(
+        dbgs() << "Disabling InstrRefBasedLDV spill tracking for "
+               << MF.getName()
+               << " since target has too many potential stack slot indexes ("
+               << MTracker->NumSlotIdxes << ", limit is " << StackSlotIdxesLimit
+               << ")\n");
+  }
+
   SmallVector<MLocTransferMap, 32> MLocTransfer;
   SmallVector<VLocTracker, 8> vlocs;
   LiveInsT SavedLiveIns;
