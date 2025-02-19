@@ -531,8 +531,7 @@ enum NodeType : unsigned {
   SME_ZA_STR,
 
   // Compare-and-branch
-  CBRR,
-  CBRI,
+  CB,
 };
 
 } // end namespace AArch64ISD
