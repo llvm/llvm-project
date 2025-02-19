@@ -1284,6 +1284,18 @@ public:
            (SI && TTI.isLegalMaskedScatter(Ty, Align));
   }
 
+  /// Returns true if the target machine can represent \p V as a strided load
+  /// or store operation.
+  bool isLegalStridedLoadStore(Value *V, ElementCount VF) {
+    if (!isa<LoadInst, StoreInst>(V))
+      return false;
+    auto *Ty = getLoadStoreType(V);
+    Align Align = getLoadStoreAlignment(V);
+    if (VF.isVector())
+      Ty = VectorType::get(Ty, VF);
+    return TTI.isLegalStridedLoadStore(Ty, Align);
+  }
+
   /// Returns true if the target machine supports all of the reduction
   /// variables found for the given VF.
   bool canVectorizeReductions(ElementCount VF) const {
