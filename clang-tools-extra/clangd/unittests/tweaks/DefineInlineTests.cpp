@@ -937,8 +937,9 @@ TEST_F(DefineInlineTest, AddInline) {
   apply(R"cpp(#include "a.h"
               const int fo^o() { return 0; })cpp",
         &EditedFiles);
-  EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
-                               testPath("a.h"), "inline const int foo(){ return 0; }")));
+  EXPECT_THAT(EditedFiles,
+              testing::ElementsAre(FileWithContents(
+                  testPath("a.h"), "inline const int foo(){ return 0; }")));
 
   // No double inline.
   ExtraFiles["a.h"] = "inline void foo();";
