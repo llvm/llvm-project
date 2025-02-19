@@ -5069,3 +5069,51 @@ define <vscale x 4 x float> @vfwmaccbf16_vf(<vscale x 4 x float> %a, bfloat %b, 
   %2 = call <vscale x 4 x float> @llvm.riscv.vfadd(<vscale x 4 x float> poison, <vscale x 4 x float> %1, <vscale x 4 x float> %d, iXLen 7, iXLen %vl)
   ret <vscale x 4 x float> %2
 }
+
+define <vscale x 4 x double> @vfsqrt(<vscale x 4 x float> %a) {
+; NOVLOPT-LABEL: vfsqrt:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    fsrmi a0, 0
+; NOVLOPT-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfsqrt.v v10, v8
+; NOVLOPT-NEXT:    fsrm a0
+; NOVLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwmacc.vv v12, v8, v10
+; NOVLOPT-NEXT:    vmv4r.v v8, v12
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfsqrt:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    fsrmi a0, 0
+; VLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; VLOPT-NEXT:    vfsqrt.v v10, v8
+; VLOPT-NEXT:    fsrm a0
+; VLOPT-NEXT:    vfwmacc.vv v12, v8, v10
+; VLOPT-NEXT:    vmv4r.v v8, v12
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x float> @llvm.riscv.vfsqrt.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %a, iXLen 0, iXLen 7)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfwmacc(<vscale x 4 x double> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %1, iXLen 7, iXLen 6, iXLen 0)
+  ret <vscale x 4 x double> %2
+}
+
+define <vscale x 4 x double> @vfrsqrt7(<vscale x 4 x float> %a) {
+; NOVLOPT-LABEL: vfrsqrt7:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfrsqrt7.v v10, v8
+; NOVLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwmacc.vv v12, v8, v10
+; NOVLOPT-NEXT:    vmv4r.v v8, v12
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfrsqrt7:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; VLOPT-NEXT:    vfrsqrt7.v v10, v8
+; VLOPT-NEXT:    vfwmacc.vv v12, v8, v10
+; VLOPT-NEXT:    vmv4r.v v8, v12
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x float> @llvm.riscv.vfrsqrt7.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %a, iXLen 7)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfwmacc(<vscale x 4 x double> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %1, iXLen 7, iXLen 6, iXLen 0)
+  ret <vscale x 4 x double> %2
+}

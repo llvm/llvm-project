@@ -3178,6 +3178,10 @@ bool OmpStructureChecker::CheckReductionOperator(
       const SourceName &realName{name->symbol->GetUltimate().name()};
       valid =
           llvm::is_contained({"max", "min", "iand", "ior", "ieor"}, realName);
+      if (!valid) {
+        auto *misc{name->symbol->detailsIf<MiscDetails>()};
+        valid = misc && misc->kind() == MiscDetails::Kind::ConstructName;
+      }
     }
     if (!valid) {
       context_.Say(source,
