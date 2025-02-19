@@ -319,30 +319,6 @@ llvm.func @target_has_device_addr(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @target_host_eval(%x : i32) {
-  // expected-error@below {{not yet implemented: host evaluation of loop bounds in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target host_eval(%x -> %lb, %x -> %ub, %x -> %step : i32, i32, i32) {
-    omp.teams {
-      omp.parallel {
-        omp.distribute {
-          omp.wsloop {
-            omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-              omp.yield
-            }
-          } {omp.composite}
-        } {omp.composite}
-        omp.terminator
-      } {omp.composite}
-      omp.terminator
-    }
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
