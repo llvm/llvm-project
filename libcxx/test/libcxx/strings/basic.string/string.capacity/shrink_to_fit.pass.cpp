@@ -51,7 +51,7 @@ void test_oversizing_allocator() {
   assert(s.size() == size);
 }
 
-// Ensure that the libc++ implementation of shrink_to_fit does NOT swap buffer with equal allocation sizes
+// Make sure libc++ shrink_to_fit does NOT swap buffer with equal allocation sizes
 void test_no_swap_with_equal_allocation_size() {
   { // Test with custom allocator with a minimum allocation size
     std::basic_string<char, std::char_traits<char>, min_size_allocator<128, char> > s(

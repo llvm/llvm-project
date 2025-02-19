@@ -62,10 +62,10 @@ public:
   TEST_NODISCARD TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
     if (n < MinAllocSize)
       n = MinAllocSize;
-    return std::allocator<T>().allocate(n);
+    return static_cast<T*>(::operator new(n * sizeof(T)));
   }
 
-  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) TEST_NOEXCEPT { std::allocator<T>().deallocate(p, n); }
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t) TEST_NOEXCEPT { ::operator delete(static_cast<void*>(p)); }
 
   template <typename U>
   struct rebind {
@@ -95,10 +95,10 @@ public:
   TEST_CONSTEXPR_CXX20 pow2_allocator(const pow2_allocator<U>&) TEST_NOEXCEPT {}
 
   TEST_NODISCARD TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
-    return std::allocator<T>().allocate(next_power_of_two(n));
+    return static_cast<T*>(::operator new(next_power_of_two(n) * sizeof(T)));
   }
 
-  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) TEST_NOEXCEPT { std::allocator<T>().deallocate(p, n); }
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t) TEST_NOEXCEPT { ::operator delete(static_cast<void*>(p)); }
 
 private:
   TEST_CONSTEXPR_CXX20 std::size_t next_power_of_two(std::size_t n) const {
