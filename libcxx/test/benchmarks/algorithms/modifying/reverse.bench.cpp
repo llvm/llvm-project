@@ -19,36 +19,32 @@
 #include "benchmark/benchmark.h"
 #include "../../GenerateInput.h"
 
-template <class Container, class Operation>
-void bm(std::string operation_name, Operation reverse) {
-  auto bench = [reverse](auto& st) {
-    std::size_t const size = st.range(0);
-    using ValueType        = typename Container::value_type;
-    Container c;
-    std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
-
-    for ([[maybe_unused]] auto _ : st) {
-      reverse(c.begin(), c.end());
-      benchmark::DoNotOptimize(c);
-      benchmark::ClobberMemory();
-    }
-  };
-  benchmark::RegisterBenchmark(operation_name, bench)->Range(8, 1 << 15);
-}
-
 int main(int argc, char** argv) {
-  auto std_reverse    = [](auto first, auto last) { return std::reverse(first, last); };
-  auto ranges_reverse = [](auto first, auto last) { return std::ranges::reverse(first, last); };
+  auto std_reverse = [](auto first, auto last) { return std::reverse(first, last); };
 
-  // std::reverse
-  bm<std::vector<int>>("std::reverse(vector<int>)", std_reverse);
-  bm<std::deque<int>>("std::reverse(deque<int>)", std_reverse);
-  bm<std::list<int>>("std::reverse(list<int>)", std_reverse);
+  // {std,ranges}::reverse(normal container)
+  {
+    auto bm = []<class Container>(std::string name, auto reverse) {
+      benchmark::RegisterBenchmark(name, [reverse](auto& st) {
+        std::size_t const size = st.range(0);
+        using ValueType        = typename Container::value_type;
+        Container c;
+        std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
 
-  // ranges::reverse
-  bm<std::vector<int>>("ranges::reverse(vector<int>)", ranges_reverse);
-  bm<std::deque<int>>("ranges::reverse(deque<int>)", ranges_reverse);
-  bm<std::list<int>>("ranges::reverse(list<int>)", ranges_reverse);
+        for ([[maybe_unused]] auto _ : st) {
+          reverse(c.begin(), c.end());
+          benchmark::DoNotOptimize(c);
+          benchmark::ClobberMemory();
+        }
+      })->Range(8, 1 << 15);
+    };
+    bm.operator()<std::vector<int>>("std::reverse(vector<int>)", std_reverse);
+    bm.operator()<std::deque<int>>("std::reverse(deque<int>)", std_reverse);
+    bm.operator()<std::list<int>>("std::reverse(list<int>)", std_reverse);
+    bm.operator()<std::vector<int>>("rng::reverse(vector<int>)", std::ranges::reverse);
+    bm.operator()<std::deque<int>>("rng::reverse(deque<int>)", std::ranges::reverse);
+    bm.operator()<std::list<int>>("rng::reverse(list<int>)", std::ranges::reverse);
+  }
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
