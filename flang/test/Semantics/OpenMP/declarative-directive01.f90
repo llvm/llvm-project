@@ -2,9 +2,6 @@
 
 ! Check OpenMP declarative directives
 
-!TODO: all internal errors
-!      enable declare-reduction example after name resolution
-
 ! 2.4 requires
 
 subroutine requires_1(a)
