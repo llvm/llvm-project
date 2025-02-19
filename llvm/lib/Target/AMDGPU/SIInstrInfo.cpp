@@ -1942,7 +1942,7 @@ getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
 void SIInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
     int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg, unsigned SubRegIdx) const {
+    const TargetRegisterInfo *TRI, Register VReg) const {
   MachineFunction *MF = MBB.getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
@@ -1983,7 +1983,7 @@ void SIInstrInfo::loadRegFromStackSlot(
   unsigned Opcode = getVectorRegSpillRestoreOpcode(VReg ? VReg : DestReg, RC,
                                                    SpillSize, RI, *MFI);
   BuildMI(MBB, MI, DL, get(Opcode))
-      .addReg(DestReg, RegState::Define, SubRegIdx)
+      .addReg(DestReg, RegState::Define)
       .addFrameIndex(FrameIndex)           // vaddr
       .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
       .addImm(0)                           // offset

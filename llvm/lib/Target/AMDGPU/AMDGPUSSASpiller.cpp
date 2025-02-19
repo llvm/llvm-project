@@ -173,6 +173,8 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
     });
   }
 
+  // Fills Active until reaches the NumAvailableRegs. If @Capacity is passed
+  // fills exactly this number of regs.
   unsigned fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
                          unsigned Capacity = 0);
 
@@ -209,6 +211,7 @@ AMDGPUSSASpiller::dumpRegSet(SetVector<VRegMaskPair> VMPs) {
   dbgs() << "\n";
   for (auto P : VMPs) {
     printVRegMaskPair(P);
+    dbgs() << "\n";
   }
   dbgs() << "\n";
 }
@@ -667,6 +670,7 @@ void AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
   }
   for (auto U : ToUpdate) {
     // FIXME: Do we always want "AtEndOfBlock"?
+    U->setSubReg(AMDGPU::NoRegister);
     U->setReg(Updater.GetValueAtEndOfBlock(&MBB));
   }
   LIS.createAndComputeVirtRegInterval(NewVReg);
@@ -810,8 +814,8 @@ unsigned AMDGPUSSASpiller::fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
                                          unsigned Capacity) {
   unsigned Limit = Capacity ? Capacity : NumAvailableRegs;
   auto &Active = RegisterMap[MBB.getNumber()].ActiveSet;
-  unsigned Size = getSizeInRegs(Active);
-  sortRegSetAt(MBB, MBB.begin(), S);
+  unsigned Size = Capacity ? 0 : getSizeInRegs(Active);
+  sortRegSetAt(MBB, MBB.getFirstNonPHI(), S);
   for (auto VMP : S) {
     unsigned RSize = getSizeInRegs(VMP);
     if (Size + RSize <= Limit) {
