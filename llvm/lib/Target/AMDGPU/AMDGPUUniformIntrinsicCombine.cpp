@@ -114,8 +114,8 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
-    // Check if the argument is uniform
-    if (UI->isUniform(II.getOperandUse(0))) {
+    // Check if the argument use is uniform
+    if (!UI->isDivergentUse(II.getOperandUse(0))) {
       LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << "\n");
       II.replaceAllUsesWith(Src);
       return true;
@@ -124,13 +124,14 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Src = II.getArgOperand(0);
-    // Check if the argument is uniform and has a direct `icmp eq` use of the
-    // ballot result.
+    // Check if the argument use is uniform and has a direct `icmp eq` use of
+    // the ballot result. If exists pull the ballot argument to the use place.
     // %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cond)
     // %is_done = icmp eq i64 %ballot, 0
-    // This means we are checking if *all lanes* in the ballot result are
-    // inactive.
-    if (UI->isUniform(II.getOperandUse(0))) {
+    // transformed IR should look like.
+    // %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cond)
+    // %is_done = icmp eq i64 %cond, 0
+    if (!UI->isDivergentUse(II.getOperandUse(0))) {
       LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << "\n");
 
       // Look for a direct `icmp eq` use of the ballot result.
