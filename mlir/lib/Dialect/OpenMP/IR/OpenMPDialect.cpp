@@ -2443,6 +2443,22 @@ LogicalResult DistributeOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
+// DeclareMapperOp / DeclareMapperInfoOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DeclareMapperInfoOp::verify() {
+  return verifyMapClause(*this, getMapVars());
+}
+
+LogicalResult DeclareMapperOp::verifyRegions() {
+  if (!llvm::isa_and_present<DeclareMapperInfoOp>(
+          getRegion().getBlocks().front().getTerminator()))
+    return emitOpError() << "expected terminator to be a DeclareMapperInfoOp";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DeclareReductionOp
 //===----------------------------------------------------------------------===//
 
