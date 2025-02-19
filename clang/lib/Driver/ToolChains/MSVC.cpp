@@ -233,7 +233,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (C.getDriver().isUsingLTO()) {
-    if (Arg *A = Args.getLastArg(options::OPT_fprofile_sample_use_EQ))
+    if (Arg *A = tools::getLastProfileSampleUseArg(Args))
       CmdArgs.push_back(Args.MakeArgString(std::string("-lto-sample-profile:") +
                                            A->getValue()));
   }

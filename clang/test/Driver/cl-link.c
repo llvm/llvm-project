@@ -72,5 +72,5 @@
 // INFER-LLD: lld-link
 // INFER-LLD-NOT: INFERASANLIBS
 
-// RUN: %clang_cl --target=x86_64-unknown-windows-msvc -flto -fuse-ld=lld -### -S -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 | FileCheck -check-prefix=CHECK-SAMPLE-PROFILE %s
+// RUN: %clang_cl --target=x86_64-unknown-windows-msvc /Tc%s -flto -fuse-ld=lld -### -fprofile-sample-use=%S/Inputs/file.prof 2>&1 | FileCheck -check-prefix=CHECK-SAMPLE-PROFILE %s
 // CHECK-SAMPLE-PROFILE: "-lto-sample-profile:{{.*}}/file.prof"
