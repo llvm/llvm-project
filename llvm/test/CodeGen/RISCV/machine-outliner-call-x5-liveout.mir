@@ -6,16 +6,6 @@
 
 # MIR has been edited by hand to have x5 as live out in @dont_outline
 
---- |
-  define i32 @outline_0(i32 %a, i32 %b) { ret i32 0 }
-
-  ; Can't outline if x5 is live out of the MBB
-  define i32 @dont_outline(i32 %a, i32 %b) { ret i32 0 }
-
-  define i32 @outline_1(i32 %a, i32 %b) { ret i32 0 }
-
-  define i32 @outline_2(i32 %a, i32 %b) { ret i32 0 }
-...
 ---
 
 name:            outline_0
