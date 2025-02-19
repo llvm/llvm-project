@@ -724,8 +724,8 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
 
   // A non-addr-taken global cannot alias with any non-pointer value.
   // Check this early and exit.
-  if (!Input->getType()->isPointerTy())
-    continue;
+  if (!V->getType()->isPointerTy())
+    return true;
 
   SmallPtrSet<const Value *, 8> Visited;
   SmallVector<const Value *, 8> Inputs;
