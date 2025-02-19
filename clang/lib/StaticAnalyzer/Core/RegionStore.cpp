@@ -342,17 +342,17 @@ public:
 
   bool hasExhaustedBindingLimit() const { return BindingsLeft == 0; }
 
-  BoundedRegionBindingsRef escapeValue(SVal V) const {
+  BoundedRegionBindingsRef withValuesEscaped(SVal V) const {
     assert(EscapedValuesDuringBind);
     EscapedValuesDuringBind->push_back(V);
     return *this;
   }
 
   BoundedRegionBindingsRef
-  escapeValues(nonloc::CompoundVal::iterator Begin,
-               nonloc::CompoundVal::iterator End) const {
+  withValuesEscaped(nonloc::CompoundVal::iterator Begin,
+                    nonloc::CompoundVal::iterator End) const {
     for (SVal V : llvm::make_range(Begin, End))
-      escapeValue(V);
+      withValuesEscaped(V);
     return *this;
   }
 
@@ -373,7 +373,7 @@ public:
     // If we are about to exhaust the binding limit, highjack this bind call for
     // the default binding.
     if (BindingsLeft == 1) {
-      escapeValue(V);
+      withValuesEscaped(V);
       K = BindingKey::Make(K.getRegion(), BindingKey::Default);
       V = UnknownVal();
     }
@@ -2519,7 +2519,7 @@ RegionStoreManager::bind(BoundedRegionBindingsConstRef B, Loc L, SVal V) {
                                  [&L]() { return locDescr(L); });
 
   if (B.hasExhaustedBindingLimit())
-    return B.escapeValue(V);
+    return B.withValuesEscaped(V);
 
   // We only care about region locations.
   auto MemRegVal = L.getAs<loc::MemRegionVal>();
@@ -2666,7 +2666,7 @@ RegionStoreManager::bindArray(BoundedRegionBindingsConstRef B,
     if (VI == VE)
       break;
     if (NewB.hasExhaustedBindingLimit())
-      return NewB.escapeValues(VI, VE);
+      return NewB.withValuesEscaped(VI, VE);
 
     NonLoc Idx = svalBuilder.makeArrayIndex(i);
     const ElementRegion *ER = MRMgr.getElementRegion(ElementTy, Idx, R, Ctx);
@@ -2883,7 +2883,7 @@ RegionStoreManager::bindStruct(BoundedRegionBindingsConstRef B,
       if (VI == VE)
         break;
       if (NewB.hasExhaustedBindingLimit())
-        return NewB.escapeValues(VI, VE);
+        return NewB.withValuesEscaped(VI, VE);
 
       QualType BTy = B.getType();
       assert(BTy->isStructureOrClassType() && "Base classes must be classes!");
@@ -2908,7 +2908,7 @@ RegionStoreManager::bindStruct(BoundedRegionBindingsConstRef B,
       break;
 
     if (NewB.hasExhaustedBindingLimit())
-      return NewB.escapeValues(VI, VE);
+      return NewB.withValuesEscaped(VI, VE);
 
     // Skip any unnamed bitfields to stay in sync with the initializers.
     if (FI->isUnnamedBitField())
