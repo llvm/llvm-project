@@ -406,8 +406,8 @@ def quantized_matmul(
 
 @linalg_structured_op
 def matmul_transpose_a(
-    A=TensorDef(T1, S.K, S.N),
-    B=TensorDef(T2, S.K, S.M),
+    A=TensorDef(T1, S.K, S.M),
+    B=TensorDef(T2, S.K, S.N),
     C=TensorDef(U, S.M, S.N, output=True),
     cast=TypeFnAttrDef(default=TypeFn.cast_signed),
 ):
