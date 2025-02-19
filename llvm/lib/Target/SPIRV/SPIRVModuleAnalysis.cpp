@@ -1681,8 +1681,9 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpConvertHandleToSamplerINTEL:
   case SPIRV::OpConvertHandleToSampledImageINTEL:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bindless_images))
-      report_fatal_error("Intel bindless images handles require the following "
-                         "SPIR-V extension: SPV_INTEL_bindless_images",
+      report_fatal_error("OpConvertHandleTo[Image/Sampler/SampledImage]INTEL "
+                         "instructions require the following SPIR-V extension: "
+                         "SPV_INTEL_bindless_images",
                          false);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bindless_images);
     Reqs.addCapability(SPIRV::Capability::BindlessImagesINTEL);

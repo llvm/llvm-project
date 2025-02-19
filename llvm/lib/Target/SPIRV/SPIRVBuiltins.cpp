@@ -1048,19 +1048,6 @@ static bool buildBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
                                         unsigned Opcode,
                                         MachineIRBuilder &MIRBuilder,
                                         SPIRVGlobalRegistry *GR) {
-  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
-  const auto *ST =
-      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
-  if ((Opcode == SPIRV::OpConvertHandleToImageINTEL ||
-       Opcode == SPIRV::OpConvertHandleToSamplerINTEL ||
-       Opcode == SPIRV::OpConvertHandleToSampledImageINTEL) &&
-      !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_bindless_images)) {
-    std::string DiagMsg = std::string(Builtin->Name) +
-                          ": the builtin requires the following SPIR-V "
-                          "extension: SPV_INTEL_bindless_images";
-    report_fatal_error(DiagMsg.c_str(), false);
-  }
-
   // Generate SPIRV instruction accordingly.
   if (Call->isSpirvOp())
     return buildOpFromWrapper(MIRBuilder, Opcode, Call,
