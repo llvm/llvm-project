@@ -3999,8 +3999,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
   assert(Opc != AMDGPU::V_FMAC_F16_t16_e32 &&
          Opc != AMDGPU::V_FMAC_F16_fake16_e32 &&
          "V_FMAC_F16_t16/fake16_e32 is not supported and not expected to be "
-         "present "
-         "pre-RA");
+         "present pre-RA");
 
   // Handle MAC/FMAC.
   bool IsF16 = Opc == AMDGPU::V_MAC_F16_e32 || Opc == AMDGPU::V_MAC_F16_e64 ||
