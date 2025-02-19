@@ -939,7 +939,7 @@ def Xarch__
       DocBrief<
           [{Specifies that the argument should only be used if the compilation
   target matches the specified architecture. This can be used with the target
-  CPU, triple architecture, or offloading host and device. This is most useful
+  CPU, triple architecture, or offloading host and device. It is most useful
   for separating behavior undesirable on one of the targets when combining many
   compilation jobs, as is commong with offloading. For example, -Xarch_x86_64,
   -Xarch_gfx90a, and -Xarch_device are all valid selectors.}]>,
