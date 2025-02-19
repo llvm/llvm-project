@@ -513,22 +513,25 @@ LogicalResult LoadGatherOp::verify() {
     transpose({1, 0}, tdescShape);
   }
 
-  if (auto sgMap = tdescTy.getSGMapAttr()) {
-    auto valueVecTy = cast<VectorType>(valueTy);
-    const int32_t wiData =
-        sgMap.getWiData()[0] > 1 ? sgMap.getWiData()[0] : sgMap.getWiData()[1];
-    // All represent the same concept: a number of row elements to store.
-    if (valueVecTy.getNumElements() != wiData ||
-        valueVecTy.getNumElements() != tdescTy.getChunkSize()) {
-      return emitOpError("Chunk size, vector size and wi_data must match.");
-    }
-    // Work-item's slice (i.e., vector shape to load) is [1] or [1, chunk_size].
-    tdescShape[tdescTy.getRank() - 1] = 1;
-  }
-
-  if (valueShape != tdescShape)
+  auto sgMap = tdescTy.getSGMapAttr();
+  // In VC mode, sg_map is not present. In this case, value shape must match
+  // the tensor descriptor shape.
+  if (!sgMap)
+    return valueShape == tdescShape
+               ? success()
+               : emitOpError("Unexpected result shape")
+                     << "(Expected shape: " << makeString(tdescShape)
+                     << ", Given shape: " << makeString(valueShape) << ").\n";
+  // In SIMT mode, sg_map, wi_data, and chunk_size determine the value shape.
+  auto distributedVectorShapeOrFailure = tdescTy.getDistributedVectorType();
+  if (failed(distributedVectorShapeOrFailure))
+    return emitOpError("Failed to compute distributed vector shape for "
+                       "tensor descriptor ")
+           << tdescTy;
+  if (cast<VectorType>(valueTy) != distributedVectorShapeOrFailure.value())
     return emitOpError("Unexpected result shape")
-           << "(Expected shape: " << makeString(tdescShape)
+           << "(Expected shape: "
+           << makeString(distributedVectorShapeOrFailure.value().getShape())
            << ", Given shape: " << makeString(valueShape) << ").\n";
 
   return success();
@@ -565,22 +568,25 @@ LogicalResult StoreScatterOp::verify() {
     transpose({1, 0}, tdescShape);
   }
 
-  if (auto sgMap = tdescTy.getSGMapAttr()) {
-    auto valueVecTy = cast<VectorType>(valueTy);
-    const int32_t wiData =
-        sgMap.getWiData()[0] > 1 ? sgMap.getWiData()[0] : sgMap.getWiData()[1];
-    // All represent the same concept: a number of row elements to store.
-    if (valueVecTy.getNumElements() != wiData ||
-        valueVecTy.getNumElements() != tdescTy.getChunkSize()) {
-      return emitOpError("Chunk size, vector size and wi_data must match.");
-    }
-    // Work-item's slice (i.e., vector to store) is [1] or [1, chunk_size].
-    tdescShape[tdescTy.getRank() - 1] = 1;
-  }
-
-  if (valueShape != tdescShape)
-    return emitOpError("Unexpected value shape")
-           << "(Expected shape: " << makeString(tdescShape)
+  auto sgMap = tdescTy.getSGMapAttr();
+  // In VC mode, sg_map is not present. In this case, value shape must match
+  // the tensor descriptor shape.
+  if (!sgMap)
+    return valueShape == tdescShape
+               ? success()
+               : emitOpError("Unexpected result shape")
+                     << "(Expected shape: " << makeString(tdescShape)
+                     << ", Given shape: " << makeString(valueShape) << ").\n";
+  // In SIMT mode, sg_map, wi_data, and chunk_size determine the value shape.
+  auto distributedVectorShapeOrFailure = tdescTy.getDistributedVectorType();
+  if (failed(distributedVectorShapeOrFailure))
+    return emitOpError("Failed to compute distributed vector shape for "
+                       "tensor descriptor ")
+           << tdescTy;
+  if (cast<VectorType>(valueTy) != distributedVectorShapeOrFailure.value())
+    return emitOpError("Unexpected result shape")
+           << "(Expected shape: "
+           << makeString(distributedVectorShapeOrFailure.value().getShape())
            << ", Given shape: " << makeString(valueShape) << ").\n";
 
   return success();
