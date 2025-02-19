@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <algorithm>
+#include <cstddef>
 #include <deque>
 #include <iterator>
 #include <list>
@@ -22,19 +23,18 @@
 template <class Container, class Operation>
 void bm_general(std::string operation_name, Operation copy_backward) {
   auto bench = [copy_backward](auto& st) {
-    auto const size = st.range(0);
-    using ValueType = typename Container::value_type;
+    std::size_t const n = st.range(0);
+    using ValueType     = typename Container::value_type;
     Container c;
-    std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
+    std::generate_n(std::back_inserter(c), n, [] { return Generate<ValueType>::random(); });
 
-    std::vector<ValueType> out(size);
+    std::vector<ValueType> out(n);
 
     for ([[maybe_unused]] auto _ : st) {
+      benchmark::DoNotOptimize(c);
+      benchmark::DoNotOptimize(out);
       auto result = copy_backward(c.begin(), c.end(), out.end());
       benchmark::DoNotOptimize(result);
-      benchmark::DoNotOptimize(out);
-      benchmark::DoNotOptimize(c);
-      benchmark::ClobberMemory();
     }
   };
   benchmark::RegisterBenchmark(operation_name, bench)->Range(8, 1 << 20);
@@ -43,7 +43,7 @@ void bm_general(std::string operation_name, Operation copy_backward) {
 template <bool Aligned, class Operation>
 static void bm_vector_bool(std::string operation_name, Operation copy_backward) {
   auto bench = [copy_backward](auto& st) {
-    auto n = st.range();
+    std::size_t const n = st.range(0);
     std::vector<bool> in(n, true);
     std::vector<bool> out(Aligned ? n : n + 8);
     benchmark::DoNotOptimize(&in);
@@ -51,10 +51,10 @@ static void bm_vector_bool(std::string operation_name, Operation copy_backward) 
     auto last  = in.end();
     auto dst   = Aligned ? out.end() : out.end() - 4;
     for ([[maybe_unused]] auto _ : st) {
+      benchmark::DoNotOptimize(in);
+      benchmark::DoNotOptimize(out);
       auto result = copy_backward(first, last, dst);
       benchmark::DoNotOptimize(result);
-      benchmark::DoNotOptimize(out);
-      benchmark::ClobberMemory();
     }
   };
   benchmark::RegisterBenchmark(operation_name, bench)->Range(64, 1 << 20);

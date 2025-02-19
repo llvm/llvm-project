@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <algorithm>
+#include <cstddef>
 #include <deque>
 #include <iterator>
 #include <list>
@@ -24,12 +25,12 @@
 template <class Container, class Operation>
 void bm_copy_every_other_element(std::string operation_name, Operation copy_if) {
   auto bench = [copy_if](auto& st) {
-    auto const size = st.range(0);
-    using ValueType = typename Container::value_type;
+    std::size_t const n = st.range(0);
+    using ValueType     = typename Container::value_type;
     Container c;
-    std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
+    std::generate_n(std::back_inserter(c), n, [] { return Generate<ValueType>::random(); });
 
-    std::vector<ValueType> out(size);
+    std::vector<ValueType> out(n);
 
     for ([[maybe_unused]] auto _ : st) {
       bool do_copy = false;
@@ -38,11 +39,10 @@ void bm_copy_every_other_element(std::string operation_name, Operation copy_if) 
         do_copy = !do_copy;
         return do_copy;
       };
+      benchmark::DoNotOptimize(c);
+      benchmark::DoNotOptimize(out);
       auto result = copy_if(c.begin(), c.end(), out.begin(), pred);
       benchmark::DoNotOptimize(result);
-      benchmark::DoNotOptimize(out);
-      benchmark::DoNotOptimize(c);
-      benchmark::ClobberMemory();
     }
   };
   benchmark::RegisterBenchmark(operation_name, bench)->Range(8, 1 << 20);
@@ -52,23 +52,22 @@ void bm_copy_every_other_element(std::string operation_name, Operation copy_if) 
 template <class Container, class Operation>
 void bm_copy_entire_range(std::string operation_name, Operation copy_if) {
   auto bench = [copy_if](auto& st) {
-    auto const size = st.range(0);
-    using ValueType = typename Container::value_type;
+    std::size_t const n = st.range(0);
+    using ValueType     = typename Container::value_type;
     Container c;
-    std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
+    std::generate_n(std::back_inserter(c), n, [] { return Generate<ValueType>::random(); });
 
-    std::vector<ValueType> out(size);
+    std::vector<ValueType> out(n);
 
     for ([[maybe_unused]] auto _ : st) {
       auto pred = [](auto& element) {
         benchmark::DoNotOptimize(element);
         return true;
       };
+      benchmark::DoNotOptimize(c);
+      benchmark::DoNotOptimize(out);
       auto result = copy_if(c.begin(), c.end(), out.begin(), pred);
       benchmark::DoNotOptimize(result);
-      benchmark::DoNotOptimize(out);
-      benchmark::DoNotOptimize(c);
-      benchmark::ClobberMemory();
     }
   };
   benchmark::RegisterBenchmark(operation_name, bench)->Range(8, 1 << 20);
