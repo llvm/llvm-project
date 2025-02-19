@@ -2122,6 +2122,12 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
         VPValue *NewMask = GetNewMask(L->getMask());
         return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
       })
+      .Case<VPWidenStridedLoadRecipe>([&](VPWidenStridedLoadRecipe *L) {
+        VPValue *NewMask = GetNewMask(L->getMask());
+        return new VPWidenStridedLoadRecipe(
+            *cast<LoadInst>(&L->getIngredient()), L->getAddr(), L->getStride(),
+            &EVL, NewMask, *L, L->getDebugLoc());
+      })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
         return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
@@ -2220,7 +2226,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           NumDefVal <= 1 &&
           "Only supports recipes with a single definition or without users.");
       EVLRecipe->insertBefore(CurRecipe);
-      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
+      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe,
+              VPWidenStridedLoadRecipe>(EVLRecipe)) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
       }
