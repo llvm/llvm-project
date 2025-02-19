@@ -103,6 +103,9 @@ bool RISCVFoldMemOffset::foldOffset(
     Register Reg = Worklist.front();
     Worklist.pop();
 
+    if (!Reg.isVirtual())
+      return false;
+
     for (auto &User : MRI.use_nodbg_instructions(Reg)) {
       FoldableOffset Offset;
 
@@ -248,6 +251,10 @@ bool RISCVFoldMemOffset::runOnMachineFunction(MachineFunction &MF) {
 
       // We only want to optimize register ADDIs.
       if (!MI.getOperand(1).isReg() || !MI.getOperand(2).isImm())
+        continue;
+
+      // Ignore 'li'.
+      if (MI.getOperand(1).getReg() == RISCV::X0)
         continue;
 
       int64_t Offset = MI.getOperand(2).getImm();
