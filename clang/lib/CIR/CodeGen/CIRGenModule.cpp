@@ -1604,7 +1604,14 @@ LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
 LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
   if (getLangOpts().OpenCL)
     return LangAS::opencl_private;
-  if (getLangOpts().SYCLIsDevice || getLangOpts().CUDAIsDevice ||
+
+  // For temporaries inside functions, CUDA treats them as normal variables.
+  // LangAS::cuda_device, on the other hand, is reserved for those variables
+  // explicitly marked with __device__.
+  if (getLangOpts().CUDAIsDevice)
+    return LangAS::Default;
+
+  if (getLangOpts().SYCLIsDevice ||
       (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
     llvm_unreachable("NYI");
   return LangAS::Default;
@@ -3983,8 +3990,11 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *D) {
       (!D || D->getType().getAddressSpace() == LangAS::Default))
     llvm_unreachable("NYI");
 
-  if (langOpts.CUDA && langOpts.CUDAIsDevice)
+  if (langOpts.CUDA && langOpts.CUDAIsDevice) {
+    if (D && D->hasAttr<CUDASharedAttr>())
+      return LangAS::cuda_shared;
     llvm_unreachable("NYI");
+  }
 
   if (langOpts.OpenMP)
     llvm_unreachable("NYI");

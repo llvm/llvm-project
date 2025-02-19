@@ -479,9 +479,10 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &D,
   // OpenCL variables in local address space and CUDA shared
   // variables cannot have an initializer.
   mlir::Attribute Init = nullptr;
-  if (D.hasAttr<CUDASharedAttr>() || D.hasAttr<LoaderUninitializedAttr>())
+  if (D.hasAttr<LoaderUninitializedAttr>())
     llvm_unreachable("CUDA is NYI");
-  else if (Ty.getAddressSpace() != LangAS::opencl_local)
+  else if (Ty.getAddressSpace() != LangAS::opencl_local &&
+           !D.hasAttr<CUDASharedAttr>())
     Init = builder.getZeroInitAttr(convertType(Ty));
 
   cir::GlobalOp GV = builder.createVersionedGlobal(
@@ -499,9 +500,14 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &D,
 
   setGVProperties(GV, &D);
 
-  // Make sure the result is of the correct type.
-  if (AS != builder.getAddrSpaceAttr(Ty.getAddressSpace()))
-    llvm_unreachable("address space cast NYI");
+  // OG checks if the expected address space, denoted by the type, is the
+  // same as the actual address space indicated by attributes. If they aren't
+  // the same, an addrspacecast is emitted when this variable is accessed.
+  // In CIR however, cir.get_global alreadys carries that information in
+  // !cir.ptr type - if this global is in OpenCL local address space, then its
+  // type would be !cir.ptr<..., addrspace(offload_local)>. Therefore we don't
+  // need an explicit address space cast in CIR: they will get emitted when
+  // lowering to LLVM IR.
 
   // Ensure that the static local gets initialized by making sure the parent
   // function gets emitted eventually.
