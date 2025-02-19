@@ -28,6 +28,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/X86TargetParser.h"
+#include "llvm/ADT/StringExtras.h"
 
 #include <cstdio>
 
@@ -61,24 +62,25 @@ static int printSupportedCPUs(llvm::StringRef triple) {
 }
 
 /// Check that given CPU is valid for given target.
-static bool checkSupportedCPU(llvm::StringRef str_cpu, llvm::StringRef str_triple) {
-  // If can create tareg from triple, then it's a valid triple
-  const llvm::Target *target = getTarget(str_triple);
-  if (!target) {
-    return false;
-  }
+static bool checkSupportedCPU(clang::DiagnosticsEngine& diags, llvm::StringRef str_cpu, llvm::StringRef str_triple) {
 
-  // TODO: only support check for x86_64 for now
   llvm::Triple triple{str_triple};
   if (triple.getArch() == llvm::Triple::x86_64) {
     const bool only64bit{true};
     llvm::X86::CPUKind x86cpu = llvm::X86::parseArchX86(str_cpu, only64bit);
-    return x86cpu != llvm::X86::CK_None;
+    if (x86cpu == llvm::X86::CK_None) {
+      diags.Report(clang::diag::err_target_unknown_cpu) << str_cpu;
+      llvm::SmallVector<llvm::StringRef, 32> validList;
+      llvm::X86::fillValidCPUArchList(validList, only64bit);
+      if (!validList.empty())
+        diags.Report(clang::diag::note_valid_options) << llvm::join(validList, ", ");
+
+      return false;
+    }
   }
-  else {
-    // TODO: only support check for x86_64 for now. Anything else passes.
-    return true;
-  }
+
+  // TODO: only support check for x86_64 for now. Anything else passes.
+  return true;
 }
 
 int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
@@ -113,12 +115,9 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   if (flang->getFrontendOpts().printSupportedCPUs)
     return printSupportedCPUs(flang->getInvocation().getTargetOpts().triple);
 
-  // Check that requested CPU can be properly supported, but only if
-  // we didn't specify CUDA support
-  if (!flang->getInvocation().getFortranOpts().features.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
-    if (!checkSupportedCPU(flang->getInvocation().getTargetOpts().cpu, flang->getInvocation().getTargetOpts().triple))
-      return 1;
-  }
+  // Check that requested CPU can be properly supported
+  if (!checkSupportedCPU(diags, flang->getInvocation().getTargetOpts().cpu, flang->getInvocation().getTargetOpts().triple))
+    return 1;
 
   diagsBuffer->flushDiagnostics(flang->getDiagnostics());
 
