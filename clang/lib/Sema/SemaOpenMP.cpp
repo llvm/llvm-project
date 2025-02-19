@@ -17054,6 +17054,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
   SourceLocation EndLoc = Locs.EndLoc;
   OMPClause *Res = nullptr;
   int ExtraModifier = Data.ExtraModifier;
+  int OriginalSharingModifier = Data.OriginalSharingModifier;
   SourceLocation ExtraModifierLoc = Data.ExtraModifierLoc;
   SourceLocation ColonLoc = Data.ColonLoc;
   switch (Kind) {
@@ -17079,7 +17080,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPReductionClause(
         VarList, static_cast<OpenMPReductionClauseModifier>(ExtraModifier),
         StartLoc, LParenLoc, ExtraModifierLoc, ColonLoc, EndLoc,
-        Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId);
+        Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId, {},
+        static_cast<OpenMPOriginalSharingModifier>(OriginalSharingModifier));
     break;
   case OMPC_task_reduction:
     Res = ActOnOpenMPTaskReductionClause(
@@ -18220,6 +18222,8 @@ namespace {
 struct ReductionData {
   /// List of original reduction items.
   SmallVector<Expr *, 8> Vars;
+  /// OpenMP 6.0 List of internal shared private reduction items
+  SmallVector<Expr *, 8> VarsTmp;
   /// List of private copies of the reduction items.
   SmallVector<Expr *, 8> Privates;
   /// LHS expressions for the reduction_op expressions.
@@ -18243,9 +18247,12 @@ struct ReductionData {
   SmallVector<Expr *, 4> ExprPostUpdates;
   /// Reduction modifier.
   unsigned RedModifier = 0;
+  /// OpenMP 6.9  Original sharing modifier
+  unsigned OrigSharingModifier = 0;
   ReductionData() = delete;
   /// Reserves required memory for the reduction data.
-  ReductionData(unsigned Size, unsigned Modifier = 0) : RedModifier(Modifier) {
+  ReductionData(unsigned Size, unsigned Modifier = 0, unsigned OrgModifier = 0) : RedModifier(Modifier),
+   OrigSharingModifier(OrgModifier) {
     Vars.reserve(Size);
     Privates.reserve(Size);
     LHSs.reserve(Size);
@@ -18255,6 +18262,9 @@ struct ReductionData {
       InscanCopyOps.reserve(Size);
       InscanCopyArrayTemps.reserve(Size);
       InscanCopyArrayElems.reserve(Size);
+    }
+    if( OrigSharingModifier == OMPC_ORIGINAL_SHARING_private){
+      VarsTmp.reserve(Size);
     }
     TaskgroupDescriptors.reserve(Size);
     ExprCaptures.reserve(Size);
@@ -18273,6 +18283,10 @@ struct ReductionData {
       InscanCopyOps.push_back(nullptr);
       InscanCopyArrayTemps.push_back(nullptr);
       InscanCopyArrayElems.push_back(nullptr);
+    }
+     // To be analyze later
+    if( OrigSharingModifier == OMPC_ORIGINAL_SHARING_private){
+      VarsTmp.emplace_back(Item);
     }
   }
   /// Stores reduction data.
@@ -18599,7 +18613,7 @@ static bool actOnOMPReductionKindClause(
           S.Diag(DVar.RefExpr->getExprLoc(), diag::note_omp_referenced);
         continue;
       }
-      if (DVar.CKind != OMPC_unknown) {
+      if (DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_shared) {
         S.Diag(ELoc, diag::err_omp_wrong_dsa)
             << getOpenMPClauseName(DVar.CKind)
             << getOpenMPClauseName(OMPC_reduction);
@@ -18611,7 +18625,7 @@ static bool actOnOMPReductionKindClause(
       //  A list item that appears in a reduction clause of a worksharing
       //  construct must be shared in the parallel regions to which any of the
       //  worksharing regions arising from the worksharing construct bind.
-      if (isOpenMPWorksharingDirective(CurrDir) &&
+      if (RD.OrigSharingModifier !=OMPC_ORIGINAL_SHARING_private && isOpenMPWorksharingDirective(CurrDir) &&
           !isOpenMPParallelDirective(CurrDir) &&
           !isOpenMPTeamsDirective(CurrDir)) {
         DVar = Stack->getImplicitDSA(D, true);
@@ -19117,7 +19131,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPReductionClause(
     SourceLocation StartLoc, SourceLocation LParenLoc,
     SourceLocation ModifierLoc, SourceLocation ColonLoc, SourceLocation EndLoc,
     CXXScopeSpec &ReductionIdScopeSpec, const DeclarationNameInfo &ReductionId,
-    ArrayRef<Expr *> UnresolvedReductions) {
+    ArrayRef<Expr *> UnresolvedReductions, OpenMPOriginalSharingModifier OriginalSharingMod  ) {
   if (ModifierLoc.isValid() && Modifier == OMPC_REDUCTION_unknown) {
     Diag(LParenLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_reduction, /*First=*/0,
@@ -19130,7 +19144,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPReductionClause(
   // worksharing-loop construct, a worksharing-loop SIMD construct, a simd
   // construct, a parallel worksharing-loop construct or a parallel
   // worksharing-loop SIMD construct.
-  if (Modifier == OMPC_REDUCTION_inscan &&
+  if ((Modifier == OMPC_REDUCTION_inscan || OriginalSharingMod  == OMPC_ORIGINAL_SHARING_private
+        || OriginalSharingMod  == OMPC_ORIGINAL_SHARING_shared )   &&
       (DSAStack->getCurrentDirective() != OMPD_for &&
        DSAStack->getCurrentDirective() != OMPD_for_simd &&
        DSAStack->getCurrentDirective() != OMPD_simd &&
@@ -19139,9 +19154,41 @@ OMPClause *SemaOpenMP::ActOnOpenMPReductionClause(
     Diag(ModifierLoc, diag::err_omp_wrong_inscan_reduction);
     return nullptr;
   }
+  
+  SmallVector<Expr *, 4> ProcessedVarList;
+  for (Expr *E : VarList) {
+    DeclRefExpr *OrigDRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts());
+    if( !OrigDRE ){
+      ProcessedVarList.push_back(E);
+      continue;
+     }
+     ValueDecl *OrigDecl = OrigDRE->getDecl();
+     DSAStackTy::DSAVarData DVar  = DSAStack->getImplicitDSA(OrigDecl, true);
+     if (DVar.CKind == OMPC_private || DVar.CKind == OMPC_firstprivate || 
+        OriginalSharingMod == OMPC_ORIGINAL_SHARING_private )
+     {
+       
+       VarDecl *SharedVar = buildVarDecl(SemaRef, E->getExprLoc(), E->getType(),
+                                                     ".omp.reduction.shared.tmp", nullptr, nullptr);
+       SemaRef.getCurScope()->AddDecl(SharedVar);
+       SharedVar->setImplicit();
+       DeclRefExpr* SharedRef = buildDeclRefExpr(SemaRef, SharedVar,
+                                                                 SharedVar->getType(),
+                                                                 E->getExprLoc());
+       DSAStack->addDSA(SharedVar, nullptr, OMPC_shared);
+       ExprResult Init = SemaRef.BuildBinOp( SemaRef.getCurScope(), OrigDRE->getBeginLoc(), BO_Assign, static_cast<Expr*>(SharedRef), E);
+       if (!Init.isInvalid())
+        SemaRef.AddInitializerToDecl(SharedVar, Init.get(), false);
 
-  ReductionData RD(VarList.size(), Modifier);
-  if (actOnOMPReductionKindClause(SemaRef, DSAStack, OMPC_reduction, VarList,
+       ProcessedVarList.push_back(static_cast<Expr*>(SharedRef));
+      } 
+     else 
+     {
+        ProcessedVarList.push_back(E);
+     }
+  }
+  ReductionData RD(ProcessedVarList.size(), Modifier, OriginalSharingMod );
+  if (actOnOMPReductionKindClause(SemaRef, DSAStack, OMPC_reduction, ProcessedVarList,
                                   StartLoc, LParenLoc, ColonLoc, EndLoc,
                                   ReductionIdScopeSpec, ReductionId,
                                   UnresolvedReductions, RD))

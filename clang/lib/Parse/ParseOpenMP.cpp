@@ -4594,6 +4594,33 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       assert(Tok.is(tok::comma) && "Expected comma.");
       (void)ConsumeToken();
     }
+    // Handle original(private / shared) Modifier
+    if (Kind == OMPC_reduction && getLangOpts().OpenMP >= 60  &&
+        Tok.is(tok::identifier) && PP.getSpelling(Tok) == "original" &&
+        NextToken().is(tok::l_paren)) {
+      // Parse original(private) modifier.
+      ConsumeToken(); 
+      BalancedDelimiterTracker ParenT(*this, tok::l_paren, tok::r_paren);
+      ParenT.consumeOpen();
+      if (Tok.is(tok::kw_private)) {
+        Data.OriginalSharingModifier = OMPC_ORIGINAL_SHARING_private;
+        Data.OriginalSharingModifierLoc = Tok.getLocation();
+        ConsumeToken(); 
+      }    
+      else if (Tok.is(tok::identifier) &&  PP.getSpelling(Tok) == "shared") {
+        Data.OriginalSharingModifier = OMPC_ORIGINAL_SHARING_shared;
+        Data.OriginalSharingModifierLoc = Tok.getLocation();
+        ConsumeToken(); 
+      } else {
+        Diag(Tok.getLocation(), diag::err_expected) << "'private or shared'";
+        SkipUntil(tok::r_paren);
+        return false;
+      }    
+      ParenT.consumeClose();
+      assert(Tok.is(tok::comma) && "Expected comma.");
+      (void)ConsumeToken();
+    } 
+    
     ColonProtectionRAIIObject ColonRAII(*this);
     if (getLangOpts().CPlusPlus)
       ParseOptionalCXXScopeSpecifier(Data.ReductionOrMapperIdScopeSpec,
