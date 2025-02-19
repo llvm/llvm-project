@@ -11,6 +11,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstddef>
 #include <cstdint>
@@ -295,14 +296,27 @@ Error DirectX::RootSignature::parse(StringRef Data) {
   for (uint32_t It = 0; It < NumParameters; It++) {
     dxbc::RootParameter NewParam;
 
+    dxbc::RootParameterType PTValue =
+        support::endian::read<dxbc::RootParameterType,
+                              llvm::endianness::little>(Current);
+    if (!dxbc::RootSignatureValidations::isValidParameterType(PTValue))
+      return validationFailed("unsupported parameter type value read: " +
+                              llvm::Twine((uint32_t)PTValue));
+
     NewParam.ParameterType =
         support::endian::read<dxbc::RootParameterType,
                               llvm::endianness::little>(Current);
     Current += sizeof(dxbc::RootParameterType);
 
-    NewParam.ShaderVisibility =
+    dxbc::ShaderVisibilityFlag SVValue =
         support::endian::read<dxbc::ShaderVisibilityFlag,
                               llvm::endianness::little>(Current);
+
+    if (!dxbc::RootSignatureValidations::isValidShaderVisibility(SVValue))
+      return validationFailed("unsupported shader visility flag value read: " +
+                              llvm::Twine((uint32_t)SVValue));
+
+    NewParam.ShaderVisibility = SVValue;
     Current += sizeof(dxbc::ShaderVisibilityFlag);
 
     uint32_t Offset =
@@ -312,11 +326,12 @@ Error DirectX::RootSignature::parse(StringRef Data) {
     switch (NewParam.ParameterType) {
 
     case dxbc::RootParameterType::Constants32Bit: {
-      if (Error Err = readStruct(Data, Current, NewParam.Constants))
+      if (Error Err = readStruct(Data, Begin + Offset, NewParam.Constants))
         return Err;
-      if (sys::IsBigEndianHost)
-        NewParam.Constants.swapBytes();
     } break;
+    case dxbc::RootParameterType::Empty:
+      llvm_unreachable("Invalid value for RootParameterType");
+      break;
     }
 
     Parameters.push_back(NewParam);
