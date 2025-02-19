@@ -545,7 +545,8 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   ClassTemplateSpecializationDecl *spec_decl =
       m_ast->CreateClassTemplateSpecializationDecl(
           m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), decl,
-          llvm::to_underlying(clang::TagTypeKind::Struct), infos);
+          llvm::to_underlying(clang::TagTypeKind::Struct), infos,
+          Declaration());
   ASSERT_NE(spec_decl, nullptr);
   CompilerType type = m_ast->CreateClassTemplateSpecializationType(spec_decl);
   ASSERT_TRUE(type);
@@ -876,7 +877,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
   // Create the actual function template.
   clang::FunctionTemplateDecl *func_template =
       m_ast->CreateFunctionTemplateDecl(TU, OptionalClangModuleID(), func,
-                                        empty_params);
+                                        empty_params, Declaration());
 
   EXPECT_EQ(TU, func_template->getDeclContext());
   EXPECT_EQ("foo", func_template->getName());
@@ -908,7 +909,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
   // Create the actual function template.
   clang::FunctionTemplateDecl *func_template =
       m_ast->CreateFunctionTemplateDecl(record, OptionalClangModuleID(), func,
-                                        empty_params);
+                                        empty_params, Declaration());
 
   EXPECT_EQ(record, func_template->getDeclContext());
   EXPECT_EQ("foo", func_template->getName());

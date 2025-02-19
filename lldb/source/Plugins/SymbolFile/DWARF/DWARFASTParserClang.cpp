@@ -1372,7 +1372,7 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
             ignore_containing_context ? m_ast.GetTranslationUnitDecl()
                                       : containing_decl_ctx,
             GetOwningClangModule(die), name, clang_type, attrs.storage,
-            attrs.is_inline);
+            attrs.is_inline, attrs.decl);
         std::free(name_buf);
 
         if (has_template_params) {
@@ -1382,11 +1382,11 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
               ignore_containing_context ? m_ast.GetTranslationUnitDecl()
                                         : containing_decl_ctx,
               GetOwningClangModule(die), attrs.name.GetStringRef(), clang_type,
-              attrs.storage, attrs.is_inline);
+              attrs.storage, attrs.is_inline, attrs.decl);
           clang::FunctionTemplateDecl *func_template_decl =
               m_ast.CreateFunctionTemplateDecl(
                   containing_decl_ctx, GetOwningClangModule(die),
-                  template_function_decl, template_param_infos);
+                  template_function_decl, template_param_infos, attrs.decl);
           m_ast.CreateFunctionTemplateSpecializationInfo(
               template_function_decl, func_template_decl, template_param_infos);
         }
@@ -1858,7 +1858,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     clang::ClassTemplateSpecializationDecl *class_specialization_decl =
         m_ast.CreateClassTemplateSpecializationDecl(
             containing_decl_ctx, GetOwningClangModule(die), class_template_decl,
-            tag_decl_kind, template_param_infos);
+            tag_decl_kind, template_param_infos, attrs.decl);
     clang_type =
         m_ast.CreateClassTemplateSpecializationType(class_specialization_decl);
 
@@ -1870,7 +1870,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     clang_type = m_ast.CreateRecordType(
         containing_decl_ctx, GetOwningClangModule(die), attrs.accessibility,
         attrs.name.GetCString(), tag_decl_kind, attrs.class_language, metadata,
-        attrs.exports_symbols);
+        attrs.exports_symbols, attrs.decl);
   }
 
   TypeSP type_sp = dwarf->MakeType(

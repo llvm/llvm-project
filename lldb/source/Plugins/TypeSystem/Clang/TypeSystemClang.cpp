@@ -1282,7 +1282,7 @@ CompilerType TypeSystemClang::CreateRecordType(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     AccessType access_type, llvm::StringRef name, int kind,
     LanguageType language, std::optional<ClangASTMetadata> metadata,
-    bool exports_symbols) {
+    bool exports_symbols, const Declaration &declaration) {
   ASTContext &ast = getASTContext();
 
   if (decl_ctx == nullptr)
@@ -1336,6 +1336,10 @@ CompilerType TypeSystemClang::CreateRecordType(
     if (isa<CXXRecordDecl>(decl_ctx) && exports_symbols)
       decl->setAnonymousStructOrUnion(true);
   }
+
+  auto location = GetLocForDecl(declaration);
+  decl->setLocStart(location);
+  decl->setLocation(location);
 
   if (metadata)
     SetMetadata(decl, *metadata);
@@ -1454,7 +1458,8 @@ static TemplateParameterList *CreateTemplateParameterList(
 clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     clang::FunctionDecl *func_decl,
-    const TemplateParameterInfos &template_param_infos) {
+    const TemplateParameterInfos &template_param_infos,
+    const Declaration &declaration) {
   //    /// Create a function template node.
   ASTContext &ast = getASTContext();
 
@@ -1468,6 +1473,7 @@ clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
   func_tmpl_decl->setDeclName(func_decl->getDeclName());
   func_tmpl_decl->setTemplateParameters(template_param_list);
   func_tmpl_decl->init(func_decl);
+  func_tmpl_decl->setLocation(GetLocForDecl(declaration));
   SetOwningModule(func_tmpl_decl, owning_module);
 
   for (size_t i = 0, template_param_decl_count = template_param_decls.size();
@@ -1693,7 +1699,8 @@ ClassTemplateSpecializationDecl *
 TypeSystemClang::CreateClassTemplateSpecializationDecl(
     DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     ClassTemplateDecl *class_template_decl, int kind,
-    const TemplateParameterInfos &template_param_infos) {
+    const TemplateParameterInfos &template_param_infos,
+    const Declaration &declaration) {
   ASTContext &ast = getASTContext();
   llvm::SmallVector<clang::TemplateArgument, 2> args(
       template_param_infos.Size() +
@@ -1727,6 +1734,8 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
 
   class_template_specialization_decl->setSpecializationKind(
       TSK_ExplicitSpecialization);
+
+  class_template_specialization_decl->setLocation(GetLocForDecl(declaration));
 
   return class_template_specialization_decl;
 }
@@ -2188,7 +2197,8 @@ std::string TypeSystemClang::GetTypeNameForDecl(const NamedDecl *named_decl,
 FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     llvm::StringRef name, const CompilerType &function_clang_type,
-    clang::StorageClass storage, bool is_inline) {
+    clang::StorageClass storage, bool is_inline,
+    const Declaration &declaration) {
   FunctionDecl *func_decl = nullptr;
   ASTContext &ast = getASTContext();
   if (!decl_ctx)
@@ -2209,6 +2219,11 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
   func_decl->setConstexprKind(isConstexprSpecified
                                   ? ConstexprSpecKind::Constexpr
                                   : ConstexprSpecKind::Unspecified);
+
+  const clang::SourceLocation location = GetLocForDecl(declaration);
+  func_decl->setLocation(location);
+  func_decl->setRangeEnd(location);
+
   SetOwningModule(func_decl, owning_module);
   decl_ctx->addDecl(func_decl);
 
@@ -2258,7 +2273,7 @@ CompilerType TypeSystemClang::CreateFunctionType(
 ParmVarDecl *TypeSystemClang::CreateParameterDeclaration(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     const char *name, const CompilerType &param_type, int storage,
-    bool add_decl) {
+    clang::SourceLocation loc, bool add_decl) {
   ASTContext &ast = getASTContext();
   auto *decl = ParmVarDecl::CreateDeserialized(ast, GlobalDeclID());
   decl->setDeclContext(decl_ctx);
@@ -2266,6 +2281,7 @@ ParmVarDecl *TypeSystemClang::CreateParameterDeclaration(
     decl->setDeclName(&ast.Idents.get(name));
   decl->setType(ClangUtil::GetQualType(param_type));
   decl->setStorageClass(static_cast<clang::StorageClass>(storage));
+  decl->setLocation(loc);
   SetOwningModule(decl, owning_module);
   if (add_decl)
     decl_ctx->addDecl(decl);
@@ -2355,9 +2371,9 @@ CompilerType TypeSystemClang::CreateEnumerationType(
     OptionalClangModuleID owning_module, const Declaration &decl,
     const CompilerType &integer_clang_type, bool is_scoped,
     std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind) {
-  // TODO: Do something intelligent with the Declaration object passed in
-  // like maybe filling in the SourceLocation with it...
   ASTContext &ast = getASTContext();
+
+  auto location = GetLocForDecl(decl);
 
   // TODO: ask about these...
   //    const bool IsFixed = false;
@@ -2368,6 +2384,8 @@ CompilerType TypeSystemClang::CreateEnumerationType(
   enum_decl->setScoped(is_scoped);
   enum_decl->setScopedUsingClassTag(is_scoped);
   enum_decl->setFixed(false);
+  enum_decl->setLocation(location);
+  enum_decl->setLocStart(location);
   SetOwningModule(enum_decl, owning_module);
   if (decl_ctx)
     decl_ctx->addDecl(enum_decl);
@@ -7794,10 +7812,11 @@ TypeSystemClang::CreateParameterDeclarations(
     llvm::StringRef name =
         !parameter_names.empty() ? parameter_names[param_index] : "";
 
-    auto *param =
-        CreateParameterDeclaration(func, /*owning_module=*/{}, name.data(),
-                                   GetType(prototype.getParamType(param_index)),
-                                   clang::SC_None, /*add_decl=*/false);
+    // FIXME: we should pass the location of the parameter not the function
+    auto *param = CreateParameterDeclaration(
+        func, /*owning_module=*/{}, name.data(),
+        GetType(prototype.getParamType(param_index)), clang::SC_None,
+        func->getLocation(), /*add_decl=*/false);
     assert(param);
 
     params.push_back(param);
@@ -7810,7 +7829,8 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
     const char *mangled_name, const CompilerType &method_clang_type,
     lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
-    bool is_explicit, bool is_attr_used, bool is_artificial) {
+    bool is_explicit, bool is_attr_used, bool is_artificial,
+    const Declaration &declaration) {
   if (!type || !method_clang_type.IsValid() || name.empty())
     return nullptr;
 
@@ -7950,6 +7970,10 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
   // have names, so we omit them when creating the ParmVarDecls.
   cxx_method_decl->setParams(CreateParameterDeclarations(
       cxx_method_decl, *method_function_prototype, /*parameter_names=*/{}));
+
+  const clang::SourceLocation location = GetLocForDecl(declaration);
+  cxx_method_decl->setLocation(location);
+  cxx_method_decl->setRangeEnd(location);
 
   AddAccessSpecifierDecl(cxx_record_decl, getASTContext(),
                          GetCXXRecordDeclAccess(cxx_record_decl),
