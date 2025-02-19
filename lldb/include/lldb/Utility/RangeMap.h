@@ -497,6 +497,7 @@ public:
         m_entries.begin(), m_entries.end(), [](const Entry &a, const Entry &b) {
           return a.DoesAdjoinOrIntersect(b) && a.data == b.data;
         });
+
     if (first_intersect == m_entries.end())
       return;
 
@@ -512,8 +513,7 @@ public:
         minimal_ranges.push_back(*pos);
     }
     m_entries.swap(minimal_ranges);
-    if (!m_entries.empty())
-      ComputeUpperBounds(0, m_entries.size());
+    ComputeUpperBounds(0, m_entries.size());
   }
 
   void Clear() { m_entries.clear(); }
