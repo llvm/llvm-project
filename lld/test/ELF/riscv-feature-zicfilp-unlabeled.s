@@ -1,17 +1,17 @@
 # REQUIRES: riscv
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc --filetype=obj --triple=riscv32-unknown-linux-gnu rv32-func1-zicfilp.s -o rv32-func1-zicfilp.o
-# RUN: llvm-mc --filetype=obj --triple=riscv32-unknown-linux-gnu rv32-func1-zicfilp-conflict.s -o rv32-func1-zicfilp-conflict.o
-# RUN: llvm-mc --filetype=obj --triple=riscv32-unknown-linux-gnu func2.s -o rv32-func2.o
-# RUN: llvm-mc --filetype=obj --triple=riscv32-unknown-linux-gnu rv32-func2-zicfilp.s -o rv32-func2-zicfilp.o
-# RUN: llvm-mc --filetype=obj --triple=riscv32-unknown-linux-gnu func3.s -o rv32-func3.o
-# RUN: llvm-mc --filetype=obj --triple=riscv32-unknown-linux-gnu rv32-func3-zicfilp.s -o rv32-func3-zicfilp.o
-# RUN: llvm-mc --filetype=obj --triple=riscv64-unknown-linux-gnu rv64-func1-zicfilp.s -o rv64-func1-zicfilp.o
-# RUN: llvm-mc --filetype=obj --triple=riscv64-unknown-linux-gnu rv64-func1-zicfilp-conflict.s -o rv64-func1-zicfilp-conflict.o
-# RUN: llvm-mc --filetype=obj --triple=riscv64-unknown-linux-gnu func2.s -o rv64-func2.o
-# RUN: llvm-mc --filetype=obj --triple=riscv64-unknown-linux-gnu rv64-func2-zicfilp.s -o rv64-func2-zicfilp.o
-# RUN: llvm-mc --filetype=obj --triple=riscv64-unknown-linux-gnu func3.s -o rv64-func3.o
-# RUN: llvm-mc --filetype=obj --triple=riscv64-unknown-linux-gnu rv64-func3-zicfilp.s -o rv64-func3-zicfilp.o
+# RUN: llvm-mc --filetype=obj --triple=riscv32 rv32-func1-zicfilp.s -o rv32-func1-zicfilp.o
+# RUN: llvm-mc --filetype=obj --triple=riscv32 rv32-func1-zicfilp-conflict.s -o rv32-func1-zicfilp-conflict.o
+# RUN: llvm-mc --filetype=obj --triple=riscv32 func2.s -o rv32-func2.o
+# RUN: llvm-mc --filetype=obj --triple=riscv32 rv32-func2-zicfilp.s -o rv32-func2-zicfilp.o
+# RUN: llvm-mc --filetype=obj --triple=riscv32 func3.s -o rv32-func3.o
+# RUN: llvm-mc --filetype=obj --triple=riscv32 rv32-func3-zicfilp.s -o rv32-func3-zicfilp.o
+# RUN: llvm-mc --filetype=obj --triple=riscv64 rv64-func1-zicfilp.s -o rv64-func1-zicfilp.o
+# RUN: llvm-mc --filetype=obj --triple=riscv64 rv64-func1-zicfilp-conflict.s -o rv64-func1-zicfilp-conflict.o
+# RUN: llvm-mc --filetype=obj --triple=riscv64 func2.s -o rv64-func2.o
+# RUN: llvm-mc --filetype=obj --triple=riscv64 rv64-func2-zicfilp.s -o rv64-func2-zicfilp.o
+# RUN: llvm-mc --filetype=obj --triple=riscv64 func3.s -o rv64-func3.o
+# RUN: llvm-mc --filetype=obj --triple=riscv64 rv64-func3-zicfilp.s -o rv64-func3-zicfilp.o
 
 ## ZICFILP-unlabeled should be enabled when it's enabled in all inputs
 # RUN: ld.lld rv32-func1-zicfilp.o rv32-func2-zicfilp.o rv32-func3-zicfilp.o -o - | llvm-readelf -n - | FileCheck --check-prefix ZICFILP-UNLABELED %s
