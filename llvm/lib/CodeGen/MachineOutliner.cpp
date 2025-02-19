@@ -1165,15 +1165,13 @@ bool MachineOutliner::outline(
             CallInst->addOperand(
                 MachineOperand::CreateRegMask(*RegMasks.begin()));
           } else {
-            uint32_t *RegMask = MF->allocateRegMask();
-            unsigned NumRegs =
-                MF->getSubtarget().getRegisterInfo()->getNumRegs();
-            unsigned Size = MachineOperand::getRegMaskSize(NumRegs);
-            memset(RegMask, UINT32_MAX, Size * sizeof(RegMask[0]));
+            auto RegMask = MF->allocateRegMaskArray();
+            for (unsigned I = 0; I < RegMask.size(); ++I)
+              RegMask[I] = UINT32_MAX;
             for (const uint32_t *Mask : RegMasks)
-              for (unsigned I = 0; I < Size; ++I)
+              for (unsigned I = 0; I < RegMask.size(); ++I)
                 RegMask[I] &= Mask[I];
-            CallInst->addOperand(MachineOperand::CreateRegMask(RegMask));
+            CallInst->addOperand(MachineOperand::CreateRegMask(RegMask.data()));
           }
         }
 
