@@ -1203,6 +1203,40 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     deviceConstructFound_ = true;
   }
 
+  unsigned version{context_.langOptions().OpenMPVersion};
+  if (version >= 52 &&
+      GetContext().directive == llvm::omp::Directive::OMPD_single) {
+    bool foundCopyPrivate{false};
+    bool foundNowait{false};
+    parser::CharBlock NowaitSource{""};
+    auto catchCopyPrivateNowaitClauses = [&](const auto &dir) {
+      for (auto &clause : std::get<parser::OmpClauseList>(dir.t).v) {
+        if (clause.Id() == llvm::omp::Clause::OMPC_copyprivate) {
+          if (foundCopyPrivate) {
+            context_.Say(clause.source,
+                "At most one COPYPRIVATE clause can appear on the SINGLE directive"_err_en_US);
+          } else {
+            foundCopyPrivate = true;
+          }
+        } else if (clause.Id() == llvm::omp::Clause::OMPC_nowait) {
+          if (foundNowait) {
+            context_.Say(clause.source,
+                "At most one NOWAIT clause can appear on the SINGLE directive"_err_en_US);
+          } else {
+            foundNowait = true;
+            NowaitSource = clause.source;
+          }
+        }
+      }
+    };
+    catchCopyPrivateNowaitClauses(beginBlockDir);
+    catchCopyPrivateNowaitClauses(endBlockDir);
+    if (version == 52 && foundCopyPrivate && foundNowait) {
+      context_.Say(NowaitSource,
+          "NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive"_err_en_US);
+    }
+  }
+
   switch (beginDir.v) {
   case llvm::omp::Directive::OMPD_target:
     if (CheckTargetBlockOnlyTeams(block)) {
@@ -2853,7 +2887,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
   CheckMultListItems();
 
   // 2.7.3 Single Construct Restriction
-  if (GetContext().directive == llvm::omp::Directive::OMPD_end_single) {
+  if (context_.langOptions().OpenMPVersion < 52 &&
+      GetContext().directive == llvm::omp::Directive::OMPD_end_single) {
     CheckNotAllowedIfClause(
         llvm::omp::Clause::OMPC_copyprivate, {llvm::omp::Clause::OMPC_nowait});
   }
@@ -3481,14 +3516,16 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_nowait);
-  if (llvm::omp::noWaitClauseNotAllowedSet.test(GetContext().directive)) {
+  if (context_.langOptions().OpenMPVersion < 52 &&
+      llvm::omp::noWaitClauseNotAllowedSet.test(GetContext().directive)) {
+    std::string dirName{
+        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString())};
     context_.Say(GetContext().clauseSource,
         "%s clause is not allowed on the OMP %s directive,"
-        " use it on OMP END %s directive "_err_en_US,
+        " use it on OMP END %s directive or %s"_err_en_US,
         parser::ToUpperCaseLetters(
             getClauseName(llvm::omp::Clause::OMPC_nowait).str()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
+        dirName, dirName, TryVersion(52));
   }
 }
 
@@ -4220,14 +4257,16 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_copyprivate);
   CheckCopyingPolymorphicAllocatable(
       symbols, llvm::omp::Clause::OMPC_copyprivate);
-  if (GetContext().directive == llvm::omp::Directive::OMPD_single) {
+  if (context_.langOptions().OpenMPVersion < 52 &&
+      GetContext().directive == llvm::omp::Directive::OMPD_single) {
+    std::string dirName{
+        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString())};
     context_.Say(GetContext().clauseSource,
         "%s clause is not allowed on the OMP %s directive,"
-        " use it on OMP END %s directive "_err_en_US,
+        " use it on OMP END %s directive or %s"_err_en_US,
         parser::ToUpperCaseLetters(
             getClauseName(llvm::omp::Clause::OMPC_copyprivate).str()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
+        dirName, dirName, TryVersion(52));
   }
 }
 

@@ -330,7 +330,7 @@ use omp_lib
   !$omp parallel
   b = 1
   !ERROR: LASTPRIVATE clause is not allowed on the SINGLE directive
-  !ERROR: NOWAIT clause is not allowed on the OMP SINGLE directive, use it on OMP END SINGLE directive 
+  !ERROR: NOWAIT clause is not allowed on the OMP SINGLE directive, use it on OMP END SINGLE directive or try -fopenmp-version=52
   !$omp single private(a) lastprivate(c) nowait
   a = 3.14
   !ERROR: Clause NOWAIT is not allowed if clause COPYPRIVATE appears on the END SINGLE directive
@@ -351,7 +351,7 @@ use omp_lib
   a = 1.0
   !ERROR: COPYPRIVATE clause is not allowed on the END WORKSHARE directive
   !$omp end workshare nowait copyprivate(a)
-  !ERROR: NOWAIT clause is not allowed on the OMP WORKSHARE directive, use it on OMP END WORKSHARE directive 
+  !ERROR: NOWAIT clause is not allowed on the OMP WORKSHARE directive, use it on OMP END WORKSHARE directive or try -fopenmp-version=52
   !$omp workshare nowait
   !$omp end workshare
   !$omp end parallel
@@ -420,7 +420,7 @@ use omp_lib
   !$omp parallel
   !ERROR: No ORDERED clause with a parameter can be specified on the DO SIMD directive
   !ERROR: NOGROUP clause is not allowed on the DO SIMD directive
-  !ERROR: NOWAIT clause is not allowed on the OMP DO SIMD directive, use it on OMP END DO SIMD directive 
+  !ERROR: NOWAIT clause is not allowed on the OMP DO SIMD directive, use it on OMP END DO SIMD directive or try -fopenmp-version=52
   !$omp do simd ordered(2) NOGROUP nowait
   do i = 1, N
      do j = 1, N
