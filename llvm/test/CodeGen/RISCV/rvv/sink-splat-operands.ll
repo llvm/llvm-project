@@ -1564,8 +1564,8 @@ define void @sink_splat_fdiv_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:  .LBB27_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl1re32.v v8, (a5)
-; CHECK-NEXT:    sub a6, a6, a3
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
+; CHECK-NEXT:    sub a6, a6, a3
 ; CHECK-NEXT:    vs1r.v v8, (a5)
 ; CHECK-NEXT:    add a5, a5, a1
 ; CHECK-NEXT:    bnez a6, .LBB27_3
@@ -1654,8 +1654,8 @@ define void @sink_splat_frdiv_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:  .LBB28_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl1re32.v v8, (a5)
-; CHECK-NEXT:    sub a6, a6, a3
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0
+; CHECK-NEXT:    sub a6, a6, a3
 ; CHECK-NEXT:    vs1r.v v8, (a5)
 ; CHECK-NEXT:    add a5, a5, a1
 ; CHECK-NEXT:    bnez a6, .LBB28_3
@@ -2504,8 +2504,8 @@ define void @sink_splat_udiv_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB42_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl2re32.v v8, (a6)
-; CHECK-NEXT:    sub a7, a7, a3
 ; CHECK-NEXT:    vdivu.vx v8, v8, a1
+; CHECK-NEXT:    sub a7, a7, a3
 ; CHECK-NEXT:    vs2r.v v8, (a6)
 ; CHECK-NEXT:    add a6, a6, a5
 ; CHECK-NEXT:    bnez a7, .LBB42_3
@@ -2595,8 +2595,8 @@ define void @sink_splat_sdiv_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB43_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl2re32.v v8, (a6)
-; CHECK-NEXT:    sub a7, a7, a3
 ; CHECK-NEXT:    vdiv.vx v8, v8, a1
+; CHECK-NEXT:    sub a7, a7, a3
 ; CHECK-NEXT:    vs2r.v v8, (a6)
 ; CHECK-NEXT:    add a6, a6, a5
 ; CHECK-NEXT:    bnez a7, .LBB43_3
@@ -2686,8 +2686,8 @@ define void @sink_splat_urem_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB44_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl2re32.v v8, (a6)
-; CHECK-NEXT:    sub a7, a7, a3
 ; CHECK-NEXT:    vremu.vx v8, v8, a1
+; CHECK-NEXT:    sub a7, a7, a3
 ; CHECK-NEXT:    vs2r.v v8, (a6)
 ; CHECK-NEXT:    add a6, a6, a5
 ; CHECK-NEXT:    bnez a7, .LBB44_3
@@ -2777,8 +2777,8 @@ define void @sink_splat_srem_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB45_3: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vl2re32.v v8, (a6)
-; CHECK-NEXT:    sub a7, a7, a3
 ; CHECK-NEXT:    vrem.vx v8, v8, a1
+; CHECK-NEXT:    sub a7, a7, a3
 ; CHECK-NEXT:    vs2r.v v8, (a6)
 ; CHECK-NEXT:    add a6, a6, a5
 ; CHECK-NEXT:    bnez a7, .LBB45_3

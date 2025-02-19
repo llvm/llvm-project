@@ -267,10 +267,6 @@ public:
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  void materializeImmediate(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
-                            Register DestReg, int64_t Value) const;
-
   const TargetRegisterClass *getPreferredSelectRegClass(
                                unsigned Size) const;
 
@@ -281,6 +277,9 @@ public:
   Register insertEQ(MachineBasicBlock *MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register SrcReg, int Value)  const;
+
+  bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
+                               int64_t &ImmVal) const override;
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
@@ -401,6 +400,15 @@ public:
   static bool isFoldableCopy(const MachineInstr &MI);
 
   void removeModOperands(MachineInstr &MI) const;
+
+  /// Return the extracted immediate value in a subregister use from a constant
+  /// materialized in a super register.
+  ///
+  /// e.g. %imm = S_MOV_B64 K[0:63]
+  ///      USE %imm.sub1
+  /// This will return K[32:63]
+  static std::optional<int64_t> extractSubregFromImm(int64_t ImmVal,
+                                                     unsigned SubRegIndex);
 
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
@@ -1067,7 +1075,13 @@ public:
   // Some operands like FrameIndexes could resolve to an inline immediate value
   // that will not require an additional 4-bytes; this function assumes that it
   // will.
-  bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const;
+  bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const {
+    assert(!MO.isReg() && "isInlineConstant called on register operand!");
+    if (!MO.isImm())
+      return false;
+    return isInlineConstant(MO.getImm(), OperandType);
+  }
+  bool isInlineConstant(int64_t ImmVal, uint8_t OperandType) const;
 
   bool isInlineConstant(const MachineOperand &MO,
                         const MCOperandInfo &OpInfo) const {
@@ -1095,7 +1109,7 @@ public:
   }
 
   bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
-                        const MachineOperand &MO) const {
+                        int64_t ImmVal) const {
     if (OpIdx >= MI.getDesc().NumOperands)
       return false;
 
@@ -1105,10 +1119,15 @@ public:
 
       uint8_t OpType = (Size == 8) ?
         AMDGPU::OPERAND_REG_IMM_INT64 : AMDGPU::OPERAND_REG_IMM_INT32;
-      return isInlineConstant(MO, OpType);
+      return isInlineConstant(ImmVal, OpType);
     }
 
-    return isInlineConstant(MO, MI.getDesc().operands()[OpIdx].OperandType);
+    return isInlineConstant(ImmVal, MI.getDesc().operands()[OpIdx].OperandType);
+  }
+
+  bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
+                        const MachineOperand &MO) const {
+    return isInlineConstant(MI, OpIdx, MO.getImm());
   }
 
   bool isInlineConstant(const MachineOperand &MO) const {

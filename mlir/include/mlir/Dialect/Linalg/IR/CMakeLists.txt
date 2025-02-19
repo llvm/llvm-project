@@ -65,6 +65,13 @@ add_public_tablegen_target(MLIRLinalgStructuredOpsIncGen)
 add_dependencies(MLIRLinalgStructuredOpsIncGen LinalgOdsGen)
 add_dependencies(mlir-headers MLIRLinalgStructuredOpsIncGen)
 
+set(LLVM_TARGET_DEFINITIONS LinalgRelayoutOps.td)
+mlir_tablegen(LinalgRelayoutOps.h.inc -gen-op-decls)
+mlir_tablegen(LinalgRelayoutOps.cpp.inc -gen-op-defs)
+add_public_tablegen_target(MLIRLinalgRelayoutOpsIncGen)
+add_dependencies(MLIRLinalgRelayoutOpsIncGen LinalgOdsGen)
+add_dependencies(mlir-headers MLIRLinalgRelayoutOpsIncGen)
+
 set(LLVM_TARGET_DEFINITIONS LinalgInterfaces.td)
 mlir_tablegen(LinalgInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(LinalgInterfaces.cpp.inc -gen-op-interface-defs)

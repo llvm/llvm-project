@@ -451,12 +451,12 @@ def ROCDL_GlobalLoadLDSOp :
 def ROCDLBufferRsrc : LLVM_PointerInAddressSpace<8>;
 
 def ROCDL_MakeBufferRsrcOp :
-  ROCDL_IntrOp<"make.buffer.rsrc", [], [0], [Pure], 1>,
+  ROCDL_IntrOp<"make.buffer.rsrc", [0], [0], [Pure], 1>,
   Arguments<(ins LLVM_AnyPointer:$base,
                  I16:$stride,
                  I32:$numRecords,
                  I32:$flags)> {
-  let results = (outs ROCDLBufferRsrc:$res);
+  let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
 }
 

@@ -697,10 +697,12 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
       return;
   SourceLocation LBrace = Body->getBeginLoc(), RBrace = Body->getEndLoc();
   auto EmitDiag = [&](SourceLocation Loc, unsigned DiagID) {
-    if (IsCoroutine)
-      S.Diag(Loc, DiagID) << FSI->CoroutinePromise->getType();
-    else
+    if (IsCoroutine) {
+      if (DiagID != 0)
+        S.Diag(Loc, DiagID) << FSI->CoroutinePromise->getType();
+    } else {
       S.Diag(Loc, DiagID);
+    }
   };
 
   // cpu_dispatch functions permit empty function bodies for ICC compatibility.

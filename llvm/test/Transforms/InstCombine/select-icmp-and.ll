@@ -388,6 +388,37 @@ define i32 @test15e_extra_use(i32 %X) {
   ret i32 %t3
 }
 
+;; (a & 128) ? 256 : 0
+define i32 @test15e_zext(i8 %X) {
+; CHECK-LABEL: @test15e_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[TMP2]], 1
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t1 = and i8 %X, 128
+  %t2 = icmp ne i8 %t1, 0
+  %t3 = select i1 %t2, i32 256, i32 0
+  ret i32 %t3
+}
+
+;; (a & 128) ? 256 : 0
+define i32 @test15e_zext_extra_use(i8 %X) {
+; CHECK-LABEL: @test15e_zext_extra_use(
+; CHECK-NEXT:    [[T2:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[TMP2]], 1
+; CHECK-NEXT:    call void @use1(i1 [[T2]])
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t1 = and i8 %X, 128
+  %t2 = icmp ne i8 %t1, 0
+  %t3 = select i1 %t2, i32 256, i32 0
+  call void @use1(i1 %t2)
+  ret i32 %t3
+}
+
 ;; (a & 128) ? 0 : 256
 define i32 @test15f(i32 %X) {
 ; CHECK-LABEL: @test15f(
@@ -417,6 +448,21 @@ define i32 @test15f_extra_use(i32 %X) {
   %t3 = select i1 %t2, i32 0, i32 256
   call void @use1(i1 %t2)
   ret i32 %t3
+}
+
+;; (a & 128) ? 0 : 256
+define i16 @test15f_trunc(i32 %X) {
+; CHECK-LABEL: @test15f_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i16 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP2]], 256
+; CHECK-NEXT:    [[T3:%.*]] = xor i16 [[TMP3]], 256
+; CHECK-NEXT:    ret i16 [[T3]]
+;
+  %t1 = and i32 %X, 128
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = select i1 %t2, i16 0, i16 256
+  ret i16 %t3
 }
 
 ;; (a & 8) ? -1 : -9
@@ -747,4 +793,113 @@ define i32 @select_bittest_to_shl_negative_test(i32 %x) {
   %y = select i1 %cond, i32 2, i32 4
   %res = add nuw nsw i32 %y, 2
   ret i32 %res
+}
+
+define i8 @select_bittest_to_xor(i8 %x) {
+; CHECK-LABEL: @select_bittest_to_xor(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[MASKSEL:%.*]] = xor i8 [[X]], -128
+; CHECK-NEXT:    ret i8 [[MASKSEL]]
+;
+  %cmp = icmp sgt i8 %x, -1
+  call void @use1(i1 %cmp)
+  %and = and i8 %x, 127
+  %or = or i8 %x, -128
+  %masksel = select i1 %cmp, i8 %or, i8 %and
+  ret i8 %masksel
+}
+
+define i8 @select_trunc_bittest_to_sub(i8 %x) {
+; CHECK-LABEL: @select_trunc_bittest_to_sub(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 3, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc i8 %x to i1
+  %ret = select i1 %trunc, i8 3, i8 4
+  ret i8 %ret
+}
+
+define i8 @select_trunc_nuw_bittest_to_sub(i8 %x) {
+; CHECK-LABEL: @select_trunc_nuw_bittest_to_sub(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 3, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %ret = select i1 %trunc, i8 3, i8 4
+  ret i8 %ret
+}
+
+define i8 @select_trunc_nsw_bittest_to_sub(i8 %x) {
+; CHECK-LABEL: @select_trunc_nsw_bittest_to_sub(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 3, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc nsw i8 %x to i1
+  %ret = select i1 %trunc, i8 3, i8 4
+  ret i8 %ret
+}
+
+define i8 @select_trunc_nuw_bittest_to_sub_extra_use(i8 %x) {
+; CHECK-LABEL: @select_trunc_nuw_bittest_to_sub_extra_use(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @use1(i1 [[TRUNC]])
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 3, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  call void @use1(i1 %trunc)
+  %ret = select i1 %trunc, i8 3, i8 4
+  ret i8 %ret
+}
+
+define i8 @neg_select_trunc_bittest_to_sub_extra_use(i8 %x) {
+; CHECK-LABEL: @neg_select_trunc_bittest_to_sub_extra_use(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @use1(i1 [[TRUNC]])
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 3, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc i8 %x to i1
+  call void @use1(i1 %trunc)
+  %ret = select i1 %trunc, i8 3, i8 4
+  ret i8 %ret
+}
+
+define i8 @select_trunc_nuw_bittest_to_shl_not(i8 %x) {
+; CHECK-LABEL: @select_trunc_nuw_bittest_to_shl_not(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 0, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %ret = select i1 %trunc, i8 0, i8 4
+  ret i8 %ret
+}
+
+define i8 @select_trunc_bittest_to_shl(i8 %x) {
+; CHECK-LABEL: @select_trunc_bittest_to_shl(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 4, i8 0
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc i8 %x to i1
+  %ret = select i1 %trunc, i8 4, i8 0
+  ret i8 %ret
+}
+
+define i8 @neg_select_trunc_bittest_to_shl_extra_use(i8 %x) {
+; CHECK-LABEL: @neg_select_trunc_bittest_to_shl_extra_use(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @use1(i1 [[TRUNC]])
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 4, i8 0
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc i8 %x to i1
+  call void @use1(i1 %trunc)
+  %ret = select i1 %trunc, i8 4, i8 0
+  ret i8 %ret
 }
