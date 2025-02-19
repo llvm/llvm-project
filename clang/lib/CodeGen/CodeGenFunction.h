@@ -1675,7 +1675,7 @@ public:
 
   /// If `InnerFn` is set, this CGF generates a thunk function that does the nil
   /// check before calling `InnerFn`. `InnerFn` has to be an objc_direct method.
-  llvm::Function* InnerFn = nullptr;
+  llvm::Function *InnerFn = nullptr;
 
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
