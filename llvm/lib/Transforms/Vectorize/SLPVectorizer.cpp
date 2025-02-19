@@ -828,20 +828,6 @@ class InterchangeableInstruction {
 protected:
   Instruction *const MainOp;
 
-  /// Return non nullptr if the right operand of I is ConstantInt.
-  static ConstantInt *isBinOpWithConstantInt(Instruction *I) {
-    Constant *C;
-    if (!match(I, m_BinOp(m_Value(), m_Constant(C))))
-      return nullptr;
-    if (auto *CI = dyn_cast<ConstantInt>(C))
-      return CI;
-    if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
-      if (auto *CI = dyn_cast_if_present<ConstantInt>(CDV->getSplatValue()))
-        return CI;
-    }
-    return nullptr;
-  }
-
 public:
   InterchangeableInstruction(Instruction *MainOp) : MainOp(MainOp) {}
   virtual bool isSame(Instruction *I) {
@@ -866,6 +852,29 @@ class InterchangeableBinOp final : public InterchangeableInstruction {
   // from high to low bit: Xor Or And Sub Add Mul AShr Shl
   MaskType Mask = 0b11111111;
   MaskType SeenBefore = 0;
+
+  /// Return a non-nullptr if either operand of I is a ConstantInt.
+  static std::pair<ConstantInt *, unsigned>
+  isBinOpWithConstantInt(Instruction *I) {
+    unsigned Opcode = I->getOpcode();
+    unsigned Pos = 1;
+    Constant *C;
+    if (!match(I, m_BinOp(m_Value(), m_Constant(C)))) {
+      if (Opcode == Instruction::Sub || Opcode == Instruction::Shl ||
+          Opcode == Instruction::AShr)
+        return std::make_pair(nullptr, Pos);
+      if (!match(I, m_BinOp(m_Constant(C), m_Value())))
+        return std::make_pair(nullptr, Pos);
+      Pos = 0;
+    }
+    if (auto *CI = dyn_cast<ConstantInt>(C))
+      return std::make_pair(CI, Pos);
+    if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
+      if (auto *CI = dyn_cast_if_present<ConstantInt>(CDV->getSplatValue()))
+        return std::make_pair(CI, Pos);
+    }
+    return std::make_pair(nullptr, Pos);
+  }
 
   static MaskType opcodeToMask(unsigned Opcode) {
     switch (Opcode) {
@@ -904,26 +913,26 @@ public:
     if (!binary_search(SupportedOp, Opcode))
       return false;
     SeenBefore |= opcodeToMask(Opcode);
-    ConstantInt *CI = isBinOpWithConstantInt(I);
+    ConstantInt *CI = isBinOpWithConstantInt(I).first;
     if (CI) {
-      const APInt &Op1Int = CI->getValue();
+      const APInt &CIValue = CI->getValue();
       switch (Opcode) {
       case Instruction::Shl:
-        if (Op1Int.isZero())
+        if (CIValue.isZero())
           return true;
         return tryAnd(0b101);
       case Instruction::Mul:
-        if (Op1Int.isOne())
+        if (CIValue.isOne())
           return true;
-        if (Op1Int.isPowerOf2())
+        if (CIValue.isPowerOf2())
           return tryAnd(0b101);
         break;
       case Instruction::And:
-        if (Op1Int.isAllOnes())
+        if (CIValue.isAllOnes())
           return true;
         break;
       default:
-        if (Op1Int.isZero())
+        if (CIValue.isZero())
           return true;
         break;
       }
@@ -957,41 +966,48 @@ public:
     unsigned FromOpcode = MainOp->getOpcode();
     if (FromOpcode == ToOpcode)
       return SmallVector<Value *>(MainOp->operands());
-    const APInt &Op1Int = isBinOpWithConstantInt(MainOp)->getValue();
-    unsigned Op1IntBitWidth = Op1Int.getBitWidth();
-    APInt RHSV;
+    auto [CI, Pos] = isBinOpWithConstantInt(MainOp);
+    const APInt &FromCIValue = CI->getValue();
+    unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
+    APInt ToCIValue;
     switch (FromOpcode) {
     case Instruction::Shl:
       if (ToOpcode == Instruction::Mul) {
-        RHSV = APInt::getOneBitSet(Op1IntBitWidth, Op1Int.getZExtValue());
+        ToCIValue = APInt::getOneBitSet(FromCIValueBitWidth,
+                                        FromCIValue.getZExtValue());
       } else {
-        assert(Op1Int.isZero() && "Cannot convert the instruction.");
-        RHSV = ToOpcode == Instruction::And ? APInt::getAllOnes(Op1IntBitWidth)
-                                            : APInt::getZero(Op1IntBitWidth);
+        assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+        ToCIValue = ToOpcode == Instruction::And
+                        ? APInt::getAllOnes(FromCIValueBitWidth)
+                        : APInt::getZero(FromCIValueBitWidth);
       }
       break;
     case Instruction::Mul:
-      assert(Op1Int.isPowerOf2() && "Cannot convert the instruction.");
+      assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
       if (ToOpcode == Instruction::Shl) {
-        RHSV = APInt(Op1IntBitWidth, Op1Int.logBase2());
+        ToCIValue = APInt(FromCIValueBitWidth, FromCIValue.logBase2());
       } else {
-        assert(Op1Int.isOne() && "Cannot convert the instruction.");
-        RHSV = ToOpcode == Instruction::And ? APInt::getAllOnes(Op1IntBitWidth)
-                                            : APInt::getZero(Op1IntBitWidth);
+        assert(FromCIValue.isOne() && "Cannot convert the instruction.");
+        ToCIValue = ToOpcode == Instruction::And
+                        ? APInt::getAllOnes(FromCIValueBitWidth)
+                        : APInt::getZero(FromCIValueBitWidth);
       }
       break;
     case Instruction::And:
-      assert(Op1Int.isAllOnes() && "Cannot convert the instruction.");
-      RHSV = ToOpcode == Instruction::Mul
-                 ? APInt::getOneBitSet(Op1IntBitWidth, 0)
-                 : APInt::getZero(Op1IntBitWidth);
+      assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
+      ToCIValue = ToOpcode == Instruction::Mul
+                      ? APInt::getOneBitSet(FromCIValueBitWidth, 0)
+                      : APInt::getZero(FromCIValueBitWidth);
       break;
     default:
-      RHSV = APInt::getZero(Op1IntBitWidth);
+      ToCIValue = APInt::getZero(FromCIValueBitWidth);
       break;
     }
-    return {MainOp->getOperand(0),
-            ConstantInt::get(MainOp->getOperand(1)->getType(), RHSV)};
+    auto LHS = MainOp->getOperand(1 - Pos);
+    auto RHS = ConstantInt::get(MainOp->getOperand(Pos)->getType(), ToCIValue);
+    if (Pos == 1)
+      return SmallVector<Value *>({LHS, RHS});
+    return SmallVector<Value *>({RHS, LHS});
   }
 };
 
