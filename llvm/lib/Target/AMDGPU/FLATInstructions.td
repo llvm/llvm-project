@@ -814,7 +814,7 @@ defm FLAT_ATOMIC_FMAX        : FLAT_Atomic_Pseudo <"flat_atomic_fmax",
 
 } // End SubtargetPredicate = isGFX7GFX10GFX11
 
-// GFX940-, GFX11-only flat instructions.
+// GFX942-, GFX11-only flat instructions.
 let SubtargetPredicate = HasFlatAtomicFaddF32Inst in {
   defm FLAT_ATOMIC_ADD_F32       : FLAT_Atomic_Pseudo<"flat_atomic_add_f32",     VGPR_32, f32>;
 } // End SubtargetPredicate = HasFlatAtomicFaddF32Inst
@@ -2076,7 +2076,7 @@ defm SCRATCH_STORE_DWORDX3      : FLAT_Real_AllAddr_SVE_vi <0x1e>;
 defm SCRATCH_STORE_DWORDX4      : FLAT_Real_AllAddr_SVE_vi <0x1f>;
 
 let SubtargetPredicate = isGFX8GFX9NotGFX940 in {
-  // These instructions are encoded differently on gfx90* and gfx940.
+  // These instructions are encoded differently on gfx90* and gfx94*.
   defm GLOBAL_ATOMIC_ADD_F32    : FLAT_Global_Real_Atomics_vi <0x04d, 0>;
   defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Real_Atomics_vi <0x04e, 0>;
 }
