@@ -11,6 +11,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
@@ -9944,4 +9945,36 @@ void TypeSystemClang::LogCreation() const {
   if (auto *log = GetLog(LLDBLog::Expressions))
     LLDB_LOG(log, "Created new TypeSystem for (ASTContext*){0:x} '{1}'",
              &getASTContext(), getDisplayName());
+}
+
+clang::SourceLocation TypeSystemClang::GetLocForDecl(const Declaration &decl) {
+  // If the Declaration is invalid there is nothing to do.
+  if (!decl.IsValid())
+    return {};
+
+  clang::SourceManager &sm = getASTContext().getSourceManager();
+  clang::FileManager &fm = sm.getFileManager();
+
+  auto fe = fm.getFileRef(decl.GetFile().GetPath());
+  if (!fe) {
+    llvm::consumeError(fe.takeError());
+    return {};
+  }
+
+  clang::FileID fid = sm.translateFile(*fe);
+  if (fid.isInvalid()) {
+    // We see the file for the first time, so create a dummy file for it now.
+
+    // Connect the new dummy file to the main file via some fake include
+    // location. This is necessary as all file's in the SourceManager need to be
+    // reachable via an include chain from the main file.
+    SourceLocation ToIncludeLocOrFakeLoc;
+    assert(sm.getMainFileID().isValid());
+    ToIncludeLocOrFakeLoc = sm.getLocForStartOfFile(sm.getMainFileID());
+    fid = sm.createFileID(*fe, ToIncludeLocOrFakeLoc, clang::SrcMgr::C_User);
+  }
+
+  // Clang requires column numbers to be >= 1..
+  return sm.translateLineCol(fid, decl.GetLine(),
+                             std::max<uint16_t>(decl.GetColumn(), 1));
 }

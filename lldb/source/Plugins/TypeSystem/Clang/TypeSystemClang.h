@@ -1165,6 +1165,15 @@ public:
 
   bool SetDeclIsForcefullyCompleted(const clang::TagDecl *td);
 
+  /// Turns the given \c decl into a \c clang::SourceLocation.
+  ///
+  /// Will create a \c FileID in this \c DWARFASTParserClang's \c ASTContext
+  /// if necessary.
+  ///
+  /// If no \c FileID could be found/created, returns an empty \c
+  /// SourceLocation.
+  clang::SourceLocation GetLocForDecl(const lldb_private::Declaration &decl);
+
 private:
   /// Returns the PrintingPolicy used when generating the internal type names.
   /// These type names are mostly used for the formatter selection.
@@ -1188,19 +1197,6 @@ private:
 
   std::optional<uint64_t> GetObjCBitSize(clang::QualType qual_type,
                                          ExecutionContextScope *exe_scope);
-
-  /// Turns the given \c decl into a \c clang::SourceLocation.
-  ///
-  /// Will create a \c FileID in this \c DWARFASTParserClang's \c ASTContext
-  /// if necessary.
-  ///
-  /// If no \c FileID could be found/created, returns an empty \c
-  /// SourceLocation.
-  ///
-  /// FIXME: currently a no-op.
-  clang::SourceLocation GetLocForDecl(const lldb_private::Declaration &decl) {
-    return {};
-  }
 
   // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;

@@ -16,7 +16,7 @@ run
 c
 # NAME_WITH_ARGS: frame int ns::foo<int ()>(str="bar")
 c
-# NAME_WITH_ARGS: frame int ns::foo<(anonymous namespace)::$_0>(t=(anonymous namespace)::(unnamed class) @ {{.*}})
+# NAME_WITH_ARGS: frame int ns::foo<(anonymous namespace)::$_0>(t=(anonymous namespace)::(unnamed class at {{.*}}) @ {{.*}})
 c
 # NAME_WITH_ARGS: frame int ns::foo<int (*)()>(t=({{.*}}`(anonymous namespace)::anon_bar() at {{.*}}))
 c

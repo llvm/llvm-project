@@ -1252,3 +1252,11 @@ DWARF:
   EXPECT_EQ(func->getParamDecl(1)->getDeclContext(), func);
   EXPECT_EQ(func->getParamDecl(1)->getName(), "namedParam");
 }
+
+// TODO: test cases
+// - DW_TAG_subprogram with DW_TAG_formal_parameter with invalid file
+// - DW_TAG_subprogram with DW_TAG_formal_parameter with valid file
+// - structures
+// - enums
+// - template functions
+// - template classes

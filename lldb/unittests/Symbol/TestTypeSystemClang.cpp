@@ -10,6 +10,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Declaration.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -17,6 +18,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/SourceManager.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -50,6 +52,16 @@ protected:
   QualType GetBasicQualType(const char *name) const {
     return ClangUtil::GetQualType(
         m_ast->GetBuiltinTypeByName(ConstString(name)));
+  }
+
+  /// Returns the textual representation of the given source location.
+  std::string GetLocAsStr(clang::SourceLocation loc) {
+    return loc.printToString(m_ast->getASTContext().getSourceManager());
+  }
+  /// Returns the textual representation of the given Declaration's source
+  /// location.
+  std::string GetDeclLocAsStr(const lldb_private::Declaration &decl) {
+    return GetLocAsStr(m_ast->GetLocForDecl(decl));
   }
 };
 
@@ -1120,4 +1132,97 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
   // DeclContext of each parameter should be the CXXMethodDecl itself.
   EXPECT_EQ(method_it->getParamDecl(0)->getDeclContext(), *method_it);
   EXPECT_EQ(method_it->getParamDecl(1)->getDeclContext(), *method_it);
+}
+
+static llvm::StringRef s_invalid_loc = "<invalid loc>";
+
+TEST_F(TestTypeSystemClang, TestGetLocForDecl_InvalidDeclaration) {
+  // Invalid Declaration should produce an invalid location.
+  lldb_private::Declaration decl;
+  EXPECT_EQ(s_invalid_loc, GetDeclLocAsStr(decl));
+}
+
+TEST_F(TestTypeSystemClang, TestGetLocForDecl) {
+  // Test that GetLocForDecl returns an invalid source location when
+  // the file provided couldn't be found. But returns valid locations
+  // for files present on disk.
+
+  EXPECT_EQ(s_invalid_loc,
+            GetDeclLocAsStr(Declaration(FileSpec("invalid.cpp"), 1, 0)));
+
+  std::string test_file_name = "dummy.cpp";
+  auto make_declaration = [&](uint32_t line, uint32_t col) {
+    return Declaration(FileSpec(GetInputFilePath(test_file_name)), line, col);
+  };
+
+  auto sloc_contains = [&](uint32_t line, uint32_t col,
+                           std::string_view expected) {
+    auto declaration_string = GetDeclLocAsStr(make_declaration(line, col));
+    return declaration_string.find(expected) != std::string::npos;
+  };
+
+  EXPECT_TRUE(sloc_contains(1, 1, test_file_name + ":1:1"));
+
+  // Max source location.
+  EXPECT_TRUE(sloc_contains(7, 27, test_file_name + ":7:27"));
+
+  // Clang requires columns to start at 1.
+  EXPECT_TRUE(sloc_contains(1, 0, test_file_name + ":1:1"));
+  EXPECT_TRUE(sloc_contains(2, 0, test_file_name + ":2:1"));
+
+  // Clang will also clamp source locations if they exceed the file line/column
+  // limit.
+  EXPECT_TRUE(sloc_contains(1000, 0, test_file_name + ":7:27"));
+  EXPECT_TRUE(sloc_contains(1000, 1000, test_file_name + ":7:27"));
+
+  // Clang will produce invalid source locations for line numbers of 0 though.
+  EXPECT_EQ(GetDeclLocAsStr(make_declaration(0, 1)), s_invalid_loc);
+  EXPECT_EQ(GetDeclLocAsStr(make_declaration(0, 0)), s_invalid_loc);
+  EXPECT_EQ(GetDeclLocAsStr(make_declaration(0, 1000)), s_invalid_loc);
+
+  // Check that we hooked up the correct file contents to the FileID
+  SourceLocation loc = m_ast->GetLocForDecl(make_declaration(5, 5));
+  clang::SourceManager &sm = m_ast->getASTContext().getSourceManager();
+  EXPECT_TRUE(sm.getBufferData(sm.getFileID(loc))
+                  .contains("// Some comment at the end"));
+}
+
+TEST_F(TestTypeSystemClang, TestGetLocForDecl_MultipleLocs) {
+  // Test having multiple source files passed to GetLocForDecl.
+  auto sloc_contains = [&](SourceLocation loc, std::string_view expected) {
+    auto declaration_string = GetLocAsStr(loc);
+    return declaration_string.find(expected) != std::string::npos;
+  };
+
+  Declaration main_decl(FileSpec(GetInputFilePath("dummy.cpp")), 2, 1);
+  SourceLocation main_loc = m_ast->GetLocForDecl(main_decl);
+  EXPECT_TRUE(sloc_contains(main_loc, "dummy.cpp:2:1"));
+
+  Declaration header_decl1(FileSpec(GetInputFilePath("dummy_header1.h")), 1, 1);
+  SourceLocation header_loc1 = m_ast->GetLocForDecl(header_decl1);
+  EXPECT_TRUE(sloc_contains(header_loc1, "dummy_header1.h:1:1"));
+
+  Declaration header_decl2(FileSpec(GetInputFilePath("dummy_header2.h")), 3, 4);
+  SourceLocation header_loc2 = m_ast->GetLocForDecl(header_decl2);
+  EXPECT_TRUE(sloc_contains(header_loc2, "dummy_header2.h:3:4"));
+
+  // This tests that the file tree we create in the Clang SourceManager is
+  // allowing Clang to establish a deterministic ordering between all the source
+  // locations. If this wasn't the case, then isBeforeInTranslationUnit (which
+  // is for example used by Clang when ordering diagnostics) would assert.
+  clang::SourceManager &SM = m_ast->getASTContext().getSourceManager();
+  EXPECT_TRUE(SM.isBeforeInTranslationUnit(main_loc, header_loc1));
+  EXPECT_TRUE(SM.isBeforeInTranslationUnit(header_loc1, header_loc2));
+
+  // Each ASTContext has a fake MainFileID which we include all other FileIDs
+  // into.
+  FileID fake_main_id = SM.getMainFileID();
+  SourceLocation fake_main = SM.getLocForStartOfFile(fake_main_id);
+  ASSERT_TRUE(fake_main.isValid());
+  EXPECT_TRUE(SM.isBeforeInTranslationUnit(fake_main, main_loc));
+  EXPECT_EQ(SM.getBufferData(fake_main_id), "\n");
+
+  auto maybe_file_entry = SM.getFileEntryRefForID(fake_main_id);
+  ASSERT_TRUE(maybe_file_entry.has_value());
+  EXPECT_EQ(maybe_file_entry->getName(), "<LLDB Dummy Main File>");
 }

@@ -15,7 +15,7 @@ struct A {
   } C;
 } a;
 
-// CHECK: A::(anonymous struct)
+// CHECK: A::(anonymous struct at
 // CHECK: |-DefinitionData is_anonymous pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
-// CHECK: A::(unnamed struct)
+// CHECK: A::(unnamed struct at
 // CHECK: |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal

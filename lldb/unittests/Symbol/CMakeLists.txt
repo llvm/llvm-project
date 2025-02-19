@@ -27,5 +27,8 @@ add_lldb_unittest(SymbolTests
 
 set(test_inputs
   inlined-functions.yaml
+  dummy.cpp
+  dummy_header1.h
+  dummy_header2.h
   )
 add_unittest_inputs(SymbolTests "${test_inputs}")
