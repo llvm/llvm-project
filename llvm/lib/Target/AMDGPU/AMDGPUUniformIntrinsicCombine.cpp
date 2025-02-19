@@ -95,6 +95,16 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
 
 bool AMDGPUUniformIntrinsicCombineImpl::run(Function &F) {
   bool IsChanged{false};
+  Module *M = F.getParent();
+
+  // If none of the relevant intrinsics are declared, return early.
+  // if (!M->getFunction(Intrinsic::getName(Intrinsic::amdgcn_permlane64)) &&
+  //     !M->getFunction(Intrinsic::getName(Intrinsic::amdgcn_readfirstlane)) &&
+  //     !M->getFunction(Intrinsic::getName(Intrinsic::amdgcn_readlane)) &&
+  //     !M->getFunction(Intrinsic::getName(Intrinsic::amdgcn_ballot))) {
+  //   return false;
+  // }
+
   // Iterate over each instruction in the function to get the desired intrinsic
   // inst to check for optimization.
   for (Instruction &I : instructions(F)) {
@@ -114,53 +124,43 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
-    // Check if the argument use is uniform
-    if (!UI->isDivergentUse(II.getOperandUse(0))) {
-      LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << "\n");
-      II.replaceAllUsesWith(Src);
-      return true;
-    }
-    break;
+    // Check if the argument use is divergent
+    if (UI->isDivergentUse(II.getOperandUse(0)))
+      return false;
+    LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << "\n");
+    II.replaceAllUsesWith(Src);
+    return true;
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Src = II.getArgOperand(0);
-    // Check if the argument use is uniform and has a direct `icmp eq` use of
-    // the ballot result. If exists pull the ballot argument to the use place.
-    // %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cond)
-    // %is_done = icmp eq i64 %ballot, 0
-    // transformed IR should look like.
-    // %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cond)
-    // %is_done = icmp eq i64 %cond, 0
-    if (!UI->isDivergentUse(II.getOperandUse(0))) {
-      LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << "\n");
+    if (UI->isDivergentUse(II.getOperandUse(0)))
+      return false;
 
-      // Look for a direct `icmp eq` use of the ballot result.
-      auto It = llvm::find_if(II.users(), [&](User *U) {
-        return match(U, m_ICmp(m_Specific(&II), m_Zero()));
-      });
+    LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << "\n");
 
-      // Check if a match was found
-      if (It != II.user_end()) {
-        // Extract the matching `icmp` instruction
-        ICmpInst *ICmp = dyn_cast<ICmpInst>(*It);
-        if (!ICmp)
-          break; // Safety check
+    // Look for a direct `icmp eq` use of the ballot result.
+    // FIXME: replace all the uses?
+    auto It = llvm::find_if(II.users(), [&](User *U) {
+      return match(U, m_ICmp(m_Specific(&II), m_Zero()));
+    });
 
-        IRBuilder<> Builder(ICmp);
+    // Check if a match was found
+    if (It == II.user_end())
+      return false;
 
-        // Convert ballot argument to match `icmp` operand type (i64)
-        Value *ConvertedSrc =
-            Builder.CreateZExtOrTrunc(Src, ICmp->getOperand(1)->getType());
+    // Extract the matching `icmp` instruction
+    ICmpInst *ICmp = dyn_cast<ICmpInst>(*It);
+    IRBuilder<> Builder(ICmp);
 
-        LLVM_DEBUG(dbgs() << "Replacing ballot result in icmp: " << *ICmp
-                          << " with " << *ConvertedSrc << "\n");
+    // Convert ballot argument to match `icmp` operand type (i64)
+    Value *ConvertedSrc = Builder.CreateZExtOrTrunc(Src, II.getType());
 
-        // Replace `%ballot` in `icmp` with `ConvertedSrc`
-        ICmp->setOperand(0, ConvertedSrc);
-        return true;
-      }
-    }
-    break;
+    LLVM_DEBUG(dbgs() << "Replacing ballot result in icmp: " << *ICmp
+                      << " with " << *ConvertedSrc << "\n");
+
+    // Replace `%ballot` in `icmp` with `ConvertedSrc`
+    ICmp->setOperand(0, ConvertedSrc);
+    return true;
   }
   }
   return false;
