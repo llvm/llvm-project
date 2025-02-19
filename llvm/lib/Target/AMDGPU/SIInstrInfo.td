@@ -2691,9 +2691,16 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
 // Return an AGPR+VGPR operand class for the given VGPR register class.
 // In case of a SGPR register class, just return the register operand.
 class getLdStRegisterOperand<RegisterClass RC> {
+  // This type of operands is only used in pseudo instructions helping
+  // code generation and thus doesn't need encoding and decoding methods.
+  // It also doesn't need to support AGPRs, because GFX908/A/40 do not
+  // support True16.
+  defvar VLdSt_16 = RegisterOperand<VGPR_16>;
+
   SIRegisterClass SIRC = !cast<SIRegisterClass>(RC);
   RegisterOperand ret =
     !cond(SIRC.HasSGPR       : RegisterOperand<RC>,
+          !eq(RC.Size, 16)   : VLdSt_16,
           !eq(RC.Size, 32)   : AVLdSt_32,
           !eq(RC.Size, 64)   : AVLdSt_64,
           !eq(RC.Size, 96)   : AVLdSt_96,
