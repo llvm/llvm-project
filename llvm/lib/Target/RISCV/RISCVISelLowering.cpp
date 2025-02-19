@@ -5742,8 +5742,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     SmallVector<SDValue> MaskVals;
     for (unsigned i = 0; i != Mask.size(); ++i) {
       int M = Mask[i];
-      if (M < 0 ||
-          (SrcInfo[1].second > 0 && i < (unsigned)SrcInfo[1].second)) {
+      if (M < 0 || (SrcInfo[1].second > 0 && i < (unsigned)SrcInfo[1].second)) {
         MaskVals.push_back(DAG.getUNDEF(XLenVT));
         continue;
       }
