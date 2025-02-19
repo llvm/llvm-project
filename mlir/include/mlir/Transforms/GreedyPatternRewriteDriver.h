@@ -14,6 +14,7 @@
 #ifndef MLIR_TRANSFORMS_GREEDYPATTERNREWRITEDRIVER_H_
 #define MLIR_TRANSFORMS_GREEDYPATTERNREWRITEDRIVER_H_
 
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 
 namespace mlir {
@@ -98,6 +99,9 @@ public:
   /// If set to "true", constants are CSE'd (even across multiple regions that
   /// are in a parent-ancestor relationship).
   bool cseConstants = true;
+
+  SmallVector<PatternRewriter::DiscardableAttributeConverterFn>
+      dicardableAttributeConverters;
 };
 
 //===----------------------------------------------------------------------===//

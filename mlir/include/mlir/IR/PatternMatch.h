@@ -790,7 +790,15 @@ public:
 /// place.
 class PatternRewriter : public RewriterBase {
 public:
+  using DiscardableAttributeConverterFn =
+      std::function<LogicalResult(Operation *, Operation *)>;
+
   explicit PatternRewriter(MLIRContext *ctx) : RewriterBase(ctx) {}
+  PatternRewriter(
+      MLIRContext *ctx,
+      ArrayRef<DiscardableAttributeConverterFn> dicardableAttributeConverters)
+      : RewriterBase(ctx),
+        dicardableAttributeConverters(dicardableAttributeConverters) {}
   using RewriterBase::RewriterBase;
 
   /// A hook used to indicate if the pattern rewriter can recover from failure
@@ -798,6 +806,27 @@ public:
   /// rewriter supports rollback, it may progress smoothly even if IR was
   /// changed during the rewrite.
   virtual bool canRecoverFromRewriteFailure() const { return false; }
+
+  /// Erase an operation that is known to have no uses. If this pattern
+  /// rewriter has attribute converters, asserts the op (and its nested ops)
+  /// has no discardable attributes.
+  void eraseOp(Operation *op) override;
+
+  /// Replace the results of the given (original) operation with the specified
+  /// new op (replacement). The result types of the two ops must match. The
+  /// original op is erased.
+  ///
+  /// If the original op has discardable attributes, try to run an attribute
+  /// converter.
+  void replaceOp(Operation *op, Operation *newOp) override;
+  using RewriterBase::replaceOp;
+
+protected:
+  ArrayRef<DiscardableAttributeConverterFn> dicardableAttributeConverters;
+
+  bool hasAttributeConverter() const {
+    return !dicardableAttributeConverters.empty();
+  }
 };
 
 } // namespace mlir

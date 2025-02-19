@@ -423,3 +423,39 @@ void RewriterBase::moveOpAfter(Operation *op, Block *block,
   assert(iterator != block->end() && "cannot move after end of block");
   moveOpBefore(op, block, std::next(iterator));
 }
+
+//===----------------------------------------------------------------------===//
+// PatternRewriter
+//===----------------------------------------------------------------------===//
+
+void PatternRewriter::eraseOp(Operation *op) {
+  if (hasAttributeConverter()) {
+    op->walk([](Operation *op) {
+      assert(op->getDiscardableAttrs().empty() &&
+             "attempting to drop discardable attribute");
+    });
+  }
+  RewriterBase::eraseOp(op);
+}
+
+void PatternRewriter::replaceOp(Operation *oldOp, Operation *newOp) {
+  if (hasAttributeConverter() && !oldOp->getDiscardableAttrs().empty()) {
+    startOpModification(oldOp);
+    startOpModification(newOp);
+    bool success = false;
+    for (DiscardableAttributeConverterFn fn :
+         llvm::reverse(dicardableAttributeConverters)) {
+      if (succeeded(fn(oldOp, newOp))) {
+        success = true;
+        finalizeOpModification(oldOp);
+        finalizeOpModification(newOp);
+        break;
+      }
+    }
+    if (!success) {
+      cancelOpModification(oldOp);
+      cancelOpModification(newOp);
+    }
+  }
+  RewriterBase::replaceOp(oldOp, newOp);
+}
