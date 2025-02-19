@@ -1034,9 +1034,22 @@ OpFoldResult PadOp::fold(FoldAdaptor adaptor) {
 // Fold away cases where a tosa.resize operation returns a copy
 // of the input image.
 OpFoldResult ResizeOp::fold(FoldAdaptor adaptor) {
-  ArrayRef<int64_t> offset = getOffset();
-  ArrayRef<int64_t> border = getBorder();
-  ArrayRef<int64_t> scale = getScale();
+  auto scaleAttr =
+      llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getScale());
+  auto offsetAttr =
+      llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getOffset());
+  auto borderAttr =
+      llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getBorder());
+  if (!scaleAttr || !offsetAttr || !borderAttr) {
+    return {};
+  }
+
+  auto scale = tosa::convertFromIntAttr(scaleAttr, /* rank = */ 4);
+  auto offset = tosa::convertFromIntAttr(offsetAttr, /* rank = */ 2);
+  auto border = tosa::convertFromIntAttr(borderAttr, /* rank = */ 2);
+  if (scale.size() != 4 || offset.size() != 2 || border.size() != 2) {
+    return {};
+  }
 
   // Check unit scaling.
   if (scale[0] != scale[1] || scale[2] != scale[3]) {
