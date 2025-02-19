@@ -123,9 +123,9 @@ void TelemetryManager::atDebuggerStartup(DebuggerTelemetryInfo *entry) {
   } else {
     MiscTelemetryInfo misc_info;
     misc_info.meta_data["internal_errors"] = "Cannot determine CWD";
-    if (auto er = dispatch(&misc_info)) {
-      LLDB_LOG(GetLog(LLDBLog::Object),
-               "Failed to dispatch misc-info at startup");
+    if (llvm::Error er = dispatch(&misc_info)) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+               "Failed to dispatch misc-info at startup: {0}");
     }
   }
 
