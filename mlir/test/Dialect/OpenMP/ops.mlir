@@ -900,6 +900,29 @@ func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
   return
 }
 
+// CHECK-LABEL: func @wsloop_inscan_reduction
+func.func @wsloop_inscan_reduction(%lb : index, %ub : index, %step : index) {
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  // CHECK: reduction(mod: inscan, @add_f32 %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
+  omp.wsloop reduction(mod:inscan, @add_f32 %0 -> %prv : !llvm.ptr) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+       // CHECK: omp.scan inclusive(%{{.*}} : !llvm.ptr)
+       omp.scan inclusive(%prv : !llvm.ptr)
+       omp.yield
+    }
+  }
+  // CHECK: reduction(mod: inscan, @add_f32 %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
+  omp.wsloop reduction(mod:inscan, @add_f32 %0 -> %prv : !llvm.ptr) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+       // CHECK: omp.scan exclusive(%{{.*}} : !llvm.ptr)
+       omp.scan exclusive(%prv : !llvm.ptr)
+       omp.yield
+    }
+  }
+  return
+}
+
 // CHECK-LABEL: func @wsloop_reduction_byref
 func.func @wsloop_reduction_byref(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32

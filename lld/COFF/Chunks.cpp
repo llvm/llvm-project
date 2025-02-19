@@ -1167,7 +1167,7 @@ uint32_t ImportThunkChunkARM64EC::extendRanges() {
 }
 
 uint64_t Arm64XRelocVal::get() const {
-  return (sym ? sym->getRVA() : 0) + value;
+  return (sym ? sym->getRVA() : 0) + (chunk ? chunk->getRVA() : 0) + value;
 }
 
 size_t Arm64XDynamicRelocEntry::getSize() const {
@@ -1228,6 +1228,17 @@ void DynamicRelocsChunk::finalize() {
   }
 
   size = alignTo(size, sizeof(uint32_t));
+}
+
+// Set the reloc value. The reloc entry must be allocated beforehand.
+void DynamicRelocsChunk::set(uint32_t rva, Arm64XRelocVal value) {
+  auto entry =
+      llvm::find_if(arm64xRelocs, [rva](const Arm64XDynamicRelocEntry &e) {
+        return e.offset.get() == rva;
+      });
+  assert(entry != arm64xRelocs.end());
+  assert(!entry->value.get());
+  entry->value = value;
 }
 
 void DynamicRelocsChunk::writeTo(uint8_t *buf) const {

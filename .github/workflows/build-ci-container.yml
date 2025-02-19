@@ -27,6 +27,7 @@ jobs:
       container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
       container-name-agent-tag: ${{ steps.vars.outputs.container-name-agent-tag }}
       container-filename: ${{ steps.vars.outputs.container-filename }}
+      container-agent-filename: ${{ steps.vars.outputs.container-agent-filename }}
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
@@ -42,6 +43,7 @@ jobs:
           echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
           echo "container-name-agent-tag=$container_name-agent:$tag" >> $GITHUB_OUTPUT
           echo "container-filename=$(echo $container_name:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
+          echo "container-agent-filename=$(echo $container_name-agent:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
       - name: Build container
         working-directory: ./.github/workflows/containers/github-action-ci/
         run: |
@@ -53,13 +55,14 @@ jobs:
       # maintain minimal permissions while building the container.
       - name: Save container image
         run: |
-          podman save  ${{ steps.vars.outputs.container-name-tag }} ${{ steps.vars.outputs.container-name-agent-tag }} >  ${{ steps.vars.outputs.container-filename }}
+          podman save ${{ steps.vars.outputs.container-name-tag }}  >  ${{ steps.vars.outputs.container-filename }}
+          podman save ${{ steps.vars.outputs.container-name-agent-tag }} > ${{ steps.vars.outputs.container-agent-filename }}
 
       - name: Upload container image
         uses: actions/upload-artifact@v4
         with:
           name: container
-          path: ${{ steps.vars.outputs.container-filename }}
+          path: "*.tar"
           retention-days: 14
 
       - name: Test Container
@@ -92,6 +95,7 @@ jobs:
           podman push ${{ needs.build-ci-container.outputs.container-name-tag }}
           podman push ${{ needs.build-ci-container.outputs.container-name }}:latest
 
+          podman load -i ${{ needs.build-ci-container.outputs.container-agent-filename }}
           podman tag ${{ needs.build-ci-container.outputs.container-name-agent-tag }} ${{ needs.build-ci-container.outputs.container-name-agent }}:latest
           podman push ${{ needs.build-ci-container.outputs.container-name-agent-tag }}
           podman push ${{ needs.build-ci-container.outputs.container-name-agent }}:latest

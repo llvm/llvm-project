@@ -100,9 +100,38 @@ public:
     }
     return FixedVectorType::get(ElemTy, NumElts);
   }
+  /// \Returns the instruction in \p Instrs that is lowest in the BB. Expects
+  /// that all instructions are in the same BB.
   static Instruction *getLowest(ArrayRef<Instruction *> Instrs) {
     Instruction *LowestI = Instrs.front();
     for (auto *I : drop_begin(Instrs)) {
+      if (LowestI->comesBefore(I))
+        LowestI = I;
+    }
+    return LowestI;
+  }
+  /// \Returns the lowest instruction in \p Vals, or nullptr if no instructions
+  /// are found or if not in the same BB.
+  static Instruction *getLowest(ArrayRef<Value *> Vals) {
+    // Find the first Instruction in Vals.
+    auto It = find_if(Vals, [](Value *V) { return isa<Instruction>(V); });
+    // If we couldn't find an instruction return nullptr.
+    if (It == Vals.end())
+      return nullptr;
+    Instruction *FirstI = cast<Instruction>(*It);
+    // Now look for the lowest instruction in Vals starting from one position
+    // after FirstI.
+    Instruction *LowestI = FirstI;
+    auto *LowestBB = LowestI->getParent();
+    for (auto *V : make_range(std::next(It), Vals.end())) {
+      auto *I = dyn_cast<Instruction>(V);
+      // Skip non-instructions.
+      if (I == nullptr)
+        continue;
+      // If the instructions are in different BBs return nullptr.
+      if (I->getParent() != LowestBB)
+        return nullptr;
+      // If `LowestI` comes before `I` then `I` is the new lowest.
       if (LowestI->comesBefore(I))
         LowestI = I;
     }

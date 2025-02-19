@@ -45,6 +45,10 @@ public:
 private:
   void addSPOperands(MCInst &MI) const;
 
+  DecodeStatus getInstruction48(MCInst &Instr, uint64_t &Size,
+                                ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                raw_ostream &CStream) const;
+
   DecodeStatus getInstruction32(MCInst &Instr, uint64_t &Size,
                                 ArrayRef<uint8_t> Bytes, uint64_t Address,
                                 raw_ostream &CStream) const;
@@ -745,6 +749,27 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   return MCDisassembler::Fail;
 }
 
+DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
+                                                 ArrayRef<uint8_t> Bytes,
+                                                 uint64_t Address,
+                                                 raw_ostream &CS) const {
+  if (Bytes.size() < 6) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+  Size = 6;
+
+  uint64_t Insn = 0;
+  for (size_t i = Size; i-- != 0;) {
+    Insn += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
+  }
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureVendorXqcilo, DecoderTableXqcilo48,
+      "Qualcomm uC Large Offset Load Store custom 48bit opcode table");
+
+  return MCDisassembler::Fail;
+}
+
 DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                ArrayRef<uint8_t> Bytes,
                                                uint64_t Address,
@@ -760,8 +785,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   // 48-bit instructions are encoded as 0bxx011111.
   if ((Bytes[0] & 0b11'1111) == 0b01'1111) {
-    Size = Bytes.size() >= 6 ? 6 : 0;
-    return MCDisassembler::Fail;
+    return getInstruction48(MI, Size, Bytes, Address, CS);
   }
 
   // 64-bit instructions are encoded as 0x0111111.

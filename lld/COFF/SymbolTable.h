@@ -150,6 +150,18 @@ public:
   // A list of EC EXP+ symbols.
   std::vector<Symbol *> expSymbols;
 
+  // A list of DLL exports.
+  std::vector<Export> exports;
+  llvm::DenseSet<StringRef> directivesExports;
+  bool hadExplicitExports;
+
+  Chunk *edataStart = nullptr;
+  Chunk *edataEnd = nullptr;
+
+  void fixupExports();
+  void assignExportOrdinals();
+  void parseModuleDefs(StringRef path);
+
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {
     for (auto &pair : symMap)

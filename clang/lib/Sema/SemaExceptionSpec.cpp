@@ -1427,6 +1427,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:
+  case Stmt::SYCLKernelCallStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::CompoundStmtClass:
   case Stmt::ContinueStmtClass:

@@ -97,6 +97,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Friend:
   case Decl::FriendTemplate:
   case Decl::Block:
+  case Decl::OutlinedFunction:
   case Decl::Captured:
   case Decl::UsingShadow:
   case Decl::ConstructorUsingShadow:

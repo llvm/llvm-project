@@ -81,6 +81,7 @@ enum class LegalityResultID {
   Widen,                   ///> Vectorize by combining scalars to a vector.
   DiamondReuse,            ///> Don't generate new code, reuse existing vector.
   DiamondReuseWithShuffle, ///> Reuse the existing vector but add a shuffle.
+  DiamondReuseMultiInput,  ///> Reuse more than one vector and/or scalars.
 };
 
 /// The reason for vectorizing or not vectorizing.
@@ -108,6 +109,8 @@ struct ToStr {
       return "DiamondReuse";
     case LegalityResultID::DiamondReuseWithShuffle:
       return "DiamondReuseWithShuffle";
+    case LegalityResultID::DiamondReuseMultiInput:
+      return "DiamondReuseMultiInput";
     }
     llvm_unreachable("Unknown LegalityResultID enum");
   }
@@ -287,6 +290,20 @@ public:
   }
 };
 
+class DiamondReuseMultiInput final : public LegalityResult {
+  friend class LegalityAnalysis;
+  CollectDescr Descr;
+  DiamondReuseMultiInput(CollectDescr &&Descr)
+      : LegalityResult(LegalityResultID::DiamondReuseMultiInput),
+        Descr(std::move(Descr)) {}
+
+public:
+  static bool classof(const LegalityResult *From) {
+    return From->getSubclassID() == LegalityResultID::DiamondReuseMultiInput;
+  }
+  const CollectDescr &getCollectDescr() const { return Descr; }
+};
+
 /// Performs the legality analysis and returns a LegalityResult object.
 class LegalityAnalysis {
   Scheduler Sched;
@@ -312,8 +329,9 @@ public:
       : Sched(AA, Ctx), SE(SE), DL(DL), IMaps(IMaps) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
-  ResultT &createLegalityResult(ArgsT... Args) {
-    ResultPool.push_back(std::unique_ptr<ResultT>(new ResultT(Args...)));
+  ResultT &createLegalityResult(ArgsT &&...Args) {
+    ResultPool.push_back(
+        std::unique_ptr<ResultT>(new ResultT(std::move(Args)...)));
     return cast<ResultT>(*ResultPool.back());
   }
   /// Checks if it's legal to vectorize the instructions in \p Bndl.

@@ -42,6 +42,7 @@ class DILabel;
 class Instruction;
 class MDNode;
 class AAResults;
+class BatchAAResults;
 template <typename T> class ArrayRef;
 class DIExpression;
 class DILocalVariable;
@@ -1753,6 +1754,8 @@ public:
   /// @param AA Optional alias analysis, used to compare memory operands.
   /// @param Other MachineInstr to check aliasing against.
   /// @param UseTBAA Whether to pass TBAA information to alias analysis.
+  bool mayAlias(BatchAAResults *AA, const MachineInstr &Other,
+                bool UseTBAA) const;
   bool mayAlias(AAResults *AA, const MachineInstr &Other, bool UseTBAA) const;
 
   /// Return true if this instruction may have an ordered

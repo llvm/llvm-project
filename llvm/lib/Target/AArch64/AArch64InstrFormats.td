@@ -9053,22 +9053,19 @@ class SIMDThreeSameVectorBF16MatrixMul<string asm>
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 class SIMD_BFCVTN
-  : BaseSIMDMixedTwoVector<0, 0, 0b10, 0b10110, V128, V128,
+  : BaseSIMDMixedTwoVector<0, 0, 0b10, 0b10110, V128, V64,
                            "bfcvtn", ".4h", ".4s",
-    [(set (v8bf16 V128:$Rd),
-          (int_aarch64_neon_bfcvtn (v4f32 V128:$Rn)))]>;
+    [(set (v4bf16 V64:$Rd), (any_fpround (v4f32 V128:$Rn)))]>;
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 class SIMD_BFCVTN2
   : BaseSIMDMixedTwoVectorTied<1, 0, 0b10, 0b10110, V128, V128,
-                           "bfcvtn2", ".8h", ".4s",
-    [(set (v8bf16 V128:$dst),
-          (int_aarch64_neon_bfcvtn2 (v8bf16 V128:$Rd), (v4f32 V128:$Rn)))]>;
+                               "bfcvtn2", ".8h", ".4s", []>;
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 class BF16ToSinglePrecision<string asm>
   : I<(outs FPR16:$Rd), (ins FPR32:$Rn), asm, "\t$Rd, $Rn", "",
-    [(set (bf16 FPR16:$Rd), (int_aarch64_neon_bfcvt (f32 FPR32:$Rn)))]>,
+    [(set (bf16 FPR16:$Rd), (any_fpround (f32 FPR32:$Rn)))]>,
     Sched<[WriteFCvt]> {
   bits<5> Rd;
   bits<5> Rn;

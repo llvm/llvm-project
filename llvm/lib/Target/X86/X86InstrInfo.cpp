@@ -4784,7 +4784,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
 void X86InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -4803,12 +4804,10 @@ void X86InstrInfo::storeRegToStackSlot(
         .addReg(SrcReg, getKillRegState(isKill));
 }
 
-void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIdx,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+void X86InstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&

@@ -39,6 +39,7 @@ foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
   def SM#sm: FeatureSM<""#sm, !mul(sm, 10)>;
 
 def SM90a: FeatureSM<"90a", 901>;
+def SM100a: FeatureSM<"100a", 1001>;
 
 foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65,
                    70, 71, 72, 73, 74, 75, 76, 77, 78,
@@ -74,6 +75,7 @@ def : Proc<"sm_89", [SM89, PTX78]>;
 def : Proc<"sm_90", [SM90, PTX78]>;
 def : Proc<"sm_90a", [SM90a, PTX80]>;
 def : Proc<"sm_100", [SM100, PTX86]>;
+def : Proc<"sm_100a", [SM100a, PTX86]>;
 
 def NVPTXInstrInfo : InstrInfo {
 }

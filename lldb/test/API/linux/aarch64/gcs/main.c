@@ -36,6 +36,19 @@ unsigned long get_gcs_status() {
   return mode;
 }
 
+void gcs_signal() {
+  // If we enabled GCS manually, then we could just return from main to generate
+  // a signal. However, if the C library enabled it, then we'd just exit
+  // normally. Assume the latter, and try to return to some bogus address to
+  // generate the signal.
+  __asm__ __volatile__(
+      // Corrupt the link register. This could be many numbers but 16 is a
+      // nicely aligned value that is unlikely to result in a fault because the
+      // PC is misaligned, which would hide the GCS fault.
+      "add x30, x30, #10\n"
+      "ret\n");
+}
+
 int main() {
   if (!(getauxval(AT_HWCAP2) & HWCAP2_GCS))
     return 1;
@@ -50,5 +63,7 @@ int main() {
   }
 
   // By now we should have one memory region where the GCS is stored.
-  return 0; // Set break point at this line.
+  gcs_signal(); // Set break point at this line.
+
+  return 0;
 }

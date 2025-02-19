@@ -5474,6 +5474,10 @@ def mdiv32 : Flag<["-"], "mdiv32">, Group<m_loongarch_Features_Group>,
   HelpText<"Use div.w[u] and mod.w[u] instructions with input not sign-extended.">;
 def mno_div32 : Flag<["-"], "mno-div32">, Group<m_loongarch_Features_Group>,
   HelpText<"Do not use div.w[u] and mod.w[u] instructions with input not sign-extended.">;
+def mscq : Flag<["-"], "mscq">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable sc.q instruction.">;
+def mno_scq : Flag<["-"], "mno-scq">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable sc.q instruction.">;
 def mannotate_tablejump : Flag<["-"], "mannotate-tablejump">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable annotate table jump instruction to correlate it with the jump table.">;
 def mno_annotate_tablejump : Flag<["-"], "mno-annotate-tablejump">, Group<m_loongarch_Features_Group>,
@@ -8245,10 +8249,6 @@ def fhlsl_strict_availability : Flag<["-"], "fhlsl-strict-availability">,
   Group<hlsl_Group>,
   MarshallingInfoFlag<LangOpts<"HLSLStrictAvailability">>;
 
-def fpreserve_vec3_type : Flag<["-"], "fpreserve-vec3-type">,
-  HelpText<"Preserve 3-component vector type">,
-  MarshallingInfoFlag<CodeGenOpts<"PreserveVec3Type">>,
-  ImpliedByAnyOf<[hlsl.KeyPath]>;
 def fwchar_type_EQ : Joined<["-"], "fwchar-type=">,
   HelpText<"Select underlying type for wchar_t">,
   Values<"char,short,int">,

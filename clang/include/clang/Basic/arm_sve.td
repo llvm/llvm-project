@@ -2280,15 +2280,15 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
 
 let SVETargetGuard = "sve2p1", SMETargetGuard = InvalidMode in {
   // ZIPQ1, ZIPQ2, UZPQ1, UZPQ2
-  def SVZIPQ1 : SInst<"svzipq1[_{d}]", "ddd", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zipq1", [], []>;
-  def SVZIPQ2 : SInst<"svzipq2[_{d}]", "ddd", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zipq2", [], []>;
-  def SVUZPQ1 : SInst<"svuzpq1[_{d}]", "ddd", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzpq1", [], []>;
-  def SVUZPQ2 : SInst<"svuzpq2[_{d}]", "ddd", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzpq2", [], []>;
+  def SVZIPQ1 : SInst<"svzipq1[_{d}]", "ddd", "cUcsUsiUilUlbhfdm", MergeNone, "aarch64_sve_zipq1", [], []>;
+  def SVZIPQ2 : SInst<"svzipq2[_{d}]", "ddd", "cUcsUsiUilUlbhfdm", MergeNone, "aarch64_sve_zipq2", [], []>;
+  def SVUZPQ1 : SInst<"svuzpq1[_{d}]", "ddd", "cUcsUsiUilUlbhfdm", MergeNone, "aarch64_sve_uzpq1", [], []>;
+  def SVUZPQ2 : SInst<"svuzpq2[_{d}]", "ddd", "cUcsUsiUilUlbhfdm", MergeNone, "aarch64_sve_uzpq2", [], []>;
   // TBLQ, TBXQ
-  def SVTBLQ : SInst<"svtblq[_{d}]", "ddu", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_tblq">;
-  def SVTBXQ : SInst<"svtbxq[_{d}]", "dddu", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_tbxq">;
+  def SVTBLQ : SInst<"svtblq[_{d}]", "ddu", "cUcsUsiUilUlbhfdm", MergeNone, "aarch64_sve_tblq">;
+  def SVTBXQ : SInst<"svtbxq[_{d}]", "dddu", "cUcsUsiUilUlbhfdm", MergeNone, "aarch64_sve_tbxq">;
   // EXTQ
-  def EXTQ : SInst<"svextq[_{d}]", "dddk", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_extq", [], [ImmCheck<2, ImmCheckLaneIndex, 0>]>;
+  def EXTQ : SInst<"svextq[_{d}]", "dddk", "cUcsUsiUilUlbhfdm", MergeNone, "aarch64_sve_extq", [], [ImmCheck<2, ImmCheckLaneIndex, 0>]>;
 
   // PMOV
   // Move to Pred
@@ -2314,7 +2314,7 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = InvalidMode in {
 
 let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2p1" in {
   // DUPQ
-  def SVDUP_LANEQ_B  : SInst<"svdup_laneq[_{d}]", "ddi",  "cUc", MergeNone, "aarch64_sve_dup_laneq", [VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_15>]>;
+  def SVDUP_LANEQ_B  : SInst<"svdup_laneq[_{d}]", "ddi",  "cUcm", MergeNone, "aarch64_sve_dup_laneq", [VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_15>]>;
   def SVDUP_LANEQ_H  : SInst<"svdup_laneq[_{d}]", "ddi",  "sUsh", MergeNone, "aarch64_sve_dup_laneq", [VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_7>]>;
   def SVDUP_LANEQ_S  : SInst<"svdup_laneq[_{d}]", "ddi",  "iUif", MergeNone, "aarch64_sve_dup_laneq", [VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_3>]>;
   def SVDUP_LANEQ_D  : SInst<"svdup_laneq[_{d}]", "ddi",  "lUld", MergeNone, "aarch64_sve_dup_laneq", [VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_1>]>;

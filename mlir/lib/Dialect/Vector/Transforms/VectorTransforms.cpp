@@ -930,8 +930,8 @@ public:
         loc, elemType, rewriter.getZeroAttr(elemType));
     Value res = rewriter.create<SplatOp>(loc, castDstType, zero);
 
-    SmallVector<int64_t> sliceShape{castDstLastDim};
-    SmallVector<int64_t> strides{1};
+    SmallVector<int64_t> sliceShape = {castDstLastDim};
+    SmallVector<int64_t> strides = {1};
     VectorType newCastDstType =
         VectorType::get(SmallVector<int64_t>{castDstLastDim / shrinkRatio},
                         castDstType.getElementType());

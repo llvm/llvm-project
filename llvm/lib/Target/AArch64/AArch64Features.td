@@ -859,8 +859,8 @@ def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
-  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX, FeatureSPE_EEF],
-  !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT])>;
+  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
+  !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT, FeatureSPE_EEF])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
   !listconcat(HasV8_7aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
@@ -875,17 +875,19 @@ def HasV9_0aOps : Architecture64<9, 0, "a", "v9a",
     FeatureSVE2])>;
 def HasV9_1aOps : Architecture64<9, 1, "a", "v9.1a",
   [HasV8_6aOps, HasV9_0aOps],
-  !listconcat(HasV9_0aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8, FeatureRME])>;
+  !listconcat(HasV9_0aOps.DefaultExts, HasV8_6aOps.DefaultExts,
+              [FeatureRME])>;
 def HasV9_2aOps : Architecture64<9, 2, "a", "v9.2a",
   [HasV8_7aOps, HasV9_1aOps],
-  !listconcat(HasV9_1aOps.DefaultExts, [FeatureMEC, FeatureWFxT])>;
+  !listconcat(HasV9_1aOps.DefaultExts, HasV8_7aOps.DefaultExts,
+              [FeatureMEC])>;
 def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
   [HasV8_8aOps, HasV9_2aOps],
-  !listconcat(HasV9_2aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
+  !listconcat(HasV9_2aOps.DefaultExts, HasV8_8aOps.DefaultExts, [])>;
 def HasV9_4aOps : Architecture64<9, 4, "a", "v9.4a",
   [HasV8_9aOps, HasV9_3aOps],
-  !listconcat(HasV9_3aOps.DefaultExts, [FeatureSPECRES2, FeatureCSSC,
-    FeatureRASv2, FeatureSVE2p1])>;
+  !listconcat(HasV9_3aOps.DefaultExts, HasV8_9aOps.DefaultExts,
+              [FeatureSVE2p1])>;
 def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;

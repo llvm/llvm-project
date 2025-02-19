@@ -605,7 +605,6 @@ function(add_mlir_python_sources_target name)
 
       add_custom_command(
         OUTPUT "${_dest_path}"
-        PRE_BUILD
         COMMENT "Copying python source ${_src_path} -> ${_dest_path}"
         DEPENDS "${_src_path}"
         COMMAND "${CMAKE_COMMAND}" -E ${_link_or_copy}
@@ -702,7 +701,7 @@ function(add_mlir_python_extension libname extname)
           ${eh_rtti_enable}
       )
     endif()
-    
+
     if(APPLE)
       # NanobindAdaptors.h uses PyClassMethod_New to build `pure_subclass`es but nanobind
       # doesn't declare this API as undefined in its linker flags. So we need to declare it as such

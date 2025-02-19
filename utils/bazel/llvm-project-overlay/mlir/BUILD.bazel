@@ -4316,7 +4316,6 @@ cc_library(
         ":GPUToNVVMTransforms",
         ":GPUToROCDLTransforms",
         ":GPUToSPIRV",
-        ":GPUToVulkanTransforms",
         ":IndexToLLVM",
         ":IndexToSPIRV",
         ":LinalgToStandard",
@@ -6178,28 +6177,6 @@ cc_library(
         ":Transforms",
         ":VectorDialect",
         ":VectorToLLVM",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "GPUToVulkanTransforms",
-    srcs = [
-        "lib/Conversion/GPUToVulkan/ConvertGPULaunchFuncToVulkanLaunchFunc.cpp",
-        "lib/Conversion/GPUToVulkan/ConvertLaunchFuncToVulkanCalls.cpp",
-    ],
-    hdrs = ["include/mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"],
-    includes = ["include"],
-    deps = [
-        ":ConversionPassIncGen",
-        ":FuncDialect",
-        ":GPUDialect",
-        ":IR",
-        ":LLVMDialect",
-        ":Pass",
-        ":SPIRVDialect",
-        ":SPIRVSerialization",
-        ":Support",
         "//llvm:Support",
     ],
 )
@@ -9777,7 +9754,6 @@ cc_library(
         ":GPUToNVVMTransforms",
         ":GPUToROCDLTransforms",
         ":GPUToSPIRV",
-        ":GPUToVulkanTransforms",
         ":GPUTransformOps",
         ":GPUTransforms",
         ":IR",
@@ -10224,8 +10200,8 @@ cc_binary(
 
 cc_library(
     name = "VulkanRuntime",
-    srcs = ["tools/mlir-vulkan-runner/VulkanRuntime.cpp"],
-    hdrs = ["tools/mlir-vulkan-runner/VulkanRuntime.h"],
+    srcs = ["lib/ExecutionEngine/VulkanRuntime.cpp"],
+    hdrs = ["lib/ExecutionEngine/VulkanRuntime.h"],
     tags = [
         "manual",  # External dependency
     ],
@@ -10238,50 +10214,13 @@ cc_library(
 
 cc_binary(
     name = "libvulkan-runtime-wrappers.so",
-    srcs = ["tools/mlir-vulkan-runner/vulkan-runtime-wrappers.cpp"],
+    srcs = ["lib/ExecutionEngine/VulkanRuntimeWrappers.cpp"],
     linkshared = True,
     linkstatic = False,
     tags = [
         "manual",  # External dependency
     ],
     deps = [":VulkanRuntime"],
-)
-
-cc_binary(
-    name = "mlir-vulkan-runner",
-    srcs = ["tools/mlir-vulkan-runner/mlir-vulkan-runner.cpp"],
-    deps = [
-        ":ArithDialect",
-        ":ArithToLLVM",
-        ":BuiltinToLLVMIRTranslation",
-        ":ControlFlowToLLVM",
-        ":ConvertToSPIRV",
-        ":ExecutionEngineUtils",
-        ":FuncDialect",
-        ":FuncToLLVM",
-        ":FuncToSPIRV",
-        ":GPUDialect",
-        ":GPUToSPIRV",
-        ":GPUToVulkanTransforms",
-        ":GPUTransforms",
-        ":LLVMCommonConversion",
-        ":LLVMDialect",
-        ":LLVMIRTransforms",
-        ":LLVMToLLVMIRTranslation",
-        ":MemRefDialect",
-        ":MemRefToLLVM",
-        ":MemRefTransforms",
-        ":MlirJitRunner",
-        ":Pass",
-        ":ReconcileUnrealizedCasts",
-        ":SCFDialect",
-        ":SPIRVDialect",
-        ":SPIRVTransforms",
-        ":ToLLVMIRTranslation",
-        ":VectorDialect",
-        ":VectorToLLVM",
-        "//llvm:Support",
-    ],
 )
 
 cc_library(

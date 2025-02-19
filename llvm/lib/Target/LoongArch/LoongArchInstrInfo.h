@@ -34,17 +34,16 @@ public:
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool IsKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DstReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DstReg,
+      int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,

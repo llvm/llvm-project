@@ -3283,6 +3283,11 @@ bool FunctionDecl::isImmediateEscalating() const {
   // consteval specifier,
   if (isDefaulted() && !isConsteval())
     return true;
+
+  if (auto *CD = dyn_cast<CXXConstructorDecl>(this);
+      CD && CD->isInheritingConstructor())
+    return CD->getInheritedConstructor().getConstructor();
+
   // - a function that results from the instantiation of a templated entity
   // defined with the constexpr specifier.
   TemplatedKind TK = getTemplatedKind();
@@ -3302,6 +3307,12 @@ bool FunctionDecl::isImmediateFunction() const {
   // immediate-escalating expression
   if (isImmediateEscalating() && BodyContainsImmediateEscalatingExpressions())
     return true;
+
+  if (auto *CD = dyn_cast<CXXConstructorDecl>(this);
+      CD && CD->isInheritingConstructor())
+    return CD->getInheritedConstructor()
+        .getConstructor()
+        ->isImmediateFunction();
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(this);
       MD && MD->isLambdaStaticInvoker())
@@ -4003,7 +4014,7 @@ const IdentifierInfo *FunctionDecl::getLiteralIdentifier() const {
 FunctionDecl::TemplatedKind FunctionDecl::getTemplatedKind() const {
   if (TemplateOrSpecialization.isNull())
     return TK_NonTemplate;
-  if (const auto *ND = TemplateOrSpecialization.dyn_cast<NamedDecl *>()) {
+  if (const auto *ND = dyn_cast<NamedDecl *>(TemplateOrSpecialization)) {
     if (isa<FunctionDecl>(ND))
       return TK_DependentNonTemplate;
     assert(isa<FunctionTemplateDecl>(ND) &&
@@ -5446,6 +5457,35 @@ BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {
 
 BlockDecl *BlockDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) BlockDecl(nullptr, SourceLocation());
+}
+
+OutlinedFunctionDecl::OutlinedFunctionDecl(DeclContext *DC, unsigned NumParams)
+    : Decl(OutlinedFunction, DC, SourceLocation()),
+      DeclContext(OutlinedFunction), NumParams(NumParams),
+      BodyAndNothrow(nullptr, false) {}
+
+OutlinedFunctionDecl *OutlinedFunctionDecl::Create(ASTContext &C,
+                                                   DeclContext *DC,
+                                                   unsigned NumParams) {
+  return new (C, DC, additionalSizeToAlloc<ImplicitParamDecl *>(NumParams))
+      OutlinedFunctionDecl(DC, NumParams);
+}
+
+OutlinedFunctionDecl *
+OutlinedFunctionDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                         unsigned NumParams) {
+  return new (C, ID, additionalSizeToAlloc<ImplicitParamDecl *>(NumParams))
+      OutlinedFunctionDecl(nullptr, NumParams);
+}
+
+Stmt *OutlinedFunctionDecl::getBody() const {
+  return BodyAndNothrow.getPointer();
+}
+void OutlinedFunctionDecl::setBody(Stmt *B) { BodyAndNothrow.setPointer(B); }
+
+bool OutlinedFunctionDecl::isNothrow() const { return BodyAndNothrow.getInt(); }
+void OutlinedFunctionDecl::setNothrow(bool Nothrow) {
+  BodyAndNothrow.setInt(Nothrow);
 }
 
 CapturedDecl::CapturedDecl(DeclContext *DC, unsigned NumParams)

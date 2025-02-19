@@ -76,7 +76,7 @@ TEST(VerifierTest, Freeze) {
   FI_dbl->eraseFromParent();
 
   // Valid type : freeze(i32*)
-  PointerType *PT = PointerType::get(ITy, 0);
+  PointerType *PT = PointerType::get(C, 0);
   ConstantPointerNull *CPN = ConstantPointerNull::get(PT);
   FreezeInst *FI_ptr = new FreezeInst(CPN);
   FI_ptr->insertBefore(RI);

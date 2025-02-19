@@ -10,11 +10,12 @@ subroutine simple_loop
   ! CHECK-DAG:     %[[WS_END:.*]] = arith.constant 9 : i32
   ! CHECK:  omp.parallel
   !$OMP PARALLEL
-  ! CHECK:         omp.wsloop private(@{{.*}} %{{.*}} -> %[[ALLOCA_IV:.*]] : !fir.ref<i32>) {
+  ! CHECK-DAG:     %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
+  ! CHECK:         %[[IV:.*]]    = fir.declare %[[ALLOCA_IV]] {uniq_name = "_QFsimple_loopEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  ! CHECK:         omp.wsloop {
   ! CHECK-NEXT:      omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_ST]]) to (%[[WS_END]]) inclusive step (%[[WS_ST]]) {
   !$OMP DO
   do i=1, 9
-  ! CHECK:         %[[IV:.*]]    = fir.declare %[[ALLOCA_IV]] {uniq_name = "_QFsimple_loopEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
   ! CHECK:             fir.store %[[I]] to %[[IV:.*]] : !fir.ref<i32>
   ! CHECK:             %[[LOAD_IV:.*]] = fir.load %[[IV]] : !fir.ref<i32>
   ! CHECK:             fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1

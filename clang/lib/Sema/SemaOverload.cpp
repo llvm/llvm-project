@@ -15962,9 +15962,9 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), Method);
 }
 
-ExprResult
-Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
-                               bool *NoArrowOperatorFound) {
+ExprResult Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base,
+                                          SourceLocation OpLoc,
+                                          bool *NoArrowOperatorFound) {
   assert(Base->getType()->isRecordType() &&
          "left-hand side must have class type");
 

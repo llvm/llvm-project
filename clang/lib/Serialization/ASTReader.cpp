@@ -10239,11 +10239,6 @@ void ASTReader::finishPendingActions() {
     }
     PendingDeducedVarTypes.clear();
 
-    // Load the delayed preferred name attributes.
-    for (unsigned I = 0; I != PendingDeferredAttributes.size(); ++I)
-      loadDeferredAttribute(PendingDeferredAttributes[I]);
-    PendingDeferredAttributes.clear();
-
     // For each decl chain that we wanted to complete while deserializing, mark
     // it as "still needs to be completed".
     for (unsigned I = 0; I != PendingIncompleteDeclChains.size(); ++I) {

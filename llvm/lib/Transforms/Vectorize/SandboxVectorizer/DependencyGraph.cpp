@@ -368,10 +368,11 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
 }
 
 void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
-  // Early return if `I` doesn't actually move.
+  // NOTE: This function runs before `I` moves to its new destination.
   BasicBlock *BB = To.getNodeParent();
-  if (To != BB->end() && &*To == I->getNextNode())
-    return;
+  assert(!(To != BB->end() && &*To == I->getNextNode()) &&
+         !(To == BB->end() && std::next(I->getIterator()) == BB->end()) &&
+         "Should not have been called if destination is same as origin.");
 
   // Maintain the DAGInterval.
   DAGInterval.notifyMoveInstr(I, To);

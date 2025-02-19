@@ -227,6 +227,8 @@
   }                                                                            \
   _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, FUNCTION, half, half)
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : disable
+
 #else
 
 #define _CLC_DEFINE_UNARY_BUILTIN_FP16(FUNCTION)

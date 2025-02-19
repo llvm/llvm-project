@@ -12,7 +12,6 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/nat.h>
 #include <__type_traits/type_list.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

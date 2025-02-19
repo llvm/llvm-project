@@ -949,7 +949,7 @@ TEST_F(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
 TEST_F(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
-  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
   auto *GEP = GetElementPtrInst::Create(Int32, PoisonValue::get(Int32Ptr),
                                         PoisonValue::get(Int32));
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
@@ -1034,7 +1034,7 @@ TEST_F(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {
 TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
-  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
   auto *Load =
       new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
@@ -1055,7 +1055,7 @@ TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
 TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   IntegerType *Int1 = IntegerType::get(C, 1);
   IntegerType *Int32 = IntegerType::get(C, 32);
-  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
   VPlan &Plan = getPlan();
 
   {

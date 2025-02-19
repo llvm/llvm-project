@@ -500,10 +500,10 @@ bool SjLjEHPrepareImpl::runOnFunction(Function &F) {
   Module &M = *F.getParent();
   RegisterFn = M.getOrInsertFunction(
       "_Unwind_SjLj_Register", Type::getVoidTy(M.getContext()),
-      PointerType::getUnqual(FunctionContextTy));
+      PointerType::getUnqual(FunctionContextTy->getContext()));
   UnregisterFn = M.getOrInsertFunction(
       "_Unwind_SjLj_Unregister", Type::getVoidTy(M.getContext()),
-      PointerType::getUnqual(FunctionContextTy));
+      PointerType::getUnqual(FunctionContextTy->getContext()));
 
   PointerType *AllocaPtrTy = M.getDataLayout().getAllocaPtrType(M.getContext());
 
