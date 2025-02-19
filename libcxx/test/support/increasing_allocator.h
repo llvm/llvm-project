@@ -59,14 +59,6 @@ public:
   template <typename U>
   TEST_CONSTEXPR_CXX20 min_size_allocator(const min_size_allocator<MinAllocSize, U>&) TEST_NOEXCEPT {}
 
-#if TEST_STD_VER >= 23
-  TEST_CONSTEXPR_CXX23 std::allocation_result<T*> allocate_at_least(std::size_t n) {
-    if (n < MinAllocSize)
-      n = MinAllocSize;
-    return std::allocator<T>{}.allocate_at_least(n);
-  }
-#endif // TEST_STD_VER >= 23
-
   TEST_NODISCARD TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
     if (n < MinAllocSize)
       n = MinAllocSize;
@@ -101,12 +93,6 @@ public:
 
   template <typename U>
   TEST_CONSTEXPR_CXX20 pow2_allocator(const pow2_allocator<U>&) TEST_NOEXCEPT {}
-
-#if TEST_STD_VER >= 23
-  TEST_CONSTEXPR_CXX23 std::allocation_result<T*> allocate_at_least(std::size_t n) {
-    return std::allocator<T>{}.allocate_at_least(next_power_of_two(n));
-  }
-#endif // TEST_STD_VER >= 23
 
   TEST_NODISCARD TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
     return std::allocator<T>().allocate(next_power_of_two(n));

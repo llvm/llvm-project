@@ -75,33 +75,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 #endif
 
-  {   // Ensure that the libc++ implementation of shrink_to_fit does NOT swap buffer with equal allocation sizes
-    { // Test with custom allocator with a minimum allocation size
-      std::basic_string<char, std::char_traits<char>, min_size_allocator<128, char> > s(
-          "A long string exceeding SSO limit but within min alloc size");
-      std::size_t capacity = s.capacity();
-      std::size_t size     = s.size();
-      auto data            = s.data();
-      s.shrink_to_fit();
-      assert(s.capacity() <= capacity);
-      assert(s.size() == size);
-      LIBCPP_ASSERT(is_string_asan_correct(s));
-      LIBCPP_ASSERT(s.capacity() == capacity && s.data() == data);
-    }
-    { // Test with custom allocator with a minimum power of two allocation size
-      std::basic_string<char, std::char_traits<char>, pow2_allocator<char> > s(
-          "This is a long string that exceeds the SSO limit");
-      std::size_t capacity = s.capacity();
-      std::size_t size     = s.size();
-      auto data            = s.data();
-      s.shrink_to_fit();
-      assert(s.capacity() <= capacity);
-      assert(s.size() == size);
-      LIBCPP_ASSERT(is_string_asan_correct(s));
-      LIBCPP_ASSERT(s.capacity() == capacity && s.data() == data);
-    }
-  }
-
   return true;
 }
 
