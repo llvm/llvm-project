@@ -11,7 +11,7 @@
 
 int x = 1;
 
-// BC: @x = dso_local global i32 1
+// BC: @x = global i32 1, align 4
 
 // ASM: x:
 // ASM: .long   1
