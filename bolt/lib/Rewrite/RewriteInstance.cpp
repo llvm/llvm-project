@@ -2976,8 +2976,7 @@ void RewriteInstance::selectFunctionsToProcess() {
   populateFunctionNames(opts::FunctionNamesFileNR, opts::ForceFunctionNamesNR);
 
   // Make a set of functions to process to speed up lookups.
-  std::unordered_set<std::string> ForceFunctionsNR(
-      opts::ForceFunctionNamesNR.begin(), opts::ForceFunctionNamesNR.end());
+  StringSet<> ForceFunctionsNR(opts::ForceFunctionNamesNR);
 
   if ((!opts::ForceFunctionNames.empty() ||
        !opts::ForceFunctionNamesNR.empty()) &&
@@ -3051,9 +3050,10 @@ void RewriteInstance::selectFunctionsToProcess() {
           return true;
 
       // Non-regex check (-funcs-no-regex and -funcs-file-no-regex).
-      for (const StringRef Name : Function.getNames())
-        if (ForceFunctionsNR.count(Name.str()))
-          return true;
+      if (Function.forEachName([&](StringRef Name) {
+            return ForceFunctionsNR.contains(NameResolver::restore(Name));
+          }))
+        return true;
 
       return false;
     }
