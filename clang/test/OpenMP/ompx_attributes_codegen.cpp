@@ -11,13 +11,13 @@
 
 // Check that the target attributes are set on the generated kernel
 void func() {
-  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l18(ptr {{[^,]+}}) #0
-  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l20(ptr {{[^,]+}})
-  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l22(ptr {{[^,]+}}) #4
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l22(ptr {{[^,]+}}) #0
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l24(ptr {{[^,]+}})
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l26(ptr {{[^,]+}}) #4
 
-  // NVIDIA: ptx_kernel void @__omp_offloading[[HASH:.*]]_l18(ptr {{[^,]+}}) #[[ATTR0:[0-9]+]]
-  // NVIDIA: ptx_kernel void @__omp_offloading[[HASH:.*]]_l20(ptr {{[^,]+}}) #[[ATTR1:[0-9]+]]
-  // NVIDIA: ptx_kernel void @__omp_offloading[[HASH:.*]]_l22(ptr {{[^,]+}}) #[[ATTR2:[0-9]+]]
+  // NVIDIA: ptx_kernel void @__omp_offloading[[HASH:.*]]_l22(ptr {{[^,]+}}) #[[ATTR0:[0-9]+]]
+  // NVIDIA: ptx_kernel void @__omp_offloading[[HASH:.*]]_l24(ptr {{[^,]+}}) #[[ATTR1:[0-9]+]]
+  // NVIDIA: ptx_kernel void @__omp_offloading[[HASH:.*]]_l26(ptr {{[^,]+}}) #[[ATTR2:[0-9]+]]
 
   #pragma omp target ompx_attribute([[clang::amdgpu_flat_work_group_size(10, 20)]])
   {}
@@ -39,11 +39,11 @@ void func() {
 
 // It is unclear if we should use the AMD annotations for other targets, we do for now.
 // NVIDIA: attributes #[[ATTR0]]
-// NVIDIA-SAME: "omp_target_thread_limit"="20"
 // NVIDIA-SAME: "nvvm.maxntid"="20"
+// NVIDIA-SAME: "omp_target_thread_limit"="20"
 // NVIDIA: attributes #[[ATTR1]]
-// NVIDIA-SAME: "omp_target_thread_limit"="45"
 // NVIDIA-SAME: "nvvm.maxntid"="45"
+// NVIDIA-SAME: "omp_target_thread_limit"="45"
 // NVIDIA: attributes #[[ATTR2]]
-// NVIDIA-SAME: "omp_target_thread_limit"="17"
 // NVIDIA-SAME: "nvvm.maxntid"="17"
+// NVIDIA-SAME: "omp_target_thread_limit"="17"

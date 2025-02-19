@@ -22,6 +22,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Mutex.h"
+#include <cstdint>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -204,6 +205,8 @@ static SmallVector<unsigned, 3> getFnAttrParsedVector(const Function &F,
   auto &Ctx = F.getContext();
 
   if (F.hasFnAttribute(Attr)) {
+    // We expect the attribute value to be of the form "x[,y[,z]]", where x, y,
+    // and z are unsigned values.
     StringRef S = F.getFnAttribute(Attr).getValueAsString();
     for (unsigned I = 0; I < 3 && !S.empty(); I++) {
       auto [First, Rest] = S.split(",");
@@ -218,14 +221,11 @@ static SmallVector<unsigned, 3> getFnAttrParsedVector(const Function &F,
   return V;
 }
 
-static std::optional<unsigned> getVectorProduct(ArrayRef<unsigned> V) {
+static std::optional<uint64_t> getVectorProduct(ArrayRef<unsigned> V) {
   if (V.empty())
     return std::nullopt;
 
-  unsigned Product = 1;
-  for (const unsigned E : V)
-    Product *= E;
-  return Product;
+  return std::accumulate(V.begin(), V.end(), 1, std::multiplies<uint64_t>{});
 }
 
 bool isParamGridConstant(const Value &V) {
@@ -298,7 +298,7 @@ SmallVector<unsigned, 3> getClusterDim(const Function &F) {
   return getFnAttrParsedVector(F, "nvvm.cluster_dim");
 }
 
-std::optional<unsigned> getOverallMaxNTID(const Function &F) {
+std::optional<uint64_t> getOverallMaxNTID(const Function &F) {
   // Note: The semantics here are a bit strange. The PTX ISA states the
   // following (11.4.2. Performance-Tuning Directives: .maxntid):
   //
@@ -309,7 +309,7 @@ std::optional<unsigned> getOverallMaxNTID(const Function &F) {
   return getVectorProduct(MaxNTID);
 }
 
-std::optional<unsigned> getOverallReqNTID(const Function &F) {
+std::optional<uint64_t> getOverallReqNTID(const Function &F) {
   // Note: The semantics here are a bit strange. See getMaxNTID.
   const auto ReqNTID = getReqNTID(F);
   return getVectorProduct(ReqNTID);

@@ -52,8 +52,8 @@ SmallVector<unsigned, 3> getMaxNTID(const Function &);
 SmallVector<unsigned, 3> getReqNTID(const Function &);
 SmallVector<unsigned, 3> getClusterDim(const Function &);
 
-std::optional<unsigned> getOverallMaxNTID(const Function &);
-std::optional<unsigned> getOverallReqNTID(const Function &);
+std::optional<uint64_t> getOverallMaxNTID(const Function &);
+std::optional<uint64_t> getOverallReqNTID(const Function &);
 
 std::optional<unsigned> getMaxClusterRank(const Function &);
 std::optional<unsigned> getMinCTASm(const Function &);

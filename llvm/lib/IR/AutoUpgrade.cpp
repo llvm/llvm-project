@@ -5033,6 +5033,8 @@ static void upgradeNVVMFnVectorAttr(const StringRef Attr, const char DimC,
   unsigned Length = 0;
 
   if (F->hasFnAttribute(Attr)) {
+    // We expect the existing attribute to have the form "x[,y[,z]]". Here we
+    // parse these elements placing them into Vect3
     StringRef S = F->getFnAttribute(Attr).getValueAsString();
     for (; Length < 3 && !S.empty(); Length++) {
       auto [Part, Rest] = S.split(',');
@@ -5041,17 +5043,20 @@ static void upgradeNVVMFnVectorAttr(const StringRef Attr, const char DimC,
     }
   }
 
-  const uint64_t VInt = mdconst::extract<ConstantInt>(V)->getZExtValue();
-  const std::string VStr = llvm::utostr(VInt);
-
   const unsigned Dim = DimC - 'x';
   assert(Dim >= 0 && Dim < 3 && "Unexpected dim char");
 
+  const uint64_t VInt = mdconst::extract<ConstantInt>(V)->getZExtValue();
+  const std::string VStr = llvm::utostr(VInt);
   Vect3[Dim] = VStr;
   Length = std::max(Length, Dim + 1);
 
   const std::string NewAttr = llvm::join(ArrayRef(Vect3, Length), ",");
   F->addFnAttr(Attr, NewAttr);
+}
+
+static inline bool isXYZ(StringRef S) {
+  return S == "x" || S == "y" || S == "z";
 }
 
 bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
@@ -5092,15 +5097,15 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
     cast<Function>(GV)->addFnAttr("nvvm.maxnreg", llvm::utostr(CV));
     return true;
   }
-  if (K.consume_front("maxntid") && (K == "x" || K == "y" || K == "z")) {
+  if (K.consume_front("maxntid") && isXYZ(K)) {
     upgradeNVVMFnVectorAttr("nvvm.maxntid", K[0], GV, V);
     return true;
   }
-  if (K.consume_front("reqntid") && (K == "x" || K == "y" || K == "z")) {
+  if (K.consume_front("reqntid") && isXYZ(K)) {
     upgradeNVVMFnVectorAttr("nvvm.reqntid", K[0], GV, V);
     return true;
   }
-  if (K.consume_front("cluster_dim_") && (K == "x" || K == "y" || K == "z")) {
+  if (K.consume_front("cluster_dim_") && isXYZ(K)) {
     upgradeNVVMFnVectorAttr("nvvm.cluster_dim", K[0], GV, V);
     return true;
   }
