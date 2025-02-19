@@ -294,6 +294,7 @@ define void @foo(ptr noalias %ptrA0, ptr noalias %ptrA1,
   auto *A1 = cast<sandboxir::StoreInst>(&*It++);
   auto *A0 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  (void)Ret;
 
   sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
   EXPECT_TRUE(Sched.trySchedule({A0, A1}));
