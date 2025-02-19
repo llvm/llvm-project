@@ -14,6 +14,7 @@ endif()
 
 add_lldb_unittest(SymbolTests
   JSONSymbolTest.cpp
+  LineTableTest.cpp
   LocateSymbolFileTest.cpp
   MangledTest.cpp
   PostfixExpressionTest.cpp
