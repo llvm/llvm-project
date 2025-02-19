@@ -140,14 +140,18 @@ bfloat16_t test_vget_lane_bf16(bfloat16x4_t v) {
   // LLVM: ret bfloat [[VGET_LANE]]
 }
 
-// CHECK-LABEL: @test_vgetq_lane_bf16(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x bfloat> [[V:%.*]], i32 7
-// CHECK-NEXT:    ret bfloat [[VGETQ_LANE]]
-//
-// bfloat16_t test_vgetq_lane_bf16(bfloat16x8_t v) {
-//   return vgetq_lane_bf16(v, 7);
-// }
+bfloat16_t test_vgetq_lane_bf16(bfloat16x8_t v) {
+  return vgetq_lane_bf16(v, 7);
+
+  // CIR-LABEL: vgetq_lane_bf16
+  // CIR: [[TMP0:%.*]] = cir.const #cir.int<7> : !s32i
+  // CIR: [[TMP1:%.*]] = cir.vec.extract {{.*}}[{{.*}} : !s32i] : !cir.vector<!cir.bf16 x 8>
+
+  // LLVM-LABEL: test_vgetq_lane_bf16
+  // LLVM-SAME: (<8 x bfloat> [[VEC:%.*]])
+  // LLVM: [[VGET_LANE:%.*]] = extractelement <8 x bfloat> [[VEC]], i32 7
+  // LLVM: ret bfloat [[VGET_LANE]]
+}
 
 // CHECK-LABEL: @test_vset_lane_bf16(
 // CHECK-NEXT:  entry:

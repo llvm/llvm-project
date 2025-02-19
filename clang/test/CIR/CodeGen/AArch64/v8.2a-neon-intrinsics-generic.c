@@ -471,15 +471,18 @@
 //   return vtrn2q_f16(a, b);
 // }
 
-// CHECK-LABEL: define {{[^@]+}}@test_vduph_laneq_f16
-// CHECK-SAME: (<8 x half> noundef [[VEC:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x half> [[VEC]], i32 7
-// CHECK-NEXT:    ret half [[VGETQ_LANE]]
-//
-// float16_t test_vduph_laneq_f16(float16x8_t vec) {
-//   return vduph_laneq_f16(vec, 7);
-// }
+float16_t test_vduph_laneq_f16(float16x8_t vec) {
+  return vduph_laneq_f16(vec, 7);
+
+  // CIR-LABEL: vduph_laneq_f16
+  // CIR: [[TMP0:%.*]] = cir.const #cir.int<7> : !s32i
+  // CIR: [[TMP1:%.*]] = cir.vec.extract {{.*}}[{{.*}} : !s32i] : !cir.vector<!cir.f16 x 8>
+
+  // LLVM-LABEL: test_vduph_laneq_f16
+  // LLVM-SAME: (<8 x half> [[VEC:%.*]])
+  // LLVM: [[VGET_LANE:%.*]] = extractelement <8 x half> [[VEC]], i32 7
+  // LLVM: ret half [[VGET_LANE]]
+}
 
 float16_t test_vduph_lane_f16(float16x4_t vec) {
   return vduph_lane_f16(vec, 3);
