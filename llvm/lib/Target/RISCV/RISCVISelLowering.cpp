@@ -1283,8 +1283,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
 
         // vXi64 MULHS/MULHU requires the V extension instead of Zve64*.
-        if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV())
+        if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV()) {
           setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
+        } else {
+          setOperationAction({ISD::VP_MULHU, ISD::VP_MULHS}, VT, Expand);
+        }
 
         setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,
                             ISD::AVGCEILU, ISD::SADDSAT, ISD::UADDSAT,
@@ -1304,11 +1307,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                            VT, Custom);
 
         setOperationAction(IntegerVPOps, VT, Custom);
-
-        // Zve64* does not support VP_MULHU/S with nxvXi64.
-        if (VT.getVectorElementType() == MVT::i64 && !Subtarget.hasStdExtV()) {
-          setOperationAction({ISD::VP_MULHU, ISD::VP_MULHS}, VT, Expand);
-        }
 
         if (Subtarget.hasStdExtZvkb())
           setOperationAction({ISD::BSWAP, ISD::ROTL, ISD::ROTR}, VT, Custom);
