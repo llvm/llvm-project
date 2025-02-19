@@ -1997,9 +1997,7 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
 LogicalResult transform::applyTransforms(
     Operation *payloadRoot, TransformOpInterface transform,
     const RaggedArray<MappedValue> &extraMapping,
-    const TransformOptions &options, bool enforceToplevelTransformOp,
-    function_ref<void(TransformState &)> stateInitializer,
-    function_ref<LogicalResult(TransformState &)> stateExporter) {
+    const TransformOptions &options, bool enforceToplevelTransformOp) {
   if (enforceToplevelTransformOp) {
     if (!transform->hasTrait<PossibleTopLevelTransformOpTrait>() ||
         transform->getNumOperands() != 0) {
@@ -2013,6 +2011,10 @@ LogicalResult transform::applyTransforms(
 
   TransformState state(transform->getParentRegion(), payloadRoot, extraMapping,
                        options);
+  function_ref<void(TransformState &)> stateInitializer =
+      options.getStateInitializer();
+  function_ref<LogicalResult(TransformState &)> stateExporter =
+      options.getStateExporter();
   if (stateInitializer)
     stateInitializer(state);
   if (state.applyTransform(transform).checkAndReport().failed())
