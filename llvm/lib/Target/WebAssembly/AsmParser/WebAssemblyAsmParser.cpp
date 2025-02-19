@@ -31,6 +31,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
@@ -1281,7 +1282,8 @@ public:
 } // end anonymous namespace
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
+void LLVMInitializeWebAssemblyAsmParser() {
   RegisterMCAsmParser<WebAssemblyAsmParser> X(getTheWebAssemblyTarget32());
   RegisterMCAsmParser<WebAssemblyAsmParser> Y(getTheWebAssemblyTarget64());
 }
