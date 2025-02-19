@@ -597,6 +597,16 @@ gpu.func @test_store_simt_3(%src: ui64) {
   gpu.return
 }
 
+// CHECK: gpu.func @test_prefetch_simt(%[[arg0:.*]]: ui64) {
+gpu.func @test_prefetch_simt(%src: ui64) {
+  //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  //CHECK: %[[R0:.*]] = xegpu.create_tdesc %[[arg0]], %[[cst]] : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  %1 = xegpu.create_tdesc %src, %0 : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  // CHECK: xegpu.prefetch %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  xegpu.prefetch %1 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  gpu.return
+}
 
 
 // CHECK: gpu.func @test_prefetch_vc(%[[arg0:.*]]: ui64) {
@@ -610,35 +620,16 @@ gpu.func @test_prefetch_vc(%src: ui64) {
   gpu.return
 }
 
-// CHECK: gpu.func @test_load_gather_vc(%[[arg0:.*]]: ui64) {
-gpu.func @test_load_gather_vc(%src: ui64) {
-  //CHECK: %[[cst:.*]] = arith.constant dense<true> : vector<4xi1>
-  %0 = arith.constant dense<1>: vector<4xi1>
-  //CHECK: %[[c2:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  %c = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  //CHECK: %[[R0:.*]] = xegpu.create_tdesc %[[arg0]], %[[c2]] : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>
-  %1 = xegpu.create_tdesc %src, %c : ui64, vector<4xindex>  -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>
-  //CHECK: %[[R1:.*]] = xegpu.load %[[R0]], %[[cst]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, transpose}>
-  //CHECK-SAME: !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<4xi1> -> vector<2x4xf32>
-  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, transpose}>
-        : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>, vector<4xi1> -> vector<2x4xf32>
-  gpu.return
-}
-
-// CHECK: gpu.func @test_store_scatter_vc(%[[arg0:.*]]: ui64) {
-gpu.func @test_store_scatter_vc(%src: ui64) {
-  //CHECK: %[[c0:.*]] = arith.constant dense<true> : vector<4xi1>
-  %0 = arith.constant dense<1>: vector<4xi1>
-  //CHECK: %[[c1:.*]] = arith.constant dense<2.900000e+00> : vector<2x4xf32>
-  %1 = arith.constant dense<2.9>: vector<2x4xf32>
-  //CHECK: %[[c2:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  %c = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  //CHECK: %[[R0:.*]] = xegpu.create_tdesc %[[arg0]], %[[c2]] : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>
-  %2 = xegpu.create_tdesc %src, %c : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>
-  //CHECK: xegpu.store %[[c1]], %[[R0]], %[[c0]] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>, transpose}>
-  //CHECK-SAME: vector<2x4xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>>, vector<4xi1>
-  xegpu.store %1, %2, %0 <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>, transpose}>
-        : vector<2x4xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>, vector<4xi1>
+// CHECK: gpu.func @test_create_update_tdesc_simt(%[[arg0:.*]]: ui64) {
+gpu.func @test_create_update_tdesc_simt(%src: ui64) {
+  //CHECK: %[[cst:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  //CHECK: %[[R0:.*]] = xegpu.create_tdesc %[[arg0]], %[[cst]] : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  //CHECK: %[[st:.*]] = arith.constant dense<32> : vector<4xindex>
+  //CHECK: %[[R1:.*]] = xegpu.update_offset %[[R0]], %[[st]] : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2 : i64>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xindex>
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %0 : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  %s = arith.constant dense<[32, 32, 32, 32]> : vector<4xindex>
+  %2 = xegpu.update_offset %1, %s : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xindex>
   gpu.return
 }
 
@@ -662,6 +653,17 @@ gpu.func @test_dpas_vc(%a : vector<8x16xf16>, %b: vector<16x16xf16>) {
   gpu.return
 }
 
+// CHECK: gpu.func @test_dpas_simt(%[[arg0:.*]]: vector<8x1xf16>, %[[arg1:.*]]: vector<8x2xf16>)
+gpu.func @test_dpas_simt(%a : vector<8x1xf16>, %b: vector<8x2xf16>) {
+  // CHECK: xegpu.dpas %[[arg0]], %[[arg1]] {sg_map_a = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>,
+  // CHECK: sg_map_b = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [2, 1]>,
+  // CHECK: sg_map_c = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>} : vector<8x1xf16>, vector<8x2xf16> -> vector<8x1xf32>
+  %1 = xegpu.dpas %a, %b {sg_map_a = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>,
+                          sg_map_b = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [2, 1]>,
+                          sg_map_c = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>}
+                          : vector<8x1xf16>, vector<8x2xf16> -> vector<8x1xf32>
+  gpu.return
+}
 
 // CHECK: gpu.func @test_dpas_vc_with_packed_b(%[[arg0:.*]]: vector<8x16xf16>, %[[arg1:.*]]: vector<8x16x2xf16>)
 gpu.func @test_dpas_vc_with_packed_b(%a : vector<8x16xf16>, %b: vector<8x16x2xf16>) {
