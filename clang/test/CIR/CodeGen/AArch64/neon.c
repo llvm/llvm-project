@@ -15174,18 +15174,40 @@ int64_t test_vshrd_n_s64(int64_t a) {
   // LLVM:   ret i64 [[SHRD_N]]
 }
 
-// NYI-LABEL: @test_vshrd_n_u64(
-// NYI:   ret i64 0
-// uint64_t test_vshrd_n_u64(uint64_t a) {
-//   return (uint64_t)vshrd_n_u64(a, 64);
-// }
+uint64_t test_vshrd_n_u64(uint64_t a) {
+   return (uint64_t)vshrd_n_u64(a, 64);
 
-// NYI-LABEL: @test_vshrd_n_u64_2(
-// NYI:   ret i64 0
-// uint64_t test_vshrd_n_u64_2() {
-//   uint64_t a = UINT64_C(0xf000000000000000);
-//   return vshrd_n_u64(a, 64);
-// }
+  // CIR-LABEL: vshrd_n_u64
+  // CIR: {{.*}} = cir.const #cir.int<0> : !u64i
+  // CIR: cir.return {{.*}} : !u64i
+
+  // LLVM-LABEL: @test_vshrd_n_u64(
+  // LLVM:   ret i64 0
+}
+
+uint64_t test_vshrd_n_u64_2() {
+  uint64_t a = UINT64_C(0xf000000000000000);
+  return vshrd_n_u64(a, 64);
+
+  // CIR-LABEL: vshrd_n_u64
+  // CIR: {{.*}} = cir.const #cir.int<0> : !u64i
+  // CIR: cir.return {{.*}} : !u64i
+
+  // LLVM-LABEL: @test_vshrd_n_u64_2(
+  // LLVM:   ret i64 0
+
+}
+
+uint64_t test_vshrd_n_u64_3(uint64_t a) {
+  return vshrd_n_u64(a, 1);
+
+  // CIR-LABEL: vshrd_n_u64
+  // CIR: {{%.*}} = cir.shift(right, {{%.*}} : !u64i, {{%.*}} : !u64i) -> !u64i
+
+  // LLVM-LABEL: @test_vshrd_n_u64_3(
+  // LLVM:   [[SHRD_N:%.*]] = lshr i64 %0, 1
+  // LLVM:   ret i64 [[SHRD_N]]
+}
 
 // NYI-LABEL: @test_vrshrd_n_s64(
 // NYI:   [[VRSHR_N:%.*]] = call i64 @llvm.aarch64.neon.srshl.i64(i64 %a, i64 -63)
