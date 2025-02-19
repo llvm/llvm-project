@@ -25,6 +25,11 @@ class TestSwiftExtraClangFlags(TestBase):
         VFS overlay using target.swift-extra-clang-flags.
         """
         self.build()
+
+        # Because the bridging header isn't precompiled or in a module
+        # we don't have DWARF type information for the types it contains.
+        self.expect("settings set symbols.swift-typesystem-compiler-fallback true")
+
         # FIXME: this doesn't work if LLDB's build dir contains a space.
         overlay = self.getBuildArtifact('overlay.yaml')
         self.addTearDownHook(
