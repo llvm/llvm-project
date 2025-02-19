@@ -446,9 +446,8 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
     // FIXME: Support jumping from a protocol decl to overrides on go-to
     // definition.
     if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D)) {
-      if (TouchedIdentifier &&
-          objcMethodIsTouched(SM, OMD, TouchedIdentifier->location()) &&
-          OMD->isThisDeclarationADefinition()) {
+      if (OMD->isThisDeclarationADefinition() && TouchedIdentifier &&
+          objcMethodIsTouched(SM, OMD, TouchedIdentifier->location())) {
         llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
         OMD->getOverriddenMethods(Overrides);
         if (!Overrides.empty()) {
