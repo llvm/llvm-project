@@ -58,7 +58,11 @@ from .._linalg_enum_gen import _iteratortypeenum
 from .opdsl.ops.core_named_ops import *
 
 from ...ir import *
-from .._ods_common import get_op_result_or_value as _get_op_result_or_value
+from .._ods_common import (
+    get_op_result_or_value as _get_op_result_or_value,
+    get_op_result_or_op_results as _get_op_result_or_op_results,
+    _dispatch_mixed_values,
+)
 from ...extras.meta import region_op
 
 
@@ -201,4 +205,37 @@ def contract(
 ):
     return create_op(
         ContractOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
+    )
+
+
+def pack(
+    source,
+    dest,
+    inner_dims_pos,
+    inner_tiles,
+    *,
+    padding_value=None,
+    outer_dims_perm=None,
+    loc=None,
+    ip=None,
+) -> ir.Value:
+    (
+        dynamic_inner_tiles,
+        # packed here means %1:2 packing (results packing)
+        _inner_tiles,
+        static_inner_tiles,
+    ) = _dispatch_mixed_values(inner_tiles)
+
+    return _get_op_result_or_op_results(
+        PackOp(
+            source=source,
+            dest=dest,
+            inner_dims_pos=inner_dims_pos,
+            inner_tiles=dynamic_inner_tiles,
+            static_inner_tiles=static_inner_tiles,
+            padding_value=padding_value,
+            outer_dims_perm=outer_dims_perm,
+            loc=loc,
+            ip=ip,
+        )
     )

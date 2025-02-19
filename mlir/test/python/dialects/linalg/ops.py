@@ -566,3 +566,34 @@ def testBatchMatmulOp():
                 )
 
     print(module)
+
+
+# CHECK-LABEL: TEST: testPackOp
+@run
+def testPackOp():
+    with Context(), Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        with InsertionPoint(module.body):
+
+            @func.FuncOp.from_py_func(
+                RankedTensorType.get((129, 47, 16, 16), f32),
+                RankedTensorType.get((17, 2, 16, 16, 32, 8), f32),
+            )
+            def tensor_pack(src, dst):
+                return linalg.pack(
+                    src,
+                    dst,
+                    inner_dims_pos=[1, 0],
+                    inner_tiles=[32, 8],
+                    padding_value=arith.constant(f32, 0.0),
+                )
+
+        # CHECK-LABEL:   func.func @tensor_pack(
+        # CHECK-SAME:                           %[[VAL_0:.*]]: tensor<129x47x16x16xf32>,
+        # CHECK-SAME:                           %[[VAL_1:.*]]: tensor<17x2x16x16x32x8xf32>) -> tensor<17x2x16x16x32x8xf32> {
+        # CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
+        # CHECK:           %[[VAL_3:.*]] = linalg.pack %[[VAL_0]] padding_value(%[[VAL_2]] : f32) inner_dims_pos = [1, 0] inner_tiles = [32, 8] into %[[VAL_1]] : tensor<129x47x16x16xf32> -> tensor<17x2x16x16x32x8xf32>
+        # CHECK:           return %[[VAL_3]] : tensor<17x2x16x16x32x8xf32>
+        # CHECK:         }
+        print(module)
