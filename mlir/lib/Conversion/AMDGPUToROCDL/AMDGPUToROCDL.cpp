@@ -1038,7 +1038,7 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
 
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
-  using ConvertAMDGPUToROCDLPassBase::ConvertAMDGPUToROCDLPassBase;
+  using Base::Base;
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
