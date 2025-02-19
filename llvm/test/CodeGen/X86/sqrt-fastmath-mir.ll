@@ -144,6 +144,6 @@ define float @rsqrt_daz(float %f) #1 {
   ret float %div
 }
 
-attributes #0 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt:2" "denormal-fp-math"="ieee,ieee" }
-attributes #1 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt:2" "denormal-fp-math"="ieee,preserve-sign" }
+attributes #0 = { "reciprocal-estimates"="sqrt:2" "denormal-fp-math"="ieee,ieee" }
+attributes #1 = { "reciprocal-estimates"="sqrt:2" "denormal-fp-math"="ieee,preserve-sign" }
 attributes #2 = { nounwind readnone }

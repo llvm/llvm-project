@@ -3440,6 +3440,6 @@ declare half @llvm.amdgcn.rcp.f16(half) #1
 
 attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math"="true" }
+attributes #2 = { nounwind }
 attributes #3 = { nounwind "no-signed-zeros-fp-math"="true" }
 attributes #4 = { nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
