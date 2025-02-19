@@ -87,10 +87,10 @@ typedef struct {
 } S3;
 
 static S3 g13 = {-1L,0L,1L};
-static S3* g14[2][2] = {{&g13, &g13}, {&g13, &g13}};
+static S3* g14[2][2] = {{0, &g13}, {&g13, &g13}};
 
 // CHECK-DAG: g13 = #cir.const_struct<{#cir.int<-1> : !s16i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 2>, #cir.int<0> : !s32i, #cir.int<1> : !s8i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 3>}> : !ty_anon_struct3
-// CHECK-DAG: g14 = #cir.const_array<[#cir.const_array<[#cir.global_view<@g13> : !cir.ptr<!ty_S3_>, #cir.global_view<@g13> : !cir.ptr<!ty_S3_>]> : !cir.array<!cir.ptr<!ty_S3_> x 2>, #cir.const_array<[#cir.global_view<@g13> : !cir.ptr<!ty_S3_>, #cir.global_view<@g13> : !cir.ptr<!ty_S3_>]> : !cir.array<!cir.ptr<!ty_S3_> x 2>]> : !cir.array<!cir.array<!cir.ptr<!ty_S3_> x 2> x 2>
+// CHECK-DAG: g14 = #cir.const_array<[#cir.const_array<[#cir.ptr<null> : !cir.ptr<!ty_S3_>, #cir.global_view<@g13> : !cir.ptr<!ty_S3_>]> : !cir.array<!cir.ptr<!ty_S3_> x 2>, #cir.const_array<[#cir.global_view<@g13> : !cir.ptr<!ty_S3_>, #cir.global_view<@g13> : !cir.ptr<!ty_S3_>]> : !cir.array<!cir.ptr<!ty_S3_> x 2>]> : !cir.array<!cir.array<!cir.ptr<!ty_S3_> x 2> x 2>
 
 typedef struct {
    int  f0;

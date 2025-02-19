@@ -885,6 +885,8 @@ static mlir::Attribute getNewInitValue(CIRGenModule &CGM, GlobalOp newGlob,
         newArray.push_back(createNewGlobalView(CGM, newGlob, view, oldTy));
       else if (auto view = dyn_cast<ConstArrayAttr>(elt))
         newArray.push_back(getNewInitValue(CGM, newGlob, oldTy, user, elt));
+      else
+        newArray.push_back(elt);
     }
 
     auto &builder = CGM.getBuilder();
