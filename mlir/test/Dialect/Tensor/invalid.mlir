@@ -64,7 +64,7 @@ func.func @concat_static_shape_mismatch(%arg0: tensor<3xf32>) {
 
 // -----
 
-func.func @extract_too_many_indices(%arg0: tensor<?xf32>) {
+func.func @extract_too_few_indices(%arg0: tensor<?xf32>) {
   // expected-error@+1 {{incorrect number of indices for extract_element}}
   %0 = tensor.extract %arg0[] : tensor<?xf32>
   return
@@ -72,9 +72,43 @@ func.func @extract_too_many_indices(%arg0: tensor<?xf32>) {
 
 // -----
 
-func.func @insert_too_many_indices(%arg0: f32, %arg1: tensor<?xf32>) {
+func.func @extract_too_many_static_indices(%arg0: tensor<?xf32>) {
+  // expected-error@+1 {{incorrect number of indices for extract_element}}
+  %0 = tensor.extract %arg0[2, 3] : tensor<?xf32>
+  return
+}
+
+// -----
+
+func.func @extract_too_many_mixed_indices(%arg0: tensor<?xf32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{incorrect number of indices for extract_element}}
+  %0 = tensor.extract %arg0[%c1, 2, 3] : tensor<?xf32>
+  return
+}
+
+// -----
+
+func.func @insert_too_few_indices(%arg0: f32, %arg1: tensor<?xf32>) {
   // expected-error@+1 {{incorrect number of indices}}
   %0 = tensor.insert %arg0 into %arg1[] : tensor<?xf32>
+  return
+}
+
+// -----
+
+func.func @insert_too_many_indices(%arg0: f32, %arg1: tensor<?xf32>) {
+  // expected-error@+1 {{incorrect number of indices}}
+  %0 = tensor.insert %arg0 into %arg1[2, 3] : tensor<?xf32>
+  return
+}
+
+// -----
+
+func.func @insert_too_many_mixed_indices(%arg0: f32, %arg1: tensor<?xf32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{incorrect number of indices}}
+  %0 = tensor.insert %arg0 into %arg1[%c1, 2, 3] : tensor<?xf32>
   return
 }
 
