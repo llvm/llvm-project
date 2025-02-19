@@ -398,6 +398,22 @@ func.func @caller() {
 
 // -----
 
+module {
+// CHECK-LABEL: func.func private @callee()
+func.func private @callee() -> (i24)
+
+// CHECK: func.func @call_op_attr_preserved()
+func.func @call_op_attr_preserved() {
+  // i24 is converted to ().
+  // CHECK: call @callee() {dialect.attr = 1 : i64} : () -> ()
+  %0 = func.call @callee() {dialect.attr = 1 : i64} : () -> (i24)
+
+  "test.return"() : () -> ()
+}
+}
+
+// -----
+
 // CHECK-LABEL: func @test_move_op_before_rollback()
 func.func @test_move_op_before_rollback() {
   // CHECK: "test.one_region_op"()
