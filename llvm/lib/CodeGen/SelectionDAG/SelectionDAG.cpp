@@ -2474,35 +2474,6 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
   return getZExtOrTrunc(Op, SDLoc(Op), ShTy);
 }
 
-SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
-                                          SDValue Op2) {
-  EVT FullTy = Op2.getValueType();
-
-  unsigned Stride = ReducedTy.getVectorMinNumElements();
-  unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
-
-  // Collect all of the subvectors
-  std::deque<SDValue> Subvectors = {Op1};
-  for (unsigned I = 0; I < ScaleFactor; I++) {
-    auto SourceIndex = getVectorIdxConstant(I * Stride, DL);
-    Subvectors.push_back(
-        getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {Op2, SourceIndex}));
-  }
-
-  // Flatten the subvector tree
-  while (Subvectors.size() > 1) {
-    Subvectors.push_back(
-        getNode(ISD::ADD, DL, ReducedTy, {Subvectors[0], Subvectors[1]}));
-    Subvectors.pop_front();
-    Subvectors.pop_front();
-  }
-
-  assert(Subvectors.size() == 1 &&
-         "There should only be one subvector after tree flattening");
-
-  return Subvectors[0];
-}
-
 /// Given a store node \p StoreNode, return true if it is safe to fold that node
 /// into \p FPNode, which expands to a library call with output pointers.
 static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
@@ -6314,7 +6285,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         Flags.setNonNeg(N1->getFlags().hasNonNeg());
       return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
     }
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       // sext(undef) = 0, because the top bits will all be the same.
       return getConstant(0, DL, VT);
     break;
@@ -6334,7 +6305,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       Flags.setNonNeg(N1->getFlags().hasNonNeg());
       return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
     }
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       // zext(undef) = 0, because the top bits will be zero.
       return getConstant(0, DL, VT);
 
@@ -6376,7 +6347,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       // (ext (zext x)) -> (zext x)  and  (ext (sext x)) -> (sext x)
       return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
     }
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
 
     // (ext (trunc x)) -> x
@@ -6411,7 +6382,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         return getNode(ISD::TRUNCATE, DL, VT, N1.getOperand(0));
       return N1.getOperand(0);
     }
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
     if (OpOpcode == ISD::VSCALE && !NewNodesMustHaveLegalTypes)
       return getVScale(DL, VT,
@@ -6429,14 +6400,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::ABS:
     assert(VT.isInteger() && VT == N1.getValueType() && "Invalid ABS!");
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getConstant(0, DL, VT);
     break;
   case ISD::BSWAP:
     assert(VT.isInteger() && VT == N1.getValueType() && "Invalid BSWAP!");
     assert((VT.getScalarSizeInBits() % 16 == 0) &&
            "BSWAP types must be a multiple of 16 bits!");
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
     // bswap(bswap(X)) -> X.
     if (OpOpcode == ISD::BSWAP)
@@ -6444,7 +6415,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::BITREVERSE:
     assert(VT.isInteger() && VT == N1.getValueType() && "Invalid BITREVERSE!");
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
     break;
   case ISD::BITCAST:
@@ -6453,7 +6424,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (VT == N1.getValueType()) return N1;   // noop conversion.
     if (OpOpcode == ISD::BITCAST) // bitconv(bitconv(x)) -> bitconv(x)
       return getNode(ISD::BITCAST, DL, VT, N1.getOperand(0));
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
     break;
   case ISD::SCALAR_TO_VECTOR:
@@ -6463,7 +6434,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
              N1.getValueType().isInteger() &&
              VT.getVectorElementType().bitsLE(N1.getValueType()))) &&
            "Illegal SCALAR_TO_VECTOR node!");
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
     // scalar_to_vector(extract_vector_elt V, 0) -> V, top bits are undefined.
     if (OpOpcode == ISD::EXTRACT_VECTOR_ELT &&
@@ -6474,7 +6445,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::FNEG:
     // Negation of an unknown bag of bits is still completely undefined.
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
 
     if (OpOpcode == ISD::FNEG) // --X -> X
@@ -7883,6 +7854,28 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     break;
   }
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA: {
+    [[maybe_unused]] EVT AccVT = N1.getValueType();
+    [[maybe_unused]] EVT Input1VT = N2.getValueType();
+    [[maybe_unused]] EVT Input2VT = N3.getValueType();
+    assert(Input1VT.isVector() && Input1VT == Input2VT &&
+           "Expected the second and third operands of the PARTIAL_REDUCE_MLA "
+           "node to have the same type!");
+    assert(VT.isVector() && VT == AccVT &&
+           "Expected the first operand of the PARTIAL_REDUCE_MLA node to have "
+           "the same type as its result!");
+    assert(Input1VT.getVectorElementCount().hasKnownScalarFactor(
+               AccVT.getVectorElementCount()) &&
+           "Expected the element count of the second and third operands of the "
+           "PARTIAL_REDUCE_MLA node to be a positive integer multiple of the "
+           "element count of the first operand and the result!");
+    assert(N2.getScalarValueSizeInBits() <= N1.getScalarValueSizeInBits() &&
+           "Expected the second and third operands of the PARTIAL_REDUCE_MLA "
+           "node to have an element type which is the same as or smaller than "
+           "the element type of the first operand and result!");
+    break;
+  }
   }
 
   // Memoize node if it doesn't produce a glue result.
@@ -8015,17 +8008,8 @@ static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
   if (Slice.Array == nullptr) {
     if (VT.isInteger())
       return DAG.getConstant(0, dl, VT);
-    if (VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128)
-      return DAG.getConstantFP(0.0, dl, VT);
-    if (VT.isVector()) {
-      unsigned NumElts = VT.getVectorNumElements();
-      MVT EltVT = (VT.getVectorElementType() == MVT::f32) ? MVT::i32 : MVT::i64;
-      return DAG.getNode(ISD::BITCAST, dl, VT,
-                         DAG.getConstant(0, dl,
-                                         EVT::getVectorVT(*DAG.getContext(),
-                                                          EltVT, NumElts)));
-    }
-    llvm_unreachable("Expected type!");
+    return DAG.getNode(ISD::BITCAST, dl, VT,
+                       DAG.getConstant(0, dl, VT.changeTypeToInteger()));
   }
 
   assert(!VT.isVector() && "Can't handle vector type here!");
@@ -13380,7 +13364,7 @@ void BuildVectorSDNode::recastRawBits(bool IsLittleEndian,
 bool BuildVectorSDNode::isConstant() const {
   for (const SDValue &Op : op_values()) {
     unsigned Opc = Op.getOpcode();
-    if (Opc != ISD::UNDEF && Opc != ISD::Constant && Opc != ISD::ConstantFP)
+    if (!Op.isUndef() && Opc != ISD::Constant && Opc != ISD::ConstantFP)
       return false;
   }
   return true;
@@ -13415,10 +13399,10 @@ BuildVectorSDNode::isConstantSequence() const {
   return std::make_pair(Start, Stride);
 }
 
-bool ShuffleVectorSDNode::isSplatMask(const int *Mask, EVT VT) {
+bool ShuffleVectorSDNode::isSplatMask(ArrayRef<int> Mask) {
   // Find the first non-undef value in the shuffle mask.
   unsigned i, e;
-  for (i = 0, e = VT.getVectorNumElements(); i != e && Mask[i] < 0; ++i)
+  for (i = 0, e = Mask.size(); i != e && Mask[i] < 0; ++i)
     /* search */;
 
   // If all elements are undefined, this shuffle can be considered a splat

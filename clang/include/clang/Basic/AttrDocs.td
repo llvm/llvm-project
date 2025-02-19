@@ -62,6 +62,16 @@ def CodeModelDocs : Documentation {
   let Content = [{
 The ``model`` attribute allows overriding the translation unit's
 code model (specified by ``-mcmodel``) for a specific global variable.
+
+On LoongArch, allowed values are "normal", "medium", "extreme".
+
+On x86-64, allowed values are ``"small"`` and ``"large"``. ``"small"`` is
+roughly equivalent to ``-mcmodel=small``, meaning the global is considered
+"small" placed closer to the ``.text`` section relative to "large" globals, and
+to prefer using 32-bit relocations to access the global. ``"large"`` is roughly
+equivalent to ``-mcmodel=large``, meaning the global is considered "large" and
+placed further from the ``.text`` section relative to "small" globals, and
+64-bit relocations must be used to access the global.
   }];
   let Heading = "model";
 }
@@ -8482,7 +8492,7 @@ that is a pointer to the type with the attribute.
   }
 
 The above example will result in a call to ``bar`` being passed the address of
-`y`` when ``y`` goes out of scope, then a call to ``foo`` being passed the
+``y`` when ``y`` goes out of scope, then a call to ``foo`` being passed the
 address of ``x`` when ``x`` goes out of scope. If two or more variables share
 the same scope, their ``cleanup`` callbacks are invoked in the reverse order
 the variables were declared in. It is not possible to check the return value

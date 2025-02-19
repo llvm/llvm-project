@@ -225,16 +225,23 @@ function(add_libclc_builtin_set)
     message( FATAL_ERROR "Must provide ARCH, ARCH_SUFFIX, and TRIPLE" )
   endif()
 
-  set( bytecode_files "" )
+  set( bytecode_files )
+  set( bytecode_ir_files )
   foreach( file IN LISTS ARG_GEN_FILES ARG_LIB_FILES )
     # We need to take each file and produce an absolute input file, as well
     # as a unique architecture-specific output file. We deal with a mix of
     # different input files, which makes this trickier.
+    set( input_file_dep )
     if( ${file} IN_LIST ARG_GEN_FILES )
       # Generated files are given just as file names, which we must make
       # absolute to the binary directory.
       set( input_file ${CMAKE_CURRENT_BINARY_DIR}/${file} )
       set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${file}.bc" )
+      # If a target exists that generates this file, add that as a dependency
+      # of the custom command.
+      if( TARGET generate-${file} )
+        set( input_file_dep generate-${file} )
+      endif()
     else()
       # Other files are originally relative to each SOURCE file, which are
       # then make relative to the libclc root directory. We must normalize
@@ -255,10 +262,24 @@ function(add_libclc_builtin_set)
       OUTPUT ${output_file}
       EXTRA_OPTS -fno-builtin -nostdlib
         "${ARG_COMPILE_FLAGS}" -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
-      DEPENDENCIES generate_convert.cl clspv-generate_convert.cl
+      DEPENDENCIES ${input_file_dep}
     )
-    list( APPEND bytecode_files ${output_file} )
+
+    # Collect all files originating in LLVM IR separately
+    get_filename_component( file_ext ${file} EXT )
+    if( ${file_ext} STREQUAL ".ll" )
+      list( APPEND bytecode_ir_files ${output_file} )
+    else()
+      list( APPEND bytecode_files ${output_file} )
+    endif()
   endforeach()
+
+  # Prepend all LLVM IR files to the list so they are linked into the final
+  # bytecode modules first. This helps to suppress unnecessary warnings
+  # regarding different data layouts while linking. Any LLVM IR files without a
+  # data layout will (silently) be given the first data layout the linking
+  # process comes across.
+  list( PREPEND bytecode_files ${bytecode_ir_files} )
 
   set( builtins_comp_lib_tgt builtins.comp.${ARG_ARCH_SUFFIX} )
   add_custom_target( ${builtins_comp_lib_tgt}
@@ -345,8 +366,9 @@ function(add_libclc_builtin_set)
   add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
   set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
 
-  # nvptx-- targets don't include workitem builtins
-  if( NOT ARG_TRIPLE MATCHES ".*ptx.*--$" )
+  # nvptx-- targets don't include workitem builtins, and clspv targets don't
+  # include all OpenCL builtins
+  if( NOT ARG_ARCH MATCHES "^(nvptx|clspv)(64)?$" )
     add_test( NAME external-calls-${obj_suffix}
       COMMAND ./check_external_calls.sh ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} ${LLVM_TOOLS_BINARY_DIR}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
@@ -380,7 +402,8 @@ endfunction(add_libclc_builtin_set)
 #     directory. If not provided, is set to '.'.
 # * DIRS <string> ...
 #     List of directories under LIB_ROOT_DIR to walk over searching for SOURCES
-#     files
+#     files. Directories earlier in the list have lower priority than
+#     subsequent ones.
 function(libclc_configure_lib_source LIB_FILE_LIST)
   cmake_parse_arguments(ARG
     "CLC_INTERNAL"
@@ -395,7 +418,7 @@ function(libclc_configure_lib_source LIB_FILE_LIST)
 
   # Enumerate SOURCES* files
   set( source_list )
-  foreach( l ${ARG_DIRS} )
+  foreach( l IN LISTS ARG_DIRS )
     foreach( s "SOURCES" "SOURCES_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}" )
       if( ARG_CLC_INTERNAL )
         file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/lib/${l}/${s} file_loc )
@@ -403,10 +426,10 @@ function(libclc_configure_lib_source LIB_FILE_LIST)
         file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/${l}/lib/${s} file_loc )
       endif()
       file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${file_loc} loc )
-      # Prepend the location to give higher priority to
-      # specialized implementation
+      # Prepend the location to give higher priority to the specialized
+      # implementation
       if( EXISTS ${loc} )
-        set( source_list ${file_loc} ${source_list} )
+        list( PREPEND source_list ${file_loc} )
       endif()
     endforeach()
   endforeach()

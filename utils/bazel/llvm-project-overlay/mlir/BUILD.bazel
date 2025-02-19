@@ -97,6 +97,14 @@ gentbl_cc_library(
     name = "OpAsmInterfaceIncGen",
     tbl_outs = [
         (
+            ["-gen-attr-interface-decls"],
+            "include/mlir/IR/OpAsmAttrInterface.h.inc",
+        ),
+        (
+            ["-gen-attr-interface-defs"],
+            "include/mlir/IR/OpAsmAttrInterface.cpp.inc",
+        ),
+        (
             ["-gen-op-interface-decls"],
             "include/mlir/IR/OpAsmOpInterface.h.inc",
         ),
@@ -1729,11 +1737,17 @@ gentbl_cc_library(
     name = "EmitCOpsIncGen",
     tbl_outs = [
         (
-            ["-gen-dialect-decls"],
+            [
+                "-gen-dialect-decls",
+                "-dialect=emitc",
+            ],
             "include/mlir/Dialect/EmitC/IR/EmitCDialect.h.inc",
         ),
         (
-            ["-gen-dialect-defs"],
+            [
+                "-gen-dialect-defs",
+                "-dialect=emitc",
+            ],
             "include/mlir/Dialect/EmitC/IR/EmitCDialect.cpp.inc",
         ),
         (
@@ -4259,6 +4273,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
         ":MemRefDialect",
         ":Pass",
@@ -6115,6 +6130,7 @@ cc_library(
         ":ControlFlowDialect",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
+        ":ConvertToLLVM",
         ":ConvertToLLVMInterface",
         ":FuncDialect",
         ":FuncToLLVM",
@@ -6242,6 +6258,8 @@ cc_library(
         ":ControlFlowDialect",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
+        ":ConvertToLLVM",
+        ":ConvertToLLVMInterface",
         ":FuncDialect",
         ":FuncToLLVM",
         ":GPUCommonTransforms",
@@ -7759,7 +7777,6 @@ td_library(
     name = "TensorOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/Tensor/IR/TensorBase.td",
-        "include/mlir/Dialect/Tensor/IR/TensorInterfaces.td",
         "include/mlir/Dialect/Tensor/IR/TensorOps.td",
     ],
     includes = ["include"],
@@ -7809,23 +7826,6 @@ gentbl_cc_library(
     deps = [":TensorOpsTdFiles"],
 )
 
-gentbl_cc_library(
-    name = "TensorInterfacesIncGen",
-    tbl_outs = [
-        (
-            ["--gen-op-interface-decls"],
-            "include/mlir/Dialect/Tensor/IR/TensorInterfaces.h.inc",
-        ),
-        (
-            ["--gen-op-interface-defs"],
-            "include/mlir/Dialect/Tensor/IR/TensorInterfaces.cpp.inc",
-        ),
-    ],
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Tensor/IR/TensorInterfaces.td",
-    deps = [":TensorOpsTdFiles"],
-)
-
 cc_library(
     name = "TensorDialect",
     srcs = [
@@ -7855,13 +7855,13 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":LinalgInterfaces",
         ":LoopLikeInterface",
         ":ParallelCombiningOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
         ":Support",
-        ":TensorInterfacesIncGen",
         ":TensorOpsIncGen",
         ":TilingInterface",
         ":TransformDialectInterfaces",
@@ -9298,6 +9298,7 @@ cc_library(
         ":OpenMPDialect",
         ":Support",
         ":TransformUtils",
+        "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
@@ -11202,6 +11203,23 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "LinalgRelayoutOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.td",
+    deps = [":LinalgOpsTdFiles"],
+)
+
+gentbl_cc_library(
     name = "LinalgEnumsIncGen",
     tbl_outs = [
         (
@@ -11528,9 +11546,36 @@ cc_library(
 )
 
 cc_library(
+    name = "LinalgInterfaces",
+    # Note: LinalgInterfaces.cpp is part of LinalgDialect, not this target.
+    # This allows TensorDialect to use the header-only RelayOpInterface without
+    # an implicit dependency on the LinalgDialect.
+    hdrs = ["include/mlir/Dialect/Linalg/IR/LinalgInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":DestinationStyleOpInterface",
+        ":DialectUtils",
+        ":IR",
+        ":InferTypeOpInterface",
+        ":LinalgInterfacesIncGen",
+        ":LinalgStructuredOpsIncGen",
+        ":Support",
+        ":ViewLikeInterface",
+    ],
+)
+
+cc_library(
     name = "LinalgDialect",
-    srcs = glob(["lib/Dialect/Linalg/IR/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/Linalg/IR/*.h"]),
+    srcs = [
+        "lib/Dialect/Linalg/IR/LinalgDialect.cpp",
+        "lib/Dialect/Linalg/IR/LinalgInterfaces.cpp",
+        "lib/Dialect/Linalg/IR/LinalgOps.cpp",
+        "lib/Dialect/Linalg/IR/ValueBoundsOpInterfaceImpl.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/IR/Linalg.h",
+        "include/mlir/Dialect/Linalg/IR/ValueBoundsOpInterfaceImpl.h",
+    ],
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -11549,9 +11594,11 @@ cc_library(
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":LinalgEnumsIncGen",
+        ":LinalgInterfaces",
         ":LinalgInterfacesIncGen",
         ":LinalgNamedStructuredOpsYamlIncGen",
         ":LinalgOpsIncGen",
+        ":LinalgRelayoutOpsIncGen",
         ":LinalgStructuredOpsIncGen",
         ":MathDialect",
         ":MemRefDialect",
@@ -11563,6 +11610,7 @@ cc_library(
         ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
+        ":TensorUtils",
         ":TilingInterface",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
@@ -11594,6 +11642,7 @@ cc_library(
         ":IR",
         ":IndexDialect",
         ":LinalgDialect",
+        ":LinalgInterfaces",
         ":LinalgMatchOpsIncGen",
         ":LinalgTransformEnumsIncGen",
         ":LinalgTransformOpsIncGen",
@@ -11705,6 +11754,7 @@ cc_library(
         ":IR",
         ":IndexDialect",
         ":LinalgDialect",
+        ":LinalgInterfaces",
         ":LinalgPassIncGen",
         ":LinalgStructuredOpsIncGen",
         ":LinalgUtils",
@@ -12900,6 +12950,14 @@ gentbl_cc_library(
             ["-gen-attrdef-defs"],
             "include/mlir/Dialect/Complex/IR/ComplexAttributes.cpp.inc",
         ),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/Complex/IR/ComplexEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/Complex/IR/ComplexEnums.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Complex/IR/ComplexAttributes.td",
@@ -12971,6 +13029,26 @@ cc_library(
 )
 
 cc_library(
+    name = "ComplexCommon",
+    srcs = glob([
+        "lib/Conversion/ComplexCommon/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ComplexCommon/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArithAttrToLLVMConversion",
+        ":ArithDialect",
+        ":ComplexDialect",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MathDialect",
+        ":Pass",
+    ],
+)
+
+cc_library(
     name = "ComplexToLLVM",
     srcs = glob([
         "lib/Conversion/ComplexToLLVM/*.cpp",
@@ -12982,6 +13060,7 @@ cc_library(
     deps = [
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
+        ":ComplexCommon",
         ":ComplexDialect",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
@@ -13041,6 +13120,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ComplexCommon",
         ":ComplexDialect",
         ":ConversionPassIncGen",
         ":IR",
@@ -13269,6 +13349,8 @@ cc_library(
         ":FuncTransforms",
         ":IR",
         ":MemRefDialect",
+        ":MeshDialect",
+        ":MeshShardingInterface",
         ":Pass",
         ":SideEffectInterfaces",
         ":Support",

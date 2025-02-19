@@ -1629,17 +1629,10 @@ void EmitterBase::EmitBuiltinCG(raw_ostream &OS) {
       for (const auto &OI : kv.second)
         key.push_back(OI.ParamValues[i]);
 
-      auto Found = ParamNumberMap.find(key);
-      if (Found != ParamNumberMap.end()) {
-        // Yes, an existing parameter variable can be reused for this.
-        ParamNumbers.push_back(Found->second);
-        continue;
-      }
-
-      // No, we need a new parameter variable.
-      int ExistingIndex = ParamNumberMap.size();
-      ParamNumberMap[key] = ExistingIndex;
-      ParamNumbers.push_back(ExistingIndex);
+      // Obtain a new parameter variable if we don't have one.
+      int ParamNum =
+          ParamNumberMap.try_emplace(key, ParamNumberMap.size()).first->second;
+      ParamNumbers.push_back(ParamNum);
     }
 
     // Now we're ready to do the pass 2 code generation, which will emit the

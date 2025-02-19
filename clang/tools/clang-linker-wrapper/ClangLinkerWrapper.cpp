@@ -474,8 +474,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-  if (Arch.empty())
-    Arch = "native";
   // Create a new file to write the linked device image to. Assume that the
   // input filename already has the device and architecture.
   auto TempFileOrErr =
@@ -485,20 +483,19 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
-  StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
   SmallVector<StringRef, 16> CmdArgs{
       *ClangPath,
       "--no-default-config",
       "-o",
       *TempFileOrErr,
       Args.MakeArgString("--target=" + Triple.getTriple()),
-      Triple.isAMDGPU() ? Args.MakeArgString("-mcpu=" + Arch)
-                        : Args.MakeArgString("-march=" + Arch),
-      Args.MakeArgString("-" + OptLevel),
   };
 
+  if (!Arch.empty())
+    Triple.isAMDGPU() ? CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch))
+                      : CmdArgs.push_back(Args.MakeArgString("-march=" + Arch));
+
   // Forward all of the `--offload-opt` and similar options to the device.
-  CmdArgs.push_back("-flto");
   for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
     CmdArgs.append(
         {"-Xlinker",
@@ -547,28 +544,11 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     CmdArgs.append({"-Xlinker", Args.MakeArgString(
                                     "-mllvm=" + StringRef(Arg->getValue()))});
 
-  if (Args.hasArg(OPT_debug))
-    CmdArgs.push_back("-g");
-
-  if (SaveTemps)
-    CmdArgs.push_back("-save-temps");
-
   if (SaveTemps && linkerSupportsLTO(Args))
     CmdArgs.push_back("-Wl,--save-temps");
 
   if (Args.hasArg(OPT_embed_bitcode))
     CmdArgs.push_back("-Wl,--lto-emit-llvm");
-
-  if (Verbose)
-    CmdArgs.push_back("-v");
-
-  if (!CudaBinaryPath.empty())
-    CmdArgs.push_back(Args.MakeArgString("--cuda-path=" + CudaBinaryPath));
-
-  for (StringRef Arg : Args.getAllArgValues(OPT_ptxas_arg))
-    llvm::copy(
-        SmallVector<StringRef>({"-Xcuda-ptxas", Args.MakeArgString(Arg)}),
-        std::back_inserter(CmdArgs));
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
@@ -826,8 +806,9 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
 
   // Set the subarchitecture and target triple for this compilation.
   const OptTable &Tbl = getOptTable();
+  StringRef Arch = Args.MakeArgString(Input.front().getBinary()->getArch());
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_arch_EQ),
-                   Args.MakeArgString(Input.front().getBinary()->getArch()));
+                   Arch == "generic" ? "" : Arch);
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
                    Args.MakeArgString(Input.front().getBinary()->getTriple()));
 
@@ -1079,8 +1060,9 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
       if (Sym.isFormatSpecific() || !Sym.isGlobal())
         continue;
 
-      bool NewSymbol = Syms.count(Sym.getName()) == 0;
-      auto OldSym = NewSymbol ? Sym_None : Syms[Sym.getName()];
+      auto It = Syms.find(Sym.getName());
+      bool NewSymbol = It == Syms.end();
+      auto OldSym = NewSymbol ? Sym_None : It->second;
 
       // We will extract if it defines a currenlty undefined non-weak
       // symbol.

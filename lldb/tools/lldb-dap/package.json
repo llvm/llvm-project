@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "LLDB debugging from VSCode",
@@ -27,7 +27,7 @@
     "Debuggers"
   ],
   "devDependencies": {
-    "@types/node": "^18.11.18",
+    "@types/node": "^18.19.41",
     "@types/vscode": "1.75.0",
     "@vscode/vsce": "^3.2.2",
     "prettier-plugin-curly": "^0.3.1",
@@ -86,7 +86,7 @@
           "default": {},
           "description": "The environment of the lldb-dap process.",
           "additionalProperties": {
-             "type": "string"
+            "type": "string"
           }
         }
       }
@@ -152,6 +152,10 @@
               "program"
             ],
             "properties": {
+              "debugAdapterExecutable": {
+                "type": "string",
+                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
+              },
               "program": {
                 "type": "string",
                 "description": "Path to the program to debug."
@@ -338,6 +342,10 @@
           },
           "attach": {
             "properties": {
+              "debugAdapterExecutable": {
+                "type": "string",
+                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
+              },
               "program": {
                 "type": "string",
                 "description": "Path to the program to attach to."

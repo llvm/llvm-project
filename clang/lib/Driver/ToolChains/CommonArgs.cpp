@@ -1289,7 +1289,8 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   if (IsOffloadingHost)
     CmdArgs.push_back("-lomptarget");
 
-  if (IsOffloadingHost && !Args.hasArg(options::OPT_nogpulib))
+  if (IsOffloadingHost &&
+      Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     CmdArgs.push_back("-lomptarget.devicertl");
 
   addArchSpecificRPath(TC, Args, CmdArgs);
@@ -3096,21 +3097,39 @@ bool tools::shouldRecordCommandLine(const ToolChain &TC,
 
 void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
                                                ArgStringList &CmdArgs) {
-  // -fno-strict-overflow implies -fwrapv if it isn't disabled, but
-  // -fstrict-overflow won't turn off an explicitly enabled -fwrapv.
-  bool StrictOverflow = Args.hasFlag(options::OPT_fstrict_overflow,
-                                     options::OPT_fno_strict_overflow, true);
-  if (Arg *A = Args.getLastArg(options::OPT_fwrapv, options::OPT_fno_wrapv)) {
-    if (A->getOption().matches(options::OPT_fwrapv))
-      CmdArgs.push_back("-fwrapv");
-  } else if (!StrictOverflow) {
+  bool use_fwrapv = false;
+  bool use_fwrapv_pointer = false;
+  for (const Arg *A : Args.filtered(
+           options::OPT_fstrict_overflow, options::OPT_fno_strict_overflow,
+           options::OPT_fwrapv, options::OPT_fno_wrapv,
+           options::OPT_fwrapv_pointer, options::OPT_fno_wrapv_pointer)) {
+    A->claim();
+    switch (A->getOption().getID()) {
+    case options::OPT_fstrict_overflow:
+      use_fwrapv = false;
+      use_fwrapv_pointer = false;
+      break;
+    case options::OPT_fno_strict_overflow:
+      use_fwrapv = true;
+      use_fwrapv_pointer = true;
+      break;
+    case options::OPT_fwrapv:
+      use_fwrapv = true;
+      break;
+    case options::OPT_fno_wrapv:
+      use_fwrapv = false;
+      break;
+    case options::OPT_fwrapv_pointer:
+      use_fwrapv_pointer = true;
+      break;
+    case options::OPT_fno_wrapv_pointer:
+      use_fwrapv_pointer = false;
+      break;
+    }
+  }
+
+  if (use_fwrapv)
     CmdArgs.push_back("-fwrapv");
-  }
-  if (Arg *A = Args.getLastArg(options::OPT_fwrapv_pointer,
-                               options::OPT_fno_wrapv_pointer)) {
-    if (A->getOption().matches(options::OPT_fwrapv_pointer))
-      CmdArgs.push_back("-fwrapv-pointer");
-  } else if (!StrictOverflow) {
+  if (use_fwrapv_pointer)
     CmdArgs.push_back("-fwrapv-pointer");
-  }
 }
