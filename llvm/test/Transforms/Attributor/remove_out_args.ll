@@ -3,18 +3,44 @@
 
 
 
-define internal i1 @foo(ptr %dst) {
+define internal i1 @foo(ptr %dst, i32 %a, i32 %b) {
 entry:
-  store i32 42, ptr %dst
-  ret i1 true
+  %x = xor i32 %a, 13
+  %y = add i32 %b, 5
+  %z = icmp sle i32 %x, %y
+  br i1 %z, label %if, label %else
+
+if:
+  store i32 %x, ptr %dst, align 4
+  br label %end
+
+else:
+  store i32 %y, ptr %dst, align 4
+  br label %end
+
+end:
+  %t = mul i32 %x, %y
+  %tt = xor i32 %x, %y
+  %result = icmp eq i32 %t, %tt
+  ret i1 %result
 }
 
 
-define i1 @fee(i32 %x, i32 %y) {
+define i1 @fee(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i1 @fee(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[A:%.*]] = call i1 @foo.converted(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], i32 [[Y]], i32 [[Z]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[B]], [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[A]], [[C]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
   %ptr = alloca i32
-  %a = call i1 @foo(ptr %ptr, i32 %y)
+  %a = call i1 @foo(ptr %ptr, i32 %y, i32 %z)
   %b = load i32, ptr %ptr
   %c = icmp sle i32 %b, %x
   %xor = xor i1 %a, %c
   ret i1 %xor
 }
+
