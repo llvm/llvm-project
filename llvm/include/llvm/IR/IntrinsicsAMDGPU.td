@@ -3455,6 +3455,6 @@ def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
 /// when used as an input to a phi node, it will make it possible for the
 /// backend to allocate the dead lanes for operations within the corresponding
 /// incoming block.
-def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_i32_ty], [],
+def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_any_ty], [],
     [IntrNoMem, IntrWillReturn, IntrNoCallback]>;
 }

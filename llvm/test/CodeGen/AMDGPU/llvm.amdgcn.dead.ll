@@ -50,7 +50,7 @@ define i32 @dead(i1 %cond, i32 %x, ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr
 ; ASM-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %dead = call i32 @llvm.amdgcn.dead()
+  %dead = call i32 @llvm.amdgcn.dead.i32()
   br i1 %cond, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
