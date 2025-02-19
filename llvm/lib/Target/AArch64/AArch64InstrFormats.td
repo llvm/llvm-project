@@ -401,16 +401,12 @@ def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
 }
 
 def CmpBranchUImm6Operand_32b
-    : Operand<i32>,
-      ComplexPattern<i32, 1, "SelectCmpBranchUImm6Operand<32>"> {
-  let ParserMatchClass = UImm6Operand;
+    : ComplexPattern<i32, 1, "SelectCmpBranchUImm6Operand", [imm]> {
   let WantsParent = true;
 }
 
 def CmpBranchUImm6Operand_64b
-    : Operand<i64>,
-      ComplexPattern<i64, 1, "SelectCmpBranchUImm6Operand<64>"> {
-  let ParserMatchClass = UImm6Operand;
+    : ComplexPattern<i64, 1, "SelectCmpBranchUImm6Operand", [imm]> {
   let WantsParent = true;
 }
 

@@ -508,7 +508,6 @@ private:
   bool SelectAllActivePredicate(SDValue N);
   bool SelectAnyPredicate(SDValue N);
 
-  template <int Bits>
   bool SelectCmpBranchUImm6Operand(SDNode *P, SDValue N, SDValue &Imm);
 };
 
@@ -7493,14 +7492,10 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,
   return true;
 }
 
-template <int Bits>
 bool AArch64DAGToDAGISel::SelectCmpBranchUImm6Operand(SDNode *P, SDValue N,
                                                       SDValue &Imm) {
-  ConstantSDNode *C = dyn_cast<ConstantSDNode>(P->getOperand(1));
-  if (!C)
-    return false;
-
-  AArch64CC::CondCode CC = static_cast<AArch64CC::CondCode>(C->getZExtValue());
+  AArch64CC::CondCode CC =
+      static_cast<AArch64CC::CondCode>(P->getConstantOperandVal(1));
   if (auto *CN = dyn_cast<ConstantSDNode>(N)) {
     // Check conservatively if the immediate fits the valid range [0, 64).
     // Immediate variants for GE and HS definitely need to be decremented
@@ -7538,8 +7533,7 @@ bool AArch64DAGToDAGISel::SelectCmpBranchUImm6Operand(SDNode *P, SDValue N,
     if (CN->getAPIntValue().uge(LowerBound) &&
         CN->getAPIntValue().ult(UpperBound)) {
       SDLoc DL(N);
-      Imm = CurDAG->getTargetConstant(CN->getZExtValue(), DL,
-                                      Bits == 32 ? MVT::i32 : MVT::i64);
+      Imm = CurDAG->getTargetConstant(CN->getZExtValue(), DL, N.getValueType());
       return true;
     }
   }
