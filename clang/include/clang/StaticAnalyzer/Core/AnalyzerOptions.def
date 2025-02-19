@@ -489,7 +489,7 @@ ANALYZER_OPTION(
     "scatter into. For example, binding an array would scatter into binding "
     "each individual element. Setting this to zero means unlimited, but then "
     "modelling large array initializers may take proportional time to their "
-    "size.", 100)
+    "size.", 128)
 
 //===----------------------------------------------------------------------===//
 // String analyzer options.
