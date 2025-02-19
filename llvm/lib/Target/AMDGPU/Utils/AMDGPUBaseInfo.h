@@ -114,6 +114,12 @@ struct CvtScaleF32_F32F16ToF8F4_Info {
   unsigned Opcode;
 };
 
+struct True16D16Info {
+  unsigned T16Op;
+  unsigned HiOp;
+  unsigned LoOp;
+};
+
 struct WMMAInstInfo {
   uint16_t Opcode;
   bool is_wmma_xdl;
@@ -128,6 +134,7 @@ struct WMMAInstInfo {
 #define GET_MAIInstInfoTable_DECL
 #define GET_isMFMA_F8F6F4Table_DECL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
+#define GET_True16D16Table_DECL
 #define GET_WMMAInstInfoTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
 

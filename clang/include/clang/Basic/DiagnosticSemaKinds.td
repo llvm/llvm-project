@@ -10606,6 +10606,9 @@ def warn_noreturn_function_has_return_expr : Warning<
 def warn_falloff_noreturn_function : Warning<
   "function declared 'noreturn' should not return">,
   InGroup<InvalidNoreturn>;
+def warn_noreturn_coroutine : Warning<
+  "coroutine %0 cannot be declared 'noreturn' as it always returns a coroutine handle">,
+  InGroup<InvalidNoreturn>;
 def err_noreturn_block_has_return_expr : Error<
   "block declared 'noreturn' should not return">;
 def err_carries_dependency_missing_on_first_decl : Error<
