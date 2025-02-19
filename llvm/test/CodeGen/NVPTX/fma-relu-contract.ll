@@ -119,7 +119,7 @@ define half @fma_f16_expanded_no_nans_multiple_uses_of_fma(half %a, half %b, hal
   ret half %6
 }
 
-define half @fma_f16_expanded_unsafe_with_nans(half %a, half %b, half %c) #1 {
+define half @fma_f16_expanded_unsafe_with_nans(half %a, half %b, half %c) {
 ; CHECK-LABEL: fma_f16_expanded_unsafe_with_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<7>;
@@ -216,7 +216,7 @@ define half @fma_f16_expanded_maxnum_no_nans(half %a, half %b, half %c) #0 {
   ret half %3
 }
 
-define bfloat @fma_bf16_expanded_unsafe_with_nans(bfloat %a, bfloat %b, bfloat %c) #1 {
+define bfloat @fma_bf16_expanded_unsafe_with_nans(bfloat %a, bfloat %b, bfloat %c) {
 ; CHECK-LABEL: fma_bf16_expanded_unsafe_with_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<7>;
@@ -647,7 +647,7 @@ define <2 x half> @fma_f16x2_expanded_no_nans_multiple_uses_of_fma(<2 x half> %a
   ret <2 x half> %6
 }
 
-define <2 x half> @fma_f16x2_expanded_unsafe_with_nans(<2 x half> %a, <2 x half> %b, <2 x half> %c) #1 {
+define <2 x half> @fma_f16x2_expanded_unsafe_with_nans(<2 x half> %a, <2 x half> %b, <2 x half> %c) {
 ; CHECK-LABEL: fma_f16x2_expanded_unsafe_with_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<7>;
@@ -754,7 +754,7 @@ define <2 x half> @fma_f16x2_expanded_maxnum_no_nans(<2 x half> %a, <2 x half> %
   ret <2 x half> %3
 }
 
-define <2 x bfloat> @fma_bf16x2_expanded_unsafe_with_nans(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c) #1 {
+define <2 x bfloat> @fma_bf16x2_expanded_unsafe_with_nans(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c) {
 ; CHECK-LABEL: fma_bf16x2_expanded_unsafe_with_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<7>;
@@ -1222,4 +1222,3 @@ define <2 x bfloat> @fma_bf16x2_expanded_maxnum_no_nans(<2 x bfloat> %a, <2 x bf
 }
 
 attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
-attributes #1 = { }
