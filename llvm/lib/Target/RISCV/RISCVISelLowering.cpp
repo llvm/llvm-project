@@ -19462,6 +19462,11 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = Known.intersectWith(Known2);
     break;
   }
+  case RISCVISD::VCPOP_VL: {
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
+    Known.Zero.setBitsFrom(Known2.countMaxActiveBits());
+    break;
+  }
   case RISCVISD::CZERO_EQZ:
   case RISCVISD::CZERO_NEZ:
     Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
