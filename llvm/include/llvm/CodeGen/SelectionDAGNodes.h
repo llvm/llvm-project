@@ -694,9 +694,6 @@ public:
 
   /// Returns true if the node type is UNDEF or, when DoNotIncludeExplicitPoison
   /// is false, POISON.
-  /// - When DoNotIncludeExplicitPoison is true, returns true only for UNDEF.
-  /// - When DoNotIncludeExplicitPoison is false, returns true for both UNDEF
-  /// and POISON.
   /// @param DoNotIncludeExplicitPoison Determines whether to check only for
   /// UNDEF.
   bool isUndef(bool DoNotIncludeExplicitPoison = false) const {
