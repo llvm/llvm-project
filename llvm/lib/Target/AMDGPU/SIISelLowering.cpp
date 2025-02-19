@@ -2557,8 +2557,11 @@ SDValue SITargetLowering::getGlobalWorkGroupId(
   SDValue ClusterIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterIdPV);
   SDLoc SL(ClusterIdXYZ);
   using namespace AMDGPU::Hwreg;
-  SDValue ClusterIdField =
-      DAG.getTargetConstant(HwregEncoding::encode(ID_IB_STS2, 6, 4), SL, VT);
+  SDValue ClusterIdField = DAG.getTargetConstant(
+      AMDGPU::isGFX1250Only(*Subtarget)
+          ? HwregEncoding::encode(ID_IB_STS2, 6, 4)
+          : HwregEncoding::encode(ID_WAVE_GROUP_INFO, 0, 4),
+      SL, VT);
   SDNode *GetReg =
       DAG.getMachineNode(AMDGPU::S_GETREG_B32, SL, VT, ClusterIdField);
   SDValue ClusterId(GetReg, 0);

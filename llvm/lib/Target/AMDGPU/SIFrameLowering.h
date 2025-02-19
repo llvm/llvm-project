@@ -101,6 +101,9 @@ private:
       Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
       Register ScratchWaveOffsetReg) const;
 
+  void finalizeIdx0SaveRestores(MachineFunction &MF, bool EntryFunction,
+                                Register TmpWavegroupReg) const;
+
   void setupLDSSpilling(MachineFunction &MF, MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator I,
                         const DebugLoc &DL) const;

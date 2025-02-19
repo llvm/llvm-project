@@ -2,73 +2,89 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
 
-declare i16 @llvm.amdgcn.cvt.pk.bf8.f16(half, half)
-declare i16 @llvm.amdgcn.cvt.pk.fp8.f16(half, half)
+declare i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half>)
+declare i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half>)
 declare i32 @llvm.amdgcn.cvt.sr.bf8.f16(half, i32, i32, i32)
 declare i32 @llvm.amdgcn.cvt.sr.fp8.f16(half, i32, i32, i32)
 
-define amdgpu_ps void @test_cvt_pk_bf8_f16_vv(half %a, half %b, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_cvt_pk_bf8_f16_vv:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_bf8_f16 v0, v0, v1
-; GFX1250-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX1250-NEXT:    s_endpgm
-  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(half %a, half %b)
+define amdgpu_ps void @test_cvt_pk_bf8_f16_v(<2 x half> %a, ptr addrspace(1) %out) {
+; GFX1250-SDAG-LABEL: test_cvt_pk_bf8_f16_v:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX1250-SDAG-NEXT:    v_cvt_pk_bf8_f16 v0, v0, 0
+; GFX1250-SDAG-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX1250-SDAG-NEXT:    s_endpgm
+;
+; GFX1250-GISEL-LABEL: test_cvt_pk_bf8_f16_v:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
+; GFX1250-GISEL-NEXT:    v_cvt_pk_bf8_f16 v0, v0, 0
+; GFX1250-GISEL-NEXT:    global_store_b16 v[4:5], v0, off
+; GFX1250-GISEL-NEXT:    s_endpgm
+  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half> %a)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_ps void @test_cvt_pk_bf8_f16_ss(half inreg %a, half inreg %b, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_cvt_pk_bf8_f16_ss:
+define amdgpu_ps void @test_cvt_pk_bf8_f16_s(<2 x half> inreg %a, ptr addrspace(1) %out) {
+; GFX1250-LABEL: test_cvt_pk_bf8_f16_s:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_bf8_f16 v2, s0, s1
+; GFX1250-NEXT:    v_cvt_pk_bf8_f16 v2, s0, 0
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
-  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(half %a, half %b)
+  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half> %a)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_ps void @test_cvt_pk_bf8_f16_sl(half inreg %a, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_cvt_pk_bf8_f16_sl:
+define amdgpu_ps void @test_cvt_pk_bf8_f16_l(ptr addrspace(1) %out) {
+; GFX1250-LABEL: test_cvt_pk_bf8_f16_l:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_bf8_f16 v2, s0, 0x5640
+; GFX1250-NEXT:    v_cvt_pk_bf8_f16 v2, 0x56400000, 0
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
-  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(half %a, half 100.0)
+  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half> <half 0.0, half 100.0>)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_ps void @test_cvt_pk_fp8_f16_vv(half %a, half %b, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_cvt_pk_fp8_f16_vv:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_fp8_f16 v0, v0, v1
-; GFX1250-NEXT:    global_store_b16 v[2:3], v0, off
-; GFX1250-NEXT:    s_endpgm
-  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(half %a, half %b)
+define amdgpu_ps void @test_cvt_pk_fp8_f16_v(<2 x half> %a, ptr addrspace(1) %out) {
+; GFX1250-SDAG-LABEL: test_cvt_pk_fp8_f16_v:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX1250-SDAG-NEXT:    v_cvt_pk_fp8_f16 v0, v0, 0
+; GFX1250-SDAG-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX1250-SDAG-NEXT:    s_endpgm
+;
+; GFX1250-GISEL-LABEL: test_cvt_pk_fp8_f16_v:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
+; GFX1250-GISEL-NEXT:    v_cvt_pk_fp8_f16 v0, v0, 0
+; GFX1250-GISEL-NEXT:    global_store_b16 v[4:5], v0, off
+; GFX1250-GISEL-NEXT:    s_endpgm
+  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half> %a)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_ps void @test_cvt_pk_fp8_f16_ss(half inreg %a, half inreg %b, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_cvt_pk_fp8_f16_ss:
+define amdgpu_ps void @test_cvt_pk_fp8_f16_s(<2 x half> inreg %a, ptr addrspace(1) %out) {
+; GFX1250-LABEL: test_cvt_pk_fp8_f16_s:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_fp8_f16 v2, s0, s1
+; GFX1250-NEXT:    v_cvt_pk_fp8_f16 v2, s0, 0
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
-  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(half %a, half %b)
+  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half> %a)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_ps void @test_cvt_pk_fp8_f16_sl(half inreg %a, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_cvt_pk_fp8_f16_sl:
+define amdgpu_ps void @test_cvt_pk_fp8_f16_l(ptr addrspace(1) %out) {
+; GFX1250-LABEL: test_cvt_pk_fp8_f16_l:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_fp8_f16 v2, s0, 0x5640
+; GFX1250-NEXT:    v_cvt_pk_fp8_f16 v2, 0x56400000, 0
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
-  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(half %a, half 100.0)
+  %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half> <half 0.0, half 100.0>)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
 }

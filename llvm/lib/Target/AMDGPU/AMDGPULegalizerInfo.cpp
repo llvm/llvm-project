@@ -4456,7 +4456,10 @@ bool AMDGPULegalizerInfo::loadGlobalWorkGroupId(
     return false;
 
   using namespace AMDGPU::Hwreg;
-  unsigned ClusterIdField = HwregEncoding::encode(ID_IB_STS2, 6, 4);
+  unsigned ClusterIdField =
+      AMDGPU::isGFX1250Only(ST)
+          ? HwregEncoding::encode(ID_IB_STS2, 6, 4)
+          : HwregEncoding::encode(ID_WAVE_GROUP_INFO, 0, 4);
   Register ClusterId = MRI.createGenericVirtualRegister(S32);
   MRI.setRegClass(ClusterId, &AMDGPU::SReg_32RegClass);
   B.buildInstr(AMDGPU::S_GETREG_B32).addDef(ClusterId).addImm(ClusterIdField);
