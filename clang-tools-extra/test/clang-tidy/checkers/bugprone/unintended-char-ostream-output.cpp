@@ -30,12 +30,12 @@ class A : public std::ostream {};
 void origin_ostream(std::ostream &os) {
   unsigned char unsigned_value = 9;
   os << unsigned_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: ('unsigned char' passed to
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to
   // 'operator<<' outputs as character instead of integer
 
   signed char signed_value = 9;
   os << signed_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: ('signed char' passed to
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'signed char' passed to
   // 'operator<<' outputs as character instead of integer
 
   char char_value = 9;
@@ -45,12 +45,12 @@ void origin_ostream(std::ostream &os) {
 void based_on_ostream(A &os) {
   unsigned char unsigned_value = 9;
   os << unsigned_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: ('unsigned char' passed to
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to
   // 'operator<<' outputs as character instead of integer
 
   signed char signed_value = 9;
   os << signed_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: ('signed char' passed to
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'signed char' passed to
   // 'operator<<' outputs as character instead of integer
 
   char char_value = 9;

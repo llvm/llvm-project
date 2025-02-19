@@ -60,9 +60,9 @@ void UnintendedCharOstreamOutputCheck::check(
   const auto *Call = Result.Nodes.getNodeAs<CXXOperatorCallExpr>("x");
   const Expr *Value = Call->getArg(1);
   diag(Call->getOperatorLoc(),
-       "(%0 passed to 'operator<<' outputs as character instead of integer. "
+       "%0 passed to 'operator<<' outputs as character instead of integer. "
        "cast to 'unsigned' to print numeric value or cast to 'char' to print "
-       "as character)")
+       "as character")
       << Value->getType() << Value->getSourceRange();
 }
 

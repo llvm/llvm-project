@@ -21,10 +21,10 @@ It could be fixed as
 
 .. code-block:: c++
 
-    std::cout << (uint32_t)v;
+    std::cout << static_cast<uint32_t>(v);
 
 Or cast to char to explicitly indicate the intent
 
 .. code-block:: c++
 
-    std::cout << (char)v;
+    std::cout << static_cast<char>(v);
