@@ -38,6 +38,6 @@ struct RootParameter {
   dxbc::ShaderVisibilityFlag ShaderVisibility;
 
   void write(raw_ostream &OS);
-}; 
+};
 } // namespace mcdxbc
 } // namespace llvm
