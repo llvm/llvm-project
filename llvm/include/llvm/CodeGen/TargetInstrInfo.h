@@ -1178,7 +1178,7 @@ public:
                                     Register DestReg, int FrameIndex,
                                     const TargetRegisterClass *RC,
                                     const TargetRegisterInfo *TRI,
-                                    Register VReg, unsigned SubRegIdx = 0) const {
+                                    Register VReg) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::loadRegFromStackSlot!");
   }
