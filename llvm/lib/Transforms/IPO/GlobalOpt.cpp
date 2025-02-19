@@ -2186,8 +2186,10 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     if (NumElementsToCopy != DZSize || DZSize != SZSize)
       continue;
 
-    unsigned NumBytesToPad = GetTTI(*F).getNumBytesToPadGlobalArray(
-        NumBytesToCopy, SourceDataArray->getType());
+    unsigned NumBytesToPad =
+        GetTTI(*CI->getFunction())
+            .getNumBytesToPadGlobalArray(NumBytesToCopy,
+                                         SourceDataArray->getType());
     if (NumBytesToPad) {
       return tryWidenGlobalArrayAndDests(F, GV, NumBytesToPad, NumBytesToCopy,
                                          BytesToCopyOp, SourceDataArray);
