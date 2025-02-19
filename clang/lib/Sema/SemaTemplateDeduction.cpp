@@ -4252,7 +4252,8 @@ ResolveOverloadForDeduction(Sema &S, TemplateParameterList *TemplateParams,
       if (FunctionDecl *ExplicitSpec =
               S.ResolveSingleFunctionTemplateSpecialization(
                   Ovl, /*Complain=*/false,
-                  /*FoundDeclAccessPair=*/nullptr, FailedTSC))
+                  /*Found=*/nullptr, FailedTSC,
+                  /*ForTypeDeduction=*/true))
         return GetTypeOfFunction(S, R, ExplicitSpec);
     }
 
@@ -4321,7 +4322,11 @@ ResolveOverloadForDeduction(Sema &S, TemplateParameterList *TemplateParams,
         /*HasDeducedAnyParam=*/nullptr);
     if (Result != TemplateDeductionResult::Success)
       continue;
-    if (!Match.isNull())
+    // C++ [temp.deduct.call]p6:
+    //   [...] If all successful deductions yield the same deduced A, that
+    //   deduced A is the result of deduction; otherwise, the parameter is
+    //   treated as a non-deduced context. [...]
+    if (!Match.isNull() && !S.isSameOrCompatibleFunctionType(Match, ArgType))
       return {};
     Match = ArgType;
   }

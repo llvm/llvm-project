@@ -88,6 +88,10 @@ Resolutions to C++ Defect Reports
   two releases. The improvements to template template parameter matching implemented
   in the previous release, as described in P3310 and P3579, made this flag unnecessary.
 
+- Implemented `CWG2918 Consideration of constraints for address of overloaded `
+  `function <https://cplusplus.github.io/CWG/issues/2918.html>`_
+
+
 C Language Changes
 ------------------
 
