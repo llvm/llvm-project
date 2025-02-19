@@ -15286,19 +15286,28 @@ int64x1_t test_vsra_n_s64(int64x1_t a, int64x1_t b) {
   // LLVM: ret <1 x i64> [[TMP4]]
 }
 
-// NYI-LABEL: @test_vsrad_n_u64(
-// NYI:   [[SHRD_N:%.*]] = lshr i64 %b, 63
-// NYI:   [[TMP0:%.*]] = add i64 %a, [[SHRD_N]]
-// NYI:   ret i64 [[TMP0]]
-// uint64_t test_vsrad_n_u64(uint64_t a, uint64_t b) {
-//   return (uint64_t)vsrad_n_u64(a, b, 63);
-// }
+uint64_t test_vsrad_n_u64(uint64_t a, uint64_t b) {
+  return (uint64_t)vsrad_n_u64(a, b, 63);
 
-// NYI-LABEL: @test_vsrad_n_u64_2(
-// NYI:   ret i64 %a
-// uint64_t test_vsrad_n_u64_2(uint64_t a, uint64_t b) {
-//   return (uint64_t)vsrad_n_u64(a, b, 64);
-// }
+  // CIR-LABEL:test_vsrad_n_u64
+  // CIR: [[SHL:%.*]] = cir.shift(left, {{%.*}} : !u64i, {{%.*}} : !u64i) -> !u64i
+  // CIR: {{.*}} = cir.binop(add, {{.*}}, [[SHL]]) : !u64i
+
+  // LLVM-LABEL: test_vsrad_n_u64(
+  // LLVM: [[SHRD_N:%.*]] = shl i64 %1, 63
+  // LLVM: [[TMP0:%.*]] = add i64 %0, [[SHRD_N]]
+  // LLVM: ret i64 [[TMP0]]
+}
+
+uint64_t test_vsrad_n_u64_2(uint64_t a, uint64_t b) {
+  return (uint64_t)vsrad_n_u64(a, b, 64);
+
+  // CIR-LABEL:test_vsrad_n_u64
+  // CIR: cir.return {{.*}} : !u64i
+
+  // LLVM-LABEL: test_vsrad_n_u64_2(
+  // LLVM: ret i64 %0
+}
 
 uint64x1_t test_vsra_n_u64(uint64x1_t a, uint64x1_t b) {
   return vsra_n_u64(a, b, 1);
