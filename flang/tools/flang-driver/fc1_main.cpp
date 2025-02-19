@@ -113,9 +113,12 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   if (flang->getFrontendOpts().printSupportedCPUs)
     return printSupportedCPUs(flang->getInvocation().getTargetOpts().triple);
 
-  // Check that requested CPU can be properly supported
-  if (!checkSupportedCPU(flang->getInvocation().getTargetOpts().cpu, flang->getInvocation().getTargetOpts().triple))
-    return 1;
+  // Check that requested CPU can be properly supported, but only if
+  // we didn't specify CUDA support
+  if (!flang->getInvocation().getFortranOpts().features.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
+    if (!checkSupportedCPU(flang->getInvocation().getTargetOpts().cpu, flang->getInvocation().getTargetOpts().triple))
+      return 1;
+  }
 
   diagsBuffer->flushDiagnostics(flang->getDiagnostics());
 
