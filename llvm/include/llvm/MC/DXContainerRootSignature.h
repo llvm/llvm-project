@@ -15,7 +15,6 @@ namespace llvm {
 class raw_ostream;
 
 namespace mcdxbc {
-
 struct RootSignatureDesc {
   dxbc::RootSignatureHeader Header;
   SmallVector<dxbc::RootParameter> Parameters;

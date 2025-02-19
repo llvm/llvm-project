@@ -22,7 +22,6 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
-#include <cstdint>
 #include <variant>
 
 namespace llvm {
