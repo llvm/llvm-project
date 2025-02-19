@@ -290,6 +290,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
       return MILog2SEW;
     return 6;
   }
+
   // Vector Integer Arithmetic Instructions
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
