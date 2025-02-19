@@ -790,9 +790,8 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
       longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList,
                             false /* Match unused functions */);
 
-  Similarity =
-      static_cast<float>(MatchedAnchors.size()) * 2 /
-      (FilteredIRAnchorsList.size() + FilteredProfileAnchorList.size());
+  Similarity = static_cast<float>(MatchedAnchors.size()) /
+               FilteredProfileAnchorList.size();
 
   LLVM_DEBUG(dbgs() << "The similarity between " << IRFunc.getName()
                     << "(IR) and " << ProfFunc << "(profile) is "

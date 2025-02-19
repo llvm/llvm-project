@@ -15,24 +15,24 @@ define void @memset_1(ptr %a, i128 %value) nounwind {
 ; RV32-BOTH-LABEL: memset_1:
 ; RV32-BOTH:       # %bb.0: # %loadstoreloop.preheader
 ; RV32-BOTH-NEXT:    li a2, 0
-; RV32-BOTH-NEXT:    li a3, 0
-; RV32-BOTH-NEXT:    lw a4, 0(a1)
-; RV32-BOTH-NEXT:    lw a5, 4(a1)
-; RV32-BOTH-NEXT:    lw a6, 8(a1)
+; RV32-BOTH-NEXT:    lw a3, 0(a1)
+; RV32-BOTH-NEXT:    lw a4, 4(a1)
+; RV32-BOTH-NEXT:    lw a5, 8(a1)
 ; RV32-BOTH-NEXT:    lw a1, 12(a1)
+; RV32-BOTH-NEXT:    li a6, 0
 ; RV32-BOTH-NEXT:  .LBB0_1: # %loadstoreloop
 ; RV32-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-BOTH-NEXT:    slli a7, a2, 4
 ; RV32-BOTH-NEXT:    addi a2, a2, 1
 ; RV32-BOTH-NEXT:    add a7, a0, a7
-; RV32-BOTH-NEXT:    sw a4, 0(a7)
-; RV32-BOTH-NEXT:    sw a5, 4(a7)
-; RV32-BOTH-NEXT:    sw a6, 8(a7)
+; RV32-BOTH-NEXT:    seqz t0, a2
+; RV32-BOTH-NEXT:    add a6, a6, t0
+; RV32-BOTH-NEXT:    or t0, a2, a6
+; RV32-BOTH-NEXT:    sw a3, 0(a7)
+; RV32-BOTH-NEXT:    sw a4, 4(a7)
+; RV32-BOTH-NEXT:    sw a5, 8(a7)
 ; RV32-BOTH-NEXT:    sw a1, 12(a7)
-; RV32-BOTH-NEXT:    seqz a7, a2
-; RV32-BOTH-NEXT:    add a3, a3, a7
-; RV32-BOTH-NEXT:    or a7, a2, a3
-; RV32-BOTH-NEXT:    beqz a7, .LBB0_1
+; RV32-BOTH-NEXT:    beqz t0, .LBB0_1
 ; RV32-BOTH-NEXT:  # %bb.2: # %split
 ; RV32-BOTH-NEXT:    ret
 ;
@@ -60,18 +60,19 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-NEXT:    sw s2, 20(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s3, 16(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s4, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s5, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a2, 0
 ; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    lw a4, 0(a1)
-; RV32-NEXT:    lw a5, 4(a1)
+; RV32-NEXT:    lw a4, 4(a1)
+; RV32-NEXT:    lw a5, 0(a1)
 ; RV32-NEXT:    lw a6, 8(a1)
 ; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    srli a7, a5, 24
-; RV32-NEXT:    srli t0, a5, 16
-; RV32-NEXT:    srli t1, a5, 8
-; RV32-NEXT:    srli t2, a4, 24
-; RV32-NEXT:    srli t3, a4, 16
-; RV32-NEXT:    srli t4, a4, 8
+; RV32-NEXT:    srli a7, a4, 24
+; RV32-NEXT:    srli t0, a4, 16
+; RV32-NEXT:    srli t1, a4, 8
+; RV32-NEXT:    srli t2, a5, 24
+; RV32-NEXT:    srli t3, a5, 16
+; RV32-NEXT:    srli t4, a5, 8
 ; RV32-NEXT:    srli t5, a6, 24
 ; RV32-NEXT:    srli t6, a6, 16
 ; RV32-NEXT:    srli s0, a6, 8
@@ -83,11 +84,12 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-NEXT:    slli s4, a2, 4
 ; RV32-NEXT:    addi a2, a2, 1
 ; RV32-NEXT:    add s4, a0, s4
-; RV32-NEXT:    sb a5, 4(s4)
+; RV32-NEXT:    seqz s5, a2
+; RV32-NEXT:    sb a4, 4(s4)
 ; RV32-NEXT:    sb t1, 5(s4)
 ; RV32-NEXT:    sb t0, 6(s4)
 ; RV32-NEXT:    sb a7, 7(s4)
-; RV32-NEXT:    sb a4, 0(s4)
+; RV32-NEXT:    sb a5, 0(s4)
 ; RV32-NEXT:    sb t4, 1(s4)
 ; RV32-NEXT:    sb t3, 2(s4)
 ; RV32-NEXT:    sb t2, 3(s4)
@@ -95,20 +97,20 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-NEXT:    sb s0, 9(s4)
 ; RV32-NEXT:    sb t6, 10(s4)
 ; RV32-NEXT:    sb t5, 11(s4)
+; RV32-NEXT:    add a3, a3, s5
+; RV32-NEXT:    or s5, a2, a3
 ; RV32-NEXT:    sb a1, 12(s4)
 ; RV32-NEXT:    sb s3, 13(s4)
 ; RV32-NEXT:    sb s2, 14(s4)
 ; RV32-NEXT:    sb s1, 15(s4)
-; RV32-NEXT:    seqz s4, a2
-; RV32-NEXT:    add a3, a3, s4
-; RV32-NEXT:    or s4, a2, a3
-; RV32-NEXT:    beqz s4, .LBB1_1
+; RV32-NEXT:    beqz s5, .LBB1_1
 ; RV32-NEXT:  # %bb.2: # %split
 ; RV32-NEXT:    lw s0, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s2, 20(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s3, 16(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s5, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
 ;
@@ -163,24 +165,24 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-FAST-LABEL: memset_1_noalign:
 ; RV32-FAST:       # %bb.0: # %loadstoreloop.preheader
 ; RV32-FAST-NEXT:    li a2, 0
-; RV32-FAST-NEXT:    li a3, 0
-; RV32-FAST-NEXT:    lw a4, 0(a1)
-; RV32-FAST-NEXT:    lw a5, 4(a1)
-; RV32-FAST-NEXT:    lw a6, 8(a1)
+; RV32-FAST-NEXT:    lw a3, 0(a1)
+; RV32-FAST-NEXT:    lw a4, 4(a1)
+; RV32-FAST-NEXT:    lw a5, 8(a1)
 ; RV32-FAST-NEXT:    lw a1, 12(a1)
+; RV32-FAST-NEXT:    li a6, 0
 ; RV32-FAST-NEXT:  .LBB1_1: # %loadstoreloop
 ; RV32-FAST-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-FAST-NEXT:    slli a7, a2, 4
 ; RV32-FAST-NEXT:    addi a2, a2, 1
 ; RV32-FAST-NEXT:    add a7, a0, a7
-; RV32-FAST-NEXT:    sw a4, 0(a7)
-; RV32-FAST-NEXT:    sw a5, 4(a7)
-; RV32-FAST-NEXT:    sw a6, 8(a7)
+; RV32-FAST-NEXT:    seqz t0, a2
+; RV32-FAST-NEXT:    add a6, a6, t0
+; RV32-FAST-NEXT:    or t0, a2, a6
+; RV32-FAST-NEXT:    sw a3, 0(a7)
+; RV32-FAST-NEXT:    sw a4, 4(a7)
+; RV32-FAST-NEXT:    sw a5, 8(a7)
 ; RV32-FAST-NEXT:    sw a1, 12(a7)
-; RV32-FAST-NEXT:    seqz a7, a2
-; RV32-FAST-NEXT:    add a3, a3, a7
-; RV32-FAST-NEXT:    or a7, a2, a3
-; RV32-FAST-NEXT:    beqz a7, .LBB1_1
+; RV32-FAST-NEXT:    beqz t0, .LBB1_1
 ; RV32-FAST-NEXT:  # %bb.2: # %split
 ; RV32-FAST-NEXT:    ret
 ;
@@ -203,26 +205,26 @@ define void @memset_4(ptr %a, i128 %value) nounwind {
 ; RV32-BOTH-LABEL: memset_4:
 ; RV32-BOTH:       # %bb.0: # %loadstoreloop.preheader
 ; RV32-BOTH-NEXT:    li a2, 0
-; RV32-BOTH-NEXT:    li a3, 0
-; RV32-BOTH-NEXT:    lw a4, 0(a1)
-; RV32-BOTH-NEXT:    lw a5, 4(a1)
-; RV32-BOTH-NEXT:    lw a6, 8(a1)
+; RV32-BOTH-NEXT:    lw a3, 0(a1)
+; RV32-BOTH-NEXT:    lw a4, 4(a1)
+; RV32-BOTH-NEXT:    lw a5, 8(a1)
 ; RV32-BOTH-NEXT:    lw a1, 12(a1)
+; RV32-BOTH-NEXT:    li a6, 0
 ; RV32-BOTH-NEXT:  .LBB2_1: # %loadstoreloop
 ; RV32-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-BOTH-NEXT:    slli a7, a2, 4
 ; RV32-BOTH-NEXT:    addi a2, a2, 1
-; RV32-BOTH-NEXT:    add a7, a0, a7
 ; RV32-BOTH-NEXT:    seqz t0, a2
-; RV32-BOTH-NEXT:    sw a4, 0(a7)
-; RV32-BOTH-NEXT:    sw a5, 4(a7)
-; RV32-BOTH-NEXT:    sw a6, 8(a7)
+; RV32-BOTH-NEXT:    sltiu t1, a2, 4
+; RV32-BOTH-NEXT:    add a6, a6, t0
+; RV32-BOTH-NEXT:    seqz t0, a6
+; RV32-BOTH-NEXT:    and t0, t0, t1
+; RV32-BOTH-NEXT:    add a7, a0, a7
+; RV32-BOTH-NEXT:    sw a3, 0(a7)
+; RV32-BOTH-NEXT:    sw a4, 4(a7)
+; RV32-BOTH-NEXT:    sw a5, 8(a7)
 ; RV32-BOTH-NEXT:    sw a1, 12(a7)
-; RV32-BOTH-NEXT:    add a3, a3, t0
-; RV32-BOTH-NEXT:    seqz a7, a3
-; RV32-BOTH-NEXT:    sltiu t0, a2, 4
-; RV32-BOTH-NEXT:    and a7, a7, t0
-; RV32-BOTH-NEXT:    bnez a7, .LBB2_1
+; RV32-BOTH-NEXT:    bnez t0, .LBB2_1
 ; RV32-BOTH-NEXT:  # %bb.2: # %split
 ; RV32-BOTH-NEXT:    ret
 ;
@@ -248,28 +250,28 @@ define void @memset_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; RV32-BOTH-NEXT:    beqz a4, .LBB3_5
 ; RV32-BOTH-NEXT:  # %bb.1: # %loadstoreloop.preheader
 ; RV32-BOTH-NEXT:    li a4, 0
-; RV32-BOTH-NEXT:    li a5, 0
-; RV32-BOTH-NEXT:    lw a6, 0(a1)
-; RV32-BOTH-NEXT:    lw a7, 4(a1)
-; RV32-BOTH-NEXT:    lw t0, 8(a1)
+; RV32-BOTH-NEXT:    lw a5, 0(a1)
+; RV32-BOTH-NEXT:    lw a6, 4(a1)
+; RV32-BOTH-NEXT:    lw a7, 8(a1)
 ; RV32-BOTH-NEXT:    lw a1, 12(a1)
+; RV32-BOTH-NEXT:    li t0, 0
 ; RV32-BOTH-NEXT:    j .LBB3_3
 ; RV32-BOTH-NEXT:  .LBB3_2: # %loadstoreloop
 ; RV32-BOTH-NEXT:    # in Loop: Header=BB3_3 Depth=1
-; RV32-BOTH-NEXT:    sltu t1, a5, a3
+; RV32-BOTH-NEXT:    sltu t1, t0, a3
 ; RV32-BOTH-NEXT:    beqz t1, .LBB3_5
 ; RV32-BOTH-NEXT:  .LBB3_3: # %loadstoreloop
 ; RV32-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-BOTH-NEXT:    slli t1, a4, 4
 ; RV32-BOTH-NEXT:    addi a4, a4, 1
+; RV32-BOTH-NEXT:    seqz t2, a4
+; RV32-BOTH-NEXT:    add t0, t0, t2
 ; RV32-BOTH-NEXT:    add t1, a0, t1
-; RV32-BOTH-NEXT:    sw a6, 0(t1)
-; RV32-BOTH-NEXT:    sw a7, 4(t1)
-; RV32-BOTH-NEXT:    sw t0, 8(t1)
+; RV32-BOTH-NEXT:    sw a5, 0(t1)
+; RV32-BOTH-NEXT:    sw a6, 4(t1)
+; RV32-BOTH-NEXT:    sw a7, 8(t1)
 ; RV32-BOTH-NEXT:    sw a1, 12(t1)
-; RV32-BOTH-NEXT:    seqz t1, a4
-; RV32-BOTH-NEXT:    add a5, a5, t1
-; RV32-BOTH-NEXT:    bne a5, a3, .LBB3_2
+; RV32-BOTH-NEXT:    bne t0, a3, .LBB3_2
 ; RV32-BOTH-NEXT:  # %bb.4: # in Loop: Header=BB3_3 Depth=1
 ; RV32-BOTH-NEXT:    sltu t1, a4, a2
 ; RV32-BOTH-NEXT:    bnez t1, .LBB3_3

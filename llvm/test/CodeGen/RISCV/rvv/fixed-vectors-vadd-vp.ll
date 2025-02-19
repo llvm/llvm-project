@@ -366,12 +366,12 @@ define <256 x i8> @vadd_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %ev
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    li a2, 128
-; CHECK-NEXT:    addi a3, a1, -128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
-; CHECK-NEXT:    sltu a0, a1, a3
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    addi a0, a1, -128
+; CHECK-NEXT:    sltu a3, a1, a0
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a0, a3, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vadd.vi v16, v16, -1, v0.t
 ; CHECK-NEXT:    bltu a1, a2, .LBB32_2
@@ -1357,9 +1357,9 @@ declare <32 x i64> @llvm.vp.add.v32i64(<32 x i64>, <32 x i64>, <32 x i1>, i32)
 define <32 x i64> @vadd_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vadd_vx_v32i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 2
-; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB108_2
 ; CHECK-NEXT:  # %bb.1:

@@ -89,20 +89,22 @@ class RISCVTuneProcessorModel<string n,
 defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore];
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
-                                       GenericModel,
+                                       NoSchedModel,
                                        [Feature32Bit,
                                         FeatureStdExtI],
                                        GenericTuneFeatures>,
                    GenericTuneInfo;
 def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
-                                       GenericModel,
+                                       NoSchedModel,
                                        [Feature64Bit,
                                         FeatureStdExtI],
                                        GenericTuneFeatures>,
                    GenericTuneInfo;
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
-def GENERIC : RISCVTuneProcessorModel<"generic", GenericModel>, GenericTuneInfo;
+def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
+def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel>,
+                  GenericTuneInfo;
 
 def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                      MIPSP8700Model,
@@ -496,7 +498,7 @@ def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
                                                   TunePostRAScheduler]>;
 
 def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
-                                            GenericModel,
+                                            NoSchedModel,
                                             [Feature64Bit,
                                              FeatureStdExtI,
                                              FeatureStdExtZifencei,
@@ -556,7 +558,7 @@ def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                             TuneShiftedZExtWFusion]>;
 
 def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
-                                       GenericModel,
+                                       NoSchedModel,
                                        !listconcat(RVA22S64Features,
                                        [FeatureStdExtV,
                                         FeatureStdExtSscofpmf,
@@ -581,7 +583,7 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
 }
 
 def RP2350_HAZARD3 : RISCVProcessorModel<"rp2350-hazard3",
-                                         GenericModel,
+                                         NoSchedModel,
                                          [Feature32Bit,
                                           FeatureStdExtI,
                                           FeatureStdExtM,
