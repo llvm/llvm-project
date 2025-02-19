@@ -492,7 +492,6 @@ protected:
   }
 
 public:
-
   SIGfx940CacheControl(const GCNSubtarget &ST) : SIGfx90ACacheControl(ST) {};
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
