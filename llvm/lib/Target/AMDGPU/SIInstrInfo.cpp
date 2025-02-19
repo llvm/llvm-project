@@ -3607,13 +3607,6 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
     MachineOperand *Src0 = &UseMI.getOperand(Src0Idx);
 
-    bool IsF32 = Opc == AMDGPU::V_MAD_F32_e64 || Opc == AMDGPU::V_MAC_F32_e64 ||
-                 Opc == AMDGPU::V_FMA_F32_e64 || Opc == AMDGPU::V_FMAC_F32_e64;
-    bool IsFMA =
-        Opc == AMDGPU::V_FMA_F32_e64 || Opc == AMDGPU::V_FMAC_F32_e64 ||
-        Opc == AMDGPU::V_FMA_F16_e64 || Opc == AMDGPU::V_FMAC_F16_e64 ||
-        Opc == AMDGPU::V_FMAC_F16_t16_e64 ||
-        Opc == AMDGPU::V_FMAC_F16_fake16_e64;
     MachineOperand *Src1 = getNamedOperand(UseMI, AMDGPU::OpName::src1);
     MachineOperand *Src2 = getNamedOperand(UseMI, AMDGPU::OpName::src2);
 
@@ -4002,17 +3995,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
          "present pre-RA");
 
   // Handle MAC/FMAC.
-  bool IsF16 = Opc == AMDGPU::V_MAC_F16_e32 || Opc == AMDGPU::V_MAC_F16_e64 ||
-               Opc == AMDGPU::V_FMAC_F16_e32 || Opc == AMDGPU::V_FMAC_F16_e64 ||
-               Opc == AMDGPU::V_FMAC_F16_t16_e64 ||
-               Opc == AMDGPU::V_FMAC_F16_fake16_e64;
-  bool IsFMA = Opc == AMDGPU::V_FMAC_F32_e32 || Opc == AMDGPU::V_FMAC_F32_e64 ||
-               Opc == AMDGPU::V_FMAC_LEGACY_F32_e32 ||
-               Opc == AMDGPU::V_FMAC_LEGACY_F32_e64 ||
-               Opc == AMDGPU::V_FMAC_F16_e32 || Opc == AMDGPU::V_FMAC_F16_e64 ||
-               Opc == AMDGPU::V_FMAC_F16_t16_e64 ||
-               Opc == AMDGPU::V_FMAC_F16_fake16_e64 ||
-               Opc == AMDGPU::V_FMAC_F64_e32 || Opc == AMDGPU::V_FMAC_F64_e64;
   bool IsF64 = Opc == AMDGPU::V_FMAC_F64_e32 || Opc == AMDGPU::V_FMAC_F64_e64;
   bool IsLegacy = Opc == AMDGPU::V_MAC_LEGACY_F32_e32 ||
                   Opc == AMDGPU::V_MAC_LEGACY_F32_e64 ||
