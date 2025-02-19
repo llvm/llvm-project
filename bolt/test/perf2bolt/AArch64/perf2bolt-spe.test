@@ -11,4 +11,4 @@ CHECK-SPE-NO-LBR: PERF2BOLT: Starting data aggregation job
 RUN: perf record -e cycles -q -o %t.perf.data -- %t.exe
 RUN: not perf2bolt -p %t.perf.data -o %t.perf.boltdata --spe %t.exe 2>&1 | FileCheck %s --check-prefix=CHECK-SPE-LBR
 
-CHECK-SPE-LBR: PERF2BOLT-ERROR: Arm SPE mode is combined only with BasicAggregation.
+CHECK-SPE-LBR: PERF2BOLT: spawning perf job to read SPE branch events
