@@ -352,17 +352,17 @@ BUILTIN(__builtin_amdgcn_set_fpenv, "vWUi", "n")
 
 //===----------------------------------------------------------------------===//
 
-BUILTIN(__builtin_amdgcn_wave_reduce_add_i32, "ii", "nc")
-BUILTIN(__builtin_amdgcn_wave_reduce_uadd_i32, "ii", "nc")
-BUILTIN(__builtin_amdgcn_wave_reduce_sub_i32, "ii", "nc")
-BUILTIN(__builtin_amdgcn_wave_reduce_usub_i32, "ii", "nc")
-BUILTIN(__builtin_amdgcn_wave_reduce_min_i32, "ii", "nc")
-BUILTIN(__builtin_amdgcn_wave_reduce_umin_i32, "ii", "nc")
-BUILTIN(__builtin_amdgcn_wave_reduce_max_i32, "ii", "nc")
-BUILTIN(__builtin_amdgcn_wave_reduce_umax_i32, "ii", "nc")
-BUILTIN(__builtin_amdgcn_wave_reduce_and_i32, "ii", "nc")
-BUILTIN(__builtin_amdgcn_wave_reduce_or_i32, "ii", "nc")
-BUILTIN(__builtin_amdgcn_wave_reduce_xor_i32, "ii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_add_i32, "iii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_add_u32, "UiUii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_sub_i32, "iii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_sub_u32, "UiUii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_i32, "iii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_u32, "UiUii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_i32, "iii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_u32, "UiUii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_and_b32, "iii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_or_b32, "iii", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_xor_b32, "iii", "nc")
 
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.
