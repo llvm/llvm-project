@@ -651,9 +651,10 @@ void CIRGenModule::emitGlobalFunctionDefinition(GlobalDecl GD,
 
   // Get or create the prototype for the function.
   auto Fn = dyn_cast_if_present<cir::FuncOp>(Op);
-  if (!Fn || Fn.getFunctionType() != Ty)
-    Fn = GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/true,
-                           ForDefinition);
+  if (!Fn || Fn.getFunctionType() != Ty) {
+    Fn = GetAddrOfFunction(GD, Ty, /*ForVTable=*/false,
+                           /*DontDefer=*/true, ForDefinition);
+  }
 
   // Already emitted.
   if (!Fn.isDeclaration())
@@ -2363,10 +2364,17 @@ cir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty,
 
   // As __global__ functions (kernels) always reside on device,
   // when we access them from host, we must refer to the kernel handle.
-  // For CUDA, it's just the device stub. For HIP, it's something different.
-  if (langOpts.CUDA && !langOpts.CUDAIsDevice && langOpts.HIP &&
+  // For HIP, we should never directly access the host device addr, but
+  // instead the Global Variable of that stub. For CUDA, it's just the device
+  // stub. For HIP, it's something different.
+  if ((langOpts.HIP || langOpts.CUDA) && !langOpts.CUDAIsDevice &&
       cast<FunctionDecl>(GD.getDecl())->hasAttr<CUDAGlobalAttr>()) {
-    llvm_unreachable("NYI");
+    auto *stubHandle = getCUDARuntime().getKernelHandle(F, GD);
+    if (IsForDefinition)
+      return F;
+
+    if (langOpts.HIP)
+      llvm_unreachable("NYI");
   }
 
   return F;
@@ -3176,15 +3184,15 @@ CIRGenModule::GetAddrOfGlobal(GlobalDecl GD, ForDefinition_t IsForDefinition) {
     auto FInfo =
         &getTypes().arrangeCXXMethodDeclaration(cast<CXXMethodDecl>(D));
     auto Ty = getTypes().GetFunctionType(*FInfo);
-    return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/false,
-                             IsForDefinition);
+    return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false,
+                             /*DontDefer=*/false, IsForDefinition);
   }
 
   if (isa<FunctionDecl>(D)) {
     const CIRGenFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
     auto Ty = getTypes().GetFunctionType(FI);
-    return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/false,
-                             IsForDefinition);
+    return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false,
+                             /*DontDefer=*/false, IsForDefinition);
   }
 
   return getAddrOfGlobalVar(cast<VarDecl>(D), /*Ty=*/nullptr, IsForDefinition)
