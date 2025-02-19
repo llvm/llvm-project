@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include <optional>
 
@@ -32,7 +33,7 @@
 // InitLLVM calls llvm_shutdown() on destruction, which cleans up
 // ManagedStatic objects.
 namespace llvm {
-class InitLLVM {
+class LLVM_ABI InitLLVM {
 public:
   InitLLVM(int &Argc, const char **&Argv,
            bool InstallPipeSignalExitHandler = true);
