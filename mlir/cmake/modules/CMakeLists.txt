@@ -9,14 +9,14 @@
 #    *to be installed* when `cmake --install` command is run or when CPack
 #    is invoked. This is the version that is distributed with LLVM packages.
 #    The key difference between this and (1) is that all paths must be
-#    relative the the instlaled "MLIRConfig.cmake" file.
+#    relative the the installed "MLIRConfig.cmake" file.
 
 include(GNUInstallPackageDir)
 include(ExtendPath)
 include(LLVMDistributionSupport)
 include(FindPrefixFromConfig)
 
-# This is a relative path to the location of MLIConfig.cmake within the
+# This is a relative path to the location of MLIRConfig.cmake within the
 # installation.
 set(MLIR_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/mlir" CACHE STRING
   "Path for CMake subdirectory for MLIR (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/mlir')")
@@ -55,7 +55,7 @@ set(MLIR_CONFIG_INCLUDE_DIRS
   "${MLIR_SOURCE_DIR}/include"
   "${MLIR_BINARY_DIR}/include"
   )
-# Refer to the best host mlir-tbgen, which might be a host-optimized version
+# Refer to the best host mlir-tblgen, which might be a host-optimized version
 set(MLIR_CONFIG_TABLEGEN_EXE "${MLIR_TABLEGEN_EXE}")
 set(MLIR_CONFIG_PDLL_TABLEGEN_EXE "${MLIR_PDLL_TABLEGEN_EXE}")
 set(MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE "${MLIR_SRC_SHARDER_TABLEGEN_EXE}")
