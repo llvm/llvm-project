@@ -14,11 +14,11 @@
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/BinaryStreamError.h"
-#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cstdint>
 #include <stdint.h>
 
 namespace llvm {
@@ -563,9 +563,11 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
 
 struct RootConstants {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  uint32_t Num32BitValues;
+  uint32_t ShaderRegister = 0;
+  uint32_t RegisterSpace = 0;
+  uint32_t Num32BitValues = 0;
+
+  RootConstants() = default;
 
   void swapBytes() {
     sys::swapByteOrder(ShaderRegister);
@@ -581,13 +583,23 @@ struct RootParameter {
   };
   dxbc::ShaderVisibilityFlag ShaderVisibility;
 
+  RootParameter() {
+    Constants = RootConstants();
+    ParameterType = dxbc::RootParameterType::Empty;
+    ShaderVisibility = dxbc::ShaderVisibilityFlag::Empty;
+  }
+
   void swapBytes() {
+
     sys::swapByteOrder(ParameterType);
     sys::swapByteOrder(ShaderVisibility);
     switch (ParameterType) {
 
     case RootParameterType::Constants32Bit:
       Constants.swapBytes();
+      break;
+    case RootParameterType::Empty:
+      llvm_unreachable("invalid value for ParameterType");
       break;
     }
   }
@@ -596,8 +608,10 @@ struct RootParameter {
 struct RootSignatureHeader {
   uint32_t Version = 2;
   uint32_t Flags = 0;
+
   void swapBytes() {
-    // nothing to swap
+    sys::swapByteOrder(Version);
+    sys::swapByteOrder(Flags);
   }
 };
 
@@ -607,6 +621,16 @@ struct RootSignatureValidations {
 
   static bool isValidVersion(uint32_t Version) {
     return (Version == 1 || Version == 2);
+  }
+
+  static bool isValidParameterType(dxbc::RootParameterType Flag) {
+    // RootParameterType::Empty is the higest value in the enum.
+    return Flag < dxbc::RootParameterType::Empty;
+  }
+
+  static bool isValidShaderVisibility(dxbc::ShaderVisibilityFlag Flag) {
+    // ShaderVisibilityFlag::Empty is the higest value in the enum.
+    return Flag < dxbc::ShaderVisibilityFlag::Empty;
   }
 };
 

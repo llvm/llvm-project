@@ -14,6 +14,7 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
@@ -235,6 +236,9 @@ void MappingTraits<dxbc::RootParameter>::mapping(IO &IO,
   case dxbc::RootParameterType::Constants32Bit:
     IO.mapRequired("Constants", P.Constants);
 
+    break;
+  case dxbc::RootParameterType::Empty:
+    llvm_unreachable("Invalid value for ParameterType");
     break;
   }
 }
