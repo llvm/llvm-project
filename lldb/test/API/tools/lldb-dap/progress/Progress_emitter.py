@@ -37,7 +37,10 @@ class ProgressTesterCommand:
         )
 
         parser.add_option(
-            "--total", dest="total", help="Total to count up.", type="int"
+            "--total",
+            dest="total",
+            help="Total to count up, use -1 to identify as indeterminate",
+            type="int",
         )
 
         parser.add_option(
@@ -45,6 +48,13 @@ class ProgressTesterCommand:
             dest="seconds",
             help="Total number of seconds to wait between increments",
             type="int",
+        )
+
+        parser.add_option(
+            "--no-details",
+            dest="no_details",
+            help="Do not display details",
+            action="store_true",
         )
 
         return parser
@@ -68,10 +78,23 @@ class ProgressTesterCommand:
             return
 
         total = cmd_options.total
-        progress = lldb.SBProgress("Progress tester", "Detail", total, debugger)
+        if total == -1:
+            progress = lldb.SBProgress(
+                "Progress tester", "Indeterminate Detail", debugger
+            )
+        else:
+            progress = lldb.SBProgress("Progress tester", "Detail", total, debugger)
+
+        # Check to see if total is set to -1 to indicate an indeterminate progress
+        # then default to 10 steps.
+        if total == -1:
+            total = 10
 
         for i in range(1, total):
-            progress.Increment(1, f"Step {i}")
+            if cmd_options.no_details:
+                progress.Increment(1)
+            else:
+                progress.Increment(1, f"Step {i}")
             time.sleep(cmd_options.seconds)
 
 
