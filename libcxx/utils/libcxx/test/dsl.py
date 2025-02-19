@@ -9,7 +9,6 @@
 import os
 import pickle
 import platform
-import shlex
 import shutil
 import tempfile
 
