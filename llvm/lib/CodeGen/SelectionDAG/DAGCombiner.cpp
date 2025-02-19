@@ -488,6 +488,7 @@ namespace {
     SDValue visitTRUNCATE(SDNode *N);
     SDValue visitTRUNCATE_USAT_U(SDNode *N);
     SDValue visitBITCAST(SDNode *N);
+    SDValue visitADDRSPACECAST(SDNode *N);
     SDValue visitFREEZE(SDNode *N);
     SDValue visitBUILD_PAIR(SDNode *N);
     SDValue visitFADD(SDNode *N);
@@ -1920,6 +1921,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::TRUNCATE:           return visitTRUNCATE(N);
   case ISD::TRUNCATE_USAT_U:    return visitTRUNCATE_USAT_U(N);
   case ISD::BITCAST:            return visitBITCAST(N);
+  case ISD::ADDRSPACECAST:      return visitADDRSPACECAST(N);
   case ISD::BUILD_PAIR:         return visitBUILD_PAIR(N);
   case ISD::FADD:               return visitFADD(N);
   case ISD::STRICT_FADD:        return visitSTRICT_FADD(N);
@@ -16049,6 +16051,25 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
         TLI.buildLegalVectorShuffle(VT, SDLoc(N), SV0, SV1, NewMask, DAG);
     if (LegalShuffle)
       return LegalShuffle;
+  }
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitADDRSPACECAST(SDNode *N) {
+  auto *ASCN1 = cast<AddrSpaceCastSDNode>(N);
+
+  if (auto *ASCN2 = dyn_cast<AddrSpaceCastSDNode>(ASCN1->getOperand(0))) {
+    assert(ASCN2->getDestAddressSpace() == ASCN1->getSrcAddressSpace());
+
+    // Fold asc[B -> A](asc[A -> B](x)) -> x
+    if (ASCN1->getDestAddressSpace() == ASCN2->getSrcAddressSpace())
+      return ASCN2->getOperand(0);
+
+    // Fold asc[B -> C](asc[A -> B](x)) -> asc[A -> C](x)
+    return DAG.getAddrSpaceCast(
+        SDLoc(N), N->getValueType(0), ASCN2->getOperand(0),
+        ASCN2->getSrcAddressSpace(), ASCN1->getDestAddressSpace());
   }
 
   return SDValue();
