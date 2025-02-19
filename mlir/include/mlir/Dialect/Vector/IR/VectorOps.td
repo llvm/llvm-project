@@ -638,7 +638,7 @@ def Vector_ExtractElementOp :
     Results<(outs AnyType:$result)> {
   let summary = "extractelement operation";
   let description = [{
-    Note: This operation is depreciated. Please use vector.extract insert.
+    Note: This operation is deprecated. Please use vector.extract insert.
 
     Takes a 0-D or 1-D vector and a optional dynamic index position and
     extracts the scalar at that position.
@@ -826,7 +826,7 @@ def Vector_InsertElementOp :
      Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "insertelement operation";
   let description = [{
-    Note: This operation is depreciated. Please use vector.insert instead.
+    Note: This operation is deprecated. Please use vector.insert instead.
 
     Takes a scalar source, a 0-D or 1-D destination vector and a dynamic index
     position and inserts the source into the destination at the proper position.
