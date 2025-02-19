@@ -603,7 +603,7 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
     return rewriter.notifyMatchFailure(op, "expected vector result");
 
   Location loc = op->getLoc();
-  Value result = rewriter.create<LLVM::UndefOp>(loc, vectorType);
+  Value result = rewriter.create<LLVM::PoisonOp>(loc, vectorType);
   Type indexType = converter.convertType(rewriter.getIndexType());
   StringAttr name = op->getName().getIdentifier();
   Type elementType = vectorType.getElementType();
@@ -771,7 +771,7 @@ LogicalResult GPUReturnOpLowering::matchAndRewrite(
     return rewriter.notifyMatchFailure(op, "could not convert result types");
   }
 
-  Value packed = rewriter.create<LLVM::UndefOp>(loc, packedType);
+  Value packed = rewriter.create<LLVM::PoisonOp>(loc, packedType);
   for (auto [idx, operand] : llvm::enumerate(updatedOperands)) {
     packed = rewriter.create<LLVM::InsertValueOp>(loc, packed, operand, idx);
   }

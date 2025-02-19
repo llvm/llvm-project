@@ -125,7 +125,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-matcher-emitter"
 
-cl::OptionCategory AsmMatcherEmitterCat("Options for -gen-asm-matcher");
+static cl::OptionCategory AsmMatcherEmitterCat("Options for -gen-asm-matcher");
 
 static cl::opt<std::string>
     MatchPrefix("match-prefix", cl::init(""),
@@ -2333,9 +2333,9 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
     OS << "  // " << InstructionConversionKinds[Row] << "\n";
     OS << "  { ";
     for (unsigned i = 0, e = ConversionTable[Row].size(); i != e; i += 2) {
-      OS << OperandConversionKinds[ConversionTable[Row][i]] << ", ";
-      if (OperandConversionKinds[ConversionTable[Row][i]] !=
-          CachedHashString("CVT_Tied")) {
+      const auto &OCK = OperandConversionKinds[ConversionTable[Row][i]];
+      OS << OCK << ", ";
+      if (OCK != CachedHashString("CVT_Tied")) {
         OS << (unsigned)(ConversionTable[Row][i + 1]) << ", ";
         continue;
       }
@@ -2522,9 +2522,9 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
   for (auto &MatchClassName : Table)
     OS << "      " << MatchClassName << ",\n";
   OS << "    };\n\n";
-  OS << "    unsigned RegID = Operand.getReg().id();\n";
-  OS << "    MatchClassKind OpKind = MCRegister::isPhysicalRegister(RegID) ? "
-        "(MatchClassKind)Table[RegID] : InvalidMatchClass;\n";
+  OS << "    MCRegister Reg = Operand.getReg();\n";
+  OS << "    MatchClassKind OpKind = Reg.isPhysical() ? "
+        "(MatchClassKind)Table[Reg.id()] : InvalidMatchClass;\n";
   OS << "    return isSubclass(OpKind, Kind) ? "
      << "(unsigned)MCTargetAsmParser::Match_Success :\n                     "
      << "                 getDiagKindFromRegisterClass(Kind);\n  }\n\n";

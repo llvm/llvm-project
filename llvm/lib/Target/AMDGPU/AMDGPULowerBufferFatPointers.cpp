@@ -66,6 +66,28 @@
 // Atomics operations on `ptr addrspace(7)` values are not suppported, as the
 // hardware does not include a 160-bit atomic.
 //
+// ## Buffer contents type legalization
+//
+// The underlying buffer intrinsics only support types up to 128 bits long,
+// and don't support complex types. If buffer operations were
+// standard pointer operations that could be represented as MIR-level loads,
+// this would be handled by the various legalization schemes in instruction
+// selection. However, because we have to do the conversion from `load` and
+// `store` to intrinsics at LLVM IR level, we must perform that legalization
+// ourselves.
+//
+// This involves a combination of
+// - Converting arrays to vectors where possible
+// - Otherwise, splitting loads and stores of aggregates into loads/stores of
+//   each component.
+// - Zero-extending things to fill a whole number of bytes
+// - Casting values of types that don't neatly correspond to supported machine
+// value
+//   (for example, an i96 or i256) into ones that would work (
+//    like <3 x i32> and <8 x i32>, respectively)
+// - Splitting values that are too long (such as aforementioned <8 x i32>) into
+//   multiple operations.
+//
 // ## Type remapping
 //
 // We use a `ValueMapper` to mangle uses of [vectors of] buffer fat pointers
@@ -85,7 +107,6 @@
 // with arguments that are {ptr addrspace(8), i32} arguments and return values.
 // This phase also records intrinsics so that they can be remangled or deleted
 // later.
-//
 //
 // ## Splitting pointer structs
 //
@@ -218,6 +239,7 @@
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -551,7 +573,6 @@ bool StoreFatPtrsAsIntsVisitor::visitLoadInst(LoadInst &LI) {
   auto *NLI = cast<LoadInst>(LI.clone());
   NLI->mutateType(IntTy);
   NLI = IRB.Insert(NLI);
-  copyMetadataForLoad(*NLI, LI);
   NLI->takeName(&LI);
 
   Value *CastBack = intsToFatPtrs(NLI, IntTy, Ty, NLI->getName());
@@ -574,6 +595,542 @@ bool StoreFatPtrsAsIntsVisitor::visitStoreInst(StoreInst &SI) {
 
   SI.setOperand(0, IntV);
   return true;
+}
+
+namespace {
+/// Convert loads/stores of types that the buffer intrinsics can't handle into
+/// one ore more such loads/stores that consist of legal types.
+///
+/// Do this by
+/// 1. Recursing into structs (and arrays that don't share a memory layout with
+/// vectors) since the intrinsics can't handle complex types.
+/// 2. Converting arrays of non-aggregate, byte-sized types into their
+/// corresponding vectors
+/// 3. Bitcasting unsupported types, namely overly-long scalars and byte
+/// vectors, into vectors of supported types.
+/// 4. Splitting up excessively long reads/writes into multiple operations.
+///
+/// Note that this doesn't handle complex data strucures, but, in the future,
+/// the aggregate load splitter from SROA could be refactored to allow for that
+/// case.
+class LegalizeBufferContentTypesVisitor
+    : public InstVisitor<LegalizeBufferContentTypesVisitor, bool> {
+  friend class InstVisitor<LegalizeBufferContentTypesVisitor, bool>;
+
+  IRBuilder<> IRB;
+
+  const DataLayout &DL;
+
+  /// If T is [N x U], where U is a scalar type, return the vector type
+  /// <N x U>, otherwise, return T.
+  Type *scalarArrayTypeAsVector(Type *MaybeArrayType);
+  Value *arrayToVector(Value *V, Type *TargetType, const Twine &Name);
+  Value *vectorToArray(Value *V, Type *OrigType, const Twine &Name);
+
+  /// Break up the loads of a struct into the loads of its components
+
+  /// Convert a vector or scalar type that can't be operated on by buffer
+  /// intrinsics to one that would be legal through bitcasts and/or truncation.
+  /// Uses the wider of i32, i16, or i8 where possible.
+  Type *legalNonAggregateFor(Type *T);
+  Value *makeLegalNonAggregate(Value *V, Type *TargetType, const Twine &Name);
+  Value *makeIllegalNonAggregate(Value *V, Type *OrigType, const Twine &Name);
+
+  struct VecSlice {
+    uint64_t Index = 0;
+    uint64_t Length = 0;
+    VecSlice() = delete;
+    // Needed for some Clangs
+    VecSlice(uint64_t Index, uint64_t Length) : Index(Index), Length(Length) {}
+  };
+  /// Return the [index, length] pairs into which `T` needs to be cut to form
+  /// legal buffer load or store operations. Clears `Slices`. Creates an empty
+  /// `Slices` for non-vector inputs and creates one slice if no slicing will be
+  /// needed.
+  void getVecSlices(Type *T, SmallVectorImpl<VecSlice> &Slices);
+
+  Value *extractSlice(Value *Vec, VecSlice S, const Twine &Name);
+  Value *insertSlice(Value *Whole, Value *Part, VecSlice S, const Twine &Name);
+
+  /// In most cases, return `LegalType`. However, when given an input that would
+  /// normally be a legal type for the buffer intrinsics to return but that
+  /// isn't hooked up through SelectionDAG, return a type of the same width that
+  /// can be used with the relevant intrinsics. Specifically, handle the cases:
+  /// - <1 x T> => T for all T
+  /// - <N x i8> <=> i16, i32, 2xi32, 4xi32 (as needed)
+  /// - <N x T> where T is under 32 bits and the total size is 96 bits <=> <3 x
+  /// i32>
+  Type *intrinsicTypeFor(Type *LegalType);
+
+  bool visitLoadImpl(LoadInst &OrigLI, Type *PartType,
+                     SmallVectorImpl<uint32_t> &AggIdxs, uint64_t AggByteOffset,
+                     Value *&Result, const Twine &Name);
+  /// Return value is (Changed, ModifiedInPlace)
+  std::pair<bool, bool> visitStoreImpl(StoreInst &OrigSI, Type *PartType,
+                                       SmallVectorImpl<uint32_t> &AggIdxs,
+                                       uint64_t AggByteOffset,
+                                       const Twine &Name);
+
+  bool visitInstruction(Instruction &I) { return false; }
+  bool visitLoadInst(LoadInst &LI);
+  bool visitStoreInst(StoreInst &SI);
+
+public:
+  LegalizeBufferContentTypesVisitor(const DataLayout &DL, LLVMContext &Ctx)
+      : IRB(Ctx), DL(DL) {}
+  bool processFunction(Function &F);
+};
+} // namespace
+
+Type *LegalizeBufferContentTypesVisitor::scalarArrayTypeAsVector(Type *T) {
+  ArrayType *AT = dyn_cast<ArrayType>(T);
+  if (!AT)
+    return T;
+  Type *ET = AT->getElementType();
+  if (!ET->isSingleValueType() || isa<VectorType>(ET))
+    report_fatal_error("loading non-scalar arrays from buffer fat pointers "
+                       "should have recursed");
+  if (!DL.typeSizeEqualsStoreSize(AT))
+    report_fatal_error(
+        "loading padded arrays from buffer fat pinters should have recursed");
+  return FixedVectorType::get(ET, AT->getNumElements());
+}
+
+Value *LegalizeBufferContentTypesVisitor::arrayToVector(Value *V,
+                                                        Type *TargetType,
+                                                        const Twine &Name) {
+  Value *VectorRes = PoisonValue::get(TargetType);
+  auto *VT = cast<FixedVectorType>(TargetType);
+  unsigned EC = VT->getNumElements();
+  for (auto I : iota_range<unsigned>(0, EC, /*Inclusive=*/false)) {
+    Value *Elem = IRB.CreateExtractValue(V, I, Name + ".elem." + Twine(I));
+    VectorRes = IRB.CreateInsertElement(VectorRes, Elem, I,
+                                        Name + ".as.vec." + Twine(I));
+  }
+  return VectorRes;
+}
+
+Value *LegalizeBufferContentTypesVisitor::vectorToArray(Value *V,
+                                                        Type *OrigType,
+                                                        const Twine &Name) {
+  Value *ArrayRes = PoisonValue::get(OrigType);
+  ArrayType *AT = cast<ArrayType>(OrigType);
+  unsigned EC = AT->getNumElements();
+  for (auto I : iota_range<unsigned>(0, EC, /*Inclusive=*/false)) {
+    Value *Elem = IRB.CreateExtractElement(V, I, Name + ".elem." + Twine(I));
+    ArrayRes = IRB.CreateInsertValue(ArrayRes, Elem, I,
+                                     Name + ".as.array." + Twine(I));
+  }
+  return ArrayRes;
+}
+
+Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T) {
+  TypeSize Size = DL.getTypeStoreSizeInBits(T);
+  // Implicitly zero-extend to the next byte if needed
+  if (!DL.typeSizeEqualsStoreSize(T))
+    T = IRB.getIntNTy(Size.getFixedValue());
+  Type *ElemTy = T->getScalarType();
+  if (isa<PointerType, ScalableVectorType>(ElemTy)) {
+    // Pointers are always big enough, and we'll let scalable vectors through to
+    // fail in codegen.
+    return T;
+  }
+  unsigned ElemSize = DL.getTypeSizeInBits(ElemTy).getFixedValue();
+  if (isPowerOf2_32(ElemSize) && ElemSize >= 16 && ElemSize <= 128) {
+    // [vectors of] anything that's 16/32/64/128 bits can be cast and split into
+    // legal buffer operations.
+    return T;
+  }
+  Type *BestVectorElemType = nullptr;
+  if (Size.isKnownMultipleOf(32))
+    BestVectorElemType = IRB.getInt32Ty();
+  else if (Size.isKnownMultipleOf(16))
+    BestVectorElemType = IRB.getInt16Ty();
+  else
+    BestVectorElemType = IRB.getInt8Ty();
+  unsigned NumCastElems =
+      Size.getFixedValue() / BestVectorElemType->getIntegerBitWidth();
+  if (NumCastElems == 1)
+    return BestVectorElemType;
+  return FixedVectorType::get(BestVectorElemType, NumCastElems);
+}
+
+Value *LegalizeBufferContentTypesVisitor::makeLegalNonAggregate(
+    Value *V, Type *TargetType, const Twine &Name) {
+  Type *SourceType = V->getType();
+  TypeSize SourceSize = DL.getTypeSizeInBits(SourceType);
+  TypeSize TargetSize = DL.getTypeSizeInBits(TargetType);
+  if (SourceSize != TargetSize) {
+    Type *ShortScalarTy = IRB.getIntNTy(SourceSize.getFixedValue());
+    Type *ByteScalarTy = IRB.getIntNTy(TargetSize.getFixedValue());
+    Value *AsScalar = IRB.CreateBitCast(V, ShortScalarTy, Name + ".as.scalar");
+    Value *Zext = IRB.CreateZExt(AsScalar, ByteScalarTy, Name + ".zext");
+    V = Zext;
+    SourceType = ByteScalarTy;
+  }
+  return IRB.CreateBitCast(V, TargetType, Name + ".legal");
+}
+
+Value *LegalizeBufferContentTypesVisitor::makeIllegalNonAggregate(
+    Value *V, Type *OrigType, const Twine &Name) {
+  Type *LegalType = V->getType();
+  TypeSize LegalSize = DL.getTypeSizeInBits(LegalType);
+  TypeSize OrigSize = DL.getTypeSizeInBits(OrigType);
+  if (LegalSize != OrigSize) {
+    Type *ShortScalarTy = IRB.getIntNTy(OrigSize.getFixedValue());
+    Type *ByteScalarTy = IRB.getIntNTy(LegalSize.getFixedValue());
+    Value *AsScalar = IRB.CreateBitCast(V, ByteScalarTy, Name + ".bytes.cast");
+    Value *Trunc = IRB.CreateTrunc(AsScalar, ShortScalarTy, Name + ".trunc");
+    return IRB.CreateBitCast(Trunc, OrigType, Name + ".orig");
+  }
+  return IRB.CreateBitCast(V, OrigType, Name + ".real.ty");
+}
+
+Type *LegalizeBufferContentTypesVisitor::intrinsicTypeFor(Type *LegalType) {
+  auto *VT = dyn_cast<FixedVectorType>(LegalType);
+  if (!VT)
+    return LegalType;
+  Type *ET = VT->getElementType();
+  // Explicitly return the element type of 1-element vectors because the
+  // underlying intrinsics don't like <1 x T> even though it's a synonym for T.
+  if (VT->getNumElements() == 1)
+    return ET;
+  if (DL.getTypeSizeInBits(LegalType) == 96 && DL.getTypeSizeInBits(ET) < 32)
+    return FixedVectorType::get(IRB.getInt32Ty(), 3);
+  if (ET->isIntegerTy(8)) {
+    switch (VT->getNumElements()) {
+    default:
+      return LegalType; // Let it crash later
+    case 1:
+      return IRB.getInt8Ty();
+    case 2:
+      return IRB.getInt16Ty();
+    case 4:
+      return IRB.getInt32Ty();
+    case 8:
+      return FixedVectorType::get(IRB.getInt32Ty(), 2);
+    case 16:
+      return FixedVectorType::get(IRB.getInt32Ty(), 4);
+    }
+  }
+  return LegalType;
+}
+
+void LegalizeBufferContentTypesVisitor::getVecSlices(
+    Type *T, SmallVectorImpl<VecSlice> &Slices) {
+  Slices.clear();
+  auto *VT = dyn_cast<FixedVectorType>(T);
+  if (!VT)
+    return;
+
+  uint64_t ElemBitWidth =
+      DL.getTypeSizeInBits(VT->getElementType()).getFixedValue();
+
+  uint64_t ElemsPer4Words = 128 / ElemBitWidth;
+  uint64_t ElemsPer2Words = ElemsPer4Words / 2;
+  uint64_t ElemsPerWord = ElemsPer2Words / 2;
+  uint64_t ElemsPerShort = ElemsPerWord / 2;
+  uint64_t ElemsPerByte = ElemsPerShort / 2;
+  // If the elements evenly pack into 32-bit words, we can use 3-word stores,
+  // such as for <6 x bfloat> or <3 x i32>, but we can't dot his for, for
+  // example, <3 x i64>, since that's not slicing.
+  uint64_t ElemsPer3Words = ElemsPerWord * 3;
+
+  uint64_t TotalElems = VT->getNumElements();
+  uint64_t Index = 0;
+  auto TrySlice = [&](unsigned MaybeLen) {
+    if (MaybeLen > 0 && Index + MaybeLen <= TotalElems) {
+      VecSlice Slice{/*Index=*/Index, /*Length=*/MaybeLen};
+      Slices.push_back(Slice);
+      Index += MaybeLen;
+      return true;
+    }
+    return false;
+  };
+  while (Index < TotalElems) {
+    TrySlice(ElemsPer4Words) || TrySlice(ElemsPer3Words) ||
+        TrySlice(ElemsPer2Words) || TrySlice(ElemsPerWord) ||
+        TrySlice(ElemsPerShort) || TrySlice(ElemsPerByte);
+  }
+}
+
+Value *LegalizeBufferContentTypesVisitor::extractSlice(Value *Vec, VecSlice S,
+                                                       const Twine &Name) {
+  auto *VecVT = dyn_cast<FixedVectorType>(Vec->getType());
+  if (!VecVT)
+    return Vec;
+  if (S.Length == VecVT->getNumElements() && S.Index == 0)
+    return Vec;
+  if (S.Length == 1)
+    return IRB.CreateExtractElement(Vec, S.Index,
+                                    Name + ".slice." + Twine(S.Index));
+  SmallVector<int> Mask = llvm::to_vector(
+      llvm::iota_range<int>(S.Index, S.Index + S.Length, /*Inclusive=*/false));
+  return IRB.CreateShuffleVector(Vec, Mask, Name + ".slice." + Twine(S.Index));
+}
+
+Value *LegalizeBufferContentTypesVisitor::insertSlice(Value *Whole, Value *Part,
+                                                      VecSlice S,
+                                                      const Twine &Name) {
+  auto *WholeVT = dyn_cast<FixedVectorType>(Whole->getType());
+  if (!WholeVT)
+    return Part;
+  if (S.Length == WholeVT->getNumElements() && S.Index == 0)
+    return Part;
+  if (S.Length == 1) {
+    return IRB.CreateInsertElement(Whole, Part, S.Index,
+                                   Name + ".slice." + Twine(S.Index));
+  }
+  int NumElems = cast<FixedVectorType>(Whole->getType())->getNumElements();
+
+  // Extend the slice with poisons to make the main shufflevector happy.
+  SmallVector<int> ExtPartMask(NumElems, -1);
+  for (auto [I, E] : llvm::enumerate(
+           MutableArrayRef<int>(ExtPartMask).take_front(S.Length))) {
+    E = I;
+  }
+  Value *ExtPart = IRB.CreateShuffleVector(Part, ExtPartMask,
+                                           Name + ".ext." + Twine(S.Index));
+
+  SmallVector<int> Mask =
+      llvm::to_vector(llvm::iota_range<int>(0, NumElems, /*Inclusive=*/false));
+  for (auto [I, E] :
+       llvm::enumerate(MutableArrayRef<int>(Mask).slice(S.Index, S.Length)))
+    E = I + NumElems;
+  return IRB.CreateShuffleVector(Whole, ExtPart, Mask,
+                                 Name + ".parts." + Twine(S.Index));
+}
+
+bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
+    LoadInst &OrigLI, Type *PartType, SmallVectorImpl<uint32_t> &AggIdxs,
+    uint64_t AggByteOff, Value *&Result, const Twine &Name) {
+  if (auto *ST = dyn_cast<StructType>(PartType)) {
+    const StructLayout *Layout = DL.getStructLayout(ST);
+    bool Changed = false;
+    for (auto [I, ElemTy, Offset] :
+         llvm::enumerate(ST->elements(), Layout->getMemberOffsets())) {
+      AggIdxs.push_back(I);
+      Changed |= visitLoadImpl(OrigLI, ElemTy, AggIdxs,
+                               AggByteOff + Offset.getFixedValue(), Result,
+                               Name + "." + Twine(I));
+      AggIdxs.pop_back();
+    }
+    return Changed;
+  }
+  if (auto *AT = dyn_cast<ArrayType>(PartType)) {
+    Type *ElemTy = AT->getElementType();
+    if (!ElemTy->isSingleValueType() || !DL.typeSizeEqualsStoreSize(ElemTy) ||
+        ElemTy->isVectorTy()) {
+      TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
+      bool Changed = false;
+      for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
+                                               /*Inclusive=*/false)) {
+        AggIdxs.push_back(I);
+        Changed |= visitLoadImpl(OrigLI, ElemTy, AggIdxs,
+                                 AggByteOff + I * ElemStoreSize.getFixedValue(),
+                                 Result, Name + Twine(I));
+        AggIdxs.pop_back();
+      }
+      return Changed;
+    }
+  }
+
+  // Typical case
+
+  Type *ArrayAsVecType = scalarArrayTypeAsVector(PartType);
+  Type *LegalType = legalNonAggregateFor(ArrayAsVecType);
+
+  SmallVector<VecSlice> Slices;
+  getVecSlices(LegalType, Slices);
+  bool HasSlices = Slices.size() > 1;
+  bool IsAggPart = !AggIdxs.empty();
+  Value *LoadsRes;
+  if (!HasSlices && !IsAggPart) {
+    Type *LoadableType = intrinsicTypeFor(LegalType);
+    if (LoadableType == PartType)
+      return false;
+
+    IRB.SetInsertPoint(&OrigLI);
+    auto *NLI = cast<LoadInst>(OrigLI.clone());
+    NLI->mutateType(LoadableType);
+    NLI = IRB.Insert(NLI);
+    NLI->setName(Name + ".loadable");
+
+    LoadsRes = IRB.CreateBitCast(NLI, LegalType, Name + ".from.loadable");
+  } else {
+    IRB.SetInsertPoint(&OrigLI);
+    LoadsRes = PoisonValue::get(LegalType);
+    Value *OrigPtr = OrigLI.getPointerOperand();
+    // If we're needing to spill something into more than one load, its legal
+    // type will be a vector (ex. an i256 load will have LegalType = <8 x i32>).
+    // But if we're already a scalar (which can happen if we're splitting up a
+    // struct), the element type will be the legal type itself.
+    Type *ElemType = LegalType->getScalarType();
+    unsigned ElemBytes = DL.getTypeStoreSize(ElemType);
+    AAMDNodes AANodes = OrigLI.getAAMetadata();
+    if (IsAggPart && Slices.empty())
+      Slices.push_back(VecSlice{/*Index=*/0, /*Length=*/1});
+    for (VecSlice S : Slices) {
+      Type *SliceType =
+          S.Length != 1 ? FixedVectorType::get(ElemType, S.Length) : ElemType;
+      int64_t ByteOffset = AggByteOff + S.Index * ElemBytes;
+      // You can't reasonably expect loads to wrap around the edge of memory.
+      Value *NewPtr = IRB.CreateGEP(
+          IRB.getInt8Ty(), OrigLI.getPointerOperand(), IRB.getInt32(ByteOffset),
+          OrigPtr->getName() + ".off.ptr." + Twine(ByteOffset),
+          GEPNoWrapFlags::noUnsignedWrap());
+      Type *LoadableType = intrinsicTypeFor(SliceType);
+      LoadInst *NewLI = IRB.CreateAlignedLoad(
+          LoadableType, NewPtr, commonAlignment(OrigLI.getAlign(), ByteOffset),
+          Name + ".off." + Twine(ByteOffset));
+      copyMetadataForLoad(*NewLI, OrigLI);
+      NewLI->setAAMetadata(
+          AANodes.adjustForAccess(ByteOffset, LoadableType, DL));
+      NewLI->setAtomic(OrigLI.getOrdering(), OrigLI.getSyncScopeID());
+      NewLI->setVolatile(OrigLI.isVolatile());
+      Value *Loaded = IRB.CreateBitCast(NewLI, SliceType,
+                                        NewLI->getName() + ".from.loadable");
+      LoadsRes = insertSlice(LoadsRes, Loaded, S, Name);
+    }
+  }
+  if (LegalType != ArrayAsVecType)
+    LoadsRes = makeIllegalNonAggregate(LoadsRes, ArrayAsVecType, Name);
+  if (ArrayAsVecType != PartType)
+    LoadsRes = vectorToArray(LoadsRes, PartType, Name);
+
+  if (IsAggPart)
+    Result = IRB.CreateInsertValue(Result, LoadsRes, AggIdxs, Name);
+  else
+    Result = LoadsRes;
+  return true;
+}
+
+bool LegalizeBufferContentTypesVisitor::visitLoadInst(LoadInst &LI) {
+  if (LI.getPointerAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
+    return false;
+
+  SmallVector<uint32_t> AggIdxs;
+  Type *OrigType = LI.getType();
+  Value *Result = PoisonValue::get(OrigType);
+  bool Changed = visitLoadImpl(LI, OrigType, AggIdxs, 0, Result, LI.getName());
+  if (!Changed)
+    return false;
+  Result->takeName(&LI);
+  LI.replaceAllUsesWith(Result);
+  LI.eraseFromParent();
+  return Changed;
+}
+
+std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
+    StoreInst &OrigSI, Type *PartType, SmallVectorImpl<uint32_t> &AggIdxs,
+    uint64_t AggByteOff, const Twine &Name) {
+  if (auto *ST = dyn_cast<StructType>(PartType)) {
+    const StructLayout *Layout = DL.getStructLayout(ST);
+    bool Changed = false;
+    for (auto [I, ElemTy, Offset] :
+         llvm::enumerate(ST->elements(), Layout->getMemberOffsets())) {
+      AggIdxs.push_back(I);
+      Changed |= std::get<0>(visitStoreImpl(OrigSI, ElemTy, AggIdxs,
+                                            AggByteOff + Offset.getFixedValue(),
+                                            Name + "." + Twine(I)));
+      AggIdxs.pop_back();
+    }
+    return std::make_pair(Changed, /*ModifiedInPlace=*/false);
+  }
+  if (auto *AT = dyn_cast<ArrayType>(PartType)) {
+    Type *ElemTy = AT->getElementType();
+    if (!ElemTy->isSingleValueType() || !DL.typeSizeEqualsStoreSize(ElemTy) ||
+        ElemTy->isVectorTy()) {
+      TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
+      bool Changed = false;
+      for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
+                                               /*Inclusive=*/false)) {
+        AggIdxs.push_back(I);
+        Changed |= std::get<0>(visitStoreImpl(
+            OrigSI, ElemTy, AggIdxs,
+            AggByteOff + I * ElemStoreSize.getFixedValue(), Name + Twine(I)));
+        AggIdxs.pop_back();
+      }
+      return std::make_pair(Changed, /*ModifiedInPlace=*/false);
+    }
+  }
+
+  Value *OrigData = OrigSI.getValueOperand();
+  Value *NewData = OrigData;
+
+  bool IsAggPart = !AggIdxs.empty();
+  if (IsAggPart)
+    NewData = IRB.CreateExtractValue(NewData, AggIdxs, Name);
+
+  Type *ArrayAsVecType = scalarArrayTypeAsVector(PartType);
+  if (ArrayAsVecType != PartType) {
+    NewData = arrayToVector(NewData, ArrayAsVecType, Name);
+  }
+
+  Type *LegalType = legalNonAggregateFor(ArrayAsVecType);
+  if (LegalType != ArrayAsVecType) {
+    NewData = makeLegalNonAggregate(NewData, LegalType, Name);
+  }
+
+  SmallVector<VecSlice> Slices;
+  getVecSlices(LegalType, Slices);
+  bool NeedToSplit = Slices.size() > 1 || IsAggPart;
+  if (!NeedToSplit) {
+    Type *StorableType = intrinsicTypeFor(LegalType);
+    if (StorableType == PartType)
+      return std::make_pair(/*Changed=*/false, /*ModifiedInPlace=*/false);
+    NewData = IRB.CreateBitCast(NewData, StorableType, Name + ".storable");
+    OrigSI.setOperand(0, NewData);
+    return std::make_pair(/*Changed=*/true, /*ModifiedInPlace=*/true);
+  }
+
+  Value *OrigPtr = OrigSI.getPointerOperand();
+  Type *ElemType = LegalType->getScalarType();
+  if (IsAggPart && Slices.empty())
+    Slices.push_back(VecSlice{/*Index=*/0, /*Length=*/1});
+  unsigned ElemBytes = DL.getTypeStoreSize(ElemType);
+  AAMDNodes AANodes = OrigSI.getAAMetadata();
+  for (VecSlice S : Slices) {
+    Type *SliceType =
+        S.Length != 1 ? FixedVectorType::get(ElemType, S.Length) : ElemType;
+    int64_t ByteOffset = AggByteOff + S.Index * ElemBytes;
+    Value *NewPtr =
+        IRB.CreateGEP(IRB.getInt8Ty(), OrigPtr, IRB.getInt32(ByteOffset),
+                      OrigPtr->getName() + ".part." + Twine(S.Index),
+                      GEPNoWrapFlags::noUnsignedWrap());
+    Value *DataSlice = extractSlice(NewData, S, Name);
+    Type *StorableType = intrinsicTypeFor(SliceType);
+    DataSlice = IRB.CreateBitCast(DataSlice, StorableType,
+                                  DataSlice->getName() + ".storable");
+    auto *NewSI = cast<StoreInst>(OrigSI.clone());
+    NewSI->setAlignment(commonAlignment(OrigSI.getAlign(), ByteOffset));
+    IRB.Insert(NewSI);
+    NewSI->setOperand(0, DataSlice);
+    NewSI->setOperand(1, NewPtr);
+    NewSI->setAAMetadata(AANodes.adjustForAccess(ByteOffset, StorableType, DL));
+  }
+  return std::make_pair(/*Changed=*/true, /*ModifiedInPlace=*/false);
+}
+
+bool LegalizeBufferContentTypesVisitor::visitStoreInst(StoreInst &SI) {
+  if (SI.getPointerAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
+    return false;
+  IRB.SetInsertPoint(&SI);
+  SmallVector<uint32_t> AggIdxs;
+  Value *OrigData = SI.getValueOperand();
+  auto [Changed, ModifiedInPlace] =
+      visitStoreImpl(SI, OrigData->getType(), AggIdxs, 0, OrigData->getName());
+  if (Changed && !ModifiedInPlace)
+    SI.eraseFromParent();
+  return Changed;
+}
+
+bool LegalizeBufferContentTypesVisitor::processFunction(Function &F) {
+  bool Changed = false;
+  for (Instruction &I : make_early_inc_range(instructions(F))) {
+    Changed |= visit(I);
+  }
+  return Changed;
 }
 
 /// Return the ptr addrspace(8) and i32 (resource and offset parts) in a lowered
@@ -1247,14 +1804,25 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   bool IsNUW = GEP.hasNoUnsignedWrap();
   bool IsNUSW = GEP.hasNoUnsignedSignedWrap();
 
+  StructType *ResTy = cast<StructType>(GEP.getType());
+  Type *ResRsrcTy = ResTy->getElementType(0);
+  VectorType *ResRsrcVecTy = dyn_cast<VectorType>(ResRsrcTy);
+  bool BroadcastsPtr = ResRsrcVecTy && !isa<VectorType>(Off->getType());
+
   // In order to call emitGEPOffset() and thus not have to reimplement it,
   // we need the GEP result to have ptr addrspace(7) type.
-  Type *FatPtrTy = IRB.getPtrTy(AMDGPUAS::BUFFER_FAT_POINTER);
-  if (auto *VT = dyn_cast<VectorType>(Off->getType()))
-    FatPtrTy = VectorType::get(FatPtrTy, VT->getElementCount());
+  Type *FatPtrTy =
+      ResRsrcTy->getWithNewType(IRB.getPtrTy(AMDGPUAS::BUFFER_FAT_POINTER));
   GEP.mutateType(FatPtrTy);
   Value *OffAccum = emitGEPOffset(&IRB, DL, &GEP);
-  GEP.mutateType(Ptr->getType());
+  GEP.mutateType(ResTy);
+
+  if (BroadcastsPtr) {
+    Rsrc = IRB.CreateVectorSplat(ResRsrcVecTy->getElementCount(), Rsrc,
+                                 Rsrc->getName());
+    Off = IRB.CreateVectorSplat(ResRsrcVecTy->getElementCount(), Off,
+                                Off->getName());
+  }
   if (match(OffAccum, m_Zero())) { // Constant-zero offset
     SplitUsers.insert(&GEP);
     return {Rsrc, Off};
@@ -1510,6 +2078,7 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   switch (IID) {
   default:
     return false;
+  case Intrinsic::amdgcn_make_buffer_rsrc:
   case Intrinsic::ptrmask:
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
@@ -1524,6 +2093,25 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
   switch (IID) {
   default:
     break;
+  case Intrinsic::amdgcn_make_buffer_rsrc: {
+    if (!isSplitFatPtr(I.getType()))
+      return {nullptr, nullptr};
+    Value *Base = I.getArgOperand(0);
+    Value *Stride = I.getArgOperand(1);
+    Value *NumRecords = I.getArgOperand(2);
+    Value *Flags = I.getArgOperand(3);
+    auto *SplitType = cast<StructType>(I.getType());
+    Type *RsrcType = SplitType->getElementType(0);
+    Type *OffType = SplitType->getElementType(1);
+    IRB.SetInsertPoint(&I);
+    Value *Rsrc = IRB.CreateIntrinsic(IID, {RsrcType, Base->getType()},
+                                      {Base, Stride, NumRecords, Flags});
+    copyMetadata(Rsrc, &I);
+    Rsrc->takeName(&I);
+    Value *Zero = Constant::getNullValue(OffType);
+    SplitUsers.insert(&I);
+    return {Rsrc, Zero};
+  }
   case Intrinsic::ptrmask: {
     Value *Ptr = I.getArgOperand(0);
     if (!isSplitFatPtr(Ptr->getType()))
@@ -1766,12 +2354,16 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
   }
 
   StoreFatPtrsAsIntsVisitor MemOpsRewrite(&IntTM, M.getContext());
+  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(DL,
+                                                              M.getContext());
   for (Function &F : M.functions()) {
     bool InterfaceChange = hasFatPointerInterface(F, &StructTM);
     bool BodyChanges = containsBufferFatPointers(F, &StructTM);
     Changed |= MemOpsRewrite.processFunction(F);
-    if (InterfaceChange || BodyChanges)
+    if (InterfaceChange || BodyChanges) {
       NeedsRemap.push_back(std::make_pair(&F, InterfaceChange));
+      Changed |= BufferContentsTypeRewrite.processFunction(F);
+    }
   }
   if (NeedsRemap.empty())
     return Changed;

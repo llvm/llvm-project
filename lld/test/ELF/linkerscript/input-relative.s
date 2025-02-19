@@ -31,13 +31,13 @@
 
 ## The rules does not apply to an absolute path.
 # RUN: echo 'INPUT(/libb.a)' > dir/absolute.lds
-# RUN: not ld.lld a.o dir/absolute.lds -o /dev/null
+# RUN: not ld.lld a.o dir/absolute.lds
 
 ## If the parent directory of the current linker script does not contain the file,
 ## fall back to the current working directory.
 # RUN: cp libb.a libc.a
 # RUN: echo 'INPUT(libc.a)' > dir/fallback.lds
-# RUN: ld.lld a.o dir/fallback.lds -o /dev/null
+# RUN: ld.lld a.o dir/fallback.lds
 
 .globl _start
 _start:

@@ -17,6 +17,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
@@ -227,14 +228,14 @@ public:
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterMaxBlocksAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      generateMetadata(value.getInt(), "cluster_max_blocks");
+      llvmFunc->addFnAttr("nvvm.maxclusterrank", llvm::utostr(value.getInt()));
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getMinctasmAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      generateMetadata(value.getInt(), "minctasm");
+      llvmFunc->addFnAttr("nvvm.minctasm", llvm::utostr(value.getInt()));
     } else if (attribute.getName() == NVVM::NVVMDialect::getMaxnregAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      generateMetadata(value.getInt(), "maxnreg");
+      llvmFunc->addFnAttr("nvvm.maxnreg", llvm::utostr(value.getInt()));
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getKernelFuncAttrName()) {
       llvmFunc->setCallingConv(llvm::CallingConv::PTX_Kernel);

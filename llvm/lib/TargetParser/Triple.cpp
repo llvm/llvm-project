@@ -1711,6 +1711,26 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   llvm_unreachable("Invalid architecture value");
 }
 
+unsigned Triple::getTrampolineSize() const {
+  switch (getArch()) {
+  default:
+    break;
+  case Triple::ppc:
+  case Triple::ppcle:
+    if (isOSLinux())
+      return 40;
+    break;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    if (isOSLinux())
+      return 48;
+    break;
+  case Triple::aarch64:
+    return 36;
+  }
+  return 32;
+}
+
 bool Triple::isArch64Bit() const {
   return getArchPointerBitWidth(getArch()) == 64;
 }

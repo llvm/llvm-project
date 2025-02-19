@@ -1865,7 +1865,7 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::StackProtect:    return 1 << 14;
   case Attribute::StackProtectReq: return 1 << 15;
   case Attribute::Alignment:       return 31 << 16;
-  case Attribute::NoCapture:       return 1 << 21;
+  // 1ULL << 21 is NoCapture, which is upgraded separately.
   case Attribute::NoRedZone:       return 1 << 22;
   case Attribute::NoImplicitFloat: return 1 << 23;
   case Attribute::Naked:           return 1 << 24;
@@ -1937,8 +1937,7 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
 }
 
 /// This fills an AttrBuilder object with the LLVM attributes that have
-/// been decoded from the given integer. This function must stay in sync with
-/// 'encodeLLVMAttributesForBitcode'.
+/// been decoded from the given integer.
 static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
                                            uint64_t EncodedAttrs,
                                            uint64_t AttrIdx) {
@@ -1984,6 +1983,12 @@ static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
     }
     if (ME != MemoryEffects::unknown())
       B.addMemoryAttr(ME);
+  }
+
+  // Upgrade nocapture to captures(none).
+  if (Attrs & (1ULL << 21)) {
+    Attrs &= ~(1ULL << 21);
+    B.addCapturesAttr(CaptureInfo::none());
   }
 
   addRawAttributeValue(B, Attrs);
@@ -2098,8 +2103,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoBuiltin;
   case bitc::ATTR_KIND_NO_CALLBACK:
     return Attribute::NoCallback;
-  case bitc::ATTR_KIND_NO_CAPTURE:
-    return Attribute::NoCapture;
   case bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE:
     return Attribute::NoDivergenceSource;
   case bitc::ATTR_KIND_NO_DUPLICATE:
@@ -2349,6 +2352,11 @@ Error BitcodeReader::parseAttributeGroupBlock() {
               upgradeOldMemoryAttribute(ME, EncodedKind))
             continue;
 
+          if (EncodedKind == bitc::ATTR_KIND_NO_CAPTURE) {
+            B.addCapturesAttr(CaptureInfo::none());
+            continue;
+          }
+
           if (Error Err = parseAttrKind(EncodedKind, &Kind))
             return Err;
 
@@ -2389,9 +2397,28 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addUWTableAttr(UWTableKind(Record[++i]));
           else if (Kind == Attribute::AllocKind)
             B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
-          else if (Kind == Attribute::Memory)
-            B.addMemoryAttr(MemoryEffects::createFromIntValue(Record[++i]));
-          else if (Kind == Attribute::Captures)
+          else if (Kind == Attribute::Memory) {
+            uint64_t EncodedME = Record[++i];
+            const uint8_t Version = (EncodedME >> 56);
+            if (Version == 0) {
+              // Errno memory location was previously encompassed into default
+              // memory. Ensure this is taken into account while reconstructing
+              // the memory attribute prior to its introduction.
+              ModRefInfo ArgMem = ModRefInfo((EncodedME >> 0) & 3);
+              ModRefInfo InaccessibleMem = ModRefInfo((EncodedME >> 2) & 3);
+              ModRefInfo OtherMem = ModRefInfo((EncodedME >> 4) & 3);
+              auto ME = MemoryEffects::inaccessibleMemOnly(InaccessibleMem) |
+                        MemoryEffects::argMemOnly(ArgMem) |
+                        MemoryEffects::errnoMemOnly(OtherMem) |
+                        MemoryEffects::otherMemOnly(OtherMem);
+              B.addMemoryAttr(ME);
+            } else {
+              // Construct the memory attribute directly from the encoded base
+              // on newer versions.
+              B.addMemoryAttr(MemoryEffects::createFromIntValue(
+                  EncodedME & 0x00FFFFFFFFFFFFFFULL));
+            }
+          } else if (Kind == Attribute::Captures)
             B.addCapturesAttr(CaptureInfo::createFromIntValue(Record[++i]));
           else if (Kind == Attribute::NoFPClass)
             B.addNoFPClassAttr(
@@ -2598,7 +2625,7 @@ Error BitcodeReader::parseTypeTableBody() {
           !PointerType::isValidElementType(ResultTy))
         return error("Invalid type");
       ContainedIDs.push_back(Record[0]);
-      ResultTy = PointerType::get(ResultTy, AddressSpace);
+      ResultTy = PointerType::get(ResultTy->getContext(), AddressSpace);
       break;
     }
     case bitc::TYPE_CODE_OPAQUE_POINTER: { // OPAQUE_POINTER: [addrspace]
@@ -7147,6 +7174,8 @@ Error BitcodeReader::materializeModule() {
   UpgradeDebugInfo(*TheModule);
 
   UpgradeModuleFlags(*TheModule);
+
+  UpgradeNVVMAnnotations(*TheModule);
 
   UpgradeARCRuntime(*TheModule);
 

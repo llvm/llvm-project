@@ -54,7 +54,12 @@ define float @debug_stash_pointer(ptr addrspace(8) %buf, i32 %idx, ptr addrspace
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw i160 [[BUF_PTR_4_PTR_INT_RSRC]], 32, !dbg [[DBG33]]
 ; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT_OFF:%.*]] = zext i32 [[BUF_PTR_4_PTR_OFF]] to i160, !dbg [[DBG33]]
 ; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT:%.*]] = or i160 [[TMP10]], [[BUF_PTR_4_PTR_INT_OFF]], !dbg [[DBG33]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i160(i160 [[BUF_PTR_4_PTR_INT]], ptr addrspace(8) align 32 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_OFF]], i32 0, i32 0), !dbg [[DBG33]]
+; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT_LEGAL:%.*]] = bitcast i160 [[BUF_PTR_4_PTR_INT]] to <5 x i32>, !dbg [[DBG33]]
+; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT_SLICE_0:%.*]] = shufflevector <5 x i32> [[BUF_PTR_4_PTR_INT_LEGAL]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !dbg [[DBG33]]
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[BUF_PTR_4_PTR_INT_SLICE_0]], ptr addrspace(8) align 32 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_OFF]], i32 0, i32 0), !dbg [[DBG33]]
+; CHECK-NEXT:    [[AUX_PTR_2_PTR_PART_4:%.*]] = add nuw i32 [[AUX_PTR_2_PTR_OFF]], 16, !dbg [[DBG33]]
+; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT_SLICE_4:%.*]] = extractelement <5 x i32> [[BUF_PTR_4_PTR_INT_LEGAL]], i64 4, !dbg [[DBG33]]
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[BUF_PTR_4_PTR_INT_SLICE_4]], ptr addrspace(8) align 16 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_PART_4]], i32 0, i32 0), !dbg [[DBG33]]
 ; CHECK-NEXT:    ret float [[RET]], !dbg [[DBG34:![0-9]+]]
 ;
   %buf.ptr.var = alloca ptr addrspace(7), align 32, addrspace(5), !dbg !20

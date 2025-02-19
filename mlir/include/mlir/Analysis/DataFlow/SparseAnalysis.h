@@ -255,10 +255,15 @@ private:
   /// operation `branch`, which can either be the entry block of one of the
   /// regions or the parent operation itself, and set either the argument or
   /// parent result lattices.
-  void visitRegionSuccessors(ProgramPoint *point,
-                             RegionBranchOpInterface branch,
-                             RegionBranchPoint successor,
-                             ArrayRef<AbstractSparseLattice *> lattices);
+  /// This method can be overridden to control precisely how the region
+  /// successors of `branch` are visited. For example in order to precisely
+  /// control the order in which predecessor operand lattices are propagated
+  /// from. An override is responsible for visiting all the known predecessors
+  /// and propagating therefrom.
+  virtual void
+  visitRegionSuccessors(ProgramPoint *point, RegionBranchOpInterface branch,
+                        RegionBranchPoint successor,
+                        ArrayRef<AbstractSparseLattice *> lattices);
 };
 
 //===----------------------------------------------------------------------===//

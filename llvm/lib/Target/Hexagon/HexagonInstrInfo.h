@@ -145,7 +145,7 @@ public:
 
   /// Second variant of isProfitableToIfCvt. This one
   /// checks for the case where two basic blocks from true and false path
-  /// of a if-then-else (diamond) are predicated on mutally exclusive
+  /// of a if-then-else (diamond) are predicated on mutually exclusive
   /// predicates, where the probability of the true path being taken is given
   /// by Probability, and Confidence is a measure of our confidence that it
   /// will be properly predicted.
@@ -181,21 +181,20 @@ public:
   /// stack frame index. The store instruction is to be added to the given
   /// machine basic block before the specified machine instruction. If isKill
   /// is true, the register operand is the last use and must be marked kill.
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   /// Load the specified register of the given register class from the specified
   /// stack frame index. The load instruction is to be added to the given
   /// machine basic block before the specified machine instruction.
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   /// This function is called for all pseudo instructions
   /// that remain after register allocation. Many pseudo instructions are
@@ -308,8 +307,9 @@ public:
   /// operand latency. But it may not be possible for instructions with variable
   /// number of defs / uses.
   ///
-  /// This is a raw interface to the itinerary that may be directly overriden by
-  /// a target. Use computeOperandLatency to get the best estimate of latency.
+  /// This is a raw interface to the itinerary that may be directly overridden
+  /// by a target. Use computeOperandLatency to get the best estimate of
+  /// latency.
   std::optional<unsigned> getOperandLatency(const InstrItineraryData *ItinData,
                                             const MachineInstr &DefMI,
                                             unsigned DefIdx,

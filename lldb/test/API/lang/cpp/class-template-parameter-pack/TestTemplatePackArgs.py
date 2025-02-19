@@ -11,7 +11,7 @@ from lldbsuite.test import lldbutil
 class TemplatePackArgsTestCase(TestBase):
     def test_template_argument_pack(self):
         self.build()
-        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
+        (target, _, thread, _) = lldbutil.run_to_source_breakpoint(
             self, "breakpoint here", lldb.SBFileSpec("main.cpp"), exe_name="a.out"
         )
         frame = thread.GetSelectedFrame()
@@ -33,10 +33,25 @@ class TemplatePackArgsTestCase(TestBase):
         self.assertEqual(
             only_pack.GetType().GetTemplateArgumentType(2).GetName(), "double"
         )
-        # Access the C<double, 42> template parameter.
+
         nested_template = only_pack.GetType().GetTemplateArgumentType(3)
         self.assertEqual(nested_template.GetName(), "D<int, int, bool>")
         self.assertEqual(nested_template.GetNumberOfTemplateArguments(), 3)
         self.assertEqual(nested_template.GetTemplateArgumentType(0).GetName(), "int")
         self.assertEqual(nested_template.GetTemplateArgumentType(1).GetName(), "int")
         self.assertEqual(nested_template.GetTemplateArgumentType(2).GetName(), "bool")
+
+        my_c = frame.FindVariable("myC")
+        self.assertTrue(my_c.IsValid(), "make sure we find the myC variable")
+
+        # Out of bounds index.
+        self.assertFalse(my_c.GetType().GetTemplateArgumentValue(target, 3))
+
+        # Out of bounds index.
+        template_param_value = my_c.GetType().GetTemplateArgumentValue(target, 1)
+        self.assertEqual(template_param_value.GetTypeName(), "int")
+        self.assertEqual(template_param_value.GetValueAsSigned(), 16)
+
+        template_param_value = my_c.GetType().GetTemplateArgumentValue(target, 2)
+        self.assertEqual(template_param_value.GetTypeName(), "int")
+        self.assertEqual(template_param_value.GetValueAsSigned(), 32)

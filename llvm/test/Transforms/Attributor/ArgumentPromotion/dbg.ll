@@ -6,7 +6,7 @@ declare void @sink(i32)
 
 define internal void @test(ptr %X) !dbg !2 {
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[X:%.*]]) !dbg [[DBG3:![0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[X:%.*]]) !dbg [[DBG3:![0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    call void @sink(i32 [[TMP2]])
@@ -33,14 +33,14 @@ define internal void @test_byval(ptr byval(%struct.pair) %P) {
 
 define void @caller(ptr %Y, ptr %P) {
 ; TUNIT-LABEL: define {{[^@]+}}@caller
-; TUNIT-SAME: (ptr nocapture nofree readonly [[Y:%.*]], ptr nocapture nofree readnone [[P:%.*]]) {
-; TUNIT-NEXT:    call void @test(ptr nocapture nofree noundef readonly align 8 [[Y]]), !dbg [[DBG4:![0-9]+]]
+; TUNIT-SAME: (ptr nofree readonly captures(none) [[Y:%.*]], ptr nofree readnone captures(none) [[P:%.*]]) {
+; TUNIT-NEXT:    call void @test(ptr nofree noundef readonly align 8 captures(none) [[Y]]), !dbg [[DBG4:![0-9]+]]
 ; TUNIT-NEXT:    call void @test_byval(), !dbg [[DBG5:![0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y:%.*]], ptr nocapture nofree readnone [[P:%.*]]) {
-; CGSCC-NEXT:    call void @test(ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y]]), !dbg [[DBG4:![0-9]+]]
+; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[Y:%.*]], ptr nofree readnone captures(none) [[P:%.*]]) {
+; CGSCC-NEXT:    call void @test(ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[Y]]), !dbg [[DBG4:![0-9]+]]
 ; CGSCC-NEXT:    call void @test_byval(), !dbg [[DBG5:![0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;

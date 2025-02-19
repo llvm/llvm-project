@@ -233,7 +233,7 @@ bool ShadowStackGCLoweringImpl::doInitialization(Module &M) {
   // Specifies length of variable length array.
   EltTys.push_back(Type::getInt32Ty(M.getContext()));
   FrameMapTy = StructType::create(EltTys, "gc_map");
-  PointerType *FrameMapPtrTy = PointerType::getUnqual(FrameMapTy);
+  PointerType *FrameMapPtrTy = PointerType::getUnqual(M.getContext());
 
   // struct StackEntry {
   //   ShadowStackEntry *Next; // Caller's stack entry.
