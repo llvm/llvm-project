@@ -865,6 +865,7 @@ class InterchangeableBinOp final : public InterchangeableInstruction {
       Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
   // from high to low bit: Xor Or And Sub Add Mul AShr Shl
   MaskType Mask = 0b11111111;
+  MaskType SeenBefore = 0;
 
   static MaskType opcodeToMask(unsigned Opcode) {
     switch (Opcode) {
@@ -902,6 +903,7 @@ public:
     unsigned Opcode = I->getOpcode();
     if (!binary_search(SupportedOp, Opcode))
       return false;
+    SeenBefore |= opcodeToMask(Opcode);
     ConstantInt *CI = isBinOpWithConstantInt(I);
     if (CI) {
       const APInt &Op1Int = CI->getValue();
@@ -929,24 +931,22 @@ public:
     return tryAnd(opcodeToMask(Opcode));
   }
   unsigned getInterchangeableInstructionOpcode() override {
-    unsigned Opcode = MainOp->getOpcode();
-    if (Mask & opcodeToMask(Opcode))
-      return Opcode;
-    if (Mask & 0b1)
+    MaskType Candidate = Mask & SeenBefore;
+    if (Candidate & 0b1)
       return Instruction::Shl;
-    if (Mask & 0b10)
+    if (Candidate & 0b10)
       return Instruction::AShr;
-    if (Mask & 0b100)
+    if (Candidate & 0b100)
       return Instruction::Mul;
-    if (Mask & 0b1000)
+    if (Candidate & 0b1000)
       return Instruction::Add;
-    if (Mask & 0b10000)
+    if (Candidate & 0b10000)
       return Instruction::Sub;
-    if (Mask & 0b100000)
+    if (Candidate & 0b100000)
       return Instruction::And;
-    if (Mask & 0b1000000)
+    if (Candidate & 0b1000000)
       return Instruction::Or;
-    if (Mask & 0b10000000)
+    if (Candidate & 0b10000000)
       return Instruction::Xor;
     llvm_unreachable("Cannot find interchangeable instruction.");
   }
