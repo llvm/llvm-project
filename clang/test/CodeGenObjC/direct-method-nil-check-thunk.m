@@ -67,7 +67,7 @@ __attribute__((objc_root_class))
 
 // CHECK-NOT: @"\01+[Root classGetInt]_inner"
 + (int)classGetInt __attribute__((objc_direct)) {
-  // CHECK: define hidden i32 @"\01+[Root classGetInt]"(ptr noundef nonnull [[ARGSELF:%.*]])
+  // CHECK: define hidden i32 @"\01+[Root classGetInt]"(ptr noundef [[ARGSELF:%.*]])
   // [self self]
   // CHECK-LABEL: entry:
   // CHECK-NEXT: [[SELFADDR:%.*]] = alloca ptr,
@@ -165,7 +165,7 @@ __attribute__((objc_root_class))
   return st;
 }
 
-// CHECK-LABEL: define hidden void @"\01+[Root classGetAggregate]"({{.*}}, ptr noundef nonnull {{.*}})
+// CHECK-LABEL: define hidden void @"\01+[Root classGetAggregate]"({{.*}}, ptr noundef {{.*}})
 // CHECK-NOT: @"\01+[Root classGetAggregate]_inner"
 + (struct my_aggregate_struct)classGetAggregate __attribute__((objc_direct)) {
   struct my_aggregate_struct st = {.a = 42};
