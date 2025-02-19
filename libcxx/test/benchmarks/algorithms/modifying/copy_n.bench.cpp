@@ -20,63 +20,60 @@
 #include "../../GenerateInput.h"
 #include "test_macros.h"
 
-template <class Container, class Operation>
-void bm_general(std::string operation_name, Operation copy_n) {
-  auto bench = [copy_n](auto& st) {
-    std::size_t const n = st.range(0);
-    using ValueType     = typename Container::value_type;
-    Container c;
-    std::generate_n(std::back_inserter(c), n, [] { return Generate<ValueType>::random(); });
-
-    std::vector<ValueType> out(n);
-
-    for ([[maybe_unused]] auto _ : st) {
-      benchmark::DoNotOptimize(c);
-      benchmark::DoNotOptimize(out);
-      auto result = copy_n(c.begin(), n, out.begin());
-      benchmark::DoNotOptimize(result);
-    }
-  };
-  benchmark::RegisterBenchmark(operation_name, bench)->Range(8, 1 << 20);
-}
-
-template <bool Aligned, class Operation>
-static void bm_vector_bool(std::string operation_name, Operation copy_n) {
-  auto bench = [copy_n](auto& st) {
-    std::size_t const n = st.range(0);
-    std::vector<bool> in(n, true);
-    std::vector<bool> out(Aligned ? n : n + 8);
-    auto first = in.begin();
-    auto dst   = Aligned ? out.begin() : out.begin() + 4;
-    for ([[maybe_unused]] auto _ : st) {
-      benchmark::DoNotOptimize(in);
-      benchmark::DoNotOptimize(out);
-      auto result = copy_n(first, n, dst);
-      benchmark::DoNotOptimize(result);
-    }
-  };
-  benchmark::RegisterBenchmark(operation_name, bench)->Range(64, 1 << 20);
-}
-
 int main(int argc, char** argv) {
-  auto std_copy_n    = [](auto first, auto n, auto out) { return std::copy_n(first, n, out); };
-  auto ranges_copy_n = std::ranges::copy_n;
+  auto std_copy_n = [](auto first, auto n, auto out) { return std::copy_n(first, n, out); };
 
-  // std::copy_n
-  bm_general<std::vector<int>>("std::copy_n(vector<int>)", std_copy_n);
-  bm_general<std::deque<int>>("std::copy_n(deque<int>)", std_copy_n);
-  bm_general<std::list<int>>("std::copy_n(list<int>)", std_copy_n);
-  bm_vector_bool<true>("std::copy_n(vector<bool>) (aligned)", std_copy_n);
-  bm_vector_bool<false>("std::copy_n(vector<bool>) (unaligned)", std_copy_n);
+  // {std,ranges}::copy_n(normal container)
+  {
+    auto bm = []<class Container>(std::string name, auto copy_n) {
+      benchmark::RegisterBenchmark(name, [copy_n](auto& st) {
+        std::size_t const n = st.range(0);
+        using ValueType     = typename Container::value_type;
+        Container c;
+        std::generate_n(std::back_inserter(c), n, [] { return Generate<ValueType>::random(); });
 
-  // ranges::copy_n
-  bm_general<std::vector<int>>("ranges::copy_n(vector<int>)", ranges_copy_n);
-  bm_general<std::deque<int>>("ranges::copy_n(deque<int>)", ranges_copy_n);
-  bm_general<std::list<int>>("ranges::copy_n(list<int>)", ranges_copy_n);
+        std::vector<ValueType> out(n);
+
+        for ([[maybe_unused]] auto _ : st) {
+          benchmark::DoNotOptimize(c);
+          benchmark::DoNotOptimize(out);
+          auto result = copy_n(c.begin(), n, out.begin());
+          benchmark::DoNotOptimize(result);
+        }
+      })->Range(8, 1 << 20);
+    };
+    bm.operator()<std::vector<int>>("std::copy_n(vector<int>)", std_copy_n);
+    bm.operator()<std::deque<int>>("std::copy_n(deque<int>)", std_copy_n);
+    bm.operator()<std::list<int>>("std::copy_n(list<int>)", std_copy_n);
+    bm.operator()<std::vector<int>>("ranges::copy_n(vector<int>)", std::ranges::copy_n);
+    bm.operator()<std::deque<int>>("ranges::copy_n(deque<int>)", std::ranges::copy_n);
+    bm.operator()<std::list<int>>("ranges::copy_n(list<int>)", std::ranges::copy_n);
+  }
+
+  // {std,ranges}::copy_n(vector<bool>)
+  {
+    auto bm = []<bool Aligned>(std::string name, auto copy_n) {
+      benchmark::RegisterBenchmark(name, [copy_n](auto& st) {
+        std::size_t const n = st.range(0);
+        std::vector<bool> in(n, true);
+        std::vector<bool> out(Aligned ? n : n + 8);
+        auto first = in.begin();
+        auto dst   = Aligned ? out.begin() : out.begin() + 4;
+        for ([[maybe_unused]] auto _ : st) {
+          benchmark::DoNotOptimize(in);
+          benchmark::DoNotOptimize(out);
+          auto result = copy_n(first, n, dst);
+          benchmark::DoNotOptimize(result);
+        }
+      })->Range(64, 1 << 20);
+    };
+    bm.operator()<true>("std::copy_n(vector<bool>) (aligned)", std_copy_n);
+    bm.operator()<false>("std::copy_n(vector<bool>) (unaligned)", std_copy_n);
 #if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
-  bm_vector_bool<true>("ranges::copy_n(vector<bool>) (aligned)", ranges_copy_n);
-  bm_vector_bool<false>("ranges::copy_n(vector<bool>) (unaligned)", ranges_copy_n);
+    bm.operator()<true>("ranges::copy_n(vector<bool>) (aligned)", std::ranges::copy_n);
+    bm.operator()<false>("ranges::copy_n(vector<bool>) (unaligned)", std::ranges::copy_n);
 #endif
+  }
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
