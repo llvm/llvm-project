@@ -714,7 +714,7 @@ func.func @fold_extract_transpose(
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
 func.func @fold_extract_broadcast_same_input_output_scalar(%a : f32, 
-  %idx0 : index, idx1 : index, %idx2 : index) -> f32 {
+  %idx0 : index, %idx1 : index, %idx2 : index) -> f32 {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
   %r = vector.extract %b[%idx0, %idx1, %idx2] : f32 from vector<1x2x4xf32>
   return %r : f32
@@ -786,7 +786,7 @@ func.func @fold_extract_splat(%a : f32, %idx0 : index, %idx1 : index, %idx2 : in
 // CHECK-LABEL: fold_extract_broadcast_dim1_broadcasting
 //  CHECK-SAME:   %[[A:.*]]: vector<2x1xf32>
 //  CHECK-SAME:   %[[IDX:.*]]: index, %[[IDX1:.*]]: index, %[[IDX2:.*]]: index
-//       CHECK:   %[[R:.*]] = vector.extract %[[A]][%[[IDX1]], %[[IDX2]]] : f32 from vector<2x1xf32>
+//       CHECK:   %[[R:.*]] = vector.extract %[[A]][%[[IDX1]], 0] : f32 from vector<2x1xf32>
 //       CHECK:   return %[[R]] : f32
 func.func @fold_extract_broadcast_dim1_broadcasting(%a : vector<2x1xf32>, 
   %idx : index, %idx1 : index, %idx2 : index) -> f32 {
