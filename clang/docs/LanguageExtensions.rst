@@ -2629,7 +2629,7 @@ with the current table size.
 .. code-block:: c++
 
   typedef void (*__funcref funcref_t)();
-  static __funcref table[0];
+  static funcref_t table[0];
 
   size_t getSize() {
     return __builtin_wasm_table_size(table);
@@ -2651,10 +2651,10 @@ or -1. It will return -1 if not enough space could be allocated.
 .. code-block:: c++
 
   typedef void (*__funcref funcref_t)();
-  static __funcref table[0];
+  static funcref_t table[0];
 
   // grow returns the new table size or -1 on error.
-  int grow(__funcref fn, int delta) {
+  int grow(funcref_t fn, int delta) {
     int prevSize = __builtin_wasm_table_grow(table, fn, delta);
     if (prevSize == -1)
       return -1;
