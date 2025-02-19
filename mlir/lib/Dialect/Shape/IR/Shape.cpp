@@ -652,14 +652,9 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   if (!adaptor.getShapes().front())
     return nullptr;
 
-  auto firstShape = llvm::to_vector<6>(
+  SmallVector<int64_t, 6> resultShape(
       llvm::cast<DenseIntElementsAttr>(adaptor.getShapes().front())
           .getValues<int64_t>());
-
-  SmallVector<int64_t, 6> resultShape;
-  resultShape.clear();
-  std::copy(firstShape.begin(), firstShape.end(),
-            std::back_inserter(resultShape));
 
   for (auto next : adaptor.getShapes().drop_front()) {
     if (!next)
