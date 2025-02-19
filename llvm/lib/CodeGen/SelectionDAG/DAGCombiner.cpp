@@ -622,6 +622,8 @@ namespace {
     SDValue CombineConsecutiveLoads(SDNode *N, EVT VT);
     SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
                                  const TargetLowering &TLI);
+    SDValue foldMulPARTIAL_REDUCE_MLA(SDNode *N);
+    SDValue foldExtendPARTIAL_REDUCE_MLA(SDNode *N);
 
     SDValue CombineExtLoad(SDNode *N);
     SDValue CombineZExtLogicopShiftLoad(SDNode *N);
@@ -12502,18 +12504,45 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
-  // Makes PARTIAL_REDUCE_MLA(Acc, MUL(EXT(MulOpLHS), EXT(MulOpRHS)), Splat(1))
-  // into PARTIAL_REDUCE_MLA(Acc, MulOpLHS, MulOpRHS)
-  SDLoc DL(N);
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-  SDValue Op2 = N->getOperand(2);
+  // Only perform the DAG combine if there is custom lowering provided by the
+  // target.
+  if (!TLI.isPartialReduceMLALegalOrCustom(N->getValueType(0),
+                                           N->getOperand(1).getValueType()))
+    return SDValue();
 
+  if (SDValue Res = foldMulPARTIAL_REDUCE_MLA(N))
+    return Res;
+  if (SDValue Res = foldExtendPARTIAL_REDUCE_MLA(N))
+    return Res;
+  return SDValue();
+}
+
+SDValue DAGCombiner::foldMulPARTIAL_REDUCE_MLA(SDNode *N) {
+  // Makes PARTIAL_REDUCE_*MLA(Acc, MUL(MulOpLHS, MulOpRHS), Splat(1)) into
+  // PARTIAL_REDUCE_*MLA(Acc, MulOpLHS, MulOpRHS)
+  SDLoc DL(N);
+
+  SDValue Op1 = N->getOperand(1);
   if (Op1->getOpcode() != ISD::MUL)
     return SDValue();
 
-  SDValue ExtMulOpLHS = Op1->getOperand(0);
-  SDValue ExtMulOpRHS = Op1->getOperand(1);
+  APInt ConstantOne;
+  if (!ISD::isConstantSplatVector(N->getOperand(2).getNode(), ConstantOne) ||
+      !ConstantOne.isOne())
+    return SDValue();
+
+  return DAG.getNode(N->getOpcode(), DL, N->getValueType(0), N->getOperand(0),
+                     Op1->getOperand(0), Op1->getOperand(1));
+}
+
+SDValue DAGCombiner::foldExtendPARTIAL_REDUCE_MLA(SDNode *N) {
+  // Makes PARTIAL_REDUCE_*MLA(Acc, ZEXT(MulOpLHS), ZEXT(MulOpRHS)) into
+  // PARTIAL_REDUCE_UMLA(Acc, MulOpLHS, MulOpRHS) and
+  // PARTIAL_REDUCE_*MLA(Acc, SEXT(MulOpLHS), SEXT(MulOpRHS)) into
+  // PARTIAL_REDUCE_SMLA(Acc, MulOpLHS, MulOpRHS)
+  SDLoc DL(N);
+  SDValue ExtMulOpLHS = N->getOperand(1);
+  SDValue ExtMulOpRHS = N->getOperand(2);
   unsigned ExtMulOpLHSOpcode = ExtMulOpLHS->getOpcode();
   unsigned ExtMulOpRHSOpcode = ExtMulOpRHS->getOpcode();
   if (!ISD::isExtOpcode(ExtMulOpLHSOpcode) ||
@@ -12526,14 +12555,6 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   if (MulOpLHSVT != MulOpRHS.getValueType())
     return SDValue();
 
-  if (!TLI.isTypeLegal(MulOpLHSVT) || !TLI.isTypeLegal(N->getValueType(0)))
-    return SDValue();
-
-  APInt ConstantOne;
-  if (!ISD::isConstantSplatVector(Op2.getNode(), ConstantOne) ||
-      !ConstantOne.isOne())
-    return SDValue();
-
   bool LHSIsSigned = ExtMulOpLHSOpcode == ISD::SIGN_EXTEND;
   bool RHSIsSigned = ExtMulOpRHSOpcode == ISD::SIGN_EXTEND;
   if (LHSIsSigned != RHSIsSigned)
@@ -12541,8 +12562,8 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
 
   unsigned NewOpcode =
       LHSIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
-  return DAG.getNode(NewOpcode, DL, Op0->getValueType(0), Op0, MulOpLHS,
-                     MulOpRHS);
+  return DAG.getNode(NewOpcode, DL, N->getValueType(0), N->getOperand(0),
+                     MulOpLHS, MulOpRHS);
 }
 
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
