@@ -966,7 +966,6 @@ Bug Fixes to C++ Support
   constraints are applied. (#GH122134)
 - Fixed canonicalization of pack indexing types - Clang did not always recognized identical pack indexing. (#GH123033)
 - Fixed a nested lambda substitution issue for constraint evaluation. (#GH123441)
-- Clang now permits the use of immediate-escalating expressions in ``constexpr`` if conditions. (#GH123524)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -979,6 +978,7 @@ Bug Fixes to AST Handling
 - Clang now uses the location of the begin of the member expression for ``CallExpr``
   involving deduced ``this``. (#GH116928)
 - Fixed printout of AST that uses pack indexing expression. (#GH116486)
+- Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
