@@ -411,7 +411,7 @@ TEST(LocateSymbol, FindOverrides) {
                                    sym("foo", Code.range("2"), std::nullopt)));
 }
 
-TEST(LocateSymbol, FindOverridesObjC) {
+TEST(LocateSymbol, FindOverridesFromDefObjC) {
   auto Code = Annotations(R"objc(
     @protocol Fooey
     - (void)foo;
@@ -437,6 +437,33 @@ TEST(LocateSymbol, FindOverridesObjC) {
       locateSymbolAt(AST, Code.point(), TU.index().get()),
       UnorderedElementsAre(sym("foo", Code.range("1"), std::nullopt),
                            sym("foo", Code.range("2"), Code.range("3"))));
+}
+
+TEST(LocateSymbol, NoOverridesFromDeclObjC) {
+  auto Code = Annotations(R"objc(
+    @protocol Fooey
+    - (void)foo;
+    @end
+    @interface Base
+    - (void)foo;
+    @end
+    @interface Foo : Base<Fooey>
+    - (void)foo;
+    @end
+
+    @interface Bar : Foo
+    - (void)$2[[fo^o]];
+    @end
+    @implementation Bar
+    - (void)$3[[foo]] {}
+    @end
+  )objc");
+  TestTU TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-xobjective-c++");
+  auto AST = TU.build();
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point(), TU.index().get()),
+      UnorderedElementsAre(sym("foo", Code.range("2"), Code.range("3"))));
 }
 
 TEST(LocateSymbol, ObjCNoOverridesOnUsage) {

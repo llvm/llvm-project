@@ -439,14 +439,16 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
         continue;
       }
     }
-    // Special case: - (void)^method; should jump to overrides. Note that an
-    // Objective-C method can override a parent class or protocol.
+    // Special case: - (void)^method {} should jump to overrides, but the decl
+    // shouldn't, only the definition. Note that an Objective-C method can
+    // override a parent class or protocol.
     //
     // FIXME: Support jumping from a protocol decl to overrides on go-to
     // definition.
     if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D)) {
       if (TouchedIdentifier &&
-          objcMethodIsTouched(SM, OMD, TouchedIdentifier->location())) {
+          objcMethodIsTouched(SM, OMD, TouchedIdentifier->location()) &&
+          OMD->isThisDeclarationADefinition()) {
         llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
         OMD->getOverriddenMethods(Overrides);
         if (!Overrides.empty()) {
