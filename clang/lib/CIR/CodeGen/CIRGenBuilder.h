@@ -871,7 +871,7 @@ public:
         /*mem_order=*/cir::MemOrderAttr{}, /*tbaa=*/cir::TBAAAttr{});
   }
 
-  mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,
+  cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
                                 mlir::Value ptr, llvm::MaybeAlign align,
                                 bool isVolatile) {
     if (ty != mlir::cast<cir::PointerType>(ptr.getType()).getPointee())
@@ -880,14 +880,14 @@ public:
     return CIRBaseBuilderTy::createLoad(loc, ptr, isVolatile, alignment);
   }
 
-  mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,
+  cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
                                 mlir::Value ptr, llvm::MaybeAlign align) {
     // TODO: make sure callsites shouldn't be really passing volatile.
     assert(!cir::MissingFeatures::volatileLoadOrStore());
     return createAlignedLoad(loc, ty, ptr, align, /*isVolatile=*/false);
   }
 
-  mlir::Value
+  cir::LoadOp
   createAlignedLoad(mlir::Location loc, mlir::Type ty, mlir::Value addr,
                     clang::CharUnits align = clang::CharUnits::One()) {
     return createAlignedLoad(loc, ty, addr, align.getAsAlign());

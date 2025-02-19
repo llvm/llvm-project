@@ -4453,7 +4453,12 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vldap1_lane_s64:
   case NEON::BI__builtin_neon_vldap1q_lane_s64: {
-    llvm_unreachable("NEON::BI__builtin_neon_vldap1q_lane_s64 NYI");
+    cir::LoadOp Load = builder.createAlignedLoad(
+        Ops[0].getLoc(), vTy.getEltType(), Ops[0], PtrOp0.getAlignment());
+    Load.setAtomic(cir::MemOrder::Acquire);
+    return builder.create<cir::VecInsertOp>(getLoc(E->getExprLoc()),
+                                            builder.createBitcast(Ops[1], vTy),
+                                            Load, Ops[2]);
   }
   case NEON::BI__builtin_neon_vld1_dup_v:
   case NEON::BI__builtin_neon_vld1q_dup_v: {
