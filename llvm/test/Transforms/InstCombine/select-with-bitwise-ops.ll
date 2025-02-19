@@ -20,6 +20,34 @@ define i32 @select_icmp_eq_and_1_0_or_2(i32 %x, i32 %y) {
   ret i32 %select
 }
 
+define i32 @select_icmp_eq_and_1_0_or_2_disjoint(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_icmp_eq_and_1_0_or_2_disjoint(
+; CHECK-NEXT:    [[AND:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = or disjoint i32 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %or = or disjoint i32 %y, 2
+  %select = select i1 %cmp, i32 %y, i32 %or
+  ret i32 %select
+}
+
+define i32 @select_icmp_eq_and_1_0_add_2_nsw_nuw(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_icmp_eq_and_1_0_add_2_nsw_nuw(
+; CHECK-NEXT:    [[AND:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = add nuw nsw i32 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
+;
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %or = add nsw nuw i32 %y, 2
+  %select = select i1 %cmp, i32 %y, i32 %or
+  ret i32 %select
+}
+
 define <2 x i32> @select_icmp_eq_and_1_0_or_2_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @select_icmp_eq_and_1_0_or_2_vec(
 ; CHECK-NEXT:    [[AND:%.*]] = shl <2 x i32> [[X:%.*]], splat (i32 1)
@@ -1692,6 +1720,20 @@ define i8 @select_icmp_eq_and_1_0_lshr_fv(i8 %x, i8 %y) {
   %and = and i8 %x, 1
   %cmp = icmp eq i8 %and, 0
   %blshr = lshr i8 %y, 2
+  %select = select i1 %cmp, i8 %y, i8 %blshr
+  ret i8 %select
+}
+
+define i8 @select_icmp_eq_and_1_0_lshr_exact_fv(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_icmp_eq_and_1_0_lshr_exact_fv(
+; CHECK-NEXT:    [[AND:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[AND]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = lshr exact i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %and = and i8 %x, 1
+  %cmp = icmp eq i8 %and, 0
+  %blshr = lshr exact i8 %y, 2
   %select = select i1 %cmp, i8 %y, i8 %blshr
   ret i8 %select
 }
