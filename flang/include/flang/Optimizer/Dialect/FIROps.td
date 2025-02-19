@@ -16,6 +16,7 @@
 
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
+include "mlir/Dialect/OpenMP/OpenMPClauses.td"
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
@@ -2226,7 +2227,7 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
   let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
 
-  let arguments = (ins
+  defvar opArgs = (ins
     Index:$lowerBound,
     Index:$upperBound,
     Index:$step,
@@ -2237,6 +2238,8 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     OptionalAttr<ArrayAttr>:$reduceAttrs,
     OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
   );
+
+  let arguments = !con(opArgs, OpenMP_PrivateClause.arguments);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
@@ -2248,10 +2251,13 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
       CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
       CArg<"mlir::ValueRange", "std::nullopt">:$reduceOperands,
       CArg<"llvm::ArrayRef<mlir::Attribute>", "{}">:$reduceAttrs,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes,
+      CArg<"mlir::ValueRange", "std::nullopt">:$private_vars,
+      CArg<"mlir::ArrayRef<mlir::Attribute>", "{}">:$private_syms
+      )>
   ];
 
-  let extraClassDeclaration = [{
+  defvar opExtraClassDeclaration = [{
     mlir::Value getInductionVar() { return getBody()->getArgument(0); }
     mlir::OpBuilder getBodyBuilder() {
       return mlir::OpBuilder(getBody(), std::prev(getBody()->end()));
@@ -2313,6 +2319,10 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
                            unsigned resultNum);
     mlir::Value blockArgToSourceOp(unsigned blockArgNum);
   }];
+
+  let extraClassDeclaration =
+    !strconcat(opExtraClassDeclaration, "\n",
+               OpenMP_PrivateClause.extraClassDeclaration);
 }
 
 def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
