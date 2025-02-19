@@ -18,6 +18,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/LogicalResult.h"
@@ -76,6 +77,19 @@ struct LLVMPointerPointerLikeModel
                                             LLVM::LLVMPointerType> {
   Type getElementType(Type pointer) const { return Type(); }
 };
+
+struct ACCInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
+                       IRMapping &valueMapping) const final {
+    return true;
+  }
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -102,6 +116,8 @@ void OpenACCDialect::initialize() {
   MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
   LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
       *getContext());
+
+  addInterfaces<ACCInlinerInterface>();
 }
 
 //===----------------------------------------------------------------------===//
