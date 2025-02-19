@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Context.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
@@ -168,6 +169,15 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     if (auto *SBBB = getValue(BB))
       return SBBB;
     return nullptr;
+  }
+  // TODO: Move these checks after more common Values, like after Instruction.
+  if (auto *MD = dyn_cast<llvm::MetadataAsValue>(LLVMV)) {
+    It->second = std::unique_ptr<OpaqueValue>(new OpaqueValue(MD, *this));
+    return It->second.get();
+  }
+  if (auto *Asm = dyn_cast<llvm::InlineAsm>(LLVMV)) {
+    It->second = std::unique_ptr<OpaqueValue>(new OpaqueValue(Asm, *this));
+    return It->second.get();
   }
   assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
 
