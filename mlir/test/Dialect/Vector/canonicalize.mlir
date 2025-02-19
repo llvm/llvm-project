@@ -714,8 +714,7 @@ func.func @fold_extract_transpose(
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
 func.func @fold_extract_broadcast_same_input_output_scalar(%a : f32, 
-                                            %idx0 : index, 
-                                            %idx1 : index) -> f32 {
+  %idx0 : index, idx1 : index) -> f32 {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
   // The indices don't matter for this folder, so we use mixed indices.
   %r = vector.extract %b[%idx0, %idx1, 2] : f32 from vector<1x2x4xf32>
@@ -728,7 +727,7 @@ func.func @fold_extract_broadcast_same_input_output_scalar(%a : f32,
 //  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
 //       CHECK:   return %[[A]] : vector<4xf32>
 func.func @fold_extract_broadcast_same_input_output_vec(%a : vector<4xf32>, 
-                                                %idx0 : index) -> vector<4xf32> {
+  %idx0 : index) -> vector<4xf32> {
   %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
   // The indices don't matter for this folder, so we use mixed indices.
   %r = vector.extract %b[0, %idx0] : vector<4xf32> from vector<1x2x4xf32>
@@ -742,8 +741,7 @@ func.func @fold_extract_broadcast_same_input_output_vec(%a : vector<4xf32>,
 //       CHECK:   %[[B:.+]] = vector.extractelement %[[A]][] : vector<f32>
 //       CHECK:   return %[[B]] : f32
 func.func @fold_extract_broadcast_0dvec_input_scalar_output(%a : vector<f32>, 
-                                                   %idx0 : index, 
-                                                   %idx1 : index) -> f32 {
+  %idx0 : index, idx1 : index) -> f32 {
   %b = vector.broadcast %a : vector<f32> to vector<1x2x4xf32>
   // The indices don't matter for this folder, so we use mixed indices.
   %r = vector.extract %b[%idx0, %idx1, 2] : f32 from vector<1x2x4xf32>
@@ -758,8 +756,7 @@ func.func @fold_extract_broadcast_0dvec_input_scalar_output(%a : vector<f32>,
 //       CHECK:   %[[B:.+]] = vector.extract %[[A]][%[[IDX1]]] : vector<4xf32> from vector<2x4xf32>
 //       CHECK:   return %[[B]] : vector<4xf32>
 func.func @fold_extract_broadcast_diff_input_output_vec(%a : vector<2x4xf32>, 
-                                                   %idx0 : index, 
-                                                   %idx1 : index) -> vector<4xf32> {
+  %idx0 : index, idx1 : index) -> vector<4xf32> {
   %b = vector.broadcast %a : vector<2x4xf32> to vector<1x2x4xf32>
   // The indices don't matter for this folder, so we use mixed indices.
   %r = vector.extract %b[%idx0, %idx1] : vector<4xf32> from vector<1x2x4xf32>
@@ -797,9 +794,7 @@ func.func @fold_extract_splat(%a : f32, %idx0 : index, %idx1 : index) -> f32 {
 //       CHECK:   %[[R:.*]] = vector.extract %[[A]][%[[IDX1]], 0] : f32 from vector<2x1xf32>
 //       CHECK:   return %[[R]] : f32
 func.func @fold_extract_broadcast_dim1_broadcasting(%a : vector<2x1xf32>, 
-                                                    %idx : index, 
-                                                    %idx1 : index, 
-                                                    %idx2 : index) -> f32 {
+%idx : index, idx1 : index, idx2 : index) -> f32 {
   %b = vector.broadcast %a : vector<2x1xf32> to vector<1x2x4xf32>
   // The indices don't matter for this folder, so we use mixed indices.
   %r = vector.extract %b[%idx, %idx1, %idx2] : f32 from vector<1x2x4xf32>
@@ -811,9 +806,8 @@ func.func @fold_extract_broadcast_dim1_broadcasting(%a : vector<2x1xf32>,
 // CHECK-LABEL: fold_extract_broadcast_to_higher_rank
 //       CHECK:   %[[B:.*]] = vector.broadcast %{{.*}} : f32 to vector<4xf32>
 //       CHECK:   return %[[B]] : vector<4xf32>
-func.func @fold_extract_broadcast_to_higher_rank(%a : f32, 
-                                                         %idx0 : index) 
-                                                         -> vector<4xf32> {
+func.func @fold_extract_broadcast_to_higher_rank(%a : f32, idx0 : index) 
+  -> vector<4xf32> {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
   // The indices don't matter for this canonicalizer, so we use mixed indices.
   %r = vector.extract %b[0, %idx0] : vector<4xf32> from vector<1x2x4xf32>
@@ -826,9 +820,8 @@ func.func @fold_extract_broadcast_to_higher_rank(%a : f32,
 //  CHECK-SAME:   %[[A:.*]]: vector<1xf32>
 //       CHECK:   %[[R:.*]] = vector.broadcast %[[A]] : vector<1xf32> to vector<8xf32>
 //       CHECK:   return %[[R]] : vector<8xf32>
-func.func @fold_extract_broadcast_to_equal_rank(%a : vector<1xf32>,
-                                                         %idx0 : index) 
-                                                         -> vector<8xf32> {
+func.func @fold_extract_broadcast_to_equal_rank(%a : vector<1xf32>, idx0 : index) 
+  -> vector<8xf32> {
   %b = vector.broadcast %a : vector<1xf32> to vector<1x8xf32>
   // The indices don't matter for this canonicalizer, so we use mixed indices.
   %r = vector.extract %b[%idx0] : vector<8xf32> from vector<1x8xf32>
