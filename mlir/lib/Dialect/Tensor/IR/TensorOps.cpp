@@ -466,18 +466,23 @@ struct ChainedTensorCast : public OpRewritePattern<CastOp> {
 
     // We can remove the intermediate cast if joining all three produces the
     // same result as just joining the source and result shapes.
-    auto firstJoin =
-        joinShapes(joinShapes(sourceType, intermediateType), resultType);
+    auto firstJoin = joinShapes(sourceType, intermediateType);
 
     // The join might not exist if the cast sequence would fail at runtime.
     if (!firstJoin)
+      return failure();
+
+    auto secondJoin = joinShapes(firstJoin, resultType);
+
+    // The join might not exist if the cast sequence would fail at runtime.
+    if (!secondJoin)
       return failure();
 
     // The newJoin always exists if the above join exists, it might just contain
     // less information. If so, we cannot drop the intermediate cast, as doing
     // so would remove runtime checks.
     auto newJoin = joinShapes(sourceType, resultType);
-    if (firstJoin != newJoin)
+    if (secondJoin != newJoin)
       return failure();
 
     rewriter.replaceOpWithNewOp<CastOp>(tensorCast, resultType,
