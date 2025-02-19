@@ -24,6 +24,7 @@
 #include <concepts>
 #include <deque>
 #include <filesystem>
+#include <flat_map>
 #include <format>
 #include <forward_list>
 #include <list>
@@ -241,6 +242,13 @@ void test_P2286() {
   assert_is_formattable<std::map<int, int>, CharT>();
   assert_is_formattable<std::multiset<int>, CharT>();
   assert_is_formattable<std::multimap<int, int>, CharT>();
+
+#if TEST_STD_VER >= 23
+  // assert_is_formattable<std::flat_set<int>, CharT>();
+  assert_is_formattable<std::flat_map<int, int>, CharT>();
+  // assert_is_formattable<std::flat_multiset<int>, CharT>();
+  assert_is_formattable<std::flat_multimap<int, int>, CharT>();
+#endif // TEST_STD_VER >= 2
 
   assert_is_formattable<std::unordered_set<int>, CharT>();
   assert_is_formattable<std::unordered_map<int, int>, CharT>();

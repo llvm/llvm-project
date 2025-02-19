@@ -270,6 +270,47 @@ func.func @compare_scf_for(%a: index, %b: index, %c: index) {
 
 // -----
 
+func.func @scf_for_induction_var_upper_bound() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %c8 = arith.constant 8 : index
+  %c10 = arith.constant 10 : index
+  scf.for %iv = %c0 to %c10 step %c4 {
+    // expected-remark @below{{true}}
+    "test.compare"(%iv, %c8) {cmp = "LE"} : (index, index) -> ()
+  }
+  scf.for %iv = %c2 to %c8 step %c3 {
+    // expected-remark @below{{true}}
+    "test.compare"(%iv, %c5) {cmp = "LE"} : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+#map_ceildiv_dynamic_divisor = affine_map<(i)[s] -> (i ceildiv s)>
+func.func @scf_for_induction_var_computed_upper_bound(%upperBound: index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %tripCount = affine.apply #map_ceildiv_dynamic_divisor (%upperBound)[%step]
+  %tripCountMinusOne = arith.subi %tripCount, %c1 : index
+  %computedUpperBound = arith.muli %tripCountMinusOne, %step : index
+  scf.for %iv = %c0 to %upperBound step %step {
+    // TODO: Value bounds analysis will fail to compute upper bound
+    // because multiplication/division of unknown block arguments is
+    // not supported.
+    // expected-error @below{{unknown}}
+    "test.compare"(%iv, %computedUpperBound) {cmp = "LE"} : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
 func.func @scf_for_result_infer() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

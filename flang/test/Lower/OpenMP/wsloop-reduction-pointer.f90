@@ -87,13 +87,12 @@ end program
 ! CHECK:           %[[VAL_17:.*]] = fir.box_addr %[[VAL_16]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK:           hlfir.assign %[[VAL_15]] to %[[VAL_17]] : i32, !fir.ptr<i32>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_18:.*]] = fir.alloca i32 {bindc_name = "i", pinned, uniq_name = "_QFEi"}
-! CHECK:             %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_20:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_21:.*]] = arith.constant 5 : i32
 ! CHECK:             %[[VAL_22:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop reduction(byref @add_reduction_byref_box_ptr_i32 %[[VAL_5]]#0 -> %[[VAL_23:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
+! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_18:.*]] : !fir.ref<i32>) reduction(byref @add_reduction_byref_box_ptr_i32 %[[VAL_5]]#0 -> %[[VAL_23:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
 ! CHECK:               omp.loop_nest (%[[VAL_24:.*]]) : i32 = (%[[VAL_20]]) to (%[[VAL_21]]) inclusive step (%[[VAL_22]]) {
+! CHECK:                 %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_23]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFEv"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:                 fir.store %[[VAL_24]] to %[[VAL_19]]#1 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_26:.*]] = fir.load %[[VAL_25]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>

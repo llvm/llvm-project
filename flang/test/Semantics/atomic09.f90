@@ -4,7 +4,7 @@
 
 program test_atomic_or
   use iso_fortran_env, only: atomic_int_kind, atomic_logical_kind
-  implicit none
+  implicit none(external, type)
 
   integer(kind=atomic_int_kind) :: scalar_coarray[*], non_scalar_coarray(10)[*], val, non_coarray
   integer(kind=atomic_int_kind) :: repeated_atom[*], repeated_val, array(10)

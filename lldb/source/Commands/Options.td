@@ -965,6 +965,8 @@ let Command = "target modules show unwind" in {
   def target_modules_show_unwind_address : Option<"address", "a">, Group<2>,
     Arg<"AddressOrExpression">, Desc<"Show unwind instructions for a function "
     "or symbol containing an address">;
+  def target_modules_show_unwind_cached : Option<"cached", "c">,
+    Arg<"Boolean">, Desc<"Show cached unwind information">;
 }
 
 let Command = "target modules lookup" in {

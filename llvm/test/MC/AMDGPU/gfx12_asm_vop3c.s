@@ -120,19 +120,19 @@ v_cmp_class_f16_e64 null, -|0xfe0b|, vcc_hi
 // GFX12: v_cmp_class_f16_e64 null, -|0xfe0b|, vcc_hi ; encoding: [0x7c,0x01,0x7d,0xd4,0xff,0xd6,0x00,0x20,0x0b,0xfe,0x00,0x00]
 
 v_cmp_class_f16_e64 s5, v255.h, v2.l
-// W32: v_cmp_class_f16_e64 s5, v255.h, v2.l    ; encoding: [0x05,0x08,0x7d,0xd4,0xff,0x05,0x02,0x00]
+// W32: v_cmp_class_f16_e64 s5, v255.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x7d,0xd4,0xff,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
 v_cmp_class_f16_e64 s5, s105, v255.h
-// W32: v_cmp_class_f16_e64 s5, s105, v255.h    ; encoding: [0x05,0x10,0x7d,0xd4,0x69,0xfe,0x03,0x00]
+// W32: v_cmp_class_f16_e64 s5, s105, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x7d,0xd4,0x69,0xfe,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
 v_cmp_class_f16_e64 s[10:11], v255.h, v2.l
-// W64: v_cmp_class_f16_e64 s[10:11], v255.h, v2.l ; encoding: [0x0a,0x08,0x7d,0xd4,0xff,0x05,0x02,0x00]
+// W64: v_cmp_class_f16_e64 s[10:11], v255.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x7d,0xd4,0xff,0x05,0x02,0x00]
 // W32-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
 v_cmp_class_f16_e64 s[10:11], s105, v255.h
-// W64: v_cmp_class_f16_e64 s[10:11], s105, v255.h ; encoding: [0x0a,0x10,0x7d,0xd4,0x69,0xfe,0x03,0x00]
+// W64: v_cmp_class_f16_e64 s[10:11], s105, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x7d,0xd4,0x69,0xfe,0x03,0x00]
 // W32-ERR: :[[@LINE-2]]:21: error: invalid operand for instruction
 
 v_cmp_class_f16_e64 vcc_lo, 0.5, m0

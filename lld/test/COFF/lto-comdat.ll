@@ -1,44 +1,45 @@
 ; REQUIRES: x86
-; RUN: llvm-as -o %T/comdat-main.lto.obj %s
-; RUN: llvm-as -o %T/comdat1.lto.obj %S/Inputs/lto-comdat1.ll
-; RUN: llvm-as -o %T/comdat2.lto.obj %S/Inputs/lto-comdat2.ll
-; RUN: rm -f %T/comdat.lto.lib
-; RUN: llvm-ar cru %T/comdat.lto.lib %T/comdat1.lto.obj %T/comdat2.lto.obj
+; RUN: mkdir -p %t.dir
+; RUN: llvm-as -o %t.dir/comdat-main.lto.obj %s
+; RUN: llvm-as -o %t.dir/comdat1.lto.obj %S/Inputs/lto-comdat1.ll
+; RUN: llvm-as -o %t.dir/comdat2.lto.obj %S/Inputs/lto-comdat2.ll
+; RUN: rm -f %t.dir/comdat.lto.lib
+; RUN: llvm-ar cru %t.dir/comdat.lto.lib %t.dir/comdat1.lto.obj %t.dir/comdat2.lto.obj
 
-; RUN: llc -filetype=obj -o %T/comdat-main.obj %s
-; RUN: llc -filetype=obj -o %T/comdat1.obj %S/Inputs/lto-comdat1.ll
-; RUN: llc -filetype=obj -o %T/comdat2.obj %S/Inputs/lto-comdat2.ll
-; RUN: rm -f %T/comdat.lib
-; RUN: llvm-ar cru %T/comdat.lib %T/comdat1.obj %T/comdat2.obj
+; RUN: llc -filetype=obj -o %t.dir/comdat-main.obj %s
+; RUN: llc -filetype=obj -o %t.dir/comdat1.obj %S/Inputs/lto-comdat1.ll
+; RUN: llc -filetype=obj -o %t.dir/comdat2.obj %S/Inputs/lto-comdat2.ll
+; RUN: rm -f %t.dir/comdat.lib
+; RUN: llvm-ar cru %t.dir/comdat.lib %t.dir/comdat1.obj %t.dir/comdat2.obj
 
 ; Check that, when we use an LTO main with LTO objects, we optimize away all
 ; of f1, f2, and comdat.
-; RUN: lld-link /out:%T/comdat-main.exe /entry:main /subsystem:console %T/comdat-main.lto.obj %T/comdat1.lto.obj %T/comdat2.lto.obj
-; RUN: llvm-readobj --file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-11 %s
-; RUN: llvm-objdump --no-print-imm-hex -d %T/comdat-main.exe | FileCheck --check-prefix=TEXT-11 %s
-; RUN: lld-link /out:%T/comdat-main.exe /entry:main /subsystem:console %T/comdat-main.lto.obj %T/comdat.lto.lib
-; RUN: llvm-readobj --file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-11 %s
-; RUN: llvm-objdump --no-print-imm-hex -d %T/comdat-main.exe | FileCheck --check-prefix=TEXT-11 %s
+; RUN: lld-link /out:%t.dir/comdat-main.exe /entry:main /subsystem:console %t.dir/comdat-main.lto.obj %t.dir/comdat1.lto.obj %t.dir/comdat2.lto.obj
+; RUN: llvm-readobj --file-headers %t.dir/comdat-main.exe | FileCheck -check-prefix=HEADERS-11 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %t.dir/comdat-main.exe | FileCheck --check-prefix=TEXT-11 %s
+; RUN: lld-link /out:%t.dir/comdat-main.exe /entry:main /subsystem:console %t.dir/comdat-main.lto.obj %t.dir/comdat.lto.lib
+; RUN: llvm-readobj --file-headers %t.dir/comdat-main.exe | FileCheck -check-prefix=HEADERS-11 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %t.dir/comdat-main.exe | FileCheck --check-prefix=TEXT-11 %s
 
 ; Check that, when we use a non-LTO main with LTO objects, we pick the comdat
 ; implementation in LTO, elide calls to it from inside LTO, and retain the
 ; call to comdat from main.
-; RUN: lld-link /out:%T/comdat-main.exe /entry:main /subsystem:console %T/comdat-main.obj %T/comdat1.lto.obj %T/comdat2.lto.obj
-; RUN: llvm-readobj --file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-01 %s
-; RUN: llvm-objdump --no-print-imm-hex -d %T/comdat-main.exe | FileCheck --check-prefix=TEXT-01 %s
-; RUN: lld-link /out:%T/comdat-main.exe /entry:main /subsystem:console %T/comdat-main.obj %T/comdat.lto.lib
-; RUN: llvm-readobj --file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-01 %s
-; RUN: llvm-objdump --no-print-imm-hex -d %T/comdat-main.exe | FileCheck --check-prefix=TEXT-01 %s
+; RUN: lld-link /out:%t.dir/comdat-main.exe /entry:main /subsystem:console %t.dir/comdat-main.obj %t.dir/comdat1.lto.obj %t.dir/comdat2.lto.obj
+; RUN: llvm-readobj --file-headers %t.dir/comdat-main.exe | FileCheck -check-prefix=HEADERS-01 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %t.dir/comdat-main.exe | FileCheck --check-prefix=TEXT-01 %s
+; RUN: lld-link /out:%t.dir/comdat-main.exe /entry:main /subsystem:console %t.dir/comdat-main.obj %t.dir/comdat.lto.lib
+; RUN: llvm-readobj --file-headers %t.dir/comdat-main.exe | FileCheck -check-prefix=HEADERS-01 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %t.dir/comdat-main.exe | FileCheck --check-prefix=TEXT-01 %s
 
 ; Check that, when we use an LTO main with non-LTO objects, we pick the comdat
 ; implementation in LTO, elide the call to it from inside LTO, and keep the
 ; calls to comdat from the non-LTO objects.
-; RUN: lld-link /out:%T/comdat-main.exe /entry:main /subsystem:console %T/comdat-main.lto.obj %T/comdat1.obj %T/comdat2.obj
-; RUN: llvm-readobj --file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-10 %s
-; RUN: llvm-objdump --no-print-imm-hex -d %T/comdat-main.exe | FileCheck --check-prefix=TEXT-10 %s
-; RUN: lld-link /out:%T/comdat-main.exe /entry:main /subsystem:console %T/comdat-main.lto.obj %T/comdat.lib
-; RUN: llvm-readobj --file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-10 %s
-; RUN: llvm-objdump --no-print-imm-hex -d %T/comdat-main.exe | FileCheck --check-prefix=TEXT-10 %s
+; RUN: lld-link /out:%t.dir/comdat-main.exe /entry:main /subsystem:console %t.dir/comdat-main.lto.obj %t.dir/comdat1.obj %t.dir/comdat2.obj
+; RUN: llvm-readobj --file-headers %t.dir/comdat-main.exe | FileCheck -check-prefix=HEADERS-10 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %t.dir/comdat-main.exe | FileCheck --check-prefix=TEXT-10 %s
+; RUN: lld-link /out:%t.dir/comdat-main.exe /entry:main /subsystem:console %t.dir/comdat-main.lto.obj %t.dir/comdat.lib
+; RUN: llvm-readobj --file-headers %t.dir/comdat-main.exe | FileCheck -check-prefix=HEADERS-10 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %t.dir/comdat-main.exe | FileCheck --check-prefix=TEXT-10 %s
 
 ; HEADERS-11: AddressOfEntryPoint: 0x1000
 ; TEXT-11: Disassembly of section .text:

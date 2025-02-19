@@ -232,6 +232,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setsid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setsid
+)
+
+add_entrypoint_object(
   symlink
   ALIAS
   DEPENDS

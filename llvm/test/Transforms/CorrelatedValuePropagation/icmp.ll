@@ -1515,10 +1515,16 @@ define void @test_trunc_bittest(i8 %a) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[A:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[TRUNC]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[A]], 0
-; CHECK-NEXT:    call void @check1(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i8 [[A]], 1
+; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i8 [[A]], 1
+; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ne i8 [[A]], -1
+; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i8 [[A]], -1
+; CHECK-NEXT:    call void @check1(i1 [[CMP6]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret void
@@ -1531,6 +1537,14 @@ if.true:
   call void @check1(i1 %cmp1)
   %cmp2 = icmp eq i8 %a, 0
   call void @check1(i1 %cmp2)
+  %cmp3 = icmp ne i8 %a, 1
+  call void @check1(i1 %cmp3)
+  %cmp4 = icmp eq i8 %a, 1
+  call void @check1(i1 %cmp4)
+  %cmp5 = icmp ne i8 %a, -1
+  call void @check1(i1 %cmp5)
+  %cmp6 = icmp eq i8 %a, -1
+  call void @check1(i1 %cmp6)
   ret void
 
 if.false:
@@ -1543,10 +1557,16 @@ define void @test_trunc_not_bittest(i8 %a) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
 ; CHECK-NEXT:    br i1 [[NOT]], label [[IF_FALSE:%.*]], label [[IF_TRUE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[A]], -1
-; CHECK-NEXT:    call void @check1(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[A]], -1
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i8 [[A]], 0
+; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ne i8 [[A]], -2
+; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i8 [[A]], -2
+; CHECK-NEXT:    call void @check1(i1 [[CMP6]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret void
@@ -1560,54 +1580,78 @@ if.true:
   call void @check1(i1 %cmp1)
   %cmp2 = icmp eq i8 %a, -1
   call void @check1(i1 %cmp2)
+  %cmp3 = icmp ne i8 %a, 0
+  call void @check1(i1 %cmp3)
+  %cmp4 = icmp eq i8 %a, 0
+  call void @check1(i1 %cmp4)
+  %cmp5 = icmp ne i8 %a, -2
+  call void @check1(i1 %cmp5)
+  %cmp6 = icmp eq i8 %a, -2
+  call void @check1(i1 %cmp6)
   ret void
 
 if.false:
   ret void
 }
 
-define void @test_icmp_trunc(i8 %a) {
-; CHECK-LABEL: @test_icmp_trunc(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+define void @test_trunc_nuw_bittest(i8 %a) {
+; CHECK-LABEL: @test_trunc_nuw_bittest(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[A:%.*]] to i1
+; CHECK-NEXT:    br i1 [[TRUNC]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[A]] to i1
-; CHECK-NEXT:    call void @check1(i1 [[TRUNC]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret void
 ;
+  %trunc = trunc nuw i8 %a to i1
+  br i1 %trunc, label %if.true, label %if.false
+
+if.true:
   %cmp1 = icmp ne i8 %a, 0
-  br i1 %cmp1, label %if.true, label %if.false
-
-if.true:
-  %trunc = trunc i8 %a to i1
-  call void @check1(i1 %trunc)
+  call void @check1(i1 %cmp1)
+  %cmp2 = icmp eq i8 %a, 0
+  call void @check1(i1 %cmp2)
+  %cmp3 = icmp ne i8 %a, 1
+  call void @check1(i1 %cmp3)
+  %cmp4 = icmp eq i8 %a, 1
+  call void @check1(i1 %cmp4)
   ret void
 
 if.false:
   ret void
 }
 
-define void @test_icmp_trunc_not(i8 %a) {
-; CHECK-LABEL: @test_icmp_trunc_not(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A:%.*]], -1
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; CHECK:       if.true:
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[A]] to i1
+define void @test_trunc_nuw_not_bittest(i8 %a) {
+; CHECK-LABEL: @test_trunc_nuw_not_bittest(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[A:%.*]] to i1
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
-; CHECK-NEXT:    call void @check1(i1 [[TRUNC]])
+; CHECK-NEXT:    br i1 [[NOT]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret void
 ;
-  %cmp1 = icmp eq i8 %a, -1
-  br i1 %cmp1, label %if.true, label %if.false
+  %trunc = trunc nuw i8 %a to i1
+  %not = xor i1 %trunc, true
+  br i1 %not, label %if.true, label %if.false
 
 if.true:
-  %trunc = trunc i8 %a to i1
-  %not = xor i1 %trunc, true
-  call void @check1(i1 %trunc)
+  %cmp1 = icmp ne i8 %a, 0
+  call void @check1(i1 %cmp1)
+  %cmp2 = icmp eq i8 %a, 0
+  call void @check1(i1 %cmp2)
+  %cmp3 = icmp ne i8 %a, 1
+  call void @check1(i1 %cmp3)
+  %cmp4 = icmp eq i8 %a, 1
+  call void @check1(i1 %cmp4)
   ret void
 
 if.false:

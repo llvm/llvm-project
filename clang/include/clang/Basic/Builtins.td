@@ -839,6 +839,12 @@ def BuiltinAssumeAligned : Builtin {
   let Prototype = "void*(void const*, size_t, ...)";
 }
 
+def BuiltinAssumeDereferenceable : Builtin {
+  let Spellings = ["__builtin_assume_dereferenceable"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(void const*, _Constant size_t)";
+}
+
 def BuiltinFree : Builtin {
   let Spellings = ["__builtin_free"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
@@ -4793,6 +4799,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int(bool)";
+}
+
+def HLSLWaveActiveMax : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_max"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
 }
 
 def HLSLWaveActiveSum : LangBuiltin<"HLSL_LANG"> {

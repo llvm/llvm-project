@@ -94,6 +94,7 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetTransformInfo;
 class Value;
+class VPIntrinsic;
 
 namespace Sched {
 
@@ -3156,6 +3157,30 @@ public:
     return false;
   }
 
+  /// Lower an interleaved load to target specific intrinsics. Return
+  /// true on success.
+  ///
+  /// \p Load is a vp.load instruction.
+  /// \p Mask is a mask value
+  /// \p DeinterleaveRes is a list of deinterleaved results.
+  virtual bool
+  lowerDeinterleavedIntrinsicToVPLoad(VPIntrinsic *Load, Value *Mask,
+                                      ArrayRef<Value *> DeinterleaveRes) const {
+    return false;
+  }
+
+  /// Lower an interleaved store to target specific intrinsics. Return
+  /// true on success.
+  ///
+  /// \p Store is the vp.store instruction.
+  /// \p Mask is a mask value
+  /// \p InterleaveOps is a list of values being interleaved.
+  virtual bool
+  lowerInterleavedIntrinsicToVPStore(VPIntrinsic *Store, Value *Mask,
+                                     ArrayRef<Value *> InterleaveOps) const {
+    return false;
+  }
+
   /// Lower a deinterleave intrinsic to a target specific load intrinsic.
   /// Return true on success. Currently only supports
   /// llvm.vector.deinterleave2
@@ -5512,20 +5537,10 @@ public:
                            SDValue HiLHS = SDValue(),
                            SDValue HiRHS = SDValue()) const;
 
-  /// forceExpandWideMUL - Unconditionally expand a MUL into either a libcall or
-  /// brute force via a wide multiplication. The expansion works by
-  /// attempting to do a multiplication on a wider type twice the size of the
-  /// original operands. LL and LH represent the lower and upper halves of the
-  /// first operand. RL and RH represent the lower and upper halves of the
-  /// second operand. The upper and lower halves of the result are stored in Lo
-  /// and Hi.
-  void forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl, bool Signed,
-                          EVT WideVT, const SDValue LL, const SDValue LH,
-                          const SDValue RL, const SDValue RH, SDValue &Lo,
-                          SDValue &Hi) const;
-
-  /// Same as above, but creates the upper halves of each operand by
-  /// sign/zero-extending the operands.
+  /// Calculate full product of LHS and RHS either via a libcall or through
+  /// brute force expansion of the multiplication. The expansion works by
+  /// splitting the 2 inputs into 4 pieces that we can multiply and add together
+  /// without needing MULH or MUL_LOHI.
   void forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl, bool Signed,
                           const SDValue LHS, const SDValue RHS, SDValue &Lo,
                           SDValue &Hi) const;
@@ -5548,6 +5563,10 @@ public:
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expands PARTIAL_REDUCE_S/UMLA nodes to a series of simpler operations,
+  /// consisting of zext/sext, extract_subvector, mul and add operations.
+  SDValue expandPartialReduceMLA(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
   /// on the current target. A VP_SETCC will additionally be given a Mask
@@ -5631,6 +5650,18 @@ public:
   // Expand vector operation by dividing it into smaller length operations and
   // joining their results. SDValue() is returned when expansion did not happen.
   SDValue expandVectorNaryOpBySplitting(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Replace an extraction of a load with a narrowed load.
+  ///
+  /// \param ResultVT type of the result extraction.
+  /// \param InVecVT type of the input vector to with bitcasts resolved.
+  /// \param EltNo index of the vector element to load.
+  /// \param OriginalLoad vector load that to be replaced.
+  /// \returns \p ResultVT Load on success SDValue() on failure.
+  SDValue scalarizeExtractedVectorLoad(EVT ResultVT, const SDLoc &DL,
+                                       EVT InVecVT, SDValue EltNo,
+                                       LoadSDNode *OriginalLoad,
+                                       SelectionDAG &DAG) const;
 
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,

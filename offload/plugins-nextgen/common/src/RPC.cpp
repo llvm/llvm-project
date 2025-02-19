@@ -99,13 +99,15 @@ static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer) {
 }
 
 void RPCServerTy::ServerThread::startThread() {
-  Worker = std::thread([this]() { run(); });
+  if (!Running.fetch_or(true, std::memory_order_acquire))
+    Worker = std::thread([this]() { run(); });
 }
 
 void RPCServerTy::ServerThread::shutDown() {
+  if (!Running.fetch_and(false, std::memory_order_release))
+    return;
   {
     std::lock_guard<decltype(Mutex)> Lock(Mutex);
-    Running.store(false, std::memory_order_release);
     CV.notify_all();
   }
   if (Worker.joinable())
@@ -126,6 +128,7 @@ void RPCServerTy::ServerThread::run() {
     Lock.unlock();
     while (NumUsers.load(std::memory_order_relaxed) > 0 &&
            Running.load(std::memory_order_relaxed)) {
+      std::lock_guard<decltype(Mutex)> Lock(BufferMutex);
       for (const auto &[Buffer, Device] : llvm::zip_equal(Buffers, Devices)) {
         if (!Buffer || !Device)
           continue;
@@ -144,7 +147,7 @@ RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
       Devices(std::make_unique<plugin::GenericDeviceTy *[]>(
           Plugin.getNumDevices())),
       Thread(new ServerThread(Buffers.get(), Devices.get(),
-                              Plugin.getNumDevices())) {}
+                              Plugin.getNumDevices(), BufferMutex)) {}
 
 llvm::Error RPCServerTy::startThread() {
   Thread->startThread();
@@ -185,6 +188,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   if (auto Err = Device.dataSubmit(ClientGlobal.getPtr(), &client,
                                    sizeof(rpc::Client), nullptr))
     return Err;
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
   Buffers[Device.getDeviceId()] = RPCBuffer;
   Devices[Device.getDeviceId()] = &Device;
 
@@ -192,6 +196,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
 }
 
 Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
   Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST);
   Buffers[Device.getDeviceId()] = nullptr;
   Devices[Device.getDeviceId()] = nullptr;
