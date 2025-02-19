@@ -319,13 +319,18 @@ public:
     // ids.
     DenseSet<uint32_t> getContextIds() const {
       unsigned Count = 0;
+      // Compute the number of ids for reserve below. In general we only need to
+      // look at one set of edges, typically the callee edges, since other than
+      // allocations and in some cases during recursion cloning, all the context
+      // ids on the callers should also flow out via callee edges.
       for (auto &Edge : CalleeEdges.empty() ? CallerEdges : CalleeEdges)
         Count += Edge->getContextIds().size();
       DenseSet<uint32_t> ContextIds;
       ContextIds.reserve(Count);
-      std::vector<std::shared_ptr<ContextEdge>> Empty;
       auto Edges = llvm::concat<const std::shared_ptr<ContextEdge>>(
-          CalleeEdges, useCallerEdgesForContextInfo() ? CallerEdges : Empty);
+          CalleeEdges, useCallerEdgesForContextInfo()
+                           ? CallerEdges
+                           : std::vector<std::shared_ptr<ContextEdge>>());
       for (const auto &Edge : Edges)
         ContextIds.insert(Edge->getContextIds().begin(),
                           Edge->getContextIds().end());
@@ -338,9 +343,10 @@ public:
       uint8_t BothTypes =
           (uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold;
       uint8_t AllocType = (uint8_t)AllocationType::None;
-      std::vector<std::shared_ptr<ContextEdge>> Empty;
       auto Edges = llvm::concat<const std::shared_ptr<ContextEdge>>(
-          CalleeEdges, useCallerEdgesForContextInfo() ? CallerEdges : Empty);
+          CalleeEdges, useCallerEdgesForContextInfo()
+                           ? CallerEdges
+                           : std::vector<std::shared_ptr<ContextEdge>>());
       for (const auto &Edge : Edges) {
         AllocType |= Edge->AllocTypes;
         // Bail early if alloc type reached both, no further refinement.
@@ -353,9 +359,10 @@ public:
     // The context ids set for this node is empty if its edge context ids are
     // also all empty.
     bool emptyContextIds() const {
-      std::vector<std::shared_ptr<ContextEdge>> Empty;
       auto Edges = llvm::concat<const std::shared_ptr<ContextEdge>>(
-          CalleeEdges, useCallerEdgesForContextInfo() ? CallerEdges : Empty);
+          CalleeEdges, useCallerEdgesForContextInfo()
+                           ? CallerEdges
+                           : std::vector<std::shared_ptr<ContextEdge>>());
       for (const auto &Edge : Edges) {
         if (!Edge->getContextIds().empty())
           return false;
@@ -3657,7 +3664,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     // TODO: Can we do better in the case where the caller was already visited?
     if (CallerEdge->IsBackedge && !CallerEdge->Caller->CloneOf &&
         !Visited.count(CallerEdge->Caller)) {
-      auto OrigIdCount = CallerEdge->getContextIds().size();
+      const auto OrigIdCount = CallerEdge->getContextIds().size();
       // Now do the recursive cloning of this backedge's caller, which was
       // deferred earlier.
       identifyClones(CallerEdge->Caller, Visited, CallerEdgeContextsForAlloc);
@@ -3714,9 +3721,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
       // updated CallerEdgeContextsForAlloc.
       CallerAllocTypeForAlloc = computeAllocType(CallerEdgeContextsForAlloc);
       CalleeEdgeAllocTypesForCallerEdge.clear();
-      for (auto &CalleeEdge : Node->CalleeEdges)
+      for (auto &CalleeEdge : Node->CalleeEdges) {
         CalleeEdgeAllocTypesForCallerEdge.push_back(intersectAllocTypes(
             CalleeEdge->getContextIds(), CallerEdgeContextsForAlloc));
+      }
     }
 
     // First see if we can use an existing clone. Check each clone and its
