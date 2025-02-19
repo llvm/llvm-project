@@ -680,7 +680,7 @@ end
 ! allocatable.
 
 ! LLVM-LABEL: define void @_QMpolyPtest_deallocate()
-! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr null, i64 ptrtoint (ptr getelementptr (%_QMpolyTp1, ptr null, i32 1) to i64), i32 20240719, i8 0, i8 42, i8 2, i8 1, ptr @_QMpolyEXdtXp1, [1 x i64] zeroinitializer }, ptr %[[ALLOCA1:[0-9]*]]
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr null, i64 8, i32 20240719, i8 0, i8 42, i8 2, i8 1, ptr @_QMpolyEXdtXp1, [1 x i64] zeroinitializer }, ptr %[[ALLOCA1:[0-9]*]]
 ! LLVM: call void @llvm.memcpy.p0.p0.i32(ptr %[[ALLOCA2:[0-9]+]], ptr %[[ALLOCA1]], i32 40, i1 false)
 ! LLVM: call void @_FortranAAllocatableInitDerivedForAllocate(ptr %[[ALLOCA2]], ptr @_QMpolyEXdtXp1, i32 0, i32 0)
 ! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %[[ALLOCA2]], i1 false, ptr null, ptr @_QQclX{{.*}}, i32 {{.*}})

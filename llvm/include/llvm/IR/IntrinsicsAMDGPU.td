@@ -237,16 +237,16 @@ def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
 // the second one is copied to m0
 def int_amdgcn_s_sendmsg : ClangBuiltin<"__builtin_amdgcn_s_sendmsg">,
   Intrinsic <[], [llvm_i32_ty, llvm_i32_ty],
-  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback]>;
 def int_amdgcn_s_sendmsghalt : ClangBuiltin<"__builtin_amdgcn_s_sendmsghalt">,
   Intrinsic <[], [llvm_i32_ty, llvm_i32_ty],
-  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrNoCallback]>;
 
 
 // gfx11 intrinsic
 // The first parameter is s_sendmsg immediate (i16). Return type is i32 or i64.
 def int_amdgcn_s_sendmsg_rtn : Intrinsic <[llvm_anyint_ty], [llvm_i32_ty],
-  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback]>;
 
 // Vanilla workgroup sync-barrier
 def int_amdgcn_s_barrier : ClangBuiltin<"__builtin_amdgcn_s_barrier">,
@@ -1284,11 +1284,24 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
 // Data type for buffer resources (V#). Maybe, in the future, we can create a
 // similar one for textures (T#).
 def AMDGPUBufferRsrcTy : LLVMQualPointerType<8>;
+// Data type for buffer fat pointers, which are a buffer resource (V#) followed by
+// a 32-bit offset. These don't exist in hardware and are a compiler-internal
+// convenience.
+def AMDGPUBufferFatPointerTy : LLVMQualPointerType<7>;
 
 let TargetPrefix = "amdgcn" in {
 
+// Create a buffer resource wrapping `base` with the specified `stride`
+// `numrecords`, and `flags`. All of these values will need to be
+// wave-uniform when the buffer instructions are invoked, so non-uniform
+// inputs to this intrinsic will trigger waterfall loops.
+//
+// In addition to creating ptr addrspace(8), whe representation of buffer
+// resources, it can create the fat pointers ptr addrspace(7) and ptr addrspace(9),
+// which carry additional offset bits. When this intrinsic is used to create
+// these fat pointers, their offset and index fields (if applicable) are zero.
 def int_amdgcn_make_buffer_rsrc : DefaultAttrsIntrinsic <
-  [AMDGPUBufferRsrcTy],
+  [llvm_anyptr_ty],
   [llvm_anyptr_ty, // base
    llvm_i16_ty,    // stride (and swizzle control)
    llvm_i32_ty,    // NumRecords / extent

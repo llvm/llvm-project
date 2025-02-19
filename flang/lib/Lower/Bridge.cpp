@@ -1049,6 +1049,11 @@ public:
     return Fortran::lower::mangle::mangleName(name, getCurrentScope(),
                                               scopeBlockIdMap);
   }
+  std::string
+  mangleName(std::string &name,
+             const Fortran::semantics::Scope &myScope) override final {
+    return Fortran::lower::mangle::mangleName(name, myScope, scopeBlockIdMap);
+  }
   std::string getRecordTypeFieldName(
       const Fortran::semantics::Symbol &component) override final {
     return Fortran::lower::mangle::getRecordTypeFieldName(component,

@@ -1910,10 +1910,10 @@ bool ScriptInterpreterPythonImpl::BreakpointCallbackFunction(
             llvm::handleAllErrors(
                 maybe_ret_val.takeError(),
                 [&](PythonException &E) {
-                  debugger.GetErrorStream() << E.ReadBacktrace();
+                  *debugger.GetAsyncErrorStream() << E.ReadBacktrace();
                 },
                 [&](const llvm::ErrorInfoBase &E) {
-                  debugger.GetErrorStream() << E.message();
+                  *debugger.GetAsyncErrorStream() << E.message();
                 });
 
           } else {

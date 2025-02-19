@@ -50,7 +50,7 @@ FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
-FunctionPass *createSIFormMemoryClausesPass();
+FunctionPass *createSIFormMemoryClausesLegacyPass();
 
 FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
@@ -425,7 +425,7 @@ extern char &SIInsertHardClausesID;
 void initializeSIInsertWaitcntsPass(PassRegistry&);
 extern char &SIInsertWaitcntsID;
 
-void initializeSIFormMemoryClausesPass(PassRegistry&);
+void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
 extern char &SIFormMemoryClausesID;
 
 void initializeSIPostRABundlerPass(PassRegistry&);
@@ -448,7 +448,7 @@ ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass();
 void initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(PassRegistry &);
 extern char &AMDGPUOpenCLEnqueuedBlockLoweringLegacyID;
 
-void initializeGCNNSAReassignPass(PassRegistry &);
+void initializeGCNNSAReassignLegacyPass(PassRegistry &);
 extern char &GCNNSAReassignID;
 
 void initializeGCNPreRALongBranchRegLegacyPass(PassRegistry &);
@@ -460,7 +460,7 @@ extern char &GCNPreRAOptimizationsID;
 FunctionPass *createAMDGPUSetWavePriorityPass();
 void initializeAMDGPUSetWavePriorityPass(PassRegistry &);
 
-void initializeGCNRewritePartialRegUsesPass(llvm::PassRegistry &);
+void initializeGCNRewritePartialRegUsesLegacyPass(llvm::PassRegistry &);
 extern char &GCNRewritePartialRegUsesID;
 
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
