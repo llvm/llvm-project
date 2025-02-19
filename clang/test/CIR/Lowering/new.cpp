@@ -215,3 +215,23 @@ void t_new_constant_size_constructor() {
 // LLVM:    %[[NEXT_PTR:.*]] = getelementptr %class.E, ptr %[[CUR_ELEM_PTR]], i64 1
 // LLVM:    store ptr %[[NEXT_PTR]]
 // LLVM:    br label %[[LOOP_INC_BB]]
+
+void t_multidim_init() {
+  auto *p = new int[2][3] { {1, 2, 3}, {4, 5, 6}};
+}
+
+// LLVM:  @_Z15t_multidim_initv()
+// LLVM:    %[[ALLOC_PTR:.*]] = call ptr @_Znam(i64 24)
+// LLVM:    %[[ELEM_00_PTR:.*]] = getelementptr i32, ptr %[[ALLOC_PTR]], i32 0
+// LLVM:    store i32 1, ptr %[[ELEM_00_PTR]], align 4
+// LLVM:    %[[ELEM_01_PTR:.*]] = getelementptr i32, ptr %[[ELEM_00_PTR]], i64 1
+// LLVM:    store i32 2, ptr %[[ELEM_01_PTR]], align 4
+// LLVM:    %[[ELEM_02_PTR:.*]] = getelementptr i32, ptr %[[ELEM_00_PTR]], i64 2
+// LLVM:    store i32 3, ptr %[[ELEM_02_PTR]], align 4
+// LLVM:    %[[ELEM_1_PTR:.*]] = getelementptr [3 x i32], ptr %[[ALLOC_PTR]], i64 1
+// LLVM:    %[[ELEM_10_PTR:.*]] = getelementptr i32, ptr %[[ELEM_1_PTR]], i32 0
+// LLVM:    store i32 4, ptr %[[ELEM_10_PTR]], align 4
+// LLVM:    %[[ELEM_11_PTR:.*]] = getelementptr i32, ptr %[[ELEM_10_PTR]], i64 1
+// LLVM:    store i32 5, ptr %[[ELEM_11_PTR]], align 4
+// LLVM:    %[[ELEM_12_PTR:.*]] = getelementptr i32, ptr %[[ELEM_10_PTR]], i64 2
+// LLVM:    store i32 6, ptr %[[ELEM_12_PTR]], align 4

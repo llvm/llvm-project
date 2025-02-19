@@ -1048,7 +1048,10 @@ void CIRGenFunction::emitNewArrayInitializer(
     QualType AllocType = E->getAllocatedType();
     if (const ConstantArrayType *CAT = dyn_cast_or_null<ConstantArrayType>(
             AllocType->getAsArrayTypeUnsafe())) {
-      llvm_unreachable("NYI");
+      ElementTy = convertTypeForMem(AllocType);
+      auto CastOp = builder.createPtrBitcast(CurPtr.getPointer(), ElementTy);
+      CurPtr = Address(CastOp, ElementTy, CurPtr.getAlignment());
+      InitListElements *= getContext().getConstantArrayElementCount(CAT);
     }
 
     // Enter a partial-destruction Cleanup if necessary.
@@ -1070,10 +1073,10 @@ void CIRGenFunction::emitNewArrayInitializer(
                               AggValueSlot::DoesNotOverlap);
       auto Loc = getLoc(IE->getExprLoc());
       auto CastOp = builder.createPtrBitcast(CurPtr.getPointer(),
-                                             convertTypeForMem(AllocType));
+                                             CurPtr.getElementType());
       auto OffsetOp = builder.getSignedInt(Loc, 1, /*width=*/32);
       auto DataPtr = builder.createPtrStride(Loc, CastOp, OffsetOp);
-      CurPtr = Address(DataPtr, CurPtr.getType(),
+      CurPtr = Address(DataPtr, CurPtr.getElementType(),
                        StartAlign.alignmentAtOffset((++i) * ElementSize));
     }
 
