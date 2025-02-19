@@ -1,4 +1,4 @@
-;; Test hoisting `xxspltib` out the loop.
+;; Test hoisting `xxspltib` out of the loop.
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --mcpu=pwr10 \
 ; RUN:   %s -o - 2>&1 | FileCheck --check-prefix=AIX64 %s
