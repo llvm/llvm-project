@@ -4575,7 +4575,7 @@ static bool isMaskedSlidePair(ArrayRef<int> Mask,
     if (M < 0)
       continue;
     int Src = M >= (int)NumElts;
-    int Diff = (M % NumElts) - (int)i;
+    int Diff = (int)i - (M % NumElts);
     bool Match = false;
     for (int j = 0; j < 2; j++) {
       if (SrcInfo[j].first == -1) {
@@ -4601,7 +4601,7 @@ static bool isMaskedSlidePair(ArrayRef<int> Mask,
     return false;
   // Prefer vslideup as the second instruction, and identity
   // only as the initial instruction.
-  if ((SrcInfo[0].second < 0 && SrcInfo[1].second > 0) ||
+  if ((SrcInfo[0].second > 0 && SrcInfo[1].second < 0) ||
       SrcInfo[1].second == 0)
     std::swap(SrcInfo[0], SrcInfo[1]);
   return true;
@@ -5720,7 +5720,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     auto GetSlide = [&](const std::pair<int, int> &Src, SDValue Mask,
                         SDValue Passthru) {
       SDValue SrcV = GetSourceFor(Src);
-      int SlideAmt = -Src.second;
+      int SlideAmt = Src.second;
       if (SlideAmt == 0) {
         // Should never be second operation
         assert(Mask == TrueMask);
@@ -5743,12 +5743,12 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     for (unsigned i = 0; i != Mask.size(); ++i) {
       int M = Mask[i];
       if (M < 0 ||
-          (SrcInfo[1].second < 0 && i < (unsigned)-SrcInfo[1].second)) {
+          (SrcInfo[1].second > 0 && i < (unsigned)SrcInfo[1].second)) {
         MaskVals.push_back(DAG.getUNDEF(XLenVT));
         continue;
       }
       int Src = M >= (int)NumElts;
-      int Diff = (M % NumElts) - (int)i;
+      int Diff = (int)i - (M % NumElts);
       bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
       MaskVals.push_back(DAG.getConstant(C, DL, XLenVT));
     }
