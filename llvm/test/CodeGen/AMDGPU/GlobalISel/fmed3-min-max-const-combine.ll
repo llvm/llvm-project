@@ -82,8 +82,6 @@ define half @test_min_K1max_ValK0_f16(half %a) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_med3_num_f16 v0, v0, 2.0, 4.0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %maxnum = call half @llvm.maxnum.f16(half %a, half 2.0)
@@ -474,8 +472,6 @@ define float @test_min_max_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_med3_num_f32 v0, v0, 2.0, 4.0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %maxnum = call float @llvm.maxnum.f32(float %a, float 2.0)
@@ -507,8 +503,6 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_minmax_num_f32 v0, v0, 4.0, 2.0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %minnum = call float @llvm.minnum.f32(float %a, float 4.0)
@@ -541,8 +535,6 @@ define float @test_max_min_maybe_NaN_input_ieee_true(float %a) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_minmax_num_f32 v0, v0, 4.0, 2.0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %minnum = call float @llvm.minnum.f32(float %a, float 4.0)

@@ -8137,14 +8137,14 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI) {
+LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI, bool ShouldCanonicalize) {
   unsigned NewOp = MI.getOpcode() == TargetOpcode::G_FMINNUM ?
     TargetOpcode::G_FMINNUM_IEEE : TargetOpcode::G_FMAXNUM_IEEE;
 
   auto [Dst, Src0, Src1] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
 
-  if (!MI.getFlag(MachineInstr::FmNoNans)) {
+  if (ShouldCanonicalize && !MI.getFlag(MachineInstr::FmNoNans)) {
     // Insert canonicalizes if it's possible we need to quiet to get correct
     // sNaN behavior.
 
