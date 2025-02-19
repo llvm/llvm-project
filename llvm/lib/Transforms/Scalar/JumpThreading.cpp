@@ -379,6 +379,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
     }
 
   LoopHeaders.clear();
+  LoopLatches.clear();
   return EverChanged;
 }
 
