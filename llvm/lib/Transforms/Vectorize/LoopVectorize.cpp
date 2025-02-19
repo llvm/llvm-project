@@ -253,7 +253,7 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
                    "Similar to data-and-control, but remove the runtime check"),
         clEnumValN(TailFoldingStyle::DataWithEVL, "data-with-evl",
                    "Use predicated EVL instructions for tail folding. If EVL "
-                   "is unsupported, fallback to data-without-lane-mask.")));
+                   "is unsupported, fallback to data.")));
 
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
@@ -1459,12 +1459,10 @@ public:
                       !EnableVPlanNativePath &&
                       Legal->getFixedOrderRecurrences().empty();
     if (!EVLIsLegal) {
-      // If for some reason EVL mode is unsupported, fallback to
-      // DataWithoutLaneMask to try to vectorize the loop with folded tail
-      // in a generic way.
+      // If for some reason EVL mode is unsupported, fallback to Data to try to
+      // vectorize the loop with folded tail in a generic way.
       ChosenTailFoldingStyle =
-          std::make_pair(TailFoldingStyle::DataWithoutLaneMask,
-                         TailFoldingStyle::DataWithoutLaneMask);
+          std::make_pair(TailFoldingStyle::Data, TailFoldingStyle::Data);
       LLVM_DEBUG(
           dbgs()
           << "LV: Preference for VP intrinsics indicated. Will "
