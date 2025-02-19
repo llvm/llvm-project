@@ -240,7 +240,7 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
                          RBA->getSpaceNumber());
 }
 
-llvm::Type *
+llvm::TargetExtType *
 CGHLSLRuntime::getHLSLBufferLayoutType(const RecordType *StructType) {
   const auto Entry = LayoutTypes.find(StructType);
   if (Entry != LayoutTypes.end())
@@ -249,7 +249,7 @@ CGHLSLRuntime::getHLSLBufferLayoutType(const RecordType *StructType) {
 }
 
 void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
-                                            llvm::Type *LayoutTy) {
+                                            llvm::TargetExtType *LayoutTy) {
   assert(getHLSLBufferLayoutType(StructType) == nullptr &&
          "layout type for this struct already exist");
   LayoutTypes[StructType] = LayoutTy;

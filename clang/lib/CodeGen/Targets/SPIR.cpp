@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABIInfoImpl.h"
-#include "HLSLTargetInfo.h"
 #include "TargetInfo.h"
 
 using namespace clang;
@@ -39,12 +38,12 @@ private:
 };
 } // end anonymous namespace
 namespace {
-class CommonSPIRTargetCodeGenInfo : public CommonHLSLTargetCodeGenInfo {
+class CommonSPIRTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   CommonSPIRTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
-      : CommonHLSLTargetCodeGenInfo(std::make_unique<CommonSPIRABIInfo>(CGT)) {}
+      : TargetCodeGenInfo(std::make_unique<CommonSPIRABIInfo>(CGT)) {}
   CommonSPIRTargetCodeGenInfo(std::unique_ptr<ABIInfo> ABIInfo)
-      : CommonHLSLTargetCodeGenInfo(std::move(ABIInfo)) {}
+      : TargetCodeGenInfo(std::move(ABIInfo)) {}
 
   LangAS getASTAllocaAddressSpace() const override {
     return getLangASFromTargetAS(
