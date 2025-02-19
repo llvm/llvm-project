@@ -1,5 +1,8 @@
 ; RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
 
+global_atomic_ordered_add_b64 v0, v[2:3], s[0:1] offset:-64
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 ;; DOT4_F32_*, DOT2_F32_*, DOT2_F16 and DOT2_BF16
 
 v_dot4_f32_fp8_fp8 v0, v1, v2, v3
