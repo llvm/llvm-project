@@ -1286,6 +1286,26 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
 
   bool IsSigned = CountFD->getType()->isSignedIntegerType();
 
+  //  array_base_size = sizeof (*ptr->array);
+  ASTContext &Ctx = getContext();
+  QualType ArrayBaseTy = ArrayBaseFD->getType()->getPointeeType();
+  CharUnits BaseSize = Ctx.getTypeSizeInChars(ArrayBaseTy);
+  if (BaseSize.isZero()) {
+    // This might be a __sized_by on a 'void *', which counts bytes, not
+    // elements.
+    auto *CAT = ArrayBaseFD->getType()->getAs<CountAttributedType>();
+    if (CAT->getKind() != CountAttributedType::SizedBy &&
+        CAT->getKind() != CountAttributedType::SizedByOrNull)
+      // Okay, not sure what it is now.
+      // FIXME: Should this be an assert?
+      return nullptr;
+
+    BaseSize = CharUnits::One();
+  }
+
+  auto *ArrayBaseSize =
+      llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
+
   //  count = ptr->count;
   Value *Count = EmitLoadOfCountedByField(ME, ArrayBaseFD, CountFD);
   if (!Count)
@@ -1299,13 +1319,6 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
     Index = EmitScalarExpr(Idx);
     Index = Builder.CreateIntCast(Index, ResType, IdxSigned, "index");
   }
-
-  //  array_base_size = sizeof (*ptr->array);
-  ASTContext &Ctx = getContext();
-  QualType ArrayBaseTy = ArrayBaseFD->getType()->getPointeeType();
-  CharUnits BaseSize = Ctx.getTypeSizeInChars(ArrayBaseTy);
-  auto *ArrayBaseSize =
-      llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
 
   //  array_size = count * array_base_size;
   Value *ArraySize = Builder.CreateMul(Count, ArrayBaseSize, "array_size",
