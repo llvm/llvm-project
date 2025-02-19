@@ -105,7 +105,7 @@ struct MiscTelemetryInfo : public LLDBBaseTelemetryInfo {
   std::string target_uuid;
 
   /// Set of key-value pairs for any optional (or impl-specific) data
-  std::map<std::string, std::string> meta_data;
+  llvm::StringMap<std::string> meta_data;
 
   MiscTelemetryInfo() = default;
 
