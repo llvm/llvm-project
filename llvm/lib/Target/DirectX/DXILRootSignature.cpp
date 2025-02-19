@@ -40,6 +40,38 @@ static bool reportError(LLVMContext *Ctx, Twine Message,
   return true;
 }
 
+static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
+                               MDNode *RootConstNode) {
+  if (RootConstNode->getNumOperands() != 5)
+    return reportError(Ctx, "Invalid format for RootFlag Element");
+
+  dxbc::RootParameter NewParam;
+  NewParam.ParameterType = dxbc::RootParameterType::Constants32Bit;
+
+  auto *ShaderVisibility =
+      mdconst::extract<ConstantInt>(RootConstNode->getOperand(1));
+  dxbc::ShaderVisibilityFlag SvFlag =
+      (dxbc::ShaderVisibilityFlag)ShaderVisibility->getZExtValue();
+  if (!dxbc::RootSignatureValidations::isValidShaderVisibility(SvFlag))
+    return reportError(
+        Ctx, "Invalid shader visibility flag value in root constant.");
+  NewParam.ShaderVisibility = SvFlag;
+
+  auto *ShaderRegister =
+      mdconst::extract<ConstantInt>(RootConstNode->getOperand(2));
+  NewParam.Constants.ShaderRegister = ShaderRegister->getZExtValue();
+
+  auto *RegisterSpace =
+      mdconst::extract<ConstantInt>(RootConstNode->getOperand(3));
+  NewParam.Constants.RegisterSpace = RegisterSpace->getZExtValue();
+
+  auto *Num32BitValues =
+      mdconst::extract<ConstantInt>(RootConstNode->getOperand(4));
+  NewParam.Constants.Num32BitValues = Num32BitValues->getZExtValue();
+
+  return false;
+}
+
 static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
                            MDNode *RootFlagNode) {
 
