@@ -1,14 +1,13 @@
-## Check that Arm SPE mode is available on AArch64 with BasicAggregation.
+## Check that Arm SPE mode is available on AArch64.
 
 REQUIRES: system-linux,perf,target=aarch64{{.*}}
 
-RUN: %clang %cflags %p/../../Inputs/asm_foo.s %p/../../Inputs/asm_main.c -o %t.exe
-RUN: touch %t.empty.perf.data
-RUN: perf2bolt -p %t.empty.perf.data -o %t.perf.boltdata --nl --spe --pa %t.exe 2>&1 | FileCheck %s --check-prefix=CHECK-SPE-NO-LBR
+RUN: perf record -e cycles -q -o %t.perf.data -- %t.exe 2> /dev/null
 
-CHECK-SPE-NO-LBR: PERF2BOLT: Starting data aggregation job
+RUN: (perf2bolt -p %t.perf.data -o %t.perf.boltdata --spe --nl %t.exe 2> /dev/null; exit 0) | FileCheck %s --check-prefix=CHECK-SPE-NO-LBR
 
-RUN: perf record -e cycles -q -o %t.perf.data -- %t.exe
-RUN: not perf2bolt -p %t.perf.data -o %t.perf.boltdata --spe %t.exe 2>&1 | FileCheck %s --check-prefix=CHECK-SPE-LBR
+RUN: (perf2bolt -p %t.perf.data -o %t.perf.boltdata --spe %t.exe 2> /dev/null; exit 0) | FileCheck %s --check-prefix=CHECK-SPE-LBR
 
-CHECK-SPE-LBR: PERF2BOLT-ERROR: Arm SPE mode is combined only with BasicAggregation.
+CHECK-SPE-NO-LBR: PERF2BOLT: spawning perf job to read SPE branch events (non-lbr)
+CHECK-SPE-LBR: PERF2BOLT: spawning perf job to read SPE brstack events
+
