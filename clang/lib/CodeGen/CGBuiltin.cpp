@@ -20723,9 +20723,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_bitop3_b16:
     return emitBuiltinWithOneOverloadedType<4>(*this, E,
                                                Intrinsic::amdgcn_bitop3);
-  case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc:
-    return emitBuiltinWithOneOverloadedType<4>(
-        *this, E, Intrinsic::amdgcn_make_buffer_rsrc);
+  case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc: {
+    // TODO: LLVM has this overloaded to allow for fat pointers, but since
+    // those haven't been plumbed through to Clang yet, default to creating the
+    // resource type.
+    SmallVector<Value *, 4> Args;
+    for (unsigned I = 0; I < 4; ++I)
+      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    llvm::PointerType *RetTy = llvm::PointerType::get(
+        Builder.getContext(), llvm::AMDGPUAS::BUFFER_RESOURCE);
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
+                                   {RetTy, Args[0]->getType()});
+    return Builder.CreateCall(F, Args);
+  }
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b8:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b16:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b32:

@@ -333,6 +333,24 @@ OpFoldResult math::ErfOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// ErfcOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::ErfcOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (APFloat::SemanticsToEnum(a.getSemantics())) {
+        case APFloat::Semantics::S_IEEEdouble:
+          return APFloat(erfc(a.convertToDouble()));
+        case APFloat::Semantics::S_IEEEsingle:
+          return APFloat(erfcf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // IPowIOp folder
 //===----------------------------------------------------------------------===//
 

@@ -1409,7 +1409,7 @@ class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
   let hasPostISelHook = 1;
 }
 
-// Like VPseudoBinaryMaskPolicy, but output can be V0 and there is no policy.
+// Like VPseudoBinaryMaskPolicy, but output can be V0.
 class VPseudoBinaryMOutMask<VReg RetClass,
                             RegisterClass Op1Class,
                             DAGOperand Op2Class,
@@ -1418,7 +1418,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$passthru,
                   Op1Class:$rs2, Op2Class:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
+                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1427,6 +1427,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
   let TargetOverlapConstraintType = TargetConstraintType;
   let HasVLOp = 1;
   let HasSEWOp = 1;
+  let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
 }
 
@@ -2622,7 +2623,6 @@ multiclass VPseudoBinaryM<DAGOperand Op2Class, LMULInfo m, bit Commutable = 0> {
       VPseudoBinaryNoMask<VR, m.vrclass, Op2Class,
                           !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
                           TargetConstraintType = 2>;
-    let ForceTailAgnostic = true in
     def "_" # m.MX # "_MASK" :
       VPseudoBinaryMOutMask<VR, m.vrclass, Op2Class,
                             !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
@@ -4140,7 +4140,7 @@ class VPatBinaryMask<string intrinsic_name,
                    (result_type result_reg_class:$passthru),
                    (op1_type op1_reg_class:$rs1),
                    (op2_type op2_kind:$rs2),
-                   (mask_type VMV0:$vm), GPR:$vl, sew)>;
+                   (mask_type VMV0:$vm), GPR:$vl, sew, TA_MU)>;
 
 class VPatBinaryMaskPolicy<string intrinsic_name,
                            string inst,
@@ -4210,7 +4210,7 @@ class VPatBinaryMaskSwapped<string intrinsic_name,
                    (result_type result_reg_class:$passthru),
                    (op1_type op1_reg_class:$rs1),
                    (op2_type op2_kind:$rs2),
-                   (mask_type VMV0:$vm), GPR:$vl, sew)>;
+                   (mask_type VMV0:$vm), GPR:$vl, sew, TA_MU)>;
 
 class VPatTiedBinaryNoMask<string intrinsic_name,
                            string inst,
@@ -6013,7 +6013,7 @@ multiclass VPatCompare_VI<string intrinsic, string inst,
                                   (vti.Mask VMV0:$vm),
                                   VLOpFrag)),
               (PseudoMask VR:$passthru, vti.RegClass:$rs1, (DecImm ImmType:$rs2),
-                          (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW)>;
+                          (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TA_MU)>;
   }
 }
 

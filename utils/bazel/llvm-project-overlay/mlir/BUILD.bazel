@@ -97,6 +97,14 @@ gentbl_cc_library(
     name = "OpAsmInterfaceIncGen",
     tbl_outs = [
         (
+            ["-gen-attr-interface-decls"],
+            "include/mlir/IR/OpAsmAttrInterface.h.inc",
+        ),
+        (
+            ["-gen-attr-interface-defs"],
+            "include/mlir/IR/OpAsmAttrInterface.cpp.inc",
+        ),
+        (
             ["-gen-op-interface-decls"],
             "include/mlir/IR/OpAsmOpInterface.h.inc",
         ),
@@ -1729,11 +1737,17 @@ gentbl_cc_library(
     name = "EmitCOpsIncGen",
     tbl_outs = [
         (
-            ["-gen-dialect-decls"],
+            [
+                "-gen-dialect-decls",
+                "-dialect=emitc",
+            ],
             "include/mlir/Dialect/EmitC/IR/EmitCDialect.h.inc",
         ),
         (
-            ["-gen-dialect-defs"],
+            [
+                "-gen-dialect-defs",
+                "-dialect=emitc",
+            ],
             "include/mlir/Dialect/EmitC/IR/EmitCDialect.cpp.inc",
         ),
         (
@@ -11533,34 +11547,20 @@ cc_library(
 
 cc_library(
     name = "LinalgInterfaces",
-    srcs = [
-        "include/mlir/Dialect/Linalg/IR/Linalg.h",
-        "lib/Dialect/Linalg/IR/LinalgInterfaces.cpp",
-    ],
+    # Note: LinalgInterfaces.cpp is part of LinalgDialect, not this target.
+    # This allows TensorDialect to use the header-only RelayOpInterface without
+    # an implicit dependency on the LinalgDialect.
     hdrs = ["include/mlir/Dialect/Linalg/IR/LinalgInterfaces.h"],
     includes = ["include"],
     deps = [
-        ":AffineDialect",
-        ":ArithDialect",
-        ":ArithUtils",
-        ":BytecodeOpInterface",
-        ":ComplexDialect",
-        ":ControlFlowInterfaces",
-        ":CopyOpInterface",
         ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
-        ":LinalgEnumsIncGen",
         ":LinalgInterfacesIncGen",
-        ":LinalgOpsIncGen",
-        ":LinalgRelayoutOpsIncGen",
         ":LinalgStructuredOpsIncGen",
-        ":SideEffectInterfaces",
         ":Support",
-        ":TilingInterface",
         ":ViewLikeInterface",
-        "//llvm:Support",
     ],
 )
 
@@ -11568,6 +11568,7 @@ cc_library(
     name = "LinalgDialect",
     srcs = [
         "lib/Dialect/Linalg/IR/LinalgDialect.cpp",
+        "lib/Dialect/Linalg/IR/LinalgInterfaces.cpp",
         "lib/Dialect/Linalg/IR/LinalgOps.cpp",
         "lib/Dialect/Linalg/IR/ValueBoundsOpInterfaceImpl.cpp",
     ],
@@ -11594,6 +11595,7 @@ cc_library(
         ":InliningUtils",
         ":LinalgEnumsIncGen",
         ":LinalgInterfaces",
+        ":LinalgInterfacesIncGen",
         ":LinalgNamedStructuredOpsYamlIncGen",
         ":LinalgOpsIncGen",
         ":LinalgRelayoutOpsIncGen",
