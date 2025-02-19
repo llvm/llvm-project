@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <algorithm>
+#include <cstddef>
 #include <deque>
 #include <iterator>
 #include <list>
@@ -25,50 +26,50 @@ auto compute_median(auto first, auto last) {
   return *middle;
 }
 
-template <class Container, class Operation>
-void bm(std::string operation_name, Operation partition) {
-  auto bench = [partition](auto& st) {
-    auto const size = st.range(0);
-    using ValueType = typename Container::value_type;
-    Container c;
-    std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
-
-    std::vector<ValueType> yes(size), no(size);
-    ValueType median = compute_median(c.begin(), c.end());
-    auto pred1       = [median](auto const& element) { return element < median; };
-    auto pred2       = [median](auto const& element) { return element > median; };
-    bool toggle      = false;
-
-    for ([[maybe_unused]] auto _ : st) {
-      if (toggle) {
-        auto result = partition(c.begin(), c.end(), pred1);
-        benchmark::DoNotOptimize(result);
-      } else {
-        auto result = partition(c.begin(), c.end(), pred2);
-        benchmark::DoNotOptimize(result);
-      }
-      toggle = !toggle;
-
-      benchmark::DoNotOptimize(c);
-      benchmark::ClobberMemory();
-    }
-  };
-  benchmark::RegisterBenchmark(operation_name, bench)->Arg(32)->Arg(1024)->Arg(8192);
-}
-
 int main(int argc, char** argv) {
-  auto std_partition    = [](auto first, auto last, auto pred) { return std::partition(first, last, pred); };
-  auto ranges_partition = [](auto first, auto last, auto pred) { return std::ranges::partition(first, last, pred); };
+  auto std_partition = [](auto first, auto last, auto pred) { return std::partition(first, last, pred); };
+
+  auto bm = []<class Container>(std::string name, auto partition) {
+    benchmark::RegisterBenchmark(
+        name,
+        [partition](auto& st) {
+          std::size_t const size = st.range(0);
+          using ValueType        = typename Container::value_type;
+          Container c;
+          std::generate_n(std::back_inserter(c), size, [] { return Generate<ValueType>::random(); });
+
+          std::vector<ValueType> yes(size), no(size);
+          ValueType median = compute_median(c.begin(), c.end());
+          auto pred1       = [median](auto const& element) { return element < median; };
+          auto pred2       = [median](auto const& element) { return element > median; };
+          bool toggle      = false;
+
+          for ([[maybe_unused]] auto _ : st) {
+            benchmark::DoNotOptimize(c);
+            if (toggle) {
+              auto result = partition(c.begin(), c.end(), pred1);
+              benchmark::DoNotOptimize(result);
+            } else {
+              auto result = partition(c.begin(), c.end(), pred2);
+              benchmark::DoNotOptimize(result);
+            }
+            toggle = !toggle;
+          }
+        })
+        ->Arg(32)
+        ->Arg(1024)
+        ->Arg(8192);
+  };
 
   // std::partition
-  bm<std::vector<int>>("std::partition(vector<int>)", std_partition);
-  bm<std::deque<int>>("std::partition(deque<int>)", std_partition);
-  bm<std::list<int>>("std::partition(list<int>)", std_partition);
+  bm.operator()<std::vector<int>>("std::partition(vector<int>)", std_partition);
+  bm.operator()<std::deque<int>>("std::partition(deque<int>)", std_partition);
+  bm.operator()<std::list<int>>("std::partition(list<int>)", std_partition);
 
   // ranges::partition
-  bm<std::vector<int>>("ranges::partition(vector<int>)", ranges_partition);
-  bm<std::deque<int>>("ranges::partition(deque<int>)", ranges_partition);
-  bm<std::list<int>>("ranges::partition(list<int>)", ranges_partition);
+  bm.operator()<std::vector<int>>("rng::partition(vector<int>)", std::ranges::partition);
+  bm.operator()<std::deque<int>>("rng::partition(deque<int>)", std::ranges::partition);
+  bm.operator()<std::list<int>>("rng::partition(list<int>)", std::ranges::partition);
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
