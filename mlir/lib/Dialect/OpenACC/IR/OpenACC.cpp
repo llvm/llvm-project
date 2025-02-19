@@ -87,8 +87,7 @@ struct ACCInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
-  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
-  }
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {}
 };
 } // namespace
 
