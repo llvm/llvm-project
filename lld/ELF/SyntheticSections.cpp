@@ -338,9 +338,8 @@ void GnuPropertySection::writeTo(uint8_t *buf) {
     featureAndType = GNU_PROPERTY_RISCV_FEATURE_1_AND;
     break;
   default:
-    Err(ctx) << "(e_machine) " << ctx.arg.emachine
-             << ": e_machine does not support .note.gnu.property section";
-    return;
+    llvm_unreachable(
+        "target machine does not support .note.gnu.property section");
   }
 
   write32(ctx, buf, 4);                          // Name size
