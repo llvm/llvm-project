@@ -1043,6 +1043,37 @@ static bool buildExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+/// Helper function for building Intel's bindless image instructions.
+static bool buildBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
+                                        unsigned Opcode,
+                                        MachineIRBuilder &MIRBuilder,
+                                        SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  const auto *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  if ((Opcode == SPIRV::OpConvertHandleToImageINTEL ||
+       Opcode == SPIRV::OpConvertHandleToSamplerINTEL ||
+       Opcode == SPIRV::OpConvertHandleToSampledImageINTEL) &&
+      !ST->canUseExtension(SPIRV::Extension::SPV_INTEL_bindless_images)) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: SPV_INTEL_bindless_images";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
+
+  // Generate SPIRV instruction accordingly.
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  MIB.addUse(Call->Arguments[0]);
+
+  return true;
+}
+
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
   switch (dim) {
   case SPIRV::Dim::DIM_1D:
@@ -2232,6 +2263,17 @@ static bool generateExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
   return buildExtendedBitOpsInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
+                                           MachineIRBuilder &MIRBuilder,
+                                           SPIRVGlobalRegistry *GR) {
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  return buildBindlessImageINTELInst(Call, Opcode, MIRBuilder, GR);
+}
+
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
@@ -2809,6 +2851,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateCoopMatrInst(Call.get(), MIRBuilder, GR);
   case SPIRV::ExtendedBitOps:
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::BindlessINTEL:
+    return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
