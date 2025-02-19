@@ -1,9 +1,15 @@
 ;; Test hoisting `xxspltib` out the loop.
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff  \
-; RUN:   %s -o - 2>&1 | FileCheck  %s
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --mcpu=pwr10 \
+; RUN:   %s -o - 2>&1 | FileCheck --check-prefix=AIX64 %s
 
-define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef writeonly %_a, ptr noalias nocapture noundef readonly %In_a, ptr noalias nocapture noundef readonly %n) local_unnamed_addr #0 {
+; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff --mcpu=pwr10 \
+; RUN:   %s -o - 2>&1 | FileCheck --check-prefix=AIX32 %s
+
+; RUN: llc -verify-machineinstrs -mtriple powerpc-ibn-linux --mcpu=pwr10 \
+; RUN:   %s -o - 2>&1 | FileCheck --check-prefix=LINUX %s
+
+define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef %_a, ptr noalias nocapture %In_a, ptr noalias nocapture %n) {
 entry:
   %0 = load i32, ptr %n, align 4
   %cmp9 = icmp sgt i32 %0, 0
@@ -67,41 +73,111 @@ for.body:
   br i1 %niter.ncmp.1, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body
 }
 
-attributes #0 = { mustprogress nofree norecurse nosync nounwind memory(argmem: readwrite) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr10" "target-features"="+altivec,+bpermd,+crbits,+crypto,+direct-move,+extdiv,+isa-v206-instructions,+isa-v207-instructions,+isa-v30-instructions,+isa-v31-instructions,+mma,+paired-vector-memops,+pcrelative-memops,+power10-vector,+power8-vector,+power9-vector,+prefix-instrs,+quadword-atomics,+vsx,-aix-shared-lib-tls-model-opt,-aix-small-local-dynamic-tls,-aix-small-local-exec-tls,-htm,-privileged,-rop-protect,-spe" }
+; AIX32:      ._Z3fooPfS_Pi:
+; AIX32-NEXT: # %bb.0:                                # %entry
+; AIX32-NEXT:   lwz 5, 0(5)
+; AIX32-NEXT:   cmpwi   5, 1
+; AIX32-NEXT:   bltlr   0
+; AIX32-NEXT: # %bb.1:                                # %for.body.preheader
+; AIX32-NEXT:   li 6, 0
+; AIX32-NEXT:   beq     0, L..BB0_4
+; AIX32-NEXT: # %bb.2:                                # %for.body.preheader.new
+; AIX32-NEXT:   addi 12, 4, -8
+; AIX32-NEXT:   addi 9, 3, -8
+; AIX32-NEXT:   rlwinm 7, 5, 0, 1, 30
+; AIX32-NEXT:   li 8, 0
+; AIX32-NEXT:   li 10, 8
+; AIX32-NEXT:   li 11, 12
+; AIX32-NEXT:   .align  4
+; AIX32-NEXT: L..BB0_3:                               # %for.body
+; AIX32-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; AIX32-NEXT:   lxvwsx 0, 12, 10
+; AIX32-NEXT:   xxspltib 1, 6
+; AIX32-NEXT:   lxvwsx 2, 12, 11
+; AIX32-NEXT:   addic 6, 6, 2
+; AIX32-NEXT:   addi 12, 12, 8
+; AIX32-NEXT:   addze 8, 8
+; AIX32-NEXT:   xor 0, 6, 7
+; AIX32-NEXT:   or. 0, 0, 8
+; AIX32-NEXT:   xxland 0, 0, 1
+; AIX32-NEXT:   xxland 1, 2, 1
+; AIX32-NEXT:   xscvspdpn 0, 0
+; AIX32-NEXT:   stfsu 0, 8(9)
+; AIX32-NEXT:   xscvspdpn 0, 1
+; AIX32-NEXT:   stfs 0, 4(9)
+; AIX32-NEXT:   bne     0, L..BB0_3
 
-; CHECK:      ._Z3fooPfS_Pi:
-; CHECK-NEXT: # %bb.0:                                # %entry
-; CHECK-NEXT:   lwz 5, 0(5)
-; CHECK-NEXT:   cmpwi   5, 1
-; CHECK-NEXT:   bltlr   0
-; CHECK-NEXT: # %bb.1:                                # %for.body.preheader
-; CHECK-NEXT:   li 6, 0
-; CHECK-NEXT:   cmplwi  5, 1
-; CHECK-NEXT:   beq     0, L..BB0_4
-; CHECK-NEXT: # %bb.2:                                # %for.body.preheader.new
-; CHECK-NEXT:   rlwinm 6, 5, 0, 1, 30
-; CHECK-NEXT:   addi 10, 4, -8
-; CHECK-NEXT:   addi 7, 3, -8
-; CHECK-NEXT:   li 8, 8
-; CHECK-NEXT:   li 9, 12
-; CHECK-NEXT:   li 11, 4
-; CHECK-NEXT:   addi 6, 6, -2
-; CHECK-NEXT:   rldicl 6, 6, 63, 1
-; CHECK-NEXT:   addi 6, 6, 1
-; CHECK-NEXT:   mtctr 6
-; CHECK-NEXT:   li 6, 0
-; CHECK-NEXT:   .align  4
-; CHECK-NEXT: L..BB0_3:                               # %for.body
-; CHECK-NEXT:                                         # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:   lxvwsx 0, 10, 8
-; CHECK-NEXT:   xxspltib 1, 6
-; CHECK-NEXT:   addi 6, 6, 2
-; CHECK-NEXT:   xxland 0, 0, 1
-; CHECK-NEXT:   xscvspdpn 0, 0
-; CHECK-NEXT:   stfsu 0, 8(7)
-; CHECK-NEXT:   lxvwsx 0, 10, 9
-; CHECK-NEXT:   addi 10, 10, 8
-; CHECK-NEXT:   xxland 0, 0, 1
-; CHECK-NEXT:   xxsldwi 0, 0, 0, 3
-; CHECK-NEXT:   stfiwx 0, 7, 11
-; CHECK-NEXT:   bdnz L..BB0_3
+; AIX64:      ._Z3fooPfS_Pi:
+; AIX64-NEXT: # %bb.0:                                # %entry
+; AIX64-NEXT:   lwz 5, 0(5)
+; AIX64-NEXT:   cmpwi   5, 1
+; AIX64-NEXT:   bltlr   0
+; AIX64-NEXT: # %bb.1:                                # %for.body.preheader
+; AIX64-NEXT:   li 6, 0
+; AIX64-NEXT:   cmplwi  5, 1
+; AIX64-NEXT:   beq     0, L..BB0_4
+; AIX64-NEXT: # %bb.2:                                # %for.body.preheader.new
+; AIX64-NEXT:   rlwinm 6, 5, 0, 1, 30
+; AIX64-NEXT:   addi 10, 4, -8
+; AIX64-NEXT:   addi 7, 3, -8
+; AIX64-NEXT:   li 8, 8
+; AIX64-NEXT:   li 9, 12
+; AIX64-NEXT:   li 11, 4
+; AIX64-NEXT:   addi 6, 6, -2
+; AIX64-NEXT:   rldicl 6, 6, 63, 1
+; AIX64-NEXT:   addi 6, 6, 1
+; AIX64-NEXT:   mtctr 6
+; AIX64-NEXT:   li 6, 0
+; AIX64-NEXT:   .align  4
+; AIX64-NEXT: L..BB0_3:                               # %for.body
+; AIX64-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; AIX64-NEXT:   lxvwsx 0, 10, 8
+; AIX64-NEXT:   xxspltib 1, 6
+; AIX64-NEXT:   addi 6, 6, 2
+; AIX64-NEXT:   xxland 0, 0, 1
+; AIX64-NEXT:   xscvspdpn 0, 0
+; AIX64-NEXT:   stfsu 0, 8(7)
+; AIX64-NEXT:   lxvwsx 0, 10, 9
+; AIX64-NEXT:   addi 10, 10, 8
+; AIX64-NEXT:   xxland 0, 0, 1
+; AIX64-NEXT:   xxsldwi 0, 0, 0, 3
+; AIX64-NEXT:   stfiwx 0, 7, 11
+; AIX64-NEXT:   bdnz L..BB0_3
+
+; LINUX:      _Z3fooPfS_Pi:                           # @_Z3fooPfS_Pi
+; LINUX-NEXT: .Lfunc_begin0:
+; LINUX-NEXT:   .cfi_startproc
+; LINUX-NEXT: # %bb.0:                                # %entry
+; LINUX-NEXT:   lwz 5, 0(5)
+; LINUX-NEXT:   cmpwi   5, 1
+; LINUX-NEXT:   bltlr   0
+; LINUX-NEXT: # %bb.1:                                # %for.body.preheader
+; LINUX-NEXT:   li 6, 0
+; LINUX-NEXT:   beq     0, .LBB0_4
+; LINUX-NEXT: # %bb.2:                                # %for.body.preheader.new
+; LINUX-NEXT:   addi 12, 4, -8
+; LINUX-NEXT:   addi 9, 3, -8
+; LINUX-NEXT:   rlwinm 7, 5, 0, 1, 30
+; LINUX-NEXT:   li 8, 0
+; LINUX-NEXT:   li 10, 8
+; LINUX-NEXT:   li 11, 12
+; LINUX-NEXT:   .p2align        4
+; LINUX-NEXT: .LBB0_3:                                # %for.body
+; LINUX-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; LINUX-NEXT:   lxvwsx 0, 12, 10
+; LINUX-NEXT:   xxspltib 1, 6
+; LINUX-NEXT:   lxvwsx 2, 12, 11
+; LINUX-NEXT:   addic 6, 6, 2
+; LINUX-NEXT:   addi 12, 12, 8
+; LINUX-NEXT:   addze 8, 8
+; LINUX-NEXT:   xor 0, 6, 7
+; LINUX-NEXT:   or. 0, 0, 8
+; LINUX-NEXT:   xxland 0, 0, 1
+; LINUX-NEXT:   xxland 1, 2, 1
+; LINUX-NEXT:   xscvspdpn 0, 0
+; LINUX-NEXT:   stfsu 0, 8(9)
+; LINUX-NEXT:   xscvspdpn 0, 1
+; LINUX-NEXT:   stfs 0, 4(9)
+; LINUX-NEXT:   bne     0, .LBB0_3
+
+
