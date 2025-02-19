@@ -789,9 +789,7 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
       if (CGM.shouldHaveNilCheckThunk(OMD))
         // Go generate  a nil check thunk around `Fn`
         CodeGenFunction(CGM, /*InnerFn=*/Fn).GenerateObjCDirectThunk(OMD, CD);
-      else
-        CGM.getObjCRuntime().GenerateObjCDirectNilCheck(*this, OMD, CD);
-      CGM.getObjCRuntime().GenerateCmdIfNecessary(*this, OMD);
+      CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
     } else {
       // For GNU family, since GNU Step2 also supports direct methods now.
       CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
@@ -1660,7 +1658,7 @@ void CodeGenFunction::GenerateObjCDirectThunk(const ObjCMethodDecl *OMD,
     EHStack.popCleanup();
 
   // Generate a nil check.
-  CGM.getObjCRuntime().GenerateObjCDirectNilCheck(*this, OMD, CD);
+  CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, CurFn, OMD, CD);
   // Call the InnerFn and pass the return value
   SmallVector<llvm::Value *> Args(CurFn->arg_size());
   std::transform(CurFn->arg_begin(), CurFn->arg_end(), Args.begin(),

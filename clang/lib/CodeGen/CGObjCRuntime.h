@@ -233,11 +233,6 @@ public:
                                             const ObjCMethodDecl *OMD,
                                             const ObjCContainerDecl *CD) = 0;
 
-  virtual void GenerateObjCDirectNilCheck(CodeGenFunction &CGF,
-                                          const ObjCMethodDecl *OMD,
-                                          const ObjCContainerDecl *CD) = 0;
-  virtual void GenerateCmdIfNecessary(CodeGenFunction &CGF,
-                                      const ObjCMethodDecl *OMD) = 0;
   /// Return the runtime function for getting properties.
   virtual llvm::FunctionCallee GetPropertyGetFunction() = 0;
 
