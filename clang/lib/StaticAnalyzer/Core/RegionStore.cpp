@@ -194,9 +194,9 @@ public:
                              *CBFactory, IsMainAnalysis);
   }
 
-  RegionBindingsRef remove(key_type_ref K) const {
-    return RegionBindingsRef(static_cast<const ParentTy *>(this)->remove(K),
-                             *CBFactory, IsMainAnalysis);
+  RegionBindingsRef removeCluster(const MemRegion *BaseRegion) const {
+    return RegionBindingsRef(ParentTy::remove(BaseRegion), *CBFactory,
+                             IsMainAnalysis);
   }
 
   RegionBindingsRef addBinding(BindingKey K, SVal V) const;
@@ -364,9 +364,10 @@ public:
         EscapedValuesDuringBind, BindingsLeft};
   }
 
-  BoundedRegionBindingsRef remove(key_type_ref K) const {
-    return BoundedRegionBindingsRef{RegionBindingsRef::remove(K),
-                                    EscapedValuesDuringBind, BindingsLeft};
+  BoundedRegionBindingsRef removeCluster(const MemRegion *BaseRegion) const {
+    return BoundedRegionBindingsRef{
+        RegionBindingsRef::removeCluster(BaseRegion), EscapedValuesDuringBind,
+        BindingsLeft};
   }
 
   BoundedRegionBindingsRef addBinding(BindingKey K, SVal V) const {
@@ -449,7 +450,7 @@ RegionBindingsRef RegionBindingsRef::removeBinding(BindingKey K) {
 
   ClusterBindings NewCluster = CBFactory->remove(*Cluster, K);
   if (NewCluster.isEmpty())
-    return remove(Base);
+    return removeCluster(Base);
   return add(Base, NewCluster);
 }
 
@@ -1102,7 +1103,7 @@ RegionStoreManager::removeSubRegionBindings(BoundedRegionBindingsConstRef B,
 
   if (Top == ClusterHead) {
     // We can remove an entire cluster's bindings all in one go.
-    return B.remove(Top);
+    return B.removeCluster(Top);
   }
 
   const ClusterBindings *Cluster = B.lookup(ClusterHead);
@@ -1135,7 +1136,7 @@ RegionStoreManager::removeSubRegionBindings(BoundedRegionBindingsConstRef B,
   }
 
   if (Result.isEmpty())
-    return B.remove(ClusterHead);
+    return B.removeCluster(ClusterHead);
   return B.addWithoutDecreasingLimit(ClusterHead, Result.asImmutableMap());
 }
 
@@ -1221,7 +1222,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
 
     // Invalidate regions contents.
     if (!PreserveRegionsContents)
-      B = B.remove(baseR);
+      B = B.removeCluster(baseR);
   }
 
   if (const auto *TO = dyn_cast<TypedValueRegion>(baseR)) {
@@ -3106,7 +3107,7 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
     // If the cluster has been visited, we know the region has been marked.
     // Otherwise, remove the dead entry.
     if (!W.isVisited(Base))
-      B = B.remove(Base);
+      B = B.removeCluster(Base);
   }
 
   return StoreRef(B.asStore(), *this);
