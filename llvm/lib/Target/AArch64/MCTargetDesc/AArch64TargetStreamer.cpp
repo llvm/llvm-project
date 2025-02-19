@@ -194,8 +194,7 @@ AArch64TargetStreamer::getAtributesSubsectionByName(StringRef Name) {
 }
 
 void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
-                                          unsigned Value, std::string String,
-                                          bool Override) {
+                                          unsigned Value, std::string String) {
 
   if (unsigned(-1) == Value && "" == String) {
     assert(0 && "Arguments error");

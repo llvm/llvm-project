@@ -8088,12 +8088,11 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   }
 
   if (unsigned(-1) != ValueInt) {
-    getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, ValueInt, "",
-                                      false);
+    getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, ValueInt, "");
   }
   if ("" != ValueStr) {
     getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, unsigned(-1),
-                                      ValueStr, false);
+                                      ValueStr);
   }
   return false;
 }
