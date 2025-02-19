@@ -156,7 +156,9 @@ public:
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
   const Triple &getTargetTriple() const { return TargetTriple; }
-  bool enableMachineScheduler() const override { return true; }
+  bool enableMachineScheduler() const override {
+    return !disablePreRAScheduler();
+  }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
   bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
 
