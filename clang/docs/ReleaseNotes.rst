@@ -170,9 +170,11 @@ Bug Fixes to C++ Support
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
+- Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -269,6 +271,10 @@ Code Completion
 
 Static Analyzer
 ---------------
+
+- Clang currently support extending lifetime of object bound to 
+  reference members of aggregates in CFG and ExprEngine, that are
+  created from default member initializer.
 
 New features
 ^^^^^^^^^^^^

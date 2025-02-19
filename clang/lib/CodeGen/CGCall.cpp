@@ -5633,22 +5633,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (!CallArgs.getCleanupsToDeactivate().empty())
     deactivateArgCleanupsBeforeCall(*this, CallArgs);
 
-  // Assert that the arguments we computed match up.  The IR verifier
-  // will catch this, but this is a common enough source of problems
-  // during IRGen changes that it's way better for debugging to catch
-  // it ourselves here.
-#ifndef NDEBUG
-  assert(IRCallArgs.size() == IRFuncTy->getNumParams() || IRFuncTy->isVarArg());
-  for (unsigned i = 0; i < IRCallArgs.size(); ++i) {
-    // Inalloca argument can have different type.
-    if (IRFunctionArgs.hasInallocaArg() &&
-        i == IRFunctionArgs.getInallocaArgNo())
-      continue;
-    if (i < IRFuncTy->getNumParams())
-      assert(IRCallArgs[i]->getType() == IRFuncTy->getParamType(i));
-  }
-#endif
-
   // Update the largest vector width if any arguments have vector types.
   for (unsigned i = 0; i < IRCallArgs.size(); ++i)
     LargestVectorWidth = std::max(LargestVectorWidth,

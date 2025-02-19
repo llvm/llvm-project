@@ -60,6 +60,7 @@ namespace clang {
 class NamedDecl;
 class VarDecl;
 class ParmVarDecl;
+class InitListExpr;
 class HLSLBufferDecl;
 class HLSLResourceBindingAttr;
 class Type;
@@ -72,6 +73,7 @@ class FunctionDecl;
 namespace CodeGen {
 
 class CodeGenModule;
+class CodeGenFunction;
 
 class CGHLSLRuntime {
 public:
@@ -163,6 +165,7 @@ public:
   llvm::Type *getHLSLBufferLayoutType(const RecordType *LayoutStructTy);
   void addHLSLBufferLayoutType(const RecordType *LayoutStructTy,
                                llvm::Type *LayoutTy);
+  void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,

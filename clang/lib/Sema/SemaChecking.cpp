@@ -5262,8 +5262,8 @@ ExprResult Sema::ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                        << E->getSourceRange());
   }
 
-  return new (Context) class ConvertVectorExpr(E, TInfo, DstTy, VK, OK,
-                                               BuiltinLoc, RParenLoc);
+  return ConvertVectorExpr::Create(Context, E, TInfo, DstTy, VK, OK, BuiltinLoc,
+                                   RParenLoc, CurFPFeatureOverrides());
 }
 
 bool Sema::BuiltinPrefetch(CallExpr *TheCall) {
@@ -11679,8 +11679,12 @@ static void AnalyzeImplicitConversions(
   // Propagate whether we are in a C++ list initialization expression.
   // If so, we do not issue warnings for implicit int-float conversion
   // precision loss, because C++11 narrowing already handles it.
-  bool IsListInit = Item.IsListInit ||
-                    (isa<InitListExpr>(OrigE) && S.getLangOpts().CPlusPlus);
+  //
+  // HLSL's initialization lists are special, so they shouldn't observe the C++
+  // behavior here.
+  bool IsListInit =
+      Item.IsListInit || (isa<InitListExpr>(OrigE) &&
+                          S.getLangOpts().CPlusPlus && !S.getLangOpts().HLSL);
 
   if (E->isTypeDependent() || E->isValueDependent())
     return;
