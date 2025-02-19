@@ -103,6 +103,8 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
+def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel>,
+                  GenericTuneInfo;
 
 def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                      MIPSP8700Model,
@@ -116,7 +118,9 @@ def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                       FeatureStdExtZba,
                                       FeatureStdExtZbb,
                                       FeatureStdExtZifencei,
-                                      FeatureStdExtZicsr],
+                                      FeatureStdExtZicsr,
+                                      FeatureVendorXMIPSCMove,
+                                      FeatureVendorXMIPSLSP],
                                      [TuneMIPSP8700]>;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
@@ -327,7 +331,7 @@ defvar SiFiveP500TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneAUIPCADDIFusion,
                                  TunePostRAScheduler];
 
-def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", NoSchedModel,
+def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", SiFiveP500Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
                                        FeatureStdExtZifencei,

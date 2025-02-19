@@ -906,6 +906,13 @@ public:
     VectorType castDstType = bitcastOp.getResultVectorType();
     assert(castSrcType.getRank() == castDstType.getRank());
 
+    // This transformation builds on top of
+    // vector.{extract|insert}_strided_slice, which do not support
+    // extracting/inserting "scallable sub-vectors". Bail out.
+    if (castSrcType.isScalable())
+      return rewriter.notifyMatchFailure(bitcastOp,
+                                         "Scalable vectors are not supported");
+
     // Only support rank 1 case for now.
     if (castSrcType.getRank() != 1)
       return failure();
@@ -1319,10 +1326,9 @@ class DropInnerMostUnitDimsTransferRead
                                       rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(srcType.getRank(),
                                       rewriter.getIndexAttr(1));
-    auto resultMemrefType =
-        cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
-            srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
-            strides));
+    MemRefType resultMemrefType = memref::SubViewOp::inferRankReducedResultType(
+        srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
+        strides);
     ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
         readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
@@ -1410,10 +1416,9 @@ class DropInnerMostUnitDimsTransferWrite
                                       rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(srcType.getRank(),
                                       rewriter.getIndexAttr(1));
-    auto resultMemrefType =
-        cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
-            srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
-            strides));
+    MemRefType resultMemrefType = memref::SubViewOp::inferRankReducedResultType(
+        srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
+        strides);
     ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
         writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
 
@@ -1785,11 +1790,11 @@ struct DropUnitDimsFromTransposeOp final
     auto dropDimsShapeCast = rewriter.create<vector::ShapeCastOp>(
         loc, sourceTypeWithoutUnitDims, op.getVector());
     // Create the new transpose.
-    auto tranposeWithoutUnitDims =
+    auto transposeWithoutUnitDims =
         rewriter.create<vector::TransposeOp>(loc, dropDimsShapeCast, newPerm);
     // Restore the unit dims via shape cast.
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
-        op, op.getResultVectorType(), tranposeWithoutUnitDims);
+        op, op.getResultVectorType(), transposeWithoutUnitDims);
 
     return success();
   }

@@ -1,5 +1,5 @@
 ===========================
-OpenMP 20.0.0 Release Notes
+OpenMP 21.0.0 Release Notes
 ===========================
 
 
@@ -25,3 +25,5 @@ Device Runtime
 - Changed the OpenMP DeviceRTL to use 'generic' IR. The
   ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
   always build support for AMDGPU and NVPTX targets.
+- Updated the offloading entry format but retained backwards compatibility with
+  the old format.

@@ -297,6 +297,16 @@ static DecodeStatus DecodeVRM8RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeVMV0RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createReg(RISCV::V0));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
@@ -671,6 +681,11 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                         "SiFive sf.cflush.d.l1 custom opcode table");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfcease, DecoderTableXSfcease32,
                         "SiFive sf.cease custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXMIPSLSP, DecoderTableXmipslsp32,
+                        "MIPS mips.lsp custom opcode table");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXMIPSCMove,
+                        DecoderTableXmipscmove32,
+                        "MIPS mips.ccmov custom opcode table");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
                         DecoderTableXCVbitmanip32,
                         "CORE-V Bit Manipulation custom opcode table");
@@ -774,6 +789,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                ArrayRef<uint8_t> Bytes,
                                                uint64_t Address,
                                                raw_ostream &CS) const {
+  CommentStream = &CS;
   // It's a 16 bit instruction if bit 0 and 1 are not 0b11.
   if ((Bytes[0] & 0b11) != 0b11)
     return getInstruction16(MI, Size, Bytes, Address, CS);

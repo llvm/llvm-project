@@ -291,9 +291,9 @@ def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
 def LLVMFixedVectorType : LLVMType<"LLVMFixedVector", "vec"> {
   let summary = "LLVM fixed vector type";
   let description = [{
-    LLVM dialect scalable vector type, represents a sequence of elements of
-    unknown length that is known to be divisible by some constant. These
-    elements can be processed as one in SIMD context.
+    LLVM dialect vector type that supports all element types that are supported
+    in LLVM vectors but that are not supported by the builtin MLIR vector type.
+    E.g., LLVMFixedVectorType supports LLVM pointers as element type.
   }];
 
   let typeName = "llvm.fixed_vec";

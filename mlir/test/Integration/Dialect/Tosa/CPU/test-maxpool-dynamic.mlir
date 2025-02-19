@@ -6,7 +6,7 @@
 // RUN:     -one-shot-bufferize="bufferize-function-boundaries" \
 // RUN:     -buffer-deallocation-pipeline \
 // RUN:     -test-lower-to-llvm \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:     -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils \
 // RUN: | FileCheck %s

@@ -288,6 +288,10 @@ Attribute Attribute::getWithNoFPClass(LLVMContext &Context,
   return get(Context, NoFPClass, ClassMask);
 }
 
+Attribute Attribute::getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI) {
+  return get(Context, Captures, CI.toIntValue());
+}
+
 Attribute
 Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
                                 const std::optional<unsigned> &NumElemsArg) {
@@ -642,6 +646,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         break;
       case IRMemLocation::InaccessibleMem:
         OS << "inaccessiblemem: ";
+        break;
+      case IRMemLocation::ErrnoMem:
+        OS << "errnomem: ";
         break;
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
@@ -2373,7 +2380,6 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
     // Attributes that only apply to pointers.
     if (ASK & ASK_SAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::NoAlias)
-          .addAttribute(Attribute::NoCapture)
           .addAttribute(Attribute::NonNull)
           .addAttribute(Attribute::ReadNone)
           .addAttribute(Attribute::ReadOnly)

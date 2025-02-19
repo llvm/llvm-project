@@ -752,13 +752,14 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
                                   dwarf::DW_ATE_unsigned_char)});
 
   for (auto *V : FrameData.getAllDefs()) {
-    if (!DIVarCache.contains(V))
+    auto It = DIVarCache.find(V);
+    if (It == DIVarCache.end())
       continue;
 
     auto Index = FrameData.getFieldIndex(V);
 
-    NameCache.insert({Index, DIVarCache[V]->getName()});
-    TyCache.insert({Index, DIVarCache[V]->getType()});
+    NameCache.insert({Index, It->second->getName()});
+    TyCache.insert({Index, It->second->getType()});
   }
 
   // Cache from index to (Align, Offset Pair)
@@ -850,7 +851,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   } else {
     DBuilder.insertDeclare(Shape.FramePtr, FrameDIVar,
                            DBuilder.createExpression(), DILoc,
-                           &*Shape.getInsertPtAfterFramePtr());
+                           Shape.getInsertPtAfterFramePtr());
   }
 }
 
@@ -1068,9 +1069,9 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
     Type *ByValTy = nullptr;
     if (auto *Arg = dyn_cast<Argument>(Def)) {
-      // If we're spilling an Argument, make sure we clear 'nocapture'
+      // If we're spilling an Argument, make sure we clear 'captures'
       // from the coroutine function.
-      Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::NoCapture);
+      Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::Captures);
 
       if (Arg->hasByValAttr())
         ByValTy = Arg->getParamByValType();
@@ -1145,7 +1146,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             DIBuilder(*CurrentBlock->getParent()->getParent(), AllowUnresolved)
                 .insertDeclare(CurrentReload, DDI->getVariable(),
                                DDI->getExpression(), DDI->getDebugLoc(),
-                               &*Builder.GetInsertPoint());
+                               Builder.GetInsertPoint());
           }
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
@@ -1377,7 +1378,7 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
   auto *SetDispatchValuePN =
       Builder.CreatePHI(SwitchType, pred_size(CleanupPadBB));
   CleanupPad->removeFromParent();
-  CleanupPad->insertAfter(SetDispatchValuePN);
+  CleanupPad->insertAfter(SetDispatchValuePN->getIterator());
   auto *SwitchOnDispatch = Builder.CreateSwitch(SetDispatchValuePN, UnreachBB,
                                                 pred_size(CleanupPadBB));
 
@@ -1448,34 +1449,39 @@ static void rewritePHIs(BasicBlock &BB) {
 
   // Special case for CleanupPad: all EH blocks must have the same unwind edge
   // so we need to create an additional "dispatcher" block.
-  if (auto *CleanupPad =
-          dyn_cast_or_null<CleanupPadInst>(BB.getFirstNonPHI())) {
-    SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
-    for (BasicBlock *Pred : Preds) {
-      if (CatchSwitchInst *CS =
-              dyn_cast<CatchSwitchInst>(Pred->getTerminator())) {
-        // CleanupPad with a CatchSwitch predecessor: therefore this is an
-        // unwind destination that needs to be handle specially.
-        assert(CS->getUnwindDest() == &BB);
-        (void)CS;
-        rewritePHIsForCleanupPad(&BB, CleanupPad);
-        return;
+  if (!BB.empty()) {
+    if (auto *CleanupPad =
+            dyn_cast_or_null<CleanupPadInst>(BB.getFirstNonPHIIt())) {
+      SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
+      for (BasicBlock *Pred : Preds) {
+        if (CatchSwitchInst *CS =
+                dyn_cast<CatchSwitchInst>(Pred->getTerminator())) {
+          // CleanupPad with a CatchSwitch predecessor: therefore this is an
+          // unwind destination that needs to be handle specially.
+          assert(CS->getUnwindDest() == &BB);
+          (void)CS;
+          rewritePHIsForCleanupPad(&BB, CleanupPad);
+          return;
+        }
       }
     }
   }
 
   LandingPadInst *LandingPad = nullptr;
   PHINode *ReplPHI = nullptr;
-  if ((LandingPad = dyn_cast_or_null<LandingPadInst>(BB.getFirstNonPHI()))) {
-    // ehAwareSplitEdge will clone the LandingPad in all the edge blocks.
-    // We replace the original landing pad with a PHINode that will collect the
-    // results from all of them.
-    ReplPHI = PHINode::Create(LandingPad->getType(), 1, "");
-    ReplPHI->insertBefore(LandingPad->getIterator());
-    ReplPHI->takeName(LandingPad);
-    LandingPad->replaceAllUsesWith(ReplPHI);
-    // We will erase the original landing pad at the end of this function after
-    // ehAwareSplitEdge cloned it in the transition blocks.
+  if (!BB.empty()) {
+    if ((LandingPad =
+             dyn_cast_or_null<LandingPadInst>(BB.getFirstNonPHIIt()))) {
+      // ehAwareSplitEdge will clone the LandingPad in all the edge blocks.
+      // We replace the original landing pad with a PHINode that will collect the
+      // results from all of them.
+      ReplPHI = PHINode::Create(LandingPad->getType(), 1, "");
+      ReplPHI->insertBefore(LandingPad->getIterator());
+      ReplPHI->takeName(LandingPad);
+      LandingPad->replaceAllUsesWith(ReplPHI);
+      // We will erase the original landing pad at the end of this function after
+      // ehAwareSplitEdge cloned it in the transition blocks.
+    }
   }
 
   SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
@@ -1697,7 +1703,8 @@ static void eliminateSwiftErrorAlloca(Function &F, AllocaInst *Alloca,
 static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
                                         coro::Shape &Shape,
                              SmallVectorImpl<AllocaInst*> &AllocasToPromote) {
-  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+  IRBuilder<> Builder(&F.getEntryBlock(),
+                      F.getEntryBlock().getFirstNonPHIOrDbg());
 
   auto ArgTy = cast<PointerType>(Arg.getType());
   auto ValueTy = PointerType::getUnqual(F.getContext());
@@ -1833,7 +1840,7 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
       if (Valid && Lifetimes.size() != 0) {
         auto *NewLifetime = Lifetimes[0]->clone();
         NewLifetime->replaceUsesOfWith(NewLifetime->getOperand(1), AI);
-        NewLifetime->insertBefore(DomBB->getTerminator());
+        NewLifetime->insertBefore(DomBB->getTerminator()->getIterator());
 
         // All the outsided lifetime.start markers are no longer necessary.
         for (Instruction *S : Lifetimes)

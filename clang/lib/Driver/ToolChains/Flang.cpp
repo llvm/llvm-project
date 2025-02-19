@@ -42,6 +42,7 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fopenacc,
                             options::OPT_finput_charset_EQ,
                             options::OPT_fimplicit_none,
+                            options::OPT_fimplicit_none_ext,
                             options::OPT_fno_implicit_none,
                             options::OPT_fbackslash,
                             options::OPT_fno_backslash,
@@ -58,7 +59,8 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fhermetic_module_files,
                             options::OPT_frealloc_lhs,
                             options::OPT_fno_realloc_lhs,
-                            options::OPT_fsave_main_program});
+                            options::OPT_fsave_main_program,
+                            options::OPT_fno_save_main_program});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -259,11 +261,18 @@ void Flang::AddPPCTargetArgs(const ArgList &Args,
 
 void Flang::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
   const llvm::Triple &Triple = getToolChain().getTriple();
+
+  StringRef ABIName = riscv::getRISCVABI(Args, Triple);
+  if (ABIName == "lp64" || ABIName == "lp64f" || ABIName == "lp64d")
+    CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
+  else
+    D.Diag(diag::err_drv_unsupported_option_argument) << "-mabi=" << ABIName;
+
   // Handle -mrvv-vector-bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_mrvv_vector_bits_EQ)) {
     StringRef Val = A->getValue();
-    const Driver &D = getToolChain().getDriver();
 
     // Get minimum VLen from march.
     unsigned MinVLen = 0;
@@ -344,11 +353,15 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
          "can only add VS runtime library on Windows!");
-  // if -fno-fortran-main has been passed, skip linking Fortran_main.a
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    CmdArgs.push_back(Args.MakeArgString(
-        "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
-  }
+
+  // Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
+  // should only depend on msv(u)crt. LLVM still emits libgcc/compiler-rt
+  // functions in some cases like 128-bit integer math (__udivti3, __modti3,
+  // __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
+  // dependency to Compiler-RT's builtin library where these are implemented.
+  CmdArgs.push_back(Args.MakeArgString(
+      "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
+
   unsigned RTOptionID = options::OPT__SLASH_MT;
   if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
     RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
@@ -362,30 +375,26 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   case options::OPT__SLASH_MT:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("--dependent-lib=libcmt");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
-    CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.runtime.static.lib");
     break;
   case options::OPT__SLASH_MTd:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("--dependent-lib=libcmtd");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
-    CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.runtime.static_dbg.lib");
     break;
   case options::OPT__SLASH_MD:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrt");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
-    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.runtime.dynamic.lib");
     break;
   case options::OPT__SLASH_MDd:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrtd");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
-    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.runtime.dynamic_dbg.lib");
     break;
   }
 }
@@ -555,7 +564,8 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
       CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
-    if (Args.hasArg(options::OPT_nogpulib))
+    if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                      true))
       CmdArgs.push_back("-nogpulib");
   }
 
@@ -937,6 +947,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::warn_O4_is_O3);
     } else if (A->getOption().matches(options::OPT_Ofast)) {
       CmdArgs.push_back("-O3");
+      D.Diag(diag::warn_drv_deprecated_arg_ofast_for_flang);
     } else {
       A->render(Args, CmdArgs);
     }

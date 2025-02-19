@@ -735,7 +735,7 @@ InstrBuilder::createInstruction(const MCInst &MCI,
       // Skip non-register operands.
       if (!Op.isReg())
         continue;
-      RegID = Op.getReg();
+      RegID = Op.getReg().id();
     } else {
       // Implicit read.
       RegID = RD.RegisterID;
@@ -800,8 +800,8 @@ InstrBuilder::createInstruction(const MCInst &MCI,
   unsigned WriteIndex = 0;
   Idx = 0U;
   for (const WriteDescriptor &WD : D.Writes) {
-    RegID = WD.isImplicitWrite() ? MCRegister(WD.RegisterID)
-                                 : MCI.getOperand(WD.OpIndex).getReg();
+    RegID = WD.isImplicitWrite() ? WD.RegisterID
+                                 : MCI.getOperand(WD.OpIndex).getReg().id();
     // Check if this is a optional definition that references NoReg or a write
     // to a constant register.
     if ((WD.IsOptionalDef && !RegID) || MRI.isConstant(RegID)) {

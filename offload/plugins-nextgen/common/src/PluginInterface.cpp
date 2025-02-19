@@ -380,7 +380,8 @@ setupIndirectCallTable(GenericPluginTy &Plugin, GenericDeviceTy &Device,
       Image.getTgtImage()->EntriesBegin, Image.getTgtImage()->EntriesEnd);
   llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
   for (const auto &Entry : Entries) {
-    if (Entry.Size == 0 || !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT))
+    if (Entry.Kind != object::OffloadKind::OFK_OpenMP || Entry.Size == 0 ||
+        !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT))
       continue;
 
     assert(Entry.Size == sizeof(void *) && "Global not a function pointer?");
@@ -738,7 +739,7 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       OMPX_SharedMemorySize("LIBOMPTARGET_SHARED_MEMORY_SIZE"),
       // Do not initialize the following two envars since they depend on the
       // device initialization. These cannot be consulted until the device is
-      // initialized correctly. We intialize them in GenericDeviceTy::init().
+      // initialized correctly. We initialize them in GenericDeviceTy::init().
       OMPX_TargetStackSize(), OMPX_TargetHeapSize(),
       // By default, the initial number of streams and events is 1.
       OMPX_InitialNumStreams("LIBOMPTARGET_NUM_INITIAL_STREAMS", 1),
@@ -860,8 +861,14 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (!ProfOrErr)
       return ProfOrErr.takeError();
 
-    // TODO: write data to profiling file
-    ProfOrErr->dump();
+    // Dump out profdata
+    if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
+        uint32_t(DeviceDebugKind::PGODump))
+      ProfOrErr->dump();
+
+    // Write data to profiling file
+    if (auto Err = ProfOrErr->write())
+      return Err;
   }
 
   // Delete the memory manager before deinitializing the device. Otherwise,
@@ -1040,7 +1047,7 @@ Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
 
 Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
                                       DeviceImageTy &Image) {
-  // The plugin either does not need an RPC server or it is unavailible.
+  // The plugin either does not need an RPC server or it is unavailable.
   if (!shouldSetupRPCServer())
     return Plugin::success();
 
@@ -1055,6 +1062,9 @@ Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
     return Plugin::success();
 
   if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
+    return Err;
+
+  if (auto Err = Server.startThread())
     return Err;
 
   RPCServer = &Server;
@@ -1322,16 +1332,16 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo) {
 }
 
 Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
-  return Plugin::error("Device does not suppport VA Management");
+  return Plugin::error("Device does not support VA Management");
 }
 
 Error GenericDeviceTy::memoryVAUnMap(void *VAddr, size_t Size) {
-  return Plugin::error("Device does not suppport VA Management");
+  return Plugin::error("Device does not support VA Management");
 }
 
 Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
   return Plugin::error(
-      "Mising getDeviceMemorySize impelmentation (required by RR-heuristic");
+      "Missing getDeviceMemorySize implementation (required by RR-heuristic");
 }
 
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
@@ -1630,8 +1640,11 @@ Error GenericPluginTy::deinit() {
   if (GlobalHandler)
     delete GlobalHandler;
 
-  if (RPCServer)
+  if (RPCServer) {
+    if (Error Err = RPCServer->shutDown())
+      return Err;
     delete RPCServer;
+  }
 
   if (RecordReplay)
     delete RecordReplay;
@@ -1807,7 +1820,7 @@ int32_t GenericPluginTy::initialize_record_replay(int32_t DeviceId,
 
   if (auto Err = RecordReplay->init(&Device, MemorySize, VAddr, Status,
                                     SaveOutput, ReqPtrArgOffset)) {
-    REPORT("WARNING RR did not intialize RR-properly with %lu bytes"
+    REPORT("WARNING RR did not initialize RR-properly with %lu bytes"
            "(Error: %s)\n",
            MemorySize, toString(std::move(Err)).data());
     RecordReplay->setStatus(RecordReplayTy::RRStatusTy::RRDeactivated);
@@ -1954,7 +1967,7 @@ int32_t GenericPluginTy::data_retrieve_async(int32_t DeviceId, void *HstPtr,
   auto Err =
       getDevice(DeviceId).dataRetrieve(HstPtr, TgtPtr, Size, AsyncInfoPtr);
   if (Err) {
-    REPORT("Faliure to copy data from device to host. Pointers: host "
+    REPORT("Failure to copy data from device to host. Pointers: host "
            "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 ": %s\n",
            DPxPTR(HstPtr), DPxPTR(TgtPtr), Size,
            toString(std::move(Err)).data());

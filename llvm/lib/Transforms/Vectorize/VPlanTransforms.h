@@ -14,7 +14,9 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
+#include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
@@ -27,7 +29,29 @@ class TargetLibraryInfo;
 class VPBuilder;
 class VPRecipeBuilder;
 
+extern cl::opt<bool> VerifyEachVPlan;
+
 struct VPlanTransforms {
+  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
+  /// arguments to the transform. Returns the boolean returned by the transform.
+  template <typename... ArgsTy>
+  static bool runPass(bool (*Transform)(VPlan &, ArgsTy...), VPlan &Plan,
+                      typename std::remove_reference<ArgsTy>::type &...Args) {
+    bool Res = Transform(Plan, Args...);
+    if (VerifyEachVPlan)
+      verifyVPlanIsValid(Plan);
+    return Res;
+  }
+  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
+  /// arguments to the transform.
+  template <typename... ArgsTy>
+  static void runPass(void (*Fn)(VPlan &, ArgsTy...), VPlan &Plan,
+                      typename std::remove_reference<ArgsTy>::type &...Args) {
+    Fn(Plan, Args...);
+    if (VerifyEachVPlan)
+      verifyVPlanIsValid(Plan);
+  }
+
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes.
   static void
@@ -100,7 +124,8 @@ struct VPlanTransforms {
   /// TODO: Replace BlockNeedsPredication callback with retrieving info from
   ///       VPlan directly.
   static void dropPoisonGeneratingRecipes(
-      VPlan &Plan, function_ref<bool(BasicBlock *)> BlockNeedsPredication);
+      VPlan &Plan,
+      const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
   /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
   /// replaces all uses except the canonical IV increment of
@@ -119,7 +144,7 @@ struct VPlanTransforms {
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
+      VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
@@ -137,6 +162,10 @@ struct VPlanTransforms {
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
+
+  /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
+  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
+  static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
 
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken

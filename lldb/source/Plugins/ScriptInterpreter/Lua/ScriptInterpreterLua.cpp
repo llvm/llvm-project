@@ -45,8 +45,8 @@ public:
         m_script_interpreter(script_interpreter),
         m_active_io_handler(active_io_handler) {
     llvm::cantFail(m_script_interpreter.GetLua().ChangeIO(
-        debugger.GetOutputFile().GetStream(),
-        debugger.GetErrorFile().GetStream()));
+        debugger.GetOutputFileSP()->GetStream(),
+        debugger.GetErrorFileSP()->GetStream()));
     llvm::cantFail(m_script_interpreter.EnterSession(debugger.GetID()));
   }
 
@@ -289,7 +289,7 @@ bool ScriptInterpreterLua::BreakpointCallbackFunction(
   llvm::Expected<bool> BoolOrErr = lua.CallBreakpointCallback(
       baton, stop_frame_sp, bp_loc_sp, bp_option_data->m_extra_args_sp);
   if (llvm::Error E = BoolOrErr.takeError()) {
-    debugger.GetErrorStream() << toString(std::move(E));
+    *debugger.GetAsyncErrorStream() << toString(std::move(E));
     return true;
   }
 
@@ -316,7 +316,7 @@ bool ScriptInterpreterLua::WatchpointCallbackFunction(
   llvm::Expected<bool> BoolOrErr =
       lua.CallWatchpointCallback(baton, stop_frame_sp, wp_sp);
   if (llvm::Error E = BoolOrErr.takeError()) {
-    debugger.GetErrorStream() << toString(std::move(E));
+    *debugger.GetAsyncErrorStream() << toString(std::move(E));
     return true;
   }
 

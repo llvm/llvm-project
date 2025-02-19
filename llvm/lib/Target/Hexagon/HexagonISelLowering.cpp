@@ -814,7 +814,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
   // stack where the return value will be stored. For Hexagon, the location on
   // caller's stack is passed only when the struct size is smaller than (and
   // equal to) 8 bytes. If not, no address will be passed into callee and
-  // callee return the result direclty through R0/R1.
+  // callee return the result directly through R0/R1.
   auto NextSingleReg = [] (const TargetRegisterClass &RC, unsigned Reg) {
     switch (RC.getID()) {
     case Hexagon::IntRegsRegClassID:
@@ -979,7 +979,7 @@ HexagonTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   // If first Vararg register is odd, add 4 bytes to start of
   // saved register area to point to the first register location.
   // This is because the saved register area has to be 8 byte aligned.
-  // Incase of an odd start register, there will be 4 bytes of padding in
+  // In case of an odd start register, there will be 4 bytes of padding in
   // the beginning of saved register area. If all registers area used up,
   // the following condition will handle it correctly.
   SDValue SavedRegAreaStartFrameIndex =
@@ -1321,7 +1321,7 @@ HexagonTargetLowering::GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
 }
 
 //
-// Lower using the intial executable model for TLS addresses
+// Lower using the initial executable model for TLS addresses
 //
 SDValue
 HexagonTargetLowering::LowerToTLSInitialExecModel(GlobalAddressSDNode *GA,
@@ -1886,11 +1886,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::SQRT_F32, "__hexagon_fast2_sqrtf");
   else
     setLibcallName(RTLIB::SQRT_F32, "__hexagon_sqrtf");
-
-  // Routines to handle fp16 storage type.
-  setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
-  setLibcallName(RTLIB::FPROUND_F64_F16, "__truncdfhf2");
-  setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
 }
 
 const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -3273,7 +3268,7 @@ HexagonTargetLowering::LowerUAddSubO(SDValue Op, SelectionDAG &DAG) const {
     if (Opc == ISD::USUBO) {
       SDValue Op = DAG.getNode(ISD::SUB, dl, VTs.VTs[0], {X, Y});
       SDValue Ov = DAG.getSetCC(dl, MVT::i1, Op,
-                                DAG.getConstant(-1, dl, ty(Op)), ISD::SETEQ);
+                                DAG.getAllOnesConstant(dl, ty(Op)), ISD::SETEQ);
       return DAG.getMergeValues({Op, Ov}, dl);
     }
   }
@@ -3320,7 +3315,7 @@ HexagonTargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
   Chain = DAG.getStore(Chain, dl, Handler, StoreAddr, MachinePointerInfo());
   Chain = DAG.getCopyToReg(Chain, dl, OffsetReg, Offset);
 
-  // Not needed we already use it as explict input to EH_RETURN.
+  // Not needed we already use it as explicit input to EH_RETURN.
   // MF.getRegInfo().addLiveOut(OffsetReg);
 
   return DAG.getNode(HexagonISD::EH_RETURN, dl, MVT::Other, Chain);
@@ -3491,7 +3486,7 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue P = Op.getOperand(0);
     switch (P.getOpcode()) {
     case HexagonISD::PTRUE:
-      return DCI.DAG.getConstant(-1, dl, ty(Op));
+      return DCI.DAG.getAllOnesConstant(dl, ty(Op));
     case HexagonISD::PFALSE:
       return getZero(dl, ty(Op), DCI.DAG);
     default:

@@ -277,7 +277,7 @@ public:
 };
 
 template <class _Context>
-class _LIBCPP_TEMPLATE_VIS basic_format_arg {
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS basic_format_arg {
 public:
   class _LIBCPP_TEMPLATE_VIS handle;
 

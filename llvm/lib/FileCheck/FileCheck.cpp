@@ -386,15 +386,12 @@ Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
   // that happens, we create a dummy variable so that parsing can continue. All
   // uses of undefined variables, whether string or numeric, are then diagnosed
   // in printNoMatch() after failing to match.
-  auto VarTableIter = Context->GlobalNumericVariableTable.find(Name);
-  NumericVariable *NumericVariable;
-  if (VarTableIter != Context->GlobalNumericVariableTable.end())
-    NumericVariable = VarTableIter->second;
-  else {
-    NumericVariable = Context->makeNumericVariable(
+  auto [VarTableIter, Inserted] =
+      Context->GlobalNumericVariableTable.try_emplace(Name);
+  if (Inserted)
+    VarTableIter->second = Context->makeNumericVariable(
         Name, ExpressionFormat(ExpressionFormat::Kind::Unsigned));
-    Context->GlobalNumericVariableTable[Name] = NumericVariable;
-  }
+  NumericVariable *NumericVariable = VarTableIter->second;
 
   std::optional<size_t> DefLineNumber = NumericVariable->getDefLineNumber();
   if (DefLineNumber && LineNumber && *DefLineNumber == *LineNumber)
@@ -1933,8 +1930,8 @@ bool FileCheck::readCheckFile(
     }
 
     // Okay, add the string we captured to the output vector and move on.
-    CheckStrings.emplace_back(P, UsedPrefix, PatternLoc);
-    std::swap(DagNotMatches, CheckStrings.back().DagNotStrings);
+    CheckStrings.emplace_back(std::move(P), UsedPrefix, PatternLoc,
+                              std::move(DagNotMatches));
     DagNotMatches = ImplicitNegativeChecks;
   }
 
@@ -1963,8 +1960,8 @@ bool FileCheck::readCheckFile(
   if (!DagNotMatches.empty()) {
     CheckStrings.emplace_back(
         Pattern(Check::CheckEOF, PatternContext.get(), LineNumber + 1),
-        *Req.CheckPrefixes.begin(), SMLoc::getFromPointer(Buffer.data()));
-    std::swap(DagNotMatches, CheckStrings.back().DagNotStrings);
+        *Req.CheckPrefixes.begin(), SMLoc::getFromPointer(Buffer.data()),
+        std::move(DagNotMatches));
   }
 
   return false;

@@ -323,3 +323,15 @@ define <vscale x 8 x double> @vfwsub_wf_nxv8f64_2(<vscale x 8 x double> %va, flo
   %vd = fsub <vscale x 8 x double> %va, %splat
   ret <vscale x 8 x double> %vd
 }
+
+define <vscale x 1 x double> @vfwsub_vv_nxv1f64_same_op(<vscale x 1 x float> %va) {
+; CHECK-LABEL: vfwsub_vv_nxv1f64_same_op:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vfwsub.vv v9, v8, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %vb = fpext <vscale x 1 x float> %va to <vscale x 1 x double>
+  %vc = fsub <vscale x 1 x double> %vb, %vb
+  ret <vscale x 1 x double> %vc
+}

@@ -456,7 +456,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
       uint64_t NumSGPRsForWavesPerEU = std::max(
           {NumSgpr, (uint64_t)1, (uint64_t)STM.getMinNumSGPRs(MaxWaves)});
       const MCExpr *OccupancyExpr = AMDGPUMCExpr::createOccupancy(
-          STM.computeOccupancy(F, MFI.getLDSSize()),
+          STM.getOccupancyWithWorkGroupSizes(*MF).second,
           MCConstantExpr::create(NumSGPRsForWavesPerEU, OutContext),
           MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext), STM,
           OutContext);
@@ -748,7 +748,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
           RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
                        OutContext, IsLocal)
               ->getVariableValue(),
-          getFunctionCodeSize(MF), MFI);
+          CurrentProgramInfo.getFunctionCodeSize(MF), MFI);
       return false;
     }
 
@@ -757,7 +757,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
         CurrentProgramInfo.NumArchVGPR,
         STM.hasMAIInsts() ? CurrentProgramInfo.NumAccVGPR : nullptr,
         CurrentProgramInfo.NumVGPR, CurrentProgramInfo.NumSGPR,
-        CurrentProgramInfo.ScratchSize, getFunctionCodeSize(MF), MFI);
+        CurrentProgramInfo.ScratchSize,
+        CurrentProgramInfo.getFunctionCodeSize(MF), MFI);
 
     OutStreamer->emitRawComment(
       " FloatMode: " + Twine(CurrentProgramInfo.FloatMode), false);
@@ -891,27 +892,6 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
       if (TSTargetID->getSramEccSetting() == IsaInfo::TargetIDSetting::Any)
         TSTargetID->setSramEccSetting(STMTargetID.getSramEccSetting());
   }
-}
-
-uint64_t AMDGPUAsmPrinter::getFunctionCodeSize(const MachineFunction &MF) const {
-  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
-  const SIInstrInfo *TII = STM.getInstrInfo();
-
-  uint64_t CodeSize = 0;
-
-  for (const MachineBasicBlock &MBB : MF) {
-    for (const MachineInstr &MI : MBB) {
-      // TODO: CodeSize should account for multiple functions.
-
-      // TODO: Should we count size of debug info?
-      if (MI.isDebugInstr())
-        continue;
-
-      CodeSize += TII->getInstSizeInBytes(MI);
-    }
-  }
-
-  return CodeSize;
 }
 
 // AccumOffset computed for the MCExpr equivalent of:
@@ -1272,8 +1252,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   }
 
   ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
-      STM.computeOccupancy(F, ProgInfo.LDSSize), ProgInfo.NumSGPRsForWavesPerEU,
-      ProgInfo.NumVGPRsForWavesPerEU, STM, Ctx);
+      STM.computeOccupancy(F, ProgInfo.LDSSize).second,
+      ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU, STM, Ctx);
 
   const auto [MinWEU, MaxWEU] =
       AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);

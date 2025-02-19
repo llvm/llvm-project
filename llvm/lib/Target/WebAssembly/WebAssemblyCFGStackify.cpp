@@ -852,12 +852,19 @@ void WebAssemblyCFGStackify::placeTryTableMarker(MachineBasicBlock &MBB) {
   // Add a CATCH_*** clause to the TRY_TABLE. These are pseudo instructions
   // following the destination END_BLOCK to simulate block return values,
   // because we currently don't support them.
+  const auto &TLI =
+      *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
+  WebAssembly::BlockType PtrTy =
+      TLI.getPointerTy(MF.getDataLayout()) == MVT::i32
+          ? WebAssembly::BlockType::I32
+          : WebAssembly::BlockType::I64;
   auto *Catch = WebAssembly::findCatch(&MBB);
   switch (Catch->getOpcode()) {
   case WebAssembly::CATCH:
     // CATCH's destination block's return type is the extracted value type,
-    // which is currently i32 for all supported tags.
-    BlockMIB.addImm(int64_t(WebAssembly::BlockType::I32));
+    // which is currently the thrown value's pointer type for all supported
+    // tags.
+    BlockMIB.addImm(int64_t(PtrTy));
     TryTableMIB.addImm(wasm::WASM_OPCODE_CATCH);
     for (const auto &Use : Catch->uses()) {
       // The only use operand a CATCH can have is the tag symbol.
