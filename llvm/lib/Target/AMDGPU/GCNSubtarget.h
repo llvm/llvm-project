@@ -246,7 +246,6 @@ protected:
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
-  bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
   bool HasAshrPkInsts = false;
@@ -1263,8 +1262,6 @@ public:
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
   bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
-
-  bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
