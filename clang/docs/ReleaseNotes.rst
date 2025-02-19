@@ -143,6 +143,8 @@ Improvements to Clang's diagnostics
 - A statement attribute applied to a ``case`` label no longer suppresses
   'bypassing variable initialization' diagnostics (#84072).
 
+- Clang now diagnoses ``-Wunused-member-function`` with a specific message for constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
