@@ -3889,7 +3889,7 @@ llvm::Expected<swift::ModuleDecl &> SwiftASTContext::CreateModule(
   if (module_name.empty())
     return llvm::createStringError("invalid module name (empty)");
 
-  if (swift::ModuleDecl *module_decl = GetCachedModule(module_name))
+  if (GetCachedModule(module_name))
     return llvm::createStringError(
         llvm::formatv("module already exists for \"{0}\"", module_name));
 
@@ -4653,7 +4653,7 @@ void SwiftASTContext::CacheDemangledTypeFailure(ConstString name) {
 /// specializations.
 static swift::Type ConvertSILFunctionTypesToASTFunctionTypes(swift::Type t) {
   return t.transformRec([](swift::TypeBase *t) -> std::optional<swift::Type> {
-    if (auto *silFn = swift::dyn_cast<swift::SILFunctionType>(t)) {
+    if (swift::dyn_cast<swift::SILFunctionType>(t)) {
       // FIXME: Verify ExtInfo state is correct, not working by accident.
       swift::FunctionType::ExtInfo info;
       return swift::Type(
@@ -6093,6 +6093,7 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::ErrorUnion:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Integer:
+  case swift::TypeKind::Locatable:
   case swift::TypeKind::Module:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::ParameterizedProtocol:
@@ -6247,6 +6248,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinPackIndex:    
   case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinUnboundGeneric:
+  case swift::TypeKind::Locatable:
   case swift::TypeKind::Integer:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackElement:
@@ -6745,6 +6747,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
+  case swift::TypeKind::Locatable:
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
@@ -6870,6 +6873,7 @@ SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Integer:
+  case swift::TypeKind::Locatable:
   case swift::TypeKind::Metatype:
   case swift::TypeKind::Module:
   case swift::TypeKind::OpaqueTypeArchetype:
@@ -7004,6 +7008,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::ErrorUnion:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Integer:
+  case swift::TypeKind::Locatable:
   case swift::TypeKind::Module:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackArchetype:
@@ -7235,6 +7240,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::ErrorUnion:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Integer:
+  case swift::TypeKind::Locatable:
   case swift::TypeKind::Module:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackArchetype:
@@ -7442,6 +7448,7 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Integer:
+  case swift::TypeKind::Locatable:
   case swift::TypeKind::Metatype:
   case swift::TypeKind::Module:
   case swift::TypeKind::OpaqueTypeArchetype:
@@ -7602,6 +7609,7 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Integer:
+  case swift::TypeKind::Locatable:
   case swift::TypeKind::Metatype:
   case swift::TypeKind::Module:
   case swift::TypeKind::OpaqueTypeArchetype:
@@ -7952,6 +7960,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::GenericFunction:
     case swift::TypeKind::InOut:
     case swift::TypeKind::Integer:
+    case swift::TypeKind::Locatable:
     case swift::TypeKind::Metatype:
     case swift::TypeKind::Module:
     case swift::TypeKind::OpaqueTypeArchetype:
@@ -8194,8 +8203,7 @@ SwiftASTContext::GetGenericArgumentKind(opaque_compiler_type_t type,
                                         size_t idx) {
   VALID_OR_RETURN_CHECK_TYPE(type, eNullGenericKindType);
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-  if (auto *unbound_generic_type =
-          swift_can_type->getAs<swift::UnboundGenericType>())
+  if (swift_can_type->getAs<swift::UnboundGenericType>())
     return eUnboundGenericKindType;
   if (auto *bound_generic_type =
           swift_can_type->getAs<swift::BoundGenericType>())
@@ -8307,8 +8315,6 @@ bool SwiftASTContext::IsMeaninglessWithoutDynamicResolution(
 //----------------------------------------------------------------------
 // Dumping types
 //----------------------------------------------------------------------
-#define DEPTH_INCREMENT 2
-
 #ifndef NDEBUG
 LLVM_DUMP_METHOD void SwiftASTContext::dump(opaque_compiler_type_t type) const {
   if (!type)
@@ -8348,6 +8354,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::Existential:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Integer:
+  case swift::TypeKind::Locatable:
   case swift::TypeKind::Module:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackArchetype:
