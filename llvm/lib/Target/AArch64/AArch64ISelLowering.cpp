@@ -1173,7 +1173,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setStackPointerRegisterToSaveRestore(AArch64::SP);
 
-  setSchedulingPreference(Sched::Hybrid);
+  setSchedulingPreference(Subtarget->enableMachineScheduler() ? Sched::Hybrid
+                                                              : Sched::Source);
 
   EnableExtLdPromotion = true;
 

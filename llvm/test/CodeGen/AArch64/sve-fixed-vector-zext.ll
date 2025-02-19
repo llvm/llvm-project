@@ -16,12 +16,12 @@ define internal i32 @test(ptr nocapture readonly %p1, i32 %i1, ptr nocapture rea
 ; SVE256-NEXT:  uaddv   d0, p1, z0.s
 
 ; NEON-LABEL: test:
-; NEON:       ldr q0, [x0, w9, sxtw]
-; NEON:       ldr q1, [x2, w10, sxtw]
-; NEON:       usubl2  v2.8h, v0.16b, v1.16b
-; NEON-NEXT:  usubl   v0.8h, v0.8b, v1.8b
-; NEON:       saddl2  v1.4s, v0.8h, v2.8h
-; NEON-NEXT:  saddl   v0.4s, v0.4h, v2.4h
+; NEON:       ldr {{q[0-9]}}, [{{x[0-9]+}}, {{w[0-9]+}}, sxtw]
+; NEON:       ldr {{q[0-9]}}, [{{x[0-9]+}}, {{w[0-9]+}}, sxtw]
+; NEON:       usubl2  v2.8h, {{v[0-9]}}.16b, {{v[0-9]}}.16b
+; NEON-NEXT:  usubl   v0.8h, {{v[0-9]}}.8b, {{v[0-9]}}.8b
+; NEON:       saddl2  v1.4s, {{v[0-9]}}.8h, {{v[0-9]}}.8h
+; NEON-NEXT:  saddl   v0.4s, {{v[0-9]}}.4h, {{v[0-9]}}.4h
 ; NEON-NEXT:  add v0.4s, v0.4s, v1.4s
 ; NEON-NEXT:  addv    s0, v0.4s
 

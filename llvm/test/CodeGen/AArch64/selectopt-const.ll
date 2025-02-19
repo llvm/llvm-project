@@ -7,30 +7,30 @@ define i32 @test_const(ptr %in1, ptr %in2, ptr %out, i32 %n, ptr %tbl) {
 ; CHECK-NEXT:    cmp w3, #1
 ; CHECK-NEXT:    b.lt .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    mov w9, #1267 // =0x4f3
-; CHECK-NEXT:    fmov s1, #1.00000000
-; CHECK-NEXT:    fmov d2, #5.00000000
 ; CHECK-NEXT:    mov w8, w3
+; CHECK-NEXT:    mov w9, #1267 // =0x4f3
 ; CHECK-NEXT:    movk w9, #16309, lsl #16
 ; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fmov d2, #5.00000000
 ; CHECK-NEXT:    .p2align 5, , 16
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr s4, [x1], #4
 ; CHECK-NEXT:    ldr w9, [x0], #4
 ; CHECK-NEXT:    add w9, w9, #10
 ; CHECK-NEXT:    scvtf d3, w9
+; CHECK-NEXT:    ldr s4, [x1], #4
 ; CHECK-NEXT:    fmadd s4, s4, s0, s1
 ; CHECK-NEXT:    fabs s4, s4
 ; CHECK-NEXT:    fcvt d4, s4
 ; CHECK-NEXT:    fdiv d3, d3, d4
 ; CHECK-NEXT:    fcmp d3, d2
 ; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    ubfiz x9, x9, #4, #32
 ; CHECK-NEXT:    ldr s3, [x4, x9]
 ; CHECK-NEXT:    fcvtzs w9, s3
 ; CHECK-NEXT:    str w9, [x2], #4
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: // %for.cond.cleanup
 ; CHECK-NEXT:    mov w0, wzr
