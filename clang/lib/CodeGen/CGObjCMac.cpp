@@ -2088,7 +2088,8 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
   llvm::FunctionCallee Fn = nullptr;
   if (Method && Method->isDirectMethod()) {
     assert(!IsSuper);
-    Fn = GenerateDirectMethod(Method, Method->getClassInterface(), /*isThunk=*/true);
+    Fn = GenerateDirectMethod(Method, Method->getClassInterface(),
+                              /*isThunk=*/true);
     // Direct methods will synthesize the proper `_cmd` internally,
     // so just don't bother with setting the `_cmd` argument.
     RequiresSelValue = false;
