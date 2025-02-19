@@ -121,7 +121,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
 
-  for (auto T : {MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64}) {
+  for (auto T : {MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64, MVT::v8f16}) {
+    if (!Subtarget->hasFP16() && T == MVT::v8f16) {
+      continue;
+    }
     // Don't expand the floating-point types to constant pools.
     setOperationAction(ISD::ConstantFP, T, Legal);
     // Expand floating-point comparisons.
@@ -145,11 +148,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setOperationAction(ISD::FP_TO_FP16, T, Expand);
     setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
     setTruncStoreAction(T, MVT::f16, Expand);
-  }
-
-  if (Subtarget->hasFP16()) {
-    setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
-    setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
   }
 
   // Expand unavailable integer operations.
