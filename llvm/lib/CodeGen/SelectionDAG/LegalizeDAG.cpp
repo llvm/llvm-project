@@ -977,17 +977,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   TargetLowering::LegalizeAction Action = TargetLowering::Legal;
   bool SimpleFinishLegalizing = true;
   switch (Node->getOpcode()) {
-  // FIXME: If the node represents a poison value, replace it with an undef
-  // value.
-  //  A poison value results from an erroneous operation but does not cause
-  //  immediate undefined behavior, allowing speculative execution.
-  //  Since most operations propagate poison, it is valid to replace poison
-  //  with an undef value, which can take any legal value of the same type.
-  //  This ensures that downstream computations do not rely on poison semantics.
-  //  Poison is more restrictive than undef. Since we replace poison with undef
-  //  here, the poison information will be lost after the code is executed. In
-  //  the futher, If we need to retain the poison information after the code is
-  //  executed, we will need to modify the code accordingly.
   case ISD::POISON: {
     SDValue UndefNode = DAG.getUNDEF(Node->getValueType(0));
     ReplaceNode(Node, UndefNode.getNode());
