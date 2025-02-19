@@ -3409,6 +3409,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::markBackedges(
   auto I = Visited.insert(Node);
   // We should only call this for unvisited nodes.
   assert(I.second);
+  (void)I;
   for (auto &CalleeEdge : Node->CalleeEdges) {
     auto *Callee = CalleeEdge->Callee;
     if (Visited.count(Callee)) {
