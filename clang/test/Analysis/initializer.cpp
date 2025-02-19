@@ -399,34 +399,34 @@ void nested_aggregates() {
   clang_analyzer_eval(0 == N1->baz); // expected-warning{{TRUE}}
 
   auto N2 = new Nested{.baz = 14};
-  clang_analyzer_eval(0 == N->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(0 == N->inner.bar); // expected-warning{{TRUE}}
-  clang_analyzer_eval(14 == N->baz); // expected-warning{{FALSE}} TODO: Should be TRUE
+  clang_analyzer_eval(0 == N2->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N2->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(14 == N2->baz); // expected-warning{{TRUE}}
 
   auto N3 = new Nested{1,2,3};
-  clang_analyzer_eval(1 == N1->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(2 == N1->inner.bar); // expected-warning{{FALSE}} TODO: Should be TRUE
-  clang_analyzer_eval(3 == N1->baz); // expected-warning{{FALSE}} TODO: Should be TRUE
+  clang_analyzer_eval(1 == N3->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == N3->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == N3->baz); // expected-warning{{TRUE}}
 
   auto N4 = new Nested{1, {}, 3};
-  clang_analyzer_eval(1 == N1->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(0 == N1->inner.bar); // expected-warning{{TRUE}}
-  clang_analyzer_eval(3 == N1->baz); // expected-warning{{FALSE}} TODO: Should be TRUE
+  clang_analyzer_eval(1 == N4->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N4->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == N4->baz); // expected-warning{{TRUE}}
 
   auto N5 = new Nested{{},{},{}};
-  clang_analyzer_eval(0 == N1->foo); // expected-warning{{FALSE}} TODO: Should be TRUE
-  clang_analyzer_eval(0 == N1->inner.bar); // expected-warning{{TRUE}}
-  clang_analyzer_eval(0 == N1->baz); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N5->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N5->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N5->baz); // expected-warning{{TRUE}}
 
   auto N6 = new Nested{1, {.bar = 2}, 3};
-  clang_analyzer_eval(1 == N1->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(2 == N1->inner.bar); // expected-warning{{FALSE}} TODO: Should be TRUE
-  clang_analyzer_eval(3 == N1->baz); // expected-warning{{FALSE}} TODO: Should be TRUE
+  clang_analyzer_eval(1 == N6->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == N6->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == N6->baz); // expected-warning{{TRUE}}
 
   auto N7 = new Nested{1, {2}, 3};
-  clang_analyzer_eval(1 == N1->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(2 == N1->inner.bar); // expected-warning{{FALSE}} TODO: Should be TRUE
-  clang_analyzer_eval(3 == N1->baz); // expected-warning{{FALSE}} TODO: Should be TRUE
+  clang_analyzer_eval(1 == N7->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == N7->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == N7->baz); // expected-warning{{TRUE}}
 
   delete N;
   delete N1;
