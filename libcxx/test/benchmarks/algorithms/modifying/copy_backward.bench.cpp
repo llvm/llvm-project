@@ -45,9 +45,9 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::copy_backward(vector<int>)", std_copy_backward);
     bm.operator()<std::deque<int>>("std::copy_backward(deque<int>)", std_copy_backward);
     bm.operator()<std::list<int>>("std::copy_backward(list<int>)", std_copy_backward);
-    bm.operator()<std::vector<int>>("ranges::copy_backward(vector<int>)", std::ranges::copy_backward);
-    bm.operator()<std::deque<int>>("ranges::copy_backward(deque<int>)", std::ranges::copy_backward);
-    bm.operator()<std::list<int>>("ranges::copy_backward(list<int>)", std::ranges::copy_backward);
+    bm.operator()<std::vector<int>>("rng::copy_backward(vector<int>)", std::ranges::copy_backward);
+    bm.operator()<std::deque<int>>("rng::copy_backward(deque<int>)", std::ranges::copy_backward);
+    bm.operator()<std::list<int>>("rng::copy_backward(list<int>)", std::ranges::copy_backward);
   }
 
   // {std,ranges}::copy_n(vector<bool>)
@@ -72,8 +72,8 @@ int main(int argc, char** argv) {
     bm.operator()<true>("std::copy_backward(vector<bool>) (aligned)", std_copy_backward);
     bm.operator()<false>("std::copy_backward(vector<bool>) (unaligned)", std_copy_backward);
 #if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
-    bm.operator()<true>("ranges::copy_backward(vector<bool>) (aligned)", std::ranges::copy_backward);
-    bm.operator()<false>("ranges::copy_backward(vector<bool>) (unaligned)", std::ranges::copy_backward);
+    bm.operator()<true>("rng::copy_backward(vector<bool>) (aligned)", std::ranges::copy_backward);
+    bm.operator()<false>("rng::copy_backward(vector<bool>) (unaligned)", std::ranges::copy_backward);
 #endif
   }
 

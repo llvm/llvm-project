@@ -53,9 +53,9 @@ int main(int argc, char** argv) {
     bm.operator()<std::deque<int>>("std::copy_if(deque<int>) (every other)", std_copy_if);
     bm.operator()<std::list<int>>("std::copy_if(list<int>) (every other)", std_copy_if);
 
-    bm.operator()<std::vector<int>>("ranges::copy_if(vector<int>) (every other)", std::ranges::copy_if);
-    bm.operator()<std::deque<int>>("ranges::copy_if(deque<int>) (every other)", std::ranges::copy_if);
-    bm.operator()<std::list<int>>("ranges::copy_if(list<int>) (every other)", std::ranges::copy_if);
+    bm.operator()<std::vector<int>>("rng::copy_if(vector<int>) (every other)", std::ranges::copy_if);
+    bm.operator()<std::deque<int>>("rng::copy_if(deque<int>) (every other)", std::ranges::copy_if);
+    bm.operator()<std::list<int>>("rng::copy_if(list<int>) (every other)", std::ranges::copy_if);
   }
 
   // Benchmark {std,ranges}::copy_if where we copy the full range.
@@ -86,9 +86,9 @@ int main(int argc, char** argv) {
     bm.operator()<std::deque<int>>("std::copy_if(deque<int>) (entire range)", std_copy_if);
     bm.operator()<std::list<int>>("std::copy_if(list<int>) (entire range)", std_copy_if);
 
-    bm.operator()<std::vector<int>>("ranges::copy_if(vector<int>) (entire range)", std::ranges::copy_if);
-    bm.operator()<std::deque<int>>("ranges::copy_if(deque<int>) (entire range)", std::ranges::copy_if);
-    bm.operator()<std::list<int>>("ranges::copy_if(list<int>) (entire range)", std::ranges::copy_if);
+    bm.operator()<std::vector<int>>("rng::copy_if(vector<int>) (entire range)", std::ranges::copy_if);
+    bm.operator()<std::deque<int>>("rng::copy_if(deque<int>) (entire range)", std::ranges::copy_if);
+    bm.operator()<std::list<int>>("rng::copy_if(list<int>) (entire range)", std::ranges::copy_if);
   }
 
   benchmark::Initialize(&argc, argv);
