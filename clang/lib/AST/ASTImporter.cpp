@@ -7407,9 +7407,10 @@ ExpectedStmt ASTNodeImporter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext())
-      ConvertVectorExpr(ToSrcExpr, ToTSI, ToType, E->getValueKind(),
-                        E->getObjectKind(), ToBuiltinLoc, ToRParenLoc);
+  return ConvertVectorExpr::Create(
+      Importer.getToContext(), ToSrcExpr, ToTSI, ToType, E->getValueKind(),
+      E->getObjectKind(), ToBuiltinLoc, ToRParenLoc,
+      E->getStoredFPFeaturesOrDefault());
 }
 
 ExpectedStmt ASTNodeImporter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
