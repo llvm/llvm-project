@@ -14,6 +14,8 @@
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/BinaryStreamError.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -151,6 +153,11 @@ enum class FeatureFlags : uint64_t {
 };
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
+
+#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
+enum class RootElementFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
 
 PartType parsePartType(StringRef S);
 
@@ -540,6 +547,23 @@ struct ProgramSignatureElement {
 
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
+
+struct RootSignatureValidations {
+
+  static Expected<uint32_t> validateRootFlag(uint32_t Flags) {
+    if ((Flags & ~0x80000fff) != 0)
+      return llvm::make_error<BinaryStreamError>("Invalid Root Signature flag");
+    return Flags;
+  }
+
+  static Expected<uint32_t> validateVersion(uint32_t Version) {
+    if (Version == 1 || Version == 2)
+      return Version;
+
+    return llvm::make_error<BinaryStreamError>(
+        "Invalid Root Signature Version");
+  }
+};
 
 } // namespace dxbc
 } // namespace llvm

@@ -8,7 +8,7 @@
 
 ; Make sure we get the same result if we run multiple times
 ; RUN: opt -S -mtriple=nvptx64-- -passes=nvptx-lower-ctor-dtor,nvptx-lower-ctor-dtor < %s | FileCheck %s
-; RUN: llc -nvptx-lower-global-ctor-dtor -mtriple=nvptx64-amd-amdhsa -mcpu=sm_70 -filetype=asm -o - < %s | FileCheck %s -check-prefix=VISIBILITY
+; RUN: llc -mtriple=nvptx64-amd-amdhsa -mcpu=sm_70 -filetype=asm -o - < %s | FileCheck %s -check-prefix=VISIBILITY
 
 @llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo, ptr null }]
 @llvm.global_dtors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @bar, ptr null }]

@@ -45,9 +45,11 @@
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1240,6 +1242,16 @@ void StmtPrinter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
   OS << '\n';
 }
 
+void StmtPrinter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
+  Indent() << "#pragma acc atomic";
+
+  if (S->getAtomicKind() != OpenACCAtomicKind::None)
+    OS << " " << S->getAtomicKind();
+
+  OS << '\n';
+  PrintStmt(S->getAssociatedStmt());
+}
+
 //===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
@@ -1291,8 +1303,14 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
          << PD->getFunctionScopeIndex();
       break;
     }
+    case Decl::Decomposition:
+      OS << "decomposition";
+      for (const auto &I : cast<DecompositionDecl>(VD)->bindings())
+        OS << '-' << I->getName();
+      break;
     default:
-      llvm_unreachable("Unhandled anonymous declaration kind");
+      OS << "unhandled-anonymous-" << VD->getDeclKindName();
+      break;
     }
   }
   if (Node->hasExplicitTemplateArgs()) {
@@ -1959,7 +1977,6 @@ void StmtPrinter::VisitPseudoObjectExpr(PseudoObjectExpr *Node) {
 void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   const char *Name = nullptr;
   switch (Node->getOp()) {
-#define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
   case AtomicExpr::AO ## ID: \
     Name = #ID "("; \
@@ -2585,6 +2602,15 @@ void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   OS << "...[";
   PrintExpr(E->getIndexExpr());
   OS << "]";
+}
+
+void StmtPrinter::VisitResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  OS << "<<resolved pack(";
+  llvm::interleave(
+      E->getExprs().begin(), E->getExprs().end(),
+      [this](auto *X) { PrintExpr(X); }, [this] { OS << ", "; });
+  OS << ")>>";
 }
 
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(

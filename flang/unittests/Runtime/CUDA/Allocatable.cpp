@@ -9,11 +9,11 @@
 #include "flang/Runtime/allocatable.h"
 #include "gtest/gtest.h"
 #include "../../../runtime/terminator.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/allocator-registry.h"
+#include "flang/Support/Fortran.h"
 
 #include "cuda_runtime.h"
 

@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
+#include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
@@ -187,6 +188,8 @@ int main(int argc, char *argv[]) {
                 std::make_unique<SimpleRemoteEPCServer::ThreadDispatcher>());
             S.bootstrapSymbols() =
                 SimpleRemoteEPCServer::defaultBootstrapSymbols();
+            addDefaultBootstrapValuesForHostProcess(S.bootstrapMap(),
+                                                    S.bootstrapSymbols());
             S.services().push_back(
                 std::make_unique<rt_bootstrap::SimpleExecutorMemoryManager>());
             S.services().push_back(

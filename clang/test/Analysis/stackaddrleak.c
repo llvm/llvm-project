@@ -56,3 +56,15 @@ void assignAsBool(void) {
   int x;
   b = &x;
 } // no-warning
+
+int *f(int* p __attribute__((lifetimebound)));
+int *g() {
+  int i;
+  return f(&i); // expected-warning {{address of stack memory associated with local variable 'i' returned}}
+}
+
+int *f_no_lifetime_bound(int *p);
+int *g_no_lifetime_bound() {
+  int i = 0;
+  return f_no_lifetime_bound(&i); // no-warning
+}

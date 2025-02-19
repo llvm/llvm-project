@@ -33,7 +33,7 @@ add_flang_unittest(FlangRuntimeTests
 
 target_link_libraries(FlangRuntimeTests
   PRIVATE
-  FortranRuntime
+  flang_rt.runtime
 )
 
 target_compile_definitions(FlangRuntimeTests PRIVATE NOT_EXE="$<TARGET_FILE:not>")

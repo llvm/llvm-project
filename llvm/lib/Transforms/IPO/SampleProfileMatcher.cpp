@@ -38,7 +38,7 @@ static cl::opt<unsigned> MinCallCountForCGMatching(
              "run stale profile call graph matching."));
 
 static cl::opt<bool> LoadFuncProfileforCGMatching(
-    "load-func-profile-for-cg-matching", cl::Hidden, cl::init(false),
+    "load-func-profile-for-cg-matching", cl::Hidden, cl::init(true),
     cl::desc(
         "Load top-level profiles that the sample reader initially skipped for "
         "the call-graph matching (only meaningful for extended binary "

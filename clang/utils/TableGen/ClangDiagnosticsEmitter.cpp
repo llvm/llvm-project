@@ -359,7 +359,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
 
     // The diagnostic is not included in a group that is (transitively) in
     // -Wpedantic.  Include it in -Wpedantic directly.
-    if (auto *V = DiagsInPedantic.dyn_cast<RecordVec *>())
+    if (auto *V = dyn_cast<RecordVec *>(DiagsInPedantic))
       V->push_back(R);
     else
       cast<RecordSet *>(DiagsInPedantic)->insert(R);
@@ -386,7 +386,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (Parents.size() > 0 && AllParentsInPedantic)
       continue;
 
-    if (auto *V = GroupsInPedantic.dyn_cast<RecordVec *>())
+    if (auto *V = dyn_cast<RecordVec *>(GroupsInPedantic))
       V->push_back(Group);
     else
       cast<RecordSet *>(GroupsInPedantic)->insert(Group);

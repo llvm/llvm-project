@@ -1,3 +1,6 @@
+// Flaky on aarch64: http://llvm.org/PR126619
+// UNSUPPORTED: target=aarch64{{.*}}
+
 // RUN: %clang_analyze_cc1 -w -analyzer-checker=debug.DumpLiveExprs %s 2>&1\
 // RUN:   | FileCheck %s
 

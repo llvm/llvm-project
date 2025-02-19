@@ -124,7 +124,7 @@ static cl::opt<unsigned>
 
 // Optionally enable cloning of callsites involved with recursive cycles
 static cl::opt<bool> AllowRecursiveCallsites(
-    "memprof-allow-recursive-callsites", cl::init(false), cl::Hidden,
+    "memprof-allow-recursive-callsites", cl::init(true), cl::Hidden,
     cl::desc("Allow cloning of callsites involved in recursive cycles"));
 
 // When disabled, try to detect and prevent cloning of recursive contexts.
@@ -301,12 +301,14 @@ public:
       // callers (i.e. if this is the leaf allocation node).
       if (!CalleeEdges.empty())
         return &CalleeEdges;
-      if (!CallerEdges.empty()) {
-        // A node with caller edges but no callee edges must be the allocation
-        // node.
-        assert(IsAllocation);
+      // Typically if the callee edges are empty either the caller edges are
+      // also empty, or this is an allocation (leaf node). However, if we are
+      // allowing recursive callsites and contexts this will be violated for
+      // incompletely cloned recursive cycles.
+      assert(CallerEdges.empty() || IsAllocation ||
+             (AllowRecursiveCallsites && AllowRecursiveContexts));
+      if (!CallerEdges.empty() && IsAllocation)
         return &CallerEdges;
-      }
       return nullptr;
     }
 
@@ -403,8 +405,13 @@ public:
     // True if this node was effectively removed from the graph, in which case
     // it should have an allocation type of None and empty context ids.
     bool isRemoved() const {
-      assert((AllocTypes == (uint8_t)AllocationType::None) ==
-             emptyContextIds());
+      // Typically if the callee edges are empty either the caller edges are
+      // also empty, or this is an allocation (leaf node). However, if we are
+      // allowing recursive callsites and contexts this will be violated for
+      // incompletely cloned recursive cycles.
+      assert((AllowRecursiveCallsites && AllowRecursiveContexts) ||
+             (AllocTypes == (uint8_t)AllocationType::None) ==
+                 emptyContextIds());
       return AllocTypes == (uint8_t)AllocationType::None;
     }
 
@@ -677,18 +684,18 @@ private:
 
   /// Computes the alloc type corresponding to the given context ids, by
   /// unioning their recorded alloc types.
-  uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds);
+  uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds) const;
 
   /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets), optimized for the case
   /// when Node1Ids is smaller than Node2Ids.
   uint8_t intersectAllocTypesImpl(const DenseSet<uint32_t> &Node1Ids,
-                                  const DenseSet<uint32_t> &Node2Ids);
+                                  const DenseSet<uint32_t> &Node2Ids) const;
 
   /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets).
   uint8_t intersectAllocTypes(const DenseSet<uint32_t> &Node1Ids,
-                              const DenseSet<uint32_t> &Node2Ids);
+                              const DenseSet<uint32_t> &Node2Ids) const;
 
   /// Create a clone of Edge's callee and move Edge to that new callee node,
   /// performing the necessary context id and allocation type updates.
@@ -1057,6 +1064,7 @@ template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
     ContextEdge *Edge, EdgeIter *EI, bool CalleeIter) {
   assert(!EI || (*EI)->get() == Edge);
+  assert(!Edge->isRemoved());
   // Save the Caller and Callee pointers so we can erase Edge from their edge
   // lists after clearing Edge below. We do the clearing first in case it is
   // destructed after removing from the edge lists (if those were the last
@@ -1069,6 +1077,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
   // reference.
   Edge->clear();
 
+#ifndef NDEBUG
+  auto CalleeCallerCount = Callee->CallerEdges.size();
+  auto CallerCalleeCount = Caller->CalleeEdges.size();
+#endif
   if (!EI) {
     Callee->eraseCallerEdge(Edge);
     Caller->eraseCalleeEdge(Edge);
@@ -1079,6 +1091,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
     Caller->eraseCalleeEdge(Edge);
     *EI = Callee->CallerEdges.erase(*EI);
   }
+  assert(Callee->CallerEdges.size() < CalleeCallerCount);
+  assert(Caller->CalleeEdges.size() < CallerCalleeCount);
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -1152,12 +1166,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 uint8_t CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::computeAllocType(
-    DenseSet<uint32_t> &ContextIds) {
+    DenseSet<uint32_t> &ContextIds) const {
   uint8_t BothTypes =
       (uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold;
   uint8_t AllocType = (uint8_t)AllocationType::None;
   for (auto Id : ContextIds) {
-    AllocType |= (uint8_t)ContextIdToAllocationType[Id];
+    AllocType |= (uint8_t)ContextIdToAllocationType.at(Id);
     // Bail early if alloc type reached both, no further refinement.
     if (AllocType == BothTypes)
       return AllocType;
@@ -1168,14 +1182,15 @@ uint8_t CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::computeAllocType(
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 uint8_t
 CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::intersectAllocTypesImpl(
-    const DenseSet<uint32_t> &Node1Ids, const DenseSet<uint32_t> &Node2Ids) {
+    const DenseSet<uint32_t> &Node1Ids,
+    const DenseSet<uint32_t> &Node2Ids) const {
   uint8_t BothTypes =
       (uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold;
   uint8_t AllocType = (uint8_t)AllocationType::None;
   for (auto Id : Node1Ids) {
     if (!Node2Ids.count(Id))
       continue;
-    AllocType |= (uint8_t)ContextIdToAllocationType[Id];
+    AllocType |= (uint8_t)ContextIdToAllocationType.at(Id);
     // Bail early if alloc type reached both, no further refinement.
     if (AllocType == BothTypes)
       return AllocType;
@@ -1185,7 +1200,8 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::intersectAllocTypesImpl(
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 uint8_t CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::intersectAllocTypes(
-    const DenseSet<uint32_t> &Node1Ids, const DenseSet<uint32_t> &Node2Ids) {
+    const DenseSet<uint32_t> &Node1Ids,
+    const DenseSet<uint32_t> &Node2Ids) const {
   if (Node1Ids.size() < Node2Ids.size())
     return intersectAllocTypesImpl(Node1Ids, Node2Ids);
   else
@@ -1335,16 +1351,48 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
     DenseSet<uint32_t> RemainingContextIds) {
   auto &OrigEdges =
       TowardsCallee ? OrigNode->CalleeEdges : OrigNode->CallerEdges;
+  DenseSet<uint32_t> RecursiveContextIds;
+  DenseSet<uint32_t> AllCallerContextIds;
+  if (AllowRecursiveCallsites) {
+    // Identify which context ids are recursive which is needed to properly
+    // update the RemainingContextIds set. The relevant recursive context ids
+    // are those that are in multiple edges.
+    for (auto &CE : OrigEdges) {
+      AllCallerContextIds.reserve(CE->getContextIds().size());
+      for (auto Id : CE->getContextIds())
+        if (!AllCallerContextIds.insert(Id).second)
+          RecursiveContextIds.insert(Id);
+    }
+  }
   // Increment iterator in loop so that we can remove edges as needed.
   for (auto EI = OrigEdges.begin(); EI != OrigEdges.end();) {
     auto Edge = *EI;
+    DenseSet<uint32_t> NewEdgeContextIds;
+    DenseSet<uint32_t> NotFoundContextIds;
     // Remove any matching context ids from Edge, return set that were found and
     // removed, these are the new edge's context ids. Also update the remaining
     // (not found ids).
-    DenseSet<uint32_t> NewEdgeContextIds, NotFoundContextIds;
     set_subtract(Edge->getContextIds(), RemainingContextIds, NewEdgeContextIds,
                  NotFoundContextIds);
-    RemainingContextIds.swap(NotFoundContextIds);
+    // Update the remaining context ids set for the later edges. This is a
+    // compile time optimization.
+    if (RecursiveContextIds.empty()) {
+      // No recursive ids, so all of the previously remaining context ids that
+      // were not seen on this edge are the new remaining set.
+      RemainingContextIds.swap(NotFoundContextIds);
+    } else {
+      // Keep the recursive ids in the remaining set as we expect to see those
+      // on another edge. We can remove the non-recursive remaining ids that
+      // were seen on this edge, however. We already have the set of remaining
+      // ids that were on this edge (in NewEdgeContextIds). Figure out which are
+      // non-recursive and only remove those. Note that despite the higher
+      // overhead of updating the remaining context ids set when recursion
+      // handling is enabled, it was found to be at worst performance neutral
+      // and in one case a clear win.
+      DenseSet<uint32_t> NonRecursiveRemainingCurEdgeIds =
+          set_difference(NewEdgeContextIds, RecursiveContextIds);
+      set_subtract(RemainingContextIds, NonRecursiveRemainingCurEdgeIds);
+    }
     // If no matching context ids for this edge, skip it.
     if (NewEdgeContextIds.empty()) {
       ++EI;
@@ -1401,9 +1449,9 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
       set_union(CallerEdgeContextIds, Edge->ContextIds);
     }
     // Node can have more context ids than callers if some contexts terminate at
-    // node and some are longer. If we are allowing recursive callsites but
-    // haven't disabled recursive contexts, this will be violated for
-    // incompletely cloned recursive cycles, so skip the checking in that case.
+    // node and some are longer. If we are allowing recursive callsites and
+    // contexts this will be violated for incompletely cloned recursive cycles,
+    // so skip the checking in that case.
     assert((AllowRecursiveCallsites && AllowRecursiveContexts) ||
            NodeContextIds == CallerEdgeContextIds ||
            set_is_subset(CallerEdgeContextIds, NodeContextIds));
@@ -1416,7 +1464,11 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
         checkEdge<DerivedCCG, FuncTy, CallTy>(Edge);
       set_union(CalleeEdgeContextIds, Edge->getContextIds());
     }
-    assert(NodeContextIds == CalleeEdgeContextIds);
+    // If we are allowing recursive callsites and contexts this will be violated
+    // for incompletely cloned recursive cycles, so skip the checking in that
+    // case.
+    assert((AllowRecursiveCallsites && AllowRecursiveContexts) ||
+           NodeContextIds == CalleeEdgeContextIds);
   }
   // FIXME: Since this checking is only invoked under an option, we should
   // change the error checking from using assert to something that will trigger
@@ -3125,6 +3177,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // over to the corresponding edge into the clone (which is created here if
   // this is a newly created clone).
   for (auto &OldCalleeEdge : OldCallee->CalleeEdges) {
+    ContextNode *CalleeToUse = OldCalleeEdge->Callee;
+    // If this is a direct recursion edge, use NewCallee (the clone) as the
+    // callee as well, so that any edge updated/created here is also direct
+    // recursive.
+    if (CalleeToUse == OldCallee)
+      CalleeToUse = NewCallee;
     // The context ids moving to the new callee are the subset of this edge's
     // context ids and the context ids on the caller edge being moved.
     DenseSet<uint32_t> EdgeContextIdsToMove =
@@ -3138,8 +3196,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       // clone, specifically during function assignment, where we would have
       // removed none type edges after creating the clone. If we can't find
       // a corresponding edge there, fall through to the cloning below.
-      if (auto *NewCalleeEdge =
-              NewCallee->findEdgeFromCallee(OldCalleeEdge->Callee)) {
+      if (auto *NewCalleeEdge = NewCallee->findEdgeFromCallee(CalleeToUse)) {
         NewCalleeEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
                                               EdgeContextIdsToMove.end());
         NewCalleeEdge->AllocTypes |= computeAllocType(EdgeContextIdsToMove);
@@ -3147,8 +3204,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       }
     }
     auto NewEdge = std::make_shared<ContextEdge>(
-        OldCalleeEdge->Callee, NewCallee,
-        computeAllocType(EdgeContextIdsToMove), EdgeContextIdsToMove);
+        CalleeToUse, NewCallee, computeAllocType(EdgeContextIdsToMove),
+        EdgeContextIdsToMove);
     NewCallee->CalleeEdges.push_back(NewEdge);
     NewEdge->Callee->CallerEdges.push_back(NewEdge);
   }
@@ -3174,13 +3231,20 @@ template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     moveCalleeEdgeToNewCaller(const std::shared_ptr<ContextEdge> &Edge,
                               ContextNode *NewCaller) {
+  auto *OldCallee = Edge->Callee;
+  auto *NewCallee = OldCallee;
+  // If this edge was direct recursive, make any new/updated edge also direct
+  // recursive to NewCaller.
+  bool Recursive = Edge->Caller == Edge->Callee;
+  if (Recursive)
+    NewCallee = NewCaller;
 
   ContextNode *OldCaller = Edge->Caller;
   OldCaller->eraseCalleeEdge(Edge.get());
 
   // We might already have an edge to the new caller. If one exists we will
   // reuse it.
-  auto ExistingEdgeToNewCaller = NewCaller->findEdgeFromCallee(Edge->Callee);
+  auto ExistingEdgeToNewCaller = NewCaller->findEdgeFromCallee(NewCallee);
 
   if (ExistingEdgeToNewCaller) {
     // Since we already have an edge to NewCaller, simply move the ids
@@ -3190,11 +3254,19 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     ExistingEdgeToNewCaller->AllocTypes |= Edge->AllocTypes;
     Edge->ContextIds.clear();
     Edge->AllocTypes = (uint8_t)AllocationType::None;
-    Edge->Callee->eraseCallerEdge(Edge.get());
+    OldCallee->eraseCallerEdge(Edge.get());
   } else {
     // Otherwise just reconnect Edge to NewCaller.
     Edge->Caller = NewCaller;
     NewCaller->CalleeEdges.push_back(Edge);
+    if (Recursive) {
+      assert(NewCallee == NewCaller);
+      // In the case of (direct) recursive edges, we update the callee as well
+      // so that it becomes recursive on the new caller.
+      Edge->Callee = NewCallee;
+      NewCallee->CallerEdges.push_back(Edge);
+      OldCallee->eraseCallerEdge(Edge.get());
+    }
     // Don't need to update Edge's context ids since we are simply
     // reconnecting it.
   }
@@ -3208,32 +3280,50 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 #ifndef NDEBUG
   bool IsNewNode = NewCaller->CallerEdges.empty();
 #endif
-  for (auto &OldCallerEdge : OldCaller->CallerEdges) {
-    // The context ids moving to the new caller are the subset of this edge's
-    // context ids and the context ids on the callee edge being moved.
-    DenseSet<uint32_t> EdgeContextIdsToMove =
-        set_intersection(OldCallerEdge->getContextIds(), Edge->getContextIds());
-    set_subtract(OldCallerEdge->getContextIds(), EdgeContextIdsToMove);
-    OldCallerEdge->AllocTypes =
-        computeAllocType(OldCallerEdge->getContextIds());
-    // In this function we expect that any pre-existing node already has edges
-    // from the same callers as the old node. That should be true in the current
-    // use case, where we will remove None-type edges after copying over all
-    // caller edges from the callee.
-    auto *ExistingCallerEdge =
-        NewCaller->findEdgeFromCaller(OldCallerEdge->Caller);
-    assert(IsNewNode || ExistingCallerEdge);
-    if (ExistingCallerEdge) {
-      ExistingCallerEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
-                                                 EdgeContextIdsToMove.end());
-      ExistingCallerEdge->AllocTypes |= computeAllocType(EdgeContextIdsToMove);
-      continue;
+  // If we just moved a direct recursive edge, presumably its context ids should
+  // also flow out of OldCaller via some other non-recursive callee edge. We
+  // don't want to remove the recursive context ids from other caller edges yet,
+  // otherwise the context ids get into an inconsistent state on OldCaller.
+  // We will update these context ids on the non-recursive caller edge when and
+  // if they are updated on the non-recursive callee.
+  if (!Recursive) {
+    for (auto &OldCallerEdge : OldCaller->CallerEdges) {
+      auto OldCallerCaller = OldCallerEdge->Caller;
+      // The context ids moving to the new caller are the subset of this edge's
+      // context ids and the context ids on the callee edge being moved.
+      DenseSet<uint32_t> EdgeContextIdsToMove = set_intersection(
+          OldCallerEdge->getContextIds(), Edge->getContextIds());
+      if (OldCaller == OldCallerCaller) {
+        OldCallerCaller = NewCaller;
+        // Don't actually move this one. The caller will move it directly via a
+        // call to this function with this as the Edge if it is appropriate to
+        // move to a diff node that has a matching callee (itself).
+        continue;
+      }
+      set_subtract(OldCallerEdge->getContextIds(), EdgeContextIdsToMove);
+      OldCallerEdge->AllocTypes =
+          computeAllocType(OldCallerEdge->getContextIds());
+      // In this function we expect that any pre-existing node already has edges
+      // from the same callers as the old node. That should be true in the
+      // current use case, where we will remove None-type edges after copying
+      // over all caller edges from the callee.
+      auto *ExistingCallerEdge = NewCaller->findEdgeFromCaller(OldCallerCaller);
+      // Since we would have skipped caller edges when moving a direct recursive
+      // edge, this may not hold true when recursive handling enabled.
+      assert(IsNewNode || ExistingCallerEdge || AllowRecursiveCallsites);
+      if (ExistingCallerEdge) {
+        ExistingCallerEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
+                                                   EdgeContextIdsToMove.end());
+        ExistingCallerEdge->AllocTypes |=
+            computeAllocType(EdgeContextIdsToMove);
+        continue;
+      }
+      auto NewEdge = std::make_shared<ContextEdge>(
+          NewCaller, OldCallerCaller, computeAllocType(EdgeContextIdsToMove),
+          EdgeContextIdsToMove);
+      NewCaller->CallerEdges.push_back(NewEdge);
+      NewEdge->Caller->CalleeEdges.push_back(NewEdge);
     }
-    auto NewEdge = std::make_shared<ContextEdge>(
-        NewCaller, OldCallerEdge->Caller,
-        computeAllocType(EdgeContextIdsToMove), EdgeContextIdsToMove);
-    NewCaller->CallerEdges.push_back(NewEdge);
-    NewEdge->Caller->CalleeEdges.push_back(NewEdge);
   }
   // Recompute the node alloc type now that its caller edges have been
   // updated (since we will compute from those edges).
@@ -3315,6 +3405,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   // Do this here so that we don't try to recursively clone callers below, which
   // isn't useful at least for this node.
   if (!Node->hasCall())
+    return;
+
+  // No need to look at any callers if allocation type already unambiguous.
+  if (hasSingleAllocType(Node->AllocTypes))
     return;
 
 #ifndef NDEBUG
@@ -3937,6 +4031,11 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         // handling and makes it less error-prone.
         auto CloneCallerEdges = Clone->CallerEdges;
         for (auto &Edge : CloneCallerEdges) {
+          // Skip removed edges (due to direct recursive edges updated when
+          // updating callee edges when moving an edge and subsequently
+          // removed by call to removeNoneTypeCalleeEdges on the Clone).
+          if (Edge->isRemoved())
+            continue;
           // Ignore any caller that does not have a recorded callsite Call.
           if (!Edge->Caller->hasCall())
             continue;
@@ -4203,7 +4302,8 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
 // Locate the summary for F. This is complicated by the fact that it might
 // have been internalized or promoted.
 static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
-                                      const ModuleSummaryIndex *ImportSummary) {
+                                      const ModuleSummaryIndex *ImportSummary,
+                                      const Function *CallingFunc = nullptr) {
   // FIXME: Ideally we would retain the original GUID in some fashion on the
   // function (e.g. as metadata), but for now do our best to locate the
   // summary without that information.
@@ -4218,20 +4318,48 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
   // Now query with the original name before any promotion was performed.
   StringRef OrigName =
       ModuleSummaryIndex::getOriginalNameBeforePromote(F.getName());
+  // When this pass is enabled, we always add thinlto_src_file provenance
+  // metadata to imported function definitions, which allows us to recreate the
+  // original internal symbol's GUID.
+  auto SrcFileMD = F.getMetadata("thinlto_src_file");
+  // If this is a call to an imported/promoted local for which we didn't import
+  // the definition, the metadata will not exist on the declaration. However,
+  // since we are doing this early, before any inlining in the LTO backend, we
+  // can simply look at the metadata on the calling function which must have
+  // been from the same module if F was an internal symbol originally.
+  if (!SrcFileMD && F.isDeclaration()) {
+    // We would only call this for a declaration for a direct callsite, in which
+    // case the caller would have provided the calling function pointer.
+    assert(CallingFunc);
+    SrcFileMD = CallingFunc->getMetadata("thinlto_src_file");
+    // If this is a promoted local (OrigName != F.getName()), since this is a
+    // declaration, it must be imported from a different module and therefore we
+    // should always find the metadata on its calling function. Any call to a
+    // promoted local that came from this module should still be a definition.
+    assert(SrcFileMD || OrigName == F.getName());
+  }
+  StringRef SrcFile = M.getSourceFileName();
+  if (SrcFileMD)
+    SrcFile = dyn_cast<MDString>(SrcFileMD->getOperand(0))->getString();
   std::string OrigId = GlobalValue::getGlobalIdentifier(
-      OrigName, GlobalValue::InternalLinkage, M.getSourceFileName());
+      OrigName, GlobalValue::InternalLinkage, SrcFile);
   TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
-  if (TheFnVI)
-    return TheFnVI;
-  // Could be a promoted local imported from another module. We need to pass
-  // down more info here to find the original module id. For now, try with
-  // the OrigName which might have been stored in the OidGuidMap in the
-  // index. This would not work if there were same-named locals in multiple
-  // modules, however.
-  auto OrigGUID =
-      ImportSummary->getGUIDFromOriginalID(GlobalValue::getGUID(OrigName));
-  if (OrigGUID)
-    TheFnVI = ImportSummary->getValueInfo(OrigGUID);
+  // Internal func in original module may have gotten a numbered suffix if we
+  // imported an external function with the same name. This happens
+  // automatically during IR linking for naming conflicts. It would have to
+  // still be internal in that case (otherwise it would have been renamed on
+  // promotion in which case we wouldn't have a naming conflict).
+  if (!TheFnVI && OrigName == F.getName() && F.hasLocalLinkage() &&
+      F.getName().contains('.')) {
+    OrigName = F.getName().rsplit('.').first;
+    OrigId = GlobalValue::getGlobalIdentifier(
+        OrigName, GlobalValue::InternalLinkage, SrcFile);
+    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+  }
+  // The only way we may not have a VI is if this is a declaration created for
+  // an imported reference. For distributed ThinLTO we may not have a VI for
+  // such declarations in the distributed summary.
+  assert(TheFnVI || F.isDeclaration());
   return TheFnVI;
 }
 
@@ -4590,7 +4718,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           // Locate the synthesized callsite info for the callee VI, if any was
           // created, and use that for cloning.
           ValueInfo CalleeVI =
-              findValueInfoForFunc(*CalledFunction, M, ImportSummary);
+              findValueInfoForFunc(*CalledFunction, M, ImportSummary, &F);
           if (CalleeVI && MapTailCallCalleeVIToCallsite.count(CalleeVI)) {
             auto Callsite = MapTailCallCalleeVIToCallsite.find(CalleeVI);
             assert(Callsite != MapTailCallCalleeVIToCallsite.end());

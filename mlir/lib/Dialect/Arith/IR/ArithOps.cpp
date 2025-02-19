@@ -1761,6 +1761,10 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
   if (llvm::isa<ShapedType>(resType))
     return {};
 
+  /// Bitcast poison.
+  if (llvm::isa<ub::PoisonAttr>(operand))
+    return ub::PoisonAttr::get(getContext());
+
   /// Bitcast integer or float to integer or float.
   APInt bits = llvm::isa<FloatAttr>(operand)
                    ? llvm::cast<FloatAttr>(operand).getValue().bitcastToAPInt()

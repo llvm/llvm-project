@@ -1169,12 +1169,13 @@ void ItaniumVTableBuilder::ComputeThisAdjustments() {
       //
       // Do not set ThunkInfo::Method if Idx is already in VTableThunks. This
       // can happen when covariant return adjustment is required too.
-      if (!VTableThunks.count(Idx)) {
+      auto [It, Inserted] = VTableThunks.try_emplace(Idx);
+      if (Inserted) {
         const CXXMethodDecl *Method = VTables.findOriginalMethodInMap(MD);
-        VTableThunks[Idx].Method = Method;
-        VTableThunks[Idx].ThisType = Method->getThisType().getTypePtr();
+        It->second.Method = Method;
+        It->second.ThisType = Method->getThisType().getTypePtr();
       }
-      VTableThunks[Idx].This = ThisAdjustment;
+      It->second.This = ThisAdjustment;
     };
 
     SetThisAdjustmentThunk(VTableIndex);
@@ -1653,8 +1654,9 @@ void ItaniumVTableBuilder::AddMethods(
     // findOriginalMethod to find the method that created the entry if the
     // method in the entry requires adjustment.
     if (!ReturnAdjustment.isEmpty()) {
-      VTableThunks[Components.size()].Method = MD;
-      VTableThunks[Components.size()].ThisType = MD->getThisType().getTypePtr();
+      auto &VTT = VTableThunks[Components.size()];
+      VTT.Method = MD;
+      VTT.ThisType = MD->getThisType().getTypePtr();
     }
 
     AddMethod(Overrider.Method, ReturnAdjustment);

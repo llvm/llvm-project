@@ -216,7 +216,7 @@ cmake \
   -DCMAKE_CUDA_COMPILER=clang \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
   ../runtime/
-make -j FortranRuntime
+make -j flang-rt
 ```
 
 Note that the used version of `clang` must [support](https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#cuda-support)
@@ -239,7 +239,7 @@ cmake \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
   ../runtime/
 
-make -j FortranRuntime
+make -j flang-rt
 ```
 
 Note that `nvcc` might limit support to certain
@@ -294,7 +294,7 @@ cmake \
   -DFLANG_OMP_DEVICE_ARCHITECTURES="all" \
   ../runtime/
 
-make -j FortranRuntime
+make -j flang-rt
 ```
 
 The result of the build is a "device-only" library, i.e. the host
@@ -309,7 +309,7 @@ The same set of CMake variables works for Flang in-tree build.
 One may provide optional CMake variables to customize the build. Available options:
 
 * `-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath`: enables build of
-  `FortranFloat128Math` library that provides `REAL(16)` math APIs
+  `flang_rt.quadmath` library that provides `REAL(16)` math APIs
   for intrinsics such as `SIN`, `COS`, etc. GCC `libquadmath`'s header file
   `quadmath.h` must be available to the build compiler.
   [More details](Real16MathSupport.md).

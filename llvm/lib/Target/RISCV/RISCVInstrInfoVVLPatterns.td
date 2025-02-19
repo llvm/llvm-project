@@ -554,6 +554,11 @@ def riscv_fpextend_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
   return N->hasOneUse();
 }]>;
 
+def riscv_fpextend_vl_sameuser : PatFrag<(ops node:$A, node:$B, node:$C),
+                                 (riscv_fpextend_vl node:$A, node:$B, node:$C), [{
+  return !N->use_empty() && all_equal(N->users());
+}]>;
+
 def riscv_vfmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                           node:$E),
                                      (riscv_vfmadd_vl node:$A, node:$B,
@@ -1052,32 +1057,8 @@ multiclass VPatIntegerSetCCVL_VX_Swappable<VTypeInfo vti, string instruction_nam
 }
 
 multiclass VPatIntegerSetCCVL_VI_Swappable<VTypeInfo vti, string instruction_name,
-                                           CondCode cc, CondCode invcc> {
-  defvar instruction_masked = !cast<Instruction>(instruction_name#"_VI_"#vti.LMul.MX#"_MASK");
-  def : Pat<(vti.Mask (riscv_setcc_vl (vti.Vector vti.RegClass:$rs1),
-                                      (SplatPat_simm5 simm5:$rs2), cc,
-                                      VR:$passthru,
-                                      (vti.Mask V0),
-                                      VLOpFrag)),
-            (instruction_masked VR:$passthru, vti.RegClass:$rs1,
-                                XLenVT:$rs2, (vti.Mask V0), GPR:$vl,
-                                vti.Log2SEW)>;
-
-  // FIXME: Can do some canonicalization to remove these patterns.
-  def : Pat<(vti.Mask (riscv_setcc_vl (SplatPat_simm5 simm5:$rs2),
-                                      (vti.Vector vti.RegClass:$rs1), invcc,
-                                      VR:$passthru,
-                                      (vti.Mask V0),
-                                      VLOpFrag)),
-            (instruction_masked VR:$passthru, vti.RegClass:$rs1,
-                                simm5:$rs2, (vti.Mask V0), GPR:$vl,
-                                vti.Log2SEW)>;
-}
-
-multiclass VPatIntegerSetCCVL_VIPlus1_Swappable<VTypeInfo vti,
-                                                string instruction_name,
-                                                CondCode cc, CondCode invcc,
-                                                ComplexPattern splatpat_kind> {
+                                           CondCode cc, CondCode invcc,
+                                           ComplexPattern splatpat_kind = SplatPat_simm5> {
   defvar instruction_masked = !cast<Instruction>(instruction_name#"_VI_"#vti.LMul.MX#"_MASK");
   def : Pat<(vti.Mask (riscv_setcc_vl (vti.Vector vti.RegClass:$rs1),
                                       (splatpat_kind simm5:$rs2), cc,
@@ -1085,7 +1066,7 @@ multiclass VPatIntegerSetCCVL_VIPlus1_Swappable<VTypeInfo vti,
                                       (vti.Mask V0),
                                       VLOpFrag)),
             (instruction_masked VR:$passthru, vti.RegClass:$rs1,
-                                (DecImm simm5:$rs2), (vti.Mask V0), GPR:$vl,
+                                XLenVT:$rs2, (vti.Mask V0), GPR:$vl,
                                 vti.Log2SEW)>;
 
   // FIXME: Can do some canonicalization to remove these patterns.
@@ -1095,7 +1076,7 @@ multiclass VPatIntegerSetCCVL_VIPlus1_Swappable<VTypeInfo vti,
                                       (vti.Mask V0),
                                       VLOpFrag)),
             (instruction_masked VR:$passthru, vti.RegClass:$rs1,
-                                (DecImm simm5:$rs2), (vti.Mask V0), GPR:$vl,
+                                simm5:$rs2, (vti.Mask V0), GPR:$vl,
                                 vti.Log2SEW)>;
 }
 
@@ -1436,29 +1417,6 @@ multiclass VPatWidenReductionVL<SDNode vop, PatFrags extop, string instruction_n
   }
 }
 
-multiclass VPatWidenReductionVL_RM<SDNode vop, PatFrags extop, string instruction_name, bit is_float> {
-  foreach vtiToWti = !if(is_float, AllWidenableFloatVectors, AllWidenableIntVectors) in {
-    defvar vti = vtiToWti.Vti;
-    defvar wti = vtiToWti.Wti;
-    defvar wti_m1 = !cast<VTypeInfo>(!if(is_float, "VF", "VI") # wti.SEW # "M1");
-    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                 GetVTypePredicates<wti>.Predicates) in {
-      def: Pat<(wti_m1.Vector (vop (wti_m1.Vector VR:$passthru),
-                                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1))),
-                                   VR:$rs2, (vti.Mask V0), VLOpFrag,
-                                   (XLenVT timm:$policy))),
-               (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW#"_MASK")
-                  (wti_m1.Vector VR:$passthru), (vti.Vector vti.RegClass:$rs1),
-                  (wti_m1.Vector VR:$rs2), (vti.Mask V0),
-                  // Value to indicate no rounding mode change in
-                  // RISCVInsertReadWriteCSR
-                  FRM_DYN,
-                  GPR:$vl, vti.Log2SEW,
-                  (XLenVT timm:$policy))>;
-    }
-  }
-}
-
 multiclass VPatWidenReductionVL_Ext_VL<SDNode vop, PatFrags extop, string instruction_name, bit is_float> {
   foreach vtiToWti = !if(is_float, AllWidenableFloatVectors, AllWidenableIntVectors) in {
     defvar vti = vtiToWti.Vti;
@@ -1467,7 +1425,7 @@ multiclass VPatWidenReductionVL_Ext_VL<SDNode vop, PatFrags extop, string instru
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<wti>.Predicates) in {
       def: Pat<(wti_m1.Vector (vop (wti_m1.Vector VR:$passthru),
-                                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), VLOpFrag)),
+                                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), (XLenVT srcvalue))),
                                    VR:$rs2, (vti.Mask V0), VLOpFrag,
                                    (XLenVT timm:$policy))),
                (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW#"_MASK")
@@ -1486,7 +1444,7 @@ multiclass VPatWidenReductionVL_Ext_VL_RM<SDNode vop, PatFrags extop, string ins
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<wti>.Predicates) in {
       def: Pat<(wti_m1.Vector (vop (wti_m1.Vector VR:$passthru),
-                                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), VLOpFrag)),
+                                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1), (vti.Mask true_mask), (XLenVT srcvalue))),
                                    VR:$rs2, (vti.Mask V0), VLOpFrag,
                                    (XLenVT timm:$policy))),
                (!cast<Instruction>(instruction_name#"_VS_"#vti.LMul.MX#"_E"#vti.SEW#"_MASK")
@@ -2173,14 +2131,14 @@ foreach vti = AllIntegerVectors in {
     defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSGT",  SETGT,  SETLT>;
     defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSGTU", SETUGT, SETULT>;
 
-    defm : VPatIntegerSetCCVL_VIPlus1_Swappable<vti, "PseudoVMSLE",  SETLT, SETGT,
-                                                SplatPat_simm5_plus1>;
-    defm : VPatIntegerSetCCVL_VIPlus1_Swappable<vti, "PseudoVMSLEU", SETULT, SETUGT,
-                                                SplatPat_simm5_plus1_nonzero>;
-    defm : VPatIntegerSetCCVL_VIPlus1_Swappable<vti, "PseudoVMSGT",  SETGE, SETLE,
-                                                SplatPat_simm5_plus1>;
-    defm : VPatIntegerSetCCVL_VIPlus1_Swappable<vti, "PseudoVMSGTU", SETUGE, SETULE,
-                                                SplatPat_simm5_plus1_nonzero>;
+    defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSLE",  SETLT, SETGT,
+                                           SplatPat_simm5_plus1>;
+    defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSLEU", SETULT, SETUGT,
+                                           SplatPat_simm5_plus1_nonzero>;
+    defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSGT",  SETGE, SETLE,
+                                           SplatPat_simm5_plus1>;
+    defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSGTU", SETUGE, SETULE,
+                                           SplatPat_simm5_plus1_nonzero>;
   }
 } // foreach vti = AllIntegerVectors
 
@@ -2677,13 +2635,9 @@ defm : VPatReductionVL<rvv_vecreduce_FMIN_vl,     "PseudoVFREDMIN", is_float=1>;
 defm : VPatReductionVL<rvv_vecreduce_FMAX_vl,     "PseudoVFREDMAX", is_float=1>;
 
 // 14.4. Vector Widening Floating-Point Reduction Instructions
-defm : VPatWidenReductionVL_RM<rvv_vecreduce_SEQ_FADD_vl, fpext_oneuse,
-                               "PseudoVFWREDOSUM", is_float=1>;
 defm : VPatWidenReductionVL_Ext_VL_RM<rvv_vecreduce_SEQ_FADD_vl,
                                       riscv_fpextend_vl_oneuse,
                                       "PseudoVFWREDOSUM", is_float=1>;
-defm : VPatWidenReductionVL_RM<rvv_vecreduce_FADD_vl, fpext_oneuse,
-                               "PseudoVFWREDUSUM", is_float=1>;
 defm : VPatWidenReductionVL_Ext_VL_RM<rvv_vecreduce_FADD_vl,
                                       riscv_fpextend_vl_oneuse,
                                       "PseudoVFWREDUSUM", is_float=1>;
