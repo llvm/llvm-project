@@ -2426,11 +2426,8 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     return true;
   }
 
-  DiagnosticInfoUnsupported InvalidAddrSpaceCast(
-      MF.getFunction(), "invalid addrspacecast", B.getDebugLoc());
-
-  LLVMContext &Ctx = MF.getFunction().getContext();
-  Ctx.diagnose(InvalidAddrSpaceCast);
+  // Invalid casts are poison.
+  // TODO: Should return poison
   B.buildUndef(Dst);
   MI.eraseFromParent();
   return true;
@@ -2713,7 +2710,8 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
   if (IsIEEEOp)
     return true;
 
-  return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
+  return Helper.lowerFMinNumMaxNum(MI, !ST.hasIEEEMinNumMaxNum()) ==
+      LegalizerHelper::Legalized;
 }
 
 bool AMDGPULegalizerInfo::legalizeExtractVectorElt(

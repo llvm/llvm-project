@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Context.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
@@ -168,6 +169,15 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     if (auto *SBBB = getValue(BB))
       return SBBB;
     return nullptr;
+  }
+  // TODO: Move these checks after more common Values, like after Instruction.
+  if (auto *MD = dyn_cast<llvm::MetadataAsValue>(LLVMV)) {
+    It->second = std::unique_ptr<OpaqueValue>(new OpaqueValue(MD, *this));
+    return It->second.get();
+  }
+  if (auto *Asm = dyn_cast<llvm::InlineAsm>(LLVMV)) {
+    It->second = std::unique_ptr<OpaqueValue>(new OpaqueValue(Asm, *this));
+    return It->second.get();
   }
   assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
 
@@ -687,6 +697,11 @@ void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
     CBEntry.second(I, WhereIt);
 }
 
+void Context::runSetUseCallbacks(const Use &U, Value *NewSrc) {
+  for (auto &CBEntry : SetUseCallbacks)
+    CBEntry.second(U, NewSrc);
+}
+
 // An arbitrary limit, to check for accidental misuse. We expect a small number
 // of callbacks to be registered at a time, but we can increase this number if
 // we discover we needed more.
@@ -730,6 +745,19 @@ void Context::unregisterMoveInstrCallback(CallbackID ID) {
   [[maybe_unused]] bool Erased = MoveInstrCallbacks.erase(ID);
   assert(Erased &&
          "Callback ID not found in MoveInstrCallbacks during deregistration");
+}
+
+Context::CallbackID Context::registerSetUseCallback(SetUseCallback CB) {
+  assert(SetUseCallbacks.size() <= MaxRegisteredCallbacks &&
+         "SetUseCallbacks size limit exceeded");
+  CallbackID ID{NextCallbackID++};
+  SetUseCallbacks[ID] = CB;
+  return ID;
+}
+void Context::unregisterSetUseCallback(CallbackID ID) {
+  [[maybe_unused]] bool Erased = SetUseCallbacks.erase(ID);
+  assert(Erased &&
+         "Callback ID not found in SetUseCallbacks during deregistration");
 }
 
 } // namespace llvm::sandboxir

@@ -1311,22 +1311,14 @@ define void @shuffle_i128_splat(ptr %p) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    lui a2, 16
-; CHECK-NEXT:    srli a1, a1, 3
+; CHECK-NEXT:    lui a1, 16
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a2
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v10, v9, a1
-; CHECK-NEXT:    vslidedown.vx v11, v10, a1
-; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v13, v8, v10
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v9
-; CHECK-NEXT:    vrgatherei16.vv v14, v8, v11
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v9, v11, a1
+; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v15, v8, v9
+; CHECK-NEXT:    vrgatherei16.vv v12, v8, v9
+; CHECK-NEXT:    vmv.v.v v13, v12
+; CHECK-NEXT:    vmv.v.v v14, v12
+; CHECK-NEXT:    vmv.v.v v15, v12
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vse64.v v12, (a0)
 ; CHECK-NEXT:    ret
@@ -1434,4 +1426,21 @@ define <4 x i16> @vmerge_3(<4 x i16> %x) {
 ; CHECK-NEXT:    ret
    %s = shufflevector <4 x i16> %x, <4 x i16> <i16 poison, i16 5, i16 poison, i16 poison>, <4 x i32> <i32 0, i32 5, i32 5, i32 3>
    ret <4 x i16> %s
+}
+
+
+define <8 x i64> @shuffle_v8i164_span_splat(<8 x i64> %a) nounwind {
+; CHECK-LABEL: shuffle_v8i164_span_splat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 1
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v12, v8, v9
+; CHECK-NEXT:    vmv.v.v v13, v12
+; CHECK-NEXT:    vmv.v.v v14, v12
+; CHECK-NEXT:    vmv.v.v v15, v12
+; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    ret
+  %res = shufflevector <8 x i64> %a, <8 x i64> poison, <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>
+  ret <8 x i64> %res
 }

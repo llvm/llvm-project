@@ -1692,11 +1692,6 @@ public:
     return capturesNothing(getCaptureInfo(OpNo));
   }
 
-  /// Returns whether the call has an argument that has an attribute like
-  /// captures(ret: address, provenance), where the return capture components
-  /// are not a subset of the other capture components.
-  bool hasArgumentWithAdditionalReturnCaptureComponents() const;
-
   /// Determine whether this argument is passed by value.
   bool isByValArgument(unsigned ArgNo) const {
     return paramHasAttr(ArgNo, Attribute::ByVal);
