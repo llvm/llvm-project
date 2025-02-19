@@ -325,6 +325,8 @@ def OMPC_Novariants : Clause<"novariants"> {
 }
 def OMPC_NoWait : Clause<"nowait"> {
   let clangClass = "OMPNowaitClause";
+  let flangClass = "OMPNowaitClause";
+  let isValueOptional = true;
 }
 def OMP_NUMTASKS_Strict : ClauseVal<"strict", 1, 1> {}
 def OMP_NUMTASKS_Unknown : ClauseVal<"unknown", 2, 0> { let isDefault = 1; }
