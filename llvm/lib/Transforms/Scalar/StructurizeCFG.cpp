@@ -278,8 +278,8 @@ public:
 
 class StructurizeCFG {
   Type *Boolean;
-  ConstantInt *BoolTrue;
-  ConstantInt *BoolFalse;
+  Value *BoolTrue;
+  Value *BoolFalse;
   Value *BoolPoison;
 
   Function *Func;
@@ -1253,8 +1253,8 @@ void StructurizeCFG::init(Region *R) {
   LLVMContext &Context = R->getEntry()->getContext();
 
   Boolean = Type::getInt1Ty(Context);
-  BoolTrue = ConstantInt::getTrue(Context);
-  BoolFalse = ConstantInt::getFalse(Context);
+  BoolTrue = PHINode::Create(Boolean, 0);
+  BoolFalse = PHINode::Create(Boolean, 0);
   BoolPoison = PoisonValue::get(Boolean);
 
   this->UA = nullptr;
@@ -1329,6 +1329,9 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
   LoopConds.clear();
   FlowSet.clear();
   TermDL.clear();
+
+  BoolTrue->replaceAllUsesWith(ConstantInt::getTrue(Boolean));
+  BoolFalse->replaceAllUsesWith(ConstantInt::getFalse(Boolean));
 
   return true;
 }
