@@ -11,11 +11,10 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-LABEL: <_start>:
-// CHECK-NEXT:     210120: b       0x210124
+// CHECK-NEXT:             b       {{.*}} <__AArch64AbsXOLongThunk_big>
 // CHECK-LABEL: <__AArch64AbsXOLongThunk_big>:
-// CHECK-NEXT:     210124: mov     x16, #0x4444
+// CHECK-NEXT:             mov     x16, #0x4444
 // CHECK-NEXT:             movk    x16, #0x3333, lsl #16
 // CHECK-NEXT:             movk    x16, #0x2222, lsl #32
 // CHECK-NEXT:             movk    x16, #0x1111, lsl #48
 // CHECK-NEXT:             br      x16
-
