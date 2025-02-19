@@ -53,8 +53,8 @@ define void @gather_const_v2f64(ptr %x) {
 define void @gather_const_v64f16(ptr %x) {
 ; CHECK-LABEL: gather_const_v64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    flh fa5, 94(a0)
+; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    vse16.v v8, (a0)
@@ -70,8 +70,8 @@ define void @gather_const_v64f16(ptr %x) {
 define void @gather_const_v32f32(ptr %x) {
 ; CHECK-LABEL: gather_const_v32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    flw fa5, 68(a0)
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    vse32.v v8, (a0)

@@ -285,14 +285,14 @@ define void @insert_v8i32_v2i32_0(ptr %vp, ptr %svp) {
 define void @insert_v8i32_v2i32_2(ptr %vp, ptr %svp) {
 ; VLA-LABEL: insert_v8i32_v2i32_2:
 ; VLA:       # %bb.0:
+; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; VLA-NEXT:    vle32.v v8, (a0)
 ; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; VLA-NEXT:    vle32.v v8, (a1)
-; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vle32.v v10, (a0)
+; VLA-NEXT:    vle32.v v10, (a1)
 ; VLA-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
-; VLA-NEXT:    vslideup.vi v10, v8, 2
+; VLA-NEXT:    vslideup.vi v8, v10, 2
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vse32.v v10, (a0)
+; VLA-NEXT:    vse32.v v8, (a0)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v8i32_v2i32_2:
@@ -314,12 +314,13 @@ define void @insert_v8i32_v2i32_2(ptr %vp, ptr %svp) {
 define void @insert_v8i32_v2i32_6(ptr %vp, ptr %svp) {
 ; VLA-LABEL: insert_v8i32_v2i32_6:
 ; VLA:       # %bb.0:
-; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; VLA-NEXT:    vle32.v v8, (a1)
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vle32.v v10, (a0)
-; VLA-NEXT:    vslideup.vi v10, v8, 6
-; VLA-NEXT:    vse32.v v10, (a0)
+; VLA-NEXT:    vle32.v v8, (a0)
+; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; VLA-NEXT:    vle32.v v10, (a1)
+; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; VLA-NEXT:    vslideup.vi v8, v10, 6
+; VLA-NEXT:    vse32.v v8, (a0)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v8i32_v2i32_6:
@@ -829,13 +830,13 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV32VLS-NEXT:    vl1re64.v v8, (a0)
 ; RV32VLS-NEXT:    addi a0, sp, 128
 ; RV32VLS-NEXT:    vs1r.v v8, (a0)
-; RV32VLS-NEXT:    addi a0, sp, 64
-; RV32VLS-NEXT:    vl8re64.v v8, (a0)
 ; RV32VLS-NEXT:    addi a0, sp, 192
+; RV32VLS-NEXT:    vl8re64.v v8, (a0)
+; RV32VLS-NEXT:    addi a0, sp, 64
 ; RV32VLS-NEXT:    vl8re64.v v16, (a0)
 ; RV32VLS-NEXT:    addi a0, a1, 128
-; RV32VLS-NEXT:    vs8r.v v16, (a0)
-; RV32VLS-NEXT:    vs8r.v v8, (a1)
+; RV32VLS-NEXT:    vs8r.v v8, (a0)
+; RV32VLS-NEXT:    vs8r.v v16, (a1)
 ; RV32VLS-NEXT:    addi sp, s0, -80
 ; RV32VLS-NEXT:    .cfi_def_cfa sp, 80
 ; RV32VLS-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
@@ -861,13 +862,13 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64VLS-NEXT:    vl1re64.v v8, (a0)
 ; RV64VLS-NEXT:    addi a0, sp, 128
 ; RV64VLS-NEXT:    vs1r.v v8, (a0)
-; RV64VLS-NEXT:    addi a0, sp, 64
-; RV64VLS-NEXT:    vl8re64.v v8, (a0)
 ; RV64VLS-NEXT:    addi a0, sp, 192
+; RV64VLS-NEXT:    vl8re64.v v8, (a0)
+; RV64VLS-NEXT:    addi a0, sp, 64
 ; RV64VLS-NEXT:    vl8re64.v v16, (a0)
 ; RV64VLS-NEXT:    addi a0, a1, 128
-; RV64VLS-NEXT:    vs8r.v v16, (a0)
-; RV64VLS-NEXT:    vs8r.v v8, (a1)
+; RV64VLS-NEXT:    vs8r.v v8, (a0)
+; RV64VLS-NEXT:    vs8r.v v16, (a1)
 ; RV64VLS-NEXT:    addi sp, s0, -80
 ; RV64VLS-NEXT:    .cfi_def_cfa sp, 80
 ; RV64VLS-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload

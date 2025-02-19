@@ -3073,9 +3073,7 @@ private:
                        bool ResizeAllowed = false) const;
 
   /// Vectorize a single entry in the tree.
-  /// \param PostponedPHIs true, if need to postpone emission of phi nodes to
-  /// avoid issues with def-use order.
-  Value *vectorizeTree(TreeEntry *E, bool PostponedPHIs);
+  Value *vectorizeTree(TreeEntry *E);
 
   /// Returns vectorized operand node, that matches the order of the scalars
   /// operand number \p NodeIdx in entry \p E.
@@ -3092,9 +3090,7 @@ private:
 
   /// Vectorize a single entry in the tree, the \p Idx-th operand of the entry
   /// \p E.
-  /// \param PostponedPHIs true, if need to postpone emission of phi nodes to
-  /// avoid issues with def-use order.
-  Value *vectorizeOperand(TreeEntry *E, unsigned NodeIdx, bool PostponedPHIs);
+  Value *vectorizeOperand(TreeEntry *E, unsigned NodeIdx);
 
   /// Create a new vector from a list of scalar values.  Produces a sequence
   /// which exploits values reused across lanes, and arranges the inserts
@@ -3105,8 +3101,7 @@ private:
   /// Create a new vector from a list of scalar values.  Produces a sequence
   /// which exploits values reused across lanes, and arranges the inserts
   /// for ease of later optimization.
-  Value *createBuildVector(const TreeEntry *E, Type *ScalarTy,
-                           bool PostponedPHIs);
+  Value *createBuildVector(const TreeEntry *E, Type *ScalarTy);
 
   /// Returns the instruction in the bundle, which can be used as a base point
   /// for scheduling. Usually it is the last instruction in the bundle, except
@@ -3307,9 +3302,6 @@ private:
     /// The Scalars are vectorized into this value. It is initialized to Null.
     WeakTrackingVH VectorizedValue = nullptr;
 
-    /// New vector phi instructions emitted for the vectorized phi nodes.
-    PHINode *PHI = nullptr;
-
     /// Do we need to gather this sequence or vectorize it
     /// (either with vector instruction or with scatter/gather
     /// intrinsics for store/load)?
@@ -3346,8 +3338,7 @@ private:
     /// to entries.
     VecTreeTy &Container;
 
-    /// The TreeEntry index containing the user of this entry.  We can actually
-    /// have multiple users so the data structure is not truly a tree.
+    /// The TreeEntry index containing the user of this entry.
     EdgeInfo UserTreeIndex;
 
     /// The index of this treeEntry in VectorizableTree.
@@ -3575,6 +3566,8 @@ private:
       dbgs() << "UserTreeIndex: ";
       if (UserTreeIndex)
         dbgs() << UserTreeIndex;
+      else
+        dbgs() << "<invalid>";
       dbgs() << "\n";
       if (!CombinedEntriesWithIndices.empty()) {
         dbgs() << "Combined entries: ";
@@ -5757,6 +5750,10 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
 
     auto CompareByBasicBlocks = [&](BasicBlock *BB1, BasicBlock *BB2) {
       assert(BB1 != BB2 && "Expected different basic blocks.");
+      if (!DT->isReachableFromEntry(BB1))
+        return false;
+      if (!DT->isReachableFromEntry(BB2))
+        return true;
       auto *NodeA = DT->getNode(BB1);
       auto *NodeB = DT->getNode(BB2);
       assert(NodeA && "Should only process reachable instructions");
@@ -5999,6 +5996,7 @@ bool BoUpSLP::isProfitableToReorder() const {
          VectorizableTree.front()->getOpcode() == Instruction::ICmp))) &&
       VectorizableTree.front()->ReorderIndices.empty()) {
     constexpr unsigned PhiOpsLimit = 12;
+    constexpr unsigned GatherLoadsLimit = 2;
     // Check if the tree has only single store and single (unordered) load node,
     // other nodes are phis or geps/binops, combined with phis, and/orsingle
     // gather load node
@@ -6028,7 +6026,7 @@ bool BoUpSLP::isProfitableToReorder() const {
         if (HasLoad)
           return true;
         ++GatherLoads;
-        if (GatherLoads >= 2)
+        if (GatherLoads >= GatherLoadsLimit)
           return true;
       }
       if (TE->getOpcode() == Instruction::GetElementPtr ||
@@ -7894,8 +7892,16 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
 
     return TreeEntry::Vectorize;
   }
-  case Instruction::ExtractValue:
-  case Instruction::ExtractElement: {
+  case Instruction::ExtractElement:
+    if (any_of(VL, [&](Value *V) {
+          auto *EI = dyn_cast<ExtractElementInst>(V);
+          if (!EI)
+            return true;
+          return isVectorized(EI->getOperand(0));
+        }))
+      return TreeEntry::NeedToGather;
+    [[fallthrough]];
+  case Instruction::ExtractValue: {
     bool Reuse = canReuseExtract(VL, CurrentOrder);
     // FIXME: Vectorizing is not supported yet for non-power-of-2 ops (and
     // non-full registers).
@@ -12297,6 +12303,30 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
       }))
     return true;
 
+  // Do not vectorize small tree of phis only, if all vector phis are also
+  // gathered.
+  if (!ForReduction && SLPCostThreshold.getNumOccurrences() &&
+      VectorizableTree.size() <= Limit &&
+      all_of(VectorizableTree,
+             [&](const std::unique_ptr<TreeEntry> &TE) {
+               return (TE->isGather() &&
+                       (!TE->hasState() ||
+                        TE->getOpcode() != Instruction::ExtractElement) &&
+                       count_if(TE->Scalars, IsaPred<ExtractElementInst>) <=
+                           Limit) ||
+                      (TE->hasState() &&
+                       (TE->getOpcode() == Instruction::InsertElement ||
+                        (TE->getOpcode() == Instruction::PHI &&
+                         all_of(TE->Scalars, [&](Value *V) {
+                           return isa<PoisonValue>(V) || MustGather.contains(V);
+                         }))));
+             }) &&
+      any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return TE->State == TreeEntry::Vectorize &&
+               TE->getOpcode() == Instruction::PHI;
+      }))
+    return true;
+
   // We can vectorize the tree if its size is greater than or equal to the
   // minimum size specified by the MinTreeSize command line option.
   if (VectorizableTree.size() >= MinTreeSize)
@@ -14853,8 +14883,7 @@ BoUpSLP::getMatchedVectorizedOperand(const TreeEntry *E, unsigned NodeIdx,
   return nullptr;
 }
 
-Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
-                                 bool PostponedPHIs) {
+Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
   ValueList &VL = E->getOperand(NodeIdx);
   InstructionsState S = getSameOpcode(VL, *TLI);
   // Special processing for GEPs bundle, which may include non-gep values.
@@ -14888,7 +14917,7 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
              "Expected either combined subnodes or reordering");
       return ShuffleBuilder.finalize({}, SubVectors, {});
     };
-    Value *V = vectorizeTree(VE, PostponedPHIs);
+    Value *V = vectorizeTree(VE);
     if (VF * getNumElements(VL[0]->getType()) !=
         cast<FixedVectorType>(V->getType())->getNumElements()) {
       if (!VE->ReuseShuffleIndices.empty()) {
@@ -14953,7 +14982,7 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
   assert(I->get()->UserTreeIndex &&
          "Expected only single user for the gather node.");
   assert(I->get()->isSame(VL) && "Expected same list of scalars.");
-  return vectorizeTree(I->get(), PostponedPHIs);
+  return vectorizeTree(I->get());
 }
 
 template <typename BVTy, typename ResTy, typename... Args>
@@ -15445,10 +15474,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   return Res;
 }
 
-Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy,
-                                  bool PostponedPHIs) {
+Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
   for (auto [EIdx, _] : E->CombinedEntriesWithIndices)
-    (void)vectorizeTree(VectorizableTree[EIdx].get(), PostponedPHIs);
+    (void)vectorizeTree(VectorizableTree[EIdx].get());
   return processBuildVector<ShuffleInstructionBuilder, Value *>(E, ScalarTy,
                                                                 Builder, *this);
 }
@@ -15463,15 +15491,8 @@ static Instruction *propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   return llvm::propagateMetadata(Inst, Insts);
 }
 
-Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
+Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   IRBuilderBase::InsertPointGuard Guard(Builder);
-
-  if (E->VectorizedValue &&
-      (E->State != TreeEntry::Vectorize || E->getOpcode() != Instruction::PHI ||
-       E->isAltShuffle())) {
-    LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *E->Scalars[0] << ".\n");
-    return E->VectorizedValue;
-  }
 
   Value *V = E->Scalars.front();
   Type *ScalarTy = V->getType();
@@ -15489,7 +15510,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     // Set insert point for non-reduction initial nodes.
     if (E->hasState() && E->Idx == 0 && !UserIgnoreList)
       setInsertPointAfterBundle(E);
-    Value *Vec = createBuildVector(E, ScalarTy, PostponedPHIs);
+    Value *Vec = createBuildVector(E, ScalarTy);
     E->VectorizedValue = Vec;
     return Vec;
   }
@@ -15544,29 +15565,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       assert((E->ReorderIndices.empty() || !E->ReuseShuffleIndices.empty() ||
               E != VectorizableTree.front().get() || E->UserTreeIndex) &&
              "PHI reordering is free.");
-      if (PostponedPHIs && E->VectorizedValue)
-        return E->VectorizedValue;
       auto *PH = cast<PHINode>(VL0);
       Builder.SetInsertPoint(PH->getParent(),
                              PH->getParent()->getFirstNonPHIIt());
       Builder.SetCurrentDebugLocation(PH->getDebugLoc());
-      if (PostponedPHIs || !E->VectorizedValue) {
-        PHINode *NewPhi = Builder.CreatePHI(VecTy, PH->getNumIncomingValues());
-        E->PHI = NewPhi;
-        Value *V = NewPhi;
+      PHINode *NewPhi = Builder.CreatePHI(VecTy, PH->getNumIncomingValues());
+      Value *V = NewPhi;
 
-        // Adjust insertion point once all PHI's have been generated.
-        Builder.SetInsertPoint(PH->getParent(),
-                               PH->getParent()->getFirstInsertionPt());
-        Builder.SetCurrentDebugLocation(PH->getDebugLoc());
+      // Adjust insertion point once all PHI's have been generated.
+      Builder.SetInsertPoint(PH->getParent(),
+                             PH->getParent()->getFirstInsertionPt());
+      Builder.SetCurrentDebugLocation(PH->getDebugLoc());
 
-        V = FinalShuffle(V, E);
+      V = FinalShuffle(V, E);
 
-        E->VectorizedValue = V;
-        if (PostponedPHIs)
-          return V;
-      }
-      PHINode *NewPhi = cast<PHINode>(E->PHI);
+      E->VectorizedValue = V;
       // If phi node is fully emitted - exit.
       if (NewPhi->getNumIncomingValues() != 0)
         return NewPhi;
@@ -15592,7 +15605,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
         Builder.SetInsertPoint(IBB->getTerminator());
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
-        Value *Vec = vectorizeOperand(E, I, /*PostponedPHIs=*/true);
+        Value *Vec = vectorizeOperand(E, I);
         if (VecTy != Vec->getType()) {
           assert((It != MinBWs.end() || getOperandEntry(E, I)->isGather() ||
                   MinBWs.contains(getOperandEntry(E, I))) &&
@@ -15610,8 +15623,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
     case Instruction::ExtractElement: {
       Value *V = E->getSingleOperand(0);
-      if (ArrayRef<TreeEntry *> TEs = getTreeEntries(V); !TEs.empty())
-        V = TEs.front()->VectorizedValue;
       setInsertPointAfterBundle(E);
       V = FinalShuffle(V, E);
       E->VectorizedValue = V;
@@ -15630,7 +15641,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     case Instruction::InsertElement: {
       assert(E->ReuseShuffleIndices.empty() && "All inserts should be unique");
       Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
-      Value *V = vectorizeOperand(E, 1, PostponedPHIs);
+      Value *V = vectorizeOperand(E, 1);
       ArrayRef<Value *> Op = E->getOperand(1);
       Type *ScalarTy = Op.front()->getType();
       if (cast<VectorType>(V->getType())->getElementType() != ScalarTy) {
@@ -15802,11 +15813,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     case Instruction::BitCast: {
       setInsertPointAfterBundle(E);
 
-      Value *InVec = vectorizeOperand(E, 0, PostponedPHIs);
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
+      Value *InVec = vectorizeOperand(E, 0);
 
       auto *CI = cast<CastInst>(VL0);
       Instruction::CastOps VecOpcode = CI->getOpcode();
@@ -15849,16 +15856,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     case Instruction::ICmp: {
       setInsertPointAfterBundle(E);
 
-      Value *L = vectorizeOperand(E, 0, PostponedPHIs);
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
-      Value *R = vectorizeOperand(E, 1, PostponedPHIs);
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
+      Value *L = vectorizeOperand(E, 0);
+      Value *R = vectorizeOperand(E, 1);
       if (L->getType() != R->getType()) {
         assert((getOperandEntry(E, 0)->isGather() ||
                 getOperandEntry(E, 1)->isGather() ||
@@ -15894,21 +15893,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     case Instruction::Select: {
       setInsertPointAfterBundle(E);
 
-      Value *Cond = vectorizeOperand(E, 0, PostponedPHIs);
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
-      Value *True = vectorizeOperand(E, 1, PostponedPHIs);
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
-      Value *False = vectorizeOperand(E, 2, PostponedPHIs);
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
+      Value *Cond = vectorizeOperand(E, 0);
+      Value *True = vectorizeOperand(E, 1);
+      Value *False = vectorizeOperand(E, 2);
       if (True->getType() != VecTy || False->getType() != VecTy) {
         assert((It != MinBWs.end() || getOperandEntry(E, 1)->isGather() ||
                 getOperandEntry(E, 2)->isGather() ||
@@ -15947,12 +15934,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     case Instruction::FNeg: {
       setInsertPointAfterBundle(E);
 
-      Value *Op = vectorizeOperand(E, 0, PostponedPHIs);
-
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
+      Value *Op = vectorizeOperand(E, 0);
 
       Value *V = Builder.CreateUnOp(
           static_cast<Instruction::UnaryOps>(E->getOpcode()), Op);
@@ -15970,12 +15952,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     case Instruction::Freeze: {
       setInsertPointAfterBundle(E);
 
-      Value *Op = vectorizeOperand(E, 0, PostponedPHIs);
-
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
+      Value *Op = vectorizeOperand(E, 0);
 
       if (Op->getType() != VecTy) {
         assert((It != MinBWs.end() || getOperandEntry(E, 0)->isGather() ||
@@ -16011,16 +15988,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     case Instruction::Xor: {
       setInsertPointAfterBundle(E);
 
-      Value *LHS = vectorizeOperand(E, 0, PostponedPHIs);
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
-      Value *RHS = vectorizeOperand(E, 1, PostponedPHIs);
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
+      Value *LHS = vectorizeOperand(E, 0);
+      Value *RHS = vectorizeOperand(E, 1);
       if (ShuffleOrOp == Instruction::And && It != MinBWs.end()) {
         for (unsigned I : seq<unsigned>(0, E->getNumOperands())) {
           ArrayRef<Value *> Ops = E->getOperand(I);
@@ -16121,11 +16090,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         NewLI = Inst;
       } else {
         assert(E->State == TreeEntry::ScatterVectorize && "Unhandled state");
-        Value *VecPtr = vectorizeOperand(E, 0, PostponedPHIs);
-        if (E->VectorizedValue) {
-          LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-          return E->VectorizedValue;
-        }
+        Value *VecPtr = vectorizeOperand(E, 0);
         if (isa<FixedVectorType>(ScalarTy)) {
           assert(SLPReVec && "FixedVectorType is not expected.");
           // CreateMaskedGather expects VecTy and VecPtr have same size. We need
@@ -16163,7 +16128,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
       setInsertPointAfterBundle(E);
 
-      Value *VecValue = vectorizeOperand(E, 0, PostponedPHIs);
+      Value *VecValue = vectorizeOperand(E, 0);
       if (VecValue->getType() != VecTy)
         VecValue =
             Builder.CreateIntCast(VecValue, VecTy, GetOperandSignedness(0));
@@ -16206,19 +16171,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       auto *GEP0 = cast<GetElementPtrInst>(VL0);
       setInsertPointAfterBundle(E);
 
-      Value *Op0 = vectorizeOperand(E, 0, PostponedPHIs);
-      if (E->VectorizedValue) {
-        LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-        return E->VectorizedValue;
-      }
+      Value *Op0 = vectorizeOperand(E, 0);
 
       SmallVector<Value *> OpVecs;
       for (int J = 1, N = GEP0->getNumOperands(); J < N; ++J) {
-        Value *OpVec = vectorizeOperand(E, J, PostponedPHIs);
-        if (E->VectorizedValue) {
-          LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-          return E->VectorizedValue;
-        }
+        Value *OpVec = vectorizeOperand(E, J);
         OpVecs.push_back(OpVec);
       }
 
@@ -16276,11 +16233,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           continue;
         }
 
-        Value *OpVec = vectorizeOperand(E, I, PostponedPHIs);
-        if (E->VectorizedValue) {
-          LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-          return E->VectorizedValue;
-        }
+        Value *OpVec = vectorizeOperand(E, I);
         ScalarArg = CEI->getArgOperand(I);
         if (cast<VectorType>(OpVec->getType())->getElementType() !=
                 ScalarArg->getType()->getScalarType() &&
@@ -16324,11 +16277,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V;
       if (SLPReVec && !E->isAltShuffle()) {
         setInsertPointAfterBundle(E);
-        Value *Src = vectorizeOperand(E, 0, PostponedPHIs);
-        if (E->VectorizedValue) {
-          LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-          return E->VectorizedValue;
-        }
+        Value *Src = vectorizeOperand(E, 0);
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
         if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src)) {
           assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
@@ -16357,19 +16306,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         Value *LHS = nullptr, *RHS = nullptr;
         if (Instruction::isBinaryOp(E->getOpcode()) || isa<CmpInst>(VL0)) {
           setInsertPointAfterBundle(E);
-          LHS = vectorizeOperand(E, 0, PostponedPHIs);
-          if (E->VectorizedValue) {
-            LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-            return E->VectorizedValue;
-          }
-          RHS = vectorizeOperand(E, 1, PostponedPHIs);
+          LHS = vectorizeOperand(E, 0);
+          RHS = vectorizeOperand(E, 1);
         } else {
           setInsertPointAfterBundle(E);
-          LHS = vectorizeOperand(E, 0, PostponedPHIs);
-        }
-        if (E->VectorizedValue) {
-          LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
-          return E->VectorizedValue;
+          LHS = vectorizeOperand(E, 0);
         }
         if (LHS && RHS &&
             ((Instruction::isBinaryOp(E->getOpcode()) &&
@@ -16520,21 +16461,15 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // gathered loads.
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     if (GatheredLoadsEntriesFirst.has_value() &&
-        TE->Idx >= *GatheredLoadsEntriesFirst &&
+        TE->Idx >= *GatheredLoadsEntriesFirst && !TE->VectorizedValue &&
         (!TE->isGather() || TE->UserTreeIndex)) {
       assert((TE->UserTreeIndex ||
               (TE->getOpcode() == Instruction::Load && !TE->isGather())) &&
              "Expected gathered load node.");
-      (void)vectorizeTree(TE.get(), /*PostponedPHIs=*/false);
+      (void)vectorizeTree(TE.get());
     }
   }
-  // Postpone emission of PHIs operands to avoid cyclic dependencies issues.
-  (void)vectorizeTree(VectorizableTree[0].get(), /*PostponedPHIs=*/true);
-  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree)
-    if (TE->State == TreeEntry::Vectorize &&
-        TE->getOpcode() == Instruction::PHI && !TE->isAltShuffle() &&
-        TE->VectorizedValue)
-      (void)vectorizeTree(TE.get(), /*PostponedPHIs=*/false);
+  (void)vectorizeTree(VectorizableTree[0].get());
   // Run through the list of postponed gathers and emit them, replacing the temp
   // emitted allocas with actual vector instructions.
   ArrayRef<const TreeEntry *> PostponedNodes = PostponedGathers.getArrayRef();
@@ -16569,7 +16504,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
       Builder.SetInsertPoint(PrevVec);
     }
     Builder.SetCurrentDebugLocation(UserI->getDebugLoc());
-    Value *Vec = vectorizeTree(TE, /*PostponedPHIs=*/false);
+    Value *Vec = vectorizeTree(TE);
     if (auto *VecI = dyn_cast<Instruction>(Vec);
         VecI && VecI->getParent() == Builder.GetInsertBlock() &&
         Builder.GetInsertPoint()->comesBefore(VecI))
@@ -18220,8 +18155,7 @@ bool BoUpSLP::collectValuesToDemote(
         BitWidth, {getOperandEntry(&E, 1), getOperandEntry(&E, 2)});
   }
 
-  // We can demote phis if we can demote all their incoming operands. Note that
-  // we don't need to worry about cycles since we ensure single use above.
+  // We can demote phis if we can demote all their incoming operands.
   case Instruction::PHI: {
     const unsigned NumOps = E.getNumOperands();
     SmallVector<const TreeEntry *> Ops(NumOps);
@@ -18342,11 +18276,9 @@ void BoUpSLP::computeMinimumValueSizes() {
     NodeIdx = 1;
 
   // Ensure the roots of the vectorizable tree don't form a cycle.
-  if (VectorizableTree[NodeIdx]->isGather() ||
-      (NodeIdx == 0 && VectorizableTree[NodeIdx]->UserTreeIndex) ||
-      (NodeIdx != 0 &&
-       VectorizableTree[NodeIdx]->UserTreeIndex.UserTE->Idx > NodeIdx))
-    return;
+  assert((VectorizableTree[NodeIdx]->isGather() || NodeIdx != 0 ||
+          !VectorizableTree[NodeIdx]->UserTreeIndex) &&
+         "Unexpected tree is graph.");
 
   // The first value node for store/insertelement is sext/zext/trunc? Skip it,
   // resize to the final type.
@@ -21000,7 +20932,8 @@ private:
         VecResSignedness = IsSigned;
       } else {
         ++NumVectorInstructions;
-        if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy) {
+        if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy &&
+            VecRes->getType()->getScalarType() == Builder.getInt1Ty()) {
           // Handle ctpop.
           unsigned VecResVF = getNumElements(VecRes->getType());
           unsigned VecVF = getNumElements(Vec->getType());
@@ -21013,7 +20946,7 @@ private:
           }
           if (VecResVF != VecVF) {
             SmallVector<int> ResizeMask(VecResVF, PoisonMaskElem);
-            std::iota(Mask.begin(), std::next(Mask.begin(), VecVF), 0);
+            std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), VecVF), 0);
             Vec = Builder.CreateShuffleVector(Vec, ResizeMask);
           }
           VecRes = Builder.CreateShuffleVector(VecRes, Vec, Mask, "rdx.op");

@@ -56,17 +56,24 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 
-/// The base Telemetry manager instance in LLDB
+/// The base Telemetry manager instance in LLDB.
 /// This class declares additional instrumentation points
 /// applicable to LLDB.
 class TelemetryManager : public llvm::telemetry::Manager {
 public:
+  llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
+
+  virtual llvm::StringRef GetInstanceName() const = 0;
+  static TelemetryManager *getInstance();
+
+protected:
   TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config);
 
-  llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
+  static void setInstance(std::unique_ptr<TelemetryManager> manger);
 
 private:
   std::unique_ptr<llvm::telemetry::Config> m_config;
+  static std::unique_ptr<TelemetryManager> g_instance;
 };
 
 } // namespace telemetry

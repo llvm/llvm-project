@@ -2210,16 +2210,6 @@ void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   Code = serialization::EXPR_PACK_INDEXING;
 }
 
-void ASTStmtWriter::VisitResolvedUnexpandedPackExpr(
-    ResolvedUnexpandedPackExpr *E) {
-  VisitExpr(E);
-  Record.push_back(E->getNumExprs());
-  Record.AddSourceLocation(E->getBeginLoc());
-  for (Expr *Sub : E->getExprs())
-    Record.AddStmt(Sub);
-  Code = serialization::EXPR_RESOLVED_UNEXPANDED_PACK;
-}
-
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);

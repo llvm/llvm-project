@@ -255,3 +255,26 @@ func.func @end_primitive() -> () {
   spirv.EndPrimitive
   return
 }
+
+//===----------------------------------------------------------------------===//
+// Mesh ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: emit_mesh_tasks
+func.func @emit_mesh_tasks(%0 : i32) -> () {
+  // CHECK: min version: v1.4
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_EXT_mesh_shader] ]
+  // CHECK: capabilities: [ [MeshShadingEXT] ]
+  spirv.EXT.EmitMeshTasks %0, %0, %0 : i32, i32, i32
+}
+
+// CHECK-LABEL: set_mesh_outputs
+func.func @set_mesh_outputs(%0 : i32, %1 : i32) -> () {
+  // CHECK: min version: v1.4
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_EXT_mesh_shader] ]
+  // CHECK: capabilities: [ [MeshShadingEXT] ]
+  spirv.EXT.SetMeshOutputs %0, %1 : i32, i32
+  spirv.Return
+}

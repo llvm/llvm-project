@@ -15,13 +15,14 @@ define fastcc void @LzmaDec_DecodeReal2(ptr %p, i1 %arg) {
 ; CHECK:       do.body66.i:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP3:%.*]], [[DO_COND_I:%.*]] ], [ undef, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> undef, <2 x i32> undef, <2 x i32> [[TMP0]]
-; CHECK-NEXT:    br i1 %arg, label [[DO_COND_I]], label [[IF_ELSE_I:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> <i32 undef, i32 poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[DO_COND_I]], label [[IF_ELSE_I:%.*]]
 ; CHECK:       if.else.i:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> [[TMP1]], undef
 ; CHECK-NEXT:    br label [[DO_COND_I]]
 ; CHECK:       do.cond.i:
-; CHECK-NEXT:    [[TMP3]] = phi <2 x i32> [ [[TMP2]], [[IF_ELSE_I]] ], [ [[TMP1]], [[DO_BODY66_I]] ]
-; CHECK-NEXT:    br i1 %arg, label [[DO_BODY66_I]], label [[DO_END1006_I:%.*]]
+; CHECK-NEXT:    [[TMP3]] = phi <2 x i32> [ [[TMP2]], [[IF_ELSE_I]] ], [ [[TMP5]], [[DO_BODY66_I]] ]
+; CHECK-NEXT:    br i1 [[ARG]], label [[DO_BODY66_I]], label [[DO_END1006_I:%.*]]
 ; CHECK:       do.end1006.i:
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> undef, <2 x i32> undef, <2 x i32> [[TMP3]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[RANGE20_I]], align 4

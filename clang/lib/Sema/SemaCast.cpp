@@ -104,6 +104,7 @@ namespace {
     void CheckStaticCast();
     void CheckDynamicCast();
     void CheckCXXCStyleCast(bool FunctionalCast, bool ListInitialization);
+    bool CheckHLSLCStyleCast(CheckedConversionKind CCK);
     void CheckCStyleCast();
     void CheckBuiltinBitCast();
     void CheckAddrspaceCast();
@@ -2776,17 +2777,9 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   CheckedConversionKind CCK = FunctionalStyle
                                   ? CheckedConversionKind::FunctionalCast
                                   : CheckedConversionKind::CStyleCast;
-  // This case should not trigger on regular vector splat
-  // vector cast, vector truncation, or special hlsl splat cases
-  QualType SrcTy = SrcExpr.get()->getType();
-  if (Self.getLangOpts().HLSL &&
-      Self.HLSL().CanPerformElementwiseCast(SrcExpr.get(), DestType)) {
-    if (SrcTy->isConstantArrayType())
-      SrcExpr = Self.ImpCastExprToType(
-          SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
-          CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
-    Kind = CK_HLSLElementwiseCast;
-    return;
+  if (Self.getLangOpts().HLSL) {
+    if (CheckHLSLCStyleCast(CCK))
+      return;
   }
 
   if (ValueKind == VK_PRValue && !DestType->isRecordType() &&
@@ -2903,6 +2896,56 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   } else {
     SrcExpr = ExprError();
   }
+}
+
+// CheckHLSLCStyleCast - Returns `true` ihe cast is handled or errored as an
+// HLSL-specific cast. Returns false if the cast should be checked as a CXX
+// C-Style cast.
+bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
+  assert(Self.getLangOpts().HLSL && "Must be HLSL!");
+  QualType SrcTy = SrcExpr.get()->getType();
+  // HLSL has several unique forms of C-style casts which support aggregate to
+  // aggregate casting.
+  // This case should not trigger on regular vector cast, vector truncation
+  if (Self.HLSL().CanPerformElementwiseCast(SrcExpr.get(), DestType)) {
+    if (SrcTy->isConstantArrayType())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
+          CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
+    Kind = CK_HLSLElementwiseCast;
+    return true;
+  }
+
+  // This case should not trigger on regular vector splat
+  // If the relative order of this and the HLSLElementWise cast checks
+  // are changed, it might change which cast handles what in a few cases
+  if (Self.HLSL().CanPerformAggregateSplatCast(SrcExpr.get(), DestType)) {
+    const VectorType *VT = SrcTy->getAs<VectorType>();
+    // change splat from vec1 case to splat from scalar
+    if (VT && VT->getNumElements() == 1)
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    // Inserting a scalar cast here allows for a simplified codegen in
+    // the case the destTy is a vector
+    if (const VectorType *DVT = DestType->getAs<VectorType>())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), DVT->getElementType(),
+          Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    Kind = CK_HLSLAggregateSplatCast;
+    return true;
+  }
+
+  // If the destination is an array, we've exhausted the valid HLSL casts, so we
+  // should emit a dignostic and stop processing.
+  if (DestType->isArrayType()) {
+    Self.Diag(OpRange.getBegin(), diag::err_bad_cxx_cast_generic)
+        << 4 << SrcTy << DestType;
+    SrcExpr = ExprError();
+    return true;
+  }
+  return false;
 }
 
 /// DiagnoseBadFunctionCast - Warn whenever a function call is cast to a

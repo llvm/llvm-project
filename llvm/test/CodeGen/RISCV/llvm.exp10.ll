@@ -143,12 +143,12 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV32IFD-NEXT:    .cfi_offset fs1, -32
 ; RV32IFD-NEXT:    .cfi_offset fs2, -40
 ; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    lhu a0, 0(a1)
-; RV32IFD-NEXT:    lhu a2, 4(a1)
-; RV32IFD-NEXT:    lhu a1, 8(a1)
-; RV32IFD-NEXT:    fmv.w.x fs0, a1
-; RV32IFD-NEXT:    fmv.w.x fs1, a0
-; RV32IFD-NEXT:    fmv.w.x fa0, a2
+; RV32IFD-NEXT:    lhu a0, 8(a1)
+; RV32IFD-NEXT:    lhu a2, 0(a1)
+; RV32IFD-NEXT:    lhu a1, 4(a1)
+; RV32IFD-NEXT:    fmv.w.x fs0, a0
+; RV32IFD-NEXT:    fmv.w.x fs1, a2
+; RV32IFD-NEXT:    fmv.w.x fa0, a1
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    call exp10f
 ; RV32IFD-NEXT:    call __truncsfhf2
@@ -200,11 +200,11 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV64IFD-NEXT:    .cfi_offset s1, -24
 ; RV64IFD-NEXT:    .cfi_offset s2, -32
 ; RV64IFD-NEXT:    .cfi_offset fs0, -40
-; RV64IFD-NEXT:    mv s0, a0
 ; RV64IFD-NEXT:    lhu s1, 0(a1)
-; RV64IFD-NEXT:    lhu a0, 8(a1)
+; RV64IFD-NEXT:    lhu a2, 8(a1)
 ; RV64IFD-NEXT:    lhu s2, 16(a1)
-; RV64IFD-NEXT:    fmv.w.x fa0, a0
+; RV64IFD-NEXT:    mv s0, a0
+; RV64IFD-NEXT:    fmv.w.x fa0, a2
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    call __truncsfhf2
@@ -267,14 +267,14 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV32IFD-NEXT:    .cfi_offset fs2, -48
 ; RV32IFD-NEXT:    .cfi_offset fs3, -56
 ; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    lhu a0, 0(a1)
-; RV32IFD-NEXT:    lhu a2, 4(a1)
-; RV32IFD-NEXT:    lhu a3, 8(a1)
-; RV32IFD-NEXT:    lhu a1, 12(a1)
-; RV32IFD-NEXT:    fmv.w.x fs0, a1
-; RV32IFD-NEXT:    fmv.w.x fs1, a0
-; RV32IFD-NEXT:    fmv.w.x fs2, a2
-; RV32IFD-NEXT:    fmv.w.x fa0, a3
+; RV32IFD-NEXT:    lhu a0, 12(a1)
+; RV32IFD-NEXT:    lhu a2, 0(a1)
+; RV32IFD-NEXT:    lhu a3, 4(a1)
+; RV32IFD-NEXT:    lhu a1, 8(a1)
+; RV32IFD-NEXT:    fmv.w.x fs0, a0
+; RV32IFD-NEXT:    fmv.w.x fs1, a2
+; RV32IFD-NEXT:    fmv.w.x fs2, a3
+; RV32IFD-NEXT:    fmv.w.x fa0, a1
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    call exp10f
 ; RV32IFD-NEXT:    call __truncsfhf2
@@ -343,12 +343,12 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV64IFD-NEXT:    .cfi_offset fs0, -48
 ; RV64IFD-NEXT:    .cfi_offset fs1, -56
 ; RV64IFD-NEXT:    .cfi_offset fs2, -64
-; RV64IFD-NEXT:    mv s0, a0
 ; RV64IFD-NEXT:    lhu s1, 0(a1)
 ; RV64IFD-NEXT:    lhu s2, 8(a1)
-; RV64IFD-NEXT:    lhu a0, 16(a1)
+; RV64IFD-NEXT:    lhu a2, 16(a1)
 ; RV64IFD-NEXT:    lhu s3, 24(a1)
-; RV64IFD-NEXT:    fmv.w.x fa0, a0
+; RV64IFD-NEXT:    mv s0, a0
+; RV64IFD-NEXT:    fmv.w.x fa0, a2
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    call __truncsfhf2
