@@ -278,18 +278,21 @@ def hasAnyLocale(config, locales):
     # Convert the locale names into C string literals, by escaping \
     # and " and wrapping each one in double quotes.
     name_string_literals = ", ".join(
-        '"' + locale.replace("\\", r'\\').replace("\"", r'\"') + '"'
+        '"' + locale.replace("\\", r"\\").replace('"', r"\"") + '"'
         for locale in locales
     )
 
-    program = """
+    program = (
+        """
     #include <stddef.h>
     #if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_LOCALIZATION
       int main(int, char**) { return 1; }
     #else
       #include <locale.h>
       static const char *const test_locale_names[] = {
-          """ + name_string_literals + """, nullptr,
+          """
+        + name_string_literals
+        + """, nullptr,
       };
       int main() {
         for (size_t i = 0; test_locale_names[i]; i++) {
@@ -301,6 +304,7 @@ def hasAnyLocale(config, locales):
       }
     #endif
     """
+    )
     return programSucceeds(config, program)
 
 
