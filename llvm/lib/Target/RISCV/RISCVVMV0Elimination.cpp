@@ -159,10 +159,10 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
         if (MO.isReg() && MO.getReg().isVirtual() &&
             MRI.getRegClass(MO.getReg()) == &RISCV::VMV0RegClass) {
           MRI.recomputeRegClass(MO.getReg());
-          assert(MRI.getRegClass(MO.getReg()) != &RISCV::VMV0RegClass ||
-                 MI.isInlineAsm() ||
-                 MRI.getVRegDef(MO.getReg())->isInlineAsm() &&
-                     "Non-inline-asm use of vmv0 left behind");
+          assert((MRI.getRegClass(MO.getReg()) != &RISCV::VMV0RegClass ||
+                  MI.isInlineAsm() ||
+                  MRI.getVRegDef(MO.getReg())->isInlineAsm()) &&
+                 "Non-inline-asm use of vmv0 left behind");
         }
       }
     }

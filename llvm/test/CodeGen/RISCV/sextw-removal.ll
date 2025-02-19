@@ -269,8 +269,8 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:  .LBB5_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    call baz
-; CHECK-NEXT:    fcvt.w.s a0, fa0, rtz
 ; CHECK-NEXT:    feq.s a1, fa0, fs0
+; CHECK-NEXT:    fcvt.w.s a0, fa0, rtz
 ; CHECK-NEXT:    beqz a1, .LBB5_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -289,8 +289,8 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    call baz
-; NOREMOVAL-NEXT:    fcvt.w.s a0, fa0, rtz
 ; NOREMOVAL-NEXT:    feq.s a1, fa0, fs0
+; NOREMOVAL-NEXT:    fcvt.w.s a0, fa0, rtz
 ; NOREMOVAL-NEXT:    beqz a1, .LBB5_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
 ; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -526,8 +526,8 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:  .LBB9_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    call baz
-; CHECK-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NEXT:    feq.s a1, fa0, fs0
+; CHECK-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NEXT:    beqz a1, .LBB9_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -546,8 +546,8 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    call baz
-; NOREMOVAL-NEXT:    fmv.x.w a0, fa0
 ; NOREMOVAL-NEXT:    feq.s a1, fa0, fs0
+; NOREMOVAL-NEXT:    fmv.x.w a0, fa0
 ; NOREMOVAL-NEXT:    beqz a1, .LBB9_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
 ; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -578,8 +578,8 @@ define signext i32 @test11(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; CHECK-NEXT:  .LBB10_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    andi a0, a0, 1234
-; CHECK-NEXT:    addw a0, a0, a1
 ; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    addw a0, a0, a1
 ; CHECK-NEXT:    bltu a2, a3, .LBB10_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ret
@@ -591,8 +591,8 @@ define signext i32 @test11(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; NOREMOVAL-NEXT:  .LBB10_1: # %bb2
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NOREMOVAL-NEXT:    andi a0, a0, 1234
-; NOREMOVAL-NEXT:    add a0, a0, a1
 ; NOREMOVAL-NEXT:    addi a2, a2, 1
+; NOREMOVAL-NEXT:    add a0, a0, a1
 ; NOREMOVAL-NEXT:    bltu a2, a3, .LBB10_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
 ; NOREMOVAL-NEXT:    sext.w a0, a0
@@ -626,8 +626,8 @@ define signext i32 @test12(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; CHECK-NEXT:    mulw a2, a0, a1
 ; CHECK-NEXT:    addw a0, a0, a2
 ; CHECK-NEXT:    and a2, a2, a0
-; CHECK-NEXT:    add a0, a2, a1
 ; CHECK-NEXT:    addi a3, a3, 1
+; CHECK-NEXT:    add a0, a2, a1
 ; CHECK-NEXT:    bltu a3, a4, .LBB11_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    mv a0, a2
@@ -643,8 +643,8 @@ define signext i32 @test12(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; NOREMOVAL-NEXT:    mul a4, a0, a1
 ; NOREMOVAL-NEXT:    add a0, a0, a4
 ; NOREMOVAL-NEXT:    and a4, a4, a0
-; NOREMOVAL-NEXT:    add a0, a4, a1
 ; NOREMOVAL-NEXT:    addi a2, a2, 1
+; NOREMOVAL-NEXT:    add a0, a4, a1
 ; NOREMOVAL-NEXT:    bltu a2, a3, .LBB11_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
 ; NOREMOVAL-NEXT:    sext.w a0, a4
@@ -678,8 +678,8 @@ define signext i32 @test13(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; CHECK-NEXT:  .LBB12_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    div a0, a0, a1
-; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    bltu a2, a3, .LBB12_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    sext.w a0, a0
@@ -692,8 +692,8 @@ define signext i32 @test13(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; NOREMOVAL-NEXT:  .LBB12_1: # %bb2
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NOREMOVAL-NEXT:    div a0, a0, a1
-; NOREMOVAL-NEXT:    add a0, a0, a1
 ; NOREMOVAL-NEXT:    addi a2, a2, 1
+; NOREMOVAL-NEXT:    add a0, a0, a1
 ; NOREMOVAL-NEXT:    bltu a2, a3, .LBB12_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
 ; NOREMOVAL-NEXT:    sext.w a0, a0
@@ -989,8 +989,8 @@ define signext i32 @test15(i64 %arg1, i64 %arg2, i64 %arg3, ptr %arg4)  {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    andi a0, a0, 1234
 ; CHECK-NEXT:    addw a0, a0, a1
-; CHECK-NEXT:    sw a0, 0(a3)
 ; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    sw a0, 0(a3)
 ; CHECK-NEXT:    bltu a2, a4, .LBB17_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ret
@@ -1003,8 +1003,8 @@ define signext i32 @test15(i64 %arg1, i64 %arg2, i64 %arg3, ptr %arg4)  {
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NOREMOVAL-NEXT:    andi a0, a0, 1234
 ; NOREMOVAL-NEXT:    add a0, a0, a1
-; NOREMOVAL-NEXT:    sw a0, 0(a3)
 ; NOREMOVAL-NEXT:    addi a2, a2, 1
+; NOREMOVAL-NEXT:    sw a0, 0(a3)
 ; NOREMOVAL-NEXT:    bltu a2, a4, .LBB17_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
 ; NOREMOVAL-NEXT:    sext.w a0, a0

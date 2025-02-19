@@ -54,6 +54,7 @@ define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V128-NEXT:    csrr a0, vlenb
 ; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; V128-NEXT:    vid.v v10
+; V128-NEXT:    vmv.v.i v0, 10
 ; V128-NEXT:    srli a0, a0, 3
 ; V128-NEXT:    vsrl.vi v10, v10, 1
 ; V128-NEXT:    vslidedown.vx v11, v10, a0
@@ -62,7 +63,6 @@ define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V128-NEXT:    vrgatherei16.vv v12, v9, v10
 ; V128-NEXT:    vrgatherei16.vv v15, v8, v11
 ; V128-NEXT:    vrgatherei16.vv v14, v8, v10
-; V128-NEXT:    vmv.v.i v0, 10
 ; V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V128-NEXT:    vmerge.vvm v8, v14, v12, v0
 ; V128-NEXT:    ret
@@ -72,9 +72,9 @@ define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; RV32-V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
 ; RV32-V512-NEXT:    vid.v v10
 ; RV32-V512-NEXT:    vsrl.vi v11, v10, 1
+; RV32-V512-NEXT:    vmv.v.i v0, 10
 ; RV32-V512-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; RV32-V512-NEXT:    vrgatherei16.vv v10, v8, v11
-; RV32-V512-NEXT:    vmv.v.i v0, 10
 ; RV32-V512-NEXT:    vrgatherei16.vv v10, v9, v11, v0.t
 ; RV32-V512-NEXT:    vmv.v.v v8, v10
 ; RV32-V512-NEXT:    ret
@@ -84,8 +84,8 @@ define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; RV64-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
 ; RV64-V512-NEXT:    vid.v v10
 ; RV64-V512-NEXT:    vsrl.vi v11, v10, 1
-; RV64-V512-NEXT:    vrgather.vv v10, v8, v11
 ; RV64-V512-NEXT:    vmv.v.i v0, 10
+; RV64-V512-NEXT:    vrgather.vv v10, v8, v11
 ; RV64-V512-NEXT:    vrgather.vv v10, v9, v11, v0.t
 ; RV64-V512-NEXT:    vmv.v.v v8, v10
 ; RV64-V512-NEXT:    ret
@@ -421,8 +421,8 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; V128-NEXT:    vzext.vf2 v8, v24
 ; V128-NEXT:    addi a1, a1, -1366
 ; V128-NEXT:    vzext.vf2 v24, v0
-; V128-NEXT:    vsll.vx v8, v8, a0
 ; V128-NEXT:    vmv.s.x v0, a1
+; V128-NEXT:    vsll.vx v8, v8, a0
 ; V128-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; V128-NEXT:    vmerge.vvm v24, v24, v8, v0
 ; V128-NEXT:    addi a0, sp, 16

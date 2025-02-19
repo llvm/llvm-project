@@ -106,12 +106,12 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: func.func @unpack_elemwise
 // CHECK:         %[[RES:.*]] = scf.for
 // CHECK:           scf.for
-// CHECK:             tensor.unpack
+// CHECK:             linalg.unpack
 // CHECK:             linalg.elemwise_unary
 // CHECK:         return %[[RES]]
 func.func @unpack_elemwise(%arg0: tensor<16x48x8x8xf32>, %arg1: tensor<128x384xf32>) -> tensor<128x384xf32> {
   %0 = tensor.empty() : tensor<128x384xf32>
-  %1 = tensor.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %0
+  %1 = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %0
       : tensor<16x48x8x8xf32> -> tensor<128x384xf32>
   %2 = linalg.elemwise_unary ins(%1: tensor<128x384xf32>)
                              outs(%arg1: tensor<128x384xf32>) -> tensor<128x384xf32>
@@ -132,12 +132,12 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: func.func @pack_elemwise
 // CHECK:         %[[RES:.*]] = scf.for
 // CHECK:           scf.for
-// CHECK:             tensor.pack
+// CHECK:             linalg.pack
 // CHECK:             linalg.elemwise_unary
 // CHECK:         return %[[RES]]
 func.func @pack_elemwise(%arg0: tensor<128x384xf32>, %arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32> {
   %0 = tensor.empty() : tensor<16x48x8x8xf32>
-  %1 = tensor.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %0
+  %1 = linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %0
       : tensor<128x384xf32> -> tensor<16x48x8x8xf32>
   %2 = linalg.elemwise_unary ins(%1: tensor<16x48x8x8xf32>)
                              outs(%arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32>
@@ -156,14 +156,14 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-LABEL: func.func @nofuse_pack_elemwise
-// CHECK:         tensor.pack
+// CHECK:         linalg.pack
 // CHECK:         %[[RES:.*]] = scf.for
 // CHECK:           scf.for
 // CHECK:             linalg.elemwise_unary
 // CHECK:         return %[[RES]]
 func.func @nofuse_pack_elemwise(%arg0: tensor<128x384xf32>, %arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32> {
   %0 = tensor.empty() : tensor<16x48x8x8xf32>
-  %1 = tensor.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %0
+  %1 = linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %0
       : tensor<128x384xf32> -> tensor<16x48x8x8xf32>
   %2 = linalg.elemwise_unary ins(%1: tensor<16x48x8x8xf32>)
                              outs(%arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32>

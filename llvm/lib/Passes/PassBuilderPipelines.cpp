@@ -53,6 +53,7 @@
 #include "llvm/Transforms/IPO/ElimAvailExtern.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
+#include "llvm/Transforms/IPO/FatLTOCleanup.h"
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
@@ -1669,6 +1670,12 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   else
     MPM.addPass(buildLTOPreLinkDefaultPipeline(Level));
   MPM.addPass(EmbedBitcodePass(ThinLTO, EmitSummary));
+
+  // Perform any cleanups to the IR that aren't suitable for per TU compilation,
+  // like removing CFI/WPD related instructions. Note, we reuse
+  // LowerTypeTestsPass to clean up type tests rather than duplicate that logic
+  // in FatLtoCleanup.
+  MPM.addPass(FatLtoCleanup());
 
   // If we're doing FatLTO w/ CFI enabled, we don't want the type tests in the
   // object code, only in the bitcode section, so drop it before we run

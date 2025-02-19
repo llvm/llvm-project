@@ -2643,6 +2643,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
   }
+    // CK_HLSLAggregateSplatCast only handles splatting to vectors from a vec1
+    // Casts were inserted in Sema to Cast the Src Expr to a Scalar and
+    // To perform any necessary Scalar Cast, so this Cast can be handled
+    // by the regular Vector Splat cast code.
+  case CK_HLSLAggregateSplatCast:
   case CK_VectorSplat: {
     llvm::Type *DstTy = ConvertType(DestTy);
     Value *Elt = Visit(const_cast<Expr *>(E));
@@ -2800,7 +2805,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     SourceLocation Loc = CE->getExprLoc();
     QualType SrcTy = E->getType();
 
-    assert(RV.isAggregate() && "Not a valid HLSL Flat Cast.");
+    assert(RV.isAggregate() && "Not a valid HLSL Elementwise Cast.");
     // RHS is an aggregate
     Address SrcVal = RV.getAggregateAddress();
     return EmitHLSLElementwiseCast(CGF, SrcVal, SrcTy, DestTy, Loc);
