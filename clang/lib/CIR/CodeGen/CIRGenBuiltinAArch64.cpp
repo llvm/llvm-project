@@ -3889,7 +3889,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vget_lane_bf16:
   case NEON::BI__builtin_neon_vduph_lane_bf16:
   case NEON::BI__builtin_neon_vduph_lane_f16: {
-    llvm_unreachable("NEON::BI__builtin_neon_vduph_lane_f16 NYI");
+    return builder.create<cir::VecExtractOp>(getLoc(E->getExprLoc()), Ops[0],
+                                             emitScalarExpr(E->getArg(1)));
   }
   case NEON::BI__builtin_neon_vgetq_lane_bf16:
   case NEON::BI__builtin_neon_vduph_laneq_bf16:
