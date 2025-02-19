@@ -39,6 +39,8 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 
+#include <numeric>
+
 using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
@@ -2936,7 +2938,13 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
         CGM.getABIInfo().getOptimalVectorMemoryType(vTy, getLangOpts());
 
     if (vTy != newVecTy) {
-      llvm_unreachable("NYI");
+      const Address cast = addr.withElementType(newVecTy);
+      mlir::Value v = builder.createLoad(loc, cast, isVolatile);
+      const uint64_t oldNumElements = vTy.getSize();
+      SmallVector<int64_t, 16> mask(oldNumElements);
+      std::iota(mask.begin(), mask.end(), 0);
+      v = builder.createVecShuffle(loc, v, mask);
+      return emitFromMemory(v, ty);
     }
   }
 

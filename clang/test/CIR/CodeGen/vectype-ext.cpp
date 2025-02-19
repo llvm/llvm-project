@@ -2,7 +2,6 @@
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++17 -fclangir -emit-llvm -triple x86_64-unknown-linux-gnu %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
-// XFAIL: *
 
 typedef int vi4 __attribute__((ext_vector_type(4)));
 typedef int vi3 __attribute__((ext_vector_type(3)));
