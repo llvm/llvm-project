@@ -39,12 +39,15 @@ def RlistAsmOperand : AsmOperandClass {
   let Name = "Rlist";
   let ParserMethod = "parseReglist";
   let DiagnosticType = "InvalidRlist";
+  let DiagnosticString = "operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}";
 }
 
 def StackAdjAsmOperand : AsmOperandClass {
   let Name = "StackAdj";
   let ParserMethod = "parseZcmpStackAdj";
   let DiagnosticType = "InvalidStackAdj";
+  let DiagnosticString = "stack adjustment is invalid for this instruction and register list; "
+        "refer to Zc spec for a detailed range of stack adjustment";
   let PredicateMethod = "isSpimm";
   let RenderMethod = "addSpimmOperands";
 }
@@ -186,7 +189,7 @@ def C_ZEXT_B  : RVZcArith_r<0b11000 , "c.zext.b">,
                 Sched<[WriteIALU, ReadIALU]>;
 
 let Predicates = [HasStdExtZcb, HasStdExtZmmul] in
-def C_MUL     : CA_ALU<0b100111, 0b10, "c.mul", GPRC>,
+def C_MUL     : CA_ALU<0b100111, 0b10, "c.mul">,
                 Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 
 let Predicates = [HasStdExtZcb] in {

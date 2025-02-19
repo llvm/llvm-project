@@ -51,12 +51,14 @@ public:
         loc(loc) {}
 
   template <typename OpTy>
-  Value buildBinaryExpr(AffineBinaryOpExpr expr) {
+  Value buildBinaryExpr(AffineBinaryOpExpr expr,
+                        arith::IntegerOverflowFlags overflowFlags =
+                            arith::IntegerOverflowFlags::none) {
     auto lhs = visit(expr.getLHS());
     auto rhs = visit(expr.getRHS());
     if (!lhs || !rhs)
       return nullptr;
-    auto op = builder.create<OpTy>(loc, lhs, rhs);
+    auto op = builder.create<OpTy>(loc, lhs, rhs, overflowFlags);
     return op.getResult();
   }
 
@@ -65,7 +67,8 @@ public:
   }
 
   Value visitMulExpr(AffineBinaryOpExpr expr) {
-    return buildBinaryExpr<arith::MulIOp>(expr);
+    return buildBinaryExpr<arith::MulIOp>(expr,
+                                          arith::IntegerOverflowFlags::nsw);
   }
 
   /// Euclidean modulo operation: negative RHS is not allowed.
@@ -425,8 +428,8 @@ LogicalResult mlir::affine::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   GreedyRewriteConfig config;
   config.strictMode = GreedyRewriteStrictness::ExistingOps;
   bool erased;
-  (void)applyOpPatternsAndFold(ifOp.getOperation(), frozenPatterns, config,
-                               /*changed=*/nullptr, &erased);
+  (void)applyOpPatternsGreedily(ifOp.getOperation(), frozenPatterns, config,
+                                /*changed=*/nullptr, &erased);
   if (erased) {
     if (folded)
       *folded = true;
@@ -454,7 +457,7 @@ LogicalResult mlir::affine::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
 
   // Canonicalize to remove dead else blocks (happens whenever an 'if' moves up
   // a sequence of affine.fors that are all perfectly nested).
-  (void)applyPatternsAndFoldGreedily(
+  (void)applyPatternsGreedily(
       hoistedIfOp->getParentWithTrait<OpTrait::IsIsolatedFromAbove>(),
       frozenPatterns);
 
@@ -1391,11 +1394,11 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
   std::unique_ptr<PostDominanceInfo> postDomInfo;
   if (domOpFilter)
     domInfo = std::make_unique<DominanceInfo>(
-        domOpFilter->getParentOfType<func::FuncOp>());
+        domOpFilter->getParentOfType<FunctionOpInterface>());
 
   if (postDomOpFilter)
     postDomInfo = std::make_unique<PostDominanceInfo>(
-        postDomOpFilter->getParentOfType<func::FuncOp>());
+        postDomOpFilter->getParentOfType<FunctionOpInterface>());
 
   // Walk all uses of old memref; collect ops to perform replacement. We use a
   // DenseSet since an operation could potentially have multiple uses of a
@@ -1734,9 +1737,10 @@ static AffineExpr createDimSizeExprForTiledLayout(AffineExpr oldMapOutput,
 ///   %c4 = arith.constant 4 : index
 ///   %1 = affine.apply #map1(%c4, %0)
 ///   %2 = affine.apply #map2(%c4, %0)
+template <typename AllocLikeOp>
 static void createNewDynamicSizes(MemRefType oldMemRefType,
                                   MemRefType newMemRefType, AffineMap map,
-                                  memref::AllocOp *allocOp, OpBuilder b,
+                                  AllocLikeOp *allocOp, OpBuilder b,
                                   SmallVectorImpl<Value> &newDynamicSizes) {
   // Create new input for AffineApplyOp.
   SmallVector<Value, 4> inAffineApply;
@@ -1783,7 +1787,8 @@ static void createNewDynamicSizes(MemRefType oldMemRefType,
 }
 
 // TODO: Currently works for static memrefs with a single layout map.
-LogicalResult mlir::affine::normalizeMemRef(memref::AllocOp *allocOp) {
+template <typename AllocLikeOp>
+LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp *allocOp) {
   MemRefType memrefType = allocOp->getType();
   OpBuilder b(*allocOp);
 
@@ -1799,7 +1804,7 @@ LogicalResult mlir::affine::normalizeMemRef(memref::AllocOp *allocOp) {
 
   SmallVector<Value, 4> symbolOperands(allocOp->getSymbolOperands());
   AffineMap layoutMap = memrefType.getLayout().getAffineMap();
-  memref::AllocOp newAlloc;
+  AllocLikeOp newAlloc;
   // Check if `layoutMap` is a tiled layout. Only single layout map is
   // supported for normalizing dynamic memrefs.
   SmallVector<std::tuple<AffineExpr, unsigned, unsigned>> tileSizePos;
@@ -1811,11 +1816,11 @@ LogicalResult mlir::affine::normalizeMemRef(memref::AllocOp *allocOp) {
                           newDynamicSizes);
     // Add the new dynamic sizes in new AllocOp.
     newAlloc =
-        b.create<memref::AllocOp>(allocOp->getLoc(), newMemRefType,
-                                  newDynamicSizes, allocOp->getAlignmentAttr());
+        b.create<AllocLikeOp>(allocOp->getLoc(), newMemRefType, newDynamicSizes,
+                              allocOp->getAlignmentAttr());
   } else {
-    newAlloc = b.create<memref::AllocOp>(allocOp->getLoc(), newMemRefType,
-                                         allocOp->getAlignmentAttr());
+    newAlloc = b.create<AllocLikeOp>(allocOp->getLoc(), newMemRefType,
+                                     allocOp->getAlignmentAttr());
   }
   // Replace all uses of the old memref.
   if (failed(replaceAllMemRefUsesWith(oldMemRef, /*newMemRef=*/newAlloc,
@@ -1839,6 +1844,11 @@ LogicalResult mlir::affine::normalizeMemRef(memref::AllocOp *allocOp) {
   allocOp->erase();
   return success();
 }
+
+template LogicalResult
+mlir::affine::normalizeMemRef<memref::AllocaOp>(memref::AllocaOp *op);
+template LogicalResult
+mlir::affine::normalizeMemRef<memref::AllocOp>(memref::AllocOp *op);
 
 MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
   unsigned rank = memrefType.getRank();
@@ -1944,11 +1954,14 @@ static FailureOr<OpFoldResult> composedAffineMultiply(OpBuilder &b,
 
 FailureOr<SmallVector<Value>>
 mlir::affine::delinearizeIndex(OpBuilder &b, Location loc, Value linearIndex,
-                               ArrayRef<Value> basis) {
+                               ArrayRef<Value> basis, bool hasOuterBound) {
+  if (hasOuterBound)
+    basis = basis.drop_front();
+
   // Note: the divisors are backwards due to the scan.
   SmallVector<Value> divisors;
   OpFoldResult basisProd = b.getIndexAttr(1);
-  for (OpFoldResult basisElem : llvm::reverse(basis.drop_front())) {
+  for (OpFoldResult basisElem : llvm::reverse(basis)) {
     FailureOr<OpFoldResult> nextProd =
         composedAffineMultiply(b, loc, basisElem, basisProd);
     if (failed(nextProd))
@@ -1971,11 +1984,15 @@ mlir::affine::delinearizeIndex(OpBuilder &b, Location loc, Value linearIndex,
 
 FailureOr<SmallVector<Value>>
 mlir::affine::delinearizeIndex(OpBuilder &b, Location loc, Value linearIndex,
-                               ArrayRef<OpFoldResult> basis) {
+                               ArrayRef<OpFoldResult> basis,
+                               bool hasOuterBound) {
+  if (hasOuterBound)
+    basis = basis.drop_front();
+
   // Note: the divisors are backwards due to the scan.
   SmallVector<Value> divisors;
   OpFoldResult basisProd = b.getIndexAttr(1);
-  for (OpFoldResult basisElem : llvm::reverse(basis.drop_front())) {
+  for (OpFoldResult basisElem : llvm::reverse(basis)) {
     FailureOr<OpFoldResult> nextProd =
         composedAffineMultiply(b, loc, basisElem, basisProd);
     if (failed(nextProd))
@@ -2005,8 +2022,15 @@ OpFoldResult mlir::affine::linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
 OpFoldResult mlir::affine::linearizeIndex(OpBuilder &builder, Location loc,
                                           ArrayRef<OpFoldResult> multiIndex,
                                           ArrayRef<OpFoldResult> basis) {
-  assert(multiIndex.size() == basis.size());
+  assert(multiIndex.size() == basis.size() ||
+         multiIndex.size() == basis.size() + 1);
   SmallVector<AffineExpr> basisAffine;
+
+  // Add a fake initial size in order to make the later index linearization
+  // computations line up if an outer bound is not provided.
+  if (multiIndex.size() == basis.size() + 1)
+    basisAffine.push_back(getAffineConstantExpr(1, builder.getContext()));
+
   for (size_t i = 0; i < basis.size(); ++i) {
     basisAffine.push_back(getAffineSymbolExpr(i, builder.getContext()));
   }

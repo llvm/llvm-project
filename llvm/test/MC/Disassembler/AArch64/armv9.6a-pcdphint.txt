@@ -4,6 +4,5 @@
 [0x1f,0x96,0x01,0xd5]
 [0x3f,0x96,0x01,0xd5]
 
-# CHECK:      	.text
-# CHECK-NEXT: 	stshh	keep
+# CHECK:      	stshh	keep
 # CHECK-NEXT: 	stshh	strm

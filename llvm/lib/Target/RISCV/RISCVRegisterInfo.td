@@ -208,6 +208,8 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 def XLenVT : ValueTypeByHwMode<[RV32, RV64],
                                [i32,  i64]>;
+defvar XLenPairVT = untyped;
+
 // Allow f64 in GPR for ZDINX on RV64.
 def XLenFVT : ValueTypeByHwMode<[RV64],
                                 [f64]>;
@@ -245,12 +247,26 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 0, 4))>;
 
 def GPRX0 : GPRRegisterClass<(add X0)>;
-def GPRX1 : GPRRegisterClass<(add X1)>;
-def GPRX5 : GPRRegisterClass<(add X5)>;
 
-def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)>;
+def GPRX1 : GPRRegisterClass<(add X1)> {
+  let DiagnosticType = "InvalidRegClassGPRX1";
+  let DiagnosticString = "register must be ra (x1)";
+}
 
-def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)>;
+def GPRX5 : GPRRegisterClass<(add X5)> {
+  let DiagnosticType = "InvalidRegClassGPRX5";
+  let DiagnosticString = "register must be t0 (x5)";
+}
+
+def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)> {
+  let DiagnosticType = "InvalidRegClassGPRX0";
+  let DiagnosticString = "register must be a GPR excluding zero (x0)";
+}
+
+def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)> {
+  let DiagnosticType = "InvalidRegClassGPRNoX0X2";
+  let DiagnosticString = "register must be a GPR excluding zero (x0) and sp (x2)";
+}
 
 def GPRX7 : GPRRegisterClass<(add X7)>;
 
@@ -274,13 +290,19 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
                                   (sequence "X%u", 28, 31))>;
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
-def SP : GPRRegisterClass<(add X2)>;
+def SP : GPRRegisterClass<(add X2)> {
+  let DiagnosticType = "InvalidRegClassSP";
+  let DiagnosticString = "register must be sp (x2)";
+}
 
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
                                  (sequence "X%u", 18, 23))>;
 
-def GPRX1X5 :  GPRRegisterClass<(add X1, X5)>;
+def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
+  let DiagnosticType = "InvalidRegClassGPRX1X5";
+  let DiagnosticString = "register must be ra or t0 (x1 or x5)";
+}
 
 //===----------------------------------------------------------------------===//
 // Even-Odd GPR Pairs
@@ -323,7 +345,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 let RegInfos = XLenPairRI,
     DecoderMethod = "DecodeGPRPairRegisterClass" in {
-def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
+def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
     X28_X29, X30_X31,
@@ -332,11 +354,11 @@ def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
     X0_Pair, X2_X3, X4_X5
 )>;
 
-def GPRPairNoX0 : RISCVRegisterClass<[XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
+def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
 } // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
 
 let RegInfos = XLenPairRI in
-def GPRPairC : RISCVRegisterClass<[XLenPairFVT], 64, (add
+def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
   X10_X11, X12_X13, X14_X15, X8_X9
 )>;
 
@@ -461,7 +483,6 @@ def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
 def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
                                                  (sequence "X%u_W", 8, 9))>;
 def GPRF32NoX0 : RISCVRegisterClass<[f32], 32, (sub GPRF32, X0_W)>;
-
 
 //===----------------------------------------------------------------------===//
 // Vector type mapping to LLVM types.

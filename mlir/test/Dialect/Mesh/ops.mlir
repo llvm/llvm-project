@@ -164,6 +164,14 @@ func.func @mesh_shard_shape() {
   return
 }
 
+// CHECK-LABEL: func @mesh_get_sharding
+// CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
+func.func @mesh_get_sharding(%arg0 : tensor<4x8xf32>) -> !mesh.sharding {
+  // CHECK-NEXT: mesh.get_sharding %[[ARG]] : tensor<4x8xf32> -> !mesh.sharding
+  %0 = mesh.get_sharding %arg0 : tensor<4x8xf32> -> !mesh.sharding
+  return %0 : !mesh.sharding
+}
+
 // CHECK-LABEL: func @mesh_shape
 func.func @mesh_shape() -> (index, index) {
   // CHECK: %[[RES:.*]]:2 = mesh.mesh_shape @mesh0 axes = [0, 1] : index, index
@@ -615,16 +623,16 @@ func.func @update_halo(
     // CHECK-SAME: %[[ARG:.*]]: memref<12x12xi8>
     %arg0 : memref<12x12xi8>) {
   // CHECK-NEXT: %[[C2:.*]] = arith.constant 2 : i64
-  // CHECK-NEXT: %[[UH1:.*]] = mesh.update_halo %[[ARG]] into %[[ARG]] on @mesh0
+  // CHECK-NEXT: %[[UH1:.*]] = mesh.update_halo %[[ARG]] on @mesh0
   // CHECK-SAME: split_axes = {{\[\[}}0]]
-  // CHECK-SAME: halo_sizes = [2, %c2_i64] : memref<12x12xi8> -> memref<12x12xi8>
+  // CHECK-SAME: halo_sizes = [2, %c2_i64] : memref<12x12xi8>
   %c2 = arith.constant 2 : i64
-  %uh1 = mesh.update_halo %arg0 into %arg0 on @mesh0 split_axes = [[0]]
-    source_halo_sizes = [2, %c2] : memref<12x12xi8> -> memref<12x12xi8>
-  // CHECK-NEXT: %[[UH2:.*]] = mesh.update_halo %[[ARG]] into %[[UH1]] on @mesh0
+  %uh1 = mesh.update_halo %arg0 on @mesh0 split_axes = [[0]]
+    halo_sizes = [2, %c2] : memref<12x12xi8>
+  // CHECK-NEXT: %[[UH2:.*]] = mesh.update_halo %[[UH1]] on @mesh0
   // CHECK-SAME: split_axes = {{\[\[}}0], [1]]
-  // CHECK-SAME: halo_sizes = [2, 2, %[[C2]], 2] : memref<12x12xi8> -> memref<12x12xi8>
-  %uh2 = mesh.update_halo %arg0 into %uh1 on @mesh0 split_axes = [[0], [1]]
-    source_halo_sizes = [2, 2, %c2, 2] : memref<12x12xi8> -> memref<12x12xi8>
+  // CHECK-SAME: halo_sizes = [2, 2, %[[C2]], 2] : memref<12x12xi8>
+  %uh2 = mesh.update_halo %uh1 on @mesh0 split_axes = [[0], [1]]
+    halo_sizes = [2, 2, %c2, 2] : memref<12x12xi8>
   return
 }

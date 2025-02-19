@@ -18,6 +18,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -284,6 +285,24 @@ void GlobalObject::setSection(StringRef S) {
   // Update the HasSectionHashEntryBit. Setting the section to the empty string
   // means this global no longer has a section.
   setGlobalObjectFlag(HasSectionHashEntryBit, !S.empty());
+}
+
+void GlobalObject::setSectionPrefix(StringRef Prefix) {
+  MDBuilder MDB(getContext());
+  setMetadata(LLVMContext::MD_section_prefix,
+              MDB.createGlobalObjectSectionPrefix(Prefix));
+}
+
+std::optional<StringRef> GlobalObject::getSectionPrefix() const {
+  if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
+    [[maybe_unused]] StringRef MDName =
+        cast<MDString>(MD->getOperand(0))->getString();
+    assert((MDName == "section_prefix" ||
+            (isa<Function>(this) && MDName == "function_section_prefix")) &&
+           "Metadata not match");
+    return cast<MDString>(MD->getOperand(1))->getString();
+  }
+  return std::nullopt;
 }
 
 bool GlobalValue::isNobuiltinFnDef() const {

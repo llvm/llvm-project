@@ -162,7 +162,7 @@ public:
   LIBC_INLINE constexpr bool has_active_reader() const {
     return state >= ACTIVE_READER_COUNT_UNIT;
   }
-  LIBC_INLINE constexpr bool has_acitve_owner() const {
+  LIBC_INLINE constexpr bool has_active_owner() const {
     return has_active_reader() || has_active_writer();
   }
   LIBC_INLINE constexpr bool has_last_reader() const {
@@ -193,7 +193,7 @@ public:
       }
       __builtin_unreachable();
     } else
-      return !has_acitve_owner();
+      return !has_active_owner();
   }
 
   // This function check if it is possible to grow the reader count without
@@ -548,7 +548,7 @@ public:
   [[nodiscard]]
   LIBC_INLINE LockResult check_for_destroy() {
     RwState old = RwState::load(state, cpp::MemoryOrder::RELAXED);
-    if (old.has_acitve_owner())
+    if (old.has_active_owner())
       return LockResult::Busy;
     return LockResult::Success;
   }

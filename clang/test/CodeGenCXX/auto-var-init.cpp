@@ -1296,7 +1296,7 @@ TEST_CUSTOM(semivolatile, semivolatile, { 0x44444444, 0x44444444 });
 // CHECK-NOT:   !annotation
 // CHECK-O0:  call void @{{.*}}used{{.*}}%custom)
 // PATTERN-O1:       store i32 1145324612, ptr %custom, align 4
-// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 4
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw i8, ptr %custom, i64 4
 // PATTERN-O1-NEXT:  store i32 1145324612, ptr %[[I]], align 4
 // ZERO-O1:          store i64 4919131752989213764, ptr %custom, align 8
 // CHECK-NOT:   !annotation
@@ -1338,7 +1338,7 @@ TEST_UNINIT(base, base);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_base_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_base_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV4base, i64 16), {{.*}}, align 8
+// ZERO-O1: store ptr getelementptr inbounds nuw inrange(-16, 16) (i8, ptr @_ZTV4base, i64 16), {{.*}}, align 8
 // ZERO-O1-NOT: !annotation
 
 TEST_BRACES(base, base);
@@ -1359,7 +1359,7 @@ TEST_UNINIT(derived, derived);
 // ZERO-LABEL: @test_derived_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-O1: store i64 0, {{.*}} align 8, !annotation [[AUTO_INIT]]
-// ZERO-O1: store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV7derived, i64 16), {{.*}} align 8
+// ZERO-O1: store ptr getelementptr inbounds nuw inrange(-16, 16) (i8, ptr @_ZTV7derived, i64 16), {{.*}} align 8
 
 TEST_BRACES(derived, derived);
 // CHECK-LABEL: @test_derived_braces()
@@ -1494,11 +1494,11 @@ TEST_CUSTOM(unmatchedreverse, unmatchedreverse, { .c = 42  });
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
 // PATTERN-O1:  store i8 42, ptr {{.*}}, align 4
-// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 1
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw i8, ptr %custom, i64 1
 // PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
-// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 2
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw i8, ptr %custom, i64 2
 // PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
-// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 3
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw i8, ptr %custom, i64 3
 // PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
 // ZERO-O1:     store i32 42, ptr {{.*}}, align 4
 

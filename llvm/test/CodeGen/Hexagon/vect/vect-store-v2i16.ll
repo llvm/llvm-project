@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 ; Used to fail with: "Cannot select: 0x3bab680: ch = store <ST4[%lsr.iv522525], trunc to v2i16>
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-a0:0-n32"

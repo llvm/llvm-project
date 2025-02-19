@@ -205,7 +205,8 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
       // TODO: As more features of the V1.1 ISA are supported, a unified "v1.1"
       // arch feature set will be used to include all sub-features belonging to
       // the V1.1 ISA version.
-      if (HasFeatureFrecipe && HasFeatureLAM_BH)
+      if (HasFeatureFrecipe && HasFeatureLAM_BH && HasFeatureLAMCAS &&
+          HasFeatureLD_SEQ_SA && HasFeatureDiv32 && HasFeatureSCQ)
         Builder.defineMacro("__loongarch_arch",
                             Twine('"') + "la64v1.1" + Twine('"'));
       else
@@ -239,6 +240,18 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasFeatureLAM_BH)
     Builder.defineMacro("__loongarch_lam_bh", Twine(1));
 
+  if (HasFeatureLAMCAS)
+    Builder.defineMacro("__loongarch_lamcas", Twine(1));
+
+  if (HasFeatureLD_SEQ_SA)
+    Builder.defineMacro("__loongarch_ld_seq_sa", Twine(1));
+
+  if (HasFeatureDiv32)
+    Builder.defineMacro("__loongarch_div32", Twine(1));
+
+  if (HasFeatureSCQ)
+    Builder.defineMacro("__loongarch_scq", Twine(1));
+
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
     Builder.defineMacro("__loongarch_lp64");
@@ -260,13 +273,55 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsLoongArch.def"
-};
+static constexpr int NumBaseBuiltins =
+    LoongArch::FirstLSXBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumLSXBuiltins =
+    LoongArch::FirstLASXBuiltin - LoongArch::FirstLSXBuiltin;
+static constexpr int NumLASXBuiltins =
+    LoongArch::LastTSBuiltin - LoongArch::FirstLASXBuiltin;
+static constexpr int NumBuiltins =
+    LoongArch::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins ==
+              (NumBaseBuiltins + NumLSXBuiltins + NumLASXBuiltins));
+
+static constexpr llvm::StringTable BuiltinBaseStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsLoongArchBase.def"
+#undef TARGET_BUILTIN
+    ;
+
+static constexpr auto BuiltinBaseInfos = Builtin::MakeInfos<NumBaseBuiltins>({
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsLoongArchBase.def"
+#undef TARGET_BUILTIN
+});
+
+static constexpr llvm::StringTable BuiltinLSXStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsLoongArchLSX.def"
+#undef TARGET_BUILTIN
+    ;
+
+static constexpr auto BuiltinLSXInfos = Builtin::MakeInfos<NumLSXBuiltins>({
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsLoongArchLSX.def"
+#undef TARGET_BUILTIN
+});
+
+static constexpr llvm::StringTable BuiltinLASXStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsLoongArchLASX.def"
+#undef TARGET_BUILTIN
+    ;
+
+static constexpr auto BuiltinLASXInfos = Builtin::MakeInfos<NumLASXBuiltins>({
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsLoongArchLASX.def"
+#undef TARGET_BUILTIN
+});
 
 bool LoongArchTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
@@ -293,9 +348,13 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
       .Default(false);
 }
 
-ArrayRef<Builtin::Info> LoongArchTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo, clang::LoongArch::LastTSBuiltin -
-                                         Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+LoongArchTargetInfo::getTargetBuiltins() const {
+  return {
+      {&BuiltinBaseStrings, BuiltinBaseInfos},
+      {&BuiltinLSXStrings, BuiltinLSXInfos},
+      {&BuiltinLASXStrings, BuiltinLASXInfos},
+  };
 }
 
 bool LoongArchTargetInfo::handleTargetFeatures(
@@ -317,6 +376,14 @@ bool LoongArchTargetInfo::handleTargetFeatures(
       HasFeatureFrecipe = true;
     else if (Feature == "+lam-bh")
       HasFeatureLAM_BH = true;
+    else if (Feature == "+lamcas")
+      HasFeatureLAMCAS = true;
+    else if (Feature == "+ld-seq-sa")
+      HasFeatureLD_SEQ_SA = true;
+    else if (Feature == "+div32")
+      HasFeatureDiv32 = true;
+    else if (Feature == "+scq")
+      HasFeatureSCQ = true;
   }
   return true;
 }

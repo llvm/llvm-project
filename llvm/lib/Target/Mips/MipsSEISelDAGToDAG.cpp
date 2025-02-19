@@ -70,7 +70,7 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
     MIB.addReg(Mips::DSPEFI, Flag);
 }
 
-unsigned MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
+MCRegister MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
   uint64_t RegNum = RegIdx->getAsZExtVal();
   return Mips::MSACtrlRegClass.getRegister(RegNum);
 }
@@ -614,11 +614,9 @@ bool MipsSEDAGToDAGISel::selectVSplatMaskL(SDValue N, SDValue &Imm) const {
 
   if (selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
       ImmValue.getBitWidth() == EltTy.getSizeInBits()) {
-    // Extract the run of set bits starting with bit zero from the bitwise
-    // inverse of ImmValue, and test that the inverse of this is the same
-    // as the original value.
-    if (ImmValue == ~(~ImmValue & ~(~ImmValue + 1))) {
-
+    // Check if we have a leading one, then check if the whole value is a
+    // shifted mask.
+    if (ImmValue.isNegative() && ImmValue.isShiftedMask()) {
       Imm = CurDAG->getTargetConstant(ImmValue.popcount() - 1, SDLoc(N), EltTy);
       return true;
     }
@@ -647,9 +645,7 @@ bool MipsSEDAGToDAGISel::selectVSplatMaskR(SDValue N, SDValue &Imm) const {
 
   if (selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
       ImmValue.getBitWidth() == EltTy.getSizeInBits()) {
-    // Extract the run of set bits starting with bit zero, and test that the
-    // result is the same as the original value
-    if (ImmValue == (ImmValue & ~(ImmValue + 1))) {
+    if (ImmValue.isMask()) {
       Imm = CurDAG->getTargetConstant(ImmValue.popcount() - 1, SDLoc(N), EltTy);
       return true;
     }

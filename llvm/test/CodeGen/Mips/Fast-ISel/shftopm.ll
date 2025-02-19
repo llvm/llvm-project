@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel -relocation-model=pic -O0 \
+; RUN: llc -mtriple=mipsel -relocation-model=pic -O0 \
 ; RUN:     -fast-isel-abort=3 -mcpu=mips32r2  < %s | FileCheck %s
-; RUN: llc -march=mipsel -relocation-model=pic -O0 \
+; RUN: llc -mtriple=mipsel -relocation-model=pic -O0 \
 ; RUN:     -fast-isel-abort=3 -mcpu=mips32 < %s | FileCheck %s
 
 @s1 = global i16 -89, align 2

@@ -1,4 +1,3 @@
-// RUN: llvm-mc -triple=amdgcn -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
 // RUN: llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
 // RUN: llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
 // RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefixes=GCN,VI

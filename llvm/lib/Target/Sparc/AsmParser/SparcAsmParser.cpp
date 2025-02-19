@@ -9,7 +9,6 @@
 #include "MCTargetDesc/SparcMCExpr.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "TargetInfo/SparcTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmMacro.h"
@@ -131,6 +130,9 @@ class SparcAsmParser : public MCTargetAsmParser {
   bool expandSET(MCInst &Inst, SMLoc IDLoc,
                  SmallVectorImpl<MCInst> &Instructions);
 
+  bool expandSETSW(MCInst &Inst, SMLoc IDLoc,
+                   SmallVectorImpl<MCInst> &Instructions);
+
   bool expandSETX(MCInst &Inst, SMLoc IDLoc,
                   SmallVectorImpl<MCInst> &Instructions);
 
@@ -221,6 +223,7 @@ private:
     k_MemoryImm,
     k_ASITag,
     k_PrefetchTag,
+    k_TailRelocSym, // Special kind of immediate for TLS relocation purposes.
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -266,7 +269,7 @@ public:
   bool isMembarTag() const { return Kind == k_Immediate; }
   bool isASITag() const { return Kind == k_ASITag; }
   bool isPrefetchTag() const { return Kind == k_PrefetchTag; }
-  bool isTailRelocSym() const { return Kind == k_Immediate; }
+  bool isTailRelocSym() const { return Kind == k_TailRelocSym; }
 
   bool isCallTarget() const {
     if (!isImm())
@@ -355,6 +358,11 @@ public:
     return Prefetch;
   }
 
+  const MCExpr *getTailRelocSym() const {
+    assert((Kind == k_TailRelocSym) && "Invalid access!");
+    return Imm.Val;
+  }
+
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override {
     return StartLoc;
@@ -380,6 +388,9 @@ public:
       break;
     case k_PrefetchTag:
       OS << "Prefetch tag: " << getPrefetchTag() << "\n";
+      break;
+    case k_TailRelocSym:
+      OS << "TailReloc: " << getTailRelocSym() << "\n";
       break;
     }
   }
@@ -455,7 +466,7 @@ public:
 
   void addTailRelocSymOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    addExpr(Inst, getImm());
+    addExpr(Inst, getTailRelocSym());
   }
 
   static std::unique_ptr<SparcOperand> CreateToken(StringRef Str, SMLoc S) {
@@ -504,8 +515,17 @@ public:
     return Op;
   }
 
+  static std::unique_ptr<SparcOperand> CreateTailRelocSym(const MCExpr *Val,
+                                                          SMLoc S, SMLoc E) {
+    auto Op = std::make_unique<SparcOperand>(k_TailRelocSym);
+    Op->Imm.Val = Val;
+    Op->StartLoc = S;
+    Op->EndLoc = E;
+    return Op;
+  }
+
   static bool MorphToIntPairReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     assert(Op.Reg.Kind == rk_IntReg);
     unsigned regIdx = 32;
     if (Reg >= Sparc::G0 && Reg <= Sparc::G7)
@@ -524,7 +544,7 @@ public:
   }
 
   static bool MorphToDoubleReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     assert(Op.Reg.Kind == rk_FloatReg);
     unsigned regIdx = Reg - Sparc::F0;
     if (regIdx % 2 || regIdx > 31)
@@ -535,7 +555,7 @@ public:
   }
 
   static bool MorphToQuadReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     unsigned regIdx = 0;
     switch (Op.Reg.Kind) {
     default: llvm_unreachable("Unexpected register kind!");
@@ -558,7 +578,7 @@ public:
   }
 
   static bool MorphToCoprocPairReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     assert(Op.Reg.Kind == rk_CoprocReg);
     unsigned regIdx = 32;
     if (Reg >= Sparc::C0 && Reg <= Sparc::C31)
@@ -572,7 +592,7 @@ public:
 
   static std::unique_ptr<SparcOperand>
   MorphToMEMrr(unsigned Base, std::unique_ptr<SparcOperand> Op) {
-    unsigned offsetReg = Op->getReg();
+    MCRegister offsetReg = Op->getReg();
     Op->Kind = k_MemoryReg;
     Op->Mem.Base = Base;
     Op->Mem.OffsetReg = offsetReg;
@@ -717,6 +737,69 @@ bool SparcAsmParser::expandSET(MCInst &Inst, SMLoc IDLoc,
   return false;
 }
 
+bool SparcAsmParser::expandSETSW(MCInst &Inst, SMLoc IDLoc,
+                                 SmallVectorImpl<MCInst> &Instructions) {
+  MCOperand MCRegOp = Inst.getOperand(0);
+  MCOperand MCValOp = Inst.getOperand(1);
+  assert(MCRegOp.isReg());
+  assert(MCValOp.isImm() || MCValOp.isExpr());
+
+  // The imm operand can be either an expression or an immediate.
+  bool IsImm = Inst.getOperand(1).isImm();
+  int64_t ImmValue = IsImm ? MCValOp.getImm() : 0;
+  const MCExpr *ValExpr = IsImm ? MCConstantExpr::create(ImmValue, getContext())
+                                : MCValOp.getExpr();
+
+  bool IsSmallImm = IsImm && isInt<13>(ImmValue);
+  bool NoLowBitsImm = IsImm && ((ImmValue & 0x3FF) == 0);
+
+  MCOperand PrevReg = MCOperand::createReg(Sparc::G0);
+
+  if (!isInt<32>(ImmValue)) {
+    return Error(IDLoc,
+                 "set: argument must be between -2147483648 and 2147483647");
+  }
+
+  // Very small immediates can be expressed without emitting a sethi.
+  if (!IsSmallImm) {
+    // sethi %hi(val), rd
+    Instructions.push_back(
+        MCInstBuilder(SP::SETHIi)
+            .addReg(MCRegOp.getReg())
+            .addExpr(adjustPICRelocation(SparcMCExpr::VK_Sparc_HI, ValExpr)));
+
+    PrevReg = MCRegOp;
+  }
+
+  // If the immediate has the lower bits set or is small, we need to emit an or.
+  if (!NoLowBitsImm || IsSmallImm) {
+    const MCExpr *Expr =
+        IsSmallImm ? ValExpr
+                   : adjustPICRelocation(SparcMCExpr::VK_Sparc_LO, ValExpr);
+
+    // or rd, %lo(val), rd
+    Instructions.push_back(MCInstBuilder(SP::ORri)
+                               .addReg(MCRegOp.getReg())
+                               .addReg(PrevReg.getReg())
+                               .addExpr(Expr));
+
+    // If it's a small immediate there's nothing more to do.
+    if (IsSmallImm)
+      return false;
+  }
+
+  // Large negative or non-immediate expressions would need an sra.
+  if (!IsImm || ImmValue < 0) {
+    // sra rd, %g0, rd
+    Instructions.push_back(MCInstBuilder(SP::SRArr)
+                               .addReg(MCRegOp.getReg())
+                               .addReg(MCRegOp.getReg())
+                               .addReg(Sparc::G0));
+  }
+
+  return false;
+}
+
 bool SparcAsmParser::expandSETX(MCInst &Inst, SMLoc IDLoc,
                                 SmallVectorImpl<MCInst> &Instructions) {
   MCOperand MCRegOp = Inst.getOperand(0);
@@ -807,6 +890,10 @@ bool SparcAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       break;
     case SP::SET:
       if (expandSET(Inst, IDLoc, Instructions))
+        return true;
+      break;
+    case SP::SETSW:
+      if (expandSETSW(Inst, IDLoc, Instructions))
         return true;
       break;
     case SP::SETX:
@@ -1071,7 +1158,7 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
   };
 
   if (getLexer().getKind() != AsmToken::Percent)
-    return Error(getLoc(), "expected '%' for operand modifier");
+    return ParseStatus::NoMatch;
 
   const AsmToken Tok = Parser.getTok();
   getParser().Lex(); // Eat '%'
@@ -1100,7 +1187,7 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
     return ParseStatus::Failure;
 
   const MCExpr *Val = adjustPICRelocation(VK, SubExpr);
-  Operands.push_back(SparcOperand::CreateImm(Val, S, E));
+  Operands.push_back(SparcOperand::CreateTailRelocSym(Val, S, E));
   return ParseStatus::Success;
 }
 

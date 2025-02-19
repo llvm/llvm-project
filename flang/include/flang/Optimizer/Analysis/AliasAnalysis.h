@@ -129,7 +129,7 @@ struct AliasAnalysis {
       /// inlining happens an inlined fir.declare of the callee's
       /// dummy argument identifies the scope where the source
       /// may be treated as a dummy argument.
-      mlir::Value instantiationPoint;
+      mlir::Operation *instantiationPoint;
 
       /// Whether the source was reached following data or box reference
       bool isData{false};
@@ -146,6 +146,8 @@ struct AliasAnalysis {
     /// Have we lost precision following the source such that
     /// even an exact match cannot be MustAlias?
     bool approximateSource;
+    /// Source object is used in an internal procedure via host association.
+    bool isCapturedInInternalProcedure{false};
 
     /// Print information about the memory source to `os`.
     void print(llvm::raw_ostream &os) const;
@@ -156,6 +158,9 @@ struct AliasAnalysis {
     bool isDummyArgument() const;
     bool isData() const;
     bool isBoxData() const;
+
+    /// Is this source a variable from the Fortran source?
+    bool isFortranUserVariable() const;
 
     /// @name Dummy Argument Aliasing
     ///
@@ -193,21 +198,27 @@ struct AliasAnalysis {
   /// Return the modify-reference behavior of `op` on `location`.
   mlir::ModRefResult getModRef(mlir::Operation *op, mlir::Value location);
 
+  /// Return the modify-reference behavior of operations inside `region` on
+  /// `location`. Contrary to getModRef(operation, location), this will visit
+  /// nested regions recursively according to the HasRecursiveMemoryEffects
+  /// trait.
+  mlir::ModRefResult getModRef(mlir::Region &region, mlir::Value location);
+
   /// Return the memory source of a value.
-  /// If getInstantiationPoint is true, the search for the source
+  /// If getLastInstantiationPoint is true, the search for the source
   /// will stop at [hl]fir.declare if it represents a dummy
   /// argument declaration (i.e. it has the dummy_scope operand).
   fir::AliasAnalysis::Source getSource(mlir::Value,
-                                       bool getInstantiationPoint = false);
+                                       bool getLastInstantiationPoint = false);
+
+  /// Return true, if `ty` is a reference type to a boxed
+  /// POINTER object or a raw fir::PointerType.
+  static bool isPointerReference(mlir::Type ty);
 
 private:
   /// Return true, if `ty` is a reference type to an object of derived type
   /// that contains a component with POINTER attribute.
   static bool isRecordWithPointerComponent(mlir::Type ty);
-
-  /// Return true, if `ty` is a reference type to a boxed
-  /// POINTER object or a raw fir::PointerType.
-  static bool isPointerReference(mlir::Type ty);
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

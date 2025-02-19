@@ -839,14 +839,12 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
 namespace {
 // Fold away ForOp iter arguments when:
 // 1) The op yields the iter arguments.
-// 2) The iter arguments have no use and the corresponding outer region
-// iterators (inputs) are yielded.
+// 2) The argument's corresponding outer region iterators (inputs) are yielded.
 // 3) The iter arguments have no use and the corresponding (operation) results
 // have no use.
 //
-// These arguments must be defined outside of
-// the ForOp region and can just be forwarded after simplifying the op inits,
-// yields and returns.
+// These arguments must be defined outside of the ForOp region and can just be
+// forwarded after simplifying the op inits, yields and returns.
 //
 // The implementation uses `inlineBlockBefore` to steal the content of the
 // original ForOp and avoid cloning.
@@ -872,30 +870,48 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     newIterArgs.reserve(forOp.getInitArgs().size());
     newYieldValues.reserve(numResults);
     newResultValues.reserve(numResults);
-    for (auto it : llvm::zip(forOp.getInitArgs(),       // iter from outside
-                             forOp.getRegionIterArgs(), // iter inside region
-                             forOp.getResults(),        // op results
-                             forOp.getYieldedValues()   // iter yield
-                             )) {
+    DenseMap<std::pair<Value, Value>, std::pair<Value, Value>> initYieldToArg;
+    for (auto [init, arg, result, yielded] :
+         llvm::zip(forOp.getInitArgs(),       // iter from outside
+                   forOp.getRegionIterArgs(), // iter inside region
+                   forOp.getResults(),        // op results
+                   forOp.getYieldedValues()   // iter yield
+                   )) {
       // Forwarded is `true` when:
       // 1) The region `iter` argument is yielded.
-      // 2) The region `iter` argument has no use, and the corresponding iter
-      // operand (input) is yielded.
+      // 2) The region `iter` argument the corresponding input is yielded.
       // 3) The region `iter` argument has no use, and the corresponding op
       // result has no use.
-      bool forwarded = ((std::get<1>(it) == std::get<3>(it)) ||
-                        (std::get<1>(it).use_empty() &&
-                         (std::get<0>(it) == std::get<3>(it) ||
-                          std::get<2>(it).use_empty())));
-      keepMask.push_back(!forwarded);
-      canonicalize |= forwarded;
+      bool forwarded = (arg == yielded) || (init == yielded) ||
+                       (arg.use_empty() && result.use_empty());
       if (forwarded) {
-        newBlockTransferArgs.push_back(std::get<0>(it));
-        newResultValues.push_back(std::get<0>(it));
+        canonicalize = true;
+        keepMask.push_back(false);
+        newBlockTransferArgs.push_back(init);
+        newResultValues.push_back(init);
         continue;
       }
-      newIterArgs.push_back(std::get<0>(it));
-      newYieldValues.push_back(std::get<3>(it));
+
+      // Check if a previous kept argument always has the same values for init
+      // and yielded values.
+      if (auto it = initYieldToArg.find({init, yielded});
+          it != initYieldToArg.end()) {
+        canonicalize = true;
+        keepMask.push_back(false);
+        auto [sameArg, sameResult] = it->second;
+        rewriter.replaceAllUsesWith(arg, sameArg);
+        rewriter.replaceAllUsesWith(result, sameResult);
+        // The replacement value doesn't matter because there are no uses.
+        newBlockTransferArgs.push_back(init);
+        newResultValues.push_back(init);
+        continue;
+      }
+
+      // This value is kept.
+      initYieldToArg.insert({{init, yielded}, {arg, result}});
+      keepMask.push_back(true);
+      newIterArgs.push_back(init);
+      newYieldValues.push_back(yielded);
       newBlockTransferArgs.push_back(Value()); // placeholder with null value
       newResultValues.push_back(Value());      // placeholder with null value
     }

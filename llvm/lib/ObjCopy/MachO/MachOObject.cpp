@@ -33,6 +33,19 @@ SymbolEntry *SymbolTable::getSymbolByIndex(uint32_t Index) {
       static_cast<const SymbolTable *>(this)->getSymbolByIndex(Index));
 }
 
+void SymbolTable::updateSymbols(function_ref<void(SymbolEntry &)> Callable) {
+  for (auto &Sym : Symbols)
+    Callable(*Sym);
+
+  // Partition symbols: local < defined external < undefined external.
+  auto ExternalBegin = std::stable_partition(
+      std::begin(Symbols), std::end(Symbols),
+      [](const auto &Sym) { return Sym->isLocalSymbol(); });
+  std::stable_partition(ExternalBegin, std::end(Symbols), [](const auto &Sym) {
+    return !Sym->isUndefinedSymbol();
+  });
+}
+
 void SymbolTable::removeSymbols(
     function_ref<bool(const std::unique_ptr<SymbolEntry> &)> ToRemove) {
   llvm::erase_if(Symbols, ToRemove);
@@ -84,6 +97,10 @@ void Object::updateLoadCommandIndexes() {
       break;
     case MachO::LC_DYLD_EXPORTS_TRIE:
       ExportsTrieCommandIndex = Index;
+      break;
+    case MachO::LC_ENCRYPTION_INFO:
+    case MachO::LC_ENCRYPTION_INFO_64:
+      EncryptionInfoCommandIndex = Index;
       break;
     }
   }

@@ -33,7 +33,7 @@ class SyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
 
-// Returned by InputSectionBase::relsOrRelas. At most one member is empty.
+// Returned by InputSectionBase::relsOrRelas. At least two members are empty.
 template <class ELFT> struct RelsOrRelas {
   Relocs<typename ELFT::Rel> rels;
   Relocs<typename ELFT::Rela> relas;
@@ -59,25 +59,17 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output, Class };
+  enum Kind : uint8_t {
+    Regular,
+    Synthetic,
+    Spill,
+    EHFrame,
+    Merge,
+    Output,
+    Class,
+  };
 
-  Kind kind() const { return (Kind)sectionKind; }
-
-  LLVM_PREFERRED_TYPE(Kind)
-  uint8_t sectionKind : 3;
-
-  // The next two bit fields are only used by InputSectionBase, but we
-  // put them here so the struct packs better.
-
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t bss : 1;
-
-  // Set for sections that should not be folded by ICF.
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t keepUnique : 1;
-
-  uint8_t partition = 1;
-  uint32_t type;
+  Kind kind() const { return sectionKind; }
 
   // The file which contains this section. For InputSectionBase, its dynamic
   // type is usually ObjFile<ELFT>, but may be an InputFile of InternalKind
@@ -93,10 +85,17 @@ public:
 
   // These corresponds to the fields in Elf_Shdr.
   uint64_t flags;
-  uint32_t addralign;
-  uint32_t entsize;
+  uint32_t type;
   uint32_t link;
   uint32_t info;
+  uint32_t addralign;
+  uint32_t entsize;
+
+  Kind sectionKind;
+  uint8_t partition = 1;
+
+  // The next two bit fields are only used by InputSectionBase, but we
+  // put them here so the struct packs better.
 
   Ctx &getCtx() const;
   OutputSection *getOutputSection();
@@ -116,11 +115,11 @@ public:
 
 protected:
   constexpr SectionBase(Kind sectionKind, InputFile *file, StringRef name,
-                        uint64_t flags, uint32_t entsize, uint32_t addralign,
-                        uint32_t type, uint32_t info, uint32_t link)
-      : sectionKind(sectionKind), bss(false), keepUnique(false), type(type),
-        file(file), name(name), flags(flags), addralign(addralign),
-        entsize(entsize), link(link), info(info) {}
+                        uint32_t type, uint64_t flags, uint32_t link,
+                        uint32_t info, uint32_t addralign, uint32_t entsize)
+      : file(file), name(name), flags(flags), type(type), link(link),
+        info(info), addralign(addralign), entsize(entsize),
+        sectionKind(sectionKind) {}
 };
 
 struct SymbolAnchor {
@@ -144,18 +143,47 @@ struct RelaxAux {
 // This corresponds to a section of an input file.
 class InputSectionBase : public SectionBase {
 public:
+  struct ObjMsg {
+    const InputSectionBase *sec;
+    uint64_t offset;
+  };
+  struct SrcMsg {
+    const InputSectionBase &sec;
+    const Symbol &sym;
+    uint64_t offset;
+  };
+
   template <class ELFT>
   InputSectionBase(ObjFile<ELFT> &file, const typename ELFT::Shdr &header,
                    StringRef name, Kind sectionKind);
 
-  InputSectionBase(InputFile *file, uint64_t flags, uint32_t type,
-                   uint64_t entsize, uint32_t link, uint32_t info,
-                   uint32_t addralign, ArrayRef<uint8_t> data, StringRef name,
+  InputSectionBase(InputFile *file, StringRef name, uint32_t type,
+                   uint64_t flags, uint32_t link, uint32_t info,
+                   uint32_t addralign, uint32_t entsize, ArrayRef<uint8_t> data,
                    Kind sectionKind);
 
   static bool classof(const SectionBase *s) {
     return s->kind() != Output && s->kind() != Class;
   }
+
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t bss : 1;
+
+  // Whether this section is SHT_CREL and has been decoded to RELA by
+  // relsOrRelas.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t decodedCrel : 1;
+
+  // Set for sections that should not be folded by ICF.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t keepUnique : 1;
+
+  // Whether the section needs to be padded with a NOP filler due to
+  // deleteFallThruJmpInsn.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t nopFiller : 1;
+
+  mutable bool compressed = false;
 
   // Input sections are part of an output section. Special sections
   // like .eh_frame and merge sections are first combined into a
@@ -175,16 +203,6 @@ public:
   // indicate the number of bytes which is not counted in the size. This should
   // be reset to zero after uses.
   uint32_t bytesDropped = 0;
-
-  mutable bool compressed = false;
-
-  // Whether this section is SHT_CREL and has been decoded to RELA by
-  // relsOrRelas.
-  bool decodedCrel = false;
-
-  // Whether the section needs to be padded with a NOP filler due to
-  // deleteFallThruJmpInsn.
-  bool nopFiller = false;
 
   void drop_back(unsigned num) {
     assert(bytesDropped + num < 256);
@@ -239,8 +257,10 @@ public:
 
   // Returns a source location string. Used to construct an error message.
   std::string getLocation(uint64_t offset) const;
-  std::string getSrcMsg(const Symbol &sym, uint64_t offset) const;
-  std::string getObjMsg(uint64_t offset) const;
+  ObjMsg getObjMsg(uint64_t offset) const { return {this, offset}; }
+  SrcMsg getSrcMsg(const Symbol &sym, uint64_t offset) const {
+    return {*this, sym, offset};
+  }
 
   // Each section knows how to relocate itself. These functions apply
   // relocations, assuming that Buf points to this section's copy in
@@ -315,8 +335,8 @@ public:
   template <class ELFT>
   MergeInputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
                     StringRef name);
-  MergeInputSection(Ctx &, uint64_t flags, uint32_t type, uint64_t entsize,
-                    ArrayRef<uint8_t> data, StringRef name);
+  MergeInputSection(Ctx &, StringRef name, uint32_t type, uint64_t flags,
+                    uint64_t entsize, ArrayRef<uint8_t> data);
 
   static bool classof(const SectionBase *s) { return s->kind() == Merge; }
   void splitIntoPieces();
@@ -394,8 +414,9 @@ public:
 // .eh_frame. It also includes the synthetic sections themselves.
 class InputSection : public InputSectionBase {
 public:
-  InputSection(InputFile *f, uint64_t flags, uint32_t type, uint32_t addralign,
-               ArrayRef<uint8_t> data, StringRef name, Kind k = Regular);
+  InputSection(InputFile *f, StringRef name, uint32_t type, uint64_t flags,
+               uint32_t addralign, uint32_t entsize, ArrayRef<uint8_t> data,
+               Kind k = Regular);
   template <class ELFT>
   InputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
                StringRef name);
@@ -466,15 +487,17 @@ public:
   }
 };
 
-static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
+#ifndef _WIN32
+static_assert(sizeof(InputSection) <= 152, "InputSection is too big");
+#endif
 
 class SyntheticSection : public InputSection {
 public:
   Ctx &ctx;
-  SyntheticSection(Ctx &ctx, uint64_t flags, uint32_t type, uint32_t addralign,
-                   StringRef name)
-      : InputSection(ctx.internalFile, flags, type, addralign, {}, name,
-                     InputSectionBase::Synthetic),
+  SyntheticSection(Ctx &ctx, StringRef name, uint32_t type, uint64_t flags,
+                   uint32_t addralign)
+      : InputSection(ctx.internalFile, name, type, flags, addralign,
+                     /*entsize=*/0, {}, InputSectionBase::Synthetic),
         ctx(ctx) {}
 
   virtual ~SyntheticSection() = default;
@@ -504,6 +527,10 @@ inline bool isDebugSection(const InputSectionBase &sec) {
 std::string toStr(elf::Ctx &, const elf::InputSectionBase *);
 const ELFSyncStream &operator<<(const ELFSyncStream &,
                                 const InputSectionBase *);
+const ELFSyncStream &operator<<(const ELFSyncStream &,
+                                InputSectionBase::ObjMsg &&);
+const ELFSyncStream &operator<<(const ELFSyncStream &,
+                                InputSectionBase::SrcMsg &&);
 } // namespace elf
 } // namespace lld
 

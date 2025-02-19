@@ -84,7 +84,7 @@ llvm.mlir.global external @explicit_undef() : i32 {
   llvm.return %0 : i32
 }
 
-// CHECK: @int_gep = internal constant ptr getelementptr (i32, ptr @i32_global, i32 2)
+// CHECK: @int_gep = internal constant ptr getelementptr (i8, ptr @i32_global, i64 8)
 llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   %addr = llvm.mlir.addressof @i32_global : !llvm.ptr
   %_c0 = llvm.mlir.constant(2: i32) : i32
@@ -998,7 +998,7 @@ llvm.func @vector_splat_nonzero() -> vector<4xf32> {
 
 // CHECK-LABEL: @vector_splat_nonzero_scalable
 llvm.func @vector_splat_nonzero_scalable() -> vector<[4]xf32> {
-  // CHECK: ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  // CHECK: ret <vscale x 4 x float> splat (float 1.000000e+00)
   %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
   llvm.return %0 : vector<[4]xf32>
 }
@@ -1195,7 +1195,7 @@ llvm.func @dereferenceableornullattr_decl(!llvm.ptr {llvm.dereferenceable_or_nul
 // CHECK-LABEL: declare void @inregattr_decl(ptr inreg)
 llvm.func @inregattr_decl(!llvm.ptr {llvm.inreg})
 
-// CHECK-LABEL: declare void @nocaptureattr_decl(ptr nocapture)
+// CHECK-LABEL: declare void @nocaptureattr_decl(ptr captures(none))
 llvm.func @nocaptureattr_decl(!llvm.ptr {llvm.nocapture})
 
 // CHECK-LABEL: declare void @nofreeattr_decl(ptr nofree)
@@ -2328,6 +2328,16 @@ llvm.func @vararg_function(%arg0: i32, ...) -> i32 {
 
 // -----
 
+// CHECK: declare void @range_arg_function(i64 range(i64 0, 4097))
+llvm.func @range_arg_function(%arg0: i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>})
+
+// -----
+
+// CHECK: declare range(i64 0, 4097) i64 @range_res_function()
+llvm.func @range_res_function() -> (i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>})
+
+// -----
+
 // CHECK: declare void @readonly_function([[PTR:.+]] readonly)
 llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 
@@ -2337,7 +2347,7 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 llvm.func @arg_mem_none_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none) }
 
 // -----
 
@@ -2345,7 +2355,7 @@ llvm.func @arg_mem_none_func() attributes {
 llvm.func @readwrite_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none) }
 
 // -----
 
@@ -2603,11 +2613,11 @@ llvm.func @mem_effects_call() {
 // CHECK: #[[ATTRS_0]]
 // CHECK-SAME: memory(none)
 // CHECK: #[[ATTRS_1]]
-// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write)
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none)
 // CHECK: #[[ATTRS_2]]
-// CHECK-SAME: memory(read, inaccessiblemem: write)
+// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none)
 // CHECK: #[[ATTRS_3]]
-// CHECK-SAME: memory(readwrite, argmem: read)
+// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none)
 
 // -----
 

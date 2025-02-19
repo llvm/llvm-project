@@ -435,6 +435,38 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
        extension.)
 
 
+C++ Standard version tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Historically libc++ tests used to filter the tests for C++ Standard versions
+with lit directives like:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+
+With C++ Standards released every 3 years, this solution is not scalable.
+Instead use:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: std-at-least-c++26
+
+There is no corresponding ``std-at-most-c++23``. This could be useful when
+tests are only valid for a small set of standard versions. For example, a
+deprecation test is only valid when the feature is deprecated until it is
+removed from the Standard. These tests should be written like:
+
+.. code-block:: cpp
+
+   // REQUIRES: c++17 || c++20 || c++23
+
+.. note::
+
+   There are a lot of tests with the first style, these can remain as they are.
+   The new style is only intended to be used for new tests.
+
+
 Benchmarks
 ==========
 
@@ -452,17 +484,35 @@ when running the benchmarks. For example,
 
 .. code-block:: bash
 
-  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
-
-If you want to see where a benchmark is located (e.g. you want to store the executable
-for subsequent analysis), you can print that information by passing ``--show-all`` to
-``lit``. That will print the command-lines being executed, which includes the location
-of the executable created for that benchmark.
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --show-all --param optimization=speed
 
 Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
 we only want to make sure they don't rot. Do not rely on the results of benchmarks
 run through ``check-cxx`` for anything, instead run the benchmarks manually using
 the instructions for running individual tests.
+
+If you want to compare the results of different benchmark runs, we recommend using the
+``libcxx-compare-benchmarks`` helper tool. First, configure CMake in a build directory
+and run the benchmark:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build1> [...]
+  $ libcxx/utils/libcxx-lit <build1> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Then, do the same for the second configuration you want to test. Use a different build
+directory for that configuration:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build2> [...]
+  $ libcxx/utils/libcxx-lit <build2> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Finally, use ``libcxx-compare-benchmarks`` to compare both:
+
+.. code-block:: bash
+
+  $ libcxx/utils/libcxx-compare-benchmarks <build1> <build2> libcxx/test/benchmarks/string.bench.cpp
 
 .. _`Google Benchmark`: https://github.com/google/benchmark
 

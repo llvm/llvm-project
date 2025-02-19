@@ -15,9 +15,10 @@
 #include <__cstddef/max_align_t.h>
 #include <__fwd/pair.h>
 #include <__memory_resource/memory_resource.h>
+#include <__new/exceptions.h>
+#include <__new/placement_new_delete.h>
 #include <__utility/exception_guard.h>
 #include <limits>
-#include <new>
 #include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

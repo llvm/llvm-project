@@ -747,13 +747,25 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     assert(RelaSec &&
            "Can't read a SHT_LLVM_BB_ADDR_MAP section in a relocatable "
            "object file without providing a relocation section.");
-    Expected<typename ELFFile<ELFT>::Elf_Rela_Range> Relas = EF.relas(*RelaSec);
-    if (!Relas)
-      return createError("unable to read relocations for section " +
-                         describe(EF, Sec) + ": " +
-                         toString(Relas.takeError()));
-    for (typename ELFFile<ELFT>::Elf_Rela Rela : *Relas)
-      FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+    if (RelaSec->sh_type == ELF::SHT_CREL) {
+      Expected<typename ELFFile<ELFT>::RelsOrRelas> Relas = EF.crels(*RelaSec);
+      if (!Relas)
+        return createError("unable to read CREL relocations for section " +
+                           describe(EF, Sec) + ": " +
+                           toString(Relas.takeError()));
+      for (typename ELFFile<ELFT>::Elf_Rela Rela : std::get<1>(*Relas)) {
+        FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+      }
+    } else {
+      Expected<typename ELFFile<ELFT>::Elf_Rela_Range> Relas =
+          EF.relas(*RelaSec);
+      if (!Relas)
+        return createError("unable to read relocations for section " +
+                           describe(EF, Sec) + ": " +
+                           toString(Relas.takeError()));
+      for (typename ELFFile<ELFT>::Elf_Rela Rela : *Relas)
+        FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+    }
   }
   auto GetAddressForRelocation =
       [&](unsigned RelocationOffsetInSection) -> Expected<unsigned> {
@@ -851,29 +863,31 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         NumBlocksInBBRange = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       }
       std::vector<BBAddrMap::BBEntry> BBEntries;
-      for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr && Cur &&
-                                    (BlockIndex < NumBlocksInBBRange);
-           ++BlockIndex) {
-        uint32_t ID = Version >= 2
-                          ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
-                          : BlockIndex;
-        uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        if (Version >= 1) {
-          // Offset is calculated relative to the end of the previous BB.
-          Offset += PrevBBEndOffset;
-          PrevBBEndOffset = Offset + Size;
+      if (!FeatEnable.OmitBBEntries) {
+        for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr &&
+                                      Cur && (BlockIndex < NumBlocksInBBRange);
+             ++BlockIndex) {
+          uint32_t ID = Version >= 2
+                            ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                            : BlockIndex;
+          uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          if (Version >= 1) {
+            // Offset is calculated relative to the end of the previous BB.
+            Offset += PrevBBEndOffset;
+            PrevBBEndOffset = Offset + Size;
+          }
+          Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
+              BBAddrMap::BBEntry::Metadata::decode(MD);
+          if (!MetadataOrErr) {
+            MetadataDecodeErr = MetadataOrErr.takeError();
+            break;
+          }
+          BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
         }
-        Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
-            BBAddrMap::BBEntry::Metadata::decode(MD);
-        if (!MetadataOrErr) {
-          MetadataDecodeErr = MetadataOrErr.takeError();
-          break;
-        }
-        BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
+        TotalNumBlocks += BBEntries.size();
       }
-      TotalNumBlocks += BBEntries.size();
       BBRangeEntries.push_back({RangeBaseAddress, std::move(BBEntries)});
     }
     FunctionEntries.push_back({std::move(BBRangeEntries)});
@@ -956,7 +970,8 @@ ELFFile<ELFT>::getSectionAndRelocations(
         continue;
     }
 
-    if (Sec.sh_type != ELF::SHT_RELA && Sec.sh_type != ELF::SHT_REL)
+    if (Sec.sh_type != ELF::SHT_RELA && Sec.sh_type != ELF::SHT_REL &&
+        Sec.sh_type != ELF::SHT_CREL)
       continue;
 
     Expected<const Elf_Shdr *> RelSecOrErr = this->getSection(Sec.sh_info);

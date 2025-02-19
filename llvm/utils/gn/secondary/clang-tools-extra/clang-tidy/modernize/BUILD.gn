@@ -45,6 +45,7 @@ static_library("modernize") {
     "UseEmplaceCheck.cpp",
     "UseEqualsDefaultCheck.cpp",
     "UseEqualsDeleteCheck.cpp",
+    "UseIntegerSignComparisonCheck.cpp",
     "UseNodiscardCheck.cpp",
     "UseNoexceptCheck.cpp",
     "UseNullptrCheck.cpp",

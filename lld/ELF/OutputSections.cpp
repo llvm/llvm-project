@@ -67,10 +67,13 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *shdr) {
 
 OutputSection::OutputSection(Ctx &ctx, StringRef name, uint32_t type,
                              uint64_t flags)
-    : SectionBase(Output, ctx.internalFile, name, flags, /*entsize=*/0,
-                  /*addralign=*/1, type,
-                  /*info=*/0, /*link=*/0),
+    : SectionBase(Output, ctx.internalFile, name, type, flags, /*link=*/0,
+                  /*info=*/0, /*addralign=*/1, /*entsize=*/0),
       ctx(ctx) {}
+
+uint64_t OutputSection::getLMA() const {
+  return ptLoad ? addr + ptLoad->lmaOffset : addr;
+}
 
 // We allow sections of types listed below to merged into a
 // single progbits section. This is typically done by linker
@@ -152,9 +155,9 @@ void OutputSection::commitSection(InputSection *isec) {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((flags ^ isec->flags) & SHF_TLS)
       ErrAlways(ctx) << "incompatible section flags for " << name << "\n>>> "
-                     << isec << ": 0x" << utohexstr(isec->flags)
+                     << isec << ": 0x" << utohexstr(isec->flags, true)
                      << "\n>>> output section " << name << ": 0x"
-                     << utohexstr(flags);
+                     << utohexstr(flags, true);
   }
 
   isec->parent = this;
@@ -250,8 +253,20 @@ void OutputSection::finalizeInputSections() {
     for (InputSection *s : isd->sections)
       commitSection(s);
   }
-  for (auto *ms : mergeSections)
+  for (auto *ms : mergeSections) {
+    // Merging may have increased the alignment of a spillable section. Update
+    // the alignment of potential spill sections and their containing output
+    // sections.
+    if (auto it = script->potentialSpillLists.find(ms);
+        it != script->potentialSpillLists.end()) {
+      for (PotentialSpillSection *s = it->second.head; s; s = s->next) {
+        s->addralign = std::max(s->addralign, ms->addralign);
+        s->parent->addralign = std::max(s->parent->addralign, s->addralign);
+      }
+    }
+
     ms->finalizeContents();
+  }
 }
 
 static void sortByOrder(MutableArrayRef<InputSection *> in,
@@ -536,7 +551,7 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
       // instructions to little-endian, leaving the data big-endian.
       if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8 &&
           (flags & SHF_EXECINSTR))
-        convertArmInstructionstoBE8(isec, buf + isec->outSecOff);
+        convertArmInstructionstoBE8(ctx, isec, buf + isec->outSecOff);
 
       // Fill gaps between sections.
       if (nonZeroFiller) {

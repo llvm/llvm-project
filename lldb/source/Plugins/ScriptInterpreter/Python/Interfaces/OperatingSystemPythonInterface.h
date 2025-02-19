@@ -45,6 +45,8 @@ public:
 
   std::optional<std::string> GetRegisterContextForTID(lldb::tid_t tid) override;
 
+  std::optional<bool> DoesPluginReportAllThreads() override;
+
   static void Initialize();
 
   static void Terminate();

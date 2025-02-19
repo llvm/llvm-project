@@ -471,7 +471,7 @@ ComplexPairTy ComplexExprEmitter::VisitExpr(Expr *E) {
   CGF.ErrorUnsupported(E, "complex expression");
   llvm::Type *EltTy =
     CGF.ConvertType(getComplexType(E->getType())->getElementType());
-  llvm::Value *U = llvm::UndefValue::get(EltTy);
+  llvm::Value *U = llvm::PoisonValue::get(EltTy);
   return ComplexPairTy(U, U);
 }
 
@@ -610,6 +610,8 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
   case CK_HLSLArrayRValue:
+  case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_FloatingRealToComplex:
@@ -1449,7 +1451,7 @@ ComplexPairTy ComplexExprEmitter::VisitVAArgExpr(VAArgExpr *E) {
     CGF.ErrorUnsupported(E, "complex va_arg expression");
     llvm::Type *EltTy =
       CGF.ConvertType(E->getType()->castAs<ComplexType>()->getElementType());
-    llvm::Value *U = llvm::UndefValue::get(EltTy);
+    llvm::Value *U = llvm::PoisonValue::get(EltTy);
     return ComplexPairTy(U, U);
   }
 

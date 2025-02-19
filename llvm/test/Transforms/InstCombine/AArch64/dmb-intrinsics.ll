@@ -35,7 +35,7 @@ define void @simple_nonmatching() #0 {
 define ptr @simple_safe_instruction(ptr %p) #0 {
 ; CHECK-LABEL: define ptr @simple_safe_instruction(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    call void @llvm.aarch64.dmb(i32 10)
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;

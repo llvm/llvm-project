@@ -22,8 +22,8 @@
 
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
+#include <clc/math/math.h>
 
-#include "math.h"
 #include "sincos_helpers.h"
 #include "sincospiF_piby4.h"
 #ifdef cl_khr_fp64
@@ -135,4 +135,10 @@ _CLC_OVERLOAD _CLC_DEF double cospi(double x) {
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, cospi, double);
 #endif
 
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
 _CLC_DEFINE_UNARY_BUILTIN_FP16(cospi)
+
+#endif

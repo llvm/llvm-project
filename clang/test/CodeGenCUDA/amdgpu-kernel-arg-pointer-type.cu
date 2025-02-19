@@ -33,7 +33,7 @@
 // CHECK-NEXT:    ret void
 //
 // CHECK-SPIRV-LABEL: define spir_kernel void @_Z7kernel1Pi(
-// CHECK-SPIRV-SAME: ptr addrspace(1) noundef [[X_COERCE:%.*]]) addrspace(4) #[[ATTR0:[0-9]+]] {
+// CHECK-SPIRV-SAME: ptr addrspace(1) noundef [[X_COERCE:%.*]]) addrspace(4) #[[ATTR0:[0-9]+]] !max_work_group_size [[META5:![0-9]+]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIRV-NEXT:    [[X:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-SPIRV-NEXT:    [[X_ADDR:%.*]] = alloca ptr addrspace(4), align 8
@@ -50,7 +50,7 @@
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel1Pi(
-// OPT-SAME: ptr addrspace(1) nocapture noundef [[X_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// OPT-SAME: ptr addrspace(1) noundef captures(none) [[X_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[X_COERCE]], align 4
 // OPT-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
@@ -58,7 +58,7 @@
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel1Pi(
-// OPT-SPIRV-SAME: ptr addrspace(1) noundef [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0:[0-9]+]] {
+// OPT-SPIRV-SAME: ptr addrspace(1) noundef [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0:[0-9]+]] !max_work_group_size [[META5:![0-9]+]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[X_COERCE]] to i64
 // OPT-SPIRV-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr addrspace(4)
@@ -102,7 +102,7 @@ __global__ void kernel1(int *x) {
 // CHECK-NEXT:    ret void
 //
 // CHECK-SPIRV-LABEL: define spir_kernel void @_Z7kernel2Ri(
-// CHECK-SPIRV-SAME: ptr addrspace(1) noundef align 4 dereferenceable(4) [[X_COERCE:%.*]]) addrspace(4) #[[ATTR0]] {
+// CHECK-SPIRV-SAME: ptr addrspace(1) noundef align 4 dereferenceable(4) [[X_COERCE:%.*]]) addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIRV-NEXT:    [[X:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-SPIRV-NEXT:    [[X_ADDR:%.*]] = alloca ptr addrspace(4), align 8
@@ -118,7 +118,7 @@ __global__ void kernel1(int *x) {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel2Ri(
-// OPT-SAME: ptr addrspace(1) nocapture noundef nonnull align 4 dereferenceable(4) [[X_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// OPT-SAME: ptr addrspace(1) noundef nonnull align 4 captures(none) dereferenceable(4) [[X_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[X_COERCE]], align 4
 // OPT-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
@@ -126,7 +126,7 @@ __global__ void kernel1(int *x) {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel2Ri(
-// OPT-SPIRV-SAME: ptr addrspace(1) noundef align 4 dereferenceable(4) [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: ptr addrspace(1) noundef align 4 dereferenceable(4) [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[X_COERCE]] to i64
 // OPT-SPIRV-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr addrspace(4)
@@ -171,7 +171,7 @@ __global__ void kernel2(int &x) {
 // CHECK-NEXT:    ret void
 //
 // CHECK-SPIRV-LABEL: define spir_kernel void @_Z7kernel3PU3AS2iPU3AS1i(
-// CHECK-SPIRV-SAME: ptr addrspace(2) noundef [[X:%.*]], ptr addrspace(1) noundef [[Y:%.*]]) addrspace(4) #[[ATTR0]] {
+// CHECK-SPIRV-SAME: ptr addrspace(2) noundef [[X:%.*]], ptr addrspace(1) noundef [[Y:%.*]]) addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIRV-NEXT:    [[X_ADDR:%.*]] = alloca ptr addrspace(2), align 8
 // CHECK-SPIRV-NEXT:    [[Y_ADDR:%.*]] = alloca ptr addrspace(1), align 8
@@ -188,14 +188,14 @@ __global__ void kernel2(int &x) {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel3PU3AS2iPU3AS1i(
-// OPT-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// OPT-SAME: ptr addrspace(2) noundef readonly captures(none) [[X:%.*]], ptr addrspace(1) noundef writeonly captures(none) initializes((0, 4)) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[X]], align 4
 // OPT-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[Y]], align 4
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel3PU3AS2iPU3AS1i(
-// OPT-SPIRV-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[Y:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR1:[0-9]+]] {
+// OPT-SPIRV-SAME: ptr addrspace(2) noundef readonly captures(none) [[X:%.*]], ptr addrspace(1) noundef writeonly captures(none) initializes((0, 4)) [[Y:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR1:[0-9]+]] !max_work_group_size [[META5]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[X]], align 4
 // OPT-SPIRV-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[Y]], align 4
@@ -253,7 +253,7 @@ __global__ void kernel3(__attribute__((address_space(2))) int *x,
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local void @_Z4funcPi(
-// OPT-SAME: ptr nocapture noundef [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// OPT-SAME: ptr noundef captures(none) [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 4
 // OPT-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
@@ -261,7 +261,7 @@ __global__ void kernel3(__attribute__((address_space(2))) int *x,
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_func void @_Z4funcPi(
-// OPT-SPIRV-SAME: ptr addrspace(4) nocapture noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2:[0-9]+]] {
+// OPT-SPIRV-SAME: ptr addrspace(4) noundef captures(none) [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2:[0-9]+]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[X]], align 4
 // OPT-SPIRV-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
@@ -302,7 +302,7 @@ struct S {
 // CHECK-NEXT:    ret void
 //
 // CHECK-SPIRV-LABEL: define spir_kernel void @_Z7kernel41S(
-// CHECK-SPIRV-SAME: [[STRUCT_S:%.*]] [[S_COERCE:%.*]]) addrspace(4) #[[ATTR0]] {
+// CHECK-SPIRV-SAME: [[STRUCT_S:%.*]] [[S_COERCE:%.*]]) addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIRV-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 8
 // CHECK-SPIRV-NEXT:    [[S1:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(4)
@@ -327,11 +327,11 @@ struct S {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel41S(
-// OPT-SAME: ptr addrspace(4) nocapture noundef readonly byref([[STRUCT_S:%.*]]) align 8 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// OPT-SAME: ptr addrspace(4) noundef readonly byref([[STRUCT_S:%.*]]) align 8 captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[COERCE_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(4) [[TMP0]], align 8, !amdgpu.noclobber [[META4:![0-9]+]]
 // OPT-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[COERCE_SROA_0_0_COPYLOAD]] to ptr addrspace(1)
-// OPT-NEXT:    [[COERCE_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 8
+// OPT-NEXT:    [[COERCE_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 8
 // OPT-NEXT:    [[COERCE_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(4) [[COERCE_SROA_2_0__SROA_IDX]], align 8, !amdgpu.noclobber [[META4]]
 // OPT-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[COERCE_SROA_2_0_COPYLOAD]] to ptr addrspace(1)
 // OPT-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[TMP1]], align 4, !amdgpu.noclobber [[META4]]
@@ -343,7 +343,7 @@ struct S {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel41S(
-// OPT-SPIRV-SAME: [[STRUCT_S:%.*]] [[S_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: [[STRUCT_S:%.*]] [[S_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_S]] [[S_COERCE]], 0
 // OPT-SPIRV-NEXT:    [[TMP1:%.*]] = extractvalue [[STRUCT_S]] [[S_COERCE]], 1
@@ -406,7 +406,7 @@ __global__ void kernel4(struct S s) {
 // CHECK-NEXT:    ret void
 //
 // CHECK-SPIRV-LABEL: define spir_kernel void @_Z7kernel5P1S(
-// CHECK-SPIRV-SAME: ptr addrspace(1) noundef [[S_COERCE:%.*]]) addrspace(4) #[[ATTR0]] {
+// CHECK-SPIRV-SAME: ptr addrspace(1) noundef [[S_COERCE:%.*]]) addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIRV-NEXT:    [[S:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-SPIRV-NEXT:    [[S_ADDR:%.*]] = alloca ptr addrspace(4), align 8
@@ -432,13 +432,13 @@ __global__ void kernel4(struct S s) {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel5P1S(
-// OPT-SAME: ptr addrspace(1) nocapture noundef readonly [[S_COERCE:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// OPT-SAME: ptr addrspace(1) noundef readonly captures(none) [[S_COERCE:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(1) [[S_COERCE]], align 8
 // OPT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // OPT-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
 // OPT-NEXT:    store i32 [[INC]], ptr [[TMP0]], align 4
-// OPT-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[S_COERCE]], i64 8
+// OPT-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[S_COERCE]], i64 8
 // OPT-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(1) [[Y]], align 8
 // OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP2]], align 4
 // OPT-NEXT:    [[ADD:%.*]] = fadd contract float [[TMP3]], 1.000000e+00
@@ -446,7 +446,7 @@ __global__ void kernel4(struct S s) {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel5P1S(
-// OPT-SPIRV-SAME: ptr addrspace(1) noundef [[S_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: ptr addrspace(1) noundef [[S_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[S_COERCE]] to i64
 // OPT-SPIRV-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr addrspace(4)
@@ -511,7 +511,7 @@ struct T {
 // CHECK-NEXT:    ret void
 //
 // CHECK-SPIRV-LABEL: define spir_kernel void @_Z7kernel61T(
-// CHECK-SPIRV-SAME: [[STRUCT_T:%.*]] [[T_COERCE:%.*]]) addrspace(4) #[[ATTR0]] {
+// CHECK-SPIRV-SAME: [[STRUCT_T:%.*]] [[T_COERCE:%.*]]) addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIRV-NEXT:    [[T:%.*]] = alloca [[STRUCT_T]], align 8
 // CHECK-SPIRV-NEXT:    [[T1:%.*]] = addrspacecast ptr [[T]] to ptr addrspace(4)
@@ -535,11 +535,11 @@ struct T {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel61T(
-// OPT-SAME: ptr addrspace(4) nocapture noundef readonly byref([[STRUCT_T:%.*]]) align 8 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// OPT-SAME: ptr addrspace(4) noundef readonly byref([[STRUCT_T:%.*]]) align 8 captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[COERCE_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(4) [[TMP0]], align 8, !amdgpu.noclobber [[META4]]
 // OPT-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[COERCE_SROA_0_0_COPYLOAD]] to ptr addrspace(1)
-// OPT-NEXT:    [[COERCE_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 8
+// OPT-NEXT:    [[COERCE_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP0]], i64 8
 // OPT-NEXT:    [[COERCE_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(4) [[COERCE_SROA_2_0__SROA_IDX]], align 8, !amdgpu.noclobber [[META4]]
 // OPT-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[COERCE_SROA_2_0_COPYLOAD]] to ptr addrspace(1)
 // OPT-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(1) [[TMP1]], align 4, !amdgpu.noclobber [[META4]]
@@ -551,7 +551,7 @@ struct T {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel61T(
-// OPT-SPIRV-SAME: [[STRUCT_T:%.*]] [[T_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: [[STRUCT_T:%.*]] [[T_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_T]] [[T_COERCE]], 0
 // OPT-SPIRV-NEXT:    [[DOTFCA_0_EXTRACT:%.*]] = extractvalue [2 x ptr addrspace(4)] [[TMP0]], 0
@@ -606,7 +606,7 @@ __global__ void kernel6(struct T t) {
 // CHECK-NEXT:    ret void
 //
 // CHECK-SPIRV-LABEL: define spir_kernel void @_Z7kernel7Pi(
-// CHECK-SPIRV-SAME: ptr addrspace(1) noalias noundef [[X_COERCE:%.*]]) addrspace(4) #[[ATTR0]] {
+// CHECK-SPIRV-SAME: ptr addrspace(1) noalias noundef [[X_COERCE:%.*]]) addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIRV-NEXT:    [[X:%.*]] = alloca ptr addrspace(4), align 8
 // CHECK-SPIRV-NEXT:    [[X_ADDR:%.*]] = alloca ptr addrspace(4), align 8
@@ -623,7 +623,7 @@ __global__ void kernel6(struct T t) {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel7Pi(
-// OPT-SAME: ptr addrspace(1) noalias nocapture noundef [[X_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// OPT-SAME: ptr addrspace(1) noalias noundef captures(none) [[X_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[X_COERCE]], align 4
 // OPT-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
@@ -631,7 +631,7 @@ __global__ void kernel6(struct T t) {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel7Pi(
-// OPT-SPIRV-SAME: ptr addrspace(1) noalias noundef [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: ptr addrspace(1) noalias noundef [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[X_COERCE]] to i64
 // OPT-SPIRV-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr addrspace(4)
@@ -677,7 +677,7 @@ struct SS {
 // CHECK-NEXT:    ret void
 //
 // CHECK-SPIRV-LABEL: define spir_kernel void @_Z7kernel82SS(
-// CHECK-SPIRV-SAME: [[STRUCT_SS:%.*]] [[A_COERCE:%.*]]) addrspace(4) #[[ATTR0]] {
+// CHECK-SPIRV-SAME: [[STRUCT_SS:%.*]] [[A_COERCE:%.*]]) addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // CHECK-SPIRV-NEXT:  [[ENTRY:.*:]]
 // CHECK-SPIRV-NEXT:    [[A:%.*]] = alloca [[STRUCT_SS]], align 8
 // CHECK-SPIRV-NEXT:    [[A1:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(4)
@@ -692,7 +692,7 @@ struct SS {
 // CHECK-SPIRV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local amdgpu_kernel void @_Z7kernel82SS(
-// OPT-SAME: ptr addrspace(1) nocapture [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// OPT-SAME: ptr addrspace(1) captures(none) [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(1) [[A_COERCE]], align 4
 // OPT-NEXT:    [[ADD:%.*]] = fadd contract float [[TMP0]], 3.000000e+00
@@ -700,7 +700,7 @@ struct SS {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel82SS(
-// OPT-SPIRV-SAME: [[STRUCT_SS:%.*]] [[A_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: [[STRUCT_SS:%.*]] [[A_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META5]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_SS]] [[A_COERCE]], 0
 // OPT-SPIRV-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(4) [[TMP0]], align 4
@@ -727,5 +727,9 @@ __global__ void kernel8(struct SS a) {
   *a.x += 3.f;
 }
 //.
+// CHECK-SPIRV: [[META5]] = !{i32 1024, i32 1, i32 1}
+//.
 // OPT: [[META4]] = !{}
+//.
+// OPT-SPIRV: [[META5]] = !{i32 1024, i32 1, i32 1}
 //.

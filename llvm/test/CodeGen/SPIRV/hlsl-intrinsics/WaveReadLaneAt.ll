@@ -1,7 +1,10 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32v1.3-vulkan-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.3-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.5-vulkan-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; Test lowering to spir-v backend for various types and scalar/vector
+
+; CHECK: Capability Shader
+; CHECK: Capability GroupNonUniformShuffle
 
 ; CHECK-DAG:   %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG:   %[[#f32:]] = OpTypeFloat 32

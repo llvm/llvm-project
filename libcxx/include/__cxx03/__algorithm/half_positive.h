@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_HALF_POSITIVE_H
-#define _LIBCPP___ALGORITHM_HALF_POSITIVE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_HALF_POSITIVE_H
+#define _LIBCPP___CXX03___ALGORITHM_HALF_POSITIVE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/enable_if.h>
@@ -34,4 +34,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp __half_positive(_Tp __value) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_HALF_POSITIVE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_HALF_POSITIVE_H

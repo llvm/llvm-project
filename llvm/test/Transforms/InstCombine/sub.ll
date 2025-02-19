@@ -841,7 +841,7 @@ define <2 x i32> @test44vec(<2 x i32> %x) {
 
 define <vscale x 2 x i32> @test44scalablevec(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: @test44scalablevec(
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 -32768, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw <vscale x 2 x i32> [[X:%.*]], splat (i32 -32768)
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[SUB]]
 ;
   %sub = sub nsw <vscale x 2 x i32> %x, splat (i32 32768)
@@ -861,7 +861,7 @@ define <2 x i16> @test44vecminval(<2 x i16> %x) {
 ; uses m_ImmConstant which matches Constant but (explicitly) not ConstantExpr.
 define <vscale x 2 x i16> @test44scalablevecminval(<vscale x 2 x i16> %x) {
 ; CHECK-LABEL: @test44scalablevecminval(
-; CHECK-NEXT:    [[SUB:%.*]] = add <vscale x 2 x i16> [[X:%.*]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 -32768, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[SUB:%.*]] = add <vscale x 2 x i16> [[X:%.*]], splat (i16 -32768)
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[SUB]]
 ;
   %sub = sub nsw <vscale x 2 x i16> %x, splat (i16 -32768)
@@ -1125,7 +1125,7 @@ define i64 @test59(ptr %foo, i64 %i) {
 ; CHECK-LABEL: @test59(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 [[I:%.*]]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4200
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO]], i64 4200
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO]], i64 4200
 ; CHECK-NEXT:    store ptr [[GEP1]], ptr @dummy_global1, align 8
 ; CHECK-NEXT:    store ptr [[GEP2]], ptr @dummy_global2, align 8
 ; CHECK-NEXT:    ret i64 [[I]]

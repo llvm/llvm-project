@@ -9,7 +9,7 @@
 #ifndef LLVM_CODEGEN_REGALLOCPRIORITYADVISOR_H
 #define LLVM_CODEGEN_REGALLOCPRIORITYADVISOR_H
 
-#include "RegAllocEvictionAdvisor.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/Pass.h"
 
@@ -56,9 +56,21 @@ private:
   unsigned getPriority(const LiveInterval &LI) const override;
 };
 
+/// Stupid priority advisor which just enqueues in virtual register number
+/// order, for debug purposes only.
+class DummyPriorityAdvisor : public RegAllocPriorityAdvisor {
+public:
+  DummyPriorityAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+                       SlotIndexes *const Indexes)
+      : RegAllocPriorityAdvisor(MF, RA, Indexes) {}
+
+private:
+  unsigned getPriority(const LiveInterval &LI) const override;
+};
+
 class RegAllocPriorityAdvisorAnalysis : public ImmutablePass {
 public:
-  enum class AdvisorMode : int { Default, Release, Development };
+  enum class AdvisorMode : int { Default, Release, Development, Dummy };
 
   RegAllocPriorityAdvisorAnalysis(AdvisorMode Mode)
       : ImmutablePass(ID), Mode(Mode){};

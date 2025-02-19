@@ -3747,7 +3747,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     } else if (!Pointee->isDependentType()) {
       // FIXME: This can result in errors if the definition was imported from a
       // module but is hidden.
-      if (!RequireCompleteType(StartLoc, Pointee,
+      if (Pointee->isEnumeralType() ||
+          !RequireCompleteType(StartLoc, Pointee,
                                LangOpts.CPlusPlus26
                                    ? diag::err_delete_incomplete
                                    : diag::warn_delete_incomplete,
@@ -3791,13 +3792,16 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
               .HasSizeT;
       }
 
-      if (!PointeeRD->hasIrrelevantDestructor())
+      if (!PointeeRD->hasIrrelevantDestructor()) {
         if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
-          MarkFunctionReferenced(StartLoc,
-                                    const_cast<CXXDestructorDecl*>(Dtor));
-          if (DiagnoseUseOfDecl(Dtor, StartLoc))
-            return ExprError();
+          if (Dtor->isCalledByDelete(OperatorDelete)) {
+            MarkFunctionReferenced(StartLoc,
+                                   const_cast<CXXDestructorDecl *>(Dtor));
+            if (DiagnoseUseOfDecl(Dtor, StartLoc))
+              return ExprError();
+          }
         }
+      }
 
       CheckVirtualDtorCall(PointeeRD->getDestructor(), StartLoc,
                            /*IsDelete=*/true, /*CallCanBeVirtual=*/true,
@@ -3832,8 +3836,9 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     bool IsVirtualDelete = false;
     if (PointeeRD) {
       if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
-        CheckDestructorAccess(Ex.get()->getExprLoc(), Dtor,
-                              PDiag(diag::err_access_dtor) << PointeeElem);
+        if (Dtor->isCalledByDelete(OperatorDelete))
+          CheckDestructorAccess(Ex.get()->getExprLoc(), Dtor,
+                                PDiag(diag::err_access_dtor) << PointeeElem);
         IsVirtualDelete = Dtor->isVirtual();
       }
     }
@@ -4431,10 +4436,21 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_HLSL_Array_RValue:
-    FromType = Context.getArrayParameterType(FromType);
-    From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-                             /*BasePath=*/nullptr, CCK)
-               .get();
+    if (ToType->isArrayParameterType()) {
+      FromType = Context.getArrayParameterType(FromType);
+      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                               /*BasePath=*/nullptr, CCK)
+                 .get();
+    } else { // FromType must be ArrayParameterType
+      assert(FromType->isArrayParameterType() &&
+             "FromType must be ArrayParameterType in ICK_HLSL_Array_RValue \
+              if it is not ToType");
+      const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
+      FromType = APT->getConstantArrayType(Context);
+      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                               /*BasePath=*/nullptr, CCK)
+                 .get();
+    }
     break;
 
   case ICK_Function_To_Pointer:
@@ -5016,7 +5032,6 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsArray:
   case UTT_IsBoundedArray:
   case UTT_IsPointer:
-  case UTT_IsReferenceable:
   case UTT_IsLvalueReference:
   case UTT_IsRvalueReference:
   case UTT_IsMemberFunctionPointer:
@@ -5663,8 +5678,6 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T.isTriviallyRelocatableType(C);
   case UTT_IsBitwiseCloneable:
     return T.isBitwiseCloneableType(C);
-  case UTT_IsReferenceable:
-    return T.isReferenceable();
   case UTT_CanPassInRegs:
     if (CXXRecordDecl *RD = T->getAsCXXRecordDecl(); RD && !T.hasQualifiers())
       return RD->canPassInRegisters();
@@ -5720,8 +5733,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsTypedResourceElementCompatible:
     assert(Self.getLangOpts().HLSL &&
            "typed resource element compatible types are an HLSL-only feature");
-    if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
-                                 diag::err_incomplete_type))
+    if (T->isIncompleteType())
       return false;
 
     return Self.HLSL().IsTypedResourceElementCompatible(T);
@@ -8190,7 +8202,7 @@ ExprResult Sema::BuildPseudoDestructorExpr(Expr *Base,
     return ExprError();
 
   if (!ObjectType->isDependentType() && !ObjectType->isScalarType() &&
-      !ObjectType->isVectorType()) {
+      !ObjectType->isVectorType() && !ObjectType->isMatrixType()) {
     if (getLangOpts().MSVCCompat && ObjectType->isVoidType())
       Diag(OpLoc, diag::ext_pseudo_dtor_on_void) << Base->getSourceRange();
     else {

@@ -150,7 +150,18 @@ std::optional<ResultTy> maybeApply(FuncTy &&func,
                                    const std::optional<ArgTy> &arg) {
   if (!arg)
     return std::nullopt;
-  return std::move(func(*arg));
+  return func(*arg);
+}
+
+template <           //
+    typename FuncTy, //
+    typename ArgTy,  //
+    typename ResultTy =
+        std::invoke_result_t<FuncTy, decltype(std::declval<ArgTy>().v)>>
+std::optional<ResultTy> maybeApplyToV(FuncTy &&func, const ArgTy *arg) {
+  if (!arg)
+    return std::nullopt;
+  return func(arg->v);
 }
 
 std::optional<Object> getBaseObject(const Object &object,
@@ -158,12 +169,14 @@ std::optional<Object> getBaseObject(const Object &object,
 
 namespace clause {
 using Range = tomp::type::RangeT<ExprTy>;
+using Mapper = tomp::type::MapperT<IdTy, ExprTy>;
 using Iterator = tomp::type::IteratorT<TypeTy, IdTy, ExprTy>;
 using IteratorSpecifier = tomp::type::IteratorSpecifierT<TypeTy, IdTy, ExprTy>;
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
 using ProcedureDesignator = tomp::type::ProcedureDesignatorT<IdTy, ExprTy>;
 using ReductionOperator = tomp::type::ReductionIdentifierT<IdTy, ExprTy>;
 using DependenceType = tomp::type::DependenceType;
+using Prescriptiveness = tomp::type::Prescriptiveness;
 
 // "Requires" clauses are handled early on, and the aggregated information
 // is stored in the Symbol details of modules, programs, and subprograms.
@@ -229,6 +242,8 @@ using Mergeable = tomp::clause::MergeableT<TypeTy, IdTy, ExprTy>;
 using Message = tomp::clause::MessageT<TypeTy, IdTy, ExprTy>;
 using NoOpenmp = tomp::clause::NoOpenmpT<TypeTy, IdTy, ExprTy>;
 using NoOpenmpRoutines = tomp::clause::NoOpenmpRoutinesT<TypeTy, IdTy, ExprTy>;
+using NoOpenmpConstructs =
+    tomp::clause::NoOpenmpConstructsT<TypeTy, IdTy, ExprTy>;
 using NoParallelism = tomp::clause::NoParallelismT<TypeTy, IdTy, ExprTy>;
 using Nocontext = tomp::clause::NocontextT<TypeTy, IdTy, ExprTy>;
 using Nogroup = tomp::clause::NogroupT<TypeTy, IdTy, ExprTy>;
@@ -244,6 +259,7 @@ using OmpxBare = tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy>;
 using OmpxDynCgroupMem = tomp::clause::OmpxDynCgroupMemT<TypeTy, IdTy, ExprTy>;
 using Ordered = tomp::clause::OrderedT<TypeTy, IdTy, ExprTy>;
 using Order = tomp::clause::OrderT<TypeTy, IdTy, ExprTy>;
+using Otherwise = tomp::clause::OtherwiseT<TypeTy, IdTy, ExprTy>;
 using Partial = tomp::clause::PartialT<TypeTy, IdTy, ExprTy>;
 using Priority = tomp::clause::PriorityT<TypeTy, IdTy, ExprTy>;
 using Private = tomp::clause::PrivateT<TypeTy, IdTy, ExprTy>;

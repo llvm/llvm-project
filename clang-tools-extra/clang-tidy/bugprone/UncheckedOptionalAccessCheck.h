@@ -12,7 +12,6 @@
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
-#include <optional>
 
 namespace clang::tidy::bugprone {
 
@@ -26,8 +25,7 @@ class UncheckedOptionalAccessCheck : public ClangTidyCheck {
 public:
   UncheckedOptionalAccessCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        ModelOptions{
-            Options.getLocalOrGlobal("IgnoreSmartPointerDereference", false)} {}
+        ModelOptions{Options.get("IgnoreSmartPointerDereference", false)} {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {

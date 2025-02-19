@@ -158,13 +158,46 @@ inline bool isOpenACCCombinedDirectiveKind(OpenACCDirectiveKind K) {
          K == OpenACCDirectiveKind::KernelsLoop;
 }
 
+// Tests 'K' to see if it is 'data', 'host_data', 'enter data', or 'exit data'.
+inline bool isOpenACCDataDirectiveKind(OpenACCDirectiveKind K) {
+  return K == OpenACCDirectiveKind::Data ||
+         K == OpenACCDirectiveKind::EnterData ||
+         K == OpenACCDirectiveKind::ExitData ||
+         K == OpenACCDirectiveKind::HostData;
+}
+
 enum class OpenACCAtomicKind : uint8_t {
   Read,
   Write,
   Update,
   Capture,
-  Invalid,
+  None,
 };
+
+template <typename StreamTy>
+inline StreamTy &printOpenACCAtomicKind(StreamTy &Out, OpenACCAtomicKind AK) {
+  switch (AK) {
+  case OpenACCAtomicKind::Read:
+    return Out << "read";
+  case OpenACCAtomicKind::Write:
+    return Out << "write";
+  case OpenACCAtomicKind::Update:
+    return Out << "update";
+  case OpenACCAtomicKind::Capture:
+    return Out << "capture";
+  case OpenACCAtomicKind::None:
+    return Out << "<none>";
+  }
+  llvm_unreachable("unknown atomic kind");
+}
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCAtomicKind AK) {
+  return printOpenACCAtomicKind(Out, AK);
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCAtomicKind AK) {
+  return printOpenACCAtomicKind(Out, AK);
+}
 
 /// Represents the kind of an OpenACC clause.
 enum class OpenACCClauseKind : uint8_t {

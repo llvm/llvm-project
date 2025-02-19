@@ -12,17 +12,17 @@
 ; CHECK-DAG: %[[#Int8Ptr:]] = OpTypePointer Generic %[[#Int8]]
 
 ; CHECK-DAG: %[[#Const4:]] = OpConstant %[[#Int32]] 4
-; CHECK: %[[#Int8x4:]] = OpTypeArray %[[#Int8]] %[[#Const4]]
+; CHECK-DAG: %[[#Int8x4:]] = OpTypeArray %[[#Int8]] %[[#Const4]]
 
 ; CHECK-DAG: %[[#Const12:]] = OpConstant %[[#Int32]] 12
-; CHECK: %[[#Int8x12:]] = OpTypeArray %[[#Int8]] %[[#Const12]]
+; CHECK-DAG: %[[#Int8x12:]] = OpTypeArray %[[#Int8]] %[[#Const12]]
 
 ; CHECK-DAG: %[[#Const21:]] = OpConstant %[[#Int8]] 21
 ; CHECK-DAG: %[[#False:]] = OpConstantFalse %[[#]]
 ; CHECK-DAG: %[[#ConstComp:]] = OpConstantComposite %[[#Int8x4]] %[[#Const21]] %[[#Const21]] %[[#Const21]] %[[#Const21]]
 ; CHECK-DAG: %[[#ConstNull:]] = OpConstantNull %[[#Int8x12]]
-; CHECK: %[[#VarComp:]] = OpVariable %[[#]] UniformConstant %[[#ConstComp]]
-; CHECK: %[[#VarNull:]] = OpVariable %[[#]] UniformConstant %[[#ConstNull]]
+; CHECK-DAG: %[[#VarComp:]] = OpVariable %[[#]] UniformConstant %[[#ConstComp]]
+; CHECK-DAG: %[[#VarNull:]] = OpVariable %[[#]] UniformConstant %[[#ConstNull]]
 
 ; CHECK-DAG: %[[#Int8PtrConst:]] = OpTypePointer UniformConstant %[[#Int8]]
 ; CHECK: OpCopyMemorySized %[[#Target:]] %[[#Source:]] %[[#Const12]] Aligned 4

@@ -425,3 +425,55 @@ module attributes {transform.with_named_sequence} {
      transform.yield
   }
 }
+
+// -----
+
+#map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+func.func @scalar_broadcast(%init : tensor<1x1x3xi32>, %src: tensor<1x3x2x4xi32>, %idx :index) -> tensor<1x1x3xi32> {
+
+  %c0 = arith.constant 0 :index
+
+  %res = linalg.generic {
+    indexing_maps = [#map],
+    iterator_types = ["parallel", "parallel", "parallel"]}
+    outs(%init : tensor<1x1x3xi32>) {
+    ^bb0(%out: i32):
+      %val = tensor.extract %src[%idx, %idx, %idx, %idx] : tensor<1x3x2x4xi32>
+      linalg.yield %val : i32
+  } -> tensor<1x1x3xi32>
+
+  return %res : tensor<1x1x3xi32>
+}
+
+// CHECK: #[[$MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (0, 0, 0)>
+// CHECK-LABEL:   func.func @scalar_broadcast(
+// CHECK-SAME:      %[[INIT:.*]]: tensor<1x1x3xi32>,
+// CHECK-SAME:      %[[SRC:.*]]: tensor<1x3x2x4xi32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) -> tensor<1x1x3xi32> {
+
+/// Compute the mask for saving the final result
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C1_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[C3:.*]] = arith.constant 3 : index
+// CHECK:           %[[MASK_RES:.*]] = vector.create_mask %[[C1]], %[[C1_2]], %[[C3]] : vector<1x1x4xi1>
+
+/// Read and broadcast the scalar
+// CHECK:           %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK:           %[[MASK_READ:.*]] = vector.constant_mask [1] : vector<1xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK_READ]] {
+// CHECK-SAME:          vector.transfer_read %[[SRC]]{{\[}}%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]],  %[[PAD]]
+// CHECK-SAME:          {in_bounds = [true, true, true], permutation_map = #[[$MAP]]} : tensor<1x3x2x4xi32>, vector<1x1x4xi32>
+// CHECK-SAME:      } : vector<1xi1> -> vector<1x1x4xi32>
+
+/// Save the result in the output tensor
+// CHECK:           vector.mask %[[MASK_RES]] {
+// CHECK-SAME:        vector.transfer_write %[[READ]], %[[INIT]]{{.*}} {in_bounds = [true, true, true]} : vector<1x1x4xi32>, tensor<1x1x3xi32>
+// CHECK-SAME:      } : vector<1x1x4xi1> -> tensor<1x1x3xi32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %module : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [1, 1, 4] {vectorize_nd_extract} : !transform.any_op
+    transform.yield
+  }
+}

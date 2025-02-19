@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <cassert>
+#include <cstddef>
 #include <new>
 
 #include "test_macros.h"

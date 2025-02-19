@@ -192,7 +192,7 @@ static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
   // mechanism that may remove flags to increase the likelihood of CSE.
 
   Flavor = SPF_UNKNOWN;
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
 
   if (!match(Cond, m_ICmp(Pred, m_Specific(A), m_Specific(B)))) {
     // Check for commuted variants of min/max by swapping predicate.
@@ -279,7 +279,7 @@ static unsigned getHashValueImpl(SimpleValue Val) {
     // Hash general selects to allow matching commuted true/false operands.
 
     // If we do not have a compare as the condition, just hash in the condition.
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Value *X, *Y;
     if (!match(Cond, m_Cmp(Pred, m_Value(X), m_Value(Y))))
       return hash_combine(Inst->getOpcode(), Cond, A, B);
@@ -290,7 +290,8 @@ static unsigned getHashValueImpl(SimpleValue Val) {
       Pred = CmpInst::getInversePredicate(Pred);
       std::swap(A, B);
     }
-    return hash_combine(Inst->getOpcode(), Pred, X, Y, A, B);
+    return hash_combine(Inst->getOpcode(),
+                        static_cast<CmpInst::Predicate>(Pred), X, Y, A, B);
   }
 
   if (CastInst *CI = dyn_cast<CastInst>(Inst))
@@ -451,7 +452,7 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
     // this code, as we simplify the double-negation before hashing the second
     // select (and so still succeed at CSEing them).
     if (LHSA == RHSB && LHSB == RHSA) {
-      CmpInst::Predicate PredL, PredR;
+      CmpPredicate PredL, PredR;
       Value *X, *Y;
       if (match(CondL, m_Cmp(PredL, m_Value(X), m_Value(Y))) &&
           match(CondR, m_Cmp(PredR, m_Specific(X), m_Specific(Y))) &&

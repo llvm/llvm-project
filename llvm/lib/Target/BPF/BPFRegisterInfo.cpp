@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFRegisterInfo.h"
-#include "BPF.h"
 #include "BPFSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
