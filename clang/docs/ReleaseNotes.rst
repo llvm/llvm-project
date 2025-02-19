@@ -155,6 +155,10 @@ Bug Fixes in This Version
 - Clang now outputs correct values when #embed data contains bytes with negative
   signed char values (#GH102798).
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
