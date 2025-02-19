@@ -15,9 +15,7 @@ define <vscale x 1 x i64> @vpudiv_by_const_no_add_nxv1i64(<vscale x 1 x i64> %va
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vdivu.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    ret
-  %vec = insertelement <vscale x 1 x i64> undef, i64 5, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %vec, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.udiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %splat, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.udiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> splat (i64 5), <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
@@ -28,9 +26,7 @@ define <vscale x 1 x i64> @vpudiv_by_const_with_add_nxv1i64(<vscale x 1 x i64> %
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vdivu.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    ret
-  %vec = insertelement <vscale x 1 x i64> undef, i64 7, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %vec, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.udiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %splat, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.udiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> splat (i64 7), <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
@@ -41,9 +37,7 @@ define <vscale x 1 x i64> @vpsdiv_const_no_ashr_nxv1i64(<vscale x 1 x i64> %va, 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vdiv.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    ret
-  %vec = insertelement <vscale x 1 x i64> undef, i64 3, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %vec, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %splat, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> splat (i64 3), <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
@@ -54,9 +48,7 @@ define <vscale x 1 x i64> @vpsdiv_const_ashr_nxv1i64(<vscale x 1 x i64> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vdiv.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    ret
-  %vec = insertelement <vscale x 1 x i64> undef, i64 5, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %vec, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %splat, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> splat (i64 5), <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
@@ -67,9 +59,7 @@ define <vscale x 1 x i64> @vpsdiv_const_add_ashr_nxv1i64(<vscale x 1 x i64> %va,
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vdiv.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    ret
-  %vec = insertelement <vscale x 1 x i64> undef, i64 15, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %vec, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %splat, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> splat (i64 15), <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
@@ -80,7 +70,7 @@ define <vscale x 1 x i64> @vpsdiv_const_sub_ashr_nxv1i64(<vscale x 1 x i64> %va,
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vdiv.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    ret
-  %vec = insertelement <vscale x 1 x i64> undef, i64 -3, i32 0
+  %vec = insertelement <vscale x 1 x i64> poison, i64 -3, i32 0
   %splat = shufflevector <vscale x 1 x i64> %vec, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %splat, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
@@ -93,9 +83,7 @@ define <vscale x 1 x i64> @vpurem_by_const_nxv1i64(<vscale x 1 x i64> %va, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vremu.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    ret
-  %vec = insertelement <vscale x 1 x i64> undef, i64 5, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %vec, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.urem.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %splat, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.urem.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> splat (i64 5), <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
@@ -106,8 +94,6 @@ define <vscale x 1 x i64> @vpsrem_by_const_nxv1i64(<vscale x 1 x i64> %va, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vrem.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    ret
-  %vec = insertelement <vscale x 1 x i64> undef, i64 5, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %vec, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.srem.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %splat, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.srem.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> splat (i64 5), <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
