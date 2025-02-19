@@ -25,6 +25,7 @@ function(cxx_add_warning_flags target enable_werror enable_pedantic)
       -Wformat-nonliteral
       -Wzero-length-array
       -Wdeprecated-redundant-constexpr-static-def
+      -Wmissing-prototypes
       )
 
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
