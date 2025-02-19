@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -19,7 +20,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -579,13 +579,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             followBoxData = true;
           approximateSource = true;
         })
-        .Case<fir::EmboxOp, fir::ReboxOp, fir::cg::XEmboxOp, fir::cg::XReboxOp>([&](auto op) {
-          if (followBoxData) {
-            v = op->getOperand(0);
-            defOp = v.getDefiningOp();
-          } else
-            breakFromLoop = true;
-        })
+        .Case<fir::EmboxOp, fir::ReboxOp, fir::cg::XEmboxOp, fir::cg::XReboxOp>(
+            [&](auto op) {
+              if (followBoxData) {
+                v = op->getOperand(0);
+                defOp = v.getDefiningOp();
+              } else
+                breakFromLoop = true;
+            })
         .Case<fir::LoadOp>([&](auto op) {
           // If load is inside target and it points to mapped item,
           // continue tracking.
@@ -654,7 +655,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
         })
-        .Case<hlfir::DeclareOp, fir::DeclareOp, fir::cg::XDeclareOp>([&](auto op) {
+        .Case<hlfir::DeclareOp, fir::DeclareOp,
+              fir::cg::XDeclareOp>([&](auto op) {
           bool isPrivateItem = false;
           if (omp::BlockArgOpenMPOpInterface argIface =
                   dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
@@ -689,7 +691,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             }
           }
           auto varIf = llvm::dyn_cast<fir::FortranVariableOpInterface>(defOp);
-          if(varIf){
+          if (varIf) {
             // While going through a declare operation collect
             // the variable attributes from it. Right now, some
             // of the attributes are duplicated, e.g. a TARGET dummy
@@ -709,7 +711,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
               v = defOp->getResult(0);
               // TODO: if the host associated variable is a dummy argument
               // of the host, I think, we can treat it as SourceKind::Argument
-              // for the purpose of alias analysis inside the internal procedure.
+              // for the purpose of alias analysis inside the internal
+              // procedure.
               type = SourceKind::HostAssoc;
               breakFromLoop = true;
               return;
