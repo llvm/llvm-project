@@ -1724,7 +1724,7 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
 
   Location loc = op->getLoc();
   SmallVector<OpFoldResult> loopBound =
-      llvm::map_to_vector(loopRanges, [&](Range range) { return range.size; });
+      llvm::map_to_vector(loopRanges, [](Range range) { return range.size; });
 
   if (collapsedOp.hasIndexSemantics()) {
     // Collect the loop range of the generic op.
