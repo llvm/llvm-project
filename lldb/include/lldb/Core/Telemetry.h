@@ -13,6 +13,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
@@ -29,6 +30,9 @@ namespace telemetry {
 
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000;
+  static const KindType TargetInfo = 0b11010;
+  // There are other entries in between (added in separate PRs)
+  static const llvm::telemetry::KindType MiscInfo = 0b11110;
 };
 
 /// Defines a convenient type for timestamp of various events.
@@ -56,14 +60,88 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 
+/// Describes an exit status.
+struct ExitDescription {
+  int exit_code;
+  std::string description;
+};
+
+struct TargetTelemetryInfo : public LldbBaseTelemetryInfo {
+  lldb::ModuleSP exec_mod;
+  Target *target_ptr;
+
+  // The same as the executable-module's UUID.
+  std::string target_uuid;
+  std::string file_format;
+
+  std::string binary_path;
+  size_t binary_size;
+
+  std::optional<ExitDescription> exit_desc;
+  TargetTelemetryInfo() = default;
+
+  TargetTelemetryInfo(const TargetTelemetryInfo &other) {
+    exec_mod = other.exec_mod;
+    target_uuid = other.target_uuid;
+    file_format = other.file_format;
+    binary_path = other.binary_path;
+    binary_size = other.binary_size;
+    exit_desc = other.exit_desc;
+  }
+
+  KindType getKind() const override { return LldbEntryKind::TargetInfo; }
+
+  static bool classof(const TelemetryInfo *T) {
+    if (T == nullptr)
+      return false;
+    return T->getKind() == LldbEntryKind::TargetInfo;
+  }
+
+  void serialize(Serializer &serializer) const override;
+};
+
+/// The "catch-all" entry to store a set of non-standard data, such as
+/// error-messages, etc.
+struct MiscTelemetryInfo : public LLDBBaseTelemetryInfo {
+  /// If the event is/can be associated with a target entry,
+  /// this field contains that target's UUID.
+  /// <EMPTY> otherwise.
+  std::string target_uuid;
+
+  /// Set of key-value pairs for any optional (or impl-specific) data
+  std::map<std::string, std::string> meta_data;
+
+  MiscTelemetryInfo() = default;
+
+  MiscTelemetryInfo(const MiscTelemetryInfo &other) {
+    target_uuid = other.target_uuid;
+    meta_data = other.meta_data;
+  }
+
+  llvm::telemetry::KindType getKind() const override {
+    return LLDBEntryKind::MiscInfo;
+  }
+
+  static bool classof(const llvm::telemetry::TelemetryInfo *T) {
+    return T->getKind() == LLDBEntryKind::MiscInfo;
+  }
+
+  void serialize(llvm::telemetry::Serializer &serializer) const override;
+};
+
 /// The base Telemetry manager instance in LLDB.
 /// This class declares additional instrumentation points
 /// applicable to LLDB.
-class TelemetryManager : public llvm::telemetry::Manager {
+class TelemetryMager : public llvm::telemetry::Manager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
-  virtual llvm::StringRef GetInstanceName() const = 0;
+  const llvm::telemetry::Config *getConfig();
+
+  virtual void AtMainExecutableLoadStart(TargetInfo * entry);
+  virtual void AtMainExecutableLoadEnd(TargetInfo *entry);
+
+      virtual llvm::StringRef GetInstanceName() const = 0;
   static TelemetryManager *getInstance();
 
 protected:
@@ -73,6 +151,10 @@ protected:
 
 private:
   std::unique_ptr<llvm::telemetry::Config> m_config;
+  // Each debugger is assigned a unique ID (session_id).
+  // All TelemetryInfo entries emitted for the same debugger instance
+  // will get the same session_id.
+  llvm::DenseMap<Debugger *, std::string> session_ids;
   static std::unique_ptr<TelemetryManager> g_instance;
 };
 
