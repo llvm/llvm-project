@@ -574,7 +574,7 @@ LogicalResult StoreScatterOp::verify() {
   if (!sgMap)
     return valueShape == tdescShape
                ? success()
-               : emitOpError("Unexpected result shape")
+               : emitOpError("Unexpected value shape")
                      << "(Expected shape: " << makeString(tdescShape)
                      << ", Given shape: " << makeString(valueShape) << ").\n";
   // In SIMT mode, sg_map, wi_data, and chunk_size determine the value shape.
@@ -584,7 +584,7 @@ LogicalResult StoreScatterOp::verify() {
                        "tensor descriptor ")
            << tdescTy;
   if (cast<VectorType>(valueTy) != distributedVectorShapeOrFailure.value())
-    return emitOpError("Unexpected result shape")
+    return emitOpError("Unexpected value shape")
            << "(Expected shape: "
            << makeString(distributedVectorShapeOrFailure.value().getShape())
            << ", Given shape: " << makeString(valueShape) << ").\n";
