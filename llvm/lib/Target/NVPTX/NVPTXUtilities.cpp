@@ -13,6 +13,8 @@
 #include "NVPTXUtilities.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -196,6 +198,36 @@ static std::optional<unsigned> getFnAttrParsedInt(const Function &F,
              : std::nullopt;
 }
 
+static SmallVector<unsigned, 3> getFnAttrParsedVector(const Function &F,
+                                                      StringRef Attr) {
+  SmallVector<unsigned, 3> V;
+  auto &Ctx = F.getContext();
+
+  if (F.hasFnAttribute(Attr)) {
+    StringRef S = F.getFnAttribute(Attr).getValueAsString();
+    for (unsigned I = 0; I < 3 && !S.empty(); I++) {
+      auto [First, Rest] = S.split(",");
+      unsigned IntVal;
+      if (First.trim().getAsInteger(0, IntVal))
+        Ctx.emitError("can't parse integer attribute " + First + " in " + Attr);
+
+      V.push_back(IntVal);
+      S = Rest;
+    }
+  }
+  return V;
+}
+
+static std::optional<unsigned> getVectorProduct(ArrayRef<unsigned> V) {
+  if (V.empty())
+    return std::nullopt;
+
+  unsigned Product = 1;
+  for (const unsigned E : V)
+    Product *= E;
+  return Product;
+}
+
 bool isParamGridConstant(const Value &V) {
   if (const Argument *Arg = dyn_cast<Argument>(&V)) {
     // "grid_constant" counts argument indices starting from 1
@@ -254,69 +286,37 @@ StringRef getSamplerName(const Value &V) {
   return V.getName();
 }
 
-std::optional<unsigned> getMaxNTIDx(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxntidx");
+SmallVector<unsigned, 3> getMaxNTID(const Function &F) {
+  return getFnAttrParsedVector(F, "nvvm.maxntid");
 }
 
-std::optional<unsigned> getMaxNTIDy(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxntidy");
+SmallVector<unsigned, 3> getReqNTID(const Function &F) {
+  return getFnAttrParsedVector(F, "nvvm.reqntid");
 }
 
-std::optional<unsigned> getMaxNTIDz(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxntidz");
+SmallVector<unsigned, 3> getClusterDim(const Function &F) {
+  return getFnAttrParsedVector(F, "nvvm.cluster_dim");
 }
 
-std::optional<unsigned> getMaxNTID(const Function &F) {
+std::optional<unsigned> getOverallMaxNTID(const Function &F) {
   // Note: The semantics here are a bit strange. The PTX ISA states the
   // following (11.4.2. Performance-Tuning Directives: .maxntid):
   //
   //  Note that this directive guarantees that the total number of threads does
   //  not exceed the maximum, but does not guarantee that the limit in any
   //  particular dimension is not exceeded.
-  std::optional<unsigned> MaxNTIDx = getMaxNTIDx(F);
-  std::optional<unsigned> MaxNTIDy = getMaxNTIDy(F);
-  std::optional<unsigned> MaxNTIDz = getMaxNTIDz(F);
-  if (MaxNTIDx || MaxNTIDy || MaxNTIDz)
-    return MaxNTIDx.value_or(1) * MaxNTIDy.value_or(1) * MaxNTIDz.value_or(1);
-  return std::nullopt;
+  const auto MaxNTID = getMaxNTID(F);
+  return getVectorProduct(MaxNTID);
 }
 
-std::optional<unsigned> getClusterDimx(const Function &F) {
-  return findOneNVVMAnnotation(&F, "cluster_dim_x");
-}
-
-std::optional<unsigned> getClusterDimy(const Function &F) {
-  return findOneNVVMAnnotation(&F, "cluster_dim_y");
-}
-
-std::optional<unsigned> getClusterDimz(const Function &F) {
-  return findOneNVVMAnnotation(&F, "cluster_dim_z");
+std::optional<unsigned> getOverallReqNTID(const Function &F) {
+  // Note: The semantics here are a bit strange. See getMaxNTID.
+  const auto ReqNTID = getReqNTID(F);
+  return getVectorProduct(ReqNTID);
 }
 
 std::optional<unsigned> getMaxClusterRank(const Function &F) {
   return getFnAttrParsedInt(F, "nvvm.maxclusterrank");
-}
-
-std::optional<unsigned> getReqNTIDx(const Function &F) {
-  return findOneNVVMAnnotation(&F, "reqntidx");
-}
-
-std::optional<unsigned> getReqNTIDy(const Function &F) {
-  return findOneNVVMAnnotation(&F, "reqntidy");
-}
-
-std::optional<unsigned> getReqNTIDz(const Function &F) {
-  return findOneNVVMAnnotation(&F, "reqntidz");
-}
-
-std::optional<unsigned> getReqNTID(const Function &F) {
-  // Note: The semantics here are a bit strange. See getMaxNTID.
-  std::optional<unsigned> ReqNTIDx = getReqNTIDx(F);
-  std::optional<unsigned> ReqNTIDy = getReqNTIDy(F);
-  std::optional<unsigned> ReqNTIDz = getReqNTIDz(F);
-  if (ReqNTIDx || ReqNTIDy || ReqNTIDz)
-    return ReqNTIDx.value_or(1) * ReqNTIDy.value_or(1) * ReqNTIDz.value_or(1);
-  return std::nullopt;
 }
 
 std::optional<unsigned> getMinCTASm(const Function &F) {

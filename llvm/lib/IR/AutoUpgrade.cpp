@@ -13,11 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -46,6 +48,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cstdint>
 #include <cstring>
 #include <numeric>
 
@@ -5021,6 +5024,36 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   return Modified;
 }
 
+static void upgradeNVVMFnVectorAttr(const StringRef Attr, const char DimC,
+                                    GlobalValue *GV, const Metadata *V) {
+  Function *F = cast<Function>(GV);
+
+  constexpr StringLiteral DefaultValue = "1";
+  StringRef Vect3[3] = {DefaultValue, DefaultValue, DefaultValue};
+  unsigned Length = 0;
+
+  if (F->hasFnAttribute(Attr)) {
+    StringRef S = F->getFnAttribute(Attr).getValueAsString();
+    for (; Length < 3 && !S.empty(); Length++) {
+      auto [Part, Rest] = S.split(',');
+      Vect3[Length] = Part.trim();
+      S = Rest;
+    }
+  }
+
+  const uint64_t VInt = mdconst::extract<ConstantInt>(V)->getZExtValue();
+  const std::string VStr = llvm::utostr(VInt);
+
+  const unsigned Dim = DimC - 'x';
+  assert(Dim >= 0 && Dim < 3 && "Unexpected dim char");
+
+  Vect3[Dim] = VStr;
+  Length = std::max(Length, Dim + 1);
+
+  const std::string NewAttr = llvm::join(ArrayRef(Vect3, Length), ",");
+  F->addFnAttr(Attr, NewAttr);
+}
+
 bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
                                         const Metadata *V) {
   if (K == "kernel") {
@@ -5057,6 +5090,18 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
   if (K == "maxnreg") {
     const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
     cast<Function>(GV)->addFnAttr("nvvm.maxnreg", llvm::utostr(CV));
+    return true;
+  }
+  if (K.consume_front("maxntid") && (K == "x" || K == "y" || K == "z")) {
+    upgradeNVVMFnVectorAttr("nvvm.maxntid", K[0], GV, V);
+    return true;
+  }
+  if (K.consume_front("reqntid") && (K == "x" || K == "y" || K == "z")) {
+    upgradeNVVMFnVectorAttr("nvvm.reqntid", K[0], GV, V);
+    return true;
+  }
+  if (K.consume_front("cluster_dim_") && (K == "x" || K == "y" || K == "z")) {
+    upgradeNVVMFnVectorAttr("nvvm.cluster_dim", K[0], GV, V);
     return true;
   }
 
