@@ -20,16 +20,12 @@ include( GNUInstallDirs )
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   amdgcn-amdhsa/lib/SOURCES;
   amdgcn/lib/SOURCES;
-  amdgcn-mesa3d/lib/SOURCES;
   amdgpu/lib/SOURCES;
   clspv/lib/SOURCES;
-  clspv64/lib/SOURCES;
   generic/lib/SOURCES;
-  ptx/lib/SOURCES;
   ptx-nvidiacl/lib/SOURCES;
   r600/lib/SOURCES;
   spirv/lib/SOURCES;
-  spirv64/lib/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
 )
@@ -280,11 +276,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
   set( opencl_dirs )
 
-  if ( NOT ${ARCH} STREQUAL spirv AND NOT ${ARCH} STREQUAL spirv64 AND
-       NOT ${ARCH} STREQUAL clspv AND NOT ${ARCH} STREQUAL clspv64)
-    LIST( APPEND opencl_dirs generic )
-  endif()
-
   if( ${ARCH} STREQUAL r600 OR ${ARCH} STREQUAL amdgcn )
     list( APPEND opencl_dirs amdgpu )
   endif()
@@ -302,8 +293,25 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( DARCH ${ARCH} )
   endif()
 
+  # Append a variety of target- and triple-based directories to search,
+  # increasing in specificity.
+  list( APPEND opencl_dirs ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS} )
+
+  # The 'generic' directory contains all of the generic implementations of the
+  # builtins. It is included first so it has the lowest search priority,
+  # allowing targets to override builtins based on file names found later in
+  # the list of search directories.
+  # CLC builds all builtins for all targets, so unconditionally prepend the
+  # 'generic' directory.
+  set( clc_dirs generic ${opencl_dirs} )
+  # Some OpenCL targets don't build all builtins, in which case they don't want
+  # the 'generic' directory. Otherwise, prepend the 'generic' directory.
+  if ( NOT ARCH STREQUAL spirv AND NOT ARCH STREQUAL spirv64 AND
+       NOT ARCH STREQUAL clspv AND NOT ARCH STREQUAL clspv64)
+    list( PREPEND opencl_dirs generic )
+  endif()
+
   set( clc_lib_files )
-  set( clc_dirs ${dirs} generic )
 
   if( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
     set( clc_gen_files clc-clspv-convert.cl )
@@ -315,7 +323,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     clc_lib_files
     CLC_INTERNAL
     LIB_ROOT_DIR clc
-    DIRS ${clc_dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+    DIRS ${clc_dirs}
   )
 
   set( opencl_lib_files )
@@ -334,7 +342,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
   libclc_configure_lib_source(
     opencl_lib_files
-    DIRS ${opencl_dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS}
+    DIRS ${opencl_dirs}
   )
 
   foreach( d ${${t}_devices} )
