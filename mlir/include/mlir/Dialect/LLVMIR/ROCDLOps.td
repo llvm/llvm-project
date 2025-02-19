@@ -475,6 +475,24 @@ def ROCDL_RawPtrBufferLoadOp :
   }];
 }
 
+def ROCDL_RawPtrBufferLoadLdsOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.load.lds", [], [], [], 0, 0, 1> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                  I32:$size,
+                  I32:$voffset,
+                  I32:$soffset,
+                  I32:$offset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc(), getLdsPtr()};
+    }
+  }];
+}
+
 def ROCDL_RawPtrBufferStoreOp :
   ROCDL_IntrOp<"raw.ptr.buffer.store", [], [0], [], 0, 0, 1> {
   dag args = (ins LLVM_Type:$vdata,
@@ -692,7 +710,7 @@ def ROCDL_CvtScaleF32PkFp8F32:
     attr-dict $srcA `,` $srcB `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
   }];
 }
-    
+
 def ROCDL_CvtScaleF32PkBf8F32:
     ROCDL_IntrOp<"cvt.scalef32.pk.bf8.f32", [], [], [Pure], 1>,
     Arguments<(ins ROCDL_V2I16Type:$old, F32:$srcA, F32:$srcB, F32: $scale, I1:$wordSel)> {
