@@ -174,7 +174,7 @@ static cl::opt<bool> EnableInitializesImprovement(
 // Helper functions
 //===----------------------------------------------------------------------===//
 using OverlapIntervalsTy = std::map<int64_t, int64_t>;
-using InstOverlapIntervalsTy = DenseMap<Instruction *, OverlapIntervalsTy>;
+using InstOverlapIntervalsTy = MapVector<Instruction *, OverlapIntervalsTy>;
 
 /// Returns true if the end of this instruction can be safely shortened in
 /// length.
