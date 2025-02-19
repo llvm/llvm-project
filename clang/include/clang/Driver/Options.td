@@ -2987,8 +2987,8 @@ defm clangir : BoolFOption<"clangir",
   BothFlags<[], [ClangOption, CC1Option], "">>;
 def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
-def emit_cir_mlir : Flag<["-"], "emit-cir-mlir">, Visibility<[CC1Option]>, Group<Action_Group>,
-  HelpText<"Build ASTs and then lower through ClangIR to MLIR, emit the .milr file">;
+def emit_core_mlir : Flag<["-"], "emit-core-mlir">, Visibility<[CC1Option]>, Group<Action_Group>,
+  HelpText<"Build ASTs and then lower through ClangIR to core MLIR dialects, emit the .milr file">;
 /// ClangIR-specific options - END
 
 def flto_EQ : Joined<["-"], "flto=">,
