@@ -900,3 +900,15 @@ define i8 @neg_select_trunc_bittest_to_shl_extra_use(i8 %x) {
   %ret = select i1 %trunc, i8 4, i8 0
   ret i8 %ret
 }
+
+define i16 @select_trunc_nuw_bittest_or(i8 %x) {
+; CHECK-LABEL: @select_trunc_nuw_bittest_or(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i16 20, i16 4
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %select = select i1 %trunc, i16 16, i16 0
+  %res = or i16 4, %select
+  ret i16 %res
+}
