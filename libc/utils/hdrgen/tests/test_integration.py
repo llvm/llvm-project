@@ -12,8 +12,7 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.main_script = self.source_dir.parent / "main.py"
         self.maxDiff = 80 * 100
 
-    def run_script(self, yaml_file, output_file, entry_points=[],
-                   switches=[]):
+    def run_script(self, yaml_file, output_file, entry_points=[], switches=[]):
         command = [
             "python3",
             str(self.main_script),
@@ -68,7 +67,6 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.run_script(yaml_file, output_file, switches=["--json"])
 
         self.compare_files(output_file, expected_output_file)
-
 
 
 def main():
