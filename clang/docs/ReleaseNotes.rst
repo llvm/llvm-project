@@ -155,6 +155,9 @@ Bug Fixes in This Version
 - Clang now outputs correct values when #embed data contains bytes with negative
   signed char values (#GH102798).
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
