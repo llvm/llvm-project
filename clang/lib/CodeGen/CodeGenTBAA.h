@@ -215,6 +215,8 @@ public:
   /// purpose of memory transfer calls.
   TBAAAccessInfo mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo DestInfo,
                                                 TBAAAccessInfo SrcInfo);
+
+  TBAAAccessInfo genConservativeTBAA(QualType AccessType);
 };
 
 }  // end namespace CodeGen
