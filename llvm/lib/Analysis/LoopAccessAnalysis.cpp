@@ -42,13 +42,12 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
@@ -66,7 +65,6 @@
 #include <vector>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "loop-accesses"
 
@@ -800,8 +798,13 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
                     Value *Ptr, PredicatedScalarEvolution &PSE) {
   // The access function must stride over the innermost loop.
   if (Lp != AR->getLoop()) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not striding over innermost loop "
-                      << *Ptr << " SCEV: " << *AR << "\n");
+    LLVM_DEBUG({
+      dbgs() << "LAA: Bad stride - Not striding over innermost loop ";
+      if (Ptr)
+        dbgs() << *Ptr << " ";
+
+      dbgs() << "SCEV: " << *AR << "\n";
+    });
     return std::nullopt;
   }
 
@@ -811,8 +814,12 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   // Calculate the pointer stride and check if it is constant.
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Step);
   if (!C) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not a constant strided " << *Ptr
-                      << " SCEV: " << *AR << "\n");
+    LLVM_DEBUG({
+      dbgs() << "LAA: Bad stride - Not a constant strided ";
+      if (Ptr)
+        dbgs() << *Ptr << " ";
+      dbgs() << "SCEV: " << *AR << "\n";
+    });
     return std::nullopt;
   }
 
@@ -839,8 +846,8 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
 static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
                         const Loop *L);
 
-/// Check whether \p AR is a non-wrapping AddRec, or if \p Ptr is a non-wrapping
-/// GEP.
+/// Check whether \p AR is a non-wrapping AddRec. If \p Ptr is not nullptr, use
+/// informating from the IR pointer value to determine no-wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
                      Value *Ptr, Type *AccessTy, const Loop *L, bool Assume,
                      std::optional<int64_t> Stride = std::nullopt) {
@@ -848,12 +855,12 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
   if (AR->getNoWrapFlags(SCEV::NoWrapMask))
     return true;
 
-  if (PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+  if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
     return true;
 
   // The address calculation must not wrap. Otherwise, a dependence could be
   // inverted.
-  if (isNoWrapGEP(Ptr, PSE, L))
+  if (Ptr && isNoWrapGEP(Ptr, PSE, L))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -861,7 +868,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
   // location will be larger than half the pointer index type space. In that
   // case, the GEP would be  poison and any memory access dependent on it would
   // be immediate UB when executed.
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+  if (auto *GEP = dyn_cast_if_present<GetElementPtrInst>(Ptr);
       GEP && GEP->hasNoUnsignedSignedWrap())
     return true;
 
@@ -877,7 +884,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
       return true;
   }
 
-  if (Assume) {
+  if (Ptr && Assume) {
     PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
     LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
                       << "LAA:   Pointer: " << *Ptr << "\n"
@@ -1119,6 +1126,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
 
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> TranslatedPtrs =
       findForkedPointer(PSE, StridesMap, Ptr, TheLoop);
+  assert(!TranslatedPtrs.empty() && "must have some translated pointers");
 
   /// Check whether all pointers can participate in a runtime bounds check. They
   /// must either be invariant or AddRecs. If ShouldCheckWrap is true, they also
@@ -1144,13 +1152,10 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
 
     // When we run after a failing dependency check we have to make sure
     // we don't have wrapping pointers.
-    if (ShouldCheckWrap) {
-      // Skip wrap checking when translating pointers.
-      if (TranslatedPtrs.size() > 1)
-        return false;
-
-      if (!isNoWrap(PSE, AR, Ptr, AccessTy, TheLoop, Assume))
-        return false;
+    if (ShouldCheckWrap &&
+        !isNoWrap(PSE, AR, TranslatedPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
+                  TheLoop, Assume)) {
+      return false;
     }
   }
 
@@ -2815,50 +2820,25 @@ bool LoopAccessInfo::isInvariant(Value *V) const {
   return SE->isLoopInvariant(S, TheLoop);
 }
 
-/// Find the operand of the GEP that should be checked for consecutive
-/// stores. This ignores trailing indices that have no effect on the final
-/// pointer.
-static unsigned getGEPInductionOperand(const GetElementPtrInst *Gep) {
-  const DataLayout &DL = Gep->getDataLayout();
-  unsigned LastOperand = Gep->getNumOperands() - 1;
-  TypeSize GEPAllocSize = DL.getTypeAllocSize(Gep->getResultElementType());
-
-  // Walk backwards and try to peel off zeros.
-  while (LastOperand > 1 && match(Gep->getOperand(LastOperand), m_Zero())) {
-    // Find the type we're currently indexing into.
-    gep_type_iterator GEPTI = gep_type_begin(Gep);
-    std::advance(GEPTI, LastOperand - 2);
-
-    // If it's a type with the same allocation size as the result of the GEP we
-    // can peel off the zero index.
-    TypeSize ElemSize = GEPTI.isStruct()
-                            ? DL.getTypeAllocSize(GEPTI.getIndexedType())
-                            : GEPTI.getSequentialElementStride(DL);
-    if (ElemSize != GEPAllocSize)
-      break;
-    --LastOperand;
-  }
-
-  return LastOperand;
-}
-
-/// If the argument is a GEP, then returns the operand identified by
-/// getGEPInductionOperand. However, if there is some other non-loop-invariant
-/// operand, it returns that instead.
-static Value *stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
+/// If \p Ptr is a GEP, which has a loop-variant operand, return that operand.
+/// Otherwise, return \p Ptr.
+static Value *getLoopVariantGEPOperand(Value *Ptr, ScalarEvolution *SE,
+                                       Loop *Lp) {
   auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   if (!GEP)
     return Ptr;
 
-  unsigned InductionOperand = getGEPInductionOperand(GEP);
-
-  // Check that all of the gep indices are uniform except for our induction
-  // operand.
-  for (unsigned I = 0, E = GEP->getNumOperands(); I != E; ++I)
-    if (I != InductionOperand &&
-        !SE->isLoopInvariant(SE->getSCEV(GEP->getOperand(I)), Lp))
-      return Ptr;
-  return GEP->getOperand(InductionOperand);
+  Value *V = Ptr;
+  for (const Use &U : GEP->operands()) {
+    if (!SE->isLoopInvariant(SE->getSCEV(U), Lp)) {
+      if (V == Ptr)
+        V = U;
+      else
+        // There must be exactly one loop-variant operand.
+        return Ptr;
+    }
+  }
+  return V;
 }
 
 /// Get the stride of a pointer access in a loop. Looks for symbolic
@@ -2873,7 +2853,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   // pointer, otherwise, we are analyzing the index.
   Value *OrigPtr = Ptr;
 
-  Ptr = stripGetElementPtr(Ptr, SE, Lp);
+  Ptr = getLoopVariantGEPOperand(Ptr, SE, Lp);
   const SCEV *V = SE->getSCEV(Ptr);
 
   if (Ptr != OrigPtr)

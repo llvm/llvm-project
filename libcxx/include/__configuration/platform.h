@@ -32,12 +32,14 @@
 
 // Need to detect which libc we're using if we're on Linux.
 #if defined(__linux__) || defined(__AMDGPU__) || defined(__NVPTX__)
-#  include <features.h>
-#  if defined(__GLIBC_PREREQ)
-#    define _LIBCPP_GLIBC_PREREQ(a, b) __GLIBC_PREREQ(a, b)
-#  else
-#    define _LIBCPP_GLIBC_PREREQ(a, b) 0
-#  endif // defined(__GLIBC_PREREQ)
+#  if __has_include(<features.h>)
+#    include <features.h>
+#    if defined(__GLIBC_PREREQ)
+#      define _LIBCPP_GLIBC_PREREQ(a, b) __GLIBC_PREREQ(a, b)
+#    else
+#      define _LIBCPP_GLIBC_PREREQ(a, b) 0
+#    endif // defined(__GLIBC_PREREQ)
+#  endif
 #endif
 
 #ifndef __BYTE_ORDER__

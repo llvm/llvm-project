@@ -155,6 +155,8 @@ Changes to LLDB
   does not provide API to query the number of supported hardware watchpoints.
   Therefore current implementation allows only 1 watchpoint, as tested with
   Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
+* LLDB now steps through C++ thunks. This fixes an issue where previously, it
+  wouldn't step into multiple inheritance virtual functions.
 
 ### Changes to lldb-dap
 
