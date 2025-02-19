@@ -73,13 +73,14 @@ class VariableBindConsumer : public StoreTestConsumer {
     EXPECT_EQ(Zero, SManager.getBinding(StX0, LX0, ASTCtxt.IntTy));
 
     // BindDefaultInitial(Zero)
-    Store StY0 =
-        SManager.BindDefaultInitial(StInit, LY0.getAsRegion(), Zero).getStore();
+    Store StY0 = SManager.BindDefaultInitial(StInit, LY0.getAsRegion(), Zero)
+                     .ResultingStore.getStore();
     EXPECT_EQ(Zero, SManager.getBinding(StY0, LY0, ASTCtxt.IntTy));
     EXPECT_EQ(Zero, *SManager.getDefaultBinding(StY0, LY0.getAsRegion()));
 
     // BindDefaultZero()
-    Store StZ0 = SManager.BindDefaultZero(StInit, LZ0.getAsRegion()).getStore();
+    Store StZ0 = SManager.BindDefaultZero(StInit, LZ0.getAsRegion())
+                     .ResultingStore.getStore();
     // BindDefaultZero wipes the region with '0 S8b', not with out Zero.
     // Direct load, however, does give us back the object of the type
     // that we specify for loading.
@@ -91,8 +92,8 @@ class VariableBindConsumer : public StoreTestConsumer {
     EXPECT_EQ(One, SManager.getBinding(StX1, LX1, ASTCtxt.IntTy));
 
     // BindDefaultInitial(One)
-    Store StY1 =
-        SManager.BindDefaultInitial(StInit, LY1.getAsRegion(), One).getStore();
+    Store StY1 = SManager.BindDefaultInitial(StInit, LY1.getAsRegion(), One)
+                     .ResultingStore.getStore();
     EXPECT_EQ(One, SManager.getBinding(StY1, LY1, ASTCtxt.IntTy));
     EXPECT_EQ(One, *SManager.getDefaultBinding(StY1, LY1.getAsRegion()));
   }

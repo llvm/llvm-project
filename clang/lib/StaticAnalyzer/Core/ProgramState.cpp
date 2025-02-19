@@ -111,6 +111,17 @@ ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
   return getPersistentState(NewState);
 }
 
+static ProgramStateRef escapeFailedToBindValues(ExprEngine &Eng,
+                                                ProgramStateRef State,
+                                                const BindResult &BindRes) {
+  // We must always notify the checkers for failing binds because otherwise they
+  // may keep stale traits for these symbols.
+  // Eg., Malloc checker may report leaks if we failed to bind that symbol.
+  if (BindRes.FailedToBindValues.empty())
+    return State;
+  return Eng.escapeValues(State, BindRes.FailedToBindValues, PSK_EscapeOnBind);
+}
+
 ProgramStateRef ProgramState::bindLoc(Loc LV,
                                       SVal V,
                                       const LocationContext *LCtx,
@@ -119,15 +130,8 @@ ProgramStateRef ProgramState::bindLoc(Loc LV,
   ExprEngine &Eng = Mgr.getOwningEngine();
   BindResult BindRes = Mgr.StoreMgr->Bind(getStore(), LV, V);
   ProgramStateRef State = makeWithStore(BindRes.ResultingStore);
+  State = escapeFailedToBindValues(Eng, State, BindRes);
   const MemRegion *MR = LV.getAsRegion();
-
-  // We must always notify the checkers for failing binds because otherwise they
-  // may keep stale traits for these symbols.
-  // Eg., Malloc checker may report leaks if we failed to bind that symbol.
-  if (!BindRes.FailedToBindValues.empty()) {
-    State =
-        Eng.escapeValues(State, BindRes.FailedToBindValues, PSK_EscapeOnBind);
-  }
 
   if (MR && notifyChanges)
     return Eng.processRegionChange(State, MR, LCtx);
@@ -139,19 +143,21 @@ ProgramStateRef
 ProgramState::bindDefaultInitial(SVal loc, SVal V,
                                  const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
+  ExprEngine &Eng = Mgr.getOwningEngine();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
-  const StoreRef &newStore = Mgr.StoreMgr->BindDefaultInitial(getStore(), R, V);
-  ProgramStateRef new_state = makeWithStore(newStore);
-  return Mgr.getOwningEngine().processRegionChange(new_state, R, LCtx);
+  BindResult BindRes = Mgr.StoreMgr->BindDefaultInitial(getStore(), R, V);
+  ProgramStateRef State = makeWithStore(BindRes.ResultingStore);
+  State = escapeFailedToBindValues(Eng, State, BindRes);
+  return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
 }
 
 ProgramStateRef
 ProgramState::bindDefaultZero(SVal loc, const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
-  const StoreRef &newStore = Mgr.StoreMgr->BindDefaultZero(getStore(), R);
-  ProgramStateRef new_state = makeWithStore(newStore);
-  return Mgr.getOwningEngine().processRegionChange(new_state, R, LCtx);
+  BindResult BindRes = Mgr.StoreMgr->BindDefaultZero(getStore(), R);
+  ProgramStateRef State = makeWithStore(BindRes.ResultingStore);
+  return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
 }
 
 typedef ArrayRef<const MemRegion *> RegionList;

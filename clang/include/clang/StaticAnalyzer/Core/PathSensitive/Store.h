@@ -118,12 +118,12 @@ public:
   /// Return a store with the specified value bound to all sub-regions of the
   /// region. The region must not have previous bindings. If you need to
   /// invalidate existing bindings, consider invalidateRegions().
-  virtual StoreRef BindDefaultInitial(Store store, const MemRegion *R,
-                                      SVal V) = 0;
+  virtual BindResult BindDefaultInitial(Store store, const MemRegion *R,
+                                        SVal V) = 0;
 
   /// Return a store with in which all values within the given region are
   /// reset to zero. This method is allowed to overwrite previous bindings.
-  virtual StoreRef BindDefaultZero(Store store, const MemRegion *R) = 0;
+  virtual BindResult BindDefaultZero(Store store, const MemRegion *R) = 0;
 
   /// Create a new store with the specified binding removed.
   /// \param ST the original store, that is the basis for the new store.
