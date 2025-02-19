@@ -1652,29 +1652,6 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetDemangleTreeForPrinting(
   return GetNodeForPrintingImpl(dem, node, flavor, resolve_objc_module);
 }
 
-/// Determine wether this demangle tree contains a node of kind \c kind and with
-/// text \c text (if provided).
-static bool Contains(swift::Demangle::NodePointer node,
-                     swift::Demangle::Node::Kind kind,
-                     llvm::StringRef text = "") {
-  if (!node)
-    return false;
-
-  if (node->getKind() == kind) {
-    if (text.empty())
-      return true;
-    if (!node->hasText())
-      return false;
-    return node->getText() == text;
-  }
-
-  for (swift::Demangle::NodePointer child : *node)
-    if (Contains(child, kind, text))
-      return true;
-
-  return false;
-}
-
 static bool ProtocolCompositionContainsSingleObjcProtocol(
     swift::Demangle::NodePointer node) {
   // Kind=ProtocolList
@@ -1690,12 +1667,18 @@ static bool ProtocolCompositionContainsSingleObjcProtocol(
       type_list->getNumChildren() != 1)
     return false;
   NodePointer type = type_list->getFirstChild();
-  return Contains(type, Node::Kind::Module, swift::MANGLING_MODULE_OBJC);
+  return swift_demangle::FindIf(type, [](NodePointer node) {
+    return node->getKind() == Node::Kind::Module && node->hasText() &&
+           node->getText() == swift::MANGLING_MODULE_OBJC;
+  });
 }
 
 /// Determine wether this demangle tree contains a generic type parameter.
 static bool ContainsGenericTypeParameter(swift::Demangle::NodePointer node) {
-  return Contains(node, swift::Demangle::Node::Kind::DependentGenericParamType);
+  return swift_demangle::FindIf(node, [](NodePointer node) {
+    return node->getKind() ==
+           swift::Demangle::Node::Kind::DependentGenericParamType;
+  });
 }
 
 /// Collect TypeInfo flags from a demangle tree. For most attributes
@@ -1928,7 +1911,9 @@ uint32_t TypeSystemSwiftTypeRef::CollectTypeInfo(
   if (swift_flags != eTypeIsSwift) {
     if (ContainsGenericTypeParameter(node))
       swift_flags |= eTypeHasUnboundGeneric;
-    if (Contains(node, Node::Kind::DynamicSelf))
+    if (swift_demangle::FindIf(node, [](NodePointer node) {
+          return node->getKind() == swift::Demangle::Node::Kind::DynamicSelf;
+        }))
       swift_flags |= eTypeHasDynamicSelf;
     return swift_flags;
   }
@@ -2816,6 +2801,8 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
 
 bool TypeSystemSwiftTypeRef::UseSwiftASTContextFallback(
     const char *func_name, lldb::opaque_compiler_type_t type) {
+  if (IsExpressionEvaluatorDefined(type))
+    return true;
   if (!ModuleList::GetGlobalModuleListProperties().GetSwiftTypeSystemFallback())
     return false;
 
@@ -2826,8 +2813,11 @@ bool TypeSystemSwiftTypeRef::UseSwiftASTContextFallback(
   return true;
 }
 
-bool TypeSystemSwiftTypeRef::DiagnoseSwiftASTContextFallback(
+void TypeSystemSwiftTypeRef::DiagnoseSwiftASTContextFallback(
     const char *func_name, lldb::opaque_compiler_type_t type) {
+  if (IsExpressionEvaluatorDefined(type))
+    return;
+
   const char *type_name = AsMangledName(type);
 
   std::optional<lldb::user_id_t> debugger_id;
@@ -2841,7 +2831,6 @@ bool TypeSystemSwiftTypeRef::DiagnoseSwiftASTContextFallback(
   Debugger::ReportWarning(msg, debugger_id, &m_fallback_warning);
 
   LLDB_LOGF(GetLog(LLDBLog::Types), "%s", msg.c_str());
-  return true;
 }
 
 CompilerType
@@ -2897,6 +2886,20 @@ TypeSystemSwiftTypeRef::DemangleCanonicalOutermostType(
     return GetDemangledType(dem, ast_type.GetMangledTypeName());
   }
   return canonical;
+}
+
+bool TypeSystemSwiftTypeRef::IsExpressionEvaluatorDefined(
+    lldb::opaque_compiler_type_t type) {
+  using namespace swift::Demangle;
+  const auto *mangled_name = AsMangledName(type);
+  Demangler dem;
+  NodePointer node = GetDemangledType(dem, mangled_name);
+  return swift_demangle::FindIf(node, [](NodePointer node) -> NodePointer {
+    if (node->getKind() == Node::Kind::Module &&
+        node->getText().starts_with("__lldb_expr"))
+      return node;
+    return nullptr;
+  });
 }
 
 CompilerType TypeSystemSwiftTypeRef::CreateGenericTypeParamType(
