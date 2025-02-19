@@ -211,7 +211,7 @@ set( cayman_aliases aruba )
 set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
   mullins tonga tongapro iceland carrizo fiji stoney polaris10 polaris11
   gfx602 gfx705 gfx805
-  gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx940 gfx941 gfx942
+  gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx942
   gfx1010 gfx1011 gfx1012 gfx1013
   gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
   gfx1100 gfx1101 gfx1102 gfx1103
