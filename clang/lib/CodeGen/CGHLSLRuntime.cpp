@@ -103,12 +103,8 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
 
   // get the layout struct from constant buffer target type
   llvm::Type *BufType = BufGV->getValueType();
-  assert(isa<llvm::TargetExtType>(BufType) &&
-         "expected target type for HLSL buffer resource");
   llvm::Type *BufLayoutType =
       cast<llvm::TargetExtType>(BufType)->getTypeParameter(0);
-  assert(isa<llvm::TargetExtType>(BufLayoutType) &&
-         "expected target type for buffer layout struct");
   llvm::StructType *LayoutStruct = cast<llvm::StructType>(
       cast<llvm::TargetExtType>(BufLayoutType)->getTypeParameter(0));
 
@@ -139,9 +135,13 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
         // Emit static and groupshared variables and resource classes inside
         // cbuffer as regular globals
         CGM.EmitGlobal(VD);
+      } else {
+        // Anything else that is not in the hlsl_constant address space must be
+        // an empty struct or a zero-sized array and can be ignored
+        assert(BufDecl->getASTContext().getTypeSize(VDTy) == 0 &&
+               "constant buffer decl with non-zero sized type outside of "
+               "hlsl_constant address space");
       }
-      // Anything else that is not in the hlsl_constant address space must be
-      // an empty struct or a zero-sized array and can be ignored
       continue;
     }
 
@@ -149,10 +149,8 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
            "number of elements in layout struct does not match");
     llvm::Type *LayoutType = *ElemIt++;
 
-    // there might be resources inside the used defined structs
-    if (VDTy->isStructureType() && VDTy->isHLSLIntangibleType())
-      // FIXME: handle resources in cbuffer structs
-      llvm_unreachable("resources in cbuffer are not supported yet");
+    // FIXME: handle resources inside user defined structs
+    // (llvm/wg-hlsl#175)
 
     // create global variable for the constant and to metadata list
     GlobalVariable *ElemGV =
@@ -161,7 +159,6 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
   }
   assert(ElemIt == LayoutStruct->element_end() &&
          "number of elements in layout struct does not match");
-  // set the size of the buffer
 
   // add buffer metadata to the module
   CGM.getModule()
@@ -235,6 +232,7 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   const HLSLResourceBindingAttr *RBA =
       BufDecl->getAttr<HLSLResourceBindingAttr>();
   // FIXME: handle implicit binding if no binding attribute is found
+  // (llvm/llvm-project#110722)
   if (RBA)
     createResourceInitFn(CGM, BufGV, RBA->getSlotNumber(),
                          RBA->getSpaceNumber());
