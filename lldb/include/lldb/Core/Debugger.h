@@ -131,17 +131,13 @@ public:
 
   void SetAsyncExecution(bool async);
 
-  lldb::FileSP GetInputFileSP() { return m_input_file_sp; }
-
-  lldb::StreamFileSP GetOutputStreamSP() { return m_output_stream_sp; }
-
-  lldb::StreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
-
   File &GetInputFile() { return *m_input_file_sp; }
 
-  File &GetOutputFile() { return m_output_stream_sp->GetFile(); }
+  lldb::FileSP GetInputFileSP() { return m_input_file_sp; }
 
-  File &GetErrorFile() { return m_error_stream_sp->GetFile(); }
+  lldb::FileSP GetOutputFileSP() { return m_output_stream_sp->GetFileSP(); }
+
+  lldb::FileSP GetErrorFileSP() { return m_error_stream_sp->GetFileSP(); }
 
   repro::DataRecorder *GetInputRecorder();
 
@@ -648,6 +644,14 @@ protected:
   void HandleDestroyCallback();
 
   void PrintProgress(const ProgressEventData &data);
+
+  /// Except for Debugger and IOHandler, GetOutputStreamSP and GetErrorStreamSP
+  /// should not be used directly. Use GetAsyncOutputStream and
+  /// GetAsyncErrorStream instead.
+  /// @{
+  lldb::StreamFileSP GetOutputStreamSP() { return m_output_stream_sp; }
+  lldb::StreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
+  /// @}
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
                      bool cancel_top_handler = true);

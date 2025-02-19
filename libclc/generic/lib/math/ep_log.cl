@@ -38,7 +38,8 @@
 #define LF1 1.24999999978138668903e-02
 #define LF2 2.23219810758559851206e-03
 
-_CLC_DEF void __clc_ep_log(double x, int *xexp, double *r1, double *r2) {
+_CLC_DEF void __clc_ep_log(double x, private int *xexp, private double *r1,
+                           private double *r2) {
   // Computes natural log(x). Algorithm based on:
   // Ping-Tak Peter Tang
   // "Table-driven implementation of the logarithm function in IEEE
