@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Option/OptSpecifier.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
 #include <string>
@@ -50,7 +51,7 @@ public:
 /// be needed at runtime; the OptTable class maintains enough information to
 /// parse command lines without instantiating Options, while letting other
 /// parts of the driver still use Option instances where convenient.
-class OptTable {
+class LLVM_ABI OptTable {
 public:
   /// Entry for a single option instance in the option data table.
   struct Info {
@@ -423,7 +424,7 @@ private:
 };
 
 /// Specialization of OptTable
-class GenericOptTable : public OptTable {
+class LLVM_ABI GenericOptTable : public OptTable {
 protected:
   GenericOptTable(const StringTable &StrTable,
                   ArrayRef<StringTable::Offset> PrefixesTable,
