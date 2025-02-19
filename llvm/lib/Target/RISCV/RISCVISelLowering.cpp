@@ -4567,9 +4567,9 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
 static bool isMaskedSlidePair(ArrayRef<int> Mask,
                               std::pair<int, int> SrcInfo[2]) {
   int NumElts = Mask.size();
-  int SIGNAL_VAL = NumElts * 2;
-  SrcInfo[0] = {-1, SIGNAL_VAL};
-  SrcInfo[1] = {-1, SIGNAL_VAL};
+  int SignalValue = NumElts * 2;
+  SrcInfo[0] = {-1, SignalValue};
+  SrcInfo[1] = {-1, SignalValue};
   for (unsigned i = 0; i != Mask.size(); ++i) {
     int M = Mask[i];
     if (M < 0)
@@ -4578,10 +4578,11 @@ static bool isMaskedSlidePair(ArrayRef<int> Mask,
     int Diff = (M % NumElts) - (int)i;
     bool Match = false;
     for (int j = 0; j < 2; j++) {
-      if (SrcInfo[j].first == -1)
+      if (SrcInfo[j].first == -1) {
+        assert(SrcInfo[j].second == SignalValue);
         SrcInfo[j].first = Src;
-      if (SrcInfo[j].second == SIGNAL_VAL)
         SrcInfo[j].second = Diff;
+      }
       if (SrcInfo[j].first == Src && SrcInfo[j].second == Diff) {
         Match = true;
         break;
@@ -4598,7 +4599,7 @@ static bool isMaskedSlidePair(ArrayRef<int> Mask,
   // Avoid matching vselect idioms
   if (SrcInfo[0].second == 0 && SrcInfo[1].second == 0)
     return false;
-  // Prefer vslideup as the second instruction, and identiy
+  // Prefer vslideup as the second instruction, and identity
   // only as the initial instruction.
   if ((SrcInfo[0].second < 0 && SrcInfo[1].second > 0) ||
       SrcInfo[1].second == 0)
@@ -5706,7 +5707,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   if (isMaskedSlidePair(Mask, SrcInfo) &&
       !isLegalBitRotate(Mask, VT, Subtarget, RotateVT, RotateAmt)) {
     SDValue Sources[2];
-    auto getSourceFor = [&](const std::pair<int, int> &Info) {
+    auto GetSourceFor = [&](const std::pair<int, int> &Info) {
       int SrcIdx = Info.first;
       assert(SrcIdx == 0 || SrcIdx == 1);
       SDValue &Src = Sources[SrcIdx];
@@ -5716,9 +5717,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       }
       return Src;
     };
-    auto getSlide = [&](const std::pair<int, int> &Src, SDValue Mask,
+    auto GetSlide = [&](const std::pair<int, int> &Src, SDValue Mask,
                         SDValue Passthru) {
-      SDValue SrcV = getSourceFor(Src);
+      SDValue SrcV = GetSourceFor(Src);
       int SlideAmt = -Src.second;
       if (SlideAmt == 0) {
         // Should never be second operation
@@ -5734,7 +5735,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                          RISCVVType::TAIL_AGNOSTIC);
     };
 
-    // Build the mask.  Note that vslideup unconditional preserves elements
+    // Build the mask.  Note that vslideup unconditionally preserves elements
     // below the slide amount in the destination, and thus those elements are
     // undefined in the mask.  If the mask ends up all true (or undef), it
     // will be folded away by general logic.
@@ -5758,8 +5759,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         DAG.getBuildVector(MaskVT, DL, MaskVals), DAG, Subtarget);
 
     SDValue Res = DAG.getUNDEF(ContainerVT);
-    Res = getSlide(SrcInfo[0], TrueMask, Res);
-    Res = getSlide(SrcInfo[1], SelectMask, Res);
+    Res = GetSlide(SrcInfo[0], TrueMask, Res);
+    Res = GetSlide(SrcInfo[1], SelectMask, Res);
     return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
 
