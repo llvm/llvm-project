@@ -226,25 +226,32 @@ protected:
 
   /// \name Utilities for implementing subclasses.
   ///@{
-  static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
-                               llvm::opt::ArgStringList &CC1Args,
-                               const Twine &Path);
   static void addExternCSystemInclude(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args,
                                       const Twine &Path);
   static void
-      addExternCSystemIncludeIfExists(const llvm::opt::ArgList &DriverArgs,
-                                      llvm::opt::ArgStringList &CC1Args,
-                                      const Twine &Path);
+  addExternCSystemIncludeIfExists(const llvm::opt::ArgList &DriverArgs,
+                                  llvm::opt::ArgStringList &CC1Args,
+                                  const Twine &Path);
+  static std::string concat(StringRef Path, const Twine &A, const Twine &B = "",
+                            const Twine &C = "", const Twine &D = "");
+
+  /// Return the CXXStdlibType which has been selected based on the
+  /// type of ToolChain driver args, triple etc. if it is in use,
+  /// i.e. we are compiling for C++ and the stdlib has not been
+  /// disabled.
+  std::optional<CXXStdlibType> getCXXStdlibTypeInUse();
+
+  ///@}
+
+public:
+  static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
+                               llvm::opt::ArgStringList &CC1Args,
+                               const Twine &Path);
   static void addSystemIncludes(const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CC1Args,
                                 ArrayRef<StringRef> Paths);
 
-  static std::string concat(StringRef Path, const Twine &A, const Twine &B = "",
-                            const Twine &C = "", const Twine &D = "");
-  ///@}
-
-public:
   virtual ~ToolChain();
 
   // Accessors

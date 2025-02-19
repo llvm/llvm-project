@@ -366,7 +366,8 @@ const StringRef PossibleAVRLibcLocations[] = {
 AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
                            const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-  GCCInstallation.init(Triple, Args);
+
+  GCCInstallation.init(Triple, Args, getCXXStdlibTypeInUse());
 
   if (getCPUName(D, Args, Triple).empty())
     D.Diag(diag::warn_drv_avr_mcu_not_specified);

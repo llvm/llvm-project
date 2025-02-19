@@ -104,6 +104,15 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     addIfExists(getFilePaths(), Path);
 }
 
+std::optional<ToolChain::CXXStdlibType> ToolChain::getCXXStdlibTypeInUse() {
+  if (!(D.CCCIsCXX() &&
+        !Args.hasArg(options::OPT_nostdinc, options::OPT_nostdincxx,
+                     options::OPT_nostdlibinc)))
+    return std::nullopt;
+
+  return GetCXXStdlibType(Args);
+}
+
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
 ToolChain::executeToolChainProgram(StringRef Executable) const {
   llvm::SmallString<64> OutputFile;
@@ -1272,14 +1281,6 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   return *cxxStdlibType;
 }
 
-/// Utility function to add a system include directory to CC1 arguments.
-/*static*/ void ToolChain::addSystemInclude(const ArgList &DriverArgs,
-                                            ArgStringList &CC1Args,
-                                            const Twine &Path) {
-  CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(Path));
-}
-
 /// Utility function to add a system include directory with extern "C"
 /// semantics to CC1 arguments.
 ///
@@ -1300,6 +1301,14 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
                                                 const Twine &Path) {
   if (llvm::sys::fs::exists(Path))
     addExternCSystemInclude(DriverArgs, CC1Args, Path);
+}
+
+/// Utility function to add a system include directory to CC1 arguments.
+/*static*/ void ToolChain::addSystemInclude(const ArgList &DriverArgs,
+                                            ArgStringList &CC1Args,
+                                            const Twine &Path) {
+  CC1Args.push_back("-internal-isystem");
+  CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
 
 /// Utility function to add a list of system include directories to CC1.

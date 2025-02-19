@@ -71,7 +71,7 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
 
 Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-  GCCInstallation.init(Triple, Args);
+  GCCInstallation.init(Triple, Args, getCXXStdlibTypeInUse());
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilibs.assign({GCCInstallation.getMultilib()});
   std::string SysRoot = computeSysRoot();

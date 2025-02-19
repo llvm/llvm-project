@@ -212,7 +212,7 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
 
 Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-  GCCInstallation.init(Triple, Args);
+  GCCInstallation.init(Triple, Args, getCXXStdlibTypeInUse());
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilibs.assign({GCCInstallation.getMultilib()});
   llvm::Triple::ArchType Arch = Triple.getArch();

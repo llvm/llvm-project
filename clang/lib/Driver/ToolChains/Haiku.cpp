@@ -166,7 +166,7 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 Haiku::Haiku(const Driver &D, const llvm::Triple& Triple, const ArgList &Args)
   : Generic_ELF(D, Triple, Args) {
 
-  GCCInstallation.init(Triple, Args);
+  GCCInstallation.init(Triple, Args, getCXXStdlibTypeInUse());
 
   getFilePaths().push_back(concat(getDriver().SysRoot, "/boot/system/lib"));
   getFilePaths().push_back(concat(getDriver().SysRoot, "/boot/system/develop/lib"));
