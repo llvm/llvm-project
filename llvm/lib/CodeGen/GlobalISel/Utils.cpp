@@ -1470,6 +1470,7 @@ static bool isConstantScalar(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_POISON:
     return true;
   case TargetOpcode::G_FCONSTANT:
     return AllowFP;
@@ -1547,6 +1548,7 @@ llvm::isConstantOrConstantSplatVectorFP(MachineInstr &MI,
 bool llvm::isNullOrNullSplat(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI, bool AllowUndefs) {
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_POISON:
   case TargetOpcode::G_IMPLICIT_DEF:
     return AllowUndefs;
   case TargetOpcode::G_CONSTANT:
@@ -1566,6 +1568,7 @@ bool llvm::isAllOnesOrAllOnesSplat(const MachineInstr &MI,
                                    const MachineRegisterInfo &MRI,
                                    bool AllowUndefs) {
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_POISON:
   case TargetOpcode::G_IMPLICIT_DEF:
     return AllowUndefs;
   case TargetOpcode::G_CONSTANT:
@@ -1582,7 +1585,8 @@ bool llvm::matchUnaryPredicate(
     std::function<bool(const Constant *ConstVal)> Match, bool AllowUndefs) {
 
   const MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
-  if (AllowUndefs && Def->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+  if (AllowUndefs && (Def->getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+                      Def->getOpcode() == TargetOpcode::G_POISON))
     return Match(nullptr);
 
   // TODO: Also handle fconstant
@@ -1595,7 +1599,8 @@ bool llvm::matchUnaryPredicate(
   for (unsigned I = 1, E = Def->getNumOperands(); I != E; ++I) {
     Register SrcElt = Def->getOperand(I).getReg();
     const MachineInstr *SrcDef = getDefIgnoringCopies(SrcElt, MRI);
-    if (AllowUndefs && SrcDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF) {
+    if (AllowUndefs && (Def->getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+                        Def->getOpcode() == TargetOpcode::G_POISON)) {
       if (!Match(nullptr))
         return false;
       continue;
@@ -1914,6 +1919,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
   switch (RegDef->getOpcode()) {
   case TargetOpcode::G_FREEZE:
     return true;
+  case TargetOpcode::G_POISON:
   case TargetOpcode::G_IMPLICIT_DEF:
     return !includesUndef(Kind);
   case TargetOpcode::G_CONSTANT:

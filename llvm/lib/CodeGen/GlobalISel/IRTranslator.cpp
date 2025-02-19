@@ -3649,6 +3649,8 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     EntryBuilder->buildConstant(Reg, *CI);
   else if (auto CF = dyn_cast<ConstantFP>(&C))
     EntryBuilder->buildFConstant(Reg, *CF);
+  else if (isa<PoisonValue>(C))
+    EntryBuilder->buildPoison(Reg);
   else if (isa<UndefValue>(C))
     EntryBuilder->buildUndef(Reg);
   else if (isa<ConstantPointerNull>(C))

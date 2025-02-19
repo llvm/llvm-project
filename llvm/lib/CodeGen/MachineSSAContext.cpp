@@ -56,7 +56,8 @@ const MachineBasicBlock *MachineSSAContext::getDefBlock(Register value) const {
 
 static bool isUndef(const MachineInstr &MI) {
   return MI.getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
-         MI.getOpcode() == TargetOpcode::IMPLICIT_DEF;
+         MI.getOpcode() == TargetOpcode::IMPLICIT_DEF ||
+         MI.getOpcode() == TargetOpcode::G_POISON;
 }
 
 /// MachineInstr equivalent of PHINode::hasConstantOrUndefValue() for G_PHI.

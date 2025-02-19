@@ -432,15 +432,26 @@ public:
   /// G_IMPLICIT_DEF.
   bool matchAnyExplicitUseIsUndef(MachineInstr &MI) const;
 
+  /// Return true if any explicit use operand on \p MI is defined by a
+  /// G_POISON.
+  bool matchAnyExplicitUseIsPoison(MachineInstr &MI) const;
+
   /// Return true if all register explicit use operands on \p MI are defined by
   /// a G_IMPLICIT_DEF.
   bool matchAllExplicitUsesAreUndef(MachineInstr &MI) const;
+
+  /// Return true if all register explicit use operands on \p MI are defined by
+  /// a G_POISON.
+  bool matchAllExplicitUsesArePoison(MachineInstr &MI) const;
 
   /// Return true if a G_SHUFFLE_VECTOR instruction \p MI has an undef mask.
   bool matchUndefShuffleVectorMask(MachineInstr &MI) const;
 
   /// Return true if a G_STORE instruction \p MI is storing an undef value.
   bool matchUndefStore(MachineInstr &MI) const;
+
+  /// Return true if a G_STORE instruction \p MI is storing a poison value.
+  bool matchPoisonStore(MachineInstr &MI) const;
 
   /// Return true if a G_SELECT instruction \p MI has an undef comparison.
   bool matchUndefSelectCmp(MachineInstr &MI) const;
@@ -466,6 +477,9 @@ public:
 
   /// Replace an instruction with a G_IMPLICIT_DEF.
   void replaceInstWithUndef(MachineInstr &MI) const;
+
+  /// Replace an instruction with a G_POISON.
+  void replaceInstWithPoison(MachineInstr &MI) const;
 
   /// Delete \p MI and replace all of its uses with its \p OpIdx-th operand.
   void replaceSingleDefInstWithOperand(MachineInstr &MI, unsigned OpIdx) const;
@@ -506,6 +520,9 @@ public:
 
   /// Check if operand \p OpIdx is undef.
   bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
+
+  /// Check if operand \p OpIdx is poison.
+  bool matchOperandIsPoison(MachineInstr &MI, unsigned OpIdx) const;
 
   /// Check if operand \p OpIdx is known to be a power of 2.
   bool matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,

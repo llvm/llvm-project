@@ -1017,8 +1017,11 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildExtract(const DstOp &Res, const SrcOp &Src, uint64_t Index);
 
-  /// Build and insert \p Res = IMPLICIT_DEF.
+  /// Build and insert \p Res = G_IMPLICIT_DEF.
   MachineInstrBuilder buildUndef(const DstOp &Res);
+
+  /// Build and insert \p Res = G_POISON.
+  MachineInstrBuilder buildPoison(const DstOp &Res);
 
   /// Build and insert \p Res = G_MERGE_VALUES \p Op0, ...
   ///

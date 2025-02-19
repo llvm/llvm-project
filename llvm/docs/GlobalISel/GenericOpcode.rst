@@ -24,6 +24,15 @@ An undefined value.
 
   %0:_(s32) = G_IMPLICIT_DEF
 
+G_POISON
+^^^^^^^^
+
+A poison value.
+
+.. code-block:: none
+
+  %0:_(s32) = G_POISON
+
 G_CONSTANT
 ^^^^^^^^^^
 

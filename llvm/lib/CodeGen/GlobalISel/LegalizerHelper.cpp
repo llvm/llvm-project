@@ -1425,6 +1425,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     return UnableToLegalize;
+  case TargetOpcode::G_POISON:
   case TargetOpcode::G_IMPLICIT_DEF: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
@@ -3082,6 +3083,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_POISON:
   case TargetOpcode::G_IMPLICIT_DEF: {
     Observer.changingInstr(MI);
     widenScalarDst(MI, WideTy);
@@ -5307,6 +5309,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
 
   switch (MI.getOpcode()) {
   case G_IMPLICIT_DEF:
+  case G_POISON:
   case G_TRUNC:
   case G_AND:
   case G_OR:
@@ -6047,6 +6050,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                     LLT MoreTy) {
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
+  case TargetOpcode::G_POISON:
   case TargetOpcode::G_IMPLICIT_DEF:
   case TargetOpcode::G_LOAD: {
     if (TypeIdx != 0)
@@ -8451,7 +8455,8 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
   auto OutPos = MIRBuilder.buildConstant(IdxTy, 0);
 
   bool HasPassthru =
-      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_IMPLICIT_DEF;
+      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_IMPLICIT_DEF &&
+      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_POISON;
 
   if (HasPassthru)
     MIRBuilder.buildStore(Passthru, StackPtr, PtrInfo, VecAlign);
