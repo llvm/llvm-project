@@ -1629,6 +1629,9 @@ private:
   /// element)
   InstructionCost getUniformMemOpCost(Instruction *I, ElementCount VF);
 
+  /// The cost computation for strided load/store instruction.
+  InstructionCost getStridedLoadStoreCost(Instruction *I, ElementCount VF);
+
   /// Estimate the overhead of scalarizing an instruction. This is a
   /// convenience wrapper for the type-based getScalarizationOverhead API.
   InstructionCost getScalarizationOverhead(Instruction *I,
@@ -5811,6 +5814,19 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
                                CostKind, 0);
   }
   return Cost;
+}
+
+InstructionCost
+LoopVectorizationCostModel::getStridedLoadStoreCost(Instruction *I,
+                                                    ElementCount VF) {
+  Type *ValTy = getLoadStoreType(I);
+  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
+  const Align Alignment = getLoadStoreAlignment(I);
+  const Value *Ptr = getLoadStorePointerOperand(I);
+
+  return TTI.getStridedMemoryOpCost(I->getOpcode(), VectorTy, Ptr,
+                                    Legal->isMaskRequired(I), Alignment,
+                                    CostKind, I);
 }
 
 std::optional<InstructionCost>
