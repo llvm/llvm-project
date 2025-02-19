@@ -65,3 +65,47 @@ bool fn4() {
   bool2 Arr[2] = {{true,true}, {false,false}};
   return Arr[0][1];
 }
+
+// CHECK-LABEL: define void {{.*}}fn5{{.*}}
+// CHECK: [[Arr:%.*]] = alloca <2 x i32>, align 8
+// CHECK-NEXT: store <2 x i32> splat (i32 1), ptr [[Arr]], align 8
+// CHECK-NEXT: [[L:%.*]] = load <2 x i32>, ptr [[Arr]], align 8
+// CHECK-NEXT: [[V:%.*]] = insertelement <2 x i32> [[L]], i32 0, i32 1
+// CHECK-NEXT: store <2 x i32> [[V]], ptr [[Arr]], align 8
+// CHECK-NEXT: ret void
+void fn5() {
+  bool2 Arr = {true,true};
+  Arr[1] = false;
+}
+
+// CHECK-LABEL: define void {{.*}}fn6{{.*}}
+// CHECK: [[V:%.*]] = alloca i32, align 4
+// CHECK-NEXT: [[S:%.*]] = alloca %struct.S, align 8
+// CHECK-NEXT: store i32 0, ptr [[V]], align 4
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[S]], ptr align 8 {{.*}}, i32 16, i1 false)
+// CHECK-NEXT: [[Y:%.*]] = load i32, ptr [[V]], align 4
+// CHECK-NEXT: [[LV:%.*]] = trunc i32 [[Y]] to i1
+// CHECK-NEXT: [[BV:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[S]], i32 0, i32 0
+// CHECK-NEXT: [[X:%.*]] = load <2 x i32>, ptr [[BV]], align 8
+// CHECK-NEXT: [[Z:%.*]] = zext i1 [[LV]] to i32
+// CHECK-NEXT: [[VI:%.*]] = insertelement <2 x i32> [[X]], i32 [[Z]], i32 1
+// CHECK-NEXT: store <2 x i32> [[VI]], ptr [[BV]], align 8
+// CHECK-NEXT: ret void
+void fn6() {
+  bool V = false;
+  S s = {{true,true}, 1.0};
+  s.bv[1] = V;
+}
+
+// CHECK-LABEL: define void {{.*}}fn7{{.*}}
+// CHECK: [[Arr:%.*]] = alloca [2 x <2 x i32>], align 8
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[Arr]], ptr align 8 {{.*}}, i32 16, i1 false)
+// CHECK-NEXT: [[Idx:%.*]] = getelementptr inbounds [2 x <2 x i32>], ptr [[Arr]], i32 0, i32 0
+// CHECK-NEXT: [[X:%.*]] = load <2 x i32>, ptr [[Idx]], align 8
+// CHECK-NEXT: [[VI:%.*]] = insertelement <2 x i32> [[X]], i32 0, i32 1
+// CHECK-NEXT: store <2 x i32> [[VI]], ptr [[Idx]], align 8
+// CHECK-NEXT: ret void
+void fn7() {
+  bool2 Arr[2] = {{true,true}, {false,false}};
+  Arr[0][1] = false;
+}

@@ -242,3 +242,63 @@ bool AssignBool(bool V) {
   X.x = V.x || V.x;
   return X;
 }
+
+// CHECK-LABEL: AssignBool2
+// CHECK: [[VAdddr:%.*]] = alloca i32, align 4
+// CHECK-NEXT: [[X:%.*]] = alloca <2 x i32>, align 8
+// CHECK-NEXT: [[Tmp:%.*]] = alloca <1 x i32>, align 4
+// CHECK-NEXT: [[SV:%.*]] = zext i1 %V to i32
+// CHECK-NEXT: store i32 [[SV]], ptr [[VAddr]], align 4
+// CHECK-NEXT: store <1 x i32> splat (i32 1), ptr [[Tmp]], align 4
+// CHECK-NEXT: [[Y:%.*]] = load <1 x i32>, ptr [[Tmp]], align 4
+// CHECK-NEXT: [[Z:%.*]] = shufflevector <1 x i32> [[Y]], <1 x i32> poison, <2 x i32> zeroinitializer
+// CHECK-NEXT: [[LV:%.*]] = trunc <2 x i32> [[Z]] to <2 x i1>
+// CHECK-NEXT: [[A:%.*]] = zext <2 x i1> [[LV]] to <2 x i32>
+// CHECK-NEXT: store <2 x i32> [[A]], ptr [[X]], align 8
+// CHECK-NEXT: [[B:%.*]] = load i32, ptr [[VAddr]], align 4
+// CHECK-NEXT: [[LV1:%.*]] = trunc i32 [[B]] to i1
+// CHECK-NEXT: [[C:%.*]] = load <2 x i32>, ptr [[X]], align 8
+// CHECK-NEXT: [[D:%.*]] = zext i1 [[LV1]] to i32
+// CHECK-NEXT: [[E:%.*]] = insertelement <2 x i32> [[C]], i32 [[D]], i32 1
+// CHECK-NEXT: store <2 x i32> [[E]], ptr [[X]], align 8
+// CHECK-NEXT: ret void
+void AssignBool2(bool V) {
+  bool2 X = true.xx;
+  X.y = V;
+}
+
+// CHECK-LABEL: AssignBool3
+// CHECK: [[VAddr:%.*]] = alloca <2 x i32>, align 8
+// CHECK-NEXT: [[X:%.*]] = alloca <2 x i32>, align 8
+// CHECK-NEXT: [[Y:%.*]] = zext <2 x i1> %V to <2 x i32>
+// CHECK-NEXT: store <2 x i32> [[Y]], ptr [[VAddr]], align 8
+// CHECK-NEXT: store <2 x i32> splat (i32 1), ptr [[X]], align 8
+// CHECK-NEXT: [[Z:%.*]] = load <2 x i32>, ptr [[VAddr]], align 8
+// CHECK-NEXT: [[LV:%.*]] = trunc <2 x i32> [[Z]] to <2 x i1>
+// CHECK-NEXT: [[A:%.*]] = load <2 x i32>, ptr [[X]], align 8
+// CHECK-NEXT: [[B:%.*]] = zext <2 x i1> [[LV]] to <2 x i32>
+// CHECK-NEXT: [[C:%.*]] = shufflevector <2 x i32> [[B]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
+// CHECK-NEXT: store <2 x i32> [[C]], ptr [[X]], align 8
+// CHECK-NEXT: ret void
+void AssignBool3(bool2 V) {
+  bool2 X = {true,true};
+  X.xy = V;
+}
+
+// CHECK-LABEL: AccessBools
+// CHECK: [[X:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT: [[Tmp:%.*]] = alloca <1 x i32>, align 4
+// CHECK-NEXT: store <1 x i32> splat (i32 1), ptr [[Tmp]], align 4
+// CHECK-NEXT: [[Y:%.*]] = load <1 x i32>, ptr [[Tmp]], align 4
+// CHECK-NEXT: [[Z:%.*]] = shufflevector <1 x i32> [[Y]], <1 x i32> poison, <4 x i32> zeroinitializer
+// CHECK-NEXT: [[LV:%.*]] = trunc <4 x i32> [[Z]] to <4 x i1>
+// CHECK-NEXT: [[A:%.*]] = zext <4 x i1> [[LV]] to <4 x i32>
+// CHECK-NEXT: store <4 x i32> [[A]], ptr [[X]], align 16
+// CHECK-NEXT: [[B:%.*]] = load <4 x i32>, ptr [[X]], align 16
+// CHECK-NEXT: [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+// CHECK-NEXT: [[LV1:%.*]] = trunc <2 x i32> [[C]] to <2 x i1>
+// CHECK-NEXT: ret <2 x i1> [[LV1]]
+bool2 AccessBools() {
+  bool4 X = true.xxxx;
+  return X.zw;
+}

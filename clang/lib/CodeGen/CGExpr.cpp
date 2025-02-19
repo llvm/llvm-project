@@ -2064,7 +2064,8 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
 
   if (Ty->isExtVectorBoolType()) {
     llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
-    if (getLangOpts().HLSL)
+    if (StoreTy->isVectorTy() && StoreTy->getScalarSizeInBits() >
+                                     Value->getType()->getScalarSizeInBits())
       return Builder.CreateZExt(Value, StoreTy);
 
     // Expand to the memory bit width.
@@ -2082,10 +2083,8 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
 /// by convertTypeForLoadStore) to its primary IR type (as returned
 /// by ConvertType).
 llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
-  if (Ty->isExtVectorBoolType()) {
+  if (Ty->isPackedVectorBoolType(getContext())) {
     const auto *RawIntTy = Value->getType();
-    if (getLangOpts().HLSL)
-      return Builder.CreateTrunc(Value, ConvertType(Ty), "loadedv");
 
     // Bitcast iP --> <P x i1>.
     auto *PaddedVecTy = llvm::FixedVectorType::get(
@@ -2097,10 +2096,10 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
     return emitBoolVecConversion(V, ValNumElems, "extractvec");
   }
 
-  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType()) {
-    llvm::Type *ResTy = ConvertType(Ty);
+  llvm::Type *ResTy = ConvertType(Ty);
+  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType() ||
+      Ty->isExtVectorBoolType())
     return Builder.CreateTrunc(Value, ResTy, "loadedv");
-  }
 
   return Value;
 }
@@ -2353,8 +2352,10 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
 
     llvm::Value *Element = Builder.CreateExtractElement(Vec, Elt);
 
-    if (getLangOpts().HLSL && LV.getType()->isBooleanType())
-      Element = Builder.CreateTrunc(Element, ConvertType(LV.getType()));
+    llvm::Type *LVTy = ConvertType(LV.getType());
+    if (Element->getType()->getPrimitiveSizeInBits() >
+        LVTy->getPrimitiveSizeInBits())
+      Element = Builder.CreateTrunc(Element, LVTy);
 
     return RValue::get(Element);
   }
@@ -2368,8 +2369,8 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
 
   Vec = Builder.CreateShuffleVector(Vec, Mask);
 
-  if (getLangOpts().HLSL && LV.getType()->isExtVectorBoolType())
-    Vec = EmitFromMemory(Vec, LV.getType());
+  if (LV.getType()->isExtVectorBoolType())
+    Vec = Builder.CreateTrunc(Vec, ConvertType(LV.getType()), "truncv");
 
   return RValue::get(Vec);
 }
@@ -2424,11 +2425,12 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       // Read/modify/write the vector, inserting the new element.
       llvm::Value *Vec = Builder.CreateLoad(Dst.getVectorAddress(),
                                             Dst.isVolatileQualified());
-      llvm::Type *OldVecTy = Vec->getType();
-      if (getLangOpts().HLSL && Dst.getType()->isExtVectorBoolType())
+      llvm::Type *VecTy = Vec->getType();
+      llvm::Value *SrcVal = Src.getScalarVal();
 
-        Vec =
-            Builder.CreateTrunc(Vec, ConvertType(Dst.getType()), "truncboolv");
+      if (SrcVal->getType()->getPrimitiveSizeInBits() <
+                                     VecTy->getScalarSizeInBits())
+        SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
 
       auto *IRStoreTy = dyn_cast<llvm::IntegerType>(Vec->getType());
       if (IRStoreTy) {
@@ -2437,15 +2439,12 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         Vec = Builder.CreateBitCast(Vec, IRVecTy);
         // iN --> <N x i1>.
       }
-      Vec = Builder.CreateInsertElement(Vec, Src.getScalarVal(),
-                                        Dst.getVectorIdx(), "vecins");
+      Vec = Builder.CreateInsertElement(Vec, SrcVal, Dst.getVectorIdx(),
+                                        "vecins");
       if (IRStoreTy) {
         // <N x i1> --> <iN>.
         Vec = Builder.CreateBitCast(Vec, IRStoreTy);
       }
-
-      if (getLangOpts().HLSL && Dst.getType()->isExtVectorBoolType())
-        Vec = Builder.CreateZExt(Vec, OldVecTy);
 
       Builder.CreateStore(Vec, Dst.getVectorAddress(),
                           Dst.isVolatileQualified());
@@ -2643,14 +2642,13 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
   // This access turns into a read/modify/write of the vector.  Load the input
   // value now.
   llvm::Value *Vec = Builder.CreateLoad(DstAddr, Dst.isVolatileQualified());
+  llvm::Type *VecTy = Vec->getType();
   const llvm::Constant *Elts = Dst.getExtVectorElts();
-
-  llvm::Value *SrcVal = Src.getScalarVal();
 
   if (const VectorType *VTy = Dst.getType()->getAs<VectorType>()) {
     unsigned NumSrcElts = VTy->getNumElements();
     unsigned NumDstElts =
-        cast<llvm::FixedVectorType>(Vec->getType())->getNumElements();
+        cast<llvm::FixedVectorType>(VecTy)->getNumElements();
     if (NumDstElts == NumSrcElts) {
       // Use shuffle vector is the src and destination are the same number of
       // elements and restore the vector mask since it is on the side it will be
@@ -2658,6 +2656,10 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       SmallVector<int, 4> Mask(NumDstElts);
       for (unsigned i = 0; i != NumSrcElts; ++i)
         Mask[getAccessedFieldNo(i, Elts)] = i;
+
+      llvm::Value *SrcVal = Src.getScalarVal();
+      if (VecTy->getScalarSizeInBits() > SrcVal->getType()->getScalarSizeInBits())
+        SrcVal = Builder.CreateZExt(SrcVal, VecTy);
 
       Vec = Builder.CreateShuffleVector(SrcVal, Mask);
     } else if (NumDstElts > NumSrcElts) {
@@ -2669,7 +2671,7 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       for (unsigned i = 0; i != NumSrcElts; ++i)
         ExtMask.push_back(i);
       ExtMask.resize(NumDstElts, -1);
-      llvm::Value *ExtSrcVal = Builder.CreateShuffleVector(SrcVal, ExtMask);
+      llvm::Value *ExtSrcVal = Builder.CreateShuffleVector(Src.getScalarVal(), ExtMask);
       // build identity
       SmallVector<int, 4> Mask;
       for (unsigned i = 0; i != NumDstElts; ++i)
@@ -2694,6 +2696,11 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
     // be updating one element.
     unsigned InIdx = getAccessedFieldNo(0, Elts);
     llvm::Value *Elt = llvm::ConstantInt::get(SizeTy, InIdx);
+
+    llvm::Value *SrcVal = Src.getScalarVal();
+    if (VecTy->getScalarSizeInBits() > SrcVal->getType()->getScalarSizeInBits())
+      SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
+
     Vec = Builder.CreateInsertElement(Vec, SrcVal, Elt);
   }
 
@@ -4718,12 +4725,11 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
 
     // Store the vector to memory (because LValue wants an address).
     Address VecMem = CreateMemTemp(E->getBase()->getType());
-    // To be consistent need to zero extend an hlsl boolean vector to store it
-    // back to memory
+    // need to zero extend an hlsl boolean vector to store it back to memory
     QualType Ty = E->getBase()->getType();
-    if (Ty->isExtVectorBoolType() && getLangOpts().HLSL)
-      Vec =
-          Builder.CreateZExt(Vec, convertTypeForLoadStore(Ty, Vec->getType()));
+    llvm::Type *LTy = convertTypeForLoadStore(Ty, Vec->getType());
+    if (LTy->getScalarSizeInBits() > Vec->getType()->getScalarSizeInBits())
+      Vec = Builder.CreateZExt(Vec, LTy);
     Builder.CreateStore(Vec, VecMem);
     Base = MakeAddrLValue(VecMem, Ty, AlignmentSource::Decl);
   }
