@@ -6285,7 +6285,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         Flags.setNonNeg(N1->getFlags().hasNonNeg());
       return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
     }
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       // sext(undef) = 0, because the top bits will all be the same.
       return getConstant(0, DL, VT);
     break;
@@ -6305,7 +6305,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       Flags.setNonNeg(N1->getFlags().hasNonNeg());
       return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
     }
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       // zext(undef) = 0, because the top bits will be zero.
       return getConstant(0, DL, VT);
 
@@ -6347,7 +6347,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       // (ext (zext x)) -> (zext x)  and  (ext (sext x)) -> (sext x)
       return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
     }
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
 
     // (ext (trunc x)) -> x
@@ -6382,7 +6382,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         return getNode(ISD::TRUNCATE, DL, VT, N1.getOperand(0));
       return N1.getOperand(0);
     }
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
     if (OpOpcode == ISD::VSCALE && !NewNodesMustHaveLegalTypes)
       return getVScale(DL, VT,
@@ -6400,14 +6400,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::ABS:
     assert(VT.isInteger() && VT == N1.getValueType() && "Invalid ABS!");
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getConstant(0, DL, VT);
     break;
   case ISD::BSWAP:
     assert(VT.isInteger() && VT == N1.getValueType() && "Invalid BSWAP!");
     assert((VT.getScalarSizeInBits() % 16 == 0) &&
            "BSWAP types must be a multiple of 16 bits!");
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
     // bswap(bswap(X)) -> X.
     if (OpOpcode == ISD::BSWAP)
@@ -6415,7 +6415,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::BITREVERSE:
     assert(VT.isInteger() && VT == N1.getValueType() && "Invalid BITREVERSE!");
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
     break;
   case ISD::BITCAST:
@@ -6424,7 +6424,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (VT == N1.getValueType()) return N1;   // noop conversion.
     if (OpOpcode == ISD::BITCAST) // bitconv(bitconv(x)) -> bitconv(x)
       return getNode(ISD::BITCAST, DL, VT, N1.getOperand(0));
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
     break;
   case ISD::SCALAR_TO_VECTOR:
@@ -6434,7 +6434,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
              N1.getValueType().isInteger() &&
              VT.getVectorElementType().bitsLE(N1.getValueType()))) &&
            "Illegal SCALAR_TO_VECTOR node!");
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
     // scalar_to_vector(extract_vector_elt V, 0) -> V, top bits are undefined.
     if (OpOpcode == ISD::EXTRACT_VECTOR_ELT &&
@@ -6445,7 +6445,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::FNEG:
     // Negation of an unknown bag of bits is still completely undefined.
-    if (OpOpcode == ISD::UNDEF)
+    if (N1.isUndef())
       return getUNDEF(VT);
 
     if (OpOpcode == ISD::FNEG) // --X -> X
@@ -13364,7 +13364,7 @@ void BuildVectorSDNode::recastRawBits(bool IsLittleEndian,
 bool BuildVectorSDNode::isConstant() const {
   for (const SDValue &Op : op_values()) {
     unsigned Opc = Op.getOpcode();
-    if (Opc != ISD::UNDEF && Opc != ISD::Constant && Opc != ISD::ConstantFP)
+    if (!Op.isUndef() && Opc != ISD::Constant && Opc != ISD::ConstantFP)
       return false;
   }
   return true;
