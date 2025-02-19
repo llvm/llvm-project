@@ -2,7 +2,7 @@
 "`P0463R1 <https://wg21.link/P0463R1>`__","Endian just Endian","2017-07 (Toronto)","|Complete|","7",""
 "`P0674R1 <https://wg21.link/P0674R1>`__","Extending make_shared to Support Arrays","2017-07 (Toronto)","|Complete|","15",""
 "","","","","",""
-"`P0020R6 <https://wg21.link/P0020R6>`__","Floating Point Atomic","2017-11 (Albuquerque)","|Complete|","18",""
+"`P0020R6 <https://wg21.link/P0020R6>`__","Floating Point Atomic","2017-11 (Albuquerque)","|Complete|","18","The feature-test macro was not set until LLVM 20."
 "`P0053R7 <https://wg21.link/P0053R7>`__","C++ Synchronized Buffered Ostream","2017-11 (Albuquerque)","|Complete|","18",""
 "`P0202R3 <https://wg21.link/P0202R3>`__","Add constexpr modifiers to functions in <algorithm> and <utility> Headers","2017-11 (Albuquerque)","|Complete|","12",""
 "`P0415R1 <https://wg21.link/P0415R1>`__","Constexpr for ``std::complex``\ ","2017-11 (Albuquerque)","|Complete|","16",""
