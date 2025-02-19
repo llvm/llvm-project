@@ -935,7 +935,7 @@ def Xanalyzer : Separate<["-"], "Xanalyzer">,
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
-      HelpText<"Pass <arg> to the compiliation if the target matches <arch>">,
+      HelpText<"Pass <arg> to the compilation if the target matches <arch>">,
       DocBrief<
           [{Specifies that the argument should only be used if the compilation
   target matches the specified architecture. This can be used with the target
