@@ -2936,6 +2936,9 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
     Kind = CK_HLSLAggregateSplatCast;
     return true;
   }
+
+  // If the destination is an array, we've exhausted the valid HLSL casts, so we
+  // should emit a dignostic and stop processing.
   if (DestType->isArrayType()) {
     Self.Diag(OpRange.getBegin(), diag::err_bad_cxx_cast_generic)
         << 4 << SrcTy << DestType;
