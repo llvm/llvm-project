@@ -9,6 +9,21 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_DAP_H
 #define LLDB_TOOLS_LLDB_DAP_DAP_H
 
+
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/Threading.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include "lldb/API/SBAttachInfo.h"
+#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBEvent.h"
+#include "lldb/API/SBLaunchInfo.h"
+
 #include "DAPForward.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
@@ -36,11 +51,16 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
+#include <cstdio>
+#include <iosfwd>
 #include <map>
 #include <mutex>
 #include <optional>
 #include <thread>
+#include <tuple>
+#include <utility>
 #include <vector>
+
 
 #define VARREF_LOCALS (int64_t)1
 #define VARREF_GLOBALS (int64_t)2
@@ -89,6 +109,10 @@ struct Variables {
   int64_t next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
   int64_t next_permanent_var_ref{PermanentVariableStartIndex};
 
+  std::map<uint32_t,
+           std::tuple<lldb::SBValueList, lldb::SBValueList, lldb::SBValueList>>
+      frames;
+
   /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
   llvm::DenseMap<int64_t, lldb::SBValue> referenced_variables;
@@ -114,30 +138,34 @@ struct Variables {
   /// \return variableReference assigned to this expandable variable.
   int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
 
+  bool SwitchFrame(uint32_t frame_id);
+
   /// Clear all scope variables and non-permanent expandable variables.
   void Clear();
 };
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
+  explicit StartDebuggingRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
+  explicit ReplModeRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
+  explicit SendEventRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
+
+enum ScopeKind { Locals, Globals, Registers };
 
 struct DAP {
   llvm::StringRef debug_adaptor_path;
@@ -165,6 +193,7 @@ struct DAP {
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
   std::vector<std::string> terminate_commands;
+  std::map<int, std::pair<ScopeKind, uint32_t>> scope_kinds;
   // Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
   // A copy of the last LaunchRequest or AttachRequest so we can reuse its
@@ -243,9 +272,11 @@ struct DAP {
 
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
-  llvm::json::Value CreateTopLevelScopes();
+  llvm::json::Value CreateTopLevelScopes(uint32_t frame_id);
 
   void PopulateExceptionBreakpoints();
+
+  std::optional<ScopeKind> GetScopeKind(const int64_t variablesReference);
 
   /// Attempt to determine if an expression is a variable expression or
   /// lldb command using a heuristic based on the first term of the
@@ -331,7 +362,10 @@ struct DAP {
   void RegisterRequestCallback(std::string request, RequestCallback callback);
 
   /// Debuggee will continue from stopped state.
-  void WillContinue() { variables.Clear(); }
+  void WillContinue() {
+    variables.Clear();
+    scope_kinds.clear();
+  }
 
   /// Poll the process to wait for it to reach the eStateStopped state.
   ///

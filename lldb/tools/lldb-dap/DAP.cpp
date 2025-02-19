@@ -151,6 +151,15 @@ void DAP::PopulateExceptionBreakpoints() {
   });
 }
 
+std::optional<ScopeKind> DAP::GetScopeKind(const int64_t variablesReference) {
+  auto iter = scope_kinds.find(variablesReference);
+  if (iter != scope_kinds.end()) {
+    return iter->second.first;
+  }
+
+  return std::nullopt;
+}
+
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
   // PopulateExceptionBreakpoints() is called after g_dap.debugger is created
   // in a request-initialize.
@@ -527,14 +536,27 @@ lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
   return thread.GetFrameAtIndex(GetLLDBFrameID(frame_id));
 }
 
-llvm::json::Value DAP::CreateTopLevelScopes() {
+llvm::json::Value DAP::CreateTopLevelScopes(uint32_t frame_id) {
   llvm::json::Array scopes;
-  scopes.emplace_back(
-      CreateScope("Locals", VARREF_LOCALS, variables.locals.GetSize(), false));
-  scopes.emplace_back(CreateScope("Globals", VARREF_GLOBALS,
+
+  scopes.emplace_back(CreateScope("Locals", variables.next_temporary_var_ref,
+                                  ScopeKind::Locals, variables.locals.GetSize(),
+                                  false));
+  scope_kinds[variables.next_temporary_var_ref++] =
+      std::make_pair(ScopeKind::Locals, frame_id);
+
+  scopes.emplace_back(CreateScope("Globals", variables.next_temporary_var_ref,
+                                  ScopeKind::Globals,
                                   variables.globals.GetSize(), false));
-  scopes.emplace_back(CreateScope("Registers", VARREF_REGS,
+  scope_kinds[variables.next_temporary_var_ref++] =
+      std::make_pair(ScopeKind::Globals, frame_id);
+
+  scopes.emplace_back(CreateScope("Registers", variables.next_temporary_var_ref,
+                                  ScopeKind::Registers,
                                   variables.registers.GetSize(), false));
+  scope_kinds[variables.next_temporary_var_ref++] =
+      std::make_pair(ScopeKind::Registers, frame_id);
+
   return llvm::json::Value(std::move(scopes));
 }
 
@@ -879,11 +901,29 @@ lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
   return error;
 }
 
+bool Variables::SwitchFrame(const uint32_t frame_id) {
+  auto iter = frames.find(frame_id);
+
+  if (iter == frames.end()) {
+    return false;
+  }
+
+  auto [frame_locals, frame_globals, frame_registers] = iter->second;
+
+  locals = frame_locals;
+  globals = frame_globals;
+  registers = frame_registers;
+
+  return true;
+}
+
 void Variables::Clear() {
   locals.Clear();
   globals.Clear();
   registers.Clear();
   referenced_variables.clear();
+  frames.clear();
+  next_temporary_var_ref = VARREF_FIRST_VAR_IDX;
 }
 
 int64_t Variables::GetNewVariableReference(bool is_permanent) {

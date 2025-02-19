@@ -9,6 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
+#include "DAP.h"
 #include "DAPForward.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBFileSpec.h"
@@ -319,7 +320,7 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 ///     A "Scope" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateScope(const llvm::StringRef name,
-                              int64_t variablesReference,
+                              int64_t variablesReference, ScopeKind kind,
                               int64_t namedVariables, bool expensive);
 
 /// Create a "Source" JSON object as described in the debug adaptor definition.
