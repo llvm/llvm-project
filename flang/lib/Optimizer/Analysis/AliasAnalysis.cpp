@@ -641,14 +641,13 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             } else if (isDummyArgument(def)) {
               defOp = nullptr;
               v = def;
+            } else {
+              type = SourceKind::Indirect;
             }
-
-            breakFromLoop = true;
-            return;
+          } else {
+            // No further tracking for addresses loaded from memory for now.
+            type = SourceKind::Indirect;
           }
-
-          // No further tracking for addresses loaded from memory for now.
-          type = SourceKind::Indirect;
           breakFromLoop = true;
         })
         .Case<fir::AddrOfOp>([&](auto op) {
