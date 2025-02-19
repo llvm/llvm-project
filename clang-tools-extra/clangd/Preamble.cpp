@@ -673,7 +673,6 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // Reset references to ref-counted-ptrs before executing the callbacks, to
   // prevent resetting them concurrently.
   PreambleDiagsEngine.reset();
-  CI.DiagnosticOpts.reset();
 
   // When building the AST for the main file, we do want the function
   // bodies.
