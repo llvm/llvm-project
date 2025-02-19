@@ -40,7 +40,7 @@
 # RUN:  -z zicfilp-func-sig-report=warning -o /dev/null 2>&1                   \
 # RUN:  | FileCheck --check-prefix=MISS-LP-WARN %s
 # RUN: not ld.lld rv32-func2-zicfilp.o rv32-func3.o --shared                   \
-# RUN:  -z zicfilp-func-sig-report=error   -o /dev/null 2>&1                   \
+# RUN:  -z zicfilp-func-sig-report=error                2>&1                   \
 # RUN:  | FileCheck --check-prefix=MISS-LP-ERROR %s
 
 # RUN: ld.lld rv32-func1-zicfilp.o rv32-func2-zicfilp.o rv32-func3-zicfilp.o   \
@@ -52,7 +52,7 @@
 # RUN:  -z zicfilp-func-sig-report=warning -o /dev/null 2>&1                   \
 # RUN:  | FileCheck --check-prefix=MISS-LP-WARN %s
 # RUN: not ld.lld rv64-func2-zicfilp.o rv64-func3.o --shared                   \
-# RUN:  -z zicfilp-func-sig-report=error   -o /dev/null 2>&1                   \
+# RUN:  -z zicfilp-func-sig-report=error                2>&1                   \
 # RUN:  | FileCheck --check-prefix=MISS-LP-ERROR %s
 
 # RUN: ld.lld rv64-func1-zicfilp.o rv64-func2-zicfilp.o rv64-func3-zicfilp.o   \

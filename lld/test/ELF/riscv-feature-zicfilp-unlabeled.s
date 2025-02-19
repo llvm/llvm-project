@@ -38,10 +38,10 @@
 
 ## ZICFILP-unlabeled and ZICFILP-func-sig should conflict with each other
 # RUN: not ld.lld rv32-func1-zicfilp-conflict.o rv32-func2-zicfilp.o           \
-# RUN:  rv32-func3-zicfilp.o -o /dev/null 2>&1                                 \
+# RUN:  rv32-func3-zicfilp.o 2>&1                                              \
 # RUN:  | FileCheck --check-prefix FEATURE-CONFLICT %s
 # RUN: not ld.lld rv64-func1-zicfilp-conflict.o rv64-func2-zicfilp.o           \
-# RUN:  rv64-func3-zicfilp.o -o /dev/null 2>&1                                 \
+# RUN:  rv64-func3-zicfilp.o 2>&1                                              \
 # RUN:  | FileCheck --check-prefix FEATURE-CONFLICT %s
 # FEATURE-CONFLICT: error: rv{{32|64}}-func1-zicfilp-conflict.o: file has
 # FEATURE-CONFLICT-SAME: conflicting properties:
@@ -54,7 +54,7 @@
 # RUN:  -z zicfilp-unlabeled-report=warning -o /dev/null 2>&1                  \
 # RUN:  | FileCheck --check-prefix=MISS-LP-WARN %s
 # RUN: not ld.lld rv32-func2-zicfilp.o rv32-func3.o --shared                   \
-# RUN:  -z zicfilp-unlabeled-report=error   -o /dev/null 2>&1                  \
+# RUN:  -z zicfilp-unlabeled-report=error                2>&1                  \
 # RUN:  | FileCheck --check-prefix=MISS-LP-ERROR %s
 
 # RUN: ld.lld rv32-func1-zicfilp.o rv32-func2-zicfilp.o rv32-func3-zicfilp.o   \
@@ -66,7 +66,7 @@
 # RUN:  -z zicfilp-unlabeled-report=warning -o /dev/null 2>&1                  \
 # RUN:  | FileCheck --check-prefix=MISS-LP-WARN %s
 # RUN: not ld.lld rv64-func2-zicfilp.o rv64-func3.o --shared                   \
-# RUN:  -z zicfilp-unlabeled-report=error   -o /dev/null 2>&1                  \
+# RUN:  -z zicfilp-unlabeled-report=error                2>&1                  \
 # RUN:  | FileCheck --check-prefix=MISS-LP-ERROR %s
 
 # RUN: ld.lld rv64-func1-zicfilp.o rv64-func2-zicfilp.o rv64-func3-zicfilp.o   \

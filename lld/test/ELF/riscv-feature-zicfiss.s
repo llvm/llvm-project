@@ -39,7 +39,7 @@
 # RUN:  -z zicfiss-report=warning -o /dev/null 2>&1                            \
 # RUN:  | FileCheck --check-prefix=MISS-SS-WARN %s
 # RUN: not ld.lld rv32-func2-zicfiss.o rv32-func3.o --shared                   \
-# RUN:  -z zicfiss-report=error   -o /dev/null 2>&1                            \
+# RUN:  -z zicfiss-report=error                2>&1                            \
 # RUN:  | FileCheck --check-prefix=MISS-SS-ERROR %s
 
 # RUN: ld.lld rv32-func1-zicfiss.o rv32-func2-zicfiss.o rv32-func3-zicfiss.o   \
@@ -51,7 +51,7 @@
 # RUN:  -z zicfiss-report=warning -o /dev/null 2>&1                            \
 # RUN:  | FileCheck --check-prefix=MISS-SS-WARN %s
 # RUN: not ld.lld rv64-func2-zicfiss.o rv64-func3.o --shared                   \
-# RUN:  -z zicfiss-report=error   -o /dev/null 2>&1                            \
+# RUN:  -z zicfiss-report=error                2>&1                            \
 # RUN:  | FileCheck --check-prefix=MISS-SS-ERROR %s
 
 # RUN: ld.lld rv64-func1-zicfiss.o rv64-func2-zicfiss.o rv64-func3-zicfiss.o   \
