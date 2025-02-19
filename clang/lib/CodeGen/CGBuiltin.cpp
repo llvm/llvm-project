@@ -19448,23 +19448,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_adduint64: {
     Value *OpA = EmitScalarExpr(E->getArg(0));
     Value *OpB = EmitScalarExpr(E->getArg(1));
-    assert(E->getArg(0)->getType()->hasIntegerRepresentation() &&
-           E->getArg(1)->getType()->hasIntegerRepresentation() &&
+    QualType Arg0Ty = E->getArg(0)->getType();
+    uint64_t NumElements = Arg0Ty->castAs<VectorType>()->getNumElements();
+    assert(Arg0Ty == E->getArg(1)->getType() &&
+           "AddUint64 operand types must match");
+    assert(Arg0Ty->hasIntegerRepresentation() &&
            "AddUint64 operands must have an integer representation");
-    assert(((E->getArg(0)->getType()->castAs<VectorType>()->getNumElements() ==
-                 2 &&
-             E->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
-                 2) ||
-            (E->getArg(0)->getType()->castAs<VectorType>()->getNumElements() ==
-                 4 &&
-             E->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
-                 4)) &&
-           "input vectors must have 2 or 4 elements each");
+    assert((NumElements == 2 || NumElements == 4) &&
+           "AddUint64 operands must have 2 or 4 elements");
 
-    uint64_t NumElements =
-        E->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
-
-    llvm::Value *Result = PoisonValue::get(OpA->getType());
     llvm::Value *LowA;
     llvm::Value *HighA;
     llvm::Value *LowB;
@@ -19496,17 +19488,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Value *HighSumPlusCarry =
         Builder.CreateAdd(HighSum, ZExtCarry, "HighSumPlusCarry");
 
-    // Insert the low and high word sums into the result vector
-    if (NumElements == 2) {
-      Result = Builder.CreateInsertElement(Result, LowSum, (uint64_t)0,
-                                           "hlsl.AddUint64.upto0");
-      Result = Builder.CreateInsertElement(Result, HighSumPlusCarry,
-                                           (uint64_t)1, "hlsl.AddUint64");
-    } else { /* NumElements == 4 */
-      Result = Builder.CreateShuffleVector(LowSum, HighSumPlusCarry,
+    if (NumElements == 4) {
+      return Builder.CreateShuffleVector(LowSum, HighSumPlusCarry,
                                            ArrayRef<int>{0, 2, 1, 3},
                                            "hlsl.AddUint64");
     }
+
+    llvm::Value *Result = PoisonValue::get(OpA->getType());
+    Result = Builder.CreateInsertElement(Result, LowSum, (uint64_t)0,
+                                         "hlsl.AddUint64.upto0");
+    Result = Builder.CreateInsertElement(Result, HighSumPlusCarry, (uint64_t)1,
+                                         "hlsl.AddUint64");
     return Result;
   }
   case Builtin::BI__builtin_hlsl_resource_getpointer: {
