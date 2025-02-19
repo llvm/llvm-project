@@ -947,7 +947,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   if (term && !strcmp(term, "dumb"))
     SetUseColor(false);
   // Turn off use-color if we don't write to a terminal with color support.
-  if (!GetOutputFile().GetIsTerminalWithColors())
+  if (!GetOutputFileSP()->GetIsTerminalWithColors())
     SetUseColor(false);
 
   if (Diagnostics::Enabled()) {
@@ -1717,7 +1717,7 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
   } else if (log_file.empty()) {
     log_handler_sp =
-        CreateLogHandler(log_handler_kind, GetOutputFile().GetDescriptor(),
+        CreateLogHandler(log_handler_kind, GetOutputFileSP()->GetDescriptor(),
                          /*should_close=*/false, buffer_size);
   } else {
     auto pos = m_stream_handlers.find(log_file);
@@ -2163,8 +2163,8 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // Determine whether the current output file is an interactive terminal with
   // color support. We assume that if we support ANSI escape codes we support
   // vt100 escape codes.
-  File &file = GetOutputFile();
-  if (!file.GetIsInteractive() || !file.GetIsTerminalWithColors())
+  FileSP file_sp = GetOutputFileSP();
+  if (!file_sp->GetIsInteractive() || !file_sp->GetIsTerminalWithColors())
     return;
 
   StreamSP output = GetAsyncOutputStream();
