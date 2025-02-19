@@ -61,6 +61,14 @@ private:
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
                               const SDLoc &SL, SDValue Chain,
                               const ISD::InputArg &Arg) const;
+#if LLPC_BUILD_NPI
+
+  SDValue getGlobalWorkGroupId(
+      SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
+#endif /* LLPC_BUILD_NPI */
   SDValue getPreloadedValue(SelectionDAG &DAG,
                             const SIMachineFunctionInfo &MFI,
                             EVT VT,

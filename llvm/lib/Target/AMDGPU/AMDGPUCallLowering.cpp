@@ -816,7 +816,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     Register InputReg = MRI.createGenericVirtualRegister(ArgTy);
 
     if (IncomingArg) {
-      LI->loadInputValue(InputReg, MIRBuilder, IncomingArg, ArgRC, ArgTy);
+      LI->buildLoadInputValue(InputReg, MIRBuilder, IncomingArg, ArgRC, ArgTy);
     } else if (InputID == AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR) {
       LI->getImplicitArgPtr(InputReg, MRI, MIRBuilder);
     } else if (InputID == AMDGPUFunctionArgInfo::LDS_KERNEL_ID) {
@@ -883,8 +883,9 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
       NeedWorkItemIDX) {
     if (ST.getMaxWorkitemID(MF.getFunction(), 0) != 0) {
       InputReg = MRI.createGenericVirtualRegister(S32);
-      LI->loadInputValue(InputReg, MIRBuilder, IncomingArgX,
-                         std::get<1>(WorkitemIDX), std::get<2>(WorkitemIDX));
+      LI->buildLoadInputValue(InputReg, MIRBuilder, IncomingArgX,
+                              std::get<1>(WorkitemIDX),
+                              std::get<2>(WorkitemIDX));
     } else {
       InputReg = MIRBuilder.buildConstant(S32, 0).getReg(0);
     }
@@ -893,8 +894,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo->WorkItemIDY &&
       NeedWorkItemIDY && ST.getMaxWorkitemID(MF.getFunction(), 1) != 0) {
     Register Y = MRI.createGenericVirtualRegister(S32);
-    LI->loadInputValue(Y, MIRBuilder, IncomingArgY, std::get<1>(WorkitemIDY),
-                       std::get<2>(WorkitemIDY));
+    LI->buildLoadInputValue(Y, MIRBuilder, IncomingArgY,
+                            std::get<1>(WorkitemIDY), std::get<2>(WorkitemIDY));
 
     Y = MIRBuilder.buildShl(S32, Y, MIRBuilder.buildConstant(S32, 10)).getReg(0);
     InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Y).getReg(0) : Y;
@@ -903,8 +904,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo->WorkItemIDZ &&
       NeedWorkItemIDZ && ST.getMaxWorkitemID(MF.getFunction(), 2) != 0) {
     Register Z = MRI.createGenericVirtualRegister(S32);
-    LI->loadInputValue(Z, MIRBuilder, IncomingArgZ, std::get<1>(WorkitemIDZ),
-                       std::get<2>(WorkitemIDZ));
+    LI->buildLoadInputValue(Z, MIRBuilder, IncomingArgZ,
+                            std::get<1>(WorkitemIDZ), std::get<2>(WorkitemIDZ));
 
     Z = MIRBuilder.buildShl(S32, Z, MIRBuilder.buildConstant(S32, 20)).getReg(0);
     InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Z).getReg(0) : Z;
@@ -925,8 +926,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
       ArgDescriptor IncomingArg = ArgDescriptor::createArg(
         IncomingArgX ? *IncomingArgX :
         IncomingArgY ? *IncomingArgY : *IncomingArgZ, ~0u);
-      LI->loadInputValue(InputReg, MIRBuilder, &IncomingArg,
-                         &AMDGPU::VGPR_32RegClass, S32);
+      LI->buildLoadInputValue(InputReg, MIRBuilder, &IncomingArg,
+                              &AMDGPU::VGPR_32RegClass, S32);
     }
   }
 

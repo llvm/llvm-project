@@ -321,26 +321,28 @@ multiclass Conv_Profile_Multi<string OutputBaseTy, string WeightsTensorBaseTy, s
 }
 
 //                                             dest    weights/tensor
-defm VOPM_CONV_F16_F16   : Conv_Profile_Multi<"f16", "f16">;
-defm VOPM_CONV_BF16_BF16 : Conv_Profile_Multi<"bf16", "bf16">;
-
-defm VOPM_CONV_F16_FP8   : Conv_Profile_Multi<"f16", "i32">;
-defm VOPM_CONV_F16_BF8   : Conv_Profile_Multi<"f16", "i32">;
-defm VOPM_CONV_F16_IU8   : Conv_Profile_Multi<"f16", "i32">;
-defm VOPM_CONV_F16_IU4   : Conv_Profile_Multi<"f16", "i32">;
-
-defm VOPM_CONV_F32_F16   : Conv_Profile_Multi<"f32", "f16">;
-defm VOPM_CONV_F32_BF16  : Conv_Profile_Multi<"f32", "bf16">;
-defm VOPM_CONV_F32_FP8   : Conv_Profile_Multi<"f32", "i32">;
-defm VOPM_CONV_F32_BF8   : Conv_Profile_Multi<"f32", "i32">;
-defm VOPM_CONV_F32_IU8   : Conv_Profile_Multi<"f32", "i32">;
-defm VOPM_CONV_F32_IU4   : Conv_Profile_Multi<"f32", "i32">;
-defm VOPM_CONV_I32_IU8   : Conv_Profile_Multi<"i32", "i32">;
-defm VOPM_CONV_I32_IU4   : Conv_Profile_Multi<"i32", "i32">;
+defm VOPM_CONV_F32_IU4     : Conv_Profile_Multi<"f32", "i32">;
+defm VOPM_CONV_F32_IU8     : Conv_Profile_Multi<"f32", "i32">;
+defm VOPM_CONV_F32_FP8_FP8 : Conv_Profile_Multi<"f32", "i32">;
+defm VOPM_CONV_F32_FP8_BF8 : Conv_Profile_Multi<"f32", "i32">;
+defm VOPM_CONV_F32_BF8_FP8 : Conv_Profile_Multi<"f32", "i32">;
+defm VOPM_CONV_F32_BF8_BF8 : Conv_Profile_Multi<"f32", "i32">;
+defm VOPM_CONV_F32_F16     : Conv_Profile_Multi<"f32", "f16">;
+defm VOPM_CONV_F32_BF16    : Conv_Profile_Multi<"f32", "bf16">;
+defm VOPM_CONV_F16_IU4     : Conv_Profile_Multi<"f16", "i32">;
+defm VOPM_CONV_F16_IU8     : Conv_Profile_Multi<"f16", "i32">;
+defm VOPM_CONV_F16_FP8_FP8 : Conv_Profile_Multi<"f16", "i32">;
+defm VOPM_CONV_F16_FP8_BF8 : Conv_Profile_Multi<"f16", "i32">;
+defm VOPM_CONV_F16_BF8_FP8 : Conv_Profile_Multi<"f16", "i32">;
+defm VOPM_CONV_F16_BF8_BF8 : Conv_Profile_Multi<"f16", "i32">;
+defm VOPM_CONV_F16_F16     : Conv_Profile_Multi<"f16", "f16">;
+defm VOPM_CONV_BF16_BF16   : Conv_Profile_Multi<"bf16", "bf16">;
+defm VOPM_CONV_I32_IU4     : Conv_Profile_Multi<"i32", "i32">;
+defm VOPM_CONV_I32_IU8     : Conv_Profile_Multi<"i32", "i32">;
 
 //                                              dest   weights/tensor acc_in
-defm VOPM_CONV_F32I32_IU8 : Conv_Profile_Multi<"f32", "i32", "i32">;
 defm VOPM_CONV_F32I32_IU4 : Conv_Profile_Multi<"f32", "i32", "i32">;
+defm VOPM_CONV_F32I32_IU8 : Conv_Profile_Multi<"f32", "i32", "i32">;
 
 class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1, 1, 1> {
 
@@ -626,24 +628,26 @@ multiclass VOPM_Conv_MultiPseudos<string ProfilePrefix> {
   def _3x3_4x2 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_3x3_4x2")>;
 }
 
-defm V_CONVOLVE_F16_F16    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_F16">;
-defm V_CONVOLVE_BF16_BF16  : VOPM_Conv_MultiPseudos <"VOPM_CONV_BF16_BF16">;
-
-defm V_CONVOLVE_F16_FP8    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_FP8">;
-defm V_CONVOLVE_F16_BF8    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_BF8">;
-defm V_CONVOLVE_F16_IU8    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_IU8">;
-defm V_CONVOLVE_F16_IU4    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_IU4">;
-
-defm V_CONVOLVE_F32_F16    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_F16">;
-defm V_CONVOLVE_F32_BF16   : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_BF16">;
-defm V_CONVOLVE_F32_FP8    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_FP8">;
-defm V_CONVOLVE_F32_BF8    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_BF8">;
-defm V_CONVOLVE_F32_IU8    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_IU8">;
-defm V_CONVOLVE_F32_IU4    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_IU4">;
-defm V_CONVOLVE_I32_IU8    : VOPM_Conv_MultiPseudos <"VOPM_CONV_I32_IU8">;
-defm V_CONVOLVE_I32_IU4    : VOPM_Conv_MultiPseudos <"VOPM_CONV_I32_IU4">;
-defm V_CONVOLVE_F32I32_IU8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32I32_IU8">;
-defm V_CONVOLVE_F32I32_IU4 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32I32_IU4">;
+defm V_CONVOLVE_F32_IU4     : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_IU4">;
+defm V_CONVOLVE_F32_IU8     : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_IU8">;
+defm V_CONVOLVE_F32_FP8_FP8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_FP8_FP8">;
+defm V_CONVOLVE_F32_FP8_BF8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_FP8_BF8">;
+defm V_CONVOLVE_F32_BF8_FP8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_BF8_FP8">;
+defm V_CONVOLVE_F32_BF8_BF8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_BF8_BF8">;
+defm V_CONVOLVE_F32_F16     : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_F16">;
+defm V_CONVOLVE_F32_BF16    : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32_BF16">;
+defm V_CONVOLVE_F16_IU4     : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_IU4">;
+defm V_CONVOLVE_F16_IU8     : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_IU8">;
+defm V_CONVOLVE_F16_FP8_FP8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_FP8_FP8">;
+defm V_CONVOLVE_F16_FP8_BF8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_FP8_BF8">;
+defm V_CONVOLVE_F16_BF8_FP8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_BF8_FP8">;
+defm V_CONVOLVE_F16_BF8_BF8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_BF8_BF8">;
+defm V_CONVOLVE_F16_F16     : VOPM_Conv_MultiPseudos <"VOPM_CONV_F16_F16">;
+defm V_CONVOLVE_BF16_BF16   : VOPM_Conv_MultiPseudos <"VOPM_CONV_BF16_BF16">;
+defm V_CONVOLVE_I32_IU4     : VOPM_Conv_MultiPseudos <"VOPM_CONV_I32_IU4">;
+defm V_CONVOLVE_I32_IU8     : VOPM_Conv_MultiPseudos <"VOPM_CONV_I32_IU8">;
+defm V_CONVOLVE_F32I32_IU4  : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32I32_IU4">;
+defm V_CONVOLVE_F32I32_IU8  : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32I32_IU8">;
 
 multiclass VOPM_Cvt_To_Tensor_Pseudo<string ProfileName> {
   defvar P = !cast<Cvt_To_Tensor_Profile>(ProfileName);
@@ -1277,33 +1281,26 @@ defm V_MOV_2SRC_B64                       : VOP2M_Real_gfx13 <0x4>;
 defm V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOP3M_Real_gfx13 <0x10>;
 defm V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOP3M_Real_gfx13 <0x11>;
 
-// TODO-GFX13:
-// Rename:
-//   V_CONVOLVE_F32_FP8 to V_CONVOLVE_F32_FP8_FP8
-//   V_CONVOLVE_F32_BF8 to V_CONVOLVE_F32_BF8_BF8
-//   V_CONVOLVE_F16_FP8 to V_CONVOLVE_F16_FP8_FP8
-//   V_CONVOLVE_F16_BF8 to V_CONVOLVE_F16_BF8_BF8
-// Add:
-//   defm V_CONVOLVE_F32_FP8_BF8 : Conv_Real_gfx13 <0xe3>;
-//   defm V_CONVOLVE_F32_BF8_FP8 : Conv_Real_gfx13 <0xe4>;
-//   defm V_CONVOLVE_F16_FP8_BF8 : Conv_Real_gfx13 <0xeb>;
-//   defm V_CONVOLVE_F16_BF8_FP8 : Conv_Real_gfx13 <0xec>;
-defm V_CONVOLVE_F32_IU4    : Conv_Real_gfx13 <0xe0>;
-defm V_CONVOLVE_F32_IU8    : Conv_Real_gfx13 <0xe1>;
-defm V_CONVOLVE_F32_FP8    : Conv_Real_gfx13 <0xe2>;
-defm V_CONVOLVE_F32_BF8    : Conv_Real_gfx13 <0xe5>;
-defm V_CONVOLVE_F32_F16    : Conv_Real_gfx13 <0xe6>;
-defm V_CONVOLVE_F32_BF16   : Conv_Real_gfx13 <0xe7>;
-defm V_CONVOLVE_F16_IU4    : Conv_Real_gfx13 <0xe8>;
-defm V_CONVOLVE_F16_IU8    : Conv_Real_gfx13 <0xe9>;
-defm V_CONVOLVE_F16_FP8    : Conv_Real_gfx13 <0xea>;
-defm V_CONVOLVE_F16_BF8    : Conv_Real_gfx13 <0xed>;
-defm V_CONVOLVE_F16_F16    : Conv_Real_gfx13 <0xf2>;
-defm V_CONVOLVE_BF16_BF16  : Conv_Real_gfx13 <0xf3>;
-defm V_CONVOLVE_I32_IU4    : Conv_Real_gfx13 <0xf4>;
-defm V_CONVOLVE_I32_IU8    : Conv_Real_gfx13 <0xf5>;
-defm V_CONVOLVE_F32I32_IU4 : Conv_Real_gfx13 <0xf6>;
-defm V_CONVOLVE_F32I32_IU8 : Conv_Real_gfx13 <0xf7>;
+defm V_CONVOLVE_F32_IU4     : Conv_Real_gfx13 <0xe0>;
+defm V_CONVOLVE_F32_IU8     : Conv_Real_gfx13 <0xe1>;
+defm V_CONVOLVE_F32_FP8_FP8 : Conv_Real_gfx13 <0xe2>;
+defm V_CONVOLVE_F32_FP8_BF8 : Conv_Real_gfx13 <0xe3>;
+defm V_CONVOLVE_F32_BF8_FP8 : Conv_Real_gfx13 <0xe4>;
+defm V_CONVOLVE_F32_BF8_BF8 : Conv_Real_gfx13 <0xe5>;
+defm V_CONVOLVE_F32_F16     : Conv_Real_gfx13 <0xe6>;
+defm V_CONVOLVE_F32_BF16    : Conv_Real_gfx13 <0xe7>;
+defm V_CONVOLVE_F16_IU4     : Conv_Real_gfx13 <0xe8>;
+defm V_CONVOLVE_F16_IU8     : Conv_Real_gfx13 <0xe9>;
+defm V_CONVOLVE_F16_FP8_FP8 : Conv_Real_gfx13 <0xea>;
+defm V_CONVOLVE_F16_FP8_BF8 : Conv_Real_gfx13 <0xeb>;
+defm V_CONVOLVE_F16_BF8_FP8 : Conv_Real_gfx13 <0xec>;
+defm V_CONVOLVE_F16_BF8_BF8 : Conv_Real_gfx13 <0xed>;
+defm V_CONVOLVE_F16_F16     : Conv_Real_gfx13 <0xf2>;
+defm V_CONVOLVE_BF16_BF16   : Conv_Real_gfx13 <0xf3>;
+defm V_CONVOLVE_I32_IU4     : Conv_Real_gfx13 <0xf4>;
+defm V_CONVOLVE_I32_IU8     : Conv_Real_gfx13 <0xf5>;
+defm V_CONVOLVE_F32I32_IU4  : Conv_Real_gfx13 <0xf6>;
+defm V_CONVOLVE_F32I32_IU8  : Conv_Real_gfx13 <0xf7>;
 
 multiclass Cvt_To_Tensor_4b_Real_gfx13<bits<8> op> {
   defm _8x4x8 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_8x4x8", !tolower(NAME)>;
@@ -1420,10 +1417,10 @@ multiclass VOP5M_SWMMA_K1_K2_K4_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X128_", NAME) : VOP5M_SWMMA_Real_gfx13<op, !tolower(NAME)>;
 }
 
-defm V_SWMMA_F32_16X16X32_F16   : VOP5M_SWMMA_Real_gfx13 <0xb0>;
-defm V_SWMMA_F16_16X16X32_F16   : VOP5M_SWMMA_Real_gfx13 <0xb1>;
-defm V_SWMMA_F32_16X16X32_BF16  : VOP5M_SWMMA_Real_gfx13 <0xb2>;
-defm V_SWMMA_BF16_16X16X32_BF16 : VOP5M_SWMMA_Real_gfx13 <0xb3>;
+defm V_SWMMA_F32_16X16X32_F16   : VOP5M_SWMMA_Real_gfx13 <0xb0, "v_swmma_f32_16x16_f16">;
+defm V_SWMMA_F16_16X16X32_F16   : VOP5M_SWMMA_Real_gfx13 <0xb1, "v_swmma_f16_16x16_f16">;
+defm V_SWMMA_F32_16X16X32_BF16  : VOP5M_SWMMA_Real_gfx13 <0xb2, "v_swmma_f32_16x16_bf16">;
+defm V_SWMMA_BF16_16X16X32_BF16 : VOP5M_SWMMA_Real_gfx13 <0xb3, "v_swmma_bf16_16x16_bf16">;
 defm V_SWMMA_F32_16X16_FP8_FP8  : VOP5M_SWMMA_K1_K2_Real <0xb4>;
 defm V_SWMMA_F32_16X16_FP8_BF8  : VOP5M_SWMMA_K1_K2_Real <0xb5>;
 defm V_SWMMA_F32_16X16_BF8_FP8  : VOP5M_SWMMA_K1_K2_Real <0xb6>;
@@ -1528,23 +1525,26 @@ multiclass ConvPatMultiFilters_VOPM<string TypeNames, string NodePrefix> {
 }
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
-  defm : ConvPatMultiFilters_VOPM<"F16_F16", "int_amdgcn_convolve_f16_f16">;
-  defm : ConvPatMultiFilters_VOPM<"BF16_BF16", "int_amdgcn_convolve_bf16_bf16">;
-  defm : ConvPatMultiFilters_VOPM<"F16_FP8", "int_amdgcn_convolve_f16_fp8">;
-  defm : ConvPatMultiFilters_VOPM<"F16_BF8", "int_amdgcn_convolve_f16_bf8">;
-  defm : ConvPatMultiFilters_VOPM<"F16_IU8", "int_amdgcn_convolve_f16_iu8">;
-  defm : ConvPatMultiFilters_VOPM<"F16_IU4", "int_amdgcn_convolve_f16_iu4">;
-
+  defm : ConvPatMultiFilters_VOPM<"F32_IU4", "int_amdgcn_convolve_f32_iu4">;
+  defm : ConvPatMultiFilters_VOPM<"F32_IU8", "int_amdgcn_convolve_f32_iu8">;
+  defm : ConvPatMultiFilters_VOPM<"F32_FP8_FP8", "int_amdgcn_convolve_f32_fp8_fp8">;
+  defm : ConvPatMultiFilters_VOPM<"F32_FP8_BF8", "int_amdgcn_convolve_f32_fp8_bf8">;
+  defm : ConvPatMultiFilters_VOPM<"F32_BF8_FP8", "int_amdgcn_convolve_f32_bf8_fp8">;
+  defm : ConvPatMultiFilters_VOPM<"F32_BF8_BF8", "int_amdgcn_convolve_f32_bf8_bf8">;
   defm : ConvPatMultiFilters_VOPM<"F32_F16", "int_amdgcn_convolve_f32_f16">;
   defm : ConvPatMultiFilters_VOPM<"F32_BF16", "int_amdgcn_convolve_f32_bf16">;
-  defm : ConvPatMultiFilters_VOPM<"F32_FP8", "int_amdgcn_convolve_f32_fp8">;
-  defm : ConvPatMultiFilters_VOPM<"F32_BF8", "int_amdgcn_convolve_f32_bf8">;
-  defm : ConvPatMultiFilters_VOPM<"F32_IU8", "int_amdgcn_convolve_f32_iu8">;
-  defm : ConvPatMultiFilters_VOPM<"F32_IU4", "int_amdgcn_convolve_f32_iu4">;
-  defm : ConvPatMultiFilters_VOPM<"I32_IU8", "int_amdgcn_convolve_i32_iu8">;
+  defm : ConvPatMultiFilters_VOPM<"F16_IU4", "int_amdgcn_convolve_f16_iu4">;
+  defm : ConvPatMultiFilters_VOPM<"F16_IU8", "int_amdgcn_convolve_f16_iu8">;
+  defm : ConvPatMultiFilters_VOPM<"F16_FP8_FP8", "int_amdgcn_convolve_f16_fp8_fp8">;
+  defm : ConvPatMultiFilters_VOPM<"F16_FP8_BF8", "int_amdgcn_convolve_f16_fp8_bf8">;
+  defm : ConvPatMultiFilters_VOPM<"F16_BF8_FP8", "int_amdgcn_convolve_f16_bf8_fp8">;
+  defm : ConvPatMultiFilters_VOPM<"F16_BF8_BF8", "int_amdgcn_convolve_f16_bf8_bf8">;
+  defm : ConvPatMultiFilters_VOPM<"F16_F16", "int_amdgcn_convolve_f16_f16">;
+  defm : ConvPatMultiFilters_VOPM<"BF16_BF16", "int_amdgcn_convolve_bf16_bf16">;
   defm : ConvPatMultiFilters_VOPM<"I32_IU4", "int_amdgcn_convolve_i32_iu4">;
-  defm : ConvPatMultiFilters_VOPM<"F32I32_IU8", "int_amdgcn_convolve_f32i32_iu8">;
+  defm : ConvPatMultiFilters_VOPM<"I32_IU8", "int_amdgcn_convolve_i32_iu8">;
   defm : ConvPatMultiFilters_VOPM<"F32I32_IU4", "int_amdgcn_convolve_f32i32_iu4">;
+  defm : ConvPatMultiFilters_VOPM<"F32I32_IU8", "int_amdgcn_convolve_f32i32_iu8">;
 } // let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus
 
 multiclass WMMAPat_VOPM<string Inst, SDPatternOperator node, VOPM_WMMA_Profile P> {
@@ -1736,6 +1736,5 @@ class InfoPseudoTable <string Class>: GenericTable {
   let PrimaryKeyName = "isVOPMPseudoOpcodeHelper";
 }
 
-// TODO-GFX13: Currently this table contains opcodes that support indexing.
 def VOPMPseudoInfoTable : InfoPseudoTable <"VOPM_Pseudo">;
 #endif /* LLPC_BUILD_NPI */

@@ -111,9 +111,16 @@ public:
   bool legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
 
-  bool loadInputValue(Register DstReg, MachineIRBuilder &B,
-                      const ArgDescriptor *Arg,
-                      const TargetRegisterClass *ArgRC, LLT ArgTy) const;
+  void buildLoadInputValue(Register DstReg, MachineIRBuilder &B,
+                           const ArgDescriptor *Arg,
+                           const TargetRegisterClass *ArgRC, LLT ArgTy) const;
+#if LLPC_BUILD_NPI
+  bool loadGlobalWorkGroupId(
+      Register DstReg, MachineIRBuilder &B,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
+#endif /* LLPC_BUILD_NPI */
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 

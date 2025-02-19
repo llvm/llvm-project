@@ -623,27 +623,25 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"cluster_max_blocks", i32 8}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxclusterrank"="8" }
+
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = 16} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.minctasm"="16" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="16" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>,
@@ -651,13 +649,12 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="32" "nvvm.minctasm"="16" }
 // CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"maxnreg", i32 32}
 // CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
-// CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 
 // -----
 // CHECK: define ptx_kernel void @kernel_func

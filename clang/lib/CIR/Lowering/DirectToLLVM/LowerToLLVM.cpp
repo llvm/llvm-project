@@ -157,9 +157,9 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
       op, llvmType, isConst, linkage, symbol, nullptr, alignment, addrSpace,
       isDsoLocal, isThreadLocal,
       /*comdat=*/mlir::SymbolRefAttr(), attributes);
-  newGlobalOp.getRegion().push_back(new mlir::Block());
+  newGlobalOp.getRegion().emplaceBlock();
   rewriter.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
-};
+}
 
 mlir::LogicalResult
 CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(

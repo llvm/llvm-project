@@ -840,10 +840,17 @@ template <typename T>
 struct SS {
     constexpr SS(unsigned long long N)
     : data(nullptr){
-        data = alloc.allocate(N);  // #call
+        data = alloc.allocate(N);
         for(std::size_t i = 0; i < N; i ++)
-            std::construct_at<T>(data + i, i); // #construct_call
+            std::construct_at<T>(data + i, i);
     }
+
+    constexpr SS()
+    : data(nullptr){
+        data = alloc.allocate(1);
+        std::construct_at<T>(data);
+    }
+
     constexpr T operator[](std::size_t i) const {
       return data[i];
     }
@@ -855,7 +862,7 @@ struct SS {
     T* data;
 };
 constexpr unsigned short ssmall = SS<unsigned short>(100)[42];
-
+constexpr auto Ss = SS<S>()[0];
 
 
 namespace IncompleteArray {
@@ -900,8 +907,33 @@ namespace IncompleteArray {
     return c;
   }
   static_assert(test4() == 12);
+}
 
+namespace NonConstexprArrayCtor {
+  struct S {
+    S() {} // both-note 2{{declared here}}
+  };
 
+  constexpr bool test() { // both-error {{never produces a constant expression}}
+     auto s = new S[1]; // both-note 2{{non-constexpr constructor}}
+     return true;
+  }
+  static_assert(test()); // both-error {{not an integral constant expression}} \
+                         // both-note {{in call to}}
+}
+
+namespace ArrayBaseCast {
+  struct A {};
+  struct B : A {};
+  constexpr bool test() {
+    B *b = new B[2];
+
+    A* a = b;
+
+    delete[] b;
+    return true;
+  }
+  static_assert(test());
 }
 
 #else

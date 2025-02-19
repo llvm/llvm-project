@@ -41,64 +41,8 @@ foreach Size = {2...6,8,16} in {
 //===----------------------------------------------------------------------===//
 
 class getSubRegs<int size> {
-  list<SubRegIndex> ret2 = [sub0, sub1];
-  list<SubRegIndex> ret3 = [sub0, sub1, sub2];
-  list<SubRegIndex> ret4 = [sub0, sub1, sub2, sub3];
-  list<SubRegIndex> ret5 = [sub0, sub1, sub2, sub3, sub4];
-  list<SubRegIndex> ret6 = [sub0, sub1, sub2, sub3, sub4, sub5];
-  list<SubRegIndex> ret7 = [sub0, sub1, sub2, sub3, sub4, sub5, sub6];
-  list<SubRegIndex> ret8 = [sub0, sub1, sub2, sub3, sub4, sub5, sub6, sub7];
-  list<SubRegIndex> ret9 = [sub0, sub1, sub2, sub3, sub4, sub5, sub6, sub7, sub8];
-  list<SubRegIndex> ret10 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9];
-  list<SubRegIndex> ret11 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9, sub10];
-  list<SubRegIndex> ret12 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9, sub10, sub11];
-  list<SubRegIndex> ret16 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9, sub10, sub11,
-                             sub12, sub13, sub14, sub15];
-#ifdef LLPC_BUILD_NPI
-  list<SubRegIndex> ret18 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9, sub10, sub11,
-                             sub12, sub13, sub14, sub15,
-                             sub16, sub17];
-#endif /* LLPC_BUILD_NPI */
-  list<SubRegIndex> ret32 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9, sub10, sub11,
-                             sub12, sub13, sub14, sub15,
-                             sub16, sub17, sub18, sub19,
-                             sub20, sub21, sub22, sub23,
-                             sub24, sub25, sub26, sub27,
-                             sub28, sub29, sub30, sub31];
-
-  list<SubRegIndex> ret = !if(!eq(size, 2), ret2,
-                              !if(!eq(size, 3), ret3,
-                                  !if(!eq(size, 4), ret4,
-                                      !if(!eq(size, 5), ret5,
-                                          !if(!eq(size, 6), ret6,
-                                              !if(!eq(size, 7), ret7,
-                                                  !if(!eq(size, 8), ret8,
-                                                      !if(!eq(size, 9), ret9,
-                                                          !if(!eq(size, 10), ret10,
-                                                              !if(!eq(size, 11), ret11,
-                                                                  !if(!eq(size, 12), ret12,
-                                                                      !if(!eq(size, 16), ret16,
-#ifdef LLPC_BUILD_NPI
-                                                                          !if(!eq(size, 18), ret18,
-                                                                              ret32)))))))))))));
-
-
-
-#else /* LLPC_BUILD_NPI */
-                                                                          ret32))))))))))));
-#endif /* LLPC_BUILD_NPI */
+  list<SubRegIndex> ret =
+      !foreach(idx, !range(0, size), !cast<SubRegIndex>(sub#idx));
 }
 
 // Generates list of sequential register tuple names.
@@ -1453,13 +1397,6 @@ def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v
 def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
 #ifdef LLPC_BUILD_NPI
                           (add VGPR_32_STAGING_Lo128, SReg_32, LDS_DIRECT_CLASS)> {
-  let isAllocatable = 0;
-  let HasVGPR = 1;
-  let HasSGPR = 1;
-}
-
-def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                                  (add VGPR_32_STAGING_Lo256, SReg_32, LDS_DIRECT_CLASS)> {
 #else /* LLPC_BUILD_NPI */
                           (add VGPR_32_Lo128, SReg_32, LDS_DIRECT_CLASS)> {
 #endif /* LLPC_BUILD_NPI */
@@ -1469,6 +1406,13 @@ def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
 }
 
 #ifdef LLPC_BUILD_NPI
+def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
+                                  (add VGPR_32_STAGING_Lo256, SReg_32, LDS_DIRECT_CLASS)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+}
+
 def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64_STAGING, SReg_64)> {
 #else /* LLPC_BUILD_NPI */
 def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64, SReg_64)> {
@@ -1643,7 +1587,9 @@ def RsrcReg128Op : RegisterOperand<RsrcReg128> {
 def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
 }
 
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
+#ifdef LLPC_BUILD_NPI
 //  GVGPR Operands
 //===----------------------------------------------------------------------===//
 
@@ -1690,9 +1636,7 @@ def GSrcSimple : RegOrImmOperand<VS_32, "OPERAND_REG_INLINE_C_INT32"> {
   let PrintMethod = "printGSrcSimple";
 }
 
-#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
-#ifdef LLPC_BUILD_NPI
 //  SSrc_* Operands with an SGPR, a 32-bit immediate, or 64-bit immediate
 //  if supported by target.
 #else /* LLPC_BUILD_NPI */

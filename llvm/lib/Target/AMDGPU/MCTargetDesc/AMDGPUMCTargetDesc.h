@@ -77,7 +77,6 @@ public:
 #include "AMDGPUGenRegisterInfo.inc"
 
 #define GET_INSTRINFO_ENUM
-#define GET_INSTRINFO_OPERAND_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
 #include "AMDGPUGenInstrInfo.inc"
 

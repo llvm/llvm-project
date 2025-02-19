@@ -984,7 +984,7 @@ class VGPRImm <dag frag> : PatLeaf<frag, [{
 }
 
 def NegateImm : SDNodeXForm<imm, [{
-  return CurDAG->getConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 // TODO: When FP inline imm values work?
@@ -3248,7 +3248,7 @@ def VOP_I16_I16_I32 : VOPProfile <[i16, i16, i32, untyped]>;
 #endif /* LLPC_BUILD_NPI */
 def VOP_I16_I16_I16_ARITH : VOPProfile <[i16, i16, i16, untyped], /*EnableClamp=*/1>;
 #ifdef LLPC_BUILD_NPI
-def VOP_I16_F16_F16 : VOPProfile <[i16, f16, f16, untyped]>;
+def VOP_I16_V2F16_V2F16 : VOPProfile<[i16, v2f16, v2f16, untyped]>;
 def VOP_BF16_BF16_BF16 : VOPProfile <[bf16, bf16, bf16, untyped]>;
 #endif /* LLPC_BUILD_NPI */
 

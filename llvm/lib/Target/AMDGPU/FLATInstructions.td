@@ -577,7 +577,7 @@ class FLAT_SWC<string opName, bit HasVdst, bit HasAddr> : FLAT_Pseudo<
   !if(HasVdst, (outs VGPR_32:$vdst), (outs)),
   !con(!if(HasAddr, !if(HasVdst, (ins VReg_64:$vaddr), (ins VGPR_32:$vaddr)), (ins)), (ins CPol:$cpol)),
   !if(HasVdst, " $vdst", "")#!if(HasAddr, ", $vaddr", "")#"$cpol">{
-
+  let VM_CNT = 0;
   let hasSideEffects = 1;
   let is_flat_global = 1;
   let has_offset = 0;
@@ -2500,9 +2500,6 @@ let SubtargetPredicate = isGFX12Plus in {
 
 #ifdef LLPC_BUILD_NPI
 } // End OtherPredicates = [HasFlatAddressSpace]
-
-let OtherPredicates = [isGFX12Plus] in
-defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 #else /* LLPC_BUILD_NPI */
   let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
     defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
@@ -2510,6 +2507,9 @@ defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_ato
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
+let OtherPredicates = [isGFX12Plus] in
+defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
+
 let OtherPredicates = [isGFX12Plus, HasAtomicCSubNoRtnInsts] in
 defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 #else /* LLPC_BUILD_NPI */

@@ -41,6 +41,7 @@ struct BundleItem {
   MachineOperand *OpInLdSt;
   SmallVector<MachineOperand *> OpsInCoreMI;
   Register StagingReg;
+  Register OpReg;
 };
 
 class AMDGPUBundleIdxLdSt : public MachineFunctionPass {
@@ -62,6 +63,10 @@ public:
 
 private:
   bool bundleIdxLdSt(MachineInstr *MI);
+  void recoverIdx0ForPrivateUse(const MachineRegisterInfo &MRI,
+                                SmallVector<BundleItem, 4> &Worklist,
+                                std::unordered_set<unsigned> &IdxList,
+                                unsigned &SrcStagingRegIdx);
   const TargetRegisterInfo *TRI;
   const SIInstrInfo *STI;
   bool NeedsAlignedVGPRs;
@@ -74,6 +79,72 @@ char &llvm::AMDGPUBundleIdxLdStID = AMDGPUBundleIdxLdSt::ID;
 
 INITIALIZE_PASS(AMDGPUBundleIdxLdSt, DEBUG_TYPE,
                 "Bundle indexed load/store with uses", false, false)
+
+constexpr unsigned NumSrcStagingRegs = 6;
+
+void AMDGPUBundleIdxLdSt::recoverIdx0ForPrivateUse(
+    const MachineRegisterInfo &MRI, SmallVector<BundleItem, 4> &Worklist,
+    std::unordered_set<unsigned> &IdxList, unsigned &SrcStagingRegIdx) {
+  // First, find the idx reg with the least V_LOAD_IDX uses
+  // Second, remove the loads that use the idx from the worklist
+  // and remap the staging regs to get an updated SrcStagingRegIdx
+  DenseMap<unsigned, unsigned> IdxRegUseCounts(NumSrcStagingRegs);
+  assert(Worklist.size() >= 4 &&
+         "Shouldn't be attempting to recover idx0 if there aren't at least 4 "
+         "bundled instructions");
+  static_assert(AMDGPU::STG_DSTA < AMDGPU::STG_SRCA &&
+                "idx0 staging reg recovery is incorrect if staging reg "
+                "ordering is changed");
+  for (auto &BI : Worklist) {
+    // Only consider src staging registers for implicit use of idx0, to simplify
+    // the algorithm
+    if (BI.StagingReg < AMDGPU::STG_SRCA)
+      continue;
+    Register IdxOpReg =
+        STI->getNamedOperand(*BI.MI, AMDGPU::OpName::idx)->getReg();
+    if (IdxRegUseCounts.find(IdxOpReg) == IdxRegUseCounts.end())
+      IdxRegUseCounts[IdxOpReg] = 0;
+    IdxRegUseCounts[IdxOpReg]++;
+  }
+  Register MinUseIdxOpReg;
+  unsigned MinUses = std::numeric_limits<unsigned>::max();
+  for (const auto &IdxRegUseCount : IdxRegUseCounts) {
+    if (IdxRegUseCount.second < MinUses) {
+      MinUseIdxOpReg = IdxRegUseCount.first;
+      MinUses = IdxRegUseCount.second;
+    }
+  }
+  assert(MinUseIdxOpReg.isValid() &&
+         "There should always be at least one staging register with only one "
+         "use, otherwise we wouldn't have to recover idx0");
+  IdxList.erase(MinUseIdxOpReg);
+  unsigned NewSrcStagingRegIdx = 0;
+  constexpr unsigned DefaultValueSentinel = NumSrcStagingRegs;
+  IndexedMap<unsigned> NewRegMap(DefaultValueSentinel);
+  NewRegMap.resize(NumSrcStagingRegs);
+  // remaps multiple uses of the same staging reg to the same new staging reg,
+  // to preserve sequential usage of staging regs
+  llvm::erase_if(Worklist, [&](auto &BI) {
+    if (BI.StagingReg < AMDGPU::STG_SRCA) {
+      return false;
+    }
+    if (STI->getNamedOperand(*BI.MI, AMDGPU::OpName::idx)->getReg() !=
+        MinUseIdxOpReg) {
+      unsigned I = BI.StagingReg - AMDGPU::STG_SRCA;
+      if (NewRegMap[I] == DefaultValueSentinel) {
+        NewRegMap[I] = AMDGPU::STG_SRCA + NewSrcStagingRegIdx;
+        NewSrcStagingRegIdx++;
+      }
+      BI.StagingReg = NewRegMap[I];
+      return false;
+    }
+    for (auto *CoreMIOp : BI.OpsInCoreMI) {
+      CoreMIOp->setReg(BI.OpReg);
+    }
+    return true;
+  });
+  SrcStagingRegIdx = NewSrcStagingRegIdx;
+}
 
 bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   if (MI->isMetaInstruction())
@@ -97,6 +168,8 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   MachineBasicBlock *MBB = MI->getParent();
   SmallVector<BundleItem, 4> Worklist;
   std::unordered_set<unsigned> IdxList;
+  bool UsesIdx0ForPrivate = false;
+  bool UsesIdx0ForDynamic = false;
 
   for (auto &Def : MI->defs()) {
     if (!Def.isReg())
@@ -132,7 +205,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
 
     MachineOperand *IdxOp = STI->getNamedOperand(*StoreMI, AMDGPU::OpName::idx);
     IdxList.insert(IdxOp->getReg());
-    Worklist.push_back({StoreMI, UseOfMI, {&Def}, AMDGPU::STG_DSTA});
+    Worklist.push_back({StoreMI, UseOfMI, {&Def}, AMDGPU::STG_DSTA, DefReg});
   }
 
   // Check for constraints on moving MI down to StoreMI
@@ -153,14 +226,12 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       }
     }
   }
-  Worklist.push_back({MI, nullptr, {}, 0});
+  Worklist.push_back({MI, nullptr, {}, 0, 0});
 
-  const unsigned NumSrcStagingRegs = 6;
   static const Register StagingRegs[NumSrcStagingRegs] = {
       AMDGPU::STG_SRCA, AMDGPU::STG_SRCB, AMDGPU::STG_SRCC,
       AMDGPU::STG_SRCD, AMDGPU::STG_SRCE, AMDGPU::STG_SRCF};
   unsigned StagingRegIdx = 0;
-
   for (auto &Use : MI->explicit_uses()) {
     if (StagingRegIdx == NumSrcStagingRegs)
       break;
@@ -177,8 +248,19 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     MachineInstr *LoadMI = MRI->getVRegDef(UseReg);
     if (!LoadMI)
       continue;
-    if (LoadMI->getOpcode() != AMDGPU::V_LOAD_IDX)
+    if (LoadMI->getOpcode() != AMDGPU::V_LOAD_IDX) {
+      if (UsesIdx0ForPrivate)
+        continue;
+      // Check if a reg use needs a private VGPR of any kind
+      const TargetRegisterClass *RegClass = MRI->getRegClass(UseReg);
+      if (TRI->getCommonSubClass(RegClass, &AMDGPU::VGPR_32RegClass)) {
+        if (UsesIdx0ForDynamic)
+          recoverIdx0ForPrivateUse(*MRI, Worklist, IdxList, StagingRegIdx);
+        UsesIdx0ForPrivate = true;
+        UsesIdx0ForDynamic = false;
+      }
       continue;
+    }
     // TODO-GFX13 handle load_idx in different block.
     if (LoadMI->getParent() != MBB)
       continue;
@@ -209,10 +291,18 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
 
     MachineOperand *IdxOp = STI->getNamedOperand(*LoadMI, AMDGPU::OpName::idx);
     if (!IdxList.count(IdxOp->getReg())) {
-      // TODO-GFX13 Need to implement idx0 saving and restoring in
-      // AMDGPUIdxRegAlloc to support 4 unique indexes
-      if (IdxList.size() >= 3)
+      // If a bundle would use more than 4 indexes, or if a bundle is
+      // using idx0 already through a private vgpr Op, then it can't use idx0
+      if (IdxList.size() == 3 && !UsesIdx0ForPrivate) {
+        UsesIdx0ForDynamic = true;
+      } else if (IdxList.size() == 3 && UsesIdx0ForPrivate) {
         continue;
+      } else if (IdxList.size() == 4) {
+        recoverIdx0ForPrivateUse(*MRI, Worklist, IdxList, StagingRegIdx);
+        UsesIdx0ForDynamic = false;
+        UsesIdx0ForPrivate = true;
+        continue;
+      }
       IdxList.insert(IdxOp->getReg());
     }
 
@@ -238,7 +328,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
 
     Worklist.push_back({LoadMI,
                         STI->getNamedOperand(*LoadMI, AMDGPU::OpName::data_op),
-                        LoadUsesInMI, StagingRegs[StagingRegIdx]});
+                        LoadUsesInMI, StagingRegs[StagingRegIdx], UseReg});
 
     StagingRegIdx++;
   }
@@ -254,7 +344,6 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     Op->setReg(Worklist[0].StagingReg);
   for (auto *Op : Worklist[0].OpsInCoreMI)
     Op->setReg(Worklist[0].StagingReg);
-
   for (unsigned I = 1; I < Worklist.size(); I++) {
     MachineInstr *CurMI = Worklist[I].MI;
     CurMI->removeFromParent();

@@ -765,9 +765,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 }
 
 static unsigned isM1OrSmaller(MVT VT) {
-  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-  return (LMUL == RISCVII::VLMUL::LMUL_F8 || LMUL == RISCVII::VLMUL::LMUL_F4 ||
-          LMUL == RISCVII::VLMUL::LMUL_F2 || LMUL == RISCVII::VLMUL::LMUL_1);
+  RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  return (LMUL == RISCVVType::VLMUL::LMUL_F8 ||
+          LMUL == RISCVVType::VLMUL::LMUL_F4 ||
+          LMUL == RISCVVType::VLMUL::LMUL_F2 ||
+          LMUL == RISCVVType::VLMUL::LMUL_1);
 }
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
@@ -1354,13 +1356,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
     if (TLI->isOperationCustom(VPISD, LT.second))
       return Cost * LT.first;
-    break;
-  }
-  case Intrinsic::vp_fneg: {
-    std::optional<unsigned> FOp =
-        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-    assert(FOp.has_value());
-    return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
   }
   case Intrinsic::vp_select: {

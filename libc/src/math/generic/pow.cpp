@@ -400,7 +400,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
 #else
   double c = FPBits(m_x.uintval() & 0x3fff'e000'0000'0000).get_val();
   dx = fputil::multiply_add(RD[idx_x], m_x.get_val() - c, CD[idx_x]); // Exact
-  dx_c0 = fputil::exact_mult<28>(dx, COEFFS[0]);                      // Exact
+  dx_c0 = fputil::exact_mult<double, 28>(dx, COEFFS[0]);              // Exact
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
   double dx2 = dx * dx;

@@ -3839,6 +3839,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                             AlignmentCI, OffsetValue);
     return RValue::get(PtrValue);
   }
+  case Builtin::BI__builtin_assume_dereferenceable: {
+    const Expr *Ptr = E->getArg(0);
+    const Expr *Size = E->getArg(1);
+    Value *PtrValue = EmitScalarExpr(Ptr);
+    Value *SizeValue = EmitScalarExpr(Size);
+    if (SizeValue->getType() != IntPtrTy)
+      SizeValue =
+          Builder.CreateIntCast(SizeValue, IntPtrTy, false, "casted.size");
+    Builder.CreateDereferenceableAssumption(PtrValue, SizeValue);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
     if (E->getArg(0)->HasSideEffects(getContext()))
@@ -21017,15 +21028,21 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_4x2:
   case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_4x4:
   case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_8x4:
-  case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_4x2:
-  case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_4x4:
-  case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_fp8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_fp8_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_fp8_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_bf8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_bf8_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_bf8_8x4:
   case AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_4x2:
   case AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_4x4:
   case AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_8x4:
-  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_4x2:
-  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_4x4:
-  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_fp8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_fp8_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_fp8_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_bf8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_bf8_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_bf8_8x4:
   case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_4x2:
   case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_4x4:
   case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_8x4:
@@ -21033,9 +21050,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_4x4:
   case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_8x4:
   case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf16_4x2:
-  case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf8_fp8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf8_bf8_4x2:
   case AMDGPU::BI__builtin_amdgcn_convolve_f32_f16_4x2:
-  case AMDGPU::BI__builtin_amdgcn_convolve_f32_fp8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_fp8_fp8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_fp8_bf8_4x2:
   case AMDGPU::BI__builtin_amdgcn_convolve_f32_iu4_4x2:
   case AMDGPU::BI__builtin_amdgcn_convolve_f32_iu8_4x2:
   case AMDGPU::BI__builtin_amdgcn_convolve_f32i32_iu4_4x2:
@@ -21102,11 +21121,17 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_bf16_bf16_1x1
                               : Intrinsic::amdgcn_convolve_bf16_bf16_3x3;
       break;
-    case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_4x2:
-    case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_4x4:
-    case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_8x4:
-      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f16_bf8_1x1
-                              : Intrinsic::amdgcn_convolve_f16_bf8_3x3;
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_fp8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_fp8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_fp8_8x4:
+      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f16_bf8_fp8_1x1
+                              : Intrinsic::amdgcn_convolve_f16_bf8_fp8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_bf8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_bf8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_bf8_bf8_8x4:
+      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f16_bf8_bf8_1x1
+                              : Intrinsic::amdgcn_convolve_f16_bf8_bf8_3x3;
       break;
     case AMDGPU::BI__builtin_amdgcn_convolve_f32i32_iu4_4x2:
       IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f32i32_iu4_1x1
@@ -21122,11 +21147,17 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f16_f16_1x1
                               : Intrinsic::amdgcn_convolve_f16_f16_3x3;
       break;
-    case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_4x2:
-    case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_4x4:
-    case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_8x4:
-      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f16_fp8_1x1
-                              : Intrinsic::amdgcn_convolve_f16_fp8_3x3;
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_fp8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_fp8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_fp8_8x4:
+      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f16_fp8_fp8_1x1
+                              : Intrinsic::amdgcn_convolve_f16_fp8_fp8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_bf8_4x2:
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_bf8_4x4:
+    case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_bf8_8x4:
+      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f16_fp8_bf8_1x1
+                              : Intrinsic::amdgcn_convolve_f16_fp8_bf8_3x3;
       break;
     case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_4x2:
     case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_4x4:
@@ -21144,17 +21175,25 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f32_bf16_1x1
                               : Intrinsic::amdgcn_convolve_f32_bf16_3x3;
       break;
-    case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf8_4x2:
-      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f32_bf8_1x1
-                              : Intrinsic::amdgcn_convolve_f32_bf8_3x3;
+    case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf8_fp8_4x2:
+      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f32_bf8_fp8_1x1
+                              : Intrinsic::amdgcn_convolve_f32_bf8_fp8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf8_bf8_4x2:
+      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f32_bf8_bf8_1x1
+                              : Intrinsic::amdgcn_convolve_f32_bf8_bf8_3x3;
       break;
     case AMDGPU::BI__builtin_amdgcn_convolve_f32_f16_4x2:
       IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f32_f16_1x1
                               : Intrinsic::amdgcn_convolve_f32_f16_3x3;
       break;
-    case AMDGPU::BI__builtin_amdgcn_convolve_f32_fp8_4x2:
-      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f32_fp8_1x1
-                              : Intrinsic::amdgcn_convolve_f32_fp8_3x3;
+    case AMDGPU::BI__builtin_amdgcn_convolve_f32_fp8_fp8_4x2:
+      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f32_fp8_fp8_1x1
+                              : Intrinsic::amdgcn_convolve_f32_fp8_fp8_3x3;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_convolve_f32_fp8_bf8_4x2:
+      IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f32_fp8_bf8_1x1
+                              : Intrinsic::amdgcn_convolve_f32_fp8_bf8_3x3;
       break;
     case AMDGPU::BI__builtin_amdgcn_convolve_f32_iu4_4x2:
       IntrinsicID = Filter1x1 ? Intrinsic::amdgcn_convolve_f32_iu4_1x1
@@ -22399,6 +22438,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
               CI = Intrinsic::experimental_constrained_nearbyint; break;
       case 1: ID = Intrinsic::round;
               CI = Intrinsic::experimental_constrained_round; break;
+      case 4: ID = Intrinsic::roundeven;
+              CI = Intrinsic::experimental_constrained_roundeven; break;
       case 5: ID = Intrinsic::trunc;
               CI = Intrinsic::experimental_constrained_trunc; break;
       case 6: ID = Intrinsic::ceil;

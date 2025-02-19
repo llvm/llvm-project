@@ -151,6 +151,8 @@ defm int_amdgcn_workitem_id : AMDGPUReadPreloadRegisterIntrinsic_xyz;
 defm int_amdgcn_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                <"__builtin_amdgcn_workgroup_id">;
 #ifdef LLPC_BUILD_NPI
+defm int_amdgcn_cluster_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
+                             <"__builtin_amdgcn_cluster_id">;
 defm int_amdgcn_cluster_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                        <"__builtin_amdgcn_cluster_workgroup_id">;
 defm int_amdgcn_cluster_workgroup_max_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
@@ -247,16 +249,16 @@ def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
 // the second one is copied to m0
 def int_amdgcn_s_sendmsg : ClangBuiltin<"__builtin_amdgcn_s_sendmsg">,
   Intrinsic <[], [llvm_i32_ty, llvm_i32_ty],
-  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback]>;
 def int_amdgcn_s_sendmsghalt : ClangBuiltin<"__builtin_amdgcn_s_sendmsghalt">,
   Intrinsic <[], [llvm_i32_ty, llvm_i32_ty],
-  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrNoCallback]>;
 
 
 // gfx11 intrinsic
 // The first parameter is s_sendmsg immediate (i16). Return type is i32 or i64.
 def int_amdgcn_s_sendmsg_rtn : Intrinsic <[llvm_anyint_ty], [llvm_i32_ty],
-  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback]>;
 
 // Vanilla workgroup sync-barrier
 def int_amdgcn_s_barrier : ClangBuiltin<"__builtin_amdgcn_s_barrier">,
@@ -627,13 +629,15 @@ def int_amdgcn_cvt_pk_f16_bf8 : DefaultAttrsIntrinsic<
   [llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_pk_f16_bf8">;
 
-def int_amdgcn_cvt_pk_fp8_f16 : DefaultAttrsIntrinsic<
-  [llvm_i16_ty], [llvm_half_ty, llvm_half_ty], [IntrNoMem, IntrSpeculatable]
->, ClangBuiltin<"__builtin_amdgcn_cvt_pk_fp8_f16">;
+def int_amdgcn_cvt_pk_fp8_f16
+    : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty],
+                            [IntrNoMem, IntrSpeculatable]>,
+      ClangBuiltin<"__builtin_amdgcn_cvt_pk_fp8_f16">;
 
-def int_amdgcn_cvt_pk_bf8_f16 : DefaultAttrsIntrinsic<
-  [llvm_i16_ty], [llvm_half_ty, llvm_half_ty], [IntrNoMem, IntrSpeculatable]
->, ClangBuiltin<"__builtin_amdgcn_cvt_pk_bf8_f16">;
+def int_amdgcn_cvt_pk_bf8_f16
+    : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty],
+                            [IntrNoMem, IntrSpeculatable]>,
+      ClangBuiltin<"__builtin_amdgcn_cvt_pk_bf8_f16">;
 
 // llvm.amdgcn.cvt.sr.fp8.f16 i32 vdst, half src, i32 seed, i32 old, imm byte_sel [0..3]
 // byte_sel selects byte to write in vdst.
@@ -3630,15 +3634,19 @@ multiclass Conv<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy = out
 
 defm int_amdgcn_convolve_f16_f16   : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 defm int_amdgcn_convolve_bf16_bf16 : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_convolve_f16_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_convolve_f16_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_fp8_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_fp8_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_bf8_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_bf8_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f16_iu8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f16_iu4   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 
 defm int_amdgcn_convolve_f32_f16   : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 defm int_amdgcn_convolve_f32_bf16  : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_convolve_f32_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_convolve_f32_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_fp8_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_fp8_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_bf8_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_bf8_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f32_iu8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_f32_iu4   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 defm int_amdgcn_convolve_i32_iu8   : Conv<llvm_anyint_ty, llvm_anyint_ty>;
@@ -4675,10 +4683,10 @@ def int_amdgcn_cvt_f16_bf8 : ClangBuiltin<"__builtin_amdgcn_cvt_f16_bf8">,
             [llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
-def int_amdgcn_cvt_sat_pk_i4_i8 : ClangBuiltin<"__builtin_amdgcn_cvt_sat_pk_i4_i8">,
+def int_amdgcn_sat_pk4_i4_i8 : ClangBuiltin<"__builtin_amdgcn_sat_pk4_i4_i8">,
   DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
-def int_amdgcn_cvt_sat_pk_u4_u8 : ClangBuiltin<"__builtin_amdgcn_cvt_sat_pk_u4_u8">,
+def int_amdgcn_sat_pk4_u4_u8 : ClangBuiltin<"__builtin_amdgcn_sat_pk4_u4_u8">,
   DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
 // llvm.amdgcn.permlane.bcast <src0> <src1> <src2>

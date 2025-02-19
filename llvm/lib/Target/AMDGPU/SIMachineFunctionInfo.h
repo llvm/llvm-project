@@ -324,6 +324,9 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<FrameIndex> ScavengeFI;
   StringValue VGPRForAGPRCopy;
   StringValue SGPRForEXECCopy;
+#if LLPC_BUILD_NPI
+  bool NeedIdx0Restore;
+#endif /* LLPC_BUILD_NPI */
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
@@ -379,6 +382,9 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("sgprForEXECCopy", MFI.SGPRForEXECCopy,
                        StringValue()); // Don't print out when it's empty.
+#if LLPC_BUILD_NPI
+    YamlIO.mapOptional("needIdx0Restore", MFI.NeedIdx0Restore, false);
+#endif /* LLPC_BUILD_NPI */
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
@@ -632,6 +638,10 @@ private:
   // To save/restore EXEC MASK around WWM spills and copies.
   Register SGPRForEXECCopy;
 
+#if LLPC_BUILD_NPI
+  bool NeedIdx0Restore;
+
+#endif /* LLPC_BUILD_NPI */
   DenseMap<int, VGPRSpillToAGPR> VGPRToAGPRSpills;
 
   // AGPRs used for VGPR spills.
@@ -844,6 +854,12 @@ public:
 
   void setSGPRForEXECCopy(Register Reg) { SGPRForEXECCopy = Reg; }
 
+#if LLPC_BUILD_NPI
+  bool getNeedIdx0Restore() const { return NeedIdx0Restore; }
+
+  void setNeedIdx0Restore(bool Need) { NeedIdx0Restore = Need; }
+
+#endif /* LLPC_BUILD_NPI */
   ArrayRef<MCPhysReg> getVGPRSpillAGPRs() const {
     return SpillVGPR;
   }

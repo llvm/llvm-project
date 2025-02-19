@@ -101,6 +101,11 @@ private:
       Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
       Register ScratchWaveOffsetReg) const;
 
+#if LLPC_BUILD_NPI
+  void finalizeIdx0SaveRestores(MachineFunction &MF, bool EntryFunction,
+                                Register TmpWavegroupReg) const;
+
+#endif /* LLPC_BUILD_NPI */
   void setupLDSSpilling(MachineFunction &MF, MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator I,
                         const DebugLoc &DL) const;

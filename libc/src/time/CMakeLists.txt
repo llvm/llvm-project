@@ -22,6 +22,8 @@ add_object_library(
   DEPENDS
     libc.include.time
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.optional
     libc.src.errno.errno
     .time_constants
     libc.hdr.types.time_t
@@ -131,6 +133,21 @@ add_entrypoint_object(
     libc.src.errno.errno
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
+)
+
+add_subdirectory(strftime_core) #TODO: Move to top
+
+add_entrypoint_object(
+  strftime
+  SRCS
+    strftime.cpp
+  HDRS
+    strftime.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_tm
+    libc.src.stdio.printf_core.writer
+    libc.src.time.strftime_core.strftime_main
 )
 
 add_entrypoint_object(

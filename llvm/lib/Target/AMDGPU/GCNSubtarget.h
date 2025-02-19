@@ -1952,6 +1952,9 @@ public:
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 #if LLPC_BUILD_NPI
 
+  /// \returns true if the subtarget supports clusters of workgroups.
+  bool hasClusters() const { return GFX1250Insts; }
+
   unsigned getBarrierMemberCountShift() const {
     return getGeneration() >= GFX13 ? 12 : 16;
   }

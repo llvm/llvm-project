@@ -108,6 +108,9 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
     return std::tuple(WorkGroupIDZ ? &WorkGroupIDZ : nullptr,
                       &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
 #if LLPC_BUILD_NPI
+  case AMDGPUFunctionArgInfo::CLUSTER_ID_X:
+  case AMDGPUFunctionArgInfo::CLUSTER_ID_Y:
+  case AMDGPUFunctionArgInfo::CLUSTER_ID_Z:
   case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
   case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
   case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:

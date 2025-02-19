@@ -441,10 +441,10 @@ static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
   unsigned Opc = Desc.getOpcode();
   unsigned I;
   for (I = 0; I < 4; ++I) {
-    if (Ops.first[I] != AMDGPU::OpName::OPERAND_LAST &&
+    if (Ops.first[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
         (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.first[I]) == OpNo)
       break;
-    if (Ops.second && Ops.second[I] != AMDGPU::OpName::OPERAND_LAST &&
+    if (Ops.second && Ops.second[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
         (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.second[I]) == OpNo)
       break;
   }
@@ -1440,7 +1440,7 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
   int NumOps = 0;
   int Ops[3];
 
-  std::pair<int, int> MOps[] = {
+  std::pair<AMDGPU::OpName, AMDGPU::OpName> MOps[] = {
       {AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src0},
       {AMDGPU::OpName::src1_modifiers, AMDGPU::OpName::src1},
       {AMDGPU::OpName::src2_modifiers, AMDGPU::OpName::src2}};
@@ -1461,7 +1461,7 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
       MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsWMMA) {
     NumOps = 0;
     int DefaultValue = Mod == SISrcMods::OP_SEL_1;
-    for (int OpName :
+    for (AMDGPU::OpName OpName :
          {AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src1_modifiers,
           AMDGPU::OpName::src2_modifiers}) {
       int Idx = AMDGPU::getNamedOperandIdx(Opc, OpName);
