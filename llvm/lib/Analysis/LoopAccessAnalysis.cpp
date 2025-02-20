@@ -1781,14 +1781,14 @@ void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
     Status = S;
 }
 
-/// Given a dependence-distance \p Dist between two
-/// memory accesses, that have strides in the same direction whose absolute
-/// value of the maximum stride is given in \p MaxStride, and that have the same
-/// type size \p TypeByteSize, in a loop whose maximum backedge taken count is
-/// \p MaxBTC, check if it is possible to prove statically that the dependence
+/// Given a dependence-distance \p Dist between two memory accesses, that have
+/// strides in the same direction whose absolute value of the maximum stride is
+/// given in \p MaxStride, in a loop whose maximum backedge taken count is \p
+/// MaxBTC, check if it is possible to prove statically that the dependence
 /// distance is larger than the range that the accesses will travel through the
 /// execution of the loop. If so, return true; false otherwise. This is useful
 /// for example in loops such as the following (PR31098):
+///
 ///     for (i = 0; i < D; ++i) {
 ///                = out[i];
 ///       out[i+D] =
@@ -1844,8 +1844,8 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
 }
 
 /// Check the dependence for two accesses with the same stride \p Stride.
-/// \p Distance is the positive distance and \p TypeByteSize is type size in
-/// bytes.
+/// \p Distance is the positive distance in bytes, and \p TypeByteSize is type
+/// size in bytes.
 ///
 /// \returns true if they are independent.
 static bool areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
@@ -1983,13 +1983,14 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
   }
 
-  TypeSize AStoreSz = DL.getTypeStoreSize(ATy),
-           BStoreSz = DL.getTypeStoreSize(BTy);
+  TypeSize AStoreSz = DL.getTypeStoreSize(ATy);
+  TypeSize BStoreSz = DL.getTypeStoreSize(BTy);
 
   // If store sizes are not the same, set TypeByteSize to zero, so we can check
-  // it in the caller.
-  uint64_t ASz = DL.getTypeAllocSize(ATy), BSz = DL.getTypeAllocSize(BTy),
-           TypeByteSize = AStoreSz == BStoreSz ? BSz : 0;
+  // it in the caller isDependent.
+  uint64_t ASz = DL.getTypeAllocSize(ATy);
+  uint64_t BSz = DL.getTypeAllocSize(BTy);
+  uint64_t TypeByteSize = (AStoreSz == BStoreSz) ? BSz : 0;
 
   uint64_t StrideAScaled = std::abs(StrideAPtrInt) * ASz;
   uint64_t StrideBScaled = std::abs(StrideBPtrInt) * BSz;
@@ -2159,7 +2160,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   //          B[i] = A[i] + 1;
   //      }
   //
-  // Two accesses in memory (stride is 2):
+  // Two accesses in memory (stride is 4 * 2):
   //     | A[0] |      | A[2] |      | A[4] |      | A[6] |      |
   //                              | B[0] |      | B[2] |      | B[4] |
   //
