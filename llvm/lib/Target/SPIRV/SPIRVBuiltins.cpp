@@ -1053,10 +1053,10 @@ static bool buildBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
     return buildOpFromWrapper(MIRBuilder, Opcode, Call,
                               GR->getSPIRVTypeID(Call->ReturnType));
 
-  auto MIB = MIRBuilder.buildInstr(Opcode)
-                 .addDef(Call->ReturnRegister)
-                 .addUse(GR->getSPIRVTypeID(Call->ReturnType))
-                 .addUse(Call->Arguments[0]);
+  MIRBuilder.buildInstr(Opcode)
+      .addDef(Call->ReturnRegister)
+      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+      .addUse(Call->Arguments[0]);
 
   return true;
 }
