@@ -409,7 +409,8 @@ template <>
 struct __find_unambiguous_index_sfinae_impl<__ambiguous> {};
 
 template <class _Tp, class... _Types>
-struct __find_unambiguous_index_sfinae : __find_unambiguous_index_sfinae_impl<__find_index<_Tp, _Types...>()> {};
+struct __find_unambiguous_index_sfinae
+    : __find_unambiguous_index_sfinae_impl<__find_detail::__find_index<_Tp, _Types...>()> {};
 
 } // namespace __find_detail
 
