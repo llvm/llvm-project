@@ -1338,7 +1338,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
 namespace {
 struct ConvertArithToSPIRVPass
     : public impl::ConvertArithToSPIRVPassBase<ConvertArithToSPIRVPass> {
-  using ConvertArithToSPIRVPassBase::ConvertArithToSPIRVPassBase;
+  using Base::Base;
 
   void runOnOperation() override {
     Operation *op = getOperation();

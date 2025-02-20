@@ -61,6 +61,11 @@ public:
         Checker->visitRecordDecl(RD);
         return true;
       }
+
+      bool VisitObjCContainerDecl(const ObjCContainerDecl *CD) override {
+        Checker->visitObjCDecl(CD);
+        return true;
+      }
     };
 
     LocalVisitor visitor(this);
@@ -84,6 +89,31 @@ public:
             reportBug(Member, MemberType, MemberCXXRD, RD);
         }
       }
+    }
+  }
+
+  void visitObjCDecl(const ObjCContainerDecl *CD) const {
+    if (auto *ID = dyn_cast<ObjCInterfaceDecl>(CD)) {
+      for (auto *Ivar : ID->ivars())
+        visitIvarDecl(CD, Ivar);
+      return;
+    }
+    if (auto *ID = dyn_cast<ObjCImplementationDecl>(CD)) {
+      for (auto *Ivar : ID->ivars())
+        visitIvarDecl(CD, Ivar);
+      return;
+    }
+  }
+
+  void visitIvarDecl(const ObjCContainerDecl *CD,
+                     const ObjCIvarDecl *Ivar) const {
+    const Type *IvarType = Ivar->getType().getTypePtrOrNull();
+    if (!IvarType)
+      return;
+    if (auto *IvarCXXRD = IvarType->getPointeeCXXRecordDecl()) {
+      std::optional<bool> IsCompatible = isPtrCompatible(IvarCXXRD);
+      if (IsCompatible && *IsCompatible)
+        reportBug(Ivar, IvarType, IvarCXXRD, CD);
     }
   }
 
@@ -121,9 +151,10 @@ public:
     return false;
   }
 
-  void reportBug(const FieldDecl *Member, const Type *MemberType,
+  template <typename DeclType, typename ParentDeclType>
+  void reportBug(const DeclType *Member, const Type *MemberType,
                  const CXXRecordDecl *MemberCXXRD,
-                 const RecordDecl *ClassCXXRD) const {
+                 const ParentDeclType *ClassCXXRD) const {
     assert(Member);
     assert(MemberType);
     assert(MemberCXXRD);
@@ -131,7 +162,10 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    Os << "Member variable ";
+    if (isa<ObjCContainerDecl>(ClassCXXRD))
+      Os << "Instance variable ";
+    else
+      Os << "Member variable ";
     printQuotedName(Os, Member);
     Os << " in ";
     printQuotedQualifiedName(Os, ClassCXXRD);

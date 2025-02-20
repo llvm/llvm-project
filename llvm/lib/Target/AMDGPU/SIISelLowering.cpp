@@ -16823,39 +16823,39 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     // safe. The message phrasing also should be better.
     if (globalMemoryFPAtomicIsLegal(*Subtarget, RMW, HasSystemScope)) {
       if (AS == AMDGPUAS::FLAT_ADDRESS) {
-        // gfx940, gfx12
+        // gfx942, gfx12
         if (Subtarget->hasAtomicFlatPkAdd16Insts() && isV2F16OrV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       } else if (AMDGPU::isExtendedGlobalAddrSpace(AS)) {
-        // gfx90a, gfx940, gfx12
+        // gfx90a, gfx942, gfx12
         if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
-        // gfx940, gfx12
+        // gfx942, gfx12
         if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       } else if (AS == AMDGPUAS::BUFFER_FAT_POINTER) {
-        // gfx90a, gfx940, gfx12
+        // gfx90a, gfx942, gfx12
         if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
-        // While gfx90a/gfx940 supports v2bf16 for global/flat, it does not for
+        // While gfx90a/gfx942 supports v2bf16 for global/flat, it does not for
         // buffer. gfx12 does have the buffer version.
         if (Subtarget->hasAtomicBufferPkAddBF16Inst() && isV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       }
 
-      // global and flat atomic fadd f64: gfx90a, gfx940.
+      // global and flat atomic fadd f64: gfx90a, gfx942.
       if (Subtarget->hasFlatBufferGlobalAtomicFaddF64Inst() && Ty->isDoubleTy())
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
       if (AS != AMDGPUAS::FLAT_ADDRESS) {
         if (Ty->isFloatTy()) {
-          // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940,
+          // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx942,
           // gfx11+.
           if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
             return ReportUnsafeHWInst(AtomicExpansionKind::None);
-          // global/buffer atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
+          // global/buffer atomic fadd f32 rtn: gfx90a, gfx942, gfx11+.
           if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
             return ReportUnsafeHWInst(AtomicExpansionKind::None);
         } else {
@@ -16867,7 +16867,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         }
       }
 
-      // flat atomic fadd f32: gfx940, gfx11+.
+      // flat atomic fadd f32: gfx942, gfx11+.
       if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy()) {
         if (Subtarget->hasFlatAtomicFaddF32Inst())
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
@@ -16906,7 +16906,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       // float, double restored in gfx10.
       // double removed again in gfx11, so only f32 for gfx11/gfx12.
       //
-      // For gfx9, gfx90a and gfx940 support f64 for global (same as fadd), but
+      // For gfx9, gfx90a and gfx942 support f64 for global (same as fadd), but
       // no f32.
       if (AS == AMDGPUAS::FLAT_ADDRESS) {
         if (Subtarget->hasAtomicFMinFMaxF32FlatInsts() && Ty->isFloatTy())

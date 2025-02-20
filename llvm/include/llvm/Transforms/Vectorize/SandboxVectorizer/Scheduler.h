@@ -61,7 +61,18 @@ class ReadyListContainer {
 
 public:
   ReadyListContainer() : List(Cmp) {}
-  void insert(DGNode *N) { List.push(N); }
+  void insert(DGNode *N) {
+#ifndef NDEBUG
+    assert(!N->scheduled() && "Don't insert a scheduled node!");
+    auto ListCopy = List;
+    while (!ListCopy.empty()) {
+      DGNode *Top = ListCopy.top();
+      ListCopy.pop();
+      assert(Top != N && "Node already exists in ready list!");
+    }
+#endif
+    List.push(N);
+  }
   DGNode *pop() {
     auto *Back = List.top();
     List.pop();
