@@ -1016,11 +1016,9 @@ protected:
           wp_sp->CaptureWatchedValue(exe_ctx);
 
           Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
-          StreamSP output_sp = debugger.GetAsyncOutputStream();
-          if (wp_sp->DumpSnapshots(output_sp.get())) {
-            output_sp->EOL();
-            output_sp->Flush();
-          }
+          StreamUP output_up = debugger.GetAsyncOutputStream();
+          if (wp_sp->DumpSnapshots(output_up.get()))
+            output_up->EOL();
         }
 
       } else {

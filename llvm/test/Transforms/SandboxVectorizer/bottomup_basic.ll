@@ -352,3 +352,37 @@ define void @diamondWithConstantVector(ptr %ptr) {
   store i32 %orB1, ptr %gepB1
   ret void
 }
+
+; Check that we don't get def-after-use errors due to wrong placement
+; of new vector instructions.
+define void @vecInstrsPlacement(ptr %ptr0) {
+; CHECK-LABEL: define void @vecInstrsPlacement(
+; CHECK-SAME: ptr [[PTR0:%.*]]) {
+; CHECK-NEXT:    [[VECL2:%.*]] = load <2 x double>, ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x double>, ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[VEC2:%.*]] = fmul <2 x double> [[VECL]], [[VECL2]]
+; CHECK-NEXT:    [[VEC:%.*]] = fmul <2 x double> [[VECL]], [[VECL2]]
+; CHECK-NEXT:    [[VEC5:%.*]] = fadd <2 x double> [[VEC]], [[VEC2]]
+; CHECK-NEXT:    store <2 x double> [[VEC5]], ptr [[PTR0]], align 8
+; CHECK-NEXT:    ret void
+;
+  %ptr1 = getelementptr inbounds double, ptr %ptr0, i64 1
+  %ldA_0 = load double, ptr %ptr0
+  %ldA_1 = load double, ptr %ptr1
+
+  %ldB_0 = load double, ptr %ptr0
+  %ldB_1 = load double, ptr %ptr1
+
+  %mul0 = fmul double %ldA_0, %ldB_0
+  %mul1 = fmul double %ldA_1, %ldB_1
+
+  %mul2 = fmul double %ldA_0, %ldB_0
+  %mul3 = fmul double %ldA_1, %ldB_1
+
+  %add0 = fadd double %mul0, %mul2
+  %add1 = fadd double %mul1, %mul3
+
+  store double %add0, ptr %ptr0
+  store double %add1, ptr %ptr1
+  ret void
+}

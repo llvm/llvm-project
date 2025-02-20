@@ -54,15 +54,26 @@ add_object_library(
     libc.src.__support.arg_list
 )
 
-add_object_library(
+if(LIBC_TARGET_OS_IS_GPU)
+add_header_library(
   reader
-  SRCS
-    reader.cpp
   HDRS
     reader.h
   DEPENDS
     libc.src.__support.macros.attributes
 )
+elseif((TARGET libc.src.__support.File.file) OR (NOT LLVM_LIBC_FULL_BUILD))
+add_header_library(
+  reader
+  HDRS
+    reader.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+    libc.hdr.types.FILE
+    libc.src.__support.File.file
+  ${use_system_file}
+)
+endif()
 
 add_object_library(
   converter

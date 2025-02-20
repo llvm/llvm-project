@@ -111,7 +111,7 @@ struct RegisterRef {
   }
 
   static constexpr bool isRegId(unsigned Id) {
-    return Register::isPhysicalRegister(Id);
+    return Register(Id).isPhysical();
   }
   static constexpr bool isUnitId(unsigned Id) {
     return Register(Id).isVirtual();

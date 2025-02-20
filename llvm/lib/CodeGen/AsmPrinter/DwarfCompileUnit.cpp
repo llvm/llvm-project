@@ -564,7 +564,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
         TFI->getDwarfFrameBase(*Asm->MF);
     switch (FrameBase.Kind) {
     case TargetFrameLowering::DwarfFrameBase::Register: {
-      if (Register::isPhysicalRegister(FrameBase.Location.Reg)) {
+      if (Register(FrameBase.Location.Reg).isPhysical()) {
         MachineLocation Location(FrameBase.Location.Reg);
         addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
       }
