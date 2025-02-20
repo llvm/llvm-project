@@ -33,7 +33,15 @@ LLVM_C_EXTERN_C_BEGIN
  * @{
  */
 
+/**
+ * Empty function used to force the linker to link MCJIT.
+ * Calling this function on a pre-built library has no effect.
+ */
 void LLVMLinkInMCJIT(void);
+/**
+ * Empty function used to force the linker to link the LLVM interpreter.
+ * Calling this function on a pre-built library has no effect.
+ */
 void LLVMLinkInInterpreter(void);
 
 typedef struct LLVMOpaqueGenericValue *LLVMGenericValueRef;
