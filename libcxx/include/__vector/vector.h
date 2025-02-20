@@ -618,7 +618,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __insert_assign_n_unchecked(_Iterator __first, difference_type __n, pointer __position) {
 #if _LIBCPP_STD_VER >= 23
-    if constexpr (!forward_iterator<_Iterator>) {
+    if constexpr (!forward_iterator<_Iterator>) { // Handles input-only sized ranges for insert_range
       ranges::copy_n(std::move(__first), __n, __position);
     } else
 #endif

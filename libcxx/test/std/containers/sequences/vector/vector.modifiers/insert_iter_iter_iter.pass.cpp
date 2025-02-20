@@ -163,7 +163,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     for (; j < 105; ++j)
       assert(v[j] == 0);
   }
-  {
+  { // Ensure that iterator-pair insert() doesn't use unexpected assignment.
     struct Wrapper {
       TEST_CONSTEXPR Wrapper(int n) : n_(n) {}
 
