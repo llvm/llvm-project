@@ -105,6 +105,7 @@ class CIRGenTBAA {
   [[maybe_unused]] const clang::LangOptions &features;
 
   llvm::DenseMap<const Type *, cir::TBAAAttr> metadataCache;
+  llvm::DenseMap<const Type *, cir::TBAAAttr> baseTypeMetadataCache;
 
   cir::TBAAAttr getChar();
 
@@ -112,6 +113,9 @@ class CIRGenTBAA {
   // to describe accesses to objects of the given type.
   cir::TBAAAttr getTypeInfoHelper(clang::QualType qty);
   cir::TBAAAttr getScalarTypeInfo(clang::QualType qty);
+
+  cir::TBAAAttr getValidBaseTypeInfo(clang::QualType qty);
+  cir::TBAAAttr getBaseTypeInfoHelper(const clang::Type *ty);
 
 public:
   CIRGenTBAA(mlir::MLIRContext *mlirContext, clang::ASTContext &astContext,

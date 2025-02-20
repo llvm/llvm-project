@@ -1,4 +1,5 @@
 #include "CIRGenTBAA.h"
+#include "CIRGenCXXABI.h"
 #include "CIRGenTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -204,7 +205,7 @@ cir::TBAAAttr CIRGenTBAA::getTypeInfo(clang::QualType qty) {
   // function.
   if (isValidBaseType(qty)) {
     assert(!cir::MissingFeatures::tbaaTagForStruct());
-    return tbaa_NYI(mlirContext);
+    return getValidBaseTypeInfo(qty);
   }
 
   const clang::Type *ty = astContext.getCanonicalType(qty).getTypePtr();
@@ -248,9 +249,101 @@ mlir::ArrayAttr CIRGenTBAA::getTBAAStructInfo(clang::QualType qty) {
 }
 
 cir::TBAAAttr CIRGenTBAA::getBaseTypeInfo(clang::QualType qty) {
-  return tbaa_NYI(mlirContext);
+  return isValidBaseType(qty) ? getValidBaseTypeInfo(qty) : nullptr;
 }
 
+cir::TBAAAttr CIRGenTBAA::getValidBaseTypeInfo(clang::QualType qty) {
+  assert(isValidBaseType(qty) && "Must be a valid base type");
+
+  const clang::Type *ty = astContext.getCanonicalType(qty).getTypePtr();
+
+  // nullptr is a valid value in the cache, so use find rather than []
+  auto iter = baseTypeMetadataCache.find(ty);
+  if (iter != baseTypeMetadataCache.end())
+    return iter->second;
+
+  // First calculate the metadata, before recomputinyg the insertion point, as
+  // the helper can recursively call us.
+  auto typeNode = getBaseTypeInfoHelper(ty);
+  LLVM_ATTRIBUTE_UNUSED auto inserted =
+      baseTypeMetadataCache.insert({ty, typeNode});
+  assert(inserted.second && "BaseType metadata was already inserted");
+
+  return typeNode;
+}
+cir::TBAAAttr CIRGenTBAA::getBaseTypeInfoHelper(const clang::Type *ty) {
+  using namespace clang;
+  if (auto *tty = mlir::dyn_cast<clang::RecordType>(ty)) {
+    const clang::RecordDecl *rd = tty->getDecl()->getDefinition();
+    const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
+    SmallVector<cir::TBAAMemberAttr, 4> fields;
+    if (const CXXRecordDecl *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
+      // Handle C++ base classes. Non-virtual bases can treated a kind of
+      // field. Virtual bases are more complex and omitted, but avoid an
+      // incomplete view for NewStructPathTBAA.
+      if (codeGenOpts.NewStructPathTBAA && cxxrd->getNumVBases() != 0)
+        return nullptr;
+      for (const CXXBaseSpecifier &cxxBaseSpecifier : cxxrd->bases()) {
+        if (cxxBaseSpecifier.isVirtual())
+          continue;
+        QualType baseQTy = cxxBaseSpecifier.getType();
+        const CXXRecordDecl *baseRD = baseQTy->getAsCXXRecordDecl();
+        if (baseRD->isEmpty())
+          continue;
+        auto typeNode = isValidBaseType(baseQTy) ? getValidBaseTypeInfo(baseQTy)
+                                                 : getTypeInfo(baseQTy);
+        if (!typeNode)
+          return nullptr;
+        uint64_t offset = layout.getBaseClassOffset(baseRD).getQuantity();
+        [[maybe_unused]] uint64_t size =
+            astContext.getASTRecordLayout(baseRD).getDataSize().getQuantity();
+        fields.push_back(
+            cir::TBAAMemberAttr::get(mlirContext, typeNode, offset));
+      }
+      // The order in which base class subobjects are allocated is
+      // unspecified, so may differ from declaration order. In particular,
+      // Itanium ABI will allocate a primary base first. Since we exclude
+      // empty subobjects, the objects are not overlapping and their offsets
+      // are unique.
+      llvm::sort(fields, [](const cir::TBAAMemberAttr &lhs,
+                            const cir::TBAAMemberAttr &rhs) {
+        return lhs.getOffset() < rhs.getOffset();
+      });
+    }
+    for (FieldDecl *field : rd->fields()) {
+      if (field->isZeroSize(astContext) || field->isUnnamedBitField())
+        continue;
+      QualType fieldQTy = field->getType();
+      auto typeNode = isValidBaseType(fieldQTy) ? getValidBaseTypeInfo(fieldQTy)
+                                                : getTypeInfo(fieldQTy);
+      if (!typeNode)
+        return nullptr;
+
+      uint64_t bitOffset = layout.getFieldOffset(field->getFieldIndex());
+      uint64_t offset = astContext.toCharUnitsFromBits(bitOffset).getQuantity();
+      [[maybe_unused]] uint64_t size =
+          astContext.getTypeSizeInChars(fieldQTy).getQuantity();
+      fields.push_back(cir::TBAAMemberAttr::get(mlirContext, typeNode, offset));
+    }
+
+    SmallString<256> outName;
+    if (features.CPlusPlus) {
+      // Don't use the mangler for C code.
+      llvm::raw_svector_ostream out(outName);
+      types.getCXXABI().getMangleContext().mangleCanonicalTypeName(
+          QualType(ty, 0), out);
+    } else {
+      outName = rd->getName();
+    }
+
+    if (codeGenOpts.NewStructPathTBAA) {
+      assert(!cir::MissingFeatures::tbaaNewStructPath());
+      return nullptr;
+    }
+    return cir::TBAAStructAttr::get(mlirContext, outName, fields);
+  }
+  return nullptr;
+}
 cir::TBAAAttr CIRGenTBAA::getAccessTagInfo(TBAAAccessInfo tbaaInfo) {
   assert(!tbaaInfo.isIncomplete() &&
          "Access to an object of an incomplete type!");
