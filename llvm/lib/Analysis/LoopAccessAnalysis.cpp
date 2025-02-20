@@ -1431,8 +1431,8 @@ void AccessAnalysis::processMemAccesses() {
           typedef SmallVector<const Value *, 16> ValueVector;
           ValueVector TempObjects;
 
-          UnderlyingObjects[Ptr] = {};
           SmallVector<const Value *, 16> &UOs = UnderlyingObjects[Ptr];
+          UOs = {};
           ::getUnderlyingObjects(Ptr, UOs, LI);
           LLVM_DEBUG(dbgs()
                      << "Underlying objects for pointer " << *Ptr << "\n");
