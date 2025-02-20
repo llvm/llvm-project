@@ -2,14 +2,14 @@
 ; RUN: opt -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S < %s | FileCheck %s
 target triple = "riscv64-unknown-unknown-elf"
 
-define i16 @func2(i64 %x, i64 %y) {
-; CHECK-LABEL: @func2(
+define i16 @basicScenario(i64 %x, i64 %y) {
+; CHECK-LABEL: @basicScenario(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[MUL:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[Y]], i64 [[X:%.*]])
 ; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP_NOT]], i1 false, i1 [[MUL_OV]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[SPEC_SELECT]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_NOT]], i1 false, i1 [[MUL_OV]]
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i16
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;
 entry:
@@ -27,15 +27,54 @@ land.end:                                         ; preds = %land.rhs, %entry
   ret i16 %conv
 }
 
-define i16 @noHoist(i64 %x, i64 %y) {
-; CHECK-LABEL: @noHoist(
+define i16 @samePatternTwice(i64 %x, i64 %y) {
+; CHECK-LABEL: @samePatternTwice(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[Y:%.*]], 0
-; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i64 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ADD2]], i64 [[X]])
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[LAND_END:%.*]], label [[LAND_RHS:%.*]]
+; CHECK:       land.rhs:
+; CHECK-NEXT:    [[MUL:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[Y]], i64 [[X:%.*]])
 ; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP_NOT]], i1 false, i1 [[MUL_OV]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[SPEC_SELECT]] to i16
+; CHECK-NEXT:    [[MUL2:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[Y]], i64 [[X]])
+; CHECK-NEXT:    [[MUL_OV2:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; CHECK-NEXT:    br label [[LAND_END]]
+; CHECK:       land.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[MUL_OV]], [[LAND_RHS]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[MUL_OV2]], [[LAND_RHS]] ]
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i16
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[TMP1]] to i16
+; CHECK-NEXT:    [[TORET:%.*]] = add nsw i16 [[CONV]], [[CONV2]]
+; CHECK-NEXT:    ret i16 [[CONV]]
+;
+entry:
+  %cmp.not = icmp eq i64 %y, 0
+  br i1 %cmp.not, label %land.end, label %land.rhs
+
+land.rhs:                                         ; preds = %entry
+  %mul = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %y, i64 %x)
+  %mul.ov = extractvalue { i64, i1 } %mul, 1
+  %mul2 = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %y, i64 %x)
+  %mul.ov2 = extractvalue { i64, i1 } %mul, 1
+  br label %land.end
+
+land.end:                                         ; preds = %land.rhs, %entry
+  %0 = phi i1 [ false, %entry ], [ %mul.ov, %land.rhs ]
+  %1 = phi i1 [ false, %entry ], [ %mul.ov2, %land.rhs ]
+  %conv = zext i1 %0 to i16
+  %conv2 = zext i1 %1 to i16
+  %toRet = add nsw i16 %conv, %conv2
+  ret i16 %conv
+}
+
+define i16 @stillHoistNotTooExpensive(i64 %x, i64 %y) {
+; CHECK-LABEL: @stillHoistNotTooExpensive(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[Y:%.*]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ADD]], i64 [[X]])
+; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_NOT]], i1 false, i1 [[MUL_OV]]
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i16
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;
 entry:
@@ -45,6 +84,45 @@ entry:
 land.rhs:                                   ; preds = %entry
   %add = add nsw i64 %y, %x
   %mul = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %add, i64 %x)
+  %mul.ov = extractvalue { i64, i1 } %mul, 1
+  br label %land.end
+
+land.end:                                         ; preds = %land.rhs, %entry
+  %0 = phi i1 [ false, %entry ], [ %mul.ov, %land.rhs ]
+  %conv = zext i1 %0 to i16
+  ret i16 %conv
+}
+
+define i16 @noHoistTooExpensive(i64 %x, i64 %y) {
+; CHECK-LABEL: @noHoistTooExpensive(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[Y:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[LAND_END:%.*]], label [[LAND_RHS:%.*]]
+; CHECK:       land.rhs:
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i64 [[Y]], [[ADD]]
+; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i64 [[ADD]], [[ADD2]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i64 [[ADD2]], [[ADD3]]
+; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i64 [[ADD3]], [[ADD4]]
+; CHECK-NEXT:    [[MUL:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ADD5]], i64 [[X]])
+; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; CHECK-NEXT:    br label [[LAND_END]]
+; CHECK:       land.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[MUL_OV]], [[LAND_RHS]] ]
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i16
+; CHECK-NEXT:    ret i16 [[CONV]]
+;
+entry:
+  %cmp.not = icmp eq i64 %y, 0
+  br i1 %cmp.not, label %land.end, label %land.rhs
+
+land.rhs:                                   ; preds = %entry
+  %add = add nsw i64 %y, %x
+  %add2 = add nsw i64 %y, %add
+  %add3 = add nsw i64 %add, %add2
+  %add4 = add nsw i64 %add2, %add3
+  %add5 = add nsw i64 %add3, %add4
+  %mul = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %add5, i64 %x)
   %mul.ov = extractvalue { i64, i1 } %mul, 1
   br label %land.end
 
