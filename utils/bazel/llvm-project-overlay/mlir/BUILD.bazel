@@ -11136,6 +11136,7 @@ td_library(
         "include/mlir/Dialect/Linalg/IR/LinalgEnums.td",
         "include/mlir/Dialect/Linalg/IR/LinalgInterfaces.td",
         "include/mlir/Dialect/Linalg/IR/LinalgOps.td",
+        "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.td",
     ],
     includes = ["include"],
     deps = [
