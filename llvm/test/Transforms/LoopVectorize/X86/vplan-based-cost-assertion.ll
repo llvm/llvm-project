@@ -11,7 +11,7 @@
 ;           e[b(f + 9)];
 ; }
 
-define void @g(i64 %n) {
+define void @g(ptr %f, i64 %n) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[N:%.*]] to i32
@@ -37,8 +37,8 @@ define void @g(i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i32> [[STEP_ADD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 2)
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 2)
 ; CHECK-NEXT:    [[TMP9]] = or <4 x i32> [[TMP7]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP10]] = or <4 x i32> [[TMP8]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[SELECT_NEXT]] = add nuw i32 [[SELECT]], 8
@@ -59,12 +59,13 @@ define void @g(i64 %n) {
 ; CHECK-NEXT:    [[SELECT1:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SELECT_NEXT1:%.*]], [[LOOP1]] ]
 ; CHECK-NEXT:    [[IV_WIDEN:%.*]] = zext i32 [[IV]] to i64
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[N]], [[IV_WIDEN]]
-; CHECK-NEXT:    [[SELECT_I:%.*]] = select i1 [[EXITCOND]], i32 0, i32 0
+; CHECK-NEXT:    [[SELECT_I:%.*]] = select i1 [[EXITCOND]], i32 0, i32 2
 ; CHECK-NEXT:    [[SELECT_NEXT1]] = or i32 [[SELECT_I]], [[SELECT1]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[SPEC_SELECT_I_LCSSA:%.*]] = phi i32 [ [[SELECT_NEXT1]], [[LOOP1]] ], [ [[TMP12]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    store i32 [[SPEC_SELECT_I_LCSSA]], ptr [[F:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -75,12 +76,12 @@ loop:
   %select = phi i32 [ 0, %entry ], [ %select.next, %loop ]
   %iv.widen = zext i32 %iv to i64
   %exitcond = icmp eq i64 %n, %iv.widen
-  %select.i = select i1 %exitcond, i32 0, i32 0
+  %select.i = select i1 %exitcond, i32 0, i32 2
   %select.next = or i32 %select.i, %select
   %iv.next = add i32 %iv, 1
   br i1 %exitcond, label %exit, label %loop
 
 exit:
-  %spec.select.i.lcssa = phi i32 [ %select.next, %loop ]
+  store i32 %select.next, ptr %f, align 4
   ret void
 }
