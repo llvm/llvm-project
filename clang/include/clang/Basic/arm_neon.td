@@ -2090,17 +2090,17 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "r
 
 // Lookup table read with 2-bit/4-bit indices
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
-  def VLUTI2_B    : SInst<"vluti2_lane", "Q.(qU)I", "cUcPcQcQUcQPc",
+  def VLUTI2_B    : SInst<"vluti2_lane", "Q.(qU)I", "cUcPcmQcQUcQPcQm",
                          [ImmCheck<2, ImmCheck0_1>]>;
-  def VLUTI2_B_Q  : SInst<"vluti2_laneq", "Q.(QU)I", "cUcPcQcQUcQPc",
+  def VLUTI2_B_Q  : SInst<"vluti2_laneq", "Q.(QU)I", "cUcPcmQcQUcQPcQm",
                          [ImmCheck<2, ImmCheck0_3>]>;
   def VLUTI2_H    : SInst<"vluti2_lane", "Q.(<qU)I", "sUsPshQsQUsQPsQh",
                          [ImmCheck<2, ImmCheck0_3>]>;
   def VLUTI2_H_Q  : SInst<"vluti2_laneq", "Q.(<QU)I", "sUsPshQsQUsQPsQh",
                          [ImmCheck<2, ImmCheck0_7>]>;
-  def VLUTI4_B    : SInst<"vluti4_lane", "..(qU)I", "QcQUcQPc",
+  def VLUTI4_B    : SInst<"vluti4_lane", "..(qU)I", "QcQUcQPcQm",
                          [ImmCheck<2, ImmCheck0_0>]>;
-  def VLUTI4_B_Q  : SInst<"vluti4_laneq", "..UI", "QcQUcQPc",
+  def VLUTI4_B_Q  : SInst<"vluti4_laneq", "..UI", "QcQUcQPcQm",
                          [ImmCheck<2, ImmCheck0_1>]>;
   def VLUTI4_H_X2 : SInst<"vluti4_lane_x2", ".2(<qU)I", "QsQUsQPsQh",
                           [ImmCheck<3, ImmCheck0_1>]>;
@@ -2194,4 +2194,70 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
   // fscale
   def FSCALE_V128 : WInst<"vscale", "..(.S)", "QdQfQh">;
   def FSCALE_V64 : WInst<"vscale", "(.q)(.q)(.qS)", "fh">;
+}
+
+//FP8 versions of untyped intrinsics
+let ArchGuard = "defined(__aarch64__)" in {
+  def VGET_LANE_MF8 : IInst<"vget_lane", "1.I", "mQm", [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
+  def SPLAT_MF8 : WInst<"splat_lane", ".(!q)I", "mQm", [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
+  def SPLATQ_MF8 : WInst<"splat_laneq", ".(!Q)I", "mQm", [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
+  def VSET_LANE_MF8 : IInst<"vset_lane", ".1.I", "mQm", [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+  def VCREATE_MF8 : NoTestOpInst<"vcreate", ".(IU>)", "m", OP_CAST> { let BigEndianSafe = 1; }
+  let InstName = "vmov" in {
+    def VDUP_N_MF8 : WOpInst<"vdup_n", ".1", "mQm", OP_DUP>;
+    def VMOV_N_MF8 : WOpInst<"vmov_n", ".1", "mQm", OP_DUP>;
+  }
+  let InstName = "" in
+    def VDUP_LANE_MF8: WOpInst<"vdup_lane", ".qI", "mQm", OP_DUP_LN>;
+  def VCOMBINE_MF8 : NoTestOpInst<"vcombine", "Q..", "m", OP_CONC>;
+  let InstName = "vmov" in {
+    def VGET_HIGH_MF8 : NoTestOpInst<"vget_high", ".Q", "m", OP_HI>;
+    def VGET_LOW_MF8 : NoTestOpInst<"vget_low", ".Q", "m", OP_LO>;
+  }
+  let InstName = "vtbl" in {
+    def VTBL1_MF8 : WInst<"vtbl1", "..p", "m">;
+    def VTBL2_MF8 : WInst<"vtbl2", ".2p", "m">;
+    def VTBL3_MF8 : WInst<"vtbl3", ".3p", "m">;
+    def VTBL4_MF8 : WInst<"vtbl4", ".4p", "m">;
+  }
+  let InstName = "vtbx" in {
+    def VTBX1_MF8 : WInst<"vtbx1", "...p", "m">;
+    def VTBX2_MF8 : WInst<"vtbx2", "..2p", "m">;
+    def VTBX3_MF8 : WInst<"vtbx3", "..3p", "m">;
+    def VTBX4_MF8 : WInst<"vtbx4", "..4p", "m">;
+  }
+  def VEXT_MF8 : WInst<"vext", "...I", "mQm", [ImmCheck<2, ImmCheckLaneIndex, 0>]>;
+  def VREV64_MF8 : WOpInst<"vrev64", "..", "mQm", OP_REV64>;
+  def VREV32_MF8 : WOpInst<"vrev32", "..", "mQm", OP_REV32>;
+  def VREV16_MF8 : WOpInst<"vrev16", "..", "mQm", OP_REV16>;
+  let isHiddenLInst = 1 in 
+  def VBSL_MF8 : SInst<"vbsl", ".U..", "mQm">;
+  def VTRN_MF8 : WInst<"vtrn", "2..", "mQm">;
+  def VZIP_MF8 : WInst<"vzip", "2..", "mQm">;
+  def VUZP_MF8 : WInst<"vuzp", "2..", "mQm">;
+  def COPY_LANE_MF8 : IOpInst<"vcopy_lane", "..I.I", "m", OP_COPY_LN>;
+  def COPYQ_LANE_MF8 : IOpInst<"vcopy_lane", "..IqI", "Qm", OP_COPY_LN>;
+  def COPY_LANEQ_MF8 : IOpInst<"vcopy_laneq", "..IQI", "m", OP_COPY_LN>;
+  def COPYQ_LANEQ_MF8 : IOpInst<"vcopy_laneq", "..I.I", "Qm", OP_COPY_LN>;
+  def VDUP_LANE2_MF8 : WOpInst<"vdup_laneq", ".QI", "mQm", OP_DUP_LN>;
+  def VTRN1_MF8 : SOpInst<"vtrn1", "...", "mQm", OP_TRN1>;
+  def VZIP1_MF8 : SOpInst<"vzip1", "...", "mQm", OP_ZIP1>;
+  def VUZP1_MF8 : SOpInst<"vuzp1", "...", "mQm", OP_UZP1>;
+  def VTRN2_MF8 : SOpInst<"vtrn2", "...", "mQm", OP_TRN2>;
+  def VZIP2_MF8 : SOpInst<"vzip2", "...", "mQm", OP_ZIP2>;
+  def VUZP2_MF8 : SOpInst<"vuzp2", "...", "mQm", OP_UZP2>;
+  let InstName = "vtbl" in {
+    def VQTBL1_A64_MF8 : WInst<"vqtbl1", ".QU", "mQm">;
+    def VQTBL2_A64_MF8 : WInst<"vqtbl2", ".(2Q)U", "mQm">;
+    def VQTBL3_A64_MF8 : WInst<"vqtbl3", ".(3Q)U", "mQm">;
+    def VQTBL4_A64_MF8 : WInst<"vqtbl4", ".(4Q)U", "mQm">;
+  }
+  let InstName = "vtbx" in {
+    def VQTBX1_A64_MF8 : WInst<"vqtbx1", "..QU", "mQm">;
+    def VQTBX2_A64_MF8 : WInst<"vqtbx2", "..(2Q)U", "mQm">;
+    def VQTBX3_A64_MF8 : WInst<"vqtbx3", "..(3Q)U", "mQm">;
+    def VQTBX4_A64_MF8 : WInst<"vqtbx4", "..(4Q)U", "mQm">;
+  }
+  def SCALAR_VDUP_LANE_MF8 : IInst<"vdup_lane", "1.I", "Sm", [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
+  def SCALAR_VDUP_LANEQ_MF8 : IInst<"vdup_laneq", "1QI", "Sm", [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
 }
