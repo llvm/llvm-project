@@ -1433,18 +1433,9 @@ static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
   return true;
 }
 
-namespace {
-llvm::Value *LoadThisForDtorDelete(CodeGenFunction &CGF,
-                                   const CXXDestructorDecl *DD) {
-  if (Expr *ThisArg = DD->getOperatorDeleteThisArg())
-    return CGF.EmitScalarExpr(ThisArg);
-  return CGF.LoadCXXThis();
-}
-} // namespace
-
-void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
-                                  CodeGenFunction &CGF,
-                                  llvm::Value *ShouldDeleteCondition) {
+static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
+                                         CodeGenFunction &CGF,
+                                         llvm::Value *ShouldDeleteCondition) {
   Address ThisPtr = CGF.LoadCXXThisAddress();
   llvm::BasicBlock *ScalarBB = CGF.createBasicBlock("dtor.scalar");
   llvm::BasicBlock *callDeleteBB =
@@ -1452,9 +1443,7 @@ void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
   llvm::BasicBlock *VectorBB = CGF.createBasicBlock("dtor.vector");
   auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
   llvm::Value *CheckTheBitForArrayDestroy = CGF.Builder.CreateAnd(
-      ShouldDeleteCondition,
-      llvm::Constant::getIntegerValue(CondTy, llvm::APInt(CondTy->getBitWidth(),
-                                                          /*val=*/2)));
+      ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 2));
   llvm::Value *ShouldDestroyArray =
       CGF.Builder.CreateIsNull(CheckTheBitForArrayDestroy);
   CGF.Builder.CreateCondBr(ShouldDestroyArray, ScalarBB, VectorBB);
@@ -1492,9 +1481,7 @@ void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
   CGF.EmitBlock(VectorBBCont);
 
   llvm::Value *CheckTheBitForDeleteCall = CGF.Builder.CreateAnd(
-      ShouldDeleteCondition,
-      llvm::Constant::getIntegerValue(CondTy, llvm::APInt(CondTy->getBitWidth(),
-                                                          /*val=*/1)));
+      ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 1));
 
   llvm::Value *ShouldCallDelete =
       CGF.Builder.CreateIsNull(CheckTheBitForDeleteCall);
@@ -1648,6 +1635,12 @@ void CodeGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &Args) 
 }
 
 namespace {
+  llvm::Value *LoadThisForDtorDelete(CodeGenFunction &CGF,
+                                     const CXXDestructorDecl *DD) {
+    if (Expr *ThisArg = DD->getOperatorDeleteThisArg())
+      return CGF.EmitScalarExpr(ThisArg);
+    return CGF.LoadCXXThis();
+  }
   /// Call the operator delete associated with the current destructor.
   struct CallDtorDelete final : EHScopeStack::Cleanup {
     CallDtorDelete() {}
@@ -1668,9 +1661,7 @@ namespace {
     llvm::BasicBlock *continueBB = CGF.createBasicBlock("dtor.continue");
     auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
     llvm::Value *CheckTheBit = CGF.Builder.CreateAnd(
-        ShouldDeleteCondition, llvm::Constant::getIntegerValue(
-                                   CondTy, llvm::APInt(CondTy->getBitWidth(),
-                                                       /*val=*/1)));
+        ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 1));
     llvm::Value *ShouldCallDelete = CGF.Builder.CreateIsNull(CheckTheBit);
     CGF.Builder.CreateCondBr(ShouldCallDelete, continueBB, callDeleteBB);
 

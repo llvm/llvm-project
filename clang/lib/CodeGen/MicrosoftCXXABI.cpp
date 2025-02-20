@@ -120,8 +120,7 @@ public:
 
   void emitVirtualObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
                                Address Ptr, QualType ElementType,
-                               const CXXDestructorDecl *Dtor,
-                               bool ArrayDeletion) override;
+                               const CXXDestructorDecl *Dtor) override;
 
   void emitRethrow(CodeGenFunction &CGF, bool isNoReturn) override;
   void emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) override;
@@ -336,12 +335,11 @@ public:
                                      Address This, llvm::Type *Ty,
                                      SourceLocation Loc) override;
 
-  llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
-                                         const CXXDestructorDecl *Dtor,
-                                         CXXDtorType DtorType, Address This,
-                                         DeleteOrMemberCallExpr E,
-                                         llvm::CallBase **CallOrInvoke,
-                                         bool ArrayDeletion) override;
+  llvm::Value *
+  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
+                            CXXDtorType DtorType, Address This,
+                            DeleteOrMemberCallExpr E,
+                            llvm::CallBase **CallOrInvoke) override;
 
   void adjustCallArgsForDestructorThunk(CodeGenFunction &CGF, GlobalDecl GD,
                                         CallArgList &CallArgs) override {
@@ -891,16 +889,15 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
 
 void MicrosoftCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
                                               const CXXDeleteExpr *DE,
-                                              Address Ptr, QualType ElementType,
-                                              const CXXDestructorDecl *Dtor,
-                                              bool ArrayDeletion) {
+                                              Address Ptr,
+                                              QualType ElementType,
+                                              const CXXDestructorDecl *Dtor) {
   // FIXME: Provide a source location here even though there's no
   // CXXMemberCallExpr for dtor call.
   bool UseGlobalDelete = DE->isGlobalDelete();
   CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
-  llvm::Value *MDThis =
-      EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE,
-                                /*CallOrInvoke=*/nullptr, ArrayDeletion);
+  llvm::Value *MDThis = EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE,
+                                                  /*CallOrInvoke=*/nullptr);
   if (UseGlobalDelete)
     CGF.EmitDeleteCall(DE->getOperatorDelete(), MDThis, ElementType);
 }
@@ -2005,8 +2002,7 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
-    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke,
-    bool ArrayDeletion) {
+    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke) {
   auto *CE = dyn_cast<const CXXMemberCallExpr *>(E);
   auto *D = dyn_cast<const CXXDeleteExpr *>(E);
   assert((CE != nullptr) ^ (D != nullptr));
@@ -2023,9 +2019,8 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   CGCallee Callee = CGCallee::forVirtual(CE, GD, This, Ty);
 
   ASTContext &Context = getContext();
-  llvm::Value *ImplicitParam = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(CGF.getLLVMContext()),
-      2 * (ArrayDeletion) + (DtorType == Dtor_Deleting));
+  uint32_t Flags = ((D && D->isArrayForm()) << 1) | (DtorType == Dtor_Deleting);
+  llvm::Value *ImplicitParam = CGF.Builder.getInt32(Flags);
 
   QualType ThisTy;
   if (CE) {
@@ -4067,14 +4062,13 @@ void MicrosoftCXXABI::emitCXXStructor(GlobalDecl GD) {
 
   if (GD.getDtorType() == Dtor_VectorDeleting &&
       !CGM.classNeedsVectorDestructor(dtor->getParent())) {
-    // Create GlobalDecl objects with the correct type for the vector and scalar
-    // deleting destructors.
-    GlobalDecl VectorDtorGD(dtor, Dtor_VectorDeleting);
+    // Create GlobalDecl object with the correct type for the scalar
+    // deleting destructor.
     GlobalDecl ScalarDtorGD(dtor, Dtor_Deleting);
 
     // Emit an alias from the vector deleting destructor to the scalar deleting
     // destructor.
-    CGM.EmitDefinitionAsAlias(VectorDtorGD, ScalarDtorGD);
+    CGM.EmitDefinitionAsAlias(GD, ScalarDtorGD);
     return;
   }
 

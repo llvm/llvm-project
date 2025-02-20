@@ -251,10 +251,9 @@ protected:
 
 public:
   virtual void emitVirtualObjectDelete(CodeGenFunction &CGF,
-                                       const CXXDeleteExpr *DE, Address Ptr,
-                                       QualType ElementType,
-                                       const CXXDestructorDecl *Dtor,
-                                       bool ArrayDeletion) = 0;
+                                       const CXXDeleteExpr *DE,
+                                       Address Ptr, QualType ElementType,
+                                       const CXXDestructorDecl *Dtor) = 0;
   virtual void emitRethrow(CodeGenFunction &CGF, bool isNoReturn) = 0;
   virtual void emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) = 0;
   virtual llvm::GlobalVariable *getThrowInfo(QualType T) { return nullptr; }
@@ -487,10 +486,11 @@ public:
       llvm::PointerUnion<const CXXDeleteExpr *, const CXXMemberCallExpr *>;
 
   /// Emit the ABI-specific virtual destructor call.
-  virtual llvm::Value *EmitVirtualDestructorCall(
-      CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
-      Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke,
-      bool ArrayDeletion = false) = 0;
+  virtual llvm::Value *
+  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
+                            CXXDtorType DtorType, Address This,
+                            DeleteOrMemberCallExpr E,
+                            llvm::CallBase **CallOrInvoke) = 0;
 
   virtual void adjustCallArgsForDestructorThunk(CodeGenFunction &CGF,
                                                 GlobalDecl GD,

@@ -161,8 +161,7 @@ public:
 
   void emitVirtualObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
                                Address Ptr, QualType ElementType,
-                               const CXXDestructorDecl *Dtor,
-                               bool ArrayDeletion = false) override;
+                               const CXXDestructorDecl *Dtor) override;
 
   void emitRethrow(CodeGenFunction &CGF, bool isNoReturn) override;
   void emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) override;
@@ -318,12 +317,11 @@ public:
                                      Address This, llvm::Type *Ty,
                                      SourceLocation Loc) override;
 
-  llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
-                                         const CXXDestructorDecl *Dtor,
-                                         CXXDtorType DtorType, Address This,
-                                         DeleteOrMemberCallExpr E,
-                                         llvm::CallBase **CallOrInvoke,
-                                         bool ArrayDeletion = false) override;
+  llvm::Value *
+  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
+                            CXXDtorType DtorType, Address This,
+                            DeleteOrMemberCallExpr E,
+                            llvm::CallBase **CallOrInvoke) override;
 
   void emitVirtualInheritanceTables(const CXXRecordDecl *RD) override;
 
@@ -1374,9 +1372,9 @@ bool ItaniumCXXABI::isZeroInitializable(const MemberPointerType *MPT) {
 /// at entry -2 in the vtable.
 void ItaniumCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
                                             const CXXDeleteExpr *DE,
-                                            Address Ptr, QualType ElementType,
-                                            const CXXDestructorDecl *Dtor,
-                                            bool ArrayDeletion) {
+                                            Address Ptr,
+                                            QualType ElementType,
+                                            const CXXDestructorDecl *Dtor) {
   bool UseGlobalDelete = DE->isGlobalDelete();
   if (UseGlobalDelete) {
     // Derive the complete-object pointer, which is what we need
@@ -2246,8 +2244,7 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
 llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
-    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke,
-    bool ArrayDeletion) {
+    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke) {
   auto *CE = dyn_cast<const CXXMemberCallExpr *>(E);
   auto *D = dyn_cast<const CXXDeleteExpr *>(E);
   assert((CE != nullptr) ^ (D != nullptr));

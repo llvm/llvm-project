@@ -1904,8 +1904,8 @@ static void EmitDestroyingObjectDelete(CodeGenFunction &CGF,
                                        QualType ElementType) {
   auto *Dtor = ElementType->getAsCXXRecordDecl()->getDestructor();
   if (Dtor && Dtor->isVirtual())
-    CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType, Dtor,
-                                                /*ArrayDeletion=*/false);
+    CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType,
+                                                Dtor);
   else
     CGF.EmitDeleteCall(DE->getOperatorDelete(), Ptr.emitRawPointer(CGF),
                        ElementType);
@@ -1916,8 +1916,7 @@ static void EmitDestroyingObjectDelete(CodeGenFunction &CGF,
 /// if not.
 static bool EmitObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
                              Address Ptr, QualType ElementType,
-                             llvm::BasicBlock *UnconditionalDeleteBlock,
-                             bool ArrayDeletion) {
+                             llvm::BasicBlock *UnconditionalDeleteBlock) {
   // C++11 [expr.delete]p3:
   //   If the static type of the object to be deleted is different from its
   //   dynamic type, the static type shall be a base class of the dynamic type
@@ -1962,7 +1961,7 @@ static bool EmitObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
         }
         if (UseVirtualCall) {
           CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType,
-                                                      Dtor, ArrayDeletion);
+                                                      Dtor);
           return false;
         }
       }
@@ -2148,9 +2147,7 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
         auto *CondTy = cast<llvm::IntegerType>(NumElements->getType());
         llvm::Value *isEmpty = Builder.CreateICmpEQ(
-            NumElements, llvm::Constant::getIntegerValue(
-                             CondTy, llvm::APInt(CondTy->getBitWidth(),
-                                                 /*val=*/0)));
+            NumElements, llvm::ConstantInt::get(CondTy, 0));
         Builder.CreateCondBr(isEmpty, doneBB, bodyBB);
 
         // Delete cookie for empty array.
@@ -2161,8 +2158,7 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
         EmitBranch(DeleteEnd);
 
         EmitBlock(bodyBB);
-        if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd,
-                              /*ArrayDeletion*/ true))
+        if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd))
           EmitBlock(DeleteEnd);
         return;
       }
@@ -2173,7 +2169,7 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
     EmitArrayDelete(*this, E, Ptr, DeleteTy);
     EmitBlock(DeleteEnd);
   } else {
-    if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd, E->isArrayForm()))
+    if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd))
       EmitBlock(DeleteEnd);
   }
 }
