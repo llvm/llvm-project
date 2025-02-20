@@ -47,6 +47,8 @@ void refoo1() {
 // CIR:       cir.call exception @_ZN1SC2Ev(%[[V2]]) : (!cir.ptr<!ty_S>) -> ()
 // CIR:       cir.call exception @__cxa_rethrow() : () -> ()
 // CIR:       cir.unreachable
+// CIR:     ^bb1:  // no predecessors
+// CIR:       cir.yield
 // CIR:     } catch [type #cir.all {
 // CIR:       %[[V3:.*]] = cir.catch_param -> !cir.ptr<!void>
 // CIR:       %[[V4:.*]] = cir.load %[[V0]] : !cir.ptr<!s32i>, !s32i
@@ -128,6 +130,8 @@ void refoo2() {
 // CIR:             cir.call exception @_ZN1SC2Ev(%[[V5]]) : (!cir.ptr<!ty_S>) -> ()
 // CIR:             cir.call exception @__cxa_rethrow() : () -> ()
 // CIR:             cir.unreachable
+// CIR:           ^bb1:  // no predecessors
+// CIR:             cir.yield
 // CIR:           }
 // CIR:           cir.yield
 // CIR:         } step {
@@ -198,3 +202,94 @@ void refoo2() {
 // LLVM:   store i32 %[[V38]], ptr {{.*}}, align 4
 // LLVM:   call void @__cxa_end_catch()
 // LLVM:   br label {{.*}}
+
+void refoo3() {
+  int r = 1;
+  try {
+    throw;
+    S s;
+  } catch (...) {
+    ++r;
+  }
+}
+
+// CIR-LABEL: @_Z6refoo3v()
+// CIR:   %[[V0:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["r", init] {alignment = 4 : i64}
+// CIR:   %[[V1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:   cir.store %[[V1]], %[[V0]] : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.scope {
+// CIR:     %[[V2:.*]] = cir.alloca !ty_S, !cir.ptr<!ty_S>, ["s", init] {alignment = 1 : i64}
+// CIR:     cir.try {
+// CIR:       cir.call exception @__cxa_rethrow() : () -> ()
+// CIR:       cir.unreachable
+// CIR:     ^bb1:  // no predecessors
+// CIR:       cir.call exception @_ZN1SC2Ev(%[[V2]]) : (!cir.ptr<!ty_S>) -> ()
+// CIR:       cir.yield
+// CIR:     } catch [type #cir.all {
+// CIR:       %[[V3:.*]] = cir.catch_param -> !cir.ptr<!void>
+// CIR:       %[[V4:.*]] = cir.load %[[V0]] : !cir.ptr<!s32i>, !s32i
+// CIR:       %[[V5:.*]] = cir.unary(inc, %[[V4]]) : !s32i, !s32i
+// CIR:       cir.store %[[V5]], %[[V0]] : !s32i, !cir.ptr<!s32i>
+// CIR:       cir.yield
+// CIR:     }]
+// CIR:   }
+// CIR:   cir.return
+// CIR: }
+
+// LLVM:  invoke void @__cxa_rethrow()
+// LLVM:          to label %[[B5:.*]] unwind label %[[B8:.*]]
+// LLVM: [[B5]]:
+// LLVM:  unreachable
+// LLVM: [[B6]]:
+// LLVM:  invoke void @_ZN1SC2Ev(ptr {{.*}})
+// LLVM:          to label %[[B7:.*]] unwind label %[[B12:.*]]
+// LLVM: [[B7]]:
+// LLVM:  br label %[[B21:.*]]
+// LLVM: [[B8]]:
+// LLVM:  %[[V9:.*]] = landingpad { ptr, i32 }
+// LLVM:          catch ptr null
+// LLVM:  %[[V10:.*]] = extractvalue { ptr, i32 } %[[V9]], 0
+// LLVM:  %[[V11:.*]] = extractvalue { ptr, i32 } %[[V9]], 1
+// LLVM:  br label %[[B16:.*]]
+// LLVM: [[B12]]:
+// LLVM:  %[[V13:.*]] = landingpad { ptr, i32 }
+// LLVM:          catch ptr null
+// LLVM:  %[[V14:.*]] = extractvalue { ptr, i32 } %[[V13]], 0
+// LLVM:  %[[V15:.*]] = extractvalue { ptr, i32 } %[[V13]], 1
+// LLVM:  br label %[[B16]]
+// LLVM: [[B16]]:
+// LLVM:  %[[V17:.*]] = phi ptr [ %[[V14]], %[[B12]] ], [ %[[V10]], %[[B8]] ]
+// LLVM:  %[[V18:.*]] = call ptr @__cxa_begin_catch(ptr %[[V17]])
+// LLVM:  %[[V19:.*]] = load i32, ptr {{.*}}, align 4
+// LLVM:  %[[V20:.*]] = add i32 %[[V19]], 1
+// LLVM:  store i32 %[[V20]], ptr {{.*}}, align 4
+// LLVM:  call void @__cxa_end_catch()
+// LLVM:  br label %[[B21]]
+// LLVM: [[B21]]:
+// LLVM:  br label {{.*}}
+
+void refoo4() {
+  try {
+    for (int i = 0; i < 5; i++) {
+      throw;
+      throw;
+      S s;
+      i++;
+    }
+  } catch (...) {
+    int r = 1;
+  }
+}
+
+// CIR-LABEL: @_Z6refoo4v
+// CIR: cir.call exception @__cxa_rethrow() : () -> ()
+// CIR-NEXT: unreachable
+// CIR: cir.call exception @__cxa_rethrow() : () -> ()
+// CIR-NEXT: unreachable
+// CIR: cir.call exception @_ZN1SC2Ev
+
+// LLVM: invoke void @__cxa_rethrow
+// LLVM: unreachable
+// LLVM: invoke void @__cxa_rethrow
+// LLVM: unreachable
+// LLVM: invoke void @_ZN1SC2Ev
