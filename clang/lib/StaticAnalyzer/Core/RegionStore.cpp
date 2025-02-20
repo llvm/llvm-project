@@ -330,13 +330,12 @@ protected:
 /// the number of bindings that can be added.
 class BoundedRegionBindingsRef : public RegionBindingsRef {
 public:
-  static BoundedRegionBindingsRef
-  createWithLimit(RegionBindingsRef Base,
-                  SmallVectorImpl<SVal> *EscapedValuesDuringBind,
-                  unsigned BindingsLeft) {
-    return BoundedRegionBindingsRef{Base, EscapedValuesDuringBind,
-                                    BindingsLeft};
-  }
+  BoundedRegionBindingsRef(RegionBindingsRef Base,
+                           SmallVectorImpl<SVal> &EscapedValuesDuringBind,
+                           unsigned BindingsLeft)
+      : RegionBindingsRef(Base),
+        EscapedValuesDuringBind(&EscapedValuesDuringBind),
+        BindingsLeft(BindingsLeft) {}
 
   unsigned bindingsLeft() const { return BindingsLeft; }
 
@@ -361,12 +360,12 @@ public:
                             data_type_ref BindingKeyAndValue) const {
     return BoundedRegionBindingsRef{RegionBindingsRef::commitBindingsToCluster(
                                         BaseRegion, BindingKeyAndValue),
-                                    EscapedValuesDuringBind, BindingsLeft};
+                                    *EscapedValuesDuringBind, BindingsLeft};
   }
 
   BoundedRegionBindingsRef removeCluster(const MemRegion *BaseRegion) const {
     return BoundedRegionBindingsRef{
-        RegionBindingsRef::removeCluster(BaseRegion), EscapedValuesDuringBind,
+        RegionBindingsRef::removeCluster(BaseRegion), *EscapedValuesDuringBind,
         BindingsLeft};
   }
 
@@ -379,7 +378,7 @@ public:
       V = UnknownVal();
     }
     return BoundedRegionBindingsRef{RegionBindingsRef::addBinding(K, V),
-                                    EscapedValuesDuringBind, BindingsLeft - 1};
+                                    *EscapedValuesDuringBind, BindingsLeft - 1};
   }
 
   BoundedRegionBindingsRef addBinding(const MemRegion *R, BindingKey::Kind k,
@@ -388,14 +387,7 @@ public:
   }
 
 private:
-  BoundedRegionBindingsRef(RegionBindingsRef Base,
-                           SmallVectorImpl<SVal> *EscapedValuesDuringBind,
-                           unsigned BindingsLeft)
-      : RegionBindingsRef(Base),
-        EscapedValuesDuringBind(EscapedValuesDuringBind),
-        BindingsLeft(BindingsLeft) {}
-
-  SmallVectorImpl<SVal> *EscapedValuesDuringBind;
+  SmallVectorImpl<SVal> *EscapedValuesDuringBind; // nonnull
   unsigned BindingsLeft;
 };
 
@@ -594,7 +586,7 @@ public: // Part of public interface to class.
   BindResult Bind(Store store, Loc LV, SVal V) override {
     llvm::SmallVector<SVal, 0> EscapedValuesDuringBind;
     BoundedRegionBindingsRef BoundedBindings =
-        getRegionBindings(store, &EscapedValuesDuringBind);
+        getRegionBindings(store, EscapedValuesDuringBind);
     return BindResult{StoreRef(bind(BoundedBindings, LV, V).asStore(), *this),
                       std::move(EscapedValuesDuringBind)};
   }
@@ -608,7 +600,7 @@ public: // Part of public interface to class.
                                 SVal V) override {
     llvm::SmallVector<SVal, 0> EscapedValuesDuringBind;
     BoundedRegionBindingsRef B =
-        getRegionBindings(store, &EscapedValuesDuringBind);
+        getRegionBindings(store, EscapedValuesDuringBind);
     // Use other APIs when you have to wipe the region that was initialized
     // earlier.
     assert(!(B.getDefaultBinding(R) || B.getDirectBinding(R)) &&
@@ -637,7 +629,7 @@ public: // Part of public interface to class.
 
     llvm::SmallVector<SVal, 0> EscapedValuesDuringBind;
     BoundedRegionBindingsRef B =
-        getRegionBindings(store, &EscapedValuesDuringBind);
+        getRegionBindings(store, EscapedValuesDuringBind);
     SVal V = svalBuilder.makeZeroVal(Ctx.CharTy);
     B = removeSubRegionBindings(B, cast<SubRegion>(R));
     B = B.addBinding(BindingKey::Make(R, BindingKey::Default), V);
@@ -809,8 +801,8 @@ public: // Part of public interface to class.
 
   BoundedRegionBindingsRef
   getRegionBindings(Store store,
-                    SmallVectorImpl<SVal> *EscapedValuesDuringBind) const {
-    return BoundedRegionBindingsRef::createWithLimit(
+                    SmallVectorImpl<SVal> &EscapedValuesDuringBind) const {
+    return BoundedRegionBindingsRef(
         getRegionBindings(store), EscapedValuesDuringBind,
         /*BindingsLeft=*/RegionStoreMaxBindingFanOut);
   }
