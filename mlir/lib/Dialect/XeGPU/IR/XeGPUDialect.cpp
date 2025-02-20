@@ -14,6 +14,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
+#include <cassert>
 
 namespace mlir {
 namespace xegpu {
@@ -281,11 +282,11 @@ LogicalResult TensorDescType::verify(
       // Validate subgroup mapping rules for scattered tensors.
       // A work-item's slice of the tensor with shape [sg_size] or
       // [sg_size, chunk_size] will be [1] or [1, 32/element_ty_bit_width]
-      // respectively, the mapping should reflect that.
+      // respectively, the mapping should reflect that. This is because each
+      // work item access data in 32 bit granularity.
       if (wiData[0] != 1)
         return emitError()
                << "cannot map over non-contiguous scattered row elements";
-
       if (wiData[1] != (32 / elementType.getIntOrFloatBitWidth()))
         return emitError() << "work item data mapping must match the number of "
                               "contiguous elements";
@@ -351,14 +352,13 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   }
 
   // Case 1: regular loads/stores
-  auto scatterAttr =
-      llvm::dyn_cast_if_present<ScatterTensorDescAttr>(getEncoding());
+  auto scatterAttr = getEncodingAsScatterTensorDescAttr();
   if (scatterAttr) {
     auto chunkSize = scatterAttr.getChunkSize().getInt();
-    // Check if the first dimension of the tensor descriptor shape is
+    // Verify if the first dimension of the tensor descriptor shape is
     // distributable.
-    if (tdescShape[0] % (wiLayout[0]) != 0)
-      return failure();
+    assert(tdescShape[0] % (wiLayout[0]) == 0 &&
+           "tensor descriptor shape is not distributable");
     if (chunkSize > 1)
       return VectorType::get({chunkSize / wiDataSize, wiDataSize},
                              getElementType());
@@ -369,8 +369,8 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   // Tensor descriptor shape can be 1D. For the 1D case, outer dims of wiData
   // and wiLayout must be 1.
   if (tdescShape.size() == 1) {
-    if (wiData[0] != 1 || wiLayout[0] != 1)
-      return failure();
+    assert((wiData[0] == 1 && wiLayout[0] == 1) &&
+           "wi_data[0] and wi_layout[0] must be 1 for 1D tensor descriptor");
     wiData = {wiData[1]};
     wiLayout = {wiLayout[1]};
   }
@@ -378,8 +378,8 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   int64_t tensorSize = 1;
   for (auto [tdescDim, wiDim, wiDataDim] :
        llvm::zip_equal(tdescShape, wiLayout, wiData)) {
-    if (tdescDim % (wiDim * wiDataDim) != 0)
-      return failure();
+    assert((tdescDim % (wiDim * wiDataDim) == 0) &&
+           "tensor descriptor shape is not distributable");
     tensorSize *= tdescDim;
   }
   // tensorSize must be adjusted for array_length.

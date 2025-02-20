@@ -11,6 +11,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
 
@@ -74,6 +75,39 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
   auto kind = attr.getValue();
   return kind == CachePolicy::CACHED || kind == CachePolicy::UNCACHED ||
          kind == CachePolicy::WRITE_BACK || kind == CachePolicy::WRITE_THROUGH;
+}
+
+// Helper to validate value shape of LoadNd and StoreNd ops.
+static LogicalResult
+isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
+                 ArrayRef<int64_t> adjustedTdescShape,
+                 function_ref<InFlightDiagnostic()> emitError) {
+  auto sgMap = tdescTy.getSGMapAttr();
+  auto valueShape = valueTy.getShape();
+  // sg_map not present means IR is in SIMD mode. In this case value shape must
+  // match adjusted tensor descriptor shape.
+  if (!sgMap)
+    return valueShape == adjustedTdescShape
+               ? success()
+               : emitError()
+                     << "Value shape " << makeString(valueShape)
+                     << " is not consistent with tensor descriptor " << tdescTy;
+
+  // sg_map present means IR is in SIMT mode. In this case sg_map determines the
+  // value shape.
+  auto expectedValueShapeOrFailure = tdescTy.getDistributedVectorType();
+  if (failed(expectedValueShapeOrFailure))
+    return emitError() << "Failed to compute distributed vector shape for "
+                          "tensor descriptor "
+                       << tdescTy;
+
+  return valueTy == expectedValueShapeOrFailure.value()
+             ? success()
+             : emitError()
+                   << "Result shape " << makeString(valueShape)
+                   << " is not consistent with distributed vector shape "
+                   << makeString(expectedValueShapeOrFailure.value().getShape())
+                   << " for tensor descriptor " << tdescTy;
 }
 
 //===----------------------------------------------------------------------===//
@@ -282,31 +316,8 @@ LogicalResult LoadNdOp::verify() {
     adjustedTdescShape.insert(it, array_len);
   }
 
-  auto sgMap = tdescTy.getSGMapAttr();
-  // sg_map not present means IR is in SIMD mode. In this case value shape must
-  // match adjusted tensor descriptor shape.
-  if (!sgMap)
-    return valueShape == adjustedTdescShape
-               ? success()
-               : emitOpError()
-                     << "Result shape " << makeString(valueShape)
-                     << " is not consistent with tensor descriptor " << tdescTy;
-
-  // sg_map present means IR is in SIMT mode. In this case sg_map determines the
-  // value shape.
-  auto expectedValueShapeOrFailure = tdescTy.getDistributedVectorType();
-  if (failed(expectedValueShapeOrFailure))
-    return emitOpError() << "Failed to compute distributed vector shape for "
-                            "tensor descriptor "
-                         << tdescTy;
-
-  return valueTy == expectedValueShapeOrFailure.value()
-             ? success()
-             : emitOpError()
-                   << "Result shape " << makeString(valueShape)
-                   << " is not consistent with distributed vector shape "
-                   << makeString(expectedValueShapeOrFailure.value().getShape())
-                   << " for tensor descriptor " << tdescTy;
+  return isArgShapesValid(tdescTy, valueTy, adjustedTdescShape,
+                          [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -337,32 +348,8 @@ LogicalResult StoreNdOp::verify() {
   auto tdescShape = getShapeOf(dstTy);
   auto valueShape = getShapeOf(valTy);
 
-  auto sgMap = dstTy.getSGMapAttr();
-  // sg_map not present means IR is in SIMD mode. In this case value shape must
-  // match adjusted tensor descriptor shape.
-  if (!sgMap)
-    return valueShape == tdescShape
-               ? success()
-               : emitOpError()
-                     << "Result shape " << makeString(valueShape)
-                     << " is not consistent with tensor descriptor shape "
-                     << makeString(tdescShape);
-
-  // sg_map present means IR is in SIMT mode. In this case sg_map determines the
-  // value shape.
-  auto expectedValueShapeOrFailure = dstTy.getDistributedVectorType();
-  if (failed(expectedValueShapeOrFailure))
-    return emitOpError() << "Failed to compute distributed vector shape for "
-                            "tensor descriptor "
-                         << dstTy;
-
-  return valTy == expectedValueShapeOrFailure.value()
-             ? success()
-             : emitOpError()
-                   << "Result shape " << makeString(valueShape)
-                   << " is not consistent with distributed vector shape "
-                   << makeString(expectedValueShapeOrFailure.value().getShape())
-                   << " for tensor descriptor " << dstTy;
+  return isArgShapesValid(dstTy, valTy, tdescShape,
+                          [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
