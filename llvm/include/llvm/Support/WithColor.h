@@ -51,7 +51,7 @@ enum class ColorMode {
 
 /// An RAII object that temporarily switches an output stream to a specific
 /// color.
-class WithColor {
+class LLVM_ABI WithColor {
 public:
   using AutoDetectFunctionType = bool (*)(const raw_ostream &OS);
 
