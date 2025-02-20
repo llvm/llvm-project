@@ -9,6 +9,8 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
+#include <iostream>
+#include <stdlib.h>
 
 using namespace mlir;
 
@@ -118,6 +120,8 @@ struct TestFuncEraseResult
     auto module = getOperation();
 
     for (auto func : module.getOps<FunctionOpInterface>()) {
+      if (!func.getNumResults())
+        continue;
       BitVector indicesToErase(func.getNumResults());
       for (auto resultIndex : llvm::seq<int>(0, func.getNumResults()))
         if (func.getResultAttr(resultIndex, "test.erase_this_result"))
