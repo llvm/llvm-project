@@ -2644,8 +2644,10 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     // optimized out. This prevents an FP stack pop from being emitted for it.
     // Setting the root like this ensures there will be a use of the
     // `CopyFromReg` chain, and ensures the FP pop will be emitted.
+    SDValue OldRoot = getRoot();
     SDValue NewRoot =
-        getNode(ISD::TokenFactor, DL, MVT::Other, getRoot(), CallChain);
+        OldRoot ? getNode(ISD::TokenFactor, DL, MVT::Other, OldRoot, CallChain)
+                : CallChain;
     setRoot(NewRoot);
     // Ensure the new root is reachable from the results.
     Results[0] = getMergeValues({Results[0], NewRoot}, DL);
