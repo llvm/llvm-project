@@ -940,3 +940,11 @@ def OpCooperativeMatrixPrefetchINTEL: Op<6449, (outs),
 // SPV_EXT_arithmetic_fence
 def OpArithmeticFenceEXT: Op<6145, (outs ID:$res), (ins TYPE:$type, ID:$target),
                   "$res = OpArithmeticFenceEXT $type $target">;
+
+// SPV_INTEL_bindless_images
+def OpConvertHandleToImageINTEL: Op<6529, (outs ID:$res), (ins TYPE:$type, ID:$operand),
+                  "$res = OpConvertHandleToImageINTEL $type $operand">;
+def OpConvertHandleToSamplerINTEL: Op<6530, (outs ID:$res), (ins TYPE:$type, ID:$operand),
+                  "$res = OpConvertHandleToSamplerINTEL $type $operand">;
+def OpConvertHandleToSampledImageINTEL: Op<6531, (outs ID:$res), (ins TYPE:$type, ID:$operand),
+                  "$res = OpConvertHandleToSampledImageINTEL $type $operand">;

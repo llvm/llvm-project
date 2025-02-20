@@ -932,9 +932,20 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
-def Xarch__ : JoinedAndSeparate<["-"], "Xarch_">, Flags<[NoXarchOption]>,
-  HelpText<"Pass <arg> to the compiliation if the target matches <arch>">,
-  MetaVarName<"<arch> <arg>">;
+def Xarch__
+    : JoinedAndSeparate<["-"], "Xarch_">,
+      Flags<[NoXarchOption]>,
+      HelpText<"Pass <arg> to the compilation if the target matches <arch>">,
+      DocBrief<
+          [{Specifies that the argument should only be used if the compilation
+  target matches the specified architecture. This can be used with the target
+  CPU, triple architecture, or offloading host and device. It is most useful
+  for separating behavior undesirable on one of the targets when combining many
+  compilation jobs, as is commong with offloading. For example, -Xarch_x86_64,
+  -Xarch_gfx90a, and -Xarch_device are all valid selectors. -Xarch_device will
+  forward the argument to the offloading device while -Xarch_host will target
+  the host system, which can be used to suppress incompatible GPU arguments.}]>,
+      MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
   HelpText<"Pass <arg> to the CUDA/HIP host compilation">, MetaVarName<"<arg>">;
 def Xarch_device : Separate<["-"], "Xarch_device">, Flags<[NoXarchOption]>,
@@ -3397,7 +3408,7 @@ def fno_objc_weak : Flag<["-"], "fno-objc-weak">, Group<f_Group>,
 def fno_omit_frame_pointer : Flag<["-"], "fno-omit-frame-pointer">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>;
 defm operator_names : BoolFOption<"operator-names",
-  LangOpts<"CXXOperatorNames">, Default<cplusplus.KeyPath>,
+  LangOpts<"CXXOperatorNames">, Default<!strconcat(cplusplus.KeyPath, " && !",hlsl.KeyPath)>,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Do not treat C++ operator name keywords as synonyms for operators">,
   PosFlag<SetTrue>>;
@@ -5618,10 +5629,18 @@ def nogpuinc : Flag<["-"], "nogpuinc">, Group<IncludePath_Group>,
 def nohipwrapperinc : Flag<["-"], "nohipwrapperinc">, Group<IncludePath_Group>,
   HelpText<"Do not include the default HIP wrapper headers and include paths">;
 def : Flag<["-"], "nocudainc">, Alias<nogpuinc>;
-def nogpulib : Flag<["-"], "nogpulib">, MarshallingInfoFlag<LangOpts<"NoGPULib">>,
-  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  HelpText<"Do not link device library for CUDA/HIP device compilation">;
-def : Flag<["-"], "nocudalib">, Alias<nogpulib>;
+def no_offloadlib
+    : Flag<["--"], "no-offloadlib">,
+      MarshallingInfoFlag<LangOpts<"NoGPULib">>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+      HelpText<"Do not link device library for CUDA/HIP device compilation">;
+def offloadlib : Flag<["--"], "offloadlib">,
+                 Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+                 HelpText<"Link device libraries for GPU device compilation">;
+def : Flag<["-"], "nogpulib">,
+      Alias<no_offloadlib>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def : Flag<["-"], "nocudalib">, Alias<no_offloadlib>;
 def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Link the LLVM C Library for GPUs">;
 def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;

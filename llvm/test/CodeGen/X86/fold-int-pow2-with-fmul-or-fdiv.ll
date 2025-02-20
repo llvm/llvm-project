@@ -660,21 +660,25 @@ define <8 x half> @fdiv_pow2_8xhalf(<8 x i16> %i) {
   ret <8 x half> %r
 }
 
+; FIXME: The movzbl is unnecessary. It would be UB for the upper bits to be set
+; in the original IR.
 define double @fmul_pow_shl_cnt(i64 %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    shlq $52, %rdi
-; CHECK-SSE-NEXT:    movabsq $4621256167635550208, %rax # imm = 0x4022000000000000
-; CHECK-SSE-NEXT:    addq %rdi, %rax
-; CHECK-SSE-NEXT:    movq %rax, %xmm0
+; CHECK-SSE-NEXT:    movzbl %dil, %eax
+; CHECK-SSE-NEXT:    shlq $52, %rax
+; CHECK-SSE-NEXT:    movabsq $4621256167635550208, %rcx # imm = 0x4022000000000000
+; CHECK-SSE-NEXT:    addq %rax, %rcx
+; CHECK-SSE-NEXT:    movq %rcx, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fmul_pow_shl_cnt:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    shlq $52, %rdi
-; CHECK-AVX-NEXT:    movabsq $4621256167635550208, %rax # imm = 0x4022000000000000
-; CHECK-AVX-NEXT:    addq %rdi, %rax
-; CHECK-AVX-NEXT:    vmovq %rax, %xmm0
+; CHECK-AVX-NEXT:    movzbl %dil, %eax
+; CHECK-AVX-NEXT:    shlq $52, %rax
+; CHECK-AVX-NEXT:    movabsq $4621256167635550208, %rcx # imm = 0x4022000000000000
+; CHECK-AVX-NEXT:    addq %rax, %rcx
+; CHECK-AVX-NEXT:    vmovq %rcx, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nuw i64 1, %cnt
   %conv = uitofp i64 %shl to double
@@ -682,23 +686,27 @@ define double @fmul_pow_shl_cnt(i64 %cnt) nounwind {
   ret double %mul
 }
 
+; FIXME: The movzbl is unnecessary. It would be UB for the upper bits to be set
+; in the original IR.
 define double @fmul_pow_shl_cnt2(i64 %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt2:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    incl %edi
-; CHECK-SSE-NEXT:    shlq $52, %rdi
-; CHECK-SSE-NEXT:    movabsq $-4602115869219225600, %rax # imm = 0xC022000000000000
-; CHECK-SSE-NEXT:    addq %rdi, %rax
-; CHECK-SSE-NEXT:    movq %rax, %xmm0
+; CHECK-SSE-NEXT:    movzbl %dil, %eax
+; CHECK-SSE-NEXT:    incl %eax
+; CHECK-SSE-NEXT:    shlq $52, %rax
+; CHECK-SSE-NEXT:    movabsq $-4602115869219225600, %rcx # imm = 0xC022000000000000
+; CHECK-SSE-NEXT:    addq %rax, %rcx
+; CHECK-SSE-NEXT:    movq %rcx, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fmul_pow_shl_cnt2:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    incl %edi
-; CHECK-AVX-NEXT:    shlq $52, %rdi
-; CHECK-AVX-NEXT:    movabsq $-4602115869219225600, %rax # imm = 0xC022000000000000
-; CHECK-AVX-NEXT:    addq %rdi, %rax
-; CHECK-AVX-NEXT:    vmovq %rax, %xmm0
+; CHECK-AVX-NEXT:    movzbl %dil, %eax
+; CHECK-AVX-NEXT:    incl %eax
+; CHECK-AVX-NEXT:    shlq $52, %rax
+; CHECK-AVX-NEXT:    movabsq $-4602115869219225600, %rcx # imm = 0xC022000000000000
+; CHECK-AVX-NEXT:    addq %rax, %rcx
+; CHECK-AVX-NEXT:    vmovq %rcx, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nuw i64 2, %cnt
   %conv = uitofp i64 %shl to double
@@ -706,27 +714,55 @@ define double @fmul_pow_shl_cnt2(i64 %cnt) nounwind {
   ret double %mul
 }
 
+; Make sure we do a movzbl of the input register.
+define double @fmul_pow_shl_cnt3(i8 %cnt) nounwind {
+; CHECK-SSE-LABEL: fmul_pow_shl_cnt3:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    movzbl %dil, %eax
+; CHECK-SSE-NEXT:    shlq $52, %rax
+; CHECK-SSE-NEXT:    movabsq $-4602115869219225600, %rcx # imm = 0xC022000000000000
+; CHECK-SSE-NEXT:    addq %rax, %rcx
+; CHECK-SSE-NEXT:    movq %rcx, %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fmul_pow_shl_cnt3:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    movzbl %dil, %eax
+; CHECK-AVX-NEXT:    shlq $52, %rax
+; CHECK-AVX-NEXT:    movabsq $-4602115869219225600, %rcx # imm = 0xC022000000000000
+; CHECK-AVX-NEXT:    addq %rax, %rcx
+; CHECK-AVX-NEXT:    vmovq %rcx, %xmm0
+; CHECK-AVX-NEXT:    retq
+  %zext_cnt = zext i8 %cnt to i64
+  %shl = shl nuw i64 1, %zext_cnt
+  %conv = uitofp i64 %shl to double
+  %mul = fmul double -9.000000e+00, %conv
+  ret double %mul
+}
+
+; FIXME: The movzbl is unnecessary. It would be UB for the upper bits to be set
+; in the original IR.
 define float @fmul_pow_select(i32 %cnt, i1 %c) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_select:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-SSE-NEXT:    leal 1(%rdi), %eax
+; CHECK-SSE-NEXT:    movzbl %dil, %eax
+; CHECK-SSE-NEXT:    leal 1(%rax), %ecx
 ; CHECK-SSE-NEXT:    testb $1, %sil
-; CHECK-SSE-NEXT:    cmovnel %edi, %eax
-; CHECK-SSE-NEXT:    shll $23, %eax
-; CHECK-SSE-NEXT:    addl $1091567616, %eax # imm = 0x41100000
-; CHECK-SSE-NEXT:    movd %eax, %xmm0
+; CHECK-SSE-NEXT:    cmovnel %eax, %ecx
+; CHECK-SSE-NEXT:    shll $23, %ecx
+; CHECK-SSE-NEXT:    addl $1091567616, %ecx # imm = 0x41100000
+; CHECK-SSE-NEXT:    movd %ecx, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fmul_pow_select:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-AVX-NEXT:    leal 1(%rdi), %eax
+; CHECK-AVX-NEXT:    movzbl %dil, %eax
+; CHECK-AVX-NEXT:    leal 1(%rax), %ecx
 ; CHECK-AVX-NEXT:    testb $1, %sil
-; CHECK-AVX-NEXT:    cmovnel %edi, %eax
-; CHECK-AVX-NEXT:    shll $23, %eax
-; CHECK-AVX-NEXT:    addl $1091567616, %eax # imm = 0x41100000
-; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
+; CHECK-AVX-NEXT:    cmovnel %eax, %ecx
+; CHECK-AVX-NEXT:    shll $23, %ecx
+; CHECK-AVX-NEXT:    addl $1091567616, %ecx # imm = 0x41100000
+; CHECK-AVX-NEXT:    vmovd %ecx, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl2 = shl nuw i32 2, %cnt
   %shl1 = shl nuw i32 1, %cnt
@@ -736,27 +772,31 @@ define float @fmul_pow_select(i32 %cnt, i1 %c) nounwind {
   ret float %mul
 }
 
+; FIXME: The movzbl is unnecessary. It would be UB for the upper bits to be set
+; in the original IR.
 define float @fmul_fly_pow_mul_min_pow2(i64 %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_fly_pow_mul_min_pow2:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    addl $3, %edi
-; CHECK-SSE-NEXT:    cmpl $13, %edi
-; CHECK-SSE-NEXT:    movl $13, %eax
-; CHECK-SSE-NEXT:    cmovbl %edi, %eax
-; CHECK-SSE-NEXT:    shll $23, %eax
-; CHECK-SSE-NEXT:    addl $1091567616, %eax # imm = 0x41100000
-; CHECK-SSE-NEXT:    movd %eax, %xmm0
+; CHECK-SSE-NEXT:    movzbl %dil, %eax
+; CHECK-SSE-NEXT:    addl $3, %eax
+; CHECK-SSE-NEXT:    cmpl $13, %eax
+; CHECK-SSE-NEXT:    movl $13, %ecx
+; CHECK-SSE-NEXT:    cmovbl %eax, %ecx
+; CHECK-SSE-NEXT:    shll $23, %ecx
+; CHECK-SSE-NEXT:    addl $1091567616, %ecx # imm = 0x41100000
+; CHECK-SSE-NEXT:    movd %ecx, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fmul_fly_pow_mul_min_pow2:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    addl $3, %edi
-; CHECK-AVX-NEXT:    cmpl $13, %edi
-; CHECK-AVX-NEXT:    movl $13, %eax
-; CHECK-AVX-NEXT:    cmovbl %edi, %eax
-; CHECK-AVX-NEXT:    shll $23, %eax
-; CHECK-AVX-NEXT:    addl $1091567616, %eax # imm = 0x41100000
-; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
+; CHECK-AVX-NEXT:    movzbl %dil, %eax
+; CHECK-AVX-NEXT:    addl $3, %eax
+; CHECK-AVX-NEXT:    cmpl $13, %eax
+; CHECK-AVX-NEXT:    movl $13, %ecx
+; CHECK-AVX-NEXT:    cmovbl %eax, %ecx
+; CHECK-AVX-NEXT:    shll $23, %ecx
+; CHECK-AVX-NEXT:    addl $1091567616, %ecx # imm = 0x41100000
+; CHECK-AVX-NEXT:    vmovd %ecx, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl8 = shl nuw i64 8, %cnt
   %shl = call i64 @llvm.umin.i64(i64 %shl8, i64 8192)
@@ -765,28 +805,30 @@ define float @fmul_fly_pow_mul_min_pow2(i64 %cnt) nounwind {
   ret float %mul
 }
 
+; FIXME: The movzbl is unnecessary. It would be UB for the upper bits to be set
+; in the original IR.
 define double @fmul_pow_mul_max_pow2(i16 %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_mul_max_pow2:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movl %edi, %eax
+; CHECK-SSE-NEXT:    movzbl %dil, %eax
 ; CHECK-SSE-NEXT:    leaq 1(%rax), %rcx
 ; CHECK-SSE-NEXT:    cmpq %rcx, %rax
 ; CHECK-SSE-NEXT:    cmovaq %rax, %rcx
 ; CHECK-SSE-NEXT:    shlq $52, %rcx
 ; CHECK-SSE-NEXT:    movabsq $4613937818241073152, %rax # imm = 0x4008000000000000
-; CHECK-SSE-NEXT:    addq %rcx, %rax
+; CHECK-SSE-NEXT:    orq %rcx, %rax
 ; CHECK-SSE-NEXT:    movq %rax, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fmul_pow_mul_max_pow2:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    movl %edi, %eax
+; CHECK-AVX-NEXT:    movzbl %dil, %eax
 ; CHECK-AVX-NEXT:    leaq 1(%rax), %rcx
 ; CHECK-AVX-NEXT:    cmpq %rcx, %rax
 ; CHECK-AVX-NEXT:    cmovaq %rax, %rcx
 ; CHECK-AVX-NEXT:    shlq $52, %rcx
 ; CHECK-AVX-NEXT:    movabsq $4613937818241073152, %rax # imm = 0x4008000000000000
-; CHECK-AVX-NEXT:    addq %rcx, %rax
+; CHECK-AVX-NEXT:    orq %rcx, %rax
 ; CHECK-AVX-NEXT:    vmovq %rax, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl2 = shl nuw i16 2, %cnt
@@ -1161,23 +1203,25 @@ define double @fmul_pow_shl_cnt_fail_maybe_bad_exp(i64 %cnt) nounwind {
   ret double %mul
 }
 
+; FIXME: The movzbl is unnecessary. It would be UB for the upper bits to be set
+; in the original IR.
 define double @fmul_pow_shl_cnt_safe(i16 %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt_safe:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-SSE-NEXT:    shlq $52, %rdi
-; CHECK-SSE-NEXT:    movabsq $8930638061065157010, %rax # imm = 0x7BEFFFFFFF5F3992
-; CHECK-SSE-NEXT:    addq %rdi, %rax
-; CHECK-SSE-NEXT:    movq %rax, %xmm0
+; CHECK-SSE-NEXT:    movzbl %dil, %eax
+; CHECK-SSE-NEXT:    shlq $52, %rax
+; CHECK-SSE-NEXT:    movabsq $8930638061065157010, %rcx # imm = 0x7BEFFFFFFF5F3992
+; CHECK-SSE-NEXT:    addq %rax, %rcx
+; CHECK-SSE-NEXT:    movq %rcx, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fmul_pow_shl_cnt_safe:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-AVX-NEXT:    shlq $52, %rdi
-; CHECK-AVX-NEXT:    movabsq $8930638061065157010, %rax # imm = 0x7BEFFFFFFF5F3992
-; CHECK-AVX-NEXT:    addq %rdi, %rax
-; CHECK-AVX-NEXT:    vmovq %rax, %xmm0
+; CHECK-AVX-NEXT:    movzbl %dil, %eax
+; CHECK-AVX-NEXT:    shlq $52, %rax
+; CHECK-AVX-NEXT:    movabsq $8930638061065157010, %rcx # imm = 0x7BEFFFFFFF5F3992
+; CHECK-AVX-NEXT:    addq %rax, %rcx
+; CHECK-AVX-NEXT:    vmovq %rcx, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nuw i16 1, %cnt
   %conv = uitofp i16 %shl to double
@@ -1236,15 +1280,15 @@ define float @fdiv_pow_shl_cnt_fail_maybe_z(i64 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-SSE-NEXT:    shlq %cl, %rax
 ; CHECK-SSE-NEXT:    testq %rax, %rax
-; CHECK-SSE-NEXT:    js .LBB22_1
+; CHECK-SSE-NEXT:    js .LBB23_1
 ; CHECK-SSE-NEXT:  # %bb.2:
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
-; CHECK-SSE-NEXT:    jmp .LBB22_3
-; CHECK-SSE-NEXT:  .LBB22_1:
+; CHECK-SSE-NEXT:    jmp .LBB23_3
+; CHECK-SSE-NEXT:  .LBB23_1:
 ; CHECK-SSE-NEXT:    shrq %rax
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
 ; CHECK-SSE-NEXT:    addss %xmm1, %xmm1
-; CHECK-SSE-NEXT:  .LBB22_3:
+; CHECK-SSE-NEXT:  .LBB23_3:
 ; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    divss %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
@@ -1256,15 +1300,15 @@ define float @fdiv_pow_shl_cnt_fail_maybe_z(i64 %cnt) nounwind {
 ; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-AVX2-NEXT:    shlq %cl, %rax
 ; CHECK-AVX2-NEXT:    testq %rax, %rax
-; CHECK-AVX2-NEXT:    js .LBB22_1
+; CHECK-AVX2-NEXT:    js .LBB23_1
 ; CHECK-AVX2-NEXT:  # %bb.2:
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    jmp .LBB22_3
-; CHECK-AVX2-NEXT:  .LBB22_1:
+; CHECK-AVX2-NEXT:    jmp .LBB23_3
+; CHECK-AVX2-NEXT:  .LBB23_1:
 ; CHECK-AVX2-NEXT:    shrq %rax
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vaddss %xmm0, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:  .LBB22_3:
+; CHECK-AVX2-NEXT:  .LBB23_3:
 ; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    retq
@@ -1545,23 +1589,25 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
   ret half %mul
 }
 
+; FIXME: The movzbl is unnecessary. It would be UB for the upper bits to be set
+; in the original IR.
 define double @fdiv_pow_shl_cnt32_to_dbl_okay(i32 %cnt) nounwind {
 ; CHECK-SSE-LABEL: fdiv_pow_shl_cnt32_to_dbl_okay:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-SSE-NEXT:    shlq $52, %rdi
-; CHECK-SSE-NEXT:    movabsq $3936146074321813504, %rax # imm = 0x36A0000000000000
-; CHECK-SSE-NEXT:    subq %rdi, %rax
-; CHECK-SSE-NEXT:    movq %rax, %xmm0
+; CHECK-SSE-NEXT:    movzbl %dil, %eax
+; CHECK-SSE-NEXT:    shlq $52, %rax
+; CHECK-SSE-NEXT:    movabsq $3936146074321813504, %rcx # imm = 0x36A0000000000000
+; CHECK-SSE-NEXT:    subq %rax, %rcx
+; CHECK-SSE-NEXT:    movq %rcx, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fdiv_pow_shl_cnt32_to_dbl_okay:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-AVX-NEXT:    shlq $52, %rdi
-; CHECK-AVX-NEXT:    movabsq $3936146074321813504, %rax # imm = 0x36A0000000000000
-; CHECK-AVX-NEXT:    subq %rdi, %rax
-; CHECK-AVX-NEXT:    vmovq %rax, %xmm0
+; CHECK-AVX-NEXT:    movzbl %dil, %eax
+; CHECK-AVX-NEXT:    shlq $52, %rax
+; CHECK-AVX-NEXT:    movabsq $3936146074321813504, %rcx # imm = 0x36A0000000000000
+; CHECK-AVX-NEXT:    subq %rax, %rcx
+; CHECK-AVX-NEXT:    vmovq %rcx, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nuw i32 1, %cnt
   %conv = uitofp i32 %shl to double
@@ -1617,21 +1663,25 @@ define float @fdiv_pow_shl_cnt32_out_of_bounds2(i32 %cnt) nounwind {
   ret float %mul
 }
 
+; FIXME: The movzbl is unnecessary. It would be UB for the upper bits to be set
+; in the original IR.
 define float @fdiv_pow_shl_cnt32_okay(i32 %cnt) nounwind {
 ; CHECK-SSE-LABEL: fdiv_pow_shl_cnt32_okay:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    shll $23, %edi
-; CHECK-SSE-NEXT:    movl $285212672, %eax # imm = 0x11000000
-; CHECK-SSE-NEXT:    subl %edi, %eax
-; CHECK-SSE-NEXT:    movd %eax, %xmm0
+; CHECK-SSE-NEXT:    movzbl %dil, %eax
+; CHECK-SSE-NEXT:    shll $23, %eax
+; CHECK-SSE-NEXT:    movl $285212672, %ecx # imm = 0x11000000
+; CHECK-SSE-NEXT:    subl %eax, %ecx
+; CHECK-SSE-NEXT:    movd %ecx, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fdiv_pow_shl_cnt32_okay:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    shll $23, %edi
-; CHECK-AVX-NEXT:    movl $285212672, %eax # imm = 0x11000000
-; CHECK-AVX-NEXT:    subl %edi, %eax
-; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
+; CHECK-AVX-NEXT:    movzbl %dil, %eax
+; CHECK-AVX-NEXT:    shll $23, %eax
+; CHECK-AVX-NEXT:    movl $285212672, %ecx # imm = 0x11000000
+; CHECK-AVX-NEXT:    subl %eax, %ecx
+; CHECK-AVX-NEXT:    vmovd %ecx, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nuw i32 1, %cnt
   %conv = uitofp i32 %shl to float

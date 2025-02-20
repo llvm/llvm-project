@@ -283,20 +283,23 @@ void InstrInfoEmitter::emitOperandNameMappings(
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "#undef GET_INSTRINFO_OPERAND_ENUM\n";
-  OS << "namespace llvm::" << Namespace << "::OpName {\n";
-  OS << "enum {\n";
+  OS << "namespace llvm::" << Namespace << " {\n";
+  OS << "enum class OpName {\n";
   for (const auto &[I, Op] : enumerate(OperandNameToID))
     OS << "  " << Op.first << " = " << I << ",\n";
-  OS << "  OPERAND_LAST = " << NumOperandNames << ",\n";
-  OS << "};\n";
-  OS << "} // end namespace llvm::" << Namespace << "::OpName\n";
+  OS << "  NUM_OPERAND_NAMES = " << NumOperandNames << ",\n";
+  OS << "}; // enum class OpName\n\n";
+  OS << "LLVM_READONLY\n";
+  OS << "int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name);\n";
+  OS << "} // end namespace llvm::" << Namespace << '\n';
   OS << "#endif //GET_INSTRINFO_OPERAND_ENUM\n\n";
 
   OS << "#ifdef GET_INSTRINFO_NAMED_OPS\n";
   OS << "#undef GET_INSTRINFO_NAMED_OPS\n";
   OS << "namespace llvm::" << Namespace << " {\n";
   OS << "LLVM_READONLY\n";
-  OS << "int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx) {\n";
+  OS << "int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name) {\n";
+  OS << "  assert(Name != OpName::NUM_OPERAND_NAMES);\n";
   if (NumOperandNames != 0) {
     assert(MaxOperandNo <= INT16_MAX &&
            "Too many operands for the operand name -> index table");
@@ -320,7 +323,8 @@ void InstrInfoEmitter::emitOperandNameMappings(
     for (const auto &[TableIndex, Entry] : enumerate(OperandMap)) {
       for (StringRef Name : Entry.second)
         OS << "  case " << Namespace << "::" << Name << ":\n";
-      OS << "    return OperandMap[" << TableIndex << "][NamedIdx];\n";
+      OS << "    return OperandMap[" << TableIndex
+         << "][static_cast<unsigned>(Name)];\n";
     }
     OS << "  default: return -1;\n";
     OS << "  }\n";
@@ -1240,7 +1244,7 @@ void InstrInfoEmitter::emitEnums(
   OS << "#undef GET_INSTRINFO_SCHED_ENUM\n";
   OS << "namespace llvm::" << Namespace << "::Sched {\n\n";
   OS << "  enum {\n";
-  auto ExplictClasses = SchedModels.explicit_classes();
+  auto ExplictClasses = SchedModels.explicitSchedClasses();
   for (const auto &[Idx, Class] : enumerate(ExplictClasses))
     OS << "    " << Class.Name << "\t= " << Idx << ",\n";
   OS << "    SCHED_LIST_END = " << ExplictClasses.size() << '\n';

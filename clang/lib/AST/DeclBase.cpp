@@ -438,7 +438,7 @@ bool Decl::isFileContextDecl() const {
 }
 
 bool Decl::isFlexibleArrayMemberLike(
-    ASTContext &Ctx, const Decl *D, QualType Ty,
+    const ASTContext &Ctx, const Decl *D, QualType Ty,
     LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
     bool IgnoreTemplateOrMacroSubstitution) {
   // For compatibility with existing code, we treat arrays of length 0 or
