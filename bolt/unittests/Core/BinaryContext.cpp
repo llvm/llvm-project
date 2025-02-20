@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/TargetSelect.h"
@@ -161,12 +162,44 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
       << "Wrong forward branch value\n";
 }
 
-TEST_P(BinaryContextTester, FlushOptionalOutOfRangePendingRelocCALL26) {
+TEST_P(BinaryContextTester,
+       FlushOptionalOutOfRangePendingRelocCALL26_ForcePatchOff) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
-  // This test checks that flushPendingRelocations skips flushing any optional
-  // pending relocations that cannot be encoded.
+  // Tests that flushPendingRelocations exits if any pending relocation is out
+  // of range and PatchEntries hasn't run. Pending relocations are added by
+  // scanExternalRefs, so this ensures that either all scanExternalRefs
+  // relocations were flushed or PatchEntries ran.
+
+  BinarySection &BS = BC->registerOrUpdateSection(
+      ".text", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
+  // Create symbol 'Func0x4'
+  MCSymbol *RelSymbol = BC->getOrCreateGlobalSymbol(4, "Func");
+  ASSERT_TRUE(RelSymbol);
+  BS.addPendingRelocation(Relocation{8, RelSymbol, ELF::R_AARCH64_CALL26, 0, 0},
+                          /*Optional*/ true);
+
+  SmallVector<char> Vect;
+  raw_svector_ostream OS(Vect);
+
+  // Resolve relocation symbol to a high value so encoding will be out of range.
+  EXPECT_EXIT(BS.flushPendingRelocations(
+                  OS, [&](const MCSymbol *S) { return 0x800000F; }),
+              ::testing::ExitedWithCode(1),
+              "BOLT-ERROR: Cannot fully run scanExternalRefs as pending "
+              "relocation for symbol Func0x4 is out-of-range. Cannot proceed "
+              "without using -force-patch");
+}
+
+TEST_P(BinaryContextTester,
+       FlushOptionalOutOfRangePendingRelocCALL26_ForcePatchOn) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // Tests that flushPendingRelocations can skip flushing any optional pending
+  // relocations that cannot be encoded, given that PatchEntries runs.
+  opts::ForcePatch = true;
 
   bool DebugFlagPrev = ::llvm::DebugFlag;
   ::llvm::DebugFlag = true;

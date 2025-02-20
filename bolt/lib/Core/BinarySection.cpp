@@ -12,6 +12,7 @@
 
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -22,8 +23,8 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
-extern cl::opt<bool> PrintRelocations;
 extern cl::opt<bool> HotData;
+extern cl::opt<bool> PrintRelocations;
 } // namespace opts
 
 uint64_t BinarySection::Count = 0;
@@ -184,6 +185,18 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
     // as part of an optimization.
     if (Optional && !Relocation::canEncodeValue(
                         Reloc.Type, Value, SectionAddress + Reloc.Offset)) {
+
+      // A successful run of 'scanExternalRefs' means that all pending
+      // relocations are flushed. Otherwise, PatchEntries should run.
+      if (!opts::ForcePatch) {
+        BC.errs()
+            << "BOLT-ERROR: Cannot fully run scanExternalRefs as pending "
+               "relocation for symbol "
+            << Reloc.Symbol->getName()
+            << " is out-of-range. Cannot proceed without using -force-patch\n";
+        exit(1);
+      }
+
       ++SkippedPendingRelocations;
       continue;
     }
