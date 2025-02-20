@@ -1,0 +1,7 @@
+# RUN: llvm-exegesis -mcpu=neoverse-v2 -mode=latency -opcode-name=ADDVv4i16v 2>&1 | FileCheck %s
+
+# Check that warning of not initializing registers is not printed
+# CHECK-NOT: setRegTo is not implemented, results will be unreliable
+
+# Check that we add ret (bx lr) instr to snippet
+# CHECK: assembled_snippet: {{.*}}C0035FD6
