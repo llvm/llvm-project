@@ -10,6 +10,8 @@
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -53,11 +55,29 @@ void UnintendedCharOstreamOutputCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CXXOperatorCallExpr>("x");
   const Expr *Value = Call->getArg(1);
-  diag(Call->getOperatorLoc(),
-       "%0 passed to 'operator<<' outputs as character instead of integer. "
-       "cast to 'unsigned' to print numeric value or cast to 'char' to print "
-       "as character")
-      << Value->getType() << Value->getSourceRange();
+  const SourceRange SourceRange = Value->getSourceRange();
+
+  DiagnosticBuilder Builder =
+      diag(Call->getOperatorLoc(),
+           "%0 passed to 'operator<<' outputs as character instead of integer. "
+           "cast to 'unsigned' to print numeric value or cast to 'char' to "
+           "print "
+           "as character")
+      << Value->getType() << SourceRange;
+
+  QualType T = Value->getType();
+  const Type *UnqualifiedDesugaredType = T->getUnqualifiedDesugaredType();
+
+  llvm::StringRef CastType;
+  if (UnqualifiedDesugaredType->isSpecificBuiltinType(BuiltinType::SChar))
+    CastType = "int";
+  else
+    CastType = "unsigned int";
+
+  Builder << FixItHint::CreateReplacement(
+      SourceRange, ("static_cast<" + CastType + ">(" +
+                    tooling::fixit::getText(*Value, *Result.Context) + ")")
+                       .str());
 }
 
 } // namespace clang::tidy::bugprone
