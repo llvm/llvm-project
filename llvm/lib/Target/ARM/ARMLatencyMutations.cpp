@@ -802,7 +802,7 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
             OP.getSubReg() == ARM::ssub_1)
           return 1;
     }
-  } else if (Register::isPhysicalRegister(RegID)) {
+  } else if (Register(RegID).isPhysical()) {
     // Note that when the producer is narrower, not all of the producers
     // may be present in the scheduling graph; somewhere earlier in the
     // compiler, an implicit def/use of the aliased full register gets
