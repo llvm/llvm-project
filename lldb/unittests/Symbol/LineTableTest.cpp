@@ -129,26 +129,21 @@ class LineTableTest : public testing::Test {
 
 class LineSequenceBuilder {
 public:
-  std::vector<std::unique_ptr<LineSequence>> Build() {
-    return std::move(m_sequences);
-  }
+  std::vector<LineTable::Sequence> Build() { return std::move(m_sequences); }
   enum Terminal : bool { Terminal = true };
   void Entry(addr_t addr, bool terminal = false) {
     LineTable::AppendLineEntryToSequence(
-        m_seq_up.get(), addr, /*line=*/1, /*column=*/0,
+        m_sequence, addr, /*line=*/1, /*column=*/0,
         /*file_idx=*/0,
         /*is_start_of_statement=*/false, /*is_start_of_basic_block=*/false,
         /*is_prologue_end=*/false, /*is_epilogue_begin=*/false, terminal);
-    if (terminal) {
-      m_sequences.push_back(std::move(m_seq_up));
-      m_seq_up = LineTable::CreateLineSequenceContainer();
-    }
+    if (terminal)
+      m_sequences.push_back(std::move(m_sequence));
   }
 
 private:
-  std::vector<std::unique_ptr<LineSequence>> m_sequences;
-  std::unique_ptr<LineSequence> m_seq_up =
-      LineTable::CreateLineSequenceContainer();
+  std::vector<LineTable::Sequence> m_sequences;
+  LineTable::Sequence m_sequence;
 };
 
 } // namespace
@@ -156,7 +151,7 @@ private:
 char FakeSymbolFile::ID;
 
 static llvm::Expected<FakeModuleFixture>
-CreateFakeModule(std::vector<std::unique_ptr<LineSequence>> line_sequences) {
+CreateFakeModule(std::vector<LineTable::Sequence> line_sequences) {
   Expected<TestFile> file = TestFile::fromYaml(R"(
 --- !ELF
 FileHeader:
