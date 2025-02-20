@@ -253,5 +253,20 @@ struct CopyAssign1 {
    CopyAssign1 & operator=(CopyAssign1 const &) = default;
 };
 
+}
 
+
+void test__builtin_trivially_relocate() {
+    struct S{ ~S();};
+    struct R {};
+    __builtin_trivially_relocate(); //expected-error {{too few arguments to function call, expected 3, have 0}}
+    __builtin_trivially_relocate(0, 0, 0, 0); //expected-error {{too many arguments to function call, expected 3, have 4}}
+    __builtin_trivially_relocate(0, 0, 0); //expected-error {{argument to '__builtin_trivially_relocate' must be a pointer}}
+    __builtin_trivially_relocate((const int*)0, 0, 0); //expected-error {{argument to '__builtin_trivially_relocate' must be non-const}}
+    __builtin_trivially_relocate((S*)0, 0, 0); //expected-error {{argument to '__builtin_trivially_relocate' must be relocatable}}
+    __builtin_trivially_relocate((int*)0, 0, 0); //expected-error {{first and second arguments to '__builtin_trivially_relocate' must be of the same type}}
+
+    __builtin_trivially_relocate((int*)0, (int*)0, (int*)0); // expected-error{{cannot initialize a value of type 'unsigned long' with an rvalue of type 'int *'}}
+    __builtin_trivially_relocate((int*)0, (int*)0, 0);
+    __builtin_trivially_relocate((R*)0, (R*)0, 0);
 }

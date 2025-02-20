@@ -12665,8 +12665,9 @@ def err_builtin_invalid_arg_type: Error<
   "%plural{[0,3]:type|:types}1 (was %4)">;
 
 def err_builtin_trivially_relocate_invalid_arg_type: Error <
-  "argument%select{s|||}0 to '__builtin_trivially_relocate' must be"
-  "%select{a pointer|non-const|relocatable|the same}0">;
+  "first%select{||| and second}0 argument%select{|||s}0 to "
+  "'__builtin_trivially_relocate' must be"
+  " %select{a pointer|non-const|relocatable|of the same type}0">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
