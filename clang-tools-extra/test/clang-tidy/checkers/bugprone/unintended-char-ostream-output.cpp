@@ -71,3 +71,23 @@ void template_based_on_ostream(B<int> &os) {
   // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to 'operator<<' outputs as character instead of integer
 }
 
+template<class T> void template_fn_1(T &os) {
+  unsigned char unsigned_value = 9;
+  os << unsigned_value;
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to 'operator<<' outputs as character instead of integer
+}
+template<class T> void template_fn_2(std::ostream &os) {
+  T unsigned_value = 9;
+  os << unsigned_value;
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to 'operator<<' outputs as character instead of integer
+}
+template<class T> void template_fn_3(std::ostream &os) {
+  T unsigned_value = 9;
+  os << unsigned_value;
+}
+void call_template_fn() {
+  A a{};
+  template_fn_1(a);
+  template_fn_2<unsigned char>(a);
+  template_fn_3<char>(a);
+}
