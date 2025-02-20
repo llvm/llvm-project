@@ -152,7 +152,7 @@ unsigned A15SDOptimizer::getDPRLaneFromSPR(unsigned SReg) {
 // Get the subreg type that is most likely to be coalesced
 // for an SPR register that will be used in VDUP32d pseudo.
 unsigned A15SDOptimizer::getPrefSPRLane(unsigned SReg) {
-  if (!Register::isVirtualRegister(SReg))
+  if (!Register(SReg).isVirtual())
     return getDPRLaneFromSPR(SReg);
 
   MachineInstr *MI = MRI->getVRegDef(SReg);
@@ -166,7 +166,7 @@ unsigned A15SDOptimizer::getPrefSPRLane(unsigned SReg) {
     SReg = MI->getOperand(1).getReg();
   }
 
-  if (Register::isVirtualRegister(SReg)) {
+  if (Register(SReg).isVirtual()) {
     if (MO->getSubReg() == ARM::ssub_1) return ARM::ssub_1;
     return ARM::ssub_0;
   }
@@ -598,7 +598,7 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
     // we can end up with multiple defs of this DPR.
 
     SmallVector<MachineInstr *, 8> DefSrcs;
-    if (!Register::isVirtualRegister(I))
+    if (!Register(I).isVirtual())
       continue;
     MachineInstr *Def = MRI->getVRegDef(I);
     if (!Def)
