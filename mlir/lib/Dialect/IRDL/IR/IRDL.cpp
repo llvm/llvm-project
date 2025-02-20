@@ -198,10 +198,10 @@ LogicalResult AttributesOp::verify() {
   for (size_t i = 0; i < numVariadicities; ++i) {
     if (variadicities[i].getValue() == Variadicity::variadic) {
       // auto test =
-      return emitOpError() << "requires attributes to have single or optional variadicity, but " << getAttributeValueNames()[i]
+      return emitOpError() << "requires attributes to have single or optional "
+                              "variadicity, but "
+                           << getAttributeValueNames()[i]
                            << " was specified as variadic.";
-
-
     }
   }
 
