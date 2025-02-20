@@ -282,6 +282,12 @@ TEST(SetOperationsTest, SetIntersects) {
   Set2 = {5, 6, 7};
   EXPECT_FALSE(set_intersects(Set1, Set2));
   EXPECT_FALSE(set_intersects(Set2, Set1));
+
+  // Check that intersecting with a null set returns false.
+  Set1.clear();
+  EXPECT_FALSE(set_intersects(Set1, Set2));
+  EXPECT_FALSE(set_intersects(Set2, Set1));
+  EXPECT_FALSE(set_intersects(Set1, Set1));
 }
 
 } // namespace

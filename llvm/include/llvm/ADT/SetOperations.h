@@ -157,6 +157,8 @@ bool set_is_subset(const S1Ty &S1, const S2Ty &S2) {
   return true;
 }
 
+namespace detail {
+
 template <class S1Ty, class S2Ty>
 bool set_intersects_impl(const S1Ty &S1, const S2Ty &S2) {
   for (const auto &E : S1)
@@ -165,13 +167,14 @@ bool set_intersects_impl(const S1Ty &S1, const S2Ty &S2) {
   return false;
 }
 
+} // namespace detail
+
 /// set_intersects(A, B) - Return true iff A ^ B is non empty
 template <class S1Ty, class S2Ty>
 bool set_intersects(const S1Ty &S1, const S2Ty &S2) {
   if (S1.size() < S2.size())
-    return set_intersects_impl(S1, S2);
-  else
-    return set_intersects_impl(S2, S1);
+    return detail::set_intersects_impl(S1, S2);
+  return detail::set_intersects_impl(S2, S1);
 }
 
 } // namespace llvm
