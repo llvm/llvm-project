@@ -13,7 +13,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
