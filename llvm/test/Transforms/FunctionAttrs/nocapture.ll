@@ -771,6 +771,40 @@ define i1 @captureICmpRev(ptr %x) {
   ret i1 %1
 }
 
+define i1 @captureICmpWrongPred(ptr %x) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FNATTRS-LABEL: define i1 @captureICmpWrongPred
+; FNATTRS-SAME: (ptr readnone [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
+; FNATTRS-NEXT:    ret i1 [[TMP1]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i1 @captureICmpWrongPred
+; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
+; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
+;
+  %1 = icmp slt ptr %x, null
+  ret i1 %1
+}
+
+define i1 @captureICmpWrongPredDereferenceableOrNull(ptr dereferenceable_or_null(1) %x) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FNATTRS-LABEL: define noundef i1 @captureICmpWrongPredDereferenceableOrNull
+; FNATTRS-SAME: (ptr readnone dereferenceable_or_null(1) [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
+; FNATTRS-NEXT:    ret i1 [[TMP1]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i1 @captureICmpWrongPredDereferenceableOrNull
+; ATTRIBUTOR-SAME: (ptr nofree readnone dereferenceable_or_null(1) [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
+; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
+;
+  %1 = icmp slt ptr %x, null
+  ret i1 %1
+}
+
 define i1 @nocaptureInboundsGEPICmp(ptr %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define i1 @nocaptureInboundsGEPICmp
