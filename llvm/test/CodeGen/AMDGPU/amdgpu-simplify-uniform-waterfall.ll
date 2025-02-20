@@ -122,6 +122,53 @@ exit:
   ret void
 }
 
+define protected amdgpu_kernel void @trivial_waterfall_multiple_icmp(ptr addrspace(1) %out) {
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_multiple_icmp(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
+; PASS-CHECK:       [[WHILE]]:
+; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
+; PASS-CHECK-NEXT:    [[NOT_DONE:%.*]] = xor i1 [[DONE]], true
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[NOT_DONE]])
+; PASS-CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[NOT_DONE]] to i64
+; PASS-CHECK-NEXT:    [[IS_DONE_1:%.*]] = icmp eq i64 [[TMP1]], 0
+; PASS-CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[NOT_DONE]] to i64
+; PASS-CHECK-NEXT:    [[IS_DONE_3:%.*]] = icmp eq i64 [[TMP0]], 0
+; PASS-CHECK-NEXT:    br i1 [[IS_DONE_1]], label %[[EXIT:.*]], label %[[IF]]
+; PASS-CHECK:       [[IF]]:
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[NOT_DONE]] to i64
+; PASS-CHECK-NEXT:    [[IS_DONE_4:%.*]] = icmp eq i64 [[TMP2]], 0
+; PASS-CHECK-NEXT:    br label %[[WHILE]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_multiple_icmp(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+entry:
+  br label %while
+
+while:
+  %done = phi i1 [ 0, %entry ], [ 1, %if ]
+  %not_done = xor i1 %done, true
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %not_done)
+  %is_done_1 = icmp eq i64 %ballot, 0
+  %is_done_2 = icmp eq i64 %ballot, 0
+  br i1 %is_done_1, label %exit, label %if
+
+if:
+  store i32 5, ptr addrspace(1) %out
+  %is_done_3 = icmp eq i64 %ballot, 0
+  br label %while
+
+exit:
+  ret void
+}
 
 declare i64 @llvm.amdgcn.ballot.i64(i1) #1
 !6 = !{i64 690}

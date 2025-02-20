@@ -96,12 +96,12 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
 bool AMDGPUUniformIntrinsicCombineImpl::run(Function &F) {
   bool IsChanged{false};
   Module *M = F.getParent();
-
+  
   // If none of the relevant intrinsics are declared, return early.
-  // if (!M->getFunction(Intrinsic::getName(Intrinsic::amdgcn_permlane64)) &&
-  //     !M->getFunction(Intrinsic::getName(Intrinsic::amdgcn_readfirstlane)) &&
-  //     !M->getFunction(Intrinsic::getName(Intrinsic::amdgcn_readlane)) &&
-  //     !M->getFunction(Intrinsic::getName(Intrinsic::amdgcn_ballot))) {
+  // if (!Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_permlane64, {}) &&
+  //     !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_readfirstlane, {}) &&
+  //     !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_readlane, {}) &&
+  //     !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_ballot, {})) {
   //   return false;
   // }
 
@@ -139,28 +139,21 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
     LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << "\n");
 
     // Look for a direct `icmp eq` use of the ballot result.
-    // FIXME: replace all the uses?
-    auto It = llvm::find_if(II.users(), [&](User *U) {
-      return match(U, m_ICmp(m_Specific(&II), m_Zero()));
-    });
+    bool Changed = false;
+    for (User *U : make_early_inc_range(II.users())) {
+      if (match(U, m_ICmp(m_Specific(&II), m_Zero()))) {
+        ICmpInst *ICmp = dyn_cast<ICmpInst>(U);
+        IRBuilder<> Builder(ICmp);
+        Value *ConvertedSrc = Builder.CreateZExtOrTrunc(Src, II.getType());
 
-    // Check if a match was found
-    if (It == II.user_end())
-      return false;
+        LLVM_DEBUG(dbgs() << "Replacing ballot result in icmp: " << *ICmp
+                          << " with " << *ConvertedSrc << "\n");
 
-    // Extract the matching `icmp` instruction
-    ICmpInst *ICmp = dyn_cast<ICmpInst>(*It);
-    IRBuilder<> Builder(ICmp);
-
-    // Convert ballot argument to match `icmp` operand type (i64)
-    Value *ConvertedSrc = Builder.CreateZExtOrTrunc(Src, II.getType());
-
-    LLVM_DEBUG(dbgs() << "Replacing ballot result in icmp: " << *ICmp
-                      << " with " << *ConvertedSrc << "\n");
-
-    // Replace `%ballot` in `icmp` with `ConvertedSrc`
-    ICmp->setOperand(0, ConvertedSrc);
-    return true;
+        ICmp->setOperand(0, ConvertedSrc);
+        Changed = true;
+      }
+    }
+    return Changed;
   }
   }
   return false;
