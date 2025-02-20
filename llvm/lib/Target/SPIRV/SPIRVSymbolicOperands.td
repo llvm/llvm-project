@@ -310,6 +310,7 @@ defm SPV_EXT_optnone : ExtensionOperand<113>;
 defm SPV_INTEL_joint_matrix : ExtensionOperand<114>;
 defm SPV_INTEL_float_controls2 : ExtensionOperand<115>;
 defm SPV_INTEL_bindless_images : ExtensionOperand<116>;
+defm SPV_INTEL_long_composites : ExtensionOperand<117>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -506,6 +507,7 @@ defm CooperativeMatrixBFloat16ComponentTypeINTEL : CapabilityOperand<6437, 0, 0,
 defm RoundToInfinityINTEL : CapabilityOperand<5582, 0, 0, [SPV_INTEL_float_controls2], []>;
 defm FloatingPointModeINTEL : CapabilityOperand<5583, 0, 0, [SPV_INTEL_float_controls2], []>;
 defm FunctionFloatControlINTEL : CapabilityOperand<5821, 0, 0, [SPV_INTEL_float_controls2], []>;
+defm LongCompositesINTEL : CapabilityOperand<6089, 0, 0, [SPV_INTEL_long_composites], []>;
 defm BindlessImagesINTEL : CapabilityOperand<6528, 0, 0, [SPV_INTEL_bindless_images], []>;
 
 //===----------------------------------------------------------------------===//
