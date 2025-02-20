@@ -1483,8 +1483,8 @@ bool GCNPassConfig::addInstSelector() {
     addPass(&SIFixSGPRCopiesLegacyID);
     addPass(createSILowerI1CopiesLegacyPass());
   }
-  // TODO-WAVETRANSFORM:
   // Else {
+  // TODO-WAVETRANSFORM:
   // When WaveTransform happens later, we do not need SIFixSGPRCopies.
   // We may want a different algorithm of LowerI1Copies, and maybe some
   // other lowering work needed?
@@ -1510,6 +1510,10 @@ bool GCNPassConfig::addLegalizeMachineIR() {
 }
 
 void GCNPassConfig::addPreRegBankSelect() {
+  // TODO-WAVETRANSFORM:
+  // GlobalISel does not run SIFixSGPRCopies and SILowerI1Copies.
+  // Equivalent work is done during GlobalISel, which indicates that
+  // GlobalISel need some change to support WaveTransform.
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
   addPass(createAMDGPUPostLegalizeCombiner(IsOptNone));
   addPass(createAMDGPUGlobalISelDivergenceLoweringPass());

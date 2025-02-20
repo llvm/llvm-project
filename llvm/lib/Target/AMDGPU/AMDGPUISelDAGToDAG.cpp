@@ -127,6 +127,10 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
   Mode = SIModeRegisterDefaults(MF.getFunction(), *Subtarget);
+  // When enabling WaveTransform, we set the following state initially
+  // to false before ISel, then set it to true after WaveTransform.
+  if (EnableWaveTransformCF)
+    MF.getInfo<SIMachineFunctionInfo>()->setWholeWaveControlFlow(false);
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 

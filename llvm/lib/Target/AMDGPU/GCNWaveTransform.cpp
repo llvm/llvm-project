@@ -79,6 +79,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
@@ -2220,6 +2221,8 @@ bool GCNWaveTransform::runOnMachineFunction(MachineFunction &MF) {
   // In some MIR tests, the MIR parser will set the NoPHIs property for the
   // test cases. We need to clear it here to avoid verifier errors.
   MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+
+  MF.getInfo<SIMachineFunctionInfo>()->setWholeWaveControlFlow(true);
 
   return true; // assume that we changed something
 }

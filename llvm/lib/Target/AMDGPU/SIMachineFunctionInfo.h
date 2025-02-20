@@ -391,8 +391,11 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   friend class GCNTargetMachine;
 
   // State of the MIR control-flow for this machine function.
-  // TODO-WAVETRANSFORM: this should be default to false, then set to true
-  // based upon when we convert control-flow into the whole-wave mode.
+  // TODO-WAVETRANSFORM: right now it is default to true assuming not using
+  // WaveTransform. We really want to default it to false, then set to true
+  // based upon when we convert control-flow into the whole-wave mode,
+  // however that breaks a bunch of existing tests, for example, on register
+  // coalescer.
   bool WholeWaveCF = true;
 
   // State of MODE register, assumed FP mode.
@@ -1065,7 +1068,7 @@ public:
 
   bool isWholeWaveControlFlow() const { return WholeWaveCF; }
 
-  void setWholeWaveControlFlow() { WholeWaveCF = true; }
+  void setWholeWaveControlFlow(bool WWCF) { WholeWaveCF = WWCF; }
 
   bool returnsVoid() const {
     return ReturnsVoid;
