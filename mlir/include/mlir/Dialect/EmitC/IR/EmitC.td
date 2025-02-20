@@ -798,6 +798,19 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
   let description = [{
     The `emitc.literal` operation produces an SSA value equal to some constant
     specified by an attribute.
+
+    Example:
+
+    ```mlir
+    %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+    %one = literal "1" : i32
+    "emitc.assign"(%x, %one) : (!emitc.lvalue<i32>, i32) -> ()
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v1;
+    v1 = 1;
+    ```
   }];
 
   let arguments = (ins StrAttr:$value);
