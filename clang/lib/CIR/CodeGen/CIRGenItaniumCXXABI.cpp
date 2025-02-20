@@ -718,7 +718,8 @@ struct CallEndCatch final : EHScopeStack::Cleanup {
     // here. For CIR, just let it pass since the cleanup is going
     // to be emitted on a later pass when lowering the catch region.
     // CGF.EmitRuntimeCallOrTryCall(getEndCatchFn(CGF.CGM));
-    CGF.getBuilder().create<cir::YieldOp>(*CGF.currSrcLoc);
+    if (!CGF.getBuilder().getBlock()->mightHaveTerminator())
+      CGF.getBuilder().create<cir::YieldOp>(*CGF.currSrcLoc);
   }
 };
 } // namespace
