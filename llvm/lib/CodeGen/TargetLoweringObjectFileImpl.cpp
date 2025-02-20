@@ -1599,37 +1599,28 @@ getCOFFSectionFlags(SectionKind K, const TargetMachine &TM) {
   bool isThumb = TM.getTargetTriple().getArch() == Triple::thumb;
 
   if (K.isMetadata())
-    Flags |=
-      COFF::IMAGE_SCN_MEM_DISCARDABLE;
+    Flags |= COFF::IMAGE_SCN_MEM_DISCARDABLE;
   else if (K.isExclude())
-    Flags |=
-      COFF::IMAGE_SCN_LNK_REMOVE | COFF::IMAGE_SCN_MEM_DISCARDABLE;
+    Flags |= COFF::IMAGE_SCN_LNK_REMOVE | COFF::IMAGE_SCN_MEM_DISCARDABLE;
   else if (K.isText())
     Flags |=
-      COFF::IMAGE_SCN_MEM_EXECUTE |
-      COFF::IMAGE_SCN_MEM_READ |
-      COFF::IMAGE_SCN_CNT_CODE |
-      (isThumb ? COFF::IMAGE_SCN_MEM_16BIT : (COFF::SectionCharacteristics)0);
+        COFF::IMAGE_SCN_MEM_EXECUTE | COFF::IMAGE_SCN_MEM_READ |
+        COFF::IMAGE_SCN_CNT_CODE |
+        (isThumb ? COFF::IMAGE_SCN_MEM_16BIT : (COFF::SectionCharacteristics)0);
   else if (K.isBSS())
-    Flags |=
-      COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA |
-      COFF::IMAGE_SCN_MEM_READ |
-      COFF::IMAGE_SCN_MEM_WRITE;
+    Flags |= COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
+             COFF::IMAGE_SCN_MEM_WRITE;
   else if (K.isThreadLocal())
-    Flags |=
-      COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-      COFF::IMAGE_SCN_MEM_READ |
-      COFF::IMAGE_SCN_MEM_WRITE;
+    Flags |= COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
+             COFF::IMAGE_SCN_MEM_WRITE;
   else if (K.isReadOnly() || K.isReadOnlyWithRel())
-    Flags |=
-      COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-      COFF::IMAGE_SCN_MEM_READ;
+    Flags |= COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ;
   else if (K.isWriteable())
-    Flags |=
-      COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-      COFF::IMAGE_SCN_MEM_READ |
-      COFF::IMAGE_SCN_MEM_WRITE;
-
+    Flags |= COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
+             COFF::IMAGE_SCN_MEM_WRITE;
+  else if (K.isShared())
+    Flags |= COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE |
+             COFF::IMAGE_SCN_MEM_SHARED;
   return Flags;
 }
 

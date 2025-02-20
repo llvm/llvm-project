@@ -23,7 +23,8 @@ class SectionKind {
   enum Kind {
     /// Metadata - Debug info sections or other metadata.
     Metadata,
-
+    /// Shared 
+    Shared,
     /// Exclude - This section will be excluded from the final executable or
     /// shared library. Only valid for ELF / COFF targets.
     Exclude,
@@ -153,6 +154,7 @@ public:
   bool isWriteable() const {
     return isThreadLocal() || isGlobalWriteableData();
   }
+  bool isShared() const { return K == Shared; }
 
   bool isThreadLocal() const {
     return K == ThreadData || K == ThreadBSS || K == ThreadBSSLocal;
@@ -190,6 +192,7 @@ public:
   static SectionKind getText() { return get(Text); }
   static SectionKind getExecuteOnly() { return get(ExecuteOnly); }
   static SectionKind getReadOnly() { return get(ReadOnly); }
+  static SectionKind getShared() { return get(Shared); }
   static SectionKind getMergeable1ByteCString() {
     return get(Mergeable1ByteCString);
   }

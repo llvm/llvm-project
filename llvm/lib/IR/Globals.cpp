@@ -447,11 +447,13 @@ bool GlobalValue::canBeOmittedFromSymbolTable() const {
 GlobalVariable::GlobalVariable(Type *Ty, bool constant, LinkageTypes Link,
                                Constant *InitVal, const Twine &Name,
                                ThreadLocalMode TLMode, unsigned AddressSpace,
-                               bool isExternallyInitialized)
+                               bool isExternallyInitialized, bool isExecute,
+                               bool isShared)
     : GlobalObject(Ty, Value::GlobalVariableVal, AllocMarker, Link, Name,
                    AddressSpace),
       isConstantGlobal(constant),
-      isExternallyInitializedConstant(isExternallyInitialized) {
+      isExternallyInitializedConstant(isExternallyInitialized),
+      isExecuteGlobal(isExecute), isSharedGlobal(isShared) {
   assert(!Ty->isFunctionTy() && PointerType::isValidElementType(Ty) &&
          "invalid type for global variable");
   setThreadLocalMode(TLMode);
@@ -469,12 +471,13 @@ GlobalVariable::GlobalVariable(Module &M, Type *Ty, bool constant,
                                const Twine &Name, GlobalVariable *Before,
                                ThreadLocalMode TLMode,
                                std::optional<unsigned> AddressSpace,
-                               bool isExternallyInitialized)
+                               bool isExternallyInitialized, bool isExecute,
+                               bool isShared)
     : GlobalVariable(Ty, constant, Link, InitVal, Name, TLMode,
                      AddressSpace
                          ? *AddressSpace
                          : M.getDataLayout().getDefaultGlobalsAddressSpace(),
-                     isExternallyInitialized) {
+                     isExternallyInitialized, isExecute, isShared) {
   if (Before)
     Before->getParent()->insertGlobalVariable(Before->getIterator(), this);
   else

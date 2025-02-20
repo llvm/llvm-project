@@ -3836,6 +3836,9 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   if (Global->hasAttr<CPUDispatchAttr>())
     return emitCPUDispatchDefinition(GD);
 
+  if (Global->hasAttr<SectionAttr>())
+    printf("here \n");
+
   // If this is CUDA, be selective about which declarations we emit.
   // Non-constexpr non-lambda implicit host device functions are not emitted
   // unless they are used on device side.
@@ -5696,6 +5699,10 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     const ASTContext::SectionInfo &SI = Context.SectionInfos[SA->getName()];
     if ((SI.SectionFlags & ASTContext::PSF_Write) == 0)
       GV->setConstant(true);
+    if ((SI.SectionFlags & ASTContext::PSF_Execute) != 0)
+      GV->setExecute(true);
+    if ((SI.SectionFlags & ASTContext::PSF_Shared) != 0)
+      GV->setShared(true);
   }
 
   CharUnits AlignVal = getContext().getDeclAlign(D);
