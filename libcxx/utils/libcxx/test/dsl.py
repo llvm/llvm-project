@@ -274,12 +274,15 @@ def hasAnyLocale(config, locales):
     depending on the %{exec} substitution.
     """
 
-    # Convert the locale names into C string literals, by escaping \
-    # and " and wrapping each one in double quotes.
-    name_string_literals = ", ".join(
-        '"' + locale.replace("\\", r"\\").replace('"', r"\"") + '"'
+    # Convert the locale names into C string literals. We expect all currently
+    # known locale names to be printable ASCII and not contain awkward
+    # characters like \ or ", so this should be trivial.
+    assert all(
+        0x20 <= ord(ch) <= 0x7E and ch not in {'"', "\\"}
         for locale in locales
+        for ch in locale
     )
+    name_string_literals = ", ".join('"' + locale + '"' for locale in locales)
 
     program = (
         """
