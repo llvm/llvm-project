@@ -33,7 +33,6 @@
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/IR/PassManager.h"
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -61,29 +60,7 @@ class VirtRegMap;
 class LLVM_LIBRARY_VISIBILITY RAGreedy : public RegAllocBase,
                                          private LiveRangeEdit::Delegate {
 public:
-  struct RequiredAnalyses {
-    VirtRegMap *VRM = nullptr;
-    LiveIntervals *LIS = nullptr;
-    LiveRegMatrix *LRM = nullptr;
-    SlotIndexes *Indexes = nullptr;
-    MachineBlockFrequencyInfo *MBFI = nullptr;
-    MachineDominatorTree *DomTree = nullptr;
-    MachineLoopInfo *Loops = nullptr;
-    MachineOptimizationRemarkEmitter *ORE = nullptr;
-    EdgeBundles *Bundles = nullptr;
-    SpillPlacement *SpillPlacer = nullptr;
-    LiveDebugVariables *DebugVars = nullptr;
-
-    // Used by InlineSpiller
-    LiveStacks *LSS;
-    // Proxies for eviction and priority advisors
-    RegAllocEvictionAdvisorProvider *EvictProvider;
-    RegAllocPriorityAdvisorProvider *PriorityProvider;
-
-    RequiredAnalyses() {}
-    RequiredAnalyses(Pass &P);
-    RequiredAnalyses(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
-  };
+  struct RequiredAnalyses;
 
   // Interface to eviction advisers
   /// Track allocation stage and eviction loop prevention during allocation.

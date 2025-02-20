@@ -183,6 +183,30 @@ RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
   initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
 }
 
+struct RAGreedy::RequiredAnalyses {
+  VirtRegMap *VRM = nullptr;
+  LiveIntervals *LIS = nullptr;
+  LiveRegMatrix *LRM = nullptr;
+  SlotIndexes *Indexes = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+  MachineDominatorTree *DomTree = nullptr;
+  MachineLoopInfo *Loops = nullptr;
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
+  EdgeBundles *Bundles = nullptr;
+  SpillPlacement *SpillPlacer = nullptr;
+  LiveDebugVariables *DebugVars = nullptr;
+
+  // Used by InlineSpiller
+  LiveStacks *LSS;
+  // Proxies for eviction and priority advisors
+  RegAllocEvictionAdvisorProvider *EvictProvider;
+  RegAllocPriorityAdvisorProvider *PriorityProvider;
+
+  RequiredAnalyses() {}
+  RequiredAnalyses(Pass &P);
+  RequiredAnalyses(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
 RAGreedy::RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F)
     : RegAllocBase(F) {
   VRM = Analyses.VRM;
