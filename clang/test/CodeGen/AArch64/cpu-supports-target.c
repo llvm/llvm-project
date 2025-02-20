@@ -91,8 +91,8 @@
 // CHECK-NEXT:    br label %[[RETURN]]
 // CHECK:       [[IF_ELSE16]]:
 // CHECK-NEXT:    [[TMP36:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP37:%.*]] = and i64 [[TMP36]], 10836786603360256
-// CHECK-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[TMP37]], 10836786603360256
+// CHECK-NEXT:    [[TMP37:%.*]] = and i64 [[TMP36]], 1688849860263936
+// CHECK-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[TMP37]], 1688849860263936
 // CHECK-NEXT:    [[TMP39:%.*]] = and i1 true, [[TMP38]]
 // CHECK-NEXT:    br i1 [[TMP39]], label %[[IF_THEN17:.*]], label %[[IF_ELSE18:.*]]
 // CHECK:       [[IF_THEN17]]:
@@ -142,7 +142,7 @@ int check_all_features() {
     return 8;
   else if (__builtin_cpu_supports("sme+memtag+sb"))
     return 9;
-  else if (__builtin_cpu_supports("predres+ssbs+bti+ls64"))
+  else if (__builtin_cpu_supports("ssbs+bti"))
     return 10;
   else if (__builtin_cpu_supports("wfxt+sme-f64f64"))
     return 11;

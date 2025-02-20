@@ -18,6 +18,7 @@
 #include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 #include <algorithm>
 
 namespace llvm::sandboxir {
@@ -85,11 +86,13 @@ public:
   /// Update the map to reflect that \p Origs got vectorized into \p Vec.
   void registerVector(ArrayRef<Value *> Origs, Value *Vec) {
     auto &OrigToLaneMap = VectorToOrigLaneMap[Vec];
-    for (auto [Lane, Orig] : enumerate(Origs)) {
+    unsigned Lane = 0;
+    for (Value *Orig : Origs) {
       auto Pair = OrigToVectorMap.try_emplace(Orig, Vec);
       assert(Pair.second && "Orig already exists in the map!");
       (void)Pair;
       OrigToLaneMap[Orig] = Lane;
+      Lane += VecUtils::getNumLanes(Orig);
     }
   }
   void clear() {

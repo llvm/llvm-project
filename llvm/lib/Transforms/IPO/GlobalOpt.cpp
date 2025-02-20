@@ -95,20 +95,11 @@ STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
 STATISTIC(NumGlobalArraysPadded,
           "Number of global arrays padded to alignment boundary");
 
-// FIXME:
-// Optimizing non-FMV callers is causing a regression in the llvm test suite,
-// specifically a 'predres' version is unexpectedly trapping on GravitonG4.
-// My explanation is that when the caller in not a versioned function, the
-// compiler exclusively relies on the command line option, or target attribute
-// to deduce whether a feature is available. However, there is no guarantee
-// that in reality the host supports those implied features, which arguably
-// is a user error. This option allows disabling the optimization as a short
-// term workaround to keep the bots green.
 static cl::opt<bool>
     OptimizeNonFMVCallers("optimize-non-fmv-callers",
                           cl::desc("Statically resolve calls to versioned "
                                    "functions from non-versioned callers."),
-                          cl::init(false), cl::Hidden);
+                          cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
@@ -2073,7 +2064,7 @@ static bool destArrayCanBeWidened(CallInst *CI) {
   return true;
 }
 
-static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar, Function *F,
+static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar,
                                            unsigned NumBytesToPad,
                                            unsigned NumBytesToCopy) {
   if (!OldVar->hasInitializer())
@@ -2092,10 +2083,10 @@ static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar, Function *F,
     StrData.push_back('\0');
   auto Arr = ArrayRef(StrData.data(), NumBytesToCopy + NumBytesToPad);
   // Create new padded version of global variable.
-  Constant *SourceReplace = ConstantDataArray::get(F->getContext(), Arr);
+  Constant *SourceReplace = ConstantDataArray::get(OldVar->getContext(), Arr);
   GlobalVariable *NewGV = new GlobalVariable(
-      *(F->getParent()), SourceReplace->getType(), true, OldVar->getLinkage(),
-      SourceReplace, SourceReplace->getName());
+      *(OldVar->getParent()), SourceReplace->getType(), true,
+      OldVar->getLinkage(), SourceReplace, SourceReplace->getName());
   // Copy any other attributes from original global variable
   // e.g. unamed_addr
   NewGV->copyAttributesFrom(OldVar);
@@ -2123,13 +2114,13 @@ static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
   }
 }
 
-static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
+static bool tryWidenGlobalArrayAndDests(GlobalVariable *SourceVar,
                                         const unsigned NumBytesToPad,
                                         const unsigned NumBytesToCopy,
                                         ConstantInt *BytesToCopyOp,
                                         ConstantDataArray *SourceDataArray) {
   auto *NewSourceGV =
-      widenGlobalVariable(SourceVar, F, NumBytesToPad, NumBytesToCopy);
+      widenGlobalVariable(SourceVar, NumBytesToPad, NumBytesToCopy);
   if (!NewSourceGV)
     return false;
 
@@ -2167,8 +2158,6 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
       continue;
 
-    Function *F = CI->getCalledFunction();
-
     auto *BytesToCopyOp = dyn_cast<ConstantInt>(CI->getArgOperand(2));
     if (!BytesToCopyOp)
       continue;
@@ -2195,10 +2184,12 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     if (NumElementsToCopy != DZSize || DZSize != SZSize)
       continue;
 
-    unsigned NumBytesToPad = GetTTI(*F).getNumBytesToPadGlobalArray(
-        NumBytesToCopy, SourceDataArray->getType());
+    unsigned NumBytesToPad =
+        GetTTI(*CI->getFunction())
+            .getNumBytesToPadGlobalArray(NumBytesToCopy,
+                                         SourceDataArray->getType());
     if (NumBytesToPad) {
-      return tryWidenGlobalArrayAndDests(F, GV, NumBytesToPad, NumBytesToCopy,
+      return tryWidenGlobalArrayAndDests(GV, NumBytesToPad, NumBytesToCopy,
                                          BytesToCopyOp, SourceDataArray);
     }
   }

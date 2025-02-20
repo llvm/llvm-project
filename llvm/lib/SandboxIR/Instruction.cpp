@@ -129,7 +129,7 @@ void Instruction::insertBefore(Instruction *BeforeI) {
 
   // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
-    I->insertBefore(BeforeTopI);
+    I->insertBefore(BeforeTopI->getIterator());
 }
 
 void Instruction::insertAfter(Instruction *AfterI) {

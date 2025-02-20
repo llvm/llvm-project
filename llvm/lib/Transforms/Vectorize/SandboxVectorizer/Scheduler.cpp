@@ -77,14 +77,36 @@ void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
   // Set nodes as "scheduled" and decrement the UnsceduledSuccs counter of all
   // dependency predecessors.
   for (DGNode *N : Bndl) {
-    N->setScheduled(true);
     for (auto *DepN : N->preds(DAG)) {
-      // TODO: preds() should not return nullptr.
-      if (DepN == nullptr)
-        continue;
       DepN->decrUnscheduledSuccs();
-      if (DepN->ready())
+      if (DepN->ready() && !DepN->scheduled())
         ReadyList.insert(DepN);
+    }
+    N->setScheduled(true);
+  }
+}
+
+void Scheduler::notifyCreateInstr(Instruction *I) {
+  // The DAG notifier should have run by now.
+  auto *N = DAG.getNode(I);
+  // If there is no DAG node for `I` it means that this is out of scope for the
+  // DAG and as such out of scope for the scheduler too, so nothing to do.
+  if (N == nullptr)
+    return;
+  // If the instruction is inserted below the top-of-schedule then we mark it as
+  // "scheduled".
+  bool IsScheduled = ScheduleTopItOpt &&
+                     *ScheduleTopItOpt != I->getParent()->end() &&
+                     (*ScheduleTopItOpt.value()).comesBefore(I);
+  if (IsScheduled)
+    N->setScheduled(true);
+  // If the new instruction is above the top of schedule we need to remove its
+  // dependency predecessors from the ready list and increment their
+  // `UnscheduledSuccs` counters.
+  if (!IsScheduled) {
+    for (auto *PredN : N->preds(DAG)) {
+      ReadyList.remove(PredN);
+      PredN->incrUnscheduledSuccs();
     }
   }
 }
@@ -166,22 +188,52 @@ Scheduler::getBndlSchedState(ArrayRef<Instruction *> Instrs) const {
 }
 
 void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
+  //                                |  Legend: N: DGNode
+  //  N <- DAGInterval.top()        |          B: SchedBundle
+  //  N                             |          *: Contains instruction in Instrs
+  //  B <- TopI (Top of schedule)   +-------------------------------------------
+  //  B
+  //  B *
+  //  B
+  //  B * <- LowestI (Lowest in Instrs)
+  //  B
+  //  N
+  //  N
+  //  N <- DAGInterval.bottom()
+  //
   Instruction *TopI = &*ScheduleTopItOpt.value();
   Instruction *LowestI = VecUtils::getLowest(Instrs);
   // Destroy the schedule bundles from LowestI all the way to the top.
   for (auto *I = LowestI, *E = TopI->getPrevNode(); I != E;
        I = I->getPrevNode()) {
     auto *N = DAG.getNode(I);
+    if (N == nullptr)
+      continue;
     if (auto *SB = N->getSchedBundle())
       eraseBundle(SB);
   }
-  // TODO: For now we clear the DAG. Trim view once it gets implemented.
-  Bndls.clear();
-  DAG.clear();
-
-  // Since we are scheduling NewRegion from scratch, we clear the ready lists.
-  // The nodes currently in the list may not be ready after clearing the View.
+  // The DAG Nodes contain state like the number of UnscheduledSuccs and the
+  // Scheduled flag. We need to reset their state. We need to do this for all
+  // nodes from LowestI to the top of the schedule. DAG Nodes that are above the
+  // top of schedule that depend on nodes that got reset need to have their
+  // UnscheduledSuccs adjusted.
+  Interval<Instruction> ResetIntvl(TopI, LowestI);
+  for (Instruction &I : ResetIntvl) {
+    auto *N = DAG.getNode(&I);
+    N->resetScheduleState();
+    // Recompute UnscheduledSuccs for nodes not only in ResetIntvl but even for
+    // nodes above the top of schedule.
+    for (auto *PredN : N->preds(DAG))
+      PredN->incrUnscheduledSuccs();
+  }
+  // Refill the ready list by visiting all nodes from the top of DAG to LowestI.
   ReadyList.clear();
+  Interval<Instruction> RefillIntvl(DAG.getInterval().top(), LowestI);
+  for (Instruction &I : RefillIntvl) {
+    auto *N = DAG.getNode(&I);
+    if (N->ready())
+      ReadyList.insert(N);
+  }
 }
 
 bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
@@ -189,7 +241,19 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
                 [Instrs](Instruction *I) {
                   return I->getParent() == (*Instrs.begin())->getParent();
                 }) &&
-         "Instrs not in the same BB!");
+         "Instrs not in the same BB, should have been rejected by Legality!");
+  // TODO: For now don't cross BBs.
+  if (!DAG.getInterval().empty()) {
+    auto *BB = DAG.getInterval().top()->getParent();
+    if (any_of(Instrs, [BB](auto *I) { return I->getParent() != BB; }))
+      return false;
+  }
+  if (ScheduledBB == nullptr)
+    ScheduledBB = Instrs[0]->getParent();
+  // We don't support crossing BBs for now.
+  if (any_of(Instrs,
+             [this](Instruction *I) { return I->getParent() != ScheduledBB; }))
+    return false;
   auto SchedState = getBndlSchedState(Instrs);
   switch (SchedState) {
   case BndlSchedState::FullyScheduled:
@@ -200,19 +264,13 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // top-most part of the schedule that includes the instrs in the bundle and
     // re-schedule.
     trimSchedule(Instrs);
-    [[fallthrough]];
+    ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
+    return tryScheduleUntil(Instrs);
   case BndlSchedState::NoneScheduled: {
     // TODO: Set the window of the DAG that we are interested in.
-    // We start scheduling at the bottom instr of Instrs.
-    ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
-
-    // TODO: For now don't cross BBs.
-    if (!DAG.getInterval().empty()) {
-      auto *BB = DAG.getInterval().top()->getParent();
-      if (any_of(Instrs, [BB](auto *I) { return I->getParent() != BB; }))
-        return false;
-    }
-
+    if (!ScheduleTopItOpt)
+      // We start scheduling at the bottom instr of Instrs.
+      ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);
     // Add nodes to ready list.
@@ -232,6 +290,12 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
 void Scheduler::dump(raw_ostream &OS) const {
   OS << "ReadyList:\n";
   ReadyList.dump(OS);
+  OS << "Top of schedule: ";
+  if (ScheduleTopItOpt)
+    OS << **ScheduleTopItOpt;
+  else
+    OS << "Empty";
+  OS << "\n";
 }
 void Scheduler::dump() const { dump(dbgs()); }
 #endif // NDEBUG

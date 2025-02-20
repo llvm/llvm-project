@@ -305,3 +305,19 @@ OpenACCUpdateConstruct::Create(const ASTContext &C, SourceLocation Start,
       new (Mem) OpenACCUpdateConstruct(Start, DirectiveLoc, End, Clauses);
   return Inst;
 }
+
+OpenACCAtomicConstruct *
+OpenACCAtomicConstruct::CreateEmpty(const ASTContext &C) {
+  void *Mem = C.Allocate(sizeof(OpenACCAtomicConstruct));
+  auto *Inst = new (Mem) OpenACCAtomicConstruct(EmptyShell{});
+  return Inst;
+}
+
+OpenACCAtomicConstruct *OpenACCAtomicConstruct::Create(
+    const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+    OpenACCAtomicKind AtKind, SourceLocation End, Stmt *AssociatedStmt) {
+  void *Mem = C.Allocate(sizeof(OpenACCAtomicConstruct));
+  auto *Inst = new (Mem)
+      OpenACCAtomicConstruct(Start, DirectiveLoc, AtKind, End, AssociatedStmt);
+  return Inst;
+}

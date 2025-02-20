@@ -2469,10 +2469,10 @@ define <8 x i32> @combine_unneeded_subvector1(<8 x i32> %a) {
 ;
 ; AVX2-FAST-ALL-LABEL: combine_unneeded_subvector1:
 ; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [7,6,5,4,7,6,5,4]
 ; AVX2-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-FAST-ALL-NEXT:    retq
 ;
 ; AVX2-FAST-PERLANE-LABEL: combine_unneeded_subvector1:

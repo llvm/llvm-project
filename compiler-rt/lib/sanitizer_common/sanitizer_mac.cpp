@@ -1203,13 +1203,14 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
   const uptr left_padding =
       Max<uptr>(granularity, 1ULL << min_shadow_base_alignment);
 
-  uptr space_size = shadow_size_bytes + left_padding;
+  uptr space_size = shadow_size_bytes;
 
   uptr largest_gap_found = 0;
   uptr max_occupied_addr = 0;
+
   VReport(2, "FindDynamicShadowStart, space_size = %p\n", (void *)space_size);
   uptr shadow_start =
-      FindAvailableMemoryRange(space_size, alignment, granularity,
+      FindAvailableMemoryRange(space_size, alignment, left_padding,
                                &largest_gap_found, &max_occupied_addr);
   // If the shadow doesn't fit, restrict the address space to make it fit.
   if (shadow_start == 0) {
@@ -1229,9 +1230,9 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
     }
     RestrictMemoryToMaxAddress(new_max_vm);
     high_mem_end = new_max_vm - 1;
-    space_size = (high_mem_end >> shadow_scale) + left_padding;
+    space_size = (high_mem_end >> shadow_scale);
     VReport(2, "FindDynamicShadowStart, space_size = %p\n", (void *)space_size);
-    shadow_start = FindAvailableMemoryRange(space_size, alignment, granularity,
+    shadow_start = FindAvailableMemoryRange(space_size, alignment, left_padding,
                                             nullptr, nullptr);
     if (shadow_start == 0) {
       Report("Unable to find a memory range after restricting VM.\n");
@@ -1272,10 +1273,15 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
     mach_msg_type_number_t count = kRegionInfoSize;
     kr = mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
                                 (vm_region_info_t)&vminfo, &count);
-    if (kr == KERN_INVALID_ADDRESS) {
+
+    // There are cases where going beyond the processes' max vm does
+    // not return KERN_INVALID_ADDRESS so we check for going beyond that
+    // max address as well.
+    if (kr == KERN_INVALID_ADDRESS || address > max_vm_address) {
       // No more regions beyond "address", consider the gap at the end of VM.
       address = max_vm_address;
       vmsize = 0;
+      kr = -1;  // break after this iteration.
     } else {
       if (max_occupied_addr) *max_occupied_addr = address + vmsize;
     }

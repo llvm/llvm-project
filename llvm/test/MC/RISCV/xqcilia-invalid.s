@@ -1,10 +1,11 @@
 # Xqcilia - Qualcomm uC Large Immediate Arithmetic extension
 # RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcilia < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-IMM %s
+# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS,CHECK-IMM %s
 # RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcilia < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-EXT %s
+# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS,CHECK-EXT %s
 
-# CHECK: :[[@LINE+1]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.e.addai 9, 33554432
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -17,7 +18,8 @@ qc.e.addai x9, 20485546494
 qc.e.addai x9, 33554432
 
 
-# CHECK: :[[@LINE+1]]:16: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:16: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:16: error: invalid operand for instruction
 qc.e.addi x10, 9, 554432
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -30,7 +32,8 @@ qc.e.addi x10, x9, 335544312
 qc.e.addi x10, x9, 554432
 
 
-# CHECK: :[[@LINE+1]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.e.andai 9, 33554432
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -43,7 +46,8 @@ qc.e.andai x9, 20494437494
 qc.e.andai x9, 33554432
 
 
-# CHECK: :[[@LINE+1]]:16: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:16: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:16: error: invalid operand for instruction
 qc.e.andi x10, 9, 554432
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -56,7 +60,8 @@ qc.e.andi x10, x9, 335544312
 qc.e.andi x10, x9, 554432
 
 
-# CHECK: :[[@LINE+1]]:11: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:11: error: invalid operand for instruction
 qc.e.orai 9, 33554432
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -69,7 +74,8 @@ qc.e.orai x9, 20494437494
 qc.e.orai x9, 33554432
 
 
-# CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.e.ori x10, 9, 554432
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -83,7 +89,8 @@ qc.e.ori x10, x9, 554432
 
 
 
-# CHECK: :[[@LINE+1]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.e.xorai 9, 33554432
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -96,7 +103,8 @@ qc.e.xorai x9, 20494437494
 qc.e.xorai x9, 33554432
 
 
-# CHECK: :[[@LINE+1]]:16: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:16: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:16: error: invalid operand for instruction
 qc.e.xori x10, 9, 554432
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction

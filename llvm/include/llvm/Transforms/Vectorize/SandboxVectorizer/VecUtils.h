@@ -111,10 +111,12 @@ public:
     return LowestI;
   }
   /// \Returns the lowest instruction in \p Vals, or nullptr if no instructions
-  /// are found or if not in the same BB.
-  static Instruction *getLowest(ArrayRef<Value *> Vals) {
-    // Find the first Instruction in Vals.
-    auto It = find_if(Vals, [](Value *V) { return isa<Instruction>(V); });
+  /// are found. Skips instructions not in \p BB.
+  static Instruction *getLowest(ArrayRef<Value *> Vals, BasicBlock *BB) {
+    // Find the first Instruction in Vals that is also in `BB`.
+    auto It = find_if(Vals, [BB](Value *V) {
+      return isa<Instruction>(V) && cast<Instruction>(V)->getParent() == BB;
+    });
     // If we couldn't find an instruction return nullptr.
     if (It == Vals.end())
       return nullptr;
@@ -122,15 +124,14 @@ public:
     // Now look for the lowest instruction in Vals starting from one position
     // after FirstI.
     Instruction *LowestI = FirstI;
-    auto *LowestBB = LowestI->getParent();
     for (auto *V : make_range(std::next(It), Vals.end())) {
       auto *I = dyn_cast<Instruction>(V);
       // Skip non-instructions.
       if (I == nullptr)
         continue;
-      // If the instructions are in different BBs return nullptr.
-      if (I->getParent() != LowestBB)
-        return nullptr;
+      // Skips instructions not in \p BB.
+      if (I->getParent() != BB)
+        continue;
       // If `LowestI` comes before `I` then `I` is the new lowest.
       if (LowestI->comesBefore(I))
         LowestI = I;

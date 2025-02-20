@@ -14,8 +14,6 @@
 
 #include "InterferenceCache.h"
 #include "RegAllocBase.h"
-#include "RegAllocEvictionAdvisor.h"
-#include "RegAllocPriorityAdvisor.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -29,6 +27,7 @@
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/Spiller.h"
@@ -359,7 +358,7 @@ private:
                                     BlockFrequency &BestCost,
                                     unsigned &NumCands, bool IgnoreCSR);
   /// Perform region splitting.
-  unsigned doRegionSplit(const LiveInterval &VirtReg, unsigned BestCand,
+  Register doRegionSplit(const LiveInterval &VirtReg, unsigned BestCand,
                          bool HasCompact, SmallVectorImpl<Register> &NewVRegs);
   /// Try to split VirtReg around physical Hint register.
   bool trySplitAroundHintReg(MCPhysReg Hint, const LiveInterval &VirtReg,
@@ -372,15 +371,15 @@ private:
                                    uint8_t &CostPerUseLimit,
                                    SmallVectorImpl<Register> &NewVRegs);
   void initializeCSRCost();
-  unsigned tryBlockSplit(const LiveInterval &, AllocationOrder &,
+  Register tryBlockSplit(const LiveInterval &, AllocationOrder &,
                          SmallVectorImpl<Register> &);
-  unsigned tryInstructionSplit(const LiveInterval &, AllocationOrder &,
+  Register tryInstructionSplit(const LiveInterval &, AllocationOrder &,
                                SmallVectorImpl<Register> &);
-  unsigned tryLocalSplit(const LiveInterval &, AllocationOrder &,
+  Register tryLocalSplit(const LiveInterval &, AllocationOrder &,
                          SmallVectorImpl<Register> &);
-  unsigned trySplit(const LiveInterval &, AllocationOrder &,
+  Register trySplit(const LiveInterval &, AllocationOrder &,
                     SmallVectorImpl<Register> &, const SmallVirtRegSet &);
-  unsigned tryLastChanceRecoloring(const LiveInterval &, AllocationOrder &,
+  Register tryLastChanceRecoloring(const LiveInterval &, AllocationOrder &,
                                    SmallVectorImpl<Register> &,
                                    SmallVirtRegSet &, RecoloringStack &,
                                    unsigned);

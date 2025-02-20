@@ -33,6 +33,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -732,7 +733,7 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
   RetVal->takeName(&I);
 
   // Try to add no-overflow flags to the final value.
-  if (isa<OverflowingBinaryOperator>(RetVal)) {
+  if (isa<BinaryOperator>(RetVal)) {
     bool HasNSW = false;
     bool HasNUW = false;
     if (isa<OverflowingBinaryOperator>(&I)) {
@@ -3517,7 +3518,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   for (Instruction &Instr : llvm::make_early_inc_range(*FreeInstrBB)) {
     if (&Instr == FreeInstrBBTerminator)
       break;
-    Instr.moveBeforePreserving(TI);
+    Instr.moveBeforePreserving(TI->getIterator());
   }
   assert(FreeInstrBB->size() == 1 &&
          "Only the branch instruction should remain");
@@ -4069,6 +4070,49 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   return nullptr;
 }
 
+static Value *foldFrexpOfSelect(ExtractValueInst &EV, IntrinsicInst *FrexpCall,
+                                SelectInst *SelectInst,
+                                InstCombiner::BuilderTy &Builder) {
+  // Helper to fold frexp of select to select of frexp.
+
+  if (!SelectInst->hasOneUse() || !FrexpCall->hasOneUse())
+    return nullptr;
+  Value *Cond = SelectInst->getCondition();
+  Value *TrueVal = SelectInst->getTrueValue();
+  Value *FalseVal = SelectInst->getFalseValue();
+
+  const APFloat *ConstVal = nullptr;
+  Value *VarOp = nullptr;
+  bool ConstIsTrue = false;
+
+  if (match(TrueVal, m_APFloat(ConstVal))) {
+    VarOp = FalseVal;
+    ConstIsTrue = true;
+  } else if (match(FalseVal, m_APFloat(ConstVal))) {
+    VarOp = TrueVal;
+    ConstIsTrue = false;
+  } else {
+    return nullptr;
+  }
+
+  Builder.SetInsertPoint(&EV);
+
+  CallInst *NewFrexp =
+      Builder.CreateCall(FrexpCall->getCalledFunction(), {VarOp}, "frexp");
+  NewFrexp->copyIRFlags(FrexpCall);
+
+  Value *NewEV = Builder.CreateExtractValue(NewFrexp, 0, "mantissa");
+
+  int Exp;
+  APFloat Mantissa = frexp(*ConstVal, Exp, APFloat::rmNearestTiesToEven);
+
+  Constant *ConstantMantissa = ConstantFP::get(TrueVal->getType(), Mantissa);
+
+  Value *NewSel = Builder.CreateSelectFMF(
+      Cond, ConstIsTrue ? ConstantMantissa : NewEV,
+      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp");
+  return NewSel;
+}
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   Value *Agg = EV.getAggregateOperand();
 
@@ -4079,6 +4123,15 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
                                           SQ.getWithInstruction(&EV)))
     return replaceInstUsesWith(EV, V);
 
+  Value *Cond, *TrueVal, *FalseVal;
+  if (match(&EV, m_ExtractValue<0>(m_Intrinsic<Intrinsic::frexp>(m_Select(
+                     m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal)))))) {
+    auto *SelInst =
+        cast<SelectInst>(cast<IntrinsicInst>(Agg)->getArgOperand(0));
+    if (Value *Result =
+            foldFrexpOfSelect(EV, cast<IntrinsicInst>(Agg), SelInst, Builder))
+      return replaceInstUsesWith(EV, Result);
+  }
   if (InsertValueInst *IV = dyn_cast<InsertValueInst>(Agg)) {
     // We're extracting from an insertvalue instruction, compare the indices
     const unsigned *exti, *exte, *insi, *inse;
@@ -4980,7 +5033,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgValues(
     // The clones are in reverse order of original appearance, reverse again to
     // maintain the original order.
     for (auto &DIIClone : llvm::reverse(DIIClones)) {
-      DIIClone->insertBefore(&*InsertPos);
+      DIIClone->insertBefore(InsertPos);
       LLVM_DEBUG(dbgs() << "SINK: " << *DIIClone << '\n');
     }
   }

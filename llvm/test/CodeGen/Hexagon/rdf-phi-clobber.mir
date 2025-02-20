@@ -1,0 +1,102 @@
+# RUN: llc -march=hexagon -run-pass=hexagon-rdf-opt \
+# RUN: -hexagon-rdf-dump -verify-machineinstrs -o /dev/null %s 2>&1 \
+# RUN: | FileCheck %s
+
+# Check that phi nodes that only have clobbering reaching defs are not created
+# during graph construction. Check that there are no phi nodes for HVX registers
+
+#CHECK-LABEL: --- %bb.1 ---
+#CHECK-NOT: p{{[0-9]+}}: phi [+d{{[0-9]+}}<V{{[0-9]+}}>
+
+--- |
+  @.str.3 = private unnamed_addr constant [2 x i8] c"%d", align 8
+  @.str.4 = private unnamed_addr constant [2 x i8] c"%d", align 8
+
+  define internal fastcc void @foo() unnamed_addr {
+  entry:
+    ret void
+  }
+
+  declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr
+
+---
+name:            foo
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$d0', virtual-reg: '' }
+  - { reg: '$d3', virtual-reg: '' }
+  - { reg: '$r23', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+    liveins: $r25, $r26, $d11
+
+    renamable $r16 = A2_tfrsi 0
+    S2_storerd_io $r29, 0, renamable $d11 :: (store (s64) into stack)
+    $r0 = A2_tfrsi @.str.3
+    J2_call @printf, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit $r0, implicit-def $r29, implicit-def dead $r0
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    successors: %bb.2, %bb.1
+    liveins: $r16, $r25, $r26
+
+    S2_storeri_io $r29, 0, killed renamable $r25 :: (store (s32) into stack)
+    $r0 = A2_tfrsi @.str.4
+    S2_storeri_io $r29, 8, killed renamable $r26 :: (store (s64) into stack + 8)
+    J2_call @printf, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit $r0, implicit-def $r29, implicit-def dead $r0
+    renamable $p0 = C2_cmpgti renamable $r16, 4
+    renamable $r16 = nsw A2_addi killed renamable $r16, 1
+    J2_jumpf killed renamable $p0, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.2:
+    liveins: $r16, $r25, $r26
+
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

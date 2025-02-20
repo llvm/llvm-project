@@ -3379,6 +3379,20 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)),
             (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexD:$index)>;
 
+  // Find index of last active lane. This is a fallback in case we miss the
+  // opportunity to fold into a lastb or clastb directly.
+  def : Pat<(i64(find_last_active nxv16i1:$P1)),
+            (INSERT_SUBREG(IMPLICIT_DEF), (LASTB_RPZ_B $P1, (INDEX_II_B 0, 1)),
+                sub_32)>;
+  def : Pat<(i64(find_last_active nxv8i1:$P1)),
+            (INSERT_SUBREG(IMPLICIT_DEF), (LASTB_RPZ_H $P1, (INDEX_II_H 0, 1)),
+                sub_32)>;
+  def : Pat<(i64(find_last_active nxv4i1:$P1)),
+            (INSERT_SUBREG(IMPLICIT_DEF), (LASTB_RPZ_S $P1, (INDEX_II_S 0, 1)),
+                sub_32)>;
+  def : Pat<(i64(find_last_active nxv2i1:$P1)), (LASTB_RPZ_D $P1, (INDEX_II_D 0,
+                                                                      1))>;
+
   // Move element from the bottom 128-bits of a scalable vector to a single-element vector.
   // Alternative case where insertelement is just scalar_to_vector rather than vector_insert.
   def : Pat<(v1f64 (scalar_to_vector
@@ -4280,13 +4294,13 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm SCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b0, "scvtf", "int_aarch64_sve_scvtf", AArch64scvtf_mt>;
   defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf", "int_aarch64_sve_ucvtf", AArch64ucvtf_mt>;
   // Signed integer base 2 logarithm of fp value, zeroing predicate
-  defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb">;
+  defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb", int_aarch64_sve_flogb>;
 
   // SVE2 integer unary operations, zeroing predicate
-  def URECPE_ZPzZ  : sve2_int_un_pred_arit_z<0b10, 0b00, "urecpe", ZPR32>;
-  def URSQRTE_ZPzZ : sve2_int_un_pred_arit_z<0b10, 0b01, "ursqrte", ZPR32>;
-  defm SQABS_ZPzZ  : sve2_int_un_pred_arit_z<0b10, "sqabs">;
-  defm SQNEG_ZPzZ  : sve2_int_un_pred_arit_z<0b11, "sqneg">;
+  defm URECPE_ZPzZ  : sve2_int_un_pred_arit_z_S<0b00, "urecpe",  int_aarch64_sve_urecpe>;
+  defm URSQRTE_ZPzZ : sve2_int_un_pred_arit_z_S<0b01, "ursqrte", int_aarch64_sve_ursqrte>;
+  defm SQABS_ZPzZ   : sve2_int_un_pred_arit_z<  0b10, "sqabs",   int_aarch64_sve_sqabs>;
+  defm SQNEG_ZPzZ   : sve2_int_un_pred_arit_z<  0b11, "sqneg",   int_aarch64_sve_sqneg>;
 
   // Floating point round to integral fp value in integer size range
   // Merging
@@ -4301,17 +4315,17 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm FRINT64X_ZPzZ : sve_fp_z2op_p_zd_frint<0b11, "frint64x">;
 
   // Floating-point round to integral fp value, zeroing predicate
-  defm FRINTN_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00000, "frintn">;
-  defm FRINTP_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00001, "frintp">;
-  defm FRINTM_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00010, "frintm">;
-  defm FRINTZ_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00011, "frintz">;
-  defm FRINTA_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00100, "frinta">;
-  defm FRINTX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00110, "frintx">;
-  defm FRINTI_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00111, "frinti">;
+  defm FRINTN_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00000, "frintn", AArch64frintn_mt>;
+  defm FRINTP_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00001, "frintp", AArch64frintp_mt>;
+  defm FRINTM_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00010, "frintm", AArch64frintm_mt>;
+  defm FRINTZ_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00011, "frintz", AArch64frintz_mt>;
+  defm FRINTA_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00100, "frinta", AArch64frinta_mt>;
+  defm FRINTX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00110, "frintx", AArch64frintx_mt>;
+  defm FRINTI_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00111, "frinti", AArch64frinti_mt>;
   // Floating-point invert exponent, zeroing predicate
-  defm FRECPX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b01100, "frecpx">;
+  defm FRECPX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b01100, "frecpx", AArch64frecpx_mt>;
   // Floating-point square root, zeroing predicate
-  defm FSQRT_ZPZz  : sve_fp_z2op_p_zd_hsd<0b01101, "fsqrt">;
+  defm FSQRT_ZPZz  : sve_fp_z2op_p_zd_hsd<0b01101, "fsqrt", AArch64fsqrt_mt>;
 
   // SVE2p2 integer unary arithmetic (bitwise), zeroing predicate
   defm CLS_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b000,  "cls", AArch64cls_mt>;
@@ -4325,25 +4339,25 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm FNEG_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b101, "fneg", AArch64fneg_mt>;
 
   // SVE2p2 integer unary arithmetic, zeroing predicate
-  defm SXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b000, "sxtb">;
-  defm UXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b001, "uxtb">;
-  defm SXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b010, "sxth">;
-  defm UXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b011, "uxth">;
+  defm SXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b000, "sxtb", AArch64sxt_mt>;
+  defm UXTB_ZPzZ  : sve_int_un_pred_arit_h_z<0b001, "uxtb", AArch64uxt_mt>;
+  defm SXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b010, "sxth", AArch64sxt_mt>;
+  defm UXTH_ZPzZ  : sve_int_un_pred_arit_w_z<0b011, "uxth", AArch64uxt_mt>;
   defm ABS_ZPzZ   : sve_int_un_pred_arit_z<  0b110, "abs", AArch64abs_mt>;
   defm NEG_ZPzZ   : sve_int_un_pred_arit_z<  0b111, "neg", AArch64neg_mt>;
-  def SXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1000, "sxtw", ZPR64>;
-  def UXTW_ZPzZ_D : sve_int_un_pred_arit_z<0b11, 0b1010, "uxtw", ZPR64>;
+  defm SXTW_ZPzZ  : sve_int_un_pred_arit_d_z<0b100, "sxtw", AArch64sxt_mt>;
+  defm UXTW_ZPzZ  : sve_int_un_pred_arit_d_z<0b101, "uxtw", AArch64uxt_mt>;
 
   // SVE predicate count
   defm FIRSTP_XPP : sve_int_pcount_pred_tmp<0b001, "firstp">;
   defm LASTP_XPP  : sve_int_pcount_pred_tmp<0b010, "lastp">;
 
   // SVE reverse within elements, zeroing predicate
-  defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit">;
-  defm REVB_ZPzZ : sve_int_perm_rev_revb_z<"revb">;
-  defm REVH_ZPzZ : sve_int_perm_rev_revh_z<"revh">;
-  def  REVW_ZPzZ : sve_int_perm_rev_z<0b11, 0b0110, "revw", ZPR64>;
-  def  REVD_ZPzZ : sve_int_perm_rev_z<0b00, 0b1110, "revd", ZPR128>;
+  defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit", AArch64rbit_mt>;
+  defm REVB_ZPzZ : sve_int_perm_rev_revb_z<"revb", AArch64revb_mt>;
+  defm REVH_ZPzZ : sve_int_perm_rev_revh_z<"revh", AArch64revh_mt>;
+  defm REVW_ZPzZ : sve_int_perm_rev_revw_z<"revw", AArch64revw_mt>;
+  defm REVD_ZPzZ : sve_int_perm_rev_revd_z<"revd", AArch64revd_mt>;
 } // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//
