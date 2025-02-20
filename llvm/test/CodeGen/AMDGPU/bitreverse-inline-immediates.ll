@@ -16,7 +16,7 @@ define amdgpu_kernel void @materialize_0_i32(ptr addrspace(1) %out) {
 
 ; GCN-LABEL: {{^}}materialize_0_i64:
 ; GCN: v_mov_b32_e32 v[[LOK:[0-9]+]], 0{{$}}
-; GCN: v_mov_b32_e32 v[[HIK:[0-9]+]], v[[LOK]]{{$}}
+; GCN: v_mov_b32_e32 v[[HIK:[0-9]+]], 0{{$}}
 ; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v[[[LOK]]:[[HIK]]]
 define amdgpu_kernel void @materialize_0_i64(ptr addrspace(1) %out) {
   store i64 0, ptr addrspace(1) %out

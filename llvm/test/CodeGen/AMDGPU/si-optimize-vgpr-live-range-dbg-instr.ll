@@ -10,9 +10,9 @@ define void @__omp_offloading_35_36570d3__ZN6openmc31process_advance_particle_ev
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    global_load_dwordx2 v[1:2], v[1:2], off
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-NEXT:    global_load_dwordx2 v[1:2], v[3:4], off
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GCN-NEXT:    s_xor_b64 s[4:5], vcc, -1
@@ -27,8 +27,6 @@ define void @__omp_offloading_35_36570d3__ZN6openmc31process_advance_particle_ev
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .LBB0_3: ; %bb2
-; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    v_mov_b32_e32 v4, v3
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dwordx2 v[1:2], v[3:4]
 ; GCN-NEXT:    ; implicit-def: $vgpr1_vgpr2
@@ -36,7 +34,7 @@ define void @__omp_offloading_35_36570d3__ZN6openmc31process_advance_particle_ev
 ; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  .LBB0_4: ; %bb1
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    v_mov_b32_e32 v4, v3
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dwordx2 v[1:2], v[3:4]
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]

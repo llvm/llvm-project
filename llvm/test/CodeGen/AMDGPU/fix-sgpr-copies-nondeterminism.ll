@@ -5,7 +5,6 @@ define amdgpu_gs void @f(i32 inreg %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: f:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
-; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb3
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v0
@@ -15,10 +14,9 @@ define amdgpu_gs void @f(i32 inreg %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 1
 ; CHECK-NEXT:  .LBB0_3: ; %bb4
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
-; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    s_mov_b32 s2, s0
-; CHECK-NEXT:    s_mov_b32 s3, s0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    s_mov_b64 s[2:3], s[0:1]
 ; CHECK-NEXT:    v_mov_b32_e32 v7, v6
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v6
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v6

@@ -1982,11 +1982,9 @@ define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
 ; GFX11-LABEL: return_512xi32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_mov_b32 s3, s0
-; GFX11-NEXT:    s_mov_b32 s1, s0
-; GFX11-NEXT:    s_mov_b32 s2, s0
+; GFX11-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_mov_b64 s[2:3], s[0:1]
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; GFX11-NEXT:    s_clause 0x1f
@@ -3186,11 +3184,9 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v60, s33 offset:1600 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    s_mov_b32 s0, 0
+; GFX11-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, 0
-; GFX11-NEXT:    s_mov_b32 s1, s0
-; GFX11-NEXT:    s_mov_b32 s2, s0
-; GFX11-NEXT:    s_mov_b32 s3, s0
+; GFX11-NEXT:    s_mov_b64 s[2:3], s[0:1]
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-NEXT:    s_mov_b32 s36, s34

@@ -30,7 +30,8 @@ define amdgpu_kernel void  @foo(i1 %cmp1) {
 ; GFX906-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:12
 ; GFX906-NEXT:    s_load_dword s2, s[4:5], 0x24
 ; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x1c
-; GFX906-NEXT:    s_mov_b32 s4, 0
+; GFX906-NEXT:    s_mov_b64 s[4:5], 0
+; GFX906-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    s_bitcmp1_b32 s2, 0
 ; GFX906-NEXT:    s_mul_i32 s0, s0, s1
@@ -38,9 +39,9 @@ define amdgpu_kernel void  @foo(i1 %cmp1) {
 ; GFX906-NEXT:    v_mad_u32_u24 v0, s0, v0, v1
 ; GFX906-NEXT:    v_add_lshl_u32 v2, v0, v2, 4
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
-; GFX906-NEXT:    v_mov_b32_e32 v1, v0
-; GFX906-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX906-NEXT:    s_mov_b64 s[2:3], exec
+; GFX906-NEXT:    v_mov_b32_e32 v1, 0
+; GFX906-NEXT:    s_mov_b32 s2, 0
+; GFX906-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX906-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX906-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX906-NEXT:    s_waitcnt vmcnt(3)
@@ -59,13 +60,11 @@ define amdgpu_kernel void  @foo(i1 %cmp1) {
 ; GFX906-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX906-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX906-NEXT:  ; %bb.2:
-; GFX906-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX906-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX906-NEXT:    s_cselect_b32 s5, 0x3ff00000, 0
-; GFX906-NEXT:    v_cvt_f32_f64_e32 v0, s[4:5]
-; GFX906-NEXT:    s_mov_b32 s5, s4
-; GFX906-NEXT:    s_mov_b32 s6, s4
-; GFX906-NEXT:    s_mov_b32 s7, s4
+; GFX906-NEXT:    s_cmp_lg_u32 s3, 0
+; GFX906-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX906-NEXT:    s_cselect_b32 s3, 0x3ff00000, 0
+; GFX906-NEXT:    v_cvt_f32_f64_e32 v0, s[2:3]
+; GFX906-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GFX906-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX906-NEXT:    s_endpgm
 entry:
