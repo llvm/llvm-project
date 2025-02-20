@@ -1482,7 +1482,7 @@ static unsigned getSrcVReg(unsigned Reg, MachineBasicBlock *BB1,
     }
     else if (Inst->isFullCopy())
       NextReg = Inst->getOperand(1).getReg();
-    if (NextReg == SrcReg || !Register(NextReg).isVirtual())
+    if (NextReg == SrcReg || !Register::isVirtualRegister(NextReg))
       break;
     SrcReg = NextReg;
   }
