@@ -186,9 +186,9 @@ void g7() {
   f7(1, s);
 }
 
-// There are no 128-bit fundamental data types defined by AAPCS32, so this gets
-// a 64-bit container plus 64 bits of padding, giving it a size of 16 bytes and
-// alignment of 8 bytes.
+// AAPCS64 does have a 128-bit integer fundamental data type, so this gets a
+// 128-bit container with 128-bit alignment. This is just within the limit of
+// what can be passed directly.
 struct VeryOverSizedBitfield {
   int x : 128;
 };
