@@ -96,6 +96,9 @@ public:
       connectBlocks(NewBlock, Succ);
     }
     connectBlocks(BlockPtr, NewBlock);
+    VPRegionBlock *Parent = BlockPtr->getParent();
+    if (Parent && Parent->getExiting() == BlockPtr)
+      Parent->setExiting(NewBlock);
   }
 
   /// Insert disconnected block \p NewBlock before \p Blockptr. First
@@ -112,6 +115,9 @@ public:
       connectBlocks(Pred, NewBlock);
     }
     connectBlocks(NewBlock, BlockPtr);
+    VPRegionBlock *Parent = BlockPtr->getParent();
+    if (Parent && Parent->getEntry() == BlockPtr)
+      Parent->setEntry(NewBlock);
   }
 
   /// Insert disconnected VPBlockBases \p IfTrue and \p IfFalse after \p
