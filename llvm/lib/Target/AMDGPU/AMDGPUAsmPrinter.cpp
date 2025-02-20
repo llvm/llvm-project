@@ -486,10 +486,12 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   // Pad with s_code_end to help tools and guard against instruction prefetch
   // causing stale data in caches. Arguably this should be done by the linker,
   // which is why this isn't done for Mesa.
+  // Don't do it if there are no functions.
   const MCSubtargetInfo &STI = *getGlobalSTI();
   if ((AMDGPU::isGFX10Plus(STI) || AMDGPU::isGFX90A(STI)) &&
       (STI.getTargetTriple().getOS() == Triple::AMDHSA ||
-       STI.getTargetTriple().getOS() == Triple::AMDPAL)) {
+       STI.getTargetTriple().getOS() == Triple::AMDPAL) &&
+      !M.empty()) {
     OutStreamer->switchSection(getObjFileLowering().getTextSection());
     getTargetStreamer()->EmitCodeEnd(STI);
   }
