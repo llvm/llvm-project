@@ -46,10 +46,10 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-NEXT:    xvf16ger2pp wacc0, v28, v30
 ; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
-; CHECK-NEXT:    stxv v2, 48(r30)
-; CHECK-NEXT:    stxv v3, 32(r30)
-; CHECK-NEXT:    stxv v4, 16(r30)
-; CHECK-NEXT:    stxv v5, 0(r30)
+; CHECK-NEXT:    stxv v4, 48(r30)
+; CHECK-NEXT:    stxv v5, 32(r30)
+; CHECK-NEXT:    stxv v2, 16(r30)
+; CHECK-NEXT:    stxv v3, 0(r30)
 ; CHECK-NEXT:    lxv v31, 144(r1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv v30, 128(r1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv v29, 112(r1) # 16-byte Folded Reload
