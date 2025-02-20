@@ -36,28 +36,28 @@
 ## zicfiss-report should report any input files that don't have the zicfiss
 ## property
 # RUN: ld.lld rv32-func1-zicfiss.o rv32-func2.o rv32-func3-zicfiss.o           \
-# RUN:  -z zicfiss-report=warning -o /dev/null 2>&1                            \
+# RUN:  -z zicfiss-report=warning 2>&1                                         \
 # RUN:  | FileCheck --check-prefix=MISS-SS-WARN %s
 # RUN: not ld.lld rv32-func2-zicfiss.o rv32-func3.o --shared                   \
-# RUN:  -z zicfiss-report=error                2>&1                            \
+# RUN:  -z zicfiss-report=error   2>&1                                         \
 # RUN:  | FileCheck --check-prefix=MISS-SS-ERROR %s
 
 # RUN: ld.lld rv32-func1-zicfiss.o rv32-func2-zicfiss.o rv32-func3-zicfiss.o   \
-# RUN:  -z zicfiss-report=warning -o /dev/null 2>&1 | count 0
+# RUN:  -z zicfiss-report=warning 2>&1 | count 0
 # RUN: ld.lld rv32-func1-zicfiss.o rv32-func2-zicfiss.o rv32-func3-zicfiss.o   \
-# RUN:  -z zicfiss-report=error   -o /dev/null 2>&1 | count 0
+# RUN:  -z zicfiss-report=error   2>&1 | count 0
 
 # RUN: ld.lld rv64-func1-zicfiss.o rv64-func2.o rv64-func3-zicfiss.o           \
-# RUN:  -z zicfiss-report=warning -o /dev/null 2>&1                            \
+# RUN:  -z zicfiss-report=warning 2>&1                                         \
 # RUN:  | FileCheck --check-prefix=MISS-SS-WARN %s
 # RUN: not ld.lld rv64-func2-zicfiss.o rv64-func3.o --shared                   \
-# RUN:  -z zicfiss-report=error                2>&1                            \
+# RUN:  -z zicfiss-report=error   2>&1                                         \
 # RUN:  | FileCheck --check-prefix=MISS-SS-ERROR %s
 
 # RUN: ld.lld rv64-func1-zicfiss.o rv64-func2-zicfiss.o rv64-func3-zicfiss.o   \
-# RUN:  -z zicfiss-report=warning -o /dev/null 2>&1 | count 0
+# RUN:  -z zicfiss-report=warning 2>&1 | count 0
 # RUN: ld.lld rv64-func1-zicfiss.o rv64-func2-zicfiss.o rv64-func3-zicfiss.o   \
-# RUN:  -z zicfiss-report=error   -o /dev/null 2>&1 | count 0
+# RUN:  -z zicfiss-report=error   2>&1 | count 0
 
 # MISS-SS-WARN: warning: rv{{32|64}}-func2.o: -z zicfiss-report: file does not
 # MISS-SS-WARN-SAME: have GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS property

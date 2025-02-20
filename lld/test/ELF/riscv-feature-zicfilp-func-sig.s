@@ -37,28 +37,28 @@
 ## zicfilp-func-sig-report should report any input files that don't have the
 ## zicfilp-func-sig property
 # RUN: ld.lld rv32-func1-zicfilp.o rv32-func2.o rv32-func3-zicfilp.o           \
-# RUN:  -z zicfilp-func-sig-report=warning -o /dev/null 2>&1                   \
+# RUN:  -z zicfilp-func-sig-report=warning 2>&1                                \
 # RUN:  | FileCheck --check-prefix=MISS-LP-WARN %s
 # RUN: not ld.lld rv32-func2-zicfilp.o rv32-func3.o --shared                   \
-# RUN:  -z zicfilp-func-sig-report=error                2>&1                   \
+# RUN:  -z zicfilp-func-sig-report=error   2>&1                                \
 # RUN:  | FileCheck --check-prefix=MISS-LP-ERROR %s
 
 # RUN: ld.lld rv32-func1-zicfilp.o rv32-func2-zicfilp.o rv32-func3-zicfilp.o   \
-# RUN:  -z zicfilp-func-sig-report=warning -o /dev/null 2>&1 | count 0
+# RUN:  -z zicfilp-func-sig-report=warning 2>&1 | count 0
 # RUN: ld.lld rv32-func1-zicfilp.o rv32-func2-zicfilp.o rv32-func3-zicfilp.o   \
-# RUN:  -z zicfilp-func-sig-report=error   -o /dev/null 2>&1 | count 0
+# RUN:  -z zicfilp-func-sig-report=error   2>&1 | count 0
 
 # RUN: ld.lld rv64-func1-zicfilp.o rv64-func2.o rv64-func3-zicfilp.o           \
-# RUN:  -z zicfilp-func-sig-report=warning -o /dev/null 2>&1                   \
+# RUN:  -z zicfilp-func-sig-report=warning 2>&1                                \
 # RUN:  | FileCheck --check-prefix=MISS-LP-WARN %s
 # RUN: not ld.lld rv64-func2-zicfilp.o rv64-func3.o --shared                   \
-# RUN:  -z zicfilp-func-sig-report=error                2>&1                   \
+# RUN:  -z zicfilp-func-sig-report=error   2>&1                                \
 # RUN:  | FileCheck --check-prefix=MISS-LP-ERROR %s
 
 # RUN: ld.lld rv64-func1-zicfilp.o rv64-func2-zicfilp.o rv64-func3-zicfilp.o   \
-# RUN:  -z zicfilp-func-sig-report=warning -o /dev/null 2>&1 | count 0
+# RUN:  -z zicfilp-func-sig-report=warning 2>&1 | count 0
 # RUN: ld.lld rv64-func1-zicfilp.o rv64-func2-zicfilp.o rv64-func3-zicfilp.o   \
-# RUN:  -z zicfilp-func-sig-report=error   -o /dev/null 2>&1 | count 0
+# RUN:  -z zicfilp-func-sig-report=error   2>&1 | count 0
 
 # MISS-LP-WARN: warning: rv{{32|64}}-func2.o: -z zicfilp-func-sig-report:
 # MISS-LP-WARN-SAME: file does not have
