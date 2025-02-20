@@ -9,9 +9,7 @@ if(scanf_config_copts)
 endif()
 
 
-list(APPEND file_deps
-  libc.hdr.types.FILE
-)
+list(APPEND file_deps libc.hdr.types.FILE)
 if(LIBC_TARGET_OS_IS_GPU)
   list(APPEND file_deps
     libc.src.stdio.getc
