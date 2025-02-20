@@ -62,7 +62,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.macros.attributes
 )
-elseif( (TARGET libc.src.__support.File.file) OR (NOT LLVM_LIBC_FULL_BUILD)  )
+elseif((TARGET libc.src.__support.File.file) OR (NOT LLVM_LIBC_FULL_BUILD))
 add_header_library(
   reader
   HDRS
