@@ -71,6 +71,8 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P1061R10 Structured Bindings can introduce a Pack <https://wg21.link/P1061R10>`_.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
