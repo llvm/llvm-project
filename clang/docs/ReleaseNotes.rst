@@ -71,6 +71,8 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P1061R10 Structured Bindings can introduce a Pack <https://wg21.link/P1061R10>`_.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -271,7 +273,7 @@ Code Completion
 Static Analyzer
 ---------------
 
-- Clang currently support extending lifetime of object bound to 
+- Clang currently support extending lifetime of object bound to
   reference members of aggregates in CFG and ExprEngine, that are
   created from default member initializer.
 
