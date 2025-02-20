@@ -16,8 +16,8 @@ Target &getTheAVRTarget() {
 }
 } // namespace llvm
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
-void LLVMInitializeAVRTargetInfo() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAVRTargetInfo() {
   llvm::RegisterTarget<llvm::Triple::avr> X(llvm::getTheAVRTarget(), "avr",
                                             "Atmel AVR Microcontroller", "AVR");
 }

@@ -25,8 +25,8 @@ Target &llvm::getTheBPFTarget() {
   return TheBPFTarget;
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
-void LLVMInitializeBPFTargetInfo() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeBPFTargetInfo() {
   TargetRegistry::RegisterTarget(getTheBPFTarget(), "bpf", "BPF (host endian)",
                                  "BPF", [](Triple::ArchType) { return false; },
                                  true);

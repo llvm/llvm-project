@@ -28,8 +28,8 @@ Target &llvm::getTheMips64elTarget() {
   return TheMips64elTarget;
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
-void LLVMInitializeMipsTargetInfo() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMipsTargetInfo() {
   RegisterTarget<Triple::mips,
                  /*HasJIT=*/true>
       X(getTheMipsTarget(), "mips", "MIPS (32-bit big endian)", "Mips");
