@@ -34,23 +34,13 @@
 
 using namespace Fortran::frontend;
 
-/// Instantiate llvm::Target based on triple
-static const llvm::Target* getTarget(llvm::StringRef triple) {
+/// Print supported cpus of the given target.
+static int printSupportedCPUs(llvm::StringRef triple) {
   std::string error;
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(triple, error);
   if (!target) {
     llvm::errs() << error;
-  }
-
-  return target;
-}
-
-/// Print supported cpus of the given target.
-static int printSupportedCPUs(llvm::StringRef triple) {
-  const llvm::Target *target = getTarget(triple);
-  if (!target) {
-    return 1;
   }
 
   // the target machine will handle the mcpu printing
@@ -64,8 +54,9 @@ static int printSupportedCPUs(llvm::StringRef triple) {
 /// Check that given CPU is valid for given target.
 static bool checkSupportedCPU(clang::DiagnosticsEngine& diags, llvm::StringRef str_cpu, llvm::StringRef str_triple) {
 
+  llvm::errs() << "EE str_cpu = '" << str_cpu << "', str_triple = '" << str_triple << "'\n";
   llvm::Triple triple{str_triple};
-  if (triple.getArch() == llvm::Triple::x86_64) {
+  if (triple.getArch() == llvm::Triple::x86_64 && !str_cpu.empty()) {
     const bool only64bit{true};
     llvm::X86::CPUKind x86cpu = llvm::X86::parseArchX86(str_cpu, only64bit);
     if (x86cpu == llvm::X86::CK_None) {
@@ -92,6 +83,12 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   if (!flang->hasDiagnostics())
     return 1;
 
+  llvm::errs() << "EE args: ";
+  for (auto arg : argv) {
+    llvm::errs() << "\"" << arg << "\" ";
+  }
+  llvm::errs() << "\n";
+
   // We will buffer diagnostics from argument parsing so that we can output
   // them using a well formed diagnostic object.
   TextDiagnosticBuffer *diagsBuffer = new TextDiagnosticBuffer;
@@ -116,8 +113,8 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
     return printSupportedCPUs(flang->getInvocation().getTargetOpts().triple);
 
   // Check that requested CPU can be properly supported
-  if (!checkSupportedCPU(diags, flang->getInvocation().getTargetOpts().cpu, flang->getInvocation().getTargetOpts().triple))
-    return 1;
+  success = success &&
+    checkSupportedCPU(diags, flang->getInvocation().getTargetOpts().cpu, flang->getInvocation().getTargetOpts().triple);
 
   diagsBuffer->flushDiagnostics(flang->getDiagnostics());
 
