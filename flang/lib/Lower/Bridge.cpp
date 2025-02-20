@@ -3110,7 +3110,7 @@ private:
               loc, 1); // Use index type directly
 
         // Ensure lb, ub, and step are of index type using fir.convert
-        auto indexType = builder->getIndexType();
+        mlir::Type indexType = builder->getIndexType();
         lb = builder->create<fir::ConvertOp>(loc, indexType, lb);
         ub = builder->create<fir::ConvertOp>(loc, indexType, ub);
         step = builder->create<fir::ConvertOp>(loc, indexType, step);
