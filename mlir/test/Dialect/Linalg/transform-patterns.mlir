@@ -1,10 +1,10 @@
 // RUN: mlir-opt %s -transform-interpreter -test-linalg-transform-patterns=test-patterns -split-input-file | FileCheck %s
 
-func.func @dot(%x: memref<?xf32, strided<[1], offset: ?>>,
-          %y: memref<?xf32, strided<[1], offset: ?>>,
+func.func @dot(%x: memref<?xf32, contiguous<1, offset: ?>>,
+          %y: memref<?xf32, contiguous<1, offset: ?>>,
           %v: memref<f32>) {
-  linalg.dot ins(%x, %y: memref<?xf32, strided<[1], offset: ?>>,
-                         memref<?xf32, strided<[1], offset: ?>>)
+  linalg.dot ins(%x, %y: memref<?xf32, contiguous<1, offset: ?>>,
+                         memref<?xf32, contiguous<1, offset: ?>>)
             outs(%v: memref<f32>)
   return
 }
@@ -26,12 +26,12 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 func.func @matvec(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-             %x: memref<?xf32, strided<[1], offset: ?>>,
-             %y: memref<?xf32, strided<[1], offset: ?>>) {
+             %x: memref<?xf32, contiguous<1, offset: ?>>,
+             %y: memref<?xf32, contiguous<1, offset: ?>>) {
   linalg.matvec
     ins(%A, %x: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-                memref<?xf32, strided<[1], offset: ?>>)
-    outs(%y: memref<?xf32, strided<[1], offset: ?>>)
+                memref<?xf32, contiguous<1, offset: ?>>)
+    outs(%y: memref<?xf32, contiguous<1, offset: ?>>)
   return
 }
 
@@ -50,8 +50,8 @@ module attributes {transform.with_named_sequence} {
 // CHECK:         scf.for {{.*}} step %[[c5]]
 // CHECK:           scf.for {{.*}} step %[[c6]]
 // CHECK:             linalg.matvec
-// CHECK:               ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?xf32, strided<[1], offset: ?>>)
-// CHECK:              outs({{.*}}: memref<?xf32, strided<[1], offset: ?>>)
+// CHECK:               ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?xf32, contiguous<1, offset: ?>>)
+// CHECK:              outs({{.*}}: memref<?xf32, contiguous<1, offset: ?>>)
 
 // -----
 
@@ -157,11 +157,11 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 func.func @matvec_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-             %x: memref<?xf32, strided<[1], offset: ?>>,
-             %y: memref<?xf32, strided<[1], offset: ?>>) {
+             %x: memref<?xf32, contiguous<1, offset: ?>>,
+             %y: memref<?xf32, contiguous<1, offset: ?>>) {
   linalg.matvec ins(%A, %x: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-                            memref<?xf32, strided<[1], offset: ?>>)
-               outs(%y: memref<?xf32, strided<[1], offset: ?>>)
+                            memref<?xf32, contiguous<1, offset: ?>>)
+               outs(%y: memref<?xf32, contiguous<1, offset: ?>>)
   return
 }
 
@@ -180,8 +180,8 @@ module attributes {transform.with_named_sequence} {
 // CHECK:         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c6]]
 // CHECK:           scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c5]]
 // CHECK:             linalg.matvec
-// CHECK:               ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?xf32, strided<[1], offset: ?>>)
-// CHECK:              outs({{.*}}: memref<?xf32, strided<[1], offset: ?>>)
+// CHECK:               ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?xf32, contiguous<1, offset: ?>>)
+// CHECK:              outs({{.*}}: memref<?xf32, contiguous<1, offset: ?>>)
 
 // -----
 

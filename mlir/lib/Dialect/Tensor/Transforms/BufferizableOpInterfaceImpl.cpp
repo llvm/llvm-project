@@ -190,7 +190,7 @@ struct CollapseShapeOpInterface
           return failure();
         resultType = MemRefType::get(
             {}, tensorResultType.getElementType(),
-            StridedLayoutAttr::get(op->getContext(), offset, {}),
+            ContiguousLayoutAttr::get(op->getContext(), offset, {}),
             bufferType.getMemorySpace());
       }
 

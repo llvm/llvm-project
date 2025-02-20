@@ -133,7 +133,7 @@ func.func @multiple_reducing_dims(%arg0 : memref<1x384x384xf32>,
 //       CHECK:   %[[REDUCED1:.+]] = memref.subview %{{.+}}[0, %{{.+}}, %{{.+}}] [1, 1, %{{.+}}] [1, 1, 1]
 //  CHECK-SAME:       : memref<1x384x384xf32> to memref<1x?xf32, strided<[384, 1], offset: ?>>
 //       CHECK:   %[[REDUCED2:.+]] = memref.subview %[[REDUCED1]][0, 0] [1, %{{.+}}] [1, 1]
-//  CHECK-SAME:       : memref<1x?xf32, strided<[384, 1], offset: ?>> to memref<?xf32, strided<[1], offset: ?>>
+//  CHECK-SAME:       : memref<1x?xf32, strided<[384, 1], offset: ?>> to memref<?xf32, contiguous<1, offset: ?>>
 
 // -----
 
@@ -149,7 +149,7 @@ func.func @multiple_reducing_dims_dynamic(%arg0 : memref<?x?x?xf32>,
 //       CHECK:   %[[REDUCED1:.+]] = memref.subview %{{.+}}[0, %{{.+}}, %{{.+}}] [1, 1, %{{.+}}] [1, 1, 1]
 //  CHECK-SAME:       : memref<?x?x?xf32> to memref<1x?xf32, strided<[?, 1], offset: ?>>
 //       CHECK:   %[[REDUCED2:.+]] = memref.subview %[[REDUCED1]][0, 0] [1, %{{.+}}] [1, 1]
-//  CHECK-SAME:       : memref<1x?xf32, strided<[?, 1], offset: ?>> to memref<?xf32, strided<[1], offset: ?>>
+//  CHECK-SAME:       : memref<1x?xf32, strided<[?, 1], offset: ?>> to memref<?xf32, contiguous<1, offset: ?>>
 
 // -----
 
@@ -466,6 +466,23 @@ func.func @compose_collapse_of_collapse(%arg0 : memref<?x?x?x?x?xf32>)
 
 // -----
 
+func.func @compose_collapse_of_expand_offset_layout(
+    %arg0: memref<?x?xf32, contiguous<2, offset: ?>>, %sz0: index, %sz1: index)
+    -> memref<?xf32, contiguous<1, offset: ?>> {
+  %1 = memref.expand_shape %arg0 [[0, 1], [2]] output_shape [%sz0, 4, %sz1] :
+    memref<?x?xf32, contiguous<2, offset: ?>> into
+    memref<?x4x?xf32, contiguous<3, offset: ?>>
+  %2 = memref.collapse_shape %1 [[0, 1, 2]] :
+    memref<?x4x?xf32, contiguous<3, offset: ?>> into
+    memref<?xf32, contiguous<1, offset: ?>>
+  return %2 : memref<?xf32, contiguous<1, offset: ?>>
+}
+// CHECK-LABEL: func @compose_collapse_of_expand_offset_layout
+// CHECK: memref.collapse_shape
+// CHECK-SAME: memref<?x?xf32, contiguous<2, offset: ?>> into memref<?xf32, contiguous<1, offset: ?>>
+
+// -----
+
 func.func @do_not_compose_collapse_of_expand_non_identity_layout(
     %arg0: memref<?x?xf32, strided<[?, 1], offset: 0>>, %sz0: index, %sz1: index)
     -> memref<?xf32, strided<[?], offset: 0>> {
@@ -640,6 +657,16 @@ func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> me
   return %0 : memref<20x42xf32, strided<[42, 1], offset: 1>>
 }
 // CHECK-LABEL: func @no_fold_subview_with_non_zero_offset(
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview
+//       CHECK:    return %[[SUBVIEW]]
+
+// -----
+
+func.func @no_fold_subview_with_non_zero_offset_contiguous(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, contiguous<2, offset: 1>> {
+  %0 = memref.subview %arg0[0, 1] [20, 42] [1, 1] : memref<20x42xf32> to memref<20x42xf32, contiguous<2, offset: 1>>
+  return %0 : memref<20x42xf32, contiguous<2, offset: 1>>
+}
+// CHECK-LABEL: func @no_fold_subview_with_non_zero_offset_contiguous(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
 //       CHECK:    return %[[SUBVIEW]]
 
@@ -981,7 +1008,7 @@ func.func @canonicalize_rank_reduced_subview(%arg0 : memref<8x?xf32>,
 // CHECK-SAME:     %[[ARG0:.+]]: memref<8x?xf32>
 // CHECK-SAME:     %[[ARG1:.+]]: index
 //      CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG0]][0, 0] [1, %[[ARG1]]] [1, 1]
-// CHECK-SAME:       memref<8x?xf32> to memref<?xf32, strided<[1]>>
+// CHECK-SAME:       memref<8x?xf32> to memref<?xf32>
 
 // -----
 
@@ -1034,12 +1061,12 @@ func.func @fold_trivial_subviews(%m: memref<?xf32, strided<[?], offset: ?>>,
 // -----
 
 // CHECK-LABEL: func @load_store_nontemporal(
-func.func @load_store_nontemporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>, %output : memref<32xf32, affine_map<(d0) -> (d0)>>) {
+func.func @load_store_nontemporal(%input : memref<32xf32, contiguous<1>>, %output : memref<32xf32, contiguous<1>>) {
   %1 = arith.constant 7 : index
   // CHECK: memref.load %{{.*}}[%{{.*}}] {nontemporal = true} : memref<32xf32>
-  %2 = memref.load %input[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  %2 = memref.load %input[%1] {nontemporal = true} : memref<32xf32, contiguous<1>>
   // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}] {nontemporal = true} : memref<32xf32>
-  memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, contiguous<1>>
   func.return
 }
 
@@ -1096,24 +1123,24 @@ func.func @subview_rank_reduction(%arg0: memref<1x384x384xf32>, %idx: index)
 
 // CHECK-LABEL: func @fold_double_transpose(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<1x2x3x4x5xf32>
-func.func @fold_double_transpose(%arg0: memref<1x2x3x4x5xf32>) -> memref<5x3x2x4x1xf32, strided<[1, 20, 60, 5, 120]>> {
+func.func @fold_double_transpose(%arg0: memref<1x2x3x4x5xf32>) -> memref<5x3x2x4x1xf32, contiguous<[4, 2, 1, 3, 0]>> {
   // CHECK: %[[ONETRANSPOSE:.+]] = memref.transpose %[[arg0]] (d0, d1, d2, d3, d4) -> (d4, d2, d1, d3, d0)
-  %0 = memref.transpose %arg0 (d0, d1, d2, d3, d4) -> (d1, d0, d4, d3, d2) : memref<1x2x3x4x5xf32> to memref<2x1x5x4x3xf32, strided<[60, 120, 1, 5, 20]>>
-  %1 = memref.transpose %0 (d1, d0, d4, d3, d2) -> (d4, d2, d1, d3, d0) : memref<2x1x5x4x3xf32, strided<[60, 120, 1, 5, 20]>> to memref<5x3x2x4x1xf32, strided<[1, 20, 60, 5, 120]>>
+  %0 = memref.transpose %arg0 (d0, d1, d2, d3, d4) -> (d1, d0, d4, d3, d2) : memref<1x2x3x4x5xf32> to memref<2x1x5x4x3xf32, contiguous<[1, 0, 4, 3, 2]>>
+  %1 = memref.transpose %0 (d1, d0, d4, d3, d2) -> (d4, d2, d1, d3, d0) : memref<2x1x5x4x3xf32, contiguous<[1, 0, 4, 3, 2]>> to memref<5x3x2x4x1xf32, contiguous<[4, 2, 1, 3, 0]>>
   // CHECK: return %[[ONETRANSPOSE]]
-  return %1 : memref<5x3x2x4x1xf32, strided<[1, 20, 60, 5, 120]>>
+  return %1 : memref<5x3x2x4x1xf32, contiguous<[4, 2, 1, 3, 0]>>
 }
 
 // -----
 
 // CHECK-LABEL: func @fold_double_transpose2(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<1x2x3x4x5xf32>
-func.func @fold_double_transpose2(%arg0: memref<1x2x3x4x5xf32>) -> memref<5x3x2x4x1xf32, strided<[1, 20, 60, 5, 120]>> {
+func.func @fold_double_transpose2(%arg0: memref<1x2x3x4x5xf32>) -> memref<5x3x2x4x1xf32, contiguous<[4, 2, 1, 3, 0]>> {
   // CHECK: %[[ONETRANSPOSE:.+]] = memref.transpose %[[arg0]] (d0, d1, d2, d3, d4) -> (d4, d2, d1, d3, d0)
-  %0 = memref.transpose %arg0 (d0, d1, d2, d3, d4) -> (d0, d1, d4, d3, d2) : memref<1x2x3x4x5xf32> to memref<1x2x5x4x3xf32, strided<[120, 60, 1, 5, 20]>>
-  %1 = memref.transpose %0 (d0, d1, d4, d3, d2) -> (d4, d2, d1, d3, d0) : memref<1x2x5x4x3xf32, strided<[120, 60, 1, 5, 20]>> to memref<5x3x2x4x1xf32, strided<[1, 20, 60, 5, 120]>>
+  %0 = memref.transpose %arg0 (d0, d1, d2, d3, d4) -> (d0, d1, d4, d3, d2) : memref<1x2x3x4x5xf32> to memref<1x2x5x4x3xf32, contiguous<[0, 1, 4, 3, 2]>>
+  %1 = memref.transpose %0 (d0, d1, d4, d3, d2) -> (d4, d2, d1, d3, d0) : memref<1x2x5x4x3xf32, contiguous<[0, 1, 4, 3, 2]>> to memref<5x3x2x4x1xf32, contiguous<[4, 2, 1, 3, 0]>>
   // CHECK: return %[[ONETRANSPOSE]]
-  return %1 : memref<5x3x2x4x1xf32, strided<[1, 20, 60, 5, 120]>>
+  return %1 : memref<5x3x2x4x1xf32, contiguous<[4, 2, 1, 3, 0]>>
 }
 
 // -----
@@ -1121,15 +1148,15 @@ func.func @fold_double_transpose2(%arg0: memref<1x2x3x4x5xf32>) -> memref<5x3x2x
 // CHECK-LABEL: func @fold_identity_transpose(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<1x2x3x4x5xf32>
 func.func @fold_identity_transpose(%arg0: memref<1x2x3x4x5xf32>) -> memref<1x2x3x4x5xf32> {
-  %0 = memref.transpose %arg0 (d0, d1, d2, d3, d4) -> (d1, d0, d4, d3, d2) : memref<1x2x3x4x5xf32> to memref<2x1x5x4x3xf32, strided<[60, 120, 1, 5, 20]>>
-  %1 = memref.transpose %0 (d1, d0, d4, d3, d2) -> (d0, d1, d2, d3, d4) : memref<2x1x5x4x3xf32, strided<[60, 120, 1, 5, 20]>> to memref<1x2x3x4x5xf32>
+  %0 = memref.transpose %arg0 (d0, d1, d2, d3, d4) -> (d1, d0, d4, d3, d2) : memref<1x2x3x4x5xf32> to memref<2x1x5x4x3xf32, contiguous<[1, 0, 4, 3, 2]>>
+  %1 = memref.transpose %0 (d1, d0, d4, d3, d2) -> (d0, d1, d2, d3, d4) : memref<2x1x5x4x3xf32, contiguous<[1, 0, 4, 3, 2]>> to memref<1x2x3x4x5xf32>
   // CHECK: return %[[arg0]]
   return %1 : memref<1x2x3x4x5xf32>
 }
 
 // -----
 
-#transpose_map = affine_map<(d0, d1)[s0] -> (d0 + d1 * s0)>
+#transpose_map = affine_map<(d0, d1)-> (d1, d0)>
 
 // CHECK-LABEL: func @cannot_fold_transpose_cast(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?x4xf32>

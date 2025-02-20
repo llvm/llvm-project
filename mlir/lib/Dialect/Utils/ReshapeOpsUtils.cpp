@@ -259,9 +259,9 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
   return success();
 }
 
-bool mlir::hasNonIdentityLayout(Type type) {
+bool mlir::hasNonRowMajorContiguousLayout(Type type) {
   if (auto memrefType = dyn_cast<MemRefType>(type))
-    return !memrefType.getLayout().isIdentity();
+    return !memrefType.areTrailingDimsContiguous(memrefType.getRank());
   return false;
 }
 

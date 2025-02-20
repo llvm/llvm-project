@@ -3,12 +3,14 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from functools import partial
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from ..ir import (
     Attribute,
+    AffineMapAttr,
     BF16Type,
     ComplexType,
+    ContiguousLayoutAttr,
     F16Type,
     F32Type,
     F64Type,
@@ -152,7 +154,9 @@ def memref(
     *shape,
     element_type: Type = None,
     memory_space: Optional[int] = None,
-    layout: Optional[StridedLayoutAttr] = None,
+    layout: Optional[
+        Union[ContiguousLayoutAttr, StridedLayoutAttr, AffineMapAttr]
+    ] = None,
 ):
     if memory_space is not None:
         memory_space = Attribute.parse(str(memory_space))

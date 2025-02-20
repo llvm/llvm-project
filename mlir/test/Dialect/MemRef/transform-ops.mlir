@@ -51,9 +51,9 @@ func.func @multi_buffer(%in: memref<16xf32>) {
   // CHECK: scf.for %[[IV:.*]] = %[[C0]]
   scf.for %i0 = %c0 to %c16 step %c4 {
     // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]])
-    // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1], offset: ?>>
+    // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, contiguous<1, offset: ?>>
     %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, #[[$MAP1]]> to memref<4xf32, strided<[1], offset: ?>>
+    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, #[[$MAP1]]> to memref<4xf32, contiguous<1, offset: ?>>
     memref.copy %1, %tmp :  memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<4xf32>
 
     "some_use"(%tmp) : (memref<4xf32>) ->()
@@ -88,9 +88,9 @@ func.func @multi_buffer_on_affine_loop(%in: memref<16xf32>) {
   // CHECK: affine.for %[[IV:.*]] = 0
   affine.for %i0 = 0 to 16 step 4 {
     // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]])
-    // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1], offset: ?>>
+    // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, contiguous<1, offset: ?>>
     %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, #[[$MAP1]]> to memref<4xf32, strided<[1], offset: ?>>
+    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, #[[$MAP1]]> to memref<4xf32, contiguous<1, offset: ?>>
     memref.copy %1, %tmp :  memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<4xf32>
 
     "some_use"(%tmp) : (memref<4xf32>) ->()
@@ -209,9 +209,9 @@ func.func @multi_buffer_one_alloc_with_use_outside_of_loop(%in: memref<16xf32>) 
   // CHECK: scf.for %[[IV:.*]] = %[[C0]]
   scf.for %i0 = %c0 to %c16 step %c4 {
     // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]])
-    // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1], offset: ?>>
+    // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, contiguous<1, offset: ?>>
     %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, #[[$MAP1]]> to memref<4xf32, strided<[1], offset: ?>>
+    // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, #[[$MAP1]]> to memref<4xf32, contiguous<1, offset: ?>>
     memref.copy %1, %tmp :  memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<4xf32>
 
     "some_use"(%tmp) : (memref<4xf32>) ->()
@@ -249,7 +249,7 @@ func.func @multi_buffer_no_analysis(%in: memref<16xf32>) {
   // CHECK: scf.for %[[IV:.*]] = %[[C0]]
   scf.for %i0 = %c0 to %c16 step %c4 {
   // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]])
-  // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1], offset: ?>>
+  // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, contiguous<1, offset: ?>>
     "some_write_read"(%tmp) : (memref<4xf32>) ->()
   }
   return
@@ -284,7 +284,7 @@ func.func @multi_buffer_dealloc(%in: memref<16xf32>) {
   // CHECK: scf.for %[[IV:.*]] = %[[C0]]
   scf.for %i0 = %c0 to %c16 step %c4 {
   // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]])
-  // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1], offset: ?>>
+  // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, contiguous<1, offset: ?>>
     "some_write_read"(%tmp) : (memref<4xf32>) ->()
   }
 

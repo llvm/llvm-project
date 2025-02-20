@@ -140,22 +140,25 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
       return failure();
 
     // Get strides
-    auto layout = subview.getResult().getType().getLayout();
-    auto stridedLayoutAttr = llvm::dyn_cast<StridedLayoutAttr>(layout);
-    if (!stridedLayoutAttr)
-      return failure();
-
-    // TODO: Allow the access to be strided in multiple dimensions.
-    if (stridedLayoutAttr.getStrides().size() != 1)
-      return failure();
-
     int64_t srcTrailingDim = sourceType.getShape().back();
+    auto layout = subview.getResult().getType().getLayout();
+    if (auto contigLayoutAttr = dyn_cast<ContiguousLayoutAttr>(layout)) {
+      // TODO: relax this to N-D layouts.
+      if (contigLayoutAttr.getPermutation() != ArrayRef<int64_t>{0, 1})
+        return failure();
+    } else if (auto stridedLayoutAttr = dyn_cast<StridedLayoutAttr>(layout)) {
+      // TODO: Allow the access to be strided in multiple dimensions.
+      if (stridedLayoutAttr.getStrides().size() != 1)
+        return failure();
 
-    // Assume that the stride matches the trailing dimension of the source
-    // memref.
-    // TODO: Relax this assumption.
-    if (stridedLayoutAttr.getStrides()[0] != srcTrailingDim)
+      // Assume that the stride matches the trailing dimension of the source
+      // memref.
+      // TODO: Relax this assumption.
+      if (stridedLayoutAttr.getStrides()[0] != srcTrailingDim)
+        return failure();
+    } else {
       return failure();
+    }
 
     // 1. Collapse the input memref so that it's "flat".
     SmallVector<ReassociationIndices> reassoc = {{0, 1}};
@@ -209,12 +212,9 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     // vector.load requires the most minor memref dim to have unit stride
     // (unless reading exactly 1 element)
     if (auto memType = dyn_cast<MemRefType>(base.getType())) {
-      if (auto stridesAttr =
-              dyn_cast_if_present<StridedLayoutAttr>(memType.getLayout())) {
-        if (stridesAttr.getStrides().back() != 1 &&
-            resultTy.getNumElements() != 1)
-          return failure();
-      }
+      if (!memType.areTrailingDimsContiguous(1) &&
+          resultTy.getNumElements() != 1)
+        return failure();
     }
 
     Value indexVec = rewriter.createOrFold<arith::IndexCastOp>(

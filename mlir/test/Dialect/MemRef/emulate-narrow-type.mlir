@@ -163,19 +163,19 @@ func.func @rank_zero_memref() -> i4 {
 
 func.func @memref_strided_i4(%idx : index) -> i4 {
   %arr = memref.alloc() : memref<128xi4>
-  %subview = memref.subview %arr[32] [32] [1] : memref<128xi4> to memref<32xi4, strided<[1], offset:32>>
-  %1 = memref.load %subview[%idx] : memref<32xi4, strided<[1], offset:32>>
+  %subview = memref.subview %arr[32] [32] [1] : memref<128xi4> to memref<32xi4, contiguous<1, offset:32>>
+  %1 = memref.load %subview[%idx] : memref<32xi4, contiguous<1, offset:32>>
   return %1 : i4
 }
 
 // CHECK-LABEL: func @memref_strided_i4
 //       CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<64xi8>
-//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][16] [16] [1] : memref<64xi8> to memref<16xi8, strided<[1], offset: 16>>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][16] [16] [1] : memref<64xi8> to memref<16xi8, contiguous<1, offset: 16>>
 //       CHECK:   %[[LOAD:.+]] = memref.load %[[SUBVIEW]]
 
 // CHECK32-LABEL: func @memref_strided_i4
 //       CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<16xi32>
-//       CHECK32:   %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][4] [4] [1] : memref<16xi32> to memref<4xi32, strided<[1], offset: 4>>
+//       CHECK32:   %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][4] [4] [1] : memref<16xi32> to memref<4xi32, contiguous<1, offset: 4>>
 //       CHECK32:   %[[LOAD:.+]] = memref.load %[[SUBVIEW]]
 
 // -----
@@ -192,13 +192,13 @@ func.func @memref_subview_dynamic_offset_i4(%idx : index) -> i4 {
 // CHECK-LABEL:   func.func @memref_subview_dynamic_offset_i4(
 // CHECK:           %[[ALLOC:.*]] = memref.alloc() : memref<2097152xi8>
 // CHECK:           %[[IDX:.*]] = affine.apply
-// CHECK:           %[[SUBVIEW:.*]] = memref.subview %[[ALLOC]][%[[IDX]]] [65536] [1] : memref<2097152xi8> to memref<65536xi8, strided<[1], offset: ?>>
+// CHECK:           %[[SUBVIEW:.*]] = memref.subview %[[ALLOC]][%[[IDX]]] [65536] [1] : memref<2097152xi8> to memref<65536xi8, contiguous<1, offset: ?>>
 // CHECK:           memref.load %[[SUBVIEW]]
 
 // CHECK32-LABEL:   func.func @memref_subview_dynamic_offset_i4(
 // CHECK32:           %[[ALLOC:.*]] = memref.alloc() : memref<524288xi32>
 // CHECK32:           %[[IDX:.*]] = affine.apply
-// CHECK32:           %[[SUBVIEW:.*]] = memref.subview %[[ALLOC]][%[[IDX]]] [16384] [1] : memref<524288xi32> to memref<16384xi32, strided<[1], offset: ?>>
+// CHECK32:           %[[SUBVIEW:.*]] = memref.subview %[[ALLOC]][%[[IDX]]] [16384] [1] : memref<524288xi32> to memref<16384xi32, contiguous<1, offset: ?>>
 // CHECK32:           memref.load %[[SUBVIEW]]
 
 // -----
@@ -238,8 +238,8 @@ func.func @reinterpret_cast_memref_load_0D() -> i4 {
 
 func.func @reinterpret_cast_memref_load_1D(%arg0: index) -> i4 {
     %0 = memref.alloc() : memref<5x5xi4>
-    %reinterpret_cast_0 = memref.reinterpret_cast %0 to offset: [8], sizes: [25], strides: [1] : memref<5x5xi4> to memref<25xi4, strided<[1], offset:8>>
-    %1 = memref.load %reinterpret_cast_0[%arg0] : memref<25xi4, strided<[1], offset:8>>
+    %reinterpret_cast_0 = memref.reinterpret_cast %0 to offset: [8], sizes: [25], strides: [1] : memref<5x5xi4> to memref<25xi4, contiguous<1, offset:8>>
+    %1 = memref.load %reinterpret_cast_0[%arg0] : memref<25xi4, contiguous<1, offset:8>>
     return %1 : i4
 }
 //   CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 2)>
@@ -247,9 +247,9 @@ func.func @reinterpret_cast_memref_load_1D(%arg0: index) -> i4 {
 //       CHECK: func @reinterpret_cast_memref_load_1D(
 //  CHECK-SAME: %[[ARG0:.+]]: index
 //       CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<13xi8>
-//       CHECK:   %[[RE_CAST:.+]] = memref.reinterpret_cast %[[ALLOC]] to offset: [4], sizes: [13], strides: [1] : memref<13xi8> to memref<13xi8, strided<[1], offset: 4>>
+//       CHECK:   %[[RE_CAST:.+]] = memref.reinterpret_cast %[[ALLOC]] to offset: [4], sizes: [13], strides: [1] : memref<13xi8> to memref<13xi8, contiguous<1, offset: 4>>
 //       CHECK:   %[[INDEX:.+]] = affine.apply #[[MAP]]()[%[[ARG0]]]
-//       CHECK:   %[[LOAD:.+]] = memref.load %[[RE_CAST]][%[[INDEX]]] : memref<13xi8, strided<[1], offset: 4>>
+//       CHECK:   %[[LOAD:.+]] = memref.load %[[RE_CAST]][%[[INDEX]]] : memref<13xi8, contiguous<1, offset: 4>>
 //       CHECK:   %[[OFFSET:.+]] = affine.apply #[[MAP1]]()[%[[ARG0]]]
 //       CHECK:   %[[CAST:.+]] = arith.index_cast %[[OFFSET]] : index to i8
 //       CHECK:   %[[SHR:.+]] = arith.shrsi %[[LOAD]], %[[CAST]] : i8
@@ -261,9 +261,9 @@ func.func @reinterpret_cast_memref_load_1D(%arg0: index) -> i4 {
 //       CHECK32: func @reinterpret_cast_memref_load_1D(
 //  CHECK32-SAME: %[[ARG0:.+]]: index
 //       CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<4xi32>
-//       CHECK32:   %[[RE_CAST:.+]] = memref.reinterpret_cast %[[ALLOC]] to offset: [1], sizes: [4], strides: [1] : memref<4xi32> to memref<4xi32, strided<[1], offset: 1>>
+//       CHECK32:   %[[RE_CAST:.+]] = memref.reinterpret_cast %[[ALLOC]] to offset: [1], sizes: [4], strides: [1] : memref<4xi32> to memref<4xi32, contiguous<1, offset: 1>>
 //       CHECK32:   %[[INDEX:.+]] = affine.apply #[[MAP]]()[%[[ARG0]]]
-//       CHECK32:   %[[LOAD:.+]] = memref.load %[[RE_CAST]][%[[INDEX]]] : memref<4xi32, strided<[1], offset: 1>>
+//       CHECK32:   %[[LOAD:.+]] = memref.load %[[RE_CAST]][%[[INDEX]]] : memref<4xi32, contiguous<1, offset: 1>>
 //       CHECK32:   %[[OFFSET:.+]] = affine.apply #[[MAP1]]()[%[[ARG0]]]
 //       CHECK32:   %[[CAST:.+]] = arith.index_cast %[[OFFSET]] : index to i32
 //       CHECK32:   %[[SHR:.+]] = arith.shrsi %[[LOAD]], %[[CAST]] : i32

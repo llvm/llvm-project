@@ -8,6 +8,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "TypeDetail.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -519,8 +520,8 @@ MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
                            Attribute memorySpace) {
   // Use default layout for empty attribute.
   if (!layout)
-    layout = AffineMapAttr::get(AffineMap::getMultiDimIdentityMap(
-        shape.size(), elementType.getContext()));
+    layout = ContiguousLayoutAttr::get(elementType.getContext(), /*offset=*/0,
+                                       /*rank=*/shape.size());
 
   // Drop default memory space value and replace it with empty attribute.
   memorySpace = skipDefaultMemorySpace(memorySpace);
@@ -535,8 +536,8 @@ MemRefType MemRefType::getChecked(
 
   // Use default layout for empty attribute.
   if (!layout)
-    layout = AffineMapAttr::get(AffineMap::getMultiDimIdentityMap(
-        shape.size(), elementType.getContext()));
+    layout = ContiguousLayoutAttr::get(elementType.getContext(), /*offset=*/0,
+                                       /*rank=*/shape.size());
 
   // Drop default memory space value and replace it with empty attribute.
   memorySpace = skipDefaultMemorySpace(memorySpace);
@@ -548,13 +549,14 @@ MemRefType MemRefType::getChecked(
 MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
                            AffineMap map, Attribute memorySpace) {
 
-  // Use default layout for empty map.
-  if (!map)
-    map = AffineMap::getMultiDimIdentityMap(shape.size(),
-                                            elementType.getContext());
-
-  // Wrap AffineMap into Attribute.
-  auto layout = AffineMapAttr::get(map);
+  MemRefLayoutAttrInterface layout;
+  if (map)
+    // Wrap AffineMap into Attribute.
+    layout = AffineMapAttr::get(map);
+  else
+    // Represent the default identity map as a contiguous layout.
+    layout = ContiguousLayoutAttr::get(elementType.getContext(), /*offset=*/0,
+                                       /*rank=*/shape.size());
 
   // Drop default memory space value and replace it with empty attribute.
   memorySpace = skipDefaultMemorySpace(memorySpace);
@@ -567,14 +569,14 @@ MemRefType
 MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
                        ArrayRef<int64_t> shape, Type elementType, AffineMap map,
                        Attribute memorySpace) {
-
-  // Use default layout for empty map.
-  if (!map)
-    map = AffineMap::getMultiDimIdentityMap(shape.size(),
-                                            elementType.getContext());
-
-  // Wrap AffineMap into Attribute.
-  auto layout = AffineMapAttr::get(map);
+  MemRefLayoutAttrInterface layout;
+  if (map)
+    // Wrap AffineMap into Attribute.
+    layout = AffineMapAttr::get(map);
+  else
+    // Represent the default identity map as a contiguous layout.
+    layout = ContiguousLayoutAttr::get(elementType.getContext(), /*offset=*/0,
+                                       /*rank=*/shape.size());
 
   // Drop default memory space value and replace it with empty attribute.
   memorySpace = skipDefaultMemorySpace(memorySpace);
@@ -586,13 +588,14 @@ MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
 MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
                            AffineMap map, unsigned memorySpaceInd) {
 
-  // Use default layout for empty map.
-  if (!map)
-    map = AffineMap::getMultiDimIdentityMap(shape.size(),
-                                            elementType.getContext());
-
-  // Wrap AffineMap into Attribute.
-  auto layout = AffineMapAttr::get(map);
+  MemRefLayoutAttrInterface layout;
+  if (map)
+    // Wrap AffineMap into Attribute.
+    layout = AffineMapAttr::get(map);
+  else
+    // Represent the default identity map as a contiguous layout.
+    layout = ContiguousLayoutAttr::get(elementType.getContext(), /*offset=*/0,
+                                       /*rank=*/shape.size());
 
   // Convert deprecated integer-like memory space to Attribute.
   Attribute memorySpace =
@@ -606,14 +609,14 @@ MemRefType
 MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
                        ArrayRef<int64_t> shape, Type elementType, AffineMap map,
                        unsigned memorySpaceInd) {
-
-  // Use default layout for empty map.
-  if (!map)
-    map = AffineMap::getMultiDimIdentityMap(shape.size(),
-                                            elementType.getContext());
-
-  // Wrap AffineMap into Attribute.
-  auto layout = AffineMapAttr::get(map);
+  MemRefLayoutAttrInterface layout;
+  if (map)
+    // Wrap AffineMap into Attribute.
+    layout = AffineMapAttr::get(map);
+  else
+    // Represent the default identity map as a contiguous layout.
+    layout = ContiguousLayoutAttr::get(elementType.getContext(), /*offset=*/0,
+                                       /*rank=*/shape.size());
 
   // Convert deprecated integer-like memory space to Attribute.
   Attribute memorySpace =
@@ -649,12 +652,26 @@ bool MemRefType::areTrailingDimsContiguous(int64_t n) {
   if (!isLastDimUnitStride())
     return false;
 
+  if (auto contiguousLayout =
+          mlir::dyn_cast<ContiguousLayoutAttr>(getLayout())) {
+    ArrayRef<int64_t> perm = contiguousLayout.getPermutation();
+    int64_t expectedValue = perm.size() - 1;
+    for (auto [iter, permVal] : llvm::enumerate(llvm::reverse(perm))) {
+      if (static_cast<int64_t>(iter) >= n)
+        return true;
+      if (permVal != expectedValue)
+        return false;
+      expectedValue--;
+    }
+    return true;
+  }
   auto memrefShape = getShape().take_back(n);
-  if (ShapedType::isDynamicShape(memrefShape))
-    return false;
 
   if (getLayout().isIdentity())
     return true;
+
+  if (ShapedType::isDynamicShape(memrefShape))
+    return false;
 
   int64_t offset;
   SmallVector<int64_t> stridesFull;
@@ -677,29 +694,156 @@ bool MemRefType::areTrailingDimsContiguous(int64_t n) {
   return llvm::equal(strides, llvm::reverse(flattenedDims));
 }
 
+/// If `layout` is some permutation of the identity layout with an offset
+/// applied to the last dimension - that is, if it has the form (d0, d1, ...,
+/// dN) -> (dX, dY, ... dZ + E) for some symbol or constant E, succeed and
+/// populate `perm` and `offset` with the discovered values.
+static LogicalResult asOffsetPermutation(MemRefLayoutAttrInterface layout,
+                                         ArrayRef<int64_t> shape,
+                                         SmallVectorImpl<int64_t> &perm,
+                                         int64_t &offset) {
+  if (auto contiguousLayout = mlir::dyn_cast<ContiguousLayoutAttr>(layout)) {
+    perm.assign(contiguousLayout.getPermutation().begin(),
+                contiguousLayout.getPermutation().end());
+    offset = contiguousLayout.getOffset();
+    return success();
+  }
+  if (auto stridedLayout = mlir::dyn_cast<StridedLayoutAttr>(layout)) {
+    // We can't reason about dynamic strides
+    if (llvm::any_of(stridedLayout.getStrides(), ShapedType::isDynamic))
+      return failure();
+
+    int64_t suffixProd = 1;
+    bool isRowMajor = true;
+    for (auto [stride, dim] : llvm::zip(
+             llvm::reverse(stridedLayout.getStrides()), llvm::reverse(shape))) {
+      if (stride != suffixProd) {
+        isRowMajor = false;
+        break;
+      }
+      suffixProd *= dim;
+    }
+    if (isRowMajor) {
+      llvm::append_range(perm, llvm::iota_range<int64_t>(0, shape.size(),
+                                                         /*Inclusive=*/false));
+      offset = stridedLayout.getOffset();
+      return success();
+    }
+
+    SmallVector<std::pair<int64_t, int64_t>> stridesAndLocs;
+    for (auto [idx, stride] : llvm::enumerate(stridedLayout.getStrides()))
+      stridesAndLocs.emplace_back(stride, static_cast<int64_t>(idx));
+    // Sort by increasing stride, ties broken by appearing later in the memref.
+    llvm::sort(stridesAndLocs, [](auto a, auto b) {
+      if (a.first == b.first)
+        return a.second >= b.second;
+      return a.first < b.first;
+    });
+    int64_t expectedStride = 1;
+    for (auto [stride, loc] : stridesAndLocs) {
+      if (stride != expectedStride)
+        return failure();
+      expectedStride *= shape[loc];
+    }
+    perm = llvm::map_to_vector(stridesAndLocs, [](auto x) { return x.second; });
+    offset = stridedLayout.getOffset();
+    return success();
+  }
+
+  auto pullOffset = [&](AffineExpr e) -> bool {
+    if (isa<AffineDimExpr>(e))
+      return false;
+    if (auto constExpr = mlir::dyn_cast<AffineConstantExpr>(e)) {
+      offset = constExpr.getValue();
+    } else {
+      offset = ShapedType::kDynamic;
+    }
+    return true;
+  };
+
+  AffineMap m = layout.getAffineMap();
+  if (m.getNumDims() == 0 && m.getNumResults() == 1) {
+    if (pullOffset(m.getResult(0)))
+      return success();
+    return failure();
+  }
+
+  int64_t rank = shape.size();
+  if (m.getNumResults() != rank || m.getNumDims() != rank)
+    return failure();
+
+  llvm::SmallBitVector seen(rank, false);
+  for (AffineExpr e : llvm::drop_end(m.getResults())) {
+    auto dimE = dyn_cast<AffineDimExpr>(e);
+    if (!dimE)
+      return failure();
+    seen.set(dimE.getPosition());
+    perm.push_back(dimE.getPosition());
+  }
+  AffineDimExpr lastDim = dyn_cast<AffineDimExpr>(m.getResults().back());
+  if (!lastDim) {
+    auto sum = dyn_cast<AffineBinaryOpExpr>(m.getResults().back());
+    if (!sum || sum.getKind() != AffineExprKind::Add)
+      return failure();
+    if (!(pullOffset(sum.getLHS()) &&
+          (lastDim = dyn_cast<AffineDimExpr>(sum.getRHS()))) &&
+        !(pullOffset(sum.getRHS()) &&
+          (lastDim = dyn_cast<AffineDimExpr>(sum.getLHS()))))
+      return failure();
+  } else {
+    offset = 0;
+  }
+  seen.set(lastDim.getPosition());
+  perm.push_back(lastDim.getPosition());
+  if (!seen.all())
+    return failure();
+  return success();
+}
+
+static SmallVector<int64_t>
+computeStridesFromPermutedShape(ArrayRef<int64_t> shape,
+                                ArrayRef<int64_t> perm) {
+  assert(shape.size() == perm.size() &&
+         "shape and permutation have same length");
+  int64_t rank = shape.size();
+  SmallVector<int64_t> strides(rank, ShapedType::kDynamic);
+  strides.reserve(rank);
+
+  // invertPermutationVector() might be a circular dependency betwin IR and
+  // Utils.
+  SmallVector<int64_t> strideOrder(rank, -1);
+  for (auto [idx, dim] : llvm::enumerate(perm)) {
+    strideOrder[dim] = static_cast<int64_t>(idx);
+  }
+  SaturatedInteger strideAccum = SaturatedInteger::wrap(1);
+  for (int64_t i = rank - 1; i >= 0; --i) {
+    strides[strideOrder[i]] = strideAccum.asInteger();
+    strideAccum = strideAccum * SaturatedInteger::wrap(shape[strideOrder[i]]);
+  }
+  return strides;
+}
+
 MemRefType MemRefType::canonicalizeStridedLayout() {
+  MemRefLayoutAttrInterface layout = getLayout();
+  if (mlir::isa<ContiguousLayoutAttr>(layout))
+    return *this;
+
+  SmallVector<int64_t> maybePerm;
+  int64_t maybeOffset;
+  if (succeeded(
+          asOffsetPermutation(layout, getShape(), maybePerm, maybeOffset))) {
+    return MemRefType::Builder(*this).setLayout(
+        ContiguousLayoutAttr::get(getContext(), maybeOffset, maybePerm));
+  }
+
   AffineMap m = getLayout().getAffineMap();
 
-  // Already in canonical form.
+  // Identity maps that aren't contiguous<> aren't canonical
   if (m.isIdentity())
-    return *this;
+    return MemRefType::Builder(*this).setLayout({});
 
   // Can't reduce to canonical identity form, return in canonical form.
   if (m.getNumResults() > 1)
-    return *this;
-
-  // Corner-case for 0-D affine maps.
-  if (m.getNumDims() == 0 && m.getNumSymbols() == 0) {
-    if (auto cst = llvm::dyn_cast<AffineConstantExpr>(m.getResult(0)))
-      if (cst.getValue() == 0)
-        return MemRefType::Builder(*this).setLayout({});
-    return *this;
-  }
-
-  // 0-D corner case for empty shape that still have an affine map. Example:
-  // `memref<f32, affine_map<()[s0] -> (s0)>>`. This is a 1 element memref whose
-  // offset needs to remain, just return t.
-  if (getShape().empty())
     return *this;
 
   // If the canonical strided layout for the sizes of `t` is equal to the
@@ -794,7 +938,7 @@ static LogicalResult getStridesAndOffset(MemRefType t,
                                          AffineExpr &offset) {
   AffineMap m = t.getLayout().getAffineMap();
 
-  if (m.getNumResults() != 1 && !m.isIdentity())
+  if (m.getNumResults() != 1)
     return failure();
 
   auto zero = getAffineConstantExpr(0, t.getContext());
@@ -842,6 +986,25 @@ LogicalResult MemRefType::getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
     return success();
   }
 
+  // Somewhat happy path: the type uses the contiguous layout, we need to
+  // compute the strides.
+  if (auto contiguous = llvm::dyn_cast<ContiguousLayoutAttr>(getLayout())) {
+    strides.append(computeStridesFromPermutedShape(
+        getShape(), contiguous.getPermutation()));
+    offset = contiguous.getOffset();
+    return success();
+  }
+
+  SmallVector<int64_t> maybePermutation;
+  int64_t maybeOffset;
+  if (succeeded(asOffsetPermutation(getLayout(), getShape(), maybePermutation,
+                                    maybeOffset))) {
+    strides.append(
+        computeStridesFromPermutedShape(getShape(), maybePermutation));
+    offset = maybeOffset;
+    return success();
+  }
+
   // Otherwise, defer to the affine fallback as layouts are supposed to be
   // convertible to affine maps.
   AffineExpr offsetExpr;
@@ -878,6 +1041,10 @@ bool MemRefType::isStrided() {
 }
 
 bool MemRefType::isLastDimUnitStride() {
+  if (auto contiguousLayout = mlir::dyn_cast<ContiguousLayoutAttr>(getLayout()))
+    return getRank() == 0 ||
+           contiguousLayout.getPermutation().back() == getRank() - 1;
+
   int64_t offset;
   SmallVector<int64_t> strides;
   auto successStrides = getStridesAndOffset(strides, offset);

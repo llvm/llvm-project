@@ -1,21 +1,21 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 // RUN: mlir-opt %s --mlir-print-op-generic | mlir-opt | FileCheck %s
 
-// CHECK: #[[$MAP:.*]] = affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>
 
 // CHECK-LABEL: func @alloc() {
 func.func @alloc() {
 ^bb0:
   // Test simple alloc.
   // CHECK: %{{.*}} = memref.alloc() : memref<1024x64xf32, 1>
-  %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+  %0 = memref.alloc() : memref<1024x64xf32, contiguous<2>, 1>
 
   %c0 = "arith.constant"() {value = 0: index} : () -> index
   %c1 = "arith.constant"() {value = 1: index} : () -> index
 
   // Test alloc with dynamic dimensions.
   // CHECK: %{{.*}} = memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32, 1>
-  %1 = memref.alloc(%c0, %c1) : memref<?x?xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+  %1 = memref.alloc(%c0, %c1) : memref<?x?xf32, contiguous<2>, 1>
 
   // Test alloc with no dynamic dimensions and one symbol.
   // CHECK: %{{.*}} = memref.alloc()[%{{.*}}] : memref<2x4xf32, #[[$MAP]], 1>
@@ -30,6 +30,14 @@ func.func @alloc() {
   // CHECK: %{{.*}} = memref.alloc() : memref<2xi32>
   %4 = memref.alloc() : memref<2 x i32>
 
+  // Alloc with affine map
+  // CHECK: %{{.*}} = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+  %5 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+
+  // Test alloc with no dynamic dimensions and one offset.
+  // CHECK: %{{.*}} = memref.alloc()[%{{.*}}] : memref<2x4xf32, contiguous<2, offset: ?>, 1>
+  %6 = memref.alloc()[%c0] : memref<2x4xf32, contiguous<2, offset: ?>, 1>
+
   // CHECK:   return
   return
 }
@@ -39,14 +47,14 @@ func.func @alloca() {
 ^bb0:
   // Test simple alloc.
   // CHECK: %{{.*}} = memref.alloca() : memref<1024x64xf32, 1>
-  %0 = memref.alloca() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+  %0 = memref.alloca() : memref<1024x64xf32, contiguous<2>, 1>
 
   %c0 = "arith.constant"() {value = 0: index} : () -> index
   %c1 = "arith.constant"() {value = 1: index} : () -> index
 
   // Test alloca with dynamic dimensions.
   // CHECK: %{{.*}} = memref.alloca(%{{.*}}, %{{.*}}) : memref<?x?xf32, 1>
-  %1 = memref.alloca(%c0, %c1) : memref<?x?xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+  %1 = memref.alloca(%c0, %c1) : memref<?x?xf32, contiguous<2>, 1>
 
   // Test alloca with no dynamic dimensions and one symbol.
   // CHECK: %{{.*}} = memref.alloca()[%{{.*}}] : memref<2x4xf32, #[[$MAP]], 1>
@@ -60,6 +68,14 @@ func.func @alloca() {
   // CHECK: %{{.*}} = memref.alloca() {alignment = 64 : i64} : memref<2xi32>
   %4 = memref.alloca() {alignment = 64} : memref<2 x i32>
 
+  // Test alloca with affine map.
+  // CHECK: %{{.*}} = memref.alloca() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+  %5 = memref.alloca() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+
+  // Test alloca with no dynamic dimensions and one offset.
+  // CHECK: %{{.*}} = memref.alloca()[%{{.*}}] : memref<2x4xf32, contiguous<2, offset: ?>, 1>
+  %6 = memref.alloca()[%c0] : memref<2x4xf32, contiguous<2, offset: ?>, 1>
+
   return
 }
 
@@ -67,26 +83,44 @@ func.func @alloca() {
 func.func @dealloc() {
 ^bb0:
   // CHECK: %{{.*}} = memref.alloc() : memref<1024x64xf32>
-  %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 0>
+  %0 = memref.alloc() : memref<1024x64xf32, contiguous<2>, 0>
 
   // CHECK: memref.dealloc %{{.*}} : memref<1024x64xf32>
-  memref.dealloc %0 : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 0>
+  memref.dealloc %0 : memref<1024x64xf32, contiguous<2>, 0>
   return
 }
 
-// CHECK-LABEL: func @load_store
+// CHECK-LABEL: @load_store
 func.func @load_store() {
 ^bb0:
   // CHECK: %{{.*}} = memref.alloc() : memref<1024x64xf32, 1>
-  %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+  %0 = memref.alloc() : memref<1024x64xf32, contiguous<2>, 1>
 
   %1 = arith.constant 0 : index
   %2 = arith.constant 1 : index
 
   // CHECK: %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<1024x64xf32, 1>
-  %3 = memref.load %0[%1, %2] : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+  %3 = memref.load %0[%1, %2] : memref<1024x64xf32, contiguous<2>, 1>
 
   // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<1024x64xf32, 1>
+  memref.store %3, %0[%1, %2] : memref<1024x64xf32, contiguous<2>, 1>
+
+  return
+}
+
+// CHECK-LABEL: func @load_store_affine
+func.func @load_store_affine() {
+^bb0:
+  // CHECK: %{{.*}} = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+  %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+
+  %1 = arith.constant 0 : index
+  %2 = arith.constant 1 : index
+
+  // CHECK: %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+  %3 = memref.load %0[%1, %2] : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
+
+  // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
   memref.store %3, %0[%1, %2] : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
 
   return
@@ -98,8 +132,8 @@ func.func @dma_ops() {
   %stride = arith.constant 32 : index
   %elt_per_stride = arith.constant 16 : index
 
-  %A = memref.alloc() : memref<256 x f32, affine_map<(d0) -> (d0)>, 0>
-  %Ah = memref.alloc() : memref<256 x f32, affine_map<(d0) -> (d0)>, 1>
+  %A = memref.alloc() : memref<256 x f32, contiguous<1>, 0>
+  %Ah = memref.alloc() : memref<256 x f32, contiguous<1>, 1>
   %tag = memref.alloc() : memref<1 x f32>
 
   %num_elements = arith.constant 256 : index
@@ -226,6 +260,13 @@ func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memr
 
   // CHECK: memref.cast %{{.*}} : memref<*xf32> to memref<4xf32>
   %5 = memref.cast %4 : memref<*xf32> to memref<4xf32>
+
+  // CHECK: memref.cast %{{.*}} : memref<4xf32> to memref<?xf32, contiguous<1, offset: ?>>
+  %6 = memref.cast %arg0 : memref<4xf32> to memref<?xf32, contiguous<1, offset: ?>>
+
+  // CHECK: memref.cast {{%.*}} : memref<?xf32, contiguous<1, offset: ?>> to memref<4xf32>
+  %7 = memref.cast %6 : memref<?xf32, contiguous<1, offset: ?>> to memref<4xf32>
+
   return
 }
 
@@ -369,7 +410,7 @@ func.func @expand_collapse_shape_static(
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1, 2]]
   %r8 = memref.collapse_shape %arg8 [[0, 1, 2]] :
       memref<1x1x1024xi8, strided<[40960, 4096, 1], offset: 0>> into
-      memref<1024xi8, strided<[1], offset: 0>>
+      memref<1024xi8>
 
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0], [1, 2, 3]]
   %r9 = memref.collapse_shape %arg9 [[0], [1, 2, 3]] :
@@ -453,15 +494,15 @@ func.func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
     memref<?x4x?xf32, strided<[?, ?, 1], offset: ?>>
 
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1]]
-//  CHECK-SAME:     memref<?x42xf32, strided<[42, 1]>> into memref<?xf32, strided<[1]>>
+//  CHECK-SAME:     memref<?x42xf32, strided<[42, 1]>> into memref<?xf32>
   %3 = memref.collapse_shape %arg3 [[0, 1]] :
     memref<?x42xf32, strided<[42, 1], offset: 0>> into
-    memref<?xf32, strided<[1]>>
+    memref<?xf32>
 
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1]] output_shape [%arg6, 42]
-//  CHECK-SAME:     memref<?xf32, strided<[1]>> into memref<?x42xf32>
+//  CHECK-SAME:     memref<?xf32> into memref<?x42xf32>
   %r3 = memref.expand_shape %3 [[0, 1]] output_shape [%arg6, 42] :
-    memref<?xf32, strided<[1]>> into memref<?x42xf32>
+    memref<?xf32> into memref<?x42xf32>
 
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
   %4 = memref.expand_shape %arg7 [[0, 1], [2], [3, 4]] output_shape [2, 2, %arg4, 2, 2]
@@ -495,6 +536,8 @@ func.func @collapse_shape_to_dynamic
 func.func @expand_collapse_shape_transposed_layout(
     %m0: memref<?x?xf32, strided<[1, 10], offset: 0>>,
     %m1: memref<4x5x6xf32, strided<[1, ?, 1000], offset: 0>>,
+    %m2: memref<?x?xf32, contiguous<[1, 0]>>,
+    %m3: memref<4x5x6xf32, contiguous<[2, 1, 0]>>,
     %sz0: index,
     %sz1: index) {
 
@@ -511,6 +554,17 @@ func.func @expand_collapse_shape_transposed_layout(
   %rr1 = memref.collapse_shape %r1 [[0, 1], [2], [3, 4]] :
     memref<2x2x5x2x3xf32, strided<[2, 1, ?, 3000, 1000], offset: 0>> into
     memref<4x5x6xf32, strided<[1, ?, 1000], offset: 0>>
+
+  %r2 = memref.expand_shape %m2 [[0], [1, 2]] output_shape [%sz0, %sz1, 5] :
+    memref<?x?xf32, contiguous<[1, 0]>> into
+    memref<?x?x5xf32, contiguous<[2, 0, 1]>>
+  %rr2 = memref.collapse_shape %r2 [[0], [1, 2]] :
+    memref<?x?x5xf32, contiguous<[2, 0, 1]>> into
+    memref<?x?xf32, contiguous<[1, 0]>>
+
+  %r3 = memref.expand_shape %m3 [[0, 1], [2], [3, 4]] output_shape [2, 2, 5, 2, 3] :
+    memref<4x5x6xf32, contiguous<[2, 1, 0]>> into
+    memref<2x2x5x2x3xf32, contiguous<[3, 4, 2, 0, 1]>>
   return
 }
 
@@ -606,7 +660,7 @@ func.func @memref_memory_space_cast(%src : memref<?xf32>) -> memref<?xf32, 1> {
 }
 
 // CHECK-LABEL: func @memref_transpose_map
-func.func @memref_transpose_map(%src : memref<?x?xf32>) -> memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>> {
-  %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
-  return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
+func.func @memref_transpose_map(%src : memref<?x?xf32>) -> memref<?x?xf32, contiguous<[1, 0]>> {
+  %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, contiguous<[1, 0]>>
+  return %dst : memref<?x?xf32, contiguous<[1, 0]>>
 }

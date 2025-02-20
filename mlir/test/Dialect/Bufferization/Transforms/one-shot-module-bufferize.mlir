@@ -543,7 +543,6 @@ func.func @entry(%A : tensor<?xf32> {bufferization.buffer_layout = affine_map<(i
 // %A, %B and %C are not inplaceable. This test case shows that this kind of
 // conflict detection has a "transitive" nature.
 //  CHECK-DAG: %[[ALLOC_A:.*]] = memref.alloc
-//  CHECK-DAG: %[[CASTED_A:.*]] = memref.cast %[[ALLOC_A]]
 //  CHECK-DAG: %[[ALLOC_B:.*]] = memref.alloc
 //  CHECK-DAG: %[[CASTED_B:.*]] = memref.cast %[[ALLOC_B]]
 //  CHECK-DAG: %[[ALLOC_C:.*]] = memref.alloc
@@ -551,7 +550,7 @@ func.func @entry(%A : tensor<?xf32> {bufferization.buffer_layout = affine_map<(i
 //  CHECK-DAG: memref.copy %[[A]], %[[ALLOC_A]]
 //  CHECK-DAG: memref.copy %[[B]], %[[ALLOC_B]]
 //  CHECK-DAG: memref.copy %[[C]], %[[ALLOC_C]]
-// CHECK-NEXT: call @callee(%[[CASTED_A]], %[[CASTED_B]], %[[CASTED_C]])
+// CHECK-NEXT: call @callee(%[[ALLOC_A]], %[[CASTED_B]], %[[CASTED_C]])
   call @callee(%A, %B, %C) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>) -> ()
   return
 }
@@ -789,8 +788,8 @@ func.func @result_type_mismatch(%c: i1) -> tensor<5xf32> {
   // CHECK: return %[[cast0]] : memref<5xf32, strided<[?], offset: ?>
   return %0 : tensor<5xf32>
 ^bb2:
-  // CHECK: %[[m1:.*]] = memref.subview %[[alloc]][2] [5] [1] : memref<10xf32> to memref<5xf32, strided<[1], offset: 2>>
-  // CHECK: %[[cast1:.*]] = memref.cast %[[m1]] : memref<5xf32, strided<[1], offset: 2>> to memref<5xf32, strided<[?], offset: ?>>
+  // CHECK: %[[m1:.*]] = memref.subview %[[alloc]][2] [5] [1] : memref<10xf32> to memref<5xf32, contiguous<1, offset: 2>>
+  // CHECK: %[[cast1:.*]] = memref.cast %[[m1]] : memref<5xf32, contiguous<1, offset: 2>> to memref<5xf32, strided<[?], offset: ?>>
   %1 = tensor.extract_slice %t[2][5][1] : tensor<10xf32> to tensor<5xf32>
   // CHECK: return %[[cast1]] : memref<5xf32, strided<[?], offset: ?>>
   return %1 : tensor<5xf32>

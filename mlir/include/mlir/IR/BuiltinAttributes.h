@@ -1081,6 +1081,28 @@ inline bool operator!=(StringRef lhs, StringAttr rhs) { return !(lhs == rhs); }
 
 namespace mlir {
 
+/// Given an N-dimensional permutation and an offset (which can use
+/// ShapedType::kDynamic) to represent a dynamic value), return the
+/// N-dimensional map that is permuted according to said permutation and adds
+/// the offset to the final output. If the permutation has no outputs (it's a
+/// 0-D map), add one result to hold the offset.
+///
+/// Examples:
+/// =========
+///
+/// offset = 0, permutation = [0, 1, 2] gives
+/// [](d0, d1, d2) -> (d0, d1, d2)
+/// while offset = 5 gives [](d0, d1, d2) -> (d0, d1, d2 + 5)
+/// and offset = ? gives [s0](d0, d1, d2) -> (d0, d1, d2 + s0).
+///
+/// offset = ?, permutation = [2, 1, 0] gives
+/// [s0](d0, d1, d2) -> (d2, d1, d0 + s0)
+///
+/// Finally, offset = 0, permutation = [], gives []() -> (0), while
+/// offset = ?, permutation = [] gives [s0]() -> (s0).
+AffineMap makePermutedMapWithOffset(ArrayRef<int64_t> permutation,
+                                    int64_t offset, MLIRContext *context);
+
 /// Given a list of strides (in which ShapedType::kDynamic
 /// represents a dynamic value), return the single result AffineMap which
 /// represents the linearized strided layout map. Dimensions correspond to the

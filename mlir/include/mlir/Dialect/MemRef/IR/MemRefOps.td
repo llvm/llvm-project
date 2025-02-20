@@ -32,8 +32,9 @@ def MemRefTypeAttr
 class MemRef_Op<string mnemonic, list<Trait> traits = []>
     : Op<MemRef_Dialect, mnemonic, traits>;
 
-// Base class for ops with static/dynamic offset, sizes and strides
-// attributes/arguments.
+// Base class for ops with static/dynamic offset, sizes and optional strides
+// attributes/arguments. When the strides are not specified, this implies a
+// contiguous layout.
 class MemRef_OpWithOffsetSizesAndStrides<string mnemonic,
                                          list<Trait> traits = []>
     : MemRef_Op<mnemonic, traits> {

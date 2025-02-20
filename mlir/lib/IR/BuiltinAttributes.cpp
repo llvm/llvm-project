@@ -49,6 +49,88 @@ void BuiltinDialect::registerAttributes() {
 }
 
 //===----------------------------------------------------------------------===//
+// ContiguousLayoutAttr
+//===----------------------------------------------------------------------===//
+
+/// Build a row-major contiguous layout
+ContiguousLayoutAttr ContiguousLayoutAttr::get(MLIRContext *context,
+                                               int64_t offset, int64_t rank) {
+  SmallVector<int64_t> identityPerm =
+      llvm::to_vector(llvm::iota_range<int64_t>(0, rank, /*inclusive=*/false));
+  return get(context, offset, identityPerm);
+}
+
+bool ContiguousLayoutAttr::isRowMajor() const {
+  return llvm::all_of(llvm::enumerate(getPermutation()), [](auto e) {
+    return static_cast<int64_t>(e.index()) == e.value();
+  });
+}
+
+/// Prints a contiguous layout attribute.
+void ContiguousLayoutAttr::print(llvm::raw_ostream &os) const {
+  os << "contiguous<";
+  if (isRowMajor()) {
+    os << getPermutation().size();
+  } else {
+    os << "[";
+    llvm::interleaveComma(getPermutation(), os);
+    os << "]";
+  }
+
+  if (getOffset() != 0) {
+    os << ", offset: ";
+    if (ShapedType::isDynamic(getOffset()))
+      os << "?";
+    else
+      os << getOffset();
+  }
+  os << ">";
+}
+
+/// Returns true if this layout is static, i.e. the offset has a known value.
+bool ContiguousLayoutAttr::hasStaticLayout() const {
+  return !ShapedType::isDynamic(getOffset());
+}
+
+bool ContiguousLayoutAttr::isIdentity() const {
+  return getOffset() == 0 && isRowMajor();
+}
+
+/// Returns the contiguous layout attr as an affine map.
+AffineMap ContiguousLayoutAttr::getAffineMap() const {
+  return makePermutedMapWithOffset(getPermutation(), getOffset(), getContext());
+}
+
+/// Checks that the type-agnostic contiguous layout invariants are satisfied.
+LogicalResult
+ContiguousLayoutAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             int64_t offset, ArrayRef<int64_t> permutation) {
+  int64_t rank = permutation.size();
+  llvm::SmallBitVector isPresent(rank, false);
+  for (int64_t idx : permutation) {
+    if (idx < 0 || idx >= rank)
+      return emitError() << "permutation element " << idx
+                         << " is not a non-negative number less than " << rank;
+    isPresent.set(idx);
+  }
+  if (!isPresent.all())
+    return emitError() << "permutation does not contain 0 upto " << rank
+                       << " exactly once";
+  return success();
+}
+
+/// Checks that the type-specific strided layout invariants are satisfied.
+LogicalResult ContiguousLayoutAttr::verifyLayout(
+    ArrayRef<int64_t> shape,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  if (shape.size() != getPermutation().size())
+    return emitError() << "expected the rank of the permutation to match the "
+                          "rank of the memref";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
 
@@ -208,6 +290,19 @@ DictionaryAttr DictionaryAttr::getEmptyUnchecked(MLIRContext *context) {
 //===----------------------------------------------------------------------===//
 // StridedLayoutAttr
 //===----------------------------------------------------------------------===//
+
+/// Gets a strided layout attribute, canonicalizing to the contiguous layout
+/// for 0-D memrefs and 1-D memrefs with a stride of 1 so as to guard against
+/// multiple distinct forms of identity layout existing.
+MemRefLayoutAttrInterface
+StridedLayoutAttr::getCanonical(MLIRContext *context, int64_t offset,
+                                ArrayRef<int64_t> strides) {
+  if (strides.empty())
+    return ContiguousLayoutAttr::get(context, offset, 0);
+  if (strides.size() == 1 && strides.back() == 1)
+    return ContiguousLayoutAttr::get(context, offset, 1);
+  return get(context, offset, strides);
+}
 
 /// Prints a strided layout attribute.
 void StridedLayoutAttr::print(llvm::raw_ostream &os) const {
@@ -1796,6 +1891,26 @@ Attribute DistinctAttr::getReferencedAttr() const {
 //===----------------------------------------------------------------------===//
 // Attribute Utilities
 //===----------------------------------------------------------------------===//
+
+AffineMap mlir::makePermutedMapWithOffset(ArrayRef<int64_t> permutation,
+                                          int64_t offset,
+                                          MLIRContext *context) {
+  SmallVector<AffineExpr> exprs;
+  int64_t rank = permutation.size();
+  exprs.reserve(rank);
+  for (int64_t comesFrom : permutation)
+    exprs.push_back(getAffineDimExpr(comesFrom, context));
+  bool hasDynamicOffset = ShapedType::isDynamic(offset);
+  AffineExpr offsetExpr = hasDynamicOffset
+                              ? getAffineSymbolExpr(0, context)
+                              : getAffineConstantExpr(offset, context);
+  if (exprs.empty()) {
+    exprs.push_back(offsetExpr);
+  } else if (offset != 0) {
+    exprs.back() = exprs.back() + offsetExpr;
+  }
+  return AffineMap::get(rank, hasDynamicOffset ? 1 : 0, exprs, context);
+}
 
 AffineMap mlir::makeStridedLinearLayoutMap(ArrayRef<int64_t> strides,
                                            int64_t offset,

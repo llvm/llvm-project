@@ -2096,10 +2096,12 @@ static LogicalResult generateCopy(
   // Check if a buffer was already created.
   bool existingBuf = fastBufferMap.count(memref) > 0;
   if (!existingBuf) {
-    AffineMap fastBufferLayout = b.getMultiDimIdentityMap(rank);
+    Attribute fastMemorySpace;
+    if (copyOptions.fastMemorySpace != 0)
+      fastMemorySpace = prologue.getI64IntegerAttr(copyOptions.fastMemorySpace);
     auto fastMemRefType =
         MemRefType::get(fastBufferShape, memRefType.getElementType(),
-                        fastBufferLayout, copyOptions.fastMemorySpace);
+                        MemRefLayoutAttrInterface{}, fastMemorySpace);
 
     // Create the fast memory space buffer just before the 'affine.for'
     // operation.
