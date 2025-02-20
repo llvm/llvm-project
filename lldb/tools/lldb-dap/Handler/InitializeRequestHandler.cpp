@@ -25,8 +25,12 @@ static std::string GetStringFromStructuredData(lldb::SBStructuredData &data,
     return std::string();
 
   const size_t length = keyValue.GetStringValue(nullptr, 0);
+
+  if (length == 0)
+    return std::string();
+
   std::string str(length + 1, 0);
-  keyValue.GetStringValue(&str[0], length);
+  keyValue.GetStringValue(&str[0], length + 1);
   return str;
 }
 
@@ -64,19 +68,38 @@ void ProgressEventThreadFunction(DAP &dap) {
         const uint64_t total = GetUintFromStructuredData(data, "total");
         const std::string details =
             GetStringFromStructuredData(data, "details");
-        std::string message;
-        // Include the title on the first event.
-        if (completed == 0) {
-          const std::string title = GetStringFromStructuredData(data, "title");
-          message += title;
-          message += ": ";
-        }
 
-        message += details;
-        // Verbose check, but we get -1 for the uint64 on failure to read
-        // so we check everything before broadcasting an event.
-        if (message.length() > 0)
-          dap.SendProgressEvent(progress_id, message.c_str(), completed, total);
+        if (completed == 0) {
+          if (total == 1) {
+            // This progress is non deterministic and won't get updated until it
+            // is completed. Send the "message" which will be the combined title
+            // and detail. The only other progress event for thus
+            // non-deterministic progress will be the completed event So there
+            // will be no need to update the detail.
+            const std::string message =
+                GetStringFromStructuredData(data, "message");
+            dap.SendProgressEvent(progress_id, message.c_str(), completed,
+                                  total);
+          } else {
+            // This progress is deterministic and will receive updates,
+            // on the progress creation event VSCode will save the message in
+            // the create packet and use that as the title, so we send just the
+            // title in the progressCreate packet followed immediately by a
+            // detail packet, if there is any detail.
+            const std::string title =
+                GetStringFromStructuredData(data, "title");
+            dap.SendProgressEvent(progress_id, title.c_str(), completed, total);
+            if (!details.empty())
+              dap.SendProgressEvent(progress_id, details.c_str(), completed,
+                                    total);
+          }
+        } else {
+          // This progress event is either the end of the progress dialog, or an
+          // update with possible detail. The "detail" string we send to VS Code
+          // will be appended to the progress dialog's initial text from when it
+          // was created.
+          dap.SendProgressEvent(progress_id, details.c_str(), completed, total);
+        }
       }
     }
   }

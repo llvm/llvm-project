@@ -109,9 +109,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_evaluate(
             f"`command script import {progress_emitter}", context="repl"
         )
-        self.dap_server.request_evaluate(
-            "`test-progress --total -1 --seconds 1", context="repl"
-        )
+        self.dap_server.request_evaluate("`test-progress --seconds 1", context="repl")
 
         self.dap_server.wait_for_event("progressEnd", 15)
         # Expect at least a start, an update, and end event
@@ -151,7 +149,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         )
 
         self.dap_server.request_evaluate(
-            "`test-progress --total -1 --seconds 1 --no-details", context="repl"
+            "`test-progress --seconds 1 --no-details", context="repl"
         )
 
         self.dap_server.wait_for_event("progressEnd", 15)
