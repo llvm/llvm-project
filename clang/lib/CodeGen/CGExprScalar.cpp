@@ -1949,6 +1949,7 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
 
     llvm::Value *Zero = llvm::Constant::getNullValue(SrcTy);
     if (SrcEltTy->isFloatingPointTy()) {
+      CodeGenFunction::CGFPOptionsRAII FPOptions(CGF, E);
       return Builder.CreateFCmpUNE(Src, Zero, "tobool");
     } else {
       return Builder.CreateICmpNE(Src, Zero, "tobool");
@@ -1975,6 +1976,7 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   } else {
     assert(SrcEltTy->isFloatingPointTy() && DstEltTy->isFloatingPointTy() &&
            "Unknown real conversion");
+    CodeGenFunction::CGFPOptionsRAII FPOptions(CGF, E);
     if (DstEltTy->getTypeID() < SrcEltTy->getTypeID())
       Res = Builder.CreateFPTrunc(Src, DstTy, "conv");
     else
