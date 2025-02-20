@@ -347,8 +347,7 @@ define void @store_to_readonly_noalias(ptr readonly noalias %0) {
 
 define void @store_select_with_null(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @store_select_with_null(
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
-; CHECK-NEXT:    store i32 0, ptr [[SEL]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[SEL:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %sel = select i1 %cond, ptr %p, ptr null
@@ -358,8 +357,7 @@ define void @store_select_with_null(i1 %cond, ptr %p) {
 
 define void @store_select_with_null_commuted(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @store_select_with_null_commuted(
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
-; CHECK-NEXT:    store i32 0, ptr [[SEL]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[SEL:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %sel = select i1 %cond, ptr null, ptr %p
