@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=aarch64 %s -o - | FileCheck %s --check-prefix=ASM
-// RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
+// RUN: llvm-mc -triple=aarch64 %s | FileCheck %s --check-prefix=ASM
+// RUN: llvm-mc -triple=aarch64 -filetype=obj %s | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
 
 // ASM: .aeabi_subsection aeabi_pauthabi, required, uleb128
 // ASM: .aeabi_attribute 1, 7 // Tag_PAuth_Platform

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=aarch64 %s -o - | FileCheck %s --check-prefix=ASM
-// RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
+// RUN: llvm-mc -triple=aarch64 %s | FileCheck %s --check-prefix=ASM
+// RUN: llvm-mc -triple=aarch64 -filetype=obj %s | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
 
 // ASM: .aeabi_subsection aeabi_feature_and_bits, optional, uleb128
 // ASM: .aeabi_attribute 0, 0 // Tag_Feature_BTI
