@@ -20,9 +20,23 @@
  * THE SOFTWARE.
  */
 
-#include <clc/clc.h>
-#include <clc/math/clc_modf.h>
+#include <clc/clc_convert.h>
+#include <clc/internal/clc.h>
+#include <clc/math/math.h>
+#include <clc/relational/clc_select.h>
+#include <clc/utils.h>
 
-#define FUNCTION modf
-#define __CLC_BODY <clc/math/unary_def_with_ptr.inc>
+#define __CLC_BODY <clc_frexp.inc>
+#define __CLC_ADDRESS_SPACE private
 #include <clc/math/gentype.inc>
+#undef __CLC_ADDRESS_SPACE
+
+#define __CLC_BODY <clc_frexp.inc>
+#define __CLC_ADDRESS_SPACE global
+#include <clc/math/gentype.inc>
+#undef __CLC_ADDRESS_SPACE
+
+#define __CLC_BODY <clc_frexp.inc>
+#define __CLC_ADDRESS_SPACE local
+#include <clc/math/gentype.inc>
+#undef __CLC_ADDRESS_SPACE
