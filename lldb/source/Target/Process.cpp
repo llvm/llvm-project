@@ -1349,34 +1349,6 @@ void Process::UpdateThreadListIfNeeded() {
   }
 }
 
-void Process::SynchronizeThreadPlans() {
-  m_thread_plans.ScanForDetachedPlanStacks();
-}
-
-ThreadPlanSP Process::FindDetachedPlanExplainingStop(Thread &thread,
-                                                     Event *event_ptr) {
-  return m_thread_plans.FindThreadPlanInStack(
-      [&](ThreadPlanStack &stack) -> ThreadPlanSP {
-        return DoesStackExplainStopNoLock(stack, thread, event_ptr);
-      });
-}
-
-// This extracted function only exists so that it can be marked a friend of
-// `ThreadPlan`, which is needed to call `DoPlanExplainsStop`.
-ThreadPlanSP Process::DoesStackExplainStopNoLock(ThreadPlanStack &stack,
-                                                 Thread &thread,
-                                                 Event *event_ptr) {
-  ThreadPlanSP plan_sp = stack.GetCurrentPlan();
-  plan_sp->SetTID(thread.GetID());
-  if (plan_sp->DoPlanExplainsStop(event_ptr)) {
-    stack.SetTID(thread.GetID());
-    m_thread_plans.Activate(stack);
-    return plan_sp;
-  }
-  plan_sp->ClearTID();
-  return {};
-}
-
 ThreadPlanStack *Process::FindThreadPlans(lldb::tid_t tid) {
   return m_thread_plans.Find(tid);
 }
@@ -3851,10 +3823,8 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
       // restarted... Asking the thread list is also not likely to go well,
       // since we are running again. So in that case just report the event.
 
-      if (!was_restarted) {
+      if (!was_restarted)
         should_resume = !m_thread_list.ShouldStop(event_ptr);
-        SynchronizeThreadPlans();
-      }
 
       if (was_restarted || should_resume || m_resume_requested) {
         Vote report_stop_vote = m_thread_list.ShouldReportStop(event_ptr);
