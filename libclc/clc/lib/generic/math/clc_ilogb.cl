@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_logb.h>
+#include <clc/clc_convert.h>
+#include <clc/clcmacro.h>
+#include <clc/float/definitions.h>
+#include <clc/integer/clc_clz.h>
+#include <clc/internal/clc.h>
+#include <clc/math/math.h>
 
-#define FUNCTION logb
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY <clc_ilogb.inc>
 #include <clc/math/gentype.inc>
