@@ -66,6 +66,7 @@ define i32 @test_frexp_f80_i32_only_use_exp(x86_fp80 %a) {
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpl@PLT
 ; X64-NEXT:    fstp %st(0)
+; X64-NEXT:    # fake_use: $rax
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 8

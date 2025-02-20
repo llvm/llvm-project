@@ -225,6 +225,7 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) nounwind {
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    addi a0, sp, 8
 ; RV32IFD-NEXT:    call frexpf
+; RV32IFD-NEXT:    # fake_use: $x10
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
@@ -237,6 +238,7 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) nounwind {
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    mv a0, sp
 ; RV64IFD-NEXT:    call frexpf
+; RV64IFD-NEXT:    # fake_use: $x10
 ; RV64IFD-NEXT:    ld a0, 0(sp)
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
@@ -249,6 +251,7 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    call __extendhfsf2
 ; RV32IZFINXZDINX-NEXT:    addi a1, sp, 8
 ; RV32IZFINXZDINX-NEXT:    call frexpf
+; RV32IZFINXZDINX-NEXT:    # fake_use: $x10
 ; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
@@ -261,6 +264,7 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    call __extendhfsf2
 ; RV64IZFINXZDINX-NEXT:    mv a1, sp
 ; RV64IZFINXZDINX-NEXT:    call frexpf
+; RV64IZFINXZDINX-NEXT:    # fake_use: $x10
 ; RV64IZFINXZDINX-NEXT:    ld a0, 0(sp)
 ; RV64IZFINXZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, 16
@@ -458,6 +462,7 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) nounwind {
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    addi a0, sp, 8
 ; RV32IFD-NEXT:    call frexpf
+; RV32IFD-NEXT:    # fake_use: $x10
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
@@ -469,6 +474,7 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) nounwind {
 ; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    mv a0, sp
 ; RV64IFD-NEXT:    call frexpf
+; RV64IFD-NEXT:    # fake_use: $x10
 ; RV64IFD-NEXT:    ld a0, 0(sp)
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
@@ -480,6 +486,7 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    addi a1, sp, 8
 ; RV32IZFINXZDINX-NEXT:    call frexpf
+; RV32IZFINXZDINX-NEXT:    # fake_use: $x10
 ; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
@@ -491,6 +498,7 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IZFINXZDINX-NEXT:    mv a1, sp
 ; RV64IZFINXZDINX-NEXT:    call frexpf
+; RV64IZFINXZDINX-NEXT:    # fake_use: $x10
 ; RV64IZFINXZDINX-NEXT:    ld a0, 0(sp)
 ; RV64IZFINXZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, 16
@@ -1086,22 +1094,24 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV32IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fsd fs2, 0(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fmv.s fs0, fa2
-; RV32IFD-NEXT:    fmv.s fs1, fa1
-; RV32IFD-NEXT:    fmv.s fs2, fa0
+; RV32IFD-NEXT:    fmv.s fs0, fa3
+; RV32IFD-NEXT:    fmv.s fs1, fa2
+; RV32IFD-NEXT:    fmv.s fs2, fa1
 ; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    addi a0, a0, 12
-; RV32IFD-NEXT:    fmv.s fa0, fa3
 ; RV32IFD-NEXT:    call frexpf
-; RV32IFD-NEXT:    addi a0, s0, 8
+; RV32IFD-NEXT:    addi a0, s0, 12
 ; RV32IFD-NEXT:    fmv.s fa0, fs0
 ; RV32IFD-NEXT:    call frexpf
-; RV32IFD-NEXT:    addi a0, s0, 4
+; RV32IFD-NEXT:    addi a0, s0, 8
 ; RV32IFD-NEXT:    fmv.s fa0, fs1
 ; RV32IFD-NEXT:    call frexpf
+; RV32IFD-NEXT:    addi a0, s0, 4
 ; RV32IFD-NEXT:    fmv.s fa0, fs2
-; RV32IFD-NEXT:    mv a0, s0
 ; RV32IFD-NEXT:    call frexpf
+; RV32IFD-NEXT:    # fake_use: $x10
+; RV32IFD-NEXT:    # fake_use: $x10
+; RV32IFD-NEXT:    # fake_use: $x10
+; RV32IFD-NEXT:    # fake_use: $x10
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
@@ -1133,6 +1143,10 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV64IFD-NEXT:    addi a0, sp, 32
 ; RV64IFD-NEXT:    fmv.s fa0, fs0
 ; RV64IFD-NEXT:    call frexpf
+; RV64IFD-NEXT:    # fake_use: $x10
+; RV64IFD-NEXT:    # fake_use: $x10
+; RV64IFD-NEXT:    # fake_use: $x10
+; RV64IFD-NEXT:    # fake_use: $x10
 ; RV64IFD-NEXT:    ld a0, 8(sp)
 ; RV64IFD-NEXT:    ld a1, 16(sp)
 ; RV64IFD-NEXT:    ld a2, 24(sp)
@@ -1157,22 +1171,26 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    mv s0, a3
-; RV32IZFINXZDINX-NEXT:    mv s1, a2
-; RV32IZFINXZDINX-NEXT:    mv s2, a1
+; RV32IZFINXZDINX-NEXT:    mv s0, a4
+; RV32IZFINXZDINX-NEXT:    mv s1, a3
+; RV32IZFINXZDINX-NEXT:    mv s2, a2
 ; RV32IZFINXZDINX-NEXT:    mv s3, a0
-; RV32IZFINXZDINX-NEXT:    addi a1, a0, 12
-; RV32IZFINXZDINX-NEXT:    mv a0, a4
-; RV32IZFINXZDINX-NEXT:    call frexpf
-; RV32IZFINXZDINX-NEXT:    addi a1, s3, 8
-; RV32IZFINXZDINX-NEXT:    mv a0, s0
-; RV32IZFINXZDINX-NEXT:    call frexpf
-; RV32IZFINXZDINX-NEXT:    addi a1, s3, 4
-; RV32IZFINXZDINX-NEXT:    mv a0, s1
-; RV32IZFINXZDINX-NEXT:    call frexpf
-; RV32IZFINXZDINX-NEXT:    mv a0, s2
+; RV32IZFINXZDINX-NEXT:    mv a0, a1
 ; RV32IZFINXZDINX-NEXT:    mv a1, s3
 ; RV32IZFINXZDINX-NEXT:    call frexpf
+; RV32IZFINXZDINX-NEXT:    addi a1, s3, 12
+; RV32IZFINXZDINX-NEXT:    mv a0, s0
+; RV32IZFINXZDINX-NEXT:    call frexpf
+; RV32IZFINXZDINX-NEXT:    addi a1, s3, 8
+; RV32IZFINXZDINX-NEXT:    mv a0, s1
+; RV32IZFINXZDINX-NEXT:    call frexpf
+; RV32IZFINXZDINX-NEXT:    addi a1, s3, 4
+; RV32IZFINXZDINX-NEXT:    mv a0, s2
+; RV32IZFINXZDINX-NEXT:    call frexpf
+; RV32IZFINXZDINX-NEXT:    # fake_use: $x10
+; RV32IZFINXZDINX-NEXT:    # fake_use: $x10
+; RV32IZFINXZDINX-NEXT:    # fake_use: $x10
+; RV32IZFINXZDINX-NEXT:    # fake_use: $x10
 ; RV32IZFINXZDINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1206,6 +1224,10 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    addi a1, sp, 32
 ; RV64IZFINXZDINX-NEXT:    mv a0, s0
 ; RV64IZFINXZDINX-NEXT:    call frexpf
+; RV64IZFINXZDINX-NEXT:    # fake_use: $x10
+; RV64IZFINXZDINX-NEXT:    # fake_use: $x10
+; RV64IZFINXZDINX-NEXT:    # fake_use: $x10
+; RV64IZFINXZDINX-NEXT:    # fake_use: $x10
 ; RV64IZFINXZDINX-NEXT:    ld a0, 8(sp)
 ; RV64IZFINXZDINX-NEXT:    ld a1, 16(sp)
 ; RV64IZFINXZDINX-NEXT:    ld a2, 24(sp)
@@ -1459,6 +1481,7 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) nounwind {
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    addi a0, sp, 8
 ; RV32IFD-NEXT:    call frexp
+; RV32IFD-NEXT:    # fake_use: $x10
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
@@ -1470,6 +1493,7 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) nounwind {
 ; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    mv a0, sp
 ; RV64IFD-NEXT:    call frexp
+; RV64IFD-NEXT:    # fake_use: $x10
 ; RV64IFD-NEXT:    ld a0, 0(sp)
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
@@ -1481,6 +1505,7 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    addi a2, sp, 8
 ; RV32IZFINXZDINX-NEXT:    call frexp
+; RV32IZFINXZDINX-NEXT:    # fake_use: $x10
 ; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
@@ -1492,6 +1517,7 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IZFINXZDINX-NEXT:    mv a1, sp
 ; RV64IZFINXZDINX-NEXT:    call frexp
+; RV64IZFINXZDINX-NEXT:    # fake_use: $x10
 ; RV64IZFINXZDINX-NEXT:    ld a0, 0(sp)
 ; RV64IZFINXZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, 16

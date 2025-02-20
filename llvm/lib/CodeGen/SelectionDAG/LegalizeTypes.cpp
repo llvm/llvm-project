@@ -435,21 +435,8 @@ NodeDone:
 #endif
     PerformExpensiveChecks();
 
-  // Get the value of the original root after type legalization.
-  SDValue Root = Dummy.getValue();
-
-  // Get the current root value, if it's not null combine it with the original
-  // root to prevent it being removed as a dead node.
-  if (SDValue LegalRoot = DAG.getRoot()) {
-    Root = DAG.getNode(ISD::TokenFactor, SDLoc(LegalRoot), MVT::Other, Root,
-                       LegalRoot);
-    // The token_factor should not need any legalization (as both inputs have
-    // already been legalized).
-    Root->setNodeId(Processed);
-  }
-
-  // Restore the root.
-  DAG.setRoot(Root);
+  // If the root changed (e.g. it was a dead load) update the root.
+  DAG.setRoot(Dummy.getValue());
 
   // Remove dead nodes.  This is important to do for cleanliness but also before
   // the checking loop below.  Implicit folding by the DAG.getNode operators and

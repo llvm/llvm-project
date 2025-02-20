@@ -68,6 +68,7 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    # fake_use: $x3
 ; CHECK-NEXT:    lwz r3, 44(r1)
 ; CHECK-NEXT:    addi r1, r1, 48
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -207,6 +208,8 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
 ; CHECK-NEXT:    mr r4, r29
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    # fake_use: $x3
+; CHECK-NEXT:    # fake_use: $x3
 ; CHECK-NEXT:    lfiwzx f0, 0, r30
 ; CHECK-NEXT:    lfiwzx f1, 0, r29
 ; CHECK-NEXT:    xxmrghw v2, vs1, vs0
@@ -273,6 +276,7 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) {
 ; CHECK-NEXT:    addi r4, r1, 44
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    # fake_use: $x3
 ; CHECK-NEXT:    lwz r3, 44(r1)
 ; CHECK-NEXT:    addi r1, r1, 48
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -352,6 +356,7 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) {
 ; CHECK-NEXT:    addi r4, r1, 44
 ; CHECK-NEXT:    bl frexp
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    # fake_use: $x3
 ; CHECK-NEXT:    lwz r3, 44(r1)
 ; CHECK-NEXT:    addi r1, r1, 48
 ; CHECK-NEXT:    ld r0, 16(r1)
