@@ -87,6 +87,13 @@ private:
   /// determines if the transformation can be applied to this elemental
   static std::optional<MatchInfo> findMatch(hlfir::ElementalOp elemental);
 
+  /// Returns the array indices for the given hlfir.designate.
+  /// It recognizes the computations used to transform the one-based indices
+  /// into the array's lb-based indices, and returns the one-based indices
+  /// in these cases.
+  static llvm::SmallVector<mlir::Value>
+  getDesignatorIndices(hlfir::DesignateOp designate);
+
 public:
   using mlir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
 
@@ -430,6 +437,73 @@ bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {
   return false;
 }
 
+llvm::SmallVector<mlir::Value>
+ElementalAssignBufferization::getDesignatorIndices(
+    hlfir::DesignateOp designate) {
+  mlir::Value memref = designate.getMemref();
+
+  // If the object is a box, then the indices may be adjusted
+  // according to the box's lower bound(s). Scan through
+  // the computations to try to find the one-based indices.
+  if (mlir::isa<fir::BaseBoxType>(memref.getType())) {
+    // Look for the following pattern:
+    //   %13 = fir.load %12 : !fir.ref<!fir.box<...>
+    //   %14:3 = fir.box_dims %13, %c0 : (!fir.box<...>, index) -> ...
+    //   %17 = arith.subi %14#0, %c1 : index
+    //   %18 = arith.addi %arg2, %17 : index
+    //   %19 = hlfir.designate %13 (%18)  : (!fir.box<...>, index) -> ...
+    //
+    // %arg2 is a one-based index.
+
+    auto isNormalizedLb = [memref](mlir::Value v, unsigned dim) {
+      // Return true, if v and dim are such that:
+      //   %14:3 = fir.box_dims %13, %dim : (!fir.box<...>, index) -> ...
+      //   %17 = arith.subi %14#0, %c1 : index
+      //   %19 = hlfir.designate %13 (...)  : (!fir.box<...>, index) -> ...
+      if (auto subOp =
+              mlir::dyn_cast_or_null<mlir::arith::SubIOp>(v.getDefiningOp())) {
+        auto cst = fir::getIntIfConstant(subOp.getRhs());
+        if (!cst || *cst != 1)
+          return false;
+        if (auto dimsOp = mlir::dyn_cast_or_null<fir::BoxDimsOp>(
+                subOp.getLhs().getDefiningOp())) {
+          if (memref != dimsOp.getVal() ||
+              dimsOp.getResult(0) != subOp.getLhs())
+            return false;
+          auto dimsOpDim = fir::getIntIfConstant(dimsOp.getDim());
+          return dimsOpDim && dimsOpDim == dim;
+        }
+      }
+      return false;
+    };
+
+    llvm::SmallVector<mlir::Value> newIndices;
+    for (auto index : llvm::enumerate(designate.getIndices())) {
+      if (auto addOp = mlir::dyn_cast_or_null<mlir::arith::AddIOp>(
+              index.value().getDefiningOp())) {
+        for (unsigned opNum = 0; opNum < 2; ++opNum)
+          if (isNormalizedLb(addOp->getOperand(opNum), index.index())) {
+            newIndices.push_back(addOp->getOperand((opNum + 1) % 2));
+            break;
+          }
+
+        // If new one-based index was not added, exit early.
+        if (newIndices.size() <= index.index())
+          break;
+      }
+    }
+
+    // If any of the indices is not adjusted to the array's lb,
+    // then return the original designator indices.
+    if (newIndices.size() != designate.getIndices().size())
+      return designate.getIndices();
+
+    return newIndices;
+  }
+
+  return designate.getIndices();
+}
+
 std::optional<ElementalAssignBufferization::MatchInfo>
 ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   mlir::Operation::user_range users = elemental->getUsers();
@@ -557,7 +631,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
                                   << " at " << elemental.getLoc() << "\n");
           return std::nullopt;
         }
-        auto indices = designate.getIndices();
+        auto indices = getDesignatorIndices(designate);
         auto elementalIndices = elemental.getIndices();
         if (indices.size() == elementalIndices.size() &&
             std::equal(indices.begin(), indices.end(), elementalIndices.begin(),
@@ -694,108 +768,6 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
   auto arrayElement =
       hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
   builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
-  rewriter.eraseOp(assign);
-  return mlir::success();
-}
-
-/// Expand hlfir.assign of array RHS to array LHS into a loop nest
-/// of element-by-element assignments:
-///   hlfir.assign %4 to %5 : !fir.ref<!fir.array<3x3xf32>>,
-///                           !fir.ref<!fir.array<3x3xf32>>
-/// into:
-///   fir.do_loop %arg1 = %c1 to %c3 step %c1 unordered {
-///     fir.do_loop %arg2 = %c1 to %c3 step %c1 unordered {
-///       %6 = hlfir.designate %4 (%arg2, %arg1)  :
-///           (!fir.ref<!fir.array<3x3xf32>>, index, index) -> !fir.ref<f32>
-///       %7 = fir.load %6 : !fir.ref<f32>
-///       %8 = hlfir.designate %5 (%arg2, %arg1)  :
-///           (!fir.ref<!fir.array<3x3xf32>>, index, index) -> !fir.ref<f32>
-///       hlfir.assign %7 to %8 : f32, !fir.ref<f32>
-///     }
-///   }
-///
-/// The transformation is correct only when LHS and RHS do not alias.
-/// This transformation does not support runtime checking for
-/// non-conforming LHS/RHS arrays' shapes currently.
-class VariableAssignBufferization
-    : public mlir::OpRewritePattern<hlfir::AssignOp> {
-private:
-public:
-  using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
-
-  llvm::LogicalResult
-  matchAndRewrite(hlfir::AssignOp assign,
-                  mlir::PatternRewriter &rewriter) const override;
-};
-
-llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
-    hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
-  if (assign.isAllocatableAssignment())
-    return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
-
-  hlfir::Entity rhs{assign.getRhs()};
-
-  // To avoid conflicts with ElementalAssignBufferization pattern, we avoid
-  // matching RHS when it is an `ExprType` defined by an `ElementalOp`; which is
-  // among the main criteria matched by ElementalAssignBufferization.
-  if (mlir::isa<hlfir::ExprType>(rhs.getType()) &&
-      mlir::isa<hlfir::ElementalOp>(rhs.getDefiningOp()))
-    return rewriter.notifyMatchFailure(
-        assign, "RHS is an ExprType defined by ElementalOp");
-
-  if (!rhs.isArray())
-    return rewriter.notifyMatchFailure(assign,
-                                       "AssignOp's RHS is not an array");
-
-  mlir::Type rhsEleTy = rhs.getFortranElementType();
-  if (!fir::isa_trivial(rhsEleTy))
-    return rewriter.notifyMatchFailure(
-        assign, "AssignOp's RHS data type is not trivial");
-
-  hlfir::Entity lhs{assign.getLhs()};
-  if (!lhs.isArray())
-    return rewriter.notifyMatchFailure(assign,
-                                       "AssignOp's LHS is not an array");
-
-  mlir::Type lhsEleTy = lhs.getFortranElementType();
-  if (!fir::isa_trivial(lhsEleTy))
-    return rewriter.notifyMatchFailure(
-        assign, "AssignOp's LHS data type is not trivial");
-
-  if (lhsEleTy != rhsEleTy)
-    return rewriter.notifyMatchFailure(assign,
-                                       "RHS/LHS element types mismatch");
-
-  fir::AliasAnalysis aliasAnalysis;
-  mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
-  // TODO: use areIdenticalOrDisjointSlices() to check if
-  // we can still do the expansion.
-  if (!aliasRes.isNo()) {
-    LLVM_DEBUG(llvm::dbgs() << "VariableAssignBufferization:\n"
-                            << "\tLHS: " << lhs << "\n"
-                            << "\tRHS: " << rhs << "\n"
-                            << "\tALIAS: " << aliasRes << "\n");
-    return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
-  }
-
-  mlir::Location loc = assign->getLoc();
-  fir::FirOpBuilder builder(rewriter, assign.getOperation());
-  builder.setInsertionPoint(assign);
-  rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
-  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
-  mlir::Value shape = hlfir::genShape(loc, builder, lhs);
-  llvm::SmallVector<mlir::Value> extents =
-      hlfir::getIndexExtents(loc, builder, shape);
-  hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
-                         flangomp::shouldUseWorkshareLowering(assign));
-  builder.setInsertionPointToStart(loopNest.body);
-  auto rhsArrayElement =
-      hlfir::getElementAt(loc, builder, rhs, loopNest.oneBasedIndices);
-  rhsArrayElement = hlfir::loadTrivialScalar(loc, builder, rhsArrayElement);
-  auto lhsArrayElement =
-      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
-  builder.create<hlfir::AssignOp>(loc, rhsArrayElement, lhsArrayElement);
   rewriter.eraseOp(assign);
   return mlir::success();
 }
@@ -958,9 +930,7 @@ public:
       llvm_unreachable("unsupported type");
     };
 
-    fir::KindMapping kindMap =
-        fir::getKindMapping(op->template getParentOfType<mlir::ModuleOp>());
-    fir::FirOpBuilder builder{op, kindMap};
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
 
     mlir::Value init;
     GenBodyFn genBodyFn;
@@ -1206,9 +1176,9 @@ public:
         loc, resultArr, builder.createBool(loc, false));
 
     // Check all the users - the destroy is no longer required, and any assign
-    // can use resultArr directly so that VariableAssignBufferization in this
-    // pass can optimize the results. Other operations are replaces with an
-    // AsExpr for the temporary resultArr.
+    // can use resultArr directly so that InlineHLFIRAssign pass
+    // can optimize the results. Other operations are replaced with an AsExpr
+    // for the temporary resultArr.
     llvm::SmallVector<hlfir::DestroyOp> destroys;
     llvm::SmallVector<hlfir::AssignOp> assigns;
     for (auto user : mloc->getUsers()) {
@@ -1356,7 +1326,6 @@ public:
     // This requires small code reordering in ElementalAssignBufferization.
     patterns.insert<ElementalAssignBufferization>(context);
     patterns.insert<BroadcastAssignBufferization>(context);
-    patterns.insert<VariableAssignBufferization>(context);
     patterns.insert<EvaluateIntoMemoryAssignBufferization>(context);
     patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);

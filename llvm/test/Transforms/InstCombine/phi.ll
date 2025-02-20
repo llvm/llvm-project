@@ -2822,3 +2822,179 @@ for.cond:                                         ; preds = %for.cond, %entry
 exit:                                             ; preds = %for.cond
   ret i64 0
 }
+
+define i1 @test_zext_icmp_eq_0(i1 %a, i1 %b, i32 %c) {
+; CHECK-LABEL: @test_zext_icmp_eq_0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[C:%.*]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ [[TMP0]], [[IF]] ], [ [[TMP1]], [[ELSE]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br i1 %a, label %if, label %else
+
+if:
+  %b.ext = zext i1 %b to i32
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ %b.ext, %if ], [ %c, %else ]
+  %cmp = icmp eq i32 %phi, 0
+  ret i1 %cmp
+}
+
+define i1 @test_zext_icmp_ne_0(i1 %a, i1 %b, i32 %c) {
+; CHECK-LABEL: @test_zext_icmp_ne_0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[C:%.*]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[B:%.*]], [[IF]] ], [ [[TMP0]], [[ELSE]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+;
+entry:
+  br i1 %a, label %if, label %else
+
+if:
+  %b.ext = zext i1 %b to i32
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ %b.ext, %if ], [ %c, %else ]
+  %cmp = icmp ne i32 %phi, 0
+  ret i1 %cmp
+}
+
+define i1 @test_zext_icmp_eq_1(i1 %a, i1 %b, i32 %c) {
+; CHECK-LABEL: @test_zext_icmp_eq_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[C:%.*]], 1
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[B:%.*]], [[IF]] ], [ [[TMP0]], [[ELSE]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+;
+entry:
+  br i1 %a, label %if, label %else
+
+if:
+  %b.ext = zext i1 %b to i32
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ %b.ext, %if ], [ %c, %else ]
+  %cmp = icmp eq i32 %phi, 1
+  ret i1 %cmp
+}
+
+define i1 @test_zext_icmp_eq_0_loop(i1 %c, i1 %b) {
+; CHECK-LABEL: @test_zext_icmp_eq_0_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[X:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[Y:%.*]] = and i1 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP0]] = xor i1 [[Y]], true
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[X]]
+;
+entry:
+  br label %loop
+
+loop:
+  %phi = phi i32 [ 1, %entry ], [ %ext, %loop ]
+  %x = icmp eq i32 %phi, 0
+  %y = and i1 %x, %b
+  %ext = zext i1 %y to i32
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret i1 %x
+}
+
+define i1 @test_zext_icmp_eq_0_multi_use(i1 %a, i1 %b, i32 %c) {
+; CHECK-LABEL: @test_zext_icmp_eq_0_multi_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[B_EXT:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[B_EXT]])
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[B_EXT]], [[IF]] ], [ [[C:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br i1 %a, label %if, label %else
+
+if:
+  %b.ext = zext i1 %b to i32
+  call void @use(i32 %b.ext)
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ %b.ext, %if ], [ %c, %else ]
+  %cmp = icmp eq i32 %phi, 0
+  ret i1 %cmp
+}
+
+define i1 @test_zext_icmp_eq_0_not_bool(i1 %a, i2 %b, i32 %c) {
+; CHECK-LABEL: @test_zext_icmp_eq_0_not_bool(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[B_EXT:%.*]] = zext i2 [[B:%.*]] to i32
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[B_EXT]], [[IF]] ], [ [[C:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br i1 %a, label %if, label %else
+
+if:
+  %b.ext = zext i2 %b to i32
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ %b.ext, %if ], [ %c, %else ]
+  %cmp = icmp eq i32 %phi, 0
+  ret i1 %cmp
+}

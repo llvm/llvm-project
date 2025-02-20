@@ -315,13 +315,12 @@ define void @test_la_tls_le(i32 signext %n) {
 ; LA32-LABEL: test_la_tls_le:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    move $a1, $zero
-; LA32-NEXT:    lu12i.w $a2, %le_hi20(le)
-; LA32-NEXT:    ori $a2, $a2, %le_lo12(le)
-; LA32-NEXT:    add.w $a2, $a2, $tp
+; LA32-NEXT:    lu12i.w $a2, %le_hi20_r(le)
+; LA32-NEXT:    add.w $a2, $a2, $tp, %le_add_r(le)
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB4_1: # %loop
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    ld.w $zero, $a2, 0
+; LA32-NEXT:    ld.w $zero, $a2, %le_lo12_r(le)
 ; LA32-NEXT:    addi.w $a1, $a1, 1
 ; LA32-NEXT:    blt $a1, $a0, .LBB4_1
 ; LA32-NEXT:  # %bb.2: # %ret
@@ -330,12 +329,12 @@ define void @test_la_tls_le(i32 signext %n) {
 ; LA64-LABEL: test_la_tls_le:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    move $a1, $zero
-; LA64-NEXT:    lu12i.w $a2, %le_hi20(le)
-; LA64-NEXT:    ori $a2, $a2, %le_lo12(le)
+; LA64-NEXT:    lu12i.w $a2, %le_hi20_r(le)
+; LA64-NEXT:    add.d $a2, $a2, $tp, %le_add_r(le)
 ; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB4_1: # %loop
 ; LA64-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ldx.w $zero, $a2, $tp
+; LA64-NEXT:    ld.w $zero, $a2, %le_lo12_r(le)
 ; LA64-NEXT:    addi.w $a1, $a1, 1
 ; LA64-NEXT:    blt $a1, $a0, .LBB4_1
 ; LA64-NEXT:  # %bb.2: # %ret

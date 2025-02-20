@@ -339,7 +339,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
         indices.push_back(value);
       else
         indices.push_back(
-            builder.getInt32(valueOrAttr.get<IntegerAttr>().getInt()));
+            builder.getInt32(cast<IntegerAttr>(valueOrAttr).getInt()));
     }
     Type baseElementType = op.getElemType();
     llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
@@ -633,6 +633,8 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                    OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$var_callee_type,
                    OptionalAttr<FlatSymbolRefAttr>:$callee,
                    Variadic<LLVM_Type>:$callee_operands,
+                   OptionalAttr<DictArrayAttr>:$arg_attrs,
+                   OptionalAttr<DictArrayAttr>:$res_attrs,
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands,
                    OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
@@ -755,7 +757,9 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                   VariadicOfVariadic<LLVM_Type,
                                      "op_bundle_sizes">:$op_bundle_operands,
                   DenseI32ArrayAttr:$op_bundle_sizes,
-                  OptionalAttr<ArrayAttr>:$op_bundle_tags);
+                  OptionalAttr<ArrayAttr>:$op_bundle_tags,
+                  OptionalAttr<DictArrayAttr>:$arg_attrs,
+                  OptionalAttr<DictArrayAttr>:$res_attrs);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -1163,12 +1167,12 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
   let arguments = (ins FlatSymbolRefAttr:$global_name);
   let results = (outs LLVM_AnyPointer:$res);
 
-  let summary = "Creates a pointer pointing to a global or a function";
+  let summary = "Creates a pointer pointing to a global, alias or a function";
 
   let description = [{
-    Creates an SSA value containing a pointer to a global variable or constant
-    defined by `llvm.mlir.global`. The global value can be defined after its
-    first referenced. If the global value is a constant, storing into it is not
+    Creates an SSA value containing a pointer to a global value (function,
+    variable or alias). The global value can be defined after its first
+    referenced. If the global value is a constant, storing into it is not
     allowed.
 
     Examples:
@@ -1186,10 +1190,19 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
       // The function address can be used for indirect calls.
       llvm.call %2() : !llvm.ptr, () -> ()
+
+      // Get the address of an aliased global.
+      %3 = llvm.mlir.addressof @const_alias : !llvm.ptr
     }
 
     // Define the global.
     llvm.mlir.global @const(42 : i32) : i32
+
+    // Define an alias.
+    llvm.mlir.alias @const_alias : i32 {
+      %0 = llvm.mlir.addressof @const : !llvm.ptr
+      llvm.return %0 : !llvm.ptr
+    }
     ```
   }];
 
@@ -1208,6 +1221,14 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
       build($_builder, $_state,
             LLVM::LLVMPointerType::get($_builder.getContext()), func.getName());
       $_state.addAttributes(attrs);
+    }]>,
+    OpBuilder<(ins "AliasOp":$alias,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
+    [{
+      build($_builder, $_state,
+            LLVM::LLVMPointerType::get($_builder.getContext(), alias.getAddrSpace()),
+            alias.getSymName());
+      $_state.addAttributes(attrs);
     }]>
   ];
 
@@ -1218,6 +1239,10 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
     /// Return the llvm.func operation that is referenced here.
     LLVMFuncOp getFunction(SymbolTableCollection &symbolTable);
+
+    /// Return the llvm.mlir.alias operation that defined the value referenced
+    /// here.
+    AliasOp getAlias(SymbolTableCollection &symbolTable);
   }];
 
   let assemblyFormat = "$global_name attr-dict `:` qualified(type($res))";
@@ -1441,6 +1466,85 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
   }];
   let assemblyFormat = "attr-dict";
   let hasVerifier = 1;
+}
+
+def LLVM_AliasOp : LLVM_Op<"mlir.alias",
+    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
+  let arguments = (ins
+    TypeAttr:$alias_type,
+    StrAttr:$sym_name,
+    Linkage:$linkage,
+    UnitAttr:$dso_local,
+    UnitAttr:$thread_local_,
+    OptionalAttr<UnnamedAddr>:$unnamed_addr,
+    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
+  );
+  let summary = "LLVM dialect alias.";
+  let description = [{
+    `llvm.mlir.alias` is a top level operation that defines a global alias for
+    global variables and functions. The operation is always initialized by
+    using a initializer region which could be a direct map to another global
+    value or contain some address computation on top of it.
+
+    It uses a symbol for its value, which will be uniqued by the module
+    with respect to other symbols in it.
+
+    Similarly to functions and globals, they can also have a linkage attribute.
+    This attribute is placed between `llvm.mlir.alias` and the symbol name. If
+    the attribute is omitted, `external` linkage is assumed by default.
+
+    Examples:
+
+    ```mlir
+    // Global alias use @-identifiers.
+    llvm.mlir.alias external @foo_alias {addr_space = 0 : i32} : !llvm.ptr {
+      %0 = llvm.mlir.addressof @some_function : !llvm.ptr
+      llvm.return %0 : !llvm.ptr
+    }
+
+    // More complex initialization.
+    llvm.mlir.alias linkonce_odr hidden @glob
+    {addr_space = 0 : i32, dso_local} : !llvm.array<32 x i32> {
+      %0 = llvm.mlir.constant(1234 : i64) : i64
+      %1 = llvm.mlir.addressof @glob.private : !llvm.ptr
+      %2 = llvm.ptrtoint %1 : !llvm.ptr to i64
+      %3 = llvm.add %2, %0 : i64
+      %4 = llvm.inttoptr %3 : i64 to !llvm.ptr
+      llvm.return %4 : !llvm.ptr
+    }
+    ```
+  }];
+  let regions = (region SizedRegion<1>:$initializer);
+
+  let builders = [
+    OpBuilder<(ins "Type":$type, "Linkage":$linkage,
+      "StringRef":$name,
+      CArg<"bool", "false">:$dsoLocal,
+      CArg<"bool", "false">:$thread_local_,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return the LLVM type of the global alias.
+    Type getType() {
+      return getAliasType();
+    }
+    /// Return the initializer region. It's always present and terminates
+    /// with an `llvm.return` op with the initializer value.
+    Region &getInitializerRegion() {
+      return getOperation()->getRegion(0);
+    }
+    Block &getInitializerBlock() {
+      return getInitializerRegion().front();
+    }
+    // Retrieve address space information from the initializer block
+    // result.
+    unsigned getAddrSpace();
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {

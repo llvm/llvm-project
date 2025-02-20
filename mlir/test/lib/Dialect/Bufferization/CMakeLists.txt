@@ -3,8 +3,8 @@ add_mlir_library(MLIRBufferizationTestPasses
   TestTensorCopyInsertion.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+)
+mlir_target_link_libraries(MLIRBufferizationTestPasses PUBLIC
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRIR

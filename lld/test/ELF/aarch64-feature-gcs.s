@@ -36,15 +36,15 @@
 
 ## gcs-report should report any input files that don't have the gcs property.
 
-# RUN: ld.lld func1-gcs.o func2.o func3-gcs.o -o /dev/null -z gcs-report=warning 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
-# RUN: ld.lld func1-gcs.o func2.o func3-gcs.o -o /dev/null -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
-# RUN: ld.lld func1-gcs.o func2.o func3-gcs.o -o /dev/null -z gcs-report=warning -z gcs=never 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
-# RUN: not ld.lld func2-gcs.o func3.o --shared -o /dev/null -z gcs-report=error 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
-# RUN: not ld.lld func2-gcs.o func3.o --shared -o /dev/null -z gcs-report=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
-# RUN: not ld.lld func2-gcs.o func3.o --shared -o /dev/null -z gcs-report=error -z gcs=never 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
-# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -o /dev/null -z gcs-report=warning 2>&1 | count 0
-# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -o /dev/null -z gcs-report=warning -z gcs=always 2>&1 | count 0
-# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -o /dev/null -z gcs-report=warning -z gcs=never 2>&1 | count 0
+# RUN: ld.lld func1-gcs.o func2.o func3-gcs.o -z gcs-report=warning 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
+# RUN: ld.lld func1-gcs.o func2.o func3-gcs.o -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
+# RUN: ld.lld func1-gcs.o func2.o func3-gcs.o -z gcs-report=warning -z gcs=never 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
+# RUN: not ld.lld func2-gcs.o func3.o --shared -z gcs-report=error 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
+# RUN: not ld.lld func2-gcs.o func3.o --shared -z gcs-report=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
+# RUN: not ld.lld func2-gcs.o func3.o --shared -z gcs-report=error -z gcs=never 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
+# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs-report=warning 2>&1 | count 0
+# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs-report=warning -z gcs=always 2>&1 | count 0
+# RUN: ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs-report=warning -z gcs=never 2>&1 | count 0
 
 # REPORT-WARN: warning: func2.o: -z gcs-report: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_GCS property
 # REPORT-ERROR: error: func3.o: -z gcs-report: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_GCS property

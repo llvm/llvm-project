@@ -1076,6 +1076,7 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     BD = GAI->second;
     if (!BD->hasName(Name)) {
       GlobalSymbols[Name] = BD;
+      BD->updateSize(Size);
       BD->Symbols.push_back(Symbol);
     }
   }
@@ -1758,7 +1759,11 @@ void BinaryContext::preprocessDebugInfo() {
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         auto Iter = DWOCUs.find(*DWOID);
-        assert(Iter != DWOCUs.end() && "DWO CU was not found.");
+        if (Iter == DWOCUs.end()) {
+          this->errs() << "BOLT-ERROR: DWO CU was not found for " << Name
+                       << '\n';
+          exit(1);
+        }
         Name = dwarf::toString(
             Iter->second->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       }
@@ -1939,6 +1944,43 @@ static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
     OS << ":" << Row.Column;
   if (Row.Discriminator)
     OS << " discriminator:" << Row.Discriminator;
+}
+
+ArrayRef<uint8_t> BinaryContext::extractData(uint64_t Address,
+                                             uint64_t Size) const {
+  ArrayRef<uint8_t> Res;
+
+  const ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
+  if (!Section || Section->isVirtual())
+    return Res;
+
+  if (!Section->containsRange(Address, Size))
+    return Res;
+
+  auto *Bytes =
+      reinterpret_cast<const uint8_t *>(Section->getContents().data());
+  return ArrayRef<uint8_t>(Bytes + Address - Section->getAddress(), Size);
+}
+
+void BinaryContext::printData(raw_ostream &OS, ArrayRef<uint8_t> Data,
+                              uint64_t Offset) const {
+  DataExtractor DE(Data, AsmInfo->isLittleEndian(),
+                   AsmInfo->getCodePointerSize());
+  uint64_t DataOffset = 0;
+  while (DataOffset + 4 <= Data.size()) {
+    OS << format("    %08" PRIx64 ": \t.word\t0x", Offset + DataOffset);
+    const auto Word = DE.getUnsigned(&DataOffset, 4);
+    OS << Twine::utohexstr(Word) << '\n';
+  }
+  if (DataOffset + 2 <= Data.size()) {
+    OS << format("    %08" PRIx64 ": \t.short\t0x", Offset + DataOffset);
+    const auto Short = DE.getUnsigned(&DataOffset, 2);
+    OS << Twine::utohexstr(Short) << '\n';
+  }
+  if (DataOffset + 1 == Data.size()) {
+    OS << format("    %08" PRIx64 ": \t.byte\t0x%x\n", Offset + DataOffset,
+                 Data[DataOffset]);
+  }
 }
 
 void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,

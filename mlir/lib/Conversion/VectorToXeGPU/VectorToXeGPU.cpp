@@ -76,8 +76,7 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
   int64_t offset;
-  if (failed(getStridesAndOffset(srcTy, strides, offset)) ||
-      strides.back() != 1)
+  if (failed(srcTy.getStridesAndOffset(strides, offset)) || strides.back() != 1)
     return rewriter.notifyMatchFailure(
         xferOp, "Buffer must be contiguous in the innermost dimension");
 
@@ -105,7 +104,7 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
                    xegpu::TensorDescType descType, TypedValue<MemRefType> src,
                    Operation::operand_range offsets) {
   MemRefType srcTy = src.getType();
-  auto [strides, offset] = getStridesAndOffset(srcTy);
+  auto [strides, offset] = srcTy.getStridesAndOffset();
 
   xegpu::CreateNdDescOp ndDesc;
   if (srcTy.hasStaticShape()) {
@@ -180,10 +179,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (isTransposeLoad &&
         elementType.getIntOrFloatBitWidth() < minTransposeBitWidth)
       return rewriter.notifyMatchFailure(
-          readOp, "Unsupported data type for tranposition");
+          readOp, "Unsupported data type for transposition");
 
     // If load is transposed, get the base shape for the tensor descriptor.
-    SmallVector<int64_t> descShape{vecTy.getShape()};
+    SmallVector<int64_t> descShape(vecTy.getShape());
     if (isTransposeLoad)
       std::reverse(descShape.begin(), descShape.end());
     auto descType = xegpu::TensorDescType::get(
@@ -329,8 +328,4 @@ void mlir::populateVectorToXeGPUConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadLowering, TransferWriteLowering, LoadLowering,
                StoreLowering>(patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createConvertVectorToXeGPUPass() {
-  return std::make_unique<ConvertVectorToXeGPUPass>();
 }

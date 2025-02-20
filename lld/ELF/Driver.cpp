@@ -105,6 +105,13 @@ llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
   using namespace llvm::sys::fs;
   OpenFlags flags =
       auxiliaryFiles.insert(filename).second ? OF_None : OF_Append;
+  if (e.disableOutput && filename == "-") {
+#ifdef _WIN32
+    filename = "NUL";
+#else
+    filename = "/dev/null";
+#endif
+  }
   return {filename, ec, flags};
 }
 
@@ -364,6 +371,9 @@ static void checkOptions(Ctx &ctx) {
       if (!ctx.arg.cmseOutputLib.empty())
         ErrAlways(ctx) << "--out-implib may not be used without --cmse-implib";
     }
+    if (ctx.arg.fixCortexA8 && !ctx.arg.isLE)
+      ErrAlways(ctx)
+          << "--fix-cortex-a8 is not supported on big endian targets";
   } else {
     if (ctx.arg.cmseImplib)
       ErrAlways(ctx) << "--cmse-implib is only supported on ARM targets";
@@ -371,29 +381,45 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "--in-implib is only supported on ARM targets";
     if (!ctx.arg.cmseOutputLib.empty())
       ErrAlways(ctx) << "--out-implib is only supported on ARM targets";
+    if (ctx.arg.fixCortexA8)
+      ErrAlways(ctx) << "--fix-cortex-a8 is only supported on ARM targets";
+    if (ctx.arg.armBe8)
+      ErrAlways(ctx) << "--be8 is only supported on ARM targets";
   }
 
-  if (ctx.arg.fixCortexA53Errata843419 && ctx.arg.emachine != EM_AARCH64)
-    ErrAlways(ctx)
-        << "--fix-cortex-a53-843419 is only supported on AArch64 targets";
+  if (ctx.arg.emachine != EM_AARCH64) {
+    if (ctx.arg.executeOnly)
+      ErrAlways(ctx) << "--execute-only is only supported on AArch64 targets";
+    if (ctx.arg.fixCortexA53Errata843419)
+      ErrAlways(ctx) << "--fix-cortex-a53-843419 is only supported on AArch64";
+    if (ctx.arg.zPacPlt)
+      ErrAlways(ctx) << "-z pac-plt only supported on AArch64";
+    if (ctx.arg.zForceBti)
+      ErrAlways(ctx) << "-z force-bti only supported on AArch64";
+    if (ctx.arg.zBtiReport != "none")
+      ErrAlways(ctx) << "-z bti-report only supported on AArch64";
+    if (ctx.arg.zPauthReport != "none")
+      ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
+    if (ctx.arg.zGcsReport != "none")
+      ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
+    if (ctx.arg.zGcs != GcsPolicy::Implicit)
+      ErrAlways(ctx) << "-z gcs only supported on AArch64";
+  }
 
-  if (ctx.arg.fixCortexA8 && ctx.arg.emachine != EM_ARM)
-    ErrAlways(ctx) << "--fix-cortex-a8 is only supported on ARM targets";
-
-  if (ctx.arg.armBe8 && ctx.arg.emachine != EM_ARM)
-    ErrAlways(ctx) << "--be8 is only supported on ARM targets";
-
-  if (ctx.arg.fixCortexA8 && !ctx.arg.isLE)
-    ErrAlways(ctx) << "--fix-cortex-a8 is not supported on big endian targets";
-
-  if (ctx.arg.tocOptimize && ctx.arg.emachine != EM_PPC64)
-    ErrAlways(ctx) << "--toc-optimize is only supported on PowerPC64 targets";
-
-  if (ctx.arg.pcRelOptimize && ctx.arg.emachine != EM_PPC64)
-    ErrAlways(ctx) << "--pcrel-optimize is only supported on PowerPC64 targets";
+  if (ctx.arg.emachine != EM_PPC64) {
+    if (ctx.arg.tocOptimize)
+      ErrAlways(ctx) << "--toc-optimize is only supported on PowerPC64 targets";
+    if (ctx.arg.pcRelOptimize)
+      ErrAlways(ctx)
+          << "--pcrel-optimize is only supported on PowerPC64 targets";
+  }
 
   if (ctx.arg.relaxGP && ctx.arg.emachine != EM_RISCV)
     ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
+
+  if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
+      ctx.arg.zCetReport != "none")
+    ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 
   if (ctx.arg.pie && ctx.arg.shared)
     ErrAlways(ctx) << "-shared and -pie may not be used together";
@@ -428,9 +454,6 @@ static void checkOptions(Ctx &ctx) {
   }
 
   if (ctx.arg.executeOnly) {
-    if (ctx.arg.emachine != EM_AARCH64)
-      ErrAlways(ctx) << "--execute-only is only supported on AArch64 targets";
-
     if (ctx.arg.singleRoRx && !ctx.script->hasSectionsCommand)
       ErrAlways(ctx)
           << "--execute-only and --no-rosegment cannot be used together";
@@ -438,25 +461,6 @@ static void checkOptions(Ctx &ctx) {
 
   if (ctx.arg.zRetpolineplt && ctx.arg.zForceIbt)
     ErrAlways(ctx) << "-z force-ibt may not be used with -z retpolineplt";
-
-  if (ctx.arg.emachine != EM_AARCH64) {
-    if (ctx.arg.zPacPlt)
-      ErrAlways(ctx) << "-z pac-plt only supported on AArch64";
-    if (ctx.arg.zForceBti)
-      ErrAlways(ctx) << "-z force-bti only supported on AArch64";
-    if (ctx.arg.zBtiReport != "none")
-      ErrAlways(ctx) << "-z bti-report only supported on AArch64";
-    if (ctx.arg.zPauthReport != "none")
-      ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
-    if (ctx.arg.zGcsReport != "none")
-      ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
-    if (ctx.arg.zGcs != GcsPolicy::Implicit)
-      ErrAlways(ctx) << "-z gcs only supported on AArch64";
-  }
-
-  if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
-      ctx.arg.zCetReport != "none")
-    ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 }
 
 static const char *getReproduceOption(opt::InputArgList &args) {
@@ -774,11 +778,8 @@ static StringRef getDynamicLinker(Ctx &ctx, opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_dynamic_linker, OPT_no_dynamic_linker);
   if (!arg)
     return "";
-  if (arg->getOption().getID() == OPT_no_dynamic_linker) {
-    // --no-dynamic-linker suppresses undefined weak symbols in .dynsym
-    ctx.arg.noDynamicLinker = true;
+  if (arg->getOption().getID() == OPT_no_dynamic_linker)
     return "";
-  }
   return arg->getValue();
 }
 
@@ -813,6 +814,26 @@ static ICFLevel getICF(opt::InputArgList &args) {
   if (arg->getOption().getID() == OPT_icf_safe)
     return ICFLevel::Safe;
   return ICFLevel::All;
+}
+
+static void parsePackageMetadata(Ctx &ctx, const opt::Arg &arg) {
+  unsigned c0, c1;
+  SmallVector<uint8_t, 0> decoded;
+  StringRef s = arg.getValue();
+  for (size_t i = 0, e = s.size(); i != e; ++i) {
+    if (s[i] != '%') {
+      decoded.push_back(s[i]);
+    } else if (i + 2 < e && (c1 = hexDigitValue(s[i + 1])) != -1u &&
+               (c0 = hexDigitValue(s[i + 2])) != -1u) {
+      decoded.push_back(uint8_t(c1 * 16 + c0));
+      i += 2;
+    } else {
+      ErrAlways(ctx) << arg.getSpelling() << ": invalid % escape at byte " << i
+                     << "; supports only %[0-9a-fA-F][0-9a-fA-F]";
+      return;
+    }
+  }
+  ctx.arg.packageMetadata = std::move(decoded);
 }
 
 static StripPolicy getStrip(Ctx &ctx, opt::InputArgList &args) {
@@ -1114,6 +1135,53 @@ static CGProfileSortKind getCGProfileSortKind(Ctx &ctx,
   return CGProfileSortKind::None;
 }
 
+static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
+  if (auto *arg = args.getLastArg(OPT_bp_compression_sort)) {
+    StringRef s = arg->getValue();
+    if (s == "function") {
+      ctx.arg.bpFunctionOrderForCompression = true;
+    } else if (s == "data") {
+      ctx.arg.bpDataOrderForCompression = true;
+    } else if (s == "both") {
+      ctx.arg.bpFunctionOrderForCompression = true;
+      ctx.arg.bpDataOrderForCompression = true;
+    } else if (s != "none") {
+      ErrAlways(ctx) << arg->getSpelling()
+                     << ": expected [none|function|data|both]";
+    }
+    if (s != "none" && args.hasArg(OPT_call_graph_ordering_file))
+      ErrAlways(ctx) << "--bp-compression-sort is incompatible with "
+                        "--call-graph-ordering-file";
+  }
+  if (auto *arg = args.getLastArg(OPT_bp_startup_sort)) {
+    StringRef s = arg->getValue();
+    if (s == "function") {
+      ctx.arg.bpStartupFunctionSort = true;
+    } else if (s != "none") {
+      ErrAlways(ctx) << arg->getSpelling() << ": expected [none|function]";
+    }
+    if (s != "none" && args.hasArg(OPT_call_graph_ordering_file))
+      ErrAlways(ctx) << "--bp-startup-sort=function is incompatible with "
+                        "--call-graph-ordering-file";
+  }
+
+  ctx.arg.bpCompressionSortStartupFunctions =
+      args.hasFlag(OPT_bp_compression_sort_startup_functions,
+                   OPT_no_bp_compression_sort_startup_functions, false);
+  ctx.arg.bpVerboseSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
+
+  ctx.arg.irpgoProfilePath = args.getLastArgValue(OPT_irpgo_profile);
+  if (ctx.arg.irpgoProfilePath.empty()) {
+    if (ctx.arg.bpStartupFunctionSort)
+      ErrAlways(ctx) << "--bp-startup-sort=function must be used with "
+                        "--irpgo-profile";
+    if (ctx.arg.bpCompressionSortStartupFunctions)
+      ErrAlways(ctx)
+          << "--bp-compression-sort-startup-functions must be used with "
+             "--irpgo-profile";
+  }
+}
+
 static DebugCompressionType getCompressionType(Ctx &ctx, StringRef s,
                                                StringRef option) {
   DebugCompressionType type = StringSwitch<DebugCompressionType>(s)
@@ -1255,6 +1323,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ctx.arg.bsymbolic = BsymbolicKind::All;
   }
   ctx.arg.callGraphProfileSort = getCGProfileSortKind(ctx, args);
+  parseBPOrdererOptions(ctx, args);
   ctx.arg.checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   ctx.arg.chroot = args.getLastArgValue(OPT_chroot);
@@ -1376,7 +1445,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.optimize = args::getInteger(args, OPT_O, 1);
   ctx.arg.orphanHandling = getOrphanHandling(ctx, args);
   ctx.arg.outputFile = args.getLastArgValue(OPT_o);
-  ctx.arg.packageMetadata = args.getLastArgValue(OPT_package_metadata);
+  if (auto *arg = args.getLastArg(OPT_package_metadata))
+    parsePackageMetadata(ctx, *arg);
   ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
   ctx.arg.printIcfSections =
       args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
@@ -1456,7 +1526,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
   ctx.arg.thinLTOModulesToCompile =
       args::getStrings(args, OPT_thinlto_single_module_eq);
-  ctx.arg.timeTraceEnabled = args.hasArg(OPT_time_trace_eq);
+  ctx.arg.timeTraceEnabled =
+      args.hasArg(OPT_time_trace_eq) && !ctx.e.disableOutput;
   ctx.arg.timeTraceGranularity =
       args::getInteger(args, OPT_time_trace_granularity, 500);
   ctx.arg.trace = args.hasArg(OPT_trace);
@@ -1746,13 +1817,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     if (args.hasArg(OPT_call_graph_ordering_file))
       ErrAlways(ctx) << "--symbol-ordering-file and --call-graph-order-file "
                         "may not be used together";
-    if (std::optional<MemoryBufferRef> buffer =
-            readFile(ctx, arg->getValue())) {
+    if (auto buffer = readFile(ctx, arg->getValue()))
       ctx.arg.symbolOrderingFile = getSymbolOrderingFile(ctx, *buffer);
-      // Also need to disable CallGraphProfileSort to prevent
-      // LLD order symbols with CGProfile
-      ctx.arg.callGraphProfileSort = CGProfileSortKind::None;
-    }
   }
 
   assert(ctx.arg.versionDefinitions.empty());
@@ -2154,9 +2220,12 @@ static void excludeLibs(Ctx &ctx, opt::InputArgList &args) {
     ArrayRef<Symbol *> symbols = file->getSymbols();
     if (isa<ELFFileBase>(file))
       symbols = cast<ELFFileBase>(file)->getGlobalSymbols();
-    for (Symbol *sym : symbols)
-      if (!sym->isUndefined() && sym->file == file)
+    for (Symbol *sym : symbols) {
+      if (!sym->isUndefined() && sym->file == file) {
         sym->versionId = VER_NDX_LOCAL;
+        sym->isExported = false;
+      }
+    }
   };
 
   for (ELFFileBase *file : ctx.objectFiles)
@@ -2407,7 +2476,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   // or DSOs, so we conservatively mark them as address-significant.
   bool icfSafe = ctx.arg.icf == ICFLevel::Safe;
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->includeInDynsym(ctx))
+    if (sym->isExported)
       markAddrsig(icfSafe, sym);
 
   // Visit the address-significance table in each object file and mark each
@@ -2423,8 +2492,10 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
         unsigned size;
         const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
-        if (err)
-          Fatal(ctx) << f << ": could not decode addrsig section: " << err;
+        if (err) {
+          Err(ctx) << f << ": could not decode addrsig section: " << err;
+          break;
+        }
         markAddrsig(icfSafe, syms[symIndex]);
         cur += size;
       }
@@ -2540,11 +2611,17 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
 
-    // Parse '@' in symbol names for non-relocatable output.
+    // For defined symbols in non-relocatable output,
+    // compute isExported and parse '@'.
     if (!ctx.arg.relocatable)
-      for (Symbol *sym : obj->getGlobalSymbols())
+      for (Symbol *sym : obj->getGlobalSymbols()) {
+        if (!sym->isDefined())
+          continue;
+        if (ctx.arg.exportDynamic && sym->computeBinding(ctx) != STB_LOCAL)
+          sym->isExported = true;
         if (sym->hasVersionSuffix)
           sym->parseSymbolVersion(ctx);
+      }
     ctx.objectFiles.push_back(obj);
   }
 }
@@ -2886,7 +2963,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   parseFiles(ctx, files);
 
   // Create dynamic sections for dynamic linking and static PIE.
-  ctx.arg.hasDynSymTab = !ctx.sharedFiles.empty() || ctx.arg.isPic;
+  ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
+  ctx.arg.exportDynamic &= ctx.hasDynsym;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))
@@ -3056,7 +3134,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override
-  // versionId set by scanVersionScript().
+  // versionId set by scanVersionScript() and isExported.
   if (args.hasArg(OPT_exclude_libs))
     excludeLibs(ctx, args);
 
@@ -3215,11 +3293,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read the callgraph now that we know what was gced or icfed
   if (ctx.arg.callGraphProfileSort != CGProfileSortKind::None) {
-    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
+    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
       if (std::optional<MemoryBufferRef> buffer =
               readFile(ctx, arg->getValue()))
         readCallGraph(ctx, *buffer);
-    readCallGraphsFromObjectFiles<ELFT>(ctx);
+    } else
+      readCallGraphsFromObjectFiles<ELFT>(ctx);
   }
 
   // Write the result to the file.

@@ -1,0 +1,143 @@
+# RUN: llc -march=hexagon -run-pass=hexagon-rdf-opt -hexagon-rdf-dump -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+
+# Check that RDF graph has a phi node for R28 register in bb.3 and bb.4
+# R28 is clobbered by memcpy call. The clobbering def must be present in bb.4's IDF
+# This phi node should prevent $r27 from being replaced by $r28 by RDF copy propagation
+
+#CHECK-LABEL: Starting copy propagation on: foo
+
+#CHECK-LABEL: --- %bb.3 ---
+#CHECK: p{{[0-9]+}}: phi [+d{{[0-9]+}}<R28>
+
+#CHECK-LABEL: --- %bb.4 ---
+#CHECK: p{{[0-9]+}}: phi [+d{{[0-9]+}}<R28>
+
+#CHECK-LABEL: After Hexagon RDF optimizations
+#CHECK-LABEL: bb.3:
+#CHECK: renamable $r0 = A2_add renamable $r27
+
+--- |
+  define internal fastcc void @foo() unnamed_addr {
+  entry:
+    ret void
+  }
+
+  declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
+
+---
+name:            foo
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$d0', virtual-reg: '' }
+  - { reg: '$d3', virtual-reg: '' }
+  - { reg: '$r23', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: 40, size: 8, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+    liveins: $d0, $d3, $r23
+
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    successors: %bb.2
+    liveins: $d0:0x0000000000000003, $d3:0x0000000000000003, $r23
+
+    renamable $r28 = L2_loadri_io %fixed-stack.0, 0 :: (load (s32) from %fixed-stack.0)
+    renamable $r27 = COPY killed renamable $r28
+
+  bb.2:
+    successors: %bb.3
+    liveins: $d0:0x0000000000000003, $d3:0x0000000000000003, $r23, $r27
+
+    renamable $d10 = L2_loadrd_io %stack.0, 0 :: (load (s64) from %stack.0)
+    renamable $d11 = L2_loadrd_io %stack.1, 0 :: (load (s64) from %stack.1)
+
+  bb.3:
+    successors: %bb.4, %bb.3
+    liveins: $d0:0x0000000000000003, $d3:0x0000000000000003, $d10:0x0000000000000003, $d11:0x0000000000000002, $r23, $r27
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    renamable $r1 = A2_add renamable $r23, killed renamable $r0
+    $r2 = COPY renamable $r22
+    renamable $r0 = A2_add renamable $r27, killed renamable $r6
+    J2_call &memcpy, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit $r0, implicit $r1, implicit $r2, implicit-def $r29, implicit-def dead $r0
+    renamable $p0 = C2_cmpgtp renamable $d11, renamable $d10
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    J2_jumpt killed renamable $p0, %bb.3, implicit-def dead $pc
+    J2_jump %bb.4, implicit-def dead $pc
+
+  bb.4:
+    successors: %bb.5, %bb.2
+    liveins: $d10:0x0000000000000003, $d11:0x0000000000000002, $r23, $r27
+
+    renamable $d0 = L2_loadrd_io %stack.2, 0 :: (load (s64) from %stack.2)
+    renamable $d3 = L2_loadrd_io %stack.3, 0 :: (load (s64) from %stack.3)
+    renamable $p0 = C2_cmpgtp killed renamable $d0, killed renamable $d3
+    J2_jumpt killed renamable $p0, %bb.2, implicit-def dead $pc
+    J2_jump %bb.5, implicit-def dead $pc
+
+  bb.5:
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

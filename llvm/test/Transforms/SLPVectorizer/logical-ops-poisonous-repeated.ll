@@ -14,7 +14,7 @@ define i1 @test(<4 x i32> %x) {
 ; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[X3]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[C3]]
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP2]], i1 [[C1]], i1 false
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i1 [[TMP1]], i1 false
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP1]], i1 [[OP_RDX]], i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX1]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0

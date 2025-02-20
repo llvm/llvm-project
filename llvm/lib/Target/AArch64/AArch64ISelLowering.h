@@ -83,6 +83,7 @@ enum NodeType : unsigned {
   // Produces the full sequence of instructions for getting the thread pointer
   // offset of a variable into X0, using the TLSDesc model.
   TLSDESC_CALLSEQ,
+  TLSDESC_AUTH_CALLSEQ,
   ADRP,     // Page address of a TargetGlobalAddress operand.
   ADR,      // ADR
   ADDlow,   // Add the low 12 bits of a TargetGlobalAddress operand.
@@ -528,6 +529,9 @@ enum NodeType : unsigned {
   // SME ZA loads and stores
   SME_ZA_LDR,
   SME_ZA_STR,
+
+  // Compare-and-branch
+  CB,
 };
 
 } // end namespace AArch64ISD
@@ -562,6 +566,10 @@ const unsigned StackProbeMaxLoopUnroll = 4;
 
 } // namespace AArch64
 
+namespace ARM64AS {
+enum : unsigned { PTR32_SPTR = 270, PTR32_UPTR = 271, PTR64 = 272 };
+}
+
 class AArch64Subtarget;
 
 class AArch64TargetLowering : public TargetLowering {
@@ -593,11 +601,19 @@ public:
                                            unsigned Depth) const override;
 
   MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override {
-    // Returning i64 unconditionally here (i.e. even for ILP32) means that the
-    // *DAG* representation of pointers will always be 64-bits. They will be
-    // truncated and extended when transferred to memory, but the 64-bit DAG
-    // allows us to use AArch64's addressing modes much more easily.
-    return MVT::getIntegerVT(64);
+    if ((AS == ARM64AS::PTR32_SPTR) || (AS == ARM64AS::PTR32_UPTR)) {
+      // These are 32-bit pointers created using the `__ptr32` extension or
+      // similar. They are handled by marking them as being in a different
+      // address space, and will be extended to 64-bits when used as the target
+      // of a load or store operation, or cast to a 64-bit pointer type.
+      return MVT::i32;
+    } else {
+      // Returning i64 unconditionally here (i.e. even for ILP32) means that the
+      // *DAG* representation of pointers will always be 64-bits. They will be
+      // truncated and extended when transferred to memory, but the 64-bit DAG
+      // allows us to use AArch64's addressing modes much more easily.
+      return MVT::i64;
+    }
   }
 
   bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,
@@ -713,12 +729,10 @@ public:
                              unsigned Factor) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(
-      IntrinsicInst *DI, LoadInst *LI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
 
   bool lowerInterleaveIntrinsicToStore(
-      IntrinsicInst *II, StoreInst *SI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
@@ -1102,7 +1116,7 @@ private:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,

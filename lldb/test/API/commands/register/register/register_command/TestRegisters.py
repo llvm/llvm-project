@@ -58,6 +58,13 @@ class RegisterCommandsTestCase(TestBase):
             # could not be read.  This is expected.
             error_str_matched = True
 
+        if self.getArchitecture() == "x86_64" and self.platformIsDarwin():
+            # debugserver on x86 will provide ds/es/ss/gsbase when the
+            # kernel provides them, but most of the time they will be
+            # unavailable.  So "register read -a" will report that
+            # 4 registers were unavailable, it is expected.
+            error_str_matched = True
+
         self.expect(
             "register read -a",
             MISSING_EXPECTED_REGISTERS,
@@ -104,7 +111,6 @@ class RegisterCommandsTestCase(TestBase):
     # "register read fstat" always return 0xffff
     @expectedFailureAndroid(archs=["i386"])
     @skipIf(archs=no_match(["amd64", "i386", "x86_64"]))
-    @skipIfOutOfTreeDebugserver
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_special_purpose_register_read(self):
         """Test commands that read fpu special purpose registers."""

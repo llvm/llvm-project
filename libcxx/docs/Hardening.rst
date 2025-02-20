@@ -248,13 +248,11 @@ Hardening assertion failure
 ===========================
 
 In production modes (``fast`` and ``extensive``), a hardening assertion failure
-immediately ``_traps <https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>``
+immediately ``_traps <https://clang.llvm.org/docs/LanguageExtensions.html#builtin-verbose-trap>``
 the program. This is the safest approach that also minimizes the code size
 penalty as the failure handler maps to a single instruction. The downside is
 that the failure provides no additional details other than the stack trace
 (which might also be affected by optimizations).
-
-TODO(hardening): describe ``__builtin_verbose_trap`` once we can use it.
 
 In the ``debug`` mode, an assertion failure terminates the program in an
 unspecified manner and also outputs the associated error message to the error
@@ -311,7 +309,10 @@ ABI configuration.
 ABI options
 -----------
 
-Vendors can use the following ABI options to enable additional hardening checks:
+Vendors can use some ABI options at CMake configuration time (when building libc++
+itself) to enable additional hardening checks. This is done by passing these
+macros as ``-DLIBCXX_ABI_DEFINES="_LIBCPP_ABI_FOO;_LIBCPP_ABI_BAR;etc"`` at
+CMake configuration time. The available options are:
 
 - ``_LIBCPP_ABI_BOUNDED_ITERATORS`` -- changes the iterator type of select
   containers (see below) to a bounded iterator that keeps track of whether it's
@@ -341,7 +342,7 @@ Vendors can use the following ABI options to enable additional hardening checks:
 
   ABI impact: changes the iterator type of ``vector`` (except ``vector<bool>``).
 
-- ``_LIBCPP_ABI_BOUNDED_UNIQUE_PTR``` -- tracks the bounds of the array stored inside
+- ``_LIBCPP_ABI_BOUNDED_UNIQUE_PTR`` -- tracks the bounds of the array stored inside
   a ``std::unique_ptr<T[]>``, allowing it to trap when accessed out-of-bounds. This
   requires the ``std::unique_ptr`` to be created using an API like ``std::make_unique``
   or ``std::make_unique_for_overwrite``, otherwise the bounds information is not available
@@ -407,7 +408,7 @@ Hardened containers status
       - ✅
       - ❌
     * - ``forward_list``
-      - ❌
+      - ✅
       - ❌
     * - ``deque``
       - ✅

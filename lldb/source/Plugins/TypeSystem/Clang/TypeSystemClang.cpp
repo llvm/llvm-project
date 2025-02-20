@@ -1311,10 +1311,18 @@ CompilerType TypeSystemClang::CreateRecordType(
 }
 
 namespace {
-/// Returns true iff the given TemplateArgument should be represented as an
-/// NonTypeTemplateParmDecl in the AST.
-bool IsValueParam(const clang::TemplateArgument &argument) {
-  return argument.getKind() == TemplateArgument::Integral;
+/// Returns the type of the template argument iff the given TemplateArgument
+/// should be represented as an NonTypeTemplateParmDecl in the AST. Returns
+/// a null QualType otherwise.
+QualType GetValueParamType(const clang::TemplateArgument &argument) {
+  switch (argument.getKind()) {
+  case TemplateArgument::Integral:
+    return argument.getIntegralType();
+  case TemplateArgument::StructuralValue:
+    return argument.getStructuralValueType();
+  default:
+    return {};
+  }
 }
 
 void AddAccessSpecifierDecl(clang::CXXRecordDecl *cxx_record_decl,
@@ -1361,8 +1369,8 @@ static TemplateParameterList *CreateTemplateParameterList(
     if (name && name[0])
       identifier_info = &ast.Idents.get(name);
     TemplateArgument const &targ = args[i];
-    if (IsValueParam(targ)) {
-      QualType template_param_type = targ.getIntegralType();
+    QualType template_param_type = GetValueParamType(targ);
+    if (!template_param_type.isNull()) {
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
           ast, decl_context, SourceLocation(), SourceLocation(), depth, i,
           identifier_info, template_param_type, parameter_pack,
@@ -1380,10 +1388,11 @@ static TemplateParameterList *CreateTemplateParameterList(
       identifier_info = &ast.Idents.get(template_param_infos.GetPackName());
     const bool parameter_pack_true = true;
 
-    if (!template_param_infos.GetParameterPack().IsEmpty() &&
-        IsValueParam(template_param_infos.GetParameterPack().Front())) {
-      QualType template_param_type =
-          template_param_infos.GetParameterPack().Front().getIntegralType();
+    QualType template_param_type =
+        !template_param_infos.GetParameterPack().IsEmpty()
+            ? GetValueParamType(template_param_infos.GetParameterPack().Front())
+            : QualType();
+    if (!template_param_type.isNull()) {
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
           ast, decl_context, SourceLocation(), SourceLocation(), depth,
           num_template_params, identifier_info, template_param_type,
@@ -1458,10 +1467,12 @@ static bool TemplateParameterAllowsValue(NamedDecl *param,
   } else if (auto *type_param =
                  llvm::dyn_cast<NonTypeTemplateParmDecl>(param)) {
     // Compare the argument kind, i.e. ensure that <typename> != <int>.
-    if (!IsValueParam(value))
+    QualType value_param_type = GetValueParamType(value);
+    if (value_param_type.isNull())
       return false;
+
     // Compare the integral type, i.e. ensure that <int> != <char>.
-    if (type_param->getType() != value.getIntegralType())
+    if (type_param->getType() != value_param_type)
       return false;
   } else {
     // There is no way to create other parameter decls at the moment, so we
@@ -1666,6 +1677,12 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   ast.getTypeDeclType(class_template_specialization_decl, nullptr);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
+
+  // FIXME: set to fixed value for now so it's not uninitialized.
+  // One way to determine StrictPackMatch would be
+  // Sema::CheckTemplateTemplateArgument.
+  class_template_specialization_decl->setStrictPackMatch(false);
+
   SetOwningModule(class_template_specialization_decl, owning_module);
   decl_ctx->addDecl(class_template_specialization_decl);
 
@@ -2217,12 +2234,6 @@ ParmVarDecl *TypeSystemClang::CreateParameterDeclaration(
   return decl;
 }
 
-void TypeSystemClang::SetFunctionParameters(
-    FunctionDecl *function_decl, llvm::ArrayRef<ParmVarDecl *> params) {
-  if (function_decl)
-    function_decl->setParams(params);
-}
-
 CompilerType
 TypeSystemClang::CreateBlockPointerType(const CompilerType &function_type) {
   QualType block_type = m_ast_up->getBlockPointerType(
@@ -2303,7 +2314,8 @@ CompilerType TypeSystemClang::GetOrCreateStructForIdentifier(
 CompilerType TypeSystemClang::CreateEnumerationType(
     llvm::StringRef name, clang::DeclContext *decl_ctx,
     OptionalClangModuleID owning_module, const Declaration &decl,
-    const CompilerType &integer_clang_type, bool is_scoped) {
+    const CompilerType &integer_clang_type, bool is_scoped,
+    std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind) {
   // TODO: Do something intelligent with the Declaration object passed in
   // like maybe filling in the SourceLocation with it...
   ASTContext &ast = getASTContext();
@@ -2320,6 +2332,10 @@ CompilerType TypeSystemClang::CreateEnumerationType(
   SetOwningModule(enum_decl, owning_module);
   if (decl_ctx)
     decl_ctx->addDecl(enum_decl);
+
+  if (enum_kind)
+    enum_decl->addAttr(
+        clang::EnumExtensibilityAttr::CreateImplicit(ast, *enum_kind));
 
   // TODO: check if we should be setting the promotion type too?
   enum_decl->setIntegerType(ClangUtil::GetQualType(integer_clang_type));
@@ -7346,10 +7362,27 @@ TypeSystemClang::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
     return std::nullopt;
 
   const auto *arg = GetNthTemplateArgument(template_decl, idx, expand_pack);
-  if (!arg || arg->getKind() != clang::TemplateArgument::Integral)
+  if (!arg)
     return std::nullopt;
 
-  return {{arg->getAsIntegral(), GetType(arg->getIntegralType())}};
+  switch (arg->getKind()) {
+  case clang::TemplateArgument::Integral:
+    return {{arg->getAsIntegral(), GetType(arg->getIntegralType())}};
+  case clang::TemplateArgument::StructuralValue: {
+    clang::APValue value = arg->getAsStructuralValue();
+    CompilerType type = GetType(arg->getStructuralValueType());
+
+    if (value.isFloat())
+      return {{value.getFloat(), type}};
+
+    if (value.isInt())
+      return {{value.getInt(), type}};
+
+    return std::nullopt;
+  }
+  default:
+    return std::nullopt;
+  }
 }
 
 CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
@@ -7433,6 +7466,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     bit_width = new (clang_ast)
         clang::IntegerLiteral(clang_ast, bitfield_bit_size_apint,
                               clang_ast.IntTy, clang::SourceLocation());
+    bit_width = clang::ConstantExpr::Create(
+        clang_ast, bit_width, APValue(llvm::APSInt(bitfield_bit_size_apint)));
   }
 
   clang::RecordDecl *record_decl = ast->GetAsRecordDecl(type);
@@ -7706,6 +7741,32 @@ void TypeSystemClang::SetFloatingInitializerForVariable(
       ast, init_value, true, qt.getUnqualifiedType(), SourceLocation()));
 }
 
+llvm::SmallVector<clang::ParmVarDecl *>
+TypeSystemClang::CreateParameterDeclarations(
+    clang::FunctionDecl *func, const clang::FunctionProtoType &prototype,
+    const llvm::SmallVector<llvm::StringRef> &parameter_names) {
+  assert(func);
+  assert(parameter_names.empty() ||
+         parameter_names.size() == prototype.getNumParams());
+
+  llvm::SmallVector<clang::ParmVarDecl *> params;
+  for (unsigned param_index = 0; param_index < prototype.getNumParams();
+       ++param_index) {
+    llvm::StringRef name =
+        !parameter_names.empty() ? parameter_names[param_index] : "";
+
+    auto *param =
+        CreateParameterDeclaration(func, /*owning_module=*/{}, name.data(),
+                                   GetType(prototype.getParamType(param_index)),
+                                   clang::SC_None, /*add_decl=*/false);
+    assert(param);
+
+    params.push_back(param);
+  }
+
+  return params;
+}
+
 clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
     const char *mangled_name, const CompilerType &method_clang_type,
@@ -7846,20 +7907,10 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
         getASTContext(), mangled_name, /*literal=*/false));
   }
 
-  // Populate the method decl with parameter decls
-
-  llvm::SmallVector<clang::ParmVarDecl *, 12> params;
-
-  for (unsigned param_index = 0; param_index < num_params; ++param_index) {
-    params.push_back(clang::ParmVarDecl::Create(
-        getASTContext(), cxx_method_decl, clang::SourceLocation(),
-        clang::SourceLocation(),
-        nullptr, // anonymous
-        method_function_prototype->getParamType(param_index), nullptr,
-        clang::SC_None, nullptr));
-  }
-
-  cxx_method_decl->setParams(llvm::ArrayRef<clang::ParmVarDecl *>(params));
+  // Parameters on member function declarations in DWARF generally don't
+  // have names, so we omit them when creating the ParmVarDecls.
+  cxx_method_decl->setParams(CreateParameterDeclarations(
+      cxx_method_decl, *method_function_prototype, /*parameter_names=*/{}));
 
   AddAccessSpecifierDecl(cxx_record_decl, getASTContext(),
                          GetCXXRecordDeclAccess(cxx_record_decl),
@@ -8451,29 +8502,22 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
   if (enum_decl->isCompleteDefinition())
     return true;
 
-  clang::ASTContext &ast = lldb_ast->getASTContext();
-
-  /// TODO This really needs to be fixed.
-
   QualType integer_type(enum_decl->getIntegerType());
   if (!integer_type.isNull()) {
-    unsigned NumPositiveBits = 1;
-    unsigned NumNegativeBits = 0;
+    clang::ASTContext &ast = lldb_ast->getASTContext();
 
-    clang::QualType promotion_qual_type;
-    // If the enum integer type is less than an integer in bit width,
-    // then we must promote it to an integer size.
-    if (ast.getTypeSize(enum_decl->getIntegerType()) <
-        ast.getTypeSize(ast.IntTy)) {
-      if (enum_decl->getIntegerType()->isSignedIntegerType())
-        promotion_qual_type = ast.IntTy;
-      else
-        promotion_qual_type = ast.UnsignedIntTy;
-    } else
-      promotion_qual_type = enum_decl->getIntegerType();
+    unsigned NumNegativeBits = 0;
+    unsigned NumPositiveBits = 0;
+    ast.computeEnumBits(enum_decl->enumerators(), NumNegativeBits,
+                        NumPositiveBits);
+
+    clang::QualType BestPromotionType;
+    clang::QualType BestType;
+    ast.computeBestEnumTypes(/*IsPacked=*/false, NumNegativeBits,
+                             NumPositiveBits, BestType, BestPromotionType);
 
     enum_decl->completeDefinition(enum_decl->getIntegerType(),
-                                  promotion_qual_type, NumPositiveBits,
+                                  BestPromotionType, NumPositiveBits,
                                   NumNegativeBits);
   }
   return true;
@@ -8529,12 +8573,10 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
 
 clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
     const CompilerType &enum_type, const Declaration &decl, const char *name,
-    int64_t enum_value, uint32_t enum_value_bit_size) {
-  CompilerType underlying_type = GetEnumerationIntegerType(enum_type);
-  bool is_signed = false;
-  underlying_type.IsIntegerType(is_signed);
-
-  llvm::APSInt value(enum_value_bit_size, !is_signed);
+    uint64_t enum_value, uint32_t enum_value_bit_size) {
+  assert(enum_type.IsEnumerationType());
+  llvm::APSInt value(enum_value_bit_size,
+                     !enum_type.IsEnumerationIntegerTypeSigned());
   value = enum_value;
 
   return AddEnumerationValueToEnumerationType(enum_type, decl, name, value);

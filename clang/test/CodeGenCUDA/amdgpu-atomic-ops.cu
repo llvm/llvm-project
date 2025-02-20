@@ -11,7 +11,7 @@
 // RUN:   -fnative-half-arguments-and-returns | FileCheck -check-prefix=SAFE %s
 
 // RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx940 -fnative-half-type \
+// RUN:   -fcuda-is-device -target-cpu gfx942 -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns -munsafe-fp-atomics \
 // RUN:   | FileCheck -check-prefix=UNSAFE %s
 
@@ -26,10 +26,10 @@ __global__ void ffp1(float *p) {
   // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 4{{$}}
   // SAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 4{{$}}
   // SAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 4{{$}}
-  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent-one-as") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE:[0-9]+]]{{$}}
-  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent-one-as") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE:[0-9]+]]{{$}}
+  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
 
   // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
@@ -37,8 +37,8 @@ __global__ void ffp1(float *p) {
   // UNSAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE:[0-9]+]], !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent-one-as") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
   // SAFE: _Z4ffp1Pf
   // SAFE: global_atomic_cmpswap
@@ -73,19 +73,19 @@ __global__ void ffp2(double *p) {
   // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8{{$}}
   // SAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 8{{$}}
   // SAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 8{{$}}
-  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
 
   // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
   // SAFE-LABEL: @_Z4ffp2Pd
   // SAFE: global_atomic_cmpswap_b64
@@ -119,19 +119,19 @@ __global__ void ffp3(long double *p) {
   // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8{{$}}
   // SAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 8{{$}}
   // SAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 8{{$}}
-  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
 
   // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
   // SAFE-LABEL: @_Z4ffp3Pe
   // SAFE: global_atomic_cmpswap_b64
@@ -185,10 +185,10 @@ __global__ void ffp6(_Float16 *p) {
   // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 2{{$}}
   // SAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 2{{$}}
   // SAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 2{{$}}
-  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent-one-as") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent-one-as") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fadd ptr {{.*}} syncscope("agent") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fsub ptr {{.*}} syncscope("workgroup") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
 
   // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 2, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 2, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
@@ -196,8 +196,8 @@ __global__ void ffp6(_Float16 *p) {
   // UNSAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 2, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent-one-as") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
-  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 2, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
   // SAFE: _Z4ffp6PDF16
   // SAFE: global_atomic_cmpswap
@@ -228,8 +228,8 @@ __global__ void ffp6(_Float16 *p) {
 // CHECK-LABEL: @_Z12test_cmpxchgPiii
 // CHECK: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acquire acquire, align 4{{$}}
 // CHECK: cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} acquire acquire, align 4{{$}}
-// CHECK: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} syncscope("workgroup-one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
-// CHECK: cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} syncscope("workgroup-one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+// CHECK: cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} syncscope("workgroup") monotonic monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+// CHECK: cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} syncscope("workgroup") monotonic monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
 __device__ int test_cmpxchg(int *ptr, int cmp, int desired) {
   bool flag = __atomic_compare_exchange(ptr, &cmp, &desired, 0, memory_order_acquire, memory_order_acquire);
   flag = __atomic_compare_exchange_n(ptr, &cmp, desired, 1, memory_order_acquire, memory_order_acquire);

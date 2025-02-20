@@ -355,3 +355,12 @@ void use2() {
   (void)G{"Hello"};
 }
 } // namespace nodiscard_specialization
+
+namespace GH117975 {
+// Test for a regression for ICE in CallExpr::getUnusedResultAttr
+int f() { return 0; }
+void id_print_name() {
+  (int) // expected-warning {{expression result unused}}
+    ((int(*)())f)();
+}
+} // namespace GH117975

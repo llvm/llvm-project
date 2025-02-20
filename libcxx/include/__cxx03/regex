@@ -5544,9 +5544,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI bool operator==(const regex_token_iterator& __x) const;
 #if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const {
-    return *this == regex_token_iterator();
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const { return *this == regex_token_iterator(); }
 #endif
 #if _LIBCPP_STD_VER < 20
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const regex_token_iterator& __x) const { return !(*this == __x); }
