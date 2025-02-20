@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -23,6 +24,7 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::memref;
@@ -1846,7 +1848,7 @@ void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
   dispatchIndexOpFoldResults(offset, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-  auto stridedLayout = StridedLayoutAttr::get(
+  auto stridedLayout = StridedLayoutAttr::getCanonical(
       b.getContext(), staticOffsets.front(), staticStrides);
   auto resultType = MemRefType::get(staticSizes, sourceType.getElementType(),
                                     stridedLayout, sourceType.getMemorySpace());
@@ -2225,9 +2227,35 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
 
 /// Compute the layout map after expanding a given source MemRef type with the
 /// specified reassociation indices.
-static FailureOr<StridedLayoutAttr>
+static FailureOr<MemRefLayoutAttrInterface>
 computeExpandedLayoutMap(MemRefType srcType, ArrayRef<int64_t> resultShape,
                          ArrayRef<ReassociationIndices> reassociation) {
+  // Special case: expanding the dimensions of a contiguous shape creates a
+  // contiguous shape by applying the permutation to the reassociation maps.
+  if (auto contigLayout = dyn_cast<ContiguousLayoutAttr>(srcType.getLayout())) {
+    int64_t srcOffset = contigLayout.getOffset();
+    SmallVector<int64_t> srcDimsBySpeed =
+        invertPermutationVector(contigLayout.getPermutation());
+    SmallVector<int64_t> resultPerm(resultShape.size(), -1);
+    // Invert the permutation to order the source dimensions by where
+    // they appear if you order them in a row-major sense, then expand that
+    // to construct the new permutation.
+    int64_t nextIndex = 0;
+    for (int64_t srcDim : srcDimsBySpeed) {
+      for (int64_t reassoc : ArrayRef<int64_t>(reassociation[srcDim])) {
+        resultPerm[reassoc] = nextIndex++;
+      }
+    }
+    // Fill in any dimensions that we're sneaking in to the end
+    for (int64_t &permEntry : resultPerm) {
+      if (permEntry == -1)
+        permEntry = nextIndex++;
+    }
+
+    return cast<MemRefLayoutAttrInterface>(
+        ContiguousLayoutAttr::get(srcType.getContext(), srcOffset, resultPerm));
+  }
+
   int64_t srcOffset;
   SmallVector<int64_t> srcStrides;
   if (failed(srcType.getStridesAndOffset(srcStrides, srcOffset)))
@@ -2262,7 +2290,8 @@ computeExpandedLayoutMap(MemRefType srcType, ArrayRef<int64_t> resultShape,
   }
   auto resultStrides = llvm::to_vector<8>(llvm::reverse(reverseResultStrides));
   resultStrides.resize(resultShape.size(), 1);
-  return StridedLayoutAttr::get(srcType.getContext(), srcOffset, resultStrides);
+  return StridedLayoutAttr::getCanonical(srcType.getContext(), srcOffset,
+                                         resultStrides);
 }
 
 FailureOr<MemRefType> ExpandShapeOp::computeExpandedType(
@@ -2277,7 +2306,7 @@ FailureOr<MemRefType> ExpandShapeOp::computeExpandedType(
   }
 
   // Source may not be contiguous. Compute the layout map.
-  FailureOr<StridedLayoutAttr> computedLayout =
+  FailureOr<MemRefLayoutAttrInterface> computedLayout =
       computeExpandedLayoutMap(srcType, resultShape, reassociation);
   if (failed(computedLayout))
     return failure();
@@ -2420,13 +2449,49 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// not possible to check this by inspecting a MemRefType in the general case.
 /// If non-contiguity cannot be checked statically, the collapse is assumed to
 /// be valid (and thus accepted by this function) unless `strict = true`.
-static FailureOr<StridedLayoutAttr>
+static FailureOr<MemRefLayoutAttrInterface>
 computeCollapsedLayoutMap(MemRefType srcType,
                           ArrayRef<ReassociationIndices> reassociation,
                           bool strict = false) {
+  auto srcShape = srcType.getShape();
+  // Special case for contiguous layouts.
+  if (auto contigLayout = dyn_cast<ContiguousLayoutAttr>(srcType.getLayout())) {
+    int64_t srcOffset = contigLayout.getOffset();
+    ArrayRef<int64_t> srcPerm = contigLayout.getPermutation();
+    // Store (smallest permutation in group, reassoc index) so we know
+    // which reassociation is innermost, outermost, etc. This is because we
+    // want to preserve the permutation of the dimensions that aren't being
+    // collapsed together. For example, we can have memref<?x?x?x?xT,
+    // contiguous<[3, 2, 1, 0]>, which is column-major, being collapsed by [[0],
+    // [2, 1], [3]], which should produce a memref<?x?x?xT, contiguous<[2, 1,
+    // 0]>, because dim 3 is the slowest-moving one and dim 0 is fastest-moving.
+    SmallVector<std::pair<int64_t, int64_t>> minPermAndResLogicalIdxs;
+
+    for (auto [resultIdx, reassoc] : llvm::enumerate(reassociation)) {
+      ArrayRef<int64_t> ref = llvm::ArrayRef(reassoc);
+      while (srcShape[ref.back()] == 1 && ref.size() > 1)
+        ref = ref.drop_back();
+      int64_t minPerm = srcPerm[ref.front()];
+      if (!llvm::all_of(llvm::enumerate(ref), [&](auto e) {
+            return srcPerm[e.value()] ==
+                   minPerm + static_cast<int64_t>(e.index());
+          })) {
+        return failure();
+      }
+      minPermAndResLogicalIdxs.emplace_back(minPerm, resultIdx);
+    }
+    llvm::sort(minPermAndResLogicalIdxs);
+    SmallVector<int64_t> resultPerm(reassociation.size(), -1);
+    for (auto [permRes, srcMinPermAndLogicalIdxRes] :
+         llvm::enumerate(minPermAndResLogicalIdxs)) {
+      resultPerm[std::get<1>(srcMinPermAndLogicalIdxRes)] = permRes;
+    }
+    return cast<MemRefLayoutAttrInterface>(ContiguousLayoutAttr::get(
+        contigLayout.getContext(), srcOffset, resultPerm));
+  }
+
   int64_t srcOffset;
   SmallVector<int64_t> srcStrides;
-  auto srcShape = srcType.getShape();
   if (failed(srcType.getStridesAndOffset(srcStrides, srcOffset)))
     return failure();
 
@@ -2481,7 +2546,8 @@ computeCollapsedLayoutMap(MemRefType srcType,
         return failure();
     }
   }
-  return StridedLayoutAttr::get(srcType.getContext(), srcOffset, resultStrides);
+  return StridedLayoutAttr::getCanonical(srcType.getContext(), srcOffset,
+                                         resultStrides);
 }
 
 bool CollapseShapeOp::isGuaranteedCollapsible(
@@ -2517,7 +2583,7 @@ MemRefType CollapseShapeOp::computeCollapsedType(
   // Source may not be fully contiguous. Compute the layout map.
   // Note: Dimensions that are collapsed into a single dim are assumed to be
   // contiguous.
-  FailureOr<StridedLayoutAttr> computedLayout =
+  FailureOr<MemRefLayoutAttrInterface> computedLayout =
       computeCollapsedLayoutMap(srcType, reassociation);
   assert(succeeded(computedLayout) &&
          "invalid source layout map or collapsing non-contiguous dims");
@@ -2567,7 +2633,7 @@ LogicalResult CollapseShapeOp::verify() {
     // Source may not be fully contiguous. Compute the layout map.
     // Note: Dimensions that are collapsed into a single dim are assumed to be
     // contiguous.
-    FailureOr<StridedLayoutAttr> computedLayout =
+    FailureOr<MemRefLayoutAttrInterface> computedLayout =
         computeCollapsedLayoutMap(srcType, getReassociationIndices());
     if (failed(computedLayout))
       return emitOpError(
@@ -2738,10 +2804,11 @@ MemRefType SubViewOp::inferResultType(MemRefType sourceMemRefType,
   }
 
   // The type is now known.
-  return MemRefType::get(staticSizes, sourceMemRefType.getElementType(),
-                         StridedLayoutAttr::get(sourceMemRefType.getContext(),
-                                                targetOffset, targetStrides),
-                         sourceMemRefType.getMemorySpace());
+  return MemRefType::get(
+      staticSizes, sourceMemRefType.getElementType(),
+      StridedLayoutAttr::getCanonical(sourceMemRefType.getContext(),
+                                      targetOffset, targetStrides),
+      sourceMemRefType.getMemorySpace());
 }
 
 MemRefType SubViewOp::inferResultType(MemRefType sourceMemRefType,
@@ -2780,18 +2847,36 @@ MemRefType SubViewOp::inferRankReducedResultType(
   assert(dimsToProject.has_value() && "invalid rank reduction");
 
   // Compute the layout and result type.
-  auto inferredLayout = llvm::cast<StridedLayoutAttr>(inferredType.getLayout());
+
+  int64_t offset = 0;
   SmallVector<int64_t> rankReducedStrides;
   rankReducedStrides.reserve(resultShape.size());
-  for (auto [idx, value] : llvm::enumerate(inferredLayout.getStrides())) {
-    if (!dimsToProject->contains(idx))
-      rankReducedStrides.push_back(value);
-  }
-  return MemRefType::get(resultShape, inferredType.getElementType(),
-                         StridedLayoutAttr::get(inferredLayout.getContext(),
-                                                inferredLayout.getOffset(),
-                                                rankReducedStrides),
-                         inferredType.getMemorySpace());
+  llvm::TypeSwitch<MemRefLayoutAttrInterface>(inferredType.getLayout())
+      .Case([&](StridedLayoutAttr inferredLayout) {
+        for (auto [idx, value] : llvm::enumerate(inferredLayout.getStrides())) {
+          if (!dimsToProject->contains(idx))
+            rankReducedStrides.push_back(value);
+        }
+        offset = inferredLayout.getOffset();
+      })
+      .Case([&](ContiguousLayoutAttr inferredLayout) {
+        assert(inferredLayout.getPermutation().size() <= 1 &&
+               "Only 0- and 1-D values can be identity-like in subviews");
+        // The result shape has no strides at all (0D) or a stride of length 1
+        // (1D), if it got sent into this case.
+        rankReducedStrides.assign(resultShape.size(), 1ll);
+        offset = inferredLayout.getOffset();
+      })
+      .Default([](MemRefLayoutAttrInterface) {
+        llvm_unreachable(
+            "unexpected non-stride-like layout in subview type inference");
+      });
+
+  return MemRefType::get(
+      resultShape, inferredType.getElementType(),
+      StridedLayoutAttr::getCanonical(inferredType.getContext(), offset,
+                                      rankReducedStrides),
+      inferredType.getMemorySpace());
 }
 
 MemRefType SubViewOp::inferRankReducedResultType(
@@ -3080,25 +3165,45 @@ static MemRefType getCanonicalSubViewResultType(
   if (failed(unusedDims))
     return nullptr;
 
-  auto layout = llvm::cast<StridedLayoutAttr>(nonRankReducedType.getLayout());
+  int64_t offset = 0;
   SmallVector<int64_t> shape, strides;
   unsigned numDimsAfterReduction =
       nonRankReducedType.getRank() - unusedDims->count();
   shape.reserve(numDimsAfterReduction);
   strides.reserve(numDimsAfterReduction);
-  for (const auto &[idx, size, stride] :
-       llvm::zip(llvm::seq<unsigned>(0, nonRankReducedType.getRank()),
-                 nonRankReducedType.getShape(), layout.getStrides())) {
-    if (unusedDims->test(idx))
-      continue;
-    shape.push_back(size);
-    strides.push_back(stride);
-  }
+  llvm::TypeSwitch<MemRefLayoutAttrInterface>(nonRankReducedType.getLayout())
+      .Case([&](StridedLayoutAttr layout) {
+        offset = layout.getOffset();
+        for (const auto &[idx, size, stride] :
+             llvm::zip(llvm::seq<unsigned>(0, nonRankReducedType.getRank()),
+                       nonRankReducedType.getShape(), layout.getStrides())) {
+          if (unusedDims->test(idx))
+            continue;
+          shape.push_back(size);
+          strides.push_back(stride);
+        }
+      })
+      .Case([&](ContiguousLayoutAttr layout) {
+        assert(nonRankReducedType.getRank() <= 1 &&
+               "Only 0D and 1D memrefs can have contiguous non-rank-reduced "
+               "layout in subview type inference");
+        offset = layout.getOffset();
+        if (nonRankReducedType.getRank() == 1 && !unusedDims->test(0)) {
+          shape.push_back(nonRankReducedType.getShape().front());
+          strides.push_back(1);
+        }
+        // Otherwise, either it's a 0D memref or we're not using the one
+        // dimension.
+      })
+      .Default([](MemRefLayoutAttrInterface) {
+        llvm_unreachable(
+            "unexpected layout kind in rank-reduced subview inference");
+      });
 
-  return MemRefType::get(shape, nonRankReducedType.getElementType(),
-                         StridedLayoutAttr::get(sourceType.getContext(),
-                                                layout.getOffset(), strides),
-                         nonRankReducedType.getMemorySpace());
+  return MemRefType::get(
+      shape, nonRankReducedType.getElementType(),
+      StridedLayoutAttr::getCanonical(sourceType.getContext(), offset, strides),
+      nonRankReducedType.getMemorySpace());
 }
 
 Value mlir::memref::createCanonicalRankReducingSubViewOp(
@@ -3277,10 +3382,11 @@ struct SubViewReturnTypeCanonicalizer {
       targetShape.push_back(nonReducedType.getDimSize(i));
     }
 
-    return MemRefType::get(targetShape, nonReducedType.getElementType(),
-                           StridedLayoutAttr::get(nonReducedType.getContext(),
-                                                  offset, targetStrides),
-                           nonReducedType.getMemorySpace());
+    return MemRefType::get(
+        targetShape, nonReducedType.getElementType(),
+        StridedLayoutAttr::getCanonical(nonReducedType.getContext(), offset,
+                                        targetStrides),
+        nonReducedType.getMemorySpace());
   }
 };
 
@@ -3302,12 +3408,17 @@ void SubViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
 OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
   MemRefType sourceMemrefType = getSource().getType();
   MemRefType resultMemrefType = getResult().getType();
-  auto resultLayout =
-      dyn_cast_if_present<StridedLayoutAttr>(resultMemrefType.getLayout());
+  // We assume that if the layout isn't strided, someone isn't using
+  // subview to manipulate a dynamic offset.
+  bool hasStaticOffset =
+      llvm::TypeSwitch<MemRefLayoutAttrInterface, bool>(
+          resultMemrefType.getLayout())
+          .Case([](StridedLayoutAttr a) { return a.hasStaticLayout(); })
+          .Case([](ContiguousLayoutAttr a) { return a.hasStaticLayout(); })
+          .Default(true);
 
   if (resultMemrefType == sourceMemrefType &&
-      resultMemrefType.hasStaticShape() &&
-      (!resultLayout || resultLayout.hasStaticLayout())) {
+      resultMemrefType.hasStaticShape() && (hasStaticOffset)) {
     return getViewSource();
   }
 
@@ -3345,17 +3456,28 @@ void TransposeOp::getAsmResultNames(
 static MemRefType inferTransposeResultType(MemRefType memRefType,
                                            AffineMap permutationMap) {
   auto originalSizes = memRefType.getShape();
-  auto [originalStrides, offset] = memRefType.getStridesAndOffset();
-  assert(originalStrides.size() == static_cast<unsigned>(memRefType.getRank()));
-
-  // Compute permuted sizes and strides.
+  // Compute permuted sizes.
   auto sizes = applyPermutationMap<int64_t>(permutationMap, originalSizes);
-  auto strides = applyPermutationMap<int64_t>(permutationMap, originalStrides);
 
-  return MemRefType::Builder(memRefType)
-      .setShape(sizes)
-      .setLayout(
-          StridedLayoutAttr::get(memRefType.getContext(), offset, strides));
+  MemRefLayoutAttrInterface newLayout;
+  if (auto contigLayout =
+          dyn_cast<ContiguousLayoutAttr>(memRefType.getLayout())) {
+    int64_t srcOffset = contigLayout.getOffset();
+    auto permutation = applyPermutationMap<int64_t>(
+        permutationMap, contigLayout.getPermutation());
+    newLayout = ContiguousLayoutAttr::get(memRefType.getContext(), srcOffset,
+                                          permutation);
+  } else {
+    auto [originalStrides, offset] = memRefType.getStridesAndOffset();
+    assert(originalStrides.size() ==
+           static_cast<unsigned>(memRefType.getRank()));
+
+    auto strides =
+        applyPermutationMap<int64_t>(permutationMap, originalStrides);
+    newLayout =
+        StridedLayoutAttr::get(memRefType.getContext(), offset, strides);
+  }
+  return MemRefType::Builder(memRefType).setShape(sizes).setLayout(newLayout);
 }
 
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,

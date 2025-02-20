@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
 
-// Identity maps used in trivial compositions in MemRefs are optimized away.
+
 #map0 = affine_map<(i, j) -> (i, j)>
 #map1 = affine_map<(i, j)[s0] -> (i, j)>
 
@@ -207,12 +207,12 @@
 // CHECK: #map{{[0-9]*}} = affine_map<(d0, d1)[s0] -> (d0 + d1 + s0)>
 #map64 = affine_map<(i0, i1)[mod] -> (i0 + i1 + mod)>
 
-// Single identity maps are removed.
-// CHECK: @f0(memref<2x4xi8, 1>)
+// Single identity maps are not removed anymore (migrate to contiguous<N>).
+// CHECK: @f0(memref<2x4xi8, #map{{[0-9]*}}, 1>)
 func.func private @f0(memref<2x4xi8, #map0, 1>)
 
-// Single identity maps are removed.
-// CHECK: @f1(memref<2x4xi8, 1>)
+// Single identity maps are not removed anymore (migrate to contiguous<N>).
+// CHECK: @f1(memref<2x4xi8, affine_map<(d0, d1)[s0] -> (d0, d1)>, 1>)
 func.func private @f1(memref<2x4xi8, #map1, 1>)
 
 // CHECK: @f2(memref<i8, #map{{[0-9]*}}, 1>)

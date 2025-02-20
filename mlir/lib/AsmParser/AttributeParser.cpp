@@ -156,6 +156,10 @@ Attribute Parser::parseAttribute(Type type) {
   case Token::kw_strided:
     return parseStridedLayoutAttr();
 
+  // Parse a contiguous layout attribute.
+  case Token::kw_contiguous:
+    return parseContiguousLayoutAttr();
+
   // Parse a distinct attribute.
   case Token::kw_distinct:
     return parseDistinctAttr(type);
@@ -1098,6 +1102,88 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
 
   // Build the sparse elements attribute by the indices and values.
   return getChecked<SparseElementsAttr>(loc, type, indices, values);
+}
+
+Attribute Parser::parseContiguousLayoutAttr() {
+  // Callback for error emissing at the keyword token location.
+  llvm::SMLoc loc = getToken().getLoc();
+  auto errorEmitter = [&] { return emitError(loc); };
+
+  consumeToken(Token::kw_contiguous);
+  if (failed(parseToken(Token::less, "expected '<' after 'contiguous'")))
+    return nullptr;
+
+  auto parseNonNegativeInteger = [&]() -> std::optional<int64_t> {
+    Token curTok = getToken();
+    if (!consumeIf(Token::integer))
+      return std::nullopt;
+
+    std::optional<uint64_t> parsedVal = curTok.getUInt64IntegerValue();
+    if (parsedVal.has_value() &&
+        *parsedVal <= std::numeric_limits<int64_t>::max())
+      return *parsedVal;
+    return std::nullopt;
+  };
+  SmallVector<int64_t> permutation;
+  Token permStart = getToken();
+  if (permStart.getKind() == Token::integer) {
+    std::optional<int64_t> rowMajorRank = parseNonNegativeInteger();
+    if (!rowMajorRank) {
+      emitError(permStart.getLoc())
+          << "expected short-form permutation rank to fit within 64 bits";
+      return nullptr;
+    }
+    llvm::append_range(permutation, llvm::iota_range<int64_t>(
+                                        0, *rowMajorRank, /*Inclusive=*/false));
+  } else if (permStart.getKind() == Token::l_square) {
+    auto parsedPerm = parseCommaSeparatedList(Delimiter::Square, [&]() {
+      std::optional<int64_t> elem = parseNonNegativeInteger();
+      if (!elem.has_value()) {
+        emitError(getToken().getLoc()) << "expected non-negative integer";
+        return ParseResult::failure();
+      }
+      permutation.push_back(*elem);
+      return ParseResult::success();
+    });
+    if (failed(parsedPerm))
+      return nullptr;
+  } else {
+    emitError(permStart.getLoc()) << "expected non-negative integer or '['";
+    return nullptr;
+  }
+
+  // Fast path in absence of offset.
+  if (consumeIf(Token::greater)) {
+    if (failed(ContiguousLayoutAttr::verify(errorEmitter,
+                                            /*offset=*/0, permutation)))
+      return nullptr;
+    return ContiguousLayoutAttr::get(getContext(), /*offset=*/0, permutation);
+  }
+
+  if (failed(parseToken(Token::comma, "expected ',' or '>'")) ||
+      failed(parseToken(Token::kw_offset, "expected 'offset' after comma")) ||
+      failed(parseToken(Token::colon, "expected ':' after 'offset'")))
+    return nullptr;
+
+  std::optional<int64_t> offset;
+  if (consumeIf(Token::question))
+    offset = ShapedType::kDynamic;
+  else
+    offset = parseNonNegativeInteger();
+
+  if (!offset) {
+    emitError(getToken().getLoc(),
+              "expected non-negative integer or '?' after ':'");
+    return nullptr;
+  }
+  if (failed(parseToken(Token::greater, "expected '>'")))
+    return nullptr;
+
+  if (failed(ContiguousLayoutAttr::verify(errorEmitter, *offset, permutation)))
+    return nullptr;
+  return ContiguousLayoutAttr::get(getContext(), *offset, permutation);
+  // return getChecked<ContiguousLayoutAttr>(loc,getContext(), *offset,
+  // permutation);
 }
 
 Attribute Parser::parseStridedLayoutAttr() {

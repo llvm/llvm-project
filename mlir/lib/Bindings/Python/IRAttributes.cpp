@@ -1699,6 +1699,60 @@ public:
   }
 };
 
+/// Contiguous layout attribute subclass.
+class PyContiguousLayoutAttribute
+    : public PyConcreteAttribute<PyContiguousLayoutAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAContiguousLayout;
+  static constexpr const char *pyClassName = "ContiguousLayoutAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirContiguousLayoutAttrGetTypeID;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](int64_t offset, const std::vector<int64_t> permutation,
+           DefaultingPyMlirContext ctx) {
+          MlirAttribute attr = mlirContiguousLayoutAttrGet(
+              ctx->get(), offset, permutation.size(), permutation.data());
+          return PyContiguousLayoutAttribute(ctx->getRef(), attr);
+        },
+        nb::arg("offset"), nb::arg("permutation"),
+        nb::arg("context").none() = nb::none(),
+        "Gets a contiguous layout attribute.");
+    c.def_static(
+        "get_row_major",
+        [](int64_t offset, int64_t rank, DefaultingPyMlirContext ctx) {
+          MlirAttribute attr =
+              mlirContiguousLayoutAttrGetRowMajor(ctx->get(), offset, rank);
+          return PyContiguousLayoutAttribute(ctx->getRef(), attr);
+        },
+        nb::arg("offset"), nb::arg("rank"),
+        nb::arg("context").none() = nb::none(),
+        "Gets a contiguous layout attribute with the given offset and a "
+        "row-major layout (the identity permutation)");
+    c.def_prop_ro(
+        "offset",
+        [](PyContiguousLayoutAttribute &self) {
+          return mlirContiguousLayoutAttrGetOffset(self);
+        },
+        "Returns the value of the offset");
+    c.def_prop_ro(
+        "permutation",
+        [](PyContiguousLayoutAttribute &self) {
+          intptr_t rank = mlirContiguousLayoutAttrGetRank(self);
+          std::vector<int64_t> permutation(rank);
+          for (intptr_t i = 0; i < rank; ++i) {
+            permutation[i] =
+                mlirContiguousLayoutAttrGetPermutationEntry(self, i);
+          }
+          return permutation;
+        },
+        "Returns the value of the permutation in this contiguous layout");
+  }
+};
+
 nb::object denseArrayAttributeCaster(PyAttribute &pyAttribute) {
   if (PyDenseBoolArrayAttribute::isaFunction(pyAttribute))
     return nb::cast(PyDenseBoolArrayAttribute(pyAttribute));
@@ -1808,4 +1862,5 @@ void mlir::python::populateIRAttributes(nb::module_ &m) {
   PyUnitAttribute::bind(m);
 
   PyStridedLayoutAttribute::bind(m);
+  PyContiguousLayoutAttribute::bind(m);
 }

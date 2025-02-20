@@ -543,39 +543,15 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
     return indicesAfterCollapsing;
   }
 
-  // Compute the remaining trailing index/offset required for reading from
-  // the collapsed memref:
-  //
-  //    offset = 0
-  //    for (i = firstDimToCollapse; i < outputRank; ++i)
-  //      offset += sourceType.getDimSize(i) * transferReadOp.indices[i]
-  //
-  // For this example:
-  //   %2 = vector.transfer_read/write %arg4[%c0, %arg0, %c0] (...) :
-  //      memref<1x43x2xi32>, vector<1x2xi32>
-  // which would be collapsed to:
-  //   %1 = vector.transfer_read/write %collapse_shape[%c0, %offset] (...) :
-  //      memref<1x86xi32>, vector<2xi32>
-  // one would get the following offset:
-  //    %offset = %arg0 * 43
-  OpFoldResult collapsedOffset =
-      rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
+  ArrayRef<int64_t> collapseBasis = shape.take_back(indicesToCollapse.size());
+  // If the outermost of the collapsing dimensions is dynamic,
+  // we can still do this rewrite, as the transfer_* is known to be `inbounds`
+  if (!collapseBasis.empty() && ShapedType::isDynamic(collapseBasis.front()))
+    collapseBasis = collapseBasis.drop_front();
 
-  auto collapsedStrides = computeSuffixProduct(
-      ArrayRef<int64_t>(shape.begin() + firstDimToCollapse, shape.end()));
-
-  // Compute the collapsed offset.
-  auto &&[collapsedExpr, collapsedVals] =
-      computeLinearIndex(collapsedOffset, collapsedStrides, indicesToCollapse);
-  collapsedOffset = affine::makeComposedFoldedAffineApply(
-      rewriter, loc, collapsedExpr, collapsedVals);
-
-  if (auto value = dyn_cast<Value>(collapsedOffset)) {
-    indicesAfterCollapsing.push_back(value);
-  } else {
-    indicesAfterCollapsing.push_back(rewriter.create<arith::ConstantIndexOp>(
-        loc, *getConstantIntValue(collapsedOffset)));
-  }
+  Value collapsed = rewriter.create<affine::AffineLinearizeIndexOp>(
+      loc, indicesToCollapse, collapseBasis, /*isDisjoint=*/true);
+  indicesAfterCollapsing.push_back(collapsed);
 
   return indicesAfterCollapsing;
 }

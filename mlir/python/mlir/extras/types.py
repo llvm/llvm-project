@@ -9,6 +9,7 @@ from ..ir import (
     Attribute,
     BF16Type,
     ComplexType,
+    ContiguousLayoutAttr,
     F16Type,
     F32Type,
     F64Type,
@@ -152,7 +153,7 @@ def memref(
     *shape,
     element_type: Type = None,
     memory_space: Optional[int] = None,
-    layout: Optional[StridedLayoutAttr] = None,
+    layout: Optional[ContiguousLayoutAttr | StridedLayoutAttr] = None,
 ):
     if memory_space is not None:
         memory_space = Attribute.parse(str(memory_space))

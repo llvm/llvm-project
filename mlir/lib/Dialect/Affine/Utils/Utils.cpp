@@ -1925,8 +1925,7 @@ MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
   auto newMemRefType =
       MemRefType::Builder(memrefType)
           .setShape(newShape)
-          .setLayout(AffineMapAttr::get(
-              AffineMap::getMultiDimIdentityMap(newRank, context)));
+          .setLayout(ContiguousLayoutAttr::get(context, /*offset=*/0, newRank));
   return newMemRefType;
 }
 
