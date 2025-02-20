@@ -835,15 +835,9 @@ bool llvm::isBaseOfObject(const Value *V) {
 }
 
 bool llvm::isEscapeSource(const Value *V) {
-  if (auto *CB = dyn_cast<CallBase>(V)) {
-    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB, true))
-      return false;
-
-    // The return value of a function with a captures(ret: address, provenance)
-    // attribute is not necessarily an escape source. The return value may
-    // alias with a non-escaping object.
-    return !CB->hasArgumentWithAdditionalReturnCaptureComponents();
-  }
+  if (auto *CB = dyn_cast<CallBase>(V))
+    return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB,
+                                                                        true);
 
   // The load case works because isNonEscapingLocalObject considers all
   // stores to be escapes (it passes true for the StoreCaptures argument

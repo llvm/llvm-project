@@ -205,11 +205,15 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
   unsigned ValZeros = ValC.logBase2();
   unsigned AndZeros = AndMask.logBase2();
   bool ShouldNotVal = !TC.isZero();
+  bool NeedShift = ValZeros != AndZeros;
+  bool NeedZExtTrunc =
+      SelType->getScalarSizeInBits() != V->getType()->getScalarSizeInBits();
 
-  // If we would need to create an 'and' + 'shift' + 'xor' to replace a 'select'
-  // + 'icmp', then this transformation would result in more instructions and
-  // potentially interfere with other folding.
-  if (CreateAnd && ShouldNotVal && ValZeros != AndZeros)
+  // If we would need to create an 'and' + 'shift' + 'xor' + cast to replace
+  // a 'select' + 'icmp', then this transformation would result in more
+  // instructions and potentially interfere with other folding.
+  if (CreateAnd + ShouldNotVal + NeedShift + NeedZExtTrunc >
+      1 + Cmp->hasOneUse())
     return nullptr;
 
   // Insert the 'and' instruction on the input to the truncate.
