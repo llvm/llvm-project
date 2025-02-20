@@ -93,7 +93,8 @@ public:
       }
       break;
     case CIRGenAction::OutputType::EmitMLIR: {
-      auto LoweredMlirModule = lowerFromCIRToMLIR(MlirModule, MlirCtx);
+      mlir::ModuleOp LoweredMlirModule =
+          lowerFromCIRToMLIR(MlirModule, MlirCtx);
       assert(OutputStream && "No output stream when lowering to MLIR!");
       // FIXME: we cannot roundtrip prettyForm=true right now.
       mlir::OpPrintingFlags Flags;

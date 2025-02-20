@@ -56,6 +56,7 @@ public:
   bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
   mlir::ModuleOp getModule() const;
   mlir::MLIRContext &getMLIRContext() { return *mlirContext; }
+  const mlir::MLIRContext &getMLIRContext() const { return *mlirContext; }
 };
 
 } // namespace cir
