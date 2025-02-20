@@ -538,7 +538,7 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
   // Emit the derived trait for the interface.
   os << "template <typename " << valueTemplate << ">\n";
-  os << "struct " << interface.getName() << "Trait;\n";
+  os << "struct " << interfaceName << "Trait;\n";
 
   os << "\n} // namespace detail\n";
 
@@ -548,6 +548,11 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
                       "  using ::mlir::{3}<{1}, detail::{2}>::{3};\n",
                       interfaceName, interfaceName, interfaceTraitsName,
                       interfaceBaseType);
+
+  // Insert function that returns the name of the interface as a string.
+  os << "  static constexpr ::llvm::StringLiteral getInterfaceName() {\n"
+     << "    return \"" << interfaceName << "\";\n"
+     << "  }\n\n";
 
   // Emit a utility wrapper trait class.
   os << llvm::formatv("  template <typename {1}>\n"
@@ -589,7 +594,8 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
        << "    auto* interface = getInterfaceFor(base);\n"
        << "    if (!interface)\n"
           "      return false;\n"
-          "    " << interfaceName << " odsInterfaceInstance(base, interface);\n"
+          "    "
+       << interfaceName << " odsInterfaceInstance(base, interface);\n"
        << "    " << tblgen::tgfmt(extraClassOf->trim(), &extraClassOfFmt)
        << "\n  }\n";
   }

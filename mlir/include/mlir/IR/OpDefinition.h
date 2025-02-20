@@ -1299,7 +1299,9 @@ struct HasParent {
       return op->emitOpError()
              << "expects parent op "
              << (sizeof...(ParentOpTypes) != 1 ? "to be one of '" : "'")
-             << llvm::ArrayRef({ParentOpTypes::getOperationName()...}) << "'";
+             << llvm::ArrayRef(
+                    {getOperationOrInterfaceName<ParentOpTypes>()...})
+             << "'";
     }
 
     template <typename ParentOpType =
@@ -1310,6 +1312,25 @@ struct HasParent {
       return llvm::cast<ParentOpType>(parent);
     }
   };
+
+private:
+  /// A class is an op interface if it has a `getInterfaceName` function.
+  template <typename T, typename = int>
+  struct IsInterface : std::false_type {};
+  template <typename T>
+  struct IsInterface<T, decltype((void)T::getInterfaceName(), 0)>
+      : std::true_type {};
+
+  /// Helper function that returns the name of the given operation or interface
+  /// as a string literal.
+  template <typename T>
+  static constexpr StringLiteral getOperationOrInterfaceName() {
+    if constexpr (IsInterface<T>::value) {
+      return T::getInterfaceName();
+    } else {
+      return T::getOperationName();
+    }
+  }
 };
 
 /// A trait for operations that have an attribute specifying operand segments.

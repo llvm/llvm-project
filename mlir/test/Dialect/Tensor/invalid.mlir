@@ -648,3 +648,12 @@ func.func @bitcast_index_1(%arg0 : tensor<?xindex>) -> tensor<?xi64> {
   %0 = tensor.bitcast %arg0 : tensor<?xindex> to tensor<?xi64>
   return %0 : tensor<?xi64>
 }
+
+// -----
+
+func.func @parallel_insert_slice_out_of_context(%a: tensor<5xf32>, %b: tensor<100xf32>) {
+  // expected-error@+1 {{expects parent op 'ParallelCombiningOpInterface'}}
+  tensor.parallel_insert_slice %a into %b[0][5][1]
+      : tensor<5xf32> into tensor<100xf32>
+  return
+}
