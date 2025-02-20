@@ -26,7 +26,7 @@ define i1 @t0_basic(i8 %x, i8 %y) {
 
 define <2 x i1> @t1_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t1_vec(
-; CHECK-NEXT:    [[T0:%.*]] = xor <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[T0:%.*]] = xor <2 x i8> [[Y:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    call void @use2x8(<2 x i8> [[T0]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i8> [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]

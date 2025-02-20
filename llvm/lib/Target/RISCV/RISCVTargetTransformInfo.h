@@ -48,6 +48,14 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   /// actual target hardware.
   unsigned getEstimatedVLFor(VectorType *Ty);
 
+  /// This function calculates the costs for one or more RVV opcodes based
+  /// on the vtype and the cost kind.
+  /// \param Opcodes A list of opcodes of the RVV instruction to evaluate.
+  /// \param VT The MVT of vtype associated with the RVV instructions.
+  /// For widening/narrowing instructions where the result and source types
+  /// differ, it is important to check the spec to determine whether the vtype
+  /// refers to the result or source type.
+  /// \param CostKind The type of cost to compute.
   InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                           TTI::TargetCostKind CostKind);
 
@@ -59,9 +67,6 @@ public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
-
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const;
 
   /// Return the cost of materializing an immediate for a value operand of
   /// a store instruction.
@@ -152,7 +157,8 @@ public:
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind);
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {});
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
@@ -167,6 +173,12 @@ public:
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I);
+
+  InstructionCost getExpandCompressMemoryOpCost(unsigned Opcode, Type *Src,
+                                                bool VariableMask,
+                                                Align Alignment,
+                                                TTI::TargetCostKind CostKind,
+                                                const Instruction *I = nullptr);
 
   InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
@@ -240,7 +252,6 @@ public:
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);
-
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
@@ -295,6 +306,14 @@ public:
     return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) {
+    return TLI->isLegalInterleavedAccessType(VTy, Factor, Alignment, AddrSpace,
+                                             DL);
+  }
+
+  bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment);
+
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment);
 
   bool isVScaleKnownToBeAPowerOfTwo() const {
@@ -322,6 +341,12 @@ public:
 
     Type *Ty = RdxDesc.getRecurrenceType();
     if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty)))
+      return false;
+
+    // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
+    // expanded.
+    // TODO: Promote f16/bf16 fmin/fmax reductions
+    if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
       return false;
 
     switch (RdxDesc.getRecurrenceKind()) {
@@ -377,6 +402,9 @@ public:
     llvm_unreachable("unknown register class");
   }
 
+  TTI::AddressingModeKind getPreferredAddressingMode(const Loop *L,
+                                                     ScalarEvolution *SE) const;
+
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
     if (Vector)
       return RISCVRegisterClass::VRRC;
@@ -412,6 +440,18 @@ public:
   shouldConsiderAddressTypePromotion(const Instruction &I,
                                      bool &AllowPromotionWithoutCommonHeader);
   std::optional<unsigned> getMinPageSize() const { return 4096; }
+  /// Return true if the (vector) instruction I will be lowered to an
+  /// instruction with a scalar splat operand for the given Operand number.
+  bool canSplatOperand(Instruction *I, int Operand) const;
+  /// Return true if a vector instruction will lower to a target instruction
+  /// able to splat the given operand.
+  bool canSplatOperand(unsigned Opcode, int Operand) const;
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
+
+  TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
+                                                    bool IsZeroCmp) const;
 };
 
 } // end namespace llvm

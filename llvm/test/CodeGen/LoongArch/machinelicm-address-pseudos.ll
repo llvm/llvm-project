@@ -279,11 +279,11 @@ define void @test_la_tls_ld(i32 signext %n) {
 ; LA64LARGE-NEXT:  .LBB3_1: # %loop
 ; LA64LARGE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64LARGE-NEXT:    move $a0, $s0
-; LA64LARGE-NEXT:    pcalau12i $a1, %pc_hi20(__tls_get_addr)
-; LA64LARGE-NEXT:    addi.d $ra, $zero, %pc_lo12(__tls_get_addr)
-; LA64LARGE-NEXT:    lu32i.d $ra, %pc64_lo20(__tls_get_addr)
-; LA64LARGE-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(__tls_get_addr)
-; LA64LARGE-NEXT:    add.d $ra, $ra, $a1
+; LA64LARGE-NEXT:    pcalau12i $a1, %got_pc_hi20(__tls_get_addr)
+; LA64LARGE-NEXT:    addi.d $ra, $zero, %got_pc_lo12(__tls_get_addr)
+; LA64LARGE-NEXT:    lu32i.d $ra, %got64_pc_lo20(__tls_get_addr)
+; LA64LARGE-NEXT:    lu52i.d $ra, $ra, %got64_pc_hi12(__tls_get_addr)
+; LA64LARGE-NEXT:    ldx.d $ra, $ra, $a1
 ; LA64LARGE-NEXT:    jirl $ra, $ra, 0
 ; LA64LARGE-NEXT:    ld.w $zero, $a0, 0
 ; LA64LARGE-NEXT:    addi.w $s1, $s1, 1
@@ -315,13 +315,12 @@ define void @test_la_tls_le(i32 signext %n) {
 ; LA32-LABEL: test_la_tls_le:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    move $a1, $zero
-; LA32-NEXT:    lu12i.w $a2, %le_hi20(le)
-; LA32-NEXT:    ori $a2, $a2, %le_lo12(le)
-; LA32-NEXT:    add.w $a2, $a2, $tp
+; LA32-NEXT:    lu12i.w $a2, %le_hi20_r(le)
+; LA32-NEXT:    add.w $a2, $a2, $tp, %le_add_r(le)
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB4_1: # %loop
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    ld.w $zero, $a2, 0
+; LA32-NEXT:    ld.w $zero, $a2, %le_lo12_r(le)
 ; LA32-NEXT:    addi.w $a1, $a1, 1
 ; LA32-NEXT:    blt $a1, $a0, .LBB4_1
 ; LA32-NEXT:  # %bb.2: # %ret
@@ -330,12 +329,12 @@ define void @test_la_tls_le(i32 signext %n) {
 ; LA64-LABEL: test_la_tls_le:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    move $a1, $zero
-; LA64-NEXT:    lu12i.w $a2, %le_hi20(le)
-; LA64-NEXT:    ori $a2, $a2, %le_lo12(le)
+; LA64-NEXT:    lu12i.w $a2, %le_hi20_r(le)
+; LA64-NEXT:    add.d $a2, $a2, $tp, %le_add_r(le)
 ; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB4_1: # %loop
 ; LA64-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ldx.w $zero, $a2, $tp
+; LA64-NEXT:    ld.w $zero, $a2, %le_lo12_r(le)
 ; LA64-NEXT:    addi.w $a1, $a1, 1
 ; LA64-NEXT:    blt $a1, $a0, .LBB4_1
 ; LA64-NEXT:  # %bb.2: # %ret
@@ -445,11 +444,11 @@ define void @test_la_tls_gd(i32 signext %n) nounwind {
 ; LA64LARGE-NEXT:  .LBB5_1: # %loop
 ; LA64LARGE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64LARGE-NEXT:    move $a0, $s0
-; LA64LARGE-NEXT:    pcalau12i $a1, %pc_hi20(__tls_get_addr)
-; LA64LARGE-NEXT:    addi.d $ra, $zero, %pc_lo12(__tls_get_addr)
-; LA64LARGE-NEXT:    lu32i.d $ra, %pc64_lo20(__tls_get_addr)
-; LA64LARGE-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(__tls_get_addr)
-; LA64LARGE-NEXT:    add.d $ra, $ra, $a1
+; LA64LARGE-NEXT:    pcalau12i $a1, %got_pc_hi20(__tls_get_addr)
+; LA64LARGE-NEXT:    addi.d $ra, $zero, %got_pc_lo12(__tls_get_addr)
+; LA64LARGE-NEXT:    lu32i.d $ra, %got64_pc_lo20(__tls_get_addr)
+; LA64LARGE-NEXT:    lu52i.d $ra, $ra, %got64_pc_hi12(__tls_get_addr)
+; LA64LARGE-NEXT:    ldx.d $ra, $ra, $a1
 ; LA64LARGE-NEXT:    jirl $ra, $ra, 0
 ; LA64LARGE-NEXT:    ld.w $zero, $a0, 0
 ; LA64LARGE-NEXT:    addi.w $s1, $s1, 1

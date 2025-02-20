@@ -8,25 +8,18 @@ target triple = "aarch64-unknown-linux-gnu"
 define <2 x half> @select_v2f16(<2 x half> %op1, <2 x half> %op2, <2 x i1> %mask) {
 ; CHECK-LABEL: select_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
 ; CHECK-NEXT:    mov z3.s, z2.s[1]
-; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d2, [sp, #8]
+; CHECK-NEXT:    zip1 z2.h, z2.h, z3.h
 ; CHECK-NEXT:    lsl z2.h, z2.h, #15
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v2f16:

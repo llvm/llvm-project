@@ -27,6 +27,13 @@
 #define LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #elif (LDBL_MANT_DIG == 113)
 #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
+#elif (LDBL_MANT_DIG == 106)
+#define LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+#endif
+
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
+#define LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 #endif
 
 // int64 / uint64 support

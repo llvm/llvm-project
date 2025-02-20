@@ -101,12 +101,60 @@ define void @floor_test(float %0, <8 x float> %1) {
   %4 = call <8 x float> @llvm.floor.v8f32(<8 x float> %1)
   ret void
 }
-; CHECK-LABEL:  llvm.func @cos_test
-define void @cos_test(float %0, <8 x float> %1) {
+; CHECK-LABEL:  llvm.func @trig_test
+define void @trig_test(float %0, <8 x float> %1) {
+  ; CHECK: llvm.intr.sin(%{{.*}}) : (f32) -> f32
+  %3 = call float @llvm.sin.f32(float %0)
+  ; CHECK: llvm.intr.sin(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %4 = call <8 x float> @llvm.sin.v8f32(<8 x float> %1)
+
   ; CHECK: llvm.intr.cos(%{{.*}}) : (f32) -> f32
-  %3 = call float @llvm.cos.f32(float %0)
+  %5 = call float @llvm.cos.f32(float %0)
   ; CHECK: llvm.intr.cos(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
-  %4 = call <8 x float> @llvm.cos.v8f32(<8 x float> %1)
+  %6 = call <8 x float> @llvm.cos.v8f32(<8 x float> %1)
+
+  ; CHECK: llvm.intr.tan(%{{.*}}) : (f32) -> f32
+  %7 = call float @llvm.tan.f32(float %0)
+  ; CHECK: llvm.intr.tan(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %8 = call <8 x float> @llvm.tan.v8f32(<8 x float> %1)
+
+  ret void
+}
+; CHECK-LABEL:  llvm.func @inv_trig_test
+define void @inv_trig_test(float %0, <8 x float> %1) {
+  ; CHECK: llvm.intr.asin(%{{.*}}) : (f32) -> f32
+  %3 = call float @llvm.asin.f32(float %0)
+  ; CHECK: llvm.intr.asin(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %4 = call <8 x float> @llvm.asin.v8f32(<8 x float> %1)
+
+  ; CHECK: llvm.intr.acos(%{{.*}}) : (f32) -> f32
+  %5 = call float @llvm.acos.f32(float %0)
+  ; CHECK: llvm.intr.acos(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %6 = call <8 x float> @llvm.acos.v8f32(<8 x float> %1)
+
+  ; CHECK: llvm.intr.atan(%{{.*}}) : (f32) -> f32
+  %7 = call float @llvm.atan.f32(float %0)
+  ; CHECK: llvm.intr.atan(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %8 = call <8 x float> @llvm.atan.v8f32(<8 x float> %1)
+
+  ret void
+}
+; CHECK-LABEL:  llvm.func @hyperbolic_trig_test
+define void @hyperbolic_trig_test(float %0, <8 x float> %1) {
+  ; CHECK: llvm.intr.sinh(%{{.*}}) : (f32) -> f32
+  %3 = call float @llvm.sinh.f32(float %0)
+  ; CHECK: llvm.intr.sinh(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %4 = call <8 x float> @llvm.sinh.v8f32(<8 x float> %1)
+
+  ; CHECK: llvm.intr.cosh(%{{.*}}) : (f32) -> f32
+  %5 = call float @llvm.cosh.f32(float %0)
+  ; CHECK: llvm.intr.cosh(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %6 = call <8 x float> @llvm.cosh.v8f32(<8 x float> %1)
+
+  ; CHECK: llvm.intr.tanh(%{{.*}}) : (f32) -> f32
+  %7 = call float @llvm.tanh.f32(float %0)
+  ; CHECK: llvm.intr.tanh(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %8 = call <8 x float> @llvm.tanh.v8f32(<8 x float> %1)
   ret void
 }
 
@@ -487,6 +535,10 @@ define void @memmove_test(i32 %0, ptr %1, ptr %2) {
 define void @memset_test(i32 %0, ptr %1, i8 %2) {
   ; CHECK: "llvm.intr.memset"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   call void @llvm.memset.p0.i32(ptr %1, i8 %2, i32 %0, i1 false)
+  ; CHECK: "llvm.intr.memset.inline"(%{{.*}}, %{{.*}}) <{isVolatile = false, len = 10 : i64}> : (!llvm.ptr, i8) -> ()
+  call void @llvm.memset.inline.p0.i64(ptr %1, i8 %2, i64 10, i1 false)
+  ; CHECK: "llvm.intr.memset.inline"(%{{.*}}, %{{.*}}) <{isVolatile = false, len = 10 : i32}> : (!llvm.ptr, i8) -> ()
+  call void @llvm.memset.inline.p0.i32(ptr %1, i8 %2, i32 10, i1 false)
   ret void
 }
 
@@ -612,8 +664,18 @@ define void @va_intrinsics_test(ptr %0, ptr %1, ...) {
 ; CHECK-LABEL: @assume
 ; CHECK-SAME:  %[[TRUE:[a-zA-Z0-9]+]]
 define void @assume(i1 %true) {
-  ; CHECK:  "llvm.intr.assume"(%[[TRUE]]) : (i1) -> ()
+  ; CHECK:  llvm.intr.assume %[[TRUE]] : i1
   call void @llvm.assume(i1 %true)
+  ret void
+}
+
+; CHECK-LABEL: @assume_with_opbundles
+; CHECK-SAME:  %[[TRUE:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @assume_with_opbundles(i1 %true, ptr %p) {
+  ; CHECK: %[[ALIGN:.+]] = llvm.mlir.constant(8 : i32) : i32
+  ; CHECK:  llvm.intr.assume %[[TRUE]] ["align"(%[[PTR]], %[[ALIGN]] : !llvm.ptr, i32)] : i1
+  call void @llvm.assume(i1 %true) ["align"(ptr %p, i32 8)]
   ret void
 }
 
@@ -771,6 +833,15 @@ define void @invariant(ptr %0) {
   %2 = call ptr @llvm.invariant.start.p0(i64 16, ptr %0)
   ; CHECK: llvm.intr.invariant.end %[[START]], 32, %{{.*}} : !llvm.ptr
   call void @llvm.invariant.end.p0(ptr %2, i64 32, ptr %0)
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @invariant_group
+define void @invariant_group(ptr %0) {
+  ; CHECK: %{{.+}} = llvm.intr.launder.invariant.group %{{.*}} : !llvm.ptr
+  %2 = call ptr @llvm.launder.invariant.group.p0(ptr %0)
+  ; CHECK: %{{.+}} = llvm.intr.strip.invariant.group %{{.*}} : !llvm.ptr
+  %3 = call ptr @llvm.strip.invariant.group.p0(ptr %0)
   ret void
 }
 
@@ -959,6 +1030,12 @@ declare float @llvm.floor.f32(float)
 declare <8 x float> @llvm.floor.v8f32(<8 x float>)
 declare float @llvm.cos.f32(float)
 declare <8 x float> @llvm.cos.v8f32(<8 x float>)
+declare float @llvm.sinh.f32(float)
+declare <8 x float> @llvm.sinh.v8f32(<8 x float>)
+declare float @llvm.cosh.f32(float)
+declare <8 x float> @llvm.cosh.v8f32(<8 x float>)
+declare float @llvm.tanh.f32(float)
+declare <8 x float> @llvm.tanh.v8f32(<8 x float>)
 declare float @llvm.copysign.f32(float, float)
 declare <8 x float> @llvm.copysign.v8f32(<8 x float>, <8 x float>)
 declare float @llvm.pow.f32(float, float)
@@ -1157,6 +1234,8 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
+declare ptr @llvm.launder.invariant.group.p0(ptr nocapture)
+declare ptr @llvm.strip.invariant.group.p0(ptr nocapture)
 
 declare void @llvm.assume(i1)
 declare float @llvm.ssa.copy.f32(float returned)

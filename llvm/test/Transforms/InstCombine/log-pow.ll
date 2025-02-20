@@ -73,7 +73,7 @@ define float @logf_powfi_nonconst(float %x, i32 %y) {
 define double @log_powi_not_fast(double %x, i32 %y) {
 ; CHECK-LABEL: @log_powi_not_fast(
 ; CHECK-NEXT:    [[POW:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[LOG:%.*]] = call fast double @log(double [[POW]])
+; CHECK-NEXT:    [[LOG:%.*]] = call fast double @llvm.log.f64(double [[POW]])
 ; CHECK-NEXT:    ret double [[LOG]]
 ;
   %pow = call double @llvm.powi.f64.i32(double %x, i32 %y)
@@ -106,7 +106,7 @@ define <2 x double> @log2v_powv(<2 x double> %x, <2 x double> %y) {
 define double @log_pow_not_fast(double %x, double %y) {
 ; CHECK-LABEL: @log_pow_not_fast(
 ; CHECK-NEXT:    [[POW:%.*]] = call double @pow(double [[X:%.*]], double [[Y:%.*]])
-; CHECK-NEXT:    [[LOG:%.*]] = call fast double @log(double [[POW]])
+; CHECK-NEXT:    [[LOG:%.*]] = call fast double @llvm.log.f64(double [[POW]])
 ; CHECK-NEXT:    ret double [[LOG]]
 ;
   %pow = call double @pow(double %x, double %y)
@@ -137,7 +137,7 @@ define double @log10_exp(double %x) {
 
 define <2 x float> @logv_exp2v(<2 x float> %x) {
 ; CHECK-LABEL: @logv_exp2v(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x float> [[X:%.*]], <float 0x3FE62E4300000000, float 0x3FE62E4300000000>
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x float> [[X:%.*]], splat (float 0x3FE62E4300000000)
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %exp = call fast <2 x float> @llvm.exp2.v2f32(<2 x float> %x)
@@ -158,7 +158,7 @@ define float @log2f_exp10f(float %x) {
 define double @log_exp2_not_fast(double %x) {
 ; CHECK-LABEL: @log_exp2_not_fast(
 ; CHECK-NEXT:    [[EXP:%.*]] = call double @exp2(double [[X:%.*]])
-; CHECK-NEXT:    [[LOG:%.*]] = call fast double @log(double [[EXP]])
+; CHECK-NEXT:    [[LOG:%.*]] = call fast double @llvm.log.f64(double [[EXP]])
 ; CHECK-NEXT:    ret double [[LOG]]
 ;
   %exp = call double @exp2(double %x)

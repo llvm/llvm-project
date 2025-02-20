@@ -382,7 +382,7 @@ bool CodeGenInstructionPattern::hasVariadicDefs() const {
   if (I.variadicOpsAreDefs)
     return true;
 
-  DagInit *OutOps = I.TheDef->getValueAsDag("OutOperandList");
+  const DagInit *OutOps = I.TheDef->getValueAsDag("OutOperandList");
   if (OutOps->arg_empty())
     return false;
 

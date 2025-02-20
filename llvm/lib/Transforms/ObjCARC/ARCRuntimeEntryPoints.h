@@ -139,7 +139,7 @@ private:
     if (Decl)
       return Decl;
 
-    return Decl = Intrinsic::getDeclaration(TheModule, IntID);
+    return Decl = Intrinsic::getOrInsertDeclaration(TheModule, IntID);
   }
 };
 

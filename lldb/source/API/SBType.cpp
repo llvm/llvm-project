@@ -13,7 +13,6 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeEnumMember.h"
 #include "lldb/Core/Mangled.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
@@ -23,6 +22,7 @@
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/MathExtras.h"
@@ -685,6 +685,42 @@ lldb::TemplateArgumentKind SBType::GetTemplateArgumentKind(uint32_t idx) {
     return m_opaque_sp->GetCompilerType(false).GetTemplateArgumentKind(
         idx, /*expand_pack=*/true);
   return eTemplateArgumentKindNull;
+}
+
+lldb::SBValue SBType::GetTemplateArgumentValue(lldb::SBTarget target,
+                                               uint32_t idx) {
+  LLDB_INSTRUMENT_VA(this, target, idx);
+
+  if (!IsValid())
+    return {};
+
+  std::optional<CompilerType::IntegralTemplateArgument> arg;
+  const bool expand_pack = true;
+  switch (GetTemplateArgumentKind(idx)) {
+  case eTemplateArgumentKindStructuralValue:
+  case eTemplateArgumentKindIntegral:
+    arg = m_opaque_sp->GetCompilerType(false).GetIntegralTemplateArgument(
+        idx, expand_pack);
+    break;
+  default:
+    break;
+  }
+
+  if (!arg)
+    return {};
+
+  DataExtractor data;
+  arg->value.GetData(data);
+
+  ExecutionContext exe_ctx;
+  auto target_sp = target.GetSP();
+  if (!target_sp)
+    return {};
+
+  target_sp->CalculateExecutionContext(exe_ctx);
+
+  return ValueObject::CreateValueObjectFromData("value", data, exe_ctx,
+                                                arg->type);
 }
 
 SBType SBType::FindDirectNestedType(const char *name) {

@@ -23,32 +23,15 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class TraversalDumper : public Checker< check::BranchCondition,
-                                        check::BeginFunction,
-                                        check::EndFunction > {
+// TODO: This checker is only referenced from two small test files and it
+// doesn't seem to be useful for manual debugging, so consider reimplementing
+// those tests with more modern tools and removing this checker.
+class TraversalDumper
+    : public Checker<check::BeginFunction, check::EndFunction> {
 public:
-  void checkBranchCondition(const Stmt *Condition, CheckerContext &C) const;
   void checkBeginFunction(CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
 };
-}
-
-void TraversalDumper::checkBranchCondition(const Stmt *Condition,
-                                           CheckerContext &C) const {
-  // Special-case Objective-C's for-in loop, which uses the entire loop as its
-  // condition. We just print the collection expression.
-  const Stmt *Parent = dyn_cast<ObjCForCollectionStmt>(Condition);
-  if (!Parent) {
-    const ParentMap &Parents = C.getLocationContext()->getParentMap();
-    Parent = Parents.getParent(Condition);
-  }
-
-  // It is mildly evil to print directly to llvm::outs() rather than emitting
-  // warnings, but this ensures things do not get filtered out by the rest of
-  // the static analyzer machinery.
-  SourceLocation Loc = Parent->getBeginLoc();
-  llvm::outs() << C.getSourceManager().getSpellingLineNumber(Loc) << " "
-               << Parent->getStmtClassName() << "\n";
 }
 
 void TraversalDumper::checkBeginFunction(CheckerContext &C) const {
@@ -71,6 +54,9 @@ bool ento::shouldRegisterTraversalDumper(const CheckerManager &mgr) {
 //------------------------------------------------------------------------------
 
 namespace {
+// TODO: This checker appears to be a utility for creating `FileCheck` tests
+// verifying its stdout output, but there are no tests that rely on it, so
+// perhaps it should be removed.
 class CallDumper : public Checker< check::PreCall,
                                    check::PostCall > {
 public:

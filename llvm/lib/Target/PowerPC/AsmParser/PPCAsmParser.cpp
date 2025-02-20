@@ -8,9 +8,9 @@
 
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
-#include "PPCTargetStreamer.h"
+#include "MCTargetDesc/PPCTargetStreamer.h"
+#include "PPCInstrInfo.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -97,7 +97,7 @@ namespace {
 struct PPCOperand;
 
 class PPCAsmParser : public MCTargetAsmParser {
-  bool IsPPC64;
+  const bool IsPPC64;
 
   void Warning(SMLoc L, const Twine &Msg) { getParser().Warning(L, Msg); }
 
@@ -142,10 +142,8 @@ class PPCAsmParser : public MCTargetAsmParser {
 public:
   PPCAsmParser(const MCSubtargetInfo &STI, MCAsmParser &,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI, MII) {
-    // Check for 64-bit vs. 32-bit pointer mode.
-    const Triple &TheTriple = STI.getTargetTriple();
-    IsPPC64 = TheTriple.isPPC64();
+      : MCTargetAsmParser(Options, STI, MII),
+        IsPPC64(STI.getTargetTriple().isPPC64()) {
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
@@ -184,6 +182,7 @@ struct PPCOperand : public MCParsedAsmOperand {
 
   struct ImmOp {
     int64_t Val;
+    bool IsMemOpBase;
   };
 
   struct ExprOp {
@@ -243,6 +242,9 @@ public:
 
   /// isPPC64 - True if this operand is for an instruction in 64-bit mode.
   bool isPPC64() const { return IsPPC64; }
+
+  /// isMemOpBase - True if this operand is the base of a memory operand.
+  bool isMemOpBase() const { return Kind == Immediate && Imm.IsMemOpBase; }
 
   int64_t getImm() const {
     assert(Kind == Immediate && "Invalid access!");
@@ -696,9 +698,11 @@ public:
   }
 
   static std::unique_ptr<PPCOperand> CreateImm(int64_t Val, SMLoc S, SMLoc E,
-                                               bool IsPPC64) {
+                                               bool IsPPC64,
+                                               bool IsMemOpBase = false) {
     auto Op = std::make_unique<PPCOperand>(Immediate);
     Op->Imm.Val = Val;
+    Op->Imm.IsMemOpBase = IsMemOpBase;
     Op->StartLoc = S;
     Op->EndLoc = E;
     Op->IsPPC64 = IsPPC64;
@@ -1252,14 +1256,29 @@ void PPCAsmParser::processInstruction(MCInst &Inst,
 static std::string PPCMnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,
                                          unsigned VariantID = 0);
 
+// Check that the register+immediate memory operand is in the right position and
+// is expected by the instruction. Returns true if the memory operand syntax is
+// valid; otherwise, returns false.
+static bool validateMemOp(const OperandVector &Operands, bool isMemriOp) {
+  for (size_t idx = 0; idx < Operands.size(); ++idx) {
+    const PPCOperand &Op = static_cast<const PPCOperand &>(*Operands[idx]);
+    if (Op.isMemOpBase() != (idx == 3 && isMemriOp))
+      return false;
+  }
+  return true;
+}
+
 bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
   MCInst Inst;
+  const PPCInstrInfo *TII = static_cast<const PPCInstrInfo *>(&MII);
 
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   case Match_Success:
+    if (!validateMemOp(Operands, TII->isMemriOp(Inst.getOpcode())))
+      return Error(IDLoc, "invalid operand for instruction");
     // Post-process instructions (typically extended mnemonics)
     processInstruction(Inst, Operands);
     Inst.setLoc(IDLoc);
@@ -1291,6 +1310,9 @@ bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
+#define GET_REGISTER_MATCHER
+#include "PPCGenAsmMatcher.inc"
+
 MCRegister PPCAsmParser::matchRegisterName(int64_t &IntVal) {
   if (getParser().getTok().is(AsmToken::Percent))
     getParser().Lex(); // Eat the '%'.
@@ -1298,55 +1320,25 @@ MCRegister PPCAsmParser::matchRegisterName(int64_t &IntVal) {
   if (!getParser().getTok().is(AsmToken::Identifier))
     return MCRegister();
 
-  MCRegister RegNo;
   StringRef Name = getParser().getTok().getString();
+  MCRegister RegNo = MatchRegisterName(Name);
+  if (!RegNo)
+    return RegNo;
+
+  Name.substr(Name.find_first_of("1234567890")).getAsInteger(10, IntVal);
+
+  // MatchRegisterName doesn't seem to have special handling for 64bit vs 32bit
+  // register types.
   if (Name.equals_insensitive("lr")) {
     RegNo = isPPC64() ? PPC::LR8 : PPC::LR;
     IntVal = 8;
   } else if (Name.equals_insensitive("ctr")) {
     RegNo = isPPC64() ? PPC::CTR8 : PPC::CTR;
     IntVal = 9;
-  } else if (Name.equals_insensitive("vrsave")) {
-    RegNo = PPC::VRSAVE;
+  } else if (Name.equals_insensitive("vrsave"))
     IntVal = 256;
-  } else if (Name.starts_with_insensitive("r") &&
-             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
+  else if (Name.starts_with_insensitive("r"))
     RegNo = isPPC64() ? XRegs[IntVal] : RRegs[IntVal];
-  } else if (Name.starts_with_insensitive("f") &&
-             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
-    RegNo = FRegs[IntVal];
-  } else if (Name.starts_with_insensitive("vs") &&
-             !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 64) {
-    RegNo = VSRegs[IntVal];
-  } else if (Name.starts_with_insensitive("v") &&
-             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
-    RegNo = VRegs[IntVal];
-  } else if (Name.starts_with_insensitive("cr") &&
-             !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
-    RegNo = CRRegs[IntVal];
-  } else if (Name.starts_with_insensitive("acc") &&
-             !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
-    RegNo = ACCRegs[IntVal];
-  } else if (Name.starts_with_insensitive("wacc_hi") &&
-             !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 8) {
-    RegNo = ACCRegs[IntVal];
-  } else if (Name.starts_with_insensitive("wacc") &&
-             !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 8) {
-    RegNo = WACCRegs[IntVal];
-  } else if (Name.starts_with_insensitive("dmrrowp") &&
-             !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 32) {
-    RegNo = DMRROWpRegs[IntVal];
-  } else if (Name.starts_with_insensitive("dmrrow") &&
-             !Name.substr(6).getAsInteger(10, IntVal) && IntVal < 64) {
-    RegNo = DMRROWRegs[IntVal];
-  } else if (Name.starts_with_insensitive("dmrp") &&
-             !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 4) {
-    RegNo = DMRROWpRegs[IntVal];
-  } else if (Name.starts_with_insensitive("dmr") &&
-             !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
-    RegNo = DMRRegs[IntVal];
-  } else
-    return MCRegister();
 
   getParser().Lex();
   return RegNo;
@@ -1644,7 +1636,8 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
     E = Parser.getTok().getLoc();
     if (parseToken(AsmToken::RParen, "missing ')'"))
       return true;
-    Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
+    Operands.push_back(
+        PPCOperand::CreateImm(IntVal, S, E, isPPC64(), /*IsMemOpBase=*/true));
   }
 
   return false;
@@ -1874,7 +1867,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmParser() {
   RegisterMCAsmParser<PPCAsmParser> D(getThePPC64LETarget());
 }
 
-#define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "PPCGenAsmMatcher.inc"

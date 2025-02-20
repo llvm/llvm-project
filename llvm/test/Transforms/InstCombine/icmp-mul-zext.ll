@@ -13,7 +13,7 @@ define i32 @sterix(i32, i8, i64) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], [[SH_PROM]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i32 [[SHR]] to i64
 ; CHECK-NEXT:    [[MUL3:%.*]] = mul nuw nsw i64 [[CONV]], [[CONV2]]
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i64 [[MUL3]], 4294967296
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp samesign ult i64 [[MUL3]], 4294967296
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[TMP2]], [[MUL3]]

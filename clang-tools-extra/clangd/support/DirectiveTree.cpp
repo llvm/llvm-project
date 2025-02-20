@@ -328,6 +328,9 @@ public:
   Preprocessor(const TokenStream &In, TokenStream &Out) : In(In), Out(Out) {}
   ~Preprocessor() { Out.finalize(); }
 
+  Preprocessor(const Preprocessor &other) = delete;
+  Preprocessor &operator=(const Preprocessor &other) = delete;
+
   void walk(const DirectiveTree &T) {
     for (const auto &C : T.Chunks)
       std::visit(*this, C);

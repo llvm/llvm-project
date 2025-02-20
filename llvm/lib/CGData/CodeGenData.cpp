@@ -14,9 +14,12 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/StableFunctionMapRecord.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 
 #define DEBUG_TYPE "cg-data"
@@ -30,6 +33,11 @@ cl::opt<bool>
 cl::opt<std::string>
     CodeGenDataUsePath("codegen-data-use-path", cl::init(""), cl::Hidden,
                        cl::desc("File path to where .cgdata file is read"));
+cl::opt<bool> CodeGenDataThinLTOTwoRounds(
+    "codegen-data-thinlto-two-rounds", cl::init(false), cl::Hidden,
+    cl::desc("Enable two-round ThinLTO code generation. The first round "
+             "emits codegen data, while the second round uses the emitted "
+             "codegen data for further optimizations."));
 
 static std::string getCGDataErrString(cgdata_error Err,
                                       const std::string &ErrMsg = "") {
@@ -139,7 +147,7 @@ CodeGenData &CodeGenData::getInstance() {
   std::call_once(CodeGenData::OnceFlag, []() {
     Instance = std::unique_ptr<CodeGenData>(new CodeGenData());
 
-    if (CodeGenDataGenerate)
+    if (CodeGenDataGenerate || CodeGenDataThinLTOTwoRounds)
       Instance->EmitCGData = true;
     else if (!CodeGenDataUsePath.empty()) {
       // Initialize the global CGData if the input file name is given.
@@ -156,9 +164,11 @@ CodeGenData &CodeGenData::getInstance() {
       auto Reader = ReaderOrErr->get();
       if (Reader->hasOutlinedHashTree())
         Instance->publishOutlinedHashTree(Reader->releaseOutlinedHashTree());
+      if (Reader->hasStableFunctionMap())
+        Instance->publishStableFunctionMap(Reader->releaseStableFunctionMap());
     }
   });
-  return *(Instance.get());
+  return *Instance;
 }
 
 namespace IndexedCGData {
@@ -178,18 +188,14 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Curr) {
     return make_error<CGDataError>(cgdata_error::unsupported_version);
   H.DataKind = endian::readNext<uint32_t, endianness::little, unaligned>(Curr);
 
-  switch (H.Version) {
-    // When a new field is added to the header add a case statement here to
-    // compute the size as offset of the new field + size of the new field. This
-    // relies on the field being added to the end of the list.
-    static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version1,
-                  "Please update the size computation below if a new field has "
-                  "been added to the header, if not add a case statement to "
-                  "fall through to the latest version.");
-  case 1ull:
-    H.OutlinedHashTreeOffset =
+  static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version2,
+                "Please update the offset computation below if a new field has "
+                "been added to the header.");
+  H.OutlinedHashTreeOffset =
+      endian::readNext<uint64_t, endianness::little, unaligned>(Curr);
+  if (H.Version >= 2)
+    H.StableFunctionMapOffset =
         endian::readNext<uint64_t, endianness::little, unaligned>(Curr);
-  }
 
   return H;
 }
@@ -198,7 +204,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Curr) {
 
 namespace cgdata {
 
-void warn(Twine Message, std::string Whence, std::string Hint) {
+void warn(Twine Message, StringRef Whence, StringRef Hint) {
   WithColor::warning();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -210,9 +216,74 @@ void warn(Twine Message, std::string Whence, std::string Hint) {
 void warn(Error E, StringRef Whence) {
   if (E.isA<CGDataError>()) {
     handleAllErrors(std::move(E), [&](const CGDataError &IPE) {
-      warn(IPE.message(), Whence.str(), "");
+      warn(IPE.message(), Whence, "");
     });
   }
+}
+
+void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
+                            AddStreamFn AddStream) {
+  LLVM_DEBUG(dbgs() << "Saving module: " << TheModule.getModuleIdentifier()
+                    << " in Task " << Task << "\n");
+  Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
+      AddStream(Task, TheModule.getModuleIdentifier());
+  if (Error Err = StreamOrErr.takeError())
+    report_fatal_error(std::move(Err));
+  std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
+
+  WriteBitcodeToFile(TheModule, *Stream->OS,
+                     /*ShouldPreserveUseListOrder=*/true);
+}
+
+std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
+                                               unsigned Task,
+                                               LLVMContext &Context,
+                                               ArrayRef<StringRef> IRFiles) {
+  LLVM_DEBUG(dbgs() << "Loading module: " << OrigModule.getModuleIdentifier()
+                    << " in Task " << Task << "\n");
+  auto FileBuffer = MemoryBuffer::getMemBuffer(
+      IRFiles[Task], "in-memory IR file", /*RequiresNullTerminator=*/false);
+  auto RestoredModule = parseBitcodeFile(*FileBuffer, Context);
+  if (!RestoredModule)
+    report_fatal_error(
+        Twine("Failed to parse optimized bitcode loaded for Task: ") +
+        Twine(Task) + "\n");
+
+  // Restore the original module identifier.
+  (*RestoredModule)->setModuleIdentifier(OrigModule.getModuleIdentifier());
+  return std::move(*RestoredModule);
+}
+
+Expected<stable_hash> mergeCodeGenData(ArrayRef<StringRef> ObjFiles) {
+  OutlinedHashTreeRecord GlobalOutlineRecord;
+  StableFunctionMapRecord GlobalStableFunctionMapRecord;
+  stable_hash CombinedHash = 0;
+  for (auto File : ObjFiles) {
+    if (File.empty())
+      continue;
+    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(
+        File, "in-memory object file", /*RequiresNullTerminator=*/false);
+    Expected<std::unique_ptr<object::ObjectFile>> BinOrErr =
+        object::ObjectFile::createObjectFile(Buffer->getMemBufferRef());
+    if (!BinOrErr)
+      return BinOrErr.takeError();
+
+    std::unique_ptr<object::ObjectFile> &Obj = BinOrErr.get();
+    if (auto E = CodeGenDataReader::mergeFromObjectFile(
+            Obj.get(), GlobalOutlineRecord, GlobalStableFunctionMapRecord,
+            &CombinedHash))
+      return E;
+  }
+
+  GlobalStableFunctionMapRecord.finalize();
+
+  if (!GlobalOutlineRecord.empty())
+    cgdata::publishOutlinedHashTree(std::move(GlobalOutlineRecord.HashTree));
+  if (!GlobalStableFunctionMapRecord.empty())
+    cgdata::publishStableFunctionMap(
+        std::move(GlobalStableFunctionMapRecord.FunctionMap));
+
+  return CombinedHash;
 }
 
 } // end namespace cgdata

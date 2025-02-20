@@ -73,7 +73,7 @@ define <2 x i8> @lshr_cttz_zero_is_not_undef_splat_vec(<2 x i8> %x) {
 
 define <2 x i8> @lshr_ctpop_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_ctpop_splat_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[SH:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
@@ -153,8 +153,8 @@ define i8 @lshr_exact(i8 %x) {
 
 define <2 x i8> @lshr_exact_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_exact_splat_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[LSHR:%.*]] = and <2 x i8> [[TMP1]], <i8 63, i8 63>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[LSHR:%.*]] = and <2 x i8> [[TMP1]], splat (i8 63)
 ; CHECK-NEXT:    ret <2 x i8> [[LSHR]]
 ;
   %shl = shl <2 x i8> %x, <i8 2, i8 2>
@@ -165,7 +165,7 @@ define <2 x i8> @lshr_exact_splat_vec(<2 x i8> %x) {
 
 define <2 x i8> @lshr_exact_splat_vec_nuw(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_exact_splat_vec_nuw(
-; CHECK-NEXT:    [[LSHR:%.*]] = add nuw <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw <2 x i8> [[X:%.*]], splat (i8 1)
 ; CHECK-NEXT:    ret <2 x i8> [[LSHR]]
 ;
   %shl = shl nuw <2 x i8> %x, <i8 2, i8 2>
@@ -190,9 +190,9 @@ define i8 @shl_add(i8 %x, i8 %y) {
 define <2 x i8> @shl_add_commute_vec(<2 x i8> %x, <2 x i8> %py) {
 ; CHECK-LABEL: @shl_add_commute_vec(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[PY:%.*]], [[PY]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[Y]], <i8 3, i8 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[Y]], splat (i8 3)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP2]], <i8 31, i8 31>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP2]], splat (i8 31)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %y = mul <2 x i8> %py, %py ; thwart complexity-based canonicalization
@@ -289,7 +289,7 @@ define i16 @smear_sign_and_widen_should_not_change_type(i4 %x) {
 
 define <2 x i8> @smear_sign_and_widen_splat(<2 x i6> %x) {
 ; CHECK-LABEL: @smear_sign_and_widen_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i6> [[X:%.*]], <i6 2, i6 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i6> [[X:%.*]], splat (i6 2)
 ; CHECK-NEXT:    [[HIBIT:%.*]] = zext <2 x i6> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[HIBIT]]
 ;
@@ -324,7 +324,7 @@ define i32 @fake_sext_but_should_not_change_type(i3 %x) {
 
 define <2 x i8> @fake_sext_splat(<2 x i3> %x) {
 ; CHECK-LABEL: @fake_sext_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i3> [[X:%.*]], <i3 2, i3 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i3> [[X:%.*]], splat (i3 2)
 ; CHECK-NEXT:    [[SH:%.*]] = zext nneg <2 x i3> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
@@ -337,7 +337,7 @@ define <2 x i8> @fake_sext_splat(<2 x i3> %x) {
 
 define <2 x i32> @narrow_lshr_constant(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @narrow_lshr_constant(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[X:%.*]], splat (i8 3)
 ; CHECK-NEXT:    [[SH:%.*]] = zext nneg <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[SH]]
 ;
@@ -359,7 +359,7 @@ define i32 @mul_splat_fold(i32 %x) {
 
 define <3 x i14> @mul_splat_fold_vec(<3 x i14> %x) {
 ; CHECK-LABEL: @mul_splat_fold_vec(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw <3 x i14> [[X:%.*]], <i14 129, i14 129, i14 129>
+; CHECK-NEXT:    [[M:%.*]] = mul nuw <3 x i14> [[X:%.*]], splat (i14 129)
 ; CHECK-NEXT:    call void @usevec(<3 x i14> [[M]])
 ; CHECK-NEXT:    ret <3 x i14> [[X]]
 ;
@@ -787,7 +787,7 @@ define i32 @negative_and_odd(i32 %x) {
 
 define <2 x i7> @negative_and_odd_vec(<2 x i7> %x) {
 ; CHECK-LABEL: @negative_and_odd_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i7> [[X:%.*]], <i7 6, i7 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i7> [[X:%.*]], splat (i7 6)
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i7> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
@@ -851,7 +851,7 @@ define i12 @trunc_sandwich(i32 %x) {
 
 define <2 x i12> @trunc_sandwich_splat_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @trunc_sandwich_splat_vec(
-; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 30, i32 30>
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 30)
 ; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw <2 x i32> [[SUM_SHIFT]] to <2 x i12>
 ; CHECK-NEXT:    ret <2 x i12> [[R1]]
 ;
@@ -947,9 +947,9 @@ define i12 @trunc_sandwich_use1(i32 %x) {
 
 define <3 x i9> @trunc_sandwich_splat_vec_use1(<3 x i14> %x) {
 ; CHECK-LABEL: @trunc_sandwich_splat_vec_use1(
-; CHECK-NEXT:    [[SH:%.*]] = lshr <3 x i14> [[X:%.*]], <i14 6, i14 6, i14 6>
+; CHECK-NEXT:    [[SH:%.*]] = lshr <3 x i14> [[X:%.*]], splat (i14 6)
 ; CHECK-NEXT:    call void @usevec(<3 x i14> [[SH]])
-; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <3 x i14> [[X]], <i14 11, i14 11, i14 11>
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <3 x i14> [[X]], splat (i14 11)
 ; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw <3 x i14> [[SUM_SHIFT]] to <3 x i9>
 ; CHECK-NEXT:    ret <3 x i9> [[R1]]
 ;
@@ -1089,7 +1089,7 @@ define <3 x i14> @lshr_sext_i1_to_i14_splat_vec_use1(<3 x i1> %a) {
 ; CHECK-LABEL: @lshr_sext_i1_to_i14_splat_vec_use1(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext <3 x i1> [[A:%.*]] to <3 x i14>
 ; CHECK-NEXT:    call void @usevec(<3 x i14> [[SEXT]])
-; CHECK-NEXT:    [[LSHR:%.*]] = select <3 x i1> [[A]], <3 x i14> <i14 1023, i14 1023, i14 1023>, <3 x i14> zeroinitializer
+; CHECK-NEXT:    [[LSHR:%.*]] = select <3 x i1> [[A]], <3 x i14> splat (i14 1023), <3 x i14> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i14> [[LSHR]]
 ;
   %sext = sext <3 x i1> %a to <3 x i14>
@@ -1269,7 +1269,7 @@ define <2 x i64> @narrow_bswap_splat_poison_elt(<2 x i16> %x) {
 define <2 x i64> @narrow_bswap_overshift(<2 x i32> %x) {
 ; CHECK-LABEL: @narrow_bswap_overshift(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], <i32 16, i32 16>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], splat (i32 16)
 ; CHECK-NEXT:    [[S:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[S]]
 ;
@@ -1320,7 +1320,7 @@ define i8 @not_signbit(i8 %x) {
 
 define <2 x i6> @not_signbit_vec(<2 x i6> %x) {
 ; CHECK-LABEL: @not_signbit_vec(
-; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i6> [[X:%.*]], <i6 -1, i6 -1>
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i6> [[X:%.*]], splat (i6 -1)
 ; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[ISNOTNEG]] to <2 x i6>
 ; CHECK-NEXT:    ret <2 x i6> [[R]]
 ;
@@ -1522,4 +1522,66 @@ define <2 x i8> @bool_add_lshr_vec_wrong_shift_amt(<2 x i1> %a, <2 x i1> %b) {
   %add = add <2 x i8> %zext.a, %zext.b
   %lshr = lshr <2 x i8> %add, <i8 1, i8 2>
   ret <2 x i8> %lshr
+}
+
+define i32 @lowbits_of_lshr_mul(i64 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[CONV:%.*]] = mul i32 [[TMP0]], 15
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i64 %x, 64424509440
+  %shift = lshr i64 %mul, 32
+  %conv = trunc i64 %shift to i32
+  ret i32 %conv
+}
+
+define i32 @lowbits_of_lshr_mul_mask(i32 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul_mask(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[X:%.*]], 1600
+; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[TMP0]], 32704
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i32 %x, 104857600
+  %shift = lshr i32 %mul, 16
+  %conv = and i32 %shift, 32767
+  ret i32 %conv
+}
+
+; Negative tests
+
+define i32 @lowbits_of_lshr_mul_mask_multiuse(i32 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul_mask_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], 104857600
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i32 [[MUL]], 16
+; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[SHIFT]], 32704
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i32 %x, 104857600
+  call void @use(i32 %mul)
+  %shift = lshr i32 %mul, 16
+  %conv = and i32 %shift, 32767
+  ret i32 %conv
+}
+
+define i32 @lowbits_of_lshr_mul_mask_indivisible(i32 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul_mask_indivisible(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], 25600
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i32 [[MUL]], 16
+; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[SHIFT]], 32767
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i32 %x, 25600
+  %shift = lshr i32 %mul, 16
+  %conv = and i32 %shift, 32767
+  ret i32 %conv
 }

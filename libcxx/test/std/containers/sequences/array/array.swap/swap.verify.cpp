@@ -10,6 +10,8 @@
 
 // void swap(array& a);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <array>
 #include <cassert>
 
@@ -17,7 +19,7 @@ int main(int, char**) {
   {
     typedef double T;
     typedef std::array<const T, 0> C;
-    C c = {};
+    C c  = {};
     C c2 = {};
     // expected-error-re@array:* {{static assertion failed{{.*}}cannot swap zero-sized array of type 'const T'}}
     c.swap(c2); // expected-note {{requested here}}

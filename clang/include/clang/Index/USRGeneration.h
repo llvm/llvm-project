@@ -15,6 +15,7 @@
 namespace clang {
 class ASTContext;
 class Decl;
+class LangOptions;
 class MacroDefinitionRecord;
 class Module;
 class SourceLocation;
@@ -30,6 +31,8 @@ static inline StringRef getUSRSpacePrefix() {
 /// Generate a USR for a Decl, including the USR prefix.
 /// \returns true if the results should be ignored, false otherwise.
 bool generateUSRForDecl(const Decl *D, SmallVectorImpl<char> &Buf);
+bool generateUSRForDecl(const Decl *D, SmallVectorImpl<char> &Buf,
+                        const LangOptions &LangOpts);
 
 /// Generate a USR fragment for an Objective-C class.
 void generateUSRForObjCClass(StringRef Cls, raw_ostream &OS,
@@ -75,7 +78,10 @@ bool generateUSRForMacro(StringRef MacroName, SourceLocation Loc,
 /// Generates a USR for a type.
 ///
 /// \return true on error, false on success.
-bool generateUSRForType(QualType T, ASTContext &Ctx, SmallVectorImpl<char> &Buf);
+bool generateUSRForType(QualType T, ASTContext &Ctx,
+                        SmallVectorImpl<char> &Buf);
+bool generateUSRForType(QualType T, ASTContext &Ctx, SmallVectorImpl<char> &Buf,
+                        const LangOptions &LangOpts);
 
 /// Generate a USR for a module, including the USR prefix.
 /// \returns true on error, false on success.

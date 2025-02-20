@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1159,8 +1158,9 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
 
 bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                                   unsigned Opc, bool AllowSP, Register &NewSrc,
-                                  bool &isKill, MachineOperand &ImplicitOp,
-                                  LiveVariables *LV, LiveIntervals *LIS) const {
+                                  unsigned &NewSrcSubReg, bool &isKill,
+                                  MachineOperand &ImplicitOp, LiveVariables *LV,
+                                  LiveIntervals *LIS) const {
   MachineFunction &MF = *MI.getParent()->getParent();
   const TargetRegisterClass *RC;
   if (AllowSP) {
@@ -1169,12 +1169,16 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     RC = Opc != X86::LEA32r ? &X86::GR64_NOSPRegClass : &X86::GR32_NOSPRegClass;
   }
   Register SrcReg = Src.getReg();
+  unsigned SubReg = Src.getSubReg();
   isKill = MI.killsRegister(SrcReg, /*TRI=*/nullptr);
+
+  NewSrcSubReg = X86::NoSubRegister;
 
   // For both LEA64 and LEA32 the register already has essentially the right
   // type (32-bit or 64-bit) we may just need to forbid SP.
   if (Opc != X86::LEA64_32r) {
     NewSrc = SrcReg;
+    NewSrcSubReg = SubReg;
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
 
     if (NewSrc.isVirtual() && !MF.getRegInfo().constrainRegClass(NewSrc, RC))
@@ -1190,16 +1194,18 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     ImplicitOp.setImplicit();
 
     NewSrc = getX86SubSuperRegister(SrcReg, 64);
+    assert(!SubReg && "no superregister for source");
     assert(NewSrc.isValid() && "Invalid Operand");
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
   } else {
     // Virtual register of the wrong class, we have to create a temporary 64-bit
     // vreg to feed into the LEA.
     NewSrc = MF.getRegInfo().createVirtualRegister(RC);
+    NewSrcSubReg = X86::NoSubRegister;
     MachineInstr *Copy =
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(TargetOpcode::COPY))
             .addReg(NewSrc, RegState::Define | RegState::Undef, X86::sub_32bit)
-            .addReg(SrcReg, getKillRegState(isKill));
+            .addReg(SrcReg, getKillRegState(isKill), SubReg);
 
     // Which is obviously going to be dead after we're done with it.
     isKill = true;
@@ -1259,7 +1265,9 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   MachineBasicBlock::iterator MBBI = MI.getIterator();
   Register Dest = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
+  unsigned SrcSubReg = MI.getOperand(1).getSubReg();
   Register Src2;
+  unsigned Src2SubReg;
   bool IsDead = MI.getOperand(0).isDead();
   bool IsKill = MI.getOperand(1).isKill();
   unsigned SubReg = Is8BitOp ? X86::sub_8bit : X86::sub_16bit;
@@ -1269,7 +1277,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   MachineInstr *InsMI =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), get(TargetOpcode::COPY))
           .addReg(InRegLEA, RegState::Define, SubReg)
-          .addReg(Src, getKillRegState(IsKill));
+          .addReg(Src, getKillRegState(IsKill), SrcSubReg);
   MachineInstr *ImpDef2 = nullptr;
   MachineInstr *InsMI2 = nullptr;
 
@@ -1307,12 +1315,14 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   case X86::ADD16rr:
   case X86::ADD16rr_DB: {
     Src2 = MI.getOperand(2).getReg();
+    Src2SubReg = MI.getOperand(2).getSubReg();
     bool IsKill2 = MI.getOperand(2).isKill();
     assert(!MI.getOperand(2).isUndef() && "Undef op doesn't need optimization");
     if (Src == Src2) {
       // ADD8rr/ADD16rr killed %reg1028, %reg1028
       // just a single insert_subreg.
-      addRegReg(MIB, InRegLEA, true, InRegLEA, false);
+      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA, false,
+                X86::NoSubRegister);
     } else {
       if (Subtarget.is64Bit())
         InRegLEA2 = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -1324,8 +1334,9 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
                         InRegLEA2);
       InsMI2 = BuildMI(MBB, &*MIB, MI.getDebugLoc(), get(TargetOpcode::COPY))
                    .addReg(InRegLEA2, RegState::Define, SubReg)
-                   .addReg(Src2, getKillRegState(IsKill2));
-      addRegReg(MIB, InRegLEA, true, InRegLEA2, true);
+                   .addReg(Src2, getKillRegState(IsKill2), Src2SubReg);
+      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA2, true,
+                X86::NoSubRegister);
     }
     if (LV && IsKill2 && InsMI2)
       LV->replaceKillInstruction(Src2, MI, *InsMI2);
@@ -1429,6 +1440,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
   MachineInstr *NewMI = nullptr;
   Register SrcReg, SrcReg2;
+  unsigned SrcSubReg, SrcSubReg2;
   bool Is64Bit = Subtarget.is64Bit();
 
   bool Is8BitOp = false;
@@ -1468,17 +1480,18 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     // LEA can't handle ESP.
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
-    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
-                                  .add(Dest)
-                                  .addReg(0)
-                                  .addImm(1LL << ShAmt)
-                                  .addReg(SrcReg, getKillRegState(isKill))
-                                  .addImm(0)
-                                  .addReg(0);
+    MachineInstrBuilder MIB =
+        BuildMI(MF, MI.getDebugLoc(), get(Opc))
+            .add(Dest)
+            .addReg(0)
+            .addImm(1LL << ShAmt)
+            .addReg(SrcReg, getKillRegState(isKill), SrcSubReg)
+            .addImm(0)
+            .addReg(0);
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
     NewMI = MIB;
@@ -1506,8 +1519,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
                        : (Is64Bit ? X86::LEA64_32r : X86::LEA32r);
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
@@ -1532,8 +1545,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
@@ -1570,8 +1583,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     const MachineOperand &Src2 = MI.getOperand(2);
     bool isKill2;
     MachineOperand ImplicitOp2 = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src2, Opc, /*AllowSP=*/false, SrcReg2, isKill2,
-                        ImplicitOp2, LV, LIS))
+    if (!classifyLEAReg(MI, Src2, Opc, /*AllowSP=*/false, SrcReg2, SrcSubReg2,
+                        isKill2, ImplicitOp2, LV, LIS))
       return nullptr;
 
     bool isKill;
@@ -1581,9 +1594,10 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       // the first call inserted a COPY from Src2 and marked it as killed.
       isKill = isKill2;
       SrcReg = SrcReg2;
+      SrcSubReg = SrcSubReg2;
     } else {
-      if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, isKill,
-                          ImplicitOp, LV, LIS))
+      if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
+                          isKill, ImplicitOp, LV, LIS))
         return nullptr;
     }
 
@@ -1593,7 +1607,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     if (ImplicitOp2.getReg() != 0)
       MIB.add(ImplicitOp2);
 
-    NewMI = addRegReg(MIB, SrcReg, isKill, SrcReg2, isKill2);
+    NewMI =
+        addRegReg(MIB, SrcReg, isKill, SrcSubReg, SrcReg2, isKill2, SrcSubReg2);
 
     // Add kills if classifyLEAReg created a new register.
     if (LV) {
@@ -1626,13 +1641,14 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
-    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
-                                  .add(Dest)
-                                  .addReg(SrcReg, getKillRegState(isKill));
+    MachineInstrBuilder MIB =
+        BuildMI(MF, MI.getDebugLoc(), get(Opc))
+            .add(Dest)
+            .addReg(SrcReg, getKillRegState(isKill), SrcSubReg);
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
 
@@ -1666,13 +1682,14 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
-    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
-                                  .add(Dest)
-                                  .addReg(SrcReg, getKillRegState(isKill));
+    MachineInstrBuilder MIB =
+        BuildMI(MF, MI.getDebugLoc(), get(Opc))
+            .add(Dest)
+            .addReg(SrcReg, getKillRegState(isKill), SrcSubReg);
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
 
@@ -4538,6 +4555,11 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
                 : GET_EGPR_IF_ENABLED(X86::TILESTORED);
 #undef GET_EGPR_IF_ENABLED
+  case 2048:
+    assert(X86::TILEPAIRRegClass.hasSubClassEq(RC) &&
+           "Unknown 2048-byte regclass");
+    assert(STI.hasAMXTILE() && "Using 2048-bit register requires AMX-TILE");
+    return Load ? X86::PTILEPAIRLOAD : X86::PTILEPAIRSTORE;
   }
 }
 
@@ -4732,6 +4754,8 @@ static bool isAMXOpcode(unsigned Opc) {
   case X86::TILESTORED:
   case X86::TILELOADD_EVEX:
   case X86::TILESTORED_EVEX:
+  case X86::PTILEPAIRLOAD:
+  case X86::PTILEPAIRSTORE:
     return true;
   }
 }
@@ -4744,7 +4768,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
   default:
     llvm_unreachable("Unexpected special opcode!");
   case X86::TILESTORED:
-  case X86::TILESTORED_EVEX: {
+  case X86::TILESTORED_EVEX:
+  case X86::PTILEPAIRSTORE: {
     // tilestored %tmm, (%sp, %idx)
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -4758,7 +4783,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
     break;
   }
   case X86::TILELOADD:
-  case X86::TILELOADD_EVEX: {
+  case X86::TILELOADD_EVEX:
+  case X86::PTILEPAIRLOAD: {
     // tileloadd (%sp, %idx), %tmm
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -4776,7 +4802,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
 void X86InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -4792,15 +4819,14 @@ void X86InstrInfo::storeRegToStackSlot(
     loadStoreTileReg(MBB, MI, Opc, SrcReg, FrameIdx, isKill);
   else
     addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
-        .addReg(SrcReg, getKillRegState(isKill));
+        .addReg(SrcReg, getKillRegState(isKill))
+        .setMIFlag(Flags);
 }
 
-void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIdx,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+void X86InstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -4814,8 +4840,8 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (isAMXOpcode(Opc))
     loadStoreTileReg(MBB, MI, Opc, DestReg, FrameIdx);
   else
-    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg),
-                      FrameIdx);
+    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg), FrameIdx)
+        .setMIFlag(Flags);
 }
 
 bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
@@ -5213,42 +5239,43 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
 }
 
 /// Check whether the use can be converted to remove a comparison against zero.
-static X86::CondCode isUseDefConvertible(const MachineInstr &MI) {
+/// Returns the EFLAGS condition and the operand that we are comparing against zero.
+static std::pair<X86::CondCode, unsigned> isUseDefConvertible(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
-    return X86::COND_INVALID;
+    return std::make_pair(X86::COND_INVALID, ~0U);
   CASE_ND(NEG8r)
   CASE_ND(NEG16r)
   CASE_ND(NEG32r)
   CASE_ND(NEG64r)
-    return X86::COND_AE;
+    return std::make_pair(X86::COND_AE, 1U);
   case X86::LZCNT16rr:
   case X86::LZCNT32rr:
   case X86::LZCNT64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
   case X86::POPCNT16rr:
   case X86::POPCNT32rr:
   case X86::POPCNT64rr:
-    return X86::COND_E;
+    return std::make_pair(X86::COND_E, 1U);
   case X86::TZCNT16rr:
   case X86::TZCNT32rr:
   case X86::TZCNT64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
   case X86::BSF16rr:
   case X86::BSF32rr:
   case X86::BSF64rr:
   case X86::BSR16rr:
   case X86::BSR32rr:
   case X86::BSR64rr:
-    return X86::COND_E;
+    return std::make_pair(X86::COND_E, 2U);
   case X86::BLSI32rr:
   case X86::BLSI64rr:
-    return X86::COND_AE;
+    return std::make_pair(X86::COND_AE, 1U);
   case X86::BLSR32rr:
   case X86::BLSR64rr:
   case X86::BLSMSK32rr:
   case X86::BLSMSK64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
     // TODO: TBM instructions.
   }
 }
@@ -5329,6 +5356,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   bool ClearsOverflowFlag = false;
   bool ShouldUpdateCC = false;
   bool IsSwapped = false;
+  unsigned OpNo = 0;
   X86::CondCode NewCC = X86::COND_INVALID;
   int64_t ImmDelta = 0;
 
@@ -5384,9 +5412,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         //      ...                 // EFLAGS not changed
         //      testl %eax, %eax    // <-- can be removed
         if (IsCmpZero) {
-          NewCC = isUseDefConvertible(Inst);
-          if (NewCC != X86::COND_INVALID && Inst.getOperand(1).isReg() &&
-              Inst.getOperand(1).getReg() == SrcReg) {
+          std::tie(NewCC, OpNo) = isUseDefConvertible(Inst);
+          if (NewCC != X86::COND_INVALID && Inst.getOperand(OpNo).isReg() &&
+              Inst.getOperand(OpNo).getReg() == SrcReg) {
             ShouldUpdateCC = true;
             MI = &Inst;
             break;
@@ -6258,16 +6286,16 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
                            get(X86::VBROADCASTF64X4Zrm), X86::sub_ymm);
   case X86::VMOVAPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSmr),
-                            get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);
+                            get(X86::VEXTRACTF32X4Zmri), X86::sub_xmm);
   case X86::VMOVUPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSmr),
-                            get(X86::VEXTRACTF32x4Zmri), X86::sub_xmm);
+                            get(X86::VEXTRACTF32X4Zmri), X86::sub_xmm);
   case X86::VMOVAPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSYmr),
-                            get(X86::VEXTRACTF64x4Zmri), X86::sub_ymm);
+                            get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::VMOVUPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
-                            get(X86::VEXTRACTF64x4Zmri), X86::sub_ymm);
+                            get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::MOV32ri64: {
     Register Reg = MIB.getReg(0);
     Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
@@ -6963,16 +6991,16 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VGETMANTSSZrri:
   case X86::VGETMANTSSZrrib:
   case X86::VGETMANTSSZrmi:
-  case X86::VRNDSCALESDZr:
-  case X86::VRNDSCALESDZr_Int:
-  case X86::VRNDSCALESDZrb_Int:
-  case X86::VRNDSCALESDZm:
-  case X86::VRNDSCALESDZm_Int:
-  case X86::VRNDSCALESSZr:
-  case X86::VRNDSCALESSZr_Int:
-  case X86::VRNDSCALESSZrb_Int:
-  case X86::VRNDSCALESSZm:
-  case X86::VRNDSCALESSZm_Int:
+  case X86::VRNDSCALESDZrri:
+  case X86::VRNDSCALESDZrri_Int:
+  case X86::VRNDSCALESDZrrib_Int:
+  case X86::VRNDSCALESDZrmi:
+  case X86::VRNDSCALESDZrmi_Int:
+  case X86::VRNDSCALESSZrri:
+  case X86::VRNDSCALESSZrri_Int:
+  case X86::VRNDSCALESSZrrib_Int:
+  case X86::VRNDSCALESSZrmi:
+  case X86::VRNDSCALESSZrmi_Int:
   case X86::VRCP14SDZrr:
   case X86::VRCP14SDZrm:
   case X86::VRCP14SSZrr:
@@ -6990,11 +7018,11 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VGETMANTSHZrri:
   case X86::VGETMANTSHZrrib:
   case X86::VGETMANTSHZrmi:
-  case X86::VRNDSCALESHZr:
-  case X86::VRNDSCALESHZr_Int:
-  case X86::VRNDSCALESHZrb_Int:
-  case X86::VRNDSCALESHZm:
-  case X86::VRNDSCALESHZm_Int:
+  case X86::VRNDSCALESHZrri:
+  case X86::VRNDSCALESHZrri_Int:
+  case X86::VRNDSCALESHZrrib_Int:
+  case X86::VRNDSCALESHZrmi:
+  case X86::VRNDSCALESHZrmi_Int:
   case X86::VSQRTSHZr:
   case X86::VSQRTSHZr_Int:
   case X86::VSQRTSHZrb_Int:
@@ -7638,8 +7666,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::CVTSS2SDrr_Int:
     case X86::VCVTSS2SDrr_Int:
     case X86::VCVTSS2SDZrr_Int:
-    case X86::VCVTSS2SDZrr_Intk:
-    case X86::VCVTSS2SDZrr_Intkz:
+    case X86::VCVTSS2SDZrrk_Int:
+    case X86::VCVTSS2SDZrrkz_Int:
     case X86::CVTSS2SIrr_Int:
     case X86::CVTSS2SI64rr_Int:
     case X86::VCVTSS2SIrr_Int:
@@ -7692,21 +7720,21 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::SUBSSrr_Int:
     case X86::VSUBSSrr_Int:
     case X86::VSUBSSZrr_Int:
-    case X86::VADDSSZrr_Intk:
-    case X86::VADDSSZrr_Intkz:
-    case X86::VCMPSSZrri_Intk:
-    case X86::VDIVSSZrr_Intk:
-    case X86::VDIVSSZrr_Intkz:
-    case X86::VMAXSSZrr_Intk:
-    case X86::VMAXSSZrr_Intkz:
-    case X86::VMINSSZrr_Intk:
-    case X86::VMINSSZrr_Intkz:
-    case X86::VMULSSZrr_Intk:
-    case X86::VMULSSZrr_Intkz:
-    case X86::VSQRTSSZr_Intk:
-    case X86::VSQRTSSZr_Intkz:
-    case X86::VSUBSSZrr_Intk:
-    case X86::VSUBSSZrr_Intkz:
+    case X86::VADDSSZrrk_Int:
+    case X86::VADDSSZrrkz_Int:
+    case X86::VCMPSSZrrik_Int:
+    case X86::VDIVSSZrrk_Int:
+    case X86::VDIVSSZrrkz_Int:
+    case X86::VMAXSSZrrk_Int:
+    case X86::VMAXSSZrrkz_Int:
+    case X86::VMINSSZrrk_Int:
+    case X86::VMINSSZrrkz_Int:
+    case X86::VMULSSZrrk_Int:
+    case X86::VMULSSZrrkz_Int:
+    case X86::VSQRTSSZrk_Int:
+    case X86::VSQRTSSZrkz_Int:
+    case X86::VSUBSSZrrk_Int:
+    case X86::VSUBSSZrrkz_Int:
     case X86::VFMADDSS4rr_Int:
     case X86::VFNMADDSS4rr_Int:
     case X86::VFMSUBSS4rr_Int:
@@ -7735,35 +7763,35 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFNMSUB213SSZr_Int:
     case X86::VFMSUB231SSZr_Int:
     case X86::VFNMSUB231SSZr_Int:
-    case X86::VFMADD132SSZr_Intk:
-    case X86::VFNMADD132SSZr_Intk:
-    case X86::VFMADD213SSZr_Intk:
-    case X86::VFNMADD213SSZr_Intk:
-    case X86::VFMADD231SSZr_Intk:
-    case X86::VFNMADD231SSZr_Intk:
-    case X86::VFMSUB132SSZr_Intk:
-    case X86::VFNMSUB132SSZr_Intk:
-    case X86::VFMSUB213SSZr_Intk:
-    case X86::VFNMSUB213SSZr_Intk:
-    case X86::VFMSUB231SSZr_Intk:
-    case X86::VFNMSUB231SSZr_Intk:
-    case X86::VFMADD132SSZr_Intkz:
-    case X86::VFNMADD132SSZr_Intkz:
-    case X86::VFMADD213SSZr_Intkz:
-    case X86::VFNMADD213SSZr_Intkz:
-    case X86::VFMADD231SSZr_Intkz:
-    case X86::VFNMADD231SSZr_Intkz:
-    case X86::VFMSUB132SSZr_Intkz:
-    case X86::VFNMSUB132SSZr_Intkz:
-    case X86::VFMSUB213SSZr_Intkz:
-    case X86::VFNMSUB213SSZr_Intkz:
-    case X86::VFMSUB231SSZr_Intkz:
-    case X86::VFNMSUB231SSZr_Intkz:
+    case X86::VFMADD132SSZrk_Int:
+    case X86::VFNMADD132SSZrk_Int:
+    case X86::VFMADD213SSZrk_Int:
+    case X86::VFNMADD213SSZrk_Int:
+    case X86::VFMADD231SSZrk_Int:
+    case X86::VFNMADD231SSZrk_Int:
+    case X86::VFMSUB132SSZrk_Int:
+    case X86::VFNMSUB132SSZrk_Int:
+    case X86::VFMSUB213SSZrk_Int:
+    case X86::VFNMSUB213SSZrk_Int:
+    case X86::VFMSUB231SSZrk_Int:
+    case X86::VFNMSUB231SSZrk_Int:
+    case X86::VFMADD132SSZrkz_Int:
+    case X86::VFNMADD132SSZrkz_Int:
+    case X86::VFMADD213SSZrkz_Int:
+    case X86::VFNMADD213SSZrkz_Int:
+    case X86::VFMADD231SSZrkz_Int:
+    case X86::VFNMADD231SSZrkz_Int:
+    case X86::VFMSUB132SSZrkz_Int:
+    case X86::VFNMSUB132SSZrkz_Int:
+    case X86::VFMSUB213SSZrkz_Int:
+    case X86::VFNMSUB213SSZrkz_Int:
+    case X86::VFMSUB231SSZrkz_Int:
+    case X86::VFNMSUB231SSZrkz_Int:
     case X86::VFIXUPIMMSSZrri:
     case X86::VFIXUPIMMSSZrrik:
     case X86::VFIXUPIMMSSZrrikz:
-    case X86::VFPCLASSSSZrr:
-    case X86::VFPCLASSSSZrrk:
+    case X86::VFPCLASSSSZri:
+    case X86::VFPCLASSSSZrik:
     case X86::VGETEXPSSZr:
     case X86::VGETEXPSSZrk:
     case X86::VGETEXPSSZrkz:
@@ -7782,9 +7810,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VREDUCESSZrri:
     case X86::VREDUCESSZrrik:
     case X86::VREDUCESSZrrikz:
-    case X86::VRNDSCALESSZr_Int:
-    case X86::VRNDSCALESSZr_Intk:
-    case X86::VRNDSCALESSZr_Intkz:
+    case X86::VRNDSCALESSZrri_Int:
+    case X86::VRNDSCALESSZrrik_Int:
+    case X86::VRNDSCALESSZrrikz_Int:
     case X86::VRSQRT14SSZrr:
     case X86::VRSQRT14SSZrrk:
     case X86::VRSQRT14SSZrrkz:
@@ -7811,8 +7839,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::CVTSD2SSrr_Int:
     case X86::VCVTSD2SSrr_Int:
     case X86::VCVTSD2SSZrr_Int:
-    case X86::VCVTSD2SSZrr_Intk:
-    case X86::VCVTSD2SSZrr_Intkz:
+    case X86::VCVTSD2SSZrrk_Int:
+    case X86::VCVTSD2SSZrrkz_Int:
     case X86::CVTSD2SIrr_Int:
     case X86::CVTSD2SI64rr_Int:
     case X86::VCVTSD2SIrr_Int:
@@ -7861,21 +7889,21 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::SUBSDrr_Int:
     case X86::VSUBSDrr_Int:
     case X86::VSUBSDZrr_Int:
-    case X86::VADDSDZrr_Intk:
-    case X86::VADDSDZrr_Intkz:
-    case X86::VCMPSDZrri_Intk:
-    case X86::VDIVSDZrr_Intk:
-    case X86::VDIVSDZrr_Intkz:
-    case X86::VMAXSDZrr_Intk:
-    case X86::VMAXSDZrr_Intkz:
-    case X86::VMINSDZrr_Intk:
-    case X86::VMINSDZrr_Intkz:
-    case X86::VMULSDZrr_Intk:
-    case X86::VMULSDZrr_Intkz:
-    case X86::VSQRTSDZr_Intk:
-    case X86::VSQRTSDZr_Intkz:
-    case X86::VSUBSDZrr_Intk:
-    case X86::VSUBSDZrr_Intkz:
+    case X86::VADDSDZrrk_Int:
+    case X86::VADDSDZrrkz_Int:
+    case X86::VCMPSDZrrik_Int:
+    case X86::VDIVSDZrrk_Int:
+    case X86::VDIVSDZrrkz_Int:
+    case X86::VMAXSDZrrk_Int:
+    case X86::VMAXSDZrrkz_Int:
+    case X86::VMINSDZrrk_Int:
+    case X86::VMINSDZrrkz_Int:
+    case X86::VMULSDZrrk_Int:
+    case X86::VMULSDZrrkz_Int:
+    case X86::VSQRTSDZrk_Int:
+    case X86::VSQRTSDZrkz_Int:
+    case X86::VSUBSDZrrk_Int:
+    case X86::VSUBSDZrrkz_Int:
     case X86::VFMADDSD4rr_Int:
     case X86::VFNMADDSD4rr_Int:
     case X86::VFMSUBSD4rr_Int:
@@ -7904,35 +7932,35 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFNMSUB213SDZr_Int:
     case X86::VFMSUB231SDZr_Int:
     case X86::VFNMSUB231SDZr_Int:
-    case X86::VFMADD132SDZr_Intk:
-    case X86::VFNMADD132SDZr_Intk:
-    case X86::VFMADD213SDZr_Intk:
-    case X86::VFNMADD213SDZr_Intk:
-    case X86::VFMADD231SDZr_Intk:
-    case X86::VFNMADD231SDZr_Intk:
-    case X86::VFMSUB132SDZr_Intk:
-    case X86::VFNMSUB132SDZr_Intk:
-    case X86::VFMSUB213SDZr_Intk:
-    case X86::VFNMSUB213SDZr_Intk:
-    case X86::VFMSUB231SDZr_Intk:
-    case X86::VFNMSUB231SDZr_Intk:
-    case X86::VFMADD132SDZr_Intkz:
-    case X86::VFNMADD132SDZr_Intkz:
-    case X86::VFMADD213SDZr_Intkz:
-    case X86::VFNMADD213SDZr_Intkz:
-    case X86::VFMADD231SDZr_Intkz:
-    case X86::VFNMADD231SDZr_Intkz:
-    case X86::VFMSUB132SDZr_Intkz:
-    case X86::VFNMSUB132SDZr_Intkz:
-    case X86::VFMSUB213SDZr_Intkz:
-    case X86::VFNMSUB213SDZr_Intkz:
-    case X86::VFMSUB231SDZr_Intkz:
-    case X86::VFNMSUB231SDZr_Intkz:
+    case X86::VFMADD132SDZrk_Int:
+    case X86::VFNMADD132SDZrk_Int:
+    case X86::VFMADD213SDZrk_Int:
+    case X86::VFNMADD213SDZrk_Int:
+    case X86::VFMADD231SDZrk_Int:
+    case X86::VFNMADD231SDZrk_Int:
+    case X86::VFMSUB132SDZrk_Int:
+    case X86::VFNMSUB132SDZrk_Int:
+    case X86::VFMSUB213SDZrk_Int:
+    case X86::VFNMSUB213SDZrk_Int:
+    case X86::VFMSUB231SDZrk_Int:
+    case X86::VFNMSUB231SDZrk_Int:
+    case X86::VFMADD132SDZrkz_Int:
+    case X86::VFNMADD132SDZrkz_Int:
+    case X86::VFMADD213SDZrkz_Int:
+    case X86::VFNMADD213SDZrkz_Int:
+    case X86::VFMADD231SDZrkz_Int:
+    case X86::VFNMADD231SDZrkz_Int:
+    case X86::VFMSUB132SDZrkz_Int:
+    case X86::VFNMSUB132SDZrkz_Int:
+    case X86::VFMSUB213SDZrkz_Int:
+    case X86::VFNMSUB213SDZrkz_Int:
+    case X86::VFMSUB231SDZrkz_Int:
+    case X86::VFNMSUB231SDZrkz_Int:
     case X86::VFIXUPIMMSDZrri:
     case X86::VFIXUPIMMSDZrrik:
     case X86::VFIXUPIMMSDZrrikz:
-    case X86::VFPCLASSSDZrr:
-    case X86::VFPCLASSSDZrrk:
+    case X86::VFPCLASSSDZri:
+    case X86::VFPCLASSSDZrik:
     case X86::VGETEXPSDZr:
     case X86::VGETEXPSDZrk:
     case X86::VGETEXPSDZrkz:
@@ -7951,9 +7979,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VREDUCESDZrri:
     case X86::VREDUCESDZrrik:
     case X86::VREDUCESDZrrikz:
-    case X86::VRNDSCALESDZr_Int:
-    case X86::VRNDSCALESDZr_Intk:
-    case X86::VRNDSCALESDZr_Intkz:
+    case X86::VRNDSCALESDZrri_Int:
+    case X86::VRNDSCALESDZrrik_Int:
+    case X86::VRNDSCALESDZrrikz_Int:
     case X86::VRSQRT14SDZrr:
     case X86::VRSQRT14SDZrrk:
     case X86::VRSQRT14SDZrrkz:
@@ -7981,19 +8009,19 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VMINSHZrr_Int:
     case X86::VMULSHZrr_Int:
     case X86::VSUBSHZrr_Int:
-    case X86::VADDSHZrr_Intk:
-    case X86::VADDSHZrr_Intkz:
-    case X86::VCMPSHZrri_Intk:
-    case X86::VDIVSHZrr_Intk:
-    case X86::VDIVSHZrr_Intkz:
-    case X86::VMAXSHZrr_Intk:
-    case X86::VMAXSHZrr_Intkz:
-    case X86::VMINSHZrr_Intk:
-    case X86::VMINSHZrr_Intkz:
-    case X86::VMULSHZrr_Intk:
-    case X86::VMULSHZrr_Intkz:
-    case X86::VSUBSHZrr_Intk:
-    case X86::VSUBSHZrr_Intkz:
+    case X86::VADDSHZrrk_Int:
+    case X86::VADDSHZrrkz_Int:
+    case X86::VCMPSHZrrik_Int:
+    case X86::VDIVSHZrrk_Int:
+    case X86::VDIVSHZrrkz_Int:
+    case X86::VMAXSHZrrk_Int:
+    case X86::VMAXSHZrrkz_Int:
+    case X86::VMINSHZrrk_Int:
+    case X86::VMINSHZrrkz_Int:
+    case X86::VMULSHZrrk_Int:
+    case X86::VMULSHZrrkz_Int:
+    case X86::VSUBSHZrrk_Int:
+    case X86::VSUBSHZrrkz_Int:
     case X86::VFMADD132SHZr_Int:
     case X86::VFNMADD132SHZr_Int:
     case X86::VFMADD213SHZr_Int:
@@ -8006,30 +8034,30 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFNMSUB213SHZr_Int:
     case X86::VFMSUB231SHZr_Int:
     case X86::VFNMSUB231SHZr_Int:
-    case X86::VFMADD132SHZr_Intk:
-    case X86::VFNMADD132SHZr_Intk:
-    case X86::VFMADD213SHZr_Intk:
-    case X86::VFNMADD213SHZr_Intk:
-    case X86::VFMADD231SHZr_Intk:
-    case X86::VFNMADD231SHZr_Intk:
-    case X86::VFMSUB132SHZr_Intk:
-    case X86::VFNMSUB132SHZr_Intk:
-    case X86::VFMSUB213SHZr_Intk:
-    case X86::VFNMSUB213SHZr_Intk:
-    case X86::VFMSUB231SHZr_Intk:
-    case X86::VFNMSUB231SHZr_Intk:
-    case X86::VFMADD132SHZr_Intkz:
-    case X86::VFNMADD132SHZr_Intkz:
-    case X86::VFMADD213SHZr_Intkz:
-    case X86::VFNMADD213SHZr_Intkz:
-    case X86::VFMADD231SHZr_Intkz:
-    case X86::VFNMADD231SHZr_Intkz:
-    case X86::VFMSUB132SHZr_Intkz:
-    case X86::VFNMSUB132SHZr_Intkz:
-    case X86::VFMSUB213SHZr_Intkz:
-    case X86::VFNMSUB213SHZr_Intkz:
-    case X86::VFMSUB231SHZr_Intkz:
-    case X86::VFNMSUB231SHZr_Intkz:
+    case X86::VFMADD132SHZrk_Int:
+    case X86::VFNMADD132SHZrk_Int:
+    case X86::VFMADD213SHZrk_Int:
+    case X86::VFNMADD213SHZrk_Int:
+    case X86::VFMADD231SHZrk_Int:
+    case X86::VFNMADD231SHZrk_Int:
+    case X86::VFMSUB132SHZrk_Int:
+    case X86::VFNMSUB132SHZrk_Int:
+    case X86::VFMSUB213SHZrk_Int:
+    case X86::VFNMSUB213SHZrk_Int:
+    case X86::VFMSUB231SHZrk_Int:
+    case X86::VFNMSUB231SHZrk_Int:
+    case X86::VFMADD132SHZrkz_Int:
+    case X86::VFNMADD132SHZrkz_Int:
+    case X86::VFMADD213SHZrkz_Int:
+    case X86::VFNMADD213SHZrkz_Int:
+    case X86::VFMADD231SHZrkz_Int:
+    case X86::VFNMADD231SHZrkz_Int:
+    case X86::VFMSUB132SHZrkz_Int:
+    case X86::VFNMSUB132SHZrkz_Int:
+    case X86::VFMSUB213SHZrkz_Int:
+    case X86::VFNMSUB213SHZrkz_Int:
+    case X86::VFMSUB231SHZrkz_Int:
+    case X86::VFNMSUB231SHZrkz_Int:
       return false;
     default:
       return true;
@@ -9481,25 +9509,25 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VDIVSDZrm:
   case X86::VDIVSDZrr:
   case X86::VDIVSDZrm_Int:
-  case X86::VDIVSDZrm_Intk:
-  case X86::VDIVSDZrm_Intkz:
+  case X86::VDIVSDZrmk_Int:
+  case X86::VDIVSDZrmkz_Int:
   case X86::VDIVSDZrr_Int:
-  case X86::VDIVSDZrr_Intk:
-  case X86::VDIVSDZrr_Intkz:
+  case X86::VDIVSDZrrk_Int:
+  case X86::VDIVSDZrrkz_Int:
   case X86::VDIVSDZrrb_Int:
-  case X86::VDIVSDZrrb_Intk:
-  case X86::VDIVSDZrrb_Intkz:
+  case X86::VDIVSDZrrbk_Int:
+  case X86::VDIVSDZrrbkz_Int:
   case X86::VDIVSSZrm:
   case X86::VDIVSSZrr:
   case X86::VDIVSSZrm_Int:
-  case X86::VDIVSSZrm_Intk:
-  case X86::VDIVSSZrm_Intkz:
+  case X86::VDIVSSZrmk_Int:
+  case X86::VDIVSSZrmkz_Int:
   case X86::VDIVSSZrr_Int:
-  case X86::VDIVSSZrr_Intk:
-  case X86::VDIVSSZrr_Intkz:
+  case X86::VDIVSSZrrk_Int:
+  case X86::VDIVSSZrrkz_Int:
   case X86::VDIVSSZrrb_Int:
-  case X86::VDIVSSZrrb_Intk:
-  case X86::VDIVSSZrrb_Intkz:
+  case X86::VDIVSSZrrbk_Int:
+  case X86::VDIVSSZrrbkz_Int:
   case X86::VSQRTPDZ128m:
   case X86::VSQRTPDZ128mb:
   case X86::VSQRTPDZ128mbk:
@@ -9562,26 +9590,26 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VSQRTPSZrkz:
   case X86::VSQRTSDZm:
   case X86::VSQRTSDZm_Int:
-  case X86::VSQRTSDZm_Intk:
-  case X86::VSQRTSDZm_Intkz:
+  case X86::VSQRTSDZmk_Int:
+  case X86::VSQRTSDZmkz_Int:
   case X86::VSQRTSDZr:
   case X86::VSQRTSDZr_Int:
-  case X86::VSQRTSDZr_Intk:
-  case X86::VSQRTSDZr_Intkz:
+  case X86::VSQRTSDZrk_Int:
+  case X86::VSQRTSDZrkz_Int:
   case X86::VSQRTSDZrb_Int:
-  case X86::VSQRTSDZrb_Intk:
-  case X86::VSQRTSDZrb_Intkz:
+  case X86::VSQRTSDZrbk_Int:
+  case X86::VSQRTSDZrbkz_Int:
   case X86::VSQRTSSZm:
   case X86::VSQRTSSZm_Int:
-  case X86::VSQRTSSZm_Intk:
-  case X86::VSQRTSSZm_Intkz:
+  case X86::VSQRTSSZmk_Int:
+  case X86::VSQRTSSZmkz_Int:
   case X86::VSQRTSSZr:
   case X86::VSQRTSSZr_Int:
-  case X86::VSQRTSSZr_Intk:
-  case X86::VSQRTSSZr_Intkz:
+  case X86::VSQRTSSZrk_Int:
+  case X86::VSQRTSSZrkz_Int:
   case X86::VSQRTSSZrb_Int:
-  case X86::VSQRTSSZrb_Intk:
-  case X86::VSQRTSSZrb_Intkz:
+  case X86::VSQRTSSZrbk_Int:
+  case X86::VSQRTSSZrbkz_Int:
 
   case X86::VGATHERDPDYrm:
   case X86::VGATHERDPDZ128rm:

@@ -8,16 +8,16 @@
 #
 # ===-----------------------------------------------------------------------===#
 
-from __future__ import unicode_literals
-
 import argparse
 import glob
 import io
 import os
 import re
+import sys
+from typing import List
 
 
-def replaceInFileRegex(fileName, sFrom, sTo):
+def replaceInFileRegex(fileName: str, sFrom: str, sTo: str) -> None:
     if sFrom == sTo:
         return
 
@@ -35,7 +35,7 @@ def replaceInFileRegex(fileName, sFrom, sTo):
         f.write(txt)
 
 
-def replaceInFile(fileName, sFrom, sTo):
+def replaceInFile(fileName: str, sFrom: str, sTo: str) -> None:
     if sFrom == sTo:
         return
     txt = None
@@ -51,7 +51,7 @@ def replaceInFile(fileName, sFrom, sTo):
         f.write(txt)
 
 
-def generateCommentLineHeader(filename):
+def generateCommentLineHeader(filename: str) -> str:
     return "".join(
         [
             "//===--- ",
@@ -63,7 +63,7 @@ def generateCommentLineHeader(filename):
     )
 
 
-def generateCommentLineSource(filename):
+def generateCommentLineSource(filename: str) -> str:
     return "".join(
         [
             "//===--- ",
@@ -75,7 +75,7 @@ def generateCommentLineSource(filename):
     )
 
 
-def fileRename(fileName, sFrom, sTo):
+def fileRename(fileName: str, sFrom: str, sTo: str) -> str:
     if sFrom not in fileName or sFrom == sTo:
         return fileName
     newFileName = fileName.replace(sFrom, sTo)
@@ -84,7 +84,7 @@ def fileRename(fileName, sFrom, sTo):
     return newFileName
 
 
-def deleteMatchingLines(fileName, pattern):
+def deleteMatchingLines(fileName: str, pattern: str) -> bool:
     lines = None
     with io.open(fileName, "r", encoding="utf8") as f:
         lines = f.readlines()
@@ -101,7 +101,7 @@ def deleteMatchingLines(fileName, pattern):
     return True
 
 
-def getListOfFiles(clang_tidy_path):
+def getListOfFiles(clang_tidy_path: str) -> List[str]:
     files = glob.glob(os.path.join(clang_tidy_path, "**"), recursive=True)
     files += [
         os.path.normpath(os.path.join(clang_tidy_path, "../docs/ReleaseNotes.rst"))
@@ -124,7 +124,7 @@ def getListOfFiles(clang_tidy_path):
 
 # Adapts the module's CMakelist file. Returns 'True' if it could add a new
 # entry and 'False' if the entry already existed.
-def adapt_cmake(module_path, check_name_camel):
+def adapt_cmake(module_path: str, check_name_camel: str) -> bool:
     filename = os.path.join(module_path, "CMakeLists.txt")
     with io.open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
@@ -153,7 +153,9 @@ def adapt_cmake(module_path, check_name_camel):
 
 
 # Modifies the module to include the new check.
-def adapt_module(module_path, module, check_name, check_name_camel):
+def adapt_module(
+    module_path: str, module: str, check_name: str, check_name_camel: str
+) -> None:
     modulecpp = next(
         iter(
             filter(
@@ -204,7 +206,9 @@ def adapt_module(module_path, module, check_name, check_name_camel):
 
 
 # Adds a release notes entry.
-def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
+def add_release_notes(
+    clang_tidy_path: str, old_check_name: str, new_check_name: str
+) -> None:
     filename = os.path.normpath(
         os.path.join(clang_tidy_path, "../docs/ReleaseNotes.rst")
     )
@@ -262,7 +266,7 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
             f.write(line)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Rename clang-tidy check.")
     parser.add_argument("old_check_name", type=str, help="Old check name.")
     parser.add_argument("new_check_name", type=str, help="New check name.")
@@ -311,7 +315,7 @@ def main():
                 "Check name '%s' not found in %s. Exiting."
                 % (check_name_camel, cmake_lists)
             )
-            return 1
+            sys.exit(1)
 
         modulecpp = next(
             iter(

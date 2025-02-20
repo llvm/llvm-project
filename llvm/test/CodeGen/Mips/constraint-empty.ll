@@ -1,5 +1,5 @@
 ; Check that `getRegForInlineAsmConstraint` does not crash on empty Constraint.
-; RUN: llc -march=mips64 < %s | FileCheck %s
+; RUN: llc -mtriple=mips64 < %s | FileCheck %s
 
 define void @foo() {
 entry:

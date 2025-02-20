@@ -243,6 +243,27 @@ define void @test_atan(float %float, double %double, fp128 %fp128) {
   ret void
 }
 
+declare float @llvm.atan2.f32(float, float)
+declare double @llvm.atan2.f64(double, double)
+declare fp128 @llvm.atan2.f128(fp128, fp128)
+
+define void @test_atan2(float %float1, double %double1, fp128 %fp1281, float %float2, double %double2, fp128 %fp1282) {
+; CHECK-LABEL: test_atan2:
+
+   %atan2float = call float @llvm.atan2.f32(float %float1, float %float2)
+   store float %atan2float, ptr @varfloat
+; CHECK: bl atan2f
+
+   %atan2double = call double @llvm.atan2.f64(double %double1, double %double2)
+   store double %atan2double, ptr @vardouble
+; CHECK: bl atan2
+
+   %atan2fp128 = call fp128 @llvm.atan2.f128(fp128 %fp1281, fp128 %fp1282)
+   store fp128 %atan2fp128, ptr @varfp128
+; CHECK: bl atan2l
+  ret void
+}
+
 declare float @llvm.cosh.f32(float)
 declare double @llvm.cosh.f64(double)
 declare fp128 @llvm.cosh.f128(fp128)

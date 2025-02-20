@@ -86,7 +86,7 @@ LogicalResult ExtFOnFloat8RewritePattern::match(arith::ExtFOp op) const {
       return failure();
     inType = inVecType.getElementType();
   }
-  return success(inType.isFloat8E5M2FNUZ() || inType.isFloat8E4M3FNUZ());
+  return success(isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(inType));
 }
 
 void ExtFOnFloat8RewritePattern::rewrite(arith::ExtFOp op,
@@ -102,20 +102,23 @@ void ExtFOnFloat8RewritePattern::rewrite(arith::ExtFOp op,
     return rewriter.replaceOp(op, result);
   }
   int64_t numElements = inType.getNumElements();
+
   Value zero = rewriter.create<arith::ConstantOp>(
       loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
+  VectorType outType = cast<VectorType>(op.getOut().getType());
+
   if (inType.getShape().empty()) {
+    Value zerodSplat =
+        rewriter.createOrFold<vector::SplatOp>(loc, outType, zero);
     Value scalarIn =
         rewriter.create<vector::ExtractOp>(loc, in, ArrayRef<int64_t>{});
-    // Recurse to send the 0-D vector case to the 1-D vector case
     Value scalarExt =
         rewriter.create<arith::ExtFOp>(loc, outElemType, scalarIn);
-    Value result = rewriter.create<vector::InsertOp>(loc, scalarExt, zero,
+    Value result = rewriter.create<vector::InsertOp>(loc, scalarExt, zerodSplat,
                                                      ArrayRef<int64_t>{});
     return rewriter.replaceOp(op, result);
   }
 
-  VectorType outType = cast<VectorType>(op.getOut().getType());
   VectorType flatTy = VectorType::get(SmallVector<int64_t>{numElements},
                                       outType.getElementType());
   Value result = rewriter.createOrFold<vector::SplatOp>(loc, flatTy, zero);
@@ -216,7 +219,7 @@ LogicalResult TruncFToFloat8RewritePattern::match(arith::TruncFOp op) const {
   if (inType && inType.getWidth() <= 8 && saturateFP8)
     // Conversion between 8-bit floats is not supported with truncation enabled.
     return failure();
-  return success(outType.isFloat8E5M2FNUZ() || outType.isFloat8E4M3FNUZ());
+  return success(isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(outType));
 }
 
 void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
@@ -313,8 +316,7 @@ void TruncfToFloat16RewritePattern::rewrite(arith::TruncFOp op,
     auto sourceB = rewriter.create<LLVM::PoisonOp>(loc, rewriter.getF32Type());
     Value asF16s =
         rewriter.create<ROCDL::CvtPkRtz>(loc, truncResType, in, sourceB);
-    Value result = rewriter.create<vector::ExtractElementOp>(
-        loc, asF16s, rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0));
+    Value result = rewriter.create<vector::ExtractOp>(loc, asF16s, 0);
     return rewriter.replaceOp(op, result);
   }
   VectorType outType = cast<VectorType>(op.getOut().getType());
@@ -334,13 +336,11 @@ void TruncfToFloat16RewritePattern::rewrite(arith::TruncFOp op,
   for (int64_t i = 0; i < numElements; i += 2) {
     int64_t elemsThisOp = std::min(numElements, i + 2) - i;
     Value thisResult = nullptr;
-    Value elemA = rewriter.create<vector::ExtractElementOp>(
-        loc, in, rewriter.create<arith::ConstantIndexOp>(loc, i));
+    Value elemA = rewriter.create<vector::ExtractOp>(loc, in, i);
     Value elemB = rewriter.create<LLVM::PoisonOp>(loc, rewriter.getF32Type());
 
     if (elemsThisOp == 2) {
-      elemB = rewriter.create<vector::ExtractElementOp>(
-          loc, in, rewriter.createOrFold<arith::ConstantIndexOp>(loc, i + 1));
+      elemB = rewriter.create<vector::ExtractOp>(loc, in, i + 1);
     }
 
     thisResult =
@@ -384,10 +384,10 @@ void ArithToAMDGPUConversionPass::runOnOperation() {
   }
 
   bool convertFP8Arithmetic =
-      maybeChipset->majorVersion == 9 && *maybeChipset >= Chipset(9, 4, 0);
+      maybeChipset->majorVersion == 9 && *maybeChipset >= Chipset(9, 4, 2);
   arith::populateArithToAMDGPUConversionPatterns(
       patterns, convertFP8Arithmetic, saturateFP8Truncf, allowPackedF16Rtz,
       *maybeChipset);
-  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+  if (failed(applyPatternsGreedily(op, std::move(patterns))))
     return signalPassFailure();
 }

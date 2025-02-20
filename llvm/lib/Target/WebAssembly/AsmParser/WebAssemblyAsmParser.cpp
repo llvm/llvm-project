@@ -18,7 +18,6 @@
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
-#include "WebAssembly.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -277,7 +276,18 @@ public:
       : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
         Lexer(Parser.getLexer()), Is64(STI.getTargetTriple().isArch64Bit()),
         TC(Parser, MII, Is64), SkipTypeCheck(Options.MCNoTypeCheck) {
-    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+    FeatureBitset FBS = ComputeAvailableFeatures(STI.getFeatureBits());
+
+    // bulk-memory implies bulk-memory-opt
+    if (FBS.test(WebAssembly::FeatureBulkMemory)) {
+      FBS.set(WebAssembly::FeatureBulkMemoryOpt);
+    }
+    // reference-types implies call-indirect-overlong
+    if (FBS.test(WebAssembly::FeatureReferenceTypes)) {
+      FBS.set(WebAssembly::FeatureCallIndirectOverlong);
+    }
+
+    setAvailableFeatures(FBS);
     // Don't type check if this is inline asm, since that is a naked sequence of
     // instructions without a function/locals decl.
     auto &SM = Parser.getSourceManager();
@@ -292,7 +302,8 @@ public:
 
     DefaultFunctionTable = getOrCreateFunctionTableSymbol(
         getContext(), "__indirect_function_table", Is64);
-    if (!STI->checkFeatures("+reference-types"))
+    if (!STI->checkFeatures("+call-indirect-overlong") &&
+        !STI->checkFeatures("+reference-types"))
       DefaultFunctionTable->setOmitFromLinkingSection();
   }
 
@@ -532,11 +543,13 @@ public:
   }
 
   bool parseFunctionTableOperand(std::unique_ptr<WebAssemblyOperand> *Op) {
-    if (STI->checkFeatures("+reference-types")) {
-      // If the reference-types feature is enabled, there is an explicit table
-      // operand.  To allow the same assembly to be compiled with or without
-      // reference types, we allow the operand to be omitted, in which case we
-      // default to __indirect_function_table.
+    if (STI->checkFeatures("+call-indirect-overlong") ||
+        STI->checkFeatures("+reference-types")) {
+      // If the call-indirect-overlong feature is enabled, or implied by the
+      // reference-types feature, there is an explicit table operand.  To allow
+      // the same assembly to be compiled with or without
+      // call-indirect-overlong, we allow the operand to be omitted, in which
+      // case we default to __indirect_function_table.
       auto &Tok = Lexer.getTok();
       if (Tok.is(AsmToken::Identifier)) {
         auto *Sym =
@@ -1233,7 +1246,7 @@ public:
     if (Group)
       WasmSym->setComdat(true);
     auto *WS = getContext().getWasmSection(SecName, SectionKind::getText(), 0,
-                                           Group, MCContext::GenericSectionID);
+                                           Group, MCSection::NonUniqueID);
     getStreamer().switchSection(WS);
     // Also generate DWARF for this section if requested.
     if (getContext().getGenDwarfForAssembly())

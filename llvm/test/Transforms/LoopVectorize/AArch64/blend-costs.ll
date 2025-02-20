@@ -27,7 +27,7 @@ define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <16 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <16 x i1> [[TMP6]], <16 x i1> zeroinitializer, <16 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <16 x i1> [[TMP6]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP8:%.*]] = xor <16 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <16 x i1> [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP7]], <16 x ptr> [[BROADCAST_SPLAT]], <16 x ptr> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i1> [[TMP9]], i32 0
@@ -209,6 +209,7 @@ define void @test_blend_feeding_replicated_store_2(ptr noalias %src, ptr %dst, i
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[C_0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <16 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE30:.*]] ]
@@ -217,11 +218,10 @@ define void @test_blend_feeding_replicated_store_2(ptr noalias %src, ptr %dst, i
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[GEP_SRC]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <16 x i1> [[TMP3]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <16 x i1> [[BROADCAST_SPLAT]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <16 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <16 x i1> [[TMP4]], <16 x i1> [[TMP5]], <16 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i1> [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> zeroinitializer, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> zeroinitializer, <16 x i8> splat (i8 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[TMP7]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -422,6 +422,35 @@ exit:
 }
 
 define void @test_blend_feeding_replicated_store_3(ptr noalias %src.1, ptr noalias %src.2, ptr noalias %dst, i32 %x, i64 %N, i1 %c.2) {
+; CHECK-LABEL: define void @test_blend_feeding_replicated_store_3(
+; CHECK-SAME: ptr noalias [[SRC_1:%.*]], ptr noalias [[SRC_2:%.*]], ptr noalias [[DST:%.*]], i32 [[X:%.*]], i64 [[N:%.*]], i1 [[C_2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[SRC_1]], align 1
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[L_1]] to i32
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X]], [[EXT]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[MUL]], 255
+; CHECK-NEXT:    [[L_2:%.*]] = load i8, ptr [[SRC_2]], align 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[L_2]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label %[[THEN:.*]], label %[[ELSE_1:.*]]
+; CHECK:       [[ELSE_1]]:
+; CHECK-NEXT:    br i1 [[C_2]], label %[[LOOP_LATCH]], label %[[ELSE_2:.*]]
+; CHECK:       [[ELSE_2]]:
+; CHECK-NEXT:    [[TRUNC_DIV:%.*]] = trunc i32 [[DIV]] to i8
+; CHECK-NEXT:    br label %[[THEN]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[P:%.*]] = phi i8 [ 0, %[[LOOP_HEADER]] ], [ [[TRUNC_DIV]], %[[ELSE_2]] ]
+; CHECK-NEXT:    store i8 [[P]], ptr [[DST]], align 1
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %loop.header
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s 
+; RUN: llc -mtriple=mipsel < %s | FileCheck %s 
 
 %struct.S1 = type { i32, [41 x i8] }
 

@@ -74,16 +74,27 @@ private:
   ///       always have the same depth.
   unsigned Depth = 0;
 
+  /// Cache for the results of GetExitBlocks
+  mutable SmallVector<BlockT *, 4> ExitBlocksCache;
+
   void clear() {
     Entries.clear();
     Children.clear();
     Blocks.clear();
     Depth = 0;
     ParentCycle = nullptr;
+    clearCache();
   }
 
-  void appendEntry(BlockT *Block) { Entries.push_back(Block); }
-  void appendBlock(BlockT *Block) { Blocks.insert(Block); }
+  void appendEntry(BlockT *Block) {
+    Entries.push_back(Block);
+    clearCache();
+  }
+
+  void appendBlock(BlockT *Block) {
+    Blocks.insert(Block);
+    clearCache();
+  }
 
   GenericCycle(const GenericCycle &) = delete;
   GenericCycle &operator=(const GenericCycle &) = delete;
@@ -102,6 +113,11 @@ public:
     return Entries;
   }
 
+  /// Clear the cache of the cycle.
+  /// This should be run in all non-const function in GenericCycle
+  /// and GenericCycleInfo.
+  void clearCache() const { ExitBlocksCache.clear(); }
+
   /// \brief Return whether \p Block is an entry block of the cycle.
   bool isEntry(const BlockT *Block) const {
     return is_contained(Entries, Block);
@@ -112,6 +128,7 @@ public:
     assert(contains(Block));
     Entries.clear();
     Entries.push_back(Block);
+    clearCache();
   }
 
   /// \brief Return whether \p Block is contained in the cycle.

@@ -10,7 +10,6 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Config/config.h"
-#include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/Support/DynamicLibrary.h"
 
@@ -136,12 +135,10 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
       // Otherwise check if we previously had exactly one relocation at this
       // offset. If so, we now have a second one and move it from the TargetMap
       // into the Multiple set.
-      auto It = BlockEdges.TargetMap.find(E.getOffset());
-      if (It != BlockEdges.TargetMap.end()) {
+      auto [It, Inserted] = BlockEdges.TargetMap.try_emplace(E.getOffset(), E);
+      if (!Inserted) {
         BlockEdges.TargetMap.erase(It);
         BlockEdges.Multiple.insert(E.getOffset());
-      } else {
-        BlockEdges.TargetMap[E.getOffset()] = EdgeTarget(E);
       }
     }
 
@@ -364,14 +361,14 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
       // Add a keep-alive edge from the FDE target to the FDE to ensure that the
       // FDE is kept alive if its target is.
       LLVM_DEBUG({
-        dbgs() << "      Adding keep-alive edge from target at "
+        dbgs() << "        Adding keep-alive edge from target at "
                << (*PCBegin)->getBlock().getAddress() << " to FDE at "
                << RecordAddress << "\n";
       });
       (*PCBegin)->getBlock().addEdge(Edge::KeepAlive, 0, FDESymbol, 0);
     } else {
       LLVM_DEBUG({
-        dbgs() << "      WARNING: Not adding keep-alive edge to FDE at "
+        dbgs() << "        WARNING: Not adding keep-alive edge to FDE at "
                << RecordAddress << ", which points to "
                << ((*PCBegin)->isExternal() ? "external" : "absolute")
                << " symbol \"" << (*PCBegin)->getName()
@@ -398,7 +395,7 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
                          .takeError())
         return Err;
   } else {
-    LLVM_DEBUG(dbgs() << "      Record does not have LSDA field.\n");
+    LLVM_DEBUG(dbgs() << "        Record does not have LSDA field.\n");
   }
 
   return Error::success();

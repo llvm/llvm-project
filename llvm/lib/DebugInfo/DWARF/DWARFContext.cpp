@@ -48,11 +48,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstdint>
 #include <deque>
 #include <map>
@@ -1345,8 +1343,7 @@ void DWARFContext::dump(
     getDebugNames().dump(OS);
 }
 
-DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
-                                                bool IsDWO) {
+DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint64_t Hash, bool IsDWO) {
   DWARFUnitVector &DWOUnits = State->getDWOUnits();
   if (const auto &TUI = getTUIndex()) {
     if (const auto *R = TUI.getFromHash(Hash))
@@ -1872,7 +1869,7 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
           LineTable->getFileLineInfoForAddress(
               {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
               CU->getCompilationDir(), Spec.FLIKind, Frame);
-      } else {
+      } else if (CallLine != 0) {
         // Otherwise, use call file, call line and call column from
         // previous DIE in inlined chain.
         if (LineTable)
@@ -2478,3 +2475,5 @@ uint8_t DWARFContext::getCUAddrSize() {
   auto CUs = compile_units();
   return CUs.empty() ? 0 : (*CUs.begin())->getAddressByteSize();
 }
+
+bool DWARFContext::isDWP() const { return !DObj->getCUIndexSection().empty(); }

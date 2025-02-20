@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/StackColoring.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -376,7 +377,7 @@ namespace {
 
 /// StackColoring - A machine pass for merging disjoint stack allocations,
 /// marked by the LIFETIME_START and LIFETIME_END pseudo instructions.
-class StackColoring : public MachineFunctionPass {
+class StackColoring {
   MachineFrameInfo *MFI = nullptr;
   MachineFunction *MF = nullptr;
 
@@ -436,14 +437,8 @@ class StackColoring : public MachineFunctionPass {
   unsigned NumIterations;
 
 public:
-  static char ID;
-
-  StackColoring() : MachineFunctionPass(ID) {
-    initializeStackColoringPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnMachineFunction(MachineFunction &Func) override;
+  StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
+  bool run(MachineFunction &Func);
 
 private:
   /// Used in collectMarkers
@@ -509,19 +504,29 @@ private:
   void expungeSlotMap(DenseMap<int, int> &SlotRemap, unsigned NumSlots);
 };
 
+class StackColoringLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  StackColoringLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &Func) override;
+};
+
 } // end anonymous namespace
 
-char StackColoring::ID = 0;
+char StackColoringLegacy::ID = 0;
 
-char &llvm::StackColoringID = StackColoring::ID;
+char &llvm::StackColoringLegacyID = StackColoringLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(StackColoring, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(StackColoringLegacy, DEBUG_TYPE,
                       "Merge disjoint stack slots", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_END(StackColoring, DEBUG_TYPE,
+INITIALIZE_PASS_END(StackColoringLegacy, DEBUG_TYPE,
                     "Merge disjoint stack slots", false, false)
 
-void StackColoring::getAnalysisUsage(AnalysisUsage &AU) const {
+void StackColoringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<SlotIndexesWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -909,10 +914,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     if (!VI.Var || !VI.inStackSlot())
       continue;
     int Slot = VI.getStackSlot();
-    if (SlotRemap.count(Slot)) {
+    if (auto It = SlotRemap.find(Slot); It != SlotRemap.end()) {
       LLVM_DEBUG(dbgs() << "Remapping debug info for ["
                         << cast<DILocalVariable>(VI.Var)->getName() << "].\n");
-      VI.updateStackSlot(SlotRemap[Slot]);
+      VI.updateStackSlot(It->second);
       FixedDbg++;
     }
   }
@@ -932,7 +937,8 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     // If From is before wo, its possible that there is a use of From between
     // them.
     if (From->comesBefore(To))
-      const_cast<AllocaInst*>(To)->moveBefore(const_cast<AllocaInst*>(From));
+      const_cast<AllocaInst *>(To)->moveBefore(
+          const_cast<AllocaInst *>(From)->getIterator());
 
     // AA might be used later for instruction scheduling, and we need it to be
     // able to deduce the correct aliasing releationships between pointers
@@ -943,7 +949,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     Instruction *Inst = const_cast<AllocaInst *>(To);
     if (From->getType() != To->getType()) {
       BitCastInst *Cast = new BitCastInst(Inst, From->getType());
-      Cast->insertAfter(Inst);
+      Cast->insertAfter(Inst->getIterator());
       Inst = Cast;
     }
 
@@ -998,10 +1004,11 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         if (!AI)
           continue;
 
-        if (!Allocas.count(AI))
+        auto It = Allocas.find(AI);
+        if (It == Allocas.end())
           continue;
 
-        MMO->setValue(Allocas[AI]);
+        MMO->setValue(It->second);
         FixedMemOp++;
       }
 
@@ -1108,9 +1115,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo())
     for (WinEHTryBlockMapEntry &TBME : EHInfo->TryBlockMap)
       for (WinEHHandlerType &H : TBME.HandlerArray)
-        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max() &&
-            SlotRemap.count(H.CatchObj.FrameIndex))
-          H.CatchObj.FrameIndex = SlotRemap[H.CatchObj.FrameIndex];
+        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max())
+          if (auto It = SlotRemap.find(H.CatchObj.FrameIndex);
+              It != SlotRemap.end())
+            H.CatchObj.FrameIndex = It->second;
 
   LLVM_DEBUG(dbgs() << "Fixed " << FixedMemOp << " machine memory operands.\n");
   LLVM_DEBUG(dbgs() << "Fixed " << FixedDbg << " debug locations.\n");
@@ -1167,8 +1175,8 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
   // Expunge slot remap map.
   for (unsigned i=0; i < NumSlots; ++i) {
     // If we are remapping i
-    if (SlotRemap.count(i)) {
-      int Target = SlotRemap[i];
+    if (auto It = SlotRemap.find(i); It != SlotRemap.end()) {
+      int Target = It->second;
       // As long as our target is mapped to something else, follow it.
       while (SlotRemap.count(Target)) {
         Target = SlotRemap[Target];
@@ -1178,12 +1186,27 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
   }
 }
 
-bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
+bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI());
+  return SC.run(MF);
+}
+
+PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
+  if (SC.run(MF))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}
+
+bool StackColoring::run(MachineFunction &Func) {
   LLVM_DEBUG(dbgs() << "********** Stack Coloring **********\n"
                     << "********** Function: " << Func.getName() << '\n');
   MF = &Func;
   MFI = &MF->getFrameInfo();
-  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   BlockLiveness.clear();
   BasicBlocks.clear();
   BasicBlockNumbering.clear();
@@ -1220,8 +1243,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // Don't continue because there are not enough lifetime markers, or the
   // stack is too small, or we are told not to optimize the slots.
-  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
-      skipFunction(Func.getFunction())) {
+  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring) {
     LLVM_DEBUG(dbgs() << "Will not try to merge slots.\n");
     return removeAllMarkers();
   }

@@ -170,8 +170,8 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
     return R_GOT_PC;
 
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -188,7 +188,7 @@ void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void SystemZ::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends)
-    write64be(buf, s.getVA());
+    write64be(buf, s.getVA(ctx));
 }
 
 void SystemZ::writePltHeader(uint8_t *buf) const {
@@ -261,8 +261,7 @@ int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
@@ -493,20 +492,20 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
   }
   switch (rel.type) {
   case R_390_8:
-    checkIntUInt(loc, val, 8, rel);
+    checkIntUInt(ctx, loc, val, 8, rel);
     *loc = val;
     break;
   case R_390_12:
   case R_390_GOT12:
   case R_390_GOTPLT12:
   case R_390_TLS_GOTIE12:
-    checkUInt(loc, val, 12, rel);
+    checkUInt(ctx, loc, val, 12, rel);
     write16be(loc, (read16be(loc) & 0xF000) | val);
     break;
   case R_390_PC12DBL:
   case R_390_PLT12DBL:
-    checkInt(loc, val, 13, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 13, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
     write16be(loc, (read16be(loc) & 0xF000) | ((val >> 1) & 0x0FFF));
     break;
   case R_390_16:
@@ -514,31 +513,31 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
   case R_390_GOTPLT16:
   case R_390_GOTOFF16:
   case R_390_PLTOFF16:
-    checkIntUInt(loc, val, 16, rel);
+    checkIntUInt(ctx, loc, val, 16, rel);
     write16be(loc, val);
     break;
   case R_390_PC16:
-    checkInt(loc, val, 16, rel);
+    checkInt(ctx, loc, val, 16, rel);
     write16be(loc, val);
     break;
   case R_390_PC16DBL:
   case R_390_PLT16DBL:
-    checkInt(loc, val, 17, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 17, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
     write16be(loc, val >> 1);
     break;
   case R_390_20:
   case R_390_GOT20:
   case R_390_GOTPLT20:
   case R_390_TLS_GOTIE20:
-    checkInt(loc, val, 20, rel);
+    checkInt(ctx, loc, val, 20, rel);
     write32be(loc, (read32be(loc) & 0xF00000FF) | ((val & 0xFFF) << 16) |
                        ((val & 0xFF000) >> 4));
     break;
   case R_390_PC24DBL:
   case R_390_PLT24DBL:
-    checkInt(loc, val, 25, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 25, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
     loc[0] = val >> 17;
     loc[1] = val >> 9;
     loc[2] = val >> 1;
@@ -554,12 +553,12 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
   case R_390_TLS_LDM32:
   case R_390_TLS_LDO32:
   case R_390_TLS_LE32:
-    checkIntUInt(loc, val, 32, rel);
+    checkIntUInt(ctx, loc, val, 32, rel);
     write32be(loc, val);
     break;
   case R_390_PC32:
   case R_390_PLT32:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32be(loc, val);
     break;
   case R_390_PC32DBL:
@@ -568,8 +567,8 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
   case R_390_GOTENT:
   case R_390_GOTPLTENT:
   case R_390_TLS_IEENT:
-    checkInt(loc, val, 33, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 33, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
     write32be(loc, val >> 1);
     break;
   case R_390_64:

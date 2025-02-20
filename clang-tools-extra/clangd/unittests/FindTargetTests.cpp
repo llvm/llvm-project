@@ -842,6 +842,8 @@ TEST_F(TargetDeclTest, OverloadExpr) {
 }
 
 TEST_F(TargetDeclTest, DependentExprs) {
+  Flags.push_back("--std=c++20");
+
   // Heuristic resolution of method of dependent field
   Code = R"cpp(
         struct A { void foo() {} };
@@ -962,6 +964,21 @@ TEST_F(TargetDeclTest, DependentExprs) {
         };
   )cpp";
   EXPECT_DECLS("MemberExpr", "void find()");
+
+  // Base expression is the type of a non-type template parameter
+  // which is deduced using CTAD.
+  Code = R"cpp(
+        template <int N>
+        struct Waldo {
+          const int found = N;
+        };
+
+        template <Waldo W>
+        int test() {
+          return W.[[found]];
+        }
+  )cpp";
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "const int found = N");
 }
 
 TEST_F(TargetDeclTest, DependentTypes) {

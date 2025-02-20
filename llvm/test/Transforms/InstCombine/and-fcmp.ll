@@ -4644,7 +4644,7 @@ define i1 @clang_builtin_isnormal_inf_check(half %x) {
 define <2 x i1> @clang_builtin_isnormal_inf_check_vector(<2 x half> %x) {
 ; CHECK-LABEL: @clang_builtin_isnormal_inf_check_vector(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
-; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq <2 x half> [[FABS_X]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq <2 x half> [[FABS_X]], splat (half 0xH7C00)
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %fabs.x = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
@@ -5040,6 +5040,58 @@ define i1 @isnormal_logical_select_0_fmf1(half %x) {
   %cmp.inf = fcmp nsz arcp reassoc uge half %fabs.x, 0xH7C00
   %and = select i1 %ord, i1 %cmp.inf, i1 false
   ret i1 %and
+}
+
+define i1 @and_fcmp_reassoc1(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %cmp, %x
+  %retval = and i1 %and, %cmp1
+  ret i1 %retval
+}
+
+define i1 @and_fcmp_reassoc2(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %x, %cmp
+  %retval = and i1 %and, %cmp1
+  ret i1 %retval
+}
+
+define i1 @and_fcmp_reassoc3(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc3(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %cmp, %x
+  %retval = and i1 %cmp1, %and
+  ret i1 %retval
+}
+
+define i1 @and_fcmp_reassoc4(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc4(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %x, %cmp
+  %retval = and i1 %cmp1, %and
+  ret i1 %retval
 }
 
 declare half @llvm.fabs.f16(half)

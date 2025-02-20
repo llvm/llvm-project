@@ -14,7 +14,7 @@ target triple = "wasm32-unknown-unknown"
 define i32 @foo() {
   %stack_addr = alloca i32
   %stack_i = ptrtoint ptr %stack_addr to i32
-  %added = add i32 %stack_i, undef
+  %added = add nuw i32 %stack_i, undef
   %added_addr = inttoptr i32 %added to ptr
   %ret = load i32, ptr %added_addr
   ret i32 %ret

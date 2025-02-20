@@ -1,4 +1,4 @@
-! Test that flang-new forwards -fno-omit-frame-pointer and -fomit-frame-pointer Flang frontend
+! Test that flang forwards -fno-omit-frame-pointer and -fomit-frame-pointer Flang frontend
 ! RUN: %flang --target=aarch64-none-none -fsyntax-only -### %s -o %t 2>&1  | FileCheck %s --check-prefix=CHECK-NOVALUE
 ! CHECK-NOVALUE: "-fc1"{{.*}}"-mframe-pointer=non-leaf"
 

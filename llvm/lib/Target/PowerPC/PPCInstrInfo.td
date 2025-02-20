@@ -166,17 +166,17 @@ def PPCany_fcfidus : PatFrags<(ops node:$op),
 
 def PPCstore_scal_int_from_vsr:
    SDNode<"PPCISD::ST_VSR_SCAL_INT", SDT_PPCstore_scal_int_from_vsr,
-           [SDNPHasChain, SDNPMayStore]>;
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCstfiwx : SDNode<"PPCISD::STFIWX", SDT_PPCstfiwx,
-                       [SDNPHasChain, SDNPMayStore]>;
+                       [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPClfiwax : SDNode<"PPCISD::LFIWAX", SDT_PPClfiwx,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPClfiwzx : SDNode<"PPCISD::LFIWZX", SDT_PPClfiwx,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPClxsizx : SDNode<"PPCISD::LXSIZX", SDT_PPCLxsizx,
-                       [SDNPHasChain, SDNPMayLoad]>;
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstxsix : SDNode<"PPCISD::STXSIX", SDT_PPCstxsix,
-                       [SDNPHasChain, SDNPMayStore]>;
+                       [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCVexts  : SDNode<"PPCISD::VEXTS", SDT_PPCVexts, []>;
 
 // Extract FPSCR (not modeled at the DAG level).
@@ -376,7 +376,7 @@ def PPCatomicCmpSwap_16 :
 def PPClbrx       : SDNode<"PPCISD::LBRX", SDT_PPClbrx,
                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstbrx      : SDNode<"PPCISD::STBRX", SDT_PPCstbrx,
-                           [SDNPHasChain, SDNPMayStore]>;
+                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCStoreCond  : SDNode<"PPCISD::STORE_COND", SDT_StoreCond,
                            [SDNPHasChain, SDNPMayStore,
                             SDNPMemOperand, SDNPOutGlue]>;
@@ -686,13 +686,15 @@ def addr   : ComplexPattern<iPTR, 1, "SelectAddr",[], []>;
 def iaddroff : ComplexPattern<iPTR, 1, "SelectAddrImmOffs", [], []>;
 
 // Load and Store Instruction Selection addressing modes.
-def DForm  : ComplexPattern<iPTR, 2, "SelectDForm",    [], [SDNPWantParent]>;
-def DSForm : ComplexPattern<iPTR, 2, "SelectDSForm",   [], [SDNPWantParent]>;
-def DQForm : ComplexPattern<iPTR, 2, "SelectDQForm",   [], [SDNPWantParent]>;
-def XForm  : ComplexPattern<iPTR, 2, "SelectXForm",    [], [SDNPWantParent]>;
-def ForceXForm : ComplexPattern<iPTR, 2, "SelectForceXForm", [], [SDNPWantParent]>;
-def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm", [], [SDNPWantParent]>;
-def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm",   [], [SDNPWantParent]>;
+let WantsParent = true in {
+  def DForm  : ComplexPattern<iPTR, 2, "SelectDForm">;
+  def DSForm : ComplexPattern<iPTR, 2, "SelectDSForm">;
+  def DQForm : ComplexPattern<iPTR, 2, "SelectDQForm">;
+  def XForm  : ComplexPattern<iPTR, 2, "SelectXForm">;
+  def ForceXForm : ComplexPattern<iPTR, 2, "SelectForceXForm">;
+  def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm">;
+  def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm">;
+}
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
@@ -2303,7 +2305,7 @@ let isCodeGenOnly = 1 in
 def LA     : DForm_2<14, (outs gprc:$RST), (ins gprc_nor0:$RA, s16imm:$D),
                      "la $RST, $D($RA)", IIC_IntGeneral,
                      [(set i32:$RST, (add i32:$RA,
-                                          (PPClo tglobaladdr:$D, 0)))]>;
+                                          (PPClo tglobaladdr:$D, 0)))]>, MemriOp;
 def MULLI  : DForm_2< 7, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "mulli $RST, $RA, $D", IIC_IntMulLI,
                      [(set i32:$RST, (mul i32:$RA, imm32SExt16:$D))]>;
@@ -3466,6 +3468,10 @@ class PPCAsmPseudo<string asm, dag iops>
   let isAsmParserOnly = 1;
   let isPseudo = 1;
   let hasNoSchedulingInfo = 1;
+
+  // Indicate that this instruction takes a register+immediate memory operand.
+  bits<1> MemriOp = 0;
+  let TSFlags{10} = MemriOp;
 }
 
 // Prefixed instructions may require access to the above defs at a later
@@ -4714,7 +4720,7 @@ def : InstAlias<"tlbilxva $RA, $RB", (TLBILX 3, gprc:$RA, gprc:$RB)>,
                 Requires<[IsBookE]>;
 def : InstAlias<"tlbilxva $RB", (TLBILX 3, R0, gprc:$RB)>, Requires<[IsBookE]>;
 
-def LAx : PPCAsmPseudo<"la $rA, $addr", (ins gprc:$rA, memri:$addr)>;
+def LAx : PPCAsmPseudo<"la $rA, $addr", (ins gprc:$rA, memri:$addr)>, MemriOp;
 
 def SUBI : PPCAsmPseudo<"subi $rA, $rB, $imm",
                         (ins gprc:$rA, gprc:$rB, s16imm:$imm)>;

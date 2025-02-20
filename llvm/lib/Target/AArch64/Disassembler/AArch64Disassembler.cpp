@@ -15,7 +15,6 @@
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm-c/Disassembler.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -25,8 +24,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
 #include <memory>
 
 using namespace llvm;
@@ -45,6 +42,13 @@ static DecodeStatus DecodeSimpleRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus
 DecodeGPR64x8ClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
                                 const MCDisassembler *Decoder);
+template <unsigned Min, unsigned Max>
+static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
+                                         uint64_t Address,
+                                         const MCDisassembler *Decoder);
+static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder);
+template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder);
@@ -75,6 +79,9 @@ static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
 static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
                                        uint64_t Address,
                                        const MCDisassembler *Decoder);
+static DecodeStatus DecodePCRelLabel9(MCInst &Inst, unsigned Imm,
+                                      uint64_t Address,
+                                      const MCDisassembler *Decoder);
 static DecodeStatus DecodeMemExtend(MCInst &Inst, unsigned Imm,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder);
@@ -355,13 +362,40 @@ DecodeGPR64x8ClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
   return Success;
 }
 
+template <unsigned Min, unsigned Max>
+static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
+                                         uint64_t Address,
+                                         const MCDisassembler *Decoder) {
+  unsigned Reg = (RegNo * 2) + Min;
+  if (Reg < Min || Reg > Max || (Reg & 1))
+    return Fail;
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::ZPRRegClassID].getRegister(Reg);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder) {
-  if (RegNo * 2 > 30)
+  unsigned Reg = (RegNo * 2) + Min;
+  if (Reg < Min || Reg > Max || (Reg & 1))
     return Fail;
+
   unsigned Register =
-      AArch64MCRegisterClasses[AArch64::ZPR2RegClassID].getRegister(RegNo * 2);
+      AArch64MCRegisterClasses[AArch64::ZPR2RegClassID].getRegister(Reg);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder) {
+  if (RegNo > 7)
+    return Fail;
+
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::ZPR_KRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -463,6 +497,20 @@ static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
 
   if (!Decoder->tryAddingSymbolicOperand(
           Inst, ImmVal * 4, Addr, Inst.getOpcode() != AArch64::LDRXl, 0, 0, 4))
+    Inst.addOperand(MCOperand::createImm(ImmVal));
+  return Success;
+}
+
+static DecodeStatus DecodePCRelLabel9(MCInst &Inst, unsigned Imm, uint64_t Addr,
+                                      const MCDisassembler *Decoder) {
+  int64_t ImmVal = Imm;
+
+  // Sign-extend 9-bit immediate.
+  if (ImmVal & (1 << (9 - 1)))
+    ImmVal |= ~((1LL << 9) - 1);
+
+  if (!Decoder->tryAddingSymbolicOperand(Inst, (ImmVal * 4), Addr,
+                                         /*IsBranch=*/true, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(ImmVal));
   return Success;
 }
@@ -1114,6 +1162,14 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::STPSpre:
   case AArch64::STGPpre:
   case AArch64::STGPpost:
+  case AArch64::LDTPpre:
+  case AArch64::LDTPpost:
+  case AArch64::LDTPQpost:
+  case AArch64::LDTPQpre:
+  case AArch64::STTPpost:
+  case AArch64::STTPpre:
+  case AArch64::STTPQpost:
+  case AArch64::STTPQpre:
     DecodeSimpleRegisterClass<AArch64::GPR64spRegClassID, 0, 32>(Inst, Rn, Addr,
                                                                  Decoder);
     break;
@@ -1130,6 +1186,10 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::LDPSWpre:
   case AArch64::STGPpre:
   case AArch64::STGPpost:
+  case AArch64::LDTPpost:
+  case AArch64::LDTPpre:
+  case AArch64::STTPpost:
+  case AArch64::STTPpre:
     NeedsDisjointWritebackTransfer = true;
     [[fallthrough]];
   case AArch64::LDNPXi:
@@ -1138,6 +1198,10 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::STPXi:
   case AArch64::LDPSWi:
   case AArch64::STGPi:
+  case AArch64::LDTPi:
+  case AArch64::STTPi:
+  case AArch64::STTNPXi:
+  case AArch64::LDTNPXi:
     DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(Inst, Rt, Addr,
                                                                Decoder);
     DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(Inst, Rt2, Addr,
@@ -1166,6 +1230,14 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::STPQi:
   case AArch64::LDPQpre:
   case AArch64::STPQpre:
+  case AArch64::LDTPQi:
+  case AArch64::LDTPQpost:
+  case AArch64::LDTPQpre:
+  case AArch64::LDTNPQi:
+  case AArch64::STTPQi:
+  case AArch64::STTPQpost:
+  case AArch64::STTPQpre:
+  case AArch64::STTNPQi:
     DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 32>(Inst, Rt, Addr,
                                                                 Decoder);
     DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 32>(Inst, Rt2, Addr,

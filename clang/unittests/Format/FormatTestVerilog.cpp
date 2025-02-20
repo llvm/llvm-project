@@ -702,6 +702,18 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "  generate\n"
                "  endgenerate\n"
                "endfunction : x");
+  // Type names with '::' should be recognized.
+  verifyFormat("function automatic x::x x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  // Names having to do macros should be recognized.
+  verifyFormat("function automatic x::x x``x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  verifyFormat("function automatic x::x `x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  verifyNoCrash("x x(x x, x x);");
 }
 
 TEST_F(FormatTestVerilog, Identifiers) {
@@ -964,6 +976,7 @@ TEST_F(FormatTestVerilog, Instantiation) {
                "        .qbar(out1),\n"
                "        .clear(in1),\n"
                "        .preset(in2));");
+  verifyNoCrash(", ff1();");
   // With breaking between instance ports disabled.
   auto Style = getDefaultStyle();
   Style.VerilogBreakBetweenInstancePorts = false;

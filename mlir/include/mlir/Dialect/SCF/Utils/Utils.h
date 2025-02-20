@@ -111,13 +111,23 @@ LogicalResult coalescePerfectlyNestedSCFForLoops(scf::ForOp op);
 void collapseParallelLoops(RewriterBase &rewriter, scf::ParallelOp loops,
                            ArrayRef<std::vector<unsigned>> combinedDimensions);
 
-/// Unrolls this for operation by the specified unroll factor. Returns failure
-/// if the loop cannot be unrolled either due to restrictions or due to invalid
-/// unroll factors. Requires positive loop bounds and step. If specified,
-/// annotates the Ops in each unrolled iteration by applying `annotateFn`.
-LogicalResult loopUnrollByFactor(
+struct UnrolledLoopInfo {
+  std::optional<scf::ForOp> mainLoopOp = std::nullopt;
+  std::optional<scf::ForOp> epilogueLoopOp = std::nullopt;
+};
+
+/// Unrolls this for operation by the specified unroll factor. Returns the
+/// unrolled main loop and the eplilog loop, if the loop is unrolled. Otherwise
+/// returns failure if the loop cannot be unrolled either due to restrictions or
+/// due to invalid unroll factors. Requires positive loop bounds and step. If
+/// specified, annotates the Ops in each unrolled iteration by applying
+/// `annotateFn`.
+FailureOr<UnrolledLoopInfo> loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
+
+/// Unrolls this loop completely.
+LogicalResult loopUnrollFull(scf::ForOp forOp);
 
 /// Unrolls and jams this `scf.for` operation by the specified unroll factor.
 /// Returns failure if the loop cannot be unrolled either due to restrictions or

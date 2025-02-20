@@ -330,7 +330,8 @@ protected:
       return false;
 
     // Insert an instruction to call the helper with the result
-    CallInst::Create(m_valid_pointer_check_func, dereferenced_ptr, "", inst);
+    CallInst::Create(m_valid_pointer_check_func, dereferenced_ptr, "",
+                     inst->getIterator());
 
     return true;
   }
@@ -417,7 +418,7 @@ protected:
 
     ArrayRef<llvm::Value *> args(arg_array, 2);
 
-    CallInst::Create(m_objc_object_check_func, args, "", inst);
+    CallInst::Create(m_objc_object_check_func, args, "", inst->getIterator());
 
     return true;
   }

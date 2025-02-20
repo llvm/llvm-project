@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "MCTargetDesc/HexagonShuffler.h"
+#include "MCTargetDesc/HexagonTargetStreamer.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -48,7 +48,6 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -75,7 +74,7 @@ static cl::opt<bool> WarnSignedMismatch(
     cl::init(false));
 static cl::opt<bool> WarnNoncontigiousRegister(
     "mwarn-noncontigious-register",
-    cl::desc("Warn for register names that arent contigious"), cl::init(true));
+    cl::desc("Warn for register names that aren't contigious"), cl::init(true));
 static cl::opt<bool> ErrorNoncontigiousRegister(
     "merror-noncontigious-register",
     cl::desc("Error for register names that aren't contigious"),
@@ -1331,7 +1330,7 @@ unsigned HexagonAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   return Match_InvalidOperand;
 }
 
-// FIXME: Calls to OutOfRange shoudl propagate failure up to parseStatement.
+// FIXME: Calls to OutOfRange should propagate failure up to parseStatement.
 bool HexagonAsmParser::OutOfRange(SMLoc IDLoc, long long Val, long long Max) {
   std::string errStr;
   raw_string_ostream ES(errStr);

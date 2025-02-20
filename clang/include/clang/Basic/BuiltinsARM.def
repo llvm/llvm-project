@@ -206,13 +206,6 @@ BUILTIN(__builtin_arm_wsrp, "vcC*vC*", "nc")
 // Misc
 BUILTIN(__builtin_sponentry, "v*", "c")
 
-// Builtins for implementing ACLE MVE intrinsics. (Unlike NEON, these
-// don't need to live in a separate BuiltinsMVE.def, because they
-// aren't included from both here and BuiltinsAArch64.def.)
-#include "clang/Basic/arm_mve_builtins.inc"
-
-#include "clang/Basic/arm_cde_builtins.inc"
-
 // MSVC
 LANGBUILTIN(__emit, "vIUiC", "", ALL_MS_LANGUAGES)
 
@@ -270,6 +263,9 @@ TARGET_HEADER_BUILTIN(_InterlockedExchange_rel,   "NiNiD*Ni",    "nh", INTRIN_H,
 TARGET_HEADER_BUILTIN(_InterlockedExchange64_acq, "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedExchange64_nf,  "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedExchange64_rel, "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangePointer_acq, "v*v*D*v*","nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangePointer_nf,  "v*v*D*v*","nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangePointer_rel, "v*v*D*v*","nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange8_acq,  "ccD*cc",         "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange8_nf,   "ccD*cc",         "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
@@ -283,6 +279,8 @@ TARGET_HEADER_BUILTIN(_InterlockedCompareExchange_rel,   "NiNiD*NiNi",     "nh",
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange64_acq, "LLiLLiD*LLiLLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange64_nf,  "LLiLLiD*LLiLLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange64_rel, "LLiLLiD*LLiLLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedCompareExchangePointer_acq, "v*v*D*v*v*","nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedCompareExchangePointer_rel, "v*v*D*v*v*","nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_InterlockedOr8_acq,  "ccD*c",       "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedOr8_nf,   "ccD*c",       "nh", INTRIN_H, ALL_MS_LANGUAGES, "")

@@ -3,6 +3,7 @@ add_header(size_t HDR size_t.h)
 add_header(ssize_t HDR ssize_t.h)
 add_header(__atfork_callback_t HDR __atfork_callback_t.h)
 add_header(__bsearchcompare_t HDR __bsearchcompare_t.h)
+add_header(__lsearchcompare_t HDR __lsearchcompare_t.h)
 add_header(__call_once_func_t HDR __call_once_func_t.h)
 add_header(__exec_argv_t HDR __exec_argv_t.h)
 add_header(__exec_envp_t HDR __exec_envp_t.h)
@@ -14,7 +15,6 @@ add_header(__pthread_start_t HDR __pthread_start_t.h)
 add_header(__pthread_tss_dtor_t HDR __pthread_tss_dtor_t.h)
 add_header(__qsortcompare_t HDR __qsortcompare_t.h)
 add_header(__qsortrcompare_t HDR __qsortrcompare_t.h)
-add_header(__sighandler_t HDR __sighandler_t.h)
 add_header(__thread_type HDR __thread_type.h)
 add_header(blkcnt_t HDR blkcnt_t.h)
 add_header(blksize_t HDR blksize_t.h)
@@ -43,6 +43,7 @@ add_header(jmp_buf HDR jmp_buf.h)
 add_header(mbstate_t HDR mbstate_t.h)
 add_header(mode_t HDR mode_t.h)
 add_header(mtx_t HDR mtx_t.h DEPENDS .__futex_word .__mutex_type)
+add_header(nfds_t HDR nfds_t.h)
 add_header(nlink_t HDR nlink_t.h)
 add_header(off_t HDR off_t.h)
 add_header(once_flag HDR once_flag.h DEPENDS .__futex_word)
@@ -64,16 +65,18 @@ if(LIBC_TYPES_TIME_T_IS_32_BIT)
 else()
   add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
 endif()
+add_header(sighandler_t HDR sighandler_t.h)
 add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
+add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t)
+add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
 add_header(struct_flock64 HDR struct_flock64.h DEPENDS .off64_t .pid_t)
-add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
-add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
+add_header(struct_pollfd HDR struct_pollfd.h)
 add_header(struct_rlimit HDR struct_rlimit.h DEPENDS .rlim_t)
-add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)
-add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t)
 add_header(struct_sched_param HDR struct_sched_param.h)
+add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
+add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)
 add_header(union_sigval HDR union_sigval.h)
 add_header(siginfo_t HDR siginfo_t.h DEPENDS .union_sigval .pid_t .uid_t .clock_t)
 add_header(sig_atomic_t HDR sig_atomic_t.h)
@@ -101,15 +104,15 @@ add_header(__getoptargv_t HDR __getoptargv_t.h)
 add_header(wchar_t HDR wchar_t.h)
 add_header(char8_t HDR char8_t.h)
 add_header(
-    char16_t 
-  HDR 
+    char16_t
+  HDR
     char16_t.h
   DEPENDS
     libc.include.llvm-libc-macros.stdint_macros
 )
 add_header(
-    char32_t 
-  HDR 
+    char32_t
+  HDR
     char32_t.h
   DEPENDS
     libc.include.llvm-libc-macros.stdint_macros
@@ -121,7 +124,6 @@ add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
 add_header(struct_msghdr HDR struct_msghdr.h DEPENDS .size_t .socklen_t .struct_iovec)
-add_header(rpc_opcodes_t HDR rpc_opcodes_t.h)
 add_header(ACTION HDR ACTION.h)
 add_header(ENTRY HDR ENTRY.h)
 add_header(struct_hsearch_data HDR struct_hsearch_data.h)
@@ -134,11 +136,19 @@ add_header(
   DEPENDS
     libc.include.llvm-libc-macros.float_macros
 )
+add_header(
+  cfloat128
+  HDR
+    cfloat128.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float_macros
+)
+add_header(cfloat16 HDR cfloat16.h)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(
-  struct_statvfs 
-HDR 
+  struct_statvfs
+HDR
   struct_statvfs.h
 DEPENDS
   .fsblkcnt_t
@@ -146,3 +156,4 @@ DEPENDS
 )
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)
+add_header(stdfix-types HDR stdfix-types.h)

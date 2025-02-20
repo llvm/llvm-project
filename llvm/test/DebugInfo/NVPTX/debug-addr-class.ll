@@ -4,7 +4,7 @@
 @GLOBAL = addrspace(1) externally_initialized global i32 0, align 4, !dbg !0
 @SHARED = addrspace(3) externally_initialized global i32 undef, align 4, !dbg !6
 
-define void @test(float, ptr, ptr, i32) !dbg !17 {
+define ptx_kernel void @test(float, ptr, ptr, i32) !dbg !17 {
   %5 = alloca float, align 4
   %6 = alloca ptr, align 8
   %7 = alloca ptr, align 8
@@ -38,7 +38,6 @@ define void @test(float, ptr, ptr, i32) !dbg !17 {
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}
-!nvvm.annotations = !{!10}
 !llvm.module.flags = !{!11, !12, !13, !14, !15}
 !llvm.ident = !{!16}
 
@@ -52,7 +51,6 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !7 = distinct !DIGlobalVariable(name: "SHARED", scope: !2, file: !8, line: 4, type: !9, isLocal: false, isDefinition: true)
 !8 = !DIFile(filename: "test.cu", directory: "/tmp")
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!10 = !{ptr @test, !"kernel", i32 1}
 !11 = !{i32 2, !"Dwarf Version", i32 2}
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !{i32 1, !"wchar_size", i32 4}

@@ -20,10 +20,10 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -53,6 +53,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
 #include <cassert>
 #include <optional>
@@ -378,7 +379,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
     for (TemplateArgument::pack_iterator
              XA = X.pack_begin(),
              XAEnd = X.pack_end(), YA = Y.pack_begin(), YAEnd = Y.pack_end();
-         XA != XAEnd; ++XA, ++YA) {
+         XA != XAEnd; ++XA) {
       if (YA != YAEnd) {
         TemplateArgument Merged = checkDeducedTemplateArguments(
             Context, DeducedTemplateArgument(*XA, X.wasDeducedFromArrayBound()),
@@ -386,6 +387,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
         if (Merged.isNull() && !(XA->isNull() && YA->isNull()))
           return DeducedTemplateArgument();
         NewPack.push_back(Merged);
+        ++YA;
       } else {
         NewPack.push_back(*XA);
       }
@@ -858,7 +860,10 @@ private:
       if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(
               TemplateParams->getParam(Index))) {
         if (!NTTP->isExpandedParameterPack())
-          if (auto *Expansion = dyn_cast<PackExpansionType>(NTTP->getType()))
+          // FIXME: CWG2982 suggests a type-constraint forms a non-deduced
+          // context, however it is not yet resolved.
+          if (auto *Expansion = dyn_cast<PackExpansionType>(
+                  S.Context.getUnconstrainedType(NTTP->getType())))
             ExtraDeductions.push_back(Expansion->getPattern());
       }
       // FIXME: Also collect the unexpanded packs in any type and template
@@ -1759,7 +1764,8 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // C++ [temp.deduct.conv]p4:
       //   If the original A is a reference type, A can be more cv-qualified
       //   than the deduced A
-      if (!A.getQualifiers().compatiblyIncludes(P.getQualifiers()))
+      if (!A.getQualifiers().compatiblyIncludes(P.getQualifiers(),
+                                                S.getASTContext()))
         return TemplateDeductionResult::NonDeducedMismatch;
 
       // Strip out all extra qualifiers from the argument to figure out the
@@ -2465,6 +2471,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::PackExpansion:
     case Type::Pipe:
     case Type::ArrayParameter:
+    case Type::HLSLAttributedResource:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -2535,10 +2542,9 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     return TemplateDeductionResult::NonDeducedMismatch;
 
   case TemplateArgument::NullPtr:
-    if (A.getKind() == TemplateArgument::NullPtr &&
-        S.Context.hasSameType(P.getNullPtrType(), A.getNullPtrType()))
+    // 'nullptr' has only one possible value, so it always matches.
+    if (A.getKind() == TemplateArgument::NullPtr)
       return TemplateDeductionResult::Success;
-
     Info.FirstArg = P;
     Info.SecondArg = A;
     return TemplateDeductionResult::NonDeducedMismatch;
@@ -2553,6 +2559,8 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     return TemplateDeductionResult::NonDeducedMismatch;
 
   case TemplateArgument::StructuralValue:
+    // FIXME: structural equality will also compare types,
+    // but they should match iff they have the same value.
     if (A.getKind() == TemplateArgument::StructuralValue &&
         A.structurallyEquals(P))
       return TemplateDeductionResult::Success;
@@ -2690,9 +2698,6 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
   if (FoldPackParameter && hasPackExpansionBeforeEnd(Ps))
     return TemplateDeductionResult::Success;
 
-  if (FoldPackArgument && hasPackExpansionBeforeEnd(As))
-    return TemplateDeductionResult::Success;
-
   // C++0x [temp.deduct.type]p9:
   //   If P has a form that contains <T> or <i>, then each argument Pi of the
   //   respective template argument list P is compared with the corresponding
@@ -2767,8 +2772,12 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     for (; hasTemplateArgumentForDeduction(As, ArgIdx) &&
            PackScope.hasNextElement();
          ++ArgIdx) {
-      if (!FoldPackParameter && !As[ArgIdx].isPackExpansion())
-        return TemplateDeductionResult::MiscellaneousDeductionFailure;
+      if (!As[ArgIdx].isPackExpansion()) {
+        if (!FoldPackParameter)
+          return TemplateDeductionResult::MiscellaneousDeductionFailure;
+        if (FoldPackArgument)
+          Info.setStrictPackMatch();
+      }
       // Deduce template arguments from the pattern.
       if (auto Result = DeduceTemplateArguments(
               S, TemplateParams, Pattern, As[ArgIdx], Info, PartialOrdering,
@@ -2949,11 +2958,11 @@ Sema::getIdentityTemplateArgumentLoc(NamedDecl *TemplateParm,
 
 /// Convert the given deduced template argument and add it to the set of
 /// fully-converted template arguments.
-static bool ConvertDeducedTemplateArgument(
-    Sema &S, NamedDecl *Param, DeducedTemplateArgument Arg, NamedDecl *Template,
-    TemplateDeductionInfo &Info, bool IsDeduced,
-    SmallVectorImpl<TemplateArgument> &SugaredOutput,
-    SmallVectorImpl<TemplateArgument> &CanonicalOutput) {
+static bool
+ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
+                               DeducedTemplateArgument Arg, NamedDecl *Template,
+                               TemplateDeductionInfo &Info, bool IsDeduced,
+                               Sema::CheckTemplateArgumentInfo &CTAI) {
   auto ConvertArg = [&](DeducedTemplateArgument Arg,
                         unsigned ArgumentPackIndex) {
     // Convert the deduced template argument into a template
@@ -2962,15 +2971,19 @@ static bool ConvertDeducedTemplateArgument(
     TemplateArgumentLoc ArgLoc = S.getTrivialTemplateArgumentLoc(
         Arg, QualType(), Info.getLocation(), Param);
 
+    SaveAndRestore _1(CTAI.MatchingTTP, false);
+    SaveAndRestore _2(CTAI.StrictPackMatch, false);
     // Check the template argument, converting it as necessary.
-    return S.CheckTemplateArgument(
+    auto Res = S.CheckTemplateArgument(
         Param, ArgLoc, Template, Template->getLocation(),
-        Template->getSourceRange().getEnd(), ArgumentPackIndex, SugaredOutput,
-        CanonicalOutput,
+        Template->getSourceRange().getEnd(), ArgumentPackIndex, CTAI,
         IsDeduced
             ? (Arg.wasDeducedFromArrayBound() ? Sema::CTAK_DeducedFromArrayBound
                                               : Sema::CTAK_Deduced)
             : Sema::CTAK_Specified);
+    if (CTAI.StrictPackMatch)
+      Info.setStrictPackMatch();
+    return Res;
   };
 
   if (Arg.getKind() == TemplateArgument::Pack) {
@@ -3000,20 +3013,21 @@ static bool ConvertDeducedTemplateArgument(
         return true;
 
       // Move the converted template argument into our argument pack.
-      SugaredPackedArgsBuilder.push_back(SugaredOutput.pop_back_val());
-      CanonicalPackedArgsBuilder.push_back(CanonicalOutput.pop_back_val());
+      SugaredPackedArgsBuilder.push_back(CTAI.SugaredConverted.pop_back_val());
+      CanonicalPackedArgsBuilder.push_back(
+          CTAI.CanonicalConverted.pop_back_val());
     }
 
     // If the pack is empty, we still need to substitute into the parameter
     // itself, in case that substitution fails.
     if (SugaredPackedArgsBuilder.empty()) {
       LocalInstantiationScope Scope(S);
-      MultiLevelTemplateArgumentList Args(Template, SugaredOutput,
+      MultiLevelTemplateArgumentList Args(Template, CTAI.SugaredConverted,
                                           /*Final=*/true);
 
       if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,
-                                         NTTP, SugaredOutput,
+                                         NTTP, CTAI.SugaredConverted,
                                          Template->getSourceRange());
         if (Inst.isInvalid() ||
             S.SubstType(NTTP->getType(), Args, NTTP->getLocation(),
@@ -3021,7 +3035,7 @@ static bool ConvertDeducedTemplateArgument(
           return true;
       } else if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(Param)) {
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,
-                                         TTP, SugaredOutput,
+                                         TTP, CTAI.SugaredConverted,
                                          Template->getSourceRange());
         if (Inst.isInvalid() || !S.SubstDecl(TTP, S.CurContext, Args))
           return true;
@@ -3030,9 +3044,9 @@ static bool ConvertDeducedTemplateArgument(
     }
 
     // Create the resulting argument pack.
-    SugaredOutput.push_back(
+    CTAI.SugaredConverted.push_back(
         TemplateArgument::CreatePackCopy(S.Context, SugaredPackedArgsBuilder));
-    CanonicalOutput.push_back(TemplateArgument::CreatePackCopy(
+    CTAI.CanonicalConverted.push_back(TemplateArgument::CreatePackCopy(
         S.Context, CanonicalPackedArgsBuilder));
     return false;
   }
@@ -3051,11 +3065,9 @@ template <typename TemplateDeclT>
 static TemplateDeductionResult ConvertDeducedTemplateArguments(
     Sema &S, TemplateDeclT *Template, bool IsDeduced,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced,
-    TemplateDeductionInfo &Info,
-    SmallVectorImpl<TemplateArgument> &SugaredBuilder,
-    SmallVectorImpl<TemplateArgument> &CanonicalBuilder,
-    LocalInstantiationScope *CurrentInstantiationScope = nullptr,
-    unsigned NumAlreadyConverted = 0, bool *IsIncomplete = nullptr) {
+    TemplateDeductionInfo &Info, Sema::CheckTemplateArgumentInfo &CTAI,
+    LocalInstantiationScope *CurrentInstantiationScope,
+    unsigned NumAlreadyConverted, bool *IsIncomplete) {
   TemplateParameterList *TemplateParams = Template->getTemplateParameters();
 
   for (unsigned I = 0, N = TemplateParams->size(); I != N; ++I) {
@@ -3088,8 +3100,8 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
           // We have already fully type-checked and converted this
           // argument, because it was explicitly-specified. Just record the
           // presence of this argument.
-          SugaredBuilder.push_back(Deduced[I]);
-          CanonicalBuilder.push_back(
+          CTAI.SugaredConverted.push_back(Deduced[I]);
+          CTAI.CanonicalConverted.push_back(
               S.Context.getCanonicalTemplateArgument(Deduced[I]));
           continue;
         }
@@ -3098,13 +3110,13 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
       // We may have deduced this argument, so it still needs to be
       // checked and converted.
       if (ConvertDeducedTemplateArgument(S, Param, Deduced[I], Template, Info,
-                                         IsDeduced, SugaredBuilder,
-                                         CanonicalBuilder)) {
+                                         IsDeduced, CTAI)) {
         Info.Param = makeTemplateParameter(Param);
         // FIXME: These template arguments are temporary. Free them!
         Info.reset(
-            TemplateArgumentList::CreateCopy(S.Context, SugaredBuilder),
-            TemplateArgumentList::CreateCopy(S.Context, CanonicalBuilder));
+            TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted),
+            TemplateArgumentList::CreateCopy(S.Context,
+                                             CTAI.CanonicalConverted));
         return TemplateDeductionResult::SubstitutionFailure;
       }
 
@@ -3118,8 +3130,8 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
     // arguments.
     if (IsIncomplete) {
       *IsIncomplete = true;
-      SugaredBuilder.push_back({});
-      CanonicalBuilder.push_back({});
+      CTAI.SugaredConverted.push_back({});
+      CTAI.CanonicalConverted.push_back({});
       continue;
     }
 
@@ -3148,29 +3160,34 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
 
       DefArg = S.SubstDefaultTemplateArgumentIfAvailable(
           TD, TD->getLocation(), TD->getSourceRange().getEnd(), Param,
-          SugaredBuilder, CanonicalBuilder, HasDefaultArg);
+          CTAI.SugaredConverted, CTAI.CanonicalConverted, HasDefaultArg);
     }
 
     // If there was no default argument, deduction is incomplete.
     if (DefArg.getArgument().isNull()) {
       Info.Param = makeTemplateParameter(
           const_cast<NamedDecl *>(TemplateParams->getParam(I)));
-      Info.reset(TemplateArgumentList::CreateCopy(S.Context, SugaredBuilder),
-                 TemplateArgumentList::CreateCopy(S.Context, CanonicalBuilder));
+      Info.reset(
+          TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted),
+          TemplateArgumentList::CreateCopy(S.Context, CTAI.CanonicalConverted));
 
       return HasDefaultArg ? TemplateDeductionResult::SubstitutionFailure
                            : TemplateDeductionResult::Incomplete;
     }
 
+    SaveAndRestore _1(CTAI.PartialOrdering, false);
+    SaveAndRestore _2(CTAI.MatchingTTP, false);
+    SaveAndRestore _3(CTAI.StrictPackMatch, false);
     // Check whether we can actually use the default argument.
     if (S.CheckTemplateArgument(
             Param, DefArg, TD, TD->getLocation(), TD->getSourceRange().getEnd(),
-            0, SugaredBuilder, CanonicalBuilder, Sema::CTAK_Specified)) {
+            /*ArgumentPackIndex=*/0, CTAI, Sema::CTAK_Specified)) {
       Info.Param = makeTemplateParameter(
                          const_cast<NamedDecl *>(TemplateParams->getParam(I)));
       // FIXME: These template arguments are temporary. Free them!
-      Info.reset(TemplateArgumentList::CreateCopy(S.Context, SugaredBuilder),
-                 TemplateArgumentList::CreateCopy(S.Context, CanonicalBuilder));
+      Info.reset(
+          TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted),
+          TemplateArgumentList::CreateCopy(S.Context, CTAI.CanonicalConverted));
       return TemplateDeductionResult::SubstitutionFailure;
     }
 
@@ -3197,6 +3214,20 @@ template<>
 struct IsPartialSpecialization<VarTemplatePartialSpecializationDecl> {
   static constexpr bool value = true;
 };
+template <typename TemplateDeclT>
+static bool DeducedArgsNeedReplacement(TemplateDeclT *Template) {
+  return false;
+}
+template <>
+bool DeducedArgsNeedReplacement<VarTemplatePartialSpecializationDecl>(
+    VarTemplatePartialSpecializationDecl *Spec) {
+  return !Spec->isClassScopeExplicitSpecialization();
+}
+template <>
+bool DeducedArgsNeedReplacement<ClassTemplatePartialSpecializationDecl>(
+    ClassTemplatePartialSpecializationDecl *Spec) {
+  return !Spec->isClassScopeExplicitSpecialization();
+}
 
 template <typename TemplateDeclT>
 static TemplateDeductionResult
@@ -3207,10 +3238,23 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
   llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
 
+  std::optional<ArrayRef<TemplateArgument>> Innermost;
+  // If we don't need to replace the deduced template arguments,
+  // we can add them immediately as the inner-most argument list.
+  if (!DeducedArgsNeedReplacement(Template))
+    Innermost = CanonicalDeducedArgs;
+
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      Template, Template->getDeclContext(), /*Final=*/false,
-      /*Innermost=*/CanonicalDeducedArgs, /*RelativeToPrimary=*/true,
-      /*ForConstraintInstantiation=*/true);
+      Template, Template->getDeclContext(), /*Final=*/false, Innermost,
+      /*RelativeToPrimary=*/true, /*Pattern=*/
+      nullptr, /*ForConstraintInstantiation=*/true);
+
+  // getTemplateInstantiationArgs picks up the non-deduced version of the
+  // template args when this is a variable template partial specialization and
+  // not class-scope explicit specialization, so replace with Deduced Args
+  // instead of adding to inner-most.
+  if (!Innermost)
+    MLTAL.replaceInnermostTemplateArguments(Template, CanonicalDeducedArgs);
 
   if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
                                     Info.getLocation(),
@@ -3243,18 +3287,19 @@ FinishTemplateArgumentDeduction(
   // C++ [temp.deduct.type]p2:
   //   [...] or if any template argument remains neither deduced nor
   //   explicitly specified, template argument deduction fails.
-  SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
+  Sema::CheckTemplateArgumentInfo CTAI(IsPartialOrdering);
   if (auto Result = ConvertDeducedTemplateArguments(
-          S, Partial, IsPartialOrdering, Deduced, Info, SugaredBuilder,
-          CanonicalBuilder);
+          S, Partial, IsPartialOrdering, Deduced, Info, CTAI,
+          /*CurrentInstantiationScope=*/nullptr, /*NumAlreadyConverted=*/0,
+          /*IsIncomplete=*/nullptr);
       Result != TemplateDeductionResult::Success)
     return Result;
 
   // Form the template argument list from the deduced template arguments.
   TemplateArgumentList *SugaredDeducedArgumentList =
-      TemplateArgumentList::CreateCopy(S.Context, SugaredBuilder);
+      TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted);
   TemplateArgumentList *CanonicalDeducedArgumentList =
-      TemplateArgumentList::CreateCopy(S.Context, CanonicalBuilder);
+      TemplateArgumentList::CreateCopy(S.Context, CTAI.CanonicalConverted);
 
   Info.reset(SugaredDeducedArgumentList, CanonicalDeducedArgumentList);
 
@@ -3271,11 +3316,11 @@ FinishTemplateArgumentDeduction(
   TemplateArgumentListInfo InstArgs(PartialTemplArgInfo->LAngleLoc,
                                     PartialTemplArgInfo->RAngleLoc);
 
-  if (S.SubstTemplateArguments(PartialTemplArgInfo->arguments(),
-                               MultiLevelTemplateArgumentList(Partial,
-                                                              SugaredBuilder,
-                                                              /*Final=*/true),
-                               InstArgs)) {
+  if (S.SubstTemplateArguments(
+          PartialTemplArgInfo->arguments(),
+          MultiLevelTemplateArgumentList(Partial, CTAI.SugaredConverted,
+                                         /*Final=*/true),
+          InstArgs)) {
     unsigned ArgIdx = InstArgs.size(), ParamIdx = ArgIdx;
     if (ParamIdx >= Partial->getTemplateParameters()->size())
       ParamIdx = Partial->getTemplateParameters()->size() - 1;
@@ -3288,19 +3333,18 @@ FinishTemplateArgumentDeduction(
   }
 
   bool ConstraintsNotSatisfied;
-  SmallVector<TemplateArgument, 4> SugaredConvertedInstArgs,
-      CanonicalConvertedInstArgs;
-  if (S.CheckTemplateArgumentList(
-          Template, Partial->getLocation(), InstArgs, /*DefaultArgs=*/{}, false,
-          SugaredConvertedInstArgs, CanonicalConvertedInstArgs,
-          /*UpdateArgsWithConversions=*/true, &ConstraintsNotSatisfied))
+  Sema::CheckTemplateArgumentInfo InstCTAI;
+  if (S.CheckTemplateArgumentList(Template, Partial->getLocation(), InstArgs,
+                                  /*DefaultArgs=*/{}, false, InstCTAI,
+                                  /*UpdateArgsWithConversions=*/true,
+                                  &ConstraintsNotSatisfied))
     return ConstraintsNotSatisfied
                ? TemplateDeductionResult::ConstraintsNotSatisfied
                : TemplateDeductionResult::SubstitutionFailure;
 
   TemplateParameterList *TemplateParams = Template->getTemplateParameters();
   for (unsigned I = 0, E = TemplateParams->size(); I != E; ++I) {
-    TemplateArgument InstArg = SugaredConvertedInstArgs.data()[I];
+    TemplateArgument InstArg = InstCTAI.SugaredConverted.data()[I];
     if (!isSameTemplateArg(S.Context, TemplateArgs[I], InstArg,
                            IsPartialOrdering)) {
       Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
@@ -3315,7 +3359,7 @@ FinishTemplateArgumentDeduction(
 
   if (!IsPartialOrdering) {
     if (auto Result = CheckDeducedArgumentConstraints(
-            S, Partial, SugaredBuilder, CanonicalBuilder, Info);
+            S, Partial, CTAI.SugaredConverted, CTAI.CanonicalConverted, Info);
         Result != TemplateDeductionResult::Success)
       return Result;
   }
@@ -3340,55 +3384,74 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
   // C++ [temp.deduct.type]p2:
   //   [...] or if any template argument remains neither deduced nor
   //   explicitly specified, template argument deduction fails.
-  SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
+  Sema::CheckTemplateArgumentInfo CTAI(PartialOrdering);
   if (auto Result = ConvertDeducedTemplateArguments(
-          S, Template, /*IsDeduced*/ PartialOrdering, Deduced, Info,
-          SugaredBuilder, CanonicalBuilder,
+          S, Template, /*IsDeduced=*/PartialOrdering, Deduced, Info, CTAI,
           /*CurrentInstantiationScope=*/nullptr,
-          /*NumAlreadyConverted=*/0U);
+          /*NumAlreadyConverted=*/0U, /*IsIncomplete=*/nullptr);
       Result != TemplateDeductionResult::Success)
     return Result;
 
   // Check that we produced the correct argument list.
-  for (ArrayRef<TemplateArgument> Ps = TemplateArgs, As = CanonicalBuilder;
-       !Ps.empty() && !As.empty();
-       /**/) {
-    TemplateArgument P = Ps.front(), A = As.front();
-    if (P.getKind() == TemplateArgument::Pack) {
-      assert(Ps.size() == 1 && "Pack not last element?");
-      Ps = P.getPackAsArray();
-      continue;
+  SmallVector<ArrayRef<TemplateArgument>, 4> PsStack{TemplateArgs},
+      AsStack{CTAI.CanonicalConverted};
+  for (;;) {
+    auto take = [](SmallVectorImpl<ArrayRef<TemplateArgument>> &Stack)
+        -> std::tuple<ArrayRef<TemplateArgument> &, TemplateArgument> {
+      while (!Stack.empty()) {
+        auto &Xs = Stack.back();
+        if (Xs.empty()) {
+          Stack.pop_back();
+          continue;
+        }
+        auto &X = Xs.front();
+        if (X.getKind() == TemplateArgument::Pack) {
+          Stack.emplace_back(X.getPackAsArray());
+          Xs = Xs.drop_front();
+          continue;
+        }
+        assert(!X.isNull());
+        return {Xs, X};
+      }
+      static constexpr ArrayRef<TemplateArgument> None;
+      return {const_cast<ArrayRef<TemplateArgument> &>(None),
+              TemplateArgument()};
+    };
+    auto [Ps, P] = take(PsStack);
+    auto [As, A] = take(AsStack);
+    if (P.isNull() && A.isNull())
+      break;
+    TemplateArgument PP = P.isPackExpansion() ? P.getPackExpansionPattern() : P,
+                     PA = A.isPackExpansion() ? A.getPackExpansionPattern() : A;
+    if (!isSameTemplateArg(S.Context, PP, PA, /*PartialOrdering=*/false)) {
+      if (!P.isPackExpansion() && !A.isPackExpansion()) {
+        Info.Param =
+            makeTemplateParameter(Template->getTemplateParameters()->getParam(
+                (PsStack.empty() ? TemplateArgs.end()
+                                 : PsStack.front().begin()) -
+                TemplateArgs.begin()));
+        Info.FirstArg = P;
+        Info.SecondArg = A;
+        return TemplateDeductionResult::NonDeducedMismatch;
+      }
+      if (P.isPackExpansion()) {
+        Ps = Ps.drop_front();
+        continue;
+      }
+      if (A.isPackExpansion()) {
+        As = As.drop_front();
+        continue;
+      }
     }
-    if (A.getKind() == TemplateArgument::Pack) {
-      assert(As.size() == 1 && "Pack not last element?");
-      As = A.getPackAsArray();
-      continue;
-    }
-
-    if (P.isPackExpansion())
-      P = P.getPackExpansionPattern();
-    else
-      Ps = Ps.drop_front();
-    if (A.isPackExpansion())
-      A = A.getPackExpansionPattern();
-    else
-      As = As.drop_front();
-
-    if (isSameTemplateArg(S.Context, P, A, PartialOrdering))
-      continue;
-    unsigned I = As.end() == CanonicalBuilder.end()
-                     ? As.begin() - CanonicalBuilder.begin()
-                     : CanonicalBuilder.size() - 1;
-    Info.Param =
-        makeTemplateParameter(Template->getTemplateParameters()->getParam(I));
-    Info.FirstArg = P;
-    Info.SecondArg = A;
-    return TemplateDeductionResult::NonDeducedMismatch;
+    Ps = Ps.drop_front(P.isPackExpansion() ? 0 : 1);
+    As = As.drop_front(A.isPackExpansion() && !P.isPackExpansion() ? 0 : 1);
   }
+  assert(PsStack.empty());
+  assert(AsStack.empty());
 
   if (!PartialOrdering) {
     if (auto Result = CheckDeducedArgumentConstraints(
-            S, Template, SugaredBuilder, CanonicalBuilder, Info);
+            S, Template, CTAI.SugaredConverted, CTAI.CanonicalConverted, Info);
         Result != TemplateDeductionResult::Success)
       return Result;
   }
@@ -3412,15 +3475,16 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
   // C++ [temp.deduct.type]p2:
   //   [...] or if any template argument remains neither deduced nor
   //   explicitly specified, template argument deduction fails.
-  SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
+  Sema::CheckTemplateArgumentInfo CTAI;
   if (auto Result = ConvertDeducedTemplateArguments(
-          S, TD, /*IsDeduced=*/false, Deduced, Info, SugaredBuilder,
-          CanonicalBuilder);
+          S, TD, /*IsDeduced=*/false, Deduced, Info, CTAI,
+          /*CurrentInstantiationScope=*/nullptr, /*NumAlreadyConverted=*/0,
+          /*IsIncomplete=*/nullptr);
       Result != TemplateDeductionResult::Success)
     return Result;
 
-  return ::CheckDeducedArgumentConstraints(S, TD, SugaredBuilder,
-                                           CanonicalBuilder, Info);
+  return ::CheckDeducedArgumentConstraints(S, TD, CTAI.SugaredConverted,
+                                           CTAI.CanonicalConverted, Info);
 }
 
 /// Perform template argument deduction to determine whether the given template
@@ -3601,7 +3665,6 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
   //   declaration order of their corresponding template-parameters. The
   //   template argument list shall not specify more template-arguments than
   //   there are corresponding template-parameters.
-  SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
 
   // Enter a new template instantiation context where we check the
   // explicitly-specified template arguments against this function template,
@@ -3613,12 +3676,13 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
   if (Inst.isInvalid())
     return TemplateDeductionResult::InstantiationDepth;
 
+  CheckTemplateArgumentInfo CTAI;
   if (CheckTemplateArgumentList(FunctionTemplate, SourceLocation(),
-                                ExplicitTemplateArgs, /*DefaultArgs=*/{}, true,
-                                SugaredBuilder, CanonicalBuilder,
+                                ExplicitTemplateArgs, /*DefaultArgs=*/{},
+                                /*PartialTemplateArgs=*/true, CTAI,
                                 /*UpdateArgsWithConversions=*/false) ||
       Trap.hasErrorOccurred()) {
-    unsigned Index = SugaredBuilder.size();
+    unsigned Index = CTAI.SugaredConverted.size();
     if (Index >= TemplateParams->size())
       return TemplateDeductionResult::SubstitutionFailure;
     Info.Param = makeTemplateParameter(TemplateParams->getParam(Index));
@@ -3628,9 +3692,9 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
   // Form the template argument list from the explicitly-specified
   // template arguments.
   TemplateArgumentList *SugaredExplicitArgumentList =
-      TemplateArgumentList::CreateCopy(Context, SugaredBuilder);
+      TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted);
   TemplateArgumentList *CanonicalExplicitArgumentList =
-      TemplateArgumentList::CreateCopy(Context, CanonicalBuilder);
+      TemplateArgumentList::CreateCopy(Context, CTAI.CanonicalConverted);
   Info.setExplicitArgs(SugaredExplicitArgumentList,
                        CanonicalExplicitArgumentList);
 
@@ -3645,15 +3709,15 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
   // the explicit template arguments. They'll be used as part of deduction
   // for this template parameter pack.
   unsigned PartiallySubstitutedPackIndex = -1u;
-  if (!SugaredBuilder.empty()) {
-    const TemplateArgument &Arg = SugaredBuilder.back();
+  if (!CTAI.SugaredConverted.empty()) {
+    const TemplateArgument &Arg = CTAI.SugaredConverted.back();
     if (Arg.getKind() == TemplateArgument::Pack) {
-      auto *Param = TemplateParams->getParam(SugaredBuilder.size() - 1);
+      auto *Param = TemplateParams->getParam(CTAI.SugaredConverted.size() - 1);
       // If this is a fully-saturated fixed-size pack, it should be
       // fully-substituted, not partially-substituted.
       std::optional<unsigned> Expansions = getExpandedPackSize(Param);
       if (!Expansions || Arg.pack_size() < *Expansions) {
-        PartiallySubstitutedPackIndex = SugaredBuilder.size() - 1;
+        PartiallySubstitutedPackIndex = CTAI.SugaredConverted.size() - 1;
         CurrentInstantiationScope->SetPartiallySubstitutedPack(
             Param, Arg.pack_begin(), Arg.pack_size());
       }
@@ -3823,7 +3887,7 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
 
     if (AQuals == DeducedAQuals) {
       // Qualifiers match; there's nothing to do.
-    } else if (!DeducedAQuals.compatiblyIncludes(AQuals)) {
+    } else if (!DeducedAQuals.compatiblyIncludes(AQuals, S.getASTContext())) {
       return Failed();
     } else {
       // Qualifiers are compatible, so have the argument type adopt the
@@ -3953,7 +4017,8 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     unsigned NumExplicitlySpecified, FunctionDecl *&Specialization,
     TemplateDeductionInfo &Info,
     SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
-    bool PartialOverloading, llvm::function_ref<bool()> CheckNonDependent) {
+    bool PartialOverloading, bool PartialOrdering,
+    llvm::function_ref<bool()> CheckNonDependent) {
   // Unevaluated SFINAE context.
   EnterExpressionEvaluationContext Unevaluated(
       *this, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -3974,11 +4039,11 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   [...] or if any template argument remains neither deduced nor
   //   explicitly specified, template argument deduction fails.
   bool IsIncomplete = false;
-  SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
+  CheckTemplateArgumentInfo CTAI(PartialOrdering);
   if (auto Result = ConvertDeducedTemplateArguments(
-          *this, FunctionTemplate, /*IsDeduced*/ true, Deduced, Info,
-          SugaredBuilder, CanonicalBuilder, CurrentInstantiationScope,
-          NumExplicitlySpecified, PartialOverloading ? &IsIncomplete : nullptr);
+          *this, FunctionTemplate, /*IsDeduced=*/true, Deduced, Info, CTAI,
+          CurrentInstantiationScope, NumExplicitlySpecified,
+          PartialOverloading ? &IsIncomplete : nullptr);
       Result != TemplateDeductionResult::Success)
     return Result;
 
@@ -3996,9 +4061,9 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
 
   // Form the template argument list from the deduced template arguments.
   TemplateArgumentList *SugaredDeducedArgumentList =
-      TemplateArgumentList::CreateCopy(Context, SugaredBuilder);
+      TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted);
   TemplateArgumentList *CanonicalDeducedArgumentList =
-      TemplateArgumentList::CreateCopy(Context, CanonicalBuilder);
+      TemplateArgumentList::CreateCopy(Context, CTAI.CanonicalConverted);
   Info.reset(SugaredDeducedArgumentList, CanonicalDeducedArgumentList);
 
   // Substitute the deduced template arguments into the function template
@@ -4044,13 +4109,13 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   deduction fails.
   if (!IsIncomplete) {
     if (CheckInstantiatedFunctionTemplateConstraints(
-            Info.getLocation(), Specialization, CanonicalBuilder,
+            Info.getLocation(), Specialization, CTAI.CanonicalConverted,
             Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;
 
     if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
-      Info.reset(Info.takeSugared(),
-                 TemplateArgumentList::CreateCopy(Context, CanonicalBuilder));
+      Info.reset(Info.takeSugared(), TemplateArgumentList::CreateCopy(
+                                         Context, CTAI.CanonicalConverted));
       return TemplateDeductionResult::ConstraintsNotSatisfied;
     }
   }
@@ -4121,11 +4186,10 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   // keep track of these diagnostics. They'll be emitted if this specialization
   // is actually used.
   if (Info.diag_begin() != Info.diag_end()) {
-    SuppressedDiagnosticsMap::iterator
-      Pos = SuppressedDiagnostics.find(Specialization->getCanonicalDecl());
-    if (Pos == SuppressedDiagnostics.end())
-        SuppressedDiagnostics[Specialization->getCanonicalDecl()]
-          .append(Info.diag_begin(), Info.diag_end());
+    auto [Pos, Inserted] =
+        SuppressedDiagnostics.try_emplace(Specialization->getCanonicalDecl());
+    if (Inserted)
+      Pos->second.append(Info.diag_begin(), Info.diag_end());
   }
 
   return TemplateDeductionResult::Success;
@@ -4495,7 +4559,8 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
     FunctionDecl *&Specialization, TemplateDeductionInfo &Info,
     bool PartialOverloading, bool AggregateDeductionCandidate,
-    QualType ObjectType, Expr::Classification ObjectClassification,
+    bool PartialOrdering, QualType ObjectType,
+    Expr::Classification ObjectClassification,
     llvm::function_ref<bool(ArrayRef<QualType>)> CheckNonDependent) {
   if (FunctionTemplate->isInvalidDecl())
     return TemplateDeductionResult::Invalid;
@@ -4710,7 +4775,8 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   runWithSufficientStackSpace(Info.getLocation(), [&] {
     Result = FinishTemplateArgumentDeduction(
         FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
-        &OriginalCallArgs, PartialOverloading, [&, CallingCtx]() {
+        &OriginalCallArgs, PartialOverloading, PartialOrdering,
+        [&, CallingCtx]() {
           ContextRAII SavedContext(*this, CallingCtx);
           return CheckNonDependent(ParamTypesForArgChecking);
         });
@@ -4822,9 +4888,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
 
   TemplateDeductionResult Result;
   runWithSufficientStackSpace(Info.getLocation(), [&] {
-    Result = FinishTemplateArgumentDeduction(FunctionTemplate, Deduced,
-                                             NumExplicitlySpecified,
-                                             Specialization, Info);
+    Result = FinishTemplateArgumentDeduction(
+        FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
+        /*OriginalCallArgs=*/nullptr, /*PartialOverloading=*/false,
+        /*PartialOrdering=*/true);
   });
   if (Result != TemplateDeductionResult::Success)
     return Result;
@@ -5004,9 +5071,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   FunctionDecl *ConversionSpecialized = nullptr;
   TemplateDeductionResult Result;
   runWithSufficientStackSpace(Info.getLocation(), [&] {
-    Result = FinishTemplateArgumentDeduction(ConversionTemplate, Deduced, 0,
-                                             ConversionSpecialized, Info,
-                                             &OriginalCallArgs);
+    Result = FinishTemplateArgumentDeduction(
+        ConversionTemplate, Deduced, 0, ConversionSpecialized, Info,
+        &OriginalCallArgs, /*PartialOverloading=*/false,
+        /*PartialOrdering=*/false);
   });
   Specialization = cast_or_null<CXXConversionDecl>(ConversionSpecialized);
   return Result;
@@ -5130,12 +5198,12 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
   for (unsigned I = 0, C = TypeLoc.getNumArgs(); I != C; ++I)
     TemplateArgs.addArgument(TypeLoc.getArgLoc(I));
 
-  llvm::SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
-  if (S.CheckTemplateArgumentList(
-          Concept, SourceLocation(), TemplateArgs, /*DefaultArgs=*/{},
-          /*PartialTemplateArgs=*/false, SugaredConverted, CanonicalConverted))
+  Sema::CheckTemplateArgumentInfo CTAI;
+  if (S.CheckTemplateArgumentList(Concept, SourceLocation(), TemplateArgs,
+                                  /*DefaultArgs=*/{},
+                                  /*PartialTemplateArgs=*/false, CTAI))
     return true;
-  MultiLevelTemplateArgumentList MLTAL(Concept, CanonicalConverted,
+  MultiLevelTemplateArgumentList MLTAL(Concept, CTAI.CanonicalConverted,
                                        /*Final=*/false);
   // Build up an EvaluationContext with an ImplicitConceptSpecializationDecl so
   // that the template arguments of the constraint can be preserved. For
@@ -5150,7 +5218,7 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
       S, Sema::ExpressionEvaluationContext::Unevaluated,
       ImplicitConceptSpecializationDecl::Create(
           S.getASTContext(), Concept->getDeclContext(), Concept->getLocation(),
-          CanonicalConverted));
+          CTAI.CanonicalConverted));
   if (S.CheckConstraintSatisfaction(Concept, {Concept->getConstraintExpr()},
                                     MLTAL, TypeLoc.getLocalSourceRange(),
                                     Satisfaction))
@@ -5580,19 +5648,19 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
   //   [...] or if any template argument remains neither deduced nor
   //   explicitly specified, template argument deduction fails.
   bool IsIncomplete = false;
-  SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
+  Sema::CheckTemplateArgumentInfo CTAI(/*PartialOrdering=*/true);
   if (auto Result = ConvertDeducedTemplateArguments(
-          S, FTD, /*IsDeduced=*/true, Deduced, Info, SugaredBuilder,
-          CanonicalBuilder, /*CurrentInstantiationScope=*/nullptr,
+          S, FTD, /*IsDeduced=*/true, Deduced, Info, CTAI,
+          /*CurrentInstantiationScope=*/nullptr,
           /*NumAlreadyConverted=*/0, &IsIncomplete);
       Result != TemplateDeductionResult::Success)
     return Result;
 
   // Form the template argument list from the deduced template arguments.
   TemplateArgumentList *SugaredDeducedArgumentList =
-      TemplateArgumentList::CreateCopy(S.Context, SugaredBuilder);
+      TemplateArgumentList::CreateCopy(S.Context, CTAI.SugaredConverted);
   TemplateArgumentList *CanonicalDeducedArgumentList =
-      TemplateArgumentList::CreateCopy(S.Context, CanonicalBuilder);
+      TemplateArgumentList::CreateCopy(S.Context, CTAI.CanonicalConverted);
 
   Info.reset(SugaredDeducedArgumentList, CanonicalDeducedArgumentList);
 
@@ -5601,7 +5669,7 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
   // and equivalent to the parameter.
   LocalInstantiationScope InstScope(S);
 
-  if (auto TDR = CheckDeductionConsistency(S, FTD, SugaredBuilder);
+  if (auto TDR = CheckDeductionConsistency(S, FTD, CTAI.SugaredConverted);
       TDR != TemplateDeductionResult::Success)
     return TDR;
 
@@ -6236,7 +6304,7 @@ struct TemplateArgumentListAreEqual {
             std::enable_if_t<!std::is_same_v<T1, T2>, bool> = true>
   bool operator()(T1 *Spec, T2 *Primary) {
     ArrayRef<TemplateArgument> Args1 = Spec->getTemplateArgs().asArray(),
-                               Args2 = Primary->getInjectedTemplateArgs();
+                               Args2 = Primary->getInjectedTemplateArgs(Ctx);
 
     for (unsigned I = 0, E = Args1.size(); I < E; ++I) {
       // We use profile, instead of structural comparison of the arguments,
@@ -6415,7 +6483,7 @@ bool Sema::isMoreSpecializedThanPrimary(
   VarTemplateDecl *Primary = Spec->getSpecializedTemplate();
   TemplateName Name(Primary);
   QualType PrimaryT = Context.getTemplateSpecializationType(
-      Name, Primary->getInjectedTemplateArgs());
+      Name, Primary->getInjectedTemplateArgs(Context));
   QualType PartialT = Context.getTemplateSpecializationType(
       Name, Spec->getTemplateArgs().asArray());
 
@@ -6429,7 +6497,7 @@ bool Sema::isMoreSpecializedThanPrimary(
 bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
     TemplateParameterList *P, TemplateDecl *PArg, TemplateDecl *AArg,
     const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
-    bool IsDeduced) {
+    bool PartialOrdering, bool *StrictPackMatch) {
   // C++1z [temp.arg.template]p4: (DR 150)
   //   A template template-parameter P is at least as specialized as a
   //   template template-argument A if, given the following rewrite to two
@@ -6452,16 +6520,14 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   //    - Each function template has a single function parameter whose type is
   //      a specialization of X with template arguments corresponding to the
   //      template parameters from the respective function template
-  SmallVector<TemplateArgument, 8> AArgs;
-  Context.getInjectedTemplateArgs(A, AArgs);
+  SmallVector<TemplateArgument, 8> AArgs(A->getInjectedTemplateArgs(Context));
 
   // Check P's arguments against A's parameter list. This will fill in default
   // template arguments as needed. AArgs are already correct by construction.
   // We can't just use CheckTemplateIdType because that will expand alias
   // templates.
-  SmallVector<TemplateArgument, 4> PArgs;
+  SmallVector<TemplateArgument, 4> PArgs(P->getInjectedTemplateArgs(Context));
   {
-    Context.getInjectedTemplateArgs(P, PArgs);
     TemplateArgumentListInfo PArgList(P->getLAngleLoc(),
                                       P->getRAngleLoc());
     for (unsigned I = 0, N = P->size(); I != N; ++I) {
@@ -6480,13 +6546,17 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
     // C++1z [temp.arg.template]p3:
     //   If the rewrite produces an invalid type, then P is not at least as
     //   specialized as A.
-    SmallVector<TemplateArgument, 4> CanonicalPArgs;
-    if (CheckTemplateArgumentList(AArg, ArgLoc, PArgList, DefaultArgs, false,
-                                  PArgs, CanonicalPArgs,
+    CheckTemplateArgumentInfo CTAI(
+        /*PartialOrdering=*/false, /*MatchingTTP=*/true);
+    CTAI.SugaredConverted = std::move(PArgs);
+    if (CheckTemplateArgumentList(AArg, ArgLoc, PArgList, DefaultArgs,
+                                  /*PartialTemplateArgs=*/false, CTAI,
                                   /*UpdateArgsWithConversions=*/true,
-                                  /*ConstraintsNotSatisfied=*/nullptr,
-                                  /*PartialOrderingTTP=*/true))
+                                  /*ConstraintsNotSatisfied=*/nullptr))
       return false;
+    PArgs = std::move(CTAI.SugaredConverted);
+    if (StrictPackMatch)
+      *StrictPackMatch |= CTAI.StrictPackMatch;
   }
 
   // Determine whether P1 is at least as specialized as P2.
@@ -6508,9 +6578,11 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   switch (::DeduceTemplateArguments(
       *this, A, AArgs, PArgs, Info, Deduced,
       /*NumberOfArgumentsMustMatch=*/false, /*PartialOrdering=*/true,
-      IsDeduced ? PackFold::ArgumentToParameter : PackFold::Both,
+      PartialOrdering ? PackFold::ArgumentToParameter : PackFold::Both,
       /*HasDeducedAnyParam=*/nullptr)) {
   case clang::TemplateDeductionResult::Success:
+    if (StrictPackMatch && Info.hasStrictPackMatch())
+      *StrictPackMatch = true;
     break;
 
   case TemplateDeductionResult::MiscellaneousDeductionFailure:
@@ -6591,8 +6663,7 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
 }
 
 namespace {
-struct MarkUsedTemplateParameterVisitor :
-    RecursiveASTVisitor<MarkUsedTemplateParameterVisitor> {
+struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
   llvm::SmallBitVector &Used;
   unsigned Depth;
 
@@ -6600,23 +6671,22 @@ struct MarkUsedTemplateParameterVisitor :
                                    unsigned Depth)
       : Used(Used), Depth(Depth) { }
 
-  bool VisitTemplateTypeParmType(TemplateTypeParmType *T) {
+  bool VisitTemplateTypeParmType(TemplateTypeParmType *T) override {
     if (T->getDepth() == Depth)
       Used[T->getIndex()] = true;
     return true;
   }
 
-  bool TraverseTemplateName(TemplateName Template) {
+  bool TraverseTemplateName(TemplateName Template) override {
     if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
             Template.getAsTemplateDecl()))
       if (TTP->getDepth() == Depth)
         Used[TTP->getIndex()] = true;
-    RecursiveASTVisitor<MarkUsedTemplateParameterVisitor>::
-        TraverseTemplateName(Template);
+    DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
     return true;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(E->getDecl()))
       if (NTTP->getDepth() == Depth)
         Used[NTTP->getIndex()] = true;
@@ -6980,6 +7050,16 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     MarkUsedTemplateParameters(Ctx,
                                cast<DependentBitIntType>(T)->getNumBitsExpr(),
                                OnlyDeduced, Depth, Used);
+    break;
+
+  case Type::HLSLAttributedResource:
+    MarkUsedTemplateParameters(
+        Ctx, cast<HLSLAttributedResourceType>(T)->getWrappedType(), OnlyDeduced,
+        Depth, Used);
+    if (cast<HLSLAttributedResourceType>(T)->hasContainedType())
+      MarkUsedTemplateParameters(
+          Ctx, cast<HLSLAttributedResourceType>(T)->getContainedType(),
+          OnlyDeduced, Depth, Used);
     break;
 
   // None of these types have any template parameters in them.

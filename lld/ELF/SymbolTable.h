@@ -47,10 +47,10 @@ public:
 
   template <typename T> Symbol *addSymbol(const T &newSym) {
     Symbol *sym = insert(newSym.getName());
-    sym->resolve(newSym);
+    sym->resolve(ctx, newSym);
     return sym;
   }
-  Symbol *addAndCheckDuplicate(const Defined &newSym);
+  Symbol *addAndCheckDuplicate(Ctx &, const Defined &newSym);
 
   void scanVersionScript();
 

@@ -1182,7 +1182,7 @@ void Process::UpdateThreadListIfNeeded() {
           // See if the OS plugin reports all threads.  If it does, then
           // it is safe to clear unseen thread's plans here.  Otherwise we
           // should preserve them in case they show up again:
-          clear_unused_threads = GetOSPluginReportsAllThreads();
+          clear_unused_threads = os->DoesPluginReportAllThreads();
 
           // Turn off dynamic types to ensure we don't run any expressions.
           // Objective-C can run an expression to determine if a SBValue is a
@@ -1292,17 +1292,12 @@ bool Process::HasAssignedIndexIDToThread(uint64_t thread_id) {
 }
 
 uint32_t Process::AssignIndexIDToThread(uint64_t thread_id) {
-  uint32_t result = 0;
-  std::map<uint64_t, uint32_t>::iterator iterator =
-      m_thread_id_to_index_id_map.find(thread_id);
-  if (iterator == m_thread_id_to_index_id_map.end()) {
-    result = ++m_thread_index_id;
-    m_thread_id_to_index_id_map[thread_id] = result;
-  } else {
-    result = iterator->second;
-  }
+  auto [iterator, inserted] =
+      m_thread_id_to_index_id_map.try_emplace(thread_id, m_thread_index_id + 1);
+  if (inserted)
+    ++m_thread_index_id;
 
-  return result;
+  return iterator->second;
 }
 
 StateType Process::GetState() {
@@ -1669,7 +1664,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
       Address symbol_address = symbol->GetAddress();
       load_addr = ResolveIndirectFunction(&symbol_address, error);
       if (!error.Success() && show_error) {
-        GetTarget().GetDebugger().GetErrorStream().Printf(
+        GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
             "warning: failed to resolve indirect function at 0x%" PRIx64
             " for breakpoint %i.%i: %s\n",
             symbol->GetLoadAddress(&GetTarget()),
@@ -1708,7 +1703,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
         } else {
           if (show_error || use_hardware) {
             // Report error for setting breakpoint...
-            GetTarget().GetDebugger().GetErrorStream().Printf(
+            GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
                 "warning: failed to set breakpoint site at 0x%" PRIx64
                 " for breakpoint %i.%i: %s\n",
                 load_addr, constituent->GetBreakpoint().GetID(),
@@ -2517,7 +2512,8 @@ bool Process::GetWatchpointReportedAfter() {
   llvm::Triple triple = arch.GetTriple();
 
   if (triple.isMIPS() || triple.isPPC64() || triple.isRISCV() ||
-      triple.isAArch64() || triple.isArmMClass() || triple.isARM())
+      triple.isAArch64() || triple.isArmMClass() || triple.isARM() ||
+      triple.isLoongArch())
     reported_after = false;
 
   return reported_after;
@@ -6080,6 +6076,10 @@ bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
   return platform_sp->GetProcessInfo(GetID(), info);
 }
 
+lldb_private::UUID Process::FindModuleUUID(const llvm::StringRef path) {
+  return lldb_private::UUID();
+}
+
 ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {
   ThreadCollectionSP threads;
 
@@ -6144,8 +6144,11 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   disassembler_sp = Disassembler::DisassembleRange(
-      target.GetArchitecture(), plugin_name, flavor, GetTarget(), range_bounds);
+      target.GetArchitecture(), plugin_name, flavor, cpu, features, GetTarget(),
+      range_bounds);
   if (disassembler_sp)
     insn_list = &disassembler_sp->GetInstructionList();
 
@@ -6181,7 +6184,12 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                     MemoryRegionInfo &range_info) {
   if (const lldb::ABISP &abi = GetABI())
     load_addr = abi->FixAnyAddress(load_addr);
-  return DoGetMemoryRegionInfo(load_addr, range_info);
+  Status error = DoGetMemoryRegionInfo(load_addr, range_info);
+  // Reject a region that does not contain the requested address.
+  if (error.Success() && !range_info.GetRange().Contains(load_addr))
+    error = Status::FromErrorString("Invalid memory region");
+
+  return error;
 }
 
 Status Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
@@ -6528,6 +6536,29 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                 CreateCoreFileMemoryRange(region));
 }
 
+static void SaveDynamicLoaderSections(Process &process,
+                                      const SaveCoreOptions &options,
+                                      CoreFileMemoryRanges &ranges,
+                                      std::set<addr_t> &stack_ends) {
+  DynamicLoader *dyld = process.GetDynamicLoader();
+  if (!dyld)
+    return;
+
+  std::vector<MemoryRegionInfo> dynamic_loader_mem_regions;
+  std::function<bool(const lldb_private::Thread &)> save_thread_predicate =
+      [&](const lldb_private::Thread &t) -> bool {
+    return options.ShouldThreadBeSaved(t.GetID());
+  };
+  dyld->CalculateDynamicSaveCoreRanges(process, dynamic_loader_mem_regions,
+                                       save_thread_predicate);
+  for (const auto &region : dynamic_loader_mem_regions) {
+    // The Dynamic Loader can give us regions that could include a truncated
+    // stack
+    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0)
+      AddRegion(region, true, ranges);
+  }
+}
+
 static void SaveOffRegionsWithStackPointers(Process &process,
                                             const SaveCoreOptions &core_options,
                                             const MemoryRegionInfos &regions,
@@ -6559,11 +6590,13 @@ static void SaveOffRegionsWithStackPointers(Process &process,
       // off in other calls
       sp_region.GetRange().SetRangeBase(stack_head);
       sp_region.GetRange().SetByteSize(stack_size);
-      stack_ends.insert(sp_region.GetRange().GetRangeEnd());
+      const addr_t range_end = sp_region.GetRange().GetRangeEnd();
+      stack_ends.insert(range_end);
       // This will return true if the threadlist the user specified is empty,
       // or contains the thread id from thread_sp.
-      if (core_options.ShouldThreadBeSaved(thread_sp->GetID()))
+      if (core_options.ShouldThreadBeSaved(thread_sp->GetID())) {
         AddRegion(sp_region, try_dirty_pages, ranges);
+      }
     }
   }
 }
@@ -6644,11 +6677,8 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
 
   for (const auto &range : regions) {
     auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry) {
-      ranges.Append(range.GetRange().GetRangeBase(),
-                    range.GetRange().GetByteSize(),
-                    CreateCoreFileMemoryRange(range));
-    }
+    if (entry)
+      AddRegion(range, true, ranges);
   }
 }
 
@@ -6672,9 +6702,14 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
   std::set<addr_t> stack_ends;
   // For fully custom set ups, we don't want to even look at threads if there
   // are no threads specified.
-  if (core_style != lldb::eSaveCoreCustomOnly || options.HasSpecifiedThreads())
+  if (core_style != lldb::eSaveCoreCustomOnly ||
+      options.HasSpecifiedThreads()) {
     SaveOffRegionsWithStackPointers(*this, options, regions, ranges,
                                     stack_ends);
+    // Save off the dynamic loader sections, so if we are on an architecture
+    // that supports Thread Locals, that we include those as well.
+    SaveDynamicLoaderSections(*this, options, ranges, stack_ends);
+  }
 
   switch (core_style) {
   case eSaveCoreUnspecified:

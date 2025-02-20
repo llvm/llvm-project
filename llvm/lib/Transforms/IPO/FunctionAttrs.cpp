@@ -15,6 +15,7 @@
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -36,6 +37,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -130,6 +132,7 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
   // If it's not an identified object, it might be an argument.
   if (!isIdentifiedObject(UO))
     ME |= MemoryEffects::argMemOnly(MR);
+  ME |= MemoryEffects(IRMemLocation::ErrnoMem, MR);
   ME |= MemoryEffects(IRMemLocation::Other, MR);
 }
 
@@ -208,6 +211,9 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       if (isa<PseudoProbeInst>(I))
         continue;
 
+      // Merge callee's memory effects into caller's ones, including
+      // inaccessible and errno memory, but excluding argument memory, which is
+      // handled separately.
       ME |= CallME.getWithoutLoc(IRMemLocation::ArgMem);
 
       // If the call accesses captured memory (currently part of "other") and
@@ -581,6 +587,202 @@ struct ArgumentUsesTracker : public CaptureTracker {
   const SCCNodeSet &SCCNodes;
 };
 
+/// A struct of argument use: a Use and the offset it accesses. This struct
+/// is to track uses inside function via GEP. If GEP has a non-constant index,
+/// the Offset field is nullopt.
+struct ArgumentUse {
+  Use *U;
+  std::optional<int64_t> Offset;
+};
+
+/// A struct of argument access info. "Unknown" accesses are the cases like
+/// unrecognized instructions, instructions that have more than one use of
+/// the argument, or volatile memory accesses. "WriteWithSideEffect" are call
+/// instructions that not only write an argument but also capture it.
+struct ArgumentAccessInfo {
+  enum class AccessType : uint8_t { Write, WriteWithSideEffect, Read, Unknown };
+  AccessType ArgAccessType;
+  ConstantRangeList AccessRanges;
+};
+
+/// A struct to wrap the argument use info per block.
+struct UsesPerBlockInfo {
+  SmallDenseMap<Instruction *, ArgumentAccessInfo, 4> Insts;
+  bool HasWrites = false;
+  bool HasUnknownAccess = false;
+};
+
+/// A struct to summarize the argument use info in a function.
+struct ArgumentUsesSummary {
+  bool HasAnyWrite = false;
+  bool HasWriteOutsideEntryBB = false;
+  SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 16> UsesPerBlock;
+};
+
+ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
+                                         const ArgumentUse &ArgUse,
+                                         const DataLayout &DL) {
+  auto GetTypeAccessRange =
+      [&DL](Type *Ty,
+            std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
+    auto TypeSize = DL.getTypeStoreSize(Ty);
+    if (!TypeSize.isScalable() && Offset) {
+      int64_t Size = TypeSize.getFixedValue();
+      return ConstantRange(APInt(64, *Offset, true),
+                           APInt(64, *Offset + Size, true));
+    }
+    return std::nullopt;
+  };
+  auto GetConstantIntRange =
+      [](Value *Length,
+         std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
+    auto *ConstantLength = dyn_cast<ConstantInt>(Length);
+    if (ConstantLength && Offset &&
+        ConstantLength->getValue().isStrictlyPositive()) {
+      return ConstantRange(
+          APInt(64, *Offset, true),
+          APInt(64, *Offset + ConstantLength->getSExtValue(), true));
+    }
+    return std::nullopt;
+  };
+  if (auto *SI = dyn_cast<StoreInst>(I)) {
+    if (SI->isSimple() && &SI->getOperandUse(1) == ArgUse.U) {
+      // Get the fixed type size of "SI". Since the access range of a write
+      // will be unioned, if "SI" doesn't have a fixed type size, we just set
+      // the access range to empty.
+      ConstantRangeList AccessRanges;
+      if (auto TypeAccessRange =
+              GetTypeAccessRange(SI->getAccessType(), ArgUse.Offset))
+        AccessRanges.insert(*TypeAccessRange);
+      return {ArgumentAccessInfo::AccessType::Write, std::move(AccessRanges)};
+    }
+  } else if (auto *LI = dyn_cast<LoadInst>(I)) {
+    if (LI->isSimple()) {
+      assert(&LI->getOperandUse(0) == ArgUse.U);
+      // Get the fixed type size of "LI". Different from Write, if "LI"
+      // doesn't have a fixed type size, we conservatively set as a clobber
+      // with an empty access range.
+      if (auto TypeAccessRange =
+              GetTypeAccessRange(LI->getAccessType(), ArgUse.Offset))
+        return {ArgumentAccessInfo::AccessType::Read, {*TypeAccessRange}};
+    }
+  } else if (auto *MemSet = dyn_cast<MemSetInst>(I)) {
+    if (!MemSet->isVolatile()) {
+      ConstantRangeList AccessRanges;
+      if (auto AccessRange =
+              GetConstantIntRange(MemSet->getLength(), ArgUse.Offset))
+        AccessRanges.insert(*AccessRange);
+      return {ArgumentAccessInfo::AccessType::Write, AccessRanges};
+    }
+  } else if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
+    if (!MTI->isVolatile()) {
+      if (&MTI->getOperandUse(0) == ArgUse.U) {
+        ConstantRangeList AccessRanges;
+        if (auto AccessRange =
+                GetConstantIntRange(MTI->getLength(), ArgUse.Offset))
+          AccessRanges.insert(*AccessRange);
+        return {ArgumentAccessInfo::AccessType::Write, AccessRanges};
+      } else if (&MTI->getOperandUse(1) == ArgUse.U) {
+        if (auto AccessRange =
+                GetConstantIntRange(MTI->getLength(), ArgUse.Offset))
+          return {ArgumentAccessInfo::AccessType::Read, {*AccessRange}};
+      }
+    }
+  } else if (auto *CB = dyn_cast<CallBase>(I)) {
+    if (CB->isArgOperand(ArgUse.U) &&
+        !CB->isByValArgument(CB->getArgOperandNo(ArgUse.U))) {
+      unsigned ArgNo = CB->getArgOperandNo(ArgUse.U);
+      bool IsInitialize = CB->paramHasAttr(ArgNo, Attribute::Initializes);
+      if (IsInitialize && ArgUse.Offset) {
+        // Argument is a Write when parameter is writeonly/readnone
+        // and nocapture. Otherwise, it's a WriteWithSideEffect.
+        auto Access = CB->onlyWritesMemory(ArgNo) && CB->doesNotCapture(ArgNo)
+                          ? ArgumentAccessInfo::AccessType::Write
+                          : ArgumentAccessInfo::AccessType::WriteWithSideEffect;
+        ConstantRangeList AccessRanges;
+        Attribute Attr = CB->getParamAttr(ArgNo, Attribute::Initializes);
+        ConstantRangeList CBCRL = Attr.getValueAsConstantRangeList();
+        for (ConstantRange &CR : CBCRL)
+          AccessRanges.insert(ConstantRange(CR.getLower() + *ArgUse.Offset,
+                                            CR.getUpper() + *ArgUse.Offset));
+        return {Access, AccessRanges};
+      }
+    }
+  }
+  // Other unrecognized instructions are considered as unknown.
+  return {ArgumentAccessInfo::AccessType::Unknown, {}};
+}
+
+// Collect the uses of argument "A" in "F".
+ArgumentUsesSummary collectArgumentUsesPerBlock(Argument &A, Function &F) {
+  auto &DL = F.getParent()->getDataLayout();
+  unsigned PointerSize =
+      DL.getIndexSizeInBits(A.getType()->getPointerAddressSpace());
+  ArgumentUsesSummary Result;
+
+  BasicBlock &EntryBB = F.getEntryBlock();
+  SmallVector<ArgumentUse, 4> Worklist;
+  for (Use &U : A.uses())
+    Worklist.push_back({&U, 0});
+
+  // Update "UsesPerBlock" with the block of "I" as key and "Info" as value.
+  // Return true if the block of "I" has write accesses after updating.
+  auto UpdateUseInfo = [&Result](Instruction *I, ArgumentAccessInfo Info) {
+    auto *BB = I->getParent();
+    auto &BBInfo = Result.UsesPerBlock[BB];
+    bool AlreadyVisitedInst = BBInfo.Insts.contains(I);
+    auto &IInfo = BBInfo.Insts[I];
+
+    // Instructions that have more than one use of the argument are considered
+    // as clobbers.
+    if (AlreadyVisitedInst) {
+      IInfo = {ArgumentAccessInfo::AccessType::Unknown, {}};
+      BBInfo.HasUnknownAccess = true;
+      return false;
+    }
+
+    IInfo = std::move(Info);
+    BBInfo.HasUnknownAccess |=
+        IInfo.ArgAccessType == ArgumentAccessInfo::AccessType::Unknown;
+    bool InfoHasWrites =
+        (IInfo.ArgAccessType == ArgumentAccessInfo::AccessType::Write ||
+         IInfo.ArgAccessType ==
+             ArgumentAccessInfo::AccessType::WriteWithSideEffect) &&
+        !IInfo.AccessRanges.empty();
+    BBInfo.HasWrites |= InfoHasWrites;
+    return InfoHasWrites;
+  };
+
+  // No need for a visited set because we don't look through phis, so there are
+  // no cycles.
+  while (!Worklist.empty()) {
+    ArgumentUse ArgUse = Worklist.pop_back_val();
+    User *U = ArgUse.U->getUser();
+    // Add GEP uses to worklist.
+    // If the GEP is not a constant GEP, set the ArgumentUse::Offset to nullopt.
+    if (auto *GEP = dyn_cast<GEPOperator>(U)) {
+      std::optional<int64_t> NewOffset = std::nullopt;
+      if (ArgUse.Offset) {
+        APInt Offset(PointerSize, 0);
+        if (GEP->accumulateConstantOffset(DL, Offset))
+          NewOffset = *ArgUse.Offset + Offset.getSExtValue();
+      }
+      for (Use &U : GEP->uses())
+        Worklist.push_back({&U, NewOffset});
+      continue;
+    }
+
+    auto *I = cast<Instruction>(U);
+    bool HasWrite = UpdateUseInfo(I, getArgumentAccessInfo(I, ArgUse, DL));
+
+    Result.HasAnyWrite |= HasWrite;
+
+    if (HasWrite && I->getParent() != &EntryBB)
+      Result.HasWriteOutsideEntryBB = true;
+  }
+  return Result;
+}
+
 } // end anonymous namespace
 
 namespace llvm {
@@ -656,7 +858,7 @@ determinePointerAccessAttrs(Argument *A,
         continue;
       }
 
-      // Given we've explictily handled the callee operand above, what's left
+      // Given we've explicitly handled the callee operand above, what's left
       // must be a data operand (e.g. argument or operand bundle)
       const unsigned UseIndex = CB.getDataOperandNo(U);
 
@@ -867,9 +1069,129 @@ static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
   return true;
 }
 
+static bool inferInitializes(Argument &A, Function &F) {
+  auto ArgumentUses = collectArgumentUsesPerBlock(A, F);
+  // No write anywhere in the function, bail.
+  if (!ArgumentUses.HasAnyWrite)
+    return false;
+
+  auto &UsesPerBlock = ArgumentUses.UsesPerBlock;
+  BasicBlock &EntryBB = F.getEntryBlock();
+  // A map to store the argument ranges initialized by a BasicBlock (including
+  // its successors).
+  DenseMap<const BasicBlock *, ConstantRangeList> Initialized;
+  // Visit the successors of "BB" block and the instructions in BB (post-order)
+  // to get the argument ranges initialized by "BB" (including its successors).
+  // The result will be cached in "Initialized".
+  auto VisitBlock = [&](const BasicBlock *BB) -> ConstantRangeList {
+    auto UPB = UsesPerBlock.find(BB);
+    ConstantRangeList CRL;
+
+    // Start with intersection of successors.
+    // If this block has any clobbering use, we're going to clear out the
+    // ranges at some point in this block anyway, so don't bother looking at
+    // successors.
+    if (UPB == UsesPerBlock.end() || !UPB->second.HasUnknownAccess) {
+      bool HasAddedSuccessor = false;
+      for (auto *Succ : successors(BB)) {
+        if (auto SuccI = Initialized.find(Succ); SuccI != Initialized.end()) {
+          if (HasAddedSuccessor) {
+            CRL = CRL.intersectWith(SuccI->second);
+          } else {
+            CRL = SuccI->second;
+            HasAddedSuccessor = true;
+          }
+        } else {
+          CRL = ConstantRangeList();
+          break;
+        }
+      }
+    }
+
+    if (UPB != UsesPerBlock.end()) {
+      // Sort uses in this block by instruction order.
+      SmallVector<std::pair<Instruction *, ArgumentAccessInfo>, 2> Insts;
+      append_range(Insts, UPB->second.Insts);
+      sort(Insts, [](std::pair<Instruction *, ArgumentAccessInfo> &LHS,
+                     std::pair<Instruction *, ArgumentAccessInfo> &RHS) {
+        return LHS.first->comesBefore(RHS.first);
+      });
+
+      // From the end of the block to the beginning of the block, set
+      // initializes ranges.
+      for (auto &[_, Info] : reverse(Insts)) {
+        if (Info.ArgAccessType == ArgumentAccessInfo::AccessType::Unknown ||
+            Info.ArgAccessType ==
+                ArgumentAccessInfo::AccessType::WriteWithSideEffect)
+          CRL = ConstantRangeList();
+        if (!Info.AccessRanges.empty()) {
+          if (Info.ArgAccessType == ArgumentAccessInfo::AccessType::Write ||
+              Info.ArgAccessType ==
+                  ArgumentAccessInfo::AccessType::WriteWithSideEffect) {
+            CRL = CRL.unionWith(Info.AccessRanges);
+          } else {
+            assert(Info.ArgAccessType == ArgumentAccessInfo::AccessType::Read);
+            for (const auto &ReadRange : Info.AccessRanges)
+              CRL.subtract(ReadRange);
+          }
+        }
+      }
+    }
+    return CRL;
+  };
+
+  ConstantRangeList EntryCRL;
+  // If all write instructions are in the EntryBB, or if the EntryBB has
+  // a clobbering use, we only need to look at EntryBB.
+  bool OnlyScanEntryBlock = !ArgumentUses.HasWriteOutsideEntryBB;
+  if (!OnlyScanEntryBlock)
+    if (auto EntryUPB = UsesPerBlock.find(&EntryBB);
+        EntryUPB != UsesPerBlock.end())
+      OnlyScanEntryBlock = EntryUPB->second.HasUnknownAccess;
+  if (OnlyScanEntryBlock) {
+    EntryCRL = VisitBlock(&EntryBB);
+    if (EntryCRL.empty())
+      return false;
+  } else {
+    // Now we have to go through CFG to get the initialized argument ranges
+    // across blocks. With dominance and post-dominance, the initialized ranges
+    // by a block include both accesses inside this block and accesses in its
+    // (transitive) successors. So visit successors before predecessors with a
+    // post-order walk of the blocks and memorize the results in "Initialized".
+    for (const BasicBlock *BB : post_order(&F)) {
+      ConstantRangeList CRL = VisitBlock(BB);
+      if (!CRL.empty())
+        Initialized[BB] = CRL;
+    }
+
+    auto EntryCRLI = Initialized.find(&EntryBB);
+    if (EntryCRLI == Initialized.end())
+      return false;
+
+    EntryCRL = EntryCRLI->second;
+  }
+
+  assert(!EntryCRL.empty() &&
+         "should have bailed already if EntryCRL is empty");
+
+  if (A.hasAttribute(Attribute::Initializes)) {
+    ConstantRangeList PreviousCRL =
+        A.getAttribute(Attribute::Initializes).getValueAsConstantRangeList();
+    if (PreviousCRL == EntryCRL)
+      return false;
+    EntryCRL = EntryCRL.unionWith(PreviousCRL);
+  }
+
+  A.addAttr(Attribute::get(A.getContext(), Attribute::Initializes,
+                           EntryCRL.rangesRef()));
+
+  return true;
+}
+
 /// Deduce nocapture attributes for the SCC.
 static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
-                             SmallSet<Function *, 8> &Changed) {
+                             SmallSet<Function *, 8> &Changed,
+                             bool SkipInitializes) {
   ArgumentGraph AG;
 
   // Check each function in turn, determining which pointer arguments are not
@@ -890,7 +1212,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         F->getReturnType()->isVoidTy()) {
       for (Argument &A : F->args()) {
         if (A.getType()->isPointerTy() && !A.hasNoCaptureAttr()) {
-          A.addAttr(Attribute::NoCapture);
+          A.addAttr(Attribute::getWithCaptureInfo(A.getContext(),
+                                                  CaptureInfo::none()));
           ++NumNoCapture;
           Changed.insert(F);
         }
@@ -908,7 +1231,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         if (!Tracker.Captured) {
           if (Tracker.Uses.empty()) {
             // If it's trivially not captured, mark it nocapture now.
-            A.addAttr(Attribute::NoCapture);
+            A.addAttr(Attribute::getWithCaptureInfo(A.getContext(),
+                                                    CaptureInfo::none()));
             ++NumNoCapture;
             Changed.insert(F);
           } else {
@@ -937,6 +1261,10 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
           if (addAccessAttr(&A, R))
             Changed.insert(F);
       }
+      if (!SkipInitializes && !A.onlyReadsMemory()) {
+        if (inferInitializes(A, *F))
+          Changed.insert(F);
+      }
     }
   }
 
@@ -957,7 +1285,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       if (ArgumentSCC[0]->Uses.size() == 1 &&
           ArgumentSCC[0]->Uses[0] == ArgumentSCC[0]) {
         Argument *A = ArgumentSCC[0]->Definition;
-        A->addAttr(Attribute::NoCapture);
+        A->addAttr(Attribute::getWithCaptureInfo(A->getContext(),
+                                                 CaptureInfo::none()));
         ++NumNoCapture;
         Changed.insert(A->getParent());
 
@@ -971,16 +1300,6 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       continue;
     }
 
-    bool SCCCaptured = false;
-    for (ArgumentGraphNode *Node : ArgumentSCC) {
-      if (Node->Uses.empty() && !Node->Definition->hasNoCaptureAttr()) {
-        SCCCaptured = true;
-        break;
-      }
-    }
-    if (SCCCaptured)
-      continue;
-
     SmallPtrSet<Argument *, 8> ArgumentSCCNodes;
     // Fill ArgumentSCCNodes with the elements of the ArgumentSCC.  Used for
     // quickly looking up whether a given Argument is in this ArgumentSCC.
@@ -988,6 +1307,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       ArgumentSCCNodes.insert(I->Definition);
     }
 
+    bool SCCCaptured = false;
     for (ArgumentGraphNode *N : ArgumentSCC) {
       for (ArgumentGraphNode *Use : N->Uses) {
         Argument *A = Use->Definition;
@@ -1004,7 +1324,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
 
     for (ArgumentGraphNode *N : ArgumentSCC) {
       Argument *A = N->Definition;
-      A->addAttr(Attribute::NoCapture);
+      A->addAttr(
+          Attribute::getWithCaptureInfo(A->getContext(), CaptureInfo::none()));
       ++NumNoCapture;
       Changed.insert(A->getParent());
     }
@@ -1910,13 +2231,16 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
 
   SmallSet<Function *, 8> Changed;
   if (ArgAttrsOnly) {
-    addArgumentAttrs(Nodes.SCCNodes, Changed);
+    // ArgAttrsOnly means to only infer attributes that may aid optimizations
+    // on the *current* function. "initializes" attribute is to aid
+    // optimizations (like DSE) on the callers, so skip "initializes" here.
+    addArgumentAttrs(Nodes.SCCNodes, Changed, /*SkipInitializes=*/true);
     return Changed;
   }
 
   addArgumentReturnedAttrs(Nodes.SCCNodes, Changed);
   addMemoryAttrs(Nodes.SCCNodes, AARGetter, Changed);
-  addArgumentAttrs(Nodes.SCCNodes, Changed);
+  addArgumentAttrs(Nodes.SCCNodes, Changed, /*SkipInitializes=*/false);
   inferConvergent(Nodes.SCCNodes, Changed);
   addNoReturnAttrs(Nodes.SCCNodes, Changed);
   addColdAttrs(Nodes.SCCNodes, Changed);

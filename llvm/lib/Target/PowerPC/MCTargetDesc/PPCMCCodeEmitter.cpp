@@ -20,11 +20,9 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
@@ -490,7 +488,7 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
             MI.getOpcode() != PPC::MFOCRF && MI.getOpcode() != PPC::MFOCRF8) ||
            MO.getReg() < PPC::CR0 || MO.getReg() > PPC::CR7);
     unsigned OpNo = getOpIdxForMO(MI, MO);
-    unsigned Reg =
+    MCRegister Reg =
         PPC::getRegNumForOperand(MCII.get(MI.getOpcode()), MO.getReg(), OpNo);
     return CTX.getRegisterInfo()->getEncodingValue(Reg);
   }

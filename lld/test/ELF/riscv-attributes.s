@@ -31,7 +31,7 @@
 # RUN: llvm-readobj --arch-specific out3 | FileCheck %s --check-prefix=CHECK3
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 invalid_arch1.s -o invalid_arch1.o
-# RUN: not ld.lld invalid_arch1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=INVALID_ARCH1 --implicit-check-not=error:
+# RUN: not ld.lld invalid_arch1.o 2>&1 | FileCheck %s --check-prefix=INVALID_ARCH1 --implicit-check-not=error:
 # INVALID_ARCH1: error: invalid_arch1.o:(.riscv.attributes): rv64i2: extension lacks version in expected format
 
 ## A zero value attribute is not printed.
@@ -41,20 +41,20 @@
 
 ## Differing stack_align values lead to an error.
 # RUN: llvm-mc -filetype=obj -triple=riscv64 diff_stack_align.s -o diff_stack_align.o
-# RUN: not ld.lld a.o b.o c.o diff_stack_align.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=STACK_ALIGN --implicit-check-not=error:
+# RUN: not ld.lld a.o b.o c.o diff_stack_align.o 2>&1 | FileCheck %s --check-prefix=STACK_ALIGN --implicit-check-not=error:
 # STACK_ALIGN: error: diff_stack_align.o:(.riscv.attributes) has stack_align=32 but a.o:(.riscv.attributes) has stack_align=16
 
 ## RISC-V tag merging for atomic_abi values A6C and A7 lead to an error.
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A6C.s -o atomic_abi_A6C.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A7.s -o atomic_abi_A7.o
-# RUN: not ld.lld atomic_abi_A6C.o atomic_abi_A7.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_ERROR --implicit-check-not=error:
+# RUN: not ld.lld atomic_abi_A6C.o atomic_abi_A7.o 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_ERROR --implicit-check-not=error:
 # ATOMIC_ABI_ERROR: error: atomic abi mismatch for .riscv.attributes
 # ATOMIC_ABI_ERROR-NEXT: >>> atomic_abi_A6C.o:(.riscv.attributes): atomic_abi=1
 # ATOMIC_ABI_ERROR-NEXT: >>> atomic_abi_A7.o:(.riscv.attributes): atomic_abi=3
 
 ## RISC-V tag merging for atomic_abi values A6C and invalid lead to an error.
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_invalid.s -o atomic_abi_invalid.o
-# RUN: not ld.lld atomic_abi_A6C.o atomic_abi_invalid.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_INVALID --implicit-check-not=error:
+# RUN: not ld.lld atomic_abi_A6C.o atomic_abi_invalid.o 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_INVALID --implicit-check-not=error:
 # ATOMIC_ABI_INVALID: error: unknown atomic abi for .riscv.attributes
 # ATOMIC_ABI_INVALID-NEXT: >>> atomic_abi_invalid.o:(.riscv.attributes): atomic_abi=42
 
@@ -104,20 +104,20 @@
 # UNKNOWN22:         warning: unknown22a.o:(.riscv.attributes): invalid tag 0x16 at offset 0x10
 
 # HDR:      Name              Type             Address          Off    Size   ES Flg Lk Inf Al
-# HDR:      .riscv.attributes RISCV_ATTRIBUTES 0000000000000000 000158 000047 00      0   0  1{{$}}
+# HDR:      .riscv.attributes RISCV_ATTRIBUTES 0000000000000000 000158 00005a 00      0   0  1{{$}}
 
 # HDR:      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # HDR:      LOAD           0x000000 0x0000000000010000 0x0000000000010000 0x000158 0x000158 R   0x1000
 # HDR-NEXT: GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
-# HDR-NEXT: ATTRIBUTES     0x000158 0x0000000000000000 0x0000000000000000 0x000047 0x000047 R   0x1{{$}}
+# HDR-NEXT: ATTRIBUTES     0x000158 0x0000000000000000 0x0000000000000000 0x00005a 0x00005a R   0x1{{$}}
 
 # CHECK:      BuildAttributes {
 # CHECK-NEXT:   FormatVersion: 0x41
 # CHECK-NEXT:   Section 1 {
-# CHECK-NEXT:     SectionLength: 70
+# CHECK-NEXT:     SectionLength: 89
 # CHECK-NEXT:     Vendor: riscv
 # CHECK-NEXT:     Tag: Tag_File (0x1)
-# CHECK-NEXT:     Size: 60
+# CHECK-NEXT:     Size: 79
 # CHECK-NEXT:     FileAttributes {
 # CHECK-NEXT:       Attribute {
 # CHECK-NEXT:         Tag: 4
@@ -128,7 +128,7 @@
 # CHECK-NEXT:       Attribute {
 # CHECK-NEXT:         Tag: 5
 # CHECK-NEXT:         TagName: arch
-# CHECK-NEXT:         Value: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zmmul1p0{{$}}
+# CHECK-NEXT:         Value: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zmmul1p0_zaamo1p0_zalrsc1p0{{$}}
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   }
@@ -137,10 +137,10 @@
 # CHECK2:      BuildAttributes {
 # CHECK2-NEXT:   FormatVersion: 0x41
 # CHECK2-NEXT:   Section 1 {
-# CHECK2-NEXT:     SectionLength: 113
+# CHECK2-NEXT:     SectionLength: 132
 # CHECK2-NEXT:     Vendor: riscv
 # CHECK2-NEXT:     Tag: Tag_File (0x1)
-# CHECK2-NEXT:     Size: 103
+# CHECK2-NEXT:     Size: 122
 # CHECK2-NEXT:     FileAttributes {
 # CHECK2-NEXT:       Attribute {
 # CHECK2-NEXT:         Tag: 4
@@ -167,7 +167,7 @@
 # CHECK2-NEXT:       Attribute {
 # CHECK2-NEXT:         Tag: 5
 # CHECK2-NEXT:         TagName: arch
-# CHECK2-NEXT:         Value: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zmmul1p0_zkt1p0_zve32f1p0_zve32x1p0_zvl32b1p0{{$}}
+# CHECK2-NEXT:         Value: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zkt1p0_zve32f1p0_zve32x1p0_zvl32b1p0{{$}}
 # CHECK2-NEXT:       }
 # CHECK2-NEXT:     }
 # CHECK2-NEXT:   }

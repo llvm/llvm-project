@@ -912,6 +912,11 @@ public:
   /// Determine if this is an equals/not equals predicate.
   bool isEquality() const { return isEquality(getPredicate()); }
 
+  /// Determine if one operand of this compare can always be replaced by the
+  /// other operand, ignoring provenance considerations. If \p Invert, check for
+  /// equivalence with the inverse predicate.
+  bool isEquivalence(bool Invert = false) const;
+
   /// Return true if the predicate is relational (not EQ or NE).
   static bool isRelational(Predicate P) { return !isEquality(P); }
 
@@ -928,43 +933,6 @@ public:
   /// Determine if this instruction is using an unsigned comparison.
   bool isUnsigned() const {
     return isUnsigned(getPredicate());
-  }
-
-  /// For example, ULT->SLT, ULE->SLE, UGT->SGT, UGE->SGE, SLT->Failed assert
-  /// @returns the signed version of the unsigned predicate pred.
-  /// return the signed version of a predicate
-  static Predicate getSignedPredicate(Predicate pred);
-
-  /// For example, ULT->SLT, ULE->SLE, UGT->SGT, UGE->SGE, SLT->Failed assert
-  /// @returns the signed version of the predicate for this instruction (which
-  /// has to be an unsigned predicate).
-  /// return the signed version of a predicate
-  Predicate getSignedPredicate() {
-    return getSignedPredicate(getPredicate());
-  }
-
-  /// For example, SLT->ULT, SLE->ULE, SGT->UGT, SGE->UGE, ULT->Failed assert
-  /// @returns the unsigned version of the signed predicate pred.
-  static Predicate getUnsignedPredicate(Predicate pred);
-
-  /// For example, SLT->ULT, SLE->ULE, SGT->UGT, SGE->UGE, ULT->Failed assert
-  /// @returns the unsigned version of the predicate for this instruction (which
-  /// has to be an signed predicate).
-  /// return the unsigned version of a predicate
-  Predicate getUnsignedPredicate() {
-    return getUnsignedPredicate(getPredicate());
-  }
-
-  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
-  /// @returns the unsigned version of the signed predicate pred or
-  ///          the signed version of the signed predicate pred.
-  static Predicate getFlippedSignednessPredicate(Predicate pred);
-
-  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
-  /// @returns the unsigned version of the signed predicate pred or
-  ///          the signed version of the signed predicate pred.
-  Predicate getFlippedSignednessPredicate() {
-    return getFlippedSignednessPredicate(getPredicate());
   }
 
   /// This is just a convenience.
@@ -998,14 +966,6 @@ public:
 
   /// Determine if the predicate is false when comparing a value with itself.
   static bool isFalseWhenEqual(Predicate predicate);
-
-  /// Determine if Pred1 implies Pred2 is true when two compares have matching
-  /// operands.
-  static bool isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2);
-
-  /// Determine if Pred1 implies Pred2 is false when two compares have matching
-  /// operands.
-  static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1055,7 +1015,7 @@ struct OperandBundleUse {
   /// has the attribute A.
   bool operandHasAttr(unsigned Idx, Attribute::AttrKind A) const {
     if (isDeoptOperandBundle())
-      if (A == Attribute::ReadOnly || A == Attribute::NoCapture)
+      if (A == Attribute::ReadOnly)
         return Inputs[Idx]->getType()->isPointerTy();
 
     // Conservative answer:  no operands have any attributes.
@@ -1453,13 +1413,21 @@ public:
   /// looking through to the attributes on the called function when necessary).
   ///@{
 
-  /// Return the parameter attributes for this call.
-  ///
+  /// Return the attributes for this call.
   AttributeList getAttributes() const { return Attrs; }
 
-  /// Set the parameter attributes for this call.
-  ///
+  /// Set the attributes for this call.
   void setAttributes(AttributeList A) { Attrs = A; }
+
+  /// Return the return attributes for this call.
+  AttributeSet getRetAttributes() const {
+    return getAttributes().getRetAttrs();
+  }
+
+  /// Return the param attributes for this call.
+  AttributeSet getParamAttributes(unsigned ArgNo) const {
+    return getAttributes().getParamAttrs(ArgNo);
+  }
 
   /// Try to intersect the attributes from 'this' CallBase and the
   /// 'Other' CallBase. Sets the intersected attributes to 'this' and
@@ -1522,6 +1490,11 @@ public:
     Attrs = Attrs.addRetAttribute(getContext(), Attr);
   }
 
+  /// Adds attributes to the return value.
+  void addRetAttrs(const AttrBuilder &B) {
+    Attrs = Attrs.addRetAttributes(getContext(), B);
+  }
+
   /// Adds the attribute to the indicated argument
   void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
     assert(ArgNo < arg_size() && "Out of bounds");
@@ -1532,6 +1505,12 @@ public:
   void addParamAttr(unsigned ArgNo, Attribute Attr) {
     assert(ArgNo < arg_size() && "Out of bounds");
     Attrs = Attrs.addParamAttribute(getContext(), ArgNo, Attr);
+  }
+
+  /// Adds attributes to the indicated argument
+  void addParamAttrs(unsigned ArgNo, const AttrBuilder &B) {
+    assert(ArgNo < arg_size() && "Out of bounds");
+    Attrs = Attrs.addParamAttributes(getContext(), ArgNo, B);
   }
 
   /// removes the attribute from the list of attributes.
@@ -1623,6 +1602,14 @@ public:
   /// Determine whether the argument or parameter has the given attribute.
   bool paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
+  /// Return true if this argument has the nonnull attribute on either the
+  /// CallBase instruction or the called function. Also returns true if at least
+  /// one byte is known to be dereferenceable and the pointer is in
+  /// addrspace(0). If \p AllowUndefOrPoison is true, respect the semantics of
+  /// nonnull attribute and return true even if the argument can be undef or
+  /// poison.
+  bool paramHasNonNullAttr(unsigned ArgNo, bool AllowUndefOrPoison) const;
+
   /// Get the attribute of a given kind at a position.
   Attribute getAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) const {
     return getAttributes().getAttributeAtIndex(i, Kind);
@@ -1695,11 +1682,14 @@ public:
     return bundleOperandHasAttr(i, Kind);
   }
 
+  /// Return which pointer components this operand may capture.
+  CaptureInfo getCaptureInfo(unsigned OpNo) const;
+
   /// Determine whether this data operand is not captured.
   // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
   // better indicate that this may return a conservative answer.
   bool doesNotCapture(unsigned OpNo) const {
-    return dataOperandHasImpliedAttr(OpNo, Attribute::NoCapture);
+    return capturesNothing(getCaptureInfo(OpNo));
   }
 
   /// Determine whether this argument is passed by value.
@@ -1746,6 +1736,11 @@ public:
   // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
   // better indicate that this may return a conservative answer.
   bool onlyReadsMemory(unsigned OpNo) const {
+    // If the argument is passed byval, the callee does not have access to the
+    // original pointer and thus cannot write to it.
+    if (OpNo < arg_size() && isByValArgument(OpNo))
+      return true;
+
     return dataOperandHasImpliedAttr(OpNo, Attribute::ReadOnly) ||
            dataOperandHasImpliedAttr(OpNo, Attribute::ReadNone);
   }

@@ -860,6 +860,8 @@ void IoChecker::Leave(const parser::WriteStmt &writeStmt) {
 
 void IoChecker::LeaveReadWrite() const {
   CheckForRequiredSpecifier(IoSpecKind::Unit); // C1211
+  CheckForRequiredSpecifier(flags_.test(Flag::InternalUnit),
+      "UNIT=internal-file", flags_.test(Flag::FmtOrNml), "FMT or NML");
   CheckForProhibitedSpecifier(IoSpecKind::Nml, IoSpecKind::Rec); // C1216
   CheckForProhibitedSpecifier(IoSpecKind::Nml, IoSpecKind::Fmt); // C1216
   CheckForProhibitedSpecifier(
@@ -918,7 +920,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
       {IoSpecKind::Decimal, {"COMMA", "POINT"}},
       {IoSpecKind::Delim, {"APOSTROPHE", "NONE", "QUOTE"}},
       {IoSpecKind::Encoding, {"DEFAULT", "UTF-8"}},
-      {IoSpecKind::Form, {"FORMATTED", "UNFORMATTED"}},
+      {IoSpecKind::Form, {"FORMATTED", "UNFORMATTED", "BINARY"}},
       {IoSpecKind::Pad, {"NO", "YES"}},
       {IoSpecKind::Position, {"APPEND", "ASIS", "REWIND"}},
       {IoSpecKind::Round,

@@ -15,8 +15,8 @@
 #include "clang/AST/ODRDiagsEmitter.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -1555,6 +1555,17 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
                                                     nullptr));
   }
 
+  // Turn ArgInfos into parameters. This must happen after parsing all
+  // parameters for bug compatibility with previous versions of Clang. (For
+  // instance, if a method declares a parameter called "id", that parameter must
+  // not shadow the "id" type.)
+  SmallVector<ParmVarDecl *, 12> ObjCParamInfo;
+  for (auto &ArgInfo : ArgInfos) {
+    ParmVarDecl *Param = Actions.ObjC().ActOnMethodParmDeclaration(
+        getCurScope(), ArgInfo, ObjCParamInfo.size(), MethodDefinition);
+    ObjCParamInfo.push_back(Param);
+  }
+
   // FIXME: Add support for optional parameter list...
   // If attributes exist after the method, parse them.
   MaybeParseAttributes(PAKM_CXX11 | (getLangOpts().ObjC ? PAKM_GNU : 0),
@@ -1567,8 +1578,8 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
                                                    &KeyIdents[0]);
   Decl *Result = Actions.ObjC().ActOnMethodDeclaration(
       getCurScope(), mLoc, Tok.getLocation(), mType, DSRet, ReturnType, KeyLocs,
-      Sel, &ArgInfos[0], CParamInfo.data(), CParamInfo.size(), methodAttrs,
-      MethodImplKind, isVariadic, MethodDefinition);
+      Sel, ObjCParamInfo.data(), CParamInfo.data(), CParamInfo.size(),
+      methodAttrs, MethodImplKind, isVariadic, MethodDefinition);
 
   PD.complete(Result);
   return Result;
@@ -3227,13 +3238,13 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
     cutOffParsing();
     if (SuperLoc.isValid())
       Actions.CodeCompletion().CodeCompleteObjCSuperMessage(
-          getCurScope(), SuperLoc, std::nullopt, false);
+          getCurScope(), SuperLoc, {}, false);
     else if (ReceiverType)
       Actions.CodeCompletion().CodeCompleteObjCClassMessage(
-          getCurScope(), ReceiverType, std::nullopt, false);
+          getCurScope(), ReceiverType, {}, false);
     else
       Actions.CodeCompletion().CodeCompleteObjCInstanceMessage(
-          getCurScope(), ReceiverExpr, std::nullopt, false);
+          getCurScope(), ReceiverExpr, {}, false);
     return ExprError();
   }
 

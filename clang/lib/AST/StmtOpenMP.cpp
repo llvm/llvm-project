@@ -425,6 +425,27 @@ OMPTileDirective *OMPTileDirective::CreateEmpty(const ASTContext &C,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
+OMPStripeDirective *
+OMPStripeDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                           SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
+                           unsigned NumLoops, Stmt *AssociatedStmt,
+                           Stmt *TransformedStmt, Stmt *PreInits) {
+  OMPStripeDirective *Dir = createDirective<OMPStripeDirective>(
+      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
+      NumLoops);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  return Dir;
+}
+
+OMPStripeDirective *OMPStripeDirective::CreateEmpty(const ASTContext &C,
+                                                    unsigned NumClauses,
+                                                    unsigned NumLoops) {
+  return createEmptyDirective<OMPStripeDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
+}
+
 OMPUnrollDirective *
 OMPUnrollDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                            SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
@@ -452,8 +473,7 @@ OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             SourceLocation EndLoc, Stmt *AssociatedStmt,
                             Stmt *TransformedStmt, Stmt *PreInits) {
   OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
-      C, std::nullopt, AssociatedStmt, TransformedStmtOffset + 1, StartLoc,
-      EndLoc);
+      C, {}, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   return Dir;
@@ -555,7 +575,7 @@ OMPSectionDirective *OMPSectionDirective::Create(const ASTContext &C,
                                                  Stmt *AssociatedStmt,
                                                  bool HasCancel) {
   auto *Dir =
-      createDirective<OMPSectionDirective>(C, std::nullopt, AssociatedStmt,
+      createDirective<OMPSectionDirective>(C, {}, AssociatedStmt,
                                            /*NumChildren=*/0, StartLoc, EndLoc);
   Dir->setHasCancel(HasCancel);
   return Dir;
@@ -605,7 +625,7 @@ OMPMasterDirective *OMPMasterDirective::Create(const ASTContext &C,
                                                SourceLocation StartLoc,
                                                SourceLocation EndLoc,
                                                Stmt *AssociatedStmt) {
-  return createDirective<OMPMasterDirective>(C, std::nullopt, AssociatedStmt,
+  return createDirective<OMPMasterDirective>(C, {}, AssociatedStmt,
                                              /*NumChildren=*/0, StartLoc,
                                              EndLoc);
 }

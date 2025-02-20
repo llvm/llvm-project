@@ -1,5 +1,7 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
+; CHECK-SPIRV: OpCapability StorageImageReadWithoutFormat
+
 ; CHECK-SPIRV: %[[#IntTy:]] = OpTypeInt
 ; CHECK-SPIRV: %[[#IVecTy:]] = OpTypeVector %[[#IntTy]]
 ; CHECK-SPIRV: %[[#FloatTy:]] = OpTypeFloat

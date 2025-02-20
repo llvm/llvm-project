@@ -111,6 +111,11 @@ def Extends    : InlineCommand<"extends">;
 def Implements : InlineCommand<"implements">;
 def MemberOf   : InlineCommand<"memberof">;
 
+def Relates     : InlineCommand<"relates">;
+def Related     : InlineCommand<"related">;
+def RelatesAlso : InlineCommand<"relatesalso">;
+def RelatedAlso : InlineCommand<"relatedalso">;
+
 //===----------------------------------------------------------------------===//
 // BlockCommand
 //===----------------------------------------------------------------------===//
@@ -247,11 +252,6 @@ def TableOfContents : VerbatimLineCommand<"tableofcontents">;
 def Page     : VerbatimLineCommand<"page">;
 def Mainpage : VerbatimLineCommand<"mainpage">;
 def Subpage  : VerbatimLineCommand<"subpage">;
-
-def Relates     : VerbatimLineCommand<"relates">;
-def Related     : VerbatimLineCommand<"related">;
-def RelatesAlso : VerbatimLineCommand<"relatesalso">;
-def RelatedAlso : VerbatimLineCommand<"relatedalso">;
 
 def AddIndex : VerbatimLineCommand<"addindex">;
 

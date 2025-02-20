@@ -21,6 +21,6 @@
 int32x2_t test_vqrshrn_n_s64(int64x2_t a) {
   // CHECK-LABEL: @test_vqrshrn_n_s64
   // CHECK-AARCH64: call <2 x i32> @llvm.aarch64.neon.sqrshrn.v2i32(<2 x i64> {{.*}}, i32 1)
-  // CHECK-ARMV7: call <2 x i32> @llvm.arm.neon.vqrshiftns.v2i32(<2 x i64> {{.*}}, <2 x i64> <i64 -1, i64 -1>)
+  // CHECK-ARMV7: call <2 x i32> @llvm.arm.neon.vqrshiftns.v2i32(<2 x i64> {{.*}}, <2 x i64> splat (i64 -1))
   return vqrshrn_n_s64(a, 0 + 1);
 }

@@ -28,9 +28,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/ABI.h"
-#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/Module.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Thunk.h"
 #include "llvm/ADT/StringExtras.h"
@@ -468,6 +466,7 @@ public:
   void mangleLambdaSig(const CXXRecordDecl *Lambda);
   void mangleModuleNamePrefix(StringRef Name, bool IsPartition = false);
   void mangleVendorQualifier(StringRef Name);
+  void mangleVendorType(StringRef Name);
 
 private:
 
@@ -575,6 +574,7 @@ private:
   static StringRef getCallingConvQualifierName(CallingConv CC);
   void mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo info);
   void mangleExtFunctionInfo(const FunctionType *T);
+  void mangleSMEAttrs(unsigned SMEAttrs);
   void mangleBareFunctionType(const FunctionProtoType *T, bool MangleReturnType,
                               const FunctionDecl *FD = nullptr);
   void mangleNeonVectorType(const VectorType *T);
@@ -2891,6 +2891,10 @@ void CXXNameMangler::mangleVendorQualifier(StringRef name) {
   Out << 'U' << name.size() << name;
 }
 
+void CXXNameMangler::mangleVendorType(StringRef name) {
+  Out << 'u' << name.size() << name;
+}
+
 void CXXNameMangler::mangleRefQualifier(RefQualifierKind RefQualifier) {
   // <ref-qualifier> ::= R                # lvalue reference
   //                 ::= O                # rvalue-reference
@@ -3413,53 +3417,52 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     if (T->getKind() == BuiltinType::SveBFloat16 &&                            \
         isCompatibleWith(LangOptions::ClangABI::Ver17)) {                      \
       /* Prior to Clang 18.0 we used this incorrect mangled name */            \
-      type_name = "__SVBFloat16_t";                                            \
-      Out << "u" << type_name.size() << type_name;                             \
+      mangleVendorType("__SVBFloat16_t");                                      \
     } else {                                                                   \
-      type_name = MangledName;                                                 \
-      Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;  \
+      type_name = #MangledName;                                                \
+      Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name; \
     }                                                                          \
     break;
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;    \
+    type_name = #MangledName;                                                  \
+    Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
     break;
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                    \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;    \
+    type_name = #MangledName;                                                  \
+    Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
+    break;
+#define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits)              \
+  case BuiltinType::Id:                                                        \
+    type_name = #MangledName;                                                  \
+    Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
     break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
-#define PPC_VECTOR_TYPE(Name, Id, Size) \
-  case BuiltinType::Id: \
-    type_name = #Name; \
-    Out << 'u' << type_name.size() << type_name; \
+#define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
+  case BuiltinType::Id:                                                        \
+    mangleVendorType(#Name);                                                   \
     break;
 #include "clang/Basic/PPCTypes.def"
     // TODO: Check the mangling scheme for RISC-V V.
 #define RVV_TYPE(Name, Id, SingletonId)                                        \
   case BuiltinType::Id:                                                        \
-    type_name = Name;                                                          \
-    Out << 'u' << type_name.size() << type_name;                               \
+    mangleVendorType(Name);                                                    \
     break;
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_REF_TYPE(InternalName, MangledName, Id, SingletonId, AS)          \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << 'u' << type_name.size() << type_name;                               \
+    mangleVendorType(MangledName);                                             \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   case BuiltinType::Id:                                                        \
-    type_name = Name;                                                          \
-    Out << 'u' << type_name.size() << type_name;                               \
+    mangleVendorType(Name);                                                    \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case BuiltinType::Id:                                                        \
-    type_name = #Name;                                                         \
-    Out << 'u' << type_name.size() << type_name;                               \
+    mangleVendorType(#Name);                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
   }
@@ -3530,6 +3533,71 @@ void CXXNameMangler::mangleExtFunctionInfo(const FunctionType *T) {
   // FIXME: noreturn
 }
 
+enum class AAPCSBitmaskSME : unsigned {
+  ArmStreamingBit = 1 << 0,
+  ArmStreamingCompatibleBit = 1 << 1,
+  ArmAgnosticSMEZAStateBit = 1 << 2,
+  ZA_Shift = 3,
+  ZT0_Shift = 6,
+  NoState = 0b000,
+  ArmIn = 0b001,
+  ArmOut = 0b010,
+  ArmInOut = 0b011,
+  ArmPreserves = 0b100,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ArmPreserves << ZT0_Shift)
+};
+
+static AAPCSBitmaskSME encodeAAPCSZAState(unsigned SMEAttrs) {
+  switch (SMEAttrs) {
+  case FunctionType::ARM_None:
+    return AAPCSBitmaskSME::NoState;
+  case FunctionType::ARM_In:
+    return AAPCSBitmaskSME::ArmIn;
+  case FunctionType::ARM_Out:
+    return AAPCSBitmaskSME::ArmOut;
+  case FunctionType::ARM_InOut:
+    return AAPCSBitmaskSME::ArmInOut;
+  case FunctionType::ARM_Preserves:
+    return AAPCSBitmaskSME::ArmPreserves;
+  default:
+    llvm_unreachable("Unrecognised SME attribute");
+  }
+}
+
+// The mangling scheme for function types which have SME attributes is
+// implemented as a "pseudo" template:
+//
+//   '__SME_ATTRS<<normal_function_type>, <sme_state>>'
+//
+// Combining the function type with a bitmask representing the streaming and ZA
+// properties of the function's interface.
+//
+// Mangling of SME keywords is described in more detail in the AArch64 ACLE:
+// https://github.com/ARM-software/acle/blob/main/main/acle.md#c-mangling-of-sme-keywords
+//
+void CXXNameMangler::mangleSMEAttrs(unsigned SMEAttrs) {
+  if (!SMEAttrs)
+    return;
+
+  AAPCSBitmaskSME Bitmask = AAPCSBitmaskSME(0);
+  if (SMEAttrs & FunctionType::SME_PStateSMEnabledMask)
+    Bitmask |= AAPCSBitmaskSME::ArmStreamingBit;
+  else if (SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)
+    Bitmask |= AAPCSBitmaskSME::ArmStreamingCompatibleBit;
+
+  if (SMEAttrs & FunctionType::SME_AgnosticZAStateMask)
+    Bitmask |= AAPCSBitmaskSME::ArmAgnosticSMEZAStateBit;
+  else {
+    Bitmask |= encodeAAPCSZAState(FunctionType::getArmZAState(SMEAttrs))
+               << AAPCSBitmaskSME::ZA_Shift;
+
+    Bitmask |= encodeAAPCSZAState(FunctionType::getArmZT0State(SMEAttrs))
+               << AAPCSBitmaskSME::ZT0_Shift;
+  }
+
+  Out << "Lj" << static_cast<unsigned>(Bitmask) << "EE";
+}
+
 void
 CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
   // Vendor-specific qualifiers are emitted in reverse alphabetical order.
@@ -3567,6 +3635,11 @@ CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
 // <function-type> ::= [<CV-qualifiers>] F [Y]
 //                      <bare-function-type> [<ref-qualifier>] E
 void CXXNameMangler::mangleType(const FunctionProtoType *T) {
+  unsigned SMEAttrs = T->getAArch64SMEAttributes();
+
+  if (SMEAttrs)
+    Out << "11__SME_ATTRSI";
+
   mangleExtFunctionInfo(T);
 
   // Mangle CV-qualifiers, if present.  These are 'this' qualifiers,
@@ -3601,6 +3674,8 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
   mangleRefQualifier(T->getRefQualifier());
 
   Out << 'E';
+
+  mangleSMEAttrs(SMEAttrs);
 }
 
 void CXXNameMangler::mangleType(const FunctionNoProtoType *T) {
@@ -3844,6 +3919,9 @@ void CXXNameMangler::mangleNeonVectorType(const VectorType *T) {
     case BuiltinType::Float:     EltName = "float32_t"; break;
     case BuiltinType::Half:      EltName = "float16_t"; break;
     case BuiltinType::BFloat16:  EltName = "bfloat16_t"; break;
+    case BuiltinType::MFloat8:
+      EltName = "mfloat8_t";
+      break;
     default:
       llvm_unreachable("unexpected Neon vector element type");
     }
@@ -3897,6 +3975,8 @@ static StringRef mangleAArch64VectorBase(const BuiltinType *EltType) {
     return "Float64";
   case BuiltinType::BFloat16:
     return "Bfloat16";
+  case BuiltinType::MFloat8:
+    return "Mfloat8";
   default:
     llvm_unreachable("Unexpected vector element base type");
   }
@@ -4030,8 +4110,9 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
   if (T->getVectorKind() == VectorKind::SveFixedLengthPredicate)
     VecSizeInBits *= 8;
 
-  Out << "9__SVE_VLSI" << 'u' << TypeName.size() << TypeName << "Lj"
-      << VecSizeInBits << "EE";
+  Out << "9__SVE_VLSI";
+  mangleVendorType(TypeName);
+  Out << "Lj" << VecSizeInBits << "EE";
 }
 
 void CXXNameMangler::mangleAArch64FixedSveVectorType(
@@ -4117,7 +4198,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
 
   // Apend the LMUL suffix.
   auto VScale = getASTContext().getTargetInfo().getVScaleRange(
-      getASTContext().getLangOpts());
+      getASTContext().getLangOpts(), false);
   unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
 
   if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
@@ -4131,8 +4212,9 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   }
   TypeNameOS << "_t";
 
-  Out << "9__RVV_VLSI" << 'u' << TypeNameStr.size() << TypeNameStr << "Lj"
-      << VecSizeInBits << "EE";
+  Out << "9__RVV_VLSI";
+  mangleVendorType(TypeNameStr);
+  Out << "Lj" << VecSizeInBits << "EE";
 }
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(
@@ -4231,8 +4313,7 @@ void CXXNameMangler::mangleType(const ConstantMatrixType *T) {
   // Mangle matrix types as a vendor extended type:
   // u<Len>matrix_typeI<Rows><Columns><element type>E
 
-  StringRef VendorQualifier = "matrix_type";
-  Out << "u" << VendorQualifier.size() << VendorQualifier;
+  mangleVendorType("matrix_type");
 
   Out << "I";
   auto &ASTCtx = getASTContext();
@@ -4250,8 +4331,7 @@ void CXXNameMangler::mangleType(const ConstantMatrixType *T) {
 void CXXNameMangler::mangleType(const DependentSizedMatrixType *T) {
   // Mangle matrix types as a vendor extended type:
   // u<Len>matrix_typeI<row expr><column expr><element type>E
-  StringRef VendorQualifier = "matrix_type";
-  Out << "u" << VendorQualifier.size() << VendorQualifier;
+  mangleVendorType("matrix_type");
 
   Out << "I";
   mangleTemplateArgExpr(T->getRowExpr());
@@ -4297,7 +4377,7 @@ void CXXNameMangler::mangleType(const ObjCObjectType *T) {
       StringRef name = I->getName();
       QualOS << name.size() << name;
     }
-    Out << 'U' << QualStr.size() << QualStr;
+    mangleVendorQualifier(QualStr);
   }
 
   mangleType(T->getBaseType());
@@ -4431,8 +4511,6 @@ void CXXNameMangler::mangleType(const UnaryTransformType *T) {
   // If this is dependent, we need to record that. If not, we simply
   // mangle it as the underlying type since they are equivalent.
   if (T->isDependentType()) {
-    Out << "u";
-
     StringRef BuiltinName;
     switch (T->getUTTKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
@@ -4441,7 +4519,7 @@ void CXXNameMangler::mangleType(const UnaryTransformType *T) {
     break;
 #include "clang/Basic/TransformTypeTraits.def"
     }
-    Out << BuiltinName.size() << BuiltinName;
+    mangleVendorType(BuiltinName);
   }
 
   Out << "I";
@@ -4510,6 +4588,38 @@ void CXXNameMangler::mangleType(const DependentBitIntType *T) {
 
 void CXXNameMangler::mangleType(const ArrayParameterType *T) {
   mangleType(cast<ConstantArrayType>(T));
+}
+
+void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
+  llvm::SmallString<64> Str("_Res");
+  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
+  // map resource class to HLSL virtual register letter
+  switch (Attrs.ResourceClass) {
+  case llvm::dxil::ResourceClass::UAV:
+    Str += "_u";
+    break;
+  case llvm::dxil::ResourceClass::SRV:
+    Str += "_t";
+    break;
+  case llvm::dxil::ResourceClass::CBuffer:
+    Str += "_b";
+    break;
+  case llvm::dxil::ResourceClass::Sampler:
+    Str += "_s";
+    break;
+  }
+  if (Attrs.IsROV)
+    Str += "_ROV";
+  if (Attrs.RawBuffer)
+    Str += "_Raw";
+  if (T->hasContainedType())
+    Str += "_CT";
+  mangleVendorQualifier(Str);
+
+  if (T->hasContainedType()) {
+    mangleType(T->getContainedType());
+  }
+  mangleType(T->getWrappedType());
 }
 
 void CXXNameMangler::mangleIntegerLiteral(QualType T,
@@ -4822,8 +4932,7 @@ recurse:
   case Expr::AtomicExprClass:
   case Expr::SourceLocExprClass:
   case Expr::EmbedExprClass:
-  case Expr::BuiltinBitCastExprClass:
-  {
+  case Expr::BuiltinBitCastExprClass: {
     NotPrimaryExpr();
     if (!NullOut) {
       // As bad as this diagnostic is, it's better than crashing.
@@ -5274,9 +5383,8 @@ recurse:
     //  <expression> ::= u <source-name> <template-arg>* E # vendor extension
     const TypeTraitExpr *TTE = cast<TypeTraitExpr>(E);
     NotPrimaryExpr();
-    Out << 'u';
     llvm::StringRef Spelling = getTraitSpelling(TTE->getTrait());
-    Out << Spelling.size() << Spelling;
+    mangleVendorType(Spelling);
     for (TypeSourceInfo *TSI : TTE->getArgs()) {
       mangleType(TSI->getType());
     }

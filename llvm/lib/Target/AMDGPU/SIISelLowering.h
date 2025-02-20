@@ -212,12 +212,16 @@ private:
   unsigned getFusedOpcode(const SelectionDAG &DAG,
                           const SDNode *N0, const SDNode *N1) const;
   SDValue tryFoldToMad64_32(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue foldAddSub64WithZeroLowBitsTo32(SDNode *N,
+                                          DAGCombinerInfo &DCI) const;
+
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAddCarrySubCarryCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFDivCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performFMulCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFMACombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSetCCCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performCvtF32UByteNCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -311,9 +315,9 @@ public:
                                       SmallVectorImpl<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
-  bool getAddrModeArguments(IntrinsicInst * /*I*/,
-                            SmallVectorImpl<Value*> &/*Ops*/,
-                            Type *&/*AccessTy*/) const override;
+  bool getAddrModeArguments(const IntrinsicInst *I,
+                            SmallVectorImpl<Value *> &Ops,
+                            Type *&AccessTy) const override;
 
   bool isLegalFlatAddressingMode(const AddrMode &AM, unsigned AddrSpace) const;
   bool isLegalGlobalAddressingMode(const AddrMode &AM) const;
@@ -361,6 +365,7 @@ public:
 
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                unsigned Index) const override;
+  bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
 
@@ -387,7 +392,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv,
                       MachineFunction &MF, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -420,7 +425,6 @@ public:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
-  SDValue lowerDYNAMIC_STACKALLOCImpl(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
@@ -456,6 +460,7 @@ public:
                                   EVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   const LLT Ty) const override;
+  bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
   bool isFMADLegal(const MachineInstr &MI, const LLT Ty) const override;
 
@@ -535,6 +540,8 @@ public:
                                  const TargetInstrInfo *TII, unsigned &PhysReg,
                                  int &Cost) const override;
 
+  bool isProfitableToHoist(Instruction *I) const override;
+
   bool isKnownNeverNaNForTargetNode(SDValue Op,
                                     const SelectionDAG &DAG,
                                     bool SNaN = false,
@@ -544,7 +551,10 @@ public:
   AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+
+  void emitExpandAtomicAddrSpacePredicate(Instruction *AI) const;
   void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
+  void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const override;
 
   LoadInst *
   lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;

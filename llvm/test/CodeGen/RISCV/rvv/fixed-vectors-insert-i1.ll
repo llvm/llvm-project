@@ -19,8 +19,8 @@ define <1 x i1> @insertelt_idx_v1i1(<1 x i1> %x, i1 %elt, i32 zeroext %idx) noun
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    addi a2, a1, 1
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a1
@@ -52,8 +52,8 @@ define <2 x i1> @insertelt_idx_v2i1(<2 x i1> %x, i1 %elt, i32 zeroext %idx) noun
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    addi a2, a1, 1
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a1
@@ -87,8 +87,8 @@ define <8 x i1> @insertelt_idx_v8i1(<8 x i1> %x, i1 %elt, i32 zeroext %idx) noun
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    addi a2, a1, 1
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a1

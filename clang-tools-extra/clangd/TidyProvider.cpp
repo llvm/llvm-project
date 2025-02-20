@@ -46,7 +46,7 @@ public:
         [this](std::optional<llvm::StringRef> Data) {
           Value.reset();
           if (Data && !Data->empty()) {
-            tidy::DiagCallback Diagnostics = [](const llvm::SMDiagnostic &D) {
+            auto Diagnostics = [](const llvm::SMDiagnostic &D) {
               switch (D.getKind()) {
               case llvm::SourceMgr::DK_Error:
                 elog("tidy-config error at {0}:{1}:{2}: {3}", D.getFilename(),
@@ -149,7 +149,7 @@ static void mergeCheckList(std::optional<std::string> &Checks,
   *Checks = llvm::join_items(",", *Checks, List);
 }
 
-TidyProviderRef provideEnvironment() {
+TidyProvider provideEnvironment() {
   static const std::optional<std::string> User = [] {
     std::optional<std::string> Ret = llvm::sys::Process::GetEnv("USER");
 #ifdef _WIN32
@@ -167,7 +167,7 @@ TidyProviderRef provideEnvironment() {
   return [](tidy::ClangTidyOptions &, llvm::StringRef) {};
 }
 
-TidyProviderRef provideDefaultChecks() {
+TidyProvider provideDefaultChecks() {
   // These default checks are chosen for:
   //  - low false-positive rate
   //  - providing a lot of value
@@ -251,7 +251,7 @@ TidyProvider disableUnusableChecks(llvm::ArrayRef<std::string> ExtraBadChecks) {
   };
 }
 
-TidyProviderRef provideClangdConfig() {
+TidyProvider provideClangdConfig() {
   return [](tidy::ClangTidyOptions &Opts, llvm::StringRef) {
     const auto &CurTidyConfig = Config::current().Diagnostics.ClangTidy;
     if (!CurTidyConfig.Checks.empty())

@@ -36,6 +36,8 @@ Prescanner::Prescanner(const Prescanner &that, Preprocessor &prepro,
     bool isNestedInIncludeDirective)
     : messages_{that.messages_}, cooked_{that.cooked_}, preprocessor_{prepro},
       allSources_{that.allSources_}, features_{that.features_},
+      preprocessingOnly_{that.preprocessingOnly_},
+      expandIncludeLines_{that.expandIncludeLines_},
       isNestedInIncludeDirective_{isNestedInIncludeDirective},
       backslashFreeFormContinuation_{that.backslashFreeFormContinuation_},
       inFixedForm_{that.inFixedForm_},
@@ -186,14 +188,15 @@ void Prescanner::Statement() {
     }
     break;
   }
-  case LineClassification::Kind::Source:
+  case LineClassification::Kind::Source: {
     BeginStatementAndAdvance();
+    bool checkLabelField{false};
     if (inFixedForm_) {
       if (features_.IsEnabled(LanguageFeature::OldDebugLines) &&
           (*at_ == 'D' || *at_ == 'd')) {
         NextChar();
       }
-      LabelField(tokens);
+      checkLabelField = true;
     } else {
       if (skipLeadingAmpersand_) {
         skipLeadingAmpersand_ = false;
@@ -205,38 +208,42 @@ void Prescanner::Statement() {
       } else {
         SkipSpaces();
       }
-      // Check for a leading identifier that might be a keyword macro
-      // that will expand to anything indicating a non-source line, like
-      // a comment marker or directive sentinel.  If so, disable line
-      // continuation, so that NextToken() won't consume anything from
-      // following lines.
-      if (IsLegalIdentifierStart(*at_)) {
-        // TODO: Only bother with these cases when any keyword macro has
-        // been defined with replacement text that could begin a comment
-        // or directive sentinel.
-        const char *p{at_};
-        while (IsLegalInIdentifier(*++p)) {
-        }
-        CharBlock id{at_, static_cast<std::size_t>(p - at_)};
-        if (preprocessor_.IsNameDefined(id) &&
-            !preprocessor_.IsFunctionLikeDefinition(id)) {
-          TokenSequence toks;
-          toks.Put(id, GetProvenance(at_));
-          if (auto replaced{preprocessor_.MacroReplacement(toks, *this)}) {
-            auto newLineClass{ClassifyLine(*replaced, GetCurrentProvenance())};
-            if (newLineClass.kind ==
-                LineClassification::Kind::CompilerDirective) {
-              directiveSentinel_ = newLineClass.sentinel;
-              disableSourceContinuation_ = false;
-            } else {
-              disableSourceContinuation_ =
-                  newLineClass.kind != LineClassification::Kind::Source;
-            }
+    }
+    // Check for a leading identifier that might be a keyword macro
+    // that will expand to anything indicating a non-source line, like
+    // a comment marker or directive sentinel.  If so, disable line
+    // continuation, so that NextToken() won't consume anything from
+    // following lines.
+    if (IsLegalIdentifierStart(*at_)) {
+      // TODO: Only bother with these cases when any keyword macro has
+      // been defined with replacement text that could begin a comment
+      // or directive sentinel.
+      const char *p{at_};
+      while (IsLegalInIdentifier(*++p)) {
+      }
+      CharBlock id{at_, static_cast<std::size_t>(p - at_)};
+      if (preprocessor_.IsNameDefined(id) &&
+          !preprocessor_.IsFunctionLikeDefinition(id)) {
+        checkLabelField = false;
+        TokenSequence toks;
+        toks.Put(id, GetProvenance(at_));
+        if (auto replaced{preprocessor_.MacroReplacement(toks, *this)}) {
+          auto newLineClass{ClassifyLine(*replaced, GetCurrentProvenance())};
+          if (newLineClass.kind ==
+              LineClassification::Kind::CompilerDirective) {
+            directiveSentinel_ = newLineClass.sentinel;
+            disableSourceContinuation_ = false;
+          } else {
+            disableSourceContinuation_ = !replaced->empty() &&
+                newLineClass.kind != LineClassification::Kind::Source;
           }
         }
       }
     }
-    break;
+    if (checkLabelField) {
+      LabelField(tokens);
+    }
+  } break;
   }
 
   while (NextToken(tokens)) {
@@ -288,8 +295,8 @@ void Prescanner::Statement() {
       break;
     case LineClassification::Kind::Source:
       if (inFixedForm_) {
-        if (preprocessed->HasBlanks(/*after column*/ 6)) {
-          preprocessed->RemoveBlanks(/*after column*/ 6);
+        if (!preprocessingOnly_ && preprocessed->HasBlanks()) {
+          preprocessed->RemoveBlanks();
         }
       } else {
         while (SourceLineContinuation(*preprocessed)) {
@@ -622,7 +629,7 @@ const char *Prescanner::SkipCComment(const char *p) const {
 
 bool Prescanner::NextToken(TokenSequence &tokens) {
   CHECK(at_ >= start_ && at_ < limit_);
-  if (InFixedFormSource()) {
+  if (InFixedFormSource() && !preprocessingOnly_) {
     SkipSpaces();
   } else {
     if (*at_ == '/' && IsCComment(at_)) {
@@ -701,9 +708,10 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       EmitCharAndAdvance(tokens, *at_);
       QuotedCharacterLiteral(tokens, start);
     } else if (IsLetter(*at_) && !preventHollerith_ &&
-        parenthesisNesting_ > 0) {
+        parenthesisNesting_ > 0 &&
+        !preprocessor_.IsNameDefined(CharBlock{at_, 1})) {
       // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
-      // we don't misrecognize I9HOLLERITH as an identifier in the next case.
+      // we don't misrecognize I9HHOLLERITH as an identifier in the next case.
       EmitCharAndAdvance(tokens, *at_);
     }
     preventHollerith_ = false;
@@ -813,18 +821,33 @@ bool Prescanner::ExponentAndKind(TokenSequence &tokens) {
   if (ed != 'e' && ed != 'd') {
     return false;
   }
-  EmitCharAndAdvance(tokens, ed);
-  if (*at_ == '+' || *at_ == '-') {
-    EmitCharAndAdvance(tokens, *at_);
+  // Do some look-ahead to ensure that this 'e'/'d' is an exponent,
+  // not the start of an identifier that could be a macro.
+  const char *p{at_};
+  if (int n{IsSpace(++p)}) {
+    p += n;
   }
-  while (IsDecimalDigit(*at_)) {
-    EmitCharAndAdvance(tokens, *at_);
-  }
-  if (*at_ == '_') {
-    while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+  if (*p == '+' || *p == '-') {
+    if (int n{IsSpace(++p)}) {
+      p += n;
     }
   }
-  return true;
+  if (IsDecimalDigit(*p)) { // it's an exponent
+    EmitCharAndAdvance(tokens, ed);
+    if (*at_ == '+' || *at_ == '-') {
+      EmitCharAndAdvance(tokens, *at_);
+    }
+    while (IsDecimalDigit(*at_)) {
+      EmitCharAndAdvance(tokens, *at_);
+    }
+    if (*at_ == '_') {
+      while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void Prescanner::QuotedCharacterLiteral(
@@ -1267,14 +1290,18 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
     return nullptr;
   }
   p = SkipWhiteSpace(p);
-  if (InCompilerDirective()) {
-    if (*p++ != '!') {
-      return nullptr;
-    }
-    for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
-      if (*s != ToLowerCaseLetter(*p)) {
-        return nullptr;
+  if (*p == '!') {
+    ++p;
+    if (InCompilerDirective()) {
+      for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
+        if (*s != ToLowerCaseLetter(*p)) {
+          return nullptr;
+        }
       }
+    } else if (features_.IsEnabled(LanguageFeature::OpenMP) && *p == '$') {
+      ++p;
+    } else {
+      return nullptr;
     }
     p = SkipWhiteSpace(p);
     if (*p == '&') {
@@ -1404,6 +1431,21 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
       break;
     }
     *sp++ = ToLowerCaseLetter(*p);
+  }
+  // A fixed form OpenMP conditional compilation sentinel must satisfy the
+  // following criteria, for initial lines:
+  // - Columns 3 through 5 must have only white space or numbers.
+  // - Column 6 must be space or zero.
+  if (column == 3 && sentinel[0] == '$') {
+    const char *q{p};
+    for (int col{3}; col < 6; ++col, ++q) {
+      if (!IsSpaceOrTab(q) && !IsDecimalDigit(*q)) {
+        return std::nullopt;
+      }
+    }
+    if (*q != ' ' && *q != '0') {
+      return std::nullopt;
+    }
   }
   if (column == 6) {
     if (*p == '0') {

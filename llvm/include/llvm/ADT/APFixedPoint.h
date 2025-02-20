@@ -168,7 +168,9 @@ public:
   }
 
   APFixedPoint(uint64_t Val, const FixedPointSemantics &Sema)
-      : APFixedPoint(APInt(Sema.getWidth(), Val, Sema.isSigned()), Sema) {}
+      : APFixedPoint(APInt(Sema.getWidth(), Val, Sema.isSigned(),
+                           /*implicitTrunc=*/true),
+                     Sema) {}
 
   // Zero initialization.
   APFixedPoint(const FixedPointSemantics &Sema) : APFixedPoint(0, Sema) {}

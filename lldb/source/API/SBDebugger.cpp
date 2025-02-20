@@ -185,7 +185,7 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
     llvm::sys::DynamicLibrary dynlib =
         llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
     if (dynlib.isValid()) {
-      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger & debugger);
+      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger debugger);
 
       lldb::SBDebugger debugger_sb(debugger_sp);
       // This calls the bool lldb::PluginInitialize(lldb::SBDebugger debugger)
@@ -508,39 +508,31 @@ SBFile SBDebugger::GetInputFile() {
 
 FILE *SBDebugger::GetOutputFileHandle() {
   LLDB_INSTRUMENT_VA(this);
-  if (m_opaque_sp) {
-    StreamFile &stream_file = m_opaque_sp->GetOutputStream();
-    return stream_file.GetFile().GetStream();
-  }
+  if (m_opaque_sp)
+    return m_opaque_sp->GetOutputFileSP()->GetStream();
   return nullptr;
 }
 
 SBFile SBDebugger::GetOutputFile() {
   LLDB_INSTRUMENT_VA(this);
-  if (m_opaque_sp) {
-    SBFile file(m_opaque_sp->GetOutputStream().GetFileSP());
-    return file;
-  }
+  if (m_opaque_sp)
+    return SBFile(m_opaque_sp->GetOutputFileSP());
   return SBFile();
 }
 
 FILE *SBDebugger::GetErrorFileHandle() {
   LLDB_INSTRUMENT_VA(this);
 
-  if (m_opaque_sp) {
-    StreamFile &stream_file = m_opaque_sp->GetErrorStream();
-    return stream_file.GetFile().GetStream();
-  }
+  if (m_opaque_sp)
+    return m_opaque_sp->GetErrorFileSP()->GetStream();
   return nullptr;
 }
 
 SBFile SBDebugger::GetErrorFile() {
   LLDB_INSTRUMENT_VA(this);
   SBFile file;
-  if (m_opaque_sp) {
-    SBFile file(m_opaque_sp->GetErrorStream().GetFileSP());
-    return file;
-  }
+  if (m_opaque_sp)
+    return SBFile(m_opaque_sp->GetErrorFileSP());
   return SBFile();
 }
 
@@ -581,8 +573,8 @@ void SBDebugger::HandleCommand(const char *command) {
 
     sb_interpreter.HandleCommand(command, result, false);
 
-    result.PutError(m_opaque_sp->GetErrorStream().GetFileSP());
-    result.PutOutput(m_opaque_sp->GetOutputStream().GetFileSP());
+    result.PutError(m_opaque_sp->GetErrorFileSP());
+    result.PutOutput(m_opaque_sp->GetOutputFileSP());
 
     if (!m_opaque_sp->GetAsyncExecution()) {
       SBProcess process(GetCommandInterpreter().GetProcess());
@@ -1405,6 +1397,19 @@ void SBDebugger::SetTerminalWidth(uint32_t term_width) {
     m_opaque_sp->SetTerminalWidth(term_width);
 }
 
+uint32_t SBDebugger::GetTerminalHeight() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return (m_opaque_sp ? m_opaque_sp->GetTerminalWidth() : 0);
+}
+
+void SBDebugger::SetTerminalHeight(uint32_t term_height) {
+  LLDB_INSTRUMENT_VA(this, term_height);
+
+  if (m_opaque_sp)
+    m_opaque_sp->SetTerminalHeight(term_height);
+}
+
 const char *SBDebugger::GetPrompt() const {
   LLDB_INSTRUMENT_VA(this);
 
@@ -1665,6 +1670,12 @@ SBTypeSynthetic SBDebugger::GetSyntheticForType(SBTypeNameSpecifier type_name) {
     return SBTypeSynthetic();
   return SBTypeSynthetic(
       DataVisualization::GetSyntheticForType(type_name.GetSP()));
+}
+
+void SBDebugger::ResetStatistics() {
+  LLDB_INSTRUMENT_VA(this);
+  if (m_opaque_sp)
+    DebuggerStats::ResetStatistics(*m_opaque_sp, nullptr);
 }
 
 static llvm::ArrayRef<const char *> GetCategoryArray(const char **categories) {

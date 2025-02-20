@@ -13,11 +13,11 @@
 #define FORTRAN_LOWER_CLAUSEPROCESSOR_H
 
 #include "Clauses.h"
-#include "DirectivesCommon.h"
 #include "ReductionProcessor.h"
 #include "Utils.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree.h"
@@ -53,6 +53,8 @@ public:
       : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
+  bool processBare(mlir::omp::BareClauseOps &result) const;
+  bool processBind(mlir::omp::BindClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
                   mlir::omp::LoopRelatedClauseOps &result,
@@ -62,6 +64,8 @@ public:
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
   bool processDistSchedule(lower::StatementContext &stmtCtx,
                            mlir::omp::DistScheduleClauseOps &result) const;
+  bool processExclusive(mlir::Location currentLocation,
+                        mlir::omp::ExclusiveClauseOps &result) const;
   bool processFilter(lower::StatementContext &stmtCtx,
                      mlir::omp::FilterClauseOps &result) const;
   bool processFinal(lower::StatementContext &stmtCtx,
@@ -70,6 +74,8 @@ public:
       mlir::omp::HasDeviceAddrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool processHint(mlir::omp::HintClauseOps &result) const;
+  bool processInclusive(mlir::Location currentLocation,
+                        mlir::omp::InclusiveClauseOps &result) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTeams(lower::StatementContext &stmtCtx,
@@ -89,6 +95,7 @@ public:
                           mlir::omp::ThreadLimitClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
 
+  bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
   bool processAligned(mlir::omp::AlignedClauseOps &result) const;
   bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
@@ -166,10 +173,10 @@ private:
       lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
       const omp::ObjectList &objects,
       llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
-      std::map<const semantics::Symbol *,
-               llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+      std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
+      llvm::StringRef mapperIdNameRef = "") const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;

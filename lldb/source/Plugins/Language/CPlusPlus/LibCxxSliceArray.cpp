@@ -8,8 +8,8 @@
 
 #include "LibCxx.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include <optional>
 
 using namespace lldb;
@@ -61,8 +61,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -143,11 +141,6 @@ lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::Update() {
   m_stride = stride->GetValueAsUnsigned(0);
 
   return ChildCacheState::eRefetch;
-}
-
-bool lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 size_t lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::

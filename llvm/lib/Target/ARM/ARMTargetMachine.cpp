@@ -11,6 +11,7 @@
 
 #include "ARMTargetMachine.h"
 #include "ARM.h"
+#include "ARMLatencyMutations.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMMacroFusion.h"
 #include "ARMSubtarget.h"
@@ -18,7 +19,6 @@
 #include "ARMTargetTransformInfo.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "TargetInfo/ARMTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/ExecutionDomainFix.h"
@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
@@ -34,7 +33,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -222,9 +220,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool isLittle)
-    : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
-                        CPU, FS, Options, getEffectiveRelocModel(TT, RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, isLittle),
+                               TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TargetABI(computeTargetABI(TT, CPU, Options)),
       TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
 
@@ -241,7 +240,9 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       Options.EABIVersion == EABI::Unknown) {
     // musl is compatible with glibc with regard to EABI version
     if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
+         TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
          TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+         TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
          TargetTriple.getEnvironment() == Triple::MuslEABI ||
          TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
          TargetTriple.getEnvironment() == Triple::OpenHOS) &&
@@ -324,6 +325,28 @@ ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(ARMTTIImpl(this, F));
 }
 
+ScheduleDAGInstrs *
+ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  // add DAG Mutations here.
+  const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+  if (ST.hasFusion())
+    DAG->addMutation(createARMMacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+ARMBaseTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
+  // add DAG Mutations here.
+  const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+  if (ST.hasFusion())
+    DAG->addMutation(createARMMacroFusionDAGMutation());
+  if (auto Mutation = createARMLatencyMutations(ST, C->AA))
+    DAG->addMutation(std::move(Mutation));
+  return DAG;
+}
+
 ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
@@ -350,26 +373,6 @@ public:
 
   ARMBaseTargetMachine &getARMTargetMachine() const {
     return getTM<ARMBaseTargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    // add DAG Mutations here.
-    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
-    if (ST.hasFusion())
-      DAG->addMutation(createARMMacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-    // add DAG Mutations here.
-    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
-    if (ST.hasFusion())
-      DAG->addMutation(createARMMacroFusionDAGMutation());
-    return DAG;
   }
 
   void addIRPasses() override;
@@ -640,3 +643,5 @@ bool ARMBaseTargetMachine::parseMachineFunctionInfo(
   MF.getInfo<ARMFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
   return false;
 }
+
+void ARMBaseTargetMachine::reset() { SubtargetMap.clear(); }
