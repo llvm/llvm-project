@@ -219,7 +219,7 @@ void InstrumentationRuntimeLibrary::link(
   }
   outs() << "BOLT-INFO: output linked against instrumentation runtime "
             "library, lib entry point is 0x"
-         << Twine::utohexstr(RuntimeFiniAddress) << "\n";
+         << Twine::utohexstr(RuntimeStartAddress) << "\n";
   outs() << "BOLT-INFO: clear procedure is 0x"
          << Twine::utohexstr(
                 Linker.lookupSymbol("__bolt_instr_clear_counters").value_or(0))

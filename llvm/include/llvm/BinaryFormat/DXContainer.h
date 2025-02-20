@@ -14,8 +14,6 @@
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/BinaryStreamError.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -550,18 +548,10 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
 
 struct RootSignatureValidations {
 
-  static Expected<uint32_t> validateRootFlag(uint32_t Flags) {
-    if ((Flags & ~0x80000fff) != 0)
-      return llvm::make_error<BinaryStreamError>("Invalid Root Signature flag");
-    return Flags;
-  }
+  static bool isValidRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
-  static Expected<uint32_t> validateVersion(uint32_t Version) {
-    if (Version == 1 || Version == 2)
-      return Version;
-
-    return llvm::make_error<BinaryStreamError>(
-        "Invalid Root Signature Version");
+  static bool isValidVersion(uint32_t Version) {
+    return (Version == 1 || Version == 2);
   }
 };
 

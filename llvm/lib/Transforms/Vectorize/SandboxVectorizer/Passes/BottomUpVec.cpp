@@ -14,19 +14,9 @@
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Region.h"
 #include "llvm/SandboxIR/Utils.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
-
-static cl::opt<unsigned>
-    OverrideVecRegBits("sbvec-vec-reg-bits", cl::init(0), cl::Hidden,
-                       cl::desc("Override the vector register size in bits, "
-                                "which is otherwise found by querying TTI."));
-static cl::opt<bool>
-    AllowNonPow2("sbvec-allow-non-pow2", cl::init(false), cl::Hidden,
-                 cl::desc("Allow non-power-of-2 vectorization."));
 
 #ifndef NDEBUG
 static cl::opt<bool>
@@ -36,10 +26,6 @@ static cl::opt<bool>
 #endif // NDEBUG
 
 namespace sandboxir {
-
-BottomUpVec::BottomUpVec(StringRef Pipeline)
-    : FunctionPass("bottom-up-vec"),
-      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
 
 static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
                                           unsigned OpIdx) {
@@ -328,12 +314,14 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
     const ShuffleMask &Mask =
         cast<DiamondReuseWithShuffle>(LegalityRes).getMask();
     NewVec = createShuffle(VecOp, Mask, UserBB);
+    assert(NewVec->getType() == VecOp->getType() &&
+           "Expected same type! Bad mask ?");
     break;
   }
   case LegalityResultID::DiamondReuseMultiInput: {
     const auto &Descr =
         cast<DiamondReuseMultiInput>(LegalityRes).getCollectDescr();
-    Type *ResTy = FixedVectorType::get(Bndl[0]->getType(), Bndl.size());
+    Type *ResTy = VecUtils::getWideType(Bndl[0]->getType(), Bndl.size());
 
     // TODO: Try to get WhereIt without creating a vector.
     SmallVector<Value *, 4> DescrInstrs;
@@ -345,7 +333,8 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
         getInsertPointAfterInstrs(DescrInstrs, UserBB);
 
     Value *LastV = PoisonValue::get(ResTy);
-    for (auto [Lane, ElmDescr] : enumerate(Descr.getDescrs())) {
+    unsigned Lane = 0;
+    for (const auto &ElmDescr : Descr.getDescrs()) {
       Value *VecOp = ElmDescr.getValue();
       Context &Ctx = VecOp->getContext();
       Value *ValueToInsert;
@@ -357,10 +346,32 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
       } else {
         ValueToInsert = VecOp;
       }
-      ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
-      Value *Ins = InsertElementInst::create(LastV, ValueToInsert, LaneC,
-                                             WhereIt, Ctx, "VIns");
-      LastV = Ins;
+      auto NumLanesToInsert = VecUtils::getNumLanes(ValueToInsert);
+      if (NumLanesToInsert == 1) {
+        // If we are inserting a scalar element then we need a single insert.
+        //   %VIns = insert %DstVec,  %SrcScalar, Lane
+        ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
+        LastV = InsertElementInst::create(LastV, ValueToInsert, LaneC, WhereIt,
+                                          Ctx, "VIns");
+      } else {
+        // If we are inserting a vector element then we need to extract and
+        // insert each vector element one by one with a chain of extracts and
+        // inserts, for example:
+        //   %VExt0 = extract %SrcVec, 0
+        //   %VIns0 = insert  %DstVec, %Vect0, Lane + 0
+        //   %VExt1 = extract %SrcVec, 1
+        //   %VIns1 = insert  %VIns0,  %Vect0, Lane + 1
+        for (unsigned LnCnt = 0; LnCnt != NumLanesToInsert; ++LnCnt) {
+          auto *ExtrIdxC = ConstantInt::get(Type::getInt32Ty(Ctx), LnCnt);
+          auto *ExtrI = ExtractElementInst::create(ValueToInsert, ExtrIdxC,
+                                                   WhereIt, Ctx, "VExt");
+          unsigned InsLane = Lane + LnCnt;
+          auto *InsLaneC = ConstantInt::get(Type::getInt32Ty(Ctx), InsLane);
+          LastV = InsertElementInst::create(LastV, ExtrI, InsLaneC, WhereIt,
+                                            Ctx, "VIns");
+        }
+      }
+      Lane += NumLanesToInsert;
     }
     NewVec = LastV;
     break;
@@ -388,6 +399,7 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
 }
 
 bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
+  Change = false;
   DeadInstrCandidates.clear();
   Legality->clear();
   vectorizeRec(Bndl, {}, /*Depth=*/0);
@@ -395,83 +407,21 @@ bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
   return Change;
 }
 
-bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
+bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
+  const auto &SeedSlice = Rgn.getAux();
+  assert(SeedSlice.size() >= 2 && "Bad slice!");
+  Function &F = *SeedSlice[0]->getParent()->getParent();
   IMaps = std::make_unique<InstrMaps>(F.getContext());
   Legality = std::make_unique<LegalityAnalysis>(
       A.getAA(), A.getScalarEvolution(), F.getParent()->getDataLayout(),
       F.getContext(), *IMaps);
-  Change = false;
-  const auto &DL = F.getParent()->getDataLayout();
-  unsigned VecRegBits =
-      OverrideVecRegBits != 0
-          ? OverrideVecRegBits
-          : A.getTTI()
-                .getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-                .getFixedValue();
 
-  // TODO: Start from innermost BBs first
-  for (auto &BB : F) {
-    SeedCollector SC(&BB, A.getScalarEvolution());
-    for (SeedBundle &Seeds : SC.getStoreSeeds()) {
-      unsigned ElmBits =
-          Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
-                                Seeds[Seeds.getFirstUnusedElementIdx()])),
-                            DL);
-
-      auto DivideBy2 = [](unsigned Num) {
-        auto Floor = VecUtils::getFloorPowerOf2(Num);
-        if (Floor == Num)
-          return Floor / 2;
-        return Floor;
-      };
-      // Try to create the largest vector supported by the target. If it fails
-      // reduce the vector size by half.
-      for (unsigned SliceElms = std::min(VecRegBits / ElmBits,
-                                         Seeds.getNumUnusedBits() / ElmBits);
-           SliceElms >= 2u; SliceElms = DivideBy2(SliceElms)) {
-        if (Seeds.allUsed())
-          break;
-        // Keep trying offsets after FirstUnusedElementIdx, until we vectorize
-        // the slice. This could be quite expensive, so we enforce a limit.
-        for (unsigned Offset = Seeds.getFirstUnusedElementIdx(),
-                      OE = Seeds.size();
-             Offset + 1 < OE; Offset += 1) {
-          // Seeds are getting used as we vectorize, so skip them.
-          if (Seeds.isUsed(Offset))
-            continue;
-          if (Seeds.allUsed())
-            break;
-
-          auto SeedSlice =
-              Seeds.getSlice(Offset, SliceElms * ElmBits, !AllowNonPow2);
-          if (SeedSlice.empty())
-            continue;
-
-          assert(SeedSlice.size() >= 2 && "Should have been rejected!");
-
-          // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
-          SmallVector<Value *> SeedSliceVals(SeedSlice.begin(),
-                                             SeedSlice.end());
-          // Create an empty region. Instructions get added to the region
-          // automatically by the callbacks.
-          auto &Ctx = F.getContext();
-          Region Rgn(Ctx, A.getTTI());
-          // Save the state of the IR before we make any changes. The
-          // transaction gets accepted/reverted by the tr-accept-or-revert pass.
-          Ctx.save();
-          // Try to vectorize starting from the seed slice. The returned value
-          // is true if we found vectorizable code and generated some vector
-          // code for it. It does not mean that the code is profitable.
-          bool VecSuccess = tryVectorize(SeedSliceVals);
-          if (VecSuccess)
-            // WARNING: All passes should return false, except those that
-            // accept/revert the state.
-            Change |= RPM.runOnRegion(Rgn, A);
-        }
-      }
-    }
-  }
-  return Change;
+  // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
+  SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());
+  // Try to vectorize starting from the seed slice. The returned value
+  // is true if we found vectorizable code and generated some vector
+  // code for it. It does not mean that the code is profitable.
+  return tryVectorize(SeedSliceVals);
 }
 
 } // namespace sandboxir

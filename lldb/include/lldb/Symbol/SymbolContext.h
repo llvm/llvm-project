@@ -467,7 +467,7 @@ public:
   const_iterator begin() const { return m_symbol_contexts.begin(); }
   const_iterator end() const { return m_symbol_contexts.end(); }
 
-  typedef AdaptedIterable<collection, SymbolContext, vector_adapter>
+  typedef llvm::iterator_range<collection::const_iterator>
       SymbolContextIterable;
   SymbolContextIterable SymbolContexts() {
     return SymbolContextIterable(m_symbol_contexts);
