@@ -1641,6 +1641,30 @@ the function call.
                            ptr %ctxt, ptr %task, ptr %actor)
   unreachable
 
+
+.. _coro.outside.frame:
+
+'llvm.coro.outside.frame' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+    declare void @llvm.coro.outside.frame(ptr %p)
+
+Overview:
+"""""""""
+
+TODO
+
+Arguments:
+""""""""""
+
+TODO
+
+Semantics:
+""""""""""
+
+TODO
+
 .. _coro.suspend:
 .. _suspend points:
 
@@ -2185,6 +2209,7 @@ Metadata
 '``coro.outside.frame``' Metadata
 ---------------------------------
 
+TODO: Deprecate/remove
 ``coro.outside.frame`` metadata may be attached to an alloca instruction to
 to signify that it shouldn't be promoted to the coroutine frame, useful for
 filtering allocas out by the frontend when emitting internal control mechanisms.
