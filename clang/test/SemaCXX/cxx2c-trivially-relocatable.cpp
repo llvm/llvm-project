@@ -40,16 +40,16 @@ class H trivially_relocatable_if_eligible {
 };
 
 struct Incomplete; // expected-note {{forward declaration of 'Incomplete'}}
-static_assert(__is_cpp_trivially_relocatable(Incomplete));  // expected-error {{incomplete type 'Incomplete' used in type trait expression}}
-static_assert(__is_cpp_trivially_relocatable(Trivial));
-static_assert(__is_cpp_trivially_relocatable(G));
-static_assert(__is_cpp_trivially_relocatable(H));
-static_assert(__is_cpp_trivially_relocatable(int));
-static_assert(__is_cpp_trivially_relocatable(void*));
-static_assert(!__is_cpp_trivially_relocatable(int&));
-static_assert(!__is_cpp_trivially_relocatable(Trivial&));
-static_assert(__is_cpp_trivially_relocatable(const Trivial));
-static_assert(__is_cpp_trivially_relocatable(Trivial[1]));
+static_assert(__builtin_is_cpp_trivially_relocatable(Incomplete));  // expected-error {{incomplete type 'Incomplete' used in type trait expression}}
+static_assert(__builtin_is_cpp_trivially_relocatable(Trivial));
+static_assert(__builtin_is_cpp_trivially_relocatable(G));
+static_assert(__builtin_is_cpp_trivially_relocatable(H));
+static_assert(__builtin_is_cpp_trivially_relocatable(int));
+static_assert(__builtin_is_cpp_trivially_relocatable(void*));
+static_assert(!__builtin_is_cpp_trivially_relocatable(int&));
+static_assert(!__builtin_is_cpp_trivially_relocatable(Trivial&));
+static_assert(__builtin_is_cpp_trivially_relocatable(const Trivial));
+static_assert(__builtin_is_cpp_trivially_relocatable(Trivial[1]));
 
 struct UserDtr {
     ~UserDtr();
@@ -85,14 +85,14 @@ struct UserDeletedMove{
     UserDeletedMove(const UserDeletedMove&) = default;
 };
 
-static_assert(!__is_cpp_trivially_relocatable(UserDtr));
-static_assert(__is_cpp_trivially_relocatable(DefaultedDtr));
-static_assert(!__is_cpp_trivially_relocatable(UserMoveWithDefaultCopy));
-static_assert(!__is_cpp_trivially_relocatable(UserMove));
-static_assert(!__is_cpp_trivially_relocatable(UserCopy));
-static_assert(__is_cpp_trivially_relocatable(UserMoveDefault));
-static_assert(__is_cpp_trivially_relocatable(UserCopyDefault));
-static_assert(__is_cpp_trivially_relocatable(UserDeletedMove));
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserDtr));
+static_assert(__builtin_is_cpp_trivially_relocatable(DefaultedDtr));
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserMoveWithDefaultCopy));
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserMove));
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserCopy));
+static_assert(__builtin_is_cpp_trivially_relocatable(UserMoveDefault));
+static_assert(__builtin_is_cpp_trivially_relocatable(UserCopyDefault));
+static_assert(__builtin_is_cpp_trivially_relocatable(UserDeletedMove));
 
 template <typename T>
 class TestDependentErrors trivially_relocatable_if_eligible : T {};
@@ -109,15 +109,15 @@ struct DeletedMoveAssign {
     DeletedMoveAssign& operator=(DeletedMoveAssign&&) = delete;
 };
 
-static_assert(!__is_cpp_trivially_relocatable(DeletedMove));
-static_assert(!__is_cpp_trivially_relocatable(DeletedCopy));
-static_assert(!__is_cpp_trivially_relocatable(DeletedMoveAssign));
+static_assert(!__builtin_is_cpp_trivially_relocatable(DeletedMove));
+static_assert(!__builtin_is_cpp_trivially_relocatable(DeletedCopy));
+static_assert(!__builtin_is_cpp_trivially_relocatable(DeletedMoveAssign));
 
 union U {
     G g;
 };
 static_assert(!__is_trivially_copyable(U));
-static_assert(__is_cpp_trivially_relocatable(U));
+static_assert(__builtin_is_cpp_trivially_relocatable(U));
 
 
 namespace replaceable {
