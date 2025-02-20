@@ -18,23 +18,21 @@
 // equal_range shall not participate in overload resolution unless the
 // qualified-id Compare::is_transparent is valid and denotes a type
 
-
 #include <map>
 #include <cassert>
 
 #include "test_macros.h"
 #include "is_transparent.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::map<int, double, transparent_less> M;
     assert(M().count(C2Int{5}) == 0);
-    }
-    {
+  }
+  {
     typedef std::map<int, double, transparent_less_not_referenceable> M;
     assert(M().count(C2Int{5}) == 0);
-    }
+  }
 
   return 0;
 }

@@ -47,6 +47,6 @@ int main(void) {
 // TRACE:     launchKernel
 // NDEBG:     cxx_function_name<S>(int, S*)
 // NDEBG:     main
-// DEBUG:     cxx_function_name<S>(int, S*) {{.*}}kernel_trap.cpp:
-// DEBUG:     main {{.*}}kernel_trap.cpp:
+// DEBUG:     cxx_function_name<S>(int, S*) {{.*}}kernel_trap.cpp
+// DEBUG:     main {{.*}}kernel_trap.cpp
 // clang-format on

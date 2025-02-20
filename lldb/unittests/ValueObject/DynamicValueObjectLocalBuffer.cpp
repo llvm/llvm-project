@@ -66,11 +66,8 @@ struct MockLanguageRuntime : public LanguageRuntime {
         *ast, "TypeWitInt", ast->GetBasicType(lldb::BasicType::eBasicTypeInt),
         "theIntField", LanguageType::eLanguageTypeC_plus_plus);
     class_type_or_name.SetCompilerType(int_type);
-    local_buffer = {(uint8_t *)in_value.GetValue().GetScalar().ULongLong(
-                        LLDB_INVALID_ADDRESS),
-                    static_cast<size_t>(in_value.GetLocalBufferSize())};
+    local_buffer = in_value.GetLocalBuffer();
     value_type = Value::ValueType::HostAddress;
-
     return true;
   }
 

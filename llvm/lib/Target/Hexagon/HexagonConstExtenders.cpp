@@ -1040,7 +1040,7 @@ unsigned HCE::getDirectRegReplacement(unsigned ExtOpc) const {
 // extender. It may be possible for MI to be tweaked to work for a register
 // defined with a slightly different value. For example
 //   ... = L2_loadrub_io Rb, 1
-// can be modifed to be
+// can be modified to be
 //   ... = L2_loadrub_io Rb', 0
 // if Rb' = Rb+1.
 // The range for Rb would be [Min+1, Max+1], where [Min, Max] is a range

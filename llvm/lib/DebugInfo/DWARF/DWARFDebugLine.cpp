@@ -1274,13 +1274,14 @@ Error DWARFDebugLine::LineTable::parse(
 
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {
-    llvm::sort(Sequences, Sequence::orderByHighPC);
+    llvm::stable_sort(Sequences, Sequence::orderByHighPC);
     // Note: actually, instruction address ranges of sequences should not
     // overlap (in shared objects and executables). If they do, the address
     // lookup would still work, though, but result would be ambiguous.
     // We don't report warning in this case. For example,
     // sometimes .so compiled from multiple object files contains a few
     // rudimentary sequences for address ranges [0x0, 0xsomething).
+    // Address ranges may also overlap when using ICF.
   }
 
   // Terminate the table with a final blank line to clearly delineate it from

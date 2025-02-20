@@ -1212,6 +1212,22 @@ struct FormatStyle {
   /// \version 3.7
   bool BinPackArguments;
 
+  /// If ``BinPackLongBracedList`` is ``true`` it overrides
+  /// ``BinPackArguments`` if there are 20 or more items in a braced
+  /// initializer list.
+  /// \code
+  ///    BinPackLongBracedList: false  vs.    BinPackLongBracedList: true
+  ///    vector<int> x{                       vector<int> x{1, 2, ...,
+  ///                                                       20, 21};
+  ///                1,
+  ///                2,
+  ///                ...,
+  ///                20,
+  ///                21};
+  /// \endcode
+  /// \version 21
+  bool BinPackLongBracedList;
+
   /// Different way to try to fit all parameters on a line.
   enum BinPackParametersStyle : int8_t {
     /// Bin-pack parameters.
@@ -5266,6 +5282,7 @@ struct FormatStyle {
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
            BinPackArguments == R.BinPackArguments &&
+           BinPackLongBracedList == R.BinPackLongBracedList &&
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&

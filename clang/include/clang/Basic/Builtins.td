@@ -839,6 +839,12 @@ def BuiltinAssumeAligned : Builtin {
   let Prototype = "void*(void const*, size_t, ...)";
 }
 
+def BuiltinAssumeDereferenceable : Builtin {
+  let Spellings = ["__builtin_assume_dereferenceable"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(void const*, _Constant size_t)";
+}
+
 def BuiltinFree : Builtin {
   let Spellings = ["__builtin_free"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
@@ -4763,6 +4769,12 @@ def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_all"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool(...)";
+}
+
+def HLSLAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_and"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {

@@ -209,6 +209,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genChdir,
      {{{"name", asAddr}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"clock64", &I::genClock64, {}, /*isElemental=*/false},
     {"cmplx",
      &I::genCmplx,
      {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
@@ -809,8 +810,8 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
 // Generate a call to the Fortran runtime library providing
 // support for 128-bit float math.
 // On 'HAS_LDBL128' targets the implementation
-// is provided by FortranRuntime, otherwise, it is done via
-// FortranFloat128Math library. In the latter case the compiler
+// is provided by flang_rt, otherwise, it is done via the
+// libflang_rt.quadmath library. In the latter case the compiler
 // has to be built with FLANG_RUNTIME_F128_MATH_LIB to guarantee
 // proper linking actions in the driver.
 static mlir::Value genLibF128Call(fir::FirOpBuilder &builder,
@@ -1057,8 +1058,10 @@ static constexpr MathOperation mathOperations[] = {
     {"acos", "cacos", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
     {"acos", RTNAME_STRING(CAcosF128), FuncTypeComplex16Complex16,
      genLibF128Call},
-    {"acosh", "acoshf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"acosh", "acosh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"acosh", "acoshf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::AcoshOp>},
+    {"acosh", "acosh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AcoshOp>},
     {"acosh", RTNAME_STRING(AcoshF128), FuncTypeReal16Real16, genLibF128Call},
     {"acosh", "cacoshf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genLibCall},
@@ -1082,15 +1085,19 @@ static constexpr MathOperation mathOperations[] = {
     {"anint", "llvm.round.f80", genFuncType<Ty::Real<10>, Ty::Real<10>>,
      genMathOp<mlir::LLVM::RoundOp>},
     {"anint", RTNAME_STRING(RoundF128), FuncTypeReal16Real16, genLibF128Call},
-    {"asin", "asinf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"asin", "asin", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"asin", "asinf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::AsinOp>},
+    {"asin", "asin", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AsinOp>},
     {"asin", RTNAME_STRING(AsinF128), FuncTypeReal16Real16, genLibF128Call},
     {"asin", "casinf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"asin", "casin", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
     {"asin", RTNAME_STRING(CAsinF128), FuncTypeComplex16Complex16,
      genLibF128Call},
-    {"asinh", "asinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"asinh", "asinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"asinh", "asinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::AsinhOp>},
+    {"asinh", "asinh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AsinhOp>},
     {"asinh", RTNAME_STRING(AsinhF128), FuncTypeReal16Real16, genLibF128Call},
     {"asinh", "casinhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genLibCall},
@@ -1119,8 +1126,10 @@ static constexpr MathOperation mathOperations[] = {
      genMathOp<mlir::math::Atan2Op>},
     {"atan2", RTNAME_STRING(Atan2F128), FuncTypeReal16Real16Real16,
      genLibF128Call},
-    {"atanh", "atanhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"atanh", "atanh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"atanh", "atanhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::AtanhOp>},
+    {"atanh", "atanh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AtanhOp>},
     {"atanh", RTNAME_STRING(AtanhF128), FuncTypeReal16Real16, genLibF128Call},
     {"atanh", "catanhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genLibCall},
@@ -3218,6 +3227,16 @@ IntrinsicLibrary::genChdir(std::optional<mlir::Type> resultType,
   }
 
   return {};
+}
+
+// CLOCK64
+mlir::Value IntrinsicLibrary::genClock64(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.read.ptx.sreg.clock64";
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(context, {}, {resultType});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
 }
 
 // CMPLX
