@@ -261,6 +261,10 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   assert(UseBitFieldTypeAlignment && "bitfields affect type alignment");
   UseZeroLengthBitfieldAlignment = true;
 
+  // AAPCS64 allows any "fundamental integer data type" to be used for
+  // over-sized bitfields, which includes 128-bit integers.
+  LargestOverSizedBitfieldContainer = 128;
+
   HasUnalignedAccess = true;
 
   // AArch64 targets default to using the ARM C++ ABI.
