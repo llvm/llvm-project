@@ -1517,6 +1517,28 @@ LogicalResult arith::TruncIOp::verify() {
 /// Perform safe const propagation for truncf, i.e., only propagate if FP value
 /// can be represented without precision loss.
 OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
+  if (matchPattern(getOperand(), m_Op<arith::ExtFOp>())) {
+    Value src = getOperand().getDefiningOp()->getOperand(0);
+    Type srcType = getElementTypeOrSelf(src.getType());
+    Type dstType = getElementTypeOrSelf(getType());
+    // truncf(extf(a)) -> truncf(a)
+    if (llvm::cast<FloatType>(srcType).getWidth() >
+        llvm::cast<FloatType>(dstType).getWidth()) {
+      setOperand(src);
+      return getResult();
+    }
+
+    // truncf(extf(a)) -> a
+    if (srcType == dstType)
+      return src;
+  }
+
+  // truncf(truncf(a)) -> truncf(a)
+  if (matchPattern(getOperand(), m_Op<arith::TruncFOp>())) {
+    setOperand(getOperand().getDefiningOp()->getOperand(0));
+    return getResult();
+  }
+  
   auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
   const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
   return constFoldCastOp<FloatAttr, FloatAttr>(
