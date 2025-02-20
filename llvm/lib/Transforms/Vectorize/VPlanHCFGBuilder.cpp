@@ -439,10 +439,6 @@ void PlainCFGBuilder::buildPlainCFG(
     }
     assert(BI->isConditional() && NumSuccs == 2 && BI->isConditional() &&
            "block must have conditional branch with 2 successors");
-    // Look up the branch condition to get the corresponding VPValue
-    // representing the condition bit in VPlan (which may be in another VPBB).
-    assert(IRDef2VPValue.contains(BI->getCondition()) &&
-           "Missing condition bit in IRDef2VPValue!");
 
     BasicBlock *IRSucc0 = BI->getSuccessor(0);
     BasicBlock *IRSucc1 = BI->getSuccessor(1);

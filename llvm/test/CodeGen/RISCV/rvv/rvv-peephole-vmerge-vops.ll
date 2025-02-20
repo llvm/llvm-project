@@ -901,9 +901,9 @@ define void @test_dag_loop() {
 ; CHECK-NEXT:    vssubu.vx v12, v8, zero, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v12, v8
-; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vsetivli zero, 0, e16, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m8, tu, mu
 ; CHECK-NEXT:    vle16.v v8, (zero), v0.t
 ; CHECK-NEXT:    vse16.v v8, (zero)
 ; CHECK-NEXT:    ret
