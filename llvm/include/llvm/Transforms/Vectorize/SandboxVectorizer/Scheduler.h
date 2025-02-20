@@ -61,7 +61,18 @@ class ReadyListContainer {
 
 public:
   ReadyListContainer() : List(Cmp) {}
-  void insert(DGNode *N) { List.push(N); }
+  void insert(DGNode *N) {
+#ifndef NDEBUG
+    assert(!N->scheduled() && "Don't insert a scheduled node!");
+    auto ListCopy = List;
+    while (!ListCopy.empty()) {
+      DGNode *Top = ListCopy.top();
+      ListCopy.pop();
+      assert(Top != N && "Node already exists in ready list!");
+    }
+#endif
+    List.push(N);
+  }
   DGNode *pop() {
     auto *Back = List.top();
     List.pop();
@@ -101,7 +112,9 @@ private:
   ContainerTy Nodes;
 
   /// Called by the DGNode destructor to avoid accessing freed memory.
-  void eraseFromBundle(DGNode *N) { Nodes.erase(find(Nodes, N)); }
+  void eraseFromBundle(DGNode *N) {
+    Nodes.erase(std::remove(Nodes.begin(), Nodes.end(), N), Nodes.end());
+  }
   friend DGNode::~DGNode(); // For eraseFromBundle().
 
 public:
