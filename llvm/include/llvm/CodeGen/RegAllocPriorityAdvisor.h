@@ -9,8 +9,10 @@
 #ifndef LLVM_CODEGEN_REGALLOCPRIORITYADVISOR_H
 #define LLVM_CODEGEN_REGALLOCPRIORITYADVISOR_H
 
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -68,20 +70,72 @@ private:
   unsigned getPriority(const LiveInterval &LI) const override;
 };
 
-class RegAllocPriorityAdvisorAnalysis : public ImmutablePass {
+/// Common provider for getting the priority advisor and logging rewards.
+/// Legacy analysis forwards all calls to this provider.
+/// New analysis serves the provider as the analysis result.
+/// Expensive setup is done in the constructor, so that the advisor can be
+/// created quickly for every machine function.
+/// TODO: Remove once legacy PM support is dropped.
+class RegAllocPriorityAdvisorProvider {
 public:
   enum class AdvisorMode : int { Default, Release, Development, Dummy };
 
-  RegAllocPriorityAdvisorAnalysis(AdvisorMode Mode)
-      : ImmutablePass(ID), Mode(Mode){};
+  RegAllocPriorityAdvisorProvider(AdvisorMode Mode) : Mode(Mode) {}
+
+  virtual ~RegAllocPriorityAdvisorProvider() = default;
+
+  virtual void logRewardIfNeeded(const MachineFunction &MF,
+                                 function_ref<float()> GetReward) {};
+
+  virtual std::unique_ptr<RegAllocPriorityAdvisor>
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             SlotIndexes &SI) = 0;
+
+  AdvisorMode getAdvisorMode() const { return Mode; }
+
+private:
+  const AdvisorMode Mode;
+};
+
+class RegAllocPriorityAdvisorAnalysis
+    : public AnalysisInfoMixin<RegAllocPriorityAdvisorAnalysis> {
+  static AnalysisKey Key;
+  friend AnalysisInfoMixin<RegAllocPriorityAdvisorAnalysis>;
+
+public:
+  struct Result {
+    // Owned by this analysis.
+    RegAllocPriorityAdvisorProvider *Provider;
+
+    bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                    MachineFunctionAnalysisManager::Invalidator &Inv) {
+      auto PAC = PA.getChecker<RegAllocPriorityAdvisorAnalysis>();
+      return !PAC.preservedWhenStateless() ||
+             Inv.invalidate<SlotIndexesAnalysis>(MF, PA);
+    }
+  };
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+
+private:
+  void initializeProvider(LLVMContext &Ctx);
+  void initializeMLProvider(RegAllocPriorityAdvisorProvider::AdvisorMode Mode,
+                            LLVMContext &Ctx);
+  std::unique_ptr<RegAllocPriorityAdvisorProvider> Provider;
+};
+
+class RegAllocPriorityAdvisorAnalysisLegacy : public ImmutablePass {
+public:
+  using AdvisorMode = RegAllocPriorityAdvisorProvider::AdvisorMode;
+  RegAllocPriorityAdvisorAnalysisLegacy(AdvisorMode Mode)
+      : ImmutablePass(ID), Mode(Mode) {};
   static char ID;
 
   /// Get an advisor for the given context (i.e. machine function, etc)
-  virtual std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
+  RegAllocPriorityAdvisorProvider &getProvider() { return *Provider; }
   AdvisorMode getAdvisorMode() const { return Mode; }
   virtual void logRewardIfNeeded(const MachineFunction &MF,
-                                 llvm::function_ref<float()> GetReward){};
+                                 llvm::function_ref<float()> GetReward) {};
 
 protected:
   // This analysis preserves everything, and subclasses may have additional
@@ -90,6 +144,8 @@ protected:
     AU.setPreservesAll();
   }
 
+  std::unique_ptr<RegAllocPriorityAdvisorProvider> Provider;
+
 private:
   StringRef getPassName() const override;
   const AdvisorMode Mode;
@@ -97,11 +153,19 @@ private:
 
 /// Specialization for the API used by the analysis infrastructure to create
 /// an instance of the priority advisor.
-template <> Pass *callDefaultCtor<RegAllocPriorityAdvisorAnalysis>();
+template <> Pass *callDefaultCtor<RegAllocPriorityAdvisorAnalysisLegacy>();
 
-RegAllocPriorityAdvisorAnalysis *createReleaseModePriorityAdvisor();
+RegAllocPriorityAdvisorAnalysisLegacy *
+createReleaseModePriorityAdvisorAnalysis();
 
-RegAllocPriorityAdvisorAnalysis *createDevelopmentModePriorityAdvisor();
+RegAllocPriorityAdvisorAnalysisLegacy *
+createDevelopmentModePriorityAdvisorAnalysis();
+
+LLVM_ATTRIBUTE_RETURNS_NONNULL RegAllocPriorityAdvisorProvider *
+createReleaseModePriorityAdvisorProvider();
+
+LLVM_ATTRIBUTE_RETURNS_NONNULL RegAllocPriorityAdvisorProvider *
+createDevelopmentModePriorityAdvisorProvider(LLVMContext &Ctx);
 
 } // namespace llvm
 
