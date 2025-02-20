@@ -21,6 +21,7 @@
 #include "flang/Frontend/TextDiagnosticBuffer.h"
 #include "flang/FrontendTool/Utils.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -28,7 +29,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/X86TargetParser.h"
-#include "llvm/ADT/StringExtras.h"
 
 #include <cstdio>
 
