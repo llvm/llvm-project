@@ -42087,9 +42087,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     }
 
     // vbroadcast(vector load X) -> vbroadcast_load
-    if ((SrcVT == MVT::v2f64 || SrcVT == MVT::v4f32 || SrcVT == MVT::v2i64 ||
-         SrcVT == MVT::v4i32) &&
-        Src.hasOneUse() && ISD::isNormalLoad(Src.getNode())) {
+    if (Src.hasOneUse() && ISD::isNormalLoad(Src.getNode())) {
       LoadSDNode *LN = cast<LoadSDNode>(Src);
       // Unless the load is volatile or atomic.
       if (LN->isSimple()) {
