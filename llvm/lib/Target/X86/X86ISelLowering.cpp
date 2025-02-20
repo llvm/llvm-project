@@ -40081,7 +40081,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       (Depth >= VariableCrossLaneShuffleDepth) || NumVariableMasks;
   AllowVariablePerLaneMask &=
       (Depth >= VariablePerLaneShuffleDepth) || NumVariableMasks;
-  // VPERMI2W/VPERMI2B are 3 uops on Skylake and Icelake so we require a
+  // VPERM2W/VPERM2B are 3 uops on Skylake and Icelake so we require a
   // higher depth before combining them.
   int BWIVPERMV3ShuffleDepth =
       VariableCrossLaneShuffleDepth + 2 - NumVariableMasks;
