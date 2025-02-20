@@ -16,8 +16,9 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXTARGETTRANSFORMINFO_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXTARGETTRANSFORMINFO_H
 
-#include "NVPTXTargetMachine.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
+#include "NVPTXTargetMachine.h"
+#include "NVPTXUtilities.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -103,6 +104,26 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
+
+  std::optional<InstructionCost>
+  getBuildVectorCost(VectorType *VecTy, ArrayRef<Value *> Operands,
+                     TTI::TargetCostKind CostKind) {
+    if (CostKind != TTI::TCK_RecipThroughput)
+      return std::nullopt;
+    auto VT = getTLI()->getValueType(DL, VecTy);
+    if (all_of(Operands, [](Value *Op) { return isa<Constant>(Op); }))
+      return TTI::TCC_Free;
+    if (Isv2x16VT(VT))
+      return 1; // Single vector mov
+    if (VT == MVT::v4i8) {
+      InstructionCost Cost = 3; // 3 x PRMT
+      for (auto *Op : Operands)
+        if (!isa<Constant>(Op))
+          Cost += 1; // zext operand to i32
+      return Cost;
+    }
+    return std::nullopt;
+  }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,

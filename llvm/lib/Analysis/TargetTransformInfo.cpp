@@ -1124,6 +1124,13 @@ InstructionCost TargetTransformInfo::getInsertExtractValueCost(
   return Cost;
 }
 
+std::optional<InstructionCost>
+TargetTransformInfo::getBuildVectorCost(VectorType *VecTy,
+                                        ArrayRef<Value *> Operands,
+                                        TargetCostKind CostKind) const {
+  return TTIImpl->getBuildVectorCost(VecTy, Operands, CostKind);
+}
+
 InstructionCost TargetTransformInfo::getReplicationShuffleCost(
     Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedDstElts,
     TTI::TargetCostKind CostKind) const {

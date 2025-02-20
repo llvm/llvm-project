@@ -1482,6 +1482,12 @@ public:
   InstructionCost getInsertExtractValueCost(unsigned Opcode,
                                             TTI::TargetCostKind CostKind) const;
 
+  /// \return The cost of ISD::BUILD_VECTOR, or nullopt if the cost should be
+  /// inferred from insert element and shuffle ops.
+  std::optional<InstructionCost>
+  getBuildVectorCost(VectorType *VecTy, ArrayRef<Value *> Operands,
+                     TargetCostKind CostKind) const;
+
   /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
   /// \p ReplicationFactor times.
   ///
@@ -2219,6 +2225,10 @@ public:
                                              TTI::TargetCostKind CostKind,
                                              unsigned Index) = 0;
 
+  virtual std::optional<InstructionCost>
+  getBuildVectorCost(VectorType *VecTy, ArrayRef<Value *> Operands,
+                     TargetCostKind CostKind) = 0;
+
   virtual InstructionCost
   getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
                             const APInt &DemandedDstElts,
@@ -2947,6 +2957,12 @@ public:
                                      unsigned Index) override {
     return Impl.getVectorInstrCost(I, Val, CostKind, Index);
   }
+  std::optional<InstructionCost>
+  getBuildVectorCost(VectorType *VecTy, ArrayRef<Value *> Operands,
+                     TTI::TargetCostKind CostKind) override {
+    return Impl.getBuildVectorCost(VecTy, Operands, CostKind);
+  }
+
   InstructionCost
   getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
                             const APInt &DemandedDstElts,
