@@ -92,6 +92,8 @@ if (LLVM_RELEASE_ENABLE_LTO)
   # Enable LTO for the runtimes.  We need to configure stage1 clang to default
   # to using lld as the linker because the stage1 toolchain will be used to
   # build and link the runtimes.
+  # FIXME: We can't use LLVM_ENABLE_LTO=Thin here, because it causes the CMake
+  # step for the libcxx build to fail.
   set(RUNTIMES_CMAKE_ARGS "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DLLVM_ENABLE_LLD=ON" CACHE STRING "")
 endif()
 
