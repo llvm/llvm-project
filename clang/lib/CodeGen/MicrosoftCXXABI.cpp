@@ -1413,6 +1413,10 @@ llvm::GlobalValue::LinkageTypes MicrosoftCXXABI::getCXXDestructorLinkage(
     // is internal.
     return llvm::GlobalValue::LinkOnceODRLinkage;
   case Dtor_VectorDeleting:
+    // Use the weak, non-ODR linkage for vector deleting destructors to block
+    // inlining. This enables an MS ABI code-size saving optimization that
+    // allows us to avoid emitting array deletion code when arrays of a given
+    // type are not allocated within the final linkage unit.
     return llvm::GlobalValue::WeakAnyLinkage;
   case Dtor_Comdat:
     llvm_unreachable("MS C++ ABI does not support comdat dtors");
