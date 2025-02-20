@@ -922,16 +922,16 @@ entry:
 }
 declare fp128 @llvm.fma.f128(fp128, fp128, fp128)
 
-define fp128 @use_acosfp128(fp128 %a) nounwind {
-; ANDROID-LABEL: use_acosfp128:
+define fp128 @Test128Acos(fp128 %a) nounwind {
+; ANDROID-LABEL: Test128Acos:
 ; ANDROID:       # %bb.0:
 ; ANDROID-NEXT:    jmp acosl@PLT # TAILCALL
 ;
-; GNU-LABEL: use_acosfp128:
+; GNU-LABEL: Test128Acos:
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    jmp acosf128@PLT # TAILCALL
 ;
-; X86-LABEL: use_acosfp128:
+; X86-LABEL: Test128Acos:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $24, %esp
@@ -955,16 +955,16 @@ define fp128 @use_acosfp128(fp128 %a) nounwind {
   ret fp128 %x
 }
 
-define fp128 @use_asinfp128(fp128 %a) nounwind {
-; ANDROID-LABEL: use_asinfp128:
+define fp128 @Test128Asin(fp128 %a) nounwind {
+; ANDROID-LABEL: Test128Asin:
 ; ANDROID:       # %bb.0:
 ; ANDROID-NEXT:    jmp asinl@PLT # TAILCALL
 ;
-; GNU-LABEL: use_asinfp128:
+; GNU-LABEL: Test128Asin:
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    jmp asinf128@PLT # TAILCALL
 ;
-; X86-LABEL: use_asinfp128:
+; X86-LABEL: Test128Asin:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $24, %esp
@@ -988,16 +988,16 @@ define fp128 @use_asinfp128(fp128 %a) nounwind {
   ret fp128 %x
 }
 
-define fp128 @use_atanfp128(fp128 %a) nounwind {
-; ANDROID-LABEL: use_atanfp128:
+define fp128 @Test128Atan(fp128 %a) nounwind {
+; ANDROID-LABEL: Test128Atan:
 ; ANDROID:       # %bb.0:
 ; ANDROID-NEXT:    jmp atanl@PLT # TAILCALL
 ;
-; GNU-LABEL: use_atanfp128:
+; GNU-LABEL: Test128Atan:
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    jmp atanf128@PLT # TAILCALL
 ;
-; X86-LABEL: use_atanfp128:
+; X86-LABEL: Test128Atan:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $24, %esp
@@ -1021,16 +1021,16 @@ define fp128 @use_atanfp128(fp128 %a) nounwind {
   ret fp128 %x
 }
 
-define fp128 @use_atan2fp128(fp128 %a, fp128 %b) nounwind {
-; ANDROID-LABEL: use_atan2fp128:
+define fp128 @Test128Atan2(fp128 %a, fp128 %b) nounwind {
+; ANDROID-LABEL: Test128Atan2:
 ; ANDROID:       # %bb.0:
 ; ANDROID-NEXT:    jmp atan2l@PLT # TAILCALL
 ;
-; GNU-LABEL: use_atan2fp128:
+; GNU-LABEL: Test128Atan2:
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    jmp atan2f128@PLT # TAILCALL
 ;
-; X86-LABEL: use_atan2fp128:
+; X86-LABEL: Test128Atan2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $24, %esp
@@ -1058,16 +1058,16 @@ define fp128 @use_atan2fp128(fp128 %a, fp128 %b) nounwind {
   ret fp128 %x
 }
 
-define fp128 @use_coshfp128(fp128 %a) nounwind {
-; ANDROID-LABEL: use_coshfp128:
+define fp128 @Test128Cosh(fp128 %a) nounwind {
+; ANDROID-LABEL: Test128Cosh:
 ; ANDROID:       # %bb.0:
 ; ANDROID-NEXT:    jmp coshl@PLT # TAILCALL
 ;
-; GNU-LABEL: use_coshfp128:
+; GNU-LABEL: Test128Cosh:
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    jmp coshf128@PLT # TAILCALL
 ;
-; X86-LABEL: use_coshfp128:
+; X86-LABEL: Test128Cosh:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $24, %esp
@@ -1091,16 +1091,16 @@ define fp128 @use_coshfp128(fp128 %a) nounwind {
   ret fp128 %x
 }
 
-define fp128 @use_sinhfp128(fp128 %a) nounwind {
-; ANDROID-LABEL: use_sinhfp128:
+define fp128 @Test128Sinh(fp128 %a) nounwind {
+; ANDROID-LABEL: Test128Sinh:
 ; ANDROID:       # %bb.0:
 ; ANDROID-NEXT:    jmp sinhl@PLT # TAILCALL
 ;
-; GNU-LABEL: use_sinhfp128:
+; GNU-LABEL: Test128Sinh:
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    jmp sinhf128@PLT # TAILCALL
 ;
-; X86-LABEL: use_sinhfp128:
+; X86-LABEL: Test128Sinh:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $24, %esp
@@ -1124,16 +1124,16 @@ define fp128 @use_sinhfp128(fp128 %a) nounwind {
   ret fp128 %x
 }
 
-define fp128 @use_tanfp128(fp128 %a) nounwind {
-; ANDROID-LABEL: use_tanfp128:
+define fp128 @Test128Tan(fp128 %a) nounwind {
+; ANDROID-LABEL: Test128Tan:
 ; ANDROID:       # %bb.0:
 ; ANDROID-NEXT:    jmp tanl@PLT # TAILCALL
 ;
-; GNU-LABEL: use_tanfp128:
+; GNU-LABEL: Test128Tan:
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    jmp tanf128@PLT # TAILCALL
 ;
-; X86-LABEL: use_tanfp128:
+; X86-LABEL: Test128Tan:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $24, %esp
@@ -1157,16 +1157,16 @@ define fp128 @use_tanfp128(fp128 %a) nounwind {
   ret fp128 %x
 }
 
-define fp128 @use_tanhfp128(fp128 %a) nounwind {
-; ANDROID-LABEL: use_tanhfp128:
+define fp128 @Test128Tanh(fp128 %a) nounwind {
+; ANDROID-LABEL: Test128Tanh:
 ; ANDROID:       # %bb.0:
 ; ANDROID-NEXT:    jmp tanhl@PLT # TAILCALL
 ;
-; GNU-LABEL: use_tanhfp128:
+; GNU-LABEL: Test128Tanh:
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    jmp tanhf128@PLT # TAILCALL
 ;
-; X86-LABEL: use_tanhfp128:
+; X86-LABEL: Test128Tanh:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $24, %esp

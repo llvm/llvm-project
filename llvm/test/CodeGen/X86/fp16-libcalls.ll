@@ -1189,8 +1189,8 @@ define void @test_half_trunc(half %a0, ptr %p0) nounwind {
   ret void
 }
 
-define half @use_acosf16(half %a) nounwind {
-; F16C-LABEL: use_acosf16:
+define half @test_half_acos(half %a) nounwind {
+; F16C-LABEL: test_half_acos:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rax
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1199,7 +1199,7 @@ define half @use_acosf16(half %a) nounwind {
 ; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
-; FP16-LABEL: use_acosf16:
+; FP16-LABEL: test_half_acos:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -1208,7 +1208,7 @@ define half @use_acosf16(half %a) nounwind {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    retq
 ;
-; X64-LABEL: use_acosf16:
+; X64-LABEL: test_half_acos:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
@@ -1217,7 +1217,7 @@ define half @use_acosf16(half %a) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: use_acosf16:
+; X86-LABEL: test_half_acos:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
@@ -1234,8 +1234,8 @@ define half @use_acosf16(half %a) nounwind {
   ret half %x
 }
 
-define half @use_asinf16(half %a) nounwind {
-; F16C-LABEL: use_asinf16:
+define half @test_half_asin(half %a) nounwind {
+; F16C-LABEL: test_half_asin:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rax
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1244,7 +1244,7 @@ define half @use_asinf16(half %a) nounwind {
 ; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
-; FP16-LABEL: use_asinf16:
+; FP16-LABEL: test_half_asin:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -1253,7 +1253,7 @@ define half @use_asinf16(half %a) nounwind {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    retq
 ;
-; X64-LABEL: use_asinf16:
+; X64-LABEL: test_half_asin:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
@@ -1262,7 +1262,7 @@ define half @use_asinf16(half %a) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: use_asinf16:
+; X86-LABEL: test_half_asin:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
@@ -1279,8 +1279,8 @@ define half @use_asinf16(half %a) nounwind {
   ret half %x
 }
 
-define half @use_atanf16(half %a) nounwind {
-; F16C-LABEL: use_atanf16:
+define half @test_half_atan(half %a) nounwind {
+; F16C-LABEL: test_half_atan:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rax
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1289,7 +1289,7 @@ define half @use_atanf16(half %a) nounwind {
 ; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
-; FP16-LABEL: use_atanf16:
+; FP16-LABEL: test_half_atan:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -1298,7 +1298,7 @@ define half @use_atanf16(half %a) nounwind {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    retq
 ;
-; X64-LABEL: use_atanf16:
+; X64-LABEL: test_half_atan:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
@@ -1307,7 +1307,7 @@ define half @use_atanf16(half %a) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: use_atanf16:
+; X86-LABEL: test_half_atan:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
@@ -1324,8 +1324,8 @@ define half @use_atanf16(half %a) nounwind {
   ret half %x
 }
 
-define half @use_atan2f16(half %a, half %b) nounwind {
-; F16C-LABEL: use_atan2f16:
+define half @test_half_atan2(half %a, half %b) nounwind {
+; F16C-LABEL: test_half_atan2:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rax
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1335,7 +1335,7 @@ define half @use_atan2f16(half %a, half %b) nounwind {
 ; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
-; FP16-LABEL: use_atan2f16:
+; FP16-LABEL: test_half_atan2:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -1345,7 +1345,7 @@ define half @use_atan2f16(half %a, half %b) nounwind {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    retq
 ;
-; X64-LABEL: use_atan2f16:
+; X64-LABEL: test_half_atan2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1362,7 +1362,7 @@ define half @use_atan2f16(half %a, half %b) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: use_atan2f16:
+; X86-LABEL: test_half_atan2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $60, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
@@ -1388,8 +1388,8 @@ define half @use_atan2f16(half %a, half %b) nounwind {
   ret half %x
 }
 
-define half @test_cos_f16(half %Val) nounwind {
-; F16C-LABEL: test_cos_f16:
+define half @test2_half_cos(half %Val) nounwind {
+; F16C-LABEL: test2_half_cos:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rax
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1398,7 +1398,7 @@ define half @test_cos_f16(half %Val) nounwind {
 ; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
-; FP16-LABEL: test_cos_f16:
+; FP16-LABEL: test2_half_cos:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -1407,7 +1407,7 @@ define half @test_cos_f16(half %Val) nounwind {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    retq
 ;
-; X64-LABEL: test_cos_f16:
+; X64-LABEL: test2_half_cos:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
@@ -1416,7 +1416,7 @@ define half @test_cos_f16(half %Val) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: test_cos_f16:
+; X86-LABEL: test2_half_cos:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
@@ -1433,8 +1433,8 @@ define half @test_cos_f16(half %Val) nounwind {
   ret half %res
 }
 
-define half @use_coshf16(half %a) nounwind {
-; F16C-LABEL: use_coshf16:
+define half @test_half_cosh(half %a) nounwind {
+; F16C-LABEL: test_half_cosh:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rax
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1443,7 +1443,7 @@ define half @use_coshf16(half %a) nounwind {
 ; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
-; FP16-LABEL: use_coshf16:
+; FP16-LABEL: test_half_cosh:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -1452,7 +1452,7 @@ define half @use_coshf16(half %a) nounwind {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    retq
 ;
-; X64-LABEL: use_coshf16:
+; X64-LABEL: test_half_cosh:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
@@ -1461,7 +1461,7 @@ define half @use_coshf16(half %a) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: use_coshf16:
+; X86-LABEL: test_half_cosh:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
@@ -1478,8 +1478,8 @@ define half @use_coshf16(half %a) nounwind {
   ret half %x
 }
 
-define half @test_sin_f16(half %Val) nounwind {
-; F16C-LABEL: test_sin_f16:
+define half @test2_half_sin(half %Val) nounwind {
+; F16C-LABEL: test2_half_sin:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rax
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1488,7 +1488,7 @@ define half @test_sin_f16(half %Val) nounwind {
 ; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
-; FP16-LABEL: test_sin_f16:
+; FP16-LABEL: test2_half_sin:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -1497,7 +1497,7 @@ define half @test_sin_f16(half %Val) nounwind {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    retq
 ;
-; X64-LABEL: test_sin_f16:
+; X64-LABEL: test2_half_sin:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
@@ -1506,7 +1506,7 @@ define half @test_sin_f16(half %Val) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: test_sin_f16:
+; X86-LABEL: test2_half_sin:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
@@ -1523,8 +1523,8 @@ define half @test_sin_f16(half %Val) nounwind {
   ret half %res
 }
 
-define half @use_sinhf16(half %a) nounwind {
-; F16C-LABEL: use_sinhf16:
+define half @test_half_sinh(half %a) nounwind {
+; F16C-LABEL: test_half_sinh:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rax
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1533,7 +1533,7 @@ define half @use_sinhf16(half %a) nounwind {
 ; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
-; FP16-LABEL: use_sinhf16:
+; FP16-LABEL: test_half_sinh:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -1542,7 +1542,7 @@ define half @use_sinhf16(half %a) nounwind {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    retq
 ;
-; X64-LABEL: use_sinhf16:
+; X64-LABEL: test_half_sinh:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
@@ -1551,7 +1551,7 @@ define half @use_sinhf16(half %a) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: use_sinhf16:
+; X86-LABEL: test_half_sinh:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
@@ -1568,8 +1568,8 @@ define half @use_sinhf16(half %a) nounwind {
   ret half %x
 }
 
-define half @use_tanf16(half %a) nounwind {
-; F16C-LABEL: use_tanf16:
+define half @test2_half_tan(half %a) nounwind {
+; F16C-LABEL: test2_half_tan:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rax
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1578,7 +1578,7 @@ define half @use_tanf16(half %a) nounwind {
 ; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
-; FP16-LABEL: use_tanf16:
+; FP16-LABEL: test2_half_tan:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -1587,7 +1587,7 @@ define half @use_tanf16(half %a) nounwind {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    retq
 ;
-; X64-LABEL: use_tanf16:
+; X64-LABEL: test2_half_tan:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
@@ -1596,7 +1596,7 @@ define half @use_tanf16(half %a) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: use_tanf16:
+; X86-LABEL: test2_half_tan:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
@@ -1613,8 +1613,8 @@ define half @use_tanf16(half %a) nounwind {
   ret half %x
 }
 
-define half @use_tanhf16(half %a) nounwind {
-; F16C-LABEL: use_tanhf16:
+define half @test_half_tanh(half %a) nounwind {
+; F16C-LABEL: test_half_tanh:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rax
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1623,7 +1623,7 @@ define half @use_tanhf16(half %a) nounwind {
 ; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
-; FP16-LABEL: use_tanhf16:
+; FP16-LABEL: test_half_tanh:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -1632,7 +1632,7 @@ define half @use_tanhf16(half %a) nounwind {
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    retq
 ;
-; X64-LABEL: use_tanhf16:
+; X64-LABEL: test_half_tanh:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
@@ -1641,7 +1641,7 @@ define half @use_tanhf16(half %a) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
-; X86-LABEL: use_tanhf16:
+; X86-LABEL: test_half_tanh:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
