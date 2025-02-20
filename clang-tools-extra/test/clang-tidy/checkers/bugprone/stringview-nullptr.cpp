@@ -27,7 +27,7 @@ public:
 
   constexpr basic_string_view(const basic_string_view &) {}
 
-  constexpr basic_string_view &operator=(const basic_string_view &) { return *this; }
+  constexpr basic_string_view &operator=(const basic_string_view &) {}
 };
 
 template <typename CharT>

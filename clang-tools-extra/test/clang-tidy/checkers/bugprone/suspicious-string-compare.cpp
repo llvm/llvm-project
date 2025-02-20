@@ -89,8 +89,6 @@ int test_warning_patterns() {
   if (strcmp(A, "a") < 0.)
     return 0;
   // CHECK-MESSAGES: [[@LINE-2]]:7: warning: function 'strcmp' has suspicious implicit cast
-
-  return 1;
 }
 
 int test_valid_patterns() {

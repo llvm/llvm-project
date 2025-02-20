@@ -170,8 +170,6 @@ const int *constArray() {
   // CHECK-FIXES: for (const int & I : ConstArr)
   // CHECK-FIXES-NEXT: if (Something)
   // CHECK-FIXES-NEXT: return &I;
-
-  return nullptr;
 }
 
 struct HasArr {

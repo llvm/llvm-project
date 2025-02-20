@@ -144,7 +144,7 @@ struct WithTemplBase : T {
   WithTemplBase();
 };
 
-void test_no_crash() {
+int test_no_crash() {
   auto foo = []() {};
   WithTemplBase<decltype(foo)>();
 }

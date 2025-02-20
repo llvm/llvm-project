@@ -12,9 +12,9 @@ typedef struct cnd_t {
 } cnd_t;
 struct timespec {};
 
-int cnd_wait(cnd_t *cond, mtx_t *mutex){ return 0; };
+int cnd_wait(cnd_t *cond, mtx_t *mutex){};
 int cnd_timedwait(cnd_t *cond, mtx_t *mutex,
-                  const struct timespec *time_point){ return 0; };
+                  const struct timespec *time_point){};
 
 struct Node1 list_c;
 static mtx_t lock;

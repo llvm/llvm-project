@@ -2,7 +2,7 @@
 
 int foo(int value = 5) { return value; }
 
-void f() {
+int f() {
   foo();
   // CHECK-NOTES: [[@LINE-1]]:3: warning: calling a function that uses a default argument is disallowed [fuchsia-default-arguments-calls]
   // CHECK-NOTES: [[@LINE-5]]:9: note: default parameter was declared here
@@ -10,7 +10,7 @@ void f() {
 
 int bar(int value) { return value; }
 
-void n() {
+int n() {
   foo(0);
   bar(0);
 }

@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s modernize-use-equals-default %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-equals-default.IgnoreMacros: false}}" \
-// RUN:   -- -fno-delayed-template-parsing -fexceptions -Wno-error=return-type
+// RUN:   -- -fno-delayed-template-parsing -fexceptions
 
 // Out of line definition.
 struct OL {

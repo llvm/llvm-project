@@ -116,7 +116,6 @@ TEST_F(ExtractVariableTest, Test) {
       struct T {
         int bar(int a = [[1]]) {
           int b = [[z]];
-          return 0;
         }
         int z = [[1]];
       } t;

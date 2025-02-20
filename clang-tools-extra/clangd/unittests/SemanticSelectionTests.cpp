@@ -201,7 +201,6 @@ TEST(FoldingRanges, ASTAll) {
       R"cpp(
         #define FOO int foo() {\
           int Variable = 42; \
-          return 0; \
         }
 
         // Do not generate folding range for braces within macro expansion.
@@ -337,18 +336,18 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
         ]]};
       )cpp",
       R"cpp(
-        /*[[ Multi
+        /*[[ Multi 
           * line
-          *  comment
+          *  comment 
           ]]*/
       )cpp",
       R"cpp(
         //[[ Comment
         // 1]]
-
+        
         //[[ Comment
         // 2]]
-
+        
         // No folding for single line comment.
 
         /*[[ comment 3
