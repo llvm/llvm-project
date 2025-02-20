@@ -3094,9 +3094,9 @@ private:
               concurrentHeader.t);
 
       for (const auto &control : controls) {
-        auto lb = fir::getBase(genExprValue(
+        mlir::Value lb = fir::getBase(genExprValue(
             *Fortran::semantics::GetExpr(std::get<1>(control.t)), stmtCtx));
-        auto ub = fir::getBase(genExprValue(
+        mlir::Value ub = fir::getBase(genExprValue(
             *Fortran::semantics::GetExpr(std::get<2>(control.t)), stmtCtx));
         mlir::Value step;
 
