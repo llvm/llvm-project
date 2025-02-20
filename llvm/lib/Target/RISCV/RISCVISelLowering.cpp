@@ -5749,6 +5749,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       int Src = M >= (int)NumElts;
       int Diff = (int)i - (M % NumElts);
       bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
+      assert(C ^ (Src == SrcInfo[0].first && Diff == SrcInfo[0].second) &&
+             "Must match exactly one of the two slides");
       MaskVals.push_back(DAG.getConstant(C, DL, XLenVT));
     }
     assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
