@@ -131,10 +131,9 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
 
           // Peek through a single copy to match what isel does.
           if (MachineInstr *SrcMI = MRI.getVRegDef(Src);
-              SrcMI->isCopy() && SrcMI->getOperand(1).getReg().isVirtual()) {
-            assert(SrcMI->getOperand(1).getSubReg() == RISCV::NoSubRegister);
+              SrcMI->isCopy() && SrcMI->getOperand(1).getReg().isVirtual() &&
+              SrcMI->getOperand(1).getSubReg() == RISCV::NoSubRegister)
             Src = SrcMI->getOperand(1).getReg();
-          }
 
           BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::COPY), RISCV::V0)
               .addReg(Src);
