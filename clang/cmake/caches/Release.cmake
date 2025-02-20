@@ -125,7 +125,12 @@ if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
   set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -static-libgcc")
 endif()
 
-set_instrument_and_final_stage_var(CMAKE_EXE_LINKER_FLAGS "-Wl,--emit-relocs,-znow ${RELEASE_LINKER_FLAGS}" STRING)
+# Set flags for bolt
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+  set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -Wl,--emit-relocs,-znow")
+endif()
+
+set_instrument_and_final_stage_var(CMAKE_EXE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
 set_instrument_and_final_stage_var(CMAKE_SHARED_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
 set_instrument_and_final_stage_var(CMAKE_MODULE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
 
