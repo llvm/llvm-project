@@ -451,8 +451,8 @@ public:
        if (!IsInlined)
          continue;
 
-       StringRef Name =
-           CGM.getMangledName(VtableComponent.getGlobalDecl(false));
+       StringRef Name = CGM.getMangledName(
+           VtableComponent.getGlobalDecl(/*HasVectorDeletingDtors=*/false));
        auto *Entry = CGM.GetGlobalValue(Name);
        // This checks if virtual inline function has already been emitted.
        // Note that it is possible that this inline function would be emitted
