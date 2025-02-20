@@ -184,25 +184,27 @@ uint32_t LineTable::lower_bound(const Address &so_addr) const {
   return std::distance(m_entries.begin(), pos);
 }
 
-uint32_t LineTable::upper_bound(const Address &so_addr) const {
-  if (so_addr.GetModule() != m_comp_unit->GetModule())
-    return GetSize();
+std::pair<uint32_t, uint32_t>
+LineTable::GetLineEntryIndexRange(const AddressRange &range) const {
+  uint32_t first = lower_bound(range.GetBaseAddress());
+  if (first >= GetSize() || range.GetByteSize() == 0)
+    return {first, first};
 
   Entry search_entry;
-  search_entry.file_addr = so_addr.GetFileAddress();
-  if (search_entry.file_addr == LLDB_INVALID_ADDRESS)
-    return GetSize();
+  search_entry.file_addr =
+      range.GetBaseAddress().GetFileAddress() + range.GetByteSize();
 
-  // This is not a typo. lower_bound returns the first entry which starts on or
-  // after the given address, which is exactly what we want -- *except* if the
-  // entry is a termination entry (in that case, we want the one after it).
+  // lower_bound returns the first entry which starts on or after the given
+  // address, which is exactly what we want -- *except* if the entry is a
+  // termination entry (in that case, we want the one after it).
   auto pos =
-      llvm::lower_bound(m_entries, search_entry, Entry::EntryAddressLessThan);
+      std::lower_bound(std::next(m_entries.begin(), first), m_entries.end(),
+                       search_entry, Entry::EntryAddressLessThan);
   if (pos != m_entries.end() && pos->file_addr == search_entry.file_addr &&
       pos->is_terminal_entry)
     ++pos;
 
-  return std::distance(m_entries.begin(), pos);
+  return {first, std::distance(m_entries.begin(), pos)};
 }
 
 bool LineTable::FindLineEntryByAddress(const Address &so_addr,

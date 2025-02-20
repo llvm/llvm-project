@@ -84,18 +84,19 @@ public:
 
   void GetDescription(Stream *s, Target *target, lldb::DescriptionLevel level);
 
-  /// Helper function for line table iteration. \c lower_bound returns the index
-  /// of the first line entry which ends after the given address (i.e., the
-  /// first entry which contains the given address or it comes after it).
-  /// \c upper_bound returns the index of the first line entry which begins on
-  /// or after the given address (i.e., the entry which would come after the
-  /// entry containing the given address, if such an entry exists). Functions
-  /// return <tt>GetSize()</tt> if there is no such entry. The functions are
-  /// most useful in combination: iterating from <tt>lower_bound(a)</tt> to
-  /// <tt>upper_bound(b) returns all line tables which intersect the half-open
-  /// range <tt>[a,b)</tt>.
+  /// Returns the index of the first line entry which ends after the given
+  /// address (i.e., the first entry which contains the given address or it
+  /// comes after it). Returns <tt>GetSize()</tt> if there is no such entry.
   uint32_t lower_bound(const Address &so_addr) const;
-  uint32_t upper_bound(const Address &so_addr) const;
+
+  /// Returns the (half-open) range of line entry indexes which overlap the
+  /// given address range. Line entries partially overlapping the range (on
+  /// either side) are included as well. Returns an empty range
+  /// (<tt>first==second</tt>) pointing to the "right" place in the list if
+  /// there are no such line entries. Empty input ranges always result in an
+  /// empty output range.
+  std::pair<uint32_t, uint32_t>
+  GetLineEntryIndexRange(const AddressRange &range) const;
 
   /// Find a line entry that contains the section offset address \a so_addr.
   ///

@@ -20,28 +20,11 @@
  * THE SOFTWARE.
  */
 
-#if __CLC_FPSIZE == 64
-#define ZERO 0.0
-#elif __CLC_FPSIZE == 32
-#define ZERO 0.0f
-#elif __CLC_FPSIZE == 16
-#define ZERO 0.0h
-#endif
+#include <clc/internal/clc.h>
+#include <clc/math/clc_copysign.h>
+#include <clc/math/clc_trunc.h>
+#include <clc/math/math.h>
+#include <clc/relational/clc_isinf.h>
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE modf(__CLC_GENTYPE x, __CLC_GENTYPE *iptr) {
-  *iptr = trunc(x);
-  return copysign(isinf(x) ? ZERO : x - *iptr, x);
-}
-
-#define MODF_DEF(addrspace) \
-  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE modf(__CLC_GENTYPE x, addrspace __CLC_GENTYPE *iptr) { \
-    __CLC_GENTYPE private_iptr; \
-    __CLC_GENTYPE ret = modf(x, &private_iptr); \
-    *iptr = private_iptr; \
-    return ret; \
-}
-
-MODF_DEF(local);
-MODF_DEF(global);
-
-#undef ZERO
+#define __CLC_BODY <clc_modf.inc>
+#include <clc/math/gentype.inc>

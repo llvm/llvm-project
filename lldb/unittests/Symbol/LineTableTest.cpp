@@ -189,7 +189,7 @@ Sections:
                            std::move(text_sp), line_table};
 }
 
-TEST_F(LineTableTest, LowerAndUpperBound) {
+TEST_F(LineTableTest, lower_bound) {
   LineSequenceBuilder builder;
   builder.Entry(0);
   builder.Entry(10);
@@ -206,41 +206,63 @@ TEST_F(LineTableTest, LowerAndUpperBound) {
 
   auto make_addr = [&](addr_t addr) { return Address(fixture->text_sp, addr); };
 
-  // Both functions return the same value for boundary values. This way the
-  // index range for e.g. [0,10) is [0,1).
   EXPECT_EQ(table->lower_bound(make_addr(0)), 0u);
-  EXPECT_EQ(table->upper_bound(make_addr(0)), 0u);
-  EXPECT_EQ(table->lower_bound(make_addr(10)), 1u);
-  EXPECT_EQ(table->upper_bound(make_addr(10)), 1u);
-  EXPECT_EQ(table->lower_bound(make_addr(20)), 3u);
-  EXPECT_EQ(table->upper_bound(make_addr(20)), 3u);
-
-  // In case there's no "real" entry at this address, they return the first real
-  // entry.
-  EXPECT_EQ(table->lower_bound(make_addr(30)), 5u);
-  EXPECT_EQ(table->upper_bound(make_addr(30)), 5u);
-
-  EXPECT_EQ(table->lower_bound(make_addr(40)), 5u);
-  EXPECT_EQ(table->upper_bound(make_addr(40)), 5u);
-
-  // For in-between values, their result differs by one. [9,19) maps to [0,2)
-  // because the first two entries contain a part of that range.
   EXPECT_EQ(table->lower_bound(make_addr(9)), 0u);
-  EXPECT_EQ(table->upper_bound(make_addr(9)), 1u);
+  EXPECT_EQ(table->lower_bound(make_addr(10)), 1u);
   EXPECT_EQ(table->lower_bound(make_addr(19)), 1u);
-  EXPECT_EQ(table->upper_bound(make_addr(19)), 2u);
+
+  // Skips over the terminal entry.
+  EXPECT_EQ(table->lower_bound(make_addr(20)), 3u);
   EXPECT_EQ(table->lower_bound(make_addr(29)), 3u);
-  EXPECT_EQ(table->upper_bound(make_addr(29)), 4u);
 
-  // In a gap, they both return the first entry after the gap.
-  EXPECT_EQ(table->upper_bound(make_addr(39)), 5u);
-  EXPECT_EQ(table->upper_bound(make_addr(39)), 5u);
+  // In case there's no "real" entry at this address, the function returns the
+  // first real entry.
+  EXPECT_EQ(table->lower_bound(make_addr(30)), 5u);
+  EXPECT_EQ(table->lower_bound(make_addr(40)), 5u);
 
-  // And if there's no such entry, they return the size of the list.
+  // In a gap, return the first entry after the gap.
+  EXPECT_EQ(table->lower_bound(make_addr(39)), 5u);
+
+  // And if there's no such entry, return the size of the list.
   EXPECT_EQ(table->lower_bound(make_addr(50)), table->GetSize());
-  EXPECT_EQ(table->upper_bound(make_addr(50)), table->GetSize());
   EXPECT_EQ(table->lower_bound(make_addr(59)), table->GetSize());
-  EXPECT_EQ(table->upper_bound(make_addr(59)), table->GetSize());
+}
+
+TEST_F(LineTableTest, GetLineEntryIndexRange) {
+  LineSequenceBuilder builder;
+  builder.Entry(0);
+  builder.Entry(10);
+  builder.Entry(20, LineSequenceBuilder::Terminal);
+
+  llvm::Expected<FakeModuleFixture> fixture = CreateFakeModule(builder.Build());
+  ASSERT_THAT_EXPECTED(fixture, llvm::Succeeded());
+
+  LineTable *table = fixture->line_table;
+
+  auto make_range = [&](addr_t addr, addr_t size) {
+    return AddressRange(fixture->text_sp, addr, size);
+  };
+
+  EXPECT_THAT(table->GetLineEntryIndexRange(make_range(0, 10)),
+              testing::Pair(0, 1));
+  EXPECT_THAT(table->GetLineEntryIndexRange(make_range(0, 20)),
+              testing::Pair(0, 3)); // Includes the terminal entry.
+  // Partial overlap on one side.
+  EXPECT_THAT(table->GetLineEntryIndexRange(make_range(3, 7)),
+              testing::Pair(0, 1));
+  // On the other side
+  EXPECT_THAT(table->GetLineEntryIndexRange(make_range(0, 15)),
+              testing::Pair(0, 2));
+  // On both sides
+  EXPECT_THAT(table->GetLineEntryIndexRange(make_range(2, 3)),
+              testing::Pair(0, 1));
+  // Empty ranges
+  EXPECT_THAT(table->GetLineEntryIndexRange(make_range(0, 0)),
+              testing::Pair(0, 0));
+  EXPECT_THAT(table->GetLineEntryIndexRange(make_range(5, 0)),
+              testing::Pair(0, 0));
+  EXPECT_THAT(table->GetLineEntryIndexRange(make_range(10, 0)),
+              testing::Pair(1, 1));
 }
 
 TEST_F(LineTableTest, FindLineEntryByAddress) {
