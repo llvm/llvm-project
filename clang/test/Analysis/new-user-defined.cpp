@@ -12,7 +12,7 @@
 
 void clang_analyzer_eval(bool);
 
-typedef __typeof(sizeof(int)) size_t;
+using size_t = decltype(sizeof(int));
 
 namespace CustomClassType {
 struct S {
