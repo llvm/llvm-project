@@ -253,7 +253,7 @@ void initializeReachingDefAnalysisPass(PassRegistry &);
 void initializeReassociateLegacyPassPass(PassRegistry &);
 void initializeRegAllocEvictionAdvisorAnalysisLegacyPass(PassRegistry &);
 void initializeRegAllocFastPass(PassRegistry &);
-void initializeRegAllocPriorityAdvisorAnalysisPass(PassRegistry &);
+void initializeRegAllocPriorityAdvisorAnalysisLegacyPass(PassRegistry &);
 void initializeRegAllocScoringPass(PassRegistry &);
 void initializeRegBankSelectPass(PassRegistry &);
 void initializeRegToMemWrapperPassPass(PassRegistry &);
