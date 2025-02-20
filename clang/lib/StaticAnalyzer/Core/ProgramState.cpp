@@ -111,26 +111,13 @@ ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
   return getPersistentState(NewState);
 }
 
-static ProgramStateRef escapeFailedToBindValues(ExprEngine &Eng,
-                                                ProgramStateRef State,
-                                                const BindResult &BindRes) {
-  // We must always notify the checkers for failing binds because otherwise they
-  // may keep stale traits for these symbols.
-  // Eg., Malloc checker may report leaks if we failed to bind that symbol.
-  if (BindRes.FailedToBindValues.empty())
-    return State;
-  return Eng.escapeValues(State, BindRes.FailedToBindValues, PSK_EscapeOnBind);
-}
-
 ProgramStateRef ProgramState::bindLoc(Loc LV,
                                       SVal V,
                                       const LocationContext *LCtx,
                                       bool notifyChanges) const {
   ProgramStateManager &Mgr = getStateManager();
   ExprEngine &Eng = Mgr.getOwningEngine();
-  BindResult BindRes = Mgr.StoreMgr->Bind(getStore(), LV, V);
-  ProgramStateRef State = makeWithStore(BindRes.ResultingStore);
-  State = escapeFailedToBindValues(Eng, State, BindRes);
+  ProgramStateRef State = makeWithStore(Mgr.StoreMgr->Bind(getStore(), LV, V));
   const MemRegion *MR = LV.getAsRegion();
 
   if (MR && notifyChanges)
@@ -143,11 +130,9 @@ ProgramStateRef
 ProgramState::bindDefaultInitial(SVal loc, SVal V,
                                  const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
-  ExprEngine &Eng = Mgr.getOwningEngine();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
   BindResult BindRes = Mgr.StoreMgr->BindDefaultInitial(getStore(), R, V);
-  ProgramStateRef State = makeWithStore(BindRes.ResultingStore);
-  State = escapeFailedToBindValues(Eng, State, BindRes);
+  ProgramStateRef State = makeWithStore(BindRes);
   return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
 }
 
@@ -156,7 +141,7 @@ ProgramState::bindDefaultZero(SVal loc, const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
   BindResult BindRes = Mgr.StoreMgr->BindDefaultZero(getStore(), R);
-  ProgramStateRef State = makeWithStore(BindRes.ResultingStore);
+  ProgramStateRef State = makeWithStore(BindRes);
   return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
 }
 
@@ -248,9 +233,8 @@ SVal ProgramState::wrapSymbolicRegion(SVal Val) const {
 ProgramStateRef
 ProgramState::enterStackFrame(const CallEvent &Call,
                               const StackFrameContext *CalleeCtx) const {
-  const StoreRef &NewStore =
-    getStateManager().StoreMgr->enterStackFrame(getStore(), Call, CalleeCtx);
-  return makeWithStore(NewStore);
+  return makeWithStore(
+      getStateManager().StoreMgr->enterStackFrame(getStore(), Call, CalleeCtx));
 }
 
 SVal ProgramState::getSelfSVal(const LocationContext *LCtx) const {
@@ -451,6 +435,18 @@ ProgramStateRef ProgramState::makeWithStore(const StoreRef &store) const {
   ProgramState NewSt(*this);
   NewSt.setStore(store);
   return getStateManager().getPersistentState(NewSt);
+}
+
+ProgramStateRef ProgramState::makeWithStore(const BindResult &BindRes) const {
+  ExprEngine &Eng = getStateManager().getOwningEngine();
+  ProgramStateRef State = makeWithStore(BindRes.ResultingStore);
+
+  // We must always notify the checkers for failing binds because otherwise they
+  // may keep stale traits for these symbols.
+  // Eg., Malloc checker may report leaks if we failed to bind that symbol.
+  if (BindRes.FailedToBindValues.empty())
+    return State;
+  return Eng.escapeValues(State, BindRes.FailedToBindValues, PSK_EscapeOnBind);
 }
 
 ProgramStateRef ProgramState::cloneAsPosteriorlyOverconstrained() const {

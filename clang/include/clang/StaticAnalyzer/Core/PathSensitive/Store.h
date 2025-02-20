@@ -248,9 +248,8 @@ public:
 
   /// enterStackFrame - Let the StoreManager to do something when execution
   /// engine is about to execute into a callee.
-  StoreRef enterStackFrame(Store store,
-                           const CallEvent &Call,
-                           const StackFrameContext *CalleeCtx);
+  BindResult enterStackFrame(Store store, const CallEvent &Call,
+                             const StackFrameContext *CalleeCtx);
 
   /// Finds the transitive closure of symbols within the given region.
   ///

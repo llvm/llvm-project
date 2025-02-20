@@ -358,3 +358,31 @@ void theValueOfTheEscapedRegionRemainsTheSame() {
 
   escape(l, l2);
 }
+
+void calleeWithManyParms(BigArray<int, 7> arr7, BigArray<int, 100> arr100) {
+  clang_analyzer_dump(arr7.array[0]);    // default-warning {{0 S32b}} unlimited-warning {{0 S32b}} limit10-warning {{0 S32b}}
+  clang_analyzer_dump(arr7.array[6]);    // default-warning {{6 S32b}} unlimited-warning {{6 S32b}} limit10-warning {{6 S32b}}
+
+  clang_analyzer_dump(arr100.array[0]);  // default-warning {{10 S32b}} unlimited-warning {{10 S32b}} limit10-warning {{10 S32b}}
+  clang_analyzer_dump(arr100.array[6]);  // default-warning {{16 S32b}} unlimited-warning {{16 S32b}} limit10-warning {{16 S32b}}
+
+  clang_analyzer_dump(arr100.array[8]);  // default-warning {{18 S32b}} unlimited-warning {{18 S32b}} limit10-warning {{18 S32b}}
+  clang_analyzer_dump(arr100.array[9]);  // default-warning {{19 S32b}} unlimited-warning {{19 S32b}} limit10-warning {{19 S32b}}
+  clang_analyzer_dump(arr100.array[10]); // default-warning {{20 S32b}} unlimited-warning {{20 S32b}} limit10-warning {{Unknown}}
+  clang_analyzer_dump(arr100.array[99]); // default-warning {{19 S32b}} unlimited-warning {{19 S32b}} limit10-warning {{Unknown}}
+}
+
+void tooManyFnArgumentsWhenInlining() {
+  calleeWithManyParms({0,1,2,3,4,5,6}, {
+    10,11,12,13,14,15,16,17,18,19,
+    20,21,22,23,24,25,26,27,28,29,
+    30,31,32,33,34,35,36,37,38,39,
+    40,41,42,43,44,45,46,47,48,49,
+    50,51,52,53,54,55,56,57,58,59,
+    60,61,62,63,64,65,66,67,68,69,
+    70,71,72,73,74,75,76,77,78,79,
+    80,81,82,83,84,85,86,87,88,89,
+    90,91,92,93,94,95,96,97,98,99,
+    10,11,12,13,14,15,16,17,18,19,
+  });
+}
