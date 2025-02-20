@@ -172,6 +172,26 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
   return Result;
 }
 
+static unsigned calculateLegacyCbufferFieldAlign(const ASTContext &Context,
+                                           QualType T) {
+  // Aggregate types are always aligned to new buffer rows
+  if (T->isAggregateType())
+    return 16;
+
+  assert(Context.getTypeSize(T) <= 64 && "Scalar bit widths larger than 64 not supported");
+
+  // 64 bit types such as double and uint64_t align to 8 bytes
+  if (Context.getTypeSize(T) == 64)
+    return 8;
+
+  // Half types align to 2 bytes only if native half is available
+  if (T->isHalfType() && Context.getLangOpts().NativeHalfType)
+    return 2;
+
+  // Everything else aligns to 4 bytes
+  return 4;
+}
+
 // Calculate the size of a legacy cbuffer type in bytes based on
 // https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-packing-rules
 static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
@@ -183,11 +203,7 @@ static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
     for (const FieldDecl *Field : RD->fields()) {
       QualType Ty = Field->getType();
       unsigned FieldSize = calculateLegacyCbufferSize(Context, Ty);
-      // FIXME: This is not the correct alignment, it does not work for 16-bit
-      // types. See llvm/llvm-project#119641.
-      unsigned FieldAlign = 4;
-      if (Ty->isAggregateType())
-        FieldAlign = CBufferAlign;
+      unsigned FieldAlign = calculateLegacyCbufferFieldAlign(Context, Ty);
       Size = llvm::alignTo(Size, FieldAlign);
       Size += FieldSize;
     }
