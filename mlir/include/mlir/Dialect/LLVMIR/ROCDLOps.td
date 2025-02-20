@@ -470,7 +470,7 @@ def ROCDL_RawPtrBufferLoadOp :
   let assemblyFormat = "operands attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
-      return {getRes()};
+      return {getRsrc()};
     }
   }];
 }
