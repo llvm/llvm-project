@@ -85,7 +85,9 @@ class ProgressTesterCommand:
                 "Progress tester", "Initial Indeterminate Detail", debugger
             )
         else:
-            progress = lldb.SBProgress("Progress tester", "Initial Detail", total, debugger)
+            progress = lldb.SBProgress(
+                "Progress tester", "Initial Detail", total, debugger
+            )
 
         # Check to see if total is set to None to indicate an indeterminate progress
         # then default to 10 steps.
