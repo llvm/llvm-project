@@ -423,13 +423,12 @@ public:
     if (__n > 0) {
       std::visit(
           [&](auto& __active_it) {
-            __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(
-                __active_index, [&](auto __index_constant) {
-                  constexpr size_t __i  = __index_constant.value;
-                  auto& __active_view   = std::get<__i>(__parent_->__views_);
-                  difference_type __idx = __active_it - ranges::begin(__active_view);
-                  __advance_fwd<__i>(__idx, __n);
-                });
+            __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(__active_index, [&](auto __index_constant) {
+              constexpr size_t __i  = __index_constant.value;
+              auto& __active_view   = std::get<__i>(__parent_->__views_);
+              difference_type __idx = __active_it - ranges::begin(__active_view);
+              __advance_fwd<__i>(__idx, __n);
+            });
           },
           __it_);
     }
@@ -437,13 +436,12 @@ public:
     else if (__n < 0) {
       std::visit(
           [&](auto& __active_it) {
-            __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(
-                __active_index, [&](auto __index_constant) {
-                  constexpr size_t __i  = __index_constant.value;
-                  auto& __active_view   = std::get<__i>(__parent_->__views_);
-                  difference_type __idx = __active_it - ranges::begin(__active_view);
-                  __advance_bwd<__i>(__idx, -__n);
-                });
+            __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(__active_index, [&](auto __index_constant) {
+              constexpr size_t __i  = __index_constant.value;
+              auto& __active_view   = std::get<__i>(__parent_->__views_);
+              difference_type __idx = __active_it - ranges::begin(__active_view);
+              __advance_bwd<__i>(__idx, -__n);
+            });
           },
           __it_);
     }
