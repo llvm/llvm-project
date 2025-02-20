@@ -1712,7 +1712,7 @@ bool BinaryFunction::scanExternalRefs() {
   // Add relocations unless disassembly failed for this function.
   if (!DisassemblyFailed)
     for (Relocation &Rel : FunctionRelocations)
-      getOriginSection()->addPendingRelocation(Rel);
+      getOriginSection()->addPendingRelocation(Rel, /*Optional*/ true);
 
   // Inform BinaryContext that this function symbols will not be defined and
   // relocations should not be created against them.
