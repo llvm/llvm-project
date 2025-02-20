@@ -163,9 +163,6 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     unsigned VendorID = AArch64BuildAttrs::getVendorID(VendorName);
 
     switch (VendorID) {
-    default:
-      assert(0 && "Subsection name error");
-      break;
     case AArch64BuildAttrs::VENDOR_UNKNOWN:
       if (unsigned(-1) != Value) {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
@@ -235,8 +232,8 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     StringRef ParameterStr = getTypeStr(ParameterType);
 
     switch (SubsectionID) {
-    default: {
-      // Treated as a private subsection
+    case AArch64BuildAttrs::VENDOR_UNKNOWN: {
+      // Private subsection
       break;
     }
     case AArch64BuildAttrs::AEABI_PAUTHABI: {
