@@ -40064,8 +40064,12 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   if (Depth < 1)
     return SDValue();
 
-  bool HasVariableMask = llvm::any_of(SrcNodes, [](const SDNode *N) {
+  int NumVariableMasks = llvm::count_if(SrcNodes, [](const SDNode *N) {
     return isTargetShuffleVariableMask(N->getOpcode());
+  });
+  bool HasSlowVariableMask = llvm::any_of(SrcNodes, [](const SDNode *N) {
+    return (N->getOpcode() == X86ISD::VPERMV3 ||
+            N->getOpcode() == X86ISD::VPERMV);
   });
 
   // Depth threshold above which we can efficiently use variable mask shuffles.
@@ -40074,13 +40078,15 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   int VariablePerLaneShuffleDepth =
       Subtarget.hasFastVariablePerLaneShuffle() ? 1 : 2;
   AllowVariableCrossLaneMask &=
-      (Depth >= VariableCrossLaneShuffleDepth) || HasVariableMask;
+      (Depth >= VariableCrossLaneShuffleDepth) || NumVariableMasks;
   AllowVariablePerLaneMask &=
-      (Depth >= VariablePerLaneShuffleDepth) || HasVariableMask;
-  // VPERMI2W/VPERMI2B are 3 uops on Skylake and Icelake so we require a
+      (Depth >= VariablePerLaneShuffleDepth) || NumVariableMasks;
+  // VPERM2W/VPERM2B are 3 uops on Skylake and Icelake so we require a
   // higher depth before combining them.
+  int BWIVPERMV3ShuffleDepth =
+      VariableCrossLaneShuffleDepth + 2 - NumVariableMasks;
   bool AllowBWIVPERMV3 =
-      (Depth >= (VariableCrossLaneShuffleDepth + 2) || HasVariableMask);
+      (Depth >= BWIVPERMV3ShuffleDepth || HasSlowVariableMask);
 
   // If root was a VPERMV3 node, always allow a variable shuffle.
   if (Root.getOpcode() == X86ISD::VPERMV3)
