@@ -62,12 +62,11 @@ define i1 @test_ugt_add(i64 %x) {
 
 define i1 @test_eq_trunc_add(i64 %x) {
 ; X64-LABEL: test_eq_trunc_add:
-; X64:       # %bb.0: # %entry
+; X64:       # %bb.0:
 ; X64-NEXT:    shrq $48, %rdi
 ; X64-NEXT:    cmpl $65525, %edi # imm = 0xFFF5
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
-entry:
   %add = add i64 %x, 3940649673949184
   %shr = lshr i64 %add, 48
   %conv = trunc i64 %shr to i32
@@ -89,12 +88,11 @@ define i1 @test_eq_add(i64 %x) {
 
 define i1 @test_ne_trunc_add(i64 %x) {
 ; X64-LABEL: test_ne_trunc_add:
-; X64:       # %bb.0: # %entry
+; X64:       # %bb.0:
 ; X64-NEXT:    shrq $48, %rdi
 ; X64-NEXT:    cmpl $65525, %edi # imm = 0xFFF5
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
-entry:
   %add = add i64 %x, 3940649673949184
   %shr = lshr i64 %add, 48
   %conv = trunc i64 %shr to i32
