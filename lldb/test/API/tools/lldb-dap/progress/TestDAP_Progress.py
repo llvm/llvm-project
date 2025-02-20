@@ -87,9 +87,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
                 start_found = True
             if "progressUpdate" in event_type:
                 message = event["body"]["message"]
-                # We send an update on first message to set the details, so ignore the first update
-                if not update_found:
-                    self.assertTrue(message == "", message)
+                self.assertEqual("Initial Detail", message)
                 update_found = True
 
         self.assertTrue(start_found)
@@ -128,7 +126,9 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
             if "progressUpdate" in event_type:
                 message = event["body"]["message"]
                 print(f"Progress update: {message}")
-                self.assertNotIn("Progres tester", message)
+                # Check on the first update we set the initial detail.
+                if not update_found:
+                    self.assertEqual("Step 1", message)
                 update_found = True
 
         self.assertTrue(start_found)
@@ -168,9 +168,9 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
                 start_found = True
             if "progressUpdate" in event_type:
                 message = event["body"]["message"]
-                # We send an update on first message to set the details, so ignore the first update
+                # Check on the first update we set the initial detail.
                 if not update_found:
-                    self.assertTrue(message == "", message)
+                    self.assertEqual("Initial Indeterminate Detail", message)
                 update_found = True
 
         self.assertTrue(start_found)

@@ -56,6 +56,7 @@ class ProgressTesterCommand:
             dest="no_details",
             help="Do not display details",
             action="store_true",
+            default=False,
         )
 
         return parser
@@ -81,10 +82,10 @@ class ProgressTesterCommand:
         total = cmd_options.total
         if total is None:
             progress = lldb.SBProgress(
-                "Progress tester", "Indeterminate Detail", debugger
+                "Progress tester", "Initial Indeterminate Detail", debugger
             )
         else:
-            progress = lldb.SBProgress("Progress tester", "Detail", total, debugger)
+            progress = lldb.SBProgress("Progress tester", "Initial Detail", total, debugger)
 
         # Check to see if total is set to None to indicate an indeterminate progress
         # then default to 10 steps.
