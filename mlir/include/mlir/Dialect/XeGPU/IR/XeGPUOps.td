@@ -757,7 +757,10 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
   let arguments = (ins
     XeGPU_DpasOpType : $lhs,
     XeGPU_DpasOpType : $rhs,
-    Optional<XeGPU_Vector2DType>: $acc);
+    Optional<XeGPU_Vector2DType>: $acc,
+    OptionalAttr<XeGPU_SGMapAttr>:$sg_map_a,
+    OptionalAttr<XeGPU_SGMapAttr>:$sg_map_b,
+    OptionalAttr<XeGPU_SGMapAttr>:$sg_map_c);
   let results = (outs XeGPU_Vector2DType: $result);
 
   let extraClassDeclaration = [{

@@ -625,9 +625,9 @@ LogicalResult DpasOp::verify() {
   auto rhsShape = getRhsType().getShape();
   auto resultShape = getResultType().getShape();
 
-  auto sgMapA = (*this)->getAttrOfType<xegpu::SGMapAttr>("sg_map_a");
-  auto sgMapB = (*this)->getAttrOfType<xegpu::SGMapAttr>("sg_map_b");
-  auto sgMapC = (*this)->getAttrOfType<xegpu::SGMapAttr>("sg_map_c");
+  auto sgMapA = getSgMapAAttr();
+  auto sgMapB = getSgMapBAttr();
+  auto sgMapC = getSgMapCAttr();
 
   // If sg_maps are not present, then the operation is in VC mode.
   if (!sgMapA && !sgMapB && !sgMapC) {
