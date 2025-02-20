@@ -41,17 +41,32 @@ static uint64_t ToNanosec(const SteadyTimePoint Point) {
   return std::chrono::nanoseconds(Point.time_since_epoch()).count();
 }
 
-static std::string MakeUUID(Debugger *debugger) {
+// Generate a unique string. This should be unique across different runs.
+// We build such string by combining three parts:
+// <16 random bytes>_<timestamp>_<hash of username>
+// This reduces the chances of getting the same UUID, even when the same
+// user runs the two copies of binary at the same time.
+static std::string MakeUUID() {
   uint8_t random_bytes[16];
+  std::string randomString = "_";
   if (auto ec = llvm::getRandomBytes(random_bytes, 16)) {
     LLDB_LOG(GetLog(LLDBLog::Object),
              "Failed to generate random bytes for UUID: {0}", ec.message());
-    // Fallback to using timestamp + debugger ID.
-    return llvm::formatv(
-        "{0}_{1}", std::chrono::steady_clock::now().time_since_epoch().count(),
-        debugger->GetID());
+  } else {
+    randomString = UUID(random_bytes).GetAsString();
   }
-  return UUID(random_bytes).GetAsString();
+
+  std::string username = "_";
+  UserIDResolver &resolver = lldb_private::HostInfo::GetUserIDResolver();
+  std::optional<llvm::StringRef> opt_username =
+      resolver.GetUserName(lldb_private::HostInfo::GetUserID());
+  if (opt_username)
+    username = *opt_username;
+
+  return llvm::formatv(
+      "{0}_{1}_{2}", randomString,
+      std::chrono::steady_clock::now().time_since_epoch().count(),
+      llvm::MD5Hash(username));
 }
 
 void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
@@ -62,7 +77,7 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
     serializer.write("end_time", ToNanosec(end_time.value()));
 }
 
-void DebuggerTelemetryInfo::serialize(Serializer &serializer) const {
+void DebuggerInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
   serializer.write("username", username);
@@ -85,18 +100,21 @@ void MiscTelemetryInfo::serialize(Serializer &serializer) const {
 }
 
 TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
-    : m_config(std::move(config)) {}
+    : m_config(std::move(config)), m_id(MakeUUID) {}
 
 llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
+  // Look up the session_id to assign to this entry or make one
+  // if none had been computed for this debugger.
   LLDBBaseTelemetryInfo *lldb_entry =
       llvm::dyn_cast<LLDBBaseTelemetryInfo>(entry);
-  std::string session_id = "";
+  std::string session_id = m_id;
   if (Debugger *debugger = lldb_entry->debugger) {
-    auto session_id_pos = session_ids.find(debugger);
+    auto session_id_pos = session_ids.find(debugger->getID());
     if (session_id_pos != session_ids.end())
       session_id = session_id_pos->second;
     else
-      session_id_pos->second = session_id = MakeUUID(debugger);
+      session_id_pos->second = session_id =
+          llvm::formatv("{0}_{1}", m_id, debugger->getID());
   }
   lldb_entry->SessionId = session_id;
 
@@ -105,36 +123,13 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
 
 const Config *getConfig() { return m_config.get(); }
 
-void TelemetryManager::atDebuggerStartup(DebuggerTelemetryInfo *entry) {
-  UserIDResolver &resolver = lldb_private::HostInfo::GetUserIDResolver();
-  std::optional<llvm::StringRef> opt_username =
-      resolver.GetUserName(lldb_private::HostInfo::GetUserID());
-  if (opt_username)
-    entry->username = *opt_username;
-
-  entry->lldb_git_sha =
-      lldb_private::GetVersion(); // TODO: find the real git sha?
-
-  entry->lldb_path = HostInfo::GetProgramFileSpec().GetPath();
-
-  llvm::SmallString<64> cwd;
-  if (!llvm::sys::fs::current_path(cwd)) {
-    entry->cwd = cwd.c_str();
-  } else {
-    MiscTelemetryInfo misc_info;
-    misc_info.meta_data["internal_errors"] = "Cannot determine CWD";
-    if (llvm::Error er = dispatch(&misc_info)) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-               "Failed to dispatch misc-info at startup: {0}");
-    }
-  }
-
+void TelemetryManager::AtDebuggerStartup(DebuggerInfo *entry) {
   if (auto er = dispatch(entry)) {
     LLDB_LOG(GetLog(LLDBLog::Object), "Failed to dispatch entry at startup");
   }
 }
 
-void TelemetryManager::atDebuggerExit(DebuggerTelemetryInfo *entry) {
+void TelemetryManager::AtDebuggerExit(DebuggerInfo *entry) {
   // There must be a reference to the debugger at this point.
   assert(entry->debugger != nullptr);
 

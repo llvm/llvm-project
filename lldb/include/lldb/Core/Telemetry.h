@@ -66,24 +66,15 @@ struct ExitDescription {
   std::string description;
 };
 
-struct DebuggerTelemetryInfo : public LLDBBaseTelemetryInfo {
-  std::string username;
-  std::string lldb_git_sha;
-  std::string lldb_path;
-  std::string cwd;
+struct DebuggerInfo : public LLDBBaseTelemetryInfo {
+  std::string lldb_version;
   std::optional<ExitDescription> exit_desc;
 
-  DebuggerTelemetryInfo() = default;
+  std::string lldb_path;
+  std::string cwd;
+  std::string username;
 
-  // Provide a copy ctor because we may need to make a copy before
-  // sanitizing the data.
-  // (The sanitization might differ between different Destination classes).
-  DebuggerTelemetryInfo(const DebuggerTelemetryInfo &other) {
-    username = other.username;
-    lldb_git_sha = other.lldb_git_sha;
-    lldb_path = other.lldb_path;
-    cwd = other.cwd;
-  };
+  DebuggerInfo() = default;
 
   llvm::telemetry::KindType getKind() const override {
     return LLDBEntryKind::DebuggerInfo;
@@ -134,8 +125,8 @@ public:
 
   const llvm::telemetry::Config *getConfig();
 
-  void atDebuggerStartup(DebuggerTelemetryInfo *entry);
-  void atDebuggerExit(DebuggerTelemetryInfo *entry);
+  virtual void AtDebuggerStartup(DebuggerInfo *entry);
+  virtual void AtDebuggerExit(DebuggerInfo *entry);
 
   virtual llvm::StringRef GetInstanceName() const = 0;
   static TelemetryManager *getInstance();
@@ -147,10 +138,13 @@ protected:
 
 private:
   std::unique_ptr<llvm::telemetry::Config> m_config;
-  // Each debugger is assigned a unique ID (session_id).
+  // Each instance of a TelemetryManager is assigned a unique ID.
+  const std::string m_id;
+
+  // Map of debugger's ID to a unique session_id string.
   // All TelemetryInfo entries emitted for the same debugger instance
   // will get the same session_id.
-  llvm::DenseMap<Debugger *, std::string> session_ids;
+  llvm::DenseMap<lldb::user_id_t, std::string> session_ids;
   static std::unique_ptr<TelemetryManager> g_instance;
 };
 
