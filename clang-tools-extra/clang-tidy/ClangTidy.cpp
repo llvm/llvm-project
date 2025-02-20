@@ -339,6 +339,35 @@ private:
   void anchor() override {};
 };
 
+/// ASTConsumer that filters top-level declarations that are in system headers,
+/// and sets the AST traversal scope to only cover the declarations in user
+/// headers. This makes all clang-tidy checks avoid spending time processing
+/// declarations in system headers. The results are discarded anyway when
+/// presenting the results.
+class IgnoreSystemHeadersConsumer : public ASTConsumer {
+public:
+  bool HandleTopLevelDecl(DeclGroupRef DG) override {
+    for (Decl *D : DG) {
+      if (!isInSystemHeader(D))
+        Decls.push_back(D);
+    }
+    return true;
+  }
+
+  void HandleTranslationUnit(ASTContext &Ctx) override {
+    Ctx.setTraversalScope(Decls);
+  }
+
+private:
+  std::vector<Decl *> Decls;
+
+  bool isInSystemHeader(Decl *D) {
+    SourceManager &SM = D->getASTContext().getSourceManager();
+    SourceLocation Loc = SM.getExpansionLoc(D->getBeginLoc());
+    return SM.isInSystemHeader(Loc);
+  }
+};
+
 } // namespace
 
 ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
@@ -449,6 +478,10 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   }
 
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+
+  if (!Context.getOptions().SystemHeaders.value_or(false))
+    Consumers.push_back(std::make_unique<IgnoreSystemHeadersConsumer>());
+
   if (!Checks.empty())
     Consumers.push_back(Finder->newASTConsumer());
 

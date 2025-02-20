@@ -88,6 +88,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- It no longer processes declarations from system headers by default, greatly
+  improving performance (up to 10x speed-up). This behavior is disabled if the
+  `SystemHeaders` option is enabled.
+
 New checks
 ^^^^^^^^^^
 
