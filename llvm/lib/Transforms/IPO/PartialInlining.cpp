@@ -1393,9 +1393,12 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     CallerORE.emit(OR);
 
     // Now update the entry count:
-    if (CalleeEntryCountV && CallSiteToProfCountMap.count(User)) {
-      uint64_t CallSiteCount = CallSiteToProfCountMap[User];
-      CalleeEntryCountV -= std::min(CalleeEntryCountV, CallSiteCount);
+    if (CalleeEntryCountV) {
+      if (auto It = CallSiteToProfCountMap.find(User);
+          It != CallSiteToProfCountMap.end()) {
+        uint64_t CallSiteCount = It->second;
+        CalleeEntryCountV -= std::min(CalleeEntryCountV, CallSiteCount);
+      }
     }
 
     AnyInline = true;

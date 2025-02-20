@@ -40,9 +40,9 @@ namespace {
 
     const TargetInstrInfo *TII;
 
-    bool IsRegInClass(unsigned Reg, const TargetRegisterClass *RC,
+    bool IsRegInClass(Register Reg, const TargetRegisterClass *RC,
                       MachineRegisterInfo &MRI) {
-      if (Register::isVirtualRegister(Reg)) {
+      if (Reg.isVirtual()) {
         return RC->hasSubClassEq(MRI.getRegClass(Reg));
       } else if (RC->contains(Reg)) {
         return true;
