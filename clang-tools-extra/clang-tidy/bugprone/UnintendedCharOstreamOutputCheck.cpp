@@ -19,20 +19,14 @@ namespace {
 
 // check if the type is unsigned char or signed char
 AST_MATCHER(Type, isNumericChar) {
-  const auto *BT = dyn_cast<BuiltinType>(&Node);
-  if (BT == nullptr)
-    return false;
-  const BuiltinType::Kind K = BT->getKind();
-  return K == BuiltinType::UChar || K == BuiltinType::SChar;
+  return Node.isSpecificBuiltinType(BuiltinType::SChar) ||
+         Node.isSpecificBuiltinType(BuiltinType::UChar);
 }
 
 // check if the type is char
 AST_MATCHER(Type, isChar) {
-  const auto *BT = dyn_cast<BuiltinType>(&Node);
-  if (BT == nullptr)
-    return false;
-  const BuiltinType::Kind K = BT->getKind();
-  return K == BuiltinType::Char_U || K == BuiltinType::Char_S;
+  return Node.isSpecificBuiltinType(BuiltinType::Char_S) ||
+         Node.isSpecificBuiltinType(BuiltinType::Char_U);
 }
 
 } // namespace

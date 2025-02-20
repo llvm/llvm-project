@@ -14,8 +14,8 @@ integer values.
 
 .. code-block:: c++
 
-    uint8_t v = 9;
-    std::cout << v; // output '\t' instead of '9'
+    uint8_t v = 65;
+    std::cout << v; // output 'A' instead of '65'
 
 It could be fixed as
 
