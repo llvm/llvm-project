@@ -170,9 +170,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     // TODO: BridgeOS should be included in isOSDarwin.
     setLibcallName(RTLIB::EXP10_F32, "__exp10f");
     setLibcallName(RTLIB::EXP10_F64, "__exp10");
-  } else {
-    setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
-    setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
   }
 
   if (TT.isGNUEnvironment() || TT.isOSFuchsia() ||
