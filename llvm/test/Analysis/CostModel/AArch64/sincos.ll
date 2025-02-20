@@ -2,66 +2,59 @@
 ; RUN: opt < %s -mtriple=aarch64-gnu-linux -mattr=+neon,+sve -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output | FileCheck %s
 ; RUN: opt < %s -mtriple=aarch64-gnu-linux -mattr=+neon,+sve -vector-library=ArmPL -passes="print<cost-model>" -libcall-based-intrinsic-cost -cost-kind=throughput 2>&1 -disable-output | FileCheck %s -check-prefix=CHECK-VECLIB
 
-define void @sincos(
+define void @sincos() {
 ; CHECK-LABEL: 'sincos'
-; CHECK:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call { half, half } @llvm.sincos.f16(half %x_f16)
-; CHECK:  Cost Model: Found an estimated cost of 10 for instruction: %f32 = call { float, float } @llvm.sincos.f32(float %x_f32)
-; CHECK:  Cost Model: Found an estimated cost of 10 for instruction: %f64 = call { double, double } @llvm.sincos.f64(double %x_f64)
-; CHECK:  Cost Model: Found an estimated cost of 10 for instruction: %f128 = call { fp128, fp128 } @llvm.sincos.f128(fp128 %x_f128)
+; CHECK:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call { half, half } @llvm.sincos.f16(half poison)
+; CHECK:  Cost Model: Found an estimated cost of 10 for instruction: %f32 = call { float, float } @llvm.sincos.f32(float poison)
+; CHECK:  Cost Model: Found an estimated cost of 10 for instruction: %f64 = call { double, double } @llvm.sincos.f64(double poison)
+; CHECK:  Cost Model: Found an estimated cost of 10 for instruction: %f128 = call { fp128, fp128 } @llvm.sincos.f128(fp128 poison)
 ;
-; CHECK:  Cost Model: Found an estimated cost of 50 for instruction: %v8f16 = call { <8 x half>, <8 x half> } @llvm.sincos.v8f16(<8 x half> %x_v8xf16)
-; CHECK:  Cost Model: Found an estimated cost of 58 for instruction: %v4f32 = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %x_v4xf32)
-; CHECK:  Cost Model: Found an estimated cost of 26 for instruction: %v2f64 = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %x_v2xf64)
-; CHECK:  Cost Model: Found an estimated cost of 10 for instruction: %v1f128 = call { <1 x fp128>, <1 x fp128> } @llvm.sincos.v1f128(<1 x fp128> %x_v1xf128)
+; CHECK:  Cost Model: Found an estimated cost of 36 for instruction: %v8f16 = call { <8 x half>, <8 x half> } @llvm.sincos.v8f16(<8 x half> poison)
+; CHECK:  Cost Model: Found an estimated cost of 52 for instruction: %v4f32 = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> poison)
+; CHECK:  Cost Model: Found an estimated cost of 24 for instruction: %v2f64 = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> poison)
+; CHECK:  Cost Model: Found an estimated cost of 10 for instruction: %v1f128 = call { <1 x fp128>, <1 x fp128> } @llvm.sincos.v1f128(<1 x fp128> poison)
+; CHECK:  Cost Model: Found an estimated cost of 104 for instruction: %v8f32 = call { <8 x float>, <8 x float> } @llvm.sincos.v8f32(<8 x float> poison)
 ;
-; CHECK:  Cost Model: Invalid cost for instruction: %nxv8f16 = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.sincos.nxv8f16(<vscale x 8 x half> %x_nxv8xf16)
-; CHECK:  Cost Model: Invalid cost for instruction: %nxv4f32 = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> %x_nxv4xf32)
-; CHECK:  Cost Model: Invalid cost for instruction: %nxv2f64 = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double> %x_nxv2xf64)
-; CHECK:  Cost Model: Invalid cost for instruction: %nxv1f128 = call { <vscale x 1 x fp128>, <vscale x 1 x fp128> } @llvm.sincos.nxv1f128(<vscale x 1 x fp128> %x_nxv1xf128)
-
+; CHECK:  Cost Model: Invalid cost for instruction: %nxv8f16 = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.sincos.nxv8f16(<vscale x 8 x half> poison)
+; CHECK:  Cost Model: Invalid cost for instruction: %nxv4f32 = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> poison)
+; CHECK:  Cost Model: Invalid cost for instruction: %nxv2f64 = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double> poison)
+; CHECK:  Cost Model: Invalid cost for instruction: %nxv1f128 = call { <vscale x 1 x fp128>, <vscale x 1 x fp128> } @llvm.sincos.nxv1f128(<vscale x 1 x fp128> poison)
+; CHECK:  Cost Model: Invalid cost for instruction: %nxv8f32 = call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.sincos.nxv8f32(<vscale x 8 x float> poison)
+;
 ; CHECK-VECLIB-LABEL: 'sincos'
-; CHECK-VECLIB:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call { half, half } @llvm.sincos.f16(half %x_f16)
-; CHECK-VECLIB:  Cost Model: Found an estimated cost of 10 for instruction: %f32 = call { float, float } @llvm.sincos.f32(float %x_f32)
-; CHECK-VECLIB:  Cost Model: Found an estimated cost of 10 for instruction: %f64 = call { double, double } @llvm.sincos.f64(double %x_f64)
-; CHECK-VECLIB:  Cost Model: Found an estimated cost of 10 for instruction: %f128 = call { fp128, fp128 } @llvm.sincos.f128(fp128 %x_f128)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call { half, half } @llvm.sincos.f16(half poison)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 10 for instruction: %f32 = call { float, float } @llvm.sincos.f32(float poison)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 10 for instruction: %f64 = call { double, double } @llvm.sincos.f64(double poison)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 10 for instruction: %f128 = call { fp128, fp128 } @llvm.sincos.f128(fp128 poison)
 ;
-; CHECK-VECLIB:  Cost Model: Found an estimated cost of 50 for instruction: %v8f16 = call { <8 x half>, <8 x half> } @llvm.sincos.v8f16(<8 x half> %x_v8xf16)
-; CHECK-VECLIB:  Cost Model: Found an estimated cost of 12 for instruction: %v4f32 = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %x_v4xf32)
-; CHECK-VECLIB:  Cost Model: Found an estimated cost of 12 for instruction: %v2f64 = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %x_v2xf64)
-; CHECK-VECLIB:  Cost Model: Found an estimated cost of 10 for instruction: %v1f128 = call { <1 x fp128>, <1 x fp128> } @llvm.sincos.v1f128(<1 x fp128> %x_v1xf128)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 36 for instruction: %v8f16 = call { <8 x half>, <8 x half> } @llvm.sincos.v8f16(<8 x half> poison)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 12 for instruction: %v4f32 = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> poison)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 12 for instruction: %v2f64 = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> poison)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 10 for instruction: %v1f128 = call { <1 x fp128>, <1 x fp128> } @llvm.sincos.v1f128(<1 x fp128> poison)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 104 for instruction: %v8f32 = call { <8 x float>, <8 x float> } @llvm.sincos.v8f32(<8 x float> poison)
 ;
-; CHECK-VECLIB:  Cost Model: Invalid cost for instruction: %nxv8f16 = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.sincos.nxv8f16(<vscale x 8 x half> %x_nxv8xf16)
-; CHECK-VECLIB:  Cost Model: Found an estimated cost of 13 for instruction: %nxv4f32 = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> %x_nxv4xf32)
-; CHECK-VECLIB:  Cost Model: Found an estimated cost of 13 for instruction: %nxv2f64 = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double> %x_nxv2xf64)
-; CHECK-VECLIB:  Cost Model: Invalid cost for instruction: %nxv1f128 = call { <vscale x 1 x fp128>, <vscale x 1 x fp128> } @llvm.sincos.nxv1f128(<vscale x 1 x fp128> %x_nxv1xf128)
+; CHECK-VECLIB:  Cost Model: Invalid cost for instruction: %nxv8f16 = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.sincos.nxv8f16(<vscale x 8 x half> poison)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 13 for instruction: %nxv4f32 = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-VECLIB:  Cost Model: Found an estimated cost of 13 for instruction: %nxv2f64 = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double> poison)
+; CHECK-VECLIB:  Cost Model: Invalid cost for instruction: %nxv1f128 = call { <vscale x 1 x fp128>, <vscale x 1 x fp128> } @llvm.sincos.nxv1f128(<vscale x 1 x fp128> poison)
+; CHECK-VECLIB:  Cost Model: Invalid cost for instruction: %nxv8f32 = call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.sincos.nxv8f32(<vscale x 8 x float> poison)
+;
+  %f16 = call { half, half } @llvm.sincos.f16(half poison)
+  %f32 = call { float, float } @llvm.sincos.f32(float poison)
+  %f64 = call { double, double } @llvm.sincos.f64(double poison)
+  %f128 = call { fp128, fp128 } @llvm.sincos.f128(fp128 poison)
 
-  half %x_f16,
-  float %x_f32,
-  double %x_f64,
-  fp128 %x_f128,
-  <8 x half> %x_v8xf16,
-  <4 x float> %x_v4xf32,
-  <2 x double> %x_v2xf64,
-  <1 x fp128> %x_v1xf128,
-  <vscale x 8 x half> %x_nxv8xf16,
-  <vscale x 4 x float> %x_nxv4xf32,
-  <vscale x 2 x double> %x_nxv2xf64,
-  <vscale x 1 x fp128> %x_nxv1xf128
-) {
-  %f16 = call { half, half } @llvm.sincos.f16(half %x_f16)
-  %f32 = call { float, float } @llvm.sincos.f32(float %x_f32)
-  %f64 = call { double, double } @llvm.sincos.f64(double %x_f64)
-  %f128 = call { fp128, fp128 } @llvm.sincos.f128(fp128 %x_f128)
+  %v8f16 = call { <8 x half>, <8 x half> } @llvm.sincos.v8f16(<8 x half> poison)
+  %v4f32 = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> poison)
+  %v2f64 = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> poison)
+  %v1f128 = call { <1 x fp128>, <1 x fp128> } @llvm.sincos.v1f128(<1 x fp128> poison)
+  %v8f32 = call { <8 x float>, <8 x float> } @llvm.sincos.v8f32(<8 x float> poison)
 
-  %v8f16 = call { <8 x half>, <8 x half> } @llvm.sincos.v8f16(<8 x half> %x_v8xf16)
-  %v4f32 = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %x_v4xf32)
-  %v2f64 = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %x_v2xf64)
-  %v1f128 = call { <1 x fp128>, <1 x fp128> } @llvm.sincos.v1f128(<1 x fp128> %x_v1xf128)
-
-  %nxv8f16 = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.sincos.v8f16(<vscale x 8 x half> %x_nxv8xf16)
-  %nxv4f32 = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.v4f32(<vscale x 4 x float> %x_nxv4xf32)
-  %nxv2f64 = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.v2f64(<vscale x 2 x double> %x_nxv2xf64)
-  %nxv1f128 = call { <vscale x 1 x fp128>, <vscale x 1 x fp128> } @llvm.sincos.v1f128(<vscale x 1 x fp128> %x_nxv1xf128)
+  %nxv8f16 = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.sincos.v8f16(<vscale x 8 x half> poison)
+  %nxv4f32 = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.v4f32(<vscale x 4 x float> poison)
+  %nxv2f64 = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.v2f64(<vscale x 2 x double> poison)
+  %nxv1f128 = call { <vscale x 1 x fp128>, <vscale x 1 x fp128> } @llvm.sincos.v1f128(<vscale x 1 x fp128> poison)
+  %nxv8f32 = call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.sincos.v8f32(<vscale x 8 x float> poison)
 
   ret void
 }
