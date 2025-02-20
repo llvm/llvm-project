@@ -36,8 +36,7 @@ template <> struct make_complex<float16> {
   using type = cfloat16;
 };
 #endif
-#if defined(LIBC_TYPES_HAS_CFLOAT128) &&                                       \
-    !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
+#ifdef LIBC_TYPES_CFLOAT128_IS_NOT_COMPLEX_LONG_DOUBLE
 template <> struct make_complex<float128> {
   using type = cfloat128;
 };
@@ -62,20 +61,13 @@ template <> struct make_real<cfloat16> {
   using type = float16;
 };
 #endif
-#if defined(LIBC_TYPES_HAS_CFLOAT128) &&                                       \
-    !defined(LIBC_TYPES_CFLOAT128_IS_COMPLEX_LONG_DOUBLE)
+#ifdef LIBC_TYPES_CFLOAT128_IS_NOT_COMPLEX_LONG_DOUBLE
 template <> struct make_real<cfloat128> {
   using type = float128;
 };
 #endif
 
 template <typename T> using make_real_t = typename make_real<T>::type;
-
-template <typename T> LIBC_INLINE constexpr T conjugate(T c) {
-  Complex<make_real_t<T>> c_c = cpp::bit_cast<Complex<make_real_t<T>>>(c);
-  c_c.imag = -c_c.imag;
-  return cpp::bit_cast<T>(c_c);
-}
 
 } // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC___SUPPORT_COMPLEX_TYPE_H

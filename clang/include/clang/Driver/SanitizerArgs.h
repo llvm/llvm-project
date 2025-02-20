@@ -25,6 +25,8 @@ class SanitizerArgs {
   SanitizerSet Sanitizers;
   SanitizerSet RecoverableSanitizers;
   SanitizerSet TrapSanitizers;
+  SanitizerSet MergeHandlers;
+  SanitizerMaskCutoffs SkipHotCutoffs;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;
@@ -41,6 +43,7 @@ class SanitizerArgs {
   bool CfiICallGeneralizePointers = false;
   bool CfiICallNormalizeIntegers = false;
   bool CfiCanonicalJumpTables = false;
+  bool KcfiArity = false;
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
   bool StableABI = false;
@@ -87,6 +90,7 @@ public:
   bool needsHwasanAliasesRt() const {
     return needsHwasanRt() && HwasanUseAliases;
   }
+  bool needsTysanRt() const { return Sanitizers.has(SanitizerKind::Type); }
   bool needsTsanRt() const { return Sanitizers.has(SanitizerKind::Thread); }
   bool needsMsanRt() const { return Sanitizers.has(SanitizerKind::Memory); }
   bool needsFuzzer() const { return Sanitizers.has(SanitizerKind::Fuzzer); }
@@ -97,6 +101,7 @@ public:
   }
   bool needsFuzzerInterceptors() const;
   bool needsUbsanRt() const;
+  bool needsUbsanCXXRt() const;
   bool requiresMinimalRuntime() const { return MinimalRuntime; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const { return SafeStackRuntime; }

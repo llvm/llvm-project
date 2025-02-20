@@ -32,6 +32,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
+    # poll.h entrypoints
+    libc.src.poll.poll
+
     # sched.h entrypoints
     libc.src.sched.sched_get_priority_max
     libc.src.sched.sched_get_priority_min
@@ -322,9 +325,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
+    libc.src.unistd.getentropy
     libc.src.unistd.geteuid
     libc.src.unistd.getpid
     libc.src.unistd.getppid
+    libc.src.unistd.getsid
     libc.src.unistd.gettid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
@@ -340,6 +345,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.readlink
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
+    libc.src.unistd.setsid
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
     libc.src.unistd.sysconf
@@ -349,7 +355,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.write
 
     # wchar.h entrypoints
+    libc.src.wchar.wcslen
     libc.src.wchar.wctob
+
+    # sys/uio.h entrypoints
+    libc.src.sys.uio.writev
+    libc.src.sys.uio.readv
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -370,6 +381,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.complex.conj
     libc.src.complex.conjf
     libc.src.complex.conjl
+    libc.src.complex.cproj
+    libc.src.complex.cprojf
+    libc.src.complex.cprojl
 
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
@@ -432,7 +446,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
-    libc.src.math.fadd 
+    libc.src.math.fadd
     libc.src.math.faddl
     libc.src.math.fadd
     libc.src.math.fdim
@@ -616,13 +630,18 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxl
 )
 
-if(LIBC_TYPES_HAS_FLOAT16)
+if(LIBC_TYPES_HAS_CFLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # complex.h C23 _Complex _Float16 entrypoints
-    # libc.src.complex.crealf16
-    # libc.src.complex.cimagf16
-    # libc.src.complex.conjf16
-    
+    libc.src.complex.crealf16
+    libc.src.complex.cimagf16
+    libc.src.complex.conjf16
+    libc.src.complex.cprojf16
+  )
+endif()
+
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
@@ -722,13 +741,18 @@ if(LIBC_TYPES_HAS_FLOAT16)
   # endif()
 endif()
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_CFLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # complex.h C23 _Complex _Float128 entrypoints
     libc.src.complex.crealf128
     libc.src.complex.cimagf128
     libc.src.complex.conjf128
+    libc.src.complex.cprojf128
+  )
+endif()
 
+if(LIBC_TYPES_HAS_FLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128

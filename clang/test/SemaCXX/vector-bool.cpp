@@ -85,10 +85,10 @@ void foo(const bool& X);
 
 // Disallow element-wise access.
 bool* ElementRefs() {
-  eight_bools.y = false; // expected-error@88 {{illegal vector component name ''y''}}
-  &eight_bools.z;        // expected-error@89 {{illegal vector component name ''z''}}
-  foo(eight_bools.w);    // expected-error@90 {{illegal vector component name ''w''}}
-  foo(eight_bools.wyx);  // expected-error@91 {{illegal vector component name ''wyx''}}
+  eight_bools.y = false; // expected-error@88 {{illegal vector component name 'y'}}
+  &eight_bools.z;        // expected-error@89 {{illegal vector component name 'z'}}
+  foo(eight_bools.w);    // expected-error@90 {{illegal vector component name 'w'}}
+  foo(eight_bools.wyx);  // expected-error@91 {{illegal vector component name 'wyx'}}
 }
 
 void Sizeof() {

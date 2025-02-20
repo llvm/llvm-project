@@ -73,11 +73,6 @@ using DataFunc =
     }                                                                          \
   } while (0)
 
-static void swapBytes(std::byte *M, size_t N) {
-  for (size_t I = 0; I != (N / 2); ++I)
-    std::swap(M[I], M[N - 1 - I]);
-}
-
 /// We use this to recursively iterate over all fields and elements of a pointer
 /// and extract relevant data for a bitcast.
 static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
@@ -115,7 +110,7 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
   if (FieldDesc->isCompositeArray()) {
     QualType ElemType = FieldDesc->getElemQualType();
     Bits ElemSize = Bits(Ctx.getASTContext().getTypeSize(ElemType));
-    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+    for (unsigned I = P.getIndex(); I != FieldDesc->getNumElems(); ++I) {
       enumerateData(P.atIndex(I).narrow(), Ctx, Offset, BitsToRead, F);
       Offset += ElemSize;
       if (Offset >= BitsToRead)
@@ -274,7 +269,7 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
         Bits BitWidth = FullBitWidth;
 
         if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
-          BitWidth = Bits(std::min(FD->getBitWidthValue(ASTCtx),
+          BitWidth = Bits(std::min(FD->getBitWidthValue(),
                                    (unsigned)FullBitWidth.getQuantity()));
         else if (T == PT_Bool && PackedBools)
           BitWidth = Bits(1);
@@ -306,8 +301,8 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
           assert(NumBits.isFullByte());
           assert(NumBits.getQuantity() <= FullBitWidth.getQuantity());
           F.bitcastToMemory(Buff.get());
-          // Now, only (maybe) swap the actual size of the float, excluding the
-          // padding bits.
+          // Now, only (maybe) swap the actual size of the float, excluding
+          // the padding bits.
           if (llvm::sys::IsBigEndianHost)
             swapBytes(Buff.get(), NumBits.roundToBytes());
 
@@ -411,7 +406,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
 
         Bits BitWidth;
         if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
-          BitWidth = Bits(std::min(FD->getBitWidthValue(ASTCtx),
+          BitWidth = Bits(std::min(FD->getBitWidthValue(),
                                    (unsigned)FullBitWidth.getQuantity()));
         else if (T == PT_Bool && PackedBools)
           BitWidth = Bits(1);
@@ -452,4 +447,35 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
       });
 
   return Success;
+}
+
+bool clang::interp::DoMemcpy(InterpState &S, CodePtr OpPC,
+                             const Pointer &SrcPtr, const Pointer &DestPtr,
+                             Bits Size) {
+  assert(SrcPtr.isBlockPointer());
+  assert(DestPtr.isBlockPointer());
+
+  unsigned SrcStartOffset = SrcPtr.getByteOffset();
+  unsigned DestStartOffset = DestPtr.getByteOffset();
+
+  enumeratePointerFields(SrcPtr, S.getContext(), Size,
+                         [&](const Pointer &P, PrimType T, Bits BitOffset,
+                             Bits FullBitWidth, bool PackedBools) -> bool {
+                           unsigned SrcOffsetDiff =
+                               P.getByteOffset() - SrcStartOffset;
+
+                           Pointer DestP =
+                               Pointer(DestPtr.asBlockPointer().Pointee,
+                                       DestPtr.asBlockPointer().Base,
+                                       DestStartOffset + SrcOffsetDiff);
+
+                           TYPE_SWITCH(T, {
+                             DestP.deref<T>() = P.deref<T>();
+                             DestP.initialize();
+                           });
+
+                           return true;
+                         });
+
+  return true;
 }

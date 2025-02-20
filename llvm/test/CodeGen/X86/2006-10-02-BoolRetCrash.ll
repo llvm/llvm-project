@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 < %s
+; RUN: llc -mtriple=i686 < %s
 ; PR933
 
 define fastcc i1 @test() {

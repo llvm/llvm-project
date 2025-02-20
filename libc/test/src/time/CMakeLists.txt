@@ -13,6 +13,8 @@ add_libc_unittest(
     20
   DEPENDS
     libc.src.time.asctime
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_unittest(
@@ -28,6 +30,8 @@ add_libc_unittest(
     20
   DEPENDS
     libc.src.time.asctime_r
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_unittest(
@@ -45,7 +49,8 @@ add_libc_unittest(
     libc.include.time
     libc.hdr.types.time_t
     libc.src.time.ctime
-    libc.src.time.time_utils
+    libc.src.time.time_constants
+    libc.hdr.types.struct_tm
 )
 
 add_libc_unittest(
@@ -63,7 +68,8 @@ add_libc_unittest(
     libc.include.time
     libc.hdr.types.time_t
     libc.src.time.ctime_r
-    libc.src.time.time_utils
+    libc.src.time.time_constants
+    libc.hdr.types.struct_tm
 )
 
 add_libc_test(
@@ -74,6 +80,9 @@ add_libc_test(
     clock_gettime_test.cpp
   DEPENDS
     libc.src.time.clock_gettime
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.time_macros
 )
 
 add_libc_test(
@@ -94,6 +103,8 @@ add_libc_unittest(
     difftime_test.cpp
   DEPENDS
     libc.src.time.difftime
+    libc.src.time.time_constants
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_libc_unittest(
@@ -105,6 +116,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.time
     libc.src.time.gettimeofday
+    libc.hdr.types.struct_timeval
 )
 
 add_libc_unittest(
@@ -118,6 +130,8 @@ add_libc_unittest(
   DEPENDS
     libc.src.time.gmtime
     libc.src.__support.CPP.limits
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_unittest(
@@ -130,6 +144,8 @@ add_libc_unittest(
     TmMatcher.h
   DEPENDS
     libc.src.time.gmtime_r
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_unittest(
@@ -146,6 +162,8 @@ add_libc_unittest(
   DEPENDS
     libc.src.time.mktime
     libc.src.__support.CPP.limits
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_test(
@@ -158,6 +176,18 @@ add_libc_test(
     libc.include.time
     libc.src.time.nanosleep
     libc.src.errno.errno
+    libc.hdr.types.struct_timespec
+)
+
+add_libc_test(
+  strftime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    strftime_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.src.time.strftime
 )
 
 add_libc_unittest(
@@ -180,6 +210,7 @@ add_libc_test(
     timespec_get_test.cpp
   DEPENDS
     libc.src.time.timespec_get
+    libc.hdr.types.struct_timespec
 )
 
 add_libc_test(
@@ -192,4 +223,5 @@ add_libc_test(
     libc.include.time
     libc.src.time.clock
     libc.src.errno.errno
+    libc.hdr.types.clock_t
 )

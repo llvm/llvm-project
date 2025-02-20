@@ -362,6 +362,7 @@ struct GetLengthOpConversion
     if (!length)
       return rewriter.notifyMatchFailure(
           getLength, "could not deduce length from GetLengthOp operand");
+    length = builder.createConvert(loc, builder.getIndexType(), length);
     rewriter.replaceOp(getLength, length);
     return mlir::success();
   }
@@ -760,8 +761,10 @@ struct HLFIRListener : public mlir::OpBuilder::Listener {
 struct ElementalOpConversion
     : public mlir::OpConversionPattern<hlfir::ElementalOp> {
   using mlir::OpConversionPattern<hlfir::ElementalOp>::OpConversionPattern;
-  explicit ElementalOpConversion(mlir::MLIRContext *ctx)
-      : mlir::OpConversionPattern<hlfir::ElementalOp>{ctx} {
+  explicit ElementalOpConversion(mlir::MLIRContext *ctx,
+                                 bool optimizeEmptyElementals = false)
+      : mlir::OpConversionPattern<hlfir::ElementalOp>{ctx},
+        optimizeEmptyElementals(optimizeEmptyElementals) {
     // This pattern recursively converts nested ElementalOp's
     // by cloning and then converting them, so we have to allow
     // for recursive pattern application. The recursion is bounded
@@ -789,6 +792,10 @@ struct ElementalOpConversion
     // If the box load is needed, we'd better place it outside
     // of the loop nest.
     temp = derefPointersAndAllocatables(loc, builder, temp);
+
+    if (optimizeEmptyElementals)
+      extents = fir::factory::updateRuntimeExtentsForEmptyArrays(builder, loc,
+                                                                 extents);
 
     // Generate a loop nest looping around the fir.elemental shape and clone
     // fir.elemental region inside the inner loop.
@@ -860,6 +867,9 @@ struct ElementalOpConversion
     rewriter.replaceOp(elemental, bufferizedExpr);
     return mlir::success();
   }
+
+private:
+  bool optimizeEmptyElementals = false;
 };
 struct CharExtremumOpConversion
     : public mlir::OpConversionPattern<hlfir::CharExtremumOp> {
@@ -931,6 +941,8 @@ struct EvaluateInMemoryOpConversion
 
 class BufferizeHLFIR : public hlfir::impl::BufferizeHLFIRBase<BufferizeHLFIR> {
 public:
+  using BufferizeHLFIRBase<BufferizeHLFIR>::BufferizeHLFIRBase;
+
   void runOnOperation() override {
     // TODO: make this a pass operating on FuncOp. The issue is that
     // FirOpBuilder helpers may generate new FuncOp because of runtime/llvm
@@ -942,13 +954,13 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
-                AssociateOpConversion, CharExtremumOpConversion,
-                ConcatOpConversion, DestroyOpConversion, ElementalOpConversion,
-                EndAssociateOpConversion, EvaluateInMemoryOpConversion,
-                NoReassocOpConversion, SetLengthOpConversion,
-                ShapeOfOpConversion, GetLengthOpConversion>(context);
+    patterns.insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+                    AssociateOpConversion, CharExtremumOpConversion,
+                    ConcatOpConversion, DestroyOpConversion,
+                    EndAssociateOpConversion, EvaluateInMemoryOpConversion,
+                    NoReassocOpConversion, SetLengthOpConversion,
+                    ShapeOfOpConversion, GetLengthOpConversion>(context);
+    patterns.insert<ElementalOpConversion>(context, optimizeEmptyElementals);
     mlir::ConversionTarget target(*context);
     // Note that YieldElementOp is not marked as an illegal operation.
     // It must be erased by its parent converter and there is no explicit

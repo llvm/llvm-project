@@ -68,8 +68,9 @@ inline namespace fundamentals_v1 {
 
  */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/experimental/type_traits>
+#else
 #  include <__config>
 
 #  if _LIBCPP_STD_VER >= 14
@@ -155,6 +156,6 @@ _LIBCPP_END_NAMESPACE_LFTS
 #    endif
 
 #  endif /* _LIBCPP_STD_VER >= 14 */
-#endif   // 0
+#endif   // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif /* _LIBCPP_EXPERIMENTAL_TYPE_TRAITS */

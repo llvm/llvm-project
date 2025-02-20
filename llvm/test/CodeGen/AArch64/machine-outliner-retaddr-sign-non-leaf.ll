@@ -8,8 +8,8 @@ define i64 @a(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V8A-LABEL: a:
 ; V8A:       // %bb.0:
 ; V8A-NEXT:    .cfi_b_key_frame
-; V8A-NEXT:    hint #27
 ; V8A-NEXT:    .cfi_negate_ra_state
+; V8A-NEXT:    hint #27
 ; V8A-NEXT:    sub sp, sp, #32
 ; V8A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; V8A-NEXT:    .cfi_def_cfa_offset 32
@@ -26,8 +26,8 @@ define i64 @a(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V83A-LABEL: a:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    .cfi_b_key_frame
-; V83A-NEXT:    pacibsp
 ; V83A-NEXT:    .cfi_negate_ra_state
+; V83A-NEXT:    pacibsp
 ; V83A-NEXT:    sub sp, sp, #32
 ; V83A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 32
@@ -59,8 +59,8 @@ define i64 @b(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V8A-LABEL: b:
 ; V8A:       // %bb.0:
 ; V8A-NEXT:    .cfi_b_key_frame
-; V8A-NEXT:    hint #27
 ; V8A-NEXT:    .cfi_negate_ra_state
+; V8A-NEXT:    hint #27
 ; V8A-NEXT:    sub sp, sp, #32
 ; V8A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; V8A-NEXT:    .cfi_def_cfa_offset 32
@@ -77,8 +77,8 @@ define i64 @b(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V83A-LABEL: b:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    .cfi_b_key_frame
-; V83A-NEXT:    pacibsp
 ; V83A-NEXT:    .cfi_negate_ra_state
+; V83A-NEXT:    pacibsp
 ; V83A-NEXT:    sub sp, sp, #32
 ; V83A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 32
@@ -110,8 +110,8 @@ define i64 @c(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V8A-LABEL: c:
 ; V8A:       // %bb.0:
 ; V8A-NEXT:    .cfi_b_key_frame
-; V8A-NEXT:    hint #27
 ; V8A-NEXT:    .cfi_negate_ra_state
+; V8A-NEXT:    hint #27
 ; V8A-NEXT:    sub sp, sp, #32
 ; V8A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; V8A-NEXT:    .cfi_def_cfa_offset 32
@@ -128,8 +128,8 @@ define i64 @c(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V83A-LABEL: c:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    .cfi_b_key_frame
-; V83A-NEXT:    pacibsp
 ; V83A-NEXT:    .cfi_negate_ra_state
+; V83A-NEXT:    pacibsp
 ; V83A-NEXT:    sub sp, sp, #32
 ; V83A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 32

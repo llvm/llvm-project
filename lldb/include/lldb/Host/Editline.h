@@ -34,6 +34,7 @@
 #include <sstream>
 #include <vector>
 
+#include "lldb/Host/StreamFile.h"
 #include "lldb/lldb-private.h"
 
 #if !defined(_WIN32) && !defined(__ANDROID__)
@@ -151,8 +152,9 @@ using namespace line_editor;
 /// facility.  Both single- and multi-line editing are supported.
 class Editline {
 public:
-  Editline(const char *editor_name, FILE *input_file, FILE *output_file,
-           FILE *error_file, std::recursive_mutex &output_mutex);
+  Editline(const char *editor_name, FILE *input_file,
+           lldb::LockableStreamFileSP output_stream_sp,
+           lldb::LockableStreamFileSP error_stream_sp, bool color);
 
   ~Editline();
 
@@ -212,19 +214,23 @@ public:
   }
 
   void SetPromptAnsiPrefix(std::string prefix) {
-    m_prompt_ansi_prefix = std::move(prefix);
+    if (m_color)
+      m_prompt_ansi_prefix = std::move(prefix);
   }
 
   void SetPromptAnsiSuffix(std::string suffix) {
-    m_prompt_ansi_suffix = std::move(suffix);
+    if (m_color)
+      m_prompt_ansi_suffix = std::move(suffix);
   }
 
   void SetSuggestionAnsiPrefix(std::string prefix) {
-    m_suggestion_ansi_prefix = std::move(prefix);
+    if (m_color)
+      m_suggestion_ansi_prefix = std::move(prefix);
   }
 
   void SetSuggestionAnsiSuffix(std::string suffix) {
-    m_suggestion_ansi_suffix = std::move(suffix);
+    if (m_color)
+      m_suggestion_ansi_suffix = std::move(suffix);
   }
 
   /// Prompts for and reads a single line of user input.
@@ -233,12 +239,15 @@ public:
   /// Prompts for and reads a multi-line batch of user input.
   bool GetLines(int first_line_number, StringList &lines, bool &interrupted);
 
-  void PrintAsync(Stream *stream, const char *s, size_t len);
+  void PrintAsync(lldb::LockableStreamFileSP stream_sp, const char *s,
+                  size_t len);
 
   /// Convert the current input lines into a UTF8 StringList
   StringList GetInputAsStringList(int line_count = UINT32_MAX);
 
   size_t GetTerminalWidth() { return m_terminal_width; }
+
+  size_t GetTerminalHeight() { return m_terminal_height; }
 
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
@@ -373,6 +382,7 @@ private:
   std::vector<EditLineStringType> m_input_lines;
   EditorStatus m_editor_status;
   int m_terminal_width = 0;
+  int m_terminal_height = 0;
   int m_base_line_number = 0;
   unsigned m_current_line_index = 0;
   int m_current_line_rows = -1;
@@ -385,8 +395,11 @@ private:
   volatile std::sig_atomic_t m_terminal_size_has_changed = 0;
   std::string m_editor_name;
   FILE *m_input_file;
-  FILE *m_output_file;
-  FILE *m_error_file;
+  lldb::LockableStreamFileSP m_output_stream_sp;
+  lldb::LockableStreamFileSP m_error_stream_sp;
+
+  std::optional<LockedStreamFile> m_locked_output;
+
   ConnectionFileDescriptor m_input_connection;
 
   IsInputCompleteCallbackType m_is_input_complete_callback;
@@ -397,13 +410,13 @@ private:
   CompleteCallbackType m_completion_callback;
   SuggestionCallbackType m_suggestion_callback;
 
+  bool m_color;
   std::string m_prompt_ansi_prefix;
   std::string m_prompt_ansi_suffix;
   std::string m_suggestion_ansi_prefix;
   std::string m_suggestion_ansi_suffix;
 
   std::size_t m_previous_autosuggestion_size = 0;
-  std::recursive_mutex &m_output_mutex;
 };
 }
 

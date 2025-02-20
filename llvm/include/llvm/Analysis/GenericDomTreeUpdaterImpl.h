@@ -16,6 +16,7 @@
 #ifndef LLVM_ANALYSIS_GENERICDOMTREEUPDATERIMPL_H
 #define LLVM_ANALYSIS_GENERICDOMTREEUPDATERIMPL_H
 
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/GenericDomTreeUpdater.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -56,7 +57,7 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::recalculate(
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
 void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::applyUpdates(
-    ArrayRef<typename DomTreeT::UpdateType> Updates) {
+    ArrayRef<UpdateT> Updates) {
   if (!DT && !PDT)
     return;
 
@@ -77,12 +78,12 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::applyUpdates(
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
 void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
-    applyUpdatesPermissive(ArrayRef<typename DomTreeT::UpdateType> Updates) {
+    applyUpdatesPermissive(ArrayRef<UpdateT> Updates) {
   if (!DT && !PDT)
     return;
 
   SmallSet<std::pair<BasicBlockT *, BasicBlockT *>, 8> Seen;
-  SmallVector<typename DomTreeT::UpdateType, 8> DeduplicatedUpdates;
+  SmallVector<UpdateT, 8> DeduplicatedUpdates;
   for (const auto &U : Updates) {
     auto Edge = std::make_pair(U.getFrom(), U.getTo());
     // Because it is illegal to submit updates that have already been applied
@@ -130,6 +131,24 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
 }
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
+void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::splitCriticalEdge(
+    BasicBlockT *FromBB, BasicBlockT *ToBB, BasicBlockT *NewBB) {
+  if (!DT && !PDT)
+    return;
+
+  CriticalEdge E = {FromBB, ToBB, NewBB};
+  if (Strategy == UpdateStrategy::Lazy) {
+    PendUpdates.push_back(E);
+    return;
+  }
+
+  if (DT)
+    splitDTCriticalEdges(E);
+  if (PDT)
+    splitPDTCriticalEdges(E);
+}
+
+template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
 DomTreeT &
 GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::getDomTree() {
   assert(DT && "Invalid acquisition of a null DomTree");
@@ -171,39 +190,40 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
     OS << "Lazy\n";
   int Index = 0;
 
+  auto printBlockInfo = [&](BasicBlockT *BB, StringRef Ending) {
+    if (BB) {
+      auto S = BB->getName();
+      if (!BB->hasName())
+        S = "(no name)";
+      OS << S << "(" << BB << ")" << Ending;
+    } else {
+      OS << "(badref)" << Ending;
+    }
+  };
+
   auto printUpdates =
-      [&](typename ArrayRef<typename DomTreeT::UpdateType>::const_iterator
-              begin,
-          typename ArrayRef<typename DomTreeT::UpdateType>::const_iterator
-              end) {
+      [&](typename ArrayRef<DomTreeUpdate>::const_iterator begin,
+          typename ArrayRef<DomTreeUpdate>::const_iterator end) {
         if (begin == end)
           OS << "  None\n";
         Index = 0;
         for (auto It = begin, ItEnd = end; It != ItEnd; ++It) {
-          auto U = *It;
-          OS << "  " << Index << " : ";
-          ++Index;
-          if (U.getKind() == DomTreeT::Insert)
-            OS << "Insert, ";
-          else
-            OS << "Delete, ";
-          BasicBlockT *From = U.getFrom();
-          if (From) {
-            auto S = From->getName();
-            if (!From->hasName())
-              S = "(no name)";
-            OS << S << "(" << From << "), ";
+          if (!It->IsCriticalEdgeSplit) {
+            auto U = It->Update;
+            OS << "  " << Index << " : ";
+            ++Index;
+            if (U.getKind() == DomTreeT::Insert)
+              OS << "Insert, ";
+            else
+              OS << "Delete, ";
+            printBlockInfo(U.getFrom(), ", ");
+            printBlockInfo(U.getTo(), "\n");
           } else {
-            OS << "(badref), ";
-          }
-          BasicBlockT *To = U.getTo();
-          if (To) {
-            auto S = To->getName();
-            if (!To->hasName())
-              S = "(no_name)";
-            OS << S << "(" << To << ")\n";
-          } else {
-            OS << "(badref)\n";
+            const auto &Edge = It->EdgeSplit;
+            OS << "  " << Index++ << " : Split critical edge, ";
+            printBlockInfo(Edge.FromBB, ", ");
+            printBlockInfo(Edge.ToBB, ", ");
+            printBlockInfo(Edge.NewBB, "\n");
           }
         }
       };
@@ -236,50 +256,53 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
     if (BB->hasName())
       OS << BB->getName() << "(";
     else
-      OS << "(no_name)(";
+      OS << "(no name)(";
     OS << BB << ")\n";
   }
 #endif
 }
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
+template <bool IsForward>
 void GenericDomTreeUpdater<DerivedT, DomTreeT,
-                           PostDomTreeT>::applyDomTreeUpdates() {
+                           PostDomTreeT>::applyUpdatesImpl() {
+  auto *DomTree = [&]() {
+    if constexpr (IsForward)
+      return DT;
+    else
+      return PDT;
+  }();
   // No pending DomTreeUpdates.
-  if (Strategy != UpdateStrategy::Lazy || !DT)
+  if (Strategy != UpdateStrategy::Lazy || !DomTree)
     return;
+  size_t &PendUpdateIndex = IsForward ? PendDTUpdateIndex : PendPDTUpdateIndex;
 
-  // Only apply updates not are applied by DomTree.
-  if (hasPendingDomTreeUpdates()) {
-    const auto I = PendUpdates.begin() + PendDTUpdateIndex;
+  // Only apply updates not are applied by (Post)DomTree.
+  while (IsForward ? hasPendingDomTreeUpdates()
+                   : hasPendingPostDomTreeUpdates()) {
+    auto I = PendUpdates.begin() + PendUpdateIndex;
     const auto E = PendUpdates.end();
     assert(I < E && "Iterator range invalid; there should be DomTree updates.");
-    DT->applyUpdates(ArrayRef<typename DomTreeT::UpdateType>(I, E));
-    PendDTUpdateIndex = PendUpdates.size();
-  }
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-void GenericDomTreeUpdater<DerivedT, DomTreeT,
-                           PostDomTreeT>::applyPostDomTreeUpdates() {
-  // No pending PostDomTreeUpdates.
-  if (Strategy != UpdateStrategy::Lazy || !PDT)
-    return;
-
-  // Only apply updates not are applied by PostDomTree.
-  if (hasPendingPostDomTreeUpdates()) {
-    const auto I = PendUpdates.begin() + PendPDTUpdateIndex;
-    const auto E = PendUpdates.end();
-    assert(I < E &&
-           "Iterator range invalid; there should be PostDomTree updates.");
-    PDT->applyUpdates(ArrayRef<typename DomTreeT::UpdateType>(I, E));
-    PendPDTUpdateIndex = PendUpdates.size();
+    if (!I->IsCriticalEdgeSplit) {
+      SmallVector<UpdateT, 32> NormalUpdates;
+      for (; I != E && !I->IsCriticalEdgeSplit; ++I)
+        NormalUpdates.push_back(I->Update);
+      DomTree->applyUpdates(NormalUpdates);
+      PendUpdateIndex += NormalUpdates.size();
+    } else {
+      SmallVector<CriticalEdge> CriticalEdges;
+      for (; I != E && I->IsCriticalEdgeSplit; ++I)
+        CriticalEdges.push_back(I->EdgeSplit);
+      IsForward ? splitDTCriticalEdges(CriticalEdges)
+                : splitPDTCriticalEdges(CriticalEdges);
+      PendUpdateIndex += CriticalEdges.size();
+    }
   }
 }
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
 bool GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::isUpdateValid(
-    typename DomTreeT::UpdateType Update) const {
+    UpdateT Update) const {
   const auto *From = Update.getFrom();
   const auto *To = Update.getTo();
   const auto Kind = Update.getKind();
@@ -345,6 +368,96 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT,
   // Calculate current index.
   PendDTUpdateIndex -= dropIndex;
   PendPDTUpdateIndex -= dropIndex;
+}
+
+template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
+void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
+    splitDTCriticalEdges(ArrayRef<CriticalEdge> Edges) {
+  // Bail out early if there is nothing to do.
+  if (!DT || Edges.empty())
+    return;
+
+  // Remember all the basic blocks that are inserted during
+  // edge splitting.
+  // Invariant: NewBBs == all the basic blocks contained in the NewBB
+  // field of all the elements of Edges.
+  // I.e., forall elt in Edges, it exists BB in NewBBs
+  // such as BB == elt.NewBB.
+  SmallSet<BasicBlockT *, 32> NewBBs;
+  for (auto &Edge : Edges)
+    NewBBs.insert(Edge.NewBB);
+  // For each element in Edges, remember whether or not element
+  // is the new immediate domminator of its successor. The mapping is done by
+  // index, i.e., the information for the ith element of Edges is
+  // the ith element of IsNewIDom.
+  SmallBitVector IsNewIDom(Edges.size(), true);
+
+  // Collect all the dominance properties info, before invalidating
+  // the underlying DT.
+  for (const auto &[Idx, Edge] : enumerate(Edges)) {
+    // Update dominator information.
+    BasicBlockT *Succ = Edge.ToBB;
+    auto *SuccDTNode = DT->getNode(Succ);
+
+    for (BasicBlockT *PredBB : predecessors(Succ)) {
+      if (PredBB == Edge.NewBB)
+        continue;
+      // If we are in this situation:
+      // FromBB1        FromBB2
+      //    +              +
+      //   + +            + +
+      //  +   +          +   +
+      // ...  Split1  Split2 ...
+      //           +   +
+      //            + +
+      //             +
+      //            Succ
+      // Instead of checking the domiance property with Split2, we check it
+      // with FromBB2 since Split2 is still unknown of the underlying DT
+      // structure.
+      if (NewBBs.contains(PredBB)) {
+        assert(pred_size(PredBB) == 1 && "A basic block resulting from a "
+                                         "critical edge split has more "
+                                         "than one predecessor!");
+        PredBB = *pred_begin(PredBB);
+      }
+      if (!DT->dominates(SuccDTNode, DT->getNode(PredBB))) {
+        IsNewIDom[Idx] = false;
+        break;
+      }
+    }
+  }
+
+  // Now, update DT with the collected dominance properties info.
+  for (const auto &[Idx, Edge] : enumerate(Edges)) {
+    // We know FromBB dominates NewBB.
+    auto *NewDTNode = DT->addNewBlock(Edge.NewBB, Edge.FromBB);
+
+    // If all the other predecessors of "Succ" are dominated by "Succ" itself
+    // then the new block is the new immediate dominator of "Succ". Otherwise,
+    // the new block doesn't dominate anything.
+    if (IsNewIDom[Idx])
+      DT->changeImmediateDominator(DT->getNode(Edge.ToBB), NewDTNode);
+  }
+}
+
+// Post dominator tree is different, the new basic block in critical edge
+// may become the new root.
+template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
+void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
+    splitPDTCriticalEdges(ArrayRef<CriticalEdge> Edges) {
+  // Bail out early if there is nothing to do.
+  if (!PDT || Edges.empty())
+    return;
+
+  std::vector<UpdateT> Updates;
+  for (const auto &Edge : Edges) {
+    Updates.push_back({PostDomTreeT::Insert, Edge.FromBB, Edge.NewBB});
+    Updates.push_back({PostDomTreeT::Insert, Edge.NewBB, Edge.ToBB});
+    if (!llvm::is_contained(successors(Edge.FromBB), Edge.ToBB))
+      Updates.push_back({PostDomTreeT::Delete, Edge.FromBB, Edge.ToBB});
+  }
+  PDT->applyUpdates(Updates);
 }
 
 } // namespace llvm

@@ -31,8 +31,9 @@ namespace std {
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/stop_token>
+#else
 #  include <__config>
 
 #  if _LIBCPP_HAS_THREADS
@@ -55,6 +56,6 @@ namespace std {
 #    include <cstddef>
 #    include <iosfwd>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STOP_TOKEN

@@ -20,6 +20,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # poll.h entrypoints
+    libc.src.poll.poll
+
     # string.h entrypoints
     libc.src.string.memccpy
     libc.src.string.memchr
@@ -212,7 +215,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.complex.conj
     libc.src.complex.conjf
     libc.src.complex.conjl
-    
+    libc.src.complex.cproj
+    libc.src.complex.cprojf
+    libc.src.complex.cprojl
+
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
     libc.src.fenv.fedisableexcept
@@ -265,7 +271,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
-    libc.src.math.fadd 
+    libc.src.math.fadd
     libc.src.math.faddl
     libc.src.math.fadd
     libc.src.math.fdim

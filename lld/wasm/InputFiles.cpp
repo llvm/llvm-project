@@ -47,7 +47,7 @@ std::string toString(const wasm::InputFile *file) {
 namespace wasm {
 
 std::string replaceThinLTOSuffix(StringRef path) {
-  auto [suffix, repl] = config->thinLTOObjectSuffixReplace;
+  auto [suffix, repl] = ctx.arg.thinLTOObjectSuffixReplace;
   if (path.consume_back(suffix))
     return (path + repl).str();
   return std::string(path);
@@ -55,10 +55,10 @@ std::string replaceThinLTOSuffix(StringRef path) {
 
 void InputFile::checkArch(Triple::ArchType arch) const {
   bool is64 = arch == Triple::wasm64;
-  if (is64 && !config->is64) {
+  if (is64 && !ctx.arg.is64) {
     fatal(toString(this) +
           ": must specify -mwasm64 to process wasm64 object files");
-  } else if (config->is64.value_or(false) != is64) {
+  } else if (ctx.arg.is64.value_or(false) != is64) {
     fatal(toString(this) +
           ": wasm32 object file can't be linked in wasm64 mode");
   }
@@ -169,7 +169,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     uint32_t index = getFunctionSymbol(reloc.Index)->getTableIndex();
     if (reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB ||
         reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB64)
-      index -= config->tableBase;
+      index -= ctx.arg.tableBase;
     return index;
   }
   case R_WASM_MEMORY_ADDR_LEB:
@@ -360,7 +360,7 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
 }
 
 static bool shouldMerge(const WasmSection &sec) {
-  if (config->optimize == 0)
+  if (ctx.arg.optimize == 0)
     return false;
   // Sadly we don't have section attributes yet for custom sections, so we
   // currently go by the name alone.
@@ -383,7 +383,7 @@ static bool shouldMerge(const WasmSegment &seg) {
   // On a regular link we don't merge sections if -O0 (default is -O1). This
   // sometimes makes the linker significantly faster, although the output will
   // be bigger.
-  if (config->optimize == 0)
+  if (ctx.arg.optimize == 0)
     return false;
 
   // A mergeable section with size 0 is useless because they don't have
@@ -845,7 +845,7 @@ BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
   this->archiveName = std::string(archiveName);
 
   std::string path = mb.getBufferIdentifier().str();
-  if (config->thinLTOIndexOnly)
+  if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier());
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique

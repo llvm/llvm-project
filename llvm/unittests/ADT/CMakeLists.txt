@@ -67,6 +67,7 @@ add_llvm_unittest(ADTTests
   SCCIteratorTest.cpp
   STLExtrasTest.cpp
   STLForwardCompatTest.cpp
+  ScopedHashTableTest.cpp
   ScopeExitTest.cpp
   SequenceTest.cpp
   SetOperationsTest.cpp

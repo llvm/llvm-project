@@ -1033,6 +1033,61 @@ while (true) {{
       emitVerifier(namedAttr.attr, namedAttr.name, getVarName(namedAttr.name));
 }
 
+static void genPropertyVerifier(const OpOrAdaptorHelper &emitHelper,
+                                FmtContext &ctx, MethodBody &body) {
+
+  // Code to get a reference to a property into a variable to avoid multiple
+  // evaluations while verifying a property.
+  // {0}: Property variable name.
+  // {1}: Property name, with the first letter capitalized, to find the getter.
+  // {2}: Property interface type.
+  const char *const fetchProperty = R"(
+  [[maybe_unused]] {2} {0} = this->get{1}();
+)";
+
+  // Code to verify that the predicate of a property holds. Embeds the
+  // condition inline.
+  // {0}: Property condition code, with tgfmt() applied.
+  // {1}: Emit error prefix.
+  // {2}: Property name.
+  // {3}: Property description.
+  const char *const verifyProperty = R"(
+  if (!({0}))
+    return {1}"property '{2}' failed to satisfy constraint: {3}");
+)";
+
+  // Prefix variables with `tblgen_` to avoid hiding the attribute accessor.
+  const auto getVarName = [&](const NamedProperty &prop) {
+    std::string varName =
+        convertToCamelFromSnakeCase(prop.name, /*capitalizeFirst=*/false);
+    return (tblgenNamePrefix + Twine(varName)).str();
+  };
+
+  for (const NamedProperty &prop : emitHelper.getOp().getProperties()) {
+    Pred predicate = prop.prop.getPredicate();
+    // Null predicate, nothing to verify.
+    if (predicate == Pred())
+      continue;
+
+    std::string rawCondition = predicate.getCondition();
+    if (rawCondition == "true")
+      continue;
+    bool needsOp = StringRef(rawCondition).contains("$_op");
+    if (needsOp && !emitHelper.isEmittingForOp())
+      continue;
+
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
+    std::string varName = getVarName(prop);
+    std::string getterName =
+        convertToCamelFromSnakeCase(prop.name, /*capitalizeFirst=*/true);
+    body << formatv(fetchProperty, varName, getterName,
+                    prop.prop.getInterfaceType());
+    body << formatv(verifyProperty, tgfmt(rawCondition, &ctx.withSelf(varName)),
+                    emitHelper.emitErrorPrefix(), prop.name,
+                    prop.prop.getSummary());
+  }
+}
+
 /// Include declarations specified on NativeTrait
 static std::string formatExtraDeclarations(const Operator &op) {
   SmallVector<StringRef> extraDeclarations;
@@ -1279,8 +1334,9 @@ static void emitAttrGetterWithReturnType(FmtContext &fctx,
       PrintFatalError("DefaultValuedAttr of type " + attr.getAttrDefName() +
                       " must have a constBuilder");
     }
-    std::string defaultValue = std::string(
-        tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+    std::string defaultValue =
+        std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                          tgfmt(attr.getDefaultValue(), &fctx)));
     body << "    if (!attr)\n      return "
          << tgfmt(attr.getConvertFromStorageCall(),
                   &fctx.withSelf(defaultValue))
@@ -1412,6 +1468,7 @@ void OpEmitter::genPropertiesSupport() {
         os << "   if (!attr) attr = dict.get(\"result_segment_sizes\");";
       }
 
+      fctx.withBuilder(odsBuilder);
       setPropMethod << "{\n"
                     << formatv(propFromAttrFmt,
                                tgfmt(prop.getConvertFromAttributeCall(),
@@ -1424,7 +1481,7 @@ void OpEmitter::genPropertiesSupport() {
                                  prop.getStorageTypeValueOverride());
       } else if (prop.hasDefaultValue()) {
         setPropMethod << formatv(attrGetDefaultFmt, name,
-                                 prop.getDefaultValue());
+                                 tgfmt(prop.getDefaultValue(), &fctx));
       } else {
         setPropMethod << formatv(attrGetNoDefaultFmt, name);
       }
@@ -2864,6 +2921,9 @@ getBuilderSignature(const Builder &builder) {
   arguments.emplace_back("::mlir::OpBuilder &", odsBuilder);
   arguments.emplace_back("::mlir::OperationState &", builderOpState);
 
+  FmtContext fctx;
+  fctx.withBuilder(odsBuilder);
+
   for (unsigned i = 0, e = params.size(); i < e; ++i) {
     // If no name is provided, generate one.
     std::optional<StringRef> paramName = params[i].getName();
@@ -2876,7 +2936,7 @@ getBuilderSignature(const Builder &builder) {
       defaultValue = *defaultParamValue;
 
     arguments.emplace_back(params[i].getCppType(), std::move(name),
-                           defaultValue);
+                           tgfmt(defaultValue, &fctx));
   }
 
   return arguments;
@@ -3134,6 +3194,9 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
     }
   }
 
+  FmtContext fctx;
+  fctx.withBuilder(odsBuilder);
+
   for (int i = 0, e = op.getNumArgs(), numOperands = 0; i < e; ++i) {
     Argument arg = op.getArg(i);
     if (const auto *operand =
@@ -3155,14 +3218,14 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
       StringRef type = prop.getInterfaceType();
       std::string defaultValue;
       if (prop.hasDefaultValue() && i >= defaultValuedAttrLikeStartIndex) {
-        defaultValue = prop.getDefaultValue();
+        defaultValue = tgfmt(prop.getDefaultValue(), &fctx);
       }
       bool isOptional = prop.hasDefaultValue();
       paramList.emplace_back(type, propArg->name, StringRef(defaultValue),
                              isOptional);
       continue;
     }
-    const NamedAttribute &namedAttr = *arg.get<NamedAttribute *>();
+    const NamedAttribute &namedAttr = *cast<NamedAttribute *>(arg);
     const Attribute &attr = namedAttr.attr;
 
     // Inferred attributes don't need to be added to the param list.
@@ -3187,7 +3250,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
     if (i >= defaultValuedAttrStartIndex) {
       if (attrParamKind == AttrParamKind::UnwrappedValue &&
           canUseUnwrappedRawValue(attr))
-        defaultValue += attr.getDefaultValue();
+        defaultValue += tgfmt(attr.getDefaultValue(), &fctx);
       else
         defaultValue += "nullptr";
     }
@@ -3499,14 +3562,14 @@ void OpEmitter::genSideEffectInterfaceMethods() {
   /// Attributes and Operands.
   for (unsigned i = 0, operandIt = 0, e = op.getNumArgs(); i != e; ++i) {
     Argument arg = op.getArg(i);
-    if (arg.is<NamedTypeConstraint *>()) {
+    if (isa<NamedTypeConstraint *>(arg)) {
       resolveDecorators(op.getArgDecorators(i), operandIt, EffectKind::Operand);
       ++operandIt;
       continue;
     }
-    if (arg.is<NamedProperty *>())
+    if (isa<NamedProperty *>(arg))
       continue;
-    const NamedAttribute *attr = arg.get<NamedAttribute *>();
+    const NamedAttribute *attr = cast<NamedAttribute *>(arg);
     if (attr->attr.getBaseAttr().isSymbolRefAttr())
       resolveDecorators(op.getArgDecorators(i), i, EffectKind::Symbol);
   }
@@ -3547,7 +3610,7 @@ void OpEmitter::genSideEffectInterfaceMethods() {
                     .str();
       } else if (location.kind == EffectKind::Symbol) {
         // A symbol reference requires adding the proper attribute.
-        const auto *attr = op.getArg(location.index).get<NamedAttribute *>();
+        const auto *attr = cast<NamedAttribute *>(op.getArg(location.index));
         std::string argName = op.getGetterName(attr->name);
         if (attr->attr.isOptional()) {
           body << "  if (auto symbolRef = " << argName << "Attr())\n  "
@@ -3648,7 +3711,7 @@ void OpEmitter::genTypeInterfaceMethods() {
           // If this is an attribute, index into the attribute dictionary.
         } else {
           auto *attr =
-              op.getArg(arg.operandOrAttributeIndex()).get<NamedAttribute *>();
+              cast<NamedAttribute *>(op.getArg(arg.operandOrAttributeIndex()));
           body << "  ::mlir::TypedAttr odsInferredTypeAttr" << inferredTypeIdx
                << " = ";
           if (op.getDialect().usePropertiesForAttributes()) {
@@ -3726,6 +3789,7 @@ void OpEmitter::genVerifier() {
   bool useProperties = emitHelper.hasProperties();
 
   populateSubstitutions(emitHelper, verifyCtx);
+  genPropertyVerifier(emitHelper, verifyCtx, implBody);
   genAttributeVerifier(emitHelper, verifyCtx, implBody, staticVerifierEmitter,
                        useProperties);
   genOperandResultVerifier(implBody, op.getOperands(), "operand");
@@ -4116,6 +4180,9 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
       staticVerifierEmitter(staticVerifierEmitter),
       emitHelper(op, /*emitForOp=*/false) {
 
+  FmtContext fctx;
+  fctx.withBuilder(odsBuilder);
+
   genericAdaptorBase.declare<VisibilityDeclaration>(Visibility::Public);
   bool useProperties = emitHelper.hasProperties();
   if (useProperties) {
@@ -4156,7 +4223,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
         if (prop.hasStorageTypeValueOverride())
           os << " = " << prop.getStorageTypeValueOverride();
         else if (prop.hasDefaultValue())
-          os << " = " << prop.getDefaultValue();
+          os << " = " << tgfmt(prop.getDefaultValue(), &fctx);
         comparatorOs << "        rhs." << name << " == this->" << name
                      << " &&\n";
         // Emit accessors using the interface type.
@@ -4398,7 +4465,6 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
   if (auto *m = genericAdaptor.addMethod("RangeT", "getOperands"))
     m->body() << "  return odsOperands;";
 
-  FmtContext fctx;
   fctx.withBuilder("::mlir::Builder(odsAttrs.getContext())");
 
   // Generate named accessor with Attribute return type.
@@ -4425,8 +4491,9 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
       // Use the default value if attribute is not set.
       // TODO: this is inefficient, we are recreating the attribute for every
       // call. This should be set instead.
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "if (!attr)\n  attr = " << defaultValue << ";\n";
     }
     body << "return attr;\n";

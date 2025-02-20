@@ -27,41 +27,49 @@ namespace targets {
 static constexpr int NumX86Builtins =
     X86::LastX86CommonBuiltin - Builtin::FirstTSBuiltin + 1;
 static constexpr int NumX86_64Builtins =
-    X86::LastTSBuiltin - Builtin::FirstTSBuiltin;
-static_assert(NumX86Builtins < NumX86_64Builtins);
+    X86::LastTSBuiltin - X86::FirstX86_64Builtin;
+static constexpr int NumBuiltins = X86::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins == (NumX86Builtins + NumX86_64Builtins));
 
-static constexpr auto BuiltinStorage =
-    Builtin::Storage<NumX86_64Builtins>::Make(
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsX86.def"
-
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
+namespace X86 {
+#define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsX86.inc"
+#undef GET_BUILTIN_STR_TABLE
 
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsX86_64.def"
-        , {
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsX86.def"
-
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
 #include "clang/Basic/BuiltinsX86.inc"
+#undef GET_BUILTIN_INFOS
+};
 
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsX86_64.def"
-          });
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsX86.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumX86Builtins);
+} // namespace X86
+
+namespace X86_64 {
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsX86_64.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsX86_64.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsX86_64.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumX86_64Builtins);
+} // namespace X86_64
 
 static const char *const GCCRegNames[] = {
     "ax",    "dx",    "cx",    "bx",    "si",      "di",    "bp",    "sp",
@@ -1101,6 +1109,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasFloat128)
     Builder.defineMacro("__SIZEOF_FLOAT128__", "16");
+
+  if (Opts.CFProtectionReturn || Opts.CFProtectionBranch)
+    Builder.defineMacro("__CET__", Twine{(Opts.CFProtectionReturn << 1) |
+                                         Opts.CFProtectionBranch});
 }
 
 bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
@@ -1379,8 +1391,8 @@ static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   // correct, so it asserts if the value is out of range.
 }
 
-unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
-  auto getPriority = [](StringRef Feature) -> unsigned {
+uint64_t X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  auto getPriority = [](StringRef Feature) -> uint64_t {
     // Valid CPUs have a 'key feature' that compares just better than its key
     // feature.
     using namespace llvm::X86;
@@ -1394,7 +1406,7 @@ unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
     return getFeaturePriority(getFeature(Feature)) << 1;
   };
 
-  unsigned Priority = 0;
+  uint64_t Priority = 0;
   for (StringRef Feature : Features)
     if (!Feature.empty())
       Priority = std::max(Priority, getPriority(Feature));
@@ -1878,14 +1890,21 @@ ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
   return llvm::ArrayRef(AddlRegNames);
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-X86_32TargetInfo::getTargetBuiltinStorage() const {
-  // Only use the relevant prefix of the infos, the string table base is common.
-  return {BuiltinStorage.StringTable,
-          llvm::ArrayRef(BuiltinStorage.Infos).take_front(NumX86Builtins)};
+llvm::SmallVector<Builtin::InfosShard>
+X86_32TargetInfo::getTargetBuiltins() const {
+  return {
+      {&X86::BuiltinStrings, X86::BuiltinInfos},
+      {&X86::BuiltinStrings, X86::PrefixedBuiltinInfos, "__builtin_ia32_"},
+  };
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-X86_64TargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+llvm::SmallVector<Builtin::InfosShard>
+X86_64TargetInfo::getTargetBuiltins() const {
+  return {
+      {&X86::BuiltinStrings, X86::BuiltinInfos},
+      {&X86::BuiltinStrings, X86::PrefixedBuiltinInfos, "__builtin_ia32_"},
+      {&X86_64::BuiltinStrings, X86_64::BuiltinInfos},
+      {&X86_64::BuiltinStrings, X86_64::PrefixedBuiltinInfos,
+       "__builtin_ia32_"},
+  };
 }

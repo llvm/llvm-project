@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon -hexagon-small-data-threshold=0 -disable-packetizer < %s | FileCheck %s
+; RUN: llc -O3 -mtriple=hexagon -hexagon-small-data-threshold=0 -disable-packetizer < %s | FileCheck %s
 
 ; This test was orignally written to test that we don't save an entire double
 ; register if only one of the integer registers needs to be saved. The problem

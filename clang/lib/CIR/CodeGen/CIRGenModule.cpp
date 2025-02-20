@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenModule.h"
+#include "CIRGenFunction.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
@@ -35,6 +36,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       diags(diags), target(astContext.getTargetInfo()), genTypes(*this) {
 
   // Initialize cached types
+  VoidTy = cir::VoidType::get(&getMLIRContext());
   SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
   SInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/true);
   SInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/true);
@@ -45,6 +47,15 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   UInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
   UInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
   UInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/false);
+  FP16Ty = cir::FP16Type::get(&getMLIRContext());
+  BFloat16Ty = cir::BF16Type::get(&getMLIRContext());
+  FloatTy = cir::SingleType::get(&getMLIRContext());
+  DoubleTy = cir::DoubleType::get(&getMLIRContext());
+  FP80Ty = cir::FP80Type::get(&getMLIRContext());
+  FP128Ty = cir::FP128Type::get(&getMLIRContext());
+
+  theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
+                     builder.getStringAttr(getTriple().str()));
 }
 
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {
@@ -92,22 +103,75 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
                                                 mlir::Operation *op) {
   auto const *funcDecl = cast<FunctionDecl>(gd.getDecl());
-  if (clang::IdentifierInfo *identifier = funcDecl->getIdentifier()) {
-    auto funcOp = builder.create<cir::FuncOp>(
-        getLoc(funcDecl->getSourceRange()), identifier->getName());
-    theModule.push_back(funcOp);
-  } else {
+  if (funcDecl->getIdentifier() == nullptr) {
     errorNYI(funcDecl->getSourceRange().getBegin(),
              "function definition with a non-identifier for a name");
+    return;
+  }
+  cir::FuncType funcType =
+      cast<cir::FuncType>(convertType(funcDecl->getType()));
+
+  cir::FuncOp funcOp = dyn_cast_if_present<cir::FuncOp>(op);
+  if (!funcOp || funcOp.getFunctionType() != funcType) {
+    funcOp = getAddrOfFunction(gd, funcType, /*ForVTable=*/false,
+                               /*DontDefer=*/true, ForDefinition);
+  }
+
+  CIRGenFunction cgf(*this, builder);
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    cgf.generateCode(gd, funcOp, funcType);
   }
 }
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
-  mlir::Type type = getTypes().convertType(vd->getType());
+  mlir::Type type = convertType(vd->getType());
   if (clang::IdentifierInfo *identifier = vd->getIdentifier()) {
     auto varOp = builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()),
                                                identifier->getName(), type);
+    // TODO(CIR): This code for processing initial values is a placeholder
+    // until class ConstantEmitter is upstreamed and the code for processing
+    // constant expressions is filled out.  Only the most basic handling of
+    // certain constant expressions is implemented for now.
+    const VarDecl *initDecl;
+    const Expr *initExpr = vd->getAnyInitializer(initDecl);
+    if (initExpr) {
+      mlir::Attribute initializer;
+      if (APValue *value = initDecl->evaluateValue()) {
+        switch (value->getKind()) {
+        case APValue::Int: {
+          initializer = builder.getAttr<cir::IntAttr>(type, value->getInt());
+          break;
+        }
+        case APValue::Float: {
+          initializer = builder.getAttr<cir::FPAttr>(type, value->getFloat());
+          break;
+        }
+        case APValue::LValue: {
+          if (value->getLValueBase()) {
+            errorNYI(initExpr->getSourceRange(),
+                     "non-null pointer initialization");
+          } else {
+            if (auto ptrType = mlir::dyn_cast<cir::PointerType>(type)) {
+              initializer = builder.getConstPtrAttr(
+                  ptrType, value->getLValueOffset().getQuantity());
+            } else {
+              llvm_unreachable(
+                  "non-pointer variable initialized with a pointer");
+            }
+          }
+          break;
+        }
+        default:
+          errorNYI(initExpr->getSourceRange(), "unsupported initializer kind");
+          break;
+        }
+      } else {
+        errorNYI(initExpr->getSourceRange(), "non-constant initializer");
+      }
+      varOp.setInitialValueAttr(initializer);
+    }
     theModule.push_back(varOp);
   } else {
     errorNYI(vd->getSourceRange().getBegin(),
@@ -169,6 +233,56 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
   }
   }
+}
+
+cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
+                                            mlir::Type funcType, bool forVTable,
+                                            bool dontDefer,
+                                            ForDefinition_t isForDefinition) {
+  assert(!cast<FunctionDecl>(gd.getDecl())->isConsteval() &&
+         "consteval function should never be emitted");
+
+  if (!funcType) {
+    const auto *fd = cast<FunctionDecl>(gd.getDecl());
+    funcType = convertType(fd->getType());
+  }
+
+  cir::FuncOp func = getOrCreateCIRFunction(
+      cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName(), funcType, gd,
+      forVTable, dontDefer, /*isThunk=*/false, isForDefinition);
+  return func;
+}
+
+cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
+    StringRef mangledName, mlir::Type funcType, GlobalDecl gd, bool forVTable,
+    bool dontDefer, bool isThunk, ForDefinition_t isForDefinition,
+    mlir::ArrayAttr extraAttrs) {
+  auto *funcDecl = llvm::cast_or_null<FunctionDecl>(gd.getDecl());
+  bool invalidLoc = !funcDecl ||
+                    funcDecl->getSourceRange().getBegin().isInvalid() ||
+                    funcDecl->getSourceRange().getEnd().isInvalid();
+  cir::FuncOp funcOp = createCIRFunction(
+      invalidLoc ? theModule->getLoc() : getLoc(funcDecl->getSourceRange()),
+      mangledName, mlir::cast<cir::FuncType>(funcType), funcDecl);
+  return funcOp;
+}
+
+cir::FuncOp
+CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
+                                cir::FuncType funcType,
+                                const clang::FunctionDecl *funcDecl) {
+  cir::FuncOp func;
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+
+    func = builder.create<cir::FuncOp>(loc, name, funcType);
+    theModule.push_back(func);
+  }
+  return func;
+}
+
+mlir::Type CIRGenModule::convertType(QualType type) {
+  return genTypes.convertType(type);
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,

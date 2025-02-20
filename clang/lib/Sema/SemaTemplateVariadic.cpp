@@ -50,11 +50,14 @@ class CollectUnexpandedParameterPacksVisitor
         auto *FTD = FD ? FD->getDescribedFunctionTemplate() : nullptr;
         if (FTD && FTD->getTemplateParameters()->getDepth() >= DepthLimit)
           return;
-      } else if (getDepthAndIndex(ND).first >= DepthLimit)
+      } else if (ND->isTemplateParameterPack() &&
+                 getDepthAndIndex(ND).first >= DepthLimit) {
         return;
+      }
 
       Unexpanded.push_back({ND, Loc});
     }
+
     void addUnexpanded(const TemplateTypeParmType *T,
                        SourceLocation Loc = SourceLocation()) {
       if (T->getDepth() < DepthLimit)
@@ -422,8 +425,8 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
     if (const TemplateTypeParmType *TTP
           = Unexpanded[I].first.dyn_cast<const TemplateTypeParmType *>())
       Name = TTP->getIdentifier();
-    else
-      Name = cast<NamedDecl *>(Unexpanded[I].first)->getIdentifier();
+    else if (NamedDecl *ND = Unexpanded[I].first.dyn_cast<NamedDecl *>())
+      Name = ND->getIdentifier();
 
     if (Name && NamesKnown.insert(Name).second)
       Names.push_back(Name);
@@ -757,12 +760,14 @@ bool Sema::CheckParameterPacksForExpansion(
   bool HaveFirstPack = false;
   std::optional<unsigned> NumPartialExpansions;
   SourceLocation PartiallySubstitutedPackLoc;
+  typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
 
   for (UnexpandedParameterPack ParmPack : Unexpanded) {
     // Compute the depth and index for this parameter pack.
     unsigned Depth = 0, Index = 0;
     IdentifierInfo *Name;
     bool IsVarDeclPack = false;
+    FunctionParmPackExpr *BindingPack = nullptr;
 
     if (const TemplateTypeParmType *TTP =
             ParmPack.first.dyn_cast<const TemplateTypeParmType *>()) {
@@ -773,18 +778,27 @@ bool Sema::CheckParameterPacksForExpansion(
       NamedDecl *ND = cast<NamedDecl *>(ParmPack.first);
       if (isa<VarDecl>(ND))
         IsVarDeclPack = true;
-      else
+      else if (isa<BindingDecl>(ND)) {
+        // Find the instantiated BindingDecl and check it for a resolved pack.
+        llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
+            CurrentInstantiationScope->findInstantiationOf(ND);
+        Decl *B = cast<Decl *>(*Instantiation);
+        Expr *BindingExpr = cast<BindingDecl>(B)->getBinding();
+        BindingPack = cast_if_present<FunctionParmPackExpr>(BindingExpr);
+        if (!BindingPack) {
+          ShouldExpand = false;
+          continue;
+        }
+      } else
         std::tie(Depth, Index) = getDepthAndIndex(ND);
 
       Name = ND->getIdentifier();
     }
 
     // Determine the size of this argument pack.
-    unsigned NewPackSize;
+    unsigned NewPackSize, PendingPackExpansionSize = 0;
     if (IsVarDeclPack) {
       // Figure out whether we're instantiating to an argument pack or not.
-      typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
-
       llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
           CurrentInstantiationScope->findInstantiationOf(
               cast<NamedDecl *>(ParmPack.first));
@@ -797,6 +811,8 @@ bool Sema::CheckParameterPacksForExpansion(
         ShouldExpand = false;
         continue;
       }
+    } else if (BindingPack) {
+      NewPackSize = BindingPack->getNumExpansions();
     } else {
       // If we don't have a template argument at this depth/index, then we
       // cannot expand the pack expansion. Make a note of this, but we still
@@ -808,7 +824,25 @@ bool Sema::CheckParameterPacksForExpansion(
       }
 
       // Determine the size of the argument pack.
-      NewPackSize = TemplateArgs(Depth, Index).pack_size();
+      ArrayRef<TemplateArgument> Pack =
+          TemplateArgs(Depth, Index).getPackAsArray();
+      NewPackSize = Pack.size();
+      PendingPackExpansionSize =
+          llvm::count_if(Pack, [](const TemplateArgument &TA) {
+            if (!TA.isPackExpansion())
+              return false;
+
+            if (TA.getKind() == TemplateArgument::Type)
+              return !TA.getAsType()
+                          ->getAs<PackExpansionType>()
+                          ->getNumExpansions();
+
+            if (TA.getKind() == TemplateArgument::Expression)
+              return !cast<PackExpansionExpr>(TA.getAsExpr())
+                          ->getNumExpansions();
+
+            return !TA.getNumTemplateExpansions();
+          });
     }
 
     // C++0x [temp.arg.explicit]p9:
@@ -831,7 +865,7 @@ bool Sema::CheckParameterPacksForExpansion(
     }
 
     if (!NumExpansions) {
-      // The is the first pack we've seen for which we have an argument.
+      // This is the first pack we've seen for which we have an argument.
       // Record it.
       NumExpansions = NewPackSize;
       FirstPack.first = Name;
@@ -841,17 +875,44 @@ bool Sema::CheckParameterPacksForExpansion(
     }
 
     if (NewPackSize != *NumExpansions) {
+      // In some cases, we might be handling packs with unexpanded template
+      // arguments. For example, this can occur when substituting into a type
+      // alias declaration that uses its injected template parameters as
+      // arguments:
+      //
+      //   template <class... Outer> struct S {
+      //     template <class... Inner> using Alias = S<void(Outer, Inner)...>;
+      //   };
+      //
+      // Consider an instantiation attempt like 'S<int>::Alias<Pack...>', where
+      // Pack comes from another template parameter. 'S<int>' is first
+      // instantiated, expanding the outer pack 'Outer' to <int>. The alias
+      // declaration is accordingly substituted, leaving the template arguments
+      // as unexpanded
+      // '<Pack...>'.
+      //
+      // Since we have no idea of the size of '<Pack...>' until its expansion,
+      // we shouldn't assume its pack size for validation. However if we are
+      // certain that there are extra arguments beyond unexpanded packs, in
+      // which case the pack size is already larger than the previous expansion,
+      // we can complain that before instantiation.
+      unsigned LeastNewPackSize = NewPackSize - PendingPackExpansionSize;
+      if (PendingPackExpansionSize && LeastNewPackSize <= *NumExpansions) {
+        ShouldExpand = false;
+        continue;
+      }
       // C++0x [temp.variadic]p5:
       //   All of the parameter packs expanded by a pack expansion shall have
       //   the same number of arguments specified.
       if (HaveFirstPack)
         Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict)
-            << FirstPack.first << Name << *NumExpansions << NewPackSize
+            << FirstPack.first << Name << *NumExpansions
+            << (LeastNewPackSize != NewPackSize) << LeastNewPackSize
             << SourceRange(FirstPack.second) << SourceRange(ParmPack.second);
       else
         Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict_multilevel)
-            << Name << *NumExpansions << NewPackSize
-            << SourceRange(ParmPack.second);
+            << Name << *NumExpansions << (LeastNewPackSize != NewPackSize)
+            << LeastNewPackSize << SourceRange(ParmPack.second);
       return true;
     }
   }
@@ -1271,7 +1332,7 @@ std::optional<unsigned> Sema::getFullyPackExpandedSize(TemplateArgument Arg) {
             dyn_cast<SubstNonTypeTemplateParmPackExpr>(Arg.getAsExpr()))
       Pack = Subst->getArgumentPack();
     else if (auto *Subst = dyn_cast<FunctionParmPackExpr>(Arg.getAsExpr()))  {
-      for (VarDecl *PD : *Subst)
+      for (ValueDecl *PD : *Subst)
         if (PD->isParameterPack())
           return std::nullopt;
       return Subst->getNumExpansions();

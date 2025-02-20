@@ -475,7 +475,7 @@ void IRNormalizer::reorderInstructions(Function &F) const {
             Call->getIntrinsicID() == Intrinsic::experimental_convergence_loop)
           FirstNonPHIOrDbgOrAlloca++;
       }
-      Instruction->moveBefore(&*FirstNonPHIOrDbgOrAlloca);
+      Instruction->moveBefore(FirstNonPHIOrDbgOrAlloca);
       TopologicalSort.pop();
     }
   }

@@ -347,12 +347,27 @@ public:
   const TargetRegisterClass *getMinimalPhysRegClass(MCRegister Reg,
                                                     MVT VT = MVT::Other) const;
 
+  /// Returns the common Register Class of two physical registers of the given
+  /// type, picking the most sub register class of the right type that contains
+  /// these two physregs.
+  const TargetRegisterClass *
+  getCommonMinimalPhysRegClass(MCRegister Reg1, MCRegister Reg2,
+                               MVT VT = MVT::Other) const;
+
   /// Returns the Register Class of a physical register of the given type,
   /// picking the most sub register class of the right type that contains this
   /// physreg. If there is no register class compatible with the given type,
   /// returns nullptr.
   const TargetRegisterClass *getMinimalPhysRegClassLLT(MCRegister Reg,
                                                        LLT Ty = LLT()) const;
+
+  /// Returns the common Register Class of two physical registers of the given
+  /// type, picking the most sub register class of the right type that contains
+  /// these two physregs. If there is no register class compatible with the
+  /// given type, returns nullptr.
+  const TargetRegisterClass *
+  getCommonMinimalPhysRegClassLLT(MCRegister Reg1, MCRegister Reg2,
+                                  LLT Ty = LLT()) const;
 
   /// Return the maximal subclass of the given register class that is
   /// allocatable or NULL.
@@ -411,8 +426,7 @@ public:
   ///
   /// If this is possible, returns true and appends the best matching set of
   /// indexes to \p Indexes. If this is not possible, returns false.
-  bool getCoveringSubRegIndexes(const MachineRegisterInfo &MRI,
-                                const TargetRegisterClass *RC,
+  bool getCoveringSubRegIndexes(const TargetRegisterClass *RC,
                                 LaneBitmask LaneMask,
                                 SmallVectorImpl<unsigned> &Indexes) const;
 
@@ -452,9 +466,9 @@ public:
   }
 
   /// Returns true if Reg contains RegUnit.
-  bool hasRegUnit(MCRegister Reg, Register RegUnit) const {
+  bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
     for (MCRegUnit Unit : regunits(Reg))
-      if (Register(Unit) == RegUnit)
+      if (Unit == RegUnit)
         return true;
     return false;
   }
@@ -718,6 +732,22 @@ public:
     return composeSubRegIndicesImpl(a, b);
   }
 
+  /// Return a subregister index that will compose to give you the subregister
+  /// index.
+  ///
+  /// Finds a subregister index x such that composeSubRegIndices(a, x) ==
+  /// b. Note that this relationship does not hold if
+  /// reverseComposeSubRegIndices returns the null subregister.
+  ///
+  /// The special null sub-register index composes as the identity.
+  unsigned reverseComposeSubRegIndices(unsigned a, unsigned b) const {
+    if (!a)
+      return b;
+    if (!b)
+      return a;
+    return reverseComposeSubRegIndicesImpl(a, b);
+  }
+
   /// Transforms a LaneMask computed for one subregister to the lanemask that
   /// would have been computed when composing the subsubregisters with IdxA
   /// first. @sa composeSubRegIndices()
@@ -757,6 +787,11 @@ public:
 protected:
   /// Overridden by TableGen in targets that have sub-registers.
   virtual unsigned composeSubRegIndicesImpl(unsigned, unsigned) const {
+    llvm_unreachable("Target has no sub-registers");
+  }
+
+  /// Overridden by TableGen in targets that have sub-registers.
+  virtual unsigned reverseComposeSubRegIndicesImpl(unsigned, unsigned) const {
     llvm_unreachable("Target has no sub-registers");
   }
 
@@ -1197,13 +1232,6 @@ public:
     return nullptr;
   }
 
-  /// Returns the physical register number of sub-register "Index"
-  /// for physical register RegNo. Return zero if the sub-register does not
-  /// exist.
-  inline MCRegister getSubReg(MCRegister Reg, unsigned Idx) const {
-    return static_cast<const MCRegisterInfo *>(this)->getSubReg(Reg, Idx);
-  }
-
   /// Some targets have non-allocatable registers that aren't technically part
   /// of the explicit callee saved register list, but should be handled as such
   /// in certain cases.
@@ -1369,9 +1397,7 @@ public:
 // This is useful when building IndexedMaps keyed on virtual registers
 struct VirtReg2IndexFunctor {
   using argument_type = Register;
-  unsigned operator()(Register Reg) const {
-    return Register::virtReg2Index(Reg);
-  }
+  unsigned operator()(Register Reg) const { return Reg.virtRegIndex(); }
 };
 
 /// Prints virtual and physical registers with or without a TRI instance.

@@ -918,9 +918,9 @@ void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
         for (auto *NewMI : NewMIs)
           MBB.insert(MI.getIterator(), NewMI);
 
-        // Update the call site info.
-        if (MI.isCandidateForCallSiteEntry())
-          MF.eraseCallSiteInfo(&MI);
+        // Update the call info.
+        if (MI.isCandidateForAdditionalCallInfo())
+          MF.eraseAdditionalCallInfo(&MI);
 
         MI.eraseFromParent();
         LLVM_DEBUG({

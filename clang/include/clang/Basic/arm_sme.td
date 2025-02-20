@@ -110,11 +110,11 @@ multiclass ZARead<string n_suffix, string t, string i_prefix, list<ImmCheck> ch>
   }
 }
 
-defm SVREAD_ZA8 : ZARead<"za8", "cUc", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_0>]>;
+defm SVREAD_ZA8 : ZARead<"za8", "cUcm", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_0>]>;
 defm SVREAD_ZA16 : ZARead<"za16", "sUshb", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_1>]>;
 defm SVREAD_ZA32 : ZARead<"za32", "iUif", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_3>]>;
 defm SVREAD_ZA64 : ZARead<"za64", "lUld", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_7>]>;
-defm SVREAD_ZA128 : ZARead<"za128", "csilUcUsUiUlhbfd", "aarch64_sme_readq", [ImmCheck<2, ImmCheck0_15>]>;
+defm SVREAD_ZA128 : ZARead<"za128", "csilUcUsUiUlmhbfd", "aarch64_sme_readq", [ImmCheck<2, ImmCheck0_15>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Write horizontal/vertical ZA slices
@@ -131,11 +131,11 @@ multiclass ZAWrite<string n_suffix, string t, string i_prefix, list<ImmCheck> ch
   }
 }
 
-defm SVWRITE_ZA8 : ZAWrite<"za8", "cUc", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_0>]>;
+defm SVWRITE_ZA8 : ZAWrite<"za8", "cUcm", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_0>]>;
 defm SVWRITE_ZA16 : ZAWrite<"za16", "sUshb", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_1>]>;
 defm SVWRITE_ZA32 : ZAWrite<"za32", "iUif", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_3>]>;
 defm SVWRITE_ZA64 : ZAWrite<"za64", "lUld", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_7>]>;
-defm SVWRITE_ZA128 : ZAWrite<"za128", "csilUcUsUiUlhbfd", "aarch64_sme_writeq", [ImmCheck<0, ImmCheck0_15>]>;
+defm SVWRITE_ZA128 : ZAWrite<"za128", "csilUcUsUiUlmhbfd", "aarch64_sme_writeq", [ImmCheck<0, ImmCheck0_15>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SME - Zero
@@ -350,7 +350,7 @@ multiclass ZAWrite_VG<string n, string t, string i, list<ImmCheck> checks> {
 }
 
 let SMETargetGuard = "sme2" in {
-  defm SVWRITE_ZA8  : ZAWrite_VG<"za8",  "cUc",   "aarch64_sme_write", [ImmCheck<0, ImmCheck0_0>]>;
+  defm SVWRITE_ZA8  : ZAWrite_VG<"za8",  "cUcm",   "aarch64_sme_write", [ImmCheck<0, ImmCheck0_0>]>;
   defm SVWRITE_ZA16 : ZAWrite_VG<"za16", "sUshb", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_1>]>;
   defm SVWRITE_ZA32 : ZAWrite_VG<"za32", "iUif",  "aarch64_sme_write", [ImmCheck<0, ImmCheck0_3>]>;
   defm SVWRITE_ZA64 : ZAWrite_VG<"za64", "lUld",  "aarch64_sme_write", [ImmCheck<0, ImmCheck0_7>]>;
@@ -366,7 +366,7 @@ multiclass ZARead_VG<string n, string t, string i, list<ImmCheck> checks> {
 }
 
 let SMETargetGuard = "sme2" in {
-  defm SVREAD_ZA8  : ZARead_VG<"za8",  "cUc",   "aarch64_sme_read", [ImmCheck<0, ImmCheck0_0>]>;
+  defm SVREAD_ZA8  : ZARead_VG<"za8",  "cUcm",   "aarch64_sme_read", [ImmCheck<0, ImmCheck0_0>]>;
   defm SVREAD_ZA16 : ZARead_VG<"za16", "sUshb", "aarch64_sme_read", [ImmCheck<0, ImmCheck0_1>]>;
   defm SVREAD_ZA32 : ZARead_VG<"za32", "iUif",  "aarch64_sme_read", [ImmCheck<0, ImmCheck0_3>]>;
   defm SVREAD_ZA64 : ZARead_VG<"za64", "lUld",  "aarch64_sme_read", [ImmCheck<0, ImmCheck0_7>]>;
@@ -716,11 +716,13 @@ let SMETargetGuard = "sme2" in {
   def SVZERO_ZT : Inst<"svzero_zt", "vi", "", MergeNone, "aarch64_sme_zero_zt", [IsOverloadNone, IsStreamingCompatible, IsOutZT0], [ImmCheck<0, ImmCheck0_0>]>;
 }
 
+def IN_STREAMING_MODE :  Inst<"__arm_in_streaming_mode", "sv", "Pc", MergeNone, "aarch64_sme_in_streaming_mode", [IsOverloadNone, IsStreamingCompatible], []>;
+
 //
 // lookup table expand four contiguous registers
 //
 let SMETargetGuard = "sme2" in {
-  def SVLUTI2_LANE_ZT_X4 : Inst<"svluti2_lane_zt_{d}_x4", "4.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti2_lane_zt_x4", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
+  def SVLUTI2_LANE_ZT_X4 : Inst<"svluti2_lane_zt_{d}_x4", "4.di[i", "cUcsUsiUimbhf", MergeNone, "aarch64_sme_luti2_lane_zt_x4", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
   def SVLUTI4_LANE_ZT_X4 : Inst<"svluti4_lane_zt_{d}_x4", "4.di[i", "sUsiUibhf", MergeNone, "aarch64_sme_luti4_lane_zt_x4", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_1>]>;
 }
 
@@ -728,16 +730,48 @@ let SMETargetGuard = "sme2" in {
 // lookup table expand one register
 //
 let SMETargetGuard = "sme2" in {
-  def SVLUTI2_LANE_ZT : Inst<"svluti2_lane_zt_{d}", "di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti2_lane_zt", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_15>]>;
-  def SVLUTI4_LANE_ZT : Inst<"svluti4_lane_zt_{d}", "di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti4_lane_zt", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_7>]>;
+  def SVLUTI2_LANE_ZT : Inst<"svluti2_lane_zt_{d}", "di[i", "cUcsUsiUimbhf", MergeNone, "aarch64_sme_luti2_lane_zt", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_15>]>;
+  def SVLUTI4_LANE_ZT : Inst<"svluti4_lane_zt_{d}", "di[i", "cUcsUsiUimbhf", MergeNone, "aarch64_sme_luti4_lane_zt", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_7>]>;
 }
 
 //
 // lookup table expand two contiguous registers
 //
 let SMETargetGuard = "sme2" in {
-  def SVLUTI2_LANE_ZT_X2 : Inst<"svluti2_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti2_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_7>]>;
-  def SVLUTI4_LANE_ZT_X2 : Inst<"svluti4_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti4_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
+  def SVLUTI2_LANE_ZT_X2 : Inst<"svluti2_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUimbhf", MergeNone, "aarch64_sme_luti2_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_7>]>;
+  def SVLUTI4_LANE_ZT_X2 : Inst<"svluti4_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUimbhf", MergeNone, "aarch64_sme_luti4_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
+}
+
+//
+// SME2 FP8 instructions
+//
+
+// FDOT
+let SMETargetGuard = "sme-f8f32" in {
+  def SVDOT_LANE_FP8_ZA32_VG1x2 : Inst<"svdot_lane_za32[_mf8]_vg1x2", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fdot_lane_za32_vg1x2", [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVDOT_LANE_FP8_ZA32_VG1x4 : Inst<"svdot_lane_za32[_mf8]_vg1x4", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fdot_lane_za32_vg1x4", [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_3>]>;
+
+  def SVVDOTB_LANE_FP8_ZA32_VG1x4 : Inst<"svvdotb_lane_za32[_mf8]_vg1x4", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fvdotb_lane_za32_vg1x4", [IsOverloadNone, IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVVDOTT_LANE_FP8_ZA32_VG1x4 : Inst<"svvdott_lane_za32[_mf8]_vg1x4", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fvdott_lane_za32_vg1x4", [IsOverloadNone, IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_3>]>;
+
+  def SVDOT_SINGLE_FP8_ZA32_VG1x2 : Inst<"svdot[_single]_za32[_mf8]_vg1x2", "vm2d>", "m", MergeNone, "aarch64_sme_fp8_fdot_single_za32_vg1x2", [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  def SVDOT_SINGLE_FP8_ZA32_VG1x4 : Inst<"svdot[_single]_za32[_mf8]_vg1x4", "vm4d>", "m", MergeNone, "aarch64_sme_fp8_fdot_single_za32_vg1x4", [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+
+  def SVDOT_MULTI_FP8_ZA32_VG1x2 : Inst<"svdot_za32[_mf8]_vg1x2", "vm22>", "m", MergeNone, "aarch64_sme_fp8_fdot_multi_za32_vg1x2", [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  def SVDOT_MULTI_FP8_ZA32_VG1x4 : Inst<"svdot_za32[_mf8]_vg1x4", "vm44>", "m", MergeNone, "aarch64_sme_fp8_fdot_multi_za32_vg1x4", [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+}
+
+let SMETargetGuard = "sme-f8f16" in {
+  def SVDOT_LANE_FP8_ZA16_VG1x2 : Inst<"svdot_lane_za16[_mf8]_vg1x2", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fdot_lane_za16_vg1x2", [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVDOT_LANE_FP8_ZA16_VG1x4 : Inst<"svdot_lane_za16[_mf8]_vg1x4", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fdot_lane_za16_vg1x4", [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
+
+  def SVVDOT_LANE_FP8_ZA16_VG1x2 : Inst<"svvdot_lane_za16[_mf8]_vg1x2", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fvdot_lane_za16_vg1x2", [IsOverloadNone, IsStreaming, IsInOutZA], [ImmCheck<3, ImmCheck0_7>]>;
+
+  def SVDOT_SINGLE_FP8_ZA16_VG1x2 : Inst<"svdot[_single]_za16[_mf8]_vg1x2", "vm2d>", "m", MergeNone, "aarch64_sme_fp8_fdot_single_za16_vg1x2", [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  def SVDOT_SINGLE_FP8_ZA16_VG1x4 : Inst<"svdot[_single]_za16[_mf8]_vg1x4", "vm4d>", "m", MergeNone, "aarch64_sme_fp8_fdot_single_za16_vg1x4", [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+
+  def SVDOT_MULTI_FP8_ZA16_VG1x2 : Inst<"svdot_za16[_mf8]_vg1x2", "vm22>", "m", MergeNone, "aarch64_sme_fp8_fdot_multi_za16_vg1x2", [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  def SVDOT_MULTI_FP8_ZA16_VG1x4 : Inst<"svdot_za16[_mf8]_vg1x4", "vm44>", "m", MergeNone, "aarch64_sme_fp8_fdot_multi_za16_vg1x4", [IsStreaming, IsInOutZA, IsOverloadNone], []>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -777,12 +811,12 @@ multiclass ZAReadz<string n_suffix, string vg_num, string t, string i_prefix, li
   }
 }
 
-defm SVREADZ_ZA8_X2  : ZAReadz<"za8",  "2", "cUc",   "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_0>]>;
+defm SVREADZ_ZA8_X2  : ZAReadz<"za8",  "2", "cUcm",   "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_0>]>;
 defm SVREADZ_ZA16_X2 : ZAReadz<"za16", "2", "sUshb", "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_1>]>;
 defm SVREADZ_ZA32_X2 : ZAReadz<"za32", "2", "iUif",  "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_3>]>;
 defm SVREADZ_ZA64_X2 : ZAReadz<"za64", "2", "lUld",  "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_7>]>;
 
-defm SVREADZ_ZA8_X4  : ZAReadz<"za8",  "4", "cUc",   "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_0>]>;
+defm SVREADZ_ZA8_X4  : ZAReadz<"za8",  "4", "cUcm",   "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_0>]>;
 defm SVREADZ_ZA16_X4 : ZAReadz<"za16", "4", "sUshb", "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_1>]>;
 defm SVREADZ_ZA32_X4 : ZAReadz<"za32", "4", "iUif",  "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_3>]>;
 defm SVREADZ_ZA64_X4 : ZAReadz<"za64", "4", "lUld",  "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_7>]>;
@@ -800,15 +834,15 @@ multiclass ZAReadzSingle<string n_suffix, string t, string i_prefix, list<ImmChe
   }
 }
 
-defm SVREADZ_ZA8   : ZAReadzSingle<"za8", "cUc", "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_0>]>;
+defm SVREADZ_ZA8   : ZAReadzSingle<"za8", "cUcm", "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_0>]>;
 defm SVREADZ_ZA16  : ZAReadzSingle<"za16", "sUshb", "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_1>]>;
 defm SVREADZ_ZA32  : ZAReadzSingle<"za32", "iUif", "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_3>]>;
 defm SVREADZ_ZA64  : ZAReadzSingle<"za64", "lUld", "aarch64_sme_readz", [ImmCheck<0, ImmCheck0_7>]>;
-defm SVREADZ_ZA128 : ZAReadzSingle<"za128", "csilUcUiUsUlbhfd", "aarch64_sme_readz_q", [ImmCheck<0, ImmCheck0_15>]>;
+defm SVREADZ_ZA128 : ZAReadzSingle<"za128", "csilUcUiUsUlmbhfd", "aarch64_sme_readz_q", [ImmCheck<0, ImmCheck0_15>]>;
 
 multiclass ZAReadzArray<string vg_num>{
   let SMETargetGuard = "sme2p1" in {
-    def NAME # _B : SInst<"svreadz_za8_{d}_vg1x" # vg_num, vg_num # "m", "cUc", MergeNone, "aarch64_sme_readz_x" # vg_num, [IsStreaming, IsInOutZA]>;
+    def NAME # _B : SInst<"svreadz_za8_{d}_vg1x" # vg_num, vg_num # "m", "cUcm", MergeNone, "aarch64_sme_readz_x" # vg_num, [IsStreaming, IsInOutZA]>;
     def NAME # _H : SInst<"svreadz_za16_{d}_vg1x" # vg_num, vg_num # "m", "sUsbh", MergeNone, "aarch64_sme_readz_x" # vg_num, [IsStreaming, IsInOutZA]>;
     def NAME # _S : SInst<"svreadz_za32_{d}_vg1x" # vg_num, vg_num # "m", "iUif", MergeNone, "aarch64_sme_readz_x" # vg_num, [IsStreaming, IsInOutZA]>;
     def NAME # _D : SInst<"svreadz_za64_{d}_vg1x" # vg_num, vg_num # "m", "lUld", MergeNone, "aarch64_sme_readz_x" # vg_num, [IsStreaming, IsInOutZA]>;
@@ -825,13 +859,51 @@ let SMETargetGuard = "sme-lutv2" in {
 }
 
 let SMETargetGuard = "sme-f8f32" in {
-  def SVMOPA_FP8_ZA32 : Inst<"svmopa_za32[_mf8]_m_fpm", "viPPdd>", "m", MergeNone, "aarch64_sme_fp8_fmopa_za32",
-                             [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<0, ImmCheck0_3>]>;
+  def SVMOPA_FP8_ZA32 : Inst<"svmopa_za32[_mf8]_m", "viPPdd>", "m", MergeNone, "aarch64_sme_fp8_fmopa_za32",
+                             [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<0, ImmCheck0_3>]>;
+   // FMLALL (indexed)
+  def SVMLA_FP8_LANE_ZA32_VG4x1 : Inst<"svmla_lane_za32[_mf8]_vg4x1", "vmddi>", "m", MergeNone, "aarch64_sme_fp8_fmlall_lane_za32_vg4x1",
+                                       [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLA_FP8_LANE_ZA32_VG4x2 : Inst<"svmla_lane_za32[_mf8]_vg4x2", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fmlall_lane_za32_vg4x2",
+                                       [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLA_FP8_LANE_ZA16_VG4x4 : Inst<"svmla_lane_za32[_mf8]_vg4x4", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fmlall_lane_za32_vg4x4",
+                                       [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  // FMLALL (single)
+  def SVMLA_FP8_SINGLE_ZA32_VG4x1 : Inst<"svmla[_single]_za32[_mf8]_vg4x1", "vmdd>", "m", MergeNone, "aarch64_sme_fp8_fmlall_single_za32_vg4x1",
+                                         [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  def SVMLA_FP8_SINGLE_ZA32_VG4x2 : Inst<"svmla[_single]_za32[_mf8]_vg4x2", "vm2d>", "m", MergeNone, "aarch64_sme_fp8_fmlall_single_za32_vg4x2",
+                                         [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  def SVMLA_FP8_SINGLE_ZA32_VG4x4 : Inst<"svmla[_single]_za32[_mf8]_vg4x4", "vm4d>", "m", MergeNone, "aarch64_sme_fp8_fmlall_single_za32_vg4x4",
+                                         [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  // FMLALL (multiple)
+  def SVMLA_FP8_MULTI_ZA32_VG4x2 : Inst<"svmla_za32[_mf8]_vg4x2", "vm22>", "m", MergeNone, "aarch64_sme_fp8_fmlall_multi_za32_vg4x2",
+                                        [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  def SVMLA_FP8_MULTI_ZA32_VG4x4 : Inst<"svmla_za32[_mf8]_vg4x4", "vm44>", "m", MergeNone, "aarch64_sme_fp8_fmlall_multi_za32_vg4x4",
+                                        [IsStreaming, IsInOutZA, IsOverloadNone], []>;
 }
 
 let SMETargetGuard = "sme-f8f16" in {
-  def SVMOPA_FP8_ZA16 : Inst<"svmopa_za16[_mf8]_m_fpm", "viPPdd>", "m", MergeNone, "aarch64_sme_fp8_fmopa_za16",
-                             [IsStreaming, IsInOutZA, SetsFPMR, IsOverloadNone], [ImmCheck<0, ImmCheck0_1>]>;
+  def SVMOPA_FP8_ZA16 : Inst<"svmopa_za16[_mf8]_m", "viPPdd>", "m", MergeNone, "aarch64_sme_fp8_fmopa_za16",
+                             [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<0, ImmCheck0_1>]>;
+  // FMLAL (indexed)
+  def SVMLA_FP8_LANE_ZA16_VG2x1 : Inst<"svmla_lane_za16[_mf8]_vg2x1", "vmddi>", "m", MergeNone, "aarch64_sme_fp8_fmlal_lane_za16_vg2x1",
+                                       [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLA_FP8_LANE_ZA16_VG2x2 : Inst<"svmla_lane_za16[_mf8]_vg2x2", "vm2di>", "m", MergeNone, "aarch64_sme_fp8_fmlal_lane_za16_vg2x2",
+                                       [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVMLA_FP8_LANE_ZA16_VG2x4 : Inst<"svmla_lane_za16[_mf8]_vg2x4", "vm4di>", "m", MergeNone, "aarch64_sme_fp8_fmlal_lane_za16_vg2x4",
+                                       [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<3, ImmCheck0_15>]>;
+  // FMLAL (single)
+  def SVMLA_FP8_SINGLE_ZA16_VG2x1 : Inst<"svmla[_single]_za16[_mf8]_vg2x1", "vmdd>", "m", MergeNone, "aarch64_sme_fp8_fmlal_single_za16_vg2x1",
+                                         [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  def SVMLA_FP8_SINGLE_ZA16_VG2x2 : Inst<"svmla[_single]_za16[_mf8]_vg2x2", "vm2d>", "m", MergeNone, "aarch64_sme_fp8_fmlal_single_za16_vg2x2",
+                                         [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  def SVMLA_FP8_SINGLE_ZA16_VG2x4 : Inst<"svmla[_single]_za16[_mf8]_vg2x4", "vm4d>", "m", MergeNone, "aarch64_sme_fp8_fmlal_single_za16_vg2x4",
+                                         [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  // FMLAL (multiple)
+  def SVMLA_FP8_MULTI_ZA16_VG2x2 : Inst<"svmla_za16[_mf8]_vg2x2", "vm22>", "m", MergeNone, "aarch64_sme_fp8_fmlal_multi_za16_vg2x2",
+                                        [IsStreaming, IsInOutZA, IsOverloadNone], []>;
+  def SVMLA_FP8_MULTI_ZA16_VG2x4 : Inst<"svmla_za16[_mf8]_vg2x4", "vm44>", "m", MergeNone, "aarch64_sme_fp8_fmlal_multi_za16_vg2x4",
+                                        [IsStreaming, IsInOutZA, IsOverloadNone], []>;
 }
 
 } // let SVETargetGuard = InvalidMode

@@ -152,6 +152,20 @@ TEST(buildASTFromCode, ReportsErrors) {
   EXPECT_EQ(1u, Consumer.NumDiagnosticsSeen);
 }
 
+TEST(buildASTFromCode, FileSystem) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  InMemoryFileSystem->addFile("included_file.h", 0,
+                              llvm::MemoryBuffer::getMemBufferCopy("class X;"));
+  std::unique_ptr<ASTUnit> AST = buildASTFromCodeWithArgs(
+      R"(#include "included_file.h")", {}, "input.cc", "clang-tool",
+      std::make_shared<PCHContainerOperations>(),
+      getClangStripDependencyFileAdjuster(), FileContentMappings(), nullptr,
+      InMemoryFileSystem);
+  ASSERT_TRUE(AST.get());
+  EXPECT_TRUE(FindClassDeclX(AST.get()));
+}
+
 TEST(newFrontendActionFactory, CreatesFrontendActionFactoryFromType) {
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory<SyntaxOnlyAction>());

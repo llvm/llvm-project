@@ -12,8 +12,8 @@ bool device_function() {
   return __nvvm_reflect("__CUDA_ARCH") >= 700;
 }
 
-// CHECK-LABEL: define dso_local spir_kernel void @kernel_function(
-// CHECK-SAME: ptr addrspace(1) noundef align 4 [[I:%.*]]) #[[ATTR2:[0-9]+]] !kernel_arg_addr_space !4 !kernel_arg_access_qual !5 !kernel_arg_type !6 !kernel_arg_base_type !6 !kernel_arg_type_qual !7 {
+// CHECK-LABEL: define dso_local ptx_kernel void @kernel_function(
+// CHECK-SAME: ptr addrspace(1) noundef align 4 [[I:%.*]]) #[[ATTR2:[0-9]+]] !kernel_arg_addr_space [[META3:![0-9]+]] !kernel_arg_access_qual [[META4:![0-9]+]] !kernel_arg_type [[META5:![0-9]+]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6:![0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca ptr addrspace(1), align 4
 // CHECK-NEXT:    store ptr addrspace(1) [[I]], ptr [[I_ADDR]], align 4
@@ -26,3 +26,9 @@ bool device_function() {
 __kernel void kernel_function(__global int *i) {
   *i = device_function();
 }
+//.
+// CHECK: [[META3]] = !{i32 1}
+// CHECK: [[META4]] = !{!"none"}
+// CHECK: [[META5]] = !{!"int*"}
+// CHECK: [[META6]] = !{!""}
+//.

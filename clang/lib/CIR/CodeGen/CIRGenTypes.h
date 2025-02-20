@@ -15,10 +15,14 @@
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "clang/AST/Type.h"
+
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
 class ASTContext;
+class FunctionType;
+class GlobalDecl;
 class QualType;
 class Type;
 } // namespace clang
@@ -39,9 +43,17 @@ class CIRGenTypes {
   clang::ASTContext &astContext;
   CIRGenBuilderTy &builder;
 
+  /// Heper for convertType.
+  mlir::Type convertFunctionTypeInternal(clang::QualType ft);
+
 public:
   CIRGenTypes(CIRGenModule &cgm);
   ~CIRGenTypes();
+
+  /// Utility to check whether a function type can be converted to a CIR type
+  /// (i.e. doesn't depend on an incomplete tag type).
+  bool isFuncTypeConvertible(const clang::FunctionType *ft);
+  bool isFuncParamTypeConvertible(clang::QualType type);
 
   /// This map of clang::Type to mlir::Type (which includes CIR type) is a
   /// cache of types that have already been processed.
@@ -52,6 +64,13 @@ public:
 
   /// Convert a Clang type into a mlir::Type.
   mlir::Type convertType(clang::QualType type);
+
+  /// Convert type T into an mlir::Type. This differs from convertType in that
+  /// it is used to convert to the memory representation for a type. For
+  /// example, the scalar representation for bool is i1, but the memory
+  /// representation is usually i8 or i32, depending on the target.
+  // TODO: convert this comment to account for MLIR's equivalence
+  mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
 };
 
 } // namespace clang::CIRGen

@@ -192,6 +192,6 @@ contains
 ! CHECK: fir.store %[[EMBOX_A]] to %[[BOX]] : !fir.ref<!fir.box<!fir.type<_QFTp{a:i32}>>>
 ! CHECK: %[[A_NONE:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.type<_QFTp{a:i32}>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[B_NONE:.*]] = fir.convert %[[EMBOX_B]] : (!fir.box<!fir.type<_QFTp{a:i32}>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAAssign(%[[A_NONE]], %[[B_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK: fir.call @_FortranAAssign(%[[A_NONE]], %[[B_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 
 end

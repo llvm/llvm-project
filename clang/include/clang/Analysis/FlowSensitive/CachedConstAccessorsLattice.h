@@ -13,7 +13,9 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_CACHED_CONST_ACCESSORS_LATTICE_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_CACHED_CONST_ACCESSORS_LATTICE_H
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
@@ -63,16 +65,16 @@ public:
 
   /// Creates or returns a previously created `StorageLocation` associated with
   /// a const method call `obj.getFoo()` where `RecordLoc` is the
-  /// `RecordStorageLocation` of `obj`.
+  /// `RecordStorageLocation` of `obj`, `Callee` is the decl for `getFoo`.
   ///
   /// The callback `Initialize` runs on the storage location if newly created.
-  /// Returns nullptr if unable to find or create a value.
   ///
   /// Requirements:
   ///
-  ///  - `CE` should return a location (GLValue or a record type).
-  StorageLocation *getOrCreateConstMethodReturnStorageLocation(
-      const RecordStorageLocation &RecordLoc, const CallExpr *CE,
+  ///  - `Callee` should return a location (return type is a reference type or a
+  ///     record type).
+  StorageLocation &getOrCreateConstMethodReturnStorageLocation(
+      const RecordStorageLocation &RecordLoc, const FunctionDecl *Callee,
       Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize);
 
   void clearConstMethodReturnValues(const RecordStorageLocation &RecordLoc) {
@@ -190,26 +192,24 @@ Value *CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnValue(
 }
 
 template <typename Base>
-StorageLocation *
+StorageLocation &
 CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
-    const RecordStorageLocation &RecordLoc, const CallExpr *CE,
+    const RecordStorageLocation &RecordLoc, const FunctionDecl *Callee,
     Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize) {
-  assert(!CE->getType().isNull());
-  assert(CE->isGLValue() || CE->getType()->isRecordType());
+  assert(Callee != nullptr);
+  QualType Type = Callee->getReturnType();
+  assert(!Type.isNull());
+  assert(Type->isReferenceType() || Type->isRecordType());
   auto &ObjMap = ConstMethodReturnStorageLocations[&RecordLoc];
-  const FunctionDecl *DirectCallee = CE->getDirectCallee();
-  if (DirectCallee == nullptr)
-    return nullptr;
-  auto it = ObjMap.find(DirectCallee);
+  auto it = ObjMap.find(Callee);
   if (it != ObjMap.end())
-    return it->second;
+    return *it->second;
 
-  StorageLocation &Loc =
-      Env.createStorageLocation(CE->getType().getNonReferenceType());
+  StorageLocation &Loc = Env.createStorageLocation(Type.getNonReferenceType());
   Initialize(Loc);
 
-  ObjMap.insert({DirectCallee, &Loc});
-  return &Loc;
+  ObjMap.insert({Callee, &Loc});
+  return Loc;
 }
 
 } // namespace dataflow

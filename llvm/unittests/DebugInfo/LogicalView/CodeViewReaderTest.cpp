@@ -31,6 +31,9 @@ namespace {
 
 const char *CodeViewClang = "test-codeview-clang.o";
 const char *CodeViewMsvc = "test-codeview-msvc.o";
+const char *CodeViewMsvcLib = "test-codeview-msvc.lib";
+const char *CodeViewMsvcLibContentName =
+    "test-codeview-msvc.lib(test-codeview-msvc.o)";
 const char *CodeViewPdbMsvc = "test-codeview-pdb-msvc.o";
 
 // Helper function to get the first scope child from the given parent.
@@ -137,6 +140,72 @@ void checkElementPropertiesMsvcCodeview(LVReader *Reader) {
 
   EXPECT_EQ(Root->getFileFormatName(), "COFF-x86-64");
   EXPECT_EQ(Root->getName(), CodeViewMsvc);
+
+  EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
+  EXPECT_TRUE(CompileUnit->getProducer().starts_with("Microsoft"));
+  EXPECT_EQ(CompileUnit->getName(), "test.cpp");
+
+  EXPECT_EQ(Function->lineCount(), 14u);
+  EXPECT_EQ(Function->scopeCount(), 1u);
+  EXPECT_EQ(Function->symbolCount(), 3u);
+  EXPECT_EQ(Function->typeCount(), 0u);
+  EXPECT_EQ(Function->rangeCount(), 1u);
+
+  const LVLocations *Ranges = Function->getRanges();
+  ASSERT_NE(Ranges, nullptr);
+  ASSERT_EQ(Ranges->size(), 1u);
+  LVLocations::const_iterator IterLocation = Ranges->begin();
+  LVLocation *Location = (*IterLocation);
+  EXPECT_STREQ(Location->getIntervalInfo().c_str(),
+               "{Range} Lines 2:9 [0x0000000000:0x0000000031]");
+
+  LVRange RangeList;
+  Function->getRanges(RangeList);
+
+  const LVRangeEntries &RangeEntries = RangeList.getEntries();
+  ASSERT_EQ(RangeEntries.size(), 2u);
+  LVRangeEntries::const_iterator IterRanges = RangeEntries.cbegin();
+  LVRangeEntry RangeEntry = *IterRanges;
+  EXPECT_EQ(RangeEntry.lower(), 0u);
+  EXPECT_EQ(RangeEntry.upper(), 0x31u);
+  EXPECT_EQ(RangeEntry.scope()->getLineNumber(), 0u);
+  EXPECT_EQ(RangeEntry.scope()->getName(), "foo");
+  EXPECT_EQ(RangeEntry.scope()->getOffset(), 0u);
+
+  ++IterRanges;
+  RangeEntry = *IterRanges;
+  EXPECT_EQ(RangeEntry.lower(), 0x1bu);
+  EXPECT_EQ(RangeEntry.upper(), 0x28u);
+  EXPECT_EQ(RangeEntry.scope()->getLineNumber(), 0u);
+  EXPECT_EQ(RangeEntry.scope()->getName(), "foo::?");
+  EXPECT_EQ(RangeEntry.scope()->getOffset(), 0u);
+
+  const LVPublicNames &PublicNames = CompileUnit->getPublicNames();
+  ASSERT_EQ(PublicNames.size(), 1u);
+  LVPublicNames::const_iterator IterNames = PublicNames.cbegin();
+  LVScope *Foo = (*IterNames).first;
+  EXPECT_EQ(Foo->getName(), "foo");
+  EXPECT_EQ(Foo->getLineNumber(), 0u);
+  LVNameInfo NameInfo = (*IterNames).second;
+  EXPECT_EQ(NameInfo.first, 0u);
+  EXPECT_EQ(NameInfo.second, 0x31u);
+
+  // Lines (debug and assembler) for 'foo'.
+  const LVLines *Lines = Foo->getLines();
+  ASSERT_NE(Lines, nullptr);
+  EXPECT_EQ(Lines->size(), 0x0eu);
+}
+
+// Check the logical elements basic properties (MSVC library - Codeview).
+void checkElementPropertiesMsvcLibraryCodeview(LVReader *Reader) {
+  LVScopeRoot *Root = Reader->getScopesRoot();
+  LVScopeCompileUnit *CompileUnit =
+      static_cast<LVScopeCompileUnit *>(getFirstScopeChild(Root));
+  LVScopeFunction *Function =
+      static_cast<LVScopeFunction *>(getFirstScopeChild(CompileUnit));
+
+  EXPECT_EQ(Root->getFileFormatName(), "COFF-x86-64");
+  EXPECT_EQ(Root->getName(), CodeViewMsvcLibContentName);
 
   EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
   EXPECT_TRUE(CompileUnit->getProducer().starts_with("Microsoft"));
@@ -369,6 +438,11 @@ void elementProperties(SmallString<128> &InputsDir) {
     std::unique_ptr<LVReader> Reader =
         createReader(ReaderHandler, InputsDir, CodeViewMsvc);
     checkElementPropertiesMsvcCodeview(Reader.get());
+  }
+  {
+    std::unique_ptr<LVReader> Reader =
+        createReader(ReaderHandler, InputsDir, CodeViewMsvcLib);
+    checkElementPropertiesMsvcLibraryCodeview(Reader.get());
   }
   {
     std::unique_ptr<LVReader> Reader =

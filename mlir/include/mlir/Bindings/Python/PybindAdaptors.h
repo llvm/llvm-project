@@ -374,9 +374,8 @@ public:
     static_assert(!std::is_member_function_pointer<Func>::value,
                   "def_staticmethod(...) called with a non-static member "
                   "function pointer");
-    py::cpp_function cf(
-        std::forward<Func>(f), py::name(name), py::scope(thisClass),
-        py::sibling(py::getattr(thisClass, name, py::none())), extra...);
+    py::cpp_function cf(std::forward<Func>(f), py::name(name),
+                        py::scope(thisClass), extra...);
     thisClass.attr(cf.name()) = py::staticmethod(cf);
     return *this;
   }
@@ -387,9 +386,8 @@ public:
     static_assert(!std::is_member_function_pointer<Func>::value,
                   "def_classmethod(...) called with a non-static member "
                   "function pointer");
-    py::cpp_function cf(
-        std::forward<Func>(f), py::name(name), py::scope(thisClass),
-        py::sibling(py::getattr(thisClass, name, py::none())), extra...);
+    py::cpp_function cf(std::forward<Func>(f), py::name(name),
+                        py::scope(thisClass), extra...);
     thisClass.attr(cf.name()) =
         py::reinterpret_borrow<py::object>(PyClassMethod_New(cf.ptr()));
     return *this;
