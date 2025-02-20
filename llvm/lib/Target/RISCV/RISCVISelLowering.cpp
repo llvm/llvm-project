@@ -8961,6 +8961,10 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
   if (VecVT.isScalableVector()) {
     SDValue SplatZero = DAG.getConstant(0, DL, VecVT);
     SDValue SplatTrueVal = DAG.getSignedConstant(ExtTrueVal, DL, VecVT);
+    if (Src.getOpcode() == ISD::XOR &&
+        ISD::isConstantSplatVectorAllOnes(Src.getOperand(1).getNode()))
+      return DAG.getNode(ISD::VSELECT, DL, VecVT, Src.getOperand(0), SplatZero,
+                         SplatTrueVal);
     return DAG.getNode(ISD::VSELECT, DL, VecVT, Src, SplatTrueVal, SplatZero);
   }
 
@@ -8975,6 +8979,20 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
   MVT XLenVT = Subtarget.getXLenVT();
   SDValue SplatZero = DAG.getConstant(0, DL, XLenVT);
   SDValue SplatTrueVal = DAG.getSignedConstant(ExtTrueVal, DL, XLenVT);
+
+  if (Src.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+    SDValue Xor = Src.getOperand(0);
+    if (Xor.getOpcode() == RISCVISD::VMXOR_VL) {
+      SDValue ScalableOnes = Xor.getOperand(1);
+      if (ScalableOnes.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          ScalableOnes.getOperand(0).isUndef() &&
+          ISD::isConstantSplatVectorAllOnes(
+              ScalableOnes.getOperand(1).getNode())) {
+        CC = Xor.getOperand(0);
+        std::swap(SplatZero, SplatTrueVal);
+      }
+    }
+  }
 
   SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
                           DAG.getUNDEF(ContainerVT), SplatZero, VL);
