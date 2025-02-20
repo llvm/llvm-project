@@ -1569,6 +1569,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP: ExpandFloatRes_XINT_TO_FP(N, Lo, Hi); break;
   case ISD::STRICT_FREM:
   case ISD::FREM:       ExpandFloatRes_FREM(N, Lo, Hi); break;
+  case ISD::FMODF:   ExpandFloatRes_FMODF(N); break;
     // clang-format on
   }
 
@@ -1617,6 +1618,23 @@ void DAGTypeLegalizer::ExpandFloatRes_Binary(SDNode *N, RTLIB::Libcall LC,
   if (IsStrict)
     ReplaceValueWith(SDValue(N, 1), Tmp.second);
   GetPairElements(Tmp.first, Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FMODF(SDNode *N) {
+  ExpandFloatRes_UnaryWithTwoFPResults(N, RTLIB::getMODF(N->getValueType(0)),
+                                       /*CallRetResNo=*/0);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_UnaryWithTwoFPResults(
+    SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo) {
+  assert(!N->isStrictFPOpcode() && "strictfp not implemented");
+  SmallVector<SDValue> Results;
+  DAG.expandMultipleResultFPLibCall(LC, N, Results, CallRetResNo);
+  for (auto [ResNo, Res] : enumerate(Results)) {
+    SDValue Lo, Hi;
+    GetPairElements(Res, Lo, Hi);
+    SetExpandedFloat(SDValue(N, ResNo), Lo, Hi);
+  }
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FABS(SDNode *N, SDValue &Lo,
