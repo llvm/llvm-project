@@ -362,8 +362,9 @@ static void clobberRegEntries(InlinedEntity Var, unsigned RegNo,
       FellowRegisters.push_back(Reg);
 
   // Drop all entries that have ended.
+  auto &Entries = LiveEntries[Var];
   for (auto Index : IndicesToErase)
-    LiveEntries[Var].erase(Index);
+    Entries.erase(Index);
 }
 
 /// Add a new debug value for \p Var. Closes all overlapping debug values.
