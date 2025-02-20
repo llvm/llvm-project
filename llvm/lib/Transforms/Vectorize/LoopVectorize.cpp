@@ -4930,7 +4930,6 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   if (Legal->hasUncountableEarlyExit())
     return 1;
 
-  auto BestKnownTC = getSmallBestKnownTC(PSE, TheLoop);
   const bool HasReductions = !Legal->getReductionVars().empty();
 
   // If we did not calculate the cost for VF (because the user selected the VF)
@@ -5006,25 +5005,33 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   }
 
   unsigned EstimatedVF = getEstimatedRuntimeVF(VF, VScaleForTuning);
-  unsigned KnownTC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
-  if (KnownTC > 0) {
-      // At least one iteration must be scalar when this constraint holds. So the
-      // maximum available iterations for interleaving is one less.
-      unsigned AvailableTC =
-          requiresScalarEpilogue(VF.isVector()) ? KnownTC - 1 : KnownTC;
 
-      // If trip count is known we select between two prospective ICs, where
+  // Try to get the exact trip count, or an estimate based on profiling data or
+  // ConstantMax from PSE, failing that.
+  if (auto BestKnownTC = getSmallBestKnownTC(PSE, TheLoop)) {
+    // At least one iteration must be scalar when this constraint holds. So the
+    // maximum available iterations for interleaving is one less.
+    unsigned AvailableTC = requiresScalarEpilogue(VF.isVector())
+                               ? (*BestKnownTC) - 1
+                               : *BestKnownTC;
+
+    unsigned InterleaveCountLB = bit_floor(std::max(
+        1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
+
+    if (PSE.getSE()->getSmallConstantTripCount(TheLoop) > 0) {
+      // If the estimated trip count is actually an exact one we select between
+      // two prospective ICs, where
+      //
       // 1) the aggressive IC is capped by the trip count divided by VF
       // 2) the conservative IC is capped by the trip count divided by (VF * 2)
+      //
       // The final IC is selected in a way that the epilogue loop trip count is
       // minimized while maximizing the IC itself, so that we either run the
-      // vector loop at least once if it generates a small epilogue loop, or else
-      // we run the vector loop at least twice.
+      // vector loop at least once if it generates a small epilogue loop, or
+      // else we run the vector loop at least twice.
 
-      unsigned InterleaveCountUB = bit_floor(
-          std::max(1u, std::min(AvailableTC / EstimatedVF, MaxInterleaveCount)));
-      unsigned InterleaveCountLB = bit_floor(std::max(
-          1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
+      unsigned InterleaveCountUB = bit_floor(std::max(
+          1u, std::min(AvailableTC / EstimatedVF, MaxInterleaveCount)));
       MaxInterleaveCount = InterleaveCountLB;
 
       if (InterleaveCountUB != InterleaveCountLB) {
@@ -5037,20 +5044,14 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
         if (TailTripCountUB == TailTripCountLB)
           MaxInterleaveCount = InterleaveCountUB;
       }
-  } else if (BestKnownTC) {
-    // At least one iteration must be scalar when this constraint holds. So the
-    // maximum available iterations for interleaving is one less.
-    unsigned AvailableTC = requiresScalarEpilogue(VF.isVector())
-                               ? (*BestKnownTC) - 1
-                               : *BestKnownTC;
-
-    // If trip count is an estimated compile time constant, limit the
-    // IC to be capped by the trip count divided by VF * 2, such that the vector
-    // loop runs at least twice to make interleaving seem profitable when there
-    // is an epilogue loop present. Since exact Trip count is not known we
-    // choose to be conservative in our IC estimate.
-    MaxInterleaveCount = bit_floor(std::max(
-        1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
+    } else {
+      // If trip count is an estimated compile time constant, limit the
+      // IC to be capped by the trip count divided by VF * 2, such that the
+      // vector loop runs at least twice to make interleaving seem profitable
+      // when there is an epilogue loop present. Since exact Trip count is not
+      // known we choose to be conservative in our IC estimate.
+      MaxInterleaveCount = InterleaveCountLB;
+    }
   }
 
   assert(MaxInterleaveCount > 0 &&
