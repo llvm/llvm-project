@@ -4,6 +4,7 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-ibm-linux-gnu"
 
+; We expect the loop with double reductions to be interleaved 8 times.
 define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK-LABEL: define void @QLA_F3_r_veq_norm2_V(
 ; CHECK-SAME: ptr noalias [[R:%.*]], ptr noalias [[A:%.*]], i32 [[N:%.*]]) {

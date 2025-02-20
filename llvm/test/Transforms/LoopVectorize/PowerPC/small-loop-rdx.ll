@@ -4,6 +4,7 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-ibm-linux-gnu"
 
+; We expect the loop with double reductions to be interleaved 8 times.
 define void @test(ptr %arr, i32 %len) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[ARR:%.*]], i32 [[LEN:%.*]]) {
