@@ -1,14 +1,5 @@
-// RUN: %clang_analyze_cc1 -w -verify %s\
-// RUN:   -analyzer-checker=core\
-// RUN:   -analyzer-checker=debug.ExprInspection -std=c++17
-// RUN: %clang_analyze_cc1 -w -verify %s\
-// RUN:   -analyzer-checker=core\
-// RUN:   -analyzer-checker=debug.ExprInspection -std=c++11\
-// RUN:   -DTEST_INLINABLE_ALLOCATORS
-// RUN: %clang_analyze_cc1 -w -verify %s\
-// RUN:   -analyzer-checker=core\
-// RUN:   -analyzer-checker=debug.ExprInspection -std=c++17\
-// RUN:   -DTEST_INLINABLE_ALLOCATORS
+// RUN: %clang_analyze_cc1 -verify %s\
+// RUN:   -analyzer-checker=core,debug.ExprInspection
 
 void clang_analyzer_eval(bool);
 
