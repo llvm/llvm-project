@@ -1388,24 +1388,49 @@ define half @use_atan2f16(half %a, half %b) nounwind {
   ret half %x
 }
 
-define float @test_cos_f32(float %Val) nounwind {
-; F16C-LABEL: test_cos_f32:
+define half @test_cos_f16(half %Val) nounwind {
+; F16C-LABEL: test_cos_f16:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    jmp cosf@PLT # TAILCALL
+; F16C-NEXT:    pushq %rax
+; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-NEXT:    callq cosf@PLT
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    popq %rax
+; F16C-NEXT:    retq
 ;
-; FP16-LABEL: test_cos_f32:
+; FP16-LABEL: test_cos_f16:
 ; FP16:       # %bb.0:
-; FP16-NEXT:    jmp cosf@PLT # TAILCALL
+; FP16-NEXT:    pushq %rax
+; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; FP16-NEXT:    callq cosf@PLT
+; FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; FP16-NEXT:    popq %rax
+; FP16-NEXT:    retq
 ;
-; X64-LABEL: test_cos_f32:
+; X64-LABEL: test_cos_f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    jmp cosf@PLT # TAILCALL
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    callq cosf@PLT
+; X64-NEXT:    callq __truncsfhf2@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
 ;
-; X86-LABEL: test_cos_f32:
+; X86-LABEL: test_cos_f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    jmp cosf # TAILCALL
-  %res = call float @llvm.cos.f32(float %Val)
-  ret float %res
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    pextrw $0, %xmm0, %eax
+; X86-NEXT:    movw %ax, (%esp)
+; X86-NEXT:    calll __extendhfsf2
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    calll cosf
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    calll __truncsfhf2
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+  %res = call half @llvm.cos.f16(half %Val)
+  ret half %res
 }
 
 define half @use_coshf16(half %a) nounwind {
@@ -1453,24 +1478,49 @@ define half @use_coshf16(half %a) nounwind {
   ret half %x
 }
 
-define float @test_sin_f32(float %Val) nounwind {
-; F16C-LABEL: test_sin_f32:
+define half @test_sin_f16(half %Val) nounwind {
+; F16C-LABEL: test_sin_f16:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    jmp sinf@PLT # TAILCALL
+; F16C-NEXT:    pushq %rax
+; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-NEXT:    callq sinf@PLT
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    popq %rax
+; F16C-NEXT:    retq
 ;
-; FP16-LABEL: test_sin_f32:
+; FP16-LABEL: test_sin_f16:
 ; FP16:       # %bb.0:
-; FP16-NEXT:    jmp sinf@PLT # TAILCALL
+; FP16-NEXT:    pushq %rax
+; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; FP16-NEXT:    callq sinf@PLT
+; FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; FP16-NEXT:    popq %rax
+; FP16-NEXT:    retq
 ;
-; X64-LABEL: test_sin_f32:
+; X64-LABEL: test_sin_f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    jmp sinf@PLT # TAILCALL
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    callq sinf@PLT
+; X64-NEXT:    callq __truncsfhf2@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
 ;
-; X86-LABEL: test_sin_f32:
+; X86-LABEL: test_sin_f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    jmp sinf # TAILCALL
-  %res = call float @llvm.sin.f32(float %Val)
-  ret float %res
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    pextrw $0, %xmm0, %eax
+; X86-NEXT:    movw %ax, (%esp)
+; X86-NEXT:    calll __extendhfsf2
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    calll sinf
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    calll __truncsfhf2
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+  %res = call half @llvm.sin.f16(half %Val)
+  ret half %res
 }
 
 define half @use_sinhf16(half %a) nounwind {
