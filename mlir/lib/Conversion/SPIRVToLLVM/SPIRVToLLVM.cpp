@@ -155,7 +155,7 @@ static Value broadcast(Location loc, Value toBroadcast, unsigned numElements,
   auto vectorType = VectorType::get(numElements, toBroadcast.getType());
   auto llvmVectorType = typeConverter.convertType(vectorType);
   auto llvmI32Type = typeConverter.convertType(rewriter.getIntegerType(32));
-  Value broadcasted = rewriter.create<LLVM::UndefOp>(loc, llvmVectorType);
+  Value broadcasted = rewriter.create<LLVM::PoisonOp>(loc, llvmVectorType);
   for (unsigned i = 0; i < numElements; ++i) {
     auto index = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI32Type, rewriter.getI32IntegerAttr(i));
@@ -708,7 +708,7 @@ public:
 
     // Initialize the struct and set the execution mode value.
     rewriter.setInsertionPointToStart(block);
-    Value structValue = rewriter.create<LLVM::UndefOp>(loc, structType);
+    Value structValue = rewriter.create<LLVM::PoisonOp>(loc, structType);
     Value executionMode = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI32Type,
         rewriter.getI32IntegerAttr(
@@ -1753,7 +1753,7 @@ public:
     auto componentsArray = components.getValue();
     auto *context = rewriter.getContext();
     auto llvmI32Type = IntegerType::get(context, 32);
-    Value targetOp = rewriter.create<LLVM::UndefOp>(loc, dstType);
+    Value targetOp = rewriter.create<LLVM::PoisonOp>(loc, dstType);
     for (unsigned i = 0; i < componentsArray.size(); i++) {
       if (!isa<IntegerAttr>(componentsArray[i]))
         return op.emitError("unable to support non-constant component");

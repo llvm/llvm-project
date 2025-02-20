@@ -23,8 +23,8 @@ recognized by GCC. Their use can be conditioned using preprocessor macros
 .. contents::
    :local:
 
-Annotations to Enhance Generic Checks
-_____________________________________
+General Purpose Annotations
+___________________________
 
 Null Pointer Checking
 #####################
@@ -79,7 +79,7 @@ implemented with a macro, with the macro performing a check for the assertion
 condition and, when the check fails, calling an assertion handler.  For
 example, consider the following code fragment:
 
-.. code-block: c
+.. code-block:: c
 
   void foo(int *p) {
     assert(p != NULL);
@@ -87,7 +87,7 @@ example, consider the following code fragment:
 
 When this code is preprocessed on Mac OS X it expands to the following:
 
-.. code-block: c
+.. code-block:: c
 
   void foo(int *p) {
     (__builtin_expect(!(p != NULL), 0) ? __assert_rtn(__func__, "t.c", 4, "p != NULL") : (void)0);
@@ -131,7 +131,7 @@ return.
 On Mac OS X, the function prototype for ``__assert_rtn`` (declared in
 ``assert.h``) is specifically annotated with the 'noreturn' attribute:
 
-.. code-block: c
+.. code-block:: c
 
   void __assert_rtn(const char *, const char *, int, const char *) __attribute__((__noreturn__));
 
@@ -151,7 +151,7 @@ the use of preprocessor macros.
 
 **Example**
 
-.. code-block: c
+.. code-block:: c
 
   #ifndef CLANG_ANALYZER_NORETURN
   #if __has_feature(attribute_analyzer_noreturn)
@@ -162,6 +162,43 @@ the use of preprocessor macros.
   #endif
 
   void my_assert_rtn(const char *, const char *, int, const char *) CLANG_ANALYZER_NORETURN;
+
+Dynamic Memory Modeling Annotations
+###################################
+
+If a project uses custom functions for dynamic memory management (that e.g. act as wrappers around ``malloc``/``free`` or ``new``/``delete`` in C++) and the analyzer cannot "see" the _definitions_ of these functions, it's possible to annotate their declarations to let the analyzer model their behavior. (Otherwise the analyzer cannot know that the opaque ``my_free()`` is basically equivalent to a standard ``free()`` call.)
+
+.. note::
+  **This page only provides a brief list of these annotations.** For a full documentation, see the main `Attributes in Clang <../../AttributeReference.html#ownership-holds-ownership-returns-ownership-takes-clang-static-analyzer>`_ page.
+
+Attribute 'ownership_returns' (Clang-specific)
+----------------------------------------------
+
+Use this attribute to mark functions that return dynamically allocated memory. Takes a single argument, the type of the allocation (e.g. ``malloc`` or ``new``).
+
+.. code-block:: c
+
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+
+Attribute 'ownership_takes' (Clang-specific)
+--------------------------------------------
+
+Use this attribute to mark functions that deallocate memory. Takes two arguments: the type of the allocation (e.g. ``malloc`` or ``new``) and the index of the parameter that is being deallocated (counting from 1).
+
+.. code-block:: c
+
+  void __attribute((ownership_takes(malloc, 1))) my_free(void *);
+
+Attribute 'ownership_holds' (Clang-specific)
+--------------------------------------------
+
+Use this attribute to mark functions that take ownership of memory and will deallocate it at some unspecified point in the future. Takes two arguments: the type of the allocation (e.g. ``malloc`` or ``new``) and the index of the parameter that is being held (counting from 1).
+
+.. code-block:: c
+
+  void __attribute((ownership_holds(malloc, 2))) store_in_table(int key, record_t *val);
+
+The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory leak reports (concerning the specified argument); the difference between them is that using taken memory is a use-after-free error, while using held memory is assumed to be legitimate.
 
 Mac OS X API Annotations
 ________________________
@@ -207,7 +244,7 @@ functions allows the analyzer to perform extra checking.
 
 **Example**
 
-.. code-block: objc
+.. code-block:: objc
 
   #import <Foundation/Foundation.h>;
 
@@ -596,7 +633,6 @@ returned object.
     OSObject *f;
     LIBKERN_RETURNS_NOT_RETAINED OSObject *myFieldGetter();
   }
-
 
   // Note that the annotation only has to be applied to the function declaration.
   OSObject * MyClass::myFieldGetter() {

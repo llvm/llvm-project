@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_MACROS_PTHREAD_MACRO_H
 #define LLVM_LIBC_MACROS_PTHREAD_MACRO_H
 
+#include "null-macro.h"
+
 #define PTHREAD_CREATE_JOINABLE 0
 #define PTHREAD_CREATE_DETACHED 1
 
@@ -25,8 +27,34 @@
 #define PTHREAD_PROCESS_PRIVATE 0
 #define PTHREAD_PROCESS_SHARED 1
 
-#define PTHREAD_MUTEX_INITIALIZER {0}
-#define PTHREAD_RWLOCK_INITIALIZER {0}
+#ifdef __linux__
+#define PTHREAD_MUTEX_INITIALIZER                                              \
+  {                                                                            \
+      /* .__timed = */ 0,      /* .__recursive = */ 0,                         \
+      /* .__robust = */ 0,     /* .__owner = */ NULL,                          \
+      /* .__lock_count = */ 0, /* .__futex_word = */ {0},                      \
+  }
+#else
+#define PTHREAD_MUTEX_INITIALIZER                                              \
+  {                                                                            \
+      /* .__timed = */ 0,      /* .__recursive = */ 0,                         \
+      /* .__robust = */ 0,     /* .__owner = */ NULL,                          \
+      /* .__lock_count = */ 0,                                                 \
+  }
+#endif
+
+#define PTHREAD_RWLOCK_INITIALIZER                                             \
+  {                                                                            \
+      /* .__is_pshared = */ 0,                                                 \
+      /* .__preference = */ 0,                                                 \
+      /* .__state = */ 0,                                                      \
+      /* .__write_tid = */ 0,                                                  \
+      /* .__wait_queue_mutex = */ {0},                                         \
+      /* .__pending_readers = */ {0},                                          \
+      /* .__pending_writers = */ {0},                                          \
+      /* .__reader_serialization = */ {0},                                     \
+      /* .__writer_serialization = */ {0},                                     \
+  }
 
 // glibc extensions
 #define PTHREAD_STACK_MIN (1 << 14) // 16KB

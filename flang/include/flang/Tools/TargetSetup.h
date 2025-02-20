@@ -24,34 +24,35 @@ namespace Fortran::tools {
     const std::string &compilerVersion, const std::string &compilerOptions) {
 
   const llvm::Triple &targetTriple{targetMachine.getTargetTriple()};
-  // FIXME: Handle real(3) ?
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
-    targetCharacteristics.DisableType(
-        Fortran::common::TypeCategory::Real, /*kind=*/10);
-  }
+
   if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);
   }
+
   if (targetTriple.isARM() || targetTriple.isAArch64()) {
     targetCharacteristics.set_haltingSupportIsUnknownAtCompileTime();
     targetCharacteristics.set_ieeeFeature(
         evaluate::IeeeFeature::Halting, false);
-  } else {
-    targetCharacteristics.set_ieeeFeature(evaluate::IeeeFeature::Halting);
+    targetCharacteristics.set_ieeeFeature(
+        evaluate::IeeeFeature::Standard, false);
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
+    targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);
   }
 
-  // Figure out if we can support F128: see
-  // flang/runtime/Float128Math/math-entries.h
-  // TODO: this should be taken from TargetInfo::getLongDoubleFormat to support
-  // cross-compilation
+  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
+    targetCharacteristics.DisableType(
+        Fortran::common::TypeCategory::Real, /*kind=*/10);
+  }
+
+  // Check for kind=16 support. See flang/runtime/Float128Math/math-entries.h.
+  // TODO: Take this from TargetInfo::getLongDoubleFormat for cross compilation.
 #ifdef FLANG_RUNTIME_F128_MATH_LIB
-  // we can use libquadmath wrappers
-  constexpr bool f128Support = true;
+  constexpr bool f128Support = true; // use libquadmath wrappers
 #elif HAS_LDBL128
-  // we can use libm wrappers
-  constexpr bool f128Support = true;
+  constexpr bool f128Support = true; // use libm wrappers
 #else
   constexpr bool f128Support = false;
 #endif
@@ -70,6 +71,9 @@ namespace Fortran::tools {
 
   if (targetTriple.isPPC())
     targetCharacteristics.set_isPPC(true);
+
+  if (targetTriple.isSPARC())
+    targetCharacteristics.set_isSPARC(true);
 
   if (targetTriple.isOSWindows())
     targetCharacteristics.set_isOSWindows(true);

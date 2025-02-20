@@ -520,7 +520,7 @@ void benchmarkMain() {
   const auto Opcodes = getOpcodesOrDie(State);
   std::vector<BenchmarkCode> Configurations;
 
-  unsigned LoopRegister =
+  MCRegister LoopRegister =
       State.getExegesisTarget().getDefaultLoopCounterRegister(
           State.getTargetMachine().getTargetTriple());
 

@@ -840,8 +840,10 @@ public:
   bool matchRedundantBinOpInEquality(MachineInstr &MI,
                                      BuildFnTy &MatchInfo) const;
 
-  /// Match shifts greater or equal to the bitwidth of the operation.
-  bool matchShiftsTooBig(MachineInstr &MI) const;
+  /// Match shifts greater or equal to the range (the bitwidth of the result
+  /// datatype, or the effective bitwidth of the source value).
+  bool matchShiftsTooBig(MachineInstr &MI,
+                         std::optional<int64_t> &MatchInfo) const;
 
   /// Match constant LHS ops that should be commuted.
   bool matchCommuteConstantToRHS(MachineInstr &MI) const;

@@ -1,11 +1,6 @@
 #ifndef __CLC_RELATIONAL_CLC_ISEQUAL_H__
 #define __CLC_RELATIONAL_CLC_ISEQUAL_H__
 
-#if defined(CLC_CLSPV) || defined(CLC_SPIRV)
-// clspv and spir-v targets provide their own OpenCL-compatible isequal
-#define __clc_isequal isequal
-#else
-
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
 
@@ -36,7 +31,5 @@ _CLC_VECTOR_ISEQUAL_DECL(half, short)
 
 #undef _CLC_ISEQUAL_DECL
 #undef _CLC_VECTOR_ISEQUAL_DECL
-
-#endif
 
 #endif //  __CLC_RELATIONAL_CLC_ISEQUAL_H__

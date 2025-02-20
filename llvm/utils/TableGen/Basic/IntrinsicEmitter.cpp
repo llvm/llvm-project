@@ -252,8 +252,7 @@ void IntrinsicEmitter::EmitIntrinsicToNameTable(
 
 )";
 
-  Table.EmitStringLiteralDef(OS, "static constexpr char IntrinsicNameTable[]",
-                             /*Indent=*/"");
+  Table.EmitStringTableDef(OS, "IntrinsicNameTable", /*Indent=*/"");
 
   OS << R"(
 static constexpr unsigned IntrinsicNameOffsetTable[] = {
@@ -473,7 +472,7 @@ struct AttributeComparator {
 static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
   switch (Kind) {
   case CodeGenIntrinsic::NoCapture:
-    return "NoCapture";
+    llvm_unreachable("Handled separately");
   case CodeGenIntrinsic::NoAlias:
     return "NoAlias";
   case CodeGenIntrinsic::NoUndef:
@@ -526,6 +525,11 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID) {
 )",
                     ID);
       for (const CodeGenIntrinsic::ArgAttribute &Attr : Attrs) {
+        if (Attr.Kind == CodeGenIntrinsic::NoCapture) {
+          OS << "      Attribute::getWithCaptureInfo(C, "
+                "CaptureInfo::none()),\n";
+          continue;
+        }
         StringRef AttrName = getArgAttrEnumName(Attr.Kind);
         if (Attr.Kind == CodeGenIntrinsic::Alignment ||
             Attr.Kind == CodeGenIntrinsic::Dereferenceable)
@@ -759,13 +763,13 @@ Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
   }
 
   if (!Table.empty()) {
-    Table.EmitStringLiteralDef(OS, "static constexpr char BuiltinNames[]");
+    Table.EmitStringTableDef(OS, "BuiltinNames");
 
     OS << R"(
   struct BuiltinEntry {
     ID IntrinsicID;
     unsigned StrTabOffset;
-    const char *getName() const { return &BuiltinNames[StrTabOffset]; }
+    const char *getName() const { return BuiltinNames[StrTabOffset].data(); }
     bool operator<(StringRef RHS) const {
       return strncmp(getName(), RHS.data(), RHS.size()) < 0;
     }

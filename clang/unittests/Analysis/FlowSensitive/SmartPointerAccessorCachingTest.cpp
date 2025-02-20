@@ -190,5 +190,57 @@ TEST(SmartPointerAccessorCachingTest, MatchesWithValueAndNonConstOverloads) {
       isSmartPointerLikeValueMethodCall()));
 }
 
+TEST(SmartPointerAccessorCachingTest, MatchesWithTypeAliases) {
+  llvm::StringRef Decls(R"cc(
+    template <class T>
+    struct HasGetAndValue {
+      using pointer_t = T*;
+      using reference_t = T&;
+
+      const pointer_t operator->() const;
+      pointer_t operator->();
+      const reference_t operator*() const;
+      reference_t operator*();
+      const reference_t value() const;
+      reference_t value();
+      const pointer_t get() const;
+      pointer_t get();
+    };
+
+    struct S { int i; };
+  )cc");
+
+  EXPECT_TRUE(matches(
+      Decls,
+      "int target(HasGetAndValue<S> &NonConst) { return (*NonConst).i; }",
+      isSmartPointerLikeOperatorStar()));
+  EXPECT_TRUE(matches(
+      Decls,
+      "int target(const HasGetAndValue<S> &Const) { return (*Const).i; }",
+      isSmartPointerLikeOperatorStar()));
+  EXPECT_TRUE(matches(
+      Decls, "int target(HasGetAndValue<S> &NonConst) { return NonConst->i; }",
+      isSmartPointerLikeOperatorArrow()));
+  EXPECT_TRUE(matches(
+      Decls, "int target(const HasGetAndValue<S> &Const) { return Const->i; }",
+      isSmartPointerLikeOperatorArrow()));
+  EXPECT_TRUE(matches(
+      Decls,
+      "int target(HasGetAndValue<S> &NonConst) { return NonConst.value().i; }",
+      isSmartPointerLikeValueMethodCall()));
+  EXPECT_TRUE(matches(
+      Decls,
+      "int target(const HasGetAndValue<S> &Const) { return Const.value().i; }",
+      isSmartPointerLikeValueMethodCall()));
+  EXPECT_TRUE(matches(
+      Decls,
+      "int target(HasGetAndValue<S> &NonConst) { return NonConst.get()->i; }",
+      isSmartPointerLikeGetMethodCall()));
+  EXPECT_TRUE(matches(
+      Decls,
+      "int target(const HasGetAndValue<S> &Const) { return Const.get()->i; }",
+      isSmartPointerLikeGetMethodCall()));
+}
+
 } // namespace
 } // namespace clang::dataflow

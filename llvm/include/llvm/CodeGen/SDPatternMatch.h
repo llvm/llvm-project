@@ -896,6 +896,10 @@ inline UnaryOpc_match<Opnd, true> m_ChainedUnaryOp(unsigned Opc,
   return UnaryOpc_match<Opnd, true>(Opc, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_BitCast(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::BITCAST, Op);
+}
+
 template <typename Opnd>
 inline UnaryOpc_match<Opnd> m_BSwap(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::BSWAP, Op);

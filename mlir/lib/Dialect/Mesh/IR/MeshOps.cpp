@@ -194,6 +194,12 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
                        const SplitAxes &splitAxes, OutShape &outShape,
                        ArrayRef<int64_t> shardedDimsOffsets = {},
                        ArrayRef<int64_t> haloSizes = {}) {
+  // 0d tensors cannot be sharded and must get replicated
+  if (inShape.empty()) {
+    assert(outShape.empty());
+    return;
+  }
+
   std::copy(llvm::adl_begin(inShape), llvm::adl_end(inShape),
             llvm::adl_begin(outShape));
 
@@ -271,7 +277,8 @@ Type mesh::shardType(Type type, MeshOp mesh, MeshSharding sharding) {
 
 void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                                      OpOperand &operand,
-                                                     OpBuilder &builder) {
+                                                     OpBuilder &builder,
+                                                     ShardOp &newShardOp) {
   OpBuilder::InsertionGuard insertionGuard(builder);
   Value operandValue = operand.get();
   Operation *operandOp = operand.getOwner();
@@ -279,14 +286,20 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
   ShardOp shardOp = dyn_cast<ShardOp>(operandOp);
   if (shardOp && sharding == shardOp.getSharding() &&
       !shardOp.getAnnotateForUsers()) {
-    // No need for anything the correct sharding is already set.
+    // No need for anything if the correct sharding is already set.
+    if (!newShardOp) {
+      newShardOp = shardOp;
+    }
     return;
   }
 
-  auto shardingOp = builder.create<ShardingOp>(operandValue.getLoc(), sharding);
-  auto newShardOp =
-      builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
-                              /*annotate_for_users*/ false);
+  if (!newShardOp) {
+    auto shardingOp =
+        builder.create<ShardingOp>(operandValue.getLoc(), sharding);
+    newShardOp =
+        builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
+                                /*annotate_for_users*/ false);
+  }
   IRRewriter rewriter(builder);
   rewriter.replaceUsesWithIf(
       operandValue, newShardOp, [operandOp, operandValue](OpOperand &use) {
@@ -297,17 +310,19 @@ void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
     return;
   }
 
-  auto newShardOp2 =
-      builder.create<ShardOp>(operandValue.getLoc(), newShardOp, shardingOp,
-                              /*annotate_for_users*/ true);
+  auto newShardOp2 = builder.create<ShardOp>(operandValue.getLoc(), newShardOp,
+                                             newShardOp.getSharding(),
+                                             /*annotate_for_users*/ true);
   rewriter.replaceAllUsesExcept(newShardOp, newShardOp2, newShardOp2);
+  return;
 }
 
 void mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                                      OpResult result,
                                                      OpBuilder &builder) {
+  ShardOp newShardOp;
   for (auto &use : llvm::make_early_inc_range(result.getUses())) {
-    maybeInsertTargetShardingAnnotation(sharding, use, builder);
+    maybeInsertTargetShardingAnnotation(sharding, use, builder, newShardOp);
   }
 }
 
@@ -316,9 +331,19 @@ void mlir::mesh::maybeInsertSourceShardingAnnotation(MeshSharding sharding,
                                                      OpBuilder &builder) {
   OpBuilder::InsertionGuard insertionGuard(builder);
   Value operandValue = operand.get();
-  Operation *operandOp = operand.getOwner();
   Operation *operandSrcOp = operandValue.getDefiningOp();
   bool isBlockArg = !operandSrcOp;
+  {
+    [[maybe_unused]] auto opType =
+        dyn_cast<mlir::RankedTensorType>(operandValue.getType());
+    assert(!opType || opType.getRank() > 0 || isFullReplication(sharding));
+  }
+  if (!isa<RankedTensorType>(operandValue.getType()) && operandSrcOp &&
+      operandSrcOp->hasTrait<OpTrait::ConstantLike>()) {
+    return;
+  }
+
+  Operation *operandOp = operand.getOwner();
   ShardOp shardOp = dyn_cast_or_null<ShardOp>(operandSrcOp);
 
   if (shardOp && sharding == shardOp.getSharding() &&
@@ -432,16 +457,14 @@ void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
                        ArrayRef<MeshAxesAttr> split_axes,
                        ArrayRef<MeshAxis> partial_axes,
                        mesh::ReductionKind partial_type,
-                       ArrayRef<int64_t> static_halo_sizes,
-                       ArrayRef<int64_t> static_sharded_dims_offsets) {
+                       ArrayRef<int64_t> static_halos,
+                       ArrayRef<int64_t> static_offsets) {
   return build(
       b, odsState, mesh, MeshAxesArrayAttr::get(b.getContext(), split_axes),
       ::mlir::DenseI16ArrayAttr::get(b.getContext(), partial_axes),
       ::mlir::mesh::ReductionKindAttr::get(b.getContext(), partial_type),
-      ::mlir::DenseI64ArrayAttr::get(b.getContext(), static_halo_sizes), {},
-      ::mlir::DenseI64ArrayAttr::get(b.getContext(),
-                                     static_sharded_dims_offsets),
-      {});
+      ::mlir::DenseI64ArrayAttr::get(b.getContext(), static_halos), {},
+      ::mlir::DenseI64ArrayAttr::get(b.getContext(), static_offsets), {});
 }
 
 void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
@@ -451,6 +474,18 @@ void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
       b, odsState, mesh, MeshAxesArrayAttr::get(b.getContext(), split_axes), {},
       ::mlir::mesh::ReductionKindAttr::get(b.getContext(), ReductionKind::Sum),
       {}, {}, {}, {});
+}
+
+void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
+                       llvm::StringRef mesh, ArrayRef<MeshAxesAttr> split_axes,
+                       ArrayRef<int64_t> static_halos,
+                       ArrayRef<int64_t> static_offsets) {
+  return build(
+      b, odsState, FlatSymbolRefAttr::get(b.getContext(), mesh),
+      MeshAxesArrayAttr::get(b.getContext(), split_axes), {},
+      ::mlir::mesh::ReductionKindAttr::get(b.getContext(), ReductionKind::Sum),
+      ::mlir::DenseI64ArrayAttr::get(b.getContext(), static_halos), {},
+      ::mlir::DenseI64ArrayAttr::get(b.getContext(), static_offsets), {});
 }
 
 void ShardingOp::build(
@@ -579,9 +614,10 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 namespace {
 // Sharding annotations "halo sizes" and "sharded dims offsets"
 // are a mix of attributes and dynamic values. This canonicalization moves
-// constant values to the respective attribute lists and so minimizes the number
+// constant values to the respective attribute lists, minimizing the number
 // of values.
-class FoldDynamicLists final : public OpRewritePattern<ShardingOp> {
+// It also removes sharded_dims_sizes and halos if they are effectively "empty".
+class NormalizeSharding final : public OpRewritePattern<ShardingOp> {
 public:
   using OpRewritePattern<ShardingOp>::OpRewritePattern;
 
@@ -593,18 +629,48 @@ public:
                                     op.getDynamicShardedDimsOffsets(), b);
 
     // No constant operands were folded, just return;
-    if (failed(foldDynamicIndexList(mixedHalos, /*onlyNonNegative=*/true)) &&
-        failed(foldDynamicIndexList(mixedOffs, /*onlyNonNegative=*/true))) {
+    bool modified = succeeded(foldDynamicIndexList(mixedHalos, true)) ||
+                    succeeded(foldDynamicIndexList(mixedOffs, true));
+
+    auto [staticHalos, dynamicHalos] = decomposeMixedValues(mixedHalos);
+    auto [staticOffs, dynamicOffs] = decomposeMixedValues(mixedOffs);
+
+    if (dynamicHalos.empty() && !staticHalos.empty()) {
+      if (staticHalos[0] == 0 && llvm::all_equal(staticHalos)) {
+        staticHalos.clear();
+        modified = true;
+      }
+    }
+
+    // Remove sharded dims offsets if they are effectively the default values,
+    // e.g. if they define equi-distance between all neighboring shards.
+    // Requires static-only offsets. Compares the first distance as the
+    // difference between the first two offsets. Only if all consecutive
+    // distances are the same, the offsets are removed.
+    if (dynamicOffs.empty() && !staticOffs.empty()) {
+      assert(staticOffs.size() >= 2);
+      auto diff = staticOffs[1] - staticOffs[0];
+      bool all_same = staticOffs.size() > 2;
+      for (auto i = 2u; i < staticOffs.size(); ++i) {
+        if (staticOffs[i] - staticOffs[i - 1] != diff) {
+          all_same = false;
+          break;
+        }
+      }
+      if (all_same) {
+        staticOffs.clear();
+        modified = true;
+      }
+    }
+
+    if (!modified) {
       return failure();
     }
 
-    auto halos = decomposeMixedValues(mixedHalos);
-    auto offs = decomposeMixedValues(mixedOffs);
-
-    op.setStaticHaloSizes(halos.first);
-    op.getDynamicHaloSizesMutable().assign(halos.second);
-    op.setStaticShardedDimsOffsets(offs.first);
-    op.getDynamicShardedDimsOffsetsMutable().assign(offs.second);
+    op.setStaticHaloSizes(staticHalos);
+    op.getDynamicHaloSizesMutable().assign(dynamicHalos);
+    op.setStaticShardedDimsOffsets(staticOffs);
+    op.getDynamicShardedDimsOffsetsMutable().assign(dynamicOffs);
 
     return success();
   }
@@ -613,7 +679,7 @@ public:
 
 void ShardingOp::getCanonicalizationPatterns(mlir::RewritePatternSet &results,
                                              mlir::MLIRContext *context) {
-  results.add<FoldDynamicLists>(context);
+  results.add<NormalizeSharding>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -707,11 +773,19 @@ bool MeshSharding::operator!=(const MeshSharding &rhs) const {
   return !(*this == rhs);
 }
 
+MeshSharding::MeshSharding(::mlir::FlatSymbolRefAttr mesh_) : mesh(mesh_) {}
+
 MeshSharding::MeshSharding(Value rhs) {
   auto shardingOp = mlir::dyn_cast<ShardingOp>(rhs.getDefiningOp());
   assert(shardingOp && "expected sharding op");
-  *this = get(shardingOp.getMeshAttr(), shardingOp.getSplitAxes().getAxes(),
-              shardingOp.getPartialAxes().value_or(ArrayRef<MeshAxis>()),
+  auto splitAxes = shardingOp.getSplitAxes().getAxes();
+  auto partialAxes = shardingOp.getPartialAxes().value_or(ArrayRef<MeshAxis>());
+  // If splitAxes and partialAxes are empty, use "empty" constructor.
+  if (splitAxes.empty() && partialAxes.empty()) {
+    *this = MeshSharding(shardingOp.getMeshAttr());
+    return;
+  }
+  *this = get(shardingOp.getMeshAttr(), splitAxes, partialAxes,
               shardingOp.getPartialType().value_or(ReductionKind::Sum),
               shardingOp.getStaticHaloSizes(),
               shardingOp.getStaticShardedDimsOffsets(),
@@ -727,8 +801,11 @@ MeshSharding MeshSharding::get(::mlir::FlatSymbolRefAttr mesh_,
                                ArrayRef<int64_t> static_sharded_dims_offsets_,
                                ArrayRef<Value> dynamic_halo_sizes_,
                                ArrayRef<Value> dynamic_sharded_dims_offsets_) {
-  MeshSharding res;
-  res.mesh = mesh_;
+  MeshSharding res(mesh_);
+  if (split_axes_.empty() && partial_axes_.empty()) {
+    return res;
+  }
+
   res.split_axes.resize(split_axes_.size());
   for (auto [i, axis] : llvm::enumerate(split_axes_)) {
     res.split_axes[i] =
@@ -769,6 +846,53 @@ void ShardShapeOp::build(::mlir::OpBuilder &odsBuilder,
 void ShardOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "sharding_annotated");
+}
+
+namespace {
+// Determine if the given ShardOp is a duplicate of another ShardOp
+// on the same value. This can happen if constant values are sharded.
+class FoldDuplicateShardOp final : public OpRewritePattern<ShardOp> {
+public:
+  using OpRewritePattern<ShardOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShardOp op, PatternRewriter &b) const override {
+    // Get the use-list of the value being sharded and check if it has more than
+    // one use.
+    Value value = op.getSrc();
+    if (value.hasOneUse() || value.getDefiningOp<ShardOp>()) {
+      return failure();
+    }
+
+    // Iterate through the uses of the value to find a duplicate ShardOp.
+    for (auto &use : value.getUses()) {
+      if (use.getOwner() != op.getOperation()) {
+        auto otherOp = dyn_cast<ShardOp>(use.getOwner());
+        if (!otherOp || !otherOp->isBeforeInBlock(op)) {
+          return failure();
+        }
+        // Create a MeshSharding object for the current and the other ShardOp
+        // If the two are equal replace current op with the other op.
+        MeshSharding currentSharding(op.getSharding());
+        MeshSharding otherSharding(otherOp.getSharding());
+        if (currentSharding == otherSharding) {
+          b.replaceAllUsesWith(op.getResult(), otherOp.getResult());
+          b.eraseOp(op.getOperation());
+        } else {
+          // use the other sharding as input for op
+          op.getSrcMutable().assign(otherOp.getResult());
+        }
+        return success();
+      }
+    }
+
+    return failure();
+  }
+};
+} // namespace
+
+void ShardOp::getCanonicalizationPatterns(mlir::RewritePatternSet &results,
+                                          mlir::MLIRContext *context) {
+  results.add<FoldDuplicateShardOp>(context);
 }
 
 //===----------------------------------------------------------------------===//

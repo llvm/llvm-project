@@ -714,6 +714,26 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT> {
 def VOP2e_I32_I32_I32_I1 : VOP2e_SGPR<[i32, i32, i32, i1]>;
 def VOP2e_I16_I16_I16_I1 : VOP2e_SGPR<[i16, i16, i16, i1]>;
 // V_CNDMASK_B16 is VOP3 only
+def VOP2e_I16_I16_I16_I1_true16 : VOP2e_SGPR<[i16, i16, i16, i1]> {
+  let IsTrue16 = 1;
+  let IsRealTrue16 = 1;
+  let HasOpSel = 1;
+  let DstRC64 = getVALUDstForVT<DstVT, 1, 1>.ret;
+  let Src0RC64 = getVOP3SrcForVT<Src0VT, 1/*IsTrue16*/>.ret;
+  let Src1RC64 = getVOP3SrcForVT<Src1VT, 1/*IsTrue16*/>.ret;
+  let Src2RC64 = getVOP3SrcForVT<Src2VT, 1/*IsTrue16*/>.ret;
+  let Src0Mod = getSrc0Mod<f16, DstVT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+  let Src1Mod = getSrcMod<f16, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+  let HasSrc2Mods = 0;
+  let InsVOP3OpSel = getInsVOP3Base<Src0RC64, Src1RC64,
+                    Src2RC64, NumSrcArgs,
+                    HasClamp, 1/*HasModifiers*/, 0/*HasSrc2Mods*/, HasOMod,
+                    Src0Mod, Src1Mod, Src2Mod, 1/*HasOpSel*/>.ret;
+  let Src0VOP3DPP = VGPRSrc_16;
+  let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0/*IsFake16*/>.ret;
+  let Src0ModVOP3DPP = getSrc0ModVOP3DPP<f16, DstVT, 0/*IsFake16*/>.ret;
+  let Src1ModVOP3DPP = getSrcModVOP3DPP<f16, 0/*IsFake16*/>.ret;
+}
 def VOP2e_I16_I16_I16_I1_fake16 : VOP2e_SGPR<[i16, i16, i16, i1]> {
   let IsTrue16 = 1;
   let DstRC64 = getVALUDstForVT<DstVT>.ret;
@@ -765,8 +785,10 @@ def VOP_WRITELANE : VOPProfile<[i32, i32, i32, i32]> {
 // VOP2 Instructions
 //===----------------------------------------------------------------------===//
 
-let SubtargetPredicate = isGFX11Plus in
-defm V_CNDMASK_B16 : VOP2eInst <"v_cndmask_b16", VOP2e_I16_I16_I16_I1_fake16>;
+let SubtargetPredicate = isGFX11Plus, True16Predicate = UseRealTrue16Insts in
+defm V_CNDMASK_B16_t16 : VOP2eInst <"v_cndmask_b16_t16", VOP2e_I16_I16_I16_I1_true16>;
+let SubtargetPredicate = isGFX11Plus, True16Predicate = UseFakeTrue16Insts in
+defm V_CNDMASK_B16_fake16 : VOP2eInst <"v_cndmask_b16_fake16", VOP2e_I16_I16_I16_I1_fake16>;
 defm V_CNDMASK_B32 : VOP2eInst_VOPD <"v_cndmask_b32", VOP2e_I32_I32_I32_I1, 0x9, "v_cndmask_b32">;
 let SubtargetPredicate = HasMadMacF32Insts, isReMaterializable = 1 in
 def V_MADMK_F32 : VOP2_Pseudo <"v_madmk_f32", VOP_MADMK_F32, []>;
@@ -1846,7 +1868,7 @@ defm V_FMAMK_F16           : VOP2Only_Real_MADK_t16_and_fake16_gfx11_gfx12<0x037
 defm V_FMAAK_F16           : VOP2Only_Real_MADK_t16_and_fake16_gfx11_gfx12<0x038, "v_fmaak_f16">;
 
 // VOP3 only.
-defm V_CNDMASK_B16         : VOP3Only_Realtriple_gfx11_gfx12<0x25d>;
+defm V_CNDMASK_B16         : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x25d, "v_cndmask_b16">;
 defm V_LDEXP_F32           : VOP3Only_Realtriple_gfx11_gfx12<0x31c>;
 defm V_BFM_B32             : VOP3Only_Realtriple_gfx11_gfx12<0x31d>;
 defm V_BCNT_U32_B32        : VOP3Only_Realtriple_gfx11_gfx12<0x31e>;

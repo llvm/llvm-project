@@ -479,3 +479,9 @@ llvm.func @intel_reqd_sub_group_size_hint() attributes {llvm.intel_reqd_sub_grou
 // CHECK-SAME: llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<512 : i64, i32>
 // CHECK-SAME: llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<128 : i64, !llvm.struct<(i32, i64, f32)>
 llvm.func @workgroup_attribution(%arg0: !llvm.ptr {llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<512 : i64, i32>}, %arg1: !llvm.ptr {llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<128 : i64, !llvm.struct<(i32, i64, f32)>>})
+
+// -----
+
+// CHECK: @constant_range_negative
+// CHECK-SAME: llvm.range = #llvm.constant_range<i32, 0, -2147483648>
+llvm.func @constant_range_negative() -> (i32 {llvm.range = #llvm.constant_range<i32, 0, -2147483648>})

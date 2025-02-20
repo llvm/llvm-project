@@ -1105,8 +1105,11 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
       return false;
 
     std::optional<uint64_t> byte_size = GetByteSize(exe_scope);
-    if (!byte_size)
+    // A bit or byte size of 0 is not a bug, but it doesn't make sense to read a
+    // scalar of zero size.
+    if (!byte_size || *byte_size == 0)
       return false;
+
     lldb::offset_t offset = data_byte_offset;
     switch (encoding) {
     case lldb::eEncodingInvalid:

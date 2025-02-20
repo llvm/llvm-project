@@ -124,3 +124,38 @@ void array_indexed_const_expr(unsigned idx) {
   k = arr[get_const(5)]; // expected-note {{used in buffer access here}}
   k = arr[get_const(4)];
 }
+
+template<unsigned length>
+consteval bool isNullTerminated(const char (&literal)[length])
+{
+  return literal[length - 1] == '\0';
+}
+
+template <typename T, unsigned M, unsigned N>
+T access2DArray(const T (&arr)[M][N]) {
+  return arr[M-1][N-1];
+}
+
+template<unsigned idx>
+constexpr int access_elements() {
+  int arr[idx + 20];
+  return arr[idx + 1];
+}
+
+// Test array accesses where const sized arrays are accessed safely with indices
+// that evaluate to a const values and depend on template arguments.
+void test_template_methods()
+{
+  constexpr char arr[] = "Good Morning!"; // = {'a', 'b', 'c', 'd', 'e'};
+  isNullTerminated(arr);
+  isNullTerminated("");
+  auto _ = isNullTerminated("hello world\n");
+  access_elements<5>();
+
+  int arr1[3][4] = {
+        {1, 2, 3, 4},
+        {5, 6, 7, 8},
+        {9, 10, 11, 12}
+    };
+  access2DArray(arr1);
+}

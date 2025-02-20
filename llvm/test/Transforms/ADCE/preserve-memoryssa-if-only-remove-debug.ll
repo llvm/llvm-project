@@ -33,7 +33,7 @@
 
 define i16 @test1() {
 entry:
-  call void @llvm.dbg.declare(metadata ptr undef, metadata !4, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr poison, metadata !4, metadata !DIExpression()), !dbg !16
   ret i16 0
 }
 

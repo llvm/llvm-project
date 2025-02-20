@@ -130,6 +130,9 @@ class SparcAsmParser : public MCTargetAsmParser {
   bool expandSET(MCInst &Inst, SMLoc IDLoc,
                  SmallVectorImpl<MCInst> &Instructions);
 
+  bool expandSETSW(MCInst &Inst, SMLoc IDLoc,
+                   SmallVectorImpl<MCInst> &Instructions);
+
   bool expandSETX(MCInst &Inst, SMLoc IDLoc,
                   SmallVectorImpl<MCInst> &Instructions);
 
@@ -522,7 +525,7 @@ public:
   }
 
   static bool MorphToIntPairReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     assert(Op.Reg.Kind == rk_IntReg);
     unsigned regIdx = 32;
     if (Reg >= Sparc::G0 && Reg <= Sparc::G7)
@@ -541,7 +544,7 @@ public:
   }
 
   static bool MorphToDoubleReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     assert(Op.Reg.Kind == rk_FloatReg);
     unsigned regIdx = Reg - Sparc::F0;
     if (regIdx % 2 || regIdx > 31)
@@ -552,7 +555,7 @@ public:
   }
 
   static bool MorphToQuadReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     unsigned regIdx = 0;
     switch (Op.Reg.Kind) {
     default: llvm_unreachable("Unexpected register kind!");
@@ -575,7 +578,7 @@ public:
   }
 
   static bool MorphToCoprocPairReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     assert(Op.Reg.Kind == rk_CoprocReg);
     unsigned regIdx = 32;
     if (Reg >= Sparc::C0 && Reg <= Sparc::C31)
@@ -589,7 +592,7 @@ public:
 
   static std::unique_ptr<SparcOperand>
   MorphToMEMrr(unsigned Base, std::unique_ptr<SparcOperand> Op) {
-    unsigned offsetReg = Op->getReg();
+    MCRegister offsetReg = Op->getReg();
     Op->Kind = k_MemoryReg;
     Op->Mem.Base = Base;
     Op->Mem.OffsetReg = offsetReg;
@@ -734,6 +737,69 @@ bool SparcAsmParser::expandSET(MCInst &Inst, SMLoc IDLoc,
   return false;
 }
 
+bool SparcAsmParser::expandSETSW(MCInst &Inst, SMLoc IDLoc,
+                                 SmallVectorImpl<MCInst> &Instructions) {
+  MCOperand MCRegOp = Inst.getOperand(0);
+  MCOperand MCValOp = Inst.getOperand(1);
+  assert(MCRegOp.isReg());
+  assert(MCValOp.isImm() || MCValOp.isExpr());
+
+  // The imm operand can be either an expression or an immediate.
+  bool IsImm = Inst.getOperand(1).isImm();
+  int64_t ImmValue = IsImm ? MCValOp.getImm() : 0;
+  const MCExpr *ValExpr = IsImm ? MCConstantExpr::create(ImmValue, getContext())
+                                : MCValOp.getExpr();
+
+  bool IsSmallImm = IsImm && isInt<13>(ImmValue);
+  bool NoLowBitsImm = IsImm && ((ImmValue & 0x3FF) == 0);
+
+  MCOperand PrevReg = MCOperand::createReg(Sparc::G0);
+
+  if (!isInt<32>(ImmValue)) {
+    return Error(IDLoc,
+                 "set: argument must be between -2147483648 and 2147483647");
+  }
+
+  // Very small immediates can be expressed without emitting a sethi.
+  if (!IsSmallImm) {
+    // sethi %hi(val), rd
+    Instructions.push_back(
+        MCInstBuilder(SP::SETHIi)
+            .addReg(MCRegOp.getReg())
+            .addExpr(adjustPICRelocation(SparcMCExpr::VK_Sparc_HI, ValExpr)));
+
+    PrevReg = MCRegOp;
+  }
+
+  // If the immediate has the lower bits set or is small, we need to emit an or.
+  if (!NoLowBitsImm || IsSmallImm) {
+    const MCExpr *Expr =
+        IsSmallImm ? ValExpr
+                   : adjustPICRelocation(SparcMCExpr::VK_Sparc_LO, ValExpr);
+
+    // or rd, %lo(val), rd
+    Instructions.push_back(MCInstBuilder(SP::ORri)
+                               .addReg(MCRegOp.getReg())
+                               .addReg(PrevReg.getReg())
+                               .addExpr(Expr));
+
+    // If it's a small immediate there's nothing more to do.
+    if (IsSmallImm)
+      return false;
+  }
+
+  // Large negative or non-immediate expressions would need an sra.
+  if (!IsImm || ImmValue < 0) {
+    // sra rd, %g0, rd
+    Instructions.push_back(MCInstBuilder(SP::SRArr)
+                               .addReg(MCRegOp.getReg())
+                               .addReg(MCRegOp.getReg())
+                               .addReg(Sparc::G0));
+  }
+
+  return false;
+}
+
 bool SparcAsmParser::expandSETX(MCInst &Inst, SMLoc IDLoc,
                                 SmallVectorImpl<MCInst> &Instructions) {
   MCOperand MCRegOp = Inst.getOperand(0);
@@ -824,6 +890,10 @@ bool SparcAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       break;
     case SP::SET:
       if (expandSET(Inst, IDLoc, Instructions))
+        return true;
+      break;
+    case SP::SETSW:
+      if (expandSETSW(Inst, IDLoc, Instructions))
         return true;
       break;
     case SP::SETX:

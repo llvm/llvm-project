@@ -108,11 +108,12 @@ MultiplexExternalSemaSource::hasExternalDefinitions(const Decl *D) {
 }
 
 bool MultiplexExternalSemaSource::FindExternalVisibleDeclsByName(
-    const DeclContext *DC, DeclarationName Name, Module *NamedModule) {
+    const DeclContext *DC, DeclarationName Name,
+    const DeclContext *OriginalDC) {
   bool AnyDeclsFound = false;
   for (size_t i = 0; i < Sources.size(); ++i)
     AnyDeclsFound |=
-        Sources[i]->FindExternalVisibleDeclsByName(DC, Name, NamedModule);
+        Sources[i]->FindExternalVisibleDeclsByName(DC, Name, OriginalDC);
   return AnyDeclsFound;
 }
 

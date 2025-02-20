@@ -75,8 +75,8 @@ addOperand(MCInst &Inst, const MCOperand& Opnd) {
 }
 
 static int insertNamedMCOperand(MCInst &MI, const MCOperand &Op,
-                                uint16_t NameIdx) {
-  int OpIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), NameIdx);
+                                AMDGPU::OpName Name) {
+  int OpIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), Name);
   if (OpIdx != -1) {
     auto *I = MI.begin();
     std::advance(I, OpIdx);
@@ -423,10 +423,11 @@ static DecodeStatus decodeAVLdSt(MCInst &Inst, unsigned Imm,
     // are also tied.
     unsigned Opc = Inst.getOpcode();
     uint64_t TSFlags = DAsm->getMCII()->get(Opc).TSFlags;
-    uint16_t DataNameIdx = (TSFlags & SIInstrFlags::DS) ? AMDGPU::OpName::data0
-                                                        : AMDGPU::OpName::vdata;
+    AMDGPU::OpName DataName = (TSFlags & SIInstrFlags::DS)
+                                  ? AMDGPU::OpName::data0
+                                  : AMDGPU::OpName::vdata;
     const MCRegisterInfo *MRI = DAsm->getContext().getRegisterInfo();
-    int DataIdx = AMDGPU::getNamedOperandIdx(Opc, DataNameIdx);
+    int DataIdx = AMDGPU::getNamedOperandIdx(Opc, DataName);
     if ((int)Inst.getNumOperands() == DataIdx) {
       int DstIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
       if (IsAGPROperand(Inst, DstIdx, MRI))
@@ -922,9 +923,9 @@ static VOPModifiers collectVOPModifiers(const MCInst &MI,
                                         bool IsVOP3P = false) {
   VOPModifiers Modifiers;
   unsigned Opc = MI.getOpcode();
-  const int ModOps[] = {AMDGPU::OpName::src0_modifiers,
-                        AMDGPU::OpName::src1_modifiers,
-                        AMDGPU::OpName::src2_modifiers};
+  const AMDGPU::OpName ModOps[] = {AMDGPU::OpName::src0_modifiers,
+                                   AMDGPU::OpName::src1_modifiers,
+                                   AMDGPU::OpName::src2_modifiers};
   for (int J = 0; J < 3; ++J) {
     int OpIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
     if (OpIdx == -1)
@@ -951,15 +952,15 @@ void AMDGPUDisassembler::convertTrue16OpSel(MCInst &MI) const {
   const unsigned Opc = MI.getOpcode();
   const MCRegisterClass &ConversionRC =
       MRI.getRegClass(AMDGPU::VGPR_16RegClassID);
-  constexpr std::array<std::tuple<int, int, unsigned>, 4> OpAndOpMods = {
-      {{AMDGPU::OpName::src0, AMDGPU::OpName::src0_modifiers,
-        SISrcMods::OP_SEL_0},
-       {AMDGPU::OpName::src1, AMDGPU::OpName::src1_modifiers,
-        SISrcMods::OP_SEL_0},
-       {AMDGPU::OpName::src2, AMDGPU::OpName::src2_modifiers,
-        SISrcMods::OP_SEL_0},
-       {AMDGPU::OpName::vdst, AMDGPU::OpName::src0_modifiers,
-        SISrcMods::DST_OP_SEL}}};
+  constexpr std::array<std::tuple<AMDGPU::OpName, AMDGPU::OpName, unsigned>, 4>
+      OpAndOpMods = {{{AMDGPU::OpName::src0, AMDGPU::OpName::src0_modifiers,
+                       SISrcMods::OP_SEL_0},
+                      {AMDGPU::OpName::src1, AMDGPU::OpName::src1_modifiers,
+                       SISrcMods::OP_SEL_0},
+                      {AMDGPU::OpName::src2, AMDGPU::OpName::src2_modifiers,
+                       SISrcMods::OP_SEL_0},
+                      {AMDGPU::OpName::vdst, AMDGPU::OpName::src0_modifiers,
+                       SISrcMods::DST_OP_SEL}}};
   for (const auto &[OpName, OpModsName, OpSelMask] : OpAndOpMods) {
     int OpIdx = AMDGPU::getNamedOperandIdx(Opc, OpName);
     int OpModsIdx = AMDGPU::getNamedOperandIdx(Opc, OpModsName);
@@ -1069,8 +1070,9 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
                                             AMDGPU::OpName::vdata);
   int VAddr0Idx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);
-  int RsrcOpName = (TSFlags & SIInstrFlags::MIMG) ? AMDGPU::OpName::srsrc
-                                                  : AMDGPU::OpName::rsrc;
+  AMDGPU::OpName RsrcOpName = (TSFlags & SIInstrFlags::MIMG)
+                                  ? AMDGPU::OpName::srsrc
+                                  : AMDGPU::OpName::rsrc;
   int RsrcIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), RsrcOpName);
   int DMaskIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::dmask);
@@ -2233,15 +2235,15 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
 
     // Bits [4-11].
     if (isGFX11()) {
-      PRINT_PSEUDO_DIRECTIVE_COMMENT("INST_PREF_SIZE",
-                                     COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE);
+      PRINT_DIRECTIVE(".amdhsa_inst_pref_size",
+                      COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE);
       PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_START",
                                      COMPUTE_PGM_RSRC3_GFX11_TRAP_ON_START);
       PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_END",
                                      COMPUTE_PGM_RSRC3_GFX11_TRAP_ON_END);
     } else if (isGFX12Plus()) {
-      PRINT_PSEUDO_DIRECTIVE_COMMENT(
-          "INST_PREF_SIZE", COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE);
+      PRINT_DIRECTIVE(".amdhsa_inst_pref_size",
+                      COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE);
     } else {
       CHECK_RESERVED_BITS_DESC_MSG(COMPUTE_PGM_RSRC3_GFX10_RESERVED1,
                                    "COMPUTE_PGM_RSRC3",

@@ -19,6 +19,8 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
@@ -376,7 +378,8 @@ lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
   return nullptr;
 }
 
-static CompilerContext GetContextEntry(DWARFDIE die) {
+static CompilerContext GetContextEntry(DWARFDIE die,
+                                       bool derive_template_names) {
   auto ctx = [die](CompilerContextKind kind) {
     return CompilerContext(kind, ConstString(die.GetName()));
   };
@@ -386,11 +389,6 @@ static CompilerContext GetContextEntry(DWARFDIE die) {
     return ctx(CompilerContextKind::Module);
   case DW_TAG_namespace:
     return ctx(CompilerContextKind::Namespace);
-  case DW_TAG_class_type:
-  case DW_TAG_structure_type:
-    return ctx(CompilerContextKind::ClassOrStruct);
-  case DW_TAG_union_type:
-    return ctx(CompilerContextKind::Union);
   case DW_TAG_enumeration_type:
     return ctx(CompilerContextKind::Enum);
   case DW_TAG_subprogram:
@@ -401,12 +399,28 @@ static CompilerContext GetContextEntry(DWARFDIE die) {
     return ctx(CompilerContextKind::Typedef);
   case DW_TAG_base_type:
     return ctx(CompilerContextKind::Builtin);
+  case DW_TAG_class_type:
+  case DW_TAG_structure_type:
+  case DW_TAG_union_type: {
+    CompilerContextKind kind = die.Tag() == DW_TAG_union_type
+                                   ? CompilerContextKind::Union
+                                   : CompilerContextKind::ClassOrStruct;
+    llvm::StringRef name = die.GetName();
+    if (!derive_template_names || name.contains('<'))
+      return CompilerContext(kind, ConstString(name));
+
+    std::string name_storage = name.str();
+    llvm::raw_string_ostream os(name_storage);
+    llvm::DWARFTypePrinter<DWARFDIE>(os).appendAndTerminateTemplateParameters(
+        die);
+    return CompilerContext(kind, ConstString(os.str()));
+  }
   default:
     llvm_unreachable("Check tag type in the caller!");
   }
 }
 
-static void GetDeclContextImpl(DWARFDIE die,
+static void GetDeclContextImpl(DWARFDIE die, bool derive_template_names,
                                llvm::SmallSet<lldb::user_id_t, 4> &seen,
                                std::vector<CompilerContext> &context) {
   // Stop if we hit a cycle.
@@ -428,7 +442,7 @@ static void GetDeclContextImpl(DWARFDIE die,
     case DW_TAG_subprogram:
     case DW_TAG_variable:
     case DW_TAG_typedef:
-      context.push_back(GetContextEntry(die));
+      context.push_back(GetContextEntry(die, derive_template_names));
       break;
     default:
       break;
@@ -438,15 +452,16 @@ static void GetDeclContextImpl(DWARFDIE die,
   }
 }
 
-std::vector<CompilerContext> DWARFDIE::GetDeclContext() const {
+std::vector<CompilerContext>
+DWARFDIE::GetDeclContext(bool derive_template_names) const {
   llvm::SmallSet<lldb::user_id_t, 4> seen;
   std::vector<CompilerContext> context;
-  GetDeclContextImpl(*this, seen, context);
+  GetDeclContextImpl(*this, derive_template_names, seen, context);
   std::reverse(context.begin(), context.end());
   return context;
 }
 
-static void GetTypeLookupContextImpl(DWARFDIE die,
+static void GetTypeLookupContextImpl(DWARFDIE die, bool derive_template_names,
                                      llvm::SmallSet<lldb::user_id_t, 4> &seen,
                                      std::vector<CompilerContext> &context) {
   // Stop if we hit a cycle.
@@ -461,7 +476,7 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
     case DW_TAG_variable:
     case DW_TAG_typedef:
     case DW_TAG_base_type:
-      context.push_back(GetContextEntry(die));
+      context.push_back(GetContextEntry(die, derive_template_names));
       break;
 
     // If any of the tags below appear in the parent chain, stop the decl
@@ -484,10 +499,11 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
   }
 }
 
-std::vector<CompilerContext> DWARFDIE::GetTypeLookupContext() const {
+std::vector<CompilerContext>
+DWARFDIE::GetTypeLookupContext(bool derive_template_names) const {
   llvm::SmallSet<lldb::user_id_t, 4> seen;
   std::vector<CompilerContext> context;
-  GetTypeLookupContextImpl(*this, seen, context);
+  GetTypeLookupContextImpl(*this, derive_template_names, seen, context);
   std::reverse(context.begin(), context.end());
   return context;
 }
@@ -606,12 +622,12 @@ std::optional<uint64_t> DWARFDIE::getLanguage() const {
 }
 
 DWARFDIE DWARFDIE::resolveReferencedType(dw_attr_t attr) const {
-  return GetReferencedDIE(attr);
+  return GetReferencedDIE(attr).resolveTypeUnitReference();
 }
 
 DWARFDIE DWARFDIE::resolveReferencedType(DWARFFormValue v) const {
   if (IsValid())
-    return v.Reference();
+    return v.Reference().resolveTypeUnitReference();
   return {};
 }
 

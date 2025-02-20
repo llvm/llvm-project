@@ -63,7 +63,11 @@ module {
 // CHECK:         %[[VAL_23:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_24:.*]] = alloca [2 x ptr], align 8
 // CHECK:         br label %[[VAL_25:.*]]
-// CHECK:       omp.par.region:                                   ; preds = %[[PAR_ENTRY]]
+
+// CHECK:       [[VAL_25]]:
+// CHECK:         br label %[[PAR_REG:omp.par.region]]
+
+// CHECK:       [[PAR_REG]]:                                   ; preds = %[[VAL_25]]
 // CHECK:         br label %[[INIT_LABEL:.*]]
 // CHECK: [[INIT_LABEL]]:
 // CHECK:         %[[VAL_20:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[VAL_13]], align 8

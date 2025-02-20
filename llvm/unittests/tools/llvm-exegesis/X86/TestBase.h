@@ -22,10 +22,12 @@ namespace exegesis {
 
 void InitializeX86ExegesisTarget();
 
+constexpr const char kTriple[] = "x86_64-unknown-linux";
+
 class X86TestBase : public ::testing::Test {
 protected:
-  X86TestBase()
-      : State(cantFail(LLVMState::Create("x86_64-unknown-linux", "haswell"))) {}
+  X86TestBase(std::string CPUName = "haswell", const char *Features = "")
+      : State(cantFail(LLVMState::Create(kTriple, CPUName, Features))) {}
 
   static void SetUpTestCase() {
     LLVMInitializeX86TargetInfo();

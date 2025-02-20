@@ -6,36 +6,36 @@
 ; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj %s -o %t.atomics.bulk-mem.pic.o -relocation-model=pic -mattr=+atomics,+bulk-memory,+mutable-globals
 ; RUN: llc --mtriple=wasm64-unknown-unknown -filetype=obj %s -o %t.atomics.bulk-mem.pic-mem64.o -relocation-model=pic -mattr=+atomics,+bulk-memory,+mutable-globals
 
-; atomics, shared memory => error
+;; atomics, shared memory => error
 ; RUN: not wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.o -o %t.atomics.wasm 2>&1 | FileCheck %s --check-prefix ERROR
 
-; bulk memory, unshared memory => active segments
+;; bulk memory, unshared memory => active segments
 ; RUN: wasm-ld -no-gc-sections --no-entry %t.bulk-mem.o -o %t.bulk-mem.wasm
 ; RUN: obj2yaml %t.bulk-mem.wasm | FileCheck %s --check-prefixes ACTIVE,ACTIVE32
 
-; bulk memory, unshared memory, wasm64 => active segments
+;; bulk memory, unshared memory, wasm64 => active segments
 ; RUN: wasm-ld -mwasm64 -no-gc-sections --no-entry %t.bulk-mem64.o -o %t.bulk-mem64.wasm
 ; RUN: obj2yaml %t.bulk-mem64.wasm | FileCheck %s --check-prefixes ACTIVE,ACTIVE64
 
-; atomics, bulk memory, shared memory => passive segments
+;; atomics, bulk memory, shared memory => passive segments
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.o -o %t.atomics.bulk-mem.wasm
 ; RUN: obj2yaml %t.atomics.bulk-mem.wasm | FileCheck %s --check-prefix PASSIVE
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.atomics.bulk-mem.wasm | FileCheck %s --check-prefixes DIS,NOPIC-DIS -DPTR=i32
 
-; atomics, bulk memory, shared memory, wasm64 => passive segments
+;; atomics, bulk memory, shared memory, wasm64 => passive segments
 ; RUN: wasm-ld -mwasm64 -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem64.o -o %t.atomics.bulk-mem64.wasm
 ; RUN: obj2yaml %t.atomics.bulk-mem64.wasm | FileCheck %s --check-prefix PASSIVE
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.atomics.bulk-mem64.wasm | FileCheck %s --check-prefixes DIS,NOPIC-DIS -DPTR=i64
 
-; Also test in combination with PIC/pie
+;; Also test in combination with PIC/pie
 ; RUN: wasm-ld --experimental-pic -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic.o -o %t.pic.wasm
 ; RUN: obj2yaml %t.pic.wasm | FileCheck %s --check-prefixes PASSIVE-PIC,PASSIVE32-PIC
-; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.pic.wasm | FileCheck %s --check-prefixes DIS,PIC-DIS -DPTR=i32
+; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.pic.wasm | FileCheck %s --check-prefixes DIS,PIC-DIS -DPTR=i32
 
-; Also test in combination with PIC/pie + wasm64
+;; Also test in combination with PIC/pie + wasm64
 ; RUN: wasm-ld -mwasm64 --experimental-pic -pie -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.pic-mem64.o -o %t.pic-mem64.wasm
 ; RUN: obj2yaml %t.pic-mem64.wasm | FileCheck %s --check-prefixes PASSIVE-PIC,PASSIVE64-PIC
-; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.pic-mem64.wasm | FileCheck %s --check-prefixes DIS,PIC-DIS -DPTR=i64
+; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.pic-mem64.wasm | FileCheck %s --check-prefixes DIS,PIC-DIS -DPTR=i64
 
 @a = hidden global [6 x i8] c"hello\00", align 1
 @b = hidden global [8 x i8] c"goodbye\00", align 1
@@ -151,7 +151,7 @@
 ; PASSIVE-PIC-NEXT:      - Index:           2
 ; PASSIVE-PIC-NEXT:        Name:            __wasm_init_memory
 
-; no data relocations.
+;; no data relocations.
 ; DIS-LABEL:       <__wasm_call_ctors>:
 ; DIS-EMPTY:
 ; DIS-NEXT:        end

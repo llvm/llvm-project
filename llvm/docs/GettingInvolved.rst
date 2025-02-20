@@ -392,7 +392,7 @@ Discord
 -------
 
 Users and developers of the LLVM project (including subprojects such as Clang)
-can be found on the community's `Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_
+can be found on the community's `Discord <https://discord.gg/xS7Z362>`_
 chat server. The server is actively moderated.
 
 The #buildbot-status channel has a bot for

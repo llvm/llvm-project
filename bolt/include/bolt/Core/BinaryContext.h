@@ -1363,6 +1363,12 @@ public:
     if (std::optional<uint32_t> Size = MIB->getSize(Inst))
       return *Size;
 
+    if (MIB->isPseudo(Inst))
+      return 0;
+
+    if (std::optional<uint32_t> Size = MIB->getInstructionSize(Inst))
+      return *Size;
+
     if (!Emitter)
       Emitter = this->MCE.get();
     SmallString<256> Code;
@@ -1428,6 +1434,17 @@ public:
                         bool PrintMCInst = false, bool PrintMemData = false,
                         bool PrintRelocations = false,
                         StringRef Endl = "\n") const;
+
+  /// Print data when embedded in the instruction stream keeping the format
+  /// similar to printInstruction().
+  void printData(raw_ostream &OS, ArrayRef<uint8_t> Data,
+                 uint64_t Offset) const;
+
+  /// Extract data from the binary corresponding to [Address, Address + Size)
+  /// range. Return an empty ArrayRef if the address range does not belong to
+  /// any section in the binary, crosses a section boundary, or falls into a
+  /// virtual section.
+  ArrayRef<uint8_t> extractData(uint64_t Address, uint64_t Size) const;
 
   /// Print a range of instructions.
   template <typename Itr>

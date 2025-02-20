@@ -46,6 +46,7 @@ import abc
 import collections
 from collections.abc import Callable, Sequence
 import io
+from pathlib import Path
 from typing import Any, ClassVar, TypeVar, overload
 
 __all__ = [
@@ -2126,6 +2127,15 @@ class Module:
     def parse(asm: str | bytes, context: Context | None = None) -> Module:
         """
         Parses a module's assembly format from a string.
+
+        Returns a new MlirModule or raises an MLIRError if the parsing fails.
+
+        See also: https://mlir.llvm.org/docs/LangRef/
+        """
+    @staticmethod
+    def parseFile(path: str, context: Context | None = None) -> Module:
+        """
+        Parses a module's assembly format from file.
 
         Returns a new MlirModule or raises an MLIRError if the parsing fails.
 

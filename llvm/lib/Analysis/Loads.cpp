@@ -13,6 +13,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -168,7 +169,12 @@ static bool isDereferenceableAndAlignedPointer(
                                               Size, DL, CtxI, AC, DT, TLI,
                                               Visited, MaxDepth);
 
-  if (CtxI) {
+  // Dereferenceable information from assumptions is only valid if the value
+  // cannot be freed between the assumption and use. For now just use the
+  // information for values that cannot be freed in the function.
+  // TODO: More precisely check if the pointer can be freed between assumption
+  // and use.
+  if (CtxI && !V->canBeFreed()) {
     /// Look through assumes to see if both dereferencability and alignment can
     /// be proven by an assume if needed.
     RetainedKnowledge AlignRK;
@@ -275,77 +281,29 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
 bool llvm::isDereferenceableAndAlignedInLoop(
     LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+  const Align Alignment = LI->getAlign();
   auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
-
   APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
                 DL.getTypeStoreSize(LI->getType()).getFixedValue());
-  const Align Alignment = LI->getAlign();
-
-  Instruction *HeaderFirstNonPHI = L->getHeader()->getFirstNonPHI();
 
   // If given a uniform (i.e. non-varying) address, see if we can prove the
   // access is safe within the loop w/o needing predication.
   if (L->isLoopInvariant(Ptr))
-    return isDereferenceableAndAlignedPointer(Ptr, Alignment, EltSize, DL,
-                                              HeaderFirstNonPHI, AC, &DT);
+    return isDereferenceableAndAlignedPointer(
+        Ptr, Alignment, EltSize, DL, &*L->getHeader()->getFirstNonPHIIt(), AC,
+        &DT);
 
-  // Otherwise, check to see if we have a repeating access pattern where we can
-  // prove that all accesses are well aligned and dereferenceable.
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Ptr));
+  const SCEV *PtrScev = SE.getSCEV(Ptr);
+  auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrScev);
+
+  // Check to see if we have a repeating access pattern and it's possible
+  // to prove all accesses are well aligned.
   if (!AddRec || AddRec->getLoop() != L || !AddRec->isAffine())
     return false;
-  auto* Step = dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(SE));
+
+  auto *Step = dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(SE));
   if (!Step)
-    return false;
-
-  auto TC = SE.getSmallConstantMaxTripCount(L, Predicates);
-  if (!TC)
-    return false;
-
-  // TODO: Handle overlapping accesses.
-  // We should be computing AccessSize as (TC - 1) * Step + EltSize.
-  if (EltSize.sgt(Step->getAPInt()))
-    return false;
-
-  // Compute the total access size for access patterns with unit stride and
-  // patterns with gaps. For patterns with unit stride, Step and EltSize are the
-  // same.
-  // For patterns with gaps (i.e. non unit stride), we are
-  // accessing EltSize bytes at every Step.
-  APInt AccessSize = TC * Step->getAPInt();
-
-  assert(SE.isLoopInvariant(AddRec->getStart(), L) &&
-         "implied by addrec definition");
-  Value *Base = nullptr;
-  if (auto *StartS = dyn_cast<SCEVUnknown>(AddRec->getStart())) {
-    Base = StartS->getValue();
-  } else if (auto *StartS = dyn_cast<SCEVAddExpr>(AddRec->getStart())) {
-    // Handle (NewBase + offset) as start value.
-    const auto *Offset = dyn_cast<SCEVConstant>(StartS->getOperand(0));
-    const auto *NewBase = dyn_cast<SCEVUnknown>(StartS->getOperand(1));
-    if (StartS->getNumOperands() == 2 && Offset && NewBase) {
-      // The following code below assumes the offset is unsigned, but GEP
-      // offsets are treated as signed so we can end up with a signed value
-      // here too. For example, suppose the initial PHI value is (i8 255),
-      // the offset will be treated as (i8 -1) and sign-extended to (i64 -1).
-      if (Offset->getAPInt().isNegative())
-        return false;
-
-      // For the moment, restrict ourselves to the case where the offset is a
-      // multiple of the requested alignment and the base is aligned.
-      // TODO: generalize if a case found which warrants
-      if (Offset->getAPInt().urem(Alignment.value()) != 0)
-        return false;
-      Base = NewBase->getValue();
-      bool Overflow = false;
-      AccessSize = AccessSize.uadd_ov(Offset->getAPInt(), Overflow);
-      if (Overflow)
-        return false;
-    }
-  }
-
-  if (!Base)
     return false;
 
   // For the moment, restrict ourselves to the case where the access size is a
@@ -353,6 +311,60 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   // TODO: generalize if a case found which warrants
   if (EltSize.urem(Alignment.value()) != 0)
     return false;
+
+  // TODO: Handle overlapping accesses.
+  if (EltSize.ugt(Step->getAPInt().abs()))
+    return false;
+
+  const SCEV *MaxBECount =
+      Predicates ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
+                 : SE.getConstantMaxBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(MaxBECount))
+    return false;
+
+  const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
+      L, PtrScev, LI->getType(), MaxBECount, &SE, nullptr);
+  if (isa<SCEVCouldNotCompute>(AccessStart) ||
+      isa<SCEVCouldNotCompute>(AccessEnd))
+    return false;
+
+  // Try to get the access size.
+  const SCEV *PtrDiff = SE.getMinusSCEV(AccessEnd, AccessStart);
+  APInt MaxPtrDiff = SE.getUnsignedRangeMax(PtrDiff);
+
+  Value *Base = nullptr;
+  APInt AccessSize;
+  if (const SCEVUnknown *NewBase = dyn_cast<SCEVUnknown>(AccessStart)) {
+    Base = NewBase->getValue();
+    AccessSize = MaxPtrDiff;
+  } else if (auto *MinAdd = dyn_cast<SCEVAddExpr>(AccessStart)) {
+    if (MinAdd->getNumOperands() != 2)
+      return false;
+
+    const auto *Offset = dyn_cast<SCEVConstant>(MinAdd->getOperand(0));
+    const auto *NewBase = dyn_cast<SCEVUnknown>(MinAdd->getOperand(1));
+    if (!Offset || !NewBase)
+      return false;
+
+    // The following code below assumes the offset is unsigned, but GEP
+    // offsets are treated as signed so we can end up with a signed value
+    // here too. For example, suppose the initial PHI value is (i8 255),
+    // the offset will be treated as (i8 -1) and sign-extended to (i64 -1).
+    if (Offset->getAPInt().isNegative())
+      return false;
+
+    // For the moment, restrict ourselves to the case where the offset is a
+    // multiple of the requested alignment and the base is aligned.
+    // TODO: generalize if a case found which warrants
+    if (Offset->getAPInt().urem(Alignment.value()) != 0)
+      return false;
+
+    AccessSize = MaxPtrDiff + Offset->getAPInt();
+    Base = NewBase->getValue();
+  } else
+    return false;
+
+  Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
   return isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,
                                             HeaderFirstNonPHI, AC, &DT);
 }

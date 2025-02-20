@@ -50,7 +50,7 @@ public:
   /// Check an <nsw> AddRec for the loop @p L is cached.
   bool hasNSWAddRecForLoop(llvm::Loop *L) const;
 
-  /// Return the LoopInfo used by thi object.
+  /// Return the LoopInfo used by the object.
   llvm::LoopInfo *getLI() const { return &LI; }
 
 private:

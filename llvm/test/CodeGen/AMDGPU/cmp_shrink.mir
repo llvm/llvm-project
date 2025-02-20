@@ -7,6 +7,6 @@ name:             not_shrink_icmp
 body:             |
   bb.0:
     ; GCN-LABEL: name: not_shrink_icmp
-    ; GCN: S_CMP_GT_I32 1, 65, implicit-def $scc
+    ; GCN: S_CMP_LT_I32 65, 1, implicit-def $scc
     S_CMP_GT_I32 1, 65, implicit-def $scc
 ...

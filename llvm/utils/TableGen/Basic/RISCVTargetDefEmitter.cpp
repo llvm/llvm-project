@@ -241,8 +241,7 @@ static void emitRISCVExtensionBitmask(const RecordKeeper &RK, raw_ostream &OS) {
     ExtName.consume_front("experimental-");
 
 #ifndef NDEBUG
-    assert(Seen.insert(std::make_pair(GroupIDVal, BitPosVal)).second &&
-           "duplicated bitmask");
+    assert(Seen.insert({GroupIDVal, BitPosVal}).second && "duplicated bitmask");
 #endif
 
     OS.indent(4) << "{"

@@ -29,21 +29,7 @@ define i64 @test_value_in_exit_compare_chain_used_outside(ptr %src, i64 %x, i64 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i8> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 5
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 6
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 7
 ; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP10]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = and i64 [[TMP11]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = and i64 [[TMP12]], 1
-; CHECK-NEXT:    [[TMP21:%.*]] = and i64 [[TMP13]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = and i64 [[TMP14]], 1
-; CHECK-NEXT:    [[TMP23:%.*]] = and i64 [[TMP15]], 1
-; CHECK-NEXT:    [[TMP24:%.*]] = and i64 [[TMP16]], 1
-; CHECK-NEXT:    [[TMP25:%.*]] = and i64 [[TMP17]], 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i32 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP27]], i32 -7
@@ -57,8 +43,8 @@ define i64 @test_value_in_exit_compare_chain_used_outside(ptr %src, i64 %x, i64 
 ; CHECK-NEXT:    [[TMP31:%.*]] = call i8 @llvm.vector.reduce.xor.v8i8(<8 x i8> [[TMP29]])
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i8 [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i8 [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]

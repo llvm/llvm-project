@@ -336,6 +336,18 @@ public:
     return make_range(Edges.begin(), Edges.end());
   }
 
+  /// Returns an iterator over all edges at the given offset within the block.
+  auto edges_at(Edge::OffsetT O) {
+    return make_filter_range(edges(),
+                             [O](const Edge &E) { return E.getOffset() == O; });
+  }
+
+  /// Returns an iterator over all edges at the given offset within the block.
+  auto edges_at(Edge::OffsetT O) const {
+    return make_filter_range(edges(),
+                             [O](const Edge &E) { return E.getOffset() == O; });
+  }
+
   /// Return the size of the edges list.
   size_t edges_size() const { return Edges.size(); }
 
@@ -575,6 +587,9 @@ public:
     return static_cast<const Block &>(*Base);
   }
 
+  /// Return the Section for this Symbol (Symbol must be defined).
+  Section &getSection() const { return getBlock().getSection(); }
+
   /// Returns the offset for this symbol within the underlying addressable.
   orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
@@ -741,6 +756,10 @@ public:
 
   /// Returns the ordinal for this section.
   SectionOrdinal getOrdinal() const { return SecOrdinal; }
+
+  /// Set the ordinal for this section. Ordinals are used to order the layout
+  /// of sections with the same permissions.
+  void setOrdinal(SectionOrdinal SecOrdinal) { this->SecOrdinal = SecOrdinal; }
 
   /// Returns true if this section is empty (contains no blocks or symbols).
   bool empty() const { return Blocks.empty(); }
@@ -1114,7 +1133,7 @@ public:
     return MutableArrayRef<char>(AllocatedBuffer, SourceStr.size() + 1);
   }
 
-  /// Create a section with the given name, protection flags, and alignment.
+  /// Create a section with the given name, protection flags.
   Section &createSection(StringRef Name, orc::MemProt Prot) {
     assert(!Sections.count(Name) && "Duplicate section name");
     std::unique_ptr<Section> Sec(new Section(Name, Prot, Sections.size()));
@@ -1444,7 +1463,7 @@ public:
       A.setAddress(orc::ExecutorAddr());
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
-      Section &Sec = Sym.getBlock().getSection();
+      Section &Sec = Sym.getSection();
       Sec.removeSymbol(Sym);
       Sym.makeExternal(createAddressable(orc::ExecutorAddr(), false));
     }
@@ -1472,7 +1491,7 @@ public:
       Sym.setScope(Scope::Local);
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
-      Section &Sec = Sym.getBlock().getSection();
+      Section &Sec = Sym.getSection();
       Sec.removeSymbol(Sym);
       Sym.makeAbsolute(createAddressable(Address));
     }
@@ -1518,7 +1537,7 @@ public:
   transferDefinedSymbol(Symbol &Sym, Block &DestBlock,
                         orc::ExecutorAddrDiff NewOffset,
                         std::optional<orc::ExecutorAddrDiff> ExplicitNewSize) {
-    auto &OldSection = Sym.getBlock().getSection();
+    auto &OldSection = Sym.getSection();
     Sym.setBlock(DestBlock);
     Sym.setOffset(NewOffset);
     if (ExplicitNewSize)
@@ -1606,7 +1625,7 @@ public:
   /// Removes defined symbols. Does not remove the underlying block.
   void removeDefinedSymbol(Symbol &Sym) {
     assert(Sym.isDefined() && "Sym is not a defined symbol");
-    Sym.getBlock().getSection().removeSymbol(Sym);
+    Sym.getSection().removeSymbol(Sym);
     destroySymbol(Sym);
   }
 

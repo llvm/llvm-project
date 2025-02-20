@@ -52,11 +52,11 @@ contains
 ! CHECK:  %[[VAL_15:.*]] = arith.constant true
 ! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
 ! CHECK:  %[[VAL_20:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<2x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:  %[[VAL_22:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_16]], %[[VAL_20]], %[[VAL_15]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, !fir.ref<i8>, i32) -> none
+! CHECK:  fir.call @_FortranAInitArrayConstructorVector(%[[VAL_16]], %[[VAL_20]], %[[VAL_15]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, !fir.ref<i8>, i32) -> ()
 ! CHECK:  fir.call @_QMchararrayctorPchar_pointer(
-! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_16]], %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_16]], %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 ! CHECK:  fir.call @_QMchararrayctorPchar_pointer(
-! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_16]], %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_16]], %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 ! CHECK:  %[[VAL_45:.*]] = arith.constant true
 ! CHECK:  %[[VAL_46:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<2x!fir.char<1,?>>>>>
 ! CHECK:  %[[VAL_47:.*]] = hlfir.as_expr %[[VAL_46]] move %[[VAL_45]] : (!fir.box<!fir.heap<!fir.array<2x!fir.char<1,?>>>>, i1) -> !hlfir.expr<2x!fir.char<1,?>>

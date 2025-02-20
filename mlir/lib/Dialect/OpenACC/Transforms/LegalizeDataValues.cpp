@@ -36,17 +36,17 @@ static bool insideAccComputeRegion(mlir::Operation *op) {
   return false;
 }
 
-static void collectPtrs(mlir::ValueRange operands,
+static void collectVars(mlir::ValueRange operands,
                         llvm::SmallVector<std::pair<Value, Value>> &values,
                         bool hostToDevice) {
   for (auto operand : operands) {
-    Value varPtr = acc::getVarPtr(operand.getDefiningOp());
-    Value accPtr = acc::getAccPtr(operand.getDefiningOp());
-    if (varPtr && accPtr) {
+    Value var = acc::getVar(operand.getDefiningOp());
+    Value accVar = acc::getAccVar(operand.getDefiningOp());
+    if (var && accVar) {
       if (hostToDevice)
-        values.push_back({varPtr, accPtr});
+        values.push_back({var, accVar});
       else
-        values.push_back({accPtr, varPtr});
+        values.push_back({accVar, var});
     }
   }
 }
@@ -75,16 +75,16 @@ static void collectAndReplaceInRegion(Op &op, bool hostToDevice) {
   llvm::SmallVector<std::pair<Value, Value>> values;
 
   if constexpr (std::is_same_v<Op, acc::LoopOp>) {
-    collectPtrs(op.getReductionOperands(), values, hostToDevice);
-    collectPtrs(op.getPrivateOperands(), values, hostToDevice);
+    collectVars(op.getReductionOperands(), values, hostToDevice);
+    collectVars(op.getPrivateOperands(), values, hostToDevice);
   } else {
-    collectPtrs(op.getDataClauseOperands(), values, hostToDevice);
+    collectVars(op.getDataClauseOperands(), values, hostToDevice);
     if constexpr (!std::is_same_v<Op, acc::KernelsOp> &&
                   !std::is_same_v<Op, acc::DataOp> &&
                   !std::is_same_v<Op, acc::DeclareOp>) {
-      collectPtrs(op.getReductionOperands(), values, hostToDevice);
-      collectPtrs(op.getPrivateOperands(), values, hostToDevice);
-      collectPtrs(op.getFirstprivateOperands(), values, hostToDevice);
+      collectVars(op.getReductionOperands(), values, hostToDevice);
+      collectVars(op.getPrivateOperands(), values, hostToDevice);
+      collectVars(op.getFirstprivateOperands(), values, hostToDevice);
     }
   }
 

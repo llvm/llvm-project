@@ -7,15 +7,16 @@ MONOREPO_ROOT="$(realpath $(dirname "${PROGNAME}"))"
 function usage() {
 cat <<EOF
 Usage:
-${PROGNAME} [-h|--help] <baseline-build> <candidate-build> benchmarks...
+${PROGNAME} [-h|--help] <baseline-build> <candidate-build> benchmarks... [-- gbench-args...]
 
 Compare the given benchmarks between the baseline and the candidate build directories.
 
 This requires those benchmarks to have already been generated in both build directories.
 
-<baseline-build>   The path to the build directory considered the baseline.
-<candidate-build>  The path to the build directory considered the candidate.
-benchmarks...      Paths of the benchmarks to compare. Those paths are relative to '<monorepo-root>'.
+<baseline-build>     The path to the build directory considered the baseline.
+<candidate-build>    The path to the build directory considered the candidate.
+benchmarks...        Paths of the benchmarks to compare. Those paths are relative to '<monorepo-root>'.
+[-- gbench-args...]  Any arguments provided after '--' will be passed as-is to GoogleBenchmark's compare.py tool.
 
 Example
 =======
@@ -45,7 +46,17 @@ python3 -m venv /tmp/libcxx-compare-benchmarks-venv
 source /tmp/libcxx-compare-benchmarks-venv/bin/activate
 pip3 install -r ${GBENCH}/tools/requirements.txt
 
-for benchmark in ${@}; do
+benchmarks=""
+while [[ $# -gt 0 ]]; do
+    if [[ "${1}" == "--" ]]; then
+        shift
+        break
+    fi
+    benchmarks+=" ${1}"
+    shift
+done
+
+for benchmark in ${benchmarks}; do
     base="$(${MONOREPO_ROOT}/libcxx/utils/libcxx-benchmark-json ${baseline} ${benchmark})"
     cand="$(${MONOREPO_ROOT}/libcxx/utils/libcxx-benchmark-json ${candidate} ${benchmark})"
 
@@ -58,5 +69,5 @@ for benchmark in ${@}; do
         continue
     fi
 
-    "${GBENCH}/tools/compare.py" benchmarks "${base}" "${cand}"
+    "${GBENCH}/tools/compare.py" benchmarks "${base}" "${cand}" ${@}
 done

@@ -1538,9 +1538,12 @@ static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
   if (ArgType->isIntegralOrEnumerationType() || ArgType->isFloatingType() ||
       ArgType->isAnyComplexType() || ArgType->isPointerType() ||
       ArgType->isNullPtrType()) {
+    auto PrevDiags = S.getEvalStatus().Diag;
+    S.getEvalStatus().Diag = nullptr;
     InterpStack Stk;
     Compiler<EvalEmitter> C(S.Ctx, S.P, S, Stk);
     auto Res = C.interpretExpr(Arg, /*ConvertResultToRValue=*/Arg->isGLValue());
+    S.getEvalStatus().Diag = PrevDiags;
     if (Res.isInvalid()) {
       C.cleanup();
       Stk.clear();
@@ -1584,6 +1587,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   // Walk up the call stack to find the appropriate caller and get the
   // element type from it.
   QualType ElemType;
+  const CallExpr *NewCall = nullptr;
 
   for (const InterpFrame *F = Frame; F; F = F->Caller) {
     const Function *Func = F->getFunction();
@@ -1606,6 +1610,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
         TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
       ElemType = TAL[0].getAsType();
+      NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetPC()));
       break;
     }
   }
@@ -1616,6 +1621,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
                        : diag::note_constexpr_new);
     return false;
   }
+  assert(NewCall);
 
   if (ElemType->isIncompleteType() || ElemType->isFunctionType()) {
     S.FFDiag(Call, diag::note_constexpr_new_not_complete_object_type)
@@ -1649,27 +1655,27 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  bool IsArray = NumElems.ugt(1);
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
   if (ElemT) {
-    if (NumElems.ule(1)) {
-      const Descriptor *Desc =
-          S.P.createDescriptor(Call, *ElemT, Descriptor::InlineDescMD,
-                               /*IsConst=*/false, /*IsTemporary=*/false,
-                               /*IsMutable=*/false);
-      Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+    if (IsArray) {
+      Block *B = Allocator.allocate(NewCall, *ElemT, NumElems.getZExtValue(),
+                                    S.Ctx.getEvalID(),
                                     DynamicAllocator::Form::Operator);
       assert(B);
-
-      S.Stk.push<Pointer>(B);
+      S.Stk.push<Pointer>(Pointer(B).atIndex(0));
       return true;
     }
-    assert(NumElems.ugt(1));
 
-    Block *B =
-        Allocator.allocate(Call, *ElemT, NumElems.getZExtValue(),
-                           S.Ctx.getEvalID(), DynamicAllocator::Form::Operator);
+    const Descriptor *Desc =
+        S.P.createDescriptor(NewCall, *ElemT, Descriptor::InlineDescMD,
+                             /*IsConst=*/false, /*IsTemporary=*/false,
+                             /*IsMutable=*/false);
+    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                  DynamicAllocator::Form::Operator);
     assert(B);
+
     S.Stk.push<Pointer>(B);
     return true;
   }
@@ -1677,21 +1683,22 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   assert(!ElemT);
   // Structs etc.
   const Descriptor *Desc = S.P.createDescriptor(
-      Call, ElemType.getTypePtr(), Descriptor::InlineDescMD,
+      NewCall, ElemType.getTypePtr(),
+      IsArray ? std::nullopt : Descriptor::InlineDescMD,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
       /*Init=*/nullptr);
 
-  if (NumElems.ule(1)) {
-    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
-                                  DynamicAllocator::Form::Operator);
+  if (IsArray) {
+    Block *B =
+        Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
+                           DynamicAllocator::Form::Operator);
     assert(B);
-    S.Stk.push<Pointer>(B);
+    S.Stk.push<Pointer>(Pointer(B).atIndex(0));
     return true;
   }
 
-  Block *B =
-      Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
-                         DynamicAllocator::Form::Operator);
+  Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                DynamicAllocator::Form::Operator);
   assert(B);
   S.Stk.push<Pointer>(B);
   return true;

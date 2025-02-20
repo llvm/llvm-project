@@ -54,7 +54,7 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.look_for_content_and_continue(
             "map",
             [
-                "%s::unordered_map" % ns,
+                "UnorderedMap",
                 children_are_key_value,
                 "size=5 {",
                 "hello",
@@ -68,7 +68,7 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.look_for_content_and_continue(
             "mmap",
             [
-                "%s::unordered_multimap" % ns,
+                "UnorderedMultiMap",
                 children_are_key_value,
                 "size=6 {",
                 "first = 3",
@@ -81,7 +81,7 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.look_for_content_and_continue(
             "iset",
             [
-                "%s::unordered_set" % ns,
+                "IntsUnorderedSet",
                 "size=5 {",
                 "\[\d\] = 5",
                 "\[\d\] = 3",
@@ -92,7 +92,7 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.look_for_content_and_continue(
             "sset",
             [
-                "%s::unordered_set" % ns,
+                "StringsUnorderedSet",
                 "size=5 {",
                 '\[\d\] = "is"',
                 '\[\d\] = "world"',
@@ -103,7 +103,7 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.look_for_content_and_continue(
             "imset",
             [
-                "%s::unordered_multiset" % ns,
+                "IntsUnorderedMultiSet",
                 "size=6 {",
                 "(\[\d\] = 3(\\n|.)+){3}",
                 "\[\d\] = 2",
@@ -114,7 +114,7 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.look_for_content_and_continue(
             "smset",
             [
-                "%s::unordered_multiset" % ns,
+                "StringsUnorderedMultiSet",
                 "size=5 {",
                 '(\[\d\] = "is"(\\n|.)+){2}',
                 '(\[\d\] = "world"(\\n|.)+){2}',

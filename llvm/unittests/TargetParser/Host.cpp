@@ -334,9 +334,13 @@ CPU revision    : 0
 
 TEST(getLinuxHostCPUName, s390x) {
   SmallVector<std::string> ModelIDs(
-      {"3931", "8561", "3906", "2964", "2827", "2817", "2097", "2064"});
+      {"9175", "3931", "8561", "3906", "2964", "2827", "2817", "2097", "2064"});
   SmallVector<std::string> VectorSupport({"", "vx"});
   SmallVector<StringRef> ExpectedCPUs;
+
+  // Model Id: 9175
+  ExpectedCPUs.push_back("zEC12");
+  ExpectedCPUs.push_back("arch15");
 
   // Model Id: 3931
   ExpectedCPUs.push_back("zEC12");
@@ -401,6 +405,19 @@ uarch           : sifive,u74-mc
   EXPECT_EQ(
       sys::detail::getHostCPUNameForRISCV("uarch           : sifive,bullet0\n"),
       "sifive-u74");
+
+  const StringRef SifiveP550MCProcCPUInfo = R"(
+processor       : 0
+hart            : 2
+isa             : rv64imafdch_zicsr_zifencei_zba_zbb_sscofpmf
+mmu             : sv48
+uarch           : eswin,eic770x
+)";
+  EXPECT_EQ(sys::detail::getHostCPUNameForRISCV(SifiveP550MCProcCPUInfo),
+            "sifive-p550");
+  EXPECT_EQ(
+      sys::detail::getHostCPUNameForRISCV("uarch           : eswin,eic770x\n"),
+      "sifive-p550");
 }
 
 static bool runAndGetCommandOutput(

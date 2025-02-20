@@ -62,10 +62,8 @@ entry:
 define { i32, i32 } @subs_cmp_c(i32 noundef %x, i32 noundef %y) {
 ; CHECK-LABEL: subs_cmp_c:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    sub w1, w1, w0
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    subs w1, w1, w0
+; CHECK-NEXT:    cset w0, ls
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %x, i32 %y)

@@ -369,3 +369,89 @@ entry:
   store <2 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
+
+define void @deinterleave4_0_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
+; CHECK-LABEL: deinterleave4_0_i8_two_source:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnsrl.wi v9, v9, 0
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnsrl.wi v9, v9, 0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 4
+; CHECK-NEXT:    vse8.v v9, (a2)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load <8 x i8>, ptr %in0, align 1
+  %1 = load <8 x i8>, ptr %in1, align 1
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 undef, i32 undef, i32 undef, i32 undef>
+  store <8 x i8> %shuffle.i5, ptr %out, align 1
+  ret void
+}
+
+define void @deinterleave4_8_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
+; CHECK-LABEL: deinterleave4_8_i8_two_source:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 8
+; CHECK-NEXT:    vnsrl.wi v9, v9, 8
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnsrl.wi v9, v9, 0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 4
+; CHECK-NEXT:    vse8.v v9, (a2)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load <8 x i8>, ptr %in0, align 1
+  %1 = load <8 x i8>, ptr %in1, align 1
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 undef, i32 undef, i32 undef, i32 undef>
+  store <8 x i8> %shuffle.i5, ptr %out, align 1
+  ret void
+}
+
+define void @deinterleave8_0_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
+; CHECK-LABEL: deinterleave8_0_i8_two_source:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a2)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load <8 x i8>, ptr %in0, align 1
+  %1 = load <8 x i8>, ptr %in1, align 1
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 0, i32 8, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  store <8 x i8> %shuffle.i5, ptr %out, align 1
+  ret void
+}
+
+define void @deinterleave8_8_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
+; CHECK-LABEL: deinterleave8_8_i8_two_source:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vmv.v.i v0, -3
+; CHECK-NEXT:    vrgather.vi v9, v8, 1, v0.t
+; CHECK-NEXT:    vse8.v v9, (a2)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load <8 x i8>, ptr %in0, align 1
+  %1 = load <8 x i8>, ptr %in1, align 1
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 1, i32 9, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  store <8 x i8> %shuffle.i5, ptr %out, align 1
+  ret void
+}

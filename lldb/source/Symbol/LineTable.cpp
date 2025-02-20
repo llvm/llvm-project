@@ -123,7 +123,7 @@ void LineTable::InsertSequence(LineSequence *sequence) {
   entry_collection::iterator end_pos = m_entries.end();
   LineTable::Entry::LessThanBinaryPredicate less_than_bp(this);
   entry_collection::iterator pos =
-      upper_bound(begin_pos, end_pos, entry, less_than_bp);
+      std::upper_bound(begin_pos, end_pos, entry, less_than_bp);
 
   // We should never insert a sequence in the middle of another sequence
   if (pos != begin_pos) {
@@ -185,6 +185,48 @@ bool LineTable::GetLineEntryAtIndex(uint32_t idx, LineEntry &line_entry) {
   return false;
 }
 
+uint32_t LineTable::lower_bound(const Address &so_addr) const {
+  if (so_addr.GetModule() != m_comp_unit->GetModule())
+    return GetSize();
+
+  Entry search_entry;
+  search_entry.file_addr = so_addr.GetFileAddress();
+  if (search_entry.file_addr == LLDB_INVALID_ADDRESS)
+    return GetSize();
+
+  // This is not a typo. upper_bound returns the first entry which definitely
+  // does not contain this address, which means the entry before it *might*
+  // contain it -- if it is not a termination entry.
+  auto pos =
+      llvm::upper_bound(m_entries, search_entry, Entry::EntryAddressLessThan);
+
+  if (pos != m_entries.begin() && !std::prev(pos)->is_terminal_entry)
+    --pos;
+
+  return std::distance(m_entries.begin(), pos);
+}
+
+uint32_t LineTable::upper_bound(const Address &so_addr) const {
+  if (so_addr.GetModule() != m_comp_unit->GetModule())
+    return GetSize();
+
+  Entry search_entry;
+  search_entry.file_addr = so_addr.GetFileAddress();
+  if (search_entry.file_addr == LLDB_INVALID_ADDRESS)
+    return GetSize();
+
+  // This is not a typo. lower_bound returns the first entry which starts on or
+  // after the given address, which is exactly what we want -- *except* if the
+  // entry is a termination entry (in that case, we want the one after it).
+  auto pos =
+      llvm::lower_bound(m_entries, search_entry, Entry::EntryAddressLessThan);
+  if (pos != m_entries.end() && pos->file_addr == search_entry.file_addr &&
+      pos->is_terminal_entry)
+    ++pos;
+
+  return std::distance(m_entries.begin(), pos);
+}
+
 bool LineTable::FindLineEntryByAddress(const Address &so_addr,
                                        LineEntry &line_entry,
                                        uint32_t *index_ptr) {
@@ -199,7 +241,7 @@ bool LineTable::FindLineEntryByAddress(const Address &so_addr,
     if (search_entry.file_addr != LLDB_INVALID_ADDRESS) {
       entry_collection::const_iterator begin_pos = m_entries.begin();
       entry_collection::const_iterator end_pos = m_entries.end();
-      entry_collection::const_iterator pos = lower_bound(
+      entry_collection::const_iterator pos = std::lower_bound(
           begin_pos, end_pos, search_entry, Entry::EntryAddressLessThan);
       if (pos != end_pos) {
         if (pos != begin_pos) {

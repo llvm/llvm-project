@@ -83,9 +83,10 @@ public:
   ///
   /// \return
   ///     Whatever SetExternalVisibleDeclsForName returns.
-  bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name,
-                                      clang::Module *NamedModule) override;
+  bool
+  FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
+                                 clang::DeclarationName Name,
+                                 const clang::DeclContext *OriginalDC) override;
 
   /// Enumerate all Decls in a given lexical context.
   ///
@@ -212,10 +213,10 @@ public:
   public:
     ClangASTSourceProxy(ClangASTSource &original) : m_original(original) {}
 
-    bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                        clang::DeclarationName Name,
-                                        clang::Module *NamedModule) override {
-      return m_original.FindExternalVisibleDeclsByName(DC, Name, NamedModule);
+    bool FindExternalVisibleDeclsByName(
+        const clang::DeclContext *DC, clang::DeclarationName Name,
+        const clang::DeclContext *OriginalDC) override {
+      return m_original.FindExternalVisibleDeclsByName(DC, Name, OriginalDC);
     }
 
     void FindExternalLexicalDecls(

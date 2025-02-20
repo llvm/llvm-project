@@ -845,7 +845,7 @@ public:
       }
       shapedType = *explicitType;
     } else {
-      SmallVector<int64_t> shape{static_cast<int64_t>(numAttributes)};
+      SmallVector<int64_t> shape = {static_cast<int64_t>(numAttributes)};
       shapedType = mlirRankedTensorTypeGet(
           shape.size(), shape.data(),
           mlirAttributeGetType(pyTryCast<PyAttribute>(attributes[0])),
@@ -1372,13 +1372,19 @@ public:
 
     MlirType type = mlirAttributeGetType(*this);
     type = mlirShapedTypeGetElementType(type);
-    assert(mlirTypeIsAInteger(type) &&
-           "expected integer element type in dense int elements attribute");
+    // Index type can also appear as a DenseIntElementsAttr and therefore can be
+    // casted to integer.
+    assert(mlirTypeIsAInteger(type) ||
+           mlirTypeIsAIndex(type) && "expected integer/index element type in "
+                                     "dense int elements attribute");
     // Dispatch element extraction to an appropriate C function based on the
     // elemental type of the attribute. nb::int_ is implicitly constructible
     // from any C++ integral type and handles bitwidth correctly.
     // TODO: consider caching the type properties in the constructor to avoid
     // querying them on each element access.
+    if (mlirTypeIsAIndex(type)) {
+      return nb::int_(mlirDenseElementsAttrGetIndexValue(*this, pos));
+    }
     unsigned width = mlirIntegerTypeGetWidth(type);
     bool isUnsigned = mlirIntegerTypeIsUnsigned(type);
     if (isUnsigned) {
@@ -1468,7 +1474,10 @@ public:
     // The userData is a Py_buffer* that the deleter owns.
     auto deleter = [](void *userData, const void *data, size_t size,
                       size_t align) {
+      if (!Py_IsInitialized())
+        Py_Initialize();
       Py_buffer *ownedView = static_cast<Py_buffer *>(userData);
+      nb::gil_scoped_acquire gil;
       PyBuffer_Release(ownedView);
       delete ownedView;
     };

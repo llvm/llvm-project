@@ -300,7 +300,11 @@ int test_extract_template(MyMatrix<int, 2, 2> Mat1) {
 using double4x4 = double __attribute__((matrix_type(4, 4)));
 
 template <class R, class C>
-auto matrix_subscript(double4x4 m, R r, C c) -> decltype(m[r][c]) {}
+auto matrix_subscript(double4x4 m, R r, C c) -> decltype(m[r][c]) {
+  // FIXME: We can't actually do 'return m[r][c]' here currently.
+  static double d;
+  return d;
+}
 
 double test_matrix_subscript(double4x4 m) {
   // CHECK-LABEL: @_Z21test_matrix_subscriptu11matrix_typeILm4ELm4EdE(

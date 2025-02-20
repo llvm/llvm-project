@@ -14,7 +14,7 @@ foreach(suffix IN ITEMS hr r lr hk k lk)
     SRCS
       abs${suffix}_test.cpp
     COMPILE_OPTIONS
-      -O3
+      ${libc_opt_high_flag}
     DEPENDS
       libc.src.stdfix.abs${suffix}
       libc.src.__support.fixed_point.fx_bits
@@ -31,7 +31,7 @@ foreach(suffix IN ITEMS uhr ur ulr uhk uk)
     SRCS
       sqrt${suffix}_test.cpp
     COMPILE_OPTIONS
-      -O3
+      ${libc_opt_high_flag}
     DEPENDS
       libc.src.stdfix.sqrt${suffix}
       libc.src.__support.CPP.bit
@@ -52,12 +52,12 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
     SRCS
       round${suffix}_test.cpp
     COMPILE_OPTIONS
-      -O3
+      ${libc_opt_high_flag}
     DEPENDS
       libc.src.stdfix.round${suffix}
       libc.src.__support.fixed_point.fx_bits
   )
-  
+
   add_libc_test(
     ${suffix}bits_test
     SUITE
@@ -67,10 +67,24 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
     SRCS
       ${suffix}bits_test.cpp
     COMPILE_OPTIONS
-      -O3
+      ${libc_opt_high_flag}
     DEPENDS
       libc.src.stdfix.${suffix}bits
       libc.src.__support.CPP.bit
+      libc.src.__support.fixed_point.fx_bits
+  )
+
+  add_libc_test(
+    countls${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      CountlsTest.h
+    SRCS
+      countls${suffix}_test.cpp
+    DEPENDS
+      libc.src.stdfix.countls${suffix}
+      libc.src.__support.fixed_point.fx_rep
       libc.src.__support.fixed_point.fx_bits
   )
 endforeach()
@@ -84,7 +98,7 @@ add_libc_test(
   SRCS
     uhksqrtus_test.cpp
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.stdfix.uhksqrtus
     libc.src.__support.CPP.bit
@@ -103,7 +117,7 @@ add_libc_test(
   SRCS
     uksqrtui_test.cpp
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.stdfix.uksqrtui
     libc.src.__support.CPP.bit
@@ -122,7 +136,7 @@ add_libc_test(
   SRCS
     exphk_test.cpp
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.stdfix.exphk
     libc.src.math.exp
@@ -140,7 +154,7 @@ add_libc_test(
   SRCS
     expk_test.cpp
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.stdfix.expk
     libc.src.math.exp

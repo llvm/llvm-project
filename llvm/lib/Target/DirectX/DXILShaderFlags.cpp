@@ -17,6 +17,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -29,6 +31,43 @@
 
 using namespace llvm;
 using namespace llvm::dxil;
+
+static bool checkWaveOps(Intrinsic::ID IID) {
+  // Currently unsupported intrinsics
+  // case Intrinsic::dx_wave_getlanecount:
+  // case Intrinsic::dx_wave_allequal:
+  // case Intrinsic::dx_wave_ballot:
+  // case Intrinsic::dx_wave_readfirst:
+  // case Intrinsic::dx_wave_reduce.and:
+  // case Intrinsic::dx_wave_reduce.or:
+  // case Intrinsic::dx_wave_reduce.xor:
+  // case Intrinsic::dx_wave_prefixop:
+  // case Intrinsic::dx_quad.readat:
+  // case Intrinsic::dx_quad.readacrossx:
+  // case Intrinsic::dx_quad.readacrossy:
+  // case Intrinsic::dx_quad.readacrossdiagonal:
+  // case Intrinsic::dx_wave_prefixballot:
+  // case Intrinsic::dx_wave_match:
+  // case Intrinsic::dx_wavemulti.*:
+  // case Intrinsic::dx_wavemulti.ballot:
+  // case Intrinsic::dx_quad.vote:
+  switch (IID) {
+  default:
+    return false;
+  case Intrinsic::dx_wave_is_first_lane:
+  case Intrinsic::dx_wave_getlaneindex:
+  case Intrinsic::dx_wave_any:
+  case Intrinsic::dx_wave_all:
+  case Intrinsic::dx_wave_readlane:
+  case Intrinsic::dx_wave_active_countbits:
+  // Wave Active Op Variants
+  case Intrinsic::dx_wave_reduce_sum:
+  case Intrinsic::dx_wave_reduce_usum:
+  case Intrinsic::dx_wave_reduce_max:
+  case Intrinsic::dx_wave_reduce_umax:
+    return true;
+  }
+}
 
 /// Update the shader flags mask based on the given instruction.
 /// \param CSF Shader flags mask to update.
@@ -64,11 +103,22 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     switch (II->getIntrinsicID()) {
     default:
       break;
+    case Intrinsic::dx_resource_handlefrombinding:
+      switch (DRTM[cast<TargetExtType>(II->getType())].getResourceKind()) {
+      case dxil::ResourceKind::StructuredBuffer:
+      case dxil::ResourceKind::RawBuffer:
+        CSF.EnableRawAndStructuredBuffers = true;
+        break;
+      default:
+        break;
+      }
+      break;
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
       if (RTI.isTyped())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
+      break;
     }
     }
   }
@@ -81,11 +131,14 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
 
     // TODO: Set DX11_1_DoubleExtensions if I is a call to DXIL intrinsic
     // DXIL::Opcode::Fma https://github.com/llvm/llvm-project/issues/114554
+
+    CSF.WaveOps |= checkWaveOps(CI->getIntrinsicID());
   }
 }
 
 /// Construct ModuleShaderFlags for module Module M
-void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM) {
+void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
+                                   const ModuleMetadataInfo &MMDI) {
   CallGraph CG(M);
 
   // Compute Shader Flags Mask for all functions using post-order visit of SCC
@@ -131,6 +184,20 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM) {
       // Merge SCCSF with that of F
       FunctionFlags[F].merge(SCCSF);
   }
+
+  // Set DisableOptimizations flag based on the presence of OptimizeNone
+  // attribute of entry functions.
+  if (MMDI.EntryPropertyVec.size() > 0) {
+    CombinedSFMask.DisableOptimizations =
+        MMDI.EntryPropertyVec[0].Entry->hasFnAttribute(
+            llvm::Attribute::OptimizeNone);
+    // Ensure all entry functions have the same optimization attribute
+    for (const auto &EntryFunProps : MMDI.EntryPropertyVec)
+      if (CombinedSFMask.DisableOptimizations !=
+          EntryFunProps.Entry->hasFnAttribute(llvm::Attribute::OptimizeNone))
+        EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
+            *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
+  }
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
@@ -169,9 +236,10 @@ AnalysisKey ShaderFlagsAnalysis::Key;
 ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
                                            ModuleAnalysisManager &AM) {
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
+  const ModuleMetadataInfo MMDI = AM.getResult<DXILMetadataAnalysis>(M);
 
   ModuleShaderFlags MSFI;
-  MSFI.initialize(M, DRTM);
+  MSFI.initialize(M, DRTM, MMDI);
 
   return MSFI;
 }
@@ -201,14 +269,17 @@ PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
 bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+  const ModuleMetadataInfo MMDI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  MSFI.initialize(M, DRTM);
+  MSFI.initialize(M, DRTM, MMDI);
   return false;
 }
 
 void ShaderFlagsAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
+  AU.addRequired<DXILMetadataAnalysisWrapperPass>();
 }
 
 char ShaderFlagsAnalysisWrapper::ID = 0;
@@ -216,5 +287,6 @@ char ShaderFlagsAnalysisWrapper::ID = 0;
 INITIALIZE_PASS_BEGIN(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
                       "DXIL Shader Flag Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_END(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
                     "DXIL Shader Flag Analysis", true, true)

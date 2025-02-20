@@ -1566,7 +1566,7 @@ define amdgpu_kernel void @v_ctlz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX10-GISEL-NEXT:    v_ffbh_u32_e32 v1, v0
 ; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-GISEL-NEXT:    v_min_u32_e32 v1, 32, v1
-; GFX10-GISEL-NEXT:    v_add_nc_u16 v1, v1, 0xffe8
+; GFX10-GISEL-NEXT:    v_add_nc_u16 v1, 0xffe8, v1
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, 0xffff, vcc_lo
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-GISEL-NEXT:    global_store_byte v1, v0, s[0:1]
@@ -1807,7 +1807,7 @@ define amdgpu_kernel void @v_ctlz_i7_sel_eq_neg1(ptr addrspace(1) noalias %out, 
 ; GFX10-GISEL-NEXT:    v_ffbh_u32_e32 v1, v0
 ; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-GISEL-NEXT:    v_min_u32_e32 v1, 32, v1
-; GFX10-GISEL-NEXT:    v_add_nc_u16 v1, v1, 0xffe7
+; GFX10-GISEL-NEXT:    v_add_nc_u16 v1, 0xffe7, v1
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, 0x7f, vcc_lo
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
