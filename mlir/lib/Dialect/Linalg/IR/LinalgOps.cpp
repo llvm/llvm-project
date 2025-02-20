@@ -3951,11 +3951,18 @@ void BatchMatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
 
+  TypeFn castVal = TypeFn::cast_signed;
+  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
+    return attr.getName() == "cast";
+  });
+  if (castIter != attrs.end()) {
+    if (auto attr = llvm::dyn_cast<TypeFnAttr>(castIter->getValue()))
+      castVal = attr.getValue();
+  }
+
   auto toType = block.getArgument(2).getType();
-  Value castValA =
-      helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(0));
-  Value castValB =
-      helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(1));
+  Value castValA = helper.buildTypeFn(castVal, toType, block.getArgument(0));
+  Value castValB = helper.buildTypeFn(castVal, toType, block.getArgument(1));
   Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
   Value addVal =
       helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
@@ -4004,11 +4011,6 @@ ParseResult BatchMatmulOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void BatchMatmulOp::print(OpAsmPrinter &p) {
-  SmallVector<StringRef, 3> elidedAttrs = {
-      "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
-  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
-                           elidedAttrs);
-
   SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
       BatchMatmulOp::getDefaultIndexingMaps(getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
@@ -4018,6 +4020,11 @@ void BatchMatmulOp::print(OpAsmPrinter &p) {
                           [&](Attribute attr) { p.printAttribute(attr); });
     p << "]";
   }
+
+  SmallVector<StringRef, 3> elidedAttrs = {
+      "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
+  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
+                           elidedAttrs);
 }
 
 /// Verify the user defined indexing maps.

@@ -1092,6 +1092,10 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFWNMSAC_VF:
   case RISCV::VFWMACCBF16_VV:
   case RISCV::VFWMACCBF16_VF:
+  // Vector Floating-Point Square-Root Instruction
+  case RISCV::VFSQRT_V:
+  // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
+  case RISCV::VFRSQRT7_V:
   // Vector Floating-Point MIN/MAX Instructions
   case RISCV::VFMIN_VF:
   case RISCV::VFMIN_VV:

@@ -323,7 +323,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     **GCN GFX9 (Vega)** [AMD-GCN-GFX900-GFX904-VEGA]_ [AMD-GCN-GFX906-VEGA7NM]_ [AMD-GCN-GFX908-CDNA1]_ [AMD-GCN-GFX90A-CDNA2]_ [AMD-GCN-GFX940-GFX942-CDNA3]_
+     **GCN GFX9 (Vega)** [AMD-GCN-GFX900-GFX904-VEGA]_ [AMD-GCN-GFX906-VEGA7NM]_ [AMD-GCN-GFX908-CDNA1]_ [AMD-GCN-GFX90A-CDNA2]_ [AMD-GCN-GFX942-CDNA3]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx900``                  ``amdgcn``   dGPU  - xnack           - Absolute      - *rocm-amdhsa* - Radeon Vega
                                                                         flat          - *pal-amdhsa*    Frontier Edition
@@ -377,20 +377,6 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                       - Ryzen 5 Pro 4650GE
                                                                                                       - Ryzen 3 Pro 4350G
                                                                                                       - Ryzen 3 Pro 4350GE
-
-     ``gfx940``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
-                                                    - tgsplit           flat
-                                                    - xnack             scratch                       .. TODO::
-                                                    - kernarg preload - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
-
-     ``gfx941``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
-                                                    - tgsplit           flat
-                                                    - xnack             scratch                       .. TODO::
-                                                    - kernarg preload - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
 
      ``gfx942``                  ``amdgcn``   dGPU  - sramecc         - Architected                   - AMD Instinct MI300X
                                                     - tgsplit           flat                          - AMD Instinct MI300A
@@ -583,10 +569,10 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                   - ``v_dot2_f32_f16``
 
 
-     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - sramecc          - Architected     FP8 and BF8 instructions,
-                                         - ``gfx941``      - tgsplit            flat scratch    FP8 and BF8 conversion
-                                         - ``gfx942``      - xnack            - Packed          instructions, as well as
-                                         - ``gfx950``      - kernarg preload    work-item       instructions with XF32 format
+     ``gfx9-4-generic``   ``amdgcn``     - ``gfx942``      - sramecc          - Architected     FP8 and BF8 instructions,
+                                         - ``gfx950``      - tgsplit            flat scratch    FP8 and BF8 conversion
+                                                           - xnack            - Packed          instructions, as well as
+                                                           - kernarg preload    work-item       instructions with XF32 format
                                                                                 IDs             support are not available.
 
      ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
@@ -2232,7 +2218,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1035``          0x03d      ``gfx1035``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1034``          0x03e      ``gfx1034``
      ``EF_AMDGPU_MACH_AMDGCN_GFX90A``           0x03f      ``gfx90a``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX940``           0x040      ``gfx940``
+     *reserved*                                 0x040      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1100``          0x041      ``gfx1100``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1013``          0x042      ``gfx1013``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1150``          0x043      ``gfx1150``
@@ -2243,7 +2229,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1200``          0x048      ``gfx1200``
      *reserved*                                 0x049      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1151``          0x04a      ``gfx1151``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX941``           0x04b      ``gfx941``
+     *reserved*                                 0x04b      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``           0x04c      ``gfx942``
      *reserved*                                 0x04d      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1201``          0x04e      ``gfx1201``
@@ -4985,7 +4971,7 @@ The fields used by CP for code objects before V3 also match those specified in
              bytes
      383:352 4 bytes COMPUTE_PGM_RSRC3               GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX90A, GFX940
+                                                     GFX90A, GFX942
                                                        Compute Shader (CS)
                                                        program settings used by
                                                        CP to set up
@@ -5070,7 +5056,7 @@ The fields used by CP for code objects before V3 also match those specified in
      463:460 4 bits                                  Reserved, must be 0.
      470:464 7 bits  KERNARG_PRELOAD_SPEC_LENGTH     GFX6-GFX9
                                                        - Reserved, must be 0.
-                                                     GFX90A, GFX940
+                                                     GFX90A, GFX942
                                                        - The number of dwords from
                                                          the kernarg segment to preload
                                                          into User SGPRs before kernel
@@ -5078,7 +5064,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                          :ref:`amdgpu-amdhsa-kernarg-preload`).
      479:471 9 bits  KERNARG_PRELOAD_SPEC_OFFSET     GFX6-GFX9
                                                        - Reserved, must be 0.
-                                                     GFX90A, GFX940
+                                                     GFX90A, GFX942
                                                        - An offset in dwords into the
                                                          kernarg segment to begin
                                                          preloading data into User
@@ -5104,7 +5090,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX6-GFX9
                                                        - vgprs_used 0..256
                                                        - max(0, ceil(vgprs_used / 4) - 1)
-                                                     GFX90A, GFX940
+                                                     GFX90A, GFX942
                                                        - vgprs_used 0..512
                                                        - vgprs_used = align(arch_vgprs, 4)
                                                                       + acc_vgprs
@@ -5570,7 +5556,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc3 for GFX90A, GFX940
+  .. table:: compute_pgm_rsrc3 for GFX90A, GFX942
      :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table
 
      ======= ======= =============================== ===========================================================================
@@ -9981,15 +9967,15 @@ only accessed by a single thread, and is always write-before-read, there is
 never a need to invalidate these entries from the L1 cache. Hence all cache
 invalidates are done as ``*_vol`` to only invalidate the volatile cache lines.
 
-The code sequences used to implement the memory model for GFX940, GFX941, GFX942
-are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx941-gfx942-table`.
+The code sequences used to implement the memory model for GFX942 are defined in
+table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
 
-  .. table:: AMDHSA Memory Model Code Sequences GFX940, GFX941, GFX942
-     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx941-gfx942-table
+  .. table:: AMDHSA Memory Model Code Sequences GFX942
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx942-table
 
      ============ ============ ============== ========== ================================
      LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
-                  Ordering     Sync Scope     Address    GFX940, GFX941, GFX942
+                  Ordering     Sync Scope     Address    GFX942
                                               Space
      ============ ============ ============== ========== ================================
      **Non-Atomic**
@@ -10024,18 +10010,12 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
      load         *none*       *none*         - local    1. ds_load
      store        *none*       *none*         - global   - !volatile & !nontemporal
                                               - generic
-                                              - private    1. GFX940, GFX941
+                                              - private    1. GFX942
                                               - constant        buffer/global/flat_store
-                                                                sc0=1 sc1=1
-                                                              GFX942
-                                                                buffer/global/flat_store
 
                                                          - !volatile & nontemporal
 
-                                                           1. GFX940, GFX941
-                                                                buffer/global/flat_store
-                                                                nt=1 sc0=1 sc1=1
-                                                              GFX942
+                                                           1. GFX942
                                                                 buffer/global/flat_store
                                                                 nt=1
 
@@ -10707,11 +10687,8 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
 
      **Release Atomic**
      ------------------------------------------------------------------------------------
-     store atomic release      - singlethread - global   1. GFX940, GFX941
+     store atomic release      - singlethread - global   1. GFX942
                                - wavefront    - generic       buffer/global/flat_store
-                                                              sc0=1 sc1=1
-                                                            GFX942
-                                                              buffer/global/flat_store
 
      store atomic release      - singlethread - local    *If TgSplit execution mode,
                                - wavefront               local address space cannot
@@ -10749,10 +10726,7 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              store that is being
                                                              released.
 
-                                                         2. GFX940, GFX941
-                                                              buffer/global/flat_store
-                                                              sc0=1 sc1=1
-                                                            GFX942
+                                                         2. GFX942
                                                               buffer/global/flat_store
                                                               sc0=1
      store atomic release      - workgroup    - local    *If TgSplit execution mode,
@@ -10813,10 +10787,7 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              store that is being
                                                              released.
 
-                                                         3. GFX940, GFX941
-                                                              buffer/global/flat_store
-                                                              sc0=1 sc1=1
-                                                            GFX942
+                                                         3. GFX942
                                                               buffer/global/flat_store
                                                               sc1=1
      store atomic release      - system       - global   1. buffer_wbl2 sc0=1 sc1=1
@@ -17574,11 +17545,7 @@ in this description.
 
     CDNA 2        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx90a<AMDGPU/AMDGPUAsmGFX90a>`
 
-    CDNA 3        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx940<AMDGPU/AMDGPUAsmGFX940>`
-
-                                                                :doc:`gfx941<AMDGPU/AMDGPUAsmGFX940>`
-
-                                                                :doc:`gfx942<AMDGPU/AMDGPUAsmGFX940>`
+    CDNA 3        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx942<AMDGPU/AMDGPUAsmGFX940>`
 
     RDNA 1        :doc:`GFX10 RDNA1<AMDGPU/AMDGPUAsmGFX10>`     :doc:`gfx1010<AMDGPU/AMDGPUAsmGFX10>`
 
@@ -17616,7 +17583,7 @@ combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_,
 [AMD-GCN-GFX900-GFX904-VEGA]_, [AMD-GCN-GFX906-VEGA7NM]_,
 [AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX90A-CDNA2]_,
-[AMD-GCN-GFX940-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
+[AMD-GCN-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
 [AMD-GCN-GFX11-RDNA3]_ and [AMD-GCN-GFX11-RDNA3.5]_.
 
 Operands
@@ -18129,7 +18096,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`
      ``.amdhsa_user_sgpr_private_segment_buffer``             0                   GFX6-GFX10   Controls ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER in
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-                                                                                  GFX940)
+                                                                                  GFX942)
      ``.amdhsa_user_sgpr_dispatch_ptr``                       0                   GFX6-GFX12   Controls ENABLE_SGPR_DISPATCH_PTR in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_queue_ptr``                          0                   GFX6-GFX12   Controls ENABLE_SGPR_QUEUE_PTR in
@@ -18140,7 +18107,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_flat_scratch_init``                  0                   GFX6-GFX10   Controls ENABLE_SGPR_FLAT_SCRATCH_INIT in
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-                                                                                  GFX940)
+                                                                                  GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
@@ -18151,8 +18118,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
                                                                                   (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
-                                                                                  GFX940)
-     ``.amdhsa_enable_private_segment``                       0                   GFX940,      Controls ENABLE_PRIVATE_SEGMENT in
+                                                                                  GFX942)
+     ``.amdhsa_enable_private_segment``                       0                   GFX942,      Controls ENABLE_PRIVATE_SEGMENT in
                                                                                   GFX11-GFX12  :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ``.amdhsa_system_sgpr_workgroup_id_x``                   1                   GFX6-GFX12   Controls ENABLE_SGPR_WORKGROUP_ID_X in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
@@ -18173,14 +18140,14 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_accum_offset``                                 Required            GFX90A,      Offset of a first AccVGPR in the unified register file.
-                                                                                  GFX940       Used to calculate ACCUM_OFFSET in
+                                                                                  GFX942       Used to calculate ACCUM_OFFSET in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
      ``.amdhsa_reserve_vcc``                                  1                   GFX6-GFX12   Whether the kernel may use the special VCC SGPR.
                                                                                                Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_reserve_flat_scratch``                         1                   GFX7-GFX10   Whether the kernel may use flat instructions to access
                                                                                   (except      scratch memory. Used to calculate
-                                                                                  GFX940)      GRANULATED_WAVEFRONT_SGPR_COUNT in
+                                                                                  GFX942)      GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_reserve_xnack_mask``                           Target              GFX8-GFX10   Whether the kernel may trigger XNACK replay.
                                                               Feature                          Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
@@ -18211,7 +18178,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_fp16_overflow``                                0                   GFX9-GFX12   Controls FP16_OVFL in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_tg_split``                                     Target              GFX90A,      Controls TG_SPLIT in
-                                                              Feature             GFX940,      :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
+                                                              Feature             GFX942,      :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
                                                               Specific            GFX11-GFX12
                                                               (tgsplit)
      ``.amdhsa_workgroup_processor_mode``                     Target              GFX10-GFX12  Controls ENABLE_WGP_MODE in
@@ -18242,9 +18209,9 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_exception_int_div_zero``                       0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ``.amdhsa_user_sgpr_kernarg_preload_length``             0                   GFX90A,      Controls KERNARG_PRELOAD_SPEC_LENGTH in
-                                                                                  GFX940       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+                                                                                  GFX942       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_kernarg_preload_offset``             0                   GFX90A,      Controls KERNARG_PRELOAD_SPEC_OFFSET in
-                                                                                  GFX940       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+                                                                                  GFX942       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ======================================================== =================== ============ ===================
 
 .amdgpu_metadata
@@ -18414,7 +18381,7 @@ Additional Documentation
 .. [AMD-GCN-GFX906-VEGA7NM] `AMD Vega 7nm Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/11/Vega_7nm_Shader_ISA_26November2019.pdf>`__
 .. [AMD-GCN-GFX908-CDNA1] `AMD Instinct MI100 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/CDNA1_Shader_ISA_14December2020.pdf>`__
 .. [AMD-GCN-GFX90A-CDNA2] `AMD Instinct MI200 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/CDNA2_Shader_ISA_4February2022.pdf>`__
-.. [AMD-GCN-GFX940-GFX942-CDNA3] `AMD Instinct MI300 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/amd-instinct-mi300-cdna3-instruction-set-architecture.pdf>`__
+.. [AMD-GCN-GFX942-CDNA3] `AMD Instinct MI300 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/amd-instinct-mi300-cdna3-instruction-set-architecture.pdf>`__
 .. [AMD-GCN-GFX10-RDNA1] `AMD RDNA 1.0 Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
 .. [AMD-GCN-GFX10-RDNA2] `AMD RDNA 2 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3] `AMD RDNA 3 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA3_Shader_ISA_December2022.pdf>`__

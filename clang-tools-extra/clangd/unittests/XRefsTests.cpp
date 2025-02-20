@@ -411,6 +411,85 @@ TEST(LocateSymbol, FindOverrides) {
                                    sym("foo", Code.range("2"), std::nullopt)));
 }
 
+TEST(LocateSymbol, FindOverridesFromDefObjC) {
+  auto Code = Annotations(R"objc(
+    @protocol Fooey
+    - (void)foo;
+    @end
+    @interface Base
+    - (void)foo;
+    @end
+    @interface Foo : Base<Fooey>
+    - (void)$1[[foo]];
+    @end
+
+    @interface Bar : Foo
+    - (void)$2[[foo]];
+    @end
+    @implementation Bar
+    - (void)$3[[fo^o]] {}
+    @end
+  )objc");
+  TestTU TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-xobjective-c++");
+  auto AST = TU.build();
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point(), TU.index().get()),
+      UnorderedElementsAre(sym("foo", Code.range("1"), std::nullopt),
+                           sym("foo", Code.range("2"), Code.range("3"))));
+}
+
+TEST(LocateSymbol, NoOverridesFromDeclObjC) {
+  auto Code = Annotations(R"objc(
+    @protocol Fooey
+    - (void)foo;
+    @end
+    @interface Base
+    - (void)foo;
+    @end
+    @interface Foo : Base<Fooey>
+    - (void)foo;
+    @end
+
+    @interface Bar : Foo
+    - (void)$2[[fo^o]];
+    @end
+    @implementation Bar
+    - (void)$3[[foo]] {}
+    @end
+  )objc");
+  TestTU TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-xobjective-c++");
+  auto AST = TU.build();
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point(), TU.index().get()),
+      UnorderedElementsAre(sym("foo", Code.range("2"), Code.range("3"))));
+}
+
+TEST(LocateSymbol, ObjCNoOverridesOnUsage) {
+  auto Code = Annotations(R"objc(
+    @interface Foo
+    - (void)foo;
+    @end
+
+    @interface Bar : Foo
+    - (void)$1[[foo]];
+    @end
+    @implementation Bar
+    - (void)$2[[foo]] {}
+    @end
+    void doSomething(Bar *bar) {
+      [bar fo^o];
+    }
+  )objc");
+  TestTU TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-xobjective-c++");
+  auto AST = TU.build();
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point(), TU.index().get()),
+      UnorderedElementsAre(sym("foo", Code.range("1"), Code.range("2"))));
+}
+
 TEST(LocateSymbol, WithIndexPreferredLocation) {
   Annotations SymbolHeader(R"cpp(
         class $p[[Proto]] {};
@@ -1834,6 +1913,41 @@ TEST(FindImplementations, Inheritance) {
   }
 }
 
+TEST(FindImplementations, InheritanceObjC) {
+  llvm::StringRef Test = R"objc(
+    @interface $base^Base
+    - (void)fo$foo^o;
+    @end
+    @protocol Protocol
+    - (void)$protocol^protocol;
+    @end
+    @interface $ChildDecl[[Child]] : Base <Protocol>
+    - (void)concrete;
+    - (void)$fooDecl[[foo]];
+    @end
+    @implementation $ChildDef[[Child]]
+    - (void)concrete {}
+    - (void)$fooDef[[foo]] {}
+    - (void)$protocolDef[[protocol]] {}
+    @end
+  )objc";
+
+  Annotations Code(Test);
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-xobjective-c++");
+  auto AST = TU.build();
+  auto Index = TU.index();
+  EXPECT_THAT(findImplementations(AST, Code.point("base"), Index.get()),
+              UnorderedElementsAre(sym("Child", Code.range("ChildDecl"),
+                                       Code.range("ChildDef"))));
+  EXPECT_THAT(findImplementations(AST, Code.point("foo"), Index.get()),
+              UnorderedElementsAre(
+                  sym("foo", Code.range("fooDecl"), Code.range("fooDef"))));
+  EXPECT_THAT(findImplementations(AST, Code.point("protocol"), Index.get()),
+              UnorderedElementsAre(sym("protocol", Code.range("protocolDef"),
+                                       Code.range("protocolDef"))));
+}
+
 TEST(FindImplementations, CaptureDefinition) {
   llvm::StringRef Test = R"cpp(
     struct Base {
@@ -1963,6 +2077,7 @@ void checkFindRefs(llvm::StringRef Test, bool UseIndex = false) {
   Annotations T(Test);
   auto TU = TestTU::withCode(T.code());
   TU.ExtraArgs.push_back("-std=c++20");
+  TU.ExtraArgs.push_back("-xobjective-c++");
 
   auto AST = TU.build();
   std::vector<Matcher<ReferencesResult::Reference>> ExpectedLocations;
@@ -2260,6 +2375,25 @@ TEST(FindReferences, IncludeOverrides) {
   checkFindRefs(Test, /*UseIndex=*/true);
 }
 
+TEST(FindReferences, IncludeOverridesObjC) {
+  llvm::StringRef Test =
+      R"objc(
+        @interface Base
+        - (void)$decl(Base)[[f^unc]];
+        @end
+        @interface Derived : Base
+        - (void)$overridedecl(Derived::func)[[func]];
+        @end
+        @implementation Derived
+        - (void)$overridedef[[func]] {}
+        @end
+        void test(Derived *derived, Base *base) {
+          [derived func];  // No references to the overrides.
+          [base $(test)[[func]]];
+        })objc";
+  checkFindRefs(Test, /*UseIndex=*/true);
+}
+
 TEST(FindReferences, RefsToBaseMethod) {
   llvm::StringRef Test =
       R"cpp(
@@ -2281,6 +2415,27 @@ TEST(FindReferences, RefsToBaseMethod) {
           B->$(test)[[func]]();
           D->$(test)[[fu^nc]]();
         })cpp";
+  checkFindRefs(Test, /*UseIndex=*/true);
+}
+
+TEST(FindReferences, RefsToBaseMethodObjC) {
+  llvm::StringRef Test =
+      R"objc(
+        @interface BaseBase
+        - (void)$(BaseBase)[[func]];
+        @end
+        @interface Base : BaseBase
+        - (void)$(Base)[[func]];
+        @end
+        @interface Derived : Base
+        - (void)$decl(Derived)[[fu^nc]];
+        @end
+        void test(BaseBase *bb, Base *b, Derived *d) {
+          // refs to overridden methods in complete type hierarchy are reported.
+          [bb $(test)[[func]]];
+          [b $(test)[[func]]];
+          [d $(test)[[fu^nc]]];
+        })objc";
   checkFindRefs(Test, /*UseIndex=*/true);
 }
 
