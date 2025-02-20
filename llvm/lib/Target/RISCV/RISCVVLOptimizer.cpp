@@ -1271,6 +1271,11 @@ RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
     return std::nullopt;
   }
 
+  if (mayReadPastVL(UserMI)) {
+    LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
+    return std::nullopt;
+  }
+
   unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
   const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
   // Looking for an immediate or a register VL that isn't X0.
@@ -1331,11 +1336,6 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
       for (auto &CopyUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
         Worklist.insert(&CopyUse);
       continue;
-    }
-
-    if (mayReadPastVL(UserMI)) {
-      LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
-      return std::nullopt;
     }
 
     auto VLOp = getMinimumVLForUser(UserOp);
