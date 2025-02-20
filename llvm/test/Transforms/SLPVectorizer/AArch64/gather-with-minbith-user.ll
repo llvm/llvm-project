@@ -5,16 +5,7 @@ define void @h() {
 ; CHECK-LABEL: define void @h() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr null, i64 16
-; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v2i1(<8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 poison, i1 poison, i1 false, i1 false>, <2 x i1> zeroinitializer, i64 4)
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v2i1(<8 x i1> <i1 poison, i1 poison, i1 poison, i1 poison, i1 false, i1 false, i1 poison, i1 poison>, <2 x i1> zeroinitializer, i64 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v2i1(<8 x i1> [[TMP1]], <2 x i1> zeroinitializer, i64 2)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v2i1(<8 x i1> [[TMP2]], <2 x i1> zeroinitializer, i64 6)
-; CHECK-NEXT:    [[TMP4:%.*]] = sub <8 x i1> [[TMP0]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add <8 x i1> [[TMP0]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP7:%.*]] = or <8 x i1> [[TMP6]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i1> [[TMP7]] to <8 x i16>
-; CHECK-NEXT:    store <8 x i16> [[TMP8]], ptr [[ARRAYIDX2]], align 2
+; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:

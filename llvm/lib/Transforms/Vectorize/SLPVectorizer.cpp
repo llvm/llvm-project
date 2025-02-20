@@ -1036,17 +1036,20 @@ static bool getInterchangeableInstruction(
 
 static bool isConvertible(Instruction *I, Instruction *MainOp,
                           Instruction *AltOp) {
-  if (!I->isBinaryOp())
-    return I->getOpcode() == MainOp->getOpcode() ||
-           I->getOpcode() == AltOp->getOpcode();
   assert(MainOp && "MainOp cannot be nullptr.");
+  if (I->getOpcode() == MainOp->getOpcode())
+    return true;
+  assert(AltOp && "AltOp cannot be nullptr.");
+  if (I->getOpcode() == AltOp->getOpcode())
+    return true;
+  if (!I->isBinaryOp())
+    return false;
   SmallVector<std::unique_ptr<InterchangeableInstruction>> Candidate(
       getInterchangeableInstruction(I));
   for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
     if (C->isSame(I) && C->isSame(MainOp))
       return true;
   Candidate = getInterchangeableInstruction(I);
-  assert(AltOp && "AltOp cannot be nullptr.");
   for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
     if (C->isSame(I) && C->isSame(AltOp))
       return true;
@@ -1056,10 +1059,12 @@ static bool isConvertible(Instruction *I, Instruction *MainOp,
 static std::pair<Instruction *, SmallVector<Value *>>
 convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
   assert(isConvertible(I, MainOp, AltOp) && "Cannot convert the instruction.");
-  if (!I->isBinaryOp())
-    return std::make_pair(I->getOpcode() == MainOp->getOpcode() ? MainOp
-                                                                : AltOp,
-                          SmallVector<Value *>(I->operands()));
+  if (I->getOpcode() == MainOp->getOpcode())
+    return std::make_pair(MainOp, SmallVector<Value *>(I->operands()));
+  // Prefer AltOp instead of interchangeable instruction of MainOp.
+  if (I->getOpcode() == AltOp->getOpcode())
+    return std::make_pair(AltOp, SmallVector<Value *>(I->operands()));
+  assert(I->isBinaryOp() && "Cannot convert the instruction.");
   SmallVector<std::unique_ptr<InterchangeableInstruction>> Candidate(
       getInterchangeableInstruction(I));
   for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
