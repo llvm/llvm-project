@@ -1108,7 +1108,7 @@ ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB, unsigned Reg,
   if (!SubIdx)
     return MIB.addReg(Reg, State);
 
-  if (Register(Reg).isPhysical())
+  if (Register::isPhysicalRegister(Reg))
     return MIB.addReg(TRI->getSubReg(Reg, SubIdx), State);
   return MIB.addReg(Reg, State, SubIdx);
 }

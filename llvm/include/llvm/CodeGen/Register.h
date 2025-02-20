@@ -48,6 +48,12 @@ public:
     return Register(FI + MCRegister::FirstStackSlot);
   }
 
+  /// Return true if the specified register number is in
+  /// the physical register namespace.
+  static constexpr bool isPhysicalRegister(unsigned Reg) {
+    return MCRegister::isPhysicalRegister(Reg);
+  }
+
   /// Convert a 0-based index to a virtual register number.
   /// This is the inverse operation of VirtReg2IndexFunctor below.
   static Register index2VirtReg(unsigned Index) {
@@ -61,9 +67,7 @@ public:
 
   /// Return true if the specified register number is in the physical register
   /// namespace.
-  constexpr bool isPhysical() const {
-    return MCRegister::isPhysicalRegister(Reg);
-  }
+  constexpr bool isPhysical() const { return isPhysicalRegister(Reg); }
 
   /// Convert a virtual register number to a 0-based index. The first virtual
   /// register in a function will get the index 0.
