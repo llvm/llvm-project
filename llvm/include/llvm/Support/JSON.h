@@ -285,7 +285,7 @@ inline bool operator!=(const Array &L, const Array &R) { return !(L == R); }
 /// And parsed:
 ///   Expected<Value> E = json::parse("[1, 2, null]");
 ///   assert(E && E->kind() == Value::Array);
-class Value {
+class LLVM_ABI Value {
 public:
   enum Kind {
     Null,
