@@ -2615,7 +2615,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
-    assert((I.arg_size() != 2) || (ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType())));
+    assert((I.arg_size() != 2) ||
+           (ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType())));
     [[maybe_unused]] FixedVectorType *ReturnType =
         cast<FixedVectorType>(I.getType());
     assert(ParamType->getNumElements() * I.arg_size() ==
@@ -2660,8 +2661,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// conceptually operates on
   ///     (<4 x i16> [[VAR1]], <4 x i16> [[VAR2]])
   /// and can be handled with ReinterpretElemWidth == 16.
-  void
-  handlePairwiseShadowOrIntrinsic(IntrinsicInst &I, int ReinterpretElemWidth) {
+  void handlePairwiseShadowOrIntrinsic(IntrinsicInst &I,
+                                       int ReinterpretElemWidth) {
     assert(I.arg_size() == 1 || I.arg_size() == 2);
 
     assert(I.getType()->isVectorTy());
@@ -2669,7 +2670,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
-    assert((I.arg_size() != 2) || (ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType())));
+    assert((I.arg_size() != 2) ||
+           (ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType())));
 
     [[maybe_unused]] FixedVectorType *ReturnType =
         cast<FixedVectorType>(I.getType());
@@ -2710,8 +2712,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *OddShadow;
     if (I.arg_size() == 2) {
       Value *SecondArgShadow = getShadow(&I, 1);
-      SecondArgShadow =
-          IRB.CreateBitCast(SecondArgShadow, ReinterpretShadowTy);
+      SecondArgShadow = IRB.CreateBitCast(SecondArgShadow, ReinterpretShadowTy);
 
       EvenShadow =
           IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, EvenMask);
