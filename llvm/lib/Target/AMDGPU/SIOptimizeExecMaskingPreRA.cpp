@@ -370,7 +370,6 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
-  // LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   const bool Wave32 = ST.isWave32();
   AndOpc = Wave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
