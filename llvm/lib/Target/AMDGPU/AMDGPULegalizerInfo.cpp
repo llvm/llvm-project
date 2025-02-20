@@ -2710,8 +2710,7 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
   if (IsIEEEOp)
     return true;
 
-  return Helper.lowerFMinNumMaxNum(MI, !ST.hasIEEEMinNumMaxNum()) ==
-      LegalizerHelper::Legalized;
+  return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
 }
 
 bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
