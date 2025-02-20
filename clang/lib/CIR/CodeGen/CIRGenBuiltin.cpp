@@ -63,13 +63,22 @@ static mlir::Value tryUseTestFPKind(CIRGenFunction &CGF, unsigned BuiltinID,
 }
 
 template <class Operation>
-static RValue emitUnaryFPBuiltin(CIRGenFunction &CGF, const CallExpr &E) {
+static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &CGF,
+                                                 const CallExpr &E) {
   auto Arg = CGF.emitScalarExpr(E.getArg(0));
 
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, &E);
   if (CGF.getBuilder().getIsFPConstrained())
     llvm_unreachable("constraint FP operations are NYI");
 
+  auto Call =
+      CGF.getBuilder().create<Operation>(Arg.getLoc(), Arg.getType(), Arg);
+  return RValue::get(Call->getResult(0));
+}
+
+template <class Operation>
+static RValue emitUnaryFPBuiltin(CIRGenFunction &CGF, const CallExpr &E) {
+  auto Arg = CGF.emitScalarExpr(E.getArg(0));
   auto Call =
       CGF.getBuilder().create<Operation>(Arg.getLoc(), Arg.getType(), Arg);
   return RValue::get(Call->getResult(0));
@@ -600,7 +609,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_ceilf16:
     case Builtin::BI__builtin_ceill:
     case Builtin::BI__builtin_ceilf128:
-      return emitUnaryFPBuiltin<cir::CeilOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(*this, *E);
 
     case Builtin::BIcopysign:
     case Builtin::BIcopysignf:
@@ -623,7 +632,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_cosl:
     case Builtin::BI__builtin_cosf128:
       assert(!cir::MissingFeatures::fastMathFlags());
-      return emitUnaryFPBuiltin<cir::CosOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::CosOp>(*this, *E);
 
     case Builtin::BIcosh:
     case Builtin::BIcoshf:
@@ -644,7 +653,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_expl:
     case Builtin::BI__builtin_expf128:
       assert(!cir::MissingFeatures::fastMathFlags());
-      return emitUnaryFPBuiltin<cir::ExpOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::ExpOp>(*this, *E);
 
     case Builtin::BIexp2:
     case Builtin::BIexp2f:
@@ -655,7 +664,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_exp2l:
     case Builtin::BI__builtin_exp2f128:
       assert(!cir::MissingFeatures::fastMathFlags());
-      return emitUnaryFPBuiltin<cir::Exp2Op>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::Exp2Op>(*this, *E);
 
     case Builtin::BI__builtin_exp10:
     case Builtin::BI__builtin_exp10f:
@@ -672,7 +681,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fabsf16:
     case Builtin::BI__builtin_fabsl:
     case Builtin::BI__builtin_fabsf128:
-      return emitUnaryFPBuiltin<cir::FAbsOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::FAbsOp>(*this, *E);
 
     case Builtin::BIfloor:
     case Builtin::BIfloorf:
@@ -682,7 +691,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_floorf16:
     case Builtin::BI__builtin_floorl:
     case Builtin::BI__builtin_floorf128:
-      return emitUnaryFPBuiltin<cir::FloorOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::FloorOp>(*this, *E);
 
     case Builtin::BIfma:
     case Builtin::BIfmaf:
@@ -745,7 +754,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_logl:
     case Builtin::BI__builtin_logf128:
       assert(!cir::MissingFeatures::fastMathFlags());
-      return emitUnaryFPBuiltin<cir::LogOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::LogOp>(*this, *E);
 
     case Builtin::BIlog10:
     case Builtin::BIlog10f:
@@ -756,7 +765,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_log10l:
     case Builtin::BI__builtin_log10f128:
       assert(!cir::MissingFeatures::fastMathFlags());
-      return emitUnaryFPBuiltin<cir::Log10Op>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::Log10Op>(*this, *E);
 
     case Builtin::BIlog2:
     case Builtin::BIlog2f:
@@ -767,7 +776,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_log2l:
     case Builtin::BI__builtin_log2f128:
       assert(!cir::MissingFeatures::fastMathFlags());
-      return emitUnaryFPBuiltin<cir::Log2Op>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::Log2Op>(*this, *E);
 
     case Builtin::BInearbyint:
     case Builtin::BInearbyintf:
@@ -776,7 +785,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_nearbyintf:
     case Builtin::BI__builtin_nearbyintl:
     case Builtin::BI__builtin_nearbyintf128:
-      return emitUnaryFPBuiltin<cir::NearbyintOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::NearbyintOp>(*this, *E);
 
     case Builtin::BIpow:
     case Builtin::BIpowf:
@@ -800,7 +809,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_rintf16:
     case Builtin::BI__builtin_rintl:
     case Builtin::BI__builtin_rintf128:
-      return emitUnaryFPBuiltin<cir::RintOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::RintOp>(*this, *E);
 
     case Builtin::BIround:
     case Builtin::BIroundf:
@@ -810,7 +819,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_roundf16:
     case Builtin::BI__builtin_roundl:
     case Builtin::BI__builtin_roundf128:
-      return emitUnaryFPBuiltin<cir::RoundOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::RoundOp>(*this, *E);
 
     case Builtin::BIroundeven:
     case Builtin::BIroundevenf:
@@ -831,7 +840,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sinl:
     case Builtin::BI__builtin_sinf128:
       assert(!cir::MissingFeatures::fastMathFlags());
-      return emitUnaryFPBuiltin<cir::SinOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::SinOp>(*this, *E);
 
     case Builtin::BIsqrt:
     case Builtin::BIsqrtf:
@@ -842,7 +851,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sqrtl:
     case Builtin::BI__builtin_sqrtf128:
       assert(!cir::MissingFeatures::fastMathFlags());
-      return emitUnaryFPBuiltin<cir::SqrtOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::SqrtOp>(*this, *E);
 
     case Builtin::BI__builtin_elementwise_sqrt:
       llvm_unreachable("BI__builtin_elementwise_sqrt NYI");
@@ -875,7 +884,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_truncf16:
     case Builtin::BI__builtin_truncl:
     case Builtin::BI__builtin_truncf128:
-      return emitUnaryFPBuiltin<cir::TruncOp>(*this, *E);
+      return emitUnaryMaybeConstrainedFPBuiltin<cir::TruncOp>(*this, *E);
 
     case Builtin::BIlround:
     case Builtin::BIlroundf:
@@ -1344,7 +1353,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       if (mlir::isa<cir::VectorType>(cirTy))
         eltTy = mlir::cast<cir::VectorType>(cirTy).getEltType();
       if (mlir::isa<cir::SingleType, cir::DoubleType>(eltTy)) {
-        return emitUnaryFPBuiltin<cir::FAbsOp>(*this, *E);
+        return emitUnaryMaybeConstrainedFPBuiltin<cir::FAbsOp>(*this, *E);
       }
       llvm_unreachable("unsupported type for BI__builtin_elementwise_abs");
     }
@@ -1365,8 +1374,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("BI__builtin_elementwise_atan2 NYI");
   case Builtin::BI__builtin_elementwise_ceil:
     llvm_unreachable("BI__builtin_elementwise_ceil NYI");
-  case Builtin::BI__builtin_elementwise_exp:
-    llvm_unreachable("BI__builtin_elementwise_exp NYI");
+  case Builtin::BI__builtin_elementwise_exp: {
+    return emitUnaryFPBuiltin<cir::ExpOp>(*this, *E);
+  }
   case Builtin::BI__builtin_elementwise_exp2:
     llvm_unreachable("BI__builtin_elementwise_exp2 NYI");
   case Builtin::BI__builtin_elementwise_log:
