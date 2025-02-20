@@ -1315,9 +1315,24 @@ RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
 
 std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
   std::optional<MachineOperand> CommonVL;
-  for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
+  SmallSetVector<MachineOperand *, 8> Worklist;
+  for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg()))
+    Worklist.insert(&UserOp);
+
+  while (!Worklist.empty()) {
+    MachineOperand &UserOp = *Worklist.pop_back_val();
     const MachineInstr &UserMI = *UserOp.getParent();
     LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
+
+    if (UserMI.isCopy() && UserMI.getOperand(0).getReg().isVirtual() &&
+        UserMI.getOperand(0).getSubReg() == RISCV::NoSubRegister &&
+        UserMI.getOperand(1).getSubReg() == RISCV::NoSubRegister) {
+      LLVM_DEBUG(dbgs() << "    Peeking through uses of COPY\n");
+      for (auto &CopyUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
+        Worklist.insert(&CopyUse);
+      continue;
+    }
+
     if (mayReadPastVL(UserMI)) {
       LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
       return std::nullopt;
