@@ -6189,11 +6189,18 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
                    eTypeInstanceIsPointer;
     break;
 
-  case swift::TypeKind::Protocol:
+  case swift::TypeKind::Protocol: {
+    auto *protocol =
+        llvm::cast<swift::ProtocolType>(swift_can_type.getPointer());
+    swift::ProtocolDecl *decl = protocol->getDecl();
+    if (decl->isObjC())
+      swift_flags |= eTypeIsObjC | eTypeHasValue;
+    LLVM_FALLTHROUGH;
+  }
   case swift::TypeKind::ProtocolComposition:
-  case swift::TypeKind::Existential:
+  case swift::TypeKind::Existential: {
     swift_flags |= eTypeHasChildren | eTypeIsStructUnion | eTypeIsProtocol;
-    break;
+  } break;
   case swift::TypeKind::ExistentialMetatype:
     swift_flags |= eTypeIsProtocol;
     LLVM_FALLTHROUGH;

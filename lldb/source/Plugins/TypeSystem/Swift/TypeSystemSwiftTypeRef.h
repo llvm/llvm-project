@@ -446,7 +446,7 @@ protected:
   bool UseSwiftASTContextFallback(const char *func_name,
                                   lldb::opaque_compiler_type_t type);
   /// Print a warning that a fallback was necessary.
-  bool DiagnoseSwiftASTContextFallback(const char *func_name,
+  void DiagnoseSwiftASTContextFallback(const char *func_name,
                                        lldb::opaque_compiler_type_t type);
 
   /// Helper that creates an AST type from \p type.
@@ -546,6 +546,11 @@ protected:
   swift::Demangle::NodePointer
   GetClangTypeTypeNode(swift::Demangle::Demangler &dem,
                        CompilerType clang_type);
+
+  /// Determine if this type contains a type from a module that looks
+  /// like it was JIT-compiled by LLDB.
+  bool IsExpressionEvaluatorDefined(lldb::opaque_compiler_type_t type);
+
 #ifndef NDEBUG
   /// Check whether the type being dealt with is tricky to validate due to
   /// discrepancies between TypeSystemSwiftTypeRef and SwiftASTContext.

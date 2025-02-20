@@ -60,6 +60,25 @@ NodeAtPath(swift::Demangle::NodePointer root,
   return ChildAtPath(root, kind_path.drop_front());
 }
 
+/// Find the first child node of root that satisfies cond.
+inline swift::Demangle::NodePointer
+FindIf(swift::Demangle::NodePointer root,
+       std::function<bool(swift::Demangle::NodePointer)> cond) {
+  if (!root)
+    return nullptr;
+
+  auto *node = root;
+  if (cond(node))
+    return node;
+  for (auto *child : *node) {
+    assert(child && "swift::Demangle::Node has null child");
+    if (auto *found = FindIf(child, cond))
+      return found;
+  }
+
+  return nullptr;
+}
+
 /// \return the child of the TypeMangling node.
 static swift::Demangle::NodePointer
 GetTypeMangling(swift::Demangle::NodePointer n) {

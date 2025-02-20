@@ -2880,10 +2880,15 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
   else if (type_info.AllSet(eTypeIsMetatype | eTypeIsProtocol))
     success = GetDynamicTypeAndAddress_ExistentialMetatype(
         in_value, val_type, use_dynamic, class_type_or_name, address);
-  else if (type_info.AnySet(eTypeIsProtocol))
-    success = GetDynamicTypeAndAddress_Existential(in_value, val_type, use_dynamic,
-                                                class_type_or_name, address);
-  else {
+  else if (type_info.AnySet(eTypeIsProtocol)) {
+    if (type_info.AnySet(eTypeIsObjC))
+      success = GetDynamicTypeAndAddress_Class(in_value, val_type, use_dynamic,
+                                               class_type_or_name, address,
+                                               static_value_type, local_buffer);
+    else
+      success = GetDynamicTypeAndAddress_Existential(
+          in_value, val_type, use_dynamic, class_type_or_name, address);
+  } else {
     CompilerType bound_type;
     if (type_info.AnySet(eTypeHasUnboundGeneric | eTypeHasDynamicSelf)) {
       // Perform generic type resolution.
