@@ -32,6 +32,7 @@
 #include "AMDGPUWaitSGPRHazards.h"
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
+#include "GCNNSAReassign.h"
 #include "GCNPreRALongBranchReg.h"
 #include "GCNPreRAOptimizations.h"
 #include "GCNRewritePartialRegUses.h"
@@ -550,7 +551,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPUResourceUsageAnalysisPass(*PR);
-  initializeGCNNSAReassignPass(*PR);
+  initializeGCNNSAReassignLegacyPass(*PR);
   initializeGCNPreRAOptimizationsLegacyPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
   initializeGCNRewritePartialRegUsesLegacyPass(*PR);
@@ -2110,6 +2111,12 @@ Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
   addPass(SIFixSGPRCopiesPass());
   addPass(SILowerI1CopiesPass());
   return Error::success();
+}
+
+void AMDGPUCodeGenPassBuilder::addPreRewrite(AddMachinePass &addPass) const {
+  if (EnableRegReassign) {
+    addPass(GCNNSAReassignPass());
+  }
 }
 
 void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(

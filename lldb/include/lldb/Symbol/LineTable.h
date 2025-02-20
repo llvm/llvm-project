@@ -102,6 +102,20 @@ public:
 
   void GetDescription(Stream *s, Target *target, lldb::DescriptionLevel level);
 
+  /// Returns the index of the first line entry which ends after the given
+  /// address (i.e., the first entry which contains the given address or it
+  /// comes after it). Returns <tt>GetSize()</tt> if there is no such entry.
+  uint32_t lower_bound(const Address &so_addr) const;
+
+  /// Returns the (half-open) range of line entry indexes which overlap the
+  /// given address range. Line entries partially overlapping the range (on
+  /// either side) are included as well. Returns an empty range
+  /// (<tt>first==second</tt>) pointing to the "right" place in the list if
+  /// there are no such line entries. Empty input ranges always result in an
+  /// empty output range.
+  std::pair<uint32_t, uint32_t>
+  GetLineEntryIndexRange(const AddressRange &range) const;
+
   /// Find a line entry that contains the section offset address \a so_addr.
   ///
   /// \param[in] so_addr

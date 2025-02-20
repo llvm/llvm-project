@@ -989,6 +989,8 @@ public:
   /// Helper method returns the APInt value of a ConstantSDNode.
   inline const APInt &getAsAPIntVal() const;
 
+  inline std::optional<APInt> bitcastToAPInt() const;
+
   const SDValue &getOperand(unsigned Num) const {
     assert(Num < NumOperands && "Invalid child # of SDNode!");
     return OperandList[Num];
@@ -1784,6 +1786,14 @@ public:
            N->getOpcode() == ISD::TargetConstantFP;
   }
 };
+
+std::optional<APInt> SDNode::bitcastToAPInt() const {
+  if (auto *CN = dyn_cast<ConstantSDNode>(this))
+    return CN->getAPIntValue();
+  if (auto *CFPN = dyn_cast<ConstantFPSDNode>(this))
+    return CFPN->getValueAPF().bitcastToAPInt();
+  return std::nullopt;
+}
 
 /// Returns true if \p V is a constant integer zero.
 bool isNullConstant(SDValue V);

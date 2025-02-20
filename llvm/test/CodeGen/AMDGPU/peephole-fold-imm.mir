@@ -451,7 +451,7 @@ body:             |
 
     ; GCN-LABEL: name: fold_s_brev_b32_simm_virtual_0
     ; GCN: [[S_BREV_B32_:%[0-9]+]]:sreg_32 = S_BREV_B32 1
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY killed [[S_BREV_B32_]]
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
     ; GCN-NEXT: SI_RETURN_TO_EPILOG
     %0:sreg_32 = S_BREV_B32 1
     %1:sreg_32 = COPY killed %0
@@ -466,7 +466,7 @@ body:             |
 
     ; GCN-LABEL: name: fold_s_brev_b32_simm_virtual_1
     ; GCN: [[S_BREV_B32_:%[0-9]+]]:sreg_32 = S_BREV_B32 -64
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY killed [[S_BREV_B32_]]
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 67108863
     ; GCN-NEXT: SI_RETURN_TO_EPILOG
     %0:sreg_32 = S_BREV_B32 -64
     %1:sreg_32 = COPY killed %0
@@ -481,8 +481,8 @@ body:             |
 
     ; GCN-LABEL: name: fold_v_bfrev_b32_e32_imm
     ; GCN: [[V_BFREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e32 1, implicit $exec
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY killed [[V_BFREV_B32_e32_]]
-    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]]
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -2147483648, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_MOV_B32_e32_]]
     %0:vgpr_32 = V_BFREV_B32_e32 1, implicit $exec
     %1:vgpr_32 = COPY killed %0
     SI_RETURN_TO_EPILOG %1
@@ -496,8 +496,8 @@ body:             |
 
     ; GCN-LABEL: name: fold_v_bfrev_b32_e64_imm
     ; GCN: [[V_BFREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 1, implicit $exec
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY killed [[V_BFREV_B32_e64_]]
-    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]]
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -2147483648, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_MOV_B32_e32_]]
     %0:vgpr_32 = V_BFREV_B32_e64 1, implicit $exec
     %1:vgpr_32 = COPY killed %0
     SI_RETURN_TO_EPILOG %1
@@ -511,7 +511,7 @@ body:             |
 
     ; GCN-LABEL: name: fold_s_not_b32_simm_virtual_0
     ; GCN: [[S_NOT_B32_:%[0-9]+]]:sreg_32 = S_NOT_B32 1, implicit-def $scc
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY killed [[S_NOT_B32_]]
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -2
     ; GCN-NEXT: SI_RETURN_TO_EPILOG
     %0:sreg_32 = S_NOT_B32 1, implicit-def $scc
     %1:sreg_32 = COPY killed %0
@@ -526,7 +526,7 @@ body:             |
 
     ; GCN-LABEL: name: fold_s_not_b32_simm_virtual_1
     ; GCN: [[S_NOT_B32_:%[0-9]+]]:sreg_32 = S_NOT_B32 -64, implicit-def $scc
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY killed [[S_NOT_B32_]]
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 63
     ; GCN-NEXT: SI_RETURN_TO_EPILOG
     %0:sreg_32 = S_NOT_B32 -64, implicit-def $scc
     %1:sreg_32 = COPY killed %0
@@ -541,8 +541,8 @@ body:             |
 
     ; GCN-LABEL: name: fold_v_not_b32_e32_imm
     ; GCN: [[V_NOT_B32_e32_:%[0-9]+]]:vgpr_32 = V_NOT_B32_e32 1, implicit $exec
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY killed [[V_NOT_B32_e32_]]
-    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]]
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -2, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_MOV_B32_e32_]]
     %0:vgpr_32 = V_NOT_B32_e32 1, implicit $exec
     %1:vgpr_32 = COPY killed %0
     SI_RETURN_TO_EPILOG %1
@@ -556,8 +556,8 @@ body:             |
 
     ; GCN-LABEL: name: fold_v_not_b32_e64_imm
     ; GCN: [[V_NOT_B32_e64_:%[0-9]+]]:vgpr_32 = V_NOT_B32_e64 1, implicit $exec
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY killed [[V_NOT_B32_e64_]]
-    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]]
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -2, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_MOV_B32_e32_]]
     %0:vgpr_32 = V_NOT_B32_e64 1, implicit $exec
     %1:vgpr_32 = COPY killed %0
     SI_RETURN_TO_EPILOG %1
