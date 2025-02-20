@@ -87,12 +87,3 @@ define <2 x float> @ucvtf_2sc(<2 x i32> %A) nounwind #0 {
 declare <2 x float> @llvm.aarch64.neon.vcvtfxu2fp.v2f32.v2i32(<2 x i32>, i32) nounwind readnone
 
 attributes #0 = { sanitize_memory }
-;.
-; CLEAN: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.
-; OR-SHADOW: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.
-; RECOVER-CLEAN: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.
-; RECOVER-OR-SHADOW: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.
