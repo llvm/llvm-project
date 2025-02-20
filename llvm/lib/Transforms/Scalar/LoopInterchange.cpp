@@ -388,6 +388,9 @@ private:
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
 
+  /// Map each loop to a pair of (index, cost). The index is the best position
+  /// of this loop, according to CacheCostAnalysis. The cost is the actual cost
+  /// as calculated by CacheCostAnalysis.
   const std::optional<CostMapTy> &CostMap;
 };
 
@@ -1149,41 +1152,13 @@ LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis() {
   assert(InnerIndex != OuterIndex && "CostMap should assign unique "
                                      "numbers to each loop");
 
+  // If the costs are equal, no decision is made. If not, a decision is made
+  // according to the index calculated by CacheCostAnalysis.
   if (InnerCost == OuterCost)
     return std::nullopt;
-
   return InnerIndex < OuterIndex;
 }
 
-// This function doesn't satisfy transitivity. Consider the following case.
-//
-// ```
-// for (int k = 0; k < N; k++) {
-//   for (int j = 0; j < N; j++) {
-//     for (int i = 0; i < N; i++) {
-//       dst0[i][j][k] += aa[i][j] + bb[i][j] + cc[j][k];
-//       dst1[k][j][i] += dd[i][j] + ee[i][j] + ff[j][k];
-//     }
-//   }
-// }
-//
-// ```
-//
-// The getInstrOrderCost will return the following value.
-//
-//  Outer | Inner | Cost
-// -------+-------+------
-//    k   |   j   |  -2
-//    j   |   i   |  -4
-//    k   |   i   |   0
-//
-// This means that this function says interchanging (k, j) loops and (j, i)
-// loops are profitable, but not (k, i). The root cause of this is that the
-// getInstrOrderCost only see the loops we are checking. We can resolve this if
-// we also consider the order going through other inductions. As for the above
-// case, we can induce that interchanging `k` and `i` is profitable (it is
-// better to move the `k` loop to inner position) by `bb[i][j]` and `cc[j][k]`.
-// However, such accurate calculation is expensive, so that we don't do it.
 std::optional<bool>
 LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
   // Legacy cost model: this is rough cost estimation algorithm. It counts the
@@ -1218,22 +1193,6 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
   return std::optional<bool>(!DepMatrix.empty());
 }
 
-// The bubble-sort fashion algorithm is adopted to sort the loop nest, so the
-// comparison function should ideally induce a strict weak ordering required by
-// some standard C++ libraries. In particular, isProfitable should hold the
-// following properties.
-//
-// Asymmetry: If isProfitable(a, b) is true then isProfitable(b, a) is false.
-// Transitivity: If both isProfitable(a, b) and isProfitable(b, c) is true then
-// isProfitable(a, c) is true.
-//
-// The most important thing is not to make unprofitable interchange. From this
-// point of view, asymmetry is important. This is because if both
-// isProfitable(a, b) and isProfitable(b, a) are true, then an unprofitable
-// transformation (one of them) will be performed. On the other hand, a lack of
-// transitivity might cause some optimization opportunities to be lost, but
-// won't trigger an unprofitable one. Moreover, guaranteeing transitivity is
-// expensive. Therefore, isProfitable only holds the asymmetry.
 bool LoopInterchangeProfitability::isProfitable(const Loop *InnerLoop,
                                                 const Loop *OuterLoop,
                                                 unsigned InnerLoopId,
@@ -1247,6 +1206,12 @@ bool LoopInterchangeProfitability::isProfitable(const Loop *InnerLoop,
   // profitable for InstrOrderCost. Likewise, if InstrOrderCost failed to
   // analysis the profitability then only, isProfitableForVectorization
   // will decide.
+  //
+  // The bubble sort fashion algorithm is used to sort the loop nest and this
+  // function is utilized like the "comparison function". Once this function
+  // returns true for a loop pair A and B, it must never return true for a pair
+  // B and A. If this happens, it triggers the LoopInterchange to undo its own
+  // transformation.
   std::optional<bool> ShouldInterchange = isProfitablePerLoopCacheAnalysis();
   if (!ShouldInterchange.has_value()) {
     ShouldInterchange = isProfitablePerInstrOrderCost();
