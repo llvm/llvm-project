@@ -326,7 +326,7 @@ LogicalResult TensorDescType::verify(
 // ---------------------------------------------------------------------
 // Case 2: Block loads/stores
 // ---------------------------------------------------------------------
-// Additionalm definitions:
+// Additional definitions:
 //        tensor_size = tensor_desc[0] * .. * tensor_desc[r-1] * array_length
 //        n_distribution_units = tensor_size / distribution_unit_size
 // Given above definitions, the following conditions must be met:

@@ -290,7 +290,7 @@ LogicalResult LoadNdOp::verify() {
                ? success()
                : emitOpError()
                      << "Result shape " << makeString(valueShape)
-                     << " is not consistent with tensor descripter " << tdescTy;
+                     << " is not consistent with tensor descriptor " << tdescTy;
 
   // sg_map present means IR is in SIMT mode. In this case sg_map determines the
   // value shape.
@@ -345,7 +345,7 @@ LogicalResult StoreNdOp::verify() {
                ? success()
                : emitOpError()
                      << "Result shape " << makeString(valueShape)
-                     << " is not consistent with tensor descripter shape "
+                     << " is not consistent with tensor descriptor shape "
                      << makeString(tdescShape);
 
   // sg_map present means IR is in SIMT mode. In this case sg_map determines the
