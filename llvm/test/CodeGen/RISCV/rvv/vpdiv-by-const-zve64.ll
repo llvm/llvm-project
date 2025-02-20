@@ -70,9 +70,7 @@ define <vscale x 1 x i64> @vpsdiv_const_sub_ashr_nxv1i64(<vscale x 1 x i64> %va,
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vdiv.vx v8, v8, a1, v0.t
 ; CHECK-NEXT:    ret
-  %vec = insertelement <vscale x 1 x i64> poison, i64 -3, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %vec, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %splat, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.sdiv.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> splat (i64 -3), <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
