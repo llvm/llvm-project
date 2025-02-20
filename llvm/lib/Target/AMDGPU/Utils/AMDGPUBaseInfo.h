@@ -126,7 +126,6 @@ struct True16D16Info {
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
 #define GET_MAIInstInfoTable_DECL
-#define GET_MAIInstInfoTable_DECL
 #define GET_isMFMA_F8F6F4Table_DECL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
 #define GET_True16D16Table_DECL
