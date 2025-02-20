@@ -395,7 +395,7 @@ private:
       if (!isa<ParentVector *>(NodeOrVector)) {
         auto *Vector = new ParentVector(
             1, getSingleDynTypedNodeFromParentMap(NodeOrVector));
-        delete NodeOrVector.template dyn_cast<DynTypedNode *>();
+        delete dyn_cast<DynTypedNode *>(NodeOrVector);
         NodeOrVector = Vector;
       }
 

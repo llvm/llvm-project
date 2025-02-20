@@ -1179,13 +1179,13 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
   // Transform the bindings first.
   // The transformed DD will have all of the concrete BindingDecls.
   SmallVector<BindingDecl*, 16> NewBindings;
-  ResolvedUnexpandedPackExpr *OldResolvedPack = nullptr;
+  BindingDecl *OldBindingPack = nullptr;
   for (auto *OldBD : D->bindings()) {
     Expr *BindingExpr = OldBD->getBinding();
-    if (auto *RP =
-            dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BindingExpr)) {
-      assert(!OldResolvedPack && "no more than one pack is allowed");
-      OldResolvedPack = RP;
+    if (isa_and_present<FunctionParmPackExpr>(BindingExpr)) {
+      // We have a resolved pack.
+      assert(!OldBindingPack && "no more than one pack is allowed");
+      OldBindingPack = OldBD;
     }
     NewBindings.push_back(cast<BindingDecl>(VisitBindingDecl(OldBD)));
   }
@@ -1198,25 +1198,20 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
     for (auto *NewBD : NewBindings)
       NewBD->setInvalidDecl();
 
-  if (OldResolvedPack) {
-    // Mark the holding vars (if any) in the pack as instantiated since
-    // they are created implicitly.
+  if (OldBindingPack) {
+    // Mark the bindings in the pack as instantiated.
     auto Bindings = NewDD->bindings();
-    auto BPack = llvm::find_if(
+    BindingDecl *NewBindingPack = *llvm::find_if(
         Bindings, [](BindingDecl *D) -> bool { return D->isParameterPack(); });
-    auto *NewResolvedPack =
-        cast<ResolvedUnexpandedPackExpr>((*BPack)->getBinding());
-    auto OldExprs = OldResolvedPack->getExprs();
-    auto NewExprs = NewResolvedPack->getExprs();
-    assert(OldExprs.size() == NewExprs.size());
-    for (unsigned I = 0; I < OldResolvedPack->getNumExprs(); I++) {
-      DeclRefExpr *OldDRE = cast<DeclRefExpr>(OldExprs[I]);
-      BindingDecl *OldNestedBD = cast<BindingDecl>(OldDRE->getDecl());
-      DeclRefExpr *NewDRE = cast<DeclRefExpr>(NewExprs[I]);
-      BindingDecl *NewNestedBD = cast<BindingDecl>(NewDRE->getDecl());
-      SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldNestedBD,
-                                                           NewNestedBD);
-    }
+    assert(NewBindingPack != nullptr && "new bindings should also have a pack");
+    llvm::ArrayRef<BindingDecl *> OldDecls =
+        OldBindingPack->getBindingPackDecls();
+    llvm::ArrayRef<BindingDecl *> NewDecls =
+        NewBindingPack->getBindingPackDecls();
+    assert(OldDecls.size() == NewDecls.size());
+    for (unsigned I = 0; I < OldDecls.size(); I++)
+      SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldDecls[I],
+                                                           NewDecls[I]);
   }
 
   return NewDD;
@@ -4039,7 +4034,7 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
       ClassTemplateSpecializationDecl::Create(
           SemaRef.Context, D->getTagKind(), Owner, D->getBeginLoc(),
           D->getLocation(), InstClassTemplate, CTAI.CanonicalConverted,
-          PrevDecl);
+          CTAI.StrictPackMatch, PrevDecl);
   InstD->setTemplateArgsAsWritten(InstTemplateArgs);
 
   // Add this partial specialization to the set of class template partial
@@ -5292,7 +5287,12 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                               });
       assert(It != Primary->redecls().end() &&
              "Should't get here without a definition");
-      DC = (*It)->getLexicalDeclContext();
+      if (FunctionDecl *Def = cast<FunctionTemplateDecl>(*It)
+                                  ->getTemplatedDecl()
+                                  ->getDefinition())
+        DC = Def->getLexicalDeclContext();
+      else
+        DC = (*It)->getLexicalDeclContext();
       Innermost.emplace(Function->getTemplateSpecializationArgs()->asArray());
     }
     MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
@@ -6275,9 +6275,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
           if (auto *BD = dyn_cast<BindingDecl>(FD);
               BD && BD->isParameterPack() &&
               ArgumentPackSubstitutionIndex != -1) {
-            auto *DRE = cast<DeclRefExpr>(
-                BD->getBindingPackExprs()[ArgumentPackSubstitutionIndex]);
-            return cast<NamedDecl>(DRE->getDecl());
+            return BD->getBindingPackDecls()[ArgumentPackSubstitutionIndex];
           }
           return cast<NamedDecl>(FD);
         }

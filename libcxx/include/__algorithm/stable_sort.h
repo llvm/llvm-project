@@ -25,6 +25,7 @@
 #include <__memory/unique_temporary_buffer.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
@@ -253,6 +254,12 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __stable_sort(
   if constexpr (__allowed_radix_sort) {
     if (__len <= __buff_size && __len >= static_cast<difference_type>(__radix_sort_min_bound<value_type>()) &&
         __len <= static_cast<difference_type>(__radix_sort_max_bound<value_type>())) {
+      if (__libcpp_is_constant_evaluated()) {
+        for (auto* __p = __buff; __p < __buff + __buff_size; ++__p) {
+          std::__construct_at(__p);
+        }
+      }
+
       std::__radix_sort(__first, __last, __buff);
       return;
     }

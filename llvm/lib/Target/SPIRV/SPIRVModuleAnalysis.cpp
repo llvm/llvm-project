@@ -1677,6 +1677,17 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(
         SPIRV::Capability::CooperativeMatrixInvocationInstructionsINTEL);
     break;
+  case SPIRV::OpConvertHandleToImageINTEL:
+  case SPIRV::OpConvertHandleToSamplerINTEL:
+  case SPIRV::OpConvertHandleToSampledImageINTEL:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bindless_images))
+      report_fatal_error("OpConvertHandleTo[Image/Sampler/SampledImage]INTEL "
+                         "instructions require the following SPIR-V extension: "
+                         "SPV_INTEL_bindless_images",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bindless_images);
+    Reqs.addCapability(SPIRV::Capability::BindlessImagesINTEL);
+    break;
   case SPIRV::OpKill: {
     Reqs.addCapability(SPIRV::Capability::Shader);
   } break;
@@ -1692,6 +1703,10 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpSDot:
   case SPIRV::OpUDot:
+  case SPIRV::OpSUDot:
+  case SPIRV::OpSDotAccSat:
+  case SPIRV::OpUDotAccSat:
+  case SPIRV::OpSUDotAccSat:
     AddDotProductRequirements(MI, Reqs, ST);
     break;
   case SPIRV::OpImageRead: {
