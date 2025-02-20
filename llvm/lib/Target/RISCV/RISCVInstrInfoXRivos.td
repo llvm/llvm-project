@@ -1,4 +1,4 @@
-//===-- RISCVInstrInfoXRivos.td --------------------------*- tablegen -*-===//
+//===-- RISCVInstrInfoXRivos.td ----------------------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,8 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 
-let Predicates = [HasVendorXRivosVizip], hasSideEffects = 0,
-  mayLoad = 0, mayStore = 0, isCodeGenOnly = 0, DecoderNamespace = "XRivos",
+let Predicates = [HasVendorXRivosVizip], DecoderNamespace = "XRivos",
   Inst<6-0> = OPC_CUSTOM_2.Value in  {
 defm RV_VZIPEVEN_V : VALU_IV_V<"rv.vzipeven", 0b001100>;
 defm RV_VZIPODD_V : VALU_IV_V<"rv.vzipodd", 0b011100>;
