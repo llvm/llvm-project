@@ -21,23 +21,5 @@ struct RootSignatureDesc {
 
   void write(raw_ostream &OS) const;
 };
-
-struct RootConstants {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  uint32_t Num32BitValues;
-
-  void write(raw_ostream &OS);
-};
-
-struct RootParameter {
-  dxbc::RootParameterType ParameterType;
-  union {
-    RootConstants Constants;
-  };
-  dxbc::ShaderVisibilityFlag ShaderVisibility;
-
-  void write(raw_ostream &OS);
-};
 } // namespace mcdxbc
 } // namespace llvm
