@@ -2624,7 +2624,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     // the FP result may be optimized out. This prevents an FP stack pop from
     // being emitted for it. The `FAKE_USE` node prevents optimizations from
     // removing the `CopyFromReg` from the chain, and ensures the FP pop will be
-    // emitted. Note: We use an undef pointer as the argument to prevent keeping
+    // emitted. Note: We use an UNDEF pointer as the argument to prevent keeping
     // any real values live longer than we need to.
     CallChain = getNode(ISD::FAKE_USE, DL, MVT::Other, CallChain,
                         getUNDEF(TLI->getPointerTy(getDataLayout())));
