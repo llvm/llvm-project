@@ -820,10 +820,8 @@ namespace {
 /// The class maintains a reference to the main instruction (MainOp) and
 /// provides methods to:
 /// - Check if another instruction is interchangeable (isSame)
-/// - Get the opcode for the interchangeable form
-/// (getInterchangeableInstructionOpcode)
-/// - Get the operands for the interchangeable form
-/// (getInterchangeableInstructionOps)
+/// - Get the opcode for the interchangeable form (getOpcode)
+/// - Get the operands for the interchangeable form (getOperand)
 class InterchangeableInstruction {
 protected:
   Instruction *const MainOp;
@@ -833,11 +831,8 @@ public:
   virtual bool isSame(Instruction *I) {
     return MainOp->getOpcode() == I->getOpcode();
   }
-  virtual unsigned getInterchangeableInstructionOpcode() {
-    return MainOp->getOpcode();
-  }
-  virtual SmallVector<Value *>
-  getInterchangeableInstructionOps(Instruction *I) {
+  virtual unsigned getOpcode() { return MainOp->getOpcode(); }
+  virtual SmallVector<Value *> getOperand(Instruction *I) {
     assert(MainOp->getOpcode() == I->getOpcode());
     return SmallVector<Value *>(MainOp->operands());
   }
@@ -939,7 +934,7 @@ public:
     }
     return tryAnd(opcodeToMask(Opcode));
   }
-  unsigned getInterchangeableInstructionOpcode() override {
+  unsigned getOpcode() override {
     MaskType Candidate = Mask & SeenBefore;
     if (Candidate & 0b1)
       return Instruction::Shl;
@@ -959,8 +954,7 @@ public:
       return Instruction::Xor;
     llvm_unreachable("Cannot find interchangeable instruction.");
   }
-  SmallVector<Value *>
-  getInterchangeableInstructionOps(Instruction *I) override {
+  SmallVector<Value *> getOperand(Instruction *I) override {
     unsigned ToOpcode = I->getOpcode();
     assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
     unsigned FromOpcode = MainOp->getOpcode();
@@ -1069,12 +1063,11 @@ convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
       getInterchangeableInstruction(I));
   for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
     if (C->isSame(I) && C->isSame(MainOp))
-      return std::make_pair(MainOp,
-                            C->getInterchangeableInstructionOps(MainOp));
+      return std::make_pair(MainOp, C->getOperand(MainOp));
   Candidate = getInterchangeableInstruction(I);
   for (std::unique_ptr<InterchangeableInstruction> &C : Candidate)
     if (C->isSame(I) && C->isSame(AltOp))
-      return std::make_pair(AltOp, C->getInterchangeableInstructionOps(AltOp));
+      return std::make_pair(AltOp, C->getOperand(AltOp));
   llvm_unreachable("Cannot convert the instruction.");
 }
 
@@ -1366,8 +1359,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         [&](ArrayRef<std::unique_ptr<InterchangeableInstruction>> Candidate) {
           for (const std::unique_ptr<InterchangeableInstruction> &I :
                Candidate) {
-            unsigned InterchangeableInstructionOpcode =
-                I->getInterchangeableInstructionOpcode();
+            unsigned InterchangeableInstructionOpcode = I->getOpcode();
             for (Value *V : VL) {
               if (isa<PoisonValue>(V))
                 continue;
