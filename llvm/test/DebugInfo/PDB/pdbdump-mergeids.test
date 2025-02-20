@@ -2,7 +2,7 @@
 ; RUN: llvm-pdbutil yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge-ids-2.yaml
 ; RUN: llvm-pdbutil merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
 ; RUN: llvm-pdbutil dump -ids %t.3.pdb | FileCheck -check-prefix=MERGED %s
-; RUN: llvm-pdbutil dump -types %t.3.pdb | FileCheck -check-prefix=TPI-EMPTY %s
+; RUN: llvm-pdbutil dump -types %t.3.pdb | FileCheck -check-prefix=NO-TPI %s
 
 
 MERGED:                          Types (IPI Stream)
@@ -19,6 +19,6 @@ MERGED-NEXT:            0x1004: `SubTwo`
 MERGED-NEXT:   0x1006 | LF_STRING_ID [size = 16] ID: 0x1005, String: Main
 MERGED-NEXT:   0x1007 | LF_STRING_ID [size = 24] ID: <no type>, String: OnlyInSecond
 
-TPI-EMPTY:                     Types (TPI Stream)
-TPI-EMPTY-NEXT: ============================================================
-TPI-EMPTY-NEXT:   Showing 0 records
+NO-TPI:                     Types (TPI Stream)
+NO-TPI-NEXT: ============================================================
+NO-TPI-NEXT:   Showing 0 records
