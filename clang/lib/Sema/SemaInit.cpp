@@ -4260,7 +4260,7 @@ static bool TryInitializerListConstruction(Sema &S,
   QualType ArrayType = S.Context.getConstantArrayType(
       E.withConst(),
       llvm::APInt(S.Context.getTypeSize(S.Context.getSizeType()),
-                  List->getNumInits()),
+                  List->getNumInitsWithEmbedExpanded()),
       nullptr, clang::ArraySizeModifier::Normal, 0);
   InitializedEntity HiddenArray =
       InitializedEntity::InitializeTemporary(ArrayType);
