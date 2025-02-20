@@ -52,7 +52,9 @@ static int printSupportedCPUs(llvm::StringRef triple) {
 }
 
 /// Check that given CPU is valid for given target.
-static bool checkSupportedCPU(clang::DiagnosticsEngine& diags, llvm::StringRef str_cpu, llvm::StringRef str_triple) {
+static bool checkSupportedCPU(
+  clang::DiagnosticsEngine& diags,
+  llvm::StringRef str_cpu, llvm::StringRef str_triple) {
 
   llvm::Triple triple{str_triple};
 
@@ -66,7 +68,8 @@ static bool checkSupportedCPU(clang::DiagnosticsEngine& diags, llvm::StringRef s
       llvm::SmallVector<llvm::StringRef, 32> validList;
       llvm::X86::fillValidCPUArchList(validList, only64bit);
       if (!validList.empty())
-        diags.Report(clang::diag::note_valid_options) << llvm::join(validList, ", ");
+        diags.Report(clang::diag::note_valid_options)
+          << llvm::join(validList, ", ");
 
       return false;
     }
@@ -111,7 +114,10 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
 
   // Check that requested CPU can be properly supported
   success = success &&
-    checkSupportedCPU(diags, flang->getInvocation().getTargetOpts().cpu, flang->getInvocation().getTargetOpts().triple);
+    checkSupportedCPU(
+      diags,
+      flang->getInvocation().getTargetOpts().cpu,
+      flang->getInvocation().getTargetOpts().triple);
 
   diagsBuffer->flushDiagnostics(flang->getDiagnostics());
 
