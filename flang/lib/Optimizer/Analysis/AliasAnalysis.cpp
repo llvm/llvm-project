@@ -641,8 +641,6 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             } else if (isDummyArgument(def)) {
               defOp = nullptr;
               v = def;
-            } else {
-              type = SourceKind::Indirect;
             }
           } else {
             // No further tracking for addresses loaded from memory for now.
