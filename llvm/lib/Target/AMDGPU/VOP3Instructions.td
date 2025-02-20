@@ -1055,7 +1055,7 @@ class VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<ValueType Src0Ty> :
 class VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile<VOPProfile P>
     : VOP3_Profile<P, VOP3_OPSEL> {
 
-  let Src0RC64 = !if(!gt(P.Src0VT.Size, 32), getVOP3VSrcReg9ForVT<P.Src0VT>.ret,
+  let Src0RC64 = !if(!gt(P.Src0VT.Size, 32), getVOP3VRegSrcForVT<P.Src0VT>.ret,
                      getVOP3SrcForVT<P.Src0VT>.ret);
   let InsVOP3OpSel = (ins PackedF32InputMods: $src0_modifiers, Src0RC64:$src0,
                           Int32InputMods:     $src1_modifiers, Src1RC64:$src1,
@@ -1107,7 +1107,7 @@ class VOP3_CVT_SCALEF32_PK_F864_Profile<VOPProfile P> : VOP3_Profile<P> {
 
   // All convert opcodes operating on FP6/BF6/FP4 data must use VGPR sources for
   // any operand slots > 32 bit.
-  let Src0RC64 = !if(!gt(P.Src0VT.Size, 32), getVOP3VSrcReg9ForVT<P.Src0VT>.ret,
+  let Src0RC64 = !if(!gt(P.Src0VT.Size, 32), getVOP3VRegSrcForVT<P.Src0VT>.ret,
                      getVOP3SrcForVT<P.Src0VT>.ret);
 }
 

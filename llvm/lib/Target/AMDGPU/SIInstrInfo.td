@@ -1803,9 +1803,21 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         1                  : VSrc_b32);
 }
 
+// VGPR only VOP3 src with 9 bit encoding
+class getVOP3VRegSrcForVT<ValueType VT> {
+  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VRegSrc_1024,
+                              !eq(VT.Size, 512)  : VRegSrc_512,
+                              !eq(VT.Size, 256)  : VRegSrc_256,
+                              !eq(VT.Size, 192)  : VRegSrc_192,
+                              !eq(VT.Size, 128)  : VRegSrc_128,
+                              !eq(VT.Size, 96)   : VRegSrc_96,
+                              !eq(VT.Size, 64)   : VRegSrc_64,
+                              1 : VRegSrc_32);
+}
+
 // Returns the vreg register class to use for sources of VOP3 instructions for the
 // given VT.
-class getVOP3VRegSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+class getVOP3VRegForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
    RegisterOperand ret =
    !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
          !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
@@ -1816,18 +1828,6 @@ class getVOP3VRegSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
                                                RegisterOperand<VGPR_16>),
                                  RegisterOperand<VGPR_32>),
          1                 : RegisterOperand<VGPR_32>);
-}
-
-// VGPR only VOP3 src with 9 bit encoding
-class getVOP3VSrcReg9ForVT<ValueType VT> {
-  RegisterOperand ret = !cond(!eq(VT.Size, 1024): VRegSrc_1024,
-                              !eq(VT.Size, 512): VRegSrc_512,
-                              !eq(VT.Size, 256): VRegSrc_256,
-                              !eq(VT.Size, 192): VRegSrc_192,
-                              !eq(VT.Size, 128): VRegSrc_128,
-                              !eq(VT.Size, 96): VRegSrc_96,
-                              !eq(VT.Size, 64): VRegSrc_64,
-                              1: VRegSrc_32);
 }
 
 // Src2 of VOP3 DPP instructions cannot be a literal
