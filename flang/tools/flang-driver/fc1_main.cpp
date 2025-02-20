@@ -41,6 +41,7 @@ static int printSupportedCPUs(llvm::StringRef triple) {
       llvm::TargetRegistry::lookupTarget(triple, error);
   if (!target) {
     llvm::errs() << error;
+    return 1;
   }
 
   // the target machine will handle the mcpu printing
