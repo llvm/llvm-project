@@ -31,6 +31,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 #include <optional>
 #include <utility>
 
@@ -332,17 +333,16 @@ class BoundedRegionBindingsRef : public RegionBindingsRef {
 public:
   BoundedRegionBindingsRef(RegionBindingsRef Base,
                            SmallVectorImpl<SVal> &EscapedValuesDuringBind,
-                           unsigned BindingsLeft)
+                           std::optional<unsigned> BindingsLeft)
       : RegionBindingsRef(Base),
         EscapedValuesDuringBind(&EscapedValuesDuringBind),
         BindingsLeft(BindingsLeft) {}
 
-  unsigned bindingsLeft() const { return BindingsLeft; }
-
-  bool hasExhaustedBindingLimit() const { return BindingsLeft == 0; }
+  bool hasExhaustedBindingLimit() const {
+    return BindingsLeft.has_value() && BindingsLeft.value() == 0;
+  }
 
   BoundedRegionBindingsRef withValuesEscaped(SVal V) const {
-    assert(EscapedValuesDuringBind);
     EscapedValuesDuringBind->push_back(V);
     return *this;
   }
@@ -370,15 +370,22 @@ public:
   }
 
   BoundedRegionBindingsRef addBinding(BindingKey K, SVal V) const {
-    // If we are about to exhaust the binding limit, highjack this bind call for
-    // the default binding.
-    if (BindingsLeft == 1) {
-      withValuesEscaped(V);
-      K = BindingKey::Make(K.getRegion(), BindingKey::Default);
-      V = UnknownVal();
+    std::optional<unsigned> NewBindingsLeft = BindingsLeft;
+    if (NewBindingsLeft.has_value()) {
+      assert(NewBindingsLeft.value() != 0);
+      NewBindingsLeft.value() -= 1;
+
+      // If we just exhausted the binding limit, highjack
+      // this bind call for the default binding.
+      if (NewBindingsLeft.value() == 0) {
+        withValuesEscaped(V);
+        K = BindingKey::Make(K.getRegion(), BindingKey::Default);
+        V = UnknownVal();
+      }
     }
+
     return BoundedRegionBindingsRef{RegionBindingsRef::addBinding(K, V),
-                                    *EscapedValuesDuringBind, BindingsLeft - 1};
+                                    *EscapedValuesDuringBind, NewBindingsLeft};
   }
 
   BoundedRegionBindingsRef addBinding(const MemRegion *R, BindingKey::Kind k,
@@ -388,7 +395,7 @@ public:
 
 private:
   SmallVectorImpl<SVal> *EscapedValuesDuringBind; // nonnull
-  unsigned BindingsLeft;
+  std::optional<unsigned> BindingsLeft;
 };
 
 typedef const RegionBindingsRef& RegionBindingsConstRef;
@@ -498,8 +505,8 @@ private:
   /// The number of bindings a single bind operation can scatter into.
   /// For example, binding the initializer-list of an array would recurse and
   /// bind all the individual array elements, potentially causing scalability
-  /// issues.
-  const unsigned RegionStoreMaxBindingFanOut;
+  /// issues. Nullopt if the limit is disabled.
+  const std::optional<unsigned> RegionStoreMaxBindingFanOutPlusOne;
 
   /// A helper used to populate the work list with the given set of
   /// regions.
@@ -517,11 +524,13 @@ public:
         CBFactory(mgr.getAllocator()),
         SmallStructLimit(getOptions().RegionStoreSmallStructLimit),
         SmallArrayLimit(getOptions().RegionStoreSmallArrayLimit),
-        RegionStoreMaxBindingFanOut(
-            getOptions().RegionStoreMaxBindingFanOut == 0
-                ? -1U
-                : getOptions().RegionStoreMaxBindingFanOut +
-                      /*for the default binding*/ 1) {}
+        RegionStoreMaxBindingFanOutPlusOne([&]() -> std::optional<unsigned> {
+          unsigned FanOut = getOptions().RegionStoreMaxBindingFanOut;
+          assert(FanOut != std::numeric_limits<unsigned>::max());
+          if (FanOut == 0)
+            return std::nullopt;
+          return FanOut + 1 /*for the default binding*/;
+        }()) {}
 
   /// setImplicitDefaultValue - Set the default binding for the provided
   ///  MemRegion to the value implicitly defined for compound literals when
@@ -804,7 +813,7 @@ public: // Part of public interface to class.
                     SmallVectorImpl<SVal> &EscapedValuesDuringBind) const {
     return BoundedRegionBindingsRef(
         getRegionBindings(store), EscapedValuesDuringBind,
-        /*BindingsLeft=*/RegionStoreMaxBindingFanOut);
+        /*BindingsLeft=*/RegionStoreMaxBindingFanOutPlusOne);
   }
 
   void printJson(raw_ostream &Out, Store S, const char *NL = "\n",
