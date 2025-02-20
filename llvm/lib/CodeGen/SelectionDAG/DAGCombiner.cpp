@@ -17387,6 +17387,17 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FMUL, DL, VT, {N0, N1}))
     return C;
 
+  // fold (fmul N0 * 0.0) --> 0.0
+  if (DAG.getMachineFunction()
+          .getFunction()
+          .getFnAttribute("no-signed-zeros-fp-math")
+          .getValueAsBool() ||
+      Flags.hasNoSignedZeros()) {
+    ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1, true);
+    if (N1C && N1C->isZero() && Flags.hasNoNaNs() && Flags.hasNoInfs())
+      return N1;
+  }
+
   // canonicalize constant to RHS
   if (DAG.isConstantFPBuildVectorOrConstantFP(N0) &&
      !DAG.isConstantFPBuildVectorOrConstantFP(N1))
