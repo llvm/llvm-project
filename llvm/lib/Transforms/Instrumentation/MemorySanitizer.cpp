@@ -343,10 +343,20 @@ static cl::opt<bool>
                     cl::desc("Apply no_sanitize to the whole file"), cl::Hidden,
                     cl::init(false));
 
-static cl::opt<bool>
-    ClCheckConstantShadow("msan-check-constant-shadow",
-                          cl::desc("Insert checks for constant shadow values"),
-                          cl::Hidden, cl::init(true));
+static cl::opt<bool> ClCheckConstantShadow(
+    "msan-check-constant-shadow",
+    cl::desc("Insert checks for constant non-zero shadow values. "
+             "N.B. constant zero (fully initialized) shadow "
+             "values are never checked."),
+    cl::Hidden, cl::init(true));
+
+static cl::opt<bool> ClOrShadowForStrictInstructions(
+    "msan-or-shadow-for-strict-instructions",
+    cl::desc("[EXPERIMENTAL] For instructions with default strict semantics, "
+             "propagate the shadow by OR'ing the shadows of the parameters, "
+             "instead of propagating a clean shadow. The strict shadow check "
+             "is still applied beforehand to all the sized parameters."),
+    cl::Hidden, cl::init(false));
 
 // This is off by default because of a bug in gold:
 // https://sourceware.org/bugzilla/show_bug.cgi?id=19002
@@ -5596,13 +5606,29 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClDumpStrictInstructions)
       dumpInst(I);
     LLVM_DEBUG(dbgs() << "DEFAULT: " << I << "\n");
+
+    bool allSized = true;
     for (size_t i = 0, n = I.getNumOperands(); i < n; i++) {
       Value *Operand = I.getOperand(i);
       if (Operand->getType()->isSized())
         insertShadowCheck(Operand, &I);
+      else
+        allSized = false;
     }
-    setShadow(&I, getCleanShadow(&I));
-    setOrigin(&I, getCleanOrigin());
+
+    Type *RetTy = cast<Value>(I).getType();
+    if (ClOrShadowForStrictInstructions && allSized && !RetTy->isVoidTy()) {
+      // - In recover mode: the shadow will be computed instead of reset to
+      //   clean.
+      // - In non-recover mode: this is conceptually a no-op (the preceding
+      //   insertShadowCheck(s) imply the shadow must be clean), but it
+      //   sometimes pessimizes the compiler and makes it easier for MSan to
+      //   detect bugs.
+      handleShadowOr(I);
+    } else {
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+    }
   }
 };
 
