@@ -205,11 +205,15 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
   unsigned ValZeros = ValC.logBase2();
   unsigned AndZeros = AndMask.logBase2();
   bool ShouldNotVal = !TC.isZero();
+  bool NeedShift = ValZeros != AndZeros;
+  bool NeedZExtTrunc =
+      SelType->getScalarSizeInBits() != V->getType()->getScalarSizeInBits();
 
-  // If we would need to create an 'and' + 'shift' + 'xor' to replace a 'select'
-  // + 'icmp', then this transformation would result in more instructions and
-  // potentially interfere with other folding.
-  if (CreateAnd && ShouldNotVal && ValZeros != AndZeros)
+  // If we would need to create an 'and' + 'shift' + 'xor' + cast to replace
+  // a 'select' + 'icmp', then this transformation would result in more
+  // instructions and potentially interfere with other folding.
+  if (CreateAnd + ShouldNotVal + NeedShift + NeedZExtTrunc >
+      1 + Cmp->hasOneUse())
     return nullptr;
 
   // Insert the 'and' instruction on the input to the truncate.
@@ -723,67 +727,90 @@ static Value *foldSelectICmpLshrAshr(const ICmpInst *IC, Value *TrueVal,
 }
 
 /// We want to turn:
-///   (select (icmp eq (and X, C1), 0), Y, (or Y, C2))
+///   (select (icmp eq (and X, C1), 0), Y, (BinOp Y, C2))
 /// into:
-///   (or (shl (and X, C1), C3), Y)
+///   IF C2 u>= C1
+///     (BinOp Y, (shl (and X, C1), C3))
+///   ELSE
+///     (BinOp Y, (lshr (and X, C1), C3))
 /// iff:
+///   0 on the RHS is the identity value (i.e add, xor, shl, etc...)
 ///   C1 and C2 are both powers of 2
 /// where:
-///   C3 = Log(C2) - Log(C1)
+///   IF C2 u>= C1
+///     C3 = Log(C2) - Log(C1)
+///   ELSE
+///     C3 = Log(C1) - Log(C2)
 ///
 /// This transform handles cases where:
 /// 1. The icmp predicate is inverted
 /// 2. The select operands are reversed
 /// 3. The magnitude of C2 and C1 are flipped
-static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
-                                  Value *FalseVal,
-                                  InstCombiner::BuilderTy &Builder) {
+static Value *foldSelectICmpAndBinOp(Value *CondVal, Value *TrueVal,
+                                     Value *FalseVal,
+                                     InstCombiner::BuilderTy &Builder) {
   // Only handle integer compares. Also, if this is a vector select, we need a
   // vector compare.
   if (!TrueVal->getType()->isIntOrIntVectorTy() ||
-      TrueVal->getType()->isVectorTy() != IC->getType()->isVectorTy())
+      TrueVal->getType()->isVectorTy() != CondVal->getType()->isVectorTy())
     return nullptr;
-
-  Value *CmpLHS = IC->getOperand(0);
-  Value *CmpRHS = IC->getOperand(1);
 
   unsigned C1Log;
   bool NeedAnd = false;
-  CmpInst::Predicate Pred = IC->getPredicate();
-  if (IC->isEquality()) {
-    if (!match(CmpRHS, m_Zero()))
-      return nullptr;
+  CmpPredicate Pred;
+  Value *CmpLHS, *CmpRHS;
 
-    const APInt *C1;
-    if (!match(CmpLHS, m_And(m_Value(), m_Power2(C1))))
-      return nullptr;
+  if (match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS)))) {
+    if (ICmpInst::isEquality(Pred)) {
+      if (!match(CmpRHS, m_Zero()))
+        return nullptr;
 
-    C1Log = C1->logBase2();
+      const APInt *C1;
+      if (!match(CmpLHS, m_And(m_Value(), m_Power2(C1))))
+        return nullptr;
+
+      C1Log = C1->logBase2();
+    } else {
+      auto Res = decomposeBitTestICmp(CmpLHS, CmpRHS, Pred);
+      if (!Res || !Res->Mask.isPowerOf2())
+        return nullptr;
+
+      CmpLHS = Res->X;
+      Pred = Res->Pred;
+      C1Log = Res->Mask.logBase2();
+      NeedAnd = true;
+    }
+  } else if (auto *Trunc = dyn_cast<TruncInst>(CondVal)) {
+    CmpLHS = Trunc->getOperand(0);
+    C1Log = 0;
+    Pred = ICmpInst::ICMP_NE;
+    NeedAnd = !Trunc->hasNoUnsignedWrap();
   } else {
-    auto Res = decomposeBitTestICmp(CmpLHS, CmpRHS, Pred);
-    if (!Res || !Res->Mask.isPowerOf2())
-      return nullptr;
-
-    CmpLHS = Res->X;
-    Pred = Res->Pred;
-    C1Log = Res->Mask.logBase2();
-    NeedAnd = true;
+    return nullptr;
   }
 
-  Value *Or, *Y, *V = CmpLHS;
+  Value *Y, *V = CmpLHS;
+  BinaryOperator *BinOp;
   const APInt *C2;
   bool NeedXor;
-  if (match(FalseVal, m_Or(m_Specific(TrueVal), m_Power2(C2)))) {
+  if (match(FalseVal, m_BinOp(m_Specific(TrueVal), m_Power2(C2)))) {
     Y = TrueVal;
-    Or = FalseVal;
+    BinOp = cast<BinaryOperator>(FalseVal);
     NeedXor = Pred == ICmpInst::ICMP_NE;
-  } else if (match(TrueVal, m_Or(m_Specific(FalseVal), m_Power2(C2)))) {
+  } else if (match(TrueVal, m_BinOp(m_Specific(FalseVal), m_Power2(C2)))) {
     Y = FalseVal;
-    Or = TrueVal;
+    BinOp = cast<BinaryOperator>(TrueVal);
     NeedXor = Pred == ICmpInst::ICMP_EQ;
   } else {
     return nullptr;
   }
+
+  // Check that 0 on RHS is identity value for this binop.
+  auto *IdentityC =
+      ConstantExpr::getBinOpIdentity(BinOp->getOpcode(), BinOp->getType(),
+                                     /*AllowRHSConstant*/ true);
+  if (IdentityC == nullptr || !IdentityC->isNullValue())
+    return nullptr;
 
   unsigned C2Log = C2->logBase2();
 
@@ -793,7 +820,7 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
 
   // Make sure we don't create more instructions than we save.
   if ((NeedShift + NeedXor + NeedZExtTrunc + NeedAnd) >
-      (IC->hasOneUse() + Or->hasOneUse()))
+      (CondVal->hasOneUse() + BinOp->hasOneUse()))
     return nullptr;
 
   if (NeedAnd) {
@@ -814,7 +841,10 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
   if (NeedXor)
     V = Builder.CreateXor(V, *C2);
 
-  return Builder.CreateOr(V, Y);
+  auto *Res = Builder.CreateBinOp(BinOp->getOpcode(), Y, V);
+  if (auto *BO = dyn_cast<BinaryOperator>(Res))
+    BO->copyIRFlags(BinOp);
+  return Res;
 }
 
 /// Canonicalize a set or clear of a masked set of constant bits to
@@ -1967,9 +1997,6 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
 
   if (Instruction *V = foldSelectZeroOrOnes(ICI, TrueVal, FalseVal, Builder))
     return V;
-
-  if (Value *V = foldSelectICmpAndOr(ICI, TrueVal, FalseVal, Builder))
-    return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectICmpLshrAshr(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
@@ -3927,6 +3954,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(CondVal))
     if (Instruction *Result = foldSelectInstWithICmp(SI, ICI))
       return Result;
+
+  if (Value *V = foldSelectICmpAndBinOp(CondVal, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
 
   if (Instruction *Add = foldAddSubSelect(SI, Builder))
     return Add;

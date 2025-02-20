@@ -1436,9 +1436,7 @@ define <2 x i32> @PR27817_nsw_vec(<2 x i32> %x) {
 
 define i32 @select_icmp_slt0_xor(i32 %x) {
 ; CHECK-LABEL: @select_icmp_slt0_xor(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], -2147483648
-; CHECK-NEXT:    [[X_XOR:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[XOR]]
+; CHECK-NEXT:    [[X_XOR:%.*]] = or i32 [[X:%.*]], -2147483648
 ; CHECK-NEXT:    ret i32 [[X_XOR]]
 ;
   %cmp = icmp slt i32 %x, zeroinitializer
@@ -1449,9 +1447,7 @@ define i32 @select_icmp_slt0_xor(i32 %x) {
 
 define <2 x i32> @select_icmp_slt0_xor_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @select_icmp_slt0_xor_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[X]], splat (i32 -2147483648)
-; CHECK-NEXT:    [[X_XOR:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[X]], <2 x i32> [[XOR]]
+; CHECK-NEXT:    [[X_XOR:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 -2147483648)
 ; CHECK-NEXT:    ret <2 x i32> [[X_XOR]]
 ;
   %cmp = icmp slt <2 x i32> %x, zeroinitializer

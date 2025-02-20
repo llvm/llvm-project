@@ -4,10 +4,7 @@
 define i8 @select_icmp_eq_pow2(i8 %x) {
 ; CHECK-LABEL: define i8 @select_icmp_eq_pow2(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 4
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 4
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ICMP]], i8 [[X]], i8 [[XOR]]
+; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[X]], -5
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %and = and i8 %x, 4
@@ -20,10 +17,7 @@ define i8 @select_icmp_eq_pow2(i8 %x) {
 define i8 @select_icmp_eq_pow2_flipped(i8 %x) {
 ; CHECK-LABEL: define i8 @select_icmp_eq_pow2_flipped(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 4
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 4
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ICMP]], i8 [[XOR]], i8 [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = or i8 [[X]], 4
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %and = and i8 %x, 4
@@ -52,10 +46,7 @@ define i8 @select_icmp_eq_not_pow2(i8 %x) {
 define i8 @select_icmp_ne_pow2(i8 %x) {
 ; CHECK-LABEL: define i8 @select_icmp_ne_pow2(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 4
-; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 4
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ICMP_NOT]], i8 [[X]], i8 [[XOR]]
+; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[X]], -5
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %and = and i8 %x, 4
@@ -68,10 +59,7 @@ define i8 @select_icmp_ne_pow2(i8 %x) {
 define i8 @select_icmp_ne_pow2_flipped(i8 %x) {
 ; CHECK-LABEL: define i8 @select_icmp_ne_pow2_flipped(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 4
-; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 4
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ICMP_NOT]], i8 [[XOR]], i8 [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = or i8 [[X]], 4
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %and = and i8 %x, 4
@@ -100,9 +88,7 @@ define i8 @select_icmp_ne_not_pow2(i8 %x) {
 define i8 @select_icmp_slt_zero_smin(i8 %x) {
 ; CHECK-LABEL: define i8 @select_icmp_slt_zero_smin(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp slt i8 [[X]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], -128
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ICMP]], i8 [[X]], i8 [[XOR]]
+; CHECK-NEXT:    [[SEL:%.*]] = or i8 [[X]], -128
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %icmp = icmp slt i8 %x, 0
@@ -114,9 +100,7 @@ define i8 @select_icmp_slt_zero_smin(i8 %x) {
 define i8 @select_icmp_slt_zero_smin_flipped(i8 %x) {
 ; CHECK-LABEL: define i8 @select_icmp_slt_zero_smin_flipped(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp slt i8 [[X]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], -128
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ICMP]], i8 [[XOR]], i8 [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[X]], 127
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %icmp = icmp slt i8 %x, 0
@@ -156,9 +140,7 @@ define i8 @select_icmp_slt_not_smin(i8 %x) {
 define i8 @select_icmp_sgt_allones_smin(i8 %x) {
 ; CHECK-LABEL: define i8 @select_icmp_sgt_allones_smin(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], -128
-; CHECK-NEXT:    [[ICMP1:%.*]] = icmp slt i8 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ICMP1]], i8 [[XOR]], i8 [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = and i8 [[X]], 127
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %icmp = icmp sgt i8 %x, 255
@@ -170,9 +152,7 @@ define i8 @select_icmp_sgt_allones_smin(i8 %x) {
 define i8 @select_icmp_sgt_allones_smin_flipped(i8 %x) {
 ; CHECK-LABEL: define i8 @select_icmp_sgt_allones_smin_flipped(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], -128
-; CHECK-NEXT:    [[ICMP1:%.*]] = icmp slt i8 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ICMP1]], i8 [[X]], i8 [[XOR]]
+; CHECK-NEXT:    [[SEL:%.*]] = or i8 [[X]], -128
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %icmp = icmp sgt i8 %x, 255
