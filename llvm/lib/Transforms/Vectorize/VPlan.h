@@ -1974,7 +1974,11 @@ public:
   }
 
   VPWidenPHIRecipe *clone() override {
-    llvm_unreachable("cloning not implemented yet");
+    auto *Phi = new VPWidenPHIRecipe(
+        dyn_cast_if_present<PHINode>(getUnderlyingValue()));
+    for (unsigned I = 0; I < getNumOperands(); I++)
+      Phi->addOperand(getIncomingValue(I));
+    return Phi;
   }
 
   ~VPWidenPHIRecipe() override = default;
