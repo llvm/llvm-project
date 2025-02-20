@@ -2047,6 +2047,49 @@ static Attribute foldPoisonSrcExtractOp(Attribute srcAttr) {
   return {};
 }
 
+static Attribute foldDenseElementsAttrSrcExtractOp(ExtractOp extractOp,
+                                                   Attribute srcAttr) {
+  auto denseAttr = dyn_cast_if_present<DenseElementsAttr>(srcAttr);
+  if (!denseAttr) {
+    return {};
+  }
+
+  if (denseAttr.isSplat()) {
+    Attribute newAttr = denseAttr.getSplatValue<Attribute>();
+    if (auto vecDstType = llvm::dyn_cast<VectorType>(extractOp.getType()))
+      newAttr = DenseElementsAttr::get(vecDstType, newAttr);
+    return newAttr;
+  }
+
+  auto vecTy = llvm::cast<VectorType>(extractOp.getSourceVectorType());
+  if (vecTy.isScalable())
+    return {};
+
+  if (extractOp.hasDynamicPosition()) {
+    return {};
+  }
+
+  // Calculate the linearized position of the continuous chunk of elements to
+  // extract.
+  llvm::SmallVector<int64_t> completePositions(vecTy.getRank(), 0);
+  copy(extractOp.getStaticPosition(), completePositions.begin());
+  int64_t elemBeginPosition =
+      linearize(completePositions, computeStrides(vecTy.getShape()));
+  auto denseValuesBegin =
+      denseAttr.value_begin<TypedAttr>() + elemBeginPosition;
+
+  TypedAttr newAttr;
+  if (auto resVecTy = llvm::dyn_cast<VectorType>(extractOp.getType())) {
+    SmallVector<Attribute> elementValues(
+        denseValuesBegin, denseValuesBegin + resVecTy.getNumElements());
+    newAttr = DenseElementsAttr::get(resVecTy, elementValues);
+  } else {
+    newAttr = *denseValuesBegin;
+  }
+
+  return newAttr;
+}
+
 OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   // Fold "vector.extract %v[] : vector<2x2xf32> from vector<2x2xf32>" to %v.
   // Note: Do not fold "vector.extract %v[] : f32 from vector<f32>" (type
@@ -2057,6 +2100,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
   if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
+    return res;
+  if (auto res = foldDenseElementsAttrSrcExtractOp(*this, adaptor.getVector()))
     return res;
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
@@ -2117,80 +2162,6 @@ public:
     }
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         extractOp, extractOp.getType(), source);
-    return success();
-  }
-};
-
-// Pattern to rewrite a ExtractOp(splat ConstantOp) -> ConstantOp.
-class ExtractOpSplatConstantFolder final : public OpRewritePattern<ExtractOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtractOp extractOp,
-                                PatternRewriter &rewriter) const override {
-    // Return if 'ExtractOp' operand is not defined by a splat vector
-    // ConstantOp.
-    Value sourceVector = extractOp.getVector();
-    Attribute vectorCst;
-    if (!matchPattern(sourceVector, m_Constant(&vectorCst)))
-      return failure();
-    auto splat = llvm::dyn_cast<SplatElementsAttr>(vectorCst);
-    if (!splat)
-      return failure();
-    TypedAttr newAttr = splat.getSplatValue<TypedAttr>();
-    if (auto vecDstType = llvm::dyn_cast<VectorType>(extractOp.getType()))
-      newAttr = DenseElementsAttr::get(vecDstType, newAttr);
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractOp, newAttr);
-    return success();
-  }
-};
-
-// Pattern to rewrite a ExtractOp(non-splat ConstantOp)[...] -> ConstantOp.
-class ExtractOpNonSplatConstantFolder final
-    : public OpRewritePattern<ExtractOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtractOp extractOp,
-                                PatternRewriter &rewriter) const override {
-    // TODO: Canonicalization for dynamic position not implemented yet.
-    if (extractOp.hasDynamicPosition())
-      return failure();
-
-    // Return if 'ExtractOp' operand is not defined by a compatible vector
-    // ConstantOp.
-    Value sourceVector = extractOp.getVector();
-    Attribute vectorCst;
-    if (!matchPattern(sourceVector, m_Constant(&vectorCst)))
-      return failure();
-
-    auto vecTy = llvm::cast<VectorType>(sourceVector.getType());
-    if (vecTy.isScalable())
-      return failure();
-
-    // The splat case is handled by `ExtractOpSplatConstantFolder`.
-    auto dense = llvm::dyn_cast<DenseElementsAttr>(vectorCst);
-    if (!dense || dense.isSplat())
-      return failure();
-
-    // Calculate the linearized position of the continuous chunk of elements to
-    // extract.
-    llvm::SmallVector<int64_t> completePositions(vecTy.getRank(), 0);
-    copy(extractOp.getStaticPosition(), completePositions.begin());
-    int64_t elemBeginPosition =
-        linearize(completePositions, computeStrides(vecTy.getShape()));
-    auto denseValuesBegin = dense.value_begin<TypedAttr>() + elemBeginPosition;
-
-    TypedAttr newAttr;
-    if (auto resVecTy = llvm::dyn_cast<VectorType>(extractOp.getType())) {
-      SmallVector<Attribute> elementValues(
-          denseValuesBegin, denseValuesBegin + resVecTy.getNumElements());
-      newAttr = DenseElementsAttr::get(resVecTy, elementValues);
-    } else {
-      newAttr = *denseValuesBegin;
-    }
-
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractOp, newAttr);
     return success();
   }
 };
@@ -2332,8 +2303,7 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ExtractOpSplatConstantFolder, ExtractOpNonSplatConstantFolder,
-              ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
+  results.add<ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
 }
