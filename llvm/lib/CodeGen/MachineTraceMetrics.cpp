@@ -682,7 +682,7 @@ struct DataDep {
   /// Create a DataDep from an SSA form virtual register.
   DataDep(const MachineRegisterInfo *MRI, unsigned VirtReg, unsigned UseOp)
     : UseOp(UseOp) {
-    assert(Register::isVirtualRegister(VirtReg));
+    assert(Register(VirtReg).isVirtual());
     MachineOperand *DefMO = MRI->getOneDef(VirtReg);
     assert(DefMO && "Register does not have unique def");
     DefMI = DefMO->getParent();
