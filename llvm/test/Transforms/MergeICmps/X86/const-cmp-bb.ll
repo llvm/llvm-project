@@ -10,7 +10,7 @@ define zeroext i1 @test(ptr nocapture noundef nonnull dereferenceable(3) %p) loc
 ; CHECK-NEXT:    store [3 x i8] c"\FF\C8\BE", ptr [[O1:%.*]], align 1
 ; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[p:%.*]], ptr [[TMP0:%.*]], i64 3)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
-; CHECK-NEXT:    br label [[IF_END5:%.*]]
+; CHECK-NEXT:    br label [[LAND_END5:%.*]]
 ; CHECK:       land.end:
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
