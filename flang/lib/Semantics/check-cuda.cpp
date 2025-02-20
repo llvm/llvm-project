@@ -613,9 +613,14 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
       std::get<std::optional<parser::DoConstruct>>(x.t))};
   const parser::Block *innerBlock{nullptr};
   if (DoConstructTightNesting(doConstruct, innerBlock) < depth) {
-    context_.Say(source,
-        "!$CUF KERNEL DO (%jd) must be followed by a DO construct with tightly nested outer levels of counted DO loops"_err_en_US,
-        std::intmax_t{depth});
+    if (doConstruct && doConstruct->IsDoConcurrent())
+      context_.Say(source,
+          "!$CUF KERNEL DO (%jd) must be followed by a DO CONCURRENT construct with at least %jd indices"_err_en_US,
+          std::intmax_t{depth}, std::intmax_t{depth});
+    else
+      context_.Say(source,
+          "!$CUF KERNEL DO (%jd) must be followed by a DO construct with tightly nested outer levels of counted DO loops"_err_en_US,
+          std::intmax_t{depth});
   }
   if (innerBlock) {
     DeviceContextChecker<true>{context_}.Check(*innerBlock);
