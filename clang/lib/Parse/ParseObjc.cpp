@@ -1094,9 +1094,11 @@ static void takeDeclAttributes(ParsedAttributes &attrs,
     takeDeclAttributes(attrs, D.getTypeObject(i).getAttrs());
 }
 
+/// TO_UPSTREAM(BoundsSafety) Added LateParsedAttrs
 ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
                                      DeclaratorContext context,
-                                     ParsedAttributes *paramAttrs) {
+                                     ParsedAttributes *paramAttrs,
+                                     LateParsedAttrList *LateParsedAttrs) {
   assert(context == DeclaratorContext::ObjCParameter ||
          context == DeclaratorContext::ObjCResult);
   assert((paramAttrs != nullptr) ==
@@ -1121,9 +1123,10 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
     DeclSpecContext dsContext = DeclSpecContext::DSC_normal;
     if (context == DeclaratorContext::ObjCResult)
       dsContext = DeclSpecContext::DSC_objc_method_result;
-    ParseSpecifierQualifierList(declSpec, AS_none, dsContext);
+    ParseSpecifierQualifierList(declSpec, AS_none, dsContext, LateParsedAttrs);
     Declarator declarator(declSpec, ParsedAttributesView::none(), context);
     ParseDeclarator(declarator);
+    DistributeCLateParsedAttrs(declarator, nullptr, LateParsedAttrs);
 
     // If that's not invalid, extract a type.
     if (!declarator.isInvalidType()) {
@@ -1174,17 +1177,25 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     return nullptr;
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  LateParsedAttrList LateParsedAttrs(/*PSoon=*/true,
+                                     /*LateAttrParseExperimentalExtOnly=*/true);
+  LateParsedAttrList LateParsedReturnAttrs(
+      /*PSoon=*/false,
+      /*LateAttrParseExperimentalExtOnly=*/true);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   // Parse the return type if present.
   ParsedType ReturnType;
   ObjCDeclSpec DSRet;
   if (Tok.is(tok::l_paren))
-    ReturnType =
-        ParseObjCTypeName(DSRet, DeclaratorContext::ObjCResult, nullptr);
+    ReturnType = ParseObjCTypeName(DSRet, DeclaratorContext::ObjCResult,
+                                   nullptr, &LateParsedReturnAttrs);
 
   // If attributes exist before the method, parse them.
   ParsedAttributes methodAttrs(AttrFactory);
   MaybeParseAttributes(PAKM_CXX11 | (getLangOpts().ObjC ? PAKM_GNU : 0),
-                       methodAttrs);
+                       methodAttrs, &LateParsedReturnAttrs);
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
@@ -1218,12 +1229,25 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
         selLoc, Sel, nullptr, CParamInfo.data(), CParamInfo.size(), methodAttrs,
         MethodImplKind, false, MethodDefinition);
     PD.complete(Result);
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    if (Result) {
+      for (auto *LateAttr : LateParsedReturnAttrs) {
+        // there are no parameters with late attrs to parse
+        assert(LateAttr->Decls.empty());
+        LateAttr->addDecl(Result);
+        ParseLexedCAttribute(*LateAttr, true);
+      }
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF */
     return Result;
   }
 
   SmallVector<const IdentifierInfo *, 12> KeyIdents;
   SmallVector<SourceLocation, 12> KeyLocs;
   SmallVector<SemaObjC::ObjCArgInfo, 12> ArgInfos;
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  SmallVector<LateParsedAttrList, 12> LateParamAttrs;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   ParseScope PrototypeScope(this, Scope::FunctionPrototypeScope |
                             Scope::FunctionDeclarationScope | Scope::DeclScope);
 
@@ -1231,6 +1255,10 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
   while (true) {
     ParsedAttributes paramAttrs(AttrFactory);
     SemaObjC::ObjCArgInfo ArgInfo;
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    LateParsedAttrList LateAttrs(/*PSoon*/ false,
+                                 /*LateAttrParseExperimentalExtOnly*/ true);
+    /* TO_UPSTREAM(BoundsSafety) OFF */
 
     // Each iteration parses a single keyword argument.
     if (ExpectAndConsume(tok::colon))
@@ -1238,13 +1266,14 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
 
     ArgInfo.Type = nullptr;
     if (Tok.is(tok::l_paren)) // Parse the argument type if present.
-      ArgInfo.Type = ParseObjCTypeName(
-          ArgInfo.DeclSpec, DeclaratorContext::ObjCParameter, &paramAttrs);
+      ArgInfo.Type =
+          ParseObjCTypeName(ArgInfo.DeclSpec, DeclaratorContext::ObjCParameter,
+                            &paramAttrs, &LateAttrs);
 
     // If attributes exist before the argument name, parse them.
     // Regardless, collect all the attributes we've parsed so far.
     MaybeParseAttributes(PAKM_CXX11 | (getLangOpts().ObjC ? PAKM_GNU : 0),
-                         paramAttrs);
+                         paramAttrs, &LateAttrs);
     ArgInfo.ArgAttrs = paramAttrs;
 
     // Code completion for the next piece of the selector.
@@ -1265,6 +1294,7 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     ConsumeToken(); // Eat the identifier.
 
     ArgInfos.push_back(ArgInfo);
+    LateParamAttrs.push_back(LateAttrs); // TO_UPSTREAM(BoundsSafety)
     KeyIdents.push_back(SelIdent);
     KeyLocs.push_back(selLoc);
 
@@ -1311,13 +1341,23 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     }
     DeclSpec DS(AttrFactory);
     ParsedTemplateInfo TemplateInfo;
-    ParseDeclarationSpecifiers(DS, TemplateInfo);
+    ParseDeclarationSpecifiers(
+        DS, TemplateInfo,
+        /* AccessSpecifier AS */ AS_none,
+        /* DeclSpecContext DSC */ DeclSpecContext::DSC_normal,
+        &LateParsedAttrs);
     // Parse the declarator.
     Declarator ParmDecl(DS, ParsedAttributesView::none(),
                         DeclaratorContext::Prototype);
     ParseDeclarator(ParmDecl);
     const IdentifierInfo *ParmII = ParmDecl.getIdentifier();
     Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDecl);
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    // This will add Param to any late attrs that do not already have an
+    // assigned decl, so it's important that other late attrs are not mixed
+    // in to LateParsedAttrs without a decl at this point
+    DistributeCLateParsedAttrs(ParmDecl, Param, &LateParsedAttrs);
+    /* TO_UPSTREAM(BoundsSafety) OFF */
     CParamInfo.push_back(DeclaratorChunk::ParamInfo(ParmII,
                                                     ParmDecl.getIdentifierLoc(),
                                                     Param,
@@ -1329,9 +1369,18 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
   // instance, if a method declares a parameter called "id", that parameter must
   // not shadow the "id" type.)
   SmallVector<ParmVarDecl *, 12> ObjCParamInfo;
-  for (auto &ArgInfo : ArgInfos) {
+  for (const auto &[ArgInfo, LateAttrs] : llvm::zip(ArgInfos, LateParamAttrs)) {
     ParmVarDecl *Param = Actions.ObjC().ActOnMethodParmDeclaration(
         getCurScope(), ArgInfo, ObjCParamInfo.size(), MethodDefinition);
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    if (Param) {
+      for (auto *LateAttr : LateAttrs) {
+        assert(LateAttr->Decls.empty());
+        LateAttr->addDecl(Param);
+      }
+      LateParsedAttrs.append(LateAttrs);
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF */
     ObjCParamInfo.push_back(Param);
   }
 
@@ -1349,6 +1398,17 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
       getCurScope(), mLoc, Tok.getLocation(), mType, DSRet, ReturnType, KeyLocs,
       Sel, ObjCParamInfo.data(), CParamInfo.data(), CParamInfo.size(),
       methodAttrs, MethodImplKind, isVariadic, MethodDefinition);
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (Result) {
+    for (auto *LateAttr : LateParsedReturnAttrs) {
+      assert(LateAttr->Decls.empty());
+      LateAttr->addDecl(Result);
+    }
+    LateParsedAttrs.append(LateParsedReturnAttrs);
+    ParseLexedCAttributeList(LateParsedAttrs,
+                             /*we already have parameters in scope*/ false);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   PD.complete(Result);
   return Result;
