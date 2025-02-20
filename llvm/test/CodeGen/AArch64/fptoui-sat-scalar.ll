@@ -797,7 +797,7 @@ define i32 @test_unsigned_f128_i32(fp128 %f) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI30_1
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
-; CHECK-GI-NEXT:    bl __letf2
+; CHECK-GI-NEXT:    bl __gttf2
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    fmov x8, d0
