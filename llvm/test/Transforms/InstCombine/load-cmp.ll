@@ -215,10 +215,7 @@ define i1 @test10_struct(i32 %x) {
 
 define i1 @test10_struct_noinbounds(i32 %x) {
 ; CHECK-LABEL: @test10_struct_noinbounds(
-; CHECK-NEXT:    [[P:%.*]] = getelementptr [[FOO:%.*]], ptr @GS, i32 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Q]], 9
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %p = getelementptr %Foo, ptr @GS, i32 %x, i32 0
   %q = load i32, ptr %p
@@ -252,11 +249,7 @@ define i1 @test10_struct_i64(i64 %x){
 
 define i1 @test10_struct_noinbounds_i16(i16 %x) {
 ; CHECK-LABEL: @test10_struct_noinbounds_i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[P:%.*]] = getelementptr [[FOO:%.*]], ptr @GS, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Q]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %p = getelementptr %Foo, ptr @GS, i16 %x, i32 0
   %q = load i32, ptr %p
@@ -333,16 +326,12 @@ define i1 @test10_struct_arr_noinbounds_i64(i64 %x) {
   ret i1 %r
 }
 
-@table = internal constant [2 x ptr] [ptr @g, ptr getelementptr (i8, ptr @g, i64 4)], align 16
+@table = internal constant [2 x ptr] [ptr @g, ptr getelementptr inbounds (i8, ptr @g, i64 4)], align 16
 @g = external global [2 x i32]
 
 define i1 @pr93017(i64 %idx) {
 ; CHECK-LABEL: @pr93017(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX:%.*]] to i32
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @table, i32 0, i32 [[TMP1]]
-; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[V]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %gep = getelementptr inbounds [2 x ptr], ptr @table, i64 0, i64 %idx
   %v = load ptr, ptr %gep
