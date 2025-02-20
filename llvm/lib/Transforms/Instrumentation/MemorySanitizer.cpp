@@ -2637,19 +2637,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     unsigned TotalNumElems = ParamType->getNumElements() * I.arg_size();
     FixedVectorType *ReinterpretShadowTy = nullptr;
     if (ReinterpretElemWidth.has_value()) {
-      assert(ParamType->getPrimitiveSizeInBits() %
-                 ReinterpretElemWidth.value() ==
-             0);
+      assert(isAligned(Align(*ReinterpretElemWidth),
+                       ParamType->getPrimitiveSizeInBits()));
       ReinterpretShadowTy = FixedVectorType::get(
-          IRB.getIntNTy(ReinterpretElemWidth.value()),
-          ParamType->getPrimitiveSizeInBits() / ReinterpretElemWidth.value());
+          IRB.getIntNTy(*ReinterpretElemWidth),
+          ParamType->getPrimitiveSizeInBits() / *ReinterpretElemWidth);
       TotalNumElems = ReinterpretShadowTy->getNumElements() * I.arg_size();
     }
 
     // Horizontal OR of shadow
     SmallVector<int, 8> EvenMask;
     SmallVector<int, 8> OddMask;
-    for (unsigned X = 0; X + 1 < TotalNumElems; X += 2) {
+    for (unsigned X = 0; X < TotalNumElems - 1; X += 2) {
       EvenMask.push_back(X);
       OddMask.push_back(X + 1);
     }
@@ -2662,10 +2661,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // number of elements is even, but we have never seen this in extant
     // instruction sets, so we enforce that each parameter must have an even
     // number of elements.
-    assert(
-        (cast<FixedVectorType>(FirstArgShadow->getType())->getNumElements()) %
-            2 ==
-        0);
+    assert(isAligned(
+        Align(2),
+        cast<FixedVectorType>(FirstArgShadow->getType())->getNumElements()));
 
     Value *EvenShadow;
     Value *OddShadow;
@@ -2688,7 +2686,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
     setShadow(&I, OrShadow);
-
     setOriginForNaryOp(I);
   }
 
