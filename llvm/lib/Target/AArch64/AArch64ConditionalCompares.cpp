@@ -258,7 +258,7 @@ bool SSACCmpConv::isDeadDef(unsigned DstReg) {
   // Writes to the zero register are dead.
   if (DstReg == AArch64::WZR || DstReg == AArch64::XZR)
     return true;
-  if (!Register(DstReg).isVirtual())
+  if (!Register::isVirtualRegister(DstReg))
     return false;
   // A virtual register def without any uses will be marked dead later, and
   // eventually replaced by the zero register.
