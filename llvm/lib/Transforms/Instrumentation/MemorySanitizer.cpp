@@ -2624,8 +2624,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
-    if (I.arg_size() == 2)
-      assert(I.getArgOperand(0)->getType() == I.getArgOperand(1)->getType());
+    assert(I.arg_size() != 2 || I.getArgOperand(0)->getType() == I.getArgOperand(1)->getType());
 
     [[maybe_unused]] FixedVectorType *ReturnType =
         cast<FixedVectorType>(I.getType());
@@ -4189,6 +4188,87 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  void handleAVXHorizontalAddSubIntrinsic(IntrinsicInst &I) {
+    // Approximation only:
+    //    output         = horizontal_add/sub(A, B)
+    // => shadow[output] = horizontal_add(shadow[A], shadow[B])
+    //
+    // We always use horizontal add instead of subtract, because subtracting
+    // a fully uninitialized shadow would result in a fully initialized shadow.
+    //
+    // - If we add two adjacent zero (initialized) shadow values, the
+    //   result always be zero i.e., no false positives.
+    // - If we add two shadows, one of which is uninitialized, the
+    //   result will always be non-zero i.e., no false negatives.
+    // - However, we can have false negatives if we do an addition that wraps
+    //   to zero; we consider this an acceptable tradeoff for performance.
+    //
+    // To make shadow propagation precise, we want the equivalent of
+    // "horizontal OR", but this is not available for SSE3/SSSE3/AVX/AVX2.
+
+    Intrinsic::ID shadowIntrinsicID = I.getIntrinsicID();
+
+    switch (I.getIntrinsicID()) {
+    case Intrinsic::x86_sse3_hsub_ps:
+      shadowIntrinsicID = Intrinsic::x86_sse3_hadd_ps;
+      break;
+
+    case Intrinsic::x86_sse3_hsub_pd:
+      shadowIntrinsicID = Intrinsic::x86_sse3_hadd_pd;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_d:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_d;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_d_128:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_d_128;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_w:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_w;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_w_128:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_w_128;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_sw:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_sw;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_sw_128:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_sw_128;
+      break;
+
+    case Intrinsic::x86_avx_hsub_pd_256:
+      shadowIntrinsicID = Intrinsic::x86_avx_hadd_pd_256;
+      break;
+
+    case Intrinsic::x86_avx_hsub_ps_256:
+      shadowIntrinsicID = Intrinsic::x86_avx_hadd_ps_256;
+      break;
+
+    case Intrinsic::x86_avx2_phsub_d:
+      shadowIntrinsicID = Intrinsic::x86_avx2_phadd_d;
+      break;
+
+    case Intrinsic::x86_avx2_phsub_w:
+      shadowIntrinsicID = Intrinsic::x86_avx2_phadd_w;
+      break;
+
+    case Intrinsic::x86_avx2_phsub_sw:
+      shadowIntrinsicID = Intrinsic::x86_avx2_phadd_sw;
+      break;
+
+    default:
+      break;
+    }
+
+    return handleIntrinsicByApplyingToShadow(I, shadowIntrinsicID,
+                                             /*trailingVerbatimArgs*/ 0);
+  }
+
   /// Handle Arm NEON vector store intrinsics (vst{2,3,4}, vst1x_{2,3,4},
   /// and vst{2,3,4}lane).
   ///
@@ -4735,49 +4815,33 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVtestIntrinsic(I);
       break;
 
-    // Packed Horizontal Add/Subtract
-    case Intrinsic::x86_ssse3_phadd_w:
-    case Intrinsic::x86_ssse3_phadd_w_128:
-    case Intrinsic::x86_avx2_phadd_w:
-    case Intrinsic::x86_ssse3_phsub_w:
-    case Intrinsic::x86_ssse3_phsub_w_128:
-    case Intrinsic::x86_avx2_phsub_w: {
-      handlePairwiseShadowOrIntrinsic(I, /*ReinterpretElemWidth=*/16);
-      break;
-    }
-
-    // Packed Horizontal Add/Subtract
-    case Intrinsic::x86_ssse3_phadd_d:
-    case Intrinsic::x86_ssse3_phadd_d_128:
-    case Intrinsic::x86_avx2_phadd_d:
-    case Intrinsic::x86_ssse3_phsub_d:
-    case Intrinsic::x86_ssse3_phsub_d_128:
-    case Intrinsic::x86_avx2_phsub_d: {
-      handlePairwiseShadowOrIntrinsic(I, /*ReinterpretElemWidth=*/32);
-      break;
-    }
-
-    // Packed Horizontal Add/Subtract and Saturate
-    case Intrinsic::x86_ssse3_phadd_sw:
-    case Intrinsic::x86_ssse3_phadd_sw_128:
-    case Intrinsic::x86_avx2_phadd_sw:
-    case Intrinsic::x86_ssse3_phsub_sw:
-    case Intrinsic::x86_ssse3_phsub_sw_128:
-    case Intrinsic::x86_avx2_phsub_sw: {
-      handlePairwiseShadowOrIntrinsic(I, /*ReinterpretElemWidth=*/16);
-      break;
-    }
-
-    // Packed Single/Double Precision Floating-Point Horizontal Add
     case Intrinsic::x86_sse3_hadd_ps:
     case Intrinsic::x86_sse3_hadd_pd:
+    case Intrinsic::x86_ssse3_phadd_d:
+    case Intrinsic::x86_ssse3_phadd_d_128:
+    case Intrinsic::x86_ssse3_phadd_w:
+    case Intrinsic::x86_ssse3_phadd_w_128:
+    case Intrinsic::x86_ssse3_phadd_sw:
+    case Intrinsic::x86_ssse3_phadd_sw_128:
     case Intrinsic::x86_avx_hadd_pd_256:
     case Intrinsic::x86_avx_hadd_ps_256:
+    case Intrinsic::x86_avx2_phadd_d:
+    case Intrinsic::x86_avx2_phadd_w:
+    case Intrinsic::x86_avx2_phadd_sw:
     case Intrinsic::x86_sse3_hsub_ps:
     case Intrinsic::x86_sse3_hsub_pd:
+    case Intrinsic::x86_ssse3_phsub_d:
+    case Intrinsic::x86_ssse3_phsub_d_128:
+    case Intrinsic::x86_ssse3_phsub_w:
+    case Intrinsic::x86_ssse3_phsub_w_128:
+    case Intrinsic::x86_ssse3_phsub_sw:
+    case Intrinsic::x86_ssse3_phsub_sw_128:
     case Intrinsic::x86_avx_hsub_pd_256:
-    case Intrinsic::x86_avx_hsub_ps_256: {
-      handlePairwiseShadowOrIntrinsic(I, /*ReinterpretElemWidth=*/std::nullopt);
+    case Intrinsic::x86_avx_hsub_ps_256:
+    case Intrinsic::x86_avx2_phsub_d:
+    case Intrinsic::x86_avx2_phsub_w:
+    case Intrinsic::x86_avx2_phsub_sw: {
+      handleAVXHorizontalAddSubIntrinsic(I);
       break;
     }
 
