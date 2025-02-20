@@ -2607,16 +2607,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// e.g., <2 x i32> @llvm.aarch64.neon.saddlp.v2i32.v4i16(<4 x i16>)
   ///       <16 x i8> @llvm.aarch64.neon.addp.v16i8(<16 x i8>, <16 x i8>)
-  ///
-  /// Optionally, reinterpret the parameters to have elements of a specified
-  /// width. For example:
-  ///     @llvm.x86.ssse3.phadd.w(<1 x i64> [[VAR1]], <1 x i64> [[VAR2]])
-  /// conceptually operates on
-  ///     (<4 x i16> [[VAR1]], <4 x i16> [[VAR2]])
-  /// and can be handled with ReinterpretElemWidth == 16.
-  void
-  handlePairwiseShadowOrIntrinsic(IntrinsicInst &I,
-                                  std::optional<int> ReinterpretElemWidth) {
+  void handlePairwiseShadowOrIntrinsic(IntrinsicInst &I) {
     assert(I.arg_size() == 1 || I.arg_size() == 2);
 
     assert(I.getType()->isVectorTy());
@@ -2624,8 +2615,61 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
-    if (I.arg_size() == 2)
-      assert(I.getArgOperand(0)->getType() == I.getArgOperand(1)->getType());
+    assert((I.arg_size() != 2) || (ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType())));
+    [[maybe_unused]] FixedVectorType *ReturnType =
+        cast<FixedVectorType>(I.getType());
+    assert(ParamType->getNumElements() * I.arg_size() ==
+           2 * ReturnType->getNumElements());
+
+    IRBuilder<> IRB(&I);
+    unsigned Width = ParamType->getNumElements() * I.arg_size();
+
+    // Horizontal OR of shadow
+    SmallVector<int, 8> EvenMask;
+    SmallVector<int, 8> OddMask;
+    for (unsigned X = 0; X < Width; X += 2) {
+      EvenMask.push_back(X);
+      OddMask.push_back(X + 1);
+    }
+
+    Value *FirstArgShadow = getShadow(&I, 0);
+    Value *EvenShadow;
+    Value *OddShadow;
+    if (I.arg_size() == 2) {
+      Value *SecondArgShadow = getShadow(&I, 1);
+      EvenShadow =
+          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, EvenMask);
+      OddShadow =
+          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, OddMask);
+    } else {
+      EvenShadow = IRB.CreateShuffleVector(FirstArgShadow, EvenMask);
+      OddShadow = IRB.CreateShuffleVector(FirstArgShadow, OddMask);
+    }
+
+    Value *OrShadow = IRB.CreateOr(EvenShadow, OddShadow);
+    OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
+
+    setShadow(&I, OrShadow);
+    setOriginForNaryOp(I);
+  }
+
+  /// Propagate shadow for 1- or 2-vector intrinsics that combine adjacent
+  /// fields, with the parameters reinterpreted to have elements of a specified
+  /// width. For example:
+  ///     @llvm.x86.ssse3.phadd.w(<1 x i64> [[VAR1]], <1 x i64> [[VAR2]])
+  /// conceptually operates on
+  ///     (<4 x i16> [[VAR1]], <4 x i16> [[VAR2]])
+  /// and can be handled with ReinterpretElemWidth == 16.
+  void
+  handlePairwiseShadowOrIntrinsic(IntrinsicInst &I, int ReinterpretElemWidth) {
+    assert(I.arg_size() == 1 || I.arg_size() == 2);
+
+    assert(I.getType()->isVectorTy());
+    assert(I.getArgOperand(0)->getType()->isVectorTy());
+
+    FixedVectorType *ParamType =
+        cast<FixedVectorType>(I.getArgOperand(0)->getType());
+    assert((I.arg_size() != 2) || (ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType())));
 
     [[maybe_unused]] FixedVectorType *ReturnType =
         cast<FixedVectorType>(I.getType());
@@ -2636,14 +2680,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     unsigned TotalNumElems = ParamType->getNumElements() * I.arg_size();
     FixedVectorType *ReinterpretShadowTy = nullptr;
-    if (ReinterpretElemWidth.has_value()) {
-      assert(isAligned(Align(*ReinterpretElemWidth),
-                       ParamType->getPrimitiveSizeInBits()));
-      ReinterpretShadowTy = FixedVectorType::get(
-          IRB.getIntNTy(*ReinterpretElemWidth),
-          ParamType->getPrimitiveSizeInBits() / *ReinterpretElemWidth);
-      TotalNumElems = ReinterpretShadowTy->getNumElements() * I.arg_size();
-    }
+    assert(isAligned(Align(ReinterpretElemWidth),
+                     ParamType->getPrimitiveSizeInBits()));
+    ReinterpretShadowTy = FixedVectorType::get(
+        IRB.getIntNTy(ReinterpretElemWidth),
+        ParamType->getPrimitiveSizeInBits() / ReinterpretElemWidth);
+    TotalNumElems = ReinterpretShadowTy->getNumElements() * I.arg_size();
 
     // Horizontal OR of shadow
     SmallVector<int, 8> EvenMask;
@@ -2654,8 +2696,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     Value *FirstArgShadow = getShadow(&I, 0);
-    if (ReinterpretShadowTy)
-      FirstArgShadow = IRB.CreateBitCast(FirstArgShadow, ReinterpretShadowTy);
+    FirstArgShadow = IRB.CreateBitCast(FirstArgShadow, ReinterpretShadowTy);
 
     // If we had two parameters each with an odd number of elements, the total
     // number of elements is even, but we have never seen this in extant
@@ -2669,9 +2710,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *OddShadow;
     if (I.arg_size() == 2) {
       Value *SecondArgShadow = getShadow(&I, 1);
-      if (ReinterpretShadowTy)
-        SecondArgShadow =
-            IRB.CreateBitCast(SecondArgShadow, ReinterpretShadowTy);
+      SecondArgShadow =
+          IRB.CreateBitCast(SecondArgShadow, ReinterpretShadowTy);
 
       EvenShadow =
           IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, EvenMask);
@@ -4777,7 +4817,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_sse3_hsub_pd:
     case Intrinsic::x86_avx_hsub_pd_256:
     case Intrinsic::x86_avx_hsub_ps_256: {
-      handlePairwiseShadowOrIntrinsic(I, /*ReinterpretElemWidth=*/std::nullopt);
+      handlePairwiseShadowOrIntrinsic(I);
       break;
     }
 
@@ -4837,7 +4877,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Add Long Pairwise
     case Intrinsic::aarch64_neon_saddlp:
     case Intrinsic::aarch64_neon_uaddlp: {
-      handlePairwiseShadowOrIntrinsic(I, std::nullopt);
+      handlePairwiseShadowOrIntrinsic(I);
       break;
     }
 
