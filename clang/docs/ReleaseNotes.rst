@@ -390,6 +390,9 @@ AST Matchers
 ------------
 
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
+- Move ```ast_matchers::MatchFinder::MatchFinderOptions`` to ``ast_matches::MatchFinderOptions``.
+- Add an option ``SkipSystemHeaders`` to ``MatchASTConsumer`` and ``MatchFinderOptions``, to
+  skip system headers when traversing the AST.
 
 clang-format
 ------------
