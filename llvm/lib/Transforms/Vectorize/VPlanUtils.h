@@ -80,6 +80,15 @@ class VPBlockUtils {
 public:
   VPBlockUtils() = delete;
 
+  /// Disconnect \p OldPred from \p Succ and connect \p NewPred to \p Succ
+  /// instead, but also swaping phi operands in the successor if necessary.
+  static void replacePredecessor(VPBlockBase *OldPred, VPBlockBase *NewPred,
+                                 VPBlockBase *Succ) {
+    Succ->replacePredecessor(OldPred, NewPred);
+    OldPred->removeSuccessor(Succ);
+    NewPred->appendSuccessor(Succ);
+  }
+
   /// Insert disconnected VPBlockBase \p NewBlock after \p BlockPtr. Add \p
   /// NewBlock as successor of \p BlockPtr and \p BlockPtr as predecessor of \p
   /// NewBlock, and propagate \p BlockPtr parent to \p NewBlock. \p BlockPtr's
@@ -91,10 +100,8 @@ public:
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
     SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
-    for (VPBlockBase *Succ : Succs) {
-      disconnectBlocks(BlockPtr, Succ);
-      connectBlocks(NewBlock, Succ);
-    }
+    for (VPBlockBase *Succ : Succs)
+      replacePredecessor(BlockPtr, NewBlock, Succ);
     connectBlocks(BlockPtr, NewBlock);
   }
 
