@@ -216,7 +216,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
       report_fatal_error("Use not jointly dominated by defs.");
     }
 
-    if (Register(PhysReg).isPhysical()) {
+    if (Register::isPhysicalRegister(PhysReg)) {
       const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
       bool IsLiveIn = MBB->isLiveIn(PhysReg);
       for (MCRegAliasIterator Alias(PhysReg, TRI, false); !IsLiveIn && Alias.isValid(); ++Alias)

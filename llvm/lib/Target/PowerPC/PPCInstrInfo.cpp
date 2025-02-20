@@ -5131,7 +5131,7 @@ static bool isOpZeroOfSubwordPreincLoad(int Opcode) {
 // This function checks for sign extension from 32 bits to 64 bits.
 static bool definedBySignExtendingOp(const unsigned Reg,
                                      const MachineRegisterInfo *MRI) {
-  if (!Register(Reg).isVirtual())
+  if (!Register::isVirtualRegister(Reg))
     return false;
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
@@ -5178,7 +5178,7 @@ static bool definedBySignExtendingOp(const unsigned Reg,
 // in the higher 32 bits then this function will return true.
 static bool definedByZeroExtendingOp(const unsigned Reg,
                                      const MachineRegisterInfo *MRI) {
-  if (!Register(Reg).isVirtual())
+  if (!Register::isVirtualRegister(Reg))
     return false;
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
@@ -5463,7 +5463,7 @@ std::pair<bool, bool>
 PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
                                    const unsigned BinOpDepth,
                                    const MachineRegisterInfo *MRI) const {
-  if (!Register(Reg).isVirtual())
+  if (!Register::isVirtualRegister(Reg))
     return std::pair<bool, bool>(false, false);
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
