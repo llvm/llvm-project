@@ -20,7 +20,6 @@ namespace llvm {
 template <typename T> class ArrayRef;
 
 LLVM_ABI int libDriverMain(ArrayRef<const char *> ARgs);
-
 }
 
 #endif
