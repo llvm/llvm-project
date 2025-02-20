@@ -408,7 +408,9 @@ public:
 
   unsigned getRequiredVectorWidth(unsigned ID) const;
 
-  /// Return true if builtin ID belongs to AuxTarget.
+  /// Return true if builtin ID belongs to only the AuxTarget.
+  /// Return false if builtin ID belongs to both the primary
+  /// and auxiliary target.
   bool isAuxBuiltinID(unsigned ID) const {
     return ID >= (Builtin::FirstTSBuiltin + NumTargetBuiltins);
   }
