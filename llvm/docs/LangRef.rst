@@ -3299,8 +3299,8 @@ The following properties hold for all allocated objects:
 
 -  no allocated object may cross the unsigned address space boundary (including
    the pointer after the end of the object),
--  the size of all allocated objects must be non-negative and smaller than
-   the largest signed integer that fits into the index type,
+-  the size of all allocated objects must be non-negative and not exceed the
+   largest signed integer that fits into the index type.
 
 .. _objectlifetime:
 
