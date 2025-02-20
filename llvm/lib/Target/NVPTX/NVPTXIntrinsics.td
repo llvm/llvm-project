@@ -795,7 +795,7 @@ class APPLYPRIORITY_L2_INTRS<string InstName> :
           InstName # " [$addr], $size;",
           [(!cast<Intrinsic>("int_nvvm_" # !subst("::", "_", !subst(".", "_", InstName)))
           i64:$addr, i64:$size)]>,
-          Requires<[hasPTX<80>, hasSM<90>]>;
+          Requires<[hasPTX<74>, hasSM<80>]>;
 
 def APPLYPRIORITY_L2_EVICT_NORMAL        : APPLYPRIORITY_L2_INTRS<"applypriority.L2::evict_normal">;
 def APPLYPRIORITY_GLOBAL_L2_EVICT_NORMAL : APPLYPRIORITY_L2_INTRS<"applypriority.global.L2::evict_normal">;
