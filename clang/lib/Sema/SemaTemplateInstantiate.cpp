@@ -903,7 +903,7 @@ bool Sema::InstantiatingTemplate::CheckInstantiationDepth(
   return true;
 }
 
-void Sema::PrintInstantiationStack() {
+void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
   // Determine which template instantiations to skip, if any.
   unsigned SkipStart = CodeSynthesisContexts.size(), SkipEnd = SkipStart;
   unsigned Limit = Diags.getTemplateBacktraceLimit();
@@ -923,9 +923,9 @@ void Sema::PrintInstantiationStack() {
     if (InstantiationIdx >= SkipStart && InstantiationIdx < SkipEnd) {
       if (InstantiationIdx == SkipStart) {
         // Note that we're skipping instantiations.
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_instantiation_contexts_suppressed)
-          << unsigned(CodeSynthesisContexts.size() - Limit);
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_instantiation_contexts_suppressed)
+                     << unsigned(CodeSynthesisContexts.size() - Limit));
       }
       continue;
     }
@@ -937,37 +937,34 @@ void Sema::PrintInstantiationStack() {
         unsigned DiagID = diag::note_template_member_class_here;
         if (isa<ClassTemplateSpecializationDecl>(Record))
           DiagID = diag::note_template_class_instantiation_here;
-        Diags.Report(Active->PointOfInstantiation, DiagID)
-          << Record << Active->InstantiationRange;
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(DiagID) << Record << Active->InstantiationRange);
       } else if (FunctionDecl *Function = dyn_cast<FunctionDecl>(D)) {
         unsigned DiagID;
         if (Function->getPrimaryTemplate())
           DiagID = diag::note_function_template_spec_here;
         else
           DiagID = diag::note_template_member_function_here;
-        Diags.Report(Active->PointOfInstantiation, DiagID)
-          << Function
-          << Active->InstantiationRange;
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(DiagID) << Function << Active->InstantiationRange);
       } else if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-        Diags.Report(Active->PointOfInstantiation,
-                     VD->isStaticDataMember()?
-                       diag::note_template_static_data_member_def_here
-                     : diag::note_template_variable_def_here)
-          << VD
-          << Active->InstantiationRange;
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(VD->isStaticDataMember()
+                           ? diag::note_template_static_data_member_def_here
+                           : diag::note_template_variable_def_here)
+                     << VD << Active->InstantiationRange);
       } else if (EnumDecl *ED = dyn_cast<EnumDecl>(D)) {
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_template_enum_def_here)
-          << ED
-          << Active->InstantiationRange;
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_template_enum_def_here)
+                     << ED << Active->InstantiationRange);
       } else if (FieldDecl *FD = dyn_cast<FieldDecl>(D)) {
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_template_nsdmi_here)
-            << FD << Active->InstantiationRange;
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_template_nsdmi_here)
+                     << FD << Active->InstantiationRange);
       } else if (ClassTemplateDecl *CTD = dyn_cast<ClassTemplateDecl>(D)) {
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_template_class_instantiation_here)
-            << CTD << Active->InstantiationRange;
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_template_class_instantiation_here)
+                     << CTD << Active->InstantiationRange);
       }
       break;
     }
@@ -979,35 +976,35 @@ void Sema::PrintInstantiationStack() {
       Template->printName(OS, getPrintingPolicy());
       printTemplateArgumentList(OS, Active->template_arguments(),
                                 getPrintingPolicy());
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_default_arg_instantiation_here)
-        << OS.str()
-        << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_default_arg_instantiation_here)
+                   << OS.str() << Active->InstantiationRange);
       break;
     }
 
     case CodeSynthesisContext::ExplicitTemplateArgumentSubstitution: {
       FunctionTemplateDecl *FnTmpl = cast<FunctionTemplateDecl>(Active->Entity);
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_explicit_template_arg_substitution_here)
-        << FnTmpl
-        << getTemplateArgumentBindingsText(FnTmpl->getTemplateParameters(),
-                                           Active->TemplateArgs,
-                                           Active->NumTemplateArgs)
-        << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_explicit_template_arg_substitution_here)
+                   << FnTmpl
+                   << getTemplateArgumentBindingsText(
+                          FnTmpl->getTemplateParameters(), Active->TemplateArgs,
+                          Active->NumTemplateArgs)
+                   << Active->InstantiationRange);
       break;
     }
 
     case CodeSynthesisContext::DeducedTemplateArgumentSubstitution: {
       if (FunctionTemplateDecl *FnTmpl =
               dyn_cast<FunctionTemplateDecl>(Active->Entity)) {
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_function_template_deduction_instantiation_here)
-          << FnTmpl
-          << getTemplateArgumentBindingsText(FnTmpl->getTemplateParameters(),
-                                             Active->TemplateArgs,
-                                             Active->NumTemplateArgs)
-          << Active->InstantiationRange;
+        DiagFunc(
+            Active->PointOfInstantiation,
+            PDiag(diag::note_function_template_deduction_instantiation_here)
+                << FnTmpl
+                << getTemplateArgumentBindingsText(
+                       FnTmpl->getTemplateParameters(), Active->TemplateArgs,
+                       Active->NumTemplateArgs)
+                << Active->InstantiationRange);
       } else {
         bool IsVar = isa<VarTemplateDecl>(Active->Entity) ||
                      isa<VarTemplateSpecializationDecl>(Active->Entity);
@@ -1026,12 +1023,13 @@ void Sema::PrintInstantiationStack() {
           llvm_unreachable("unexpected template kind");
         }
 
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_deduced_template_arg_substitution_here)
-          << IsVar << IsTemplate << cast<NamedDecl>(Active->Entity)
-          << getTemplateArgumentBindingsText(Params, Active->TemplateArgs,
-                                             Active->NumTemplateArgs)
-          << Active->InstantiationRange;
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_deduced_template_arg_substitution_here)
+                     << IsVar << IsTemplate << cast<NamedDecl>(Active->Entity)
+                     << getTemplateArgumentBindingsText(Params,
+                                                        Active->TemplateArgs,
+                                                        Active->NumTemplateArgs)
+                     << Active->InstantiationRange);
       }
       break;
     }
@@ -1045,10 +1043,9 @@ void Sema::PrintInstantiationStack() {
       FD->printName(OS, getPrintingPolicy());
       printTemplateArgumentList(OS, Active->template_arguments(),
                                 getPrintingPolicy());
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_default_function_arg_instantiation_here)
-        << OS.str()
-        << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_default_function_arg_instantiation_here)
+                   << OS.str() << Active->InstantiationRange);
       break;
     }
 
@@ -1065,14 +1062,13 @@ void Sema::PrintInstantiationStack() {
         TemplateParams =
           cast<ClassTemplatePartialSpecializationDecl>(Active->Template)
                                                       ->getTemplateParameters();
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_prior_template_arg_substitution)
-        << isa<TemplateTemplateParmDecl>(Parm)
-        << Name
-        << getTemplateArgumentBindingsText(TemplateParams,
-                                           Active->TemplateArgs,
-                                           Active->NumTemplateArgs)
-        << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_prior_template_arg_substitution)
+                   << isa<TemplateTemplateParmDecl>(Parm) << Name
+                   << getTemplateArgumentBindingsText(TemplateParams,
+                                                      Active->TemplateArgs,
+                                                      Active->NumTemplateArgs)
+                   << Active->InstantiationRange);
       break;
     }
 
@@ -1085,55 +1081,56 @@ void Sema::PrintInstantiationStack() {
           cast<ClassTemplatePartialSpecializationDecl>(Active->Template)
                                                       ->getTemplateParameters();
 
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_template_default_arg_checking)
-        << getTemplateArgumentBindingsText(TemplateParams,
-                                           Active->TemplateArgs,
-                                           Active->NumTemplateArgs)
-        << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_template_default_arg_checking)
+                   << getTemplateArgumentBindingsText(TemplateParams,
+                                                      Active->TemplateArgs,
+                                                      Active->NumTemplateArgs)
+                   << Active->InstantiationRange);
       break;
     }
 
     case CodeSynthesisContext::ExceptionSpecEvaluation:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_evaluating_exception_spec_here)
-          << cast<FunctionDecl>(Active->Entity);
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_evaluating_exception_spec_here)
+                   << cast<FunctionDecl>(Active->Entity));
       break;
 
     case CodeSynthesisContext::ExceptionSpecInstantiation:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_template_exception_spec_instantiation_here)
-        << cast<FunctionDecl>(Active->Entity)
-        << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_template_exception_spec_instantiation_here)
+                   << cast<FunctionDecl>(Active->Entity)
+                   << Active->InstantiationRange);
       break;
 
     case CodeSynthesisContext::RequirementInstantiation:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_template_requirement_instantiation_here)
-        << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_template_requirement_instantiation_here)
+                   << Active->InstantiationRange);
       break;
     case CodeSynthesisContext::RequirementParameterInstantiation:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_template_requirement_params_instantiation_here)
-          << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_template_requirement_params_instantiation_here)
+                   << Active->InstantiationRange);
       break;
 
     case CodeSynthesisContext::NestedRequirementConstraintsCheck:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_nested_requirement_here)
-        << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_nested_requirement_here)
+                   << Active->InstantiationRange);
       break;
 
     case CodeSynthesisContext::DeclaringSpecialMember:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_in_declaration_of_implicit_special_member)
-          << cast<CXXRecordDecl>(Active->Entity)
-          << llvm::to_underlying(Active->SpecialMember);
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_in_declaration_of_implicit_special_member)
+                   << cast<CXXRecordDecl>(Active->Entity)
+                   << llvm::to_underlying(Active->SpecialMember));
       break;
 
     case CodeSynthesisContext::DeclaringImplicitEqualityComparison:
-      Diags.Report(Active->Entity->getLocation(),
-                   diag::note_in_declaration_of_implicit_equality_comparison);
+      DiagFunc(
+          Active->Entity->getLocation(),
+          PDiag(diag::note_in_declaration_of_implicit_equality_comparison));
       break;
 
     case CodeSynthesisContext::DefiningSynthesizedFunction: {
@@ -1144,60 +1141,62 @@ void Sema::PrintInstantiationStack() {
           FD ? getDefaultedFunctionKind(FD) : DefaultedFunctionKind();
       if (DFK.isSpecialMember()) {
         auto *MD = cast<CXXMethodDecl>(FD);
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_member_synthesized_at)
-            << MD->isExplicitlyDefaulted()
-            << llvm::to_underlying(DFK.asSpecialMember())
-            << Context.getTagDeclType(MD->getParent());
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_member_synthesized_at)
+                     << MD->isExplicitlyDefaulted()
+                     << llvm::to_underlying(DFK.asSpecialMember())
+                     << Context.getTagDeclType(MD->getParent()));
       } else if (DFK.isComparison()) {
         QualType RecordType = FD->getParamDecl(0)
                                   ->getType()
                                   .getNonReferenceType()
                                   .getUnqualifiedType();
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_comparison_synthesized_at)
-            << (int)DFK.asComparison() << RecordType;
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_comparison_synthesized_at)
+                     << (int)DFK.asComparison() << RecordType);
       }
       break;
     }
 
     case CodeSynthesisContext::RewritingOperatorAsSpaceship:
-      Diags.Report(Active->Entity->getLocation(),
-                   diag::note_rewriting_operator_as_spaceship);
+      DiagFunc(Active->Entity->getLocation(),
+               PDiag(diag::note_rewriting_operator_as_spaceship));
       break;
 
     case CodeSynthesisContext::InitializingStructuredBinding:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_in_binding_decl_init)
-          << cast<BindingDecl>(Active->Entity);
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_in_binding_decl_init)
+                   << cast<BindingDecl>(Active->Entity));
       break;
 
     case CodeSynthesisContext::MarkingClassDllexported:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_due_to_dllexported_class)
-          << cast<CXXRecordDecl>(Active->Entity) << !getLangOpts().CPlusPlus11;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_due_to_dllexported_class)
+                   << cast<CXXRecordDecl>(Active->Entity)
+                   << !getLangOpts().CPlusPlus11);
       break;
 
     case CodeSynthesisContext::BuildingBuiltinDumpStructCall:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_building_builtin_dump_struct_call)
-          << convertCallArgsToString(
-                 *this, llvm::ArrayRef(Active->CallArgs, Active->NumCallArgs));
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_building_builtin_dump_struct_call)
+                   << convertCallArgsToString(
+                          *this, llvm::ArrayRef(Active->CallArgs,
+                                                Active->NumCallArgs)));
       break;
 
     case CodeSynthesisContext::Memoization:
       break;
 
     case CodeSynthesisContext::LambdaExpressionSubstitution:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_lambda_substitution_here);
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_lambda_substitution_here));
       break;
     case CodeSynthesisContext::ConstraintsCheck: {
       unsigned DiagID = 0;
       if (!Active->Entity) {
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_nested_requirement_here)
-          << Active->InstantiationRange;
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_nested_requirement_here)
+                     << Active->InstantiationRange);
         break;
       }
       if (isa<ConceptDecl>(Active->Entity))
@@ -1219,42 +1218,44 @@ void Sema::PrintInstantiationStack() {
         printTemplateArgumentList(OS, Active->template_arguments(),
                                   getPrintingPolicy());
       }
-      Diags.Report(Active->PointOfInstantiation, DiagID) << OS.str()
-        << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(DiagID) << OS.str() << Active->InstantiationRange);
       break;
     }
     case CodeSynthesisContext::ConstraintSubstitution:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_constraint_substitution_here)
-          << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_constraint_substitution_here)
+                   << Active->InstantiationRange);
       break;
     case CodeSynthesisContext::ConstraintNormalization:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_constraint_normalization_here)
-          << cast<NamedDecl>(Active->Entity) << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_constraint_normalization_here)
+                   << cast<NamedDecl>(Active->Entity)
+                   << Active->InstantiationRange);
       break;
     case CodeSynthesisContext::ParameterMappingSubstitution:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_parameter_mapping_substitution_here)
-          << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_parameter_mapping_substitution_here)
+                   << Active->InstantiationRange);
       break;
     case CodeSynthesisContext::BuildingDeductionGuides:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_building_deduction_guide_here);
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_building_deduction_guide_here));
       break;
     case CodeSynthesisContext::TypeAliasTemplateInstantiation:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_template_type_alias_instantiation_here)
-          << cast<TypeAliasTemplateDecl>(Active->Entity)
-          << Active->InstantiationRange;
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_template_type_alias_instantiation_here)
+                   << cast<TypeAliasTemplateDecl>(Active->Entity)
+                   << Active->InstantiationRange);
       break;
     case CodeSynthesisContext::PartialOrderingTTP:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_template_arg_template_params_mismatch);
+      DiagFunc(Active->PointOfInstantiation,
+               PDiag(diag::note_template_arg_template_params_mismatch));
       if (SourceLocation ParamLoc = Active->Entity->getLocation();
           ParamLoc.isValid())
-        Diags.Report(ParamLoc, diag::note_template_prev_declaration)
-            << /*isTemplateTemplateParam=*/true << Active->InstantiationRange;
+        DiagFunc(ParamLoc, PDiag(diag::note_template_prev_declaration)
+                               << /*isTemplateTemplateParam=*/true
+                               << Active->InstantiationRange);
       break;
     }
   }
