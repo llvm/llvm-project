@@ -33,6 +33,16 @@ AST_MATCHER(Type, isChar) {
 
 } // namespace
 
+UnintendedCharOstreamOutputCheck::UnintendedCharOstreamOutputCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context), CastTypeName(Options.get("CastTypeName")) {
+}
+void UnintendedCharOstreamOutputCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  if (CastTypeName.has_value())
+    Options.store(Opts, "CastTypeName", CastTypeName.value());
+}
+
 void UnintendedCharOstreamOutputCheck::registerMatchers(MatchFinder *Finder) {
   auto BasicOstream =
       cxxRecordDecl(hasName("::std::basic_ostream"),
@@ -60,19 +70,17 @@ void UnintendedCharOstreamOutputCheck::check(
   DiagnosticBuilder Builder =
       diag(Call->getOperatorLoc(),
            "%0 passed to 'operator<<' outputs as character instead of integer. "
-           "cast to 'unsigned' to print numeric value or cast to 'char' to "
-           "print "
-           "as character")
+           "cast to 'unsigned int' to print numeric value or cast to 'char' to "
+           "print as character")
       << Value->getType() << SourceRange;
 
   QualType T = Value->getType();
   const Type *UnqualifiedDesugaredType = T->getUnqualifiedDesugaredType();
 
-  llvm::StringRef CastType;
-  if (UnqualifiedDesugaredType->isSpecificBuiltinType(BuiltinType::SChar))
-    CastType = "int";
-  else
-    CastType = "unsigned int";
+  llvm::StringRef CastType = CastTypeName.value_or(
+      UnqualifiedDesugaredType->isSpecificBuiltinType(BuiltinType::SChar)
+          ? "int"
+          : "unsigned int");
 
   Builder << FixItHint::CreateReplacement(
       SourceRange, ("static_cast<" + CastType + ">(" +

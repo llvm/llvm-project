@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNINTENDEDCHAROSTREAMOUTPUTCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include <optional>
 
 namespace clang::tidy::bugprone {
 
@@ -20,13 +21,16 @@ namespace clang::tidy::bugprone {
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unintended-char-ostream-output.html
 class UnintendedCharOstreamOutputCheck : public ClangTidyCheck {
 public:
-  UnintendedCharOstreamOutputCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UnintendedCharOstreamOutputCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+
+private:
+  const std::optional<StringRef> CastTypeName;
 };
 
 } // namespace clang::tidy::bugprone
