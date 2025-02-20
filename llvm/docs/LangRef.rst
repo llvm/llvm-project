@@ -2932,9 +2932,8 @@ the behavior is undefined, unless one of the following exceptions applies:
   must be a null pointer, otherwise the behavior is undefined.
 
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
-    dereferenceable at the point of the assumption. The pointer may not be
-    dereferenceable at later pointers, e.g. because it could have been
-    freed.
+  dereferenceable at the point of the assumption. The pointer may not be
+  dereferenceable at later pointers, e.g. because it could have been freed.
 
 In addition to allowing operand bundles encoding function and parameter
 attributes, an assume operand bundle my also encode a ``separate_storage``
@@ -5113,10 +5112,6 @@ The following is the syntax for constant expressions:
     Perform an addition on constants.
 ``sub (LHS, RHS)``
     Perform a subtraction on constants.
-``mul (LHS, RHS)``
-    Perform a multiplication on constants.
-``shl (LHS, RHS)``
-    Perform a left shift on constants.
 ``xor (LHS, RHS)``
     Perform a bitwise xor on constants.
 

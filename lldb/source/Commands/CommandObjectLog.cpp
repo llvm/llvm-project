@@ -394,7 +394,8 @@ protected:
           (*file)->GetDescriptor(), /*shouldClose=*/true);
     } else {
       stream_up = std::make_unique<llvm::raw_fd_ostream>(
-          GetDebugger().GetOutputFile().GetDescriptor(), /*shouldClose=*/false);
+          GetDebugger().GetOutputFileSP()->GetDescriptor(),
+          /*shouldClose=*/false);
     }
 
     const std::string channel = std::string(args[0].ref());
