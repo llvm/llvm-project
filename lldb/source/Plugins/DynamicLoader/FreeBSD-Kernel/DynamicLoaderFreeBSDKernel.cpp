@@ -327,9 +327,9 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
   Target &target = process->GetTarget();
 
   if (IsKernel() && m_uuid.IsValid()) {
-    Stream &s = target.GetDebugger().GetOutputStream();
-    s.Printf("Kernel UUID: %s\n", m_uuid.GetAsString().c_str());
-    s.Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
+    lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
+    s->Printf("Kernel UUID: %s\n", m_uuid.GetAsString().c_str());
+    s->Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
   }
 
   // Test if the module is loaded into the taget,
@@ -355,9 +355,9 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
       if (!m_module_sp)
         m_module_sp = target.GetOrCreateModule(module_spec, true);
       if (IsKernel() && !m_module_sp) {
-        Stream &s = target.GetDebugger().GetOutputStream();
-        s.Printf("WARNING: Unable to locate kernel binary on the debugger "
-                 "system.\n");
+        lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
+        s->Printf("WARNING: Unable to locate kernel binary on the debugger "
+                  "system.\n");
       }
     }
 
@@ -464,20 +464,19 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
   }
 
   if (IsLoaded() && m_module_sp && IsKernel()) {
-    Stream &s = target.GetDebugger().GetOutputStream();
+    lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
     ObjectFile *kernel_object_file = m_module_sp->GetObjectFile();
     if (kernel_object_file) {
       addr_t file_address =
           kernel_object_file->GetBaseAddress().GetFileAddress();
       if (m_load_address != LLDB_INVALID_ADDRESS &&
           file_address != LLDB_INVALID_ADDRESS) {
-        s.Printf("Kernel slide 0x%" PRIx64 " in memory.\n",
-                 m_load_address - file_address);
-        s.Printf("Loaded kernel file %s\n",
-                 m_module_sp->GetFileSpec().GetPath().c_str());
+        s->Printf("Kernel slide 0x%" PRIx64 " in memory.\n",
+                  m_load_address - file_address);
+        s->Printf("Loaded kernel file %s\n",
+                  m_module_sp->GetFileSpec().GetPath().c_str());
       }
     }
-    s.Flush();
   }
 
   return IsLoaded();

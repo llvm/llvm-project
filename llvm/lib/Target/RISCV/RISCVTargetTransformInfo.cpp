@@ -673,7 +673,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // We use 2 for the cost of the mask materialization as this is the true
     // cost for small masks and most shuffles are small.  At worst, this cost
     // should be a very small constant for the constant pool load.  As such,
-    // we may bias towards large selects slightly more than truely warranted.
+    // we may bias towards large selects slightly more than truly warranted.
     return LT.first *
            (1 + getRISCVInstructionCost({RISCV::VMV_S_X, RISCV::VMERGE_VVM},
                                         LT.second, CostKind));
@@ -765,9 +765,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 }
 
 static unsigned isM1OrSmaller(MVT VT) {
-  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-  return (LMUL == RISCVII::VLMUL::LMUL_F8 || LMUL == RISCVII::VLMUL::LMUL_F4 ||
-          LMUL == RISCVII::VLMUL::LMUL_F2 || LMUL == RISCVII::VLMUL::LMUL_1);
+  RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  return (LMUL == RISCVVType::VLMUL::LMUL_F8 ||
+          LMUL == RISCVVType::VLMUL::LMUL_F4 ||
+          LMUL == RISCVVType::VLMUL::LMUL_F2 ||
+          LMUL == RISCVVType::VLMUL::LMUL_1);
 }
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
@@ -1176,6 +1178,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::fma:
   case Intrinsic::fmuladd: {
     // TODO: handle promotion with f16/bf16 with zvfhmin/zvfbfmin
     auto LT = getTypeLegalizationCost(RetTy);
@@ -1353,13 +1356,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
     if (TLI->isOperationCustom(VPISD, LT.second))
       return Cost * LT.first;
-    break;
-  }
-  case Intrinsic::vp_fneg: {
-    std::optional<unsigned> FOp =
-        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-    assert(FOp.has_value());
-    return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
   }
   case Intrinsic::vp_select: {
@@ -2396,7 +2392,7 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
   // either GEP instructions, PHIs, bitcasts or constants. When we have same
   // base, we just calculate cost of each non-Base GEP as an ADD operation if
   // any their index is a non-const.
-  // If no known dependecies between the pointers cost is calculated as a sum
+  // If no known dependencies between the pointers cost is calculated as a sum
   // of costs of GEP instructions.
   for (auto [I, V] : enumerate(Ptrs)) {
     const auto *GEP = dyn_cast<GetElementPtrInst>(V);
@@ -2440,7 +2436,7 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   if (ST->enableDefaultUnroll())
     return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
 
-  // Enable Upper bound unrolling universally, not dependant upon the conditions
+  // Enable Upper bound unrolling universally, not dependent upon the conditions
   // below.
   UP.UpperBound = true;
 

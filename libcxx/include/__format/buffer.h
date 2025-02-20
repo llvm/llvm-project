@@ -15,7 +15,6 @@
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__algorithm/ranges_copy.h>
-#include <__algorithm/ranges_copy_n.h>
 #include <__algorithm/transform.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__concepts/same_as.h>
@@ -33,7 +32,7 @@
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
-#include <__memory/ranges_construct_at.h>
+#include <__memory/destroy.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/conditional.h>
@@ -621,7 +620,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI ~__retarget_buffer() {
-    ranges::destroy_n(__ptr_, __size_);
+    std::destroy_n(__ptr_, __size_);
     allocator_traits<_Alloc>::deallocate(__alloc_, __ptr_, __capacity_);
   }
 
@@ -686,7 +685,7 @@ private:
     // guard is optimized away so there is no runtime overhead.
     std::uninitialized_move_n(__ptr_, __size_, __result.ptr);
     __guard.__complete();
-    ranges::destroy_n(__ptr_, __size_);
+    std::destroy_n(__ptr_, __size_);
     allocator_traits<_Alloc>::deallocate(__alloc_, __ptr_, __capacity_);
 
     __ptr_      = __result.ptr;

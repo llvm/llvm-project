@@ -1,6 +1,6 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization-staging \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization-staging -o - %s 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp  -o - %s 2>&1 \
 ! RUN:   | FileCheck %s
 
 subroutine wsloop_private

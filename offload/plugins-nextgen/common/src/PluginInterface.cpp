@@ -861,8 +861,14 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (!ProfOrErr)
       return ProfOrErr.takeError();
 
-    // TODO: write data to profiling file
-    ProfOrErr->dump();
+    // Dump out profdata
+    if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
+        uint32_t(DeviceDebugKind::PGODump))
+      ProfOrErr->dump();
+
+    // Write data to profiling file
+    if (auto Err = ProfOrErr->write())
+      return Err;
   }
 
   // Delete the memory manager before deinitializing the device. Otherwise,
@@ -1058,9 +1064,8 @@ Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
   if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
     return Err;
 
-  if (!Server.Thread->Running.load(std::memory_order_acquire))
-    if (auto Err = Server.startThread())
-      return Err;
+  if (auto Err = Server.startThread())
+    return Err;
 
   RPCServer = &Server;
   DP("Running an RPC server on device %d\n", getDeviceId());
@@ -1635,12 +1640,11 @@ Error GenericPluginTy::deinit() {
   if (GlobalHandler)
     delete GlobalHandler;
 
-  if (RPCServer && RPCServer->Thread->Running.load(std::memory_order_acquire))
+  if (RPCServer) {
     if (Error Err = RPCServer->shutDown())
       return Err;
-
-  if (RPCServer)
     delete RPCServer;
+  }
 
   if (RecordReplay)
     delete RecordReplay;

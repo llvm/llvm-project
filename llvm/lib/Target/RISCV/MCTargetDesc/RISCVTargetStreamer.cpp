@@ -21,7 +21,7 @@
 
 using namespace llvm;
 
-// This option controls wether or not we emit ELF attributes for ABI features,
+// This option controls whether or not we emit ELF attributes for ABI features,
 // like RISC-V atomics or X3 usage.
 static cl::opt<bool> RiscvAbiAttr(
     "riscv-abi-attributes",

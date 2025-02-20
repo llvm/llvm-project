@@ -1693,6 +1693,7 @@ void Parser::ParseOpenMPClauses(OpenMPDirectiveKind DKind,
 ///     'holds' '(' scalar-expression ')'
 ///     'no_openmp'
 ///     'no_openmp_routines'
+///     'no_openmp_constructs' (OpenMP 6.0)
 ///     'no_parallelism'
 ///
 void Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
@@ -2547,9 +2548,10 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     }
   }
 
-  if (DKind == OMPD_tile && !SeenClauses[unsigned(OMPC_sizes)]) {
+  if ((DKind == OMPD_tile || DKind == OMPD_stripe) &&
+      !SeenClauses[unsigned(OMPC_sizes)]) {
     Diag(Loc, diag::err_omp_required_clause)
-        << getOpenMPDirectiveName(OMPD_tile) << "sizes";
+        << getOpenMPDirectiveName(DKind) << "sizes";
   }
 
   StmtResult AssociatedStmt;
@@ -2758,15 +2760,16 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
                                    ? OMPC_unknown
                                    : getOpenMPClauseKind(PP.getSpelling(Tok));
       // Check if the clause is unrecognized.
-      if (getLangOpts().OpenMP < 52 && (CKind == OMPC_unknown || CKind == OMPC_otherwise)) {
+      if (getLangOpts().OpenMP < 52 &&
+          (CKind == OMPC_unknown || CKind == OMPC_otherwise)) {
         Diag(Tok, diag::err_omp_unknown_clause)
-        << PP.getSpelling(Tok) << "metadirective";
+            << PP.getSpelling(Tok) << "metadirective";
       }
       if (getLangOpts().OpenMP >= 52 && CKind == OMPC_unknown) {
         Diag(Tok, diag::err_omp_unknown_clause)
-        << PP.getSpelling(Tok) << "metadirective";
+            << PP.getSpelling(Tok) << "metadirective";
       }
-      if(CKind == OMPC_default && getLangOpts().OpenMP >= 52) {
+      if (CKind == OMPC_default && getLangOpts().OpenMP >= 52) {
         Diag(Tok, diag::warn_omp_default_deprecated);
       }
       SourceLocation Loc = ConsumeToken();
@@ -2797,8 +2800,9 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       }
       if (CKind == OMPC_otherwise) {
         // Check for 'otherwise' keyword.
-        if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()->getName() == "otherwise") {
-        ConsumeToken();  // Consume 'otherwise'
+        if (Tok.is(tok::identifier) &&
+            Tok.getIdentifierInfo()->getName() == "otherwise") {
+          ConsumeToken(); // Consume 'otherwise'
         }
       }
       // Skip Directive for now. We will parse directive in the second iteration
@@ -3492,6 +3496,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   }
   case OMPC_no_openmp:
   case OMPC_no_openmp_routines:
+  case OMPC_no_openmp_constructs:
   case OMPC_no_parallelism: {
     if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
