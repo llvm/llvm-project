@@ -29,7 +29,7 @@ namespace interp {
 template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
   DeclScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
-      : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P, VD),
+      : LocalScope<Emitter>(Ctx, VD), Scope(Ctx->P),
         OldInitializingDecl(Ctx->InitializingDecl) {
     Ctx->InitializingDecl = VD;
     Ctx->InitStack.push_back(InitLink::Decl(VD));
@@ -272,7 +272,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
         CurType = B->getType();
       } else {
         unsigned DerivedOffset = collectBaseOffset(B->getType(), CurType);
-        if (!this->emitGetPtrBasePop(DerivedOffset, CE))
+        if (!this->emitGetPtrBasePop(
+                DerivedOffset, /*NullOK=*/CE->getType()->isPointerType(), CE))
           return false;
         CurType = B->getType();
       }
@@ -288,7 +289,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     unsigned DerivedOffset =
         collectBaseOffset(SubExpr->getType(), CE->getType());
 
-    return this->emitGetPtrDerivedPop(DerivedOffset, CE);
+    return this->emitGetPtrDerivedPop(
+        DerivedOffset, /*NullOK=*/CE->getType()->isPointerType(), CE);
   }
 
   case CK_FloatingCast: {
@@ -3395,7 +3397,8 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
           CtorFunc = getFunction(CE->getConstructor());
           if (!CtorFunc)
             return false;
-        }
+        } else if (!DynamicInit)
+          DynamicInit = Init;
 
         LabelTy EndLabel = this->getLabel();
         LabelTy StartLabel = this->getLabel();
