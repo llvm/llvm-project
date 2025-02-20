@@ -33,12 +33,18 @@ class BuiltinTemplate<list<TemplateArg> template_head> {
   list<TemplateArg> TemplateHead = template_head;
 }
 
+// template <template <class T, T... Ints> IntSeq, class T, T N>
 def __make_integer_seq : BuiltinTemplate<
   [Template<[Class<"T">, NTTP<"T", "Ints", /*is_variadic=*/1>], "IntSeq">, Class<"T">, NTTP<"T", "N">]>;
 
+// template <size_t, class... T>
 def __type_pack_element : BuiltinTemplate<
   [SizeT, Class<"T", /*is_variadic=*/1>]>;
 
+// template <template <class... Args> BaseTemplate,
+//           template <class TypeMember> HasTypeMember,
+//           class HasNoTypeMember
+//           class... Ts>
 def __builtin_common_type : BuiltinTemplate<
   [Template<[Class<"Args", /*is_variadic=*/1>], "BaseTemplate">,
    Template<[Class<"TypeMember">], "HasTypeMember">,
