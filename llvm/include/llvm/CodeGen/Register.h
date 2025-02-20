@@ -54,6 +54,12 @@ public:
     return MCRegister::isPhysicalRegister(Reg);
   }
 
+  /// Return true if the specified register number is in
+  /// the virtual register namespace.
+  static constexpr bool isVirtualRegister(unsigned Reg) {
+    return Reg & MCRegister::VirtualRegFlag;
+  }
+
   /// Convert a 0-based index to a virtual register number.
   /// This is the inverse operation of VirtReg2IndexFunctor below.
   static Register index2VirtReg(unsigned Index) {
@@ -63,7 +69,7 @@ public:
 
   /// Return true if the specified register number is in the virtual register
   /// namespace.
-  constexpr bool isVirtual() const { return Reg & MCRegister::VirtualRegFlag; }
+  constexpr bool isVirtual() const { return isVirtualRegister(Reg); }
 
   /// Return true if the specified register number is in the physical register
   /// namespace.
@@ -150,14 +156,14 @@ class VirtRegOrUnit {
 
 public:
   constexpr explicit VirtRegOrUnit(MCRegUnit Unit) : VRegOrUnit(Unit) {
-    assert(!Register(VRegOrUnit).isVirtual());
+    assert(!Register::isVirtualRegister(VRegOrUnit));
   }
   constexpr explicit VirtRegOrUnit(Register Reg) : VRegOrUnit(Reg.id()) {
     assert(Reg.isVirtual());
   }
 
   constexpr bool isVirtualReg() const {
-    return Register(VRegOrUnit).isVirtual();
+    return Register::isVirtualRegister(VRegOrUnit);
   }
 
   constexpr MCRegUnit asMCRegUnit() const {

@@ -910,7 +910,8 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
 
       // If the source register was virtual and if we know something about it,
       // add an assert node.
-      if (!Regs[Part + i].isVirtual() || !RegisterVT.isInteger())
+      if (!Register::isVirtualRegister(Regs[Part + i]) ||
+          !RegisterVT.isInteger())
         continue;
 
       const FunctionLoweringInfo::LiveOutInfo *LOI =
@@ -1024,7 +1025,7 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
   InlineAsm::Flag Flag(Code, Regs.size());
   if (HasMatching)
     Flag.setMatchingOp(MatchingIdx);
-  else if (!Regs.empty() && Regs.front().isVirtual()) {
+  else if (!Regs.empty() && Register::isVirtualRegister(Regs.front())) {
     // Put the register class of the virtual registers in the flag word.  That
     // way, later passes can recompute register class constraints for inline
     // assembly as well as normal instructions.
