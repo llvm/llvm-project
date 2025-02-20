@@ -519,24 +519,8 @@ float modff(float __x, float *__iptr) {
 }
 
 __DEVICE__
-float nanf(const char *__tagp __attribute__((nonnull))) {
-  union {
-    float val;
-    struct ieee_float {
-      unsigned int mantissa : 22;
-      unsigned int quiet : 1;
-      unsigned int exponent : 8;
-      unsigned int sign : 1;
-    } bits;
-  } __tmp;
-  __static_assert_type_size_equal(sizeof(__tmp.val), sizeof(__tmp.bits));
-
-  __tmp.bits.sign = 0u;
-  __tmp.bits.exponent = ~0u;
-  __tmp.bits.quiet = 1u;
-  __tmp.bits.mantissa = __make_mantissa(__tagp);
-
-  return __tmp.val;
+float nanf(const char *__tagp) {
+  return __builtin_nanf(__tagp);
 }
 
 __DEVICE__
@@ -1072,30 +1056,7 @@ double modf(double __x, double *__iptr) {
 
 __DEVICE__
 double nan(const char *__tagp) {
-#if !_WIN32
-  union {
-    double val;
-    struct ieee_double {
-      uint64_t mantissa : 51;
-      uint32_t quiet : 1;
-      uint32_t exponent : 11;
-      uint32_t sign : 1;
-    } bits;
-  } __tmp;
-  __static_assert_type_size_equal(sizeof(__tmp.val), sizeof(__tmp.bits));
-
-  __tmp.bits.sign = 0u;
-  __tmp.bits.exponent = ~0u;
-  __tmp.bits.quiet = 1u;
-  __tmp.bits.mantissa = __make_mantissa(__tagp);
-
-  return __tmp.val;
-#else
-  __static_assert_type_size_equal(sizeof(uint64_t), sizeof(double));
-  uint64_t __val = __make_mantissa(__tagp);
-  __val |= 0xFFF << 51;
-  return *reinterpret_cast<double *>(&__val);
-#endif
+  return __builtin_nan(__tagp);
 }
 
 __DEVICE__
