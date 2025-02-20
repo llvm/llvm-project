@@ -250,8 +250,13 @@ private:
       DominanceInfoNode *idom = nullptr;
 
       // DominanceInfo doesn't support getNode queries for single-block regions.
-      if (!currentBlock->isEntryBlock())
-        idom = dominators.getNode(currentBlock)->getIDom();
+      if (!currentBlock->isEntryBlock()) {
+        auto domNode = dominators.getNode(currentBlock);
+        // If we encounter an unreachable block, we cannot move up further.
+        if (domNode == nullptr)
+          break;
+        idom = domNode->getIDom();
+      }
 
       if (idom && dominators.properlyDominates(parentBlock, idom->getBlock())) {
         // If the current immediate dominator is below the placement block, move
