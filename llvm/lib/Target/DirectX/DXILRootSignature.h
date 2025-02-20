@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -24,7 +25,11 @@
 namespace llvm {
 namespace dxil {
 
-enum class RootSignatureElementKind { Error = 0, RootFlags = 1 };
+enum class RootSignatureElementKind {
+  Error = 0,
+  RootFlags = 1,
+  RootConstants = 2
+};
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
   friend AnalysisInfoMixin<RootSignatureAnalysis>;
   static AnalysisKey Key;

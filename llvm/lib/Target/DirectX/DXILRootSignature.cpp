@@ -43,7 +43,7 @@ static bool reportError(LLVMContext *Ctx, Twine Message,
 static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
                                MDNode *RootConstNode) {
   if (RootConstNode->getNumOperands() != 5)
-    return reportError(Ctx, "Invalid format for RootFlag Element");
+    return reportError(Ctx, "Invalid format for Root constants element");
 
   dxbc::RootParameter NewParam;
   NewParam.ParameterType = dxbc::RootParameterType::Constants32Bit;
@@ -68,6 +68,8 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   auto *Num32BitValues =
       mdconst::extract<ConstantInt>(RootConstNode->getOperand(4));
   NewParam.Constants.Num32BitValues = Num32BitValues->getZExtValue();
+
+  RSD.Parameters.push_back(NewParam);
 
   return false;
 }
@@ -94,10 +96,12 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
   RootSignatureElementKind ElementKind =
       StringSwitch<RootSignatureElementKind>(ElementText->getString())
           .Case("RootFlags", RootSignatureElementKind::RootFlags)
+          .Case("RootConstants", RootSignatureElementKind::RootConstants)
           .Default(RootSignatureElementKind::Error);
 
   switch (ElementKind) {
-
+  case RootSignatureElementKind::RootConstants:
+    return parseRootConstants(Ctx, RSD, Element);
   case RootSignatureElementKind::RootFlags:
     return parseRootFlags(Ctx, RSD, Element);
   case RootSignatureElementKind::Error:
@@ -241,6 +245,34 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << indent(Space) << "NumStaticSamplers: " << 0 << ":\n";
     OS << indent(Space) << "StaticSamplersOffset: "
        << sizeof(RS.Header) + RS.Parameters.size_in_bytes() << ":\n";
+
+    OS << indent(Space) << "- Parameters: \n";
+    Space++;
+    for (const auto &Param : RS.Parameters) {
+      OS << indent(Space) << "Type: " << &Param.ParameterType << " \n";
+      OS << indent(Space) << "ShaderVisibility: " << &Param.ShaderVisibility
+         << " \n";
+      Space++;
+
+      switch (Param.ParameterType) {
+
+      case dxbc::RootParameterType::Constants32Bit: {
+        OS << indent(Space) << "- Constants: \n";
+        Space++;
+        OS << indent(Space)
+           << "RegisterSpace: " << &Param.Constants.RegisterSpace << " \n";
+        OS << indent(Space)
+           << "ShaderRegister: " << &Param.Constants.ShaderRegister << " \n";
+        OS << indent(Space)
+           << "Num32BitValues: " << &Param.Constants.Num32BitValues << " \n";
+        Space--;
+      } break;
+      case dxbc::RootParameterType::Empty:
+        break;
+      }
+      Space--;
+    }
+    Space--;
     Space--;
     // end root signature header
   }
