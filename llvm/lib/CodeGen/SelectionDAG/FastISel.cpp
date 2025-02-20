@@ -2229,7 +2229,8 @@ Register FastISel::fastEmitInst_i(unsigned MachineInstOpcode,
 Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, unsigned Op0,
                                               uint32_t Idx) {
   Register ResultReg = createResultReg(TLI.getRegClassFor(RetVT));
-  assert(Register(Op0).isVirtual() && "Cannot yet extract from physregs");
+  assert(Register::isVirtualRegister(Op0) &&
+         "Cannot yet extract from physregs");
   const TargetRegisterClass *RC = MRI.getRegClass(Op0);
   MRI.constrainRegClass(Op0, TRI.getSubClassWithSubReg(RC, Idx));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
