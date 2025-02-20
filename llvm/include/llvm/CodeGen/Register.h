@@ -36,23 +36,10 @@ public:
   static_assert(std::numeric_limits<decltype(Reg)>::max() >= 0xFFFFFFFF,
                 "Reg isn't large enough to hold full range.");
 
-  /// isStackSlot - Sometimes it is useful to be able to store a non-negative
-  /// frame index in a variable that normally holds a register. isStackSlot()
-  /// returns true if Reg is in the range used for stack slots.
-  ///
-  /// FIXME: remove in favor of member.
-  static constexpr bool isStackSlot(unsigned Reg) {
+  /// Return true if this is a stack slot.
+  constexpr bool isStack() const {
     return MCRegister::FirstStackSlot <= Reg &&
            Reg < MCRegister::VirtualRegFlag;
-  }
-
-  /// Return true if this is a stack slot.
-  constexpr bool isStack() const { return isStackSlot(Reg); }
-
-  /// Compute the frame index from a register value representing a stack slot.
-  static int stackSlot2Index(Register Reg) {
-    assert(Reg.isStack() && "Not a stack slot");
-    return int(Reg.id() - MCRegister::FirstStackSlot);
   }
 
   /// Convert a non-negative frame index to a stack slot register value.
