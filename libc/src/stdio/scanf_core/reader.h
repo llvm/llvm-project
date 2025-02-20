@@ -15,6 +15,11 @@
 #include "src/__support/File/file.h"
 #endif
 
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+#include "src/stdio/getc.h"
+#include "src/stdio/ungetc.h"
+#endif
+
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include "src/__support/macros/config.h"
 
