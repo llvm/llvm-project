@@ -1926,15 +1926,15 @@ static ExprResult BuiltinTriviallyRelocate(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 3))
     return ExprError();
 
-  QualType ArgTy = TheCall->getArg(0)->getType();
-  if (!ArgTy->isPointerType() || ArgTy.getCVRQualifiers() != 0) {
+  QualType Dest = TheCall->getArg(0)->getType();
+  if (!Dest->isPointerType() || Dest.getCVRQualifiers() != 0) {
     S.Diag(TheCall->getArg(0)->getExprLoc(),
            diag::err_builtin_trivially_relocate_invalid_arg_type)
         << /*a pointer*/ 0;
     return ExprError();
   }
 
-  QualType T = ArgTy->getPointeeType();
+  QualType T = Dest->getPointeeType();
   if (S.RequireCompleteType(TheCall->getBeginLoc(), T,
                             diag::err_incomplete_type))
     return ExprError();
@@ -1947,10 +1947,10 @@ static ExprResult BuiltinTriviallyRelocate(Sema &S, CallExpr *TheCall) {
     return ExprError();
   }
 
-  TheCall->setType(ArgTy);
+  TheCall->setType(Dest);
 
-  QualType Dest = TheCall->getArg(1)->getType();
-  if (Dest.getCanonicalType() != ArgTy.getCanonicalType()) {
+  QualType Src = TheCall->getArg(1)->getType();
+  if (Src.getCanonicalType() != Dest.getCanonicalType()) {
     S.Diag(TheCall->getArg(0)->getExprLoc(),
            diag::err_builtin_trivially_relocate_invalid_arg_type)
         << /*the same*/ 3;

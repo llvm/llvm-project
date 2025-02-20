@@ -1863,6 +1863,12 @@ The following type trait primitives are supported by Clang. Those traits marked
   functionally equivalent to copying the underlying bytes and then dropping the
   source object on the floor. This is true of trivial types and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
+* ``__builtin_is_cpp_trivially_relocatable`` (C++): Returns true if and object
+  is trivially relocatable, as defined by the C++26 standard.
+  Note that the caller code should ensure that if the object is polymorphic,
+  the dynamic type is of the most derived type.
+* ``__builtin_is_replaceable`` (C++): Returns true if and object
+  is replaceable, as defined by the C++26 standard.
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
   object representations. Note that types containing padding bytes are never
@@ -3721,6 +3727,21 @@ Query for this feature with ``__has_builtin(__builtin_operator_new)`` or
   * If the value is non-zero, the builtins may not support calling arbitrary
     replaceable global (de)allocation functions, but do support calling at least
     ``::operator new(size_t)`` and ``::operator delete(void*)``.
+
+
+``__builtin_trivially_relocate``
+-----------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+  T* __builtin_trivially_relocate(T* dest, T* src, size_t count)
+
+Trivially relocates ``count`` objects of relocatable, complete type ``T``
+from ``src`` to ``dest`` and returns ``dest``.
+This builtin is used to implement ``std::trivially_relocate``.
+
 
 ``__builtin_preserve_access_index``
 -----------------------------------
