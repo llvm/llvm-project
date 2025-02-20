@@ -342,7 +342,12 @@ def parseOptionsAndInitTestdirs():
         )
 
     if args.E:
-        os.environ["CFLAGS_EXTRAS"] = args.E
+        args_list = args.E.split(":")
+        # Remove first 'start' element, as it was an ancillary item.
+        if args_list[0] == "start":
+            args_list = args_list[1:]
+
+        os.environ["CFLAGS_EXTRAS"] = " ".join(args_list)
 
     if args.dwarf_version:
         configuration.dwarf_version = args.dwarf_version
