@@ -173,12 +173,13 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
 }
 
 static unsigned calculateLegacyCbufferFieldAlign(const ASTContext &Context,
-                                           QualType T) {
+                                                 QualType T) {
   // Aggregate types are always aligned to new buffer rows
   if (T->isAggregateType())
     return 16;
 
-  assert(Context.getTypeSize(T) <= 64 && "Scalar bit widths larger than 64 not supported");
+  assert(Context.getTypeSize(T) <= 64 &&
+         "Scalar bit widths larger than 64 not supported");
 
   // 64 bit types such as double and uint64_t align to 8 bytes
   if (Context.getTypeSize(T) == 64)
