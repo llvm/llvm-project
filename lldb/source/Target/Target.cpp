@@ -3073,7 +3073,7 @@ bool Target::RunStopHooks() {
   if (num_exe_ctx == 0)
     return false;
 
-  StreamUP output_sp = m_debugger.GetAsyncOutputStream();
+  StreamSP output_sp = m_debugger.GetAsyncOutputStream();
 
   bool auto_continue = false;
   bool hooks_ran = false;
