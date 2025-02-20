@@ -420,6 +420,11 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["ashr-pk-insts"] = true;
       Features["atomic-buffer-pk-add-bf16-inst"] = true;
       Features["vmem-pref-insts"] = true;
+      Features["atomic-fadd-rtn-insts"] = true;
+      Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+      Features["atomic-flat-pk-add-16-insts"] = true;
+      Features["atomic-global-pk-add-bf16-inst"] = true;
+      Features["atomic-ds-pk-add-16-insts"] = true;
       break;
     case GK_GFX120F:
     case GK_GFX120E:
