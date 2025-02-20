@@ -979,26 +979,23 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
     Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_i8_asi, NVPTX::LD_i16_asi,
                              NVPTX::LD_i32_asi, NVPTX::LD_i64_asi,
                              NVPTX::LD_f32_asi, NVPTX::LD_f64_asi);
-    if (!Opcode)
-      return false;
-    Ops.append({Base, Offset, Chain});
   } else {
-    PointerSize == 64 ? SelectADDRri64(N1.getNode(), N1, Base, Offset)
-                      : SelectADDRri(N1.getNode(), N1, Base, Offset);
-
-    if (PointerSize == 64)
+    if (PointerSize == 64) {
+      SelectADDRri64(N1.getNode(), N1, Base, Offset);
       Opcode =
           pickOpcodeForVT(TargetVT, NVPTX::LD_i8_ari_64, NVPTX::LD_i16_ari_64,
                           NVPTX::LD_i32_ari_64, NVPTX::LD_i64_ari_64,
                           NVPTX::LD_f32_ari_64, NVPTX::LD_f64_ari_64);
-    else
+    } else {
+      SelectADDRri(N1.getNode(), N1, Base, Offset);
       Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_i8_ari, NVPTX::LD_i16_ari,
                                NVPTX::LD_i32_ari, NVPTX::LD_i64_ari,
                                NVPTX::LD_f32_ari, NVPTX::LD_f64_ari);
-    if (!Opcode)
-      return false;
-    Ops.append({Base, Offset, Chain});
+    }
   }
+  if (!Opcode)
+    return false;
+  Ops.append({Base, Offset, Chain});
 
   SDNode *NVPTXLD =
       CurDAG->getMachineNode(*Opcode, DL, TargetVT, MVT::Other, Ops);
@@ -1114,10 +1111,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
       return false;
     Ops.append({Base, Offset, Chain});
   } else {
-    PointerSize == 64 ? SelectADDRri64(Op1.getNode(), Op1, Base, Offset)
-                      : SelectADDRri(Op1.getNode(), Op1, Base, Offset);
-
     if (PointerSize == 64) {
+      SelectADDRri64(Op1.getNode(), Op1, Base, Offset);
       switch (N->getOpcode()) {
       default:
         return false;
@@ -1136,6 +1131,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
         break;
       }
     } else {
+      SelectADDRri(Op1.getNode(), Op1, Base, Offset);
       switch (N->getOpcode()) {
       default:
         return false;
@@ -1265,10 +1261,8 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     SDValue Ops[] = { Addr, Chain };
     LD = CurDAG->getMachineNode(*Opcode, DL, InstVTList, Ops);
   } else {
-    TM.is64Bit() ? SelectADDRri64(Op1.getNode(), Op1, Base, Offset)
-                 : SelectADDRri(Op1.getNode(), Op1, Base, Offset);
-
     if (TM.is64Bit()) {
+      SelectADDRri64(Op1.getNode(), Op1, Base, Offset);
       switch (N->getOpcode()) {
       default:
         return false;
@@ -1324,6 +1318,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
         break;
       }
     } else {
+      SelectADDRri(Op1.getNode(), Op1, Base, Offset);
       switch (N->getOpcode()) {
       default:
         return false;
@@ -1478,25 +1473,23 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     Opcode = pickOpcodeForVT(SourceVT, NVPTX::ST_i8_asi, NVPTX::ST_i16_asi,
                              NVPTX::ST_i32_asi, NVPTX::ST_i64_asi,
                              NVPTX::ST_f32_asi, NVPTX::ST_f64_asi);
-    if (!Opcode)
-      return false;
-    Ops.append({Base, Offset, Chain});
   } else {
-    PointerSize == 64 ? SelectADDRri64(BasePtr.getNode(), BasePtr, Base, Offset)
-                      : SelectADDRri(BasePtr.getNode(), BasePtr, Base, Offset);
-    if (PointerSize == 64)
+    if (PointerSize == 64) {
+      SelectADDRri64(BasePtr.getNode(), BasePtr, Base, Offset);
       Opcode =
           pickOpcodeForVT(SourceVT, NVPTX::ST_i8_ari_64, NVPTX::ST_i16_ari_64,
                           NVPTX::ST_i32_ari_64, NVPTX::ST_i64_ari_64,
                           NVPTX::ST_f32_ari_64, NVPTX::ST_f64_ari_64);
-    else
+    } else {
+      SelectADDRri(BasePtr.getNode(), BasePtr, Base, Offset);
       Opcode = pickOpcodeForVT(SourceVT, NVPTX::ST_i8_ari, NVPTX::ST_i16_ari,
                                NVPTX::ST_i32_ari, NVPTX::ST_i64_ari,
                                NVPTX::ST_f32_ari, NVPTX::ST_f64_ari);
-    if (!Opcode)
-      return false;
-    Ops.append({Base, Offset, Chain});
+    }
   }
+  if (!Opcode)
+    return false;
+  Ops.append({Base, Offset, Chain});
 
   SDNode *NVPTXST = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
 
@@ -1587,10 +1580,8 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     }
     Ops.append({Base, Offset});
   } else {
-    PointerSize == 64 ? SelectADDRri64(N2.getNode(), N2, Base, Offset)
-                      : SelectADDRri(N2.getNode(), N2, Base, Offset);
-
     if (PointerSize == 64) {
+      SelectADDRri64(N2.getNode(), N2, Base, Offset);
       switch (N->getOpcode()) {
       default:
         return false;
@@ -1609,6 +1600,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
         break;
       }
     } else {
+      SelectADDRri(N2.getNode(), N2, Base, Offset);
       switch (N->getOpcode()) {
       default:
         return false;
