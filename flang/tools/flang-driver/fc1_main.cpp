@@ -54,10 +54,12 @@ static int printSupportedCPUs(llvm::StringRef triple) {
 /// Check that given CPU is valid for given target.
 static bool checkSupportedCPU(clang::DiagnosticsEngine& diags, llvm::StringRef str_cpu, llvm::StringRef str_triple) {
 
-  llvm::errs() << "EE str_cpu = '" << str_cpu << "', str_triple = '" << str_triple << "'\n";
   llvm::Triple triple{str_triple};
+
+  // Need to check for empty CPU string, because it can be empty for some
+  // cases, e.g., "-x cuda" compilation.
   if (triple.getArch() == llvm::Triple::x86_64 && !str_cpu.empty()) {
-    const bool only64bit{true};
+    constexpr bool only64bit{true};
     llvm::X86::CPUKind x86cpu = llvm::X86::parseArchX86(str_cpu, only64bit);
     if (x86cpu == llvm::X86::CK_None) {
       diags.Report(clang::diag::err_target_unknown_cpu) << str_cpu;
@@ -70,7 +72,8 @@ static bool checkSupportedCPU(clang::DiagnosticsEngine& diags, llvm::StringRef s
     }
   }
 
-  // TODO: only support check for x86_64 for now. Anything else passes.
+  // TODO: only support check for x86_64 for now. Anything else is considered
+  // as "supported".
   return true;
 }
 
@@ -82,12 +85,6 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   flang->createDiagnostics();
   if (!flang->hasDiagnostics())
     return 1;
-
-  llvm::errs() << "EE args: ";
-  for (auto arg : argv) {
-    llvm::errs() << "\"" << arg << "\" ";
-  }
-  llvm::errs() << "\n";
 
   // We will buffer diagnostics from argument parsing so that we can output
   // them using a well formed diagnostic object.
