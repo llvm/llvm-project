@@ -607,17 +607,14 @@ public: // Part of public interface to class.
   // a default value.
   BindResult BindDefaultInitial(Store store, const MemRegion *R,
                                 SVal V) override {
-    llvm::SmallVector<SVal, 0> EscapedValuesDuringBind;
-    BoundedRegionBindingsRef B =
-        getRegionBindings(store, EscapedValuesDuringBind);
+    RegionBindingsRef B = getRegionBindings(store);
     // Use other APIs when you have to wipe the region that was initialized
     // earlier.
     assert(!(B.getDefaultBinding(R) || B.getDirectBinding(R)) &&
            "Double initialization!");
     B = B.addBinding(BindingKey::Make(R, BindingKey::Default), V);
     return BindResult{
-        StoreRef(B.asImmutableMap().getRootWithoutRetain(), *this),
-        std::move(EscapedValuesDuringBind)};
+        StoreRef(B.asImmutableMap().getRootWithoutRetain(), *this), {}};
   }
 
   // BindDefaultZero is used for zeroing constructors that may accidentally
