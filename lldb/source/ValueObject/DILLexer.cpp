@@ -29,9 +29,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "l_paren";
   case Kind::r_paren:
     return "r_paren";
-  default:
-    llvm_unreachable("Unknown token name");
   }
+  llvm_unreachable("Unknown token name");
 }
 
 static bool IsLetter(char c) {
