@@ -820,9 +820,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   // Default to having -disable-strictnode-mutation on
   IsStrictFPEnabled = true;
 
-  setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
-  setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
-
   if (Subtarget.isTargetzOS()) {
     struct RTLibCallMapping {
       RTLIB::Libcall Code;
