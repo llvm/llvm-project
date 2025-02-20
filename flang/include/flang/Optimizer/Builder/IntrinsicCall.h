@@ -336,6 +336,7 @@ struct IntrinsicLibrary {
   template <typename Shift>
   mlir::Value genMask(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genMatchAllSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genMatchAnySync(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genMatmul(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMatmulTranspose(mlir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
