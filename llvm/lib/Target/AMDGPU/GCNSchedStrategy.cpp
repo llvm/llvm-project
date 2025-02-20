@@ -1690,6 +1690,7 @@ bool PreRARematStage::hasExcessVGPRs(const GCNRegPressure &RP,
       HasSpill = true;
     }
     if (NumAGPRs > MaxVGPRs) {
+      ExcessArchVGPRs = NumArchVGPRs;
       AGPRLimited = true;
       HasSpill = true;
     }
@@ -1747,7 +1748,8 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   const unsigned MaxVGPRsNoSpill =
       ST.getBaseMaxNumVGPRs(F, {ST.getMinNumVGPRs(OccBounds.second),
                                 ST.getMaxNumVGPRs(OccBounds.first)});
-  const unsigned MaxSGPRsMinOcc = ST.getMaxNumSGPRs(DAG.MinOccupancy, false);
+  const unsigned MaxSGPRsIncOcc =
+      ST.getMaxNumSGPRs(DAG.MinOccupancy + 1, false);
   const unsigned MaxVGPRsIncOcc = ST.getMaxNumVGPRs(DAG.MinOccupancy + 1);
   IncreaseOccupancy = OccBounds.second > DAG.MinOccupancy;
 
@@ -1784,13 +1786,20 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
       });
     } else if (IncreaseOccupancy) {
       // Check whether SGPR pressure prevents us from increasing occupancy.
-      if (ClearOptRegionsIf(NumSGPRs > MaxSGPRsMinOcc))
+      if (ClearOptRegionsIf(NumSGPRs > MaxSGPRsIncOcc)) {
+        if (DAG.MinOccupancy >= OccBounds.first)
+          return false;
         continue;
+      }
 
       if (hasExcessVGPRs(RP, MaxVGPRsIncOcc, ExcessRP, OccAGPRLimited)) {
         // Check whether AGPR pressure prevents us from increasing occupancy.
-        if (ClearOptRegionsIf(OccAGPRLimited))
+        if (ClearOptRegionsIf(OccAGPRLimited)) {
+          if (DAG.MinOccupancy >= OccBounds.first)
+            return false;
           continue;
+        }
+
         // Occupancy could be increased by rematerializing ArchVGPRs.
         REMAT_DEBUG({
           if (ExcessRP) {
