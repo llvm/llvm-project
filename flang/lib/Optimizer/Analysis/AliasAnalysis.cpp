@@ -642,6 +642,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
               defOp = nullptr;
               v = def;
             }
+
+            breakFromLoop = true;
+            return;
           } else {
             // No further tracking for addresses loaded from memory for now.
             type = SourceKind::Indirect;
