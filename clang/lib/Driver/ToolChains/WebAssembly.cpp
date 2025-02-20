@@ -150,14 +150,15 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
+  if (Args.hasArg(options::OPT_pthread))
+    CmdArgs.push_back("--shared-memory");
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
 
-    if (Args.hasArg(options::OPT_pthread)) {
+    if (Args.hasArg(options::OPT_pthread))
       CmdArgs.push_back("-lpthread");
-      CmdArgs.push_back("--shared-memory");
-    }
 
     CmdArgs.push_back("-lc");
     AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
