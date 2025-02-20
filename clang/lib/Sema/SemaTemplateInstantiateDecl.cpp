@@ -12,6 +12,7 @@
 #include "TreeTransform.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DependentDiagnostic.h"
@@ -1167,25 +1168,51 @@ TemplateDeclInstantiator::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
 
 Decl *TemplateDeclInstantiator::VisitBindingDecl(BindingDecl *D) {
   auto *NewBD = BindingDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                    D->getIdentifier());
+                                    D->getIdentifier(), D->getType());
   NewBD->setReferenced(D->isReferenced());
   SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, NewBD);
+
   return NewBD;
 }
 
 Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
   // Transform the bindings first.
+  // The transformed DD will have all of the concrete BindingDecls.
   SmallVector<BindingDecl*, 16> NewBindings;
-  for (auto *OldBD : D->bindings())
+  BindingDecl *OldBindingPack = nullptr;
+  for (auto *OldBD : D->bindings()) {
+    Expr *BindingExpr = OldBD->getBinding();
+    if (isa_and_present<FunctionParmPackExpr>(BindingExpr)) {
+      // We have a resolved pack.
+      assert(!OldBindingPack && "no more than one pack is allowed");
+      OldBindingPack = OldBD;
+    }
     NewBindings.push_back(cast<BindingDecl>(VisitBindingDecl(OldBD)));
+  }
   ArrayRef<BindingDecl*> NewBindingArray = NewBindings;
 
-  auto *NewDD = cast_or_null<DecompositionDecl>(
+  auto *NewDD = cast_if_present<DecompositionDecl>(
       VisitVarDecl(D, /*InstantiatingVarTemplate=*/false, &NewBindingArray));
 
   if (!NewDD || NewDD->isInvalidDecl())
     for (auto *NewBD : NewBindings)
       NewBD->setInvalidDecl();
+
+  if (OldBindingPack) {
+    // Mark the bindings in the pack as instantiated.
+    auto Bindings = NewDD->bindings();
+    BindingDecl *NewBindingPack = *llvm::find_if(
+        Bindings, [](BindingDecl *D) -> bool { return D->isParameterPack(); });
+    assert(NewBindingPack != nullptr && "new bindings should also have a pack");
+    llvm::ArrayRef<BindingDecl *> OldDecls =
+        OldBindingPack->getBindingPackDecls();
+    llvm::ArrayRef<BindingDecl *> NewDecls =
+        NewBindingPack->getBindingPackDecls();
+    assert(OldDecls.size() == NewDecls.size());
+    for (unsigned I = 0; I < OldDecls.size(); I++)
+      SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldDecls[I],
+                                                           NewDecls[I]);
+  }
 
   return NewDD;
 }
@@ -4007,7 +4034,7 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
       ClassTemplateSpecializationDecl::Create(
           SemaRef.Context, D->getTagKind(), Owner, D->getBeginLoc(),
           D->getLocation(), InstClassTemplate, CTAI.CanonicalConverted,
-          PrevDecl);
+          CTAI.StrictPackMatch, PrevDecl);
   InstD->setTemplateArgsAsWritten(InstTemplateArgs);
 
   // Add this partial specialization to the set of class template partial
@@ -5245,9 +5272,31 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
+    NamedDecl *ND = Function;
+    DeclContext *DC = ND->getLexicalDeclContext();
+    std::optional<ArrayRef<TemplateArgument>> Innermost;
+    if (auto *Primary = Function->getPrimaryTemplate();
+        Primary &&
+        !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function) &&
+        Function->getTemplateSpecializationKind() !=
+            TSK_ExplicitSpecialization) {
+      auto It = llvm::find_if(Primary->redecls(),
+                              [](const RedeclarableTemplateDecl *RTD) {
+                                return cast<FunctionTemplateDecl>(RTD)
+                                    ->isCompatibleWithDefinition();
+                              });
+      assert(It != Primary->redecls().end() &&
+             "Should't get here without a definition");
+      if (FunctionDecl *Def = cast<FunctionTemplateDecl>(*It)
+                                  ->getTemplatedDecl()
+                                  ->getDefinition())
+        DC = Def->getLexicalDeclContext();
+      else
+        DC = (*It)->getLexicalDeclContext();
+      Innermost.emplace(Function->getTemplateSpecializationArgs()->asArray());
+    }
     MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-        Function, Function->getLexicalDeclContext(), /*Final=*/false,
-        /*Innermost=*/std::nullopt, false, PatternDecl);
+        Function, DC, /*Final=*/false, Innermost, false, PatternDecl);
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.
@@ -6222,8 +6271,14 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // declarations to their instantiations.
     if (CurrentInstantiationScope) {
       if (auto Found = CurrentInstantiationScope->findInstantiationOf(D)) {
-        if (Decl *FD = Found->dyn_cast<Decl *>())
+        if (Decl *FD = Found->dyn_cast<Decl *>()) {
+          if (auto *BD = dyn_cast<BindingDecl>(FD);
+              BD && BD->isParameterPack() &&
+              ArgumentPackSubstitutionIndex != -1) {
+            return BD->getBindingPackDecls()[ArgumentPackSubstitutionIndex];
+          }
           return cast<NamedDecl>(FD);
+        }
 
         int PackIdx = ArgumentPackSubstitutionIndex;
         assert(PackIdx != -1 &&

@@ -77,6 +77,7 @@ add_subdirectory(inttypes)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)
+  add_subdirectory(poll)
   add_subdirectory(sched)
   add_subdirectory(sys)
   add_subdirectory(termios)

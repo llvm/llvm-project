@@ -150,15 +150,6 @@ def Tosa_TransConvOpQuantInfoBuilder : OpBuilder<
                                   outputShape, acc_type);
   }]>;
 
-// The tosa.fully_connected op has its own builder as it does not have
-// strides/dilation/padding.
-def Tosa_FCOpQuantInfoBuilder : OpBuilder<
-  (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias),
-  [{
-    buildFCOpWithQuantInfo($_builder, $_state, outputType,
-                           input, weight, bias);
-  }]>;
-
 // The tosa.matmul op is also intended to be generated where a fully_connected
 // op must be constructed where the weight is not a constant. In this case,
 // the fully_connected op must be expressed using matmul.
@@ -239,7 +230,9 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
     Tosa_Op<mnemonic, !listconcat(traits, [
               DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                                         ["inferReturnTypeComponents"]>,
+              ResultsBroadcastableShape,
               TosaElementwiseOperator,
+              SameOperandsAndResultRank,
               Pure])> {
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
@@ -248,8 +241,6 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
 class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
     Tosa_ElementwiseOp<mnemonic, !listconcat(traits, [
               SameOperandsAndResultShape,
-              ResultsBroadcastableShape,
-              SameOperandsAndResultRank,
               SameOperandsAndResultElementType])> {}
 
 class Tosa_InferTensorTypeOp<string mnemonic, list<Trait> traits = []>
@@ -262,6 +253,13 @@ class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor, Pure])> {
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
+}
+
+// The "SameVariadicOperandSize" trait allows us to pass optional arguments
+// for multiple zero points in convolution ops.
+class Tosa_ConvOp<string mnemonic, list<Trait> traits = []>
+    : Tosa_InferShapedTypeOp<mnemonic, !listconcat(traits,
+      [SameVariadicOperandSize])> {
 }
 
 #endif // TOSA_OP_BASE

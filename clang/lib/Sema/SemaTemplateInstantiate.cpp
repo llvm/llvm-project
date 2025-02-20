@@ -190,7 +190,7 @@ HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
       Specialized = VarTemplSpec->getSpecializedTemplateOrPartial();
   if (VarTemplatePartialSpecializationDecl *Partial =
-          Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+          dyn_cast<VarTemplatePartialSpecializationDecl *>(Specialized)) {
     if (!SkipForSpecialization)
       Result.addOuterTemplateArguments(
           Partial, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
@@ -479,9 +479,6 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   using namespace TemplateInstArgsHelpers;
   const Decl *CurDecl = ND;
 
-  if (!CurDecl)
-    CurDecl = Decl::castFromDeclContext(DC);
-
   if (Innermost) {
     Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND), *Innermost,
                                      Final);
@@ -495,8 +492,10 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     // has a depth of 0.
     if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl))
       HandleDefaultTempArgIntoTempTempParam(TTP, Result);
-    CurDecl = Response::UseNextDecl(CurDecl).NextDecl;
-  }
+    CurDecl = DC ? Decl::castFromDeclContext(DC)
+                 : Response::UseNextDecl(CurDecl).NextDecl;
+  } else if (!CurDecl)
+    CurDecl = Decl::castFromDeclContext(DC);
 
   while (!CurDecl->isFileContextDecl()) {
     Response R;
@@ -1467,6 +1466,18 @@ namespace {
       }
     }
 
+    static TemplateArgument
+    getTemplateArgumentPackPatternForRewrite(const TemplateArgument &TA) {
+      if (TA.getKind() != TemplateArgument::Pack)
+        return TA;
+      assert(TA.pack_size() == 1 &&
+             "unexpected pack arguments in template rewrite");
+      TemplateArgument Arg = *TA.pack_begin();
+      if (Arg.isPackExpansion())
+        Arg = Arg.getPackExpansionPattern();
+      return Arg;
+    }
+
     /// Transform the given declaration by instantiating a reference to
     /// this declaration.
     Decl *TransformDecl(SourceLocation Loc, Decl *D);
@@ -1574,10 +1585,10 @@ namespace {
                                            SubstNonTypeTemplateParmExpr *E);
 
     /// Rebuild a DeclRefExpr for a VarDecl reference.
-    ExprResult RebuildVarDeclRefExpr(VarDecl *PD, SourceLocation Loc);
+    ExprResult RebuildVarDeclRefExpr(ValueDecl *PD, SourceLocation Loc);
 
     /// Transform a reference to a function or init-capture parameter pack.
-    ExprResult TransformFunctionParmPackRefExpr(DeclRefExpr *E, VarDecl *PD);
+    ExprResult TransformFunctionParmPackRefExpr(DeclRefExpr *E, ValueDecl *PD);
 
     /// Transform a FunctionParmPackExpr which was built when we couldn't
     /// expand a function parameter pack reference which refers to an expanded
@@ -1624,7 +1635,7 @@ namespace {
           TemplateArgumentLoc Input = SemaRef.getTrivialTemplateArgumentLoc(
               pack, QualType(), SourceLocation{});
           TemplateArgumentLoc Output;
-          if (SemaRef.SubstTemplateArgument(Input, TemplateArgs, Output))
+          if (TransformTemplateArgument(Input, Output, Uneval))
             return true; // fails
           TArgs.push_back(Output.getArgument());
         }
@@ -1849,7 +1860,8 @@ bool TemplateInstantiator::AlreadyTransformed(QualType T) {
   if (T.isNull())
     return true;
 
-  if (T->isInstantiationDependentType() || T->isVariablyModifiedType())
+  if (T->isInstantiationDependentType() || T->isVariablyModifiedType() ||
+      T->containsUnexpandedParameterPack())
     return false;
 
   getSema().MarkDeclarationsReferencedInType(Loc, T);
@@ -2036,11 +2048,7 @@ TemplateName TemplateInstantiator::TransformTemplateName(
       if (TemplateArgs.isRewrite()) {
         // We're rewriting the template parameter as a reference to another
         // template parameter.
-        if (Arg.getKind() == TemplateArgument::Pack) {
-          assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion() &&
-                 "unexpected pack arguments in template rewrite");
-          Arg = Arg.pack_begin()->getPackExpansionPattern();
-        }
+        Arg = getTemplateArgumentPackPatternForRewrite(Arg);
         assert(Arg.getKind() == TemplateArgument::Template &&
                "unexpected nontype template argument kind in template rewrite");
         return Arg.getAsTemplate();
@@ -2121,11 +2129,7 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
   if (TemplateArgs.isRewrite()) {
     // We're rewriting the template parameter as a reference to another
     // template parameter.
-    if (Arg.getKind() == TemplateArgument::Pack) {
-      assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion() &&
-             "unexpected pack arguments in template rewrite");
-      Arg = Arg.pack_begin()->getPackExpansionPattern();
-    }
+    Arg = getTemplateArgumentPackPatternForRewrite(Arg);
     assert(Arg.getKind() == TemplateArgument::Expression &&
            "unexpected nontype template argument kind in template rewrite");
     // FIXME: This can lead to the same subexpression appearing multiple times
@@ -2384,7 +2388,7 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
                                          SugaredConverted, E->getPackIndex());
 }
 
-ExprResult TemplateInstantiator::RebuildVarDeclRefExpr(VarDecl *PD,
+ExprResult TemplateInstantiator::RebuildVarDeclRefExpr(ValueDecl *PD,
                                                        SourceLocation Loc) {
   DeclarationNameInfo NameInfo(PD->getDeclName(), Loc);
   return getSema().BuildDeclarationNameExpr(CXXScopeSpec(), NameInfo, PD);
@@ -2394,8 +2398,8 @@ ExprResult
 TemplateInstantiator::TransformFunctionParmPackExpr(FunctionParmPackExpr *E) {
   if (getSema().ArgumentPackSubstitutionIndex != -1) {
     // We can expand this parameter pack now.
-    VarDecl *D = E->getExpansion(getSema().ArgumentPackSubstitutionIndex);
-    VarDecl *VD = cast_or_null<VarDecl>(TransformDecl(E->getExprLoc(), D));
+    ValueDecl *D = E->getExpansion(getSema().ArgumentPackSubstitutionIndex);
+    ValueDecl *VD = cast_or_null<ValueDecl>(TransformDecl(E->getExprLoc(), D));
     if (!VD)
       return ExprError();
     return RebuildVarDeclRefExpr(VD, E->getExprLoc());
@@ -2407,11 +2411,11 @@ TemplateInstantiator::TransformFunctionParmPackExpr(FunctionParmPackExpr *E) {
 
   // Transform each of the parameter expansions into the corresponding
   // parameters in the instantiation of the function decl.
-  SmallVector<VarDecl *, 8> Vars;
+  SmallVector<ValueDecl *, 8> Vars;
   Vars.reserve(E->getNumExpansions());
   for (FunctionParmPackExpr::iterator I = E->begin(), End = E->end();
        I != End; ++I) {
-    VarDecl *D = cast_or_null<VarDecl>(TransformDecl(E->getExprLoc(), *I));
+    ValueDecl *D = cast_or_null<ValueDecl>(TransformDecl(E->getExprLoc(), *I));
     if (!D)
       return ExprError();
     Vars.push_back(D);
@@ -2426,14 +2430,14 @@ TemplateInstantiator::TransformFunctionParmPackExpr(FunctionParmPackExpr *E) {
 
 ExprResult
 TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
-                                                       VarDecl *PD) {
+                                                       ValueDecl *PD) {
   typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
   llvm::PointerUnion<Decl *, DeclArgumentPack *> *Found
     = getSema().CurrentInstantiationScope->findInstantiationOf(PD);
   assert(Found && "no instantiation for parameter pack");
 
   Decl *TransformedDecl;
-  if (DeclArgumentPack *Pack = Found->dyn_cast<DeclArgumentPack *>()) {
+  if (DeclArgumentPack *Pack = dyn_cast<DeclArgumentPack *>(*Found)) {
     // If this is a reference to a function parameter pack which we can
     // substitute but can't yet expand, build a FunctionParmPackExpr for it.
     if (getSema().ArgumentPackSubstitutionIndex == -1) {
@@ -2452,7 +2456,8 @@ TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
   }
 
   // We have either an unexpanded pack or a specific expansion.
-  return RebuildVarDeclRefExpr(cast<VarDecl>(TransformedDecl), E->getExprLoc());
+  return RebuildVarDeclRefExpr(cast<ValueDecl>(TransformedDecl),
+                               E->getExprLoc());
 }
 
 ExprResult
@@ -2578,11 +2583,7 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
     if (TemplateArgs.isRewrite()) {
       // We're rewriting the template parameter as a reference to another
       // template parameter.
-      if (Arg.getKind() == TemplateArgument::Pack) {
-        assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion() &&
-               "unexpected pack arguments in template rewrite");
-        Arg = Arg.pack_begin()->getPackExpansionPattern();
-      }
+      Arg = getTemplateArgumentPackPatternForRewrite(Arg);
       assert(Arg.getKind() == TemplateArgument::Type &&
              "unexpected nontype template argument kind in template rewrite");
       QualType NewT = Arg.getAsType();
@@ -4032,8 +4033,7 @@ bool Sema::usesPartialOrExplicitSpecialization(
 static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
     Sema &S, SourceLocation PointOfInstantiation,
     ClassTemplateSpecializationDecl *ClassTemplateSpec,
-    TemplateSpecializationKind TSK,
-    bool PrimaryHasMatchedPackOnParmToNonPackOnArg) {
+    TemplateSpecializationKind TSK, bool PrimaryStrictPackMatch) {
   Sema::InstantiatingTemplate Inst(S, PointOfInstantiation, ClassTemplateSpec);
   if (Inst.isInvalid())
     return {/*Invalid=*/true};
@@ -4086,12 +4086,11 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
             MakeDeductionFailureInfo(S.Context, Result, Info));
         (void)Result;
       } else {
-        auto &List =
-            Info.hasMatchedPackOnParmToNonPackOnArg() ? ExtraMatched : Matched;
+        auto &List = Info.hasStrictPackMatch() ? ExtraMatched : Matched;
         List.push_back(MatchResult{Partial, Info.takeCanonical()});
       }
     }
-    if (Matched.empty() && PrimaryHasMatchedPackOnParmToNonPackOnArg)
+    if (Matched.empty() && PrimaryStrictPackMatch)
       Matched = std::move(ExtraMatched);
 
     // If we're dealing with a member template where the template parameters
@@ -4196,7 +4195,7 @@ bool Sema::InstantiateClassTemplateSpecialization(
     SourceLocation PointOfInstantiation,
     ClassTemplateSpecializationDecl *ClassTemplateSpec,
     TemplateSpecializationKind TSK, bool Complain,
-    bool PrimaryHasMatchedPackOnParmToNonPackOnArg) {
+    bool PrimaryStrictPackMatch) {
   // Perform the actual instantiation on the canonical declaration.
   ClassTemplateSpec = cast<ClassTemplateSpecializationDecl>(
       ClassTemplateSpec->getCanonicalDecl());
@@ -4204,9 +4203,9 @@ bool Sema::InstantiateClassTemplateSpecialization(
     return true;
 
   ActionResult<CXXRecordDecl *> Pattern =
-      getPatternForClassTemplateSpecialization(
-          *this, PointOfInstantiation, ClassTemplateSpec, TSK,
-          PrimaryHasMatchedPackOnParmToNonPackOnArg);
+      getPatternForClassTemplateSpecialization(*this, PointOfInstantiation,
+                                               ClassTemplateSpec, TSK,
+                                               PrimaryStrictPackMatch);
   if (!Pattern.isUsable())
     return Pattern.isInvalid();
 
@@ -4656,7 +4655,7 @@ void LocalInstantiationScope::InstantiatedLocal(const Decl *D, Decl *Inst) {
 #endif
     Stored = Inst;
   } else if (DeclArgumentPack *Pack = dyn_cast<DeclArgumentPack *>(Stored)) {
-    Pack->push_back(cast<VarDecl>(Inst));
+    Pack->push_back(cast<ValueDecl>(Inst));
   } else {
     assert(cast<Decl *>(Stored) == Inst && "Already instantiated this local");
   }

@@ -2822,12 +2822,13 @@ SDValue SITargetLowering::LowerFormalArguments(
   const Function &Fn = MF.getFunction();
   FunctionType *FType = MF.getFunction().getFunctionType();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  bool IsError = false;
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isGraphics(CallConv)) {
     DiagnosticInfoUnsupported NoGraphicsHSA(
         Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
     DAG.getContext()->diagnose(NoGraphicsHSA);
-    return DAG.getEntryNode();
+    IsError = true;
   }
 
   SmallVector<ISD::InputArg, 16> Splits;
@@ -2936,7 +2937,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   for (unsigned i = 0, e = Ins.size(), ArgIdx = 0; i != e; ++i) {
     const ISD::InputArg &Arg = Ins[i];
-    if (Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) {
+    if ((Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) || IsError) {
       InVals.push_back(DAG.getUNDEF(Arg.VT));
       continue;
     }
@@ -6832,7 +6833,8 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   // mode functions, but this happens to be OK since it's only done in cases
   // where there is known no sNaN.
   if (IsIEEEMode)
-    return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
+    return expandFMINNUM_FMAXNUM(Op.getNode(), DAG,
+                                 !Subtarget->hasIEEEMinNumMaxNum());
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
       VT == MVT::v16bf16)
@@ -7340,11 +7342,8 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   // global <-> flat are no-ops and never emitted.
 
-  const MachineFunction &MF = DAG.getMachineFunction();
-  DiagnosticInfoUnsupported InvalidAddrSpaceCast(
-      MF.getFunction(), "invalid addrspacecast", SL.getDebugLoc());
-  DAG.getContext()->diagnose(InvalidAddrSpaceCast);
-
+  // Invalid casts are poison.
+  // TODO: Should return poison
   return DAG.getUNDEF(Op->getValueType(0));
 }
 
@@ -8618,6 +8617,11 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   unsigned MaxID = Subtarget->getMaxWorkitemID(MF.getFunction(), Dim);
   if (MaxID == 0)
     return DAG.getConstant(0, SL, MVT::i32);
+
+  // It's undefined behavior if a function marked with the amdgpu-no-*
+  // attributes uses the corresponding intrinsic.
+  if (!Arg)
+    return DAG.getUNDEF(Op->getValueType(0));
 
   SDValue Val = loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                                SDLoc(DAG.getEntryNode()), Arg);
@@ -16820,39 +16824,39 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     // safe. The message phrasing also should be better.
     if (globalMemoryFPAtomicIsLegal(*Subtarget, RMW, HasSystemScope)) {
       if (AS == AMDGPUAS::FLAT_ADDRESS) {
-        // gfx940, gfx12
+        // gfx942, gfx12
         if (Subtarget->hasAtomicFlatPkAdd16Insts() && isV2F16OrV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       } else if (AMDGPU::isExtendedGlobalAddrSpace(AS)) {
-        // gfx90a, gfx940, gfx12
+        // gfx90a, gfx942, gfx12
         if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
-        // gfx940, gfx12
+        // gfx942, gfx12
         if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       } else if (AS == AMDGPUAS::BUFFER_FAT_POINTER) {
-        // gfx90a, gfx940, gfx12
+        // gfx90a, gfx942, gfx12
         if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
-        // While gfx90a/gfx940 supports v2bf16 for global/flat, it does not for
+        // While gfx90a/gfx942 supports v2bf16 for global/flat, it does not for
         // buffer. gfx12 does have the buffer version.
         if (Subtarget->hasAtomicBufferPkAddBF16Inst() && isV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       }
 
-      // global and flat atomic fadd f64: gfx90a, gfx940.
+      // global and flat atomic fadd f64: gfx90a, gfx942.
       if (Subtarget->hasFlatBufferGlobalAtomicFaddF64Inst() && Ty->isDoubleTy())
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
       if (AS != AMDGPUAS::FLAT_ADDRESS) {
         if (Ty->isFloatTy()) {
-          // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940,
+          // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx942,
           // gfx11+.
           if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
             return ReportUnsafeHWInst(AtomicExpansionKind::None);
-          // global/buffer atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
+          // global/buffer atomic fadd f32 rtn: gfx90a, gfx942, gfx11+.
           if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
             return ReportUnsafeHWInst(AtomicExpansionKind::None);
         } else {
@@ -16864,7 +16868,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         }
       }
 
-      // flat atomic fadd f32: gfx940, gfx11+.
+      // flat atomic fadd f32: gfx942, gfx11+.
       if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy()) {
         if (Subtarget->hasFlatAtomicFaddF32Inst())
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
@@ -16903,7 +16907,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       // float, double restored in gfx10.
       // double removed again in gfx11, so only f32 for gfx11/gfx12.
       //
-      // For gfx9, gfx90a and gfx940 support f64 for global (same as fadd), but
+      // For gfx9, gfx90a and gfx942 support f64 for global (same as fadd), but
       // no f32.
       if (AS == AMDGPUAS::FLAT_ADDRESS) {
         if (Subtarget->hasAtomicFMinFMaxF32FlatInsts() && Ty->isFloatTy())

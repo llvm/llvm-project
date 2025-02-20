@@ -699,7 +699,6 @@ def DS_PERMUTE_B32  : DS_1A1D_PERMUTE <"ds_permute_b32",
                                        int_amdgcn_ds_permute>;
 def DS_BPERMUTE_B32 : DS_1A1D_PERMUTE <"ds_bpermute_b32",
                                        int_amdgcn_ds_bpermute>;
-def DS_BPERMUTE_FI_B32 : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32">;
 }
 
 } // let SubtargetPredicate = isGFX8Plus
@@ -737,6 +736,8 @@ defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
 defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
 defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
 defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc<"ds_sub_clamp_rtn_u32", VGPR_32>;
+def DS_BPERMUTE_FI_B32    : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32",
+                                             int_amdgcn_ds_bpermute_fi_b32>;
 
 multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
                                   ValueType vt, string frag> {
@@ -1772,7 +1773,7 @@ def DS_READ_B128_vi       : DS_Real_vi<0xff, DS_READ_B128>;
 def DS_ADD_F64_vi     : DS_Real_vi<0x5c, DS_ADD_F64>;
 def DS_ADD_RTN_F64_vi : DS_Real_vi<0x7c, DS_ADD_RTN_F64>;
 
-// GFX940+.
+// GFX942+.
 def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
 def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
 def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;

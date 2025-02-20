@@ -42,11 +42,12 @@ public:
   ///
   /// FIXME: remove in favor of member.
   static constexpr bool isStackSlot(unsigned Reg) {
-    return MCRegister::isStackSlot(Reg);
+    return MCRegister::FirstStackSlot <= Reg &&
+           Reg < MCRegister::VirtualRegFlag;
   }
 
   /// Return true if this is a stack slot.
-  constexpr bool isStack() const { return MCRegister::isStackSlot(Reg); }
+  constexpr bool isStack() const { return isStackSlot(Reg); }
 
   /// Compute the frame index from a register value representing a stack slot.
   static int stackSlot2Index(Register Reg) {
@@ -97,6 +98,12 @@ public:
   /// Convert a virtual register number to a 0-based index. The first virtual
   /// register in a function will get the index 0.
   unsigned virtRegIndex() const { return virtReg2Index(Reg); }
+
+  /// Compute the frame index from a register value representing a stack slot.
+  int stackSlotIndex() const {
+    assert(isStack() && "Not a stack slot");
+    return static_cast<int>(Reg - MCRegister::FirstStackSlot);
+  }
 
   constexpr operator unsigned() const { return Reg; }
 

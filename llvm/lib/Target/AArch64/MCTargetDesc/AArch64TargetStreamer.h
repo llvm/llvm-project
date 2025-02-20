@@ -137,12 +137,6 @@ public:
 };
 
 class AArch64TargetWinCOFFStreamer : public llvm::AArch64TargetStreamer {
-private:
-  // True if we are processing SEH directives in an epilogue.
-  bool InEpilogCFI = false;
-
-  // Symbol of the current epilog for which we are processing SEH directives.
-  MCSymbol *CurrentEpilog = nullptr;
 public:
   AArch64TargetWinCOFFStreamer(llvm::MCStreamer &S)
     : AArch64TargetStreamer(S) {}

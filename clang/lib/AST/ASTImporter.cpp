@@ -2553,7 +2553,7 @@ ExpectedDecl ASTNodeImporter::VisitBindingDecl(BindingDecl *D) {
 
   BindingDecl *ToD;
   if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(), DC, Loc,
-                              Name.getAsIdentifierInfo()))
+                              Name.getAsIdentifierInfo(), D->getType()))
     return ToD;
 
   Error Err = Error::success();
@@ -6320,10 +6320,10 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
 
     updateLookupTableForTemplateParameters(*ToTPList);
   } else { // Not a partial specialization.
-    if (GetImportedOrCreateDecl(
-            D2, D, Importer.getToContext(), D->getTagKind(), DC,
-            *BeginLocOrErr, *IdLocOrErr, ClassTemplate, TemplateArgs,
-            PrevDecl))
+    if (GetImportedOrCreateDecl(D2, D, Importer.getToContext(), D->getTagKind(),
+                                DC, *BeginLocOrErr, *IdLocOrErr, ClassTemplate,
+                                TemplateArgs, D->hasStrictPackMatch(),
+                                PrevDecl))
       return D2;
 
     // Update InsertPos, because preceding import calls may have invalidated
@@ -7386,9 +7386,10 @@ ExpectedStmt ASTNodeImporter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext())
-      ConvertVectorExpr(ToSrcExpr, ToTSI, ToType, E->getValueKind(),
-                        E->getObjectKind(), ToBuiltinLoc, ToRParenLoc);
+  return ConvertVectorExpr::Create(
+      Importer.getToContext(), ToSrcExpr, ToTSI, ToType, E->getValueKind(),
+      E->getObjectKind(), ToBuiltinLoc, ToRParenLoc,
+      E->getStoredFPFeaturesOrDefault());
 }
 
 ExpectedStmt ASTNodeImporter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {

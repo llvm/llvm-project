@@ -1843,6 +1843,28 @@ func.func @bitcastOfBitcast(%arg : i16) -> i16 {
 
 // -----
 
+// CHECK-LABEL: @bitcastPoisonItoFP(
+func.func @bitcastPoisonItoFP() -> f32 {
+  // CHECK: %[[P:.+]] = ub.poison : f32
+  // CHECK: return %[[P]] : f32
+  %p = ub.poison : i32
+  %res = arith.bitcast %p : i32 to f32
+  return %res : f32
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastPoisonFPtoI(
+func.func @bitcastPoisonFPtoI() -> i32 {
+  // CHECK: %[[P:.+]] = ub.poison : i32
+  // CHECK: return %[[P]] : i32
+  %p = ub.poison : f32
+  %res = arith.bitcast %p : f32 to i32
+  return %res : i32
+}
+
+// -----
+
 // CHECK-LABEL: test_maxsi
 // CHECK-DAG: %[[C0:.+]] = arith.constant 42
 // CHECK-DAG: %[[MAX_INT_CST:.+]] = arith.constant 127

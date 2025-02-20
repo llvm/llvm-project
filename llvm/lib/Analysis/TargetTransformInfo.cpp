@@ -1113,6 +1113,16 @@ TargetTransformInfo::getVectorInstrCost(const Instruction &I, Type *Val,
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getInsertExtractValueCost(
+    unsigned Opcode, TTI::TargetCostKind CostKind) const {
+  assert((Opcode == Instruction::InsertValue ||
+          Opcode == Instruction::ExtractValue) &&
+         "Expecting Opcode to be insertvalue/extractvalue.");
+  InstructionCost Cost = TTIImpl->getInsertExtractValueCost(Opcode, CostKind);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getReplicationShuffleCost(
     Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedDstElts,
     TTI::TargetCostKind CostKind) const {
@@ -1150,6 +1160,15 @@ InstructionCost TargetTransformInfo::getGatherScatterOpCost(
       Opcode, DataTy, Ptr, VariableMask, Alignment, CostKind, I);
   assert((!Cost.isValid() || Cost >= 0) &&
          "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getExpandCompressMemoryOpCost(
+    unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+    TTI::TargetCostKind CostKind, const Instruction *I) const {
+  InstructionCost Cost = TTIImpl->getExpandCompressMemoryOpCost(
+      Opcode, DataTy, VariableMask, Alignment, CostKind, I);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
@@ -1439,6 +1458,12 @@ unsigned
 TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
                                                  Type *ArrayType) const {
   return TTIImpl->getNumBytesToPadGlobalArray(Size, ArrayType);
+}
+
+void TargetTransformInfo::collectKernelLaunchBounds(
+    const Function &F,
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  return TTIImpl->collectKernelLaunchBounds(F, LB);
 }
 
 TargetTransformInfo::Concept::~Concept() = default;

@@ -9,6 +9,7 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/PrintCallHelper.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
@@ -1027,7 +1028,7 @@ public:
       eltType = arrayType.getElementType();
     else
       eltType = cast<VectorType>(llvmType).getElementType();
-    Value insert = rewriter.create<LLVM::UndefOp>(loc, llvmType);
+    Value insert = rewriter.create<LLVM::PoisonOp>(loc, llvmType);
     int64_t insPos = 0;
     for (int64_t extPos : mask) {
       Value value = adaptor.getV1();
@@ -1441,7 +1442,7 @@ public:
     auto int64Ty = IntegerType::get(rewriter.getContext(), 64);
 
     // Create descriptor.
-    auto desc = MemRefDescriptor::undef(rewriter, loc, llvmTargetDescriptorTy);
+    auto desc = MemRefDescriptor::poison(rewriter, loc, llvmTargetDescriptorTy);
     // Set allocated ptr.
     Value allocated = sourceMemRef.allocatedPtr(rewriter, loc);
     desc.setAllocatedPtr(rewriter, loc, allocated);
@@ -1681,9 +1682,10 @@ struct VectorSplatOpLowering : public ConvertOpToLLVMPattern<vector::SplatOp> {
     if (resultType.getRank() > 1)
       return failure();
 
-    // First insert it into an undef vector so we can shuffle it.
+    // First insert it into a poison vector so we can shuffle it.
     auto vectorType = typeConverter->convertType(splatOp.getType());
-    Value undef = rewriter.create<LLVM::UndefOp>(splatOp.getLoc(), vectorType);
+    Value poison =
+        rewriter.create<LLVM::PoisonOp>(splatOp.getLoc(), vectorType);
     auto zero = rewriter.create<LLVM::ConstantOp>(
         splatOp.getLoc(),
         typeConverter->convertType(rewriter.getIntegerType(32)),
@@ -1692,19 +1694,19 @@ struct VectorSplatOpLowering : public ConvertOpToLLVMPattern<vector::SplatOp> {
     // For 0-d vector, we simply do `insertelement`.
     if (resultType.getRank() == 0) {
       rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
-          splatOp, vectorType, undef, adaptor.getInput(), zero);
+          splatOp, vectorType, poison, adaptor.getInput(), zero);
       return success();
     }
 
     // For 1-d vector, we additionally do a `vectorshuffle`.
     auto v = rewriter.create<LLVM::InsertElementOp>(
-        splatOp.getLoc(), vectorType, undef, adaptor.getInput(), zero);
+        splatOp.getLoc(), vectorType, poison, adaptor.getInput(), zero);
 
     int64_t width = cast<VectorType>(splatOp.getType()).getDimSize(0);
     SmallVector<int32_t> zeroValues(width, 0);
 
     // Shuffle the value across the desired number of elements.
-    rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(splatOp, v, undef,
+    rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(splatOp, v, poison,
                                                        zeroValues);
     return success();
   }
@@ -1733,11 +1735,11 @@ struct VectorSplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
       return failure();
 
     // Construct returned value.
-    Value desc = rewriter.create<LLVM::UndefOp>(loc, llvmNDVectorTy);
+    Value desc = rewriter.create<LLVM::PoisonOp>(loc, llvmNDVectorTy);
 
     // Construct a 1-D vector with the splatted value that we insert in all the
     // places within the returned descriptor.
-    Value vdesc = rewriter.create<LLVM::UndefOp>(loc, llvm1DVectorTy);
+    Value vdesc = rewriter.create<LLVM::PoisonOp>(loc, llvm1DVectorTy);
     auto zero = rewriter.create<LLVM::ConstantOp>(
         loc, typeConverter->convertType(rewriter.getIntegerType(32)),
         rewriter.getZeroAttr(rewriter.getIntegerType(32)));
@@ -1878,7 +1880,7 @@ struct VectorFromElementsLowering
       return rewriter.notifyMatchFailure(fromElementsOp,
                                          "rank > 1 vectors are not supported");
     Type llvmType = typeConverter->convertType(vectorType);
-    Value result = rewriter.create<LLVM::UndefOp>(loc, llvmType);
+    Value result = rewriter.create<LLVM::PoisonOp>(loc, llvmType);
     for (auto [idx, val] : llvm::enumerate(adaptor.getElements()))
       result = rewriter.create<vector::InsertOp>(loc, val, result, idx);
     rewriter.replaceOp(fromElementsOp, result);
@@ -1941,4 +1943,28 @@ void mlir::populateVectorToLLVMMatrixConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<VectorMatmulOpConversion>(converter);
   patterns.add<VectorFlatTransposeOpConversion>(converter);
+}
+
+namespace {
+struct VectorToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<LLVM::LLVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateVectorToLLVMConversionPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::vector::registerConvertVectorToLLVMInterface(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
+    dialect->addInterfaces<VectorToLLVMDialectInterface>();
+  });
 }

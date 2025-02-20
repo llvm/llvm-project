@@ -41,49 +41,8 @@ foreach Size = {2...6,8,16} in {
 //===----------------------------------------------------------------------===//
 
 class getSubRegs<int size> {
-  list<SubRegIndex> ret2 = [sub0, sub1];
-  list<SubRegIndex> ret3 = [sub0, sub1, sub2];
-  list<SubRegIndex> ret4 = [sub0, sub1, sub2, sub3];
-  list<SubRegIndex> ret5 = [sub0, sub1, sub2, sub3, sub4];
-  list<SubRegIndex> ret6 = [sub0, sub1, sub2, sub3, sub4, sub5];
-  list<SubRegIndex> ret7 = [sub0, sub1, sub2, sub3, sub4, sub5, sub6];
-  list<SubRegIndex> ret8 = [sub0, sub1, sub2, sub3, sub4, sub5, sub6, sub7];
-  list<SubRegIndex> ret9 = [sub0, sub1, sub2, sub3, sub4, sub5, sub6, sub7, sub8];
-  list<SubRegIndex> ret10 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9];
-  list<SubRegIndex> ret11 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9, sub10];
-  list<SubRegIndex> ret12 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9, sub10, sub11];
-  list<SubRegIndex> ret16 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9, sub10, sub11,
-                             sub12, sub13, sub14, sub15];
-  list<SubRegIndex> ret32 = [sub0, sub1, sub2, sub3,
-                             sub4, sub5, sub6, sub7,
-                             sub8, sub9, sub10, sub11,
-                             sub12, sub13, sub14, sub15,
-                             sub16, sub17, sub18, sub19,
-                             sub20, sub21, sub22, sub23,
-                             sub24, sub25, sub26, sub27,
-                             sub28, sub29, sub30, sub31];
-
-  list<SubRegIndex> ret = !if(!eq(size, 2), ret2,
-                              !if(!eq(size, 3), ret3,
-                                  !if(!eq(size, 4), ret4,
-                                      !if(!eq(size, 5), ret5,
-                                          !if(!eq(size, 6), ret6,
-                                              !if(!eq(size, 7), ret7,
-                                                  !if(!eq(size, 8), ret8,
-                                                      !if(!eq(size, 9), ret9,
-                                                          !if(!eq(size, 10), ret10,
-                                                              !if(!eq(size, 11), ret11,
-                                                                  !if(!eq(size, 12), ret12,
-                                                                      !if(!eq(size, 16), ret16,
-                                                                          ret32))))))))))));
+  list<SubRegIndex> ret =
+      !foreach(idx, !range(0, size), !cast<SubRegIndex>(sub#idx));
 }
 
 // Generates list of sequential register tuple names.

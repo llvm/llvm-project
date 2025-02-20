@@ -51,6 +51,13 @@ cl::opt<bool> MemProfReportHintedSizes(
     "memprof-report-hinted-sizes", cl::init(false), cl::Hidden,
     cl::desc("Report total allocation sizes of hinted allocations"));
 
+// This is useful if we have enabled reporting of hinted sizes, and want to get
+// information from the indexing step for all contexts (especially for testing),
+// or have specified a value less than 100% for -memprof-cloning-cold-threshold.
+cl::opt<bool> MemProfKeepAllNotColdContexts(
+    "memprof-keep-all-not-cold-contexts", cl::init(false), cl::Hidden,
+    cl::desc("Keep all non-cold contexts (increases cloning overheads)"));
+
 AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
                                            uint64_t AllocCount,
                                            uint64_t TotalLifetime) {
@@ -156,15 +163,21 @@ void CallStackTrie::addCallStack(
       continue;
     }
     // Update existing caller node if it exists.
-    auto Next = Curr->Callers.find(StackId);
-    if (Next != Curr->Callers.end()) {
+    CallStackTrieNode *Prev = nullptr;
+    auto [Next, Inserted] = Curr->Callers.try_emplace(StackId);
+    if (!Inserted) {
+      Prev = Curr;
       Curr = Next->second;
       Curr->addAllocType(AllocType);
+      // If this node has an ambiguous alloc type, its callee is not the deepest
+      // point where we have an ambigous allocation type.
+      if (!hasSingleAllocType(Curr->AllocTypes))
+        Prev->DeepestAmbiguousAllocType = false;
       continue;
     }
     // Otherwise add a new caller node.
     auto *New = new CallStackTrieNode(AllocType);
-    Curr->Callers[StackId] = New;
+    Next->second = New;
     Curr = New;
   }
   assert(Curr);
@@ -243,14 +256,35 @@ void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
 bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                                   std::vector<uint64_t> &MIBCallStack,
                                   std::vector<Metadata *> &MIBNodes,
-                                  bool CalleeHasAmbiguousCallerContext) {
+                                  bool CalleeHasAmbiguousCallerContext,
+                                  bool &CalleeDeepestAmbiguousAllocType) {
   // Trim context below the first node in a prefix with a single alloc type.
   // Add an MIB record for the current call stack prefix.
   if (hasSingleAllocType(Node->AllocTypes)) {
-    std::vector<ContextTotalSize> ContextSizeInfo;
-    collectContextSizeInfo(Node, ContextSizeInfo);
-    MIBNodes.push_back(createMIBNode(
-        Ctx, MIBCallStack, (AllocationType)Node->AllocTypes, ContextSizeInfo));
+    // Because we only clone cold contexts (we don't clone for exposing NotCold
+    // contexts as that is the default allocation behavior), we create MIB
+    // metadata for this context if any of the following are true:
+    // 1) It is cold.
+    // 2) The immediate callee is the deepest point where we have an ambiguous
+    //    allocation type (i.e. the other callers that are cold need to know
+    //    that we have a not cold context overlapping to this point so that we
+    //    know how deep to clone).
+    // 3) MemProfKeepAllNotColdContexts is enabled, which is useful if we are
+    //    reporting hinted sizes, and want to get information from the indexing
+    //    step for all contexts, or have specified a value less than 100% for
+    //    -memprof-cloning-cold-threshold.
+    if (Node->hasAllocType(AllocationType::Cold) ||
+        CalleeDeepestAmbiguousAllocType || MemProfKeepAllNotColdContexts) {
+      std::vector<ContextTotalSize> ContextSizeInfo;
+      collectContextSizeInfo(Node, ContextSizeInfo);
+      MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack,
+                                       (AllocationType)Node->AllocTypes,
+                                       ContextSizeInfo));
+      // If we just emitted an MIB for a not cold caller, don't need to emit
+      // another one for the callee to correctly disambiguate its cold callers.
+      if (!Node->hasAllocType(AllocationType::Cold))
+        CalleeDeepestAmbiguousAllocType = false;
+    }
     return true;
   }
 
@@ -261,9 +295,9 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
     bool AddedMIBNodesForAllCallerContexts = true;
     for (auto &Caller : Node->Callers) {
       MIBCallStack.push_back(Caller.first);
-      AddedMIBNodesForAllCallerContexts &=
-          buildMIBNodes(Caller.second, Ctx, MIBCallStack, MIBNodes,
-                        NodeHasAmbiguousCallerContext);
+      AddedMIBNodesForAllCallerContexts &= buildMIBNodes(
+          Caller.second, Ctx, MIBCallStack, MIBNodes,
+          NodeHasAmbiguousCallerContext, Node->DeepestAmbiguousAllocType);
       // Remove Caller.
       MIBCallStack.pop_back();
     }
@@ -337,10 +371,16 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   MIBCallStack.push_back(AllocStackId);
   std::vector<Metadata *> MIBNodes;
   assert(!Alloc->Callers.empty() && "addCallStack has not been called yet");
-  // The last parameter is meant to say whether the callee of the given node
-  // has more than one caller. Here the node being passed in is the alloc
-  // and it has no callees. So it's false.
-  if (buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes, false)) {
+  // The CalleeHasAmbiguousCallerContext flag is meant to say whether the
+  // callee of the given node has more than one caller. Here the node being
+  // passed in is the alloc and it has no callees. So it's false.
+  // Similarly, the last parameter is meant to say whether the callee of the
+  // given node is the deepest point where we have ambiguous alloc types, which
+  // is also false as the alloc has no callees.
+  bool DeepestAmbiguousAllocType = true;
+  if (buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes,
+                    /*CalleeHasAmbiguousCallerContext=*/false,
+                    DeepestAmbiguousAllocType)) {
     assert(MIBCallStack.size() == 1 &&
            "Should only be left with Alloc's location in stack");
     CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));

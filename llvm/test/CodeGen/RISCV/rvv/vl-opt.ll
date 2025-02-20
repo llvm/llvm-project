@@ -194,3 +194,26 @@ define <vscale x 4 x i32> @dont_optimize_tied_def(<vscale x 4 x i32> %a, <vscale
   ret <vscale x 4 x i32> %2
 }
 
+define void @optimize_ternary_use(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, ptr %p, iXLen %vl) {
+; NOVLOPT-LABEL: optimize_ternary_use:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vzext.vf2 v14, v8
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vmadd.vv v14, v10, v12
+; NOVLOPT-NEXT:    vse32.v v14, (a0)
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: optimize_ternary_use:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vzext.vf2 v14, v8
+; VLOPT-NEXT:    vmadd.vv v14, v10, v12
+; VLOPT-NEXT:    vse32.v v14, (a0)
+; VLOPT-NEXT:    ret
+  %1 = zext <vscale x 4 x i16> %a to <vscale x 4 x i32>
+  %2 = mul <vscale x 4 x i32> %b, %1
+  %3 = add <vscale x 4 x i32> %2, %c
+  call void @llvm.riscv.vse(<vscale x 4 x i32> %3, ptr %p, iXLen %vl)
+  ret void
+}

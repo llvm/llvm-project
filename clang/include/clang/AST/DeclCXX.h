@@ -4175,8 +4175,9 @@ class BindingDecl : public ValueDecl {
   /// binding).
   Expr *Binding = nullptr;
 
-  BindingDecl(DeclContext *DC, SourceLocation IdLoc, IdentifierInfo *Id)
-      : ValueDecl(Decl::Binding, DC, IdLoc, Id, QualType()) {}
+  BindingDecl(DeclContext *DC, SourceLocation IdLoc, IdentifierInfo *Id,
+              QualType T)
+      : ValueDecl(Decl::Binding, DC, IdLoc, Id, T) {}
 
   void anchor() override;
 
@@ -4184,7 +4185,8 @@ public:
   friend class ASTDeclReader;
 
   static BindingDecl *Create(ASTContext &C, DeclContext *DC,
-                             SourceLocation IdLoc, IdentifierInfo *Id);
+                             SourceLocation IdLoc, IdentifierInfo *Id,
+                             QualType T);
   static BindingDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   /// Get the expression to which this declaration is bound. This may be null
@@ -4192,13 +4194,12 @@ public:
   /// decomposition declaration, and when the initializer is type-dependent.
   Expr *getBinding() const { return Binding; }
 
+  // Get the array of nested BindingDecls when the binding represents a pack.
+  llvm::ArrayRef<BindingDecl *> getBindingPackDecls() const;
+
   /// Get the decomposition declaration that this binding represents a
   /// decomposition of.
   ValueDecl *getDecomposedDecl() const { return Decomp; }
-
-  /// Get the variable (if any) that holds the value of evaluating the binding.
-  /// Only present for user-defined bindings for tuple-like types.
-  VarDecl *getHoldingVar() const;
 
   /// Set the binding for this BindingDecl, along with its declared type (which
   /// should be a possibly-cv-qualified form of the type of the binding, or a
@@ -4210,6 +4211,10 @@ public:
 
   /// Set the decomposed variable for this BindingDecl.
   void setDecomposedDecl(ValueDecl *Decomposed) { Decomp = Decomposed; }
+
+  /// Get the variable (if any) that holds the value of evaluating the binding.
+  /// Only present for user-defined bindings for tuple-like types.
+  VarDecl *getHoldingVar() const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decl::Binding; }
@@ -4238,8 +4243,14 @@ class DecompositionDecl final
         NumBindings(Bindings.size()) {
     std::uninitialized_copy(Bindings.begin(), Bindings.end(),
                             getTrailingObjects<BindingDecl *>());
-    for (auto *B : Bindings)
+    for (auto *B : Bindings) {
       B->setDecomposedDecl(this);
+      if (B->isParameterPack() && B->getBinding()) {
+        for (BindingDecl *NestedBD : B->getBindingPackDecls()) {
+          NestedBD->setDecomposedDecl(this);
+        }
+      }
+    }
   }
 
   void anchor() override;
@@ -4257,8 +4268,29 @@ public:
   static DecompositionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                unsigned NumBindings);
 
-  ArrayRef<BindingDecl *> bindings() const {
-    return llvm::ArrayRef(getTrailingObjects<BindingDecl *>(), NumBindings);
+  // Provide the range of bindings which may have a nested pack.
+  llvm::ArrayRef<BindingDecl *> bindings() const {
+    return {getTrailingObjects<BindingDecl *>(), NumBindings};
+  }
+
+  // Provide a flattened range to visit each binding.
+  auto flat_bindings() const {
+    llvm::ArrayRef<BindingDecl *> Bindings = bindings();
+    llvm::ArrayRef<BindingDecl *> PackBindings;
+
+    // Split the bindings into subranges split by the pack.
+    llvm::ArrayRef<BindingDecl *> BeforePackBindings = Bindings.take_until(
+        [](BindingDecl *BD) { return BD->isParameterPack(); });
+
+    Bindings = Bindings.drop_front(BeforePackBindings.size());
+    if (!Bindings.empty()) {
+      PackBindings = Bindings.front()->getBindingPackDecls();
+      Bindings = Bindings.drop_front();
+    }
+
+    return llvm::concat<BindingDecl *const>(std::move(BeforePackBindings),
+                                            std::move(PackBindings),
+                                            std::move(Bindings));
   }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;

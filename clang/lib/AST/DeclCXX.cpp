@@ -1462,6 +1462,18 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (Using->getDeclName().getCXXOverloadedOperator() == OO_Equal)
       data().HasInheritedAssignment = true;
   }
+
+  // HLSL: All user-defined data types are aggregates and use aggregate
+  // initialization, meanwhile most, but not all built-in types behave like
+  // aggregates. Resource types, and some other HLSL types that wrap handles
+  // don't behave like aggregates. We can identify these as different because we
+  // implicitly define "special" member functions, which aren't spellable in
+  // HLSL. This all _needs_ to change in the future. There are two
+  // relevant HLSL feature proposals that will depend on this changing:
+  // * 0005-strict-initializer-lists.md
+  // * https://github.com/microsoft/hlsl-specs/pull/325
+  if (getLangOpts().HLSL)
+    data().Aggregate = data().UserDeclaredSpecialMembers == 0;
 }
 
 bool CXXRecordDecl::isLiteral() const {
@@ -3462,19 +3474,21 @@ VarDecl *ValueDecl::getPotentiallyDecomposedVarDecl() {
   if (auto *Var = llvm::dyn_cast<VarDecl>(this))
     return Var;
   if (auto *BD = llvm::dyn_cast<BindingDecl>(this))
-    return llvm::dyn_cast<VarDecl>(BD->getDecomposedDecl());
+    return llvm::dyn_cast_if_present<VarDecl>(BD->getDecomposedDecl());
   return nullptr;
 }
 
 void BindingDecl::anchor() {}
 
 BindingDecl *BindingDecl::Create(ASTContext &C, DeclContext *DC,
-                                 SourceLocation IdLoc, IdentifierInfo *Id) {
-  return new (C, DC) BindingDecl(DC, IdLoc, Id);
+                                 SourceLocation IdLoc, IdentifierInfo *Id,
+                                 QualType T) {
+  return new (C, DC) BindingDecl(DC, IdLoc, Id, T);
 }
 
 BindingDecl *BindingDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  return new (C, ID) BindingDecl(nullptr, SourceLocation(), nullptr);
+  return new (C, ID)
+      BindingDecl(nullptr, SourceLocation(), nullptr, QualType());
 }
 
 VarDecl *BindingDecl::getHoldingVar() const {
@@ -3488,6 +3502,15 @@ VarDecl *BindingDecl::getHoldingVar() const {
   auto *VD = cast<VarDecl>(DRE->getDecl());
   assert(VD->isImplicit() && "holding var for binding decl not implicit");
   return VD;
+}
+
+llvm::ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
+  assert(Binding && "expecting a pack expr");
+  auto *FP = cast<FunctionParmPackExpr>(Binding);
+  ValueDecl *const *First = FP->getNumExpansions() > 0 ? FP->begin() : nullptr;
+  assert((!First || isa<BindingDecl>(*First)) && "expecting a BindingDecl");
+  return llvm::ArrayRef<BindingDecl *>(
+      reinterpret_cast<BindingDecl *const *>(First), FP->getNumExpansions());
 }
 
 void DecompositionDecl::anchor() {}

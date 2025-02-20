@@ -2284,7 +2284,7 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
 
 /// Return true if sincos libcall is available.
 static bool isSinCosLibcallAvailable(SDNode *Node, const TargetLowering &TLI) {
-  RTLIB::Libcall LC = RTLIB::getFSINCOS(Node->getSimpleValueType(0).SimpleTy);
+  RTLIB::Libcall LC = RTLIB::getSINCOS(Node->getSimpleValueType(0).SimpleTy);
   return TLI.getLibcallName(LC) != nullptr;
 }
 
@@ -3970,8 +3970,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     else
       Index = DAG.getNode(ISD::MUL, dl, Index.getValueType(), Index,
                           DAG.getConstant(EntrySize, dl, Index.getValueType()));
-    SDValue Addr = DAG.getNode(ISD::ADD, dl, Index.getValueType(),
-                               Index, Table);
+    SDValue Addr = DAG.getMemBasePlusOffset(Table, Index, dl);
 
     EVT MemVT = EVT::getIntegerVT(*DAG.getContext(), EntrySize * 8);
     SDValue LD = DAG.getExtLoad(
@@ -3980,10 +3979,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Addr = LD;
     if (TLI.isJumpTableRelative()) {
       // For PIC, the sequence is:
-      // BRIND(load(Jumptable + index) + RelocBase)
+      // BRIND(RelocBase + load(Jumptable + index))
       // RelocBase can be JumpTable, GOT or some sort of global base.
-      Addr = DAG.getNode(ISD::ADD, dl, PTy, Addr,
-                          TLI.getPICJumpTableRelocBase(Table, DAG));
+      Addr = DAG.getMemBasePlusOffset(TLI.getPICJumpTableRelocBase(Table, DAG),
+                                      Addr, dl);
     }
 
     Tmp1 = TLI.expandIndirectJTBranch(dl, LD.getValue(1), Addr, JTI, DAG);
@@ -4521,11 +4520,15 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::TANH_F32, RTLIB::TANH_F64, RTLIB::TANH_F80,
                     RTLIB::TANH_F128, RTLIB::TANH_PPCF128, Results);
     break;
-  case ISD::FSINCOS: {
-    RTLIB::Libcall LC = RTLIB::getFSINCOS(Node->getValueType(0));
+  case ISD::FSINCOS:
+  case ISD::FSINCOSPI: {
+    EVT VT = Node->getValueType(0);
+    RTLIB::Libcall LC = Node->getOpcode() == ISD::FSINCOS
+                            ? RTLIB::getSINCOS(VT)
+                            : RTLIB::getSINCOSPI(VT);
     bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results);
     if (!Expanded)
-      llvm_unreachable("Expected scalar FSINCOS to expand to libcall!");
+      llvm_unreachable("Expected scalar FSINCOS[PI] to expand to libcall!");
     break;
   }
   case ISD::FLOG:
@@ -4610,12 +4613,15 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::LDEXP_F32, RTLIB::LDEXP_F64, RTLIB::LDEXP_F80,
                     RTLIB::LDEXP_F128, RTLIB::LDEXP_PPCF128, Results);
     break;
+  case ISD::FMODF:
   case ISD::FFREXP: {
-    RTLIB::Libcall LC = RTLIB::getFREXP(Node->getValueType(0));
+    EVT VT = Node->getValueType(0);
+    RTLIB::Libcall LC = Node->getOpcode() == ISD::FMODF ? RTLIB::getMODF(VT)
+                                                        : RTLIB::getFREXP(VT);
     bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results,
                                                       /*CallRetResNo=*/0);
     if (!Expanded)
-      llvm_unreachable("Expected scalar FFREXP to expand to libcall!");
+      llvm_unreachable("Expected scalar FFREXP/FMODF to expand to libcall!");
     break;
   }
   case ISD::FPOWI:
@@ -5504,9 +5510,11 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp2.getValue(1));
     break;
   }
-  case ISD::FSINCOS: {
+  case ISD::FMODF:
+  case ISD::FSINCOS:
+  case ISD::FSINCOSPI: {
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
-    Tmp2 = DAG.getNode(ISD::FSINCOS, dl, DAG.getVTList(NVT, NVT), Tmp1,
+    Tmp2 = DAG.getNode(Node->getOpcode(), dl, DAG.getVTList(NVT, NVT), Tmp1,
                        Node->getFlags());
     Tmp3 = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
     for (unsigned ResNum = 0; ResNum < Node->getNumValues(); ResNum++)

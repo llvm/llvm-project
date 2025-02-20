@@ -4204,6 +4204,17 @@ public:
         Exprs, RParenLoc, EndLoc, Clauses, {});
   }
 
+  StmtResult RebuildOpenACCAtomicConstruct(SourceLocation BeginLoc,
+                                           SourceLocation DirLoc,
+                                           OpenACCAtomicKind AtKind,
+                                           SourceLocation EndLoc,
+                                           StmtResult AssociatedStmt) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Atomic, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, AtKind, SourceLocation{}, EndLoc, {},
+        AssociatedStmt);
+  }
+
   ExprResult RebuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
     return getSema().OpenACC().ActOnOpenACCAsteriskSizeExpr(AsteriskLoc);
   }
@@ -9529,6 +9540,17 @@ TreeTransform<Derived>::TransformOMPTileDirective(OMPTileDirective *D) {
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPStripeDirective(OMPStripeDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPUnrollDirective(OMPUnrollDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
@@ -10606,6 +10628,11 @@ TreeTransform<Derived>::TransformOMPNoOpenMPClause(OMPNoOpenMPClause *C) {
 template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPNoOpenMPRoutinesClause(
     OMPNoOpenMPRoutinesClause *C) {
+  return C;
+}
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *C) {
   return C;
 }
 template <typename Derived>
@@ -12607,6 +12634,29 @@ TreeTransform<Derived>::TransformOpenACCWaitConstruct(OpenACCWaitConstruct *C) {
 }
 
 template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOpenACCAtomicConstruct(
+    OpenACCAtomicConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
+                                                  C->getBeginLoc(), {}))
+    return StmtError();
+
+  // Transform Associated Stmt.
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
+      getSema().OpenACC(), C->getDirectiveKind(), C->getDirectiveLoc(), {}, {});
+
+  StmtResult AssocStmt = getDerived().TransformStmt(C->getAssociatedStmt());
+  AssocStmt = getSema().OpenACC().ActOnAssociatedStmt(
+      C->getBeginLoc(), C->getDirectiveKind(), C->getAtomicKind(), {},
+      AssocStmt);
+
+  return getDerived().RebuildOpenACCAtomicConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getAtomicKind(),
+      C->getEndLoc(), AssocStmt);
+}
+
+template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformOpenACCAsteriskSizeExpr(
     OpenACCAsteriskSizeExpr *E) {
   if (getDerived().AlwaysRebuild())
@@ -12666,7 +12716,7 @@ TreeTransform<Derived>::TransformDeclRefExpr(DeclRefExpr *E) {
   ValueDecl *ND
     = cast_or_null<ValueDecl>(getDerived().TransformDecl(E->getLocation(),
                                                          E->getDecl()));
-  if (!ND)
+  if (!ND || ND->isInvalidDecl())
     return ExprError();
 
   NamedDecl *Found = ND;
@@ -13615,7 +13665,7 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
       Desig.AddDesignator(
           Designator::CreateArrayDesignator(Index.get(), D.getLBracketLoc()));
 
-      ExprChanged = ExprChanged || Init.get() != E->getArrayIndex(D);
+      ExprChanged = ExprChanged || Index.get() != E->getArrayIndex(D);
       ArrayExprs.push_back(Index.get());
       continue;
     }
@@ -15427,12 +15477,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         // The transform has determined that we should perform an expansion;
         // transform and capture each of the arguments.
         // expansion of the pattern. Do so.
-        auto *Pack = cast<VarDecl>(C->getCapturedVar());
+        auto *Pack = cast<ValueDecl>(C->getCapturedVar());
         for (unsigned I = 0; I != *NumExpansions; ++I) {
           Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
-          VarDecl *CapturedVar
-            = cast_or_null<VarDecl>(getDerived().TransformDecl(C->getLocation(),
-                                                               Pack));
+          ValueDecl *CapturedVar = cast_if_present<ValueDecl>(
+              getDerived().TransformDecl(C->getLocation(), Pack));
           if (!CapturedVar) {
             Invalid = true;
             continue;

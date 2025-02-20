@@ -2326,12 +2326,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // shuffling arguments passed in memory.
   if (!IsSibcall && isTailCall) {
     // Force all the incoming stack arguments to be loaded from the stack
-    // before any new outgoing arguments are stored to the stack, because the
-    // outgoing stack slots may alias the incoming argument stack slots, and
-    // the alias isn't otherwise explicit. This is slightly more conservative
-    // than necessary, because it means that each store effectively depends
-    // on every argument instead of just those arguments it would clobber.
-    SDValue ArgChain = DAG.getStackArgumentTokenFactor(Chain);
+    // before any new outgoing arguments or the return address are stored to the
+    // stack, because the outgoing stack slots may alias the incoming argument
+    // stack slots, and the alias isn't otherwise explicit. This is slightly
+    // more conservative than necessary, because it means that each store
+    // effectively depends on every argument instead of just those arguments it
+    // would clobber.
+    Chain = DAG.getStackArgumentTokenFactor(Chain);
 
     SmallVector<SDValue, 8> MemOpChains2;
     SDValue FIN;
@@ -2373,13 +2374,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         Source = DAG.getNode(ISD::ADD, dl, getPointerTy(DAG.getDataLayout()),
                              StackPtr, Source);
 
-        MemOpChains2.push_back(CreateCopyOfByValArgument(Source, FIN,
-                                                         ArgChain,
-                                                         Flags, DAG, dl));
+        MemOpChains2.push_back(
+            CreateCopyOfByValArgument(Source, FIN, Chain, Flags, DAG, dl));
       } else {
         // Store relative to framepointer.
         MemOpChains2.push_back(DAG.getStore(
-            ArgChain, dl, Arg, FIN,
+            Chain, dl, Arg, FIN,
             MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI)));
       }
     }

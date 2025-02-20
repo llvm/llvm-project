@@ -31,7 +31,6 @@ entry:
 define i1 @test_EQ_IlsEbT(i64 %a, i16 %b) {
 ; CHECK-LABEL: test_EQ_IlsEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    cmn x0, w1, sxth
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -45,7 +44,6 @@ entry:
 define i1 @test_EQ_IlcEbT(i64 %a, i8 %b) {
 ; CHECK-LABEL: test_EQ_IlcEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    cmn x0, w1, uxtb
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -110,7 +108,6 @@ entry:
 define i1 @test_EQ_IslEbT(i16 %a, i64 %b) {
 ; CHECK-LABEL: test_EQ_IslEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmn x1, w0, sxth
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -167,7 +164,6 @@ entry:
 define i1 @test_EQ_IclEbT(i8 %a, i64 %b) {
 ; CHECK-LABEL: test_EQ_IclEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmn x1, w0, uxtb
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
@@ -249,7 +245,6 @@ entry:
 define i1 @test_NE_IlsEbT(i64 %a, i16 %b) {
 ; CHECK-LABEL: test_NE_IlsEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    cmn x0, w1, sxth
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -263,7 +258,6 @@ entry:
 define i1 @test_NE_IlcEbT(i64 %a, i8 %b) {
 ; CHECK-LABEL: test_NE_IlcEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    cmn x0, w1, uxtb
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -328,7 +322,6 @@ entry:
 define i1 @test_NE_IslEbT(i16 %a, i64 %b) {
 ; CHECK-LABEL: test_NE_IslEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmn x1, w0, sxth
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -385,7 +378,6 @@ entry:
 define i1 @test_NE_IclEbT(i8 %a, i64 %b) {
 ; CHECK-LABEL: test_NE_IclEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmn x1, w0, uxtb
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret

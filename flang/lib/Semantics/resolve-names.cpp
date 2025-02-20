@@ -13,8 +13,6 @@
 #include "resolve-directives.h"
 #include "resolve-names-utils.h"
 #include "rewrite-parse-tree.h"
-#include "flang/Common/Fortran.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Common/visit.h"
@@ -38,6 +36,8 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "flang/Support/Fortran.h"
+#include "flang/Support/default-kinds.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
@@ -87,7 +87,8 @@ private:
   bool inheritFromParent_{false}; // look in parent if not specified here
   bool isImplicitNoneType_{
       context_.IsEnabled(common::LanguageFeature::ImplicitNoneTypeAlways)};
-  bool isImplicitNoneExternal_{false};
+  bool isImplicitNoneExternal_{
+      context_.IsEnabled(common::LanguageFeature::ImplicitNoneExternal)};
   // map_ contains the mapping between letters and types that were defined
   // by the IMPLICIT statements of the related scope. It does not contain
   // the default Fortran mappings nor the mapping defined in parents.
@@ -1474,8 +1475,22 @@ public:
     return true;
   }
 
-  bool Pre(const parser::OpenMPDeclareMapperConstruct &);
+  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+    AddOmpSourceRange(x.source);
+    ProcessMapperSpecifier(std::get<parser::OmpMapperSpecifier>(x.t),
+        std::get<parser::OmpClauseList>(x.t));
+    return false;
+  }
 
+  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
+    AddOmpSourceRange(x.source);
+    parser::OmpClauseList emptyList{std::list<parser::OmpClause>{}};
+    ProcessReductionSpecifier(
+        std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
+        emptyList);
+    Walk(std::get<std::optional<parser::OmpReductionInitializerClause>>(x.t));
+    return false;
+  }
   bool Pre(const parser::OmpMapClause &);
 
   void Post(const parser::OmpBeginLoopDirective &) {
@@ -1616,6 +1631,21 @@ public:
       PopScope();
     }
   }
+  bool Pre(const parser::OmpDirectiveSpecification &x);
+
+  bool Pre(const parser::OmpTypeSpecifier &x) {
+    BeginDeclTypeSpec();
+    return true;
+  }
+  void Post(const parser::OmpTypeSpecifier &x) { //
+    EndDeclTypeSpec();
+  }
+
+private:
+  void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
+      const parser::OmpClauseList &clauses);
+  void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
+      const parser::OmpClauseList &clauses);
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1655,37 +1685,6 @@ void OmpVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   }
 }
 
-// This "manually" walks the tree of the construct, because we need
-// to resolve the type before the map clauses are processed - when
-// just following the natural flow, the map clauses gets processed before
-// the type has been fully processed.
-bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
-  AddOmpSourceRange(x.source);
-  BeginDeclTypeSpec();
-  const auto &spec{std::get<parser::OmpDeclareMapperSpecifier>(x.t)};
-  Symbol *mapperSym{nullptr};
-  if (const auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)}) {
-    mapperSym =
-        &MakeSymbol(*mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
-    mapperName->symbol = mapperSym;
-  } else {
-    const parser::CharBlock defaultName{"default", 7};
-    mapperSym = &MakeSymbol(
-        defaultName, Attrs{}, MiscDetails{MiscDetails::Kind::ConstructName});
-  }
-
-  PushScope(Scope::Kind::OtherConstruct, nullptr);
-  Walk(std::get<parser::TypeSpec>(spec.t));
-  const auto &varName{std::get<parser::ObjectName>(spec.t)};
-  DeclareObjectEntity(varName);
-
-  Walk(std::get<parser::OmpClauseList>(x.t));
-
-  EndDeclTypeSpec();
-  PopScope();
-  return false;
-}
-
 bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
   auto &mods{OmpGetModifiers(x)};
   if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
@@ -1711,6 +1710,91 @@ bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
     }
   }
   return true;
+}
+
+void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
+    const parser::OmpClauseList &clauses) {
+  // This "manually" walks the tree of the construct, because we need
+  // to resolve the type before the map clauses are processed - when
+  // just following the natural flow, the map clauses gets processed before
+  // the type has been fully processed.
+  BeginDeclTypeSpec();
+  if (auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)}) {
+    mapperName->symbol =
+        &MakeSymbol(*mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
+  } else {
+    const parser::CharBlock defaultName{"default", 7};
+    MakeSymbol(
+        defaultName, Attrs{}, MiscDetails{MiscDetails::Kind::ConstructName});
+  }
+
+  PushScope(Scope::Kind::OtherConstruct, nullptr);
+  Walk(std::get<parser::TypeSpec>(spec.t));
+  auto &varName{std::get<parser::Name>(spec.t)};
+  DeclareObjectEntity(varName);
+
+  Walk(clauses);
+  EndDeclTypeSpec();
+  PopScope();
+}
+
+void OmpVisitor::ProcessReductionSpecifier(
+    const parser::OmpReductionSpecifier &spec,
+    const parser::OmpClauseList &clauses) {
+  BeginDeclTypeSpec();
+  const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
+  if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
+    if (auto *name{std::get_if<parser::Name>(&procDes->u)}) {
+      name->symbol =
+          &MakeSymbol(*name, MiscDetails{MiscDetails::Kind::ConstructName});
+    }
+  }
+  EndDeclTypeSpec();
+  // Creating a new scope in case the combiner expression (or clauses) use
+  // reerved identifiers, like "omp_in". This is a temporary solution until
+  // we deal with these in a more thorough way.
+  PushScope(Scope::Kind::OtherConstruct, nullptr);
+  Walk(std::get<parser::OmpTypeNameList>(spec.t));
+  Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
+  Walk(clauses);
+  PopScope();
+}
+
+bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
+  // OmpDirectiveSpecification is only used in METADIRECTIVE at the moment.
+  // Since it contains directives and clauses, some semantic checks may
+  // not be applicable.
+  // Disable the semantic analysis for it for now to allow the compiler to
+  // parse METADIRECTIVE without flagging errors.
+  AddOmpSourceRange(x.source);
+  auto dirId{std::get<llvm::omp::Directive>(x.t)};
+  auto &maybeArgs{std::get<std::optional<std::list<parser::OmpArgument>>>(x.t)};
+  auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
+
+  switch (dirId) {
+  case llvm::omp::Directive::OMPD_declare_mapper:
+    if (maybeArgs && maybeClauses) {
+      const parser::OmpArgument &first{maybeArgs->front()};
+      if (auto *spec{std::get_if<parser::OmpMapperSpecifier>(&first.u)}) {
+        ProcessMapperSpecifier(*spec, *maybeClauses);
+      }
+    }
+    break;
+  case llvm::omp::Directive::OMPD_declare_reduction:
+    if (maybeArgs && maybeClauses) {
+      const parser::OmpArgument &first{maybeArgs->front()};
+      if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
+        ProcessReductionSpecifier(*spec, *maybeClauses);
+      }
+    }
+    break;
+  default:
+    // Default processing.
+    Walk(maybeArgs);
+    Walk(maybeClauses);
+    break;
+  }
+  return false;
 }
 
 // Walk the parse tree and resolve names to symbols.
@@ -3353,6 +3437,15 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
   if (&localUltimate == &useUltimate) {
     // use-associating the same symbol again -- ok
     return;
+  }
+  if (useUltimate.owner().IsModule() && localUltimate.owner().IsSubmodule() &&
+      DoesScopeContain(&useUltimate.owner(), localUltimate)) {
+    // Within a submodule, USE'ing a symbol that comes indirectly
+    // from the ancestor module, e.g. foo in:
+    //  MODULE m1; INTERFACE; MODULE SUBROUTINE foo; END INTERFACE; END
+    //  MODULE m2; USE m1; END
+    //  SUBMODULE m1(sm); USE m2; CONTAINS; MODULE PROCEDURE foo; END; END
+    return; // ok, ignore it
   }
 
   if (localUltimate.name() == useUltimate.name() &&
@@ -9458,7 +9551,9 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 }
 
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
-  if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u)) {
+  if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Unroll>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u)) {
     return;
   }
   if (const auto *tkr{
@@ -9736,7 +9831,7 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
       },
       node.stmt());
   Walk(node.spec());
-  bool inDeviceSubprogram = false;
+  bool inDeviceSubprogram{false};
   // If this is a function, convert result to an object. This is to prevent the
   // result from being converted later to a function symbol if it is called
   // inside the function.

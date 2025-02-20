@@ -205,6 +205,11 @@ static constexpr IntrinsicHandler handlers[]{
     {"c_ptr_ne", &I::genCPtrCompare<mlir::arith::CmpIPredicate::ne>},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
+    {"chdir",
+     &I::genChdir,
+     {{{"name", asAddr}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"clock64", &I::genClock64, {}, /*isElemental=*/false},
     {"cmplx",
      &I::genCmplx,
      {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
@@ -676,6 +681,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"syncthreads_and", &I::genSyncThreadsAnd, {}, /*isElemental=*/false},
     {"syncthreads_count", &I::genSyncThreadsCount, {}, /*isElemental=*/false},
     {"syncthreads_or", &I::genSyncThreadsOr, {}, /*isElemental=*/false},
+    {"syncwarp", &I::genSyncWarp, {}, /*isElemental=*/false},
     {"system",
      &I::genSystem,
      {{{"command", asBox}, {"exitstat", asBox, handleDynamicOptional}}},
@@ -804,8 +810,8 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
 // Generate a call to the Fortran runtime library providing
 // support for 128-bit float math.
 // On 'HAS_LDBL128' targets the implementation
-// is provided by FortranRuntime, otherwise, it is done via
-// FortranFloat128Math library. In the latter case the compiler
+// is provided by flang_rt, otherwise, it is done via the
+// libflang_rt.quadmath library. In the latter case the compiler
 // has to be built with FLANG_RUNTIME_F128_MATH_LIB to guarantee
 // proper linking actions in the driver.
 static mlir::Value genLibF128Call(fir::FirOpBuilder &builder,
@@ -1052,8 +1058,10 @@ static constexpr MathOperation mathOperations[] = {
     {"acos", "cacos", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
     {"acos", RTNAME_STRING(CAcosF128), FuncTypeComplex16Complex16,
      genLibF128Call},
-    {"acosh", "acoshf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"acosh", "acosh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"acosh", "acoshf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::AcoshOp>},
+    {"acosh", "acosh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AcoshOp>},
     {"acosh", RTNAME_STRING(AcoshF128), FuncTypeReal16Real16, genLibF128Call},
     {"acosh", "cacoshf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genLibCall},
@@ -1077,15 +1085,19 @@ static constexpr MathOperation mathOperations[] = {
     {"anint", "llvm.round.f80", genFuncType<Ty::Real<10>, Ty::Real<10>>,
      genMathOp<mlir::LLVM::RoundOp>},
     {"anint", RTNAME_STRING(RoundF128), FuncTypeReal16Real16, genLibF128Call},
-    {"asin", "asinf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"asin", "asin", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"asin", "asinf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::AsinOp>},
+    {"asin", "asin", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AsinOp>},
     {"asin", RTNAME_STRING(AsinF128), FuncTypeReal16Real16, genLibF128Call},
     {"asin", "casinf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"asin", "casin", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
     {"asin", RTNAME_STRING(CAsinF128), FuncTypeComplex16Complex16,
      genLibF128Call},
-    {"asinh", "asinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"asinh", "asinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"asinh", "asinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::AsinhOp>},
+    {"asinh", "asinh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AsinhOp>},
     {"asinh", RTNAME_STRING(AsinhF128), FuncTypeReal16Real16, genLibF128Call},
     {"asinh", "casinhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genLibCall},
@@ -1114,8 +1126,10 @@ static constexpr MathOperation mathOperations[] = {
      genMathOp<mlir::math::Atan2Op>},
     {"atan2", RTNAME_STRING(Atan2F128), FuncTypeReal16Real16Real16,
      genLibF128Call},
-    {"atanh", "atanhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"atanh", "atanh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"atanh", "atanhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::AtanhOp>},
+    {"atanh", "atanh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AtanhOp>},
     {"atanh", RTNAME_STRING(AtanhF128), FuncTypeReal16Real16, genLibF128Call},
     {"atanh", "catanhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genLibCall},
@@ -3184,6 +3198,45 @@ IntrinsicLibrary::genChar(mlir::Type type,
   mlir::Value len =
       builder.createIntegerConstant(loc, builder.getCharacterLengthType(), 1);
   return fir::CharBoxValue{cast, len};
+}
+
+// CHDIR
+fir::ExtendedValue
+IntrinsicLibrary::genChdir(std::optional<mlir::Type> resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 1 && resultType.has_value()) ||
+         (args.size() >= 1 && !resultType.has_value()));
+  mlir::Value name = fir::getBase(args[0]);
+  mlir::Value status = fir::runtime::genChdir(builder, loc, name);
+
+  if (resultType.has_value()) {
+    return status;
+  } else {
+    // Subroutine form, store status and return none.
+    if (!isStaticallyAbsent(args[1])) {
+      mlir::Value statusAddr = fir::getBase(args[1]);
+      statusAddr.dump();
+      mlir::Value statusIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, statusAddr);
+      builder.genIfThen(loc, statusIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, status, statusAddr);
+          })
+          .end();
+    }
+  }
+
+  return {};
+}
+
+// CLOCK64
+mlir::Value IntrinsicLibrary::genClock64(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.read.ptx.sreg.clock64";
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(context, {}, {resultType});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
 }
 
 // CMPLX
@@ -6333,10 +6386,12 @@ mlir::Value IntrinsicLibrary::genNearest(mlir::Type resultType,
   mlir::FloatType xType = mlir::dyn_cast<mlir::FloatType>(x.getType());
   const unsigned xBitWidth = xType.getWidth();
   mlir::Type i1Ty = builder.getI1Type();
-  if constexpr (proc == NearestProc::NextAfter)
+  if constexpr (proc == NearestProc::NextAfter) {
     // If isNan(Y), set X to a qNaN that will propagate to the resultIsX result.
-    x = builder.create<mlir::arith::SelectOp>(
-        loc, genIsFPClass(i1Ty, args[1], nanTest), genQNan(xType), x);
+    mlir::Value qNan = genQNan(xType);
+    mlir::Value isFPClass = genIsFPClass(i1Ty, args[1], nanTest);
+    x = builder.create<mlir::arith::SelectOp>(loc, isFPClass, qNan, x);
+  }
   mlir::Value resultIsX = genIsFPClass(i1Ty, x, nanTest);
   mlir::Type intType = builder.getIntegerType(xBitWidth);
   mlir::Value one = builder.createIntegerConstant(loc, intType, 1);
@@ -6456,12 +6511,11 @@ mlir::Value IntrinsicLibrary::genNearest(mlir::Type resultType,
   } else {
     // Kind 2, 3, 4, 8, 16. Increment or decrement X cast to integer.
     mlir::Value intX = builder.create<mlir::arith::BitcastOp>(loc, intType, x);
+    mlir::Value add = builder.create<mlir::arith::AddIOp>(loc, intX, one);
+    mlir::Value sub = builder.create<mlir::arith::SubIOp>(loc, intX, one);
     result = builder.create<mlir::arith::BitcastOp>(
         loc, resultType,
-        builder.create<mlir::arith::SelectOp>(
-            loc, magnitudeUp,
-            builder.create<mlir::arith::AddIOp>(loc, intX, one),
-            builder.create<mlir::arith::SubIOp>(loc, intX, one)));
+        builder.create<mlir::arith::SelectOp>(loc, magnitudeUp, add, sub));
     if constexpr (proc == NearestProc::Nearest ||
                   proc == NearestProc::NextAfter) {
       genRaiseExcept(_FORTRAN_RUNTIME_IEEE_OVERFLOW |
@@ -7668,6 +7722,18 @@ IntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
   return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
+}
+
+// SYNCWARP
+void IntrinsicLibrary::genSyncWarp(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  constexpr llvm::StringLiteral funcName = "llvm.nvvm.bar.warp.sync";
+  mlir::Value mask = fir::getBase(args[0]);
+  mlir::FunctionType funcType =
+      mlir::FunctionType::get(builder.getContext(), {mask.getType()}, {});
+  auto funcOp = builder.createFunction(loc, funcName, funcType);
+  llvm::SmallVector<mlir::Value> argsList{mask};
+  builder.create<fir::CallOp>(loc, funcOp, argsList);
 }
 
 // SYSTEM

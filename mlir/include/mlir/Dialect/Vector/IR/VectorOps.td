@@ -373,8 +373,9 @@ def Vector_BroadcastOp :
 
     The source operand is duplicated over all the missing leading dimensions
     and stretched over the trailing dimensions where the source has a non-equal
-    dimension of 1. These rules imply that any scalar broadcast (k=0) to any
-    shaped vector with the same element type is always legal.
+    dimension of 1 (stretching a trailing dimension is also referred to as
+    "dim-1" broadcasting). These rules imply that any scalar broadcast (k=0) to
+    any shaped vector with the same element type is always legal.
 
     Example:
 
@@ -396,7 +397,7 @@ def Vector_BroadcastOp :
 
     /// Broadcast `value` to a vector of `dstShape`, knowing that exactly the
     /// `broadcastedDims` dimensions in the dstShape are broadcasted.
-    /// This requires (and asserts) that the broadcast is free of dim-1
+    /// This requires (and asserts) that the broadcast is free of "dim-1"
     /// broadcasting.
     /// Since vector.broadcast only allows expanding leading dimensions, an extra
     /// vector.transpose may be inserted to make the broadcast possible.
@@ -643,11 +644,13 @@ def Vector_ExtractElementOp :
     Results<(outs AnyType:$result)> {
   let summary = "extractelement operation";
   let description = [{
+    Note: This operation is deprecated. Please use vector.extract insert.
+
     Takes a 0-D or 1-D vector and a optional dynamic index position and
     extracts the scalar at that position.
 
     Note that this instruction resembles vector.extract, but is restricted to
-    0-D and 1-D vectors and relaxed to dynamic indices.
+    0-D and 1-D vectors.
     If the vector is 0-D, the position must be std::nullopt.
 
 
@@ -833,11 +836,13 @@ def Vector_InsertElementOp :
      Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "insertelement operation";
   let description = [{
+    Note: This operation is deprecated. Please use vector.insert instead.
+
     Takes a scalar source, a 0-D or 1-D destination vector and a dynamic index
     position and inserts the source into the destination at the proper position.
 
     Note that this instruction resembles vector.insert, but is restricted to 0-D
-    and 1-D vectors and relaxed to dynamic indices.
+    and 1-D vectors.
 
     It is meant to be closer to LLVM's version:
     https://llvm.org/docs/LangRef.html#insertelement-instruction
@@ -2779,7 +2784,7 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
     "`:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
 }
 
-/// Vector dialect matrix tranposition op that operates on flattened 1-D
+/// Vector dialect matrix transposition op that operates on flattened 1-D
 /// MLIR vectors. This is the counterpart of llvm.matrix.transpose in MLIR.
 /// This may seem redundant with vector.transpose but it serves the purposes of
 /// more progressive lowering and localized type conversion on the path:
@@ -2799,7 +2804,7 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
   let description = [{
     This is the counterpart of llvm.matrix.transpose in MLIR. It serves
     the purposes of more progressive lowering and localized type conversion.
-    Higher levels typically lower matrix tranpositions into 'vector.transpose'
+    Higher levels typically lower matrix transpositions into 'vector.transpose'
     operations. Subsequent rewriting rule progressively lower these operations
     into 'vector.flat_transpose' operations to bring the operations closer
     to the hardware ISA.

@@ -270,6 +270,7 @@ set(files
   __chrono/steady_clock.h
   __chrono/sys_info.h
   __chrono/system_clock.h
+  __chrono/tai_clock.h
   __chrono/time_point.h
   __chrono/time_zone.h
   __chrono/time_zone_link.h
@@ -556,12 +557,14 @@ set(files
   __memory/compressed_pair.h
   __memory/concepts.h
   __memory/construct_at.h
+  __memory/destroy.h
   __memory/destruct_n.h
   __memory/inout_ptr.h
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
+  __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_count.h

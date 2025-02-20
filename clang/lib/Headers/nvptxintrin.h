@@ -13,6 +13,10 @@
 #error "This file is intended for NVPTX targets or offloading to NVPTX"
 #endif
 
+#ifndef __CUDA_ARCH__
+#define __CUDA_ARCH__ 0
+#endif
+
 #include <stdint.h>
 
 #if !defined(__cplusplus)
@@ -149,22 +153,96 @@ _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_lane(uint64_t __lane_mask) {
 
 // Shuffles the the lanes inside the warp according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
-__gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x) {
+__gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
+                      uint32_t __width) {
+  // Mask out inactive lanes to match AMDGPU behavior.
   uint32_t __mask = (uint32_t)__lane_mask;
-  return __nvvm_shfl_sync_idx_i32(__mask, __x, __idx, __gpu_num_lanes() - 1u);
+  bool __bitmask = (1ull << __idx) & __lane_mask;
+  return -__bitmask &
+         __nvvm_shfl_sync_idx_i32(__mask, __x, __idx,
+                                  ((__gpu_num_lanes() - __width) << 8u) | 0x1f);
 }
 
 // Shuffles the the lanes inside the warp according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x) {
+__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x,
+                      uint32_t __width) {
   uint32_t __hi = (uint32_t)(__x >> 32ull);
   uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
   uint32_t __mask = (uint32_t)__lane_mask;
-  return ((uint64_t)__nvvm_shfl_sync_idx_i32(__mask, __hi, __idx,
-                                             __gpu_num_lanes() - 1u)
+  return ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __hi, __width)
           << 32ull) |
-         ((uint64_t)__nvvm_shfl_sync_idx_i32(__mask, __lo, __idx,
-                                             __gpu_num_lanes() - 1u));
+         ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __lo, __width));
+}
+
+// Returns a bitmask marking all lanes that have the same value of __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
+  // Newer targets can use the dedicated CUDA support.
+  if (__CUDA_ARCH__ >= 700 || __nvvm_reflect("__CUDA_ARCH") >= 700)
+    return __nvvm_match_any_sync_i32(__lane_mask, __x);
+
+  uint32_t __match_mask = 0;
+  bool __done = 0;
+  while (__gpu_ballot(__lane_mask, !__done)) {
+    if (!__done) {
+      uint32_t __first = __gpu_read_first_lane_u32(__lane_mask, __x);
+      if (__first == __x) {
+        __match_mask = __gpu_lane_mask();
+        __done = 1;
+      }
+    }
+  }
+  return __match_mask;
+}
+
+// Returns a bitmask marking all lanes that have the same value of __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
+  // Newer targets can use the dedicated CUDA support.
+  if (__CUDA_ARCH__ >= 700 || __nvvm_reflect("__CUDA_ARCH") >= 700)
+    return __nvvm_match_any_sync_i64(__lane_mask, __x);
+
+  uint64_t __match_mask = 0;
+
+  bool __done = 0;
+  while (__gpu_ballot(__lane_mask, __done)) {
+    if (!__done) {
+      uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+      if (__first == __x) {
+        __match_mask = __gpu_lane_mask();
+        __done = 1;
+      }
+    }
+  }
+  __gpu_sync_lane(__lane_mask);
+  return __match_mask;
+}
+
+// Returns the current lane mask if every lane contains __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
+  // Newer targets can use the dedicated CUDA support.
+  int predicate;
+  if (__CUDA_ARCH__ >= 700 || __nvvm_reflect("__CUDA_ARCH") >= 700)
+    return __nvvm_match_all_sync_i32p(__lane_mask, __x, &predicate);
+
+  uint32_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+  uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
+  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+}
+
+// Returns the current lane mask if every lane contains __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
+  // Newer targets can use the dedicated CUDA support.
+  int predicate;
+  if (__CUDA_ARCH__ >= 700 || __nvvm_reflect("__CUDA_ARCH") >= 700)
+    return __nvvm_match_all_sync_i64p(__lane_mask, __x, &predicate);
+
+  uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+  uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
+  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
 }
 
 // Returns true if the flat pointer points to CUDA 'shared' memory.

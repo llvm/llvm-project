@@ -20,55 +20,30 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::set<int> M;
-        typedef int V;
-        V ar[] =
-        {
-            1,
-            1,
-            1,
-            2,
-            2,
-            2,
-            3,
-            3,
-            3
-        };
-        M m;
-        m.insert(cpp17_input_iterator<const V*>(ar),
-                 cpp17_input_iterator<const V*>(ar + sizeof(ar)/sizeof(ar[0])));
-        assert(m.size() == 3);
-        assert(*m.begin() == 1);
-        assert(*std::next(m.begin()) == 2);
-        assert(*std::next(m.begin(), 2) == 3);
-    }
+int main(int, char**) {
+  {
+    typedef std::set<int> M;
+    typedef int V;
+    V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
+    M m;
+    m.insert(cpp17_input_iterator<const V*>(ar), cpp17_input_iterator<const V*>(ar + sizeof(ar) / sizeof(ar[0])));
+    assert(m.size() == 3);
+    assert(*m.begin() == 1);
+    assert(*std::next(m.begin()) == 2);
+    assert(*std::next(m.begin(), 2) == 3);
+  }
 #if TEST_STD_VER >= 11
-    {
-        typedef std::set<int, std::less<int>, min_allocator<int>> M;
-        typedef int V;
-        V ar[] =
-        {
-            1,
-            1,
-            1,
-            2,
-            2,
-            2,
-            3,
-            3,
-            3
-        };
-        M m;
-        m.insert(cpp17_input_iterator<const V*>(ar),
-                 cpp17_input_iterator<const V*>(ar + sizeof(ar)/sizeof(ar[0])));
-        assert(m.size() == 3);
-        assert(*m.begin() == 1);
-        assert(*std::next(m.begin()) == 2);
-        assert(*std::next(m.begin(), 2) == 3);
-    }
+  {
+    typedef std::set<int, std::less<int>, min_allocator<int>> M;
+    typedef int V;
+    V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
+    M m;
+    m.insert(cpp17_input_iterator<const V*>(ar), cpp17_input_iterator<const V*>(ar + sizeof(ar) / sizeof(ar[0])));
+    assert(m.size() == 3);
+    assert(*m.begin() == 1);
+    assert(*std::next(m.begin()) == 2);
+    assert(*std::next(m.begin(), 2) == 3);
+  }
 #endif
 
   return 0;

@@ -19,6 +19,9 @@ include "llvm/TableGen/SearchableTable.td"
 
 class SysReg<string name, bits<12> op> {
   string Name = name;
+  // Custom vendor CSRs have a "<vendor>." prefix. Convert these to "<vendor>_"
+  // before passing it to the SysRegEncodings GenericEnum below.
+  string EnumName = !subst(".", "_", name);
   bits<12> Encoding = op;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read and Write = 0, 1, 2; Read-Only = 3.
@@ -50,7 +53,7 @@ def SysRegsList : GenericTable {
 
 def SysRegEncodings : GenericEnum {
   let FilterClass = "SysReg";
-  let NameField = "Name";
+  let NameField = "EnumName";
   let ValueField = "Encoding";
 }
 
@@ -154,6 +157,8 @@ def : SysReg<"hideleg", 0x603>;
 def : SysReg<"hie", 0x604>;
 def : SysReg<"hcounteren", 0x606>;
 def : SysReg<"hgeie", 0x607>;
+let isRV32Only = 1 in
+def : SysReg<"hedelegh", 0x612>;
 
 //===----------------------------------------------------------------------===//
 // Hypervisor Trap Handling
@@ -230,8 +235,10 @@ def : SysReg<"mideleg", 0x303>;
 def : SysReg<"mie", 0x304>;
 def : SysReg<"mtvec", 0x305>;
 def : SysReg<"mcounteren", 0x306>;
-let isRV32Only = 1 in
+let isRV32Only = 1 in {
 def : SysReg<"mstatush", 0x310>;
+def : SysReg<"medelegh", 0x312>;
+} // isRV32Only
 
 //===----------------------------------------------------------------------===//
 // Machine Trap Handling
