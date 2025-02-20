@@ -9,8 +9,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
-#include <iostream>
-#include <stdlib.h>
 
 using namespace mlir;
 
