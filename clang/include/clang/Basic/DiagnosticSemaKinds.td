@@ -9768,7 +9768,7 @@ def err_operator_new_delete_invalid_result_type : Error<
 def err_operator_new_delete_dependent_result_type : Error<
   "%0 cannot have a dependent return type; use %1 instead">;
 def err_operator_new_delete_too_few_parameters : Error<
-  "%0 must have at least one parameter">;
+  "%select{|type aware }0%1 must have at least %select{|one|two|three|four}2 parameter%s2">;
 def err_operator_new_delete_template_too_few_parameters : Error<
   "%0 template must have at least two parameters">;
 def warn_operator_new_returns_null : Warning<
@@ -9776,17 +9776,17 @@ def warn_operator_new_returns_null : Warning<
   "%select{| or 'noexcept'}1">, InGroup<OperatorNewReturnsNull>;
 
 def err_operator_new_dependent_param_type : Error<
-  "%select{|type aware}1 %0 cannot take a dependent type as %select{first|second}1 parameter; "
-  "use size_t (%2) instead">;
+  "%select{|type aware }0%1 cannot take a dependent type as %select{first|second|third|fourth}2 parameter; "
+  "use %4 (%3) instead">;
 def err_operator_new_param_type : Error<
-  "%select{|type aware}1 %0 takes type size_t (%2) as %select{first|second}1 parameter">;
+  "%select{|type aware }0%1 takes type %4 (%3) as %select{first|second|third|fourth}2 parameter">;
 def err_operator_new_default_arg: Error<
   "parameter of %0 cannot have a default argument">;
 def err_operator_delete_dependent_param_type : Error<
-  "%select{|type aware}1 %0 cannot take a dependent type as %select{first|second}1 parameter; "
-  "use %2 instead">;
+  "%select{|type aware }0%1 cannot take a dependent type as %select{first|second|third|fourth}2 parameter; "
+  "use %3 instead">;
 def err_operator_delete_param_type : Error<
-  "%select{first|second}1 parameter of%select{|type aware}1 %0 must have type %2">;
+  "%select{first|second|third|fourth}2 parameter of%select{| type aware}0 %1 must have type %3">;
 def err_destroying_operator_delete_not_usual : Error<
   "destroying operator delete can have only an optional size and optional "
   "alignment parameter">;
