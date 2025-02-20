@@ -39,7 +39,7 @@ Implemented Papers
 ------------------
 
 - N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
-- P2542: Implements views::concat (`Github <https://github.com/llvm/llvm-project/issues/105419>`__)
+- P2542R8: ``views::concat`` (`Github <https://github.com/llvm/llvm-project/issues/105419>`__)
 
 Improvements and New Features
 -----------------------------
