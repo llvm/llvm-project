@@ -4973,6 +4973,10 @@ def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
 def mno_restrict_it: Flag<["-"], "mno-restrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Allow generation of complex IT blocks.">;
 def marm : Flag<["-"], "marm">, Alias<mno_thumb>;
+def ffixed_r4 : Flag<["-"], "ffixed-r4">, Group<m_arm_Features_Group>,
+  HelpText<"Reserve the r4 register (ARM only)">;
+def ffixed_r5 : Flag<["-"], "ffixed-r5">, Group<m_arm_Features_Group>,
+  HelpText<"Reserve the r5 register (ARM only)">;
 def ffixed_r9 : Flag<["-"], "ffixed-r9">, Group<m_arm_Features_Group>,
   HelpText<"Reserve the r9 register (ARM only)">;
 def mno_movt : Flag<["-"], "mno-movt">, Group<m_arm_Features_Group>,
