@@ -269,9 +269,9 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     bool NeedsFreeze) {
   const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
   const SCEV *BTC = PSE.getBackedgeTakenCount();
-  const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
-      Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC, PSE.getSE(),
-      &DC.getPointerBounds());
+  const auto &[ScStart, ScEnd] =
+      getStartAndEndForAccess(Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC,
+                              PSE.getSE(), &DC.getPointerBounds());
   assert(!isa<SCEVCouldNotCompute>(ScStart) &&
          !isa<SCEVCouldNotCompute>(ScEnd) &&
          "must be able to compute both start and end expressions");
@@ -1928,12 +1928,12 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
       SE.isLoopInvariant(Sink, InnermostLoop)) {
     const SCEV *BTC = PSE.getBackedgeTakenCount();
     const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
-    const auto &[SrcStart_, SrcEnd_] = getStartAndEndForAccess(
-        InnermostLoop, Src, ATy, BTC, SymbolicMaxBTC, PSE.getSE(),
-        &PointerBounds);
-    const auto &[SinkStart_, SinkEnd_] = getStartAndEndForAccess(
-        InnermostLoop, Sink, BTy, BTC, SymbolicMaxBTC, PSE.getSE(),
-        &PointerBounds);
+    const auto &[SrcStart_, SrcEnd_] =
+        getStartAndEndForAccess(InnermostLoop, Src, ATy, BTC, SymbolicMaxBTC,
+                                PSE.getSE(), &PointerBounds);
+    const auto &[SinkStart_, SinkEnd_] =
+        getStartAndEndForAccess(InnermostLoop, Sink, BTy, BTC, SymbolicMaxBTC,
+                                PSE.getSE(), &PointerBounds);
     if (!isa<SCEVCouldNotCompute>(SrcStart_) &&
         !isa<SCEVCouldNotCompute>(SrcEnd_) &&
         !isa<SCEVCouldNotCompute>(SinkStart_) &&
