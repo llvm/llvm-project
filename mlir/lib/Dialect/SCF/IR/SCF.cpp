@@ -502,7 +502,7 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
   // Set block argument types, so that they are known when parsing the region.
   regionArgs.front().type = type;
   for (auto [iterArg, type] :
-       llvm::zip(llvm::drop_begin(regionArgs), result.types))
+       llvm::zip_equal(llvm::drop_begin(regionArgs), result.types))
     iterArg.type = type;
 
   // Parse the body region.
@@ -518,8 +518,8 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperand(step, type, result.operands))
     return failure();
   if (hasIterArgs) {
-    for (auto argOperandType :
-         llvm::zip(llvm::drop_begin(regionArgs), operands, result.types)) {
+    for (auto argOperandType : llvm::zip_equal(llvm::drop_begin(regionArgs),
+                                               operands, result.types)) {
       Type type = std::get<2>(argOperandType);
       std::get<0>(argOperandType).type = type;
       if (parser.resolveOperand(std::get<1>(argOperandType), type,
