@@ -1709,6 +1709,10 @@ private:
     hsa_agent_t Agent;
     AMDGPUSignalTy *Signal;
     double TicksToTime;
+    std::string KernelName;
+    uint32_t NumTeams;
+    uint32_t NumThreads;
+    KernelRunRecordTy *KernelRunRecords;
   };
 
   using AMDGPUStreamCallbackTy = Error(void *Data);
@@ -2087,9 +2091,20 @@ private:
     PostKernelRunProcessingArgsTy *Args =
         reinterpret_cast<PostKernelRunProcessingArgsTy *>(Data);
 
-    uint64_t KernelDuration = getKernelDuration(Args);
-    fprintf(stderr, "Kernel Duration: %lu ns\n", KernelDuration);
+    KernelRunRecordTy *KernelRecord = Args->KernelRunRecords;
+    assert(KernelRecord && "KernelRunRecord is null!");
 
+    uint64_t KernelDuration = getKernelDuration(Args);
+    KernelRecord->addEntry(Args->KernelName, Args->NumTeams, Args->NumThreads,
+                           KernelDuration);
+
+    if (getInfoLevel() & OMP_INFOTYPE_AMD_KERNEL_TRACE) {
+      fprintf(stderr,
+              "[Autotuning run] Kernel %s with %u teams and %u threads "
+              "completed in %lu ns.\n",
+              Args->KernelName.c_str(), Args->NumTeams, Args->NumThreads,
+              KernelDuration);
+    }
     return Plugin::success();
   }
 
@@ -2171,14 +2186,26 @@ public:
 
     // If runtime autotuning is enabled, setup the callback functions to process
     // the data after kernel completed.
-    if (Device.enableRuntimeAutotuning()) {
-      PostKernelRunProcessingArgs.Agent = Agent;
-      PostKernelRunProcessingArgs.Signal = OutputSignal;
-      PostKernelRunProcessingArgs.TicksToTime = 1.0;
+    if (Device.enableRuntimeAutotuning() && Kernel.isSPMDMode()) {
+      std::string KernelName(Kernel.getName());
+      KernelRunRecordTy *KernelRecords = Device.getKernelRunRecords();
+      assert(KernelRecords && "No KernelRecords!");
 
-      if (auto Err = Slots[Curr].schedCallback(postKernelRunProcessingAction,
-                                               &PostKernelRunProcessingArgs))
-        return Err;
+      // If this kernel has reached the run limit,
+      // skip registering the callback function.
+      if (!KernelRecords->reachedRunLimitForKernel(KernelName)) {
+        PostKernelRunProcessingArgs.Agent = Agent;
+        PostKernelRunProcessingArgs.Signal = OutputSignal;
+        PostKernelRunProcessingArgs.TicksToTime = 1.0;
+        PostKernelRunProcessingArgs.KernelName = KernelName;
+        PostKernelRunProcessingArgs.NumTeams = NumBlocks[0];
+        PostKernelRunProcessingArgs.NumThreads = NumThreads[0];
+        PostKernelRunProcessingArgs.KernelRunRecords = KernelRecords;
+
+        if (auto Err = Slots[Curr].schedCallback(postKernelRunProcessingAction,
+                                                 &PostKernelRunProcessingArgs))
+          return Err;
+      }
     }
 
     // Push the kernel with the output signal and an input signal (optional)
