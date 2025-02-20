@@ -3819,9 +3819,11 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     }
 
     if (!dominatesMergePoint(PN->getIncomingValue(0), BB, DomBI,
-                             AggressiveInsts, Cost, Budget, TTI, AC, ZeroCostInstructions) ||
+                             AggressiveInsts, Cost, Budget, TTI, AC,
+                             ZeroCostInstructions) ||
         !dominatesMergePoint(PN->getIncomingValue(1), BB, DomBI,
-                             AggressiveInsts, Cost, Budget, TTI, AC, ZeroCostInstructions))
+                             AggressiveInsts, Cost, Budget, TTI, AC,
+                             ZeroCostInstructions))
       return Changed;
   }
 
