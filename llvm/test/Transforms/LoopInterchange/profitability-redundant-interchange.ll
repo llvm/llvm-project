@@ -3,8 +3,9 @@
 ; RUN: FileCheck -input-file %t %s
 
 
-; Test that the same pair of loops are not interchanged twice. This is the case
-; when the cost computed by CacheCost is the same for the loop of `j` and `k`.
+; Test that loop-interchange doesn't undo its own transoformation. This is
+; the case when the cost computed by CacheCost is the same for the loop of `j`
+; and `k`.
 ;
 ; #define N 4
 ; int a[N*N][N*N][N*N];
