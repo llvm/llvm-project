@@ -289,35 +289,6 @@ static func::FuncOp getCalledFunction(func::CallOp callOp) {
       SymbolTable::lookupNearestSymbolFrom(callOp, sym));
 }
 
-/// Gather equivalence info of CallOps.
-/// Note: This only adds new equivalence info if the called function was already
-/// analyzed.
-// TODO: This does not handle cyclic function call graphs etc.
-static void equivalenceAnalysis(func::FuncOp funcOp,
-                                OneShotAnalysisState &state,
-                                FuncAnalysisState &funcState) {
-  funcOp->walk([&](func::CallOp callOp) {
-    func::FuncOp calledFunction = getCalledFunction(callOp);
-    assert(calledFunction && "could not retrieved called func::FuncOp");
-
-    // No equivalence info available for the called function.
-    if (!funcState.equivalentFuncArgs.count(calledFunction))
-      return WalkResult::skip();
-
-    for (auto it : funcState.equivalentFuncArgs[calledFunction]) {
-      int64_t returnIdx = it.first;
-      int64_t bbargIdx = it.second;
-      if (!state.isInPlace(callOp->getOpOperand(bbargIdx)))
-        continue;
-      Value returnVal = callOp.getResult(returnIdx);
-      Value argVal = callOp->getOperand(bbargIdx);
-      state.unionEquivalenceClasses(returnVal, argVal);
-    }
-
-    return WalkResult::advance();
-  });
-}
-
 /// Return "true" if the given function signature has tensor semantics.
 static bool hasTensorSignature(func::FuncOp funcOp) {
   return llvm::any_of(funcOp.getFunctionType().getInputs(),
@@ -493,9 +464,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     // Now analyzing function.
     funcState.startFunctionAnalysis(funcOp);
 
-    // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, state, funcState);
-
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state, statistics)))
       return failure();
@@ -513,9 +481,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   for (func::FuncOp funcOp : remainingFuncOps) {
     if (!state.getOptions().isOpAllowed(funcOp))
       continue;
-
-    // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, state, funcState);
 
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state, statistics)))

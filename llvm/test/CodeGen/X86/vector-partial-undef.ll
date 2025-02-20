@@ -151,9 +151,9 @@ define <8 x i32> @xor_undef_elts_alt(<4 x i32> %x) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps {{.*#+}} ymm1 = [6,1,5,4,3,2,0,7]
 ; AVX-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %extend = shufflevector <4 x i32> %x, <4 x i32> undef, <8 x i32> <i32 undef, i32 undef, i32 2, i32 3, i32 0, i32 1, i32 undef, i32 undef>
   %bogus_bo = xor <8 x i32> %extend, <i32 42, i32 43, i32 undef, i32 undef, i32 undef, i32 undef, i32 44, i32 12>

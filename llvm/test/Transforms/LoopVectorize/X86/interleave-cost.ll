@@ -114,44 +114,8 @@ define void @geps_feeding_interleave_groups_with_reuse(ptr %arg, i64 %arg1, ptr 
 ; CHECK-SAME: ptr [[ARG:%.*]], i64 [[ARG1:%.*]], ptr [[ARG2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[ARG1]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 54
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ARG2]], i64 8
-; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[ARG1]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[ARG2]], i64 12
-; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[ARG1]])
-; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 0, [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW4]]
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[ARG2]], i64 4
-; CHECK-NEXT:    [[MUL6:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[ARG1]])
-; CHECK-NEXT:    [[MUL_RESULT7:%.*]] = extractvalue { i64, i1 } [[MUL6]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW8:%.*]] = extractvalue { i64, i1 } [[MUL6]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SCEVGEP5]], i64 [[MUL_RESULT7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[SCEVGEP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW8]]
-; CHECK-NEXT:    [[MUL9:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[ARG1]])
-; CHECK-NEXT:    [[MUL_RESULT10:%.*]] = extractvalue { i64, i1 } [[MUL9]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW11:%.*]] = extractvalue { i64, i1 } [[MUL9]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 0, [[MUL_RESULT10]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[ARG2]], i64 [[MUL_RESULT10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr [[TMP14]], [[ARG2]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW11]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP17]], [[TMP12]]
-; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP18]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP19]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[ARG1]], 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[TMP20]], 16
@@ -171,9 +135,9 @@ define void @geps_feeding_interleave_groups_with_reuse(ptr %arg, i64 %arg1, ptr 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = shl i64 [[TMP24]], 5
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[ARG]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = shl i64 [[TMP24]], 4
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[ARG2]], i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[ARG2]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x float>, ptr [[TMP26]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x float> [[WIDE_VEC]], <16 x float> poison, <2 x i32> <i32 0, i32 8>
 ; CHECK-NEXT:    [[STRIDED_VEC14:%.*]] = shufflevector <16 x float> [[WIDE_VEC]], <16 x float> poison, <2 x i32> <i32 1, i32 9>
@@ -203,44 +167,44 @@ define void @geps_feeding_interleave_groups_with_reuse(ptr %arg, i64 %arg1, ptr 
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SHL_IV_5:%.*]] = shl i64 [[IV]], 5
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[ARG]], i64 [[SHL_IV_5]]
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 [[SHL_IV_5]]
 ; CHECK-NEXT:    [[ADD_5:%.*]] = or disjoint i64 [[SHL_IV_5]], 16
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, ptr [[ARG]], i64 [[ADD_5]]
 ; CHECK-NEXT:    [[SHL_IV_4:%.*]] = shl i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i8, ptr [[ARG2]], i64 [[SHL_IV_4]]
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i8, ptr [[ARG2]], i64 [[SHL_IV_4]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load float, ptr [[GEP_1]], align 4
 ; CHECK-NEXT:    [[L_2:%.*]] = load float, ptr [[GEP_2]], align 4
 ; CHECK-NEXT:    [[ADD_1:%.*]] = fadd float [[L_1]], [[L_2]]
 ; CHECK-NEXT:    [[MUL_1:%.*]] = fmul float [[ADD_1]], 0.000000e+00
 ; CHECK-NEXT:    store float [[MUL_1]], ptr [[GEP_3]], align 4
-; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr i8, ptr [[GEP_1]], i64 4
+; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i8, ptr [[GEP_1]], i64 4
 ; CHECK-NEXT:    [[L_3:%.*]] = load float, ptr [[GEP_4]], align 4
-; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr i8, ptr [[GEP_2]], i64 4
+; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i8, ptr [[GEP_2]], i64 4
 ; CHECK-NEXT:    [[L_4:%.*]] = load float, ptr [[GEP_5]], align 4
 ; CHECK-NEXT:    [[ADD_2:%.*]] = fadd float [[L_3]], [[L_4]]
 ; CHECK-NEXT:    [[MUL_2:%.*]] = fmul float [[ADD_2]], 0.000000e+00
-; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr i8, ptr [[GEP_3]], i64 4
+; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i8, ptr [[GEP_3]], i64 4
 ; CHECK-NEXT:    store float [[MUL_2]], ptr [[GEP_6]], align 4
-; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr i8, ptr [[GEP_1]], i64 8
+; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i8, ptr [[GEP_1]], i64 8
 ; CHECK-NEXT:    [[L_5:%.*]] = load float, ptr [[GEP_7]], align 4
-; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr i8, ptr [[GEP_2]], i64 8
+; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds i8, ptr [[GEP_2]], i64 8
 ; CHECK-NEXT:    [[L_6:%.*]] = load float, ptr [[GEP_8]], align 4
 ; CHECK-NEXT:    [[ADD_3:%.*]] = fadd float [[L_5]], [[L_6]]
 ; CHECK-NEXT:    [[MUL_3:%.*]] = fmul float [[ADD_3]], 0.000000e+00
-; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr i8, ptr [[GEP_3]], i64 8
+; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr inbounds i8, ptr [[GEP_3]], i64 8
 ; CHECK-NEXT:    store float [[MUL_3]], ptr [[GEP_9]], align 4
-; CHECK-NEXT:    [[I27:%.*]] = getelementptr i8, ptr [[GEP_1]], i64 12
+; CHECK-NEXT:    [[I27:%.*]] = getelementptr inbounds i8, ptr [[GEP_1]], i64 12
 ; CHECK-NEXT:    [[L_7:%.*]] = load float, ptr [[I27]], align 4
-; CHECK-NEXT:    [[GEP_10:%.*]] = getelementptr i8, ptr [[GEP_2]], i64 12
+; CHECK-NEXT:    [[GEP_10:%.*]] = getelementptr inbounds i8, ptr [[GEP_2]], i64 12
 ; CHECK-NEXT:    [[L_8:%.*]] = load float, ptr [[GEP_10]], align 4
 ; CHECK-NEXT:    [[ADD_4:%.*]] = fadd float [[L_7]], [[L_8]]
 ; CHECK-NEXT:    [[MUL_4:%.*]] = fmul float [[ADD_4]], 0.000000e+00
-; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr i8, ptr [[GEP_3]], i64 12
+; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds i8, ptr [[GEP_3]], i64 12
 ; CHECK-NEXT:    store float [[MUL_4]], ptr [[GEP_11]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[ARG1]]
@@ -254,39 +218,39 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %shl.iv.5 = shl i64 %iv, 5
-  %gep.1 = getelementptr i8, ptr %arg, i64 %shl.iv.5
+  %gep.1 = getelementptr inbounds i8, ptr %arg, i64 %shl.iv.5
   %add.5 = or disjoint i64 %shl.iv.5, 16
   %gep.2 = getelementptr i8, ptr %arg, i64 %add.5
   %shl.iv.4 = shl i64 %iv, 4
-  %gep.3 = getelementptr i8, ptr %arg2, i64 %shl.iv.4
+  %gep.3 = getelementptr inbounds i8, ptr %arg2, i64 %shl.iv.4
   %l.1 = load float, ptr %gep.1, align 4
   %l.2 = load float, ptr %gep.2, align 4
   %add.1 = fadd float %l.1, %l.2
   %mul.1 = fmul float %add.1, 0.000000e+00
   store float %mul.1, ptr %gep.3, align 4
-  %gep.4 = getelementptr i8, ptr %gep.1, i64 4
+  %gep.4 = getelementptr inbounds i8, ptr %gep.1, i64 4
   %l.3 = load float, ptr %gep.4, align 4
-  %gep.5 = getelementptr i8, ptr %gep.2, i64 4
+  %gep.5 = getelementptr inbounds i8, ptr %gep.2, i64 4
   %l.4 = load float, ptr %gep.5, align 4
   %add.2 = fadd float %l.3, %l.4
   %mul.2 = fmul float %add.2, 0.000000e+00
-  %gep.6 = getelementptr i8, ptr %gep.3, i64 4
+  %gep.6 = getelementptr inbounds i8, ptr %gep.3, i64 4
   store float %mul.2, ptr %gep.6, align 4
-  %gep.7 = getelementptr i8, ptr %gep.1, i64 8
+  %gep.7 = getelementptr inbounds i8, ptr %gep.1, i64 8
   %l.5 = load float, ptr %gep.7, align 4
-  %gep.8 = getelementptr i8, ptr %gep.2, i64 8
+  %gep.8 = getelementptr inbounds i8, ptr %gep.2, i64 8
   %l.6 = load float, ptr %gep.8, align 4
   %add.3 = fadd float %l.5, %l.6
   %mul.3 = fmul float %add.3, 0.000000e+00
-  %gep.9 = getelementptr i8, ptr %gep.3, i64 8
+  %gep.9 = getelementptr inbounds i8, ptr %gep.3, i64 8
   store float %mul.3, ptr %gep.9, align 4
-  %i27 = getelementptr i8, ptr %gep.1, i64 12
+  %i27 = getelementptr inbounds i8, ptr %gep.1, i64 12
   %l.7 = load float, ptr %i27, align 4
-  %gep.10 = getelementptr i8, ptr %gep.2, i64 12
+  %gep.10 = getelementptr inbounds i8, ptr %gep.2, i64 12
   %l.8 = load float, ptr %gep.10, align 4
   %add.4 = fadd float %l.7, %l.8
   %mul.4 = fmul float %add.4, 0.000000e+00
-  %gep.11 = getelementptr i8, ptr %gep.3, i64 12
+  %gep.11 = getelementptr inbounds i8, ptr %gep.3, i64 12
   store float %mul.4, ptr %gep.11, align 4
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv, %arg1

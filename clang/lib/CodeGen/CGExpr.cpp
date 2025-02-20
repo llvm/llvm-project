@@ -5551,6 +5551,12 @@ CodeGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
   return EmitAnyExpr(e->getSourceExpr());
 }
 
+bool CodeGenFunction::isOpaqueValueEmitted(const OpaqueValueExpr *E) {
+  if (OpaqueValueMapping::shouldBindAsLValue(E))
+    return OpaqueLValues.contains(E);
+  return OpaqueRValues.contains(E);
+}
+
 RValue CodeGenFunction::EmitRValueForField(LValue LV,
                                            const FieldDecl *FD,
                                            SourceLocation Loc) {
