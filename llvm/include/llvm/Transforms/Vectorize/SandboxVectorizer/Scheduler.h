@@ -115,7 +115,8 @@ private:
   void eraseFromBundle(DGNode *N) {
     Nodes.erase(std::remove(Nodes.begin(), Nodes.end(), N), Nodes.end());
   }
-  friend DGNode::~DGNode(); // For eraseFromBundle().
+  friend void DGNode::setSchedBundle(SchedBundle &); // For eraseFromBunde().
+  friend DGNode::~DGNode();                          // For eraseFromBundle().
 
 public:
   SchedBundle() = default;
