@@ -186,6 +186,37 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
   }
 }
 
+// Check that assigning a bundle to a DAG Node that is already assigned to a
+// bundle, removes the node from the old bundle.
+TEST_F(SchedulerTest, SchedBundleReassign) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v0, i8 %v1, i8 %v2) {
+  store i8 %v0, ptr %ptr
+  store i8 %v1, ptr %ptr
+  store i8 %v2, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+  auto *SN0 = DAG.getNode(S0);
+  auto *SN1 = DAG.getNode(S1);
+  auto *SN2 = DAG.getNode(S2);
+  sandboxir::SchedBundle BndlOld({SN0, SN1});
+  sandboxir::SchedBundle BndlNew({SN0, SN2});
+  EXPECT_THAT(BndlOld, testing::ElementsAre(SN1));
+  EXPECT_THAT(BndlNew, testing::ElementsAre(SN0, SN2));
+}
+
 TEST_F(SchedulerTest, Basic) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
