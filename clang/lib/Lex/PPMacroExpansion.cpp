@@ -1823,6 +1823,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               return 201802;
             default:
               // __has_target_builtin should return false for aux builtins.
+              // isAuxBuiltinID only returns true if the builtin is
+              // supported by the aux target alone.
               if (IsHasTargetBuiltin &&
                   getBuiltinInfo().isAuxBuiltinID(BuiltinID))
                 return false;
