@@ -34,7 +34,9 @@ public:
         MachineFunctionProperties::Property::IsSSA);
   }
 
-  void printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) const;
+  void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName) const;
   static bool isRequired() { return true; }
 
 private:

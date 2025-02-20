@@ -225,7 +225,9 @@ RAGreedy::RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F)
   PriorityProvider = Analyses.PriorityProvider;
 }
 
-void RAGreedyPass::printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) const {
+void RAGreedyPass::printPipeline(
+    raw_ostream &OS,
+    function_ref<StringRef(StringRef)> MapClassName2PassName) const {
   StringRef FilterName = Opts.FilterName.empty() ? "all" : Opts.FilterName;
   OS << "greedy<" << FilterName << '>';
 }
