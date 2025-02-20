@@ -254,7 +254,7 @@ public:
   __base_iter __it_;
   __maybe_const<_Const, concat_view>* __parent_ = nullptr;
 
-  template <std::size_t _Idx>
+  template <size_t _Idx>
   _LIBCPP_HIDE_FROM_ABI constexpr void __satisfy() {
     if constexpr (_Idx < (sizeof...(_Views) - 1)) {
       if (std::get<_Idx>(__it_) == ranges::end(std::get<_Idx>(__parent_->__views_))) {
@@ -264,7 +264,7 @@ public:
     }
   }
 
-  template <std::size_t _Idx>
+  template <size_t _Idx>
   _LIBCPP_HIDE_FROM_ABI constexpr void __prev() {
     if constexpr (_Idx == 0) {
       --std::get<0>(__it_);
@@ -284,7 +284,7 @@ public:
     }
   }
 
-  template <std::size_t _Idx>
+  template <size_t _Idx>
   _LIBCPP_HIDE_FROM_ABI constexpr void __advance_fwd(difference_type __offset, difference_type __steps) {
     using __underlying_diff_type = iter_difference_t<variant_alternative_t<_Idx, __base_iter>>;
     if constexpr (_Idx == sizeof...(_Views) - 1) {
@@ -300,7 +300,7 @@ public:
     }
   }
 
-  template <std::size_t _Idx>
+  template <size_t _Idx>
   _LIBCPP_HIDE_FROM_ABI constexpr void __advance_bwd(difference_type __offset, difference_type __steps) {
     using __underlying_diff_type = iter_difference_t<variant_alternative_t<_Idx, __base_iter>>;
     if constexpr (_Idx == 0) {
@@ -353,7 +353,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
     size_t __active_index = __it_.index();
-    __apply_at_index<std::variant_size_v<decltype(__it_)>>(__active_index, [&](auto __index_constant) {
+    __apply_at_index<variant_size_v<decltype(__it_)>>(__active_index, [&](auto __index_constant) {
       constexpr size_t __i = __index_constant.value;
       ++std::get<__i>(__it_);
       __satisfy<__i>();
@@ -375,7 +375,7 @@ public:
     requires __concat_is_bidirectional<_Const, _Views...>
   {
     size_t __active_index = __it_.index();
-    __apply_at_index<std::variant_size_v<decltype(__it_)>>(__active_index, [&](auto __index_constant) {
+    __apply_at_index<variant_size_v<decltype(__it_)>>(__active_index, [&](auto __index_constant) {
       constexpr size_t __i = __index_constant.value;
       __prev<__i>();
     });
@@ -423,7 +423,7 @@ public:
     if (__n > 0) {
       std::visit(
           [&](auto& __active_it) {
-            __apply_at_index<std::tuple_size_v<decltype(__parent_->__views_)>>(
+            __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(
                 __active_index, [&](auto __index_constant) {
                   constexpr size_t __i  = __index_constant.value;
                   auto& __active_view   = std::get<__i>(__parent_->__views_);
@@ -437,7 +437,7 @@ public:
     else if (__n < 0) {
       std::visit(
           [&](auto& __active_it) {
-            __apply_at_index<std::tuple_size_v<decltype(__parent_->__views_)>>(
+            __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(
                 __active_index, [&](auto __index_constant) {
                   constexpr size_t __i  = __index_constant.value;
                   auto& __active_view   = std::get<__i>(__parent_->__views_);
