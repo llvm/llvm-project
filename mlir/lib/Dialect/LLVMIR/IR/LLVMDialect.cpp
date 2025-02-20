@@ -1937,12 +1937,10 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     DenseElementsAttr constval;
     matchPattern(getContainer(), m_Constant(&constval));
     if (constval && constval.getElementType() == getType()) {
-      if (isa<SplatElementsAttr>(constval)) {
+      if (isa<SplatElementsAttr>(constval))
         return constval.getSplatValue<Attribute>();
-      }
-      if (getPosition().size() == 1) {
+      if (getPosition().size() == 1)
         return constval.getValues<Attribute>()[getPosition()[0]];
-      }
     }
   }
 
