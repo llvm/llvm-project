@@ -7,7 +7,6 @@
 # RUN: llvm-objcopy %t.o --update-section __DATA,__storage=%p/Inputs/macho_sections.s %t.new.o
 # RUN: llvm-otool -l %t.new.o | FileCheck %s --check-prefix=UPDATED
 
-
 # ORIG:      cmd LC_SEGMENT_64
 # ORIG-NEXT: cmdsize 312
 # ORIG-NEXT: segname
