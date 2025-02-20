@@ -205,7 +205,7 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
 }
 
 unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
-  if (Register::isVirtualRegister(Reg)) {
+  if (Register(Reg).isVirtual()) {
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 
     DenseMap<unsigned, unsigned> &RegMap = VRegMapping[RC];
