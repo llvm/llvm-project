@@ -522,8 +522,8 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
       if (PI.PHI->getOperand(i+1).getMBB() == FPred)
         PI.FReg = PI.PHI->getOperand(i).getReg();
     }
-    assert(Register::isVirtualRegister(PI.TReg) && "Bad PHI");
-    assert(Register::isVirtualRegister(PI.FReg) && "Bad PHI");
+    assert(Register(PI.TReg).isVirtual() && "Bad PHI");
+    assert(Register(PI.FReg).isVirtual() && "Bad PHI");
 
     // Get target information.
     if (!TII->canInsertSelect(*Head, Cond, PI.PHI->getOperand(0).getReg(),
@@ -895,7 +895,7 @@ bool EarlyIfConverter::shouldConvertIf() {
         if (!MO.isReg() || !MO.isUse())
           return false;
         Register Reg = MO.getReg();
-        if (Register::isPhysicalRegister(Reg))
+        if (Reg.isPhysical())
           return false;
 
         MachineInstr *Def = MRI->getVRegDef(Reg);
@@ -906,7 +906,7 @@ bool EarlyIfConverter::shouldConvertIf() {
                  if (!MO.isReg() || !MO.isUse())
                    return false;
                  Register Reg = MO.getReg();
-                 if (Register::isPhysicalRegister(Reg))
+                 if (Reg.isPhysical())
                    return false;
 
                  MachineInstr *Def = MRI->getVRegDef(Reg);

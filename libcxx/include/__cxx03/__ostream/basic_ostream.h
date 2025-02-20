@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___OSTREAM_BASIC_OSTREAM_H
-#define _LIBCPP___OSTREAM_BASIC_OSTREAM_H
+#ifndef _LIBCPP___CXX03___OSTREAM_BASIC_OSTREAM_H
+#define _LIBCPP___CXX03___OSTREAM_BASIC_OSTREAM_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__exception/operations.h>
@@ -857,4 +857,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___OSTREAM_BASIC_OSTREAM_H
+#endif // _LIBCPP___CXX03___OSTREAM_BASIC_OSTREAM_H

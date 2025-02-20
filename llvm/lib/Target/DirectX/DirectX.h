@@ -12,6 +12,7 @@
 #define LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
 
 namespace llvm {
+class FunctionPass;
 class ModulePass;
 class PassRegistry;
 class raw_ostream;
@@ -52,6 +53,12 @@ void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 /// Pass to lowering LLVM intrinsic call to DXIL op function call.
 ModulePass *createDXILOpLoweringLegacyPass();
 
+/// Initializer for DXILResourceAccess
+void initializeDXILResourceAccessLegacyPass(PassRegistry &);
+
+/// Pass to update resource accesses to use load/store directly.
+FunctionPass *createDXILResourceAccessLegacyPass();
+
 /// Initializer for DXILTranslateMetadata.
 void initializeDXILTranslateMetadataLegacyPass(PassRegistry &);
 
@@ -69,6 +76,9 @@ void initializeDXILPrettyPrinterLegacyPass(PassRegistry &);
 
 /// Initializer for dxil::ShaderFlagsAnalysisWrapper pass.
 void initializeShaderFlagsAnalysisWrapperPass(PassRegistry &);
+
+/// Initializer for dxil::RootSignatureAnalysisWrapper pass.
+void initializeRootSignatureAnalysisWrapperPass(PassRegistry &);
 
 /// Initializer for DXContainerGlobals pass.
 void initializeDXContainerGlobalsPass(PassRegistry &);

@@ -17,6 +17,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
@@ -227,25 +228,17 @@ public:
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterMaxBlocksAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      generateMetadata(value.getInt(), "cluster_max_blocks");
+      llvmFunc->addFnAttr("nvvm.maxclusterrank", llvm::utostr(value.getInt()));
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getMinctasmAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      generateMetadata(value.getInt(), "minctasm");
+      llvmFunc->addFnAttr("nvvm.minctasm", llvm::utostr(value.getInt()));
     } else if (attribute.getName() == NVVM::NVVMDialect::getMaxnregAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      generateMetadata(value.getInt(), "maxnreg");
+      llvmFunc->addFnAttr("nvvm.maxnreg", llvm::utostr(value.getInt()));
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getKernelFuncAttrName()) {
-      llvm::Metadata *llvmMetadataKernel[] = {
-          llvm::ValueAsMetadata::get(llvmFunc),
-          llvm::MDString::get(llvmContext, "kernel"),
-          llvm::ValueAsMetadata::get(
-              llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 1))};
-      llvm::MDNode *llvmMetadataNode =
-          llvm::MDNode::get(llvmContext, llvmMetadataKernel);
-      moduleTranslation.getOrInsertNamedModuleMetadata("nvvm.annotations")
-          ->addOperand(llvmMetadataNode);
+      llvmFunc->setCallingConv(llvm::CallingConv::PTX_Kernel);
     }
     return success();
   }

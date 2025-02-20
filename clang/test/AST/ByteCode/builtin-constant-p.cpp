@@ -12,3 +12,9 @@ static_assert(__builtin_constant_p(I + 10.0), "");
 static_assert(__builtin_constant_p(nullptr), "");
 static_assert(__builtin_constant_p(&I), ""); // both-error {{failed due to requirement}}
 static_assert(__builtin_constant_p((void)I), ""); // both-error {{failed due to requirement}}
+
+extern int z;
+constexpr int foo(int &a) {
+  return __builtin_constant_p(a);
+}
+static_assert(!foo(z));

@@ -177,7 +177,7 @@ subroutine open_8_error_recovery_1(n, ios)
 ! CHECK:    %[[VAL_20:.*]] = arith.constant false
 ! CHECK:    %[[VAL_21:.*]] = arith.constant false
 ! CHECK:    %[[VAL_22:.*]] = arith.constant false
-! CHECK:    %[[VAL_23:.*]] = fir.call @_FortranAioEnableHandlers(%[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> none
+! CHECK:    fir.call @_FortranAioEnableHandlers(%[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> ()
 ! CHECK:    %[[VAL_24:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_17]]) {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:    fir.result %[[VAL_24]] : i32
 ! CHECK:  } else {
@@ -209,10 +209,10 @@ subroutine open_8_error_recovery_2(n, msg)
 ! CHECK:    %[[VAL_21:.*]] = arith.constant false
 ! CHECK:    %[[VAL_22:.*]] = arith.constant false
 ! CHECK:    %[[VAL_23:.*]] = arith.constant true
-! CHECK:    %[[VAL_24:.*]] = fir.call @_FortranAioEnableHandlers(%[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_23]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> none
+! CHECK:    fir.call @_FortranAioEnableHandlers(%[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_23]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> ()
 ! CHECK:    %[[VAL_25:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:    %[[VAL_26:.*]] = fir.convert %[[VAL_2]]#1 : (index) -> i64
-! CHECK:    %[[VAL_27:.*]] = fir.call @_FortranAioGetIoMsg(%[[VAL_18]], %[[VAL_25]], %[[VAL_26]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> none
+! CHECK:    fir.call @_FortranAioGetIoMsg(%[[VAL_18]], %[[VAL_25]], %[[VAL_26]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> ()
 ! CHECK:    %[[VAL_28:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_18]]) {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:    fir.result %[[VAL_28]] : i32
 ! CHECK:  } else {

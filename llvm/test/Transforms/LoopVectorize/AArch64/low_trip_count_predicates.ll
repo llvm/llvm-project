@@ -37,7 +37,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef %val) {
 ; CHECK-VS1-LABEL: define void @low_vf_ic_is_better(
-; CHECK-VS1-SAME: ptr nocapture noundef [[P:%.*]], i32 [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-VS1-SAME: ptr noundef captures(none) [[P:%.*]], i32 [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-VS1-NEXT:  [[ENTRY:.*:]]
 ; CHECK-VS1-NEXT:    [[CMP7:%.*]] = icmp ult i32 [[TC]], 19
 ; CHECK-VS1-NEXT:    br i1 [[CMP7]], label %[[ITER_CHECK:.*]], label %[[WHILE_END:.*]]
@@ -81,8 +81,8 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VS1-NEXT:    [[TMP20:%.*]] = add i64 [[TMP0]], [[INDEX]]
 ; CHECK-VS1-NEXT:    [[TMP21:%.*]] = add i64 [[TMP20]], 0
-; CHECK-VS1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 [[TMP21]]
-; CHECK-VS1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[TMP22]], i32 0
+; CHECK-VS1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 [[TMP21]]
+; CHECK-VS1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP22]], i32 0
 ; CHECK-VS1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[TMP23]], align 1
 ; CHECK-VS1-NEXT:    [[TMP24:%.*]] = add <vscale x 16 x i8> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-VS1-NEXT:    store <vscale x 16 x i8> [[TMP24]], ptr [[TMP23]], align 1
@@ -105,9 +105,9 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[TMP29:%.*]] = mul i64 [[TMP28]], 8
 ; CHECK-VS1-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[TMP3]], [[TMP29]]
 ; CHECK-VS1-NEXT:    [[N_VEC3:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF2]]
-; CHECK-VS1-NEXT:    [[IND_END:%.*]] = add i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-VS1-NEXT:    [[TMP30:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VS1-NEXT:    [[TMP31:%.*]] = mul i64 [[TMP30]], 8
+; CHECK-VS1-NEXT:    [[TMP39:%.*]] = add i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-VS1-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-VS1-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT7]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-VS1-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
@@ -115,8 +115,8 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-VS1-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[TMP0]], [[INDEX5]]
 ; CHECK-VS1-NEXT:    [[TMP32:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-VS1-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 [[TMP32]]
-; CHECK-VS1-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[TMP33]], i32 0
+; CHECK-VS1-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 [[TMP32]]
+; CHECK-VS1-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP33]], i32 0
 ; CHECK-VS1-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 8 x i8>, ptr [[TMP34]], align 1
 ; CHECK-VS1-NEXT:    [[TMP35:%.*]] = add <vscale x 8 x i8> [[WIDE_LOAD6]], [[BROADCAST_SPLAT8]]
 ; CHECK-VS1-NEXT:    store <vscale x 8 x i8> [[TMP35]], ptr [[TMP34]], align 1
@@ -127,7 +127,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC3]]
 ; CHECK-VS1-NEXT:    br i1 [[CMP_N10]], label %[[WHILE_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-VS1:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-VS1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[TMP0]], %[[ITER_CHECK]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ]
+; CHECK-VS1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP39]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ], [ [[TMP0]], %[[ITER_CHECK]] ]
 ; CHECK-VS1-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK-VS1:       [[WHILE_BODY]]:
 ; CHECK-VS1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[WHILE_BODY]] ]
@@ -145,7 +145,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    ret void
 ;
 ; CHECK-VS2-LABEL: define void @low_vf_ic_is_better(
-; CHECK-VS2-SAME: ptr nocapture noundef [[P:%.*]], i32 [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-VS2-SAME: ptr noundef captures(none) [[P:%.*]], i32 [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-VS2-NEXT:  [[ENTRY:.*:]]
 ; CHECK-VS2-NEXT:    [[CMP7:%.*]] = icmp ult i32 [[TC]], 19
 ; CHECK-VS2-NEXT:    br i1 [[CMP7]], label %[[ITER_CHECK:.*]], label %[[WHILE_END:.*]]
@@ -189,8 +189,8 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VS2-NEXT:    [[TMP20:%.*]] = add i64 [[TMP0]], [[INDEX]]
 ; CHECK-VS2-NEXT:    [[TMP21:%.*]] = add i64 [[TMP20]], 0
-; CHECK-VS2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 [[TMP21]]
-; CHECK-VS2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[TMP22]], i32 0
+; CHECK-VS2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 [[TMP21]]
+; CHECK-VS2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP22]], i32 0
 ; CHECK-VS2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP23]], align 1
 ; CHECK-VS2-NEXT:    [[TMP24:%.*]] = add <vscale x 8 x i8> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-VS2-NEXT:    store <vscale x 8 x i8> [[TMP24]], ptr [[TMP23]], align 1
@@ -213,9 +213,9 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[TMP29:%.*]] = mul i64 [[TMP28]], 4
 ; CHECK-VS2-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[TMP3]], [[TMP29]]
 ; CHECK-VS2-NEXT:    [[N_VEC3:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF2]]
-; CHECK-VS2-NEXT:    [[IND_END:%.*]] = add i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-VS2-NEXT:    [[TMP30:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VS2-NEXT:    [[TMP31:%.*]] = mul i64 [[TMP30]], 4
+; CHECK-VS2-NEXT:    [[TMP39:%.*]] = add i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-VS2-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-VS2-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 4 x i8> [[BROADCAST_SPLATINSERT7]], <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-VS2-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
@@ -223,8 +223,8 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-VS2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[TMP0]], [[INDEX5]]
 ; CHECK-VS2-NEXT:    [[TMP32:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-VS2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 [[TMP32]]
-; CHECK-VS2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[TMP33]], i32 0
+; CHECK-VS2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 [[TMP32]]
+; CHECK-VS2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP33]], i32 0
 ; CHECK-VS2-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 4 x i8>, ptr [[TMP34]], align 1
 ; CHECK-VS2-NEXT:    [[TMP35:%.*]] = add <vscale x 4 x i8> [[WIDE_LOAD6]], [[BROADCAST_SPLAT8]]
 ; CHECK-VS2-NEXT:    store <vscale x 4 x i8> [[TMP35]], ptr [[TMP34]], align 1
@@ -235,7 +235,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC3]]
 ; CHECK-VS2-NEXT:    br i1 [[CMP_N10]], label %[[WHILE_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-VS2:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-VS2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[TMP0]], %[[ITER_CHECK]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ]
+; CHECK-VS2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP39]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ], [ [[TMP0]], %[[ITER_CHECK]] ]
 ; CHECK-VS2-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK-VS2:       [[WHILE_BODY]]:
 ; CHECK-VS2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[WHILE_BODY]] ]
@@ -279,7 +279,7 @@ while.end:
 
 define void @trip_count_too_small(ptr nocapture noundef %p, i32 noundef %tc, i16 noundef %val) {
 ; CHECK-LABEL: define void @trip_count_too_small(
-; CHECK-SAME: ptr nocapture noundef [[P:%.*]], i32 noundef [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp ult i32 [[TC]], 3
 ; CHECK-NEXT:    br i1 [[CMP7]], label %[[WHILE_PREHEADER:.*]], label %[[WHILE_END:.*]]
@@ -330,7 +330,7 @@ while.end:
 
 define void @too_many_runtime_checks(ptr nocapture noundef %p, ptr nocapture noundef %p1, ptr nocapture noundef readonly %p2, ptr nocapture noundef readonly %p3, i32 noundef %tc, i16 noundef %val) {
 ; CHECK-LABEL: define void @too_many_runtime_checks(
-; CHECK-SAME: ptr nocapture noundef [[P:%.*]], ptr nocapture noundef [[P1:%.*]], ptr nocapture noundef readonly [[P2:%.*]], ptr nocapture noundef readonly [[P3:%.*]], i32 noundef [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef captures(none) [[P:%.*]], ptr noundef captures(none) [[P1:%.*]], ptr noundef readonly captures(none) [[P2:%.*]], ptr noundef readonly captures(none) [[P3:%.*]], i32 noundef [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP20:%.*]] = icmp ult i32 [[TC]], 16
 ; CHECK-NEXT:    br i1 [[CMP20]], label %[[WHILE_PREHEADER:.*]], label %[[WHILE_END:.*]]
@@ -399,7 +399,7 @@ while.end:
 
 define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %tc, i16 noundef %val) vscale_range(1,16) {
 ; CHECK-LABEL: define void @overflow_indvar_known_false(
-; CHECK-SAME: ptr nocapture noundef [[P:%.*]], i32 noundef [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp ult i32 [[TC]], 1027
 ; CHECK-NEXT:    br i1 [[CMP7]], label %[[WHILE_PREHEADER:.*]], label %[[WHILE_END:.*]]
@@ -428,9 +428,9 @@ define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 16
+; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[TMP1]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -440,8 +440,8 @@ define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[TMP0]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP14]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP15]], ptr [[TMP14]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])

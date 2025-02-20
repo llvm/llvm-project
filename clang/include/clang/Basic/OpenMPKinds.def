@@ -219,6 +219,7 @@ OPENMP_NUMTASKS_MODIFIER(strict)
 
 // Modifiers for 'allocate' clause.
 OPENMP_ALLOCATE_MODIFIER(allocator)
+OPENMP_ALLOCATE_MODIFIER(align)
 
 // Modifiers for the 'doacross' clause.
 OPENMP_DOACROSS_MODIFIER(source)

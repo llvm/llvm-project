@@ -44,6 +44,7 @@ TargetCharacteristics::TargetCharacteristics() {
   enableCategoryKinds(TypeCategory::Complex);
   enableCategoryKinds(TypeCategory::Character);
   enableCategoryKinds(TypeCategory::Logical);
+  enableCategoryKinds(TypeCategory::Unsigned);
 
   isBigEndian_ = !isHostLittleEndian;
 
@@ -103,6 +104,7 @@ void TargetCharacteristics::set_isBigEndian(bool isBig) {
 }
 
 void TargetCharacteristics::set_isPPC(bool isPowerPC) { isPPC_ = isPowerPC; }
+void TargetCharacteristics::set_isSPARC(bool isSPARC) { isSPARC_ = isSPARC; }
 
 void TargetCharacteristics::set_areSubnormalsFlushedToZero(bool yes) {
   areSubnormalsFlushedToZero_ = yes;
@@ -137,6 +139,7 @@ void TargetCharacteristics::set_roundingMode(Rounding rounding) {
 }
 
 // SELECTED_INT_KIND() -- F'2018 16.9.169
+// and SELECTED_UNSIGNED_KIND() extension (same results)
 class SelectedIntKindVisitor {
 public:
   SelectedIntKindVisitor(

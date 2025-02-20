@@ -50,7 +50,7 @@ documentation refer to `GitHub's documentation <https://docs.github.com/pull-req
 .. note::
    If you are using a Pull Request for purposes other than review
    (eg: precommit CI results, convenient web-based reverts, etc)
-   `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
+   add the `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
    label to the PR.
 
 GitHub Tools
@@ -214,6 +214,28 @@ commonly used first:
   request will understand that you're rebasing just your patches, and display
   this result correctly with a note that a force push did occur.
 
+
+Pre-merge Continuous Integration (CI)
+-------------------------------------
+
+Multiple checks will be applied on a pull-request, either for linting/formatting
+or some build and tests. None of these are perfect and you will encounter
+false positive, infrastructure failures (unstable or unavailable worker), or
+you will be unlucky and based your change on a broken revision of the main branch.
+
+None of the checks are strictly mandatory: these are tools to help us build a
+better codebase and be more productive (by avoiding issues found post-merge and
+possible reverts). As a developer you're empowered to exercise your judgement
+about bypassing any of the checks when merging code.
+
+The infrastructure can print messages that make it seem like these are mandatory,
+but this is just an artifact of GitHub infrastructure and not a policy of the
+project.
+
+However, please make sure you do not force-merge any changes that have clear
+test failures directly linked to your changes. Our policy is still to keep the
+``main`` branch in a good condition, and introducing failures to be fixed later
+violates that policy.
 
 Problems After Landing Your Change
 ==================================
@@ -416,9 +438,13 @@ Releases
 Backporting Fixes to the Release Branches
 -----------------------------------------
 You can use special comments on issues or pull requests to make backport
-requests for the release branches.  This is done by making a comment containing
-the following command on any issue or pull request that has been added to one
-of the "X.Y.Z Release" milestones.
+requests for the release branches.  To do this, after your pull request has been
+merged:
+
+1. Edit "Milestone" at the right side of the isssue or pull request
+   to say "LLVM X.Y Release"
+
+2. Add a comment to it in the following format:
 
 ::
 

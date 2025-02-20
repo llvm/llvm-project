@@ -25,7 +25,7 @@ using namespace CodeGen;
 static uint64_t getFieldSize(const FieldDecl *FD, QualType FT,
                              ASTContext &Ctx) {
   if (FD && FD->isBitField())
-    return FD->getBitWidthValue(Ctx);
+    return FD->getBitWidthValue();
   return Ctx.getTypeSize(FT);
 }
 
@@ -255,7 +255,7 @@ struct GenBinaryFuncName : CopyStructVisitor<GenBinaryFuncName<IsMove>, IsMove>,
   void visitVolatileTrivial(QualType FT, const FieldDecl *FD,
                             CharUnits CurStructOffset) {
     // Zero-length bit-fields don't need to be copied/assigned.
-    if (FD && FD->isZeroLengthBitField(this->Ctx))
+    if (FD && FD->isZeroLengthBitField())
       return;
 
     // Because volatile fields can be bit-fields and are individually copied,
@@ -544,7 +544,7 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
     LValue DstLV, SrcLV;
     if (FD) {
       // No need to copy zero-length bit-fields.
-      if (FD->isZeroLengthBitField(this->CGF->getContext()))
+      if (FD->isZeroLengthBitField())
         return;
 
       QualType RT = QualType(FD->getParent()->getTypeForDecl(), 0);

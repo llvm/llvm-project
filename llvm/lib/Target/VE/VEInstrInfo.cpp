@@ -461,7 +461,8 @@ void VEInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                       Register SrcReg, bool isKill, int FI,
                                       const TargetRegisterClass *RC,
                                       const TargetRegisterInfo *TRI,
-                                      Register VReg) const {
+                                      Register VReg,
+                                      MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
@@ -519,12 +520,10 @@ void VEInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     report_fatal_error("Can't store this register to stack slot");
 }
 
-void VEInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator I,
-                                       Register DestReg, int FI,
-                                       const TargetRegisterClass *RC,
-                                       const TargetRegisterInfo *TRI,
-                                       Register VReg) const {
+void VEInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_CONVERTIBLE_TO_H
-#define _LIBCPP___CONCEPTS_CONVERTIBLE_TO_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_CONVERTIBLE_TO_H
+#define _LIBCPP___CXX03___CONCEPTS_CONVERTIBLE_TO_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_convertible.h>
@@ -30,4 +30,4 @@ concept convertible_to = is_convertible_v<_From, _To> && requires { static_cast<
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_CONVERTIBLE_TO_H
+#endif // _LIBCPP___CXX03___CONCEPTS_CONVERTIBLE_TO_H

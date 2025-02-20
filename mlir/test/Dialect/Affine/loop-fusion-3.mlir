@@ -351,8 +351,157 @@ func.func @should_not_fuse_since_top_level_non_affine_mem_write_users(
 // CHECK:  affine.for
 // CHECK:    arith.addf
 
+// Tests that fusion isn't prevented by the presence of a dealloc op in
+// between since we can move the fused nest.
+
+// CHECK-LABEL: func @fuse_non_affine_intervening_op
+func.func @fuse_non_affine_intervening_op() {
+  %cst = arith.constant 0.0 : f32
+
+  %a = memref.alloc() : memref<100xf32>
+  %b = memref.alloc() : memref<100xf32>
+  %c = memref.alloc() : memref<100xf32>
+
+  affine.for %i = 0 to 100 {
+    affine.store %cst, %a[%i] : memref<100xf32>
+    affine.store %cst, %c[%i] : memref<100xf32>
+  }
+
+  // The source is fused into the destination while being moved here.
+  // CHECK:      affine.for %{{.*}} = 0 to 100
+  // CHECK-NEXT:   affine.store %cst
+  // CHECK-NEXT:   affine.store %cst{{.*}}
+  // CHECK-NEXT:   affine.load
+  // CHECK-NEXT:   affine.store
+  // CHECK-NEXT: }
+  // CHECK-NEXT: memref.dealloc
+
+  memref.dealloc %c : memref<100xf32>
+
+  affine.for %i = 0 to 100 {
+    %v = affine.load %a[%i] : memref<100xf32>
+    affine.store %v, %b[%i] : memref<100xf32>
+  }
+
+  return
+}
+
+// Tests that fusion happens in the presence of intervening non-affine reads.
+
+// CHECK-LABEL: func @fuse_non_affine_intervening_read
+func.func @fuse_non_affine_intervening_read() {
+  %cst = arith.constant 0.0 : f32
+
+  %a = memref.alloc() : memref<100xf32>
+  %b = memref.alloc() : memref<100xf32>
+  %c = memref.alloc() : memref<100xf32>
+
+  affine.for %i = 0 to 100 {
+    affine.store %cst, %a[%i] : memref<100xf32>
+  }
+
+  // The source is fused into the destination while being moved here.
+  // CHECK:      affine.for %{{.*}} = 0 to 100
+  // CHECK-NEXT:   affine.store %cst
+  // CHECK-NEXT:   affine.load
+  // CHECK-NEXT:   affine.store
+  // CHECK-NEXT: }
+
+  // CHECK:     affine.for %{{.*}} = 0 to 100
+  // CHECK-NEXT:  memref.load
+  affine.for %i = 0 to 100 {
+    memref.load %a[%i] : memref<100xf32>
+  }
+
+  affine.for %i = 0 to 100 {
+    %v = affine.load %a[%i] : memref<100xf32>
+    affine.store %v, %b[%i] : memref<100xf32>
+  }
+
+  return
+}
+
+// Tests that fusion happens in the presence of intervening non-affine region
+// ops.
+
+// CHECK-LABEL: func @fuse_non_affine_intervening_read_nest
+func.func @fuse_non_affine_intervening_read_nest() {
+  %cst = arith.constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+
+  %a = memref.alloc() : memref<100xf32>
+  %b = memref.alloc() : memref<100xf32>
+  %c = memref.alloc() : memref<100xf32>
+
+  affine.for %i = 0 to 100 {
+    affine.store %cst, %a[%i] : memref<100xf32>
+  }
+
+  // The source is fused into the destination while being moved here.
+  // CHECK:      affine.for %{{.*}} = 0 to 100
+  // CHECK-NEXT:   affine.store %cst
+  // CHECK-NEXT:   affine.load
+  // CHECK-NEXT:   affine.store
+  // CHECK-NEXT: }
+
+  // CHECK: scf.for
+  // CHECK-NEXT:  memref.load
+  scf.for %i = %c0 to %c100 step %c1 {
+    memref.load %a[%i] : memref<100xf32>
+  }
+
+  affine.for %i = 0 to 100 {
+    %v = affine.load %a[%i] : memref<100xf32>
+    affine.store %v, %b[%i] : memref<100xf32>
+  }
+
+  return
+}
+
+// Tests that fusion does not happen when there are non-affine sources
+// intervening.
+
+// CHECK-LABEL: func @no_fusion_scf_for_store
+func.func @no_fusion_scf_for_store() {
+  %cst = arith.constant 0.0 : f32
+  %cst1 = arith.constant 1.0 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+
+  %a = memref.alloc() : memref<100xf32>
+  %b = memref.alloc() : memref<100xf32>
+  %c = memref.alloc() : memref<100xf32>
+
+  // CHECK:      affine.for %{{.*}} = 0 to 100
+  // CHECK-NEXT:   affine.store
+  // CHECK-NEXT: }
+  affine.for %i = 0 to 100 {
+    affine.store %cst, %a[%i] : memref<100xf32>
+  }
+
+  // CHECK: scf.for
+  scf.for %i = %c0 to %c100 step %c1 {
+    memref.store %cst1, %a[%i] : memref<100xf32>
+  }
+
+  // CHECK:      affine.for %{{.*}} = 0 to 100
+  // CHECK-NEXT:   affine.load
+  // CHECK-NEXT:   affine.store
+  affine.for %i = 0 to 100 {
+    // Non-affine source for this load.
+    %v = affine.load %a[%i] : memref<100xf32>
+    affine.store %v, %b[%i] : memref<100xf32>
+  }
+
+  return
+}
+
 // -----
 
+// CHECK-LABEL: func @fuse_minor_affine_map
 // MAXIMAL-LABEL: func @fuse_minor_affine_map
 func.func @fuse_minor_affine_map(%in: memref<128xf32>, %out: memref<20x512xf32>) {
   %tmp = memref.alloc() : memref<128xf32>
@@ -418,7 +567,7 @@ func.func @should_fuse_multi_store_producer_and_privatize_memfefs() {
   return
 }
 
-
+// CHECK-LABEL: func @should_fuse_multi_store_producer_with_escaping_memrefs_and_remove_src
 func.func @should_fuse_multi_store_producer_with_escaping_memrefs_and_remove_src(
     %a : memref<10xf32>, %b : memref<10xf32>) {
   %cst = arith.constant 0.000000e+00 : f32
@@ -467,7 +616,7 @@ func.func @should_fuse_multi_store_producer_with_escaping_memrefs_and_preserve_s
     %0 = affine.load %b[%i2] : memref<10xf32>
   }
 
-	// Loops '%i0' and '%i2' should be fused first and '%i0' should be removed
+  // Loops '%i0' and '%i2' should be fused first and '%i0' should be removed
   // since fusion is maximal. Then the fused loop and '%i1' should be fused
   // and the fused loop shouldn't be removed since fusion is not maximal.
   // CHECK:       affine.for %{{.*}} = 0 to 10 {
@@ -516,6 +665,31 @@ func.func @should_not_fuse_due_to_dealloc(%arg0: memref<16xf32>){
 // CHECK-NEXT:      affine.load
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      affine.store
+
+// CHECK-LABEL: func @cannot_fuse_intervening_deallocs
+func.func @cannot_fuse_intervening_deallocs(%arg0: memref<16xf32>){
+  %A = memref.alloc() : memref<16xf32>
+  %C = memref.alloc() : memref<16xf32>
+  %cst_1 = arith.constant 1.000000e+00 : f32
+  // CHECK: affine.for %{{.*}} = 0 to 16
+  affine.for %arg1 = 0 to 16 {
+    %a = affine.load %arg0[%arg1] : memref<16xf32>
+    affine.store %a, %A[%arg1] : memref<16xf32>
+    affine.store %a, %C[%arg1] : memref<16xf32>
+  }
+  // The presence of B's alloc prevents placement of the fused nest above C's
+  // dealloc. No fusion here.
+  memref.dealloc %C : memref<16xf32>
+  %B = memref.alloc() : memref<16xf32>
+  // CHECK: affine.for %{{.*}} = 0 to 16
+  affine.for %arg1 = 0 to 16 {
+    %a = affine.load %A[%arg1] : memref<16xf32>
+    %b = arith.addf %cst_1, %a : f32
+    affine.store %b, %B[%arg1] : memref<16xf32>
+  }
+  memref.dealloc %A : memref<16xf32>
+  return
+}
 
 // -----
 

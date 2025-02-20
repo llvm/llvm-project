@@ -283,18 +283,15 @@ public:
   }
 
 #ifndef NDEBUG
-  void dumpOS(raw_ostream &OS) { LLVMTy->print(OS); }
-  LLVM_DUMP_METHOD void dump() {
-    dumpOS(dbgs());
-    dbgs() << "\n";
-  }
+  void dumpOS(raw_ostream &OS);
+  LLVM_DUMP_METHOD void dump();
 #endif // NDEBUG
 };
 
 class PointerType : public Type {
 public:
   // TODO: add missing functions
-  static PointerType *get(Type *ElementType, unsigned AddressSpace);
+
   static PointerType *get(Context &Ctx, unsigned AddressSpace);
 
   static bool classof(const Type *From) {

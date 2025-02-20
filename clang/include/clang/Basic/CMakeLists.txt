@@ -3,6 +3,11 @@ macro(clang_diag_gen component)
     -gen-clang-diags-defs -clang-component=${component}
     SOURCE Diagnostic.td
     TARGET ClangDiagnostic${component})
+
+  clang_tablegen(Diagnostic${component}Enums.inc
+    -gen-clang-diags-enums -clang-component=${component}
+    SOURCE Diagnostic.td
+    TARGET ClangDiagnostic${component}Enums)
 endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)
@@ -31,6 +36,11 @@ clang_tablegen(AttrList.inc -gen-clang-attr-list
   SOURCE Attr.td
   TARGET ClangAttrList)
 
+clang_tablegen(AttrParsedAttrList.inc -gen-clang-attr-parsed-attr-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET ClangAttrParsedAttrList)
+
 clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
@@ -48,6 +58,12 @@ clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
   TARGET ClangAttrHasAttributeImpl
   )
 
+clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET CXX11AttributeInfo
+  )
+
 clang_tablegen(Builtins.inc -gen-clang-builtins
   SOURCE Builtins.td
   TARGET ClangBuiltins)
@@ -56,13 +72,29 @@ clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td
   TARGET ClangBuiltinsBPF)
 
+clang_tablegen(BuiltinsHexagon.inc -gen-clang-builtins
+  SOURCE BuiltinsHexagon.td
+  TARGET ClangBuiltinsHexagon)
+
+clang_tablegen(BuiltinsNVPTX.inc -gen-clang-builtins
+  SOURCE BuiltinsNVPTX.td
+  TARGET ClangBuiltinsNVPTX)
+
 clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
   SOURCE BuiltinsRISCV.td
   TARGET ClangBuiltinsRISCV)
 
+clang_tablegen(BuiltinsSPIRV.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRV.td
+  TARGET ClangBuiltinsSPIRV)
+
 clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
   SOURCE BuiltinsX86.td
   TARGET ClangBuiltinsX86)
+
+clang_tablegen(BuiltinsX86_64.inc -gen-clang-builtins
+  SOURCE BuiltinsX86_64.td
+  TARGET ClangBuiltinsX86_64)
 
 # ARM NEON and MVE
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema

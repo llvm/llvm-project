@@ -28,8 +28,6 @@
 // CHECK-NEXT:     FEAT_FP16                                              Enable half-precision floating-point data processing
 // CHECK-NEXT:     FEAT_FP8                                               Enable FP8 instructions
 // CHECK-NEXT:     FEAT_FP8DOT2                                           Enable FP8 2-way dot instructions
-// CHECK-NEXT:     FEAT_FP8DOT4                                           Enable FP8 4-way dot instructions
-// CHECK-NEXT:     FEAT_FP8FMA                                            Enable Armv9.5-A FP8 multiply-add instructions
 // CHECK-NEXT:     FEAT_FPAC                                              Enable Armv8.3-A Pointer Authentication Faulting enhancement
 // CHECK-NEXT:     FEAT_FRINTTS                                           Enable FRInt[32|64][Z|X] instructions that round a floating-point number to an integer (in FP format) forcing it to fit into a 32- or 64-bit int
 // CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions
@@ -65,7 +63,6 @@
 // CHECK-NEXT:     FEAT_SM4, FEAT_SM3                                     Enable SM3 and SM4 support
 // CHECK-NEXT:     FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
 // CHECK-NEXT:     FEAT_SPECRES2                                          Enable Speculation Restriction Instruction
-// CHECK-NEXT:     FEAT_SPEv1p2                                           Enable extra register in the Statistical Profiling Extension
 // CHECK-NEXT:     FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
 // CHECK-NEXT:     FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
 // CHECK-NEXT:     FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions

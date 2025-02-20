@@ -164,6 +164,9 @@ private:
 
   void preregisterSections();
 
+  /// run analyses requested in binary analysis mode.
+  void runBinaryAnalyses();
+
   /// Run optimizations that operate at the binary, or post-linker, level.
   void runOptimizationPasses();
 

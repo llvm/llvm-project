@@ -190,8 +190,8 @@ Value *ShapeCalculator::getRowFromCol(Instruction *II, Value *V,
 
 Value *ShapeCalculator::getColFromRow(Instruction *II, Value *V,
                                       unsigned Granularity) {
-  if (Row2Col.count(V))
-    return Row2Col[V];
+  if (auto It = Row2Col.find(V); It != Row2Col.end())
+    return It->second;
   IRBuilder<> Builder(II);
   Value *RealCol = nullptr;
   if (isa<ConstantInt>(V))
@@ -248,7 +248,11 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
   case Intrinsic::x86_tdpbuud_internal:
   case Intrinsic::x86_tdpbf16ps_internal:
   case Intrinsic::x86_tdpfp16ps_internal:
-  case Intrinsic::x86_tmmultf32ps_internal: {
+  case Intrinsic::x86_tmmultf32ps_internal:
+  case Intrinsic::x86_tdpbf8ps_internal:
+  case Intrinsic::x86_tdpbhf8ps_internal:
+  case Intrinsic::x86_tdphbf8ps_internal:
+  case Intrinsic::x86_tdphf8ps_internal: {
     switch (OpNo) {
     case 3:
       Row = II->getArgOperand(0);
@@ -273,8 +277,8 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
     break;
   }
   case Intrinsic::x86_tcvtrowd2ps_internal:
-  case Intrinsic::x86_tcvtrowps2pbf16h_internal:
-  case Intrinsic::x86_tcvtrowps2pbf16l_internal:
+  case Intrinsic::x86_tcvtrowps2bf16h_internal:
+  case Intrinsic::x86_tcvtrowps2bf16l_internal:
   case Intrinsic::x86_tcvtrowps2phh_internal:
   case Intrinsic::x86_tcvtrowps2phl_internal:
   case Intrinsic::x86_tilemovrow_internal: {
@@ -498,7 +502,7 @@ bool X86LowerAMXType::visit() {
             DeadInsts.push_back(Bitcast);
           continue;
         }
-        // If load has mutli-user, duplicate a vector load.
+        // If load has multi-user, duplicate a vector load.
         // %src = load <256 x i32>, <256 x i32>* %addr, align 64
         // %2 = bitcast <256 x i32> %src to x86_amx
         // %add = add <256 x i32> %src, <256 x i32> %src2
@@ -935,10 +939,10 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
         BasicBlock::iterator Iter = Block->getTerminator()->getIterator();
         Instruction *NewInst = Builder.CreateIntrinsic(
             Intrinsic::x86_tilezero_internal, {}, {Row, Col});
-        NewInst->moveBefore(&*Iter);
+        NewInst->moveBefore(Iter);
         NewInst = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
                                           {IncValue->getType()}, {NewInst});
-        NewInst->moveBefore(&*Iter);
+        NewInst->moveBefore(Iter);
         // Replace InValue with new Value.
         OldPN->setIncomingValue(I, NewInst);
         IncValue = NewInst;
@@ -1407,9 +1411,7 @@ class X86LowerAMXTypeLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  X86LowerAMXTypeLegacyPass() : FunctionPass(ID) {
-    initializeX86LowerAMXTypeLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  X86LowerAMXTypeLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     // Performance optimization: most code doesn't use AMX, so return early if

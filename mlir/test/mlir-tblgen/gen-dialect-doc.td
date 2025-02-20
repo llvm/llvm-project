@@ -36,7 +36,15 @@ def ACOp : Op<Test_Dialect, "c", [NoMemoryEffect, SingleBlockImplicitTerminator<
 def ABOp : Op<Test_Dialect, "b", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
 }
 
-def AEOp : Op<Test_Dialect, "e", [NoMemoryEffect, SingleBlockImplicitTerminator<"YieldOp">]>;
+def AEOp : Op<Test_Dialect, "e", [NoMemoryEffect]> {
+  let summary = "Op with a summary";
+  let description = "Op with a description";
+  let arguments = (ins ConfinedType<AnyType, [CPred<"::llvm::isa<::mlir::TensorType>($_self)">]>:$tensor,
+                       I16Attr:$int_attr);
+  let results = (outs
+    ConfinedType<AnyType, [CPred<"::llvm::isa<::mlir::TensorType>($_self)">]>:$output
+  ); 
+}
 
 def TestAttr : DialectAttr<Test_Dialect, CPred<"true">> {
   let summary = "attribute summary";
@@ -81,11 +89,33 @@ def TestEnum :
 }
 
 // CHECK: Dialect without a [TOC] here.
-// CHECK: TOC added by tool.
-// CHECK: [TOC]
+// CHECK-NEXT:  TOC added by tool.
+// CHECK-EMPTY:
+// CHECK-NEXT:  [TOC]
+// CHECK-EMPTY:
 
 // CHECK-NOT: [TOC]
-// CHECK: test.e
+
+// CHECK:       test.e
+// CHECK-EMPTY:
+// CHECK-NEXT:  _Op with a summary_
+// CHECK-EMPTY:
+// CHECK-NEXT:  Op with a description
+// CHECK-EMPTY:
+
+// CHECK: Operands:
+// CHECK-EMPTY:
+// CHECK-NEXT:  | Operand | Description |
+// CHECK-NEXT:  | :-----: | ----------- |
+// CHECK-NEXT:  | `tensor` | |
+// CHECK-EMPTY:
+// CHECK-NEXT:  Results:
+// CHECK-EMPTY:
+// CHECK-NEXT:  | Result | Description |
+// CHECK-NEXT:  | :----: | ----------- |
+// CHECK-NEXT:  | `output` | |
+// CHECK-EMPTY:
+
 // CHECK: Group of ops
 // CHECK: test.a
 // CHECK: test.d
@@ -96,9 +126,11 @@ def TestEnum :
 // CHECK: Interfaces: `NoMemoryEffect (MemoryEffectOpInterface)`
 // CHECK: Effects: `MemoryEffects::Effect{}`
 
-// CHECK: ## Attribute constraints
-// CHECK: ### attribute summary
-// CHECK: attribute description
+// CHECK:       ## Attribute constraints
+// CHECK-EMPTY:
+// CHECK-NEXT:  ### attribute summary
+// CHECK-EMPTY:
+// CHECK:       attribute description
 
 // CHECK: TestAttrDefAttr
 // CHECK: Syntax:
@@ -120,15 +152,20 @@ def TestEnum :
 // CHECK: Syntax:
 // CHECK: !test.test_type_def_params
 
-// CHECK: ## Enums
-// CHECK: ### TestEnum
-// CHECK: enum summary
-// CHECK: #### Cases:
-// CHECK: | Symbol | Value | String |
-// CHECK: | :----: | :---: | ------ |
-// CHECK: | First | `0` | first |
-// CHECK: | Second | `1` | second |
-// CHECK: | Third | `2` | third |
+// CHECK:       ## Enums
+// CHECK-EMPTY:
+// CHECK-NEXT:  ### TestEnum
+// CHECK-EMPTY:
+// CHECK-NEXT:  _Enum summary_
+// CHECK-EMPTY:
+// CHECK-NEXT:  #### Cases:
+// CHECK-EMPTY:
+// CHECK-NEXT:  | Symbol | Value | String |
+// CHECK-NEXT:  | :----: | :---: | ------ |
+// CHECK-NEXT:  | First | `0` | first |
+// CHECK-NEXT:  | Second | `1` | second |
+// CHECK-NEXT:  | Third | `2` | third |
+// CHECK-EMPTY:
 
 def Toc_Dialect : Dialect {
   let name = "test_toc";

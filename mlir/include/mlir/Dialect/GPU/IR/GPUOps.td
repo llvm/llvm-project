@@ -794,9 +794,9 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
 }
 
 def GPU_LaunchOp : GPU_Op<"launch", [
-      AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface,
+      AffineScope, AutomaticAllocationScope, AttrSizedOperandSegments,
       DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-      RecursiveMemoryEffects]>,
+      GPU_AsyncOpInterface, RecursiveMemoryEffects]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
@@ -1055,7 +1055,7 @@ def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,
     imposed by one's target platform.
   }];
   let assemblyFormat = [{
-    $format attr-dict ($args^ `:` type($args))?
+    $format attr-dict (`,` $args^ `:` type($args))?
   }];
 }
 

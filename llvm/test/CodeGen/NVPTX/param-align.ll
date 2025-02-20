@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefixes=CHECK,NOALIGN4
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-force-min-byval-param-align | FileCheck %s --check-prefixes=CHECK,ALIGN4
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-force-min-byval-param-align | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefixes=CHECK,NOALIGN4
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -nvptx-force-min-byval-param-align | FileCheck %s --check-prefixes=CHECK,ALIGN4
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -nvptx-force-min-byval-param-align | %ptxas-verify %}
 
 ;;; Need 4-byte alignment on ptr passed byval
 define ptx_device void @t1(ptr byval(float) %x) {

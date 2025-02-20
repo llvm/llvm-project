@@ -8,7 +8,7 @@ define i32 @cnt32_advsimd(i32 %x) nounwind readnone {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w0
 ; CHECK-NEXT:    cnt.8b v0, v0
-; CHECK-NEXT:    uaddlv.8b h0, v0
+; CHECK-NEXT:    addv.8b b0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 ;
@@ -43,7 +43,7 @@ define i32 @cnt32_advsimd_2(<2 x i32> %x) {
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    cnt.8b v0, v0
-; CHECK-NEXT:    uaddlv.8b h0, v0
+; CHECK-NEXT:    addv.8b b0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 ;
@@ -79,8 +79,8 @@ define i64 @cnt64_advsimd(i64 %x) nounwind readnone {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    cnt.8b v0, v0
-; CHECK-NEXT:    uaddlv.8b h0, v0
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    addv.8b b0, v0
+; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NONEON-LABEL: cnt64_advsimd:

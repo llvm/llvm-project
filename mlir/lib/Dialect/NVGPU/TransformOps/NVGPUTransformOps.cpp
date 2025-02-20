@@ -740,9 +740,9 @@ static std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
                   SmallVector<int64_t>>
 makeVectorShapes(ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs,
                  ArrayRef<int64_t> res) {
-  SmallVector<int64_t> vlhs{lhs};
-  SmallVector<int64_t> vrhs{rhs};
-  SmallVector<int64_t> vres{res};
+  SmallVector<int64_t> vlhs(lhs);
+  SmallVector<int64_t> vrhs(rhs);
+  SmallVector<int64_t> vres(res);
   return std::make_tuple(vlhs, vrhs, vres);
 }
 

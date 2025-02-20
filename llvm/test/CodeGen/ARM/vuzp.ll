@@ -21,11 +21,11 @@ define <8 x i8> @vuzpi8(ptr %A, ptr %B) nounwind {
 define <16 x i8> @vuzpi8_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vuzpi8_Qres:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vuzp.8 d16, d17
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vuzp.8 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = load <8 x i8>, ptr %B
@@ -53,11 +53,11 @@ define <4 x i16> @vuzpi16(ptr %A, ptr %B) nounwind {
 define <8 x i16> @vuzpi16_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vuzpi16_Qres:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vuzp.16 d16, d17
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vuzp.16 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = load <4 x i16>, ptr %B
@@ -221,11 +221,11 @@ define <8 x i8> @vuzpi8_undef(ptr %A, ptr %B) nounwind {
 define <16 x i8> @vuzpi8_undef_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vuzpi8_undef_Qres:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vuzp.8 d16, d17
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vuzp.8 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = load <8 x i8>, ptr %B
@@ -269,11 +269,11 @@ define <16 x i16> @vuzpQi16_undef_QQres(ptr %A, ptr %B) nounwind {
 define <8 x i16> @vuzp_lower_shufflemask_undef(ptr %A, ptr %B) {
 ; CHECK-LABEL: vuzp_lower_shufflemask_undef:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vuzp.16 d18, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vuzp.16 d17, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 entry:
 	%tmp1 = load <4 x i16>, ptr %A
@@ -285,13 +285,13 @@ entry:
 define <4 x i32> @vuzp_lower_shufflemask_zeroed(ptr %A, ptr %B) {
 ; CHECK-LABEL: vuzp_lower_shufflemask_zeroed:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vorr d19, d18, d18
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vtrn.32 d19, d17
-; CHECK-NEXT:    vdup.32 d16, d18[0]
-; CHECK-NEXT:    vmov r2, r3, d17
-; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vorr d18, d17, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vdup.32 d17, d17[0]
+; CHECK-NEXT:    vtrn.32 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 entry:
   %tmp1 = load <2 x i32>, ptr %A

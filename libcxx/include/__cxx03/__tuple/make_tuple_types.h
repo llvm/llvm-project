@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_MAKE_TUPLE_TYPES_H
-#define _LIBCPP___TUPLE_MAKE_TUPLE_TYPES_H
+#ifndef _LIBCPP___CXX03___TUPLE_MAKE_TUPLE_TYPES_H
+#define _LIBCPP___CXX03___TUPLE_MAKE_TUPLE_TYPES_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/array.h>
@@ -77,4 +77,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_CXX03_LANG
 
-#endif // _LIBCPP___TUPLE_MAKE_TUPLE_TYPES_H
+#endif // _LIBCPP___CXX03___TUPLE_MAKE_TUPLE_TYPES_H

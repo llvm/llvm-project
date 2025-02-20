@@ -643,8 +643,8 @@ bool PPCInstrInfo::shouldReduceRegisterPressure(
   };
 
   // For now we only care about float and double type fma.
-  unsigned VSSRCLimit = TRI->getRegPressureSetLimit(
-      *MBB->getParent(), PPC::RegisterPressureSets::VSSRC);
+  unsigned VSSRCLimit =
+      RegClassInfo->getRegPressureSetLimit(PPC::RegisterPressureSets::VSSRC);
 
   // Only reduce register pressure when pressure is high.
   return GetMBBPressure(MBB)[PPC::RegisterPressureSets::VSSRC] >
@@ -1967,7 +1967,8 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
 void PPCInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
   // using a VSX instruction. The issue with this is that the VSX
@@ -2011,12 +2012,10 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
   NewMIs.back()->addMemOperand(MF, MMO);
 }
 
-void PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIdx,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+void PPCInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
   // using a VSX instruction. The issue with this is that the VSX
@@ -5132,7 +5131,7 @@ static bool isOpZeroOfSubwordPreincLoad(int Opcode) {
 // This function checks for sign extension from 32 bits to 64 bits.
 static bool definedBySignExtendingOp(const unsigned Reg,
                                      const MachineRegisterInfo *MRI) {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Register(Reg).isVirtual())
     return false;
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
@@ -5179,7 +5178,7 @@ static bool definedBySignExtendingOp(const unsigned Reg,
 // in the higher 32 bits then this function will return true.
 static bool definedByZeroExtendingOp(const unsigned Reg,
                                      const MachineRegisterInfo *MRI) {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Register(Reg).isVirtual())
     return false;
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
@@ -5464,7 +5463,7 @@ std::pair<bool, bool>
 PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
                                    const unsigned BinOpDepth,
                                    const MachineRegisterInfo *MRI) const {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Register(Reg).isVirtual())
     return std::pair<bool, bool>(false, false);
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
@@ -5694,7 +5693,11 @@ public:
     // so we don't need to generate any thing here.
   }
 
-  void disposed() override {
+  void disposed(LiveIntervals *LIS) override {
+    if (LIS) {
+      LIS->RemoveMachineInstrFromMaps(*Loop);
+      LIS->RemoveMachineInstrFromMaps(*LoopCount);
+    }
     Loop->eraseFromParent();
     // Ensure the loop setup instruction is deleted too.
     LoopCount->eraseFromParent();

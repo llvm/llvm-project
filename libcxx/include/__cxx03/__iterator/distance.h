@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_DISTANCE_H
-#define _LIBCPP___ITERATOR_DISTANCE_H
+#ifndef _LIBCPP___CXX03___ITERATOR_DISTANCE_H
+#define _LIBCPP___CXX03___ITERATOR_DISTANCE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/concepts.h>
@@ -96,4 +96,4 @@ inline constexpr auto distance = __distance::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_DISTANCE_H
+#endif // _LIBCPP___CXX03___ITERATOR_DISTANCE_H

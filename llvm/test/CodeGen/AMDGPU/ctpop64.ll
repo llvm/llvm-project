@@ -334,58 +334,58 @@ define amdgpu_kernel void @v_ctpop_v4i64(ptr addrspace(1) noalias %out, ptr addr
 define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %ctpop_arg, i32 %cond) {
 ; SI-LABEL: ctpop_i64_in_br:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s8, s[4:5], 0xf
+; SI-NEXT:    s_load_dword s6, s[4:5], 0xf
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0xd
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_cmp_lg_u32 s8, 0
+; SI-NEXT:    s_cmp_lg_u32 s6, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB7_4
 ; SI-NEXT:  ; %bb.1: ; %else
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x2
+; SI-NEXT:    s_load_dwordx2 s[6:7], s[2:3], 0x2
 ; SI-NEXT:    s_mov_b64 s[2:3], 0
 ; SI-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 vcc, vcc
 ; SI-NEXT:    s_cbranch_vccnz .LBB7_3
 ; SI-NEXT:  .LBB7_2: ; %if
-; SI-NEXT:    s_bcnt1_i32_b64 s4, s[6:7]
-; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_bcnt1_i32_b64 s6, s[4:5]
+; SI-NEXT:    s_mov_b32 s7, 0
 ; SI-NEXT:  .LBB7_3: ; %endif
-; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    v_mov_b32_e32 v0, s6
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s5
+; SI-NEXT:    v_mov_b32_e32 v1, s7
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB7_4:
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; SI-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; SI-NEXT:    s_branch .LBB7_2
 ;
 ; VI-LABEL: ctpop_i64_in_br:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dword s8, s[4:5], 0x3c
+; VI-NEXT:    s_load_dword s6, s[4:5], 0x3c
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_cmp_lg_u32 s8, 0
+; VI-NEXT:    s_cmp_lg_u32 s6, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB7_4
 ; VI-NEXT:  ; %bb.1: ; %else
-; VI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x8
+; VI-NEXT:    s_load_dwordx2 s[6:7], s[2:3], 0x8
 ; VI-NEXT:    s_cbranch_execnz .LBB7_3
 ; VI-NEXT:  .LBB7_2: ; %if
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_bcnt1_i32_b64 s4, s[6:7]
-; VI-NEXT:    s_mov_b32 s5, 0
+; VI-NEXT:    s_bcnt1_i32_b64 s6, s[4:5]
+; VI-NEXT:    s_mov_b32 s7, 0
 ; VI-NEXT:  .LBB7_3: ; %endif
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v0, s6
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    v_mov_b32_e32 v1, s7
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:  .LBB7_4:
-; VI-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; VI-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; VI-NEXT:    s_branch .LBB7_2
 entry:
   %tmp0 = icmp eq i32 %cond, 0

@@ -211,23 +211,7 @@ class SPIRVGeneralDuplicatesTracker {
   SPIRVDuplicatesTracker<MachineInstr> MT;
   SPIRVDuplicatesTracker<SPIRV::SpecialTypeDescriptor> ST;
 
-  // NOTE: using MOs instead of regs to get rid of MF dependency to be able
-  // to use flat data structure.
-  // NOTE: replacing DenseMap with MapVector doesn't affect overall correctness
-  // but makes LITs more stable, should prefer DenseMap still due to
-  // significant perf difference.
-  using SPIRVReg2EntryTy =
-      MapVector<MachineOperand *, SPIRV::DTSortableEntry *>;
-
-  template <typename T>
-  void prebuildReg2Entry(SPIRVDuplicatesTracker<T> &DT,
-                         SPIRVReg2EntryTy &Reg2Entry,
-                         const SPIRVInstrInfo *TII);
-
 public:
-  void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
-                      const SPIRVInstrInfo *TII, MachineModuleInfo *MMI);
-
   void add(const Type *Ty, const MachineFunction *MF, Register R) {
     TT.add(unifyPtrType(Ty), MF, R);
   }

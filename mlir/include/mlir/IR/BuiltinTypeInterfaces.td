@@ -16,6 +16,45 @@
 
 include "mlir/IR/OpBase.td"
 
+def FloatTypeInterface : TypeInterface<"FloatType"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    This type interface should be implemented by all floating-point types. It
+    defines the LLVM APFloat semantics and provides a few helper functions.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the APFloat semantics for this floating-point type.
+      }],
+      /*retTy=*/"const ::llvm::fltSemantics &",
+      /*methodName=*/"getFloatSemantics",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns a float type with bitwidth scaled by `scale`. Returns a "null"
+        float type if the scaled element type cannot be represented.
+      }],
+      /*retTy=*/"::mlir::FloatType",
+      /*methodName=*/"scaleElementBitwidth",
+      /*args=*/(ins "unsigned":$scale),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return ::mlir::FloatType();"
+    >
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return the bitwidth of this float type.
+    unsigned getWidth();
+
+    /// Return the width of the mantissa of this type.
+    /// The width includes the integer bit.
+    unsigned getFPMantissaWidth();
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // MemRefElementTypeInterface
 //===----------------------------------------------------------------------===//

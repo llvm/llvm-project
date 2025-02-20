@@ -8,7 +8,7 @@ target triple = "riscv64-unknown-linux-gnu"
 
 define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-LABEL: define void @lshift_significand(
-; CHECK-SAME: i32 [[N:%.*]], ptr nocapture writeonly [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]], ptr writeonly captures(none) [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP1_PEEL:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP1_PEEL]], i64 2, i64 0
@@ -25,9 +25,9 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], [[TMP7]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[SPEC_SELECT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 2
+; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[SPEC_SELECT]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

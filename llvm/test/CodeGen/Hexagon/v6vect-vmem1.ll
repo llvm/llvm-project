@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
 ; CHECK: vmem(r{{[0-9]*}}+#1) =
 
 target triple = "hexagon"

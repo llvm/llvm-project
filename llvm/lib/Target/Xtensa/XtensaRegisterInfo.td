@@ -75,4 +75,8 @@ class SRReg<bits<8> num, string n, list<string> alt = []> : XtensaReg<n> {
 // Shift Amount Register
 def SAR : SRReg<3, "sar", ["SAR","3"]>;
 
-def SR :  RegisterClass<"Xtensa", [i32], 32, (add SAR)>;
+// Windowed Register Option registers
+def WINDOWBASE : SRReg<72, "windowbase", ["WINDOWBASE", "72"]>;
+def WINDOWSTART : SRReg<73, "windowstart", ["WINDOWSTART", "73"]>;
+
+def SR :  RegisterClass<"Xtensa", [i32], 32, (add SAR, WINDOWBASE, WINDOWSTART)>;

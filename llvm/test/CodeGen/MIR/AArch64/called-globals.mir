@@ -1,0 +1,61 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
+
+--- |
+  declare dllimport void @callee_func() local_unnamed_addr
+
+  define dso_local void @caller() local_unnamed_addr {
+  entry:
+    call void @callee_func()
+    call void @callee_func()
+    ret void
+  }
+...
+---
+name:            caller
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+calledGlobals:
+  - bb:              0
+    offset:          7
+    callee:          callee_func
+    flags:           144
+  - bb:              0
+    offset:          8
+    callee:          callee_func
+    flags:           144
+body:             |
+  bb.0.entry:
+    liveins: $x19, $lr
+
+    early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -16 :: (store (s64) into %stack.1)
+    frame-setup SEH_SaveReg_X 19, -16
+    frame-setup STRXui killed $lr, $sp, 1 :: (store (s64) into %stack.0)
+    frame-setup SEH_SaveReg 30, 8
+    frame-setup SEH_PrologEnd
+    $x19 = ADRP target-flags(aarch64-page, aarch64-got, aarch64-dllimport) @callee_func
+    renamable $x19 = LDRXui killed $x19, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc, aarch64-dllimport) @callee_func
+    BLR renamable $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    BLR killed renamable $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    frame-destroy SEH_EpilogStart
+    $lr = frame-destroy LDRXui $sp, 1 :: (load (s64) from %stack.0)
+    frame-destroy SEH_SaveReg 30, 8
+    early-clobber $sp, $x19 = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.1)
+    frame-destroy SEH_SaveReg_X 19, -16
+    frame-destroy SEH_EpilogEnd
+    RET undef $lr
+...
+
+# CHECK-LABEL: calledGlobals:
+# CHECK-NEXT:  - bb:              0
+# CHECK-NEXT:    offset:          7
+# CHECK-NEXT:    callee:          callee_func
+# CHECK-NEXT:    flags:           144
+# CHECK-NEXT:  - bb:              0
+# CHECK-NEXT:    offset:          8
+# CHECK-NEXT:    callee:          callee_func
+# CHECK-NEXT:    flags:           144

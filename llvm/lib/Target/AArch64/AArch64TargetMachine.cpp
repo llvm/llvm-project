@@ -268,7 +268,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64StackTaggingPreRAPass(*PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
   initializeAArch64DAGToDAGISelLegacyPass(*PR);
-  initializeAArch64GlobalsTaggingPass(*PR);
 }
 
 void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
@@ -481,6 +480,33 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+ScheduleDAGInstrs *
+AArch64TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
+  ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  if (ST.hasFusion())
+    DAG->addMutation(createAArch64MacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+AArch64TargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
+  ScheduleDAGMI *DAG =
+      new ScheduleDAGMI(C, std::make_unique<AArch64PostRASchedStrategy>(C),
+                        /* RemoveKillFlags=*/true);
+  if (ST.hasFusion()) {
+    // Run the Macro Fusion after RA again since literals are expanded from
+    // pseudos then (v. addPreSched2()).
+    DAG->addMutation(createAArch64MacroFusionDAGMutation());
+    return DAG;
+  }
+
+  return DAG;
+}
+
 void AArch64leTargetMachine::anchor() { }
 
 AArch64leTargetMachine::AArch64leTargetMachine(
@@ -511,33 +537,6 @@ public:
 
   AArch64TargetMachine &getAArch64TargetMachine() const {
     return getTM<AArch64TargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-    if (ST.hasFusion())
-      DAG->addMutation(createAArch64MacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
-    ScheduleDAGMI *DAG =
-        new ScheduleDAGMI(C, std::make_unique<AArch64PostRASchedStrategy>(C),
-                          /* RemoveKillFlags=*/true);
-    if (ST.hasFusion()) {
-      // Run the Macro Fusion after RA again since literals are expanded from
-      // pseudos then (v. addPreSched2()).
-      DAG->addMutation(createAArch64MacroFusionDAGMutation());
-      return DAG;
-    }
-
-    return DAG;
   }
 
   void addIRPasses()  override;
@@ -642,7 +641,6 @@ void AArch64PassConfig::addIRPasses() {
   if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSelectOpt)
     addPass(createSelectOptimizePass());
 
-  addPass(createAArch64GlobalsTaggingPass());
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
 

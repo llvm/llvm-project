@@ -287,8 +287,8 @@ def t_addrmode_sp : MemOperand,
 
 // Inspects parent to determine whether an or instruction can be implemented as
 // an add (i.e. whether we know overflow won't occur in the add).
-def AddLikeOrOp : ComplexPattern<i32, 1, "SelectAddLikeOr", [],
-                                 [SDNPWantParent]>;
+let WantsParent = true in
+def AddLikeOrOp : ComplexPattern<i32, 1, "SelectAddLikeOr">;
 
 // Pattern to exclude immediates from matching
 def non_imm32 : PatLeaf<(i32 GPR), [{ return !isa<ConstantSDNode>(N); }]>;

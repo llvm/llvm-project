@@ -8,8 +8,8 @@
 
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "MCTargetDesc/PPCTargetStreamer.h"
 #include "PPCInstrInfo.h"
-#include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"

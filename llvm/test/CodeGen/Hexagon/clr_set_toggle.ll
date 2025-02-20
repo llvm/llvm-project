@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-bit=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-bit=0 < %s | FileCheck %s
 ; Optimized bitwise operations.
 
 define i32 @my_clrbit(i32 %x) nounwind {

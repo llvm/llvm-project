@@ -11,16 +11,7 @@
 
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcIsAlNum, SimpleTest) {
-  EXPECT_NE(LIBC_NAMESPACE::isalnum('a'), 0);
-  EXPECT_NE(LIBC_NAMESPACE::isalnum('B'), 0);
-  EXPECT_NE(LIBC_NAMESPACE::isalnum('3'), 0);
-
-  EXPECT_EQ(LIBC_NAMESPACE::isalnum(' '), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isalnum('?'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isalnum('\0'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isalnum(-1), 0);
-}
+namespace {
 
 // TODO: Merge the ctype tests using this framework.
 constexpr char ALNUM_ARRAY[] = {
@@ -36,6 +27,19 @@ bool in_span(int ch, LIBC_NAMESPACE::cpp::span<const char> arr) {
     if (static_cast<int>(arr[i]) == ch)
       return true;
   return false;
+}
+
+} // namespace
+
+TEST(LlvmLibcIsAlNum, SimpleTest) {
+  EXPECT_NE(LIBC_NAMESPACE::isalnum('a'), 0);
+  EXPECT_NE(LIBC_NAMESPACE::isalnum('B'), 0);
+  EXPECT_NE(LIBC_NAMESPACE::isalnum('3'), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::isalnum(' '), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isalnum('?'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isalnum('\0'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isalnum(-1), 0);
 }
 
 TEST(LlvmLibcIsAlNum, DefaultLocale) {

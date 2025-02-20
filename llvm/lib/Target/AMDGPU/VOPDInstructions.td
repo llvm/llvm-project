@@ -128,13 +128,13 @@ class VOPD_MADK<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
 defvar VOPDPseudosCommon = [
   "V_FMAC_F32_e32", "V_FMAAK_F32", "V_FMAMK_F32", "V_MUL_F32_e32",
   "V_ADD_F32_e32", "V_SUB_F32_e32", "V_SUBREV_F32_e32", "V_MUL_LEGACY_F32_e32",
-  "V_MOV_B32_e32", "V_CNDMASK_B32_e32", "V_MAX_F32_e32", "V_MIN_F32_e32"
+  "V_MOV_B32_e32", "V_CNDMASK_B32_e32", "V_MAX_F32_e32", "V_MIN_F32_e32",
+  "V_DOT2C_F32_F16_e32", "V_DOT2C_F32_BF16_e32"
 ];
-defvar VOPDPseudosGFX11 = ["V_DOT2C_F32_F16_e32", "V_DOT2C_F32_BF16_e32"];
 defvar VOPDYOnlyPseudosCommon = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32",
                                  "V_AND_B32_e32"];
 
-defvar VOPDXPseudosGFX11 = !listconcat(VOPDPseudosCommon, VOPDPseudosGFX11);
+defvar VOPDXPseudosGFX11 = VOPDPseudosCommon;
 defvar VOPDXPseudosGFX12 = VOPDPseudosCommon;
 defvar VOPDYPseudosGFX11 = !listconcat(VOPDXPseudosGFX11, VOPDYOnlyPseudosCommon);
 defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon);

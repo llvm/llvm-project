@@ -48,6 +48,15 @@ def VMaskAsmOperand : AsmOperandClass {
   let IsOptional = 1;
   let DefaultMethod = "defaultMaskRegOp";
   let DiagnosticType = "InvalidVMaskRegister";
+  let DiagnosticString = "operand must be v0.t";
+}
+
+def VMaskCarryInAsmOperand : AsmOperandClass {
+  let Name = "RVVMaskCarryInRegOpOperand";
+  let RenderMethod = "addRegOperands";
+  let PredicateMethod = "isV0Reg";
+  let DiagnosticType = "InvalidVMaskCarryInRegister";
+  let DiagnosticString = "operand must be v0";
 }
 
 def VMaskOp : RegisterOperand<VMV0> {
@@ -55,6 +64,11 @@ def VMaskOp : RegisterOperand<VMV0> {
   let PrintMethod = "printVMaskReg";
   let EncoderMethod = "getVMaskReg";
   let DecoderMethod = "decodeVMaskReg";
+}
+
+def VMaskCarryInOp : RegisterOperand<VMV0> {
+  let ParserMatchClass = VMaskCarryInAsmOperand;
+  let EncoderMethod = "getVMaskReg";
 }
 
 def simm5 : RISCVSImmLeafOp<5> {
@@ -66,15 +80,9 @@ def simm5 : RISCVSImmLeafOp<5> {
   }];
 }
 
-def SImm5Plus1AsmOperand : AsmOperandClass {
-  let Name = "SImm5Plus1";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidSImm5Plus1";
-}
-
 def simm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
   [{return (isInt<5>(Imm) && Imm != -16) || Imm == 16;}]> {
-  let ParserMatchClass = SImm5Plus1AsmOperand;
+  let ParserMatchClass = SImmAsmOperand<5, "Plus1">;
   let OperandType = "OPERAND_SIMM5_PLUS1";
   let MCOperandPredicate = [{
     int64_t Imm;
@@ -448,10 +456,8 @@ class VALUVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 // op vd, vs2, vs1, v0 (without mask, use v0 as carry input)
 class VALUmVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVV<funct6, opv, (outs VR:$vd),
-                (ins VR:$vs2, VR:$vs1, VMV0:$v0),
-                opcodestr, "$vd, $vs2, $vs1, v0"> {
-  let vm = 0;
-}
+                (ins VR:$vs2, VR:$vs1, VMaskCarryInOp:$vm),
+                opcodestr, "$vd, $vs2, $vs1, $vm">;
 
 // op vd, vs1, vs2, vm (reverse the order of vs1 and vs2)
 class VALUrVV<bits<6> funct6, RISCVVFormat opv, string opcodestr,
@@ -480,10 +486,8 @@ class VALUVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 // op vd, vs2, rs1, v0 (without mask, use v0 as carry input)
 class VALUmVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVX<funct6, opv, (outs VR:$vd),
-                (ins VR:$vs2, GPR:$rs1, VMV0:$v0),
-                opcodestr, "$vd, $vs2, $rs1, v0"> {
-  let vm = 0;
-}
+                (ins VR:$vs2, GPR:$rs1, VMaskCarryInOp:$vm),
+                opcodestr, "$vd, $vs2, $rs1, $vm">;
 
 // op vd, rs1, vs2, vm (reverse the order of rs1 and vs2)
 class VALUrVX<bits<6> funct6, RISCVVFormat opv, string opcodestr,
@@ -512,10 +516,8 @@ class VALUVI<bits<6> funct6, string opcodestr, Operand optype = simm5>
 // op vd, vs2, imm, v0 (without mask, use v0 as carry input)
 class VALUmVI<bits<6> funct6, string opcodestr, Operand optype = simm5>
     : RVInstIVI<funct6, (outs VR:$vd),
-                (ins VR:$vs2, optype:$imm, VMV0:$v0),
-                opcodestr, "$vd, $vs2, $imm, v0"> {
-  let vm = 0;
-}
+                (ins VR:$vs2, optype:$imm, VMaskCarryInOp:$vm),
+                opcodestr, "$vd, $vs2, $imm, $vm">;
 
 // op vd, vs2, imm, vm
 class VALUVINoVm<bits<6> funct6, string opcodestr, Operand optype = simm5>
@@ -1464,10 +1466,9 @@ defm VFCLASS_V : VCLS_FV_VS2<"vfclass.v", 0b010011, 0b10000>;
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
 // Vector Floating-Point Merge Instruction
-let vm = 0 in
 def VFMERGE_VFM : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
-                           (ins VR:$vs2, FPR32:$rs1, VMV0:$v0),
-                           "vfmerge.vfm", "$vd, $vs2, $rs1, v0">,
+                           (ins VR:$vs2, FPR32:$rs1, VMaskCarryInOp:$vm),
+                           "vfmerge.vfm", "$vd, $vs2, $rs1, $vm">,
                   SchedBinaryMC<"WriteVFMergeV", "ReadVFMergeV", "ReadVFMergeF">;
 
 // Vector Floating-Point Move Instruction

@@ -107,7 +107,7 @@ TEST(LexicallyOrderedRecursiveASTVisitor, VisitDeclsInImplementation) {
 @end
 @implementation I
 
-int nestedFunction() { }
+void nestedFunction() { }
 
 - (void) method{ }
 

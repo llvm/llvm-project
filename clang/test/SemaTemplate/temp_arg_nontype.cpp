@@ -255,6 +255,7 @@ namespace test8 {
 namespace PR8372 {
   template <int I> void foo() { } // expected-note{{template parameter is declared here}}
   void bar() { foo <0x80000000> (); } // expected-warning{{non-type template argument value '2147483648' truncated to '-2147483648' for template parameter of type 'int'}}
+  // expected-note@-1 {{while substituting explicitly-specified template arguments}}
 }
 
 namespace PR9227 {
@@ -387,12 +388,11 @@ namespace PR17696 {
 
 namespace partial_order_different_types {
   template<int, int, typename T, typename, T> struct A;
-  template<int N, typename T, typename U, T V> struct A<0, N, T, U, V>; // expected-note {{matches}}
-  // FIXME: It appears that this partial specialization should be ill-formed as
-  // it is not more specialized than the primary template. V is not deducible
-  // because it does not have the same type as the corresponding parameter.
-  template<int N, typename T, typename U, U V> struct A<0, N, T, U, V> {}; // expected-note {{matches}}
-  A<0, 0, int, int, 0> a; // expected-error {{ambiguous}}
+  // expected-note@-1 {{template is declared here}}
+  template<int N, typename T, typename U, T V> struct A<0, N, T, U, V> {};
+  template<int N, typename T, typename U, U V> struct A<0, N, T, U, V>;
+  // expected-error@-1 {{class template partial specialization is not more specialized than the primary template}}
+  A<0, 0, int, int, 0> a;
 }
 
 namespace partial_order_references {
@@ -458,13 +458,24 @@ namespace dependent_nested_partial_specialization {
 namespace nondependent_default_arg_ordering {
   int n, m;
   template<typename A, A B = &n> struct X {};
+
   template<typename A> void f(X<A>);
+  // expected-note@-1 {{candidate function}}
   template<typename A> void f(X<A, &m>);
+  // expected-note@-1 {{candidate function}}
   template<typename A, A B> void f(X<A, B>);
+  // expected-note@-1 2{{candidate function}}
   template<template<typename U, U> class T, typename A, int *B> void f(T<A, B>);
+  // expected-note@-1 2{{candidate function}}
+
+  // FIXME: When partial ordering, we get an inconsistent deduction between
+  // `A` (type-parameter-0-0) and `int *`, when deducing the first parameter.
+  // The deduction mechanism needs to be extended to be able to correctly
+  // handle these cases where the argument's template parameters appear in
+  // the result.
   void g() {
-    X<int *, &n> x; f(x);
-    X<int *, &m> y; f(y);
+    X<int *, &n> x; f(x); // expected-error {{call to 'f' is ambiguous}}
+    X<int *, &m> y; f(y); // expected-error {{call to 'f' is ambiguous}}
   }
 }
 

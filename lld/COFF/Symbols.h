@@ -533,6 +533,10 @@ std::string toString(const coff::COFFLinkerContext &ctx, coff::Symbol &b);
 std::string toCOFFString(const coff::COFFLinkerContext &ctx,
                          const llvm::object::Archive::Symbol &b);
 
+// Returns a symbol name for an error message.
+std::string maybeDemangleSymbol(const coff::COFFLinkerContext &ctx,
+                                StringRef symName);
+
 } // namespace lld
 
 #endif

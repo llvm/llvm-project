@@ -52,6 +52,17 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *T,
+                             const LangOptions &Opt) const override {
+    // We have legal instructions for 96-bit so 3x32 can be supported.
+    // FIXME: This check should be a subtarget feature as technically SI doesn't
+    // support it.
+    if (T->getNumElements() == 3 && getDataLayout().getTypeSizeInBits(T) == 96)
+      return T;
+    return DefaultABIInfo::getOptimalVectorMemoryType(T, Opt);
+  }
 };
 
 bool AMDGPUABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -225,7 +236,8 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
 
     // Ignore empty structs/unions.
     if (isEmptyRecord(getContext(), Ty, true))
@@ -537,7 +549,11 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
     break;
   }
 
-  if (Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
+  // OpenCL assumes by default that atomic scopes are per-address space for
+  // non-sequentially consistent operations.
+  if (Scope >= SyncScope::OpenCLWorkGroup &&
+      Scope <= SyncScope::OpenCLSubGroup &&
+      Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
     if (!Name.empty())
       Name = Twine(Twine(Name) + Twine("-")).str();
 

@@ -25,9 +25,11 @@
 // RISCV64: error: unknown target CPU 'not-a-cpu'
 // RISCV64-NEXT: note: valid target CPU values are:
 // RISCV64-SAME: {{^}} generic-rv64
+// RISCV64-SAME: {{^}}, mips-p8700
 // RISCV64-SAME: {{^}}, rocket-rv64
 // RISCV64-SAME: {{^}}, sifive-p450
 // RISCV64-SAME: {{^}}, sifive-p470
+// RISCV64-SAME: {{^}}, sifive-p550
 // RISCV64-SAME: {{^}}, sifive-p670
 // RISCV64-SAME: {{^}}, sifive-s21
 // RISCV64-SAME: {{^}}, sifive-s51
@@ -64,6 +66,7 @@
 // TUNE-RISCV32-SAME: {{^}}, syntacore-scr4-rv32
 // TUNE-RISCV32-SAME: {{^}}, syntacore-scr5-rv32
 // TUNE-RISCV32-SAME: {{^}}, generic
+// TUNE-RISCV32-SAME: {{^}}, generic-ooo
 // TUNE-RISCV32-SAME: {{^}}, rocket
 // TUNE-RISCV32-SAME: {{^}}, sifive-7-series
 // TUNE-RISCV32-SAME: {{$}}
@@ -72,9 +75,11 @@
 // TUNE-RISCV64: error: unknown target CPU 'not-a-cpu'
 // TUNE-RISCV64-NEXT: note: valid target CPU values are:
 // TUNE-RISCV64-SAME: {{^}} generic-rv64
+// TUNE-RISCV64-SAME: {{^}}, mips-p8700
 // TUNE-RISCV64-SAME: {{^}}, rocket-rv64
 // TUNE-RISCV64-SAME: {{^}}, sifive-p450
 // TUNE-RISCV64-SAME: {{^}}, sifive-p470
+// TUNE-RISCV64-SAME: {{^}}, sifive-p550
 // TUNE-RISCV64-SAME: {{^}}, sifive-p670
 // TUNE-RISCV64-SAME: {{^}}, sifive-s21
 // TUNE-RISCV64-SAME: {{^}}, sifive-s51
@@ -92,6 +97,7 @@
 // TUNE-RISCV64-SAME: {{^}}, veyron-v1
 // TUNE-RISCV64-SAME: {{^}}, xiangshan-nanhu
 // TUNE-RISCV64-SAME: {{^}}, generic
+// TUNE-RISCV64-SAME: {{^}}, generic-ooo
 // TUNE-RISCV64-SAME: {{^}}, rocket
 // TUNE-RISCV64-SAME: {{^}}, sifive-7-series
 // TUNE-RISCV64-SAME: {{$}}

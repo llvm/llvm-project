@@ -701,9 +701,15 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(readwrite);
   KEYWORD(argmem);
   KEYWORD(inaccessiblemem);
+  KEYWORD(errnomem);
   KEYWORD(argmemonly);
   KEYWORD(inaccessiblememonly);
   KEYWORD(inaccessiblemem_or_argmemonly);
+  KEYWORD(nocapture);
+  KEYWORD(address_is_null);
+  KEYWORD(address);
+  KEYWORD(provenance);
+  KEYWORD(read_provenance);
 
   // nofpclass attribute
   KEYWORD(all);
@@ -971,6 +977,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(CC, DwarfCC);
   DWKEYWORD(OP, DwarfOp);
   DWKEYWORD(MACINFO, DwarfMacinfo);
+  DWKEYWORD(APPLE_ENUM_KIND, DwarfEnumKind);
 
 #undef DWKEYWORD
 

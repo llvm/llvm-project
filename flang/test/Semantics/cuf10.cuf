@@ -2,6 +2,14 @@
 module m
   real, device :: a(4,8)
   real, managed, allocatable :: b(:,:)
+  integer, constant :: x = 1
+  type :: int
+     real :: i, s 
+  end type int
+  interface operator (+)
+     module procedure addHost
+     module procedure addDevice
+  end interface operator (+)
  contains
   attributes(global) subroutine kernel(a,b,c,n,m)
     integer, value :: n
@@ -23,4 +31,22 @@ module m
       call devsub(c,4) ! not checked in OpenACC construct
     end do
   end
+  attributes(global) subroutine sub1(x)
+    integer :: x
+  end
+  subroutine sub2()
+    call sub1<<<1,1>>>(x) ! actual constant to device dummy
+  end
+  function addHost(a, b) result(c)
+    type(int), intent(in) :: a, b
+    type(int) :: c
+  end function addHost
+  attributes(device) function addDevice(a, b) result(c)
+    type(int), device :: c
+    type(int), intent(in) :: a ,b
+  end function addDevice
+  attributes(global) subroutine overload(c, a, b)
+    type (int) :: c, a, b
+    c = a+b ! ok resolve to addDevice
+  end subroutine overload
 end

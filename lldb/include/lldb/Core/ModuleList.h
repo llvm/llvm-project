@@ -521,14 +521,13 @@ protected:
   Notifier *m_notifier = nullptr;
 
 public:
-  typedef LockingAdaptedIterable<collection, lldb::ModuleSP, vector_adapter,
-                                 std::recursive_mutex>
+  typedef LockingAdaptedIterable<std::recursive_mutex, collection>
       ModuleIterable;
   ModuleIterable Modules() const {
     return ModuleIterable(m_modules, GetMutex());
   }
 
-  typedef AdaptedIterable<collection, lldb::ModuleSP, vector_adapter>
+  typedef llvm::iterator_range<collection::const_iterator>
       ModuleIterableNoLocking;
   ModuleIterableNoLocking ModulesNoLocking() const {
     return ModuleIterableNoLocking(m_modules);

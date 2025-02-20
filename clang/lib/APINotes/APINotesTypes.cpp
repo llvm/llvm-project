@@ -77,6 +77,8 @@ LLVM_DUMP_METHOD void FunctionInfo::dump(llvm::raw_ostream &OS) const {
      << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   if (!ResultType.empty())
     OS << "Result Type: " << ResultType << ' ';
+  if (!SwiftReturnOwnership.empty())
+    OS << "SwiftReturnOwnership: " << SwiftReturnOwnership << ' ';
   if (!Params.empty())
     OS << '\n';
   for (auto &PI : Params)

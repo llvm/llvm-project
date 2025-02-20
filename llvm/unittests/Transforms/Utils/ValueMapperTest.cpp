@@ -347,8 +347,8 @@ TEST(ValueMapperTest, mapValueLocalInArgList) {
   // such as "metadata i32 %x" don't currently successfully maintain that
   // property.  To keep RemapInstruction from crashing we need a non-null
   // return here, but we also shouldn't reference the unmapped local.  Use
-  // undef for uses in a DIArgList.
-  auto *N0 = UndefValue::get(Type::getInt8Ty(C));
+  // poison for uses in a DIArgList.
+  auto *N0 = PoisonValue::get(Type::getInt8Ty(C));
   auto *N0AM = ValueAsMetadata::get(N0);
   std::vector<ValueAsMetadata*> N0Elts;
   N0Elts.push_back(N0AM);

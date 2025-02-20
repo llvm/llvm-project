@@ -536,15 +536,11 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
 
 template <class ELFT>
 void ELFState<ELFT>::initProgramHeaders(std::vector<Elf_Phdr> &PHeaders) {
-  DenseMap<StringRef, ELFYAML::Fill *> NameToFill;
   DenseMap<StringRef, size_t> NameToIndex;
   for (size_t I = 0, E = Doc.Chunks.size(); I != E; ++I) {
-    if (auto S = dyn_cast<ELFYAML::Fill>(Doc.Chunks[I].get()))
-      NameToFill[S->Name] = S;
     NameToIndex[Doc.Chunks[I]->Name] = I + 1;
   }
 
-  std::vector<ELFYAML::Section *> Sections = Doc.getSections();
   for (size_t I = 0, E = Doc.ProgramHeaders.size(); I != E; ++I) {
     ELFYAML::ProgramHeader &YamlPhdr = Doc.ProgramHeaders[I];
     Elf_Phdr Phdr;
@@ -1796,7 +1792,7 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::NoteSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  if (!Section.Notes)
+  if (!Section.Notes || Section.Notes->empty())
     return;
 
   unsigned Align;
@@ -1811,6 +1807,13 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   default:
     reportError(Section.Name + ": invalid alignment for a note section: 0x" +
                 Twine::utohexstr(Section.AddressAlign));
+    return;
+  }
+
+  if (CBA.getOffset() != alignTo(CBA.getOffset(), Align)) {
+    reportError(Section.Name + ": invalid offset of a note section: 0x" +
+                Twine::utohexstr(CBA.getOffset()) + ", should be aligned to " +
+                Twine(Align));
     return;
   }
 

@@ -39,10 +39,9 @@ void Block::GetDescription(Stream *s, Function *function,
 
     addr_t base_addr = LLDB_INVALID_ADDRESS;
     if (target)
-      base_addr =
-          function->GetAddressRange().GetBaseAddress().GetLoadAddress(target);
+      base_addr = function->GetAddress().GetLoadAddress(target);
     if (base_addr == LLDB_INVALID_ADDRESS)
-      base_addr = function->GetAddressRange().GetBaseAddress().GetFileAddress();
+      base_addr = function->GetAddress().GetFileAddress();
 
     s->Printf(", range%s = ", num_ranges > 1 ? "s" : "");
     for (size_t i = 0; i < num_ranges; ++i) {
@@ -244,25 +243,17 @@ bool Block::GetRangeContainingAddress(const Address &addr,
                                       AddressRange &range) {
   Function *function = CalculateSymbolContextFunction();
   if (function) {
-    const AddressRange &func_range = function->GetAddressRange();
-    if (addr.GetModule() == func_range.GetBaseAddress().GetModule()) {
-      const addr_t file_addr = addr.GetFileAddress();
-      const addr_t func_file_addr =
-          func_range.GetBaseAddress().GetFileAddress();
-      if (file_addr >= func_file_addr &&
-          file_addr < func_file_addr + func_range.GetByteSize()) {
-        addr_t offset = file_addr - func_file_addr;
+    if (uint32_t idx = GetRangeIndexContainingAddress(addr);
+        idx != UINT32_MAX) {
+      const Range *range_ptr = m_ranges.GetEntryAtIndex(idx);
+      assert(range_ptr);
 
-        const Range *range_ptr = m_ranges.FindEntryThatContains(offset);
-
-        if (range_ptr) {
-          range.GetBaseAddress() =
-              Address(func_file_addr + range_ptr->GetRangeBase(),
-                      addr.GetModule()->GetSectionList());
-          range.SetByteSize(range_ptr->GetByteSize());
-          return true;
-        }
-      }
+      Address func_addr = function->GetAddress();
+      range.GetBaseAddress() =
+          Address(func_addr.GetFileAddress() + range_ptr->GetRangeBase(),
+                  func_addr.GetModule()->GetSectionList());
+      range.SetByteSize(range_ptr->GetByteSize());
+      return true;
     }
   }
   range.Clear();
@@ -279,19 +270,16 @@ bool Block::GetRangeContainingLoadAddress(lldb::addr_t load_addr,
 
 uint32_t Block::GetRangeIndexContainingAddress(const Address &addr) {
   Function *function = CalculateSymbolContextFunction();
-  if (function) {
-    const AddressRange &func_range = function->GetAddressRange();
-    if (addr.GetSection() == func_range.GetBaseAddress().GetSection()) {
-      const addr_t addr_offset = addr.GetOffset();
-      const addr_t func_offset = func_range.GetBaseAddress().GetOffset();
-      if (addr_offset >= func_offset &&
-          addr_offset < func_offset + func_range.GetByteSize()) {
-        addr_t offset = addr_offset - func_offset;
-        return m_ranges.FindEntryIndexThatContains(offset);
-      }
-    }
-  }
-  return UINT32_MAX;
+  if (!function)
+    return UINT32_MAX;
+
+  const Address &func_addr = function->GetAddress();
+  if (addr.GetModule() != func_addr.GetModule())
+    return UINT32_MAX;
+
+  const addr_t file_addr = addr.GetFileAddress();
+  const addr_t func_file_addr = func_addr.GetFileAddress();
+  return m_ranges.FindEntryIndexThatContains(file_addr - func_file_addr);
 }
 
 bool Block::GetRangeAtIndex(uint32_t range_idx, AddressRange &range) {
@@ -299,7 +287,7 @@ bool Block::GetRangeAtIndex(uint32_t range_idx, AddressRange &range) {
     Function *function = CalculateSymbolContextFunction();
     if (function) {
       const Range &vm_range = m_ranges.GetEntryRef(range_idx);
-      range.GetBaseAddress() = function->GetAddressRange().GetBaseAddress();
+      range.GetBaseAddress() = function->GetAddress();
       range.GetBaseAddress().Slide(vm_range.GetRangeBase());
       range.SetByteSize(vm_range.GetByteSize());
       return true;
@@ -317,7 +305,7 @@ AddressRanges Block::GetRanges() {
     ranges.emplace_back();
     auto &range = ranges.back();
     const Range &vm_range = m_ranges.GetEntryRef(i);
-    range.GetBaseAddress() = function->GetAddressRange().GetBaseAddress();
+    range.GetBaseAddress() = function->GetAddress();
     range.GetBaseAddress().Slide(vm_range.GetRangeBase());
     range.SetByteSize(vm_range.GetByteSize());
   }
@@ -330,7 +318,7 @@ bool Block::GetStartAddress(Address &addr) {
 
   Function *function = CalculateSymbolContextFunction();
   if (function) {
-    addr = function->GetAddressRange().GetBaseAddress();
+    addr = function->GetAddress();
     addr.Slide(m_ranges.GetEntryRef(0).GetRangeBase());
     return true;
   }
@@ -349,8 +337,7 @@ void Block::AddRange(const Range &range) {
     if (log) {
       ModuleSP module_sp(m_parent_scope.CalculateSymbolContextModule());
       Function *function = m_parent_scope.CalculateSymbolContextFunction();
-      const addr_t function_file_addr =
-          function->GetAddressRange().GetBaseAddress().GetFileAddress();
+      const addr_t function_file_addr = function->GetAddress().GetFileAddress();
       const addr_t block_start_addr = function_file_addr + range.GetRangeBase();
       const addr_t block_end_addr = function_file_addr + range.GetRangeEnd();
       Type *func_type = function->GetType();

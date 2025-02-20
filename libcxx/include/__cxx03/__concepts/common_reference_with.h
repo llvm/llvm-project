@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_COMMON_REFERENCE_WITH_H
-#define _LIBCPP___CONCEPTS_COMMON_REFERENCE_WITH_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_COMMON_REFERENCE_WITH_H
+#define _LIBCPP___CXX03___CONCEPTS_COMMON_REFERENCE_WITH_H
 
 #include <__cxx03/__concepts/convertible_to.h>
 #include <__cxx03/__concepts/same_as.h>
@@ -33,4 +33,4 @@ concept common_reference_with =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_COMMON_REFERENCE_WITH_H
+#endif // _LIBCPP___CXX03___CONCEPTS_COMMON_REFERENCE_WITH_H

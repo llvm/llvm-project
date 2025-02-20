@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_DOUBLE_COMMON_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_DOUBLE_COMMON_H
 
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
@@ -22,7 +21,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-static constexpr unsigned SPLIT = DEFAULT_DOUBLE_SPLIT;
+static constexpr unsigned SPLIT = fputil::DefaultSplit<double>::VALUE;
 #else
 // When there is no-FMA instructions, in order to have exact product of 2 double
 // precision with directional roundings, we need to lower the precision of the

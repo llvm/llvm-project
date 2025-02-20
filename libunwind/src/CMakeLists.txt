@@ -20,7 +20,12 @@ set(LIBUNWIND_C_SOURCES
     )
 set_source_files_properties(${LIBUNWIND_C_SOURCES}
                             PROPERTIES
-                              COMPILE_FLAGS "-std=c99")
+                              # We need to set `-fexceptions` here so that key
+                              # unwinding functions, like
+                              # _UNWIND_RaiseException, are not marked as
+                              # `nounwind`, which breaks LTO builds of
+                              # libunwind.  See #56825 and #120657 for context.
+                              COMPILE_FLAGS "-std=c99 -fexceptions")
 
 set(LIBUNWIND_ASM_SOURCES
     UnwindRegistersRestore.S
@@ -31,7 +36,6 @@ set(LIBUNWIND_HEADERS
     AddressSpace.hpp
     assembly.h
     CompactUnwinder.hpp
-    cet_unwind.h
     config.h
     dwarf2.h
     DwarfInstructions.hpp
@@ -41,6 +45,7 @@ set(LIBUNWIND_HEADERS
     libunwind_ext.h
     Registers.hpp
     RWMutex.hpp
+    shadow_stack_unwind.h
     Unwind-EHABI.h
     UnwindCursor.hpp
     ../include/libunwind.h

@@ -2,8 +2,10 @@
 
 #include <stdio.h>
 
+#if !defined(_MSC_VER) || defined(__clang__)
 // Required for ld64 macOS 12.0+
 __attribute__((weak)) extern "C" void foo() {}
+#endif
 
 extern "C" void __sanitizer_report_error_summary(const char *summary) {
   fprintf(stderr, "test_report_error_summary\n");

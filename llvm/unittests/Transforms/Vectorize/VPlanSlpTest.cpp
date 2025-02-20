@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lib/Transforms/Vectorize/VPlanSLP.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanHCFGBuilder.h"
 #include "VPlanTestBase.h"
@@ -16,7 +17,7 @@
 namespace llvm {
 namespace {
 
-class VPlanSlpTest : public VPlanTestBase {
+class VPlanSlpTest : public VPlanTestIRBase {
 protected:
   TargetLibraryInfoImpl TLII;
   TargetLibraryInfo TLI;

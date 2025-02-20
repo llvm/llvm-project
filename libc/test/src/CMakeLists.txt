@@ -1,11 +1,20 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
+    "NEED_MPFR;NEED_MPC;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
   )
+
+  if(MATH_UNITTEST_NEED_MPC)
+    set(MATH_UNITTEST_NEED_MPFR TRUE)
+    if(NOT LIBC_TESTS_CAN_USE_MPC)
+      message(VERBOSE "Complex test ${name} will be skipped as MPC library is not available.")
+      return()
+    endif()
+    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPCWrapper)
+  endif()
 
   if(MATH_UNITTEST_NEED_MPFR)
     if(NOT LIBC_TESTS_CAN_USE_MPFR)
@@ -58,32 +67,34 @@ add_subdirectory(stdfix)
 add_subdirectory(stdio)
 add_subdirectory(stdlib)
 add_subdirectory(string)
+add_subdirectory(strings)
 add_subdirectory(wchar)
 add_subdirectory(time)
+add_subdirectory(unistd)
 
 # Depends on utilities in stdlib
 add_subdirectory(inttypes)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)
+  add_subdirectory(poll)
   add_subdirectory(sched)
   add_subdirectory(sys)
   add_subdirectory(termios)
-  add_subdirectory(unistd)
 endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
+add_subdirectory(arpa)
 add_subdirectory(assert)
 add_subdirectory(compiler)
 add_subdirectory(dirent)
-add_subdirectory(network)
+add_subdirectory(locale)
 add_subdirectory(setjmp)
 add_subdirectory(signal)
 add_subdirectory(spawn)
-add_subdirectory(locale)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(pthread)

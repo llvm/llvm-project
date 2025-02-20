@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_ARRAY_H
-#define _LIBCPP___TYPE_TRAITS_IS_ARRAY_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_ARRAY_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_ARRAY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -48,4 +48,4 @@ inline constexpr bool is_array_v = is_array<_Tp>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_ARRAY_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_ARRAY_H

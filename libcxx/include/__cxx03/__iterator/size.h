@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_SIZE_H
-#define _LIBCPP___ITERATOR_SIZE_H
+#ifndef _LIBCPP___CXX03___ITERATOR_SIZE_H
+#define _LIBCPP___CXX03___ITERATOR_SIZE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/common_type.h>
@@ -56,4 +56,4 @@ _LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_SIZE_H
+#endif // _LIBCPP___CXX03___ITERATOR_SIZE_H

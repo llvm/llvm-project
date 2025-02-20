@@ -776,7 +776,7 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
     if (!ClonedCastInst) {
       ClonedCastInst = CastInst->clone();
       ClonedCastInst->setOperand(0, Mat);
-      ClonedCastInst->insertAfter(CastInst);
+      ClonedCastInst->insertAfter(CastInst->getIterator());
       // Use the same debug location as the original cast instruction.
       ClonedCastInst->setDebugLoc(CastInst->getDebugLoc());
       LLVM_DEBUG(dbgs() << "Clone instruction: " << *CastInst << '\n'

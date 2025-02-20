@@ -139,7 +139,7 @@ static void emitThumbRegPlusImmInReg(
     return;
   }
 
-  bool isHigh = !isARMLowRegister(DestReg) ||
+  bool isHigh = DestReg.isVirtual() || !isARMLowRegister(DestReg) ||
                 (BaseReg != 0 && !isARMLowRegister(BaseReg));
   bool isSub = false;
   // Subtract doesn't have high register version. Load the negative value
@@ -153,7 +153,7 @@ static void emitThumbRegPlusImmInReg(
   Register LdReg = DestReg;
   if (DestReg == ARM::SP)
     assert(BaseReg == ARM::SP && "Unexpected!");
-  if (!isARMLowRegister(DestReg) && !DestReg.isVirtual())
+  if (!DestReg.isVirtual() && !isARMLowRegister(DestReg))
     LdReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
 
   if (NumBytes <= 255 && NumBytes >= 0 && CanChangeCC) {

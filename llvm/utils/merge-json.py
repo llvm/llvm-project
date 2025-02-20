@@ -33,7 +33,6 @@ def main():
                 data = json.load(f)
                 merged_data.extend(data)
         except (IOError, json.JSONDecodeError) as e:
-            print("Failed to parse {json_file}: {e}", file=sys.stderr)
             continue
 
     # Deduplicate by converting each entry to a tuple of sorted key-value pairs

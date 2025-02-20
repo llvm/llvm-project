@@ -21,6 +21,7 @@
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
@@ -3011,15 +3012,13 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   OS << "\n";
   if (ShowAllFunctions || !FuncNameFilter.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
-  OS << "Total functions: " << PS->getNumFunctions() << "\n";
+  PS->printSummary(OS);
   if (ShowValueCutoff > 0) {
     OS << "Number of functions with maximum count (< " << ShowValueCutoff
        << "): " << BelowCutoffFunctions << "\n";
     OS << "Number of functions with maximum count (>= " << ShowValueCutoff
        << "): " << PS->getNumFunctions() - BelowCutoffFunctions << "\n";
   }
-  OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
-  OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
 
   if (TopNFunctions) {
     std::vector<std::pair<std::string, uint64_t>> SortedHottestFuncs;
@@ -3049,11 +3048,8 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     showValueSitesStats(OS, IPVK_MemOPSize, VPStats[IPVK_MemOPSize]);
   }
 
-  if (ShowDetailedSummary) {
-    OS << "Total number of blocks: " << PS->getNumCounts() << "\n";
-    OS << "Total count: " << PS->getTotalCount() << "\n";
+  if (ShowDetailedSummary)
     PS->printDetailedSummary(OS);
-  }
 
   if (ShowBinaryIds)
     if (Error E = Reader->printBinaryIds(OS))
@@ -3306,7 +3302,9 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 
   auto Reader = std::move(ReaderOrErr.get());
   memprof::AllMemProfData Data = Reader->getAllMemProfData();
-  yaml::Output Yout(OS);
+  // Construct yaml::Output with the maximum column width of 80 so that each
+  // Frame fits in one line.
+  yaml::Output Yout(OS, nullptr, 80);
   Yout << Data;
 
   return 0;

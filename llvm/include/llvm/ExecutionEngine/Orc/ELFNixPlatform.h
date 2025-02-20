@@ -156,6 +156,7 @@ private:
         RuntimeFunction *func1, RuntimeFunction *func2,
         const shared::WrapperFunctionCall::ArgDataBufferType &arg1,
         const shared::WrapperFunctionCall::ArgDataBufferType &arg2) {
+      std::lock_guard<std::mutex> Lock(Mutex);
       auto &argList = DeferredRTFnMap[std::make_pair(func1, func2)];
       argList.emplace_back(arg1, arg2);
     }

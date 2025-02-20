@@ -591,7 +591,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 func.func @imperfect_unpack_producer_fusion(%source: tensor<1x1x288x8x4xf32>, %dest: tensor<1x2x1152xf32>) -> tensor<1x2x1152xf32> {
-  %0 = tensor.unpack %source
+  %0 = linalg.unpack %source
       outer_dims_perm = [0, 1, 2]
       inner_dims_pos = [1, 2]
       inner_tiles = [8, 4] into %dest
@@ -625,7 +625,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:     %[[ARG1:.+]]: tensor<1x2x1152xf32>
 //       CHECK:   %[[FOR_RESULT:.+]] = scf.for{{.*}}iter_args(%[[ITER_ARG:.+]] = {{.*}})
 //       CHECK:     %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
-//       CHECK:     %[[UNPACK:.+]] = tensor.unpack %[[SLICE]]
+//       CHECK:     %[[UNPACK:.+]] = linalg.unpack %[[SLICE]]
 //   CHECK-DAG:     %[[UNPACK_SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
 //   CHECK-DAG:     %[[INIT_SLICE:.+]] = tensor.extract_slice %[[ITER_ARG]]
 //       CHECK:     %[[GENERIC:.+]] = linalg.generic

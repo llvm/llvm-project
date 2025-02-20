@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_MOVE_SENTINEL_H
-#define _LIBCPP___ITERATOR_MOVE_SENTINEL_H
+#ifndef _LIBCPP___CXX03___ITERATOR_MOVE_SENTINEL_H
+#define _LIBCPP___CXX03___ITERATOR_MOVE_SENTINEL_H
 
 #include <__cxx03/__concepts/assignable.h>
 #include <__cxx03/__concepts/convertible_to.h>
@@ -58,4 +58,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ITERATOR_MOVE_SENTINEL_H
+#endif // _LIBCPP___CXX03___ITERATOR_MOVE_SENTINEL_H

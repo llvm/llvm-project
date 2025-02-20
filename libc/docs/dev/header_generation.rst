@@ -44,15 +44,15 @@ To add through the command line:
 
    .. code-block:: none
 
-     python3 libc/hdrgen/yaml_to_classes.py
-     libc/hdrgen/yaml/[yaml_file.yaml] --add_function "<return_type>" <function_name> "<function_arg1, function_arg2>" <standard> <guard> <attribute>
+     python3 libc/utils/hdrgen/yaml_to_classes.py
+     libc/include/[yaml_file.yaml] --add_function "<return_type>" <function_name> "<function_arg1, function_arg2>" <standard> <guard> <attribute>
 
    Example:
 
    .. code-block:: none
 
-      python3 libc/hdrgen/yaml_to_classes.py
-      libc/hdrgen/yaml/ctype.yaml --add_function "char" example_function
+      python3 libc/utils/hdrgen/yaml_to_classes.py
+      libc/include/ctype.yaml --add_function "char" example_function
       "int, void, const void" stdc example_float example_attribute
 
    Keep in mind only the return_type and arguments have quotes around them. If
@@ -62,7 +62,8 @@ To add through the command line:
    generated header file with the new addition in the hdrgen directory to
    examine.
 
-If you want to sort the functions alphabetically you can check out libc/hdrgen/yaml_functions_sorted.py.
+If you want to sort the functions alphabetically you can check out
+libc/utils/hdrgen/yaml_functions_sorted.py.
 
 
 Testing
@@ -75,10 +76,10 @@ ensures the process of YAML to classes to generate headers works properly. If
 there are any new additions on formatting headers, make sure the test is
 updated with the specific addition.
 
-Integration Test can be found in: ``libc/hdrgen/tests/test_integration.py``
+Integration Test can be found in: ``libc/utils/hdrgen/tests/test_integration.py``
 
 File to modify if adding something to formatting:
-``libc/hdrgen/tests/expected_output/test_header.h``
+``libc/utils/hdrgen/tests/expected_output/test_header.h``
 
 
 Common Errors
@@ -89,7 +90,7 @@ Common Errors
 
    .. code-block:: none
 
-      "/llvm-project/libc/hdrgen/yaml_to_classes.py", line 67, in yaml_to_classes function_data["return_type"]
+      "/llvm-project/libc/utils/hdrgen/yaml_to_classes.py", line 67, in yaml_to_classes function_data["return_type"]
 
    If you receive this error or any error pertaining to
    ``function_data[function_specific_component]`` while building the headers
@@ -117,7 +118,7 @@ Common Errors
    missing. Ensure the correct style and required files are present:
 
    | ``[header_name]``
-   | ``[../libc/hdrgen/yaml/[yaml_file.yaml]``
+   | ``[../libc/include/[yaml_file.yaml]``
    | ``[header_name.h.def]``
    | ``[header_name.h]``
    | ``DEPENDS``
@@ -147,13 +148,13 @@ Common Errors
 
    .. code-block:: none
 
-     File "/llvm-project/libc/hdrgen/header.py", line 60, in __str__ for
+     File "/llvm-project/libc/utils/hdrgen/header.py", line 60, in __str__ for
      function in self.functions: AttributeError: 'HeaderFile' object has no
      attribute 'functions'
 
    When running ``ninja libc`` in the build directory to generate headers you
    may receive the error above. Essentially this means that in
-   ``libc/hdrgen/header.py`` there is a missing attribute named functions.
+   ``libc/utils/hdrgen/header.py`` there is a missing attribute named functions.
    Make sure all function components are defined within this file and there are
    no missing functions to add these components.
 
@@ -184,12 +185,12 @@ Common Errors
    Sometimes the integration test will fail but that
    still means the process is working unless the comparison between the output
    and expected_output is not showing. If that is the case make sure in
-   ``libc/hdrgen/tests/test_integration.py`` there are no missing arguments
+   ``libc/utils/hdrgen/tests/test_integration.py`` there are no missing arguments
    that run through the script.
 
    If the integration tests are failing due to mismatching of lines or small
    errors in spacing that is nothing to worry about. If this is happening while
    you are making a new change to the formatting of the headers, then
    ensure the expected output file
-   ``libc/hdrgen/tests/expected_output/test_header.h`` has the changes you
+   ``libc/utils/hdrgen/tests/expected_output/test_header.h`` has the changes you
    are applying.

@@ -2432,6 +2432,8 @@ def fir_CallOp : fir_Op<"call",
   let arguments = (ins
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
     DefaultValuedAttr<Arith_FastMathAttr,
                       "::mlir::arith::FastMathFlags::none">:$fastmath
@@ -2488,8 +2490,9 @@ def fir_CallOp : fir_Op<"call",
     void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
       if (auto calling =
           (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
-        (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
-      setOperand(0, callee.get<mlir::Value>());
+        (*this)->setAttr(getCalleeAttrName(),
+                         llvm::cast<mlir::SymbolRefAttr>(callee));
+      setOperand(0, llvm::cast<mlir::Value>(callee));
     }
   }];
 }
@@ -2517,6 +2520,8 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     fir_ClassType:$object,
     Variadic<AnyType>:$args,
     OptionalAttr<I32Attr>:$pass_arg_pos,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs
   );
 
@@ -2735,8 +2740,9 @@ def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
 }
 
 def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
-    Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType,"
-              "fir::LogicalType, mlir::FloatType, mlir::ComplexType,"
+    Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType, "
+              "fir::UnsignedType, fir::LogicalType, mlir::FloatType, "
+              "mlir::ComplexType, "
               "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
     >]>]>, "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];

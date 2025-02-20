@@ -64,7 +64,7 @@ define signext i32 @f1(ptr noalias %A, ptr noalias %B, i32 signext %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP13:%.*]] = add nsw <2 x i32> [[WIDE_LOAD7]], [[WIDE_LOAD8]]
 ; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 2
 ; VF-TWO-CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC4]]
-; VF-TWO-CHECK-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; VF-TWO-CHECK-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF-TWO-CHECK:       vec.epilog.middle.block:
 ; VF-TWO-CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP13]], i32 1
 ; VF-TWO-CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC4]]

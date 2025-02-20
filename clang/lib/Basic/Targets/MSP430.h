@@ -50,10 +50,9 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override {
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
     // FIXME: Implement.
-    return {nullptr, {}};
+    return {};
   }
 
   bool allowsLargerPreferedTypeAlignment() const override { return false; }

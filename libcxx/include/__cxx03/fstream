@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FSTREAM
-#define _LIBCPP_FSTREAM
+#ifndef _LIBCPP___CXX03_FSTREAM
+#define _LIBCPP___CXX03_FSTREAM
 
 /*
     fstream synopsis
@@ -1569,4 +1569,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_FSTREAM
+#endif // _LIBCPP___CXX03_FSTREAM

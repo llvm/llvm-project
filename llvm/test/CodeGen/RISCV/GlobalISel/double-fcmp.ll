@@ -28,7 +28,7 @@ define i32 @fcmp_false(double %a, double %b) nounwind {
   ret i32 %2
 }
 
-; FIXME: slli+srli on RV64 are unnecessary 
+; FIXME: slli+srli on RV64 are unnecessary
 define i32 @fcmp_oeq(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_oeq:
 ; CHECKIFD:       # %bb.0:
@@ -50,8 +50,7 @@ define i32 @fcmp_oeq(double %a, double %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __eqdf2
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -194,7 +193,7 @@ define i32 @fcmp_ole(double %a, double %b) nounwind {
   ret i32 %2
 }
 
-; FIXME: slli+srli on RV64 are unnecessary 
+; FIXME: slli+srli on RV64 are unnecessary
 define i32 @fcmp_one(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_one:
 ; CHECKIFD:       # %bb.0:
@@ -244,14 +243,12 @@ define i32 @fcmp_one(double %a, double %b) nounwind {
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    call __eqdf2
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    snez s2, a0
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __unorddf2
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    and a0, s2, a0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -265,7 +262,7 @@ define i32 @fcmp_one(double %a, double %b) nounwind {
   ret i32 %2
 }
 
-; FIXME: slli+srli on RV64 are unnecessary 
+; FIXME: slli+srli on RV64 are unnecessary
 define i32 @fcmp_ord(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_ord:
 ; CHECKIFD:       # %bb.0:
@@ -289,8 +286,7 @@ define i32 @fcmp_ord(double %a, double %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __unorddf2
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -300,7 +296,7 @@ define i32 @fcmp_ord(double %a, double %b) nounwind {
   ret i32 %2
 }
 
-; FIXME: slli+srli on RV64 are unnecessary 
+; FIXME: slli+srli on RV64 are unnecessary
 define i32 @fcmp_ueq(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_ueq:
 ; CHECKIFD:       # %bb.0:
@@ -351,14 +347,12 @@ define i32 @fcmp_ueq(double %a, double %b) nounwind {
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    call __eqdf2
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    seqz s2, a0
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __unorddf2
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    or a0, s2, a0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -508,7 +502,7 @@ define i32 @fcmp_ule(double %a, double %b) nounwind {
   ret i32 %2
 }
 
-; FIXME: slli+srli on RV64 are unnecessary 
+; FIXME: slli+srli on RV64 are unnecessary
 define i32 @fcmp_une(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_une:
 ; CHECKIFD:       # %bb.0:
@@ -531,8 +525,7 @@ define i32 @fcmp_une(double %a, double %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __nedf2
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -542,7 +535,7 @@ define i32 @fcmp_une(double %a, double %b) nounwind {
   ret i32 %2
 }
 
-; FIXME: slli+srli on RV64 are unnecessary 
+; FIXME: slli+srli on RV64 are unnecessary
 define i32 @fcmp_uno(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fcmp_uno:
 ; CHECKIFD:       # %bb.0:
@@ -567,8 +560,7 @@ define i32 @fcmp_uno(double %a, double %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __unorddf2
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16

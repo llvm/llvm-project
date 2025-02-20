@@ -36,6 +36,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_INTEL_arbitrary_precision_integers},
         {"SPV_INTEL_cache_controls",
          SPIRV::Extension::Extension::SPV_INTEL_cache_controls},
+        {"SPV_INTEL_float_controls2",
+         SPIRV::Extension::Extension::SPV_INTEL_float_controls2},
         {"SPV_INTEL_global_variable_fpga_decorations",
          SPIRV::Extension::Extension::
              SPV_INTEL_global_variable_fpga_decorations},
@@ -69,6 +71,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_KHR_linkonce_odr},
         {"SPV_INTEL_inline_assembly",
          SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
+        {"SPV_INTEL_bindless_images",
+         SPIRV::Extension::Extension::SPV_INTEL_bindless_images},
         {"SPV_INTEL_bfloat16_conversion",
          SPIRV::Extension::Extension::SPV_INTEL_bfloat16_conversion},
         {"SPV_KHR_subgroup_rotate",
@@ -82,7 +86,9 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_KHR_cooperative_matrix",
          SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
         {"SPV_KHR_non_semantic_info",
-         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info}};
+         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+        {"SPV_INTEL_long_composites",
+         SPIRV::Extension::Extension::SPV_INTEL_long_composites}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
                                   llvm::StringRef ArgValue,
@@ -131,6 +137,11 @@ llvm::StringRef SPIRVExtensionsParser::checkExtensions(
     const std::vector<std::string> &ExtNames,
     std::set<SPIRV::Extension::Extension> &AllowedExtensions) {
   for (const auto &Ext : ExtNames) {
+    if (Ext == "all") {
+      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
+        AllowedExtensions.insert(ExtensionEnum);
+      break;
+    }
     auto It = SPIRVExtensionMap.find(Ext);
     if (It == SPIRVExtensionMap.end())
       return Ext;

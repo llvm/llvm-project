@@ -61,6 +61,7 @@
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaSPIRV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaSystemZ.h"
@@ -239,6 +240,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       PPCPtr(std::make_unique<SemaPPC>(*this)),
       PseudoObjectPtr(std::make_unique<SemaPseudoObject>(*this)),
       RISCVPtr(std::make_unique<SemaRISCV>(*this)),
+      SPIRVPtr(std::make_unique<SemaSPIRV>(*this)),
       SYCLPtr(std::make_unique<SemaSYCL>(*this)),
       SwiftPtr(std::make_unique<SemaSwift>(*this)),
       SystemZPtr(std::make_unique<SemaSystemZ>(*this)),
@@ -476,8 +478,8 @@ void Sema::Initialize() {
   if (Context.getTargetInfo().hasAArch64SVETypes() ||
       (Context.getAuxTargetInfo() &&
        Context.getAuxTargetInfo()->hasAArch64SVETypes())) {
-#define SVE_TYPE(Name, Id, SingletonId) \
-    addImplicitTypedef(Name, Context.SingletonId);
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  addImplicitTypedef(#Name, Context.SingletonId);
 #include "clang/Basic/AArch64SVEACLETypes.def"
   }
 
@@ -707,6 +709,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     case CK_ToVoid:
     case CK_NonAtomicToAtomic:
     case CK_HLSLArrayRValue:
+    case CK_HLSLAggregateSplatCast:
       break;
     }
   }
@@ -1652,11 +1655,20 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
     }
 
     case DiagnosticIDs::SFINAE_Suppress:
+      if (DiagnosticsEngine::Level Level = getDiagnostics().getDiagnosticLevel(
+              DiagInfo.getID(), DiagInfo.getLocation());
+          Level == DiagnosticsEngine::Ignored)
+        return;
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information;
       if (*Info) {
-        (*Info)->addSuppressedDiagnostic(DiagInfo.getLocation(),
-                       PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
+        (*Info)->addSuppressedDiagnostic(
+            DiagInfo.getLocation(),
+            PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
+        if (!Diags.getDiagnosticIDs()->isNote(DiagID))
+          PrintContextStack([Info](SourceLocation Loc, PartialDiagnostic PD) {
+            (*Info)->addSuppressedDiagnostic(Loc, std::move(PD));
+          });
       }
 
       // Suppress this diagnostic.
@@ -1677,7 +1689,7 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
   // that is different from the last template instantiation where
   // we emitted an error, print a template instantiation
   // backtrace.
-  if (!DiagnosticIDs::isBuiltinNote(DiagID))
+  if (!Diags.getDiagnosticIDs()->isNote(DiagID))
     PrintContextStack();
 }
 
@@ -1691,7 +1703,8 @@ bool Sema::hasUncompilableErrorOccurred() const {
   if (Loc == DeviceDeferredDiags.end())
     return false;
   for (auto PDAt : Loc->second) {
-    if (DiagnosticIDs::isDefaultMappingAsError(PDAt.second.getDiagID()))
+    if (Diags.getDiagnosticIDs()->isDefaultMappingAsError(
+            PDAt.second.getDiagID()))
       return true;
   }
   return false;

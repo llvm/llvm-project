@@ -59,19 +59,29 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
 
 def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scatter_tdesc_attr"> {
   let summary = [{a composite attribute for `TensorDescType`}];
-  let description = [{`ScatterTensorDesc` (or `scatter_tdesc_attr`) is a composite
-    attribute defined for `TensorDescType` for describing following
-    properties of a `TensorDesc`.
+  let description = [{
+    `ScatterTensorDesc` is a composite attribute defined for `TensorDescType`
+    for describing following properties of a `TensorDesc`:
+
     1. `memory_space`: It describes where the data block described by the
         TensorDesc is located, `Global` device memory or `Shared` local memory.
         It is default to `Global`.
-    2.  `chunk_size`: indicates number of continious elements accessed for each
+
+    2.  `chunk_size`: indicates number of contiguous elements accessed for each
         offset, default is 1. It is used with `scattered` attr only.
   }];
 
   let parameters = (ins
-    OptionalParameter<"MemorySpaceAttr">: $memory_space,
-    OptionalParameter<"IntegerAttr", "1">: $chunk_size
+    DefaultValuedParameter<
+      "MemorySpaceAttr",
+      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
+      "Data memory location"
+    >: $memory_space,
+    DefaultValuedParameter<
+      "IntegerAttr",
+      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
+      "Number of contiguous elements"
+    >: $chunk_size
   );
 
   let builders = [
@@ -80,6 +90,8 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
       CArg<"int", "1">: $chunk_size
     )>
   ];
+
+  let genVerifyDecl = 1;
  }
 
 //===----------------------------------------------------------------------===//
@@ -164,11 +176,9 @@ def XeGPU_SGMapAttr : XeGPUAttr<"SGMap", "sg_map"> {
   }];
   let parameters = (ins
     ArrayRefParameter<"uint32_t">:$wi_layout,
-    ArrayRefParameter<"uint32_t">:$wi_data);
+    ArrayRefParameter<"uint32_t">:$wi_data
+  );
 
-  let builders = [
-    AttrBuilder<(ins)>
-  ];
 
   let hasCustomAssemblyFormat = 1;
   let genVerifyDecl = 1;

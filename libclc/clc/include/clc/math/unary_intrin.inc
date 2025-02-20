@@ -1,3 +1,6 @@
+#include <clc/clcfunc.h>
+#include <clc/clctypes.h>
+
 _CLC_OVERLOAD float __CLC_FUNCTION(float f) __asm(__CLC_INTRINSIC ".f32");
 _CLC_OVERLOAD float2 __CLC_FUNCTION(float2 f) __asm(__CLC_INTRINSIC ".v2f32");
 _CLC_OVERLOAD float3 __CLC_FUNCTION(float3 f) __asm(__CLC_INTRINSIC ".v3f32");

@@ -15,7 +15,7 @@ define i8 @remove_alloca_use_arg(i1 %cond) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
-; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ getelementptr inbounds (i8, ptr @g1, i64 2), [[IF]] ], [ getelementptr inbounds (i8, ptr @g1, i64 1), [[ELSE]] ]
+; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @g1, i64 2), [[IF]] ], [ getelementptr inbounds nuw (i8, ptr @g1, i64 1), [[ELSE]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PTR1]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -114,7 +114,7 @@ define i8 @loop_phi_remove_alloca(i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB_0:%.*]]
 ; CHECK:       bb.0:
-; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ getelementptr inbounds (i8, ptr @g1, i64 1), [[ENTRY:%.*]] ], [ getelementptr inbounds (i8, ptr @g1, i64 2), [[BB_1:%.*]] ]
+; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @g1, i64 1), [[ENTRY:%.*]] ], [ getelementptr inbounds nuw (i8, ptr @g1, i64 2), [[BB_1:%.*]] ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB_1]], label [[EXIT:%.*]]
 ; CHECK:       bb.1:
 ; CHECK-NEXT:    br label [[BB_0]]
@@ -171,7 +171,7 @@ define i8 @loop_phi_late_memtransfer_remove_alloca(i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB_0:%.*]]
 ; CHECK:       bb.0:
-; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ getelementptr inbounds (i8, ptr @g1, i64 1), [[ENTRY:%.*]] ], [ getelementptr inbounds (i8, ptr @g1, i64 2), [[BB_1:%.*]] ]
+; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @g1, i64 1), [[ENTRY:%.*]] ], [ getelementptr inbounds nuw (i8, ptr @g1, i64 2), [[BB_1:%.*]] ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB_1]], label [[EXIT:%.*]]
 ; CHECK:       bb.1:
 ; CHECK-NEXT:    br label [[BB_0]]
@@ -288,7 +288,7 @@ define i32 @addrspace_diff_remove_alloca(i1 %cond) {
 ; CHECK:       if:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr addrspace(1) [ @g2, [[IF]] ], [ getelementptr inbounds (i8, ptr addrspace(1) @g2, i64 2), [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr addrspace(1) [ @g2, [[IF]] ], [ getelementptr inbounds nuw (i8, ptr addrspace(1) @g2, i64 2), [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[PHI1]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
@@ -430,7 +430,7 @@ entry:
 define i8 @select_diff_addrspace_remove_alloca_asan(i1 %cond, ptr %p) sanitize_address {
 ; CHECK-LABEL: @select_diff_addrspace_remove_alloca_asan(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP2:%.*]] = select i1 [[COND:%.*]], ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @g2, i64 4), ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g2, i64 6)
+; CHECK-NEXT:    [[GEP2:%.*]] = select i1 [[COND:%.*]], ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @g2, i64 4), ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @g2, i64 6)
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(1) [[GEP2]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;

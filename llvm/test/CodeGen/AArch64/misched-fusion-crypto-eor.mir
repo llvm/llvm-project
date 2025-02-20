@@ -1,6 +1,9 @@
 # RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-- -mattr=-fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
 # RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-- -mattr=+fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSEAES
 # RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-- -mattr=+fuse-aes,+fuse-crypto-eor,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSEAES,FUSECRYPTO
+# RUN: llc -o /dev/null %s -passes=machine-scheduler -mtriple aarch64-- -mattr=-fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -o /dev/null %s -passes=machine-scheduler -mtriple aarch64-- -mattr=+fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSEAES
+# RUN: llc -o /dev/null %s -passes=machine-scheduler -mtriple aarch64-- -mattr=+fuse-aes,+fuse-crypto-eor,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSEAES,FUSECRYPTO
 # REQUIRES: asserts
 
 name: func

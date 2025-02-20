@@ -318,8 +318,8 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
       return UseCaptureKind::NO_CAPTURE;
 
     // Not captured if only passed via 'nocapture' arguments.
-    if (Call->isDataOperand(&U) &&
-        !Call->doesNotCapture(Call->getDataOperandNo(&U))) {
+    assert(Call->isDataOperand(&U) && "Non-callee must be data operand");
+    if (!Call->doesNotCapture(Call->getDataOperandNo(&U))) {
       // The parameter is not marked 'nocapture' - captured.
       return UseCaptureKind::MAY_CAPTURE;
     }
@@ -376,11 +376,12 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
-    if (auto *CPN = dyn_cast<ConstantPointerNull>(I->getOperand(OtherIdx))) {
+    if (isa<ConstantPointerNull>(I->getOperand(OtherIdx)) &&
+        cast<ICmpInst>(I)->isEquality()) {
       // Don't count comparisons of a no-alias return value against null as
       // captures. This allows us to ignore comparisons of malloc results
       // with null, for example.
-      if (CPN->getType()->getAddressSpace() == 0)
+      if (U->getType()->getPointerAddressSpace() == 0)
         if (isNoAliasCall(U.get()->stripPointerCasts()))
           return UseCaptureKind::NO_CAPTURE;
       if (!I->getFunction()->nullPointerIsDefined()) {

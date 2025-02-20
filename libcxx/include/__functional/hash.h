@@ -522,7 +522,7 @@ template <class _Key, class _Hash>
 using __check_hash_requirements _LIBCPP_NODEBUG =
     integral_constant<bool,
                       is_copy_constructible<_Hash>::value && is_move_constructible<_Hash>::value &&
-                          __invokable_r<size_t, _Hash, _Key const&>::value >;
+                          __is_invocable_r_v<size_t, _Hash, _Key const&> >;
 
 template <class _Key, class _Hash = hash<_Key> >
 using __has_enabled_hash _LIBCPP_NODEBUG =

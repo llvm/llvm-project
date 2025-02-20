@@ -78,9 +78,46 @@ multiple file formats.
  Enable deterministic mode when copying archives, i.e. use 0 for archive member
  header UIDs, GIDs and timestamp fields. On by default.
 
+.. option:: --globalize-symbol <symbol>
+
+ Mark any defined symbols named ``<symbol>`` as global symbols in the output.
+ Can be specified multiple times to mark multiple symbols.
+
+.. option:: --globalize-symbols <filename>
+
+ Read a list of names from the file ``<filename>`` and mark defined symbols with
+ those names as global in the output. In the file, each line represents a single
+ symbol, with leading and trailing whitespace ignored, as is anything following
+ a '#'. Can be specified multiple times to read names from multiple files.
+
 .. option:: --help, -h
 
  Print a summary of command line options.
+
+.. option:: --keep-global-symbol <symbol>, -G
+
+ Mark all symbols local in the output, except for symbols with the name
+ ``<symbol>``. Can be specified multiple times to ignore multiple symbols.
+
+.. option:: --keep-global-symbols <filename>
+
+ Mark all symbols local in the output, except for symbols named in the file
+ ``<filename>``. In the file, each line represents a single symbol, with leading
+ and trailing whitespace ignored, as is anything following a '#'. Can be
+ specified multiple times to read names from multiple files.
+
+.. option:: --localize-symbol <symbol>, -L
+
+ Mark any defined non-common symbol named ``<symbol>`` as a local symbol in the
+ output. Can be specified multiple times to mark multiple symbols as local.
+
+.. option:: --localize-symbols <filename>
+
+ Read a list of names from the file ``<filename>`` and mark defined non-common
+ symbols with those names as local in the output. In the file, each line
+ represents a single symbol, with leading and trailing whitespace ignored, as is
+ anything following a '#'. Can be specified multiple times to read names from
+ multiple files.
 
 .. option:: --only-keep-debug
 
@@ -176,6 +213,19 @@ multiple file formats.
  - `data` = add the `IMAGE_SCN_CNT_INITIALIZED_DATA` and `IMAGE_SCN_MEM_READ`
    flags.
  - `share` = add the `IMAGE_SCN_MEM_SHARED` and `IMAGE_SCN_MEM_READ` flags.
+
+.. option:: --skip-symbol <symbol>
+
+ Do not change the parameters of symbol ``<symbol>`` when executing other
+ options that can change the symbol's name, binding or visibility.
+
+.. option:: --skip-symbols <filename>
+
+ Do not change the parameters of symbols named in the file ``<filename>`` when
+ executing other options that can change the symbol's name, binding or
+ visibility. In the file, each line represents a single symbol, with leading
+ and trailing whitespace ignored, as is anything following a '#'.
+ Can be specified multiple times to read names from multiple files.
 
 .. option:: --strip-all-gnu
 
@@ -355,18 +405,6 @@ them.
  For binary outputs, fill the gaps between sections with ``<value>`` instead
  of zero. The value must be an unsigned 8-bit integer.
 
-.. option:: --globalize-symbol <symbol>
-
- Mark any defined symbols named ``<symbol>`` as global symbols in the output.
- Can be specified multiple times to mark multiple symbols.
-
-.. option:: --globalize-symbols <filename>
-
- Read a list of names from the file ``<filename>`` and mark defined symbols with
- those names as global in the output. In the file, each line represents a single
- symbol, with leading and trailing whitespace ignored, as is anything following
- a '#'. Can be specified multiple times to read names from multiple files.
-
 .. option:: --input-target <format>, -I
 
  Read the input as the specified format. See `SUPPORTED FORMATS`_ for a list of
@@ -376,18 +414,6 @@ them.
 .. option:: --keep-file-symbols
 
  Keep symbols of type `STT_FILE`, even if they would otherwise be stripped.
-
-.. option:: --keep-global-symbol <symbol>, -G
-
- Mark all symbols local in the output, except for symbols with the name
- ``<symbol>``. Can be specified multiple times to ignore multiple symbols.
-
-.. option:: --keep-global-symbols <filename>
-
- Mark all symbols local in the output, except for symbols named in the file
- ``<filename>``. In the file, each line represents a single symbol, with leading
- and trailing whitespace ignored, as is anything following a '#'. Can be
- specified multiple times to read names from multiple files.
 
 .. option:: --keep-section <section>
 
@@ -409,19 +435,6 @@ them.
 .. option:: --localize-hidden
 
  Mark all symbols with hidden or internal visibility local in the output.
-
-.. option:: --localize-symbol <symbol>, -L
-
- Mark any defined non-common symbol named ``<symbol>`` as a local symbol in the
- output. Can be specified multiple times to mark multiple symbols as local.
-
-.. option:: --localize-symbols <filename>
-
- Read a list of names from the file ``<filename>`` and mark defined non-common
- symbols with those names as local in the output. In the file, each line
- represents a single symbol, with leading and trailing whitespace ignored, as is
- anything following a '#'. Can be specified multiple times to read names from
- multiple files.
 
 .. option:: --new-symbol-visibility <visibility>
 
@@ -464,6 +477,11 @@ them.
 
  Preserve access and modification timestamps in the output.
 
+.. option:: --remove-note [<name>/]<type>
+
+ Remove notes of integer type ``<type>`` and name ``<name>`` from SHT_NOTE
+ sections that are not in a segment. Can be specified multiple times.
+
 .. option:: --rename-section <old>=<new>[,<flag>,...]
 
  Rename sections called ``<old>`` to ``<new>`` in the output, and apply any
@@ -488,19 +506,6 @@ them.
 
  Read a list of symbols from <filename> and change their visibility to the
  specified value. Visibility values: default, internal, hidden, protected.
-
-.. option:: --skip-symbol <symbol>
-
- Do not change the parameters of symbol ``<symbol>`` when executing other
- options that can change the symbol's name, binding or visibility.
-
-.. option:: --skip-symbols <filename>
-
- Do not change the parameters of symbols named in the file ``<filename>`` when
- executing other options that can change the symbol's name, binding or
- visibility. In the file, each line represents a single symbol, with leading
- and trailing whitespace ignored, as is anything following a '#'.
- Can be specified multiple times to read names from multiple files.
 
 .. option:: --split-dwo <dwo-file>
 

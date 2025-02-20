@@ -181,37 +181,4 @@ def Arith_RoundingModeAttr : I32EnumAttr<
   let cppNamespace = "::mlir::arith";
 }
 
-//===----------------------------------------------------------------------===//
-// Arith_DenormalMode
-//===----------------------------------------------------------------------===//
-
-// Denormal mode is applied on operands and results. For example, if denormal =
-// preserve_sign, operands and results will be flushed to sign preserving zero.
-// We do not distinguish between operands and results.
-
-// The default mode. Denormals are preserved and processed as defined 
-// by IEEE 754 rules.
-def Arith_DenormalModeIEEE          : I32EnumAttrCase<"ieee", 0>;
-
-// A mode where denormal numbers are flushed to zero, but the sign of the zero 
-// (+0 or -0) is preserved.
-def Arith_DenormalModePreserveSign  : I32EnumAttrCase<"preserve_sign", 1>;
-
-// A mode where all denormal numbers are flushed to positive zero (+0), 
-// ignoring the sign of the original number.
-def Arith_DenormalModePositiveZero  : I32EnumAttrCase<"positive_zero",  2>;
-
-def Arith_DenormalMode : I32EnumAttr<
-    "DenormalMode", "denormal mode arith",
-    [Arith_DenormalModeIEEE, Arith_DenormalModePreserveSign, 
-     Arith_DenormalModePositiveZero]> {
-  let cppNamespace = "::mlir::arith";
-  let genSpecializedAttr = 0;
-}
-
-def Arith_DenormalModeAttr :
-    EnumAttr<Arith_Dialect, Arith_DenormalMode, "denormal"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
 #endif // ARITH_BASE

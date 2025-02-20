@@ -549,24 +549,6 @@ void Shift(_BitInt(28) Ext, _BitInt(65) LargeExt, int i) {
   // CHECK: ashr i65 {{.+}}, %[[PROMO]]
 }
 
-void ComplexTest(_Complex _BitInt(12) first, _Complex _BitInt(33) second) {
-  // LIN: define{{.*}} void @_Z11ComplexTestCDB12_CDB33_
-  // WIN: define dso_local void  @"?ComplexTest@@YAXU?$_Complex@U?$_BitInt@$0M@@__clang@@@__clang@@U?$_Complex@U?$_BitInt@$0CB@@__clang@@@2@@Z"
-  first + second;
-  // CHECK: %[[FIRST_REALP:.+]] = getelementptr inbounds nuw { i12, i12 }, ptr %{{.+}}, i32 0, i32 0
-  // CHECK: %[[FIRST_REAL:.+]] = load i12, ptr %[[FIRST_REALP]]
-  // CHECK: %[[FIRST_IMAGP:.+]] = getelementptr inbounds nuw { i12, i12 }, ptr %{{.+}}, i32 0, i32 1
-  // CHECK: %[[FIRST_IMAG:.+]] = load i12, ptr %[[FIRST_IMAGP]]
-  // CHECK: %[[FIRST_REAL_CONV:.+]] = sext i12 %[[FIRST_REAL]]
-  // CHECK: %[[FIRST_IMAG_CONV:.+]] = sext i12 %[[FIRST_IMAG]]
-  // CHECK: %[[SECOND_REALP:.+]] = getelementptr inbounds nuw { i33, i33 }, ptr %{{.+}}, i32 0, i32 0
-  // CHECK: %[[SECOND_REAL:.+]] = load i33, ptr %[[SECOND_REALP]]
-  // CHECK: %[[SECOND_IMAGP:.+]] = getelementptr inbounds nuw { i33, i33 }, ptr %{{.+}}, i32 0, i32 1
-  // CHECK: %[[SECOND_IMAG:.+]] = load i33, ptr %[[SECOND_IMAGP]]
-  // CHECK: %[[REAL:.+]] = add i33 %[[FIRST_REAL_CONV]], %[[SECOND_REAL]]
-  // CHECK: %[[IMAG:.+]] = add i33 %[[FIRST_IMAG_CONV]], %[[SECOND_IMAG]]
-}
-
 typedef  _BitInt(64) vint64_t16 __attribute__((vector_size(16)));
 void VectorTest(vint64_t16 first, vint64_t16 second) {
   // LIN: define{{.*}} void @_Z10VectorTestDv2_DB64_S0_(<2 x i64> %{{.+}}, <2 x i64> %{{.+}})

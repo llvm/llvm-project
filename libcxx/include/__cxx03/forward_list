@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FORWARD_LIST
-#define _LIBCPP_FORWARD_LIST
+#ifndef _LIBCPP___CXX03_FORWARD_LIST
+#define _LIBCPP___CXX03_FORWARD_LIST
 
 /*
     forward_list synopsis
@@ -1571,4 +1571,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/typeinfo>
 #endif
 
-#endif // _LIBCPP_FORWARD_LIST
+#endif // _LIBCPP___CXX03_FORWARD_LIST

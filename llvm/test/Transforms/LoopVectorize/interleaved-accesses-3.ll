@@ -23,7 +23,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @_Z4funcPjS_hh(ptr noalias nocapture readonly %a, ptr noalias nocapture %b, i8 zeroext %x, i8 zeroext %y) local_unnamed_addr {
 ; CHECK-LABEL: define void @_Z4funcPjS_hh(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]], ptr noalias nocapture [[B:%.*]], i8 zeroext [[X:%.*]], i8 zeroext [[Y:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]], i8 zeroext [[X:%.*]], i8 zeroext [[Y:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i8 [[Y]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
@@ -68,7 +68,7 @@ define void @_Z4funcPjS_hh(ptr noalias nocapture readonly %a, ptr noalias nocapt
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_PREHEADER]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[X]], %[[FOR_BODY_PREHEADER]] ], [ [[X]], %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[X]], %[[FOR_BODY_PREHEADER]] ], [ [[X]], %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
@@ -76,7 +76,7 @@ define void @_Z4funcPjS_hh(ptr noalias nocapture readonly %a, ptr noalias nocapt
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[INDEX_011:%.*]] = phi i8 [ [[ADD:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDEX_011:%.*]] = phi i8 [ [[ADD:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i8 [[INDEX_011]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[ARRAYIDX]], align 4

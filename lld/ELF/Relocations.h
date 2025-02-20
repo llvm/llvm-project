@@ -92,10 +92,15 @@ enum RelExpr {
   // of a relocation type, there are some relocations whose semantics are
   // unique to a target. Such relocation are marked with RE_<TARGET_NAME>.
   RE_AARCH64_GOT_PAGE_PC,
+  RE_AARCH64_AUTH_GOT_PAGE_PC,
   RE_AARCH64_GOT_PAGE,
+  RE_AARCH64_AUTH_GOT,
+  RE_AARCH64_AUTH_GOT_PC,
   RE_AARCH64_PAGE_PC,
   RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   RE_AARCH64_TLSDESC_PAGE,
+  RE_AARCH64_AUTH_TLSDESC_PAGE,
+  RE_AARCH64_AUTH_TLSDESC,
   RE_AARCH64_AUTH,
   RE_ARM_PCA,
   RE_ARM_SBREL,

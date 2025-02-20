@@ -1001,7 +1001,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   GetReturnInfo(CLI.CallConv, CLI.RetTy, getReturnAttrs(CLI), Outs, TLI, DL);
 
   bool CanLowerReturn = TLI.CanLowerReturn(
-      CLI.CallConv, *FuncInfo.MF, CLI.IsVarArg, Outs, CLI.RetTy->getContext());
+      CLI.CallConv, *FuncInfo.MF, CLI.IsVarArg, Outs, CLI.RetTy->getContext(), CLI.RetTy);
 
   // FIXME: sret demotion isn't supported yet - bail out.
   if (!CanLowerReturn)
@@ -1078,7 +1078,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       // For ByVal, alignment should come from FE. BE will guess if this info
       // is not there, but there are cases it cannot get right.
       if (!MemAlign)
-        MemAlign = Align(TLI.getByValTypeAlignment(Arg.IndirectType, DL));
+        MemAlign = TLI.getByValTypeAlignment(Arg.IndirectType, DL);
       Flags.setByValSize(FrameSize);
     } else if (!MemAlign) {
       MemAlign = DL.getABITypeAlign(Arg.Ty);
@@ -1229,7 +1229,7 @@ void FastISel::handleDbgInfo(const Instruction *II) {
     }
 
     if (!Res)
-      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DVR << "\n";);
+      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DVR << "\n");
   }
 }
 
@@ -2229,8 +2229,7 @@ Register FastISel::fastEmitInst_i(unsigned MachineInstOpcode,
 Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, unsigned Op0,
                                               uint32_t Idx) {
   Register ResultReg = createResultReg(TLI.getRegClassFor(RetVT));
-  assert(Register::isVirtualRegister(Op0) &&
-         "Cannot yet extract from physregs");
+  assert(Register(Op0).isVirtual() && "Cannot yet extract from physregs");
   const TargetRegisterClass *RC = MRI.getRegClass(Op0);
   MRI.constrainRegClass(Op0, TRI.getSubClassWithSubReg(RC, Idx));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),

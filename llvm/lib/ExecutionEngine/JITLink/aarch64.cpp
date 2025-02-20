@@ -38,6 +38,8 @@ const char *getEdgeKindName(Edge::Kind R) {
   switch (R) {
   case Pointer64:
     return "Pointer64";
+  case Pointer64Authenticated:
+    return "Pointer64Authenticated";
   case Pointer32:
     return "Pointer32";
   case Delta64:
@@ -202,6 +204,26 @@ static Error writeStoreRegSeq(AppendFtor &Append, unsigned DstLocReg,
   return Append(Instr);
 }
 
+void GOTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : GOTSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 1 &&
+           "GOT block edge count != 1");
+    registerPreExistingEntry(EntrySym->getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
+
+void PLTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : StubsSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 2 &&
+           "PLT block edge count != 2");
+    auto &GOTSym = EntrySym->getBlock().edges().begin()->getTarget();
+    assert(GOTSym.getBlock().edges_size() == 1 && "GOT block edge count != 1");
+    registerPreExistingEntry(GOTSym.getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
+
 const char *getPointerSigningFunctionSectionName() { return "$__ptrauth_sign"; }
 
 /// Creates a pointer signing function section, block, and symbol to reserve
@@ -295,53 +317,50 @@ Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G) {
   };
 
   for (auto *B : G.blocks()) {
-    for (auto EI = B->edges().begin(); EI != B->edges().end();) {
-      auto &E = *EI;
-      if (E.getKind() == aarch64::Pointer64Authenticated) {
-        uint64_t EncodedInfo = E.getAddend();
-        int32_t RealAddend = (uint32_t)(EncodedInfo & 0xffffffff);
-        uint32_t InitialDiscriminator = (EncodedInfo >> 32) & 0xffff;
-        bool AddressDiversify = (EncodedInfo >> 48) & 0x1;
-        uint32_t Key = (EncodedInfo >> 49) & 0x3;
-        uint32_t HighBits = EncodedInfo >> 51;
-        auto ValueToSign = E.getTarget().getAddress() + RealAddend;
+    for (auto &E : B->edges()) {
+      // We're only concerned with Pointer64Authenticated edges here.
+      if (E.getKind() != aarch64::Pointer64Authenticated)
+        continue;
 
-        if (HighBits != 0x1000)
-          return make_error<JITLinkError>(
-              "Pointer64Auth edge at " +
-              formatv("{0:x}", B->getFixupAddress(E).getValue()) +
-              " has invalid encoded addend  " + formatv("{0:x}", EncodedInfo));
+      uint64_t EncodedInfo = E.getAddend();
+      int32_t RealAddend = (uint32_t)(EncodedInfo & 0xffffffff);
+      uint32_t InitialDiscriminator = (EncodedInfo >> 32) & 0xffff;
+      bool AddressDiversify = (EncodedInfo >> 48) & 0x1;
+      uint32_t Key = (EncodedInfo >> 49) & 0x3;
+      uint32_t HighBits = EncodedInfo >> 51;
+      auto ValueToSign = E.getTarget().getAddress() + RealAddend;
 
-#ifndef NDEBUG
+      if (HighBits != 0x1000)
+        return make_error<JITLinkError>(
+            "Pointer64Auth edge at " +
+            formatv("{0:x}", B->getFixupAddress(E).getValue()) +
+            " has invalid encoded addend  " + formatv("{0:x}", EncodedInfo));
+
+      LLVM_DEBUG({
         const char *const KeyNames[] = {"IA", "IB", "DA", "DB"};
-#endif // NDEBUG
-        LLVM_DEBUG({
-          dbgs() << "  " << B->getFixupAddress(E) << " <- " << ValueToSign
-                 << " : key = " << KeyNames[Key] << ", discriminator = "
-                 << formatv("{0:x4}", InitialDiscriminator)
-                 << ", address diversified = "
-                 << (AddressDiversify ? "yes" : "no") << "\n";
-        });
+        dbgs() << "  " << B->getFixupAddress(E) << " <- " << ValueToSign
+               << " : key = " << KeyNames[Key] << ", discriminator = "
+               << formatv("{0:x4}", InitialDiscriminator)
+               << ", address diversified = "
+               << (AddressDiversify ? "yes" : "no") << "\n";
+      });
 
-        // Materialize pointer value.
-        cantFail(
-            writeMovRegImm64Seq(AppendInstr, Reg1, ValueToSign.getValue()));
+      // Materialize pointer value.
+      cantFail(writeMovRegImm64Seq(AppendInstr, Reg1, ValueToSign.getValue()));
 
-        // Materialize fixup pointer.
-        cantFail(writeMovRegImm64Seq(AppendInstr, Reg2,
-                                     B->getFixupAddress(E).getValue()));
+      // Materialize fixup pointer.
+      cantFail(writeMovRegImm64Seq(AppendInstr, Reg2,
+                                   B->getFixupAddress(E).getValue()));
 
-        // Write signing instruction(s).
-        cantFail(writePACSignSeq(AppendInstr, Reg1, ValueToSign, Reg2, Reg3,
-                                 Key, InitialDiscriminator, AddressDiversify));
+      // Write signing instruction(s).
+      cantFail(writePACSignSeq(AppendInstr, Reg1, ValueToSign, Reg2, Reg3, Key,
+                               InitialDiscriminator, AddressDiversify));
 
-        // Store signed pointer.
-        cantFail(writeStoreRegSeq(AppendInstr, Reg2, Reg1));
+      // Store signed pointer.
+      cantFail(writeStoreRegSeq(AppendInstr, Reg2, Reg1));
 
-        // Remove this edge.
-        EI = B->removeEdge(EI);
-      } else
-        ++EI;
+      // Replace edge with a keep-alive to preserve dependence info.
+      E.setKind(Edge::KeepAlive);
     }
   }
 

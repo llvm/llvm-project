@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CSTDIO
-#define _LIBCPP_CSTDIO
+#ifndef _LIBCPP___CXX03_CSTDIO
+#define _LIBCPP___CXX03_CSTDIO
 
 /*
     cstdio synopsis
@@ -99,7 +99,7 @@ void perror(const char* s);
 
 #include <__cxx03/stdio.h>
 
-#ifndef _LIBCPP_STDIO_H
+#ifndef _LIBCPP___CXX03_STDIO_H
 #   error <cstdio> tried including <stdio.h> but didn't find libc++'s <stdio.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -171,4 +171,4 @@ using ::vprintf _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CSTDIO
+#endif // _LIBCPP___CXX03_CSTDIO

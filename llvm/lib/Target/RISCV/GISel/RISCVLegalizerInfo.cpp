@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -132,7 +133,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   auto PtrVecTys = {nxv1p0, nxv2p0, nxv4p0, nxv8p0, nxv16p0};
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
+  getActionDefinitionsBuilder({G_ADD, G_SUB})
+      .legalFor({sXLen})
+      .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
+      .customFor(ST.is64Bit(), {s32})
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, sXLen, sXLen);
+
+  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({sXLen})
       .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
       .widenScalarToNextPow2(0)
@@ -598,7 +606,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtZfa(), {s32})
       .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {s16})
-      .libcallFor({s32, s64});
+      .libcallFor({s32, s64})
+      .libcallFor(ST.is64Bit(), {s128});
 
   getActionDefinitionsBuilder({G_FMAXIMUM, G_FMINIMUM})
       .legalFor(ST.hasStdExtZfa(), {s32})
@@ -609,9 +618,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                G_FLOG10, G_FEXP, G_FEXP2, G_FEXP10, G_FACOS,
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
                                G_FTANH})
-      .libcallFor({s32, s64});
+      .libcallFor({s32, s64})
+      .libcallFor(ST.is64Bit(), {s128});
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
-      .libcallFor({{s32, s32}, {s64, s32}});
+      .libcallFor({{s32, s32}, {s64, s32}})
+      .libcallFor(ST.is64Bit(), {s128, s32});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 
@@ -1109,7 +1120,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
   // divide exactly.
   assert(
       RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(LitTyMVT)).second ||
-      RISCVTargetLowering::getLMUL(LitTyMVT) == RISCVII::VLMUL::LMUL_1);
+      RISCVTargetLowering::getLMUL(LitTyMVT) == RISCVVType::LMUL_1);
 
   // If the vector type is an LMUL-group type, extract a subvector equal to the
   // nearest full vector register type.
@@ -1132,7 +1143,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
   const LLT XLenTy(STI.getXLenVT());
   auto SlidedownAmt = MIB.buildVScale(XLenTy, RemIdx);
   auto [Mask, VL] = buildDefaultVLOps(LitTy, MIB, MRI);
-  uint64_t Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+  uint64_t Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
   auto Slidedown = MIB.buildInstr(
       RISCV::G_VSLIDEDOWN_VL, {InterLitTy},
       {MIB.buildUndef(InterLitTy), Vec, SlidedownAmt, Mask, VL, Policy});
@@ -1254,10 +1265,10 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
     // Use tail agnostic policy if we're inserting over InterLitTy's tail.
     ElementCount EndIndex =
         ElementCount::getScalable(RemIdx) + LitTy.getElementCount();
-    uint64_t Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+    uint64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
     if (STI.expandVScale(EndIndex) ==
         STI.expandVScale(InterLitTy.getElementCount()))
-      Policy = RISCVII::TAIL_AGNOSTIC;
+      Policy = RISCVVType::TAIL_AGNOSTIC;
 
     Inserted =
         MIB.buildInstr(RISCV::G_VSLIDEUP_VL, {InsertedDst},
@@ -1326,6 +1337,24 @@ bool RISCVLegalizerInfo::legalizeCustom(
     if (!shouldBeInConstantPool(ConstVal->getValue(), ShouldOptForSize))
       return true;
     return Helper.lowerConstant(MI);
+  }
+  case TargetOpcode::G_SUB:
+  case TargetOpcode::G_ADD: {
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
+    Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ANYEXT);
+
+    Register DstALU = MRI.createGenericVirtualRegister(sXLen);
+
+    MachineOperand &MO = MI.getOperand(0);
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
+    auto DstSext = MIRBuilder.buildSExtInReg(sXLen, DstALU, 32);
+
+    MIRBuilder.buildInstr(TargetOpcode::G_TRUNC, {MO}, {DstSext});
+    MO.setReg(DstALU);
+
+    Helper.Observer.changedInstr(MI);
+    return true;
   }
   case TargetOpcode::G_SEXT_INREG: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());

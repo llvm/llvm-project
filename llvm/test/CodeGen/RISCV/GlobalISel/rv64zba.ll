@@ -105,22 +105,12 @@ define i64 @zextw_i64(i64 %a) nounwind {
 ; This makes sure targetShrinkDemandedConstant changes the and immmediate to
 ; allow zext.w or slli+srli.
 define i64 @zextw_demandedbits_i64(i64 %0) {
-; RV64I-LABEL: zextw_demandedbits_i64:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 1
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    addi a1, a1, -2
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    ori a0, a0, 1
-; RV64I-NEXT:    ret
-;
-; RV64ZBA-LABEL: zextw_demandedbits_i64:
-; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    li a1, -2
-; RV64ZBA-NEXT:    zext.w a1, a1
-; RV64ZBA-NEXT:    and a0, a0, a1
-; RV64ZBA-NEXT:    ori a0, a0, 1
-; RV64ZBA-NEXT:    ret
+; CHECK-LABEL: zextw_demandedbits_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srliw a0, a0, 1
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    ori a0, a0, 1
+; CHECK-NEXT:    ret
   %2 = and i64 %0, 4294967294
   %3 = or i64 %2, 1
   ret i64 %3
@@ -1520,19 +1510,17 @@ entry:
 define i64 @srli_slli_i16(i64 %1) {
 ; RV64I-LABEL: srli_slli_i16:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    slli a0, a0, 4
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBANOZBB-LABEL: srli_slli_i16:
 ; RV64ZBANOZBB:       # %bb.0: # %entry
-; RV64ZBANOZBB-NEXT:    lui a1, 16
-; RV64ZBANOZBB-NEXT:    addiw a1, a1, -1
 ; RV64ZBANOZBB-NEXT:    srli a0, a0, 2
-; RV64ZBANOZBB-NEXT:    and a0, a0, a1
+; RV64ZBANOZBB-NEXT:    slli a0, a0, 48
+; RV64ZBANOZBB-NEXT:    srli a0, a0, 48
 ; RV64ZBANOZBB-NEXT:    slli a0, a0, 4
 ; RV64ZBANOZBB-NEXT:    ret
 ;

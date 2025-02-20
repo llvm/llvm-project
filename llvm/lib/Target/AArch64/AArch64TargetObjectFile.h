@@ -35,6 +35,16 @@ public:
                                  MachineModuleInfo *MMI, const MCSymbol *RawSym,
                                  AArch64PACKey::ID Key,
                                  uint16_t Discriminator) const;
+
+  void emitPersonalityValueImpl(MCStreamer &Streamer, const DataLayout &DL,
+                                const MCSymbol *Sym,
+                                const MachineModuleInfo *MMI) const override;
+
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
+                                      const TargetMachine &TM) const override;
+
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+                                    const TargetMachine &TM) const override;
 };
 
 /// AArch64_MachoTargetObjectFile - This TLOF implementation is used for Darwin.

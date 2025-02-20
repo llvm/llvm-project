@@ -635,7 +635,11 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
       global.setLinkName(builder.createCommonLinkage());
     Fortran::lower::createGlobalInitialization(
         builder, global, [&](fir::FirOpBuilder &builder) {
-          mlir::Value initValue = builder.create<fir::ZeroOp>(loc, symTy);
+          mlir::Value initValue;
+          if (converter.getLoweringOptions().getInitGlobalZero())
+            initValue = builder.create<fir::ZeroOp>(loc, symTy);
+          else
+            initValue = builder.create<fir::UndefOp>(loc, symTy);
           builder.create<fir::HasValueOp>(loc, initValue);
         });
   }
@@ -798,6 +802,20 @@ void Fortran::lower::defaultInitializeAtRuntime(
   }
 }
 
+/// Call clone initialization runtime routine to initialize \p sym's value.
+void Fortran::lower::initializeCloneAtRuntime(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::semantics::Symbol &sym, Fortran::lower::SymMap &symMap) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  fir::ExtendedValue exv = converter.getSymbolExtendedValue(sym, &symMap);
+  mlir::Value newBox = builder.createBox(loc, exv);
+  lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(sym);
+  fir::ExtendedValue hexv = converter.symBoxToExtendedValue(hsb);
+  mlir::Value box = builder.createBox(loc, hexv);
+  fir::runtime::genDerivedTypeInitializeClone(builder, loc, newBox, box);
+}
+
 enum class VariableCleanUp { Finalize, Deallocate };
 /// Check whether a local variable needs to be finalized according to clause
 /// 7.5.6.3 point 3 or if it is an allocatable that must be deallocated. Note
@@ -938,7 +956,15 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                              Fortran::lower::SymMap &symMap) {
   assert(!var.isAlias());
   Fortran::lower::StatementContext stmtCtx;
+  // isUnusedEntryDummy must be computed before mapSymbolAttributes.
+  const bool isUnusedEntryDummy =
+      var.hasSymbol() && Fortran::semantics::IsDummy(var.getSymbol()) &&
+      !symMap.lookupSymbol(var.getSymbol()).getAddr();
   mapSymbolAttributes(converter, var, symMap, stmtCtx);
+  // Do not generate code to initialize/finalize/destroy dummy arguments that
+  // are nor part of the current ENTRY. They do not have backing storage.
+  if (isUnusedEntryDummy)
+    return;
   deallocateIntentOut(converter, var, symMap);
   if (needDummyIntentoutFinalization(var))
     finalizeAtRuntime(converter, var, symMap);
@@ -981,7 +1007,6 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                "trying to deallocate entity not lowered as allocatable");
         Fortran::lower::genDeallocateIfAllocated(*converterPtr, *mutableBox,
                                                  loc, sym);
-        
       });
     }
   }

@@ -439,36 +439,30 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   //    already duplicated
   //  - call both from Sema and from here
 
-  const auto *BaseDRE =
-      dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
-  const auto *SLiteral =
-      dyn_cast<StringLiteral>(Node.getBase()->IgnoreParenImpCasts());
-  uint64_t size;
-
-  if (!BaseDRE && !SLiteral)
+  uint64_t limit;
+  if (const auto *CATy =
+          dyn_cast<ConstantArrayType>(Node.getBase()
+                                          ->IgnoreParenImpCasts()
+                                          ->getType()
+                                          ->getUnqualifiedDesugaredType())) {
+    limit = CATy->getLimitedSize();
+  } else if (const auto *SLiteral = dyn_cast<StringLiteral>(
+                 Node.getBase()->IgnoreParenImpCasts())) {
+    limit = SLiteral->getLength() + 1;
+  } else {
     return false;
-
-  if (BaseDRE) {
-    if (!BaseDRE->getDecl())
-      return false;
-    const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-        BaseDRE->getDecl()->getType());
-    if (!CATy) {
-      return false;
-    }
-    size = CATy->getLimitedSize();
-  } else if (SLiteral) {
-    size = SLiteral->getLength() + 1;
   }
 
-  if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
-    const APInt ArrIdx = IdxLit->getValue();
+  Expr::EvalResult EVResult;
+  const Expr *IndexExpr = Node.getIdx();
+  if (!IndexExpr->isValueDependent() &&
+      IndexExpr->EvaluateAsInt(EVResult, Finder->getASTContext())) {
+    llvm::APSInt ArrIdx = EVResult.Val.getInt();
     // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
     // bug
-    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < size)
+    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < limit)
       return true;
   }
-
   return false;
 }
 
@@ -936,7 +930,7 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
       // The array element type must be compatible with `char` otherwise an
       // explicit cast will be needed, which will make this check unreachable.
       // Therefore, the array extent is same as its' bytewise size.
-      if (Size->EvaluateAsConstantExpr(ER, Ctx)) {
+      if (Size->EvaluateAsInt(ER, Ctx)) {
         APSInt EVal = ER.Val.getInt(); // Size must have integer type
 
         return APSInt::compareValues(EVal, APSInt(CAT->getSize(), true)) != 0;

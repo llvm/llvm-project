@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_WIN32_H
-#define _LIBCPP___LOCALE_LOCALE_BASE_API_WIN32_H
+#ifndef _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_WIN32_H
+#define _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_WIN32_H
 
 #include <__cxx03/__config>
 #include <__cxx03/cstddef>
@@ -232,4 +232,4 @@ _LIBCPP_EXPORTED_FROM_ABI int vasprintf_l(char** __ret, locale_t __loc, const ch
 // not-so-pressing FIXME: use locale to determine blank characters
 inline int iswblank_l(wint_t __c, locale_t /*loc*/) { return (__c == L' ' || __c == L'\t'); }
 
-#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_WIN32_H
+#endif // _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_WIN32_H

@@ -15,7 +15,6 @@
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/next.h>
 #include <__type_traits/invoke.h>
 #include <__utility/pair.h>
 

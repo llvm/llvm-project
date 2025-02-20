@@ -76,7 +76,9 @@ define i32 @fpr_csr_stackobj(double %x) "aarch64_pstate_sm_compatible" "frame-po
 ; CHECK1024:       .seh_proc fpr_csr_stackobj
 ; CHECK1024-NEXT:  // %bb.0: // %entry
 ; CHECK1024-NEXT:    sub sp, sp, #1072
+; CHECK1024-NEXT:    .seh_stackalloc 1072
 ; CHECK1024-NEXT:    str x23, [sp] // 8-byte Folded Spill
+; CHECK1024-NEXT:    .seh_save_reg x23, 0
 ; CHECK1024-NEXT:    str x29, [sp, #8] // 8-byte Folded Spill
 ; CHECK1024-NEXT:    .seh_save_reg x29, 8
 ; CHECK1024-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
@@ -105,7 +107,9 @@ define i32 @fpr_csr_stackobj(double %x) "aarch64_pstate_sm_compatible" "frame-po
 ; CHECK1024-NEXT:    ldr x29, [sp, #8] // 8-byte Folded Reload
 ; CHECK1024-NEXT:    .seh_save_reg x29, 8
 ; CHECK1024-NEXT:    ldr x23, [sp] // 8-byte Folded Reload
+; CHECK1024-NEXT:    .seh_save_reg x23, 0
 ; CHECK1024-NEXT:    add sp, sp, #1072
+; CHECK1024-NEXT:    .seh_stackalloc 1072
 ; CHECK1024-NEXT:    .seh_endepilogue
 ; CHECK1024-NEXT:    ret
 ; CHECK1024-NEXT:    .seh_endfunclet

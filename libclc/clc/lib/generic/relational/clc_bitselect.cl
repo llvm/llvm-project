@@ -53,3 +53,15 @@ FLOAT_BITSELECT(double, ulong, 8)
 FLOAT_BITSELECT(double, ulong, 16)
 
 #endif
+
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+FLOAT_BITSELECT(half, ushort, )
+FLOAT_BITSELECT(half, ushort, 2)
+FLOAT_BITSELECT(half, ushort, 3)
+FLOAT_BITSELECT(half, ushort, 4)
+FLOAT_BITSELECT(half, ushort, 8)
+FLOAT_BITSELECT(half, ushort, 16)
+
+#endif

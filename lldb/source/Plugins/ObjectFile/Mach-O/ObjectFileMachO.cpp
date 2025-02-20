@@ -1209,6 +1209,8 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDWARFAppleObjC:
         case eSectionTypeDWARFGNUDebugAltLink:
         case eSectionTypeCTF:
+        case eSectionTypeLLDBTypeSummaries:
+        case eSectionTypeLLDBFormatters:
         case eSectionTypeSwiftModules:
           return AddressClass::eDebug;
 
@@ -1484,6 +1486,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_data("__data");
   static ConstString g_sect_name_go_symtab("__gosymtab");
   static ConstString g_sect_name_ctf("__ctf");
+  static ConstString g_sect_name_lldb_summaries("__lldbsummaries");
+  static ConstString g_sect_name_lldb_formatters("__lldbformatters");
   static ConstString g_sect_name_swift_ast("__swift_ast");
 
   if (section_name == g_sect_name_dwarf_debug_abbrev)
@@ -1564,6 +1568,10 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeGoSymtab;
   if (section_name == g_sect_name_ctf)
     return eSectionTypeCTF;
+  if (section_name == g_sect_name_lldb_summaries)
+    return lldb::eSectionTypeLLDBTypeSummaries;
+  if (section_name == g_sect_name_lldb_formatters)
+    return lldb::eSectionTypeLLDBFormatters;
   if (section_name == g_sect_name_swift_ast)
     return eSectionTypeSwiftModules;
   if (section_name == g_sect_name_objc_data ||
@@ -2742,7 +2750,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
         return;
 
         if (process_shared_cache_uuid.IsValid() &&
-          process_shared_cache_uuid != UUID::fromData(&cache_uuid, 16))
+          process_shared_cache_uuid != UUID(&cache_uuid, 16))
         return;
 
       dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
@@ -2751,7 +2759,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           return;
 
         dyld_image_copy_uuid(image, &dsc_image_uuid);
-        if (image_uuid != UUID::fromData(dsc_image_uuid, 16))
+        if (image_uuid != UUID(dsc_image_uuid, 16))
           return;
 
         found_image = true;
@@ -2840,7 +2848,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                           "DSC unmapped local symbol[{0}] has invalid "
                           "string table offset {1:x} in {2}, ignoring symbol",
                           nlist_index, nlist.n_strx,
-                          module_sp->GetFileSpec().GetPath());
+                          module_sp->GetFileSpec().GetPath()));
                       continue;
                     }
                     if (symbol_name[0] == '\0')
@@ -5591,9 +5599,13 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
       // struct main_bin_spec
       // {
       //     uint32_t version;       // currently 2
-      //     uint32_t type;          // 0 == unspecified, 1 == kernel,
+      //     uint32_t type;          // 0 == unspecified,
+      //                             // 1 == kernel
       //                             // 2 == user process,
+      //                                     dyld mach-o binary addr
       //                             // 3 == standalone binary
+      //                             // 4 == user process,
+      //                             //      dyld_all_image_infos addr
       //     uint64_t address;       // UINT64_MAX if address not specified
       //     uint64_t slide;         // slide, UINT64_MAX if unspecified
       //                             // 0 if no slide needs to be applied to
@@ -5644,6 +5656,7 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
           // convert the "main bin spec" type into our
           // ObjectFile::BinaryType enum
           const char *typestr = "unrecognized type";
+          type = eBinaryTypeInvalid;
           switch (binspec_type) {
           case 0:
             type = eBinaryTypeUnknown;
@@ -5660,6 +5673,10 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
           case 3:
             type = eBinaryTypeStandalone;
             typestr = "standalone";
+            break;
+          case 4:
+            type = eBinaryTypeUserAllImageInfos;
+            typestr = "userland dyld_all_image_infos";
             break;
           }
           LLDB_LOGF(log,
@@ -6245,9 +6262,9 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                   "0x%" PRIx64,
                   section_sp->GetName().AsCString(),
                   section_sp->GetFileAddress() + value);
-        if (target.GetSectionLoadList().SetSectionLoadAddress(
-                section_sp, section_sp->GetFileAddress() + value,
-                warn_multiple))
+        if (target.SetSectionLoadAddress(section_sp,
+                                         section_sp->GetFileAddress() + value,
+                                         warn_multiple))
           ++num_loaded_sections;
       }
     }
@@ -6268,8 +6285,8 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                     "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
                     "0x%" PRIx64,
                     section_sp->GetName().AsCString(), section_load_addr);
-          if (target.GetSectionLoadList().SetSectionLoadAddress(
-                  section_sp, section_load_addr, warn_multiple))
+          if (target.SetSectionLoadAddress(section_sp, section_load_addr,
+                                           warn_multiple))
             ++num_loaded_sections;
         }
       }
@@ -6549,9 +6566,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
        target_triple.getOS() == llvm::Triple::IOS ||
        target_triple.getOS() == llvm::Triple::WatchOS ||
        target_triple.getOS() == llvm::Triple::TvOS ||
+       target_triple.getOS() == llvm::Triple::BridgeOS ||
        target_triple.getOS() == llvm::Triple::XROS)) {
-    // NEED_BRIDGEOS_TRIPLE target_triple.getOS() == llvm::Triple::BridgeOS))
-    // {
     bool make_core = false;
     switch (target_arch.GetMachine()) {
     case llvm::Triple::aarch64:

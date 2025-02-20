@@ -157,7 +157,7 @@ private:
 
   // Return true iff the given register is in the given class.
   bool isRegInClass(unsigned Reg, const TargetRegisterClass *RC) {
-    if (Register::isVirtualRegister(Reg))
+    if (Register(Reg).isVirtual())
       return RC->hasSubClassEq(MRI->getRegClass(Reg));
     return RC->contains(Reg);
   }
@@ -560,7 +560,7 @@ unsigned PPCVSXSwapRemoval::lookThruCopyLike(unsigned SrcReg,
   if (!MI->isCopyLike())
     return SrcReg;
 
-  unsigned CopySrcReg;
+  Register CopySrcReg;
   if (MI->isCopy())
     CopySrcReg = MI->getOperand(1).getReg();
   else {
@@ -568,7 +568,7 @@ unsigned PPCVSXSwapRemoval::lookThruCopyLike(unsigned SrcReg,
     CopySrcReg = MI->getOperand(2).getReg();
   }
 
-  if (!Register::isVirtualRegister(CopySrcReg)) {
+  if (!CopySrcReg.isVirtual()) {
     if (!isScalarVecReg(CopySrcReg))
       SwapVector[VecIdx].MentionsPhysVR = 1;
     return CopySrcReg;

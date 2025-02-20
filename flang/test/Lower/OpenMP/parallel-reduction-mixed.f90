@@ -27,17 +27,16 @@ end subroutine proc
 !CHECK:  %[[F_priv:.*]] = alloca ptr
 !CHECK:  %[[I_priv:.*]] = alloca i32
 
+!CHECK: omp.par.region:
+
 !CHECK: omp.reduction.init:
 !CHECK:  store ptr %{{.*}}, ptr %[[F_priv]]
 !CHECK:  store i32 0, ptr %[[I_priv]]
-
-!CHECK: omp.par.region:
 !CHECK:  br label %[[MALLOC_BB:.*]]
 
 !CHECK: [[MALLOC_BB]]:
 !CHECK-NOT: omp.par.{{.*}}:
-!CHECK: call ptr @malloc
-!CHECK-SAME: i64 10
+!CHECK: call ptr @malloc(i64 80)
 
 !CHECK: %[[RED_ARR_0:.*]] = getelementptr inbounds [2 x ptr], ptr %red.array, i64 0, i64 0
 !CHECK: store ptr %[[F_priv]], ptr %[[RED_ARR_0:.*]]

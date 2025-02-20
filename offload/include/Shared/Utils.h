@@ -68,11 +68,6 @@ inline uint32_t popc(uint64_t V) {
   return __builtin_popcountl(V);
 }
 
-template <typename DstTy, typename SrcTy> inline DstTy convertViaPun(SrcTy V) {
-  static_assert(sizeof(DstTy) == sizeof(SrcTy), "Bad conversion");
-  return *((DstTy *)(&V));
-}
-
 } // namespace utils
 
 #endif // OMPTARGET_SHARED_UTILS_H

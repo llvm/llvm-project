@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_STRIP_SIGNATURE_H
-#define _LIBCPP___TYPE_TRAITS_STRIP_SIGNATURE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_STRIP_SIGNATURE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_STRIP_SIGNATURE_H
 
 #include <__cxx03/__config>
 
@@ -78,4 +78,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___TYPE_TRAITS_STRIP_SIGNATURE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_STRIP_SIGNATURE_H

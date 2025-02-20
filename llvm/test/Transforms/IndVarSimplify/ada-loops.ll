@@ -18,7 +18,7 @@ target triple = "i686-pc-linux-gnu"
 
 define void @kinds__sbytezero(ptr nocapture %a) nounwind {
 ; CHECK-LABEL: define void @kinds__sbytezero(
-; CHECK-SAME: ptr nocapture [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb.thread:
 ; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr [256 x i32], ptr [[A]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 0, ptr [[TMP46]], align 4
@@ -56,7 +56,7 @@ return:		; preds = %bb
 
 define void @kinds__ubytezero(ptr nocapture %a) nounwind {
 ; CHECK-LABEL: define void @kinds__ubytezero(
-; CHECK-SAME: ptr nocapture [[A:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  bb.thread:
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr [256 x i32], ptr [[A]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 0, ptr [[TMP35]], align 4
@@ -91,7 +91,7 @@ return:		; preds = %bb
 
 define void @kinds__srangezero(ptr nocapture %a) nounwind {
 ; CHECK-LABEL: define void @kinds__srangezero(
-; CHECK-SAME: ptr nocapture [[A:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  bb.thread:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
@@ -124,7 +124,7 @@ return:		; preds = %bb
 
 define void @kinds__urangezero(ptr nocapture %a) nounwind {
 ; CHECK-LABEL: define void @kinds__urangezero(
-; CHECK-SAME: ptr nocapture [[A:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  bb.thread:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:

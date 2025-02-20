@@ -50,12 +50,12 @@ define void @saddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc nuw i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[IND_END8:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[N_VEC]], 1
-; CHECK-NEXT:    [[IND_END13:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP6]]
+; CHECK-NEXT:    [[IND_END10:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[N_VEC]], 1
-; CHECK-NEXT:    [[IND_END10:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP7]]
-; CHECK-NEXT:    [[DOTCAST7:%.*]] = trunc nuw i64 [[N_VEC]] to i32
-; CHECK-NEXT:    [[IND_END8:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST7]]
+; CHECK-NEXT:    [[IND_END13:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 12
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
@@ -171,10 +171,10 @@ define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END12:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC]]
-; CHECK-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[DOTCAST6:%.*]] = trunc nuw i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END7:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST6]]
+; CHECK-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[IND_END12:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 24
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]

@@ -913,7 +913,7 @@ class VGPRImm <dag frag> : PatLeaf<frag, [{
 }
 
 def NegateImm : SDNodeXForm<imm, [{
-  return CurDAG->getConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 // TODO: When FP inline imm values work?
@@ -2483,8 +2483,15 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
 
 // Return an AGPR+VGPR operand class for the given VGPR register class.
 class getLdStRegisterOperand<RegisterClass RC> {
+  // This type of operands is only used in pseudo instructions helping
+  // code generation and thus doesn't need encoding and decoding methods.
+  // It also doesn't need to support AGPRs, because GFX908/A/40 do not
+  // support True16.
+  defvar VLdSt_16 = RegisterOperand<VGPR_16>;
+
   RegisterOperand ret =
-    !cond(!eq(RC.Size, 32)   : AVLdSt_32,
+    !cond(!eq(RC.Size, 16)   : VLdSt_16,
+          !eq(RC.Size, 32)   : AVLdSt_32,
           !eq(RC.Size, 64)   : AVLdSt_64,
           !eq(RC.Size, 96)   : AVLdSt_96,
           !eq(RC.Size, 128)  : AVLdSt_128,
@@ -2567,6 +2574,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsFP8SrcByteSel = 0;
   field bit IsFP8DstByteSel = 0;
   field bit HasFP8DstByteSel = 0;
+  field bit HasFP4DstByteSel = 0;
   field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
@@ -3249,13 +3257,13 @@ def isMFMA_F8F6F4Table : GenericTable {
   let PrimaryKeyName = "isMFMA_F8F6F4" ;
 }
 
-def FP8DstByteSelTable : GenericTable {
+def FP4FP8DstByteSelTable : GenericTable {
   let FilterClass = "VOP3_Pseudo";
-  let CppTypeName = "FP8DstByteSelInfo";
-  let Fields = ["Opcode", "HasFP8DstByteSel"];
+  let CppTypeName = "FP4FP8DstByteSelInfo";
+  let Fields = ["Opcode", "HasFP8DstByteSel", "HasFP4DstByteSel"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getFP8DstByteSelHelper";
+  let PrimaryKeyName = "getFP4FP8DstByteSelHelper";
 }
 
 def VOPDComponentTable : GenericTable {

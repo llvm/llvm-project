@@ -14,8 +14,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MDSPAN_DEFAULT_ACCESSOR_H
-#define _LIBCPP___MDSPAN_DEFAULT_ACCESSOR_H
+#ifndef _LIBCPP___CXX03___MDSPAN_DEFAULT_ACCESSOR_H
+#define _LIBCPP___CXX03___MDSPAN_DEFAULT_ACCESSOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_abstract.h>
@@ -63,4 +63,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MDSPAN_DEFAULT_ACCESSOR_H
+#endif // _LIBCPP___CXX03___MDSPAN_DEFAULT_ACCESSOR_H
