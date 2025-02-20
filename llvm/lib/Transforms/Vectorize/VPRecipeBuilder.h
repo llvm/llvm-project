@@ -196,7 +196,17 @@ public:
   void createBlockInMask(BasicBlock *BB);
 
   /// Returns the *entry* mask for the block \p BB.
-  VPValue *getBlockInMask(BasicBlock *BB) const;
+  VPValue *getBlockInMask(const BasicBlock *BB) const;
+
+  /// Returns true if there already is a block-in mask for \p BB.
+  bool hasBlockInMask(BasicBlock *BB) const {
+    return BlockMaskCache.contains(BB);
+  }
+
+  /// Set the block-in mask of \p BB directly.
+  void setBlockInMask(BasicBlock *BB, VPValue *Mask) {
+    BlockMaskCache[BB] = Mask;
+  }
 
   /// Create an edge mask for every destination of cases and/or default.
   void createSwitchEdgeMasks(SwitchInst *SI);
@@ -224,6 +234,14 @@ public:
   VPReplicateRecipe *handleReplication(Instruction *I,
                                        ArrayRef<VPValue *> Operands,
                                        VFRange &Range);
+
+  /// Return true if there already is a recipe for the given ingredient.
+  bool hasRecipe(Instruction *I) const { return Ingredient2Recipe.contains(I); }
+
+  /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
+  /// last operand. Range.End may be decreased to ensure same recipe behavior
+  /// from \p Range.Start to \p Range.End.
+  VPReplicateRecipe *handleReplication(Instruction *I, VFRange &Range);
 
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.

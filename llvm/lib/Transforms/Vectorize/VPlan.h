@@ -1994,11 +1994,17 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
   /// Returns the \p I th incoming VPBasicBlock.
   VPBasicBlock *getIncomingBlock(unsigned I);
 
   /// Returns the \p I th incoming VPValue.
-  VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
+  VPValue *getIncomingValue(unsigned I) const { return getOperand(I); }
+
+  /// Return the incoming VPValue for the predecessor \p BB.
+  VPValue *getIncomingValueForBlock(const VPBasicBlock *BB) const;
 };
 
 /// A recipe for handling first-order recurrence phis. The start value is the

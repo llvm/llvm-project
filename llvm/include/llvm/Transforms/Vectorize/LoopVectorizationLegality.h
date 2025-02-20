@@ -642,6 +642,10 @@ private:
   /// Keep track of the loop edge to an uncountable exit, comprising a pair
   /// of (Exiting, Exit) blocks, if there is exactly one early exit.
   std::optional<std::pair<BasicBlock *, BasicBlock *>> UncountableEdge;
+
+  /// Contains true for a nested loop if it or any of its parents up
+  /// to the loop to vectorize needs a inner-loop active lane mask.
+  mutable DenseMap<const Loop *, bool> InnerLoopsNeedingPredication;
 };
 
 } // namespace llvm

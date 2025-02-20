@@ -970,7 +970,12 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
-  assert((!getVectorLoopRegion() || VFxUF.getNumUsers()) &&
+  // When outer-loop vectorizing and the trip-count is known, it is possible
+  // that VPlanTransforms::optimizeForVFAndUF() destroys the vector loop region,
+  // but getVectorLoopRegion() will falsely return the inner loop region.
+  assert((!getVectorLoopRegion() || VFxUF.getNumUsers() ||
+          !State.LI->getLoopFor(getScalarHeader()->getIRBasicBlock())
+               ->isInnermost()) &&
          "VFxUF expected to always have users");
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
