@@ -32,6 +32,19 @@ using namespace fir;
 using namespace mlir;
 
 namespace {
+/// Looks up from the operation from and returns the PrivateClauseOp with
+/// name symbolName
+///
+/// TODO Copied from OpenMPToLLVMIRTranslation.cpp, move to a shared location.
+/// Maybe a static function on the `PrivateClauseOp`.
+static omp::PrivateClauseOp findPrivatizer(Operation *from,
+                                           SymbolRefAttr symbolName) {
+  omp::PrivateClauseOp privatizer =
+      SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(from,
+                                                                 symbolName);
+  assert(privatizer && "privatizer not found in the symbol table");
+  return privatizer;
+}
 
 // Conversion of fir control ops to more primitive control-flow.
 //
@@ -56,6 +69,30 @@ public:
       flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
     auto iofAttr = mlir::arith::IntegerOverflowFlagsAttr::get(
         rewriter.getContext(), flags);
+
+    // Handle privatization
+    if (!loop.getPrivateVars().empty()) {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(&loop.getRegion().front());
+
+      std::optional<ArrayAttr> privateSyms = loop.getPrivateSyms();
+
+      for (auto [privateVar, privateArg, privatizerSym] :
+           llvm::zip_equal(loop.getPrivateVars(), loop.getRegionPrivateArgs(),
+                           *privateSyms)) {
+        SymbolRefAttr privatizerName = llvm::cast<SymbolRefAttr>(privatizerSym);
+        omp::PrivateClauseOp privatizer = findPrivatizer(loop, privatizerName);
+
+        mlir::Value localAlloc =
+            rewriter.create<fir::AllocaOp>(loop.getLoc(), privatizer.getType());
+        rewriter.replaceAllUsesWith(privateArg, localAlloc);
+      }
+
+      loop.getRegion().front().eraseArguments(1 + loop.getNumRegionIterArgs(),
+                                              loop.numPrivateBlockArgs());
+      loop.getPrivateVarsMutable().clear();
+      loop.setPrivateSymsAttr(nullptr);
+    }
 
     // Create the start and end blocks that will wrap the DoLoopOp with an
     // initalizer and an end point

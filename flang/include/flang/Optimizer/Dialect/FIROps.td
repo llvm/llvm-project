@@ -2284,12 +2284,6 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
           .slice(getNumControlOperands() + getNumReduceOperands(),
                  getNumIterOperands());
     }
-    mlir::Operation::operand_range getPrivateOperands() {
-      return getOperands()
-          .slice(getNumControlOperands() + getNumReduceOperands()
-                                         + getNumIterOperands(),
-                 numPrivateBlockArgs());
-    }
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
     void setUpperBound(mlir::Value bound) { (*this)->setOperand(1, bound); }
@@ -2297,7 +2291,7 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
 
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
-      return getBody()->getNumArguments() - 1;
+      return getNumIterOperands();
     }
     /// Number of operands controlling the loop: lb, ub, step
     unsigned getNumControlOperands() { return 3; }
