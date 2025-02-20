@@ -5,17 +5,14 @@
 ; ONE: 1 cgscc - Number of functions in the largest SCC
 ; TWO: 2 cgscc - Number of functions in the largest SCC
 
-@g1 = constant ptr @f1
-@g2 = constant ptr @f2
-
 define void @f1() {
-  %f = load ptr, ptr @g2
+  %f = bitcast ptr @f2 to ptr
   call void %f()
   ret void
 }
 
 define void @f2() {
-  %f = load ptr, ptr @g1
+  %f = bitcast ptr @f1 to ptr
   call void %f()
   ret void
 }
