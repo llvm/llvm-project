@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=aarch64-none-linux-gnu -filetype=obj -o %t.obj %s
-// RUN: llvm-readobj -S --sd %t.obj | FileCheck %s
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -o %t.o %s
+// RUN: llvm-readobj -S --sd %t.o | FileCheck %s
 .section sec00, "ax"
 .byte 1
 .section sec01, "ax"
