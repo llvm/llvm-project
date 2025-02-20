@@ -16,7 +16,7 @@ if(LIBC_TARGET_OS_IS_GPU)
     libc.src.stdio.ungetc
     libc.src.stdio.ferror
   )
-elseif(LLVM_LIBC_FULL_BUILD)
+elseif(TARGET libc.src.__support.File.file AND LLVM_LIBC_FULL_BUILD)
   list(APPEND file_deps
     libc.src.__support.File.file
   )
