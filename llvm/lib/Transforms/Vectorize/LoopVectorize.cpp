@@ -7291,6 +7291,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   for (unsigned I = 0; I != ExitInstrs.size(); ++I) {
     Instruction *CondI = ExitInstrs[I];
     if (!OrigLoop->contains(CondI) ||
+        CostCtx.skipCostComputation(CondI, VF.isVector()) ||
         !CostCtx.SkipCostComputation.insert(CondI).second)
       continue;
     InstructionCost CondICost = CostCtx.getLegacyCost(CondI, VF);
