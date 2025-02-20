@@ -336,7 +336,7 @@ Function::GetSourceInfo() {
     for (auto [idx, end] = line_table->GetLineEntryIndexRange(range); idx < end;
          ++idx) {
       LineEntry entry;
-        // Ignore entries belonging to inlined functions or #included files.
+      // Ignore entries belonging to inlined functions or #included files.
       if (line_table->GetLineEntryAtIndex(idx, entry) &&
           source_file_sp->Equal(*entry.file_sp,
                                 SupportFile::eEqualFileSpecAndChecksumIfSet))
