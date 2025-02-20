@@ -248,23 +248,23 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
     OS << indent(Space) << "- Parameters: \n";
     Space++;
-    for (const auto &Param : RS.Parameters) {
-      OS << indent(Space) << "Type: " << &Param.ParameterType << " \n";
-      OS << indent(Space) << "ShaderVisibility: " << &Param.ShaderVisibility
-         << " \n";
+    for (const auto &P : RS.Parameters) {
+      OS << indent(Space) << "Type: " << (uint32_t)P.ParameterType << " \n";
+      OS << indent(Space)
+         << "ShaderVisibility: " << (uint32_t)P.ShaderVisibility << " \n";
       Space++;
 
-      switch (Param.ParameterType) {
+      switch (P.ParameterType) {
 
       case dxbc::RootParameterType::Constants32Bit: {
         OS << indent(Space) << "- Constants: \n";
         Space++;
-        OS << indent(Space)
-           << "RegisterSpace: " << &Param.Constants.RegisterSpace << " \n";
-        OS << indent(Space)
-           << "ShaderRegister: " << &Param.Constants.ShaderRegister << " \n";
-        OS << indent(Space)
-           << "Num32BitValues: " << &Param.Constants.Num32BitValues << " \n";
+        OS << indent(Space) << "RegisterSpace: " << P.Constants.RegisterSpace
+           << " \n";
+        OS << indent(Space) << "ShaderRegister: " << P.Constants.ShaderRegister
+           << " \n";
+        OS << indent(Space) << "Num32BitValues: " << P.Constants.Num32BitValues
+           << " \n";
         Space--;
       } break;
       case dxbc::RootParameterType::Empty:
