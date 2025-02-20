@@ -3840,7 +3840,21 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vrsrad_n_u64:
   case NEON::BI__builtin_neon_vrsrad_n_s64: {
-    llvm_unreachable("NEON::BI__builtin_neon_vrsrad_n_s64 NYI");
+    cir::IntType IntType = BuiltinID == NEON::BI__builtin_neon_vrsrad_n_u64
+                               ? builder.getUInt64Ty()
+                               : builder.getSInt64Ty();
+    Ops[1] = builder.createBitcast(Ops[1], IntType);
+    Ops.push_back(builder.createNeg(emitScalarExpr(E->getArg(2))));
+
+    const StringRef Intrinsic = BuiltinID == NEON::BI__builtin_neon_vrsrad_n_u64
+                                    ? "aarch64.neon.urshl"
+                                    : "aarch64.neon.srshl";
+
+    llvm::SmallVector<mlir::Value, 2> args = {
+        Ops[1], builder.createIntCast(Ops[2], IntType)};
+    Ops[1] = emitNeonCall(builder, {IntType, IntType}, args, Intrinsic, IntType,
+                          getLoc(E->getExprLoc()));
+    return builder.createAdd(Ops[0], builder.createBitcast(Ops[1], IntType));
   }
   case NEON::BI__builtin_neon_vshld_n_s64:
   case NEON::BI__builtin_neon_vshld_n_u64: {

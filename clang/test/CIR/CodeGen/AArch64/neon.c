@@ -15327,13 +15327,21 @@ uint64x1_t test_vsra_n_u64(uint64x1_t a, uint64x1_t b) {
   // LLVM:   ret <1 x i64> [[TMP4]]
 }
 
-// NYI-LABEL: @test_vrsrad_n_s64(
-// NYI:   [[TMP0:%.*]] = call i64 @llvm.aarch64.neon.srshl.i64(i64 %b, i64 -63)
-// NYI:   [[TMP1:%.*]] = add i64 %a, [[TMP0]]
-// NYI:   ret i64 [[TMP1]]
-// int64_t test_vrsrad_n_s64(int64_t a, int64_t b) {
-//   return (int64_t)vrsrad_n_s64(a, b, 63);
-// }
+int64_t test_vrsrad_n_s64(int64_t a, int64_t b) {
+  return (int64_t)vrsrad_n_s64(a, b, 63);
+
+  // CIR-LABEL: vrsrad_n_s64
+  // CIR: [[TMP0:%.*]] = cir.const #cir.int<63> : !s32i
+  // CIR: [[TMP1:%.*]] = cir.unary(minus, [[TMP0]]) : !s32i, !s32i
+  // CIR: [[TMP2:%.*]] = cir.cast(integral, [[TMP1]] : !s32i), !s64i
+  // CIR: [[TMP3:%.*]] = cir.llvm.intrinsic "aarch64.neon.srshl" {{.*}}, [[TMP2]] : (!s64i, !s64i) -> !s64i
+  // CIR: [[TMP4:%.*]] = cir.binop(add, {{.*}}, [[TMP3]]) : !s64i
+
+  // LLVM-LABEL: @test_vrsrad_n_s64(
+  // LLVM: [[TMP0:%.*]] = call i64 @llvm.aarch64.neon.srshl.i64(i64 %1, i64 -63)
+  // LLVM: [[TMP1:%.*]] = add i64 %0, [[TMP0]]
+  // LLVM: ret i64 [[TMP1]]
+}
 
 int64x1_t test_vrsra_n_s64(int64x1_t a, int64x1_t b) {
   return vrsra_n_s64(a, b, 1);
@@ -15355,13 +15363,21 @@ int64x1_t test_vrsra_n_s64(int64x1_t a, int64x1_t b) {
   // LLVM:   ret <1 x i64> [[TMP3]]
 }
 
-// NYI-LABEL: @test_vrsrad_n_u64(
-// NYI:   [[TMP0:%.*]] = call i64 @llvm.aarch64.neon.urshl.i64(i64 %b, i64 -63)
-// NYI:   [[TMP1:%.*]] = add i64 %a, [[TMP0]]
-// NYI:   ret i64 [[TMP1]]
-// uint64_t test_vrsrad_n_u64(uint64_t a, uint64_t b) {
-//   return (uint64_t)vrsrad_n_u64(a, b, 63);
-// }
+uint64_t test_vrsrad_n_u64(uint64_t a, uint64_t b) {
+  return (uint64_t)vrsrad_n_u64(a, b, 63);
+
+  // CIR-LABEL:vrsrad_n_u64
+  // CIR: [[TMP0:%.*]] = cir.const #cir.int<63> : !s32i
+  // CIR: [[TMP1:%.*]] = cir.unary(minus, [[TMP0]]) : !s32i, !s32i
+  // CIR: [[TMP2:%.*]] = cir.cast(integral, [[TMP1]] : !s32i), !u64i
+  // CIR: [[TMP3:%.*]] = cir.llvm.intrinsic "aarch64.neon.urshl" {{.*}}, [[TMP2]] : (!u64i, !u64i) -> !u64i
+  // CIR: [[TMP4:%.*]] = cir.binop(add, {{.*}}, [[TMP3]]) : !u64i
+
+  // LLVM-LABEL: @test_vrsrad_n_u64(
+  // LLVM: [[TMP0:%.*]] = call i64 @llvm.aarch64.neon.urshl.i64(i64 %1, i64 -63)
+  // LLVM: [[TMP1:%.*]] = add i64 %0, [[TMP0]]
+  // LLVM: ret i64 [[TMP1]]
+}
 
 uint64x1_t test_vrsra_n_u64(uint64x1_t a, uint64x1_t b) {
   return vrsra_n_u64(a, b, 1);
