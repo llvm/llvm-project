@@ -788,6 +788,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
 }
 
 def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
+      MemoryEffects<[MemWrite]>,
       AllElementTypesMatch<["tensorDesc", "value", "result"]>,
       AllShapesMatch<["tensorDesc", "value", "result"]>]> {
   let summary = "Atomic ready-modify-write operation on the TensorDesc. ";
