@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
 
         std::vector<bool>* in  = &c1;
         std::vector<bool>* out = &c2;
-        for (auto _ : st) {
+        for ([[maybe_unused]] auto _ : st) {
           benchmark::DoNotOptimize(in);
           benchmark::DoNotOptimize(out);
           auto first  = Aligned ? in->begin() : in->begin() + 4;
