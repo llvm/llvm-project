@@ -283,7 +283,7 @@ LogicalResult LoadNdOp::verify() {
   }
 
   auto sgMap = tdescTy.getSGMapAttr();
-  // sg_map not present means IR is in VC mode. In this case value shape must
+  // sg_map not present means IR is in SIMD mode. In this case value shape must
   // match adjusted tensor descriptor shape.
   if (!sgMap)
     return valueShape == adjustedTdescShape
@@ -338,7 +338,7 @@ LogicalResult StoreNdOp::verify() {
   auto valueShape = getShapeOf(valTy);
 
   auto sgMap = dstTy.getSGMapAttr();
-  // sg_map not present means IR is in VC mode. In this case value shape must
+  // sg_map not present means IR is in SIMD mode. In this case value shape must
   // match adjusted tensor descriptor shape.
   if (!sgMap)
     return valueShape == tdescShape
@@ -514,7 +514,7 @@ LogicalResult LoadGatherOp::verify() {
   }
 
   auto sgMap = tdescTy.getSGMapAttr();
-  // In VC mode, sg_map is not present. In this case, value shape must match
+  // In SIMD mode, sg_map is not present. In this case, value shape must match
   // the tensor descriptor shape.
   if (!sgMap)
     return valueShape == tdescShape
@@ -569,7 +569,7 @@ LogicalResult StoreScatterOp::verify() {
   }
 
   auto sgMap = tdescTy.getSGMapAttr();
-  // In VC mode, sg_map is not present. In this case, value shape must match
+  // In SIMD mode, sg_map is not present. In this case, value shape must match
   // the tensor descriptor shape.
   if (!sgMap)
     return valueShape == tdescShape
@@ -629,7 +629,7 @@ LogicalResult DpasOp::verify() {
   auto sgMapB = getSgMapBAttr();
   auto sgMapC = getSgMapCAttr();
 
-  // If sg_maps are not present, then the operation is in VC mode.
+  // If sg_maps are not present, then the operation is in SIMD mode.
   if (!sgMapA && !sgMapB && !sgMapC) {
     if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resultRank != 2)
       return emitOpError(
