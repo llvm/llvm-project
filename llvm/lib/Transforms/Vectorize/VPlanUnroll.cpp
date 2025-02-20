@@ -373,6 +373,28 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
+    if (auto *Any = dyn_cast<VPInstruction>(&R);
+        Any && Any->getOpcode() == VPInstruction::AnyOf) {
+      VPValue *Res = Any;
+      VPRecipeBase *FirstOr = nullptr;
+      for (unsigned Part = 1; Part != UF; ++Part) {
+        auto *NewAny = new VPInstruction(
+            VPInstruction::AnyOf, {getValueForPart(Any->getOperand(0), Part)},
+            Any->getDebugLoc());
+        NewAny->insertAfter(Res->getDefiningRecipe());
+        auto *Or = new VPInstruction(Instruction::Or, {Res, NewAny},
+                                     Any->getDebugLoc());
+        Or->insertAfter(NewAny->getDefiningRecipe());
+        ToSkip.insert(Or);
+        if (Part == 1)
+          FirstOr = Or;
+        Res = Or;
+      }
+      Any->getVPSingleValue()->replaceAllUsesWith(Res);
+      FirstOr->setOperand(0, Any);
+      continue;
+    }
+
     auto *SingleDef = dyn_cast<VPSingleDefRecipe>(&R);
     if (SingleDef && vputils::isUniformAcrossVFsAndUFs(SingleDef)) {
       addUniformForAllParts(SingleDef);
