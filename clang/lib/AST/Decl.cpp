@@ -1764,6 +1764,10 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       }
     }
 
+    // Suppress transparent contexts like export or HLSLBufferDecl context
+    if (Ctx->isTransparentContext())
+      continue;
+
     // Skip non-named contexts such as linkage specifications and ExportDecls.
     const NamedDecl *ND = dyn_cast<NamedDecl>(Ctx);
     if (!ND)
@@ -5779,7 +5783,7 @@ HLSLBufferDecl::HLSLBufferDecl(DeclContext *DC, bool CBuffer,
                                SourceLocation IDLoc, SourceLocation LBrace)
     : NamedDecl(Decl::Kind::HLSLBuffer, DC, IDLoc, DeclarationName(ID)),
       DeclContext(Decl::Kind::HLSLBuffer), LBraceLoc(LBrace), KwLoc(KwLoc),
-      IsCBuffer(CBuffer) {}
+      IsCBuffer(CBuffer), HasValidPackoffset(false), LayoutStruct(nullptr) {}
 
 HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
                                        DeclContext *LexicalParent, bool CBuffer,
@@ -5807,6 +5811,12 @@ HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID) {
   return new (C, ID) HLSLBufferDecl(nullptr, false, SourceLocation(), nullptr,
                                     SourceLocation(), SourceLocation());
+}
+
+void HLSLBufferDecl::addLayoutStruct(CXXRecordDecl *LS) {
+  assert(LayoutStruct == nullptr && "layout struct has already been set");
+  LayoutStruct = LS;
+  addDecl(LS);
 }
 
 //===----------------------------------------------------------------------===//
