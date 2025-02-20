@@ -58,6 +58,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -596,13 +597,9 @@ static bool isGCSafepointPoll(Function &F) {
 /// polls and parseable call sites.  The main point of this function is to be
 /// an extension point for custom logic.
 static bool shouldRewriteFunction(Function &F) {
-  // TODO: This should check the GCStrategy
   if (F.hasGC()) {
-    const auto &FunctionGCName = F.getGC();
-    const StringRef StatepointExampleName("statepoint-example");
-    const StringRef CoreCLRName("coreclr");
-    return (StatepointExampleName == FunctionGCName) ||
-           (CoreCLRName == FunctionGCName);
+    const auto &GCStrategy = getGCStrategy(F.getGC());
+    return GCStrategy->useStatepoints();
   } else
     return false;
 }
