@@ -126,7 +126,7 @@ static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
   // and setting that stride to a cache stride.
   Type i16 = rewriter.getI16Type();
   Value stride;
-  if (chipset.majorVersion == 9 && chipset >= kGfx940 && cacheSwizzleStride) {
+  if (chipset.majorVersion == 9 && chipset >= kGfx942 && cacheSwizzleStride) {
     Value cacheStrideZext =
         rewriter.create<LLVM::ZExtOp>(loc, i16, cacheSwizzleStride);
     Value swizzleBit = rewriter.create<LLVM::ConstantOp>(
