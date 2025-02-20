@@ -6585,6 +6585,18 @@ void InitializationSequence::InitializeFrom(Sema &S,
       }
     }
 
+    if (S.getLangOpts().HLSL && Initializer && isa<ConstantArrayType>(DestAT)) {
+      QualType SrcType = Entity.getType();
+      if (SrcType->isArrayParameterType())
+        SrcType =
+            cast<ArrayParameterType>(SrcType)->getConstantArrayType(Context);
+      if (S.Context.hasSameUnqualifiedType(DestType, SrcType)) {
+        TryArrayCopy(S, Kind, Entity, Initializer, DestType, *this,
+                     TreatUnavailableAsInvalid);
+        return;
+      }
+    }
+
     // Some kinds of initialization permit an array to be initialized from
     // another array of the same type, and perform elementwise initialization.
     if (Initializer && isa<ConstantArrayType>(DestAT) &&

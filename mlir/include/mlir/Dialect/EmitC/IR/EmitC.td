@@ -23,6 +23,7 @@ include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
+include "mlir/IR/BuiltinAttributes.td"
 
 //===----------------------------------------------------------------------===//
 // EmitC op definitions
@@ -55,6 +56,52 @@ def CExpression : NativeOpTrait<"emitc::CExpression">;
 def IntegerIndexOrOpaqueType : Type<CPred<"emitc::isIntegerIndexOrOpaqueType($_self)">,
 "integer, index or opaque type supported by EmitC">;
 def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[EmitCFloatType, IntegerIndexOrOpaqueType]>;
+
+def EmitC_FileOp
+    : EmitC_Op<"file", [IsolatedFromAbove, NoRegionArguments, SymbolTable,
+                        OpAsmOpInterface]#GraphRegionNoTerminator.traits> {
+  let summary = "A file container operation";
+  let description = [{
+    A `file` represents a single C/C++ file.
+
+    `mlir-translate` ignores the body of all `emitc.file` ops
+    unless the `-file-id=id` flag is used. With that flag, all `emitc.file` ops
+    with matching id are emitted.
+
+    Example:
+
+    ```mlir
+    emitc.file "main" {
+      emitc.func @func_one() {
+        emitc.return
+      }
+    }
+    ```
+  }];
+
+  let arguments = (ins Builtin_StringAttr:$id);
+  let regions = (region SizedRegion<1>:$bodyRegion);
+
+  let assemblyFormat = "$id attr-dict-with-keyword $bodyRegion";
+  let builders = [OpBuilder<(ins CArg<"StringRef">:$id)>];
+  let extraClassDeclaration = [{
+    /// Construct a file op from the given location with a name.
+    static FileOp create(Location loc, StringRef name);
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
+  }];
+
+  // We need to ensure that the body region has a block;
+  // the auto-generated builders do not guarantee that.
+  let skipDefaultBuilders = 1;
+}
 
 def EmitC_AddOp : EmitC_BinaryOp<"add", [CExpression]> {
   let summary = "Addition operation";
@@ -1222,10 +1269,29 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     }
     #endif
     ```
+
+    If the `emitc.verbatim` op has operands, then the `value` is interpreted as
+    format string, where `{}` is a placeholder for an operand in their order.
+    For example, `emitc.verbatim "#pragma my src={} dst={}" %src, %dest : i32, i32`
+    would be emitted as `#pragma my src=a dst=b` if `%src` became `a` and
+    `%dest` became `b` in the C code.
+    `{{` in the format string is interpreted as a single `{` and doesn't introduce
+    a placeholder.
   }];
 
-  let arguments = (ins StrAttr:$value);
-  let assemblyFormat = "$value attr-dict";
+  let extraClassDeclaration = [{
+    FailureOr<SmallVector<::mlir::emitc::ReplacementItem>> parseFormatString();
+  }];
+
+  let arguments = (ins StrAttr:$value, Variadic<EmitCType>:$fmtArgs);
+
+  let builders = [OpBuilder<(ins "::mlir::StringAttr":$value),
+                            [{ build($_builder, $_state, value, {}); }]>];
+  let builders = [OpBuilder<(ins "::llvm::StringRef":$value),
+                            [{ build($_builder, $_state, value, {}); }]>];
+  let hasVerifier = 1;
+  let assemblyFormat =
+      "$value (`args` $fmtArgs^ `:` type($fmtArgs))? attr-dict";
 }
 
 def EmitC_AssignOp : EmitC_Op<"assign", []> {

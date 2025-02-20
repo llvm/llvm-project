@@ -5724,6 +5724,10 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
 
     auto CompareByBasicBlocks = [&](BasicBlock *BB1, BasicBlock *BB2) {
       assert(BB1 != BB2 && "Expected different basic blocks.");
+      if (!DT->isReachableFromEntry(BB1))
+        return false;
+      if (!DT->isReachableFromEntry(BB2))
+        return true;
       auto *NodeA = DT->getNode(BB1);
       auto *NodeB = DT->getNode(BB2);
       assert(NodeA && "Should only process reachable instructions");
@@ -12127,6 +12131,30 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
                  TE->getOpcode() != Instruction::ExtractElement) &&
                 count_if(TE->Scalars, IsaPred<ExtractElementInst>) <= Limit) ||
                (TE->hasState() && TE->getOpcode() == Instruction::PHI);
+      }))
+    return true;
+
+  // Do not vectorize small tree of phis only, if all vector phis are also
+  // gathered.
+  if (!ForReduction && SLPCostThreshold.getNumOccurrences() &&
+      VectorizableTree.size() <= Limit &&
+      all_of(VectorizableTree,
+             [&](const std::unique_ptr<TreeEntry> &TE) {
+               return (TE->isGather() &&
+                       (!TE->hasState() ||
+                        TE->getOpcode() != Instruction::ExtractElement) &&
+                       count_if(TE->Scalars, IsaPred<ExtractElementInst>) <=
+                           Limit) ||
+                      (TE->hasState() &&
+                       (TE->getOpcode() == Instruction::InsertElement ||
+                        (TE->getOpcode() == Instruction::PHI &&
+                         all_of(TE->Scalars, [&](Value *V) {
+                           return isa<PoisonValue>(V) || MustGather.contains(V);
+                         }))));
+             }) &&
+      any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return TE->State == TreeEntry::Vectorize &&
+               TE->getOpcode() == Instruction::PHI;
       }))
     return true;
 

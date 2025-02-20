@@ -3680,13 +3680,6 @@ public:
                                            FullySubstituted);
   }
 
-  ExprResult RebuildResolvedUnexpandedPackExpr(SourceLocation BeginLoc,
-                                               QualType T,
-                                               ArrayRef<Expr *> Exprs) {
-    return ResolvedUnexpandedPackExpr::Create(SemaRef.Context, BeginLoc, T,
-                                              Exprs);
-  }
-
   /// Build a new expression representing a call to a source location
   ///  builtin.
   ///
@@ -12723,7 +12716,7 @@ TreeTransform<Derived>::TransformDeclRefExpr(DeclRefExpr *E) {
   ValueDecl *ND
     = cast_or_null<ValueDecl>(getDerived().TransformDecl(E->getLocation(),
                                                          E->getDecl()));
-  if (!ND)
+  if (!ND || ND->isInvalidDecl())
     return ExprError();
 
   NamedDecl *Found = ND;
@@ -16181,24 +16174,6 @@ ExprResult
 TreeTransform<Derived>::TransformFunctionParmPackExpr(FunctionParmPackExpr *E) {
   // Default behavior is to do nothing with this transformation.
   return E;
-}
-
-template <typename Derived>
-ExprResult TreeTransform<Derived>::TransformResolvedUnexpandedPackExpr(
-    ResolvedUnexpandedPackExpr *E) {
-  bool ArgumentChanged = false;
-  SmallVector<Expr *, 12> NewExprs;
-  if (TransformExprs(E->getExprs().begin(), E->getNumExprs(),
-                     /*IsCall=*/false, NewExprs, &ArgumentChanged))
-    return ExprError();
-
-  if (!AlwaysRebuild() && !ArgumentChanged)
-    return E;
-
-  // NOTE: The type is just a superficial PackExpansionType
-  //       that needs no substitution.
-  return RebuildResolvedUnexpandedPackExpr(E->getBeginLoc(), E->getType(),
-                                           NewExprs);
 }
 
 template<typename Derived>

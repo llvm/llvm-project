@@ -2001,8 +2001,15 @@ static LogicalResult generateCopy(
   }
 
   SmallVector<AffineMap, 4> lbMaps(rank), ubMaps(rank);
-  for (unsigned i = 0; i < rank; ++i)
+  for (unsigned i = 0; i < rank; ++i) {
     region.getLowerAndUpperBound(i, lbMaps[i], ubMaps[i]);
+    if (lbMaps[i].getNumResults() == 0 || ubMaps[i].getNumResults() == 0) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Missing lower or upper bound for region along dimension: "
+                 << i << '\n');
+      return failure();
+    }
+  }
 
   const FlatAffineValueConstraints *cst = region.getConstraints();
   // 'regionSymbols' hold values that this memory region is symbolic/parametric

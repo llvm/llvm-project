@@ -65,13 +65,13 @@ private:
 /// Represents the EMUL and EEW of a MachineOperand.
 struct OperandInfo {
   // Represent as 1,2,4,8, ... and fractional indicator. This is because
-  // EMUL can take on values that don't map to RISCVII::VLMUL values exactly.
+  // EMUL can take on values that don't map to RISCVVType::VLMUL values exactly.
   // For example, a mask operand can have an EMUL less than MF8.
   std::optional<std::pair<unsigned, bool>> EMUL;
 
   unsigned Log2EEW;
 
-  OperandInfo(RISCVII::VLMUL EMUL, unsigned Log2EEW)
+  OperandInfo(RISCVVType::VLMUL EMUL, unsigned Log2EEW)
       : EMUL(RISCVVType::decodeVLMUL(EMUL)), Log2EEW(Log2EEW) {}
 
   OperandInfo(std::pair<unsigned, bool> EMUL, unsigned Log2EEW)
@@ -141,7 +141,7 @@ static raw_ostream &operator<<(raw_ostream &OS,
 /// SEW are from the TSFlags of MI.
 static std::pair<unsigned, bool>
 getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
-  RISCVII::VLMUL MIVLMUL = RISCVII::getLMul(MI.getDesc().TSFlags);
+  RISCVVType::VLMUL MIVLMUL = RISCVII::getLMul(MI.getDesc().TSFlags);
   auto [MILMUL, MILMULIsFractional] = RISCVVType::decodeVLMUL(MIVLMUL);
   unsigned MILog2SEW =
       MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
@@ -1092,6 +1092,10 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFWNMSAC_VF:
   case RISCV::VFWMACCBF16_VV:
   case RISCV::VFWMACCBF16_VF:
+  // Vector Floating-Point Square-Root Instruction
+  case RISCV::VFSQRT_V:
+  // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
+  case RISCV::VFRSQRT7_V:
   // Vector Floating-Point MIN/MAX Instructions
   case RISCV::VFMIN_VF:
   case RISCV::VFMIN_VV:
@@ -1311,9 +1315,24 @@ RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
 
 std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
   std::optional<MachineOperand> CommonVL;
-  for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
+  SmallSetVector<MachineOperand *, 8> Worklist;
+  for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg()))
+    Worklist.insert(&UserOp);
+
+  while (!Worklist.empty()) {
+    MachineOperand &UserOp = *Worklist.pop_back_val();
     const MachineInstr &UserMI = *UserOp.getParent();
     LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
+
+    if (UserMI.isCopy() && UserMI.getOperand(0).getReg().isVirtual() &&
+        UserMI.getOperand(0).getSubReg() == RISCV::NoSubRegister &&
+        UserMI.getOperand(1).getSubReg() == RISCV::NoSubRegister) {
+      LLVM_DEBUG(dbgs() << "    Peeking through uses of COPY\n");
+      for (auto &CopyUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
+        Worklist.insert(&CopyUse);
+      continue;
+    }
+
     if (mayReadPastVL(UserMI)) {
       LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
       return std::nullopt;
