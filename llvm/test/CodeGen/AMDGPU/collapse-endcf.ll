@@ -981,14 +981,14 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_movk_i32 s4, 0x207
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
-; GCN-NEXT:    s_mov_b32 s8, 0
 ; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0
 ; GCN-NEXT:    s_mov_b64 s[12:13], 0
+; GCN-NEXT:    s_mov_b64 s[8:9], 0
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_branch .LBB5_3
 ; GCN-NEXT:  .LBB5_1: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
-; GCN-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN-NEXT:    s_or_b64 exec, exec, s[16:17]
 ; GCN-NEXT:  .LBB5_2: ; %bb10
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[14:15]
@@ -1006,9 +1006,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:  ; %bb.4: ; %bb2
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GCN-NEXT:    s_mov_b32 s9, s8
-; GCN-NEXT:    s_mov_b32 s10, s8
-; GCN-NEXT:    s_mov_b32 s11, s8
+; GCN-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN-NEXT:    v_mov_b32_e32 v1, s9
 ; GCN-NEXT:    v_mov_b32_e32 v2, s10
@@ -1024,11 +1022,11 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s9
 ; GCN-NEXT:    v_mov_b32_e32 v2, s10
 ; GCN-NEXT:    v_mov_b32_e32 v3, s11
-; GCN-NEXT:    s_and_saveexec_b64 s[10:11], s[6:7]
+; GCN-NEXT:    s_and_saveexec_b64 s[16:17], s[6:7]
 ; GCN-NEXT:    s_cbranch_execz .LBB5_1
 ; GCN-NEXT:  ; %bb.6: ; %bb8
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
-; GCN-NEXT:    s_mov_b32 s9, s8
+; GCN-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN-NEXT:    v_mov_b32_e32 v1, s9
 ; GCN-NEXT:    v_mov_b32_e32 v2, s10
@@ -1111,11 +1109,9 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[6:7], v0, s6
 ; GCN-O0-NEXT:    v_writelane_b32 v6, s4, 8
 ; GCN-O0-NEXT:    v_writelane_b32 v6, s5, 9
-; GCN-O0-NEXT:    s_mov_b32 s4, 0
-; GCN-O0-NEXT:    s_mov_b32 s8, s4
-; GCN-O0-NEXT:    s_mov_b32 s9, s4
-; GCN-O0-NEXT:    s_mov_b32 s10, s4
-; GCN-O0-NEXT:    s_mov_b32 s11, s4
+; GCN-O0-NEXT:    s_mov_b64 s[4:5], 0
+; GCN-O0-NEXT:    s_mov_b64 s[8:9], s[4:5]
+; GCN-O0-NEXT:    s_mov_b64 s[10:11], s[4:5]
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s9
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, s10
@@ -1145,10 +1141,9 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_cmp_lt_f32_e64 s[6:7], v0, s4
-; GCN-O0-NEXT:    s_mov_b32 s8, s4
-; GCN-O0-NEXT:    s_mov_b32 s9, s4
-; GCN-O0-NEXT:    s_mov_b32 s10, s4
-; GCN-O0-NEXT:    s_mov_b32 s11, s4
+; GCN-O0-NEXT:    s_mov_b64 s[4:5], 0
+; GCN-O0-NEXT:    s_mov_b64 s[8:9], s[4:5]
+; GCN-O0-NEXT:    s_mov_b64 s[10:11], s[4:5]
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s9
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, s10
@@ -1168,17 +1163,9 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    s_cbranch_execz .LBB5_6
 ; GCN-O0-NEXT:  ; %bb.4: ; %bb8
 ; GCN-O0-NEXT:    ; in Loop: Header=BB5_1 Depth=1
-; GCN-O0-NEXT:    s_mov_b32 s10, 0
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4
-; GCN-O0-NEXT:    ; implicit-def: $sgpr5
-; GCN-O0-NEXT:    ; implicit-def: $sgpr9
-; GCN-O0-NEXT:    ; implicit-def: $sgpr5
-; GCN-O0-NEXT:    ; implicit-def: $sgpr8
-; GCN-O0-NEXT:    ; implicit-def: $sgpr5
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7
-; GCN-O0-NEXT:    s_mov_b32 s5, s10
-; GCN-O0-NEXT:    s_mov_b32 s6, s9
-; GCN-O0-NEXT:    s_mov_b32 s7, s8
+; GCN-O0-NEXT:    s_mov_b64 s[8:9], 0
+; GCN-O0-NEXT:    s_mov_b64 s[4:5], s[8:9]
+; GCN-O0-NEXT:    s_mov_b64 s[6:7], s[8:9]
 ; GCN-O0-NEXT:    s_waitcnt expcnt(1)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s5

@@ -1532,12 +1532,23 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
     TargetInstrInfo::RegSubRegPair CopyToVGPR;
     if (Def->isImm() &&
         TII->isInlineConstant(*Def, AMDGPU::OPERAND_REG_INLINE_C_INT32)) {
+      unsigned SubRegChannels = TRI->getNumChannelsFromSubReg(Defs[0].second);
       int64_t Imm = Def->getImm();
 
-      auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
-      BuildMI(MBB, CopyMI, DL, TII->get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), Tmp)
-          .addImm(Imm);
-      B.addReg(Tmp);
+      // Adding multiple immediates in case of 64 bit MOVs to agpr.
+      for (unsigned ImmIt = 0; ImmIt < SubRegChannels; ++ImmIt) {
+        auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
+        unsigned SubRegs =
+            SIRegisterInfo::getSubRegFromChannel(I * SubRegChannels + ImmIt);
+        BuildMI(MBB, CopyMI, DL, TII->get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), Tmp)
+            .addImm(Imm);
+        B.addReg(Tmp);
+        B.addImm(SubRegs);
+      }
+      // Avoid fallthrough that adds 'Defs[I].second' to B as we may
+      // technically be pulling the SubReg apart from sgpr64 to
+      // agpr32:agpr32.
+      continue;
     } else if (Def->isReg() && TRI->isAGPR(*MRI, Def->getReg())) {
       auto Src = getRegSubRegPair(*Def);
       Def->setIsKill(false);

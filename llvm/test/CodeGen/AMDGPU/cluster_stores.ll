@@ -446,19 +446,20 @@ define amdgpu_ps void @cluster_image_sample(<8 x i32> inreg %src, <4 x i32> inre
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v4, v0
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v5, v1
+; GFX11-NEXT:    v_mov_b32_e32 v6, 1.0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_dual_mov_b32 v6, 1.0 :: v_dual_add_f32 v11, 2.0, v5
-; GFX11-NEXT:    v_dual_add_f32 v9, 1.0, v5 :: v_dual_add_f32 v8, 1.0, v4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_add_f32 v10, 2.0, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_add_f32 v11, 2.0, v4
+; GFX11-NEXT:    v_dual_add_f32 v8, 1.0, v4 :: v_dual_add_f32 v9, 1.0, v5
+; GFX11-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_add_f32 v12, 2.0, v5
 ; GFX11-NEXT:    v_mov_b32_e32 v7, v6
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    image_sample_d v[2:5], [v8, v9, v2, v2, v[2:3]], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample_d v[6:9], [v10, v11, v6, v6, v[6:7]], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample_d v[2:5], [v8, v9, v10, v10, v[2:3]], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample_d v[6:9], [v11, v12, v6, v6, v[6:7]], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_add_f32_e32 v3, v3, v7
 ; GFX11-NEXT:    v_dual_add_f32 v5, v5, v9 :: v_dual_add_f32 v4, v4, v8
-; GFX11-NEXT:    v_dual_add_f32 v3, v3, v7 :: v_dual_add_f32 v2, v2, v6
+; GFX11-NEXT:    v_add_f32_e32 v2, v2, v6
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[12:19] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    s_endpgm
 entry:
