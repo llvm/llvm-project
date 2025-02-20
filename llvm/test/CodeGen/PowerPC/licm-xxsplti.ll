@@ -6,8 +6,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff --mcpu=pwr10 \
 ; RUN:   %s -o - 2>&1 | FileCheck --check-prefix=AIX32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc-ibn-linux --mcpu=pwr10 \
-; RUN:   %s -o - 2>&1 | FileCheck --check-prefix=LINUX %s
+; RUN: llc -verify-machineinstrs -mtriple powerpc64le-unknown-linux-gnu --mcpu=pwr10 \
+; RUN:   %s -o - 2>&1 | FileCheck --check-prefix=LINUX64LE %s
 
 define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef %_a, ptr noalias nocapture %In_a, ptr noalias nocapture %n) {
 entry:
@@ -144,40 +144,41 @@ for.body:
 ; AIX64-NEXT:   stfiwx 0, 7, 11
 ; AIX64-NEXT:   bdnz L..BB0_3
 
-; LINUX:      _Z3fooPfS_Pi:                           # @_Z3fooPfS_Pi
-; LINUX-NEXT: .Lfunc_begin0:
-; LINUX-NEXT:   .cfi_startproc
-; LINUX-NEXT: # %bb.0:                                # %entry
-; LINUX-NEXT:   lwz 5, 0(5)
-; LINUX-NEXT:   cmpwi   5, 1
-; LINUX-NEXT:   bltlr   0
-; LINUX-NEXT: # %bb.1:                                # %for.body.preheader
-; LINUX-NEXT:   li 6, 0
-; LINUX-NEXT:   beq     0, .LBB0_4
-; LINUX-NEXT: # %bb.2:                                # %for.body.preheader.new
-; LINUX-NEXT:   addi 12, 4, -8
-; LINUX-NEXT:   addi 9, 3, -8
-; LINUX-NEXT:   rlwinm 7, 5, 0, 1, 30
-; LINUX-NEXT:   li 8, 0
-; LINUX-NEXT:   li 10, 8
-; LINUX-NEXT:   li 11, 12
-; LINUX-NEXT:   .p2align        4
-; LINUX-NEXT: .LBB0_3:                                # %for.body
-; LINUX-NEXT:                                         # =>This Inner Loop Header: Depth=1
-; LINUX-NEXT:   lxvwsx 0, 12, 10
-; LINUX-NEXT:   xxspltib 1, 6
-; LINUX-NEXT:   lxvwsx 2, 12, 11
-; LINUX-NEXT:   addic 6, 6, 2
-; LINUX-NEXT:   addi 12, 12, 8
-; LINUX-NEXT:   addze 8, 8
-; LINUX-NEXT:   xor 0, 6, 7
-; LINUX-NEXT:   or. 0, 0, 8
-; LINUX-NEXT:   xxland 0, 0, 1
-; LINUX-NEXT:   xxland 1, 2, 1
-; LINUX-NEXT:   xscvspdpn 0, 0
-; LINUX-NEXT:   stfsu 0, 8(9)
-; LINUX-NEXT:   xscvspdpn 0, 1
-; LINUX-NEXT:   stfs 0, 4(9)
-; LINUX-NEXT:   bne     0, .LBB0_3
-
-
+; LINUX64LE:      _Z3fooPfS_Pi:                           # @_Z3fooPfS_Pi
+; LINUX64LE-NEXT: .Lfunc_begin0:
+; LINUX64LE-NEXT:       .cfi_startproc
+; LINUX64LE-NEXT: # %bb.0:                                # %entry
+; LINUX64LE-NEXT:       lwz 5, 0(5)
+; LINUX64LE-NEXT:       cmpwi   5, 1
+; LINUX64LE-NEXT:       bltlr   0
+; LINUX64LE-NEXT: # %bb.1:                                # %for.body.preheader
+; LINUX64LE-NEXT:       li 6, 0
+; LINUX64LE-NEXT:       cmplwi  5, 1
+; LINUX64LE-NEXT:       beq     0, .LBB0_4
+; LINUX64LE-NEXT: # %bb.2:                                # %for.body.preheader.new
+; LINUX64LE-NEXT:       rlwinm 6, 5, 0, 1, 30
+; LINUX64LE-NEXT:       addi 8, 4, -8
+; LINUX64LE-NEXT:       addi 7, 3, -8
+; LINUX64LE-NEXT:       li 9, 8
+; LINUX64LE-NEXT:       li 10, 12
+; LINUX64LE-NEXT:       li 11, 4
+; LINUX64LE-NEXT:       addi 6, 6, -2
+; LINUX64LE-NEXT:       rldicl 6, 6, 63, 1
+; LINUX64LE-NEXT:       addi 6, 6, 1
+; LINUX64LE-NEXT:       mtctr 6
+; LINUX64LE-NEXT:       li 6, 0
+; LINUX64LE-NEXT:       .p2align        4
+; LINUX64LE-NEXT: .LBB0_3:                                # %for.body
+; LINUX64LE-NEXT:                                         # =>This Inner Loop Header: Depth=1
+; LINUX64LE-NEXT:       lxvwsx 0, 8, 9
+; LINUX64LE-NEXT:       xxspltib 1, 6
+; LINUX64LE-NEXT:       addi 6, 6, 2
+; LINUX64LE-NEXT:       xxland 0, 0, 1
+; LINUX64LE-NEXT:       xxsldwi 0, 0, 0, 3
+; LINUX64LE-NEXT:       xscvspdpn 0, 0
+; LINUX64LE-NEXT:       stfsu 0, 8(7)
+; LINUX64LE-NEXT:       lxvwsx 0, 8, 10
+; LINUX64LE-NEXT:       addi 8, 8, 8
+; LINUX64LE-NEXT:       xxland 0, 0, 1
+; LINUX64LE-NEXT:       stxvrwx 0, 7, 11
+; LINUX64LE-NEXT:       bdnz .LBB0_3
