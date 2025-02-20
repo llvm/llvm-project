@@ -4641,11 +4641,25 @@ define <32 x i8> @shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_
 ; AVX512VLBW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512VLBW-NEXT:    retq
 ;
-; AVX512VLVBMI-LABEL: shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
-; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,16,16,16,16,16,16,16,16]
-; AVX512VLVBMI-NEXT:    vpermt2b %xmm1, %xmm2, %xmm0
-; AVX512VLVBMI-NEXT:    retq
+; AVX512VLVBMI-SLOW-LABEL: shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; AVX512VLVBMI-SLOW:       # %bb.0:
+; AVX512VLVBMI-SLOW-NEXT:    vpbroadcastb %xmm1, %xmm1
+; AVX512VLVBMI-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,15,15,15,15,15,15,15,u,u,u,u,u,u,u,u]
+; AVX512VLVBMI-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512VLVBMI-SLOW-NEXT:    retq
+;
+; AVX512VLVBMI-FAST-ALL-LABEL: shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; AVX512VLVBMI-FAST-ALL:       # %bb.0:
+; AVX512VLVBMI-FAST-ALL-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,16,16,16,16,16,16,16,16]
+; AVX512VLVBMI-FAST-ALL-NEXT:    vpermt2b %xmm1, %xmm2, %xmm0
+; AVX512VLVBMI-FAST-ALL-NEXT:    retq
+;
+; AVX512VLVBMI-FAST-PERLANE-LABEL: shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; AVX512VLVBMI-FAST-PERLANE:       # %bb.0:
+; AVX512VLVBMI-FAST-PERLANE-NEXT:    vpbroadcastb %xmm1, %xmm1
+; AVX512VLVBMI-FAST-PERLANE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,15,15,15,15,15,15,15,u,u,u,u,u,u,u,u]
+; AVX512VLVBMI-FAST-PERLANE-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512VLVBMI-FAST-PERLANE-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v32i8_15_15_15_15_15_15_15_15_32_32_32_32_32_32_32_32_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
 ; XOP:       # %bb.0:

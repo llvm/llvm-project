@@ -6128,10 +6128,26 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     SDValue Sub = N.getOperand(1);
     EVT SubVT = Sub.getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
+    uint64_t InsertIdx = N.getConstantOperandVal(2);
+    // Handle CONCAT(SUB0, SUB1).
+    // Limit this to vXi64 vector cases to make the most of cross lane shuffles.
+    if (Depth > 0 && InsertIdx == NumSubElts && NumElts == (2 * NumSubElts) &&
+        NumBitsPerElt == 64 && Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        Src.getOperand(0).isUndef() &&
+        Src.getOperand(1).getValueType() == SubVT &&
+        Src.getConstantOperandVal(2) == 0 &&
+        SDNode::areOnlyUsersOf({N.getNode(), Src.getNode()}, Sub.getNode())) {
+      for (int i = 0; i != (int)NumSubElts; ++i)
+        Mask.push_back(i);
+      for (int i = 0; i != (int)NumSubElts; ++i)
+        Mask.push_back(i + NumElts);
+      Ops.push_back(Src.getOperand(1));
+      Ops.push_back(Sub);
+      return true;
+    }
     if (!N->isOnlyUserOf(Sub.getNode()))
       return false;
     SDValue SubBC = peekThroughBitcasts(Sub);
-    uint64_t InsertIdx = N.getConstantOperandVal(2);
     // Handle INSERT_SUBVECTOR(SRC0, EXTRACT_SUBVECTOR(SRC1)).
     if (SubBC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         SubBC.getOperand(0).getValueSizeInBits() == NumSizeInBits) {
@@ -6152,21 +6168,6 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       if (!SrcIsUndef)
         Ops.push_back(Src);
       Ops.push_back(SubBCSrc);
-      return true;
-    }
-    // Handle CONCAT(SUB0, SUB1).
-    // Limit this to vXi64 vector cases to make the most of cross lane shuffles.
-    if (Depth > 0 && InsertIdx == NumSubElts && NumElts == (2 * NumSubElts) &&
-        NumBitsPerElt == 64 && Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
-        Src.getOperand(0).isUndef() &&
-        Src.getOperand(1).getValueType() == SubVT &&
-        Src.getConstantOperandVal(2) == 0) {
-      for (int i = 0; i != (int)NumSubElts; ++i)
-        Mask.push_back(i);
-      for (int i = 0; i != (int)NumSubElts; ++i)
-        Mask.push_back(i + NumElts);
-      Ops.push_back(Src.getOperand(1));
-      Ops.push_back(Sub);
       return true;
     }
     // Handle INSERT_SUBVECTOR(SRC0, SHUFFLE(SRC1)).
@@ -40064,8 +40065,12 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   if (Depth < 1)
     return SDValue();
 
-  bool HasVariableMask = llvm::any_of(SrcNodes, [](const SDNode *N) {
+  int NumVariableMasks = llvm::count_if(SrcNodes, [](const SDNode *N) {
     return isTargetShuffleVariableMask(N->getOpcode());
+  });
+  bool HasSlowVariableMask = llvm::any_of(SrcNodes, [](const SDNode *N) {
+    return (N->getOpcode() == X86ISD::VPERMV3 ||
+            N->getOpcode() == X86ISD::VPERMV);
   });
 
   // Depth threshold above which we can efficiently use variable mask shuffles.
@@ -40074,13 +40079,15 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   int VariablePerLaneShuffleDepth =
       Subtarget.hasFastVariablePerLaneShuffle() ? 1 : 2;
   AllowVariableCrossLaneMask &=
-      (Depth >= VariableCrossLaneShuffleDepth) || HasVariableMask;
+      (Depth >= VariableCrossLaneShuffleDepth) || NumVariableMasks;
   AllowVariablePerLaneMask &=
-      (Depth >= VariablePerLaneShuffleDepth) || HasVariableMask;
-  // VPERMI2W/VPERMI2B are 3 uops on Skylake and Icelake so we require a
+      (Depth >= VariablePerLaneShuffleDepth) || NumVariableMasks;
+  // VPERM2W/VPERM2B are 3 uops on Skylake and Icelake so we require a
   // higher depth before combining them.
+  int BWIVPERMV3ShuffleDepth =
+      VariableCrossLaneShuffleDepth + 2 - NumVariableMasks;
   bool AllowBWIVPERMV3 =
-      (Depth >= (VariableCrossLaneShuffleDepth + 2) || HasVariableMask);
+      (Depth >= BWIVPERMV3ShuffleDepth || HasSlowVariableMask);
 
   // If root was a VPERMV3 node, always allow a variable shuffle.
   if (Root.getOpcode() == X86ISD::VPERMV3)
