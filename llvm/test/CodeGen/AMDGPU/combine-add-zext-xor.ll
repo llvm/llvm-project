@@ -39,11 +39,10 @@ define i32 @combine_add_zext_xor() {
 ; GFX1100-NEXT:  .LBB0_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GFX1100-NEXT:    s_xor_b32 s0, s0, -1
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0xfffffbe6, v1
 ; GFX1100-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_add_nc_u32_e32 v2, v1, v0
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB0_4
 ; GFX1100-NEXT:  .LBB0_2: ; %.a
@@ -119,11 +118,10 @@ define i32 @combine_sub_zext_xor() {
 ; GFX1100-NEXT:  .LBB1_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GFX1100-NEXT:    s_xor_b32 s0, s0, -1
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0xfffffbe6, v1
 ; GFX1100-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_sub_nc_u32_e32 v2, v1, v0
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB1_4
 ; GFX1100-NEXT:  .LBB1_2: ; %.a

@@ -2782,7 +2782,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX11-NEXT:    v_add_co_u32 v0, s1, v0, s1
 ; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    s_addc_u32 s0, s0, s7
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX11-NEXT:    s_mul_i32 s7, s5, s0
 ; GFX11-NEXT:    s_mul_hi_u32 s12, s5, s1
@@ -2807,7 +2807,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX11-NEXT:    v_add_co_u32 v0, s1, v0, s1
 ; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    s_addc_u32 s0, s0, s5
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX11-NEXT:    s_mul_i32 s6, s10, s0
 ; GFX11-NEXT:    s_mul_hi_u32 s5, s10, s0
