@@ -669,7 +669,8 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Make sure there's a valid return reg, even for functions returning void.
   if (!ResVReg.isValid())
     ResVReg = MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
-  SPIRVType *RetType = GR->assignTypeToVReg(OrigRetTy, ResVReg, MIRBuilder);
+  SPIRVType *RetType = GR->assignTypeToVReg(
+      OrigRetTy, ResVReg, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
 
   // Emit the call instruction and its args.
   auto MIB = MIRBuilder.buildInstr(CallOp)

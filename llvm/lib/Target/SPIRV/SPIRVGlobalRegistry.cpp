@@ -244,7 +244,8 @@ SPIRVGlobalRegistry::getOrCreateConstIntReg(uint64_t Val, SPIRVType *SpvType,
         CurMF->getRegInfo().createGenericVirtualRegister(LLT::scalar(BitWidth));
     CurMF->getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
     if (MIRBuilder)
-      assignTypeToVReg(LLVMIntTy, Res, *MIRBuilder);
+      assignTypeToVReg(LLVMIntTy, Res, *MIRBuilder,
+                       SPIRV::AccessQualifier::ReadWrite, true);
     else
       assignIntTypeToVReg(BitWidth, Res, *I, *TII);
     DT.add(CI, CurMF, Res);
@@ -271,7 +272,8 @@ SPIRVGlobalRegistry::getOrCreateConstFloatReg(APFloat Val, SPIRVType *SpvType,
         CurMF->getRegInfo().createGenericVirtualRegister(LLT::scalar(BitWidth));
     CurMF->getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
     if (MIRBuilder)
-      assignTypeToVReg(LLVMFloatTy, Res, *MIRBuilder);
+      assignTypeToVReg(LLVMFloatTy, Res, *MIRBuilder,
+                       SPIRV::AccessQualifier::ReadWrite, true);
     else
       assignFloatTypeToVReg(BitWidth, Res, *I, *TII);
     DT.add(CI, CurMF, Res);
@@ -878,12 +880,13 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeOpaque(const StructType *Ty,
   });
 }
 
-SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
-                                                MachineIRBuilder &MIRBuilder,
-                                                bool EmitIR) {
+SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(
+    const StructType *Ty, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccQual, bool EmitIR) {
   SmallVector<Register, 4> FieldTypes;
   for (const auto &Elem : Ty->elements()) {
-    SPIRVType *ElemTy = findSPIRVType(toTypedPointer(Elem), MIRBuilder);
+    SPIRVType *ElemTy =
+        findSPIRVType(toTypedPointer(Elem), MIRBuilder, AccQual, EmitIR);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
            "Invalid struct element type");
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
@@ -1017,26 +1020,27 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
   if (Ty->isVoidTy())
     return getOpTypeVoid(MIRBuilder);
   if (Ty->isVectorTy()) {
-    SPIRVType *El =
-        findSPIRVType(cast<FixedVectorType>(Ty)->getElementType(), MIRBuilder);
+    SPIRVType *El = findSPIRVType(cast<FixedVectorType>(Ty)->getElementType(),
+                                  MIRBuilder, AccQual, EmitIR);
     return getOpTypeVector(cast<FixedVectorType>(Ty)->getNumElements(), El,
                            MIRBuilder);
   }
   if (Ty->isArrayTy()) {
-    SPIRVType *El = findSPIRVType(Ty->getArrayElementType(), MIRBuilder);
+    SPIRVType *El =
+        findSPIRVType(Ty->getArrayElementType(), MIRBuilder, AccQual, EmitIR);
     return getOpTypeArray(Ty->getArrayNumElements(), El, MIRBuilder, EmitIR);
   }
   if (auto SType = dyn_cast<StructType>(Ty)) {
     if (SType->isOpaque())
       return getOpTypeOpaque(SType, MIRBuilder);
-    return getOpTypeStruct(SType, MIRBuilder, EmitIR);
+    return getOpTypeStruct(SType, MIRBuilder, AccQual, EmitIR);
   }
   if (auto FType = dyn_cast<FunctionType>(Ty)) {
-    SPIRVType *RetTy = findSPIRVType(FType->getReturnType(), MIRBuilder);
+    SPIRVType *RetTy =
+        findSPIRVType(FType->getReturnType(), MIRBuilder, AccQual, EmitIR);
     SmallVector<SPIRVType *, 4> ParamTypes;
-    for (const auto &t : FType->params()) {
-      ParamTypes.push_back(findSPIRVType(t, MIRBuilder));
-    }
+    for (const auto &ParamTy : FType->params())
+      ParamTypes.push_back(findSPIRVType(ParamTy, MIRBuilder, AccQual, EmitIR));
     return getOpTypeFunction(RetTy, ParamTypes, MIRBuilder);
   }
 

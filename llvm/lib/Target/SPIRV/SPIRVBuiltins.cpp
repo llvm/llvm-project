@@ -476,8 +476,9 @@ static bool buildSelectInst(MachineIRBuilder &MIRBuilder,
   if (ReturnType->getOpcode() == SPIRV::OpTypeVector) {
     unsigned Bits = GR->getScalarOrVectorBitWidth(ReturnType);
     uint64_t AllOnes = APInt::getAllOnes(Bits).getZExtValue();
-    TrueConst = GR->getOrCreateConsIntVector(AllOnes, MIRBuilder, ReturnType);
-    FalseConst = GR->getOrCreateConsIntVector(0, MIRBuilder, ReturnType);
+    TrueConst =
+        GR->getOrCreateConsIntVector(AllOnes, MIRBuilder, ReturnType, true);
+    FalseConst = GR->getOrCreateConsIntVector(0, MIRBuilder, ReturnType, true);
   } else {
     TrueConst = GR->buildConstantInt(1, MIRBuilder, ReturnType);
     FalseConst = GR->buildConstantInt(0, MIRBuilder, ReturnType);
@@ -1457,7 +1458,7 @@ static bool genWorkgroupQuery(const SPIRV::IncomingCall *Call,
       ToTruncate = DefaultReg;
     }
     auto NewRegister =
-        GR->buildConstantInt(DefaultValue, MIRBuilder, PointerSizeType);
+        GR->buildConstantInt(DefaultValue, MIRBuilder, PointerSizeType, true);
     MIRBuilder.buildCopy(DefaultReg, NewRegister);
   } else { // If it could be in range, we need to load from the given builtin.
     auto Vec3Ty =
@@ -1492,13 +1493,14 @@ static bool genWorkgroupQuery(const SPIRV::IncomingCall *Call,
       GR->assignSPIRVTypeToVReg(BoolType, CompareRegister, MIRBuilder.getMF());
 
       // Use G_ICMP to check if idxVReg < 3.
-      MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CompareRegister, IndexRegister,
-                           GR->buildConstantInt(3, MIRBuilder, IndexType));
+      MIRBuilder.buildICmp(
+          CmpInst::ICMP_ULT, CompareRegister, IndexRegister,
+          GR->buildConstantInt(3, MIRBuilder, IndexType, true));
 
       // Get constant for the default value (0 or 1 depending on which
       // function).
       Register DefaultRegister =
-          GR->buildConstantInt(DefaultValue, MIRBuilder, PointerSizeType);
+          GR->buildConstantInt(DefaultValue, MIRBuilder, PointerSizeType, true);
 
       // Get a register for the selection result (possibly a new temporary one).
       Register SelectionResult = Call->ReturnRegister;
@@ -2277,7 +2279,7 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       Const = GR->getOrCreateConstIntArray(0, Size, *MIRBuilder.getInsertPt(),
                                            SpvFieldTy, *ST.getInstrInfo());
     } else {
-      Const = GR->buildConstantInt(0, MIRBuilder, SpvTy);
+      Const = GR->buildConstantInt(0, MIRBuilder, SpvTy, true);
     }
     if (!LocalWorkSize.isValid())
       LocalWorkSize = Const;
