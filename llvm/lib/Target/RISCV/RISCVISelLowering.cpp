@@ -4560,6 +4560,50 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
   return ((EvenSrc % HalfNumElts) == 0) && ((OddSrc % HalfNumElts) == 0);
 }
 
+/// Is this mask representing a masked combination of two slides?
+static bool isMaskedSlidePair(ArrayRef<int> Mask,
+                              std::pair<int, int> SrcInfo[2]) {
+  int NumElts = Mask.size();
+  int SignalValue = NumElts * 2;
+  SrcInfo[0] = {-1, SignalValue};
+  SrcInfo[1] = {-1, SignalValue};
+  for (unsigned i = 0; i != Mask.size(); ++i) {
+    int M = Mask[i];
+    if (M < 0)
+      continue;
+    int Src = M >= (int)NumElts;
+    int Diff = (int)i - (M % NumElts);
+    bool Match = false;
+    for (int j = 0; j < 2; j++) {
+      if (SrcInfo[j].first == -1) {
+        assert(SrcInfo[j].second == SignalValue);
+        SrcInfo[j].first = Src;
+        SrcInfo[j].second = Diff;
+      }
+      if (SrcInfo[j].first == Src && SrcInfo[j].second == Diff) {
+        Match = true;
+        break;
+      }
+    }
+    if (!Match)
+      return false;
+  }
+
+  // Avoid matching unconditional slides for now.  This is reasonably
+  // covered by existing matchers.
+  if (SrcInfo[0].first == -1 || SrcInfo[1].first == -1)
+    return false;
+  // Avoid matching vselect idioms
+  if (SrcInfo[0].second == 0 && SrcInfo[1].second == 0)
+    return false;
+  // Prefer vslideup as the second instruction, and identity
+  // only as the initial instruction.
+  if ((SrcInfo[0].second > 0 && SrcInfo[1].second < 0) ||
+      SrcInfo[1].second == 0)
+    std::swap(SrcInfo[0], SrcInfo[1]);
+  return true;
+}
+
 /// Match shuffles that concatenate two vectors, rotate the concatenation,
 /// and then extract the original number of elements from the rotated result.
 /// This is equivalent to vector.splice or X86's PALIGNR instruction. The
@@ -5429,7 +5473,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
-  auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  // Store the return value in a single variable instead of structured bindings
+  // so that we can pass it to GetSlide below, which cannot capture structured
+  // bindings until C++20.
+  auto TrueMaskVL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [TrueMask, VL] = TrueMaskVL;
 
   if (SVN->isSplat()) {
     const int Lane = SVN->getSplatIndex();
@@ -5648,6 +5696,76 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
 
+  // Recognize a pattern which can handled via a pair of vslideup/vslidedown
+  // instructions (in any combination) with masking on the second instruction.
+  // Avoid matching bit rotates as slide pairs.  This is a performance
+  // heuristic, not a functional check.
+  // TODO: Generalize this slightly to allow single instruction cases, and
+  // prune the logic above which is mostly covered by this already.
+  std::pair<int, int> SrcInfo[2];
+  unsigned RotateAmt;
+  MVT RotateVT;
+  if (isMaskedSlidePair(Mask, SrcInfo) &&
+      !isLegalBitRotate(Mask, VT, Subtarget, RotateVT, RotateAmt)) {
+    SDValue Sources[2];
+    auto GetSourceFor = [&](const std::pair<int, int> &Info) {
+      int SrcIdx = Info.first;
+      assert(SrcIdx == 0 || SrcIdx == 1);
+      SDValue &Src = Sources[SrcIdx];
+      if (!Src) {
+        SDValue SrcV = SrcIdx == 0 ? V1 : V2;
+        Src = convertToScalableVector(ContainerVT, SrcV, DAG, Subtarget);
+      }
+      return Src;
+    };
+    auto GetSlide = [&](const std::pair<int, int> &Src, SDValue Mask,
+                        SDValue Passthru) {
+      auto [TrueMask, VL] = TrueMaskVL;
+      SDValue SrcV = GetSourceFor(Src);
+      int SlideAmt = Src.second;
+      if (SlideAmt == 0) {
+        // Should never be second operation
+        assert(Mask == TrueMask);
+        return SrcV;
+      }
+      if (SlideAmt < 0)
+        return getVSlidedown(DAG, Subtarget, DL, ContainerVT, Passthru, SrcV,
+                             DAG.getConstant(-SlideAmt, DL, XLenVT), Mask, VL,
+                             RISCVVType::TAIL_AGNOSTIC);
+      return getVSlideup(DAG, Subtarget, DL, ContainerVT, Passthru, SrcV,
+                         DAG.getConstant(SlideAmt, DL, XLenVT), Mask, VL,
+                         RISCVVType::TAIL_AGNOSTIC);
+    };
+
+    // Build the mask.  Note that vslideup unconditionally preserves elements
+    // below the slide amount in the destination, and thus those elements are
+    // undefined in the mask.  If the mask ends up all true (or undef), it
+    // will be folded away by general logic.
+    SmallVector<SDValue> MaskVals;
+    for (unsigned i = 0; i != Mask.size(); ++i) {
+      int M = Mask[i];
+      if (M < 0 || (SrcInfo[1].second > 0 && i < (unsigned)SrcInfo[1].second)) {
+        MaskVals.push_back(DAG.getUNDEF(XLenVT));
+        continue;
+      }
+      int Src = M >= (int)NumElts;
+      int Diff = (int)i - (M % NumElts);
+      bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
+      assert(C ^ (Src == SrcInfo[0].first && Diff == SrcInfo[0].second) &&
+             "Must match exactly one of the two slides");
+      MaskVals.push_back(DAG.getConstant(C, DL, XLenVT));
+    }
+    assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+    SDValue SelectMask = convertToScalableVector(
+        ContainerVT.changeVectorElementType(MVT::i1),
+        DAG.getBuildVector(MaskVT, DL, MaskVals), DAG, Subtarget);
+
+    SDValue Res = DAG.getUNDEF(ContainerVT);
+    Res = GetSlide(SrcInfo[0], TrueMask, Res);
+    Res = GetSlide(SrcInfo[1], SelectMask, Res);
+    return convertFromScalableVector(VT, Res, DAG, Subtarget);
+  }
 
   // Handle any remaining single source shuffles
   assert(!V1.isUndef() && "Unexpected shuffle canonicalization");
@@ -8961,6 +9079,10 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
   if (VecVT.isScalableVector()) {
     SDValue SplatZero = DAG.getConstant(0, DL, VecVT);
     SDValue SplatTrueVal = DAG.getSignedConstant(ExtTrueVal, DL, VecVT);
+    if (Src.getOpcode() == ISD::XOR &&
+        ISD::isConstantSplatVectorAllOnes(Src.getOperand(1).getNode()))
+      return DAG.getNode(ISD::VSELECT, DL, VecVT, Src.getOperand(0), SplatZero,
+                         SplatTrueVal);
     return DAG.getNode(ISD::VSELECT, DL, VecVT, Src, SplatTrueVal, SplatZero);
   }
 
@@ -8975,6 +9097,20 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
   MVT XLenVT = Subtarget.getXLenVT();
   SDValue SplatZero = DAG.getConstant(0, DL, XLenVT);
   SDValue SplatTrueVal = DAG.getSignedConstant(ExtTrueVal, DL, XLenVT);
+
+  if (Src.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+    SDValue Xor = Src.getOperand(0);
+    if (Xor.getOpcode() == RISCVISD::VMXOR_VL) {
+      SDValue ScalableOnes = Xor.getOperand(1);
+      if (ScalableOnes.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          ScalableOnes.getOperand(0).isUndef() &&
+          ISD::isConstantSplatVectorAllOnes(
+              ScalableOnes.getOperand(1).getNode())) {
+        CC = Xor.getOperand(0);
+        std::swap(SplatZero, SplatTrueVal);
+      }
+    }
+  }
 
   SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
                           DAG.getUNDEF(ContainerVT), SplatZero, VL);

@@ -36,7 +36,6 @@ set(LIBUNWIND_HEADERS
     AddressSpace.hpp
     assembly.h
     CompactUnwinder.hpp
-    cet_unwind.h
     config.h
     dwarf2.h
     DwarfInstructions.hpp
@@ -46,6 +45,7 @@ set(LIBUNWIND_HEADERS
     libunwind_ext.h
     Registers.hpp
     RWMutex.hpp
+    shadow_stack_unwind.h
     Unwind-EHABI.h
     UnwindCursor.hpp
     ../include/libunwind.h

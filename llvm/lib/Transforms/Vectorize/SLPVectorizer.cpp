@@ -5985,6 +5985,8 @@ static void combineOrders(MutableArrayRef<unsigned> Order,
 bool BoUpSLP::isProfitableToReorder() const {
   constexpr unsigned TinyVF = 2;
   constexpr unsigned TinyTree = 10;
+  constexpr unsigned PhiOpsLimit = 12;
+  constexpr unsigned GatherLoadsLimit = 2;
   if (VectorizableTree.size() <= TinyTree)
     return true;
   if (VectorizableTree.front()->hasState() &&
@@ -5995,8 +5997,6 @@ bool BoUpSLP::isProfitableToReorder() const {
         (VectorizableTree.front()->getOpcode() == Instruction::PtrToInt ||
          VectorizableTree.front()->getOpcode() == Instruction::ICmp))) &&
       VectorizableTree.front()->ReorderIndices.empty()) {
-    constexpr unsigned PhiOpsLimit = 12;
-    constexpr unsigned GatherLoadsLimit = 2;
     // Check if the tree has only single store and single (unordered) load node,
     // other nodes are phis or geps/binops, combined with phis, and/orsingle
     // gather load node
