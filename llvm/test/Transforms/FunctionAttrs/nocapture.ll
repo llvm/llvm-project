@@ -791,7 +791,7 @@ define i1 @captureICmpWrongPred(ptr %x) {
 define i1 @captureICmpWrongPredDereferenceableOrNull(ptr dereferenceable_or_null(1) %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define noundef i1 @captureICmpWrongPredDereferenceableOrNull
-; FNATTRS-SAME: (ptr readnone captures(none) dereferenceable_or_null(1) [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone dereferenceable_or_null(1) [[X:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
 ; FNATTRS-NEXT:    ret i1 [[TMP1]]
 ;
