@@ -142,6 +142,11 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   return false;
 }
 
+// Merge two adjacent load/store instructions into a paired instruction
+// (LDP/SDP/SWP/LWP) if the effective address is 16-byte aligned. This function
+// selects the appropriate paired opcode, verifies that the memory operand (or
+// fixed-stack slot) is 16-byte aligned, and checks that the offset is valid. If
+// all conditions are met, it builds and inserts the paired instruction.
 bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     MachineBasicBlock::iterator First, MachineBasicBlock::iterator Second) {
   unsigned PairOpc;
@@ -166,16 +171,22 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
   MachineFunction *MF = First->getMF();
   const MachineMemOperand *MMO = *First->memoperands_begin();
   Align MMOAlign = MMO->getAlign();
-  if (const PseudoSourceValue *Source = MMO->getPseudoValue())
+
+  // The stack pointer shall be aligned to a 128-bit per ABI.
+  if (const PseudoSourceValue *Source = MMO->getPseudoValue()) {
     if (Source->kind() == PseudoSourceValue::FixedStack)
       MMOAlign = MF->getSubtarget().getFrameLowering()->getStackAlign();
+  }
 
-  if (MMOAlign < Align(MMO->getSize().getValue() * 2))
+  // Only pair if alignment is exactly 16 bytes.
+  if (MMOAlign != 16)
     return false;
+
   int64_t Offset = First->getOperand(2).getImm();
   if (!isUInt<7>(Offset) ||
       !isAligned(Align(MMO->getSize().getValue()), Offset))
     return false;
+
   MachineInstrBuilder MIB = BuildMI(
       *MF,
       First->getDebugLoc().get() ? First->getDebugLoc() : Second->getDebugLoc(),
