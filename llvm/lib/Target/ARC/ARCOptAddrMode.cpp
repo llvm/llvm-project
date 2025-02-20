@@ -216,7 +216,7 @@ MachineInstr *ARCOptAddrMode::tryToCombine(MachineInstr &Ldst) {
   }
 
   Register B = Base.getReg();
-  if (B.isStackSlot() || !B.isVirtual()) {
+  if (!Register::isVirtualRegister(B)) {
     LLVM_DEBUG(dbgs() << "[ABAW] Base is not VReg\n");
     return nullptr;
   }
