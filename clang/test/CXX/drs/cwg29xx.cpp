@@ -104,7 +104,7 @@ void test() {
   static_assert(x(0) == 42, "");
 
   constexpr auto y = &X<false>::f;
-  static_assert(__is_same(decltype(x), int(*const)(short)));
+  static_assert(__is_same(decltype(y), int(*const)(short)));
   static_assert(y(0) == 24, "");
   
   constexpr auto z = &f<int>;
@@ -118,7 +118,9 @@ void test() {
 }
 
 } // namespace Example2
+#endif
 
+#if __cplusplus >= 201103L
 namespace Example3 {
 
 template <typename T> void f(T &&, void (*)(T &&)); // #cwg2918_f
@@ -134,8 +136,8 @@ void g(short &&); // #3
 void q() {
   int x;
   f(x, g);
-  // since-cxx20-error@-1 {{no matching function for call to 'f'}}
-  //   since-cxx20-note@#cwg2918_f {{candidate template ignored: deduced conflicting types for parameter 'T' ('int &' vs. 'short')}}
+  // since-cxx11-error@-1 {{no matching function for call to 'f'}}
+  //   since-cxx11-note@#cwg2918_f {{candidate template ignored: deduced conflicting types for parameter 'T' ('int &' vs. 'short')}}
 }
 
 } // namespace Example3
