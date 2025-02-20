@@ -8,6 +8,26 @@
 
 #include "thread-safety-annotations.h"
 
+
+namespace std {
+
+template <typename T> struct remove_reference {
+  using type = T;
+};
+template <typename T> struct remove_reference<T &> {
+  using type = T;
+};
+template <typename T> struct remove_reference<T &&> {
+  using type = T;
+};
+
+template <typename T>
+constexpr typename std::remove_reference<T>::type &&move(T &&t) noexcept {
+  return static_cast<typename std::remove_reference<T>::type &&>(t);
+}
+
+} // namespace std
+
 class LOCKABLE Mutex {
  public:
   void Lock() EXCLUSIVE_LOCK_FUNCTION();
@@ -6059,6 +6079,11 @@ class Return {
   Foo &returns_ref_locked() {
     MutexLock lock(&mu);
     return foo;               // expected-warning {{returning variable 'foo' by reference requires holding mutex 'mu'}}
+  }
+
+  Foo &&returns_refref_locked() {
+    MutexLock lock(&mu);
+    return std::move(foo);    // expected-warning {{returning variable 'foo' by reference requires holding mutex 'mu'}}
   }
 
   Foo &returns_ref_shared_locks_required() SHARED_LOCKS_REQUIRED(mu) {

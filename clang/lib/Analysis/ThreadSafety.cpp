@@ -1748,6 +1748,12 @@ void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
       checkAccess(FSet, ME->getBase(), AK, POK);
   }
 
+  if (const auto *C = dyn_cast<CallExpr>(Exp); C && C->isCallToStdMove()) {
+    // Changing rvalue-ness of a reference does not change anything w.r.t
+    // thread-safety.
+    checkAccess(FSet, C->getArg(0), AK, POK);
+  }
+
   const ValueDecl *D = getValueDecl(Exp);
   if (!D || !D->hasAttrs())
     return;
@@ -2279,7 +2285,7 @@ void BuildLockset::VisitReturnStmt(const ReturnStmt *S) {
   // capabilities.
   const QualType ReturnType =
       Analyzer->CurrentFunction->getReturnType().getCanonicalType();
-  if (ReturnType->isLValueReferenceType()) {
+  if (ReturnType->isReferenceType()) {
     Analyzer->checkAccess(
         FunctionExitFSet, RetVal,
         ReturnType->getPointeeType().isConstQualified() ? AK_Read : AK_Written,
