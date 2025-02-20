@@ -83,27 +83,29 @@ public:
   ReadELF(swift::remote::RemoteAddress ImageStart,
           std::optional<llvm::sys::MemoryBlock> FileBuffer,
           llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
-  virtual const swift::reflection::TypeRef *GetTypeRefOrNull(
-      llvm::StringRef mangled_type_name,
-      swift::reflection::DescriptorFinder *descriptor_finder) = 0;
-  virtual const swift::reflection::TypeRef *GetTypeRefOrNull(
-      swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
-      swift::reflection::DescriptorFinder *descriptor_finder) = 0;
-  virtual const swift::reflection::TypeInfo *GetClassInstanceTypeInfo(
-      const swift::reflection::TypeRef *type_ref,
+  virtual llvm::Expected<const swift::reflection::TypeRef &>
+  GetTypeRef(llvm::StringRef mangled_type_name,
+             swift::reflection::DescriptorFinder *descriptor_finder) = 0;
+  virtual llvm::Expected<const swift::reflection::TypeRef &>
+  GetTypeRef(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+             swift::reflection::DescriptorFinder *descriptor_finder) = 0;
+  virtual llvm::Expected<const swift::reflection::RecordTypeInfo &>
+  GetClassInstanceTypeInfo(
+      const swift::reflection::TypeRef &type_ref,
       swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
-  virtual const swift::reflection::TypeInfo *
-  GetTypeInfo(const swift::reflection::TypeRef *type_ref,
+  virtual llvm::Expected<const swift::reflection::TypeInfo &>
+  GetTypeInfo(const swift::reflection::TypeRef &type_ref,
               swift::remote::TypeInfoProvider *provider,
               swift::reflection::DescriptorFinder *descriptor_finder) = 0;
-  virtual const swift::reflection::TypeInfo *GetTypeInfoFromInstance(
+  virtual llvm::Expected<const swift::reflection::TypeInfo &>
+  GetTypeInfoFromInstance(
       lldb::addr_t instance, swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
   virtual swift::remote::MemoryReader &GetReader() = 0;
-  virtual const swift::reflection::TypeRef *LookupSuperclass(
-      const swift::reflection::TypeRef *tr,
-      swift::reflection::DescriptorFinder *descriptor_finder) = 0;
+  virtual const swift::reflection::TypeRef *
+  LookupSuperclass(const swift::reflection::TypeRef &tr,
+                   swift::reflection::DescriptorFinder *descriptor_finder) = 0;
   virtual bool
   ForEachSuperClassType(swift::remote::TypeInfoProvider *tip,
                         swift::reflection::DescriptorFinder *descriptor_finder,
@@ -131,23 +133,23 @@ public:
       const swift::reflection::TypeRef *enum_type_ref,
       swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
-  virtual const swift::reflection::TypeRef *
+  virtual llvm::Expected<const swift::reflection::TypeRef &>
   LookupTypeWitness(const std::string &MangledTypeName,
                     const std::string &Member, StringRef Protocol) = 0;
   virtual swift::reflection::ConformanceCollectionResult
   GetAllConformances() = 0;
-  virtual const swift::reflection::TypeRef *ReadTypeFromMetadata(
-      lldb::addr_t metadata_address,
-      swift::reflection::DescriptorFinder *descriptor_finder,
-      bool skip_artificial_subclasses = false) = 0;
-  virtual const swift::reflection::TypeRef *ReadTypeFromInstance(
-      lldb::addr_t instance_address,
-      swift::reflection::DescriptorFinder *descriptor_finder,
-      bool skip_artificial_subclasses = false) = 0;
+  virtual llvm::Expected<const swift::reflection::TypeRef &>
+  ReadTypeFromMetadata(lldb::addr_t metadata_address,
+                       swift::reflection::DescriptorFinder *descriptor_finder,
+                       bool skip_artificial_subclasses = false) = 0;
+  virtual llvm::Expected<const swift::reflection::TypeRef &>
+  ReadTypeFromInstance(lldb::addr_t instance_address,
+                       swift::reflection::DescriptorFinder *descriptor_finder,
+                       bool skip_artificial_subclasses = false) = 0;
   virtual std::optional<bool> IsValueInlinedInExistentialContainer(
       swift::remote::RemoteAddress existential_address) = 0;
-  virtual const swift::reflection::TypeRef *ApplySubstitutions(
-      const swift::reflection::TypeRef *type_ref,
+  virtual llvm::Expected<const swift::reflection::TypeRef &> ApplySubstitutions(
+      const swift::reflection::TypeRef &type_ref,
       swift::reflection::GenericArgumentMap substitutions,
       swift::reflection::DescriptorFinder *descriptor_finder) = 0;
   virtual swift::remote::RemoteAbsolutePointer

@@ -531,13 +531,12 @@ protected:
                        llvm::ArrayRef<swift::reflection::FieldInfo> fields);
 
   /// Use the reflection context to build a TypeRef object.
-  const swift::reflection::TypeRef *
+  llvm::Expected<const swift::reflection::TypeRef &>
   GetTypeRef(CompilerType type, TypeSystemSwiftTypeRef *module_holder);
 
-private:
   /// Ask Remote Mirrors for the type info about a Swift type.
   /// This will return a nullptr if the lookup fails.
-  const swift::reflection::TypeInfo *
+  llvm::Expected<const swift::reflection::TypeInfo &>
   GetSwiftRuntimeTypeInfo(CompilerType type, ExecutionContextScope *exe_scope,
                           swift::reflection::TypeRef const **out_tr = nullptr);
 
