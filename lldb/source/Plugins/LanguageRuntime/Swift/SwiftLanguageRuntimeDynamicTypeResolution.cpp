@@ -1171,9 +1171,9 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
   auto get_from_field_info =
       [&](const swift::reflection::FieldInfo &field,
           std::optional<TypeSystemSwift::TupleElement> tuple,
-          bool hide_existentials) -> CompilerType {
+          bool hide_existentials, bool is_enum) -> CompilerType {
     bool is_indirect_enum =
-        !field.Offset && field.TR &&
+        is_enum && !field.Offset && field.TR &&
         llvm::isa<swift::reflection::BuiltinTypeRef>(field.TR) &&
         llvm::isa<swift::reflection::ReferenceTypeInfo>(field.TI) &&
         llvm::cast<swift::reflection::ReferenceTypeInfo>(field.TI)
@@ -1258,7 +1258,9 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
         return llvm::createStringError(llvm::Twine("index") + llvm::Twine(idx) +
                                        "is out of bounds (" +
                                        llvm::Twine(fields.size()) + ")");
-      return get_from_field_info(fields[idx - 3], tuple, false);
+      return get_from_field_info(fields[idx - 3], tuple,
+                                 /*hide_existentials=*/false,
+                                 /*is_enum=*/false);
     }
     if (rti->getRecordKind() ==
         swift::reflection::RecordKind::ClassExistential) {
@@ -1281,7 +1283,8 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
       return llvm::createStringError(llvm::Twine("index") + llvm::Twine(idx) +
                                      "is out of bounds (" +
                                      llvm::Twine(fields.size()) + ")");
-    return get_from_field_info(fields[idx], tuple, true);
+    return get_from_field_info(fields[idx], tuple, /*hide_existentials=*/true,
+                               /*is_enum=*/false);
   }
   // Enums.
   if (auto *eti = llvm::dyn_cast_or_null<swift::reflection::EnumTypeInfo>(ti)) {
@@ -1291,7 +1294,8 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
       if (!enum_case.TR)
         continue;
       if (i++ == idx)
-        return get_from_field_info(enum_case, {}, true);
+        return get_from_field_info(enum_case, {}, /*hide_existentials=*/true,
+                                   /*is_enum=*/true);
     }
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
@@ -1414,7 +1418,9 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
         auto fields = rti->getFields();
         if (idx < fields.size()) {
           std::optional<TypeSystemSwift::TupleElement> tuple;
-          return get_from_field_info(fields[idx], tuple, true);
+          return get_from_field_info(fields[idx], tuple,
+                                     /*hide_existentials=*/true,
+                                     /*is_enum=*/false);
         }
       }
       return llvm::createStringError(llvm::Twine("index") + llvm::Twine(idx) +
@@ -1461,7 +1467,8 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
       return llvm::createStringError("no record type info");
     for (auto &field : object->getFields())
       if (i++ == idx)
-        return get_from_field_info(field, {}, true);
+        return get_from_field_info(field, {}, /*hide_existentials=*/true,
+                                   /*is_enum=*/false);
 
     return llvm::createStringError(llvm::Twine("index") + llvm::Twine(idx) +
                                    "is out of bounds (" + llvm::Twine(i - 1) +
