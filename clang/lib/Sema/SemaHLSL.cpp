@@ -239,6 +239,7 @@ static void validatePackoffset(Sema &S, HLSLBufferDecl *BufDecl) {
 
   // Make sure there is no overlap in packoffset - sort PackOffsetVec by offset
   // and compare adjacent values.
+  bool IsValid = true;
   ASTContext &Context = S.getASTContext();
   std::sort(PackOffsetVec.begin(), PackOffsetVec.end(),
             [](const std::pair<VarDecl *, HLSLPackOffsetAttr *> &LHS,
@@ -257,8 +258,10 @@ static void validatePackoffset(Sema &S, HLSLBufferDecl *BufDecl) {
       VarDecl *NextVar = PackOffsetVec[i + 1].first;
       S.Diag(NextVar->getLocation(), diag::err_hlsl_packoffset_overlap)
           << NextVar << Var;
+      IsValid = false;
     }
   }
+  BufDecl->setHasValidPackoffset(IsValid);
 }
 
 // Returns true if the array has a zero size = if any of the dimensions is 0
@@ -500,7 +503,7 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
     }
   }
   LS->completeDefinition();
-  BufDecl->addDecl(LS);
+  BufDecl->addLayoutStruct(LS);
 }
 
 // Handle end of cbuffer/tbuffer declaration
