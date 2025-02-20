@@ -44,8 +44,8 @@ bool CopyPropagation::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
       const MachineOperand &Src = MI->getOperand(1);
       RegisterRef DstR = DFG.makeRegRef(Dst.getReg(), Dst.getSubReg());
       RegisterRef SrcR = DFG.makeRegRef(Src.getReg(), Src.getSubReg());
-      assert(Register::isPhysicalRegister(DstR.Reg));
-      assert(Register::isPhysicalRegister(SrcR.Reg));
+      assert(Register(DstR.Reg).isPhysical());
+      assert(Register(SrcR.Reg).isPhysical());
       const TargetRegisterInfo &TRI = DFG.getTRI();
       if (TRI.getMinimalPhysRegClass(DstR.Reg) !=
           TRI.getMinimalPhysRegClass(SrcR.Reg))
@@ -133,8 +133,8 @@ bool CopyPropagation::run() {
     for (NodeId I : Copies) {
       dbgs() << "Instr: " << *DFG.addr<StmtNode*>(I).Addr->getCode();
       dbgs() << "   eq: {";
-      if (CopyMap.count(I)) {
-        for (auto J : CopyMap.at(I))
+      if (auto It = CopyMap.find(I); It != CopyMap.end()) {
+        for (auto J : It->second)
           dbgs() << ' ' << Print<RegisterRef>(J.first, DFG) << '='
                  << Print<RegisterRef>(J.second, DFG);
       }

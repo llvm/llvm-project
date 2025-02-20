@@ -1758,23 +1758,6 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(PPC::EFDCFS), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
     return;
-  } else if ((PPC::G8RCRegClass.contains(DestReg) ||
-              PPC::GPRCRegClass.contains(DestReg)) &&
-             SrcReg == PPC::CARRY) {
-    bool Is64Bit = PPC::G8RCRegClass.contains(DestReg);
-    BuildMI(MBB, I, DL, get(Is64Bit ? PPC::MFSPR8 : PPC::MFSPR), DestReg)
-        .addImm(1)
-        .addReg(PPC::CARRY, RegState::Implicit);
-    return;
-  } else if ((PPC::G8RCRegClass.contains(SrcReg) ||
-              PPC::GPRCRegClass.contains(SrcReg)) &&
-             DestReg == PPC::CARRY) {
-    bool Is64Bit = PPC::G8RCRegClass.contains(SrcReg);
-    BuildMI(MBB, I, DL, get(Is64Bit ? PPC::MTSPR8 : PPC::MTSPR))
-        .addImm(1)
-        .addReg(SrcReg)
-        .addReg(PPC::CARRY, RegState::ImplicitDefine);
-    return;
   }
 
   unsigned Opc;
@@ -5148,7 +5131,7 @@ static bool isOpZeroOfSubwordPreincLoad(int Opcode) {
 // This function checks for sign extension from 32 bits to 64 bits.
 static bool definedBySignExtendingOp(const unsigned Reg,
                                      const MachineRegisterInfo *MRI) {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Register(Reg).isVirtual())
     return false;
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
@@ -5195,7 +5178,7 @@ static bool definedBySignExtendingOp(const unsigned Reg,
 // in the higher 32 bits then this function will return true.
 static bool definedByZeroExtendingOp(const unsigned Reg,
                                      const MachineRegisterInfo *MRI) {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Register(Reg).isVirtual())
     return false;
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
@@ -5480,7 +5463,7 @@ std::pair<bool, bool>
 PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
                                    const unsigned BinOpDepth,
                                    const MachineRegisterInfo *MRI) const {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Register(Reg).isVirtual())
     return std::pair<bool, bool>(false, false);
 
   MachineInstr *MI = MRI->getVRegDef(Reg);

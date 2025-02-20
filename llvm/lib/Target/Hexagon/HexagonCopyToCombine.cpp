@@ -223,8 +223,8 @@ static bool areCombinableOperations(const TargetRegisterInfo *TRI,
   return true;
 }
 
-static bool isEvenReg(unsigned Reg) {
-  assert(Register::isPhysicalRegister(Reg));
+static bool isEvenReg(Register Reg) {
+  assert(Reg.isPhysical());
   if (Hexagon::IntRegsRegClass.contains(Reg))
     return (Reg - Hexagon::R0) % 2 == 0;
   if (Hexagon::HvxVRRegClass.contains(Reg))
@@ -546,7 +546,7 @@ MachineInstr *HexagonCopyToCombine::findPairable(MachineInstr &I1,
     // is even.
     bool IsI1LowReg = (I2DestReg - I1DestReg) == 1;
     bool IsI2LowReg = (I1DestReg - I2DestReg) == 1;
-    unsigned FirstRegIndex = IsI1LowReg ? I1DestReg : I2DestReg;
+    Register FirstRegIndex = IsI1LowReg ? I1DestReg : I2DestReg;
     if ((!IsI1LowReg && !IsI2LowReg) || !isEvenReg(FirstRegIndex))
       continue;
 
@@ -593,8 +593,8 @@ void HexagonCopyToCombine::combine(MachineInstr &I1, MachineInstr &I2,
     llvm_unreachable("Unexpected register class");
 
   // Get the double word register.
-  unsigned DoubleRegDest = TRI->getMatchingSuperReg(LoRegDef, SubLo, SuperRC);
-  assert(DoubleRegDest != 0 && "Expect a valid register");
+  MCRegister DoubleRegDest = TRI->getMatchingSuperReg(LoRegDef, SubLo, SuperRC);
+  assert(DoubleRegDest.isValid() && "Expect a valid register");
 
   // Setup source operands.
   MachineOperand &LoOperand = IsI1Loreg ? I1.getOperand(1) : I2.getOperand(1);

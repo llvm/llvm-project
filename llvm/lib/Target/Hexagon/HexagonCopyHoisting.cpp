@@ -139,8 +139,7 @@ void HexagonCopyHoisting::addMItoCopyList(MachineInstr *MI) {
   Register DstReg = MI->getOperand(0).getReg();
   Register SrcReg = MI->getOperand(1).getReg();
 
-  if (!Register::isVirtualRegister(DstReg) ||
-      !Register::isVirtualRegister(SrcReg) ||
+  if (!DstReg.isVirtual() || !SrcReg.isVirtual() ||
       MRI->getRegClass(DstReg) != &Hexagon::IntRegsRegClass ||
       MRI->getRegClass(SrcReg) != &Hexagon::IntRegsRegClass)
     return;

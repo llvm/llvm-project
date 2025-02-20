@@ -6,7 +6,20 @@
 #
 # ==-------------------------------------------------------------------------==#
 
+from functools import total_ordering
 
+
+@total_ordering
 class Type:
     def __init__(self, type_name):
+        assert type_name
         self.type_name = type_name
+
+    def __eq__(self, other):
+        return self.type_name == other.type_name
+
+    def __lt__(self, other):
+        return self.type_name < other.type_name
+
+    def __hash__(self):
+        return self.type_name.__hash__()
