@@ -31,8 +31,4 @@ void F() {
   S *s3 = new S{1};
   clang_analyzer_eval(1 == s3->x); // expected-warning{{TRUE}}
 }
-
-struct WithPlacementNew {
-};
-
 } // namespace CustomClassType
