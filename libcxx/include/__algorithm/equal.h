@@ -28,10 +28,6 @@
 #include <__type_traits/is_volatile.h>
 #include <__utility/move.h>
 
-#if _LIBCPP_STD_VER >= 20
-#  include <__functional/ranges_operations.h>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
