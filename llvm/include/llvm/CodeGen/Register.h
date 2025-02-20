@@ -60,13 +60,6 @@ public:
     return Reg & MCRegister::VirtualRegFlag;
   }
 
-  /// Convert a virtual register number to a 0-based index.
-  /// The first virtual register in a function will get the index 0.
-  static unsigned virtReg2Index(Register Reg) {
-    assert(Reg.isVirtual() && "Not a virtual register");
-    return Reg.id() & ~MCRegister::VirtualRegFlag;
-  }
-
   /// Convert a 0-based index to a virtual register number.
   /// This is the inverse operation of VirtReg2IndexFunctor below.
   static Register index2VirtReg(unsigned Index) {
@@ -84,7 +77,10 @@ public:
 
   /// Convert a virtual register number to a 0-based index. The first virtual
   /// register in a function will get the index 0.
-  unsigned virtRegIndex() const { return virtReg2Index(Reg); }
+  unsigned virtRegIndex() const {
+    assert(isVirtual() && "Not a virtual register");
+    return Reg & ~MCRegister::VirtualRegFlag;
+  }
 
   /// Compute the frame index from a register value representing a stack slot.
   int stackSlotIndex() const {
