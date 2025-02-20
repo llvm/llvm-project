@@ -74,7 +74,6 @@ public:
     if (!loop.getPrivateVars().empty()) {
       mlir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToStart(&loop.getRegion().front());
-
       std::optional<ArrayAttr> privateSyms = loop.getPrivateSyms();
 
       for (auto [privateVar, privateArg, privatizerSym] :
@@ -85,6 +84,27 @@ public:
 
         mlir::Value localAlloc =
             rewriter.create<fir::AllocaOp>(loop.getLoc(), privatizer.getType());
+
+        if (privatizer.getDataSharingType() ==
+            omp::DataSharingClauseType::FirstPrivate) {
+          mlir::Block *beforeLocalInit = rewriter.getInsertionBlock();
+          mlir::Block *afterLocalInit = rewriter.splitBlock(
+              rewriter.getInsertionBlock(), rewriter.getInsertionPoint());
+          rewriter.cloneRegionBefore(privatizer.getCopyRegion(),
+                                     afterLocalInit);
+          mlir::Block *copyRegionFront = beforeLocalInit->getNextNode();
+          mlir::Block *copyRegionBack = afterLocalInit->getPrevNode();
+
+          rewriter.setInsertionPoint(beforeLocalInit, beforeLocalInit->end());
+          rewriter.create<mlir::cf::BranchOp>(
+              loc, copyRegionFront,
+              llvm::SmallVector<mlir::Value>{privateVar, privateArg});
+
+          rewriter.eraseOp(copyRegionBack->getTerminator());
+          rewriter.setInsertionPoint(copyRegionBack, copyRegionBack->end());
+          rewriter.create<mlir::cf::BranchOp>(loc, afterLocalInit);
+        }
+
         rewriter.replaceAllUsesWith(privateArg, localAlloc);
       }
 
