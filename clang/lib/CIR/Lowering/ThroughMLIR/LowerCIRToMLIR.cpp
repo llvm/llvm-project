@@ -48,15 +48,15 @@ public:
   mlir::LogicalResult
   matchAndRewrite(cir::GlobalOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto moduleOp = op->getParentOfType<mlir::ModuleOp>();
+    mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
     if (!moduleOp)
       return mlir::failure();
 
     mlir::OpBuilder b(moduleOp.getContext());
 
-    const auto cirSymType = op.getSymType();
+    const mlir::Type cirSymType = op.getSymType();
     assert(!cir::MissingFeatures::convertTypeForMemory());
-    auto convertedType = getTypeConverter()->convertType(cirSymType);
+    mlir::Type convertedType = getTypeConverter()->convertType(cirSymType);
     if (!convertedType)
       return mlir::failure();
     auto memrefType = dyn_cast<mlir::MemRefType>(convertedType);
@@ -156,9 +156,9 @@ static mlir::TypeConverter prepareTypeConverter() {
 }
 
 void ConvertCIRToMLIRPass::runOnOperation() {
-  auto module = getOperation();
+  mlir::ModuleOp module = getOperation();
 
-  auto converter = prepareTypeConverter();
+  mlir::TypeConverter converter = prepareTypeConverter();
 
   mlir::RewritePatternSet patterns(&getContext());
 
@@ -185,7 +185,7 @@ mlir::ModuleOp lowerFromCIRToMLIR(mlir::ModuleOp mlirModule,
 
   pm.addPass(createConvertCIRToMLIRPass());
 
-  auto result = !mlir::failed(pm.run(mlirModule));
+  bool result = !mlir::failed(pm.run(mlirModule));
   if (!result)
     llvm::report_fatal_error(
         "The pass manager failed to lower CIR to MLIR standard dialects!");
