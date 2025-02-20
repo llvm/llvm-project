@@ -66,7 +66,8 @@ EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(
   if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance, rt::SimpleExecutorDylibManagerInstanceName},
            {SAs.Open, rt::SimpleExecutorDylibManagerOpenWrapperName},
-           {SAs.Lookup, rt::SimpleExecutorDylibManagerLookupWrapperName}}))
+           {SAs.Lookup, rt::SimpleExecutorDylibManagerLookupWrapperName},
+           {SAs.Resolve, rt::SimpleExecutorDylibManagerResolveWrapperName}}))
     return std::move(Err);
   return EPCGenericDylibManager(EPC, std::move(SAs));
 }
@@ -115,6 +116,38 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         Complete(std::move(Result));
       },
       SAs.Instance, H, Lookup);
+}
+
+void EPCGenericDylibManager::resolveAsync(const SymbolLookupSet &Lookup,
+                                          ResolveSymbolsCompleteFn Complete) {
+  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerResolveSignature>(
+      SAs.Resolve,
+      [Complete = std::move(Complete)](Error SerializationErr,
+                                       Expected<ResolveResult> Result) mutable {
+        if (SerializationErr) {
+          cantFail(Result.takeError());
+          Complete(std::move(SerializationErr));
+          return;
+        }
+        Complete(std::move(Result));
+      },
+      SAs.Instance, Lookup);
+}
+
+void EPCGenericDylibManager::resolveAsync(const RemoteSymbolLookupSet &Lookup,
+                                          ResolveSymbolsCompleteFn Complete) {
+  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorDylibManagerResolveSignature>(
+      SAs.Resolve,
+      [Complete = std::move(Complete)](Error SerializationErr,
+                                       Expected<ResolveResult> Result) mutable {
+        if (SerializationErr) {
+          cantFail(Result.takeError());
+          Complete(std::move(SerializationErr));
+          return;
+        }
+        Complete(std::move(Result));
+      },
+      SAs.Instance, Lookup);
 }
 
 } // end namespace orc
