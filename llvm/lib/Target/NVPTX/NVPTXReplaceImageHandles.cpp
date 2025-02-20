@@ -1809,7 +1809,7 @@ findIndexForHandle(MachineOperand &Op, MachineFunction &MF, unsigned &Idx) {
   MachineInstr &TexHandleDef = *MRI.getVRegDef(Op.getReg());
 
   switch (TexHandleDef.getOpcode()) {
-  case NVPTX::LD_i64_avar: {
+  case NVPTX::LD_i64_asi: {
     // The handle is a parameter value being loaded, replace with the
     // parameter symbol
     const NVPTXTargetMachine &TM =
