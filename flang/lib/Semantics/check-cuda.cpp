@@ -529,8 +529,10 @@ static int DoConstructTightNesting(
     const auto &loopControl = doConstruct->GetLoopControl();
     if (loopControl) {
       if (const auto *concurrentControl{
-              std::get_if<parser::LoopControl::Concurrent>(&loopControl->u)}) {                                                                             const auto &concurrentHeader =
-            std::get<Fortran::parser::ConcurrentHeader>(concurrentControl->t);                                                                              const auto &controls =
+              std::get_if<parser::LoopControl::Concurrent>(&loopControl->u)}) {
+        const auto &concurrentHeader =
+            std::get<Fortran::parser::ConcurrentHeader>(concurrentControl->t);
+        const auto &controls =
             std::get<std::list<Fortran::parser::ConcurrentControl>>(
                 concurrentHeader.t);
         return controls.size();
