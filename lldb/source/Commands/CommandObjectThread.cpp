@@ -969,24 +969,12 @@ protected:
           return;
         }
 
-        uint32_t lowest_func_idx = UINT32_MAX;
-        uint32_t highest_func_idx = 0;
-        for (AddressRange range : sc.function->GetAddressRanges()) {
-          uint32_t idx;
-          LineEntry unused;
-          Address addr = range.GetBaseAddress();
-          if (line_table->FindLineEntryByAddress(addr, unused, &idx))
-            lowest_func_idx = std::min(lowest_func_idx, idx);
-
-          addr.Slide(range.GetByteSize());
-          if (line_table->FindLineEntryByAddress(addr, unused, &idx)) {
-            highest_func_idx = std::max(highest_func_idx, idx);
-          } else {
-            // No line entry after the current function. The function is the
-            // last in the file, so we can just search until the end.
-            highest_func_idx = UINT32_MAX;
-          }
+        RangeVector<uint32_t, uint32_t> line_idx_ranges;
+        for (const AddressRange &range : sc.function->GetAddressRanges()) {
+          auto [begin, end] = line_table->GetLineEntryIndexRange(range);
+          line_idx_ranges.Append(begin, end - begin);
         }
+        line_idx_ranges.Sort();
 
         bool found_something = false;
 
@@ -1004,22 +992,19 @@ protected:
           found_something = true;
           line_number = line_entry.line;
           exact = true;
-          uint32_t start_idx_ptr = lowest_func_idx;
-          while (start_idx_ptr <= highest_func_idx) {
-            start_idx_ptr = sc.comp_unit->FindLineEntry(
-                start_idx_ptr, line_number, nullptr, exact, &line_entry);
-            if (start_idx_ptr == UINT32_MAX)
-              break;
-
-            addr_t address =
-                line_entry.range.GetBaseAddress().GetLoadAddress(target);
-            if (address != LLDB_INVALID_ADDRESS) {
-              AddressRange unused;
-              if (sc.function->GetRangeContainingLoadAddress(address, *target,
-                                                             unused))
+          uint32_t end_func_idx = line_idx_ranges.GetMaxRangeEnd(0);
+          uint32_t idx = sc.comp_unit->FindLineEntry(
+              line_idx_ranges.GetMinRangeBase(UINT32_MAX), line_number, nullptr,
+              exact, &line_entry);
+          while (idx < end_func_idx) {
+            if (line_idx_ranges.FindEntryIndexThatContains(idx) != UINT32_MAX) {
+              addr_t address =
+                  line_entry.range.GetBaseAddress().GetLoadAddress(target);
+              if (address != LLDB_INVALID_ADDRESS)
                 address_list.push_back(address);
             }
-            start_idx_ptr++;
+            idx = sc.comp_unit->FindLineEntry(idx + 1, line_number, nullptr,
+                                              exact, &line_entry);
           }
         }
 
