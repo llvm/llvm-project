@@ -1271,6 +1271,7 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     #endif
     ```
 
+<<<<<<< HEAD
     If the `emitc.verbatim` op has operands, then the `value` is interpreted as
     format string, where `{}` is a placeholder for an operand in their order.
     For example, `emitc.verbatim "#pragma my src={} dst={}" %src, %dest : i32, i32`
@@ -1278,6 +1279,14 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     `%dest` became `b` in the C code.
     `{{` in the format string is interpreted as a single `{` and doesn't introduce
     a placeholder.
+=======
+    Example:
+
+    ```mlir
+    emitc.verbatim "typedef float f32;"
+    emitc.verbatim "#pragma my var={} property" args %arg : f32
+    ```
+>>>>>>> cabdac5e5703 ([mlir][emitc][NFC] Add an example to the description of the emitc.verbatim operation)
   }];
 
   let extraClassDeclaration = [{
