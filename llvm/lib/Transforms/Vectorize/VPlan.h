@@ -2564,6 +2564,9 @@ protected:
   /// Whether the consecutive accessed addresses are in reverse order.
   bool Reverse;
 
+  /// Whether the accessed addresses are evenly spaced apart by a fixed stride.
+  bool Strided;
+
   /// Whether the memory access is masked.
   bool IsMasked = false;
 
@@ -2577,9 +2580,9 @@ protected:
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, bool Reverse, DebugLoc DL)
+                      bool Consecutive, bool Reverse, bool Strided, DebugLoc DL)
       : VPRecipeBase(SC, Operands, DL), Ingredient(I), Consecutive(Consecutive),
-        Reverse(Reverse) {
+        Reverse(Reverse), Strided(Strided) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
   }
 
@@ -2606,6 +2609,10 @@ public:
   /// Return whether the consecutive loaded/stored addresses are in reverse
   /// order.
   bool isReverse() const { return Reverse; }
+
+  /// Return whether the accessed addresses are evenly spaced apart by a fixed
+  /// stride.
+  bool isStrided() const { return Strided; }
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const { return getOperand(0); }
@@ -2636,16 +2643,16 @@ public:
 /// optional mask.
 struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, bool Reverse, DebugLoc DL)
+                    bool Consecutive, bool Reverse, bool Strided, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
-                            Reverse, DL),
+                            Reverse, Strided, DL),
         VPValue(this, &Load) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, Reverse,
+                                 getMask(), Consecutive, Reverse, Strided,
                                  getDebugLoc());
   }
 
@@ -2677,7 +2684,7 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
                             {L.getAddr(), &EVL}, L.isConsecutive(),
-                            L.isReverse(), L.getDebugLoc()),
+                            L.isReverse(), L.isStrided(), L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -2714,16 +2721,17 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// to store to and an optional mask.
 struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
-                     VPValue *Mask, bool Consecutive, bool Reverse, DebugLoc DL)
+                     VPValue *Mask, bool Consecutive, bool Reverse,
+                     bool Strided, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
-                            Consecutive, Reverse, DL) {
+                            Consecutive, Reverse, Strided, DL) {
     setMask(Mask);
   }
 
   VPWidenStoreRecipe *clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
                                   getStoredValue(), getMask(), Consecutive,
-                                  Reverse, getDebugLoc());
+                                  Reverse, Strided, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);
@@ -2757,7 +2765,8 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {S.getAddr(), S.getStoredValue(), &EVL},
-                            S.isConsecutive(), S.isReverse(), S.getDebugLoc()) {
+                            S.isConsecutive(), S.isReverse(), S.isStrided(),
+                            S.getDebugLoc()) {
     setMask(Mask);
   }
 
