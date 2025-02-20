@@ -11246,9 +11246,9 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
   if (S.getLangOpts().OpenCL)
     return;
 
-  if (LHS.get()->IgnoreParenImpCasts()->getType()->isBooleanType()) {
-    S.Diag(Loc, diag::warn_shift_bool)
-        << (Opc == BO_Shr) /*left|right*/ << LHS.get()->getSourceRange();
+  if (Opc == BO_Shr &&
+      LHS.get()->IgnoreParenImpCasts()->getType()->isBooleanType()) {
+    S.Diag(Loc, diag::warn_shift_bool) << LHS.get()->getSourceRange();
     return;
   }
 
