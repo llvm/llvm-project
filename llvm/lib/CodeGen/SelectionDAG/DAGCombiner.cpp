@@ -12504,25 +12504,17 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
-  // Only perform the DAG combine if there is custom lowering provided by the
-  // target.
-  if (!TLI.isPartialReduceMLALegalOrCustom(N->getValueType(0),
-                                           N->getOperand(1).getValueType()))
-    return SDValue();
-
-  if (SDValue Res = foldMulPARTIAL_REDUCE_MLA(N))
-    return Res;
-  if (SDValue Res = foldExtendPARTIAL_REDUCE_MLA(N))
-    return Res;
-  return SDValue();
-}
-
-SDValue DAGCombiner::foldMulPARTIAL_REDUCE_MLA(SDNode *N) {
-  // Makes PARTIAL_REDUCE_*MLA(Acc, MUL(MulOpLHS, MulOpRHS), Splat(1)) into
-  // PARTIAL_REDUCE_*MLA(Acc, MulOpLHS, MulOpRHS)
+  // Makes PARTIAL_REDUCE_*MLA(Acc, MUL(ZEXT(MulOpLHS), ZEXT(MulOpRHS)),
+  // Splat(1)) into
+  // PARTIAL_REDUCE_UMLA(Acc, MulOpLHS, MulOpRHS).
+  // Makes PARTIAL_REDUCE_*MLA(Acc, MUL(SEXT(MulOpLHS), SEXT(MulOpRHS)),
+  // Splat(1)) into
+  // PARTIAL_REDUCE_SMLA(Acc, MulOpLHS, MulOpRHS).
   SDLoc DL(N);
 
+  SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
+
   if (Op1->getOpcode() != ISD::MUL)
     return SDValue();
 
@@ -12531,18 +12523,8 @@ SDValue DAGCombiner::foldMulPARTIAL_REDUCE_MLA(SDNode *N) {
       !ConstantOne.isOne())
     return SDValue();
 
-  return DAG.getNode(N->getOpcode(), DL, N->getValueType(0), N->getOperand(0),
-                     Op1->getOperand(0), Op1->getOperand(1));
-}
-
-SDValue DAGCombiner::foldExtendPARTIAL_REDUCE_MLA(SDNode *N) {
-  // Makes PARTIAL_REDUCE_*MLA(Acc, ZEXT(MulOpLHS), ZEXT(MulOpRHS)) into
-  // PARTIAL_REDUCE_UMLA(Acc, MulOpLHS, MulOpRHS) and
-  // PARTIAL_REDUCE_*MLA(Acc, SEXT(MulOpLHS), SEXT(MulOpRHS)) into
-  // PARTIAL_REDUCE_SMLA(Acc, MulOpLHS, MulOpRHS)
-  SDLoc DL(N);
-  SDValue ExtMulOpLHS = N->getOperand(1);
-  SDValue ExtMulOpRHS = N->getOperand(2);
+  SDValue ExtMulOpLHS = Op1->getOperand(0);
+  SDValue ExtMulOpRHS = Op1->getOperand(1);
   unsigned ExtMulOpLHSOpcode = ExtMulOpLHS->getOpcode();
   unsigned ExtMulOpRHSOpcode = ExtMulOpRHS->getOpcode();
   if (!ISD::isExtOpcode(ExtMulOpLHSOpcode) ||
@@ -12554,6 +12536,10 @@ SDValue DAGCombiner::foldExtendPARTIAL_REDUCE_MLA(SDNode *N) {
   EVT MulOpLHSVT = MulOpLHS.getValueType();
   if (MulOpLHSVT != MulOpRHS.getValueType())
     return SDValue();
+  // Only perform the DAG combine if there is custom lowering provided by the
+  // target
+  if (!TLI.isPartialReduceMLALegalOrCustom(N->getValueType(0), MulOpLHSVT))
+    return SDValue();
 
   bool LHSIsSigned = ExtMulOpLHSOpcode == ISD::SIGN_EXTEND;
   bool RHSIsSigned = ExtMulOpRHSOpcode == ISD::SIGN_EXTEND;
@@ -12562,8 +12548,8 @@ SDValue DAGCombiner::foldExtendPARTIAL_REDUCE_MLA(SDNode *N) {
 
   unsigned NewOpcode =
       LHSIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
-  return DAG.getNode(NewOpcode, DL, N->getValueType(0), N->getOperand(0),
-                     MulOpLHS, MulOpRHS);
+  return DAG.getNode(NewOpcode, DL, N->getValueType(0), Op0, MulOpLHS,
+                     MulOpRHS);
 }
 
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
