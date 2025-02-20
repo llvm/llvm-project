@@ -37,8 +37,8 @@ void operator delete[](void *x) throw();
 void operator delete[](void * /*x*/) throw();
 
 struct X {
-  X operator++(int) { throw 0; }
-  X operator--(int) { throw 0; }
+  void operator++(int) {}
+  void operator--(int) {}
 
   X(X&) = delete;
   X &operator=(X&) = default;
