@@ -14058,7 +14058,17 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
 
     // C++1z [dcl.dcl]p1 grammar implies that an initializer is mandatory.
     if (isa<DecompositionDecl>(RealDecl)) {
-      Diag(Var->getLocation(), diag::err_decomp_decl_requires_init) << Var;
+      Preprocessor  &PP = getPreprocessor();
+      SourceManager &SM = Context.getSourceManager();
+      LangOptions    LO = Context.getLangOpts();
+
+      // Lexer previously checked for '=' and didn't find it
+      // Highlight the token found in its place in the error message
+      Token Tok;
+      Lexer::getRawToken(PP.getLastCachedTokenLocation(), Tok, SM, LO);
+
+      Diag(Tok.getLocation(), diag::err_decomp_decl_requires_init)
+        << Var << Lexer::getSpelling(Tok, SM, LO);
       Var->setInvalidDecl();
       return;
     }
