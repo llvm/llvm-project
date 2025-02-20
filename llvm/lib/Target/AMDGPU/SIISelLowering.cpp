@@ -6833,8 +6833,7 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   // mode functions, but this happens to be OK since it's only done in cases
   // where there is known no sNaN.
   if (IsIEEEMode)
-    return expandFMINNUM_FMAXNUM(Op.getNode(), DAG,
-                                 !Subtarget->hasIEEEMinNumMaxNum());
+    return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
       VT == MVT::v16bf16)
