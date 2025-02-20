@@ -677,7 +677,7 @@ unsigned AArch64InstrInfo::insertBranch(
 
 // Find the original register that VReg is copied from.
 static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
-  while (Register::isVirtualRegister(VReg)) {
+  while (Register(VReg).isVirtual()) {
     const MachineInstr *DefMI = MRI.getVRegDef(VReg);
     if (!DefMI->isFullCopy())
       return VReg;
@@ -692,7 +692,7 @@ static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
 static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
                                 unsigned *NewVReg = nullptr) {
   VReg = removeCopies(MRI, VReg);
-  if (!Register::isVirtualRegister(VReg))
+  if (!Register(VReg).isVirtual())
     return 0;
 
   bool Is64Bit = AArch64::GPR64allRegClass.hasSubClassEq(MRI.getRegClass(VReg));
@@ -6121,9 +6121,9 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     Register SrcReg = SrcMO.getReg();
     // This is slightly expensive to compute for physical regs since
     // getMinimalPhysRegClass is slow.
-    auto getRegClass = [&](unsigned Reg) {
-      return Register::isVirtualRegister(Reg) ? MRI.getRegClass(Reg)
-                                              : TRI.getMinimalPhysRegClass(Reg);
+    auto getRegClass = [&](Register Reg) {
+      return Reg.isVirtual() ? MRI.getRegClass(Reg)
+                             : TRI.getMinimalPhysRegClass(Reg);
     };
 
     if (DstMO.getSubReg() == 0 && SrcMO.getSubReg() == 0) {
@@ -7456,7 +7456,7 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
     MRI.constrainRegClass(SrcReg0, RC);
   if (SrcReg1.isVirtual())
     MRI.constrainRegClass(SrcReg1, RC);
-  if (Register::isVirtualRegister(VR))
+  if (Register(VR).isVirtual())
     MRI.constrainRegClass(VR, RC);
 
   MachineInstrBuilder MIB =

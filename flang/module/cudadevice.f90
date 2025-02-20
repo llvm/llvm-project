@@ -562,4 +562,31 @@ implicit none
     end function
   end interface
 
+interface match_all_sync
+  attributes(device) integer function match_all_syncjj(mask, val, pred)
+!dir$ ignore_tkr(d) mask, (d) val, (d) pred
+  integer(4), value :: mask
+  integer(4), value :: val
+  integer(4)        :: pred
+  end function
+  attributes(device) integer function match_all_syncjx(mask, val, pred)
+!dir$ ignore_tkr(d) mask, (d) val, (d) pred
+  integer(4), value :: mask
+  integer(8), value :: val
+  integer(4)        :: pred
+  end function
+  attributes(device) integer function match_all_syncjf(mask, val, pred)
+!dir$ ignore_tkr(d) mask, (d) val, (d) pred
+  integer(4), value :: mask
+  real(4), value    :: val
+  integer(4)        :: pred
+  end function
+  attributes(device) integer function match_all_syncjd(mask, val, pred)
+!dir$ ignore_tkr(d) mask, (d) val, (d) pred
+  integer(4), value :: mask
+  real(8), value    :: val
+  integer(4)        :: pred
+  end function
+end interface
+
 end module
