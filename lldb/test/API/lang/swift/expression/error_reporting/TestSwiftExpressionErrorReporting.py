@@ -14,6 +14,35 @@ class TestSwiftExpressionErrorReporting(TestBase):
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
 
+        # This produces two errors:
+        #   error: <EXPR>:8:1: initializers may only be declared within a type
+        #   } catch (let __lldb_tmp_error) {
+        #   ^
+        #
+        #   error: <EXPR>:6:5: expected '(' for initializer parameters
+        #   init
+        #       ^
+        # The first one is outside of user code, the second one isn't.
+
+        options = lldb.SBExpressionOptions()
+        value = self.frame().EvaluateExpression("init", options)
+        data = value.GetError().GetErrorData()
+
+        version = data.GetValueForKey("version")
+        self.assertEqual(version.GetIntegerValue(), 1)
+        diags = data.GetValueForKey("errors").GetItemAtIndex(0)
+        details = diags.GetValueForKey("details")
+        err0 = details.GetItemAtIndex(0)
+        self.assertIn("initializers", str(err0.GetValueForKey("message")))
+        loc0 = err0.GetValueForKey("source_location")
+        self.assertTrue(loc0.GetValueForKey("hidden").GetBooleanValue())
+        self.assertFalse(loc0.GetValueForKey("in_user_input").GetBooleanValue())
+        err1 = details.GetItemAtIndex(1)
+        self.assertIn("expected '('", str(err1.GetValueForKey("message")))
+        loc1 = err1.GetValueForKey("source_location")
+        self.assertFalse(loc1.GetValueForKey("hidden").GetBooleanValue())
+        self.assertTrue(loc1.GetValueForKey("in_user_input").GetBooleanValue())
+
         options = lldb.SBExpressionOptions()
         value = self.frame().EvaluateExpression(
             "ceciNestPasUnVar", options)
@@ -58,3 +87,4 @@ class TestSwiftExpressionErrorReporting(TestBase):
         process.Continue()
         self.expect('expression -O -- number', error=True,
                     substrs=['self', 'not', 'found'])
+

@@ -152,16 +152,52 @@ public:
     // FXIME: This is a heuristic.
     uint16_t len = info.Ranges.size() ? info.Ranges.front().getByteLength() : 0;
     bool in_user_input = false;
-    // FIXME: improve this!
-    if (buffer_name == "<REPL>" || buffer_name == "<EXPR>" ||
-        buffer_name == "repl.swift" ||
-        buffer_name.starts_with("<user expression"))
-      in_user_input = true;
+    bool hidden = false;
+    [&]() {
+      if (buffer_name == "repl.swift") {
+        in_user_input = true;
+        return;
+      }
+      if (buffer_name != "<REPL>" && buffer_name != "<EXPR>" &&
+          !buffer_name.starts_with("<user expression"))
+        return;
+
+      unsigned buffer_id = source_mgr.findBufferContainingLoc(info.Loc);
+      llvm::SourceMgr &src_mgr = source_mgr.getLLVMSourceMgr();
+      auto *buffer = src_mgr.getMemoryBuffer(buffer_id);
+      if (!buffer)
+        return;
+
+      // Clang uses the much more elegant #line mechanism to find the
+      // user code, but doing this here could interfere with
+      // ExprOptions.PoundLineLine mechanism used Swift
+      // Playgrounds. So instead we find the markers from both ends.
+      StringRef buffer_data = buffer->getBuffer();
+      size_t pos = buffer_data.find("__LLDB_USER_START__");
+      if (pos == StringRef::npos)
+        return;
+      auto start_loc =
+          llvm::SMLoc::getFromPointer(buffer->getBufferStart() + pos);
+      unsigned start_line = src_mgr.FindLineNumber(start_loc, buffer_id);
+
+      pos = buffer_data.rfind("__LLDB_USER_END__");
+      if (pos == StringRef::npos)
+        return;
+      auto end_loc =
+          llvm::SMLoc::getFromPointer(buffer->getBufferStart() + pos);
+      unsigned end_line = src_mgr.FindLineNumber(end_loc, buffer_id);
+
+      unsigned diag_line =
+          source_mgr.getLineAndColumnInBuffer(info.Loc, buffer_id).first;
+
+      in_user_input = start_line < diag_line && diag_line < end_line;
+      hidden = !in_user_input;
+    }();
     DiagnosticDetail::SourceLocation loc = {FileSpec{buffer_name.str()},
                                             line_col.first,
                                             (uint16_t)line_col.second,
                                             len,
-                                            !in_user_input,
+                                            hidden,
                                             in_user_input};
     DiagnosticDetail detail = {loc, severity, raw_text, formatted_text};
     RawDiagnostic diagnostic(
