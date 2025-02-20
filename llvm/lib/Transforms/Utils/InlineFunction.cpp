@@ -1983,7 +1983,7 @@ static void trackInlinedStores(Function::iterator Start, Function::iterator End,
                                const CallBase &CB) {
   LLVM_DEBUG(errs() << "trackInlinedStores into "
                     << Start->getParent()->getName() << " from "
-                    << CB.getCalledFunction()->getName() << "\n");
+                    << *CB.getCalledFunctionName() << "\n");
   const DataLayout &DL = CB.getDataLayout();
   at::trackAssignments(Start, End, collectEscapedLocals(DL, CB), DL);
 }
