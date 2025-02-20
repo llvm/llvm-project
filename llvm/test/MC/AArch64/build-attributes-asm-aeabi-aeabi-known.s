@@ -19,13 +19,13 @@
 // ASM: .aeabi_attribute 2, 1 // Tag_Feature_GCS
 
 // ELF: Hex dump of section '.ARM.attributes':
-// ELF: 0x00000000 411a0000 00616561 62695f70 61757468 A....aeabi_pauth
-// ELF: 0x00000010 61626900 00000107 02890623 00000061 abi........#...a
-// ELF: 0x00000020 65616269 5f666561 74757265 5f616e64 eabi_feature_and
-// ELF: 0x00000030 5f626974 73000100 00010101 0201     _bits.........
+// ELF-NEXT: 0x00000000 411a0000 00616561 62695f70 61757468 A....aeabi_pauth
+// ELF-NEXT: 0x00000010 61626900 00000107 02890623 00000061 abi........#...a
+// ELF-NEXT: 0x00000020 65616269 5f666561 74757265 5f616e64 eabi_feature_and
+// ELF-NEXT: 0x00000030 5f626974 73000100 00010101 0201     _bits.........
 
 
-.aeabi_subsection aeabi_pauthabi, required, uleb128 // test header comment
+.aeabi_subsection aeabi_pauthabi, required, uleb128
 .aeabi_attribute Tag_PAuth_Platform, 7
 .aeabi_attribute Tag_PAuth_Schema, 777
 .aeabi_attribute Tag_PAuth_Schema, 777
