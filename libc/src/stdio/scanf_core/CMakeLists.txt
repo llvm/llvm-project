@@ -61,6 +61,8 @@ add_header_library(
     reader.h
   DEPENDS
     libc.src.__support.macros.attributes
+    libc.src.stdio.getc
+    libc.src.stdio.ungetc
 )
 elseif((TARGET libc.src.__support.File.file) OR (NOT LLVM_LIBC_FULL_BUILD))
 add_header_library(
