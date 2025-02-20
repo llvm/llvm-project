@@ -1053,6 +1053,8 @@ Bug Fixes to C++ Support
   template parameter. Now, such expression can be used with ``static_assert`` and ``constexpr``. (#GH123498)
 - Correctly determine the implicit constexprness of lambdas in dependent contexts. (#GH97958) (#GH114234)
 - Fix that some dependent immediate expressions did not cause immediate escalation (#GH119046)
+- Fixed a substitution bug in transforming CTAD aliases when the type alias contains a non-pack template argument
+  corresponding to a pack parameter (#GH124715)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
