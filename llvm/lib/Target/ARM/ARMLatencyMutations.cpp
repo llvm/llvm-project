@@ -756,7 +756,7 @@ signed M85Overrides::modifyMixedWidthFP(const MachineInstr *SrcMI,
       !II->producesQP(SrcMI->getOpcode()))
     return 0;
 
-  if (Register(RegID).isVirtual()) {
+  if (Register::isVirtualRegister(RegID)) {
     if (II->producesSP(SrcMI->getOpcode()) &&
         II->consumesDP(DstMI->getOpcode())) {
       for (auto &OP : SrcMI->operands())
