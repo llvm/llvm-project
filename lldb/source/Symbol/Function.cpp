@@ -333,18 +333,12 @@ Function::GetSourceInfo() {
 
   uint32_t end_line = start_line;
   for (const AddressRange &range : GetAddressRanges()) {
-    LineEntry entry;
-    uint32_t idx;
-    if (!line_table->FindLineEntryByAddress(range.GetBaseAddress(), entry,
-                                            &idx))
-      continue;
-
-    addr_t end_addr =
-        range.GetBaseAddress().GetFileAddress() + range.GetByteSize();
-    while (line_table->GetLineEntryAtIndex(idx++, entry) &&
-           entry.range.GetBaseAddress().GetFileAddress() < end_addr) {
-      // Ignore entries belonging to inlined functions or #included files.
-      if (source_file_sp->Equal(*entry.file_sp,
+    for (auto [idx, end] = line_table->GetLineEntryIndexRange(range); idx < end;
+         ++idx) {
+      LineEntry entry;
+        // Ignore entries belonging to inlined functions or #included files.
+      if (line_table->GetLineEntryAtIndex(idx, entry) &&
+          source_file_sp->Equal(*entry.file_sp,
                                 SupportFile::eEqualFileSpecAndChecksumIfSet))
         end_line = std::max(end_line, entry.line);
     }
