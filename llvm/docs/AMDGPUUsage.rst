@@ -1720,6 +1720,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-sgpr-hazard-mem-wait-cull-threshold"     Sets the number of active SGPR hazards that must be present before
                                                       inserting a cull sequence at a memory wait.
 
+     "amdgpu-promote-alloca-to-vector-max-elements"   Maximum vector size (in elements) to create when promoting alloca.
+
+     "amdgpu-promote-alloca-to-vector-vgpr-ratio"     Ratio of VGPRs to budget for promoting alloca to vectors.
+
      ================================================ ==========================================================
 
 Calling Conventions
