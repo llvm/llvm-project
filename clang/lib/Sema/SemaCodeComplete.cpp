@@ -26,6 +26,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -184,7 +185,7 @@ private:
 
   /// Overloaded C++ member functions found by SemaLookup.
   /// Used to determine when one overload is dominated by another.
-  llvm::DenseMap<std::pair<DeclContext *, /*Name*/uintptr_t>, ShadowMapEntry>
+  llvm::DenseMap<std::pair<DeclContext *, /*Name*/ uintptr_t>, ShadowMapEntry>
       OverloadMap;
 
   /// If we're potentially referring to a C++ member function, the set
@@ -1430,16 +1431,16 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
         }
         // Detect cases where a ref-qualified method cannot be invoked.
         switch (Method->getRefQualifier()) {
-          case RQ_LValue:
-            if (ObjectKind != VK_LValue && !MethodQuals.hasConst())
-              return;
-            break;
-          case RQ_RValue:
-            if (ObjectKind == VK_LValue)
-              return;
-            break;
-          case RQ_None:
-            break;
+        case RQ_LValue:
+          if (ObjectKind != VK_LValue && !MethodQuals.hasConst())
+            return;
+          break;
+        case RQ_RValue:
+          if (ObjectKind == VK_LValue)
+            return;
+          break;
+        case RQ_None:
+          break;
         }
 
         /// Check whether this dominates another overloaded method, which should
@@ -1488,9 +1489,7 @@ void ResultBuilder::AddResult(Result R) {
 void ResultBuilder::EnterNewScope() { ShadowMaps.emplace_back(); }
 
 /// Exit from the current scope.
-void ResultBuilder::ExitScope() {
-  ShadowMaps.pop_back();
-}
+void ResultBuilder::ExitScope() { ShadowMaps.pop_back(); }
 
 /// Determines whether this given declaration will be found by
 /// ordinary name lookup.
@@ -2555,7 +2554,8 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
       ReturnType = Method->getReturnType();
     else if (SemaRef.getCurBlock() &&
              !SemaRef.getCurBlock()->ReturnType.isNull())
-      ReturnType = SemaRef.getCurBlock()->ReturnType;;
+      ReturnType = SemaRef.getCurBlock()->ReturnType;
+    ;
     if (ReturnType.isNull() || ReturnType->isVoidType()) {
       Builder.AddTypedTextChunk("return");
       Builder.AddChunk(CodeCompletionString::CK_SemiColon);
@@ -3425,6 +3425,25 @@ AddFunctionTypeQualsToCompletionString(CodeCompletionBuilder &Result,
   Result.AddInformativeChunk(Result.getAllocator().CopyString(QualsStr));
 }
 
+static void
+AddFunctionExceptSpecToCompletionString(std::string &NameAndSignature,
+                                        const FunctionDecl *Function) {
+  const auto *Proto = Function->getType()->getAs<FunctionProtoType>();
+  if (!Proto)
+    return;
+
+  auto ExceptInfo = Proto->getExceptionSpecInfo();
+  switch (ExceptInfo.Type) {
+  case EST_BasicNoexcept:
+  case EST_NoexceptTrue:
+    NameAndSignature += " noexcept";
+    break;
+
+  default:
+    break;
+  }
+}
+
 /// Add the name of the given declaration
 static void AddTypedNameChunk(ASTContext &Context, const PrintingPolicy &Policy,
                               const NamedDecl *ND,
@@ -3640,6 +3659,13 @@ CodeCompletionResult::createCodeCompletionStringForOverride(
   std::string NameAndSignature;
   // For overrides all chunks go into the result, none are informative.
   printOverrideString(*CCS, BeforeName, NameAndSignature);
+
+  // If the virtual function is declared with "noexcept", add it in the result
+  // code completion string.
+  const auto *VirtualFunc = dyn_cast<FunctionDecl>(Declaration);
+  assert(VirtualFunc && "overridden decl must be a function");
+  AddFunctionExceptSpecToCompletionString(NameAndSignature, VirtualFunc);
+
   NameAndSignature += " override";
 
   Result.AddTextChunk(Result.getAllocator().CopyString(BeforeName));
@@ -4885,7 +4911,8 @@ static void AddEnumerators(ResultBuilder &Results, ASTContext &Context,
                            EnumDecl *Enum, DeclContext *CurContext,
                            const CoveredEnumerators &Enumerators) {
   NestedNameSpecifier *Qualifier = Enumerators.SuggestedQualifier;
-  if (Context.getLangOpts().CPlusPlus && !Qualifier && Enumerators.Seen.empty()) {
+  if (Context.getLangOpts().CPlusPlus && !Qualifier &&
+      Enumerators.Seen.empty()) {
     // If there are no prior enumerators in C++, check whether we have to
     // qualify the names of the enumerators that we suggest, because they
     // may not be visible in this scope.
@@ -5291,8 +5318,7 @@ AddObjCProperties(const CodeCompletionContext &CCContext,
                         AllowNullaryMethods, CurContext, AddedProperties,
                         Results, IsBaseExprStatement, IsClassProperty,
                         /*InOriginalClass*/ false);
-  } else if (const auto *Category =
-                 dyn_cast<ObjCCategoryDecl>(Container)) {
+  } else if (const auto *Category = dyn_cast<ObjCCategoryDecl>(Container)) {
     // Look through protocols.
     for (auto *P : Category->protocols())
       AddObjCProperties(CCContext, P, AllowCategories, AllowNullaryMethods,
@@ -6170,8 +6196,7 @@ void SemaCodeCompletion::CodeCompleteCase(Scope *S) {
 
     Expr *CaseVal = Case->getLHS()->IgnoreParenCasts();
     if (auto *DRE = dyn_cast<DeclRefExpr>(CaseVal))
-      if (auto *Enumerator =
-              dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
+      if (auto *Enumerator = dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
         // We look into the AST of the case statement to determine which
         // enumerator was named. Alternatively, we could compute the value of
         // the integral constant expression, then compare it against the
@@ -8442,11 +8467,10 @@ void SemaCodeCompletion::CodeCompleteObjCInstanceMessage(
       return;
     RecExpr = Conv.get();
   }
-  QualType ReceiverType = RecExpr
-                              ? RecExpr->getType()
-                              : Super ? Context.getObjCObjectPointerType(
-                                            Context.getObjCInterfaceType(Super))
-                                      : Context.getObjCIdType();
+  QualType ReceiverType = RecExpr ? RecExpr->getType()
+                          : Super ? Context.getObjCObjectPointerType(
+                                        Context.getObjCInterfaceType(Super))
+                                  : Context.getObjCIdType();
 
   // If we're messaging an expression with type "id" or "Class", check
   // whether we know something special about the receiver that allows
@@ -10318,8 +10342,7 @@ void SemaCodeCompletion::CodeCompleteIncludedFile(llvm::StringRef Dir,
   };
 
   // Helper: scans IncludeDir for nice files, and adds results for each.
-  auto AddFilesFromIncludeDir = [&](StringRef IncludeDir,
-                                    bool IsSystem,
+  auto AddFilesFromIncludeDir = [&](StringRef IncludeDir, bool IsSystem,
                                     DirectoryLookup::LookupType_t LookupType) {
     llvm::SmallString<128> Dir = IncludeDir;
     if (!NativeRelDir.empty()) {
