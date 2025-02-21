@@ -130,17 +130,12 @@ public:
     return id;
   }
 
-  const swift::reflection::TypeRef *GetTypeRefOrNull(
-      StringRef mangled_type_name,
-      swift::reflection::DescriptorFinder *descriptor_finder) override {
+  llvm::Expected<const swift::reflection::TypeRef &>
+  GetTypeRef(StringRef mangled_type_name,
+             swift::reflection::DescriptorFinder *descriptor_finder) override {
     swift::Demangle::Demangler dem;
     swift::Demangle::NodePointer node = dem.demangleSymbol(mangled_type_name);
-    const swift::reflection::TypeRef *type_ref =
-        GetTypeRefOrNull(dem, node, descriptor_finder);
-    if (!type_ref)
-      LLDB_LOG(GetLog(LLDBLog::Types), "Could not find typeref for type {0}",
-               mangled_type_name);
-    return type_ref;
+    return GetTypeRef(dem, node, descriptor_finder);
   }
 
   /// Sets the descriptor finder, and on scope exit clears it out.
@@ -151,89 +146,87 @@ public:
         [&]() { m_forwader.PopExternalDescriptorFinder(); });
   }
 
-  const swift::reflection::TypeRef *GetTypeRefOrNull(
-      swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
-      swift::reflection::DescriptorFinder *descriptor_finder) override {
+  llvm::Expected<const swift::reflection::TypeRef &>
+  GetTypeRef(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+             swift::reflection::DescriptorFinder *descriptor_finder) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     auto type_ref_or_err =
         swift::Demangle::decodeMangledType(m_reflection_ctx.getBuilder(), node);
-    if (type_ref_or_err.isError()) {
-      LLDB_LOG(GetLog(LLDBLog::Types),
-               "Could not find typeref: decode mangled type failed. Error: {0}",
-               type_ref_or_err.getError()->copyErrorString());
-      return nullptr;
-    }
-    return type_ref_or_err.getType();
+    if (type_ref_or_err.isError())
+      return llvm::createStringError(
+          type_ref_or_err.getError()->copyErrorString());
+    auto *tr = type_ref_or_err.getType();
+    if (!tr)
+      return llvm::createStringError(
+          "decoder returned nullptr typeref but no error");
+    return *tr;
   }
 
-  const swift::reflection::RecordTypeInfo *GetClassInstanceTypeInfo(
-      const swift::reflection::TypeRef *type_ref,
+  llvm::Expected<const swift::reflection::RecordTypeInfo &>
+  GetClassInstanceTypeInfo(
+      const swift::reflection::TypeRef &type_ref,
       swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
-    if (!type_ref)
-      return nullptr;
-
     auto start =
-        m_reflection_ctx.computeUnalignedFieldStartOffset(type_ref, provider);
+        m_reflection_ctx.computeUnalignedFieldStartOffset(&type_ref, provider);
     if (!start) {
-      if (auto *log = GetLog(LLDBLog::Types)) {
-        std::stringstream ss;
-        type_ref->dump(ss);
-        LLDB_LOG(log, "Could not compute start field offset for typeref: ",
-                 ss.str());
-      }
-      return nullptr;
+      std::stringstream ss;
+      type_ref.dump(ss);
+      return llvm::createStringError(
+          "Could not compute start field offset for typeref: " + ss.str());
     }
 
-    return m_type_converter.getClassInstanceTypeInfo(type_ref, *start,
-                                                     provider);
+    auto *rti =
+        m_type_converter.getClassInstanceTypeInfo(&type_ref, *start, provider);
+    if (!rti)
+      return llvm::createStringError(
+          "converter returned nullptr typeinfo but no error");
+    return *rti;
   }
 
-  const swift::reflection::TypeInfo *
-  GetTypeInfo(const swift::reflection::TypeRef *type_ref,
+  llvm::Expected<const swift::reflection::TypeInfo &>
+  GetTypeInfo(const swift::reflection::TypeRef &type_ref,
               swift::remote::TypeInfoProvider *provider,
               swift::reflection::DescriptorFinder *descriptor_finder) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
-    if (!type_ref)
-      return nullptr;
 
     Log *log(GetLog(LLDBLog::Types));
     if (log && log->GetVerbose()) {
       std::stringstream ss;
-      type_ref->dump(ss);
+      type_ref.dump(ss);
       LLDB_LOG(log,
                "[TargetReflectionContext[{0:x}]::getTypeInfo] Getting type "
                "info for typeref {1}",
                provider ? provider->getId() : 0, ss.str());
     }
 
-    auto type_info = m_reflection_ctx.getTypeInfo(type_ref, provider);
-    if (log && !type_info) {
+    auto type_info = m_reflection_ctx.getTypeInfo(&type_ref, provider);
+    if (!type_info) {
       std::stringstream ss;
-      type_ref->dump(ss);
-      LLDB_LOG(log,
-               "[TargetReflectionContext::getTypeInfo] Could not get "
-               "type info for typeref {0}",
-               ss.str());
+      type_ref.dump(ss);
+      return llvm::createStringError("Could not get type info for typeref: " +
+                                     ss.str());
     }
 
-    if (type_info && log && log->GetVerbose()) {
+    if (log && log->GetVerbose()) {
       std::stringstream ss;
       type_info->dump(ss);
       LLDB_LOG(log,
-               "[TargetReflectionContext::getTypeInfo] Found "
-               "type info {0}",
+               "[TargetReflectionContext::getTypeInfo] Found type info {0}",
                ss.str());
     }
-    return type_info;
+    return *type_info;
   }
 
-  const swift::reflection::TypeInfo *GetTypeInfoFromInstance(
+  llvm::Expected<const swift::reflection::TypeInfo &> GetTypeInfoFromInstance(
       lldb::addr_t instance, swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
-    return m_reflection_ctx.getInstanceTypeInfo(instance, provider);
+    auto *ti = m_reflection_ctx.getInstanceTypeInfo(instance, provider);
+    if (!ti)
+      return llvm::createStringError("could not get instance type info");
+    return *ti;
   }
 
   swift::reflection::MemoryReader &GetReader() override {
@@ -241,10 +234,10 @@ public:
   }
 
   const swift::reflection::TypeRef *LookupSuperclass(
-      const swift::reflection::TypeRef *tr,
+      const swift::reflection::TypeRef &tr,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
-    return m_reflection_ctx.getBuilder().lookupSuperclass(tr);
+    return m_reflection_ctx.getBuilder().lookupSuperclass(&tr);
   }
 
   bool
@@ -254,12 +247,15 @@ public:
                         std::function<bool(SuperClassType)> fn) override {
     while (tr) {
       if (fn({[=]() -> const swift::reflection::RecordTypeInfo * {
-                return GetRecordTypeInfo(tr, tip, descriptor_finder);
+                auto ti_or_err = GetRecordTypeInfo(*tr, tip, descriptor_finder);
+                LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), ti_or_err.takeError(),
+                                "ForEachSuperClassType: {0}");
+                return &*ti_or_err;
               },
               [=]() -> const swift::reflection::TypeRef * { return tr; }}))
         return true;
 
-      tr = LookupSuperclass(tr, descriptor_finder);
+      tr = LookupSuperclass(*tr, descriptor_finder);
     }
     return false;
   }
@@ -323,11 +319,13 @@ public:
         existential_address, existential_tr);
   }
 
-  const swift::reflection::TypeRef *
+  llvm::Expected<const swift::reflection::TypeRef &>
   LookupTypeWitness(const std::string &MangledTypeName,
                     const std::string &Member, StringRef Protocol) override {
-    return m_type_converter.getBuilder().lookupTypeWitness(MangledTypeName,
-                                                           Member, Protocol);
+    if (auto *tr = m_type_converter.getBuilder().lookupTypeWitness(
+            MangledTypeName, Member, Protocol))
+      return *tr;
+    return llvm::createStringError("could not lookup type witness");
   }
   swift::reflection::ConformanceCollectionResult GetAllConformances() override {
     swift::reflection::TypeRefBuilder &b = m_type_converter.getBuilder();
@@ -336,31 +334,33 @@ public:
     return b.collectAllConformances<swift::NoObjCInterop, PointerSize>();
   }
 
-  const swift::reflection::TypeRef *
+  llvm::Expected<const swift::reflection::TypeRef &>
   ReadTypeFromMetadata(lldb::addr_t metadata_address,
                        swift::reflection::DescriptorFinder *descriptor_finder,
                        bool skip_artificial_subclasses) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
-    return m_reflection_ctx.readTypeFromMetadata(metadata_address,
-                                                 skip_artificial_subclasses);
+    if (auto *tr = m_reflection_ctx.readTypeFromMetadata(
+            metadata_address, skip_artificial_subclasses))
+      return *tr;
+    return llvm::createStringError("could not read type from metadata");
   }
 
-  const swift::reflection::TypeRef *
+  llvm::Expected<const swift::reflection::TypeRef &>
   ReadTypeFromInstance(lldb::addr_t instance_address,
                        swift::reflection::DescriptorFinder *descriptor_finder,
                        bool skip_artificial_subclasses) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     auto metadata_address =
         m_reflection_ctx.readMetadataFromInstance(instance_address);
-    if (!metadata_address) {
-      LLDB_LOG(GetLog(LLDBLog::Types),
-               "could not read heap metadata for object at {0:x}",
-               instance_address);
-      return nullptr;
-    }
+    if (!metadata_address)
+      return llvm::createStringError(
+          llvm::formatv("could not read heap metadata for object at {0:x}",
+                        instance_address));
 
-    return m_reflection_ctx.readTypeFromMetadata(*metadata_address,
-                                                 skip_artificial_subclasses);
+    if (auto *tr = m_reflection_ctx.readTypeFromMetadata(
+            *metadata_address, skip_artificial_subclasses))
+      return *tr;
+    return llvm::createStringError("could not read type from metadata");
   }
 
   std::optional<bool> IsValueInlinedInExistentialContainer(
@@ -369,12 +369,14 @@ public:
         existential_address);
   }
 
-  const swift::reflection::TypeRef *ApplySubstitutions(
-      const swift::reflection::TypeRef *type_ref,
+  llvm::Expected<const swift::reflection::TypeRef &> ApplySubstitutions(
+      const swift::reflection::TypeRef &type_ref,
       swift::reflection::GenericArgumentMap substitutions,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
-    return type_ref->subst(m_reflection_ctx.getBuilder(), substitutions);
+    if (auto *tr = type_ref.subst(m_reflection_ctx.getBuilder(), substitutions))
+      return *tr;
+    return llvm::createStringError("failed to apply substitutions");
   }
 
   swift::remote::RemoteAbsolutePointer
@@ -409,23 +411,24 @@ public:
 private:
   /// Return a description of the layout of the record (classes, structs and
   /// tuples) type given its typeref.
-  const swift::reflection::RecordTypeInfo *
-  GetRecordTypeInfo(const swift::reflection::TypeRef *type_ref,
+  llvm::Expected<const swift::reflection::RecordTypeInfo &>
+  GetRecordTypeInfo(const swift::reflection::TypeRef &type_ref,
                     swift::remote::TypeInfoProvider *tip,
                     swift::reflection::DescriptorFinder *descriptor_finder) {
-    auto *type_info = GetTypeInfo(type_ref, tip, descriptor_finder);
+    auto type_info_or_err = GetTypeInfo(type_ref, tip, descriptor_finder);
+    if (!type_info_or_err)
+      return type_info_or_err.takeError();
+    auto *type_info = &*type_info_or_err;
     if (auto record_type_info =
             llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(
                 type_info))
-      return record_type_info;
+      return *record_type_info;
     if (llvm::isa_and_nonnull<swift::reflection::ReferenceTypeInfo>(type_info))
       return GetClassInstanceTypeInfo(type_ref, tip, descriptor_finder);
-    if (auto *log = GetLog(LLDBLog::Types)) {
-      std::stringstream ss;
-      type_ref->dump(ss);
-      LLDB_LOG(log, "Could not get record type info for typeref: ", ss.str());
-    }
-    return nullptr;
+    std::stringstream ss;
+    type_ref.dump(ss);
+    return llvm::createStringError(
+        "Could not get record type info for typeref: " + ss.str());
   }
 };
 } // namespace
