@@ -36,16 +36,16 @@ def simm26 : RISCVSImmLeafOp<26>;
 
 // 32-bit Immediate, used by RV32 Instructions in 32-bit operations, so no
 // sign-/zero-extension. This is represented internally as a signed 32-bit value.
-def imm32 : RISCVOp<XLenVT> {
-  let ParserMatchClass = ImmAsmOperand<"", 32, "">;
+def simm32 : RISCVOp<XLenVT> {
+  let ParserMatchClass = SImmAsmOperand<32, "">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<32>";
-  let OperandType = "OPERAND_IMM32";
+  let OperandType = "OPERAND_SIMM32";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
-      return (isInt<32>(Imm));
-    return MCOp.isBareSymbolRef();
+      return isInt<32>(Imm);
+    return false;
   }];
 }
 
@@ -261,7 +261,7 @@ class QCIRVInstESStore<bits<3> funct3, bits<2> funct2, string opcodestr>
                       opcodestr, "$rs2, ${imm}(${rs1})">;
 
 class QCIRVInstEAI<bits<3> funct3, bits<1> funct1, string opcodestr>
-    : RVInst48<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, imm32:$imm),
+    : RVInst48<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, simm32:$imm),
                opcodestr, "$rd, $imm", [], InstFormatOther> {
   bits<5> rd;
   bits<32> imm;
