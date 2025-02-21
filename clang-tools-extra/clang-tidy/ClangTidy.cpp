@@ -42,6 +42,7 @@
 #include "llvm/Support/Process.h"
 #include <algorithm>
 #include <utility>
+#include <vector>
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
 #include "clang/Analysis/PathDiagnostic.h"
@@ -362,8 +363,8 @@ private:
   std::vector<Decl *> Decls;
 
   bool isInSystemHeader(Decl *D) {
-    SourceManager &SM = D->getASTContext().getSourceManager();
-    SourceLocation Loc = SM.getExpansionLoc(D->getBeginLoc());
+    const SourceManager &SM = D->getASTContext().getSourceManager();
+    const SourceLocation Loc = SM.getExpansionLoc(D->getBeginLoc());
     return SM.isInSystemHeader(Loc);
   }
 };
