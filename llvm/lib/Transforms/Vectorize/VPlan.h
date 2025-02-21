@@ -3426,6 +3426,11 @@ class VPlan {
   /// VPIRBasicBlock wrapping the header of the original scalar loop.
   VPIRBasicBlock *ScalarHeader;
 
+  /// Immutable list of VPIRBasicBlocks wrapping the exit blocks of the original
+  /// scalar loop. Note that some exit blocks may be unreachable, e.g. if the
+  /// scalar epilogue always executes
+  SmallVector<VPIRBasicBlock *, 2> ExitBlocks;
+
   /// Holds the VFs applicable to this VPlan.
   SmallSetVector<ElementCount, 2> VFs;
 
@@ -3559,11 +3564,13 @@ public:
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
   VPIRBasicBlock *getScalarHeader() const { return ScalarHeader; }
 
-  /// Return an iterator range over the VPIRBasicBlock wrapping the exit blocks
-  /// of the VPlan, that is leaf nodes except the scalar header. Defined in
-  /// VPlanHCFG, as the definition of the type needs access to the definitions
-  /// of VPBlockShallowTraversalWrapper.
-  auto getExitBlocks();
+  /// Return an ArrayRef containing VPIRBasicBlocks wrapping the exit blocks of
+  /// the original scalar loop.
+  ArrayRef<VPIRBasicBlock *> getExitBlocks() const { return ExitBlocks; }
+
+  /// Return the VPIRBasicBlock corresponding to \p IRBB. \p IRBB must be an
+  /// exit block.
+  VPIRBasicBlock *getExitBlock(BasicBlock *IRBB) const;
 
   /// Returns true if \p VPBB is an exit block.
   bool isExitBlock(VPBlockBase *VPBB);
