@@ -1521,9 +1521,12 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
   if (auto extOp = getOperand().getDefiningOp<arith::ExtFOp>()) {
     Value src = extOp.getIn();
     auto srcType = cast<FloatType>(getElementTypeOrSelf(src.getType()));
-    auto intermediateType = cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
+    auto intermediateType =
+        cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
     // Check if the srcType is representable in the intermediateType
-    if(llvm::APFloatBase::isRepresentableBy(srcType.getFloatSemantics(), intermediateType.getFloatSemantics())) {
+    if (llvm::APFloatBase::isRepresentableBy(
+            srcType.getFloatSemantics(),
+            intermediateType.getFloatSemantics())) {
       // truncf(extf(a)) -> truncf(a)
       if (srcType.getWidth() > resElemType.getWidth()) {
         setOperand(src);
