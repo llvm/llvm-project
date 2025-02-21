@@ -68,8 +68,8 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
     AddressRange &func, Thread &thread, UnwindPlan &unwind_plan) {
   bool do_augment_unwindplan = true;
 
-  UnwindPlan::RowSP first_row = unwind_plan.GetRowForFunctionOffset(0);
-  UnwindPlan::RowSP last_row = unwind_plan.GetRowForFunctionOffset(-1);
+  const UnwindPlan::Row *first_row = unwind_plan.GetRowForFunctionOffset(0);
+  const UnwindPlan::Row *last_row = unwind_plan.GetLastRow();
 
   int wordsize = 8;
   ProcessSP process_sp(thread.GetProcess());

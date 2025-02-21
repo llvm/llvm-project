@@ -366,11 +366,11 @@ LazyBool FuncUnwinders::CompareUnwindPlansForIdenticalInitialPCLocation(
   RegisterNumber pc_reg(thread, eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
   uint32_t pc_reg_lldb_regnum = pc_reg.GetAsKind(eRegisterKindLLDB);
 
-  if (a.get() && b.get()) {
-    UnwindPlan::RowSP a_first_row = a->GetRowAtIndex(0);
-    UnwindPlan::RowSP b_first_row = b->GetRowAtIndex(0);
+  if (a && b) {
+    const UnwindPlan::Row *a_first_row = a->GetRowAtIndex(0);
+    const UnwindPlan::Row *b_first_row = b->GetRowAtIndex(0);
 
-    if (a_first_row.get() && b_first_row.get()) {
+    if (a_first_row && b_first_row) {
       UnwindPlan::Row::AbstractRegisterLocation a_pc_regloc;
       UnwindPlan::Row::AbstractRegisterLocation b_pc_regloc;
 

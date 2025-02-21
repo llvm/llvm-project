@@ -1359,7 +1359,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
   if (unwind_plan.GetRowCount() < 2)
     return false;
 
-  UnwindPlan::RowSP first_row = unwind_plan.GetRowAtIndex(0);
+  const UnwindPlan::Row *first_row = unwind_plan.GetRowAtIndex(0);
   if (first_row->GetOffset() != 0)
     return false;
   uint32_t cfa_reg = first_row->GetCFAValue().GetRegisterNumber();
@@ -1372,7 +1372,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
       first_row->GetCFAValue().GetOffset() != m_wordsize)
     return false;
 
-  UnwindPlan::RowSP original_last_row = unwind_plan.GetRowForFunctionOffset(-1);
+  const UnwindPlan::Row *original_last_row = unwind_plan.GetLastRow();
 
   size_t offset = 0;
   int row_id = 1;
@@ -1417,7 +1417,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
            unwind_plan.GetRowAtIndex(row_id)->GetOffset() <= offset) {
       row_id++;
     }
-    UnwindPlan::RowSP original_row = unwind_plan.GetRowAtIndex(row_id - 1);
+    const UnwindPlan::Row *original_row = unwind_plan.GetRowAtIndex(row_id - 1);
     if (original_row->GetOffset() == offset) {
       *row = *original_row;
       continue;
