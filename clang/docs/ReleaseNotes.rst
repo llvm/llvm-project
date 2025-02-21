@@ -1057,6 +1057,7 @@ Bug Fixes to C++ Support
 - Fix that some dependent immediate expressions did not cause immediate escalation (#GH119046)
 - Fixed a substitution bug in transforming CTAD aliases when the type alias contains a non-pack template argument
   corresponding to a pack parameter (#GH124715)
+- Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
