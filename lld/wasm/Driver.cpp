@@ -942,6 +942,8 @@ static void createSyntheticSymbols() {
     // For non-PIC code
     ctx.sym.stackPointer = createGlobalVariable("__stack_pointer", true);
     ctx.sym.stackPointer->markLive();
+    ctx.sym.memoryBase = createGlobalVariable("__memory_base", false);
+    ctx.sym.tableBase = createGlobalVariable("__table_base", false);
   }
 
   if (ctx.arg.sharedMemory) {
