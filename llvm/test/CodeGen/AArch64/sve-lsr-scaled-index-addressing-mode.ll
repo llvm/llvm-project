@@ -89,7 +89,7 @@ define void @masked_ld_st_nxv8i16(ptr %in, ptr %out, i64 %n) {
 ; IR-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 [[TMP0]]
 ; IR-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVAR]], 1
 ; IR-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 [[TMP1]]
-; IR-NEXT:    [[VAL:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[UGLYGEP1]], i32 4, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> undef)
+; IR-NEXT:    [[VAL:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[UGLYGEP1]], i32 4, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> poison)
 ; IR-NEXT:    [[ADDP_VEC:%.*]] = add <vscale x 8 x i16> [[VAL]], splat (i16 3)
 ; IR-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[ADDP_VEC]], ptr [[UGLYGEP]], i32 4, <vscale x 8 x i1> splat (i1 true))
 ; IR-NEXT:    [[INDVAR_NEXT]] = add nsw i64 [[INDVAR]], [[SCALED_VF]]
@@ -127,7 +127,7 @@ loop:                                             ; preds = %loop, %loop.ph
   %indvar = phi i64 [ 0, %loop.ph ], [ %indvar.next, %loop ]
   %ptr.in = getelementptr inbounds i16, ptr %in, i64 %indvar
   %ptr.out = getelementptr inbounds i16, ptr %out, i64 %indvar
-  %val = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr %ptr.in, i32 4, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> undef)
+  %val = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr %ptr.in, i32 4, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> poison)
   %addp_vec = add <vscale x 8 x i16> %val, splat (i16 3)
   call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %addp_vec, ptr %ptr.out, i32 4, <vscale x 8 x i1> splat (i1 true))
   %indvar.next = add nsw i64 %indvar, %scaled_vf
