@@ -1286,6 +1286,11 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     emitc.verbatim "typedef float f32;"
     emitc.verbatim "#pragma my var={} property" args %arg : f32
     ```
+    ```c++
+    // Code emitted for the operation above.
+    typedef float f32;
+    #pragma my var=v1 property
+    ```
 >>>>>>> cabdac5e5703 ([mlir][emitc][NFC] Add an example to the description of the emitc.verbatim operation)
   }];
 
