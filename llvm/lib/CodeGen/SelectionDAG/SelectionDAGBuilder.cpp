@@ -3365,7 +3365,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     // lower it to a DAG node here.
     case Intrinsic::wasm_throw: {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      SmallVector<SDValue, 8> Ops = {
+      std::array<SDValue, 4> Ops = {
           getControlRoot(), // inchain for the terminator node
           DAG.getTargetConstant(Intrinsic::wasm_throw, getCurSDLoc(),
                                 TLI.getPointerTy(DAG.getDataLayout())),
@@ -3377,12 +3377,11 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       break;
     }
     case Intrinsic::wasm_rethrow: {
-      SmallVector<SDValue, 8> Ops;
-      Ops.push_back(getControlRoot()); // inchain for the terminator node
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      Ops.push_back(
+      std::array<SDValue, 2> Ops = {
+          getControlRoot(), // inchain for the terminator node
           DAG.getTargetConstant(Intrinsic::wasm_rethrow, getCurSDLoc(),
-                                TLI.getPointerTy(DAG.getDataLayout())));
+                                TLI.getPointerTy(DAG.getDataLayout()))};
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
