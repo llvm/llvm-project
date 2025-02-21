@@ -103,7 +103,7 @@
 "`LWG4142 <https://wg21.link/LWG4142>`__","``format_parse_context::check_dynamic_spec`` should require at least one type","2024-11 (Wrocław)","","","`#118358 <https://github.com/llvm/llvm-project/issues/118358>`__",""
 "`LWG4144 <https://wg21.link/LWG4144>`__","Disallow ``unique_ptr<T&, D>``","2024-11 (Wrocław)","","","`#118359 <https://github.com/llvm/llvm-project/issues/118359>`__",""
 "`LWG4147 <https://wg21.link/LWG4147>`__","Precondition on ``inplace_vector::emplace``","2024-11 (Wrocław)","","","`#118361 <https://github.com/llvm/llvm-project/issues/118361>`__",""
-"`LWG4148 <https://wg21.link/LWG4148>`__","``unique_ptr::operator*`` should not allow dangling references","2024-11 (Wrocław)","","","`#118362 <https://github.com/llvm/llvm-project/issues/118362>`__",""
+"`LWG4148 <https://wg21.link/LWG4148>`__","``unique_ptr::operator*`` should not allow dangling references","2024-11 (Wrocław)","|Complete|","22","`#118362 <https://github.com/llvm/llvm-project/issues/118362>`__",""
 "`LWG4153 <https://wg21.link/LWG4153>`__","Fix extra ""-1"" for ``philox_engine::max()``","2024-11 (Wrocław)","","","`#118363 <https://github.com/llvm/llvm-project/issues/118363>`__",""
 "`LWG4154 <https://wg21.link/LWG4154>`__","The Mandates for ``std::packaged_task``'s constructor from a callable entity should consider decaying","2024-11 (Wrocław)","","","`#118364 <https://github.com/llvm/llvm-project/issues/118364>`__",""
 "`LWG4157 <https://wg21.link/LWG4157>`__","The resolution of LWG3465 was damaged by P2167R3","2024-11 (Wrocław)","|Complete|","20","`#118365 <https://github.com/llvm/llvm-project/issues/118365>`__",""
