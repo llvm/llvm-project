@@ -1589,7 +1589,7 @@ that means restricting visibility to a single `.cpp` file if it's not referenced
 outside that file.
 
 Visibility of file-scope non-member variables and functions can be restricted to
-the current translation unit by using either `static` keyword or anonymous namespace.
+the current translation unit by using either the `static` keyword or an anonymous namespace.
 Anonymous namespaces are a great language feature that tells the C++ compiler that
 the contents of the namespace are only visible within the current translation unit,
 allowing more aggressive optimization and eliminating the possibility of symbol
