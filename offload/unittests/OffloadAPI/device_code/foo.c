@@ -1,5 +1,5 @@
-#include "util.h"
+#include <gpuintrin.h>
 
-KERNEL void foo(int *out) {
-    out[get_thread_id_x()] = get_thread_id_x();
+__gpu_kernel void foo(int *out) {
+    out[__gpu_thread_id(0)] = __gpu_thread_id(0);
 }
