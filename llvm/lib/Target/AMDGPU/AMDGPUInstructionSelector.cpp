@@ -782,22 +782,9 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
     return true;
 
   // TODO: This should probably be a combine somewhere
+  // (build_vector $src0, undef) -> copy $src0
   MachineInstr *Src1Def = getDefIgnoringCopies(Src1, *MRI);
   if (Src1Def->getOpcode() == AMDGPU::G_IMPLICIT_DEF) {
-    if (Subtarget->useRealTrue16Insts() && IsVector) {
-      // (vecTy (DivergentBinFrag<build_vector> Ty:$src0, (Ty undef))),
-      // -> (vecTy (INSERT_SUBREG (IMPLICIT_DEF), VGPR_16:$src0, lo16))
-      Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*BB, &MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), Undef);
-      BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::INSERT_SUBREG), Dst)
-          .addReg(Undef)
-          .addReg(Src0)
-          .addImm(AMDGPU::lo16);
-      MI.eraseFromParent();
-      return RBI.constrainGenericRegister(Dst, AMDGPU::VGPR_32RegClass, *MRI) &&
-             RBI.constrainGenericRegister(Src0, AMDGPU::VGPR_16RegClass, *MRI);
-    }
-    // (build_vector $src0, undef)  -> copy $src0
     MI.setDesc(TII.get(AMDGPU::COPY));
     MI.removeOperand(2);
     const auto &RC =
