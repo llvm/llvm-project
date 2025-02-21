@@ -5364,7 +5364,7 @@ int main(int argc, char *argv[]) {
     if (auto Err = serveConnection(protocol, name, log.get(), program_path,
                                    default_repl_mode, pre_init_commands)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                  "Failed to create socket listener: ");
+                                  "Connection failed: ");
       return EXIT_FAILURE;
     }
 
