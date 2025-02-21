@@ -3587,7 +3587,15 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   Value *RetVal = RI.getReturnValue();
-  if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
+  if (!RetVal)
+    return nullptr;
+
+  if (RetVal->getType()->isPointerTy() && RI.getFunction()->isReturnNonNull()) {
+    if (Value *V = simplifyNonNullOperand(RetVal))
+      return replaceOperand(RI, 0, V);
+  }
+
+  if (!AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
     return nullptr;
 
   Function *F = RI.getFunction();

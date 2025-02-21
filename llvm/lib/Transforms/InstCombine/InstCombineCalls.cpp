@@ -3993,10 +3993,20 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   unsigned ArgNo = 0;
 
   for (Value *V : Call.args()) {
-    if (V->getType()->isPointerTy() &&
-        !Call.paramHasAttr(ArgNo, Attribute::NonNull) &&
-        isKnownNonZero(V, getSimplifyQuery().getWithInstruction(&Call)))
-      ArgNos.push_back(ArgNo);
+    if (V->getType()->isPointerTy()) {
+      // Simplify the nonnull operand before nonnull inference to avoid
+      // unnecessary queries.
+      if (Call.paramHasNonNullAttr(ArgNo, /*AllowUndefOrPoison=*/true)) {
+        if (Value *Res = simplifyNonNullOperand(V)) {
+          replaceOperand(Call, ArgNo, Res);
+          Changed = true;
+        }
+      }
+
+      if (!Call.paramHasAttr(ArgNo, Attribute::NonNull) &&
+          isKnownNonZero(V, getSimplifyQuery().getWithInstruction(&Call)))
+        ArgNos.push_back(ArgNo);
+    }
     ArgNo++;
   }
 
