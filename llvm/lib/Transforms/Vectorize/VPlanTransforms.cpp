@@ -994,10 +994,10 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
 
   // Calculate the widest type required for known TC, VF and UF.
   auto ComputeBitWidth = [](APInt TC, uint64_t Align) {
-    auto AlignedTC =
+    APInt AlignedTC =
         Align * APIntOps::RoundingUDiv(TC, APInt(TC.getBitWidth(), Align),
                                        APInt::Rounding::UP);
-    auto MaxVal = AlignedTC - 1;
+    APInt MaxVal = AlignedTC - 1;
     return std::max<unsigned>(PowerOf2Ceil(MaxVal.getActiveBits()), 8);
   };
   unsigned NewBitWidth =
@@ -1011,6 +1011,10 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+
+    // Currently only handle canonical IVs as it is trivial to replace the start
+    // and stop values, and we only perform the optimisation when the IV is only
+    // used by the comparison controlling loop control-flow.
     if (!WideIV || !WideIV->isCanonical() ||
         WideIV->hasMoreThanOneUniqueUser() ||
         NewIVTy == WideIV->getScalarType())
@@ -1034,7 +1038,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     auto *NewBTC = new VPWidenCastRecipe(
         Instruction::Trunc, Plan.getOrCreateBackedgeTakenCount(), NewIVTy);
     Plan.getVectorPreheader()->appendRecipe(NewBTC);
-    auto *Cmp = dyn_cast<VPInstruction>(*WideIV->user_begin());
+    auto *Cmp = cast<VPInstruction>(*WideIV->user_begin());
     Cmp->setOperand(1, NewBTC);
 
     MadeChange = true;
