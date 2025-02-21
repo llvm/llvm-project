@@ -31,16 +31,12 @@ define i16 @samePatternTwice(i64 %x, i64 %y) {
 ; CHECK-LABEL: @samePatternTwice(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[Y:%.*]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[LAND_END:%.*]], label [[LAND_RHS:%.*]]
-; CHECK:       land.rhs:
 ; CHECK-NEXT:    [[MUL:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[Y]], i64 [[X:%.*]])
 ; CHECK-NEXT:    [[MUL_OV:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
 ; CHECK-NEXT:    [[MUL2:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[Y]], i64 [[X]])
-; CHECK-NEXT:    [[MUL_OV2:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    br label [[LAND_END]]
-; CHECK:       land.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[MUL_OV]], [[LAND_RHS]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[MUL_OV2]], [[LAND_RHS]] ]
+; CHECK-NEXT:    [[MUL_OV2:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_NOT]], i1 false, i1 [[MUL_OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP_NOT]], i1 false, i1 [[MUL_OV2]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i16
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TORET:%.*]] = add nsw i16 [[CONV]], [[CONV2]]
@@ -54,7 +50,7 @@ land.rhs:                                         ; preds = %entry
   %mul = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %y, i64 %x)
   %mul.ov = extractvalue { i64, i1 } %mul, 1
   %mul2 = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %y, i64 %x)
-  %mul.ov2 = extractvalue { i64, i1 } %mul, 1
+  %mul.ov2 = extractvalue { i64, i1 } %mul2, 1
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %entry
