@@ -165,7 +165,7 @@ using iter_value_t =
                   int>::value_type;
 namespace ranges {
 struct Trans_NS___iter_move___fn {
-  template <class _Ip> auto operator()(_Ip __i) const -> decltype(move(*(__i)));
+  template <class _Ip> auto operator()(_Ip __i) const -> decltype(std::move(*(__i)));
 };
 inline namespace {
 auto iter_move = Trans_NS___iter_move___fn{};
