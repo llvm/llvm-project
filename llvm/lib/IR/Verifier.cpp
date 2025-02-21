@@ -6367,6 +6367,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
+    Check(dyn_cast_or_null<UnreachableInst>(Call.getNextNode()),
+          "amdgcn_cs_chain must precede unreachable", &Call);
     break;
   }
   case Intrinsic::amdgcn_set_inactive_chain_arg: {
