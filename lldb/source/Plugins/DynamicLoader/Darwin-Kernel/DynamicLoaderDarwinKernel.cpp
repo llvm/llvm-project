@@ -738,7 +738,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
   }
 
   if (IsKernel() && m_uuid.IsValid()) {
-    lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
+    lldb::StreamUP s = target.GetDebugger().GetAsyncOutputStream();
     s->Printf("Kernel UUID: %s\n", m_uuid.GetAsString().c_str());
     s->Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
 
@@ -830,7 +830,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       }
 
       if (IsKernel() && !m_module_sp) {
-        lldb::StreamSP s = target.GetDebugger().GetAsyncErrorStream();
+        lldb::StreamUP s = target.GetDebugger().GetAsyncErrorStream();
         s->Printf("WARNING: Unable to locate kernel binary on the debugger "
                   "system.\n");
         if (kernel_search_error.Fail() && kernel_search_error.AsCString("") &&
@@ -974,7 +974,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
   bool is_loaded = IsLoaded();
 
   if (is_loaded && m_module_sp && IsKernel()) {
-    lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
+    lldb::StreamUP s = target.GetDebugger().GetAsyncOutputStream();
     ObjectFile *kernel_object_file = m_module_sp->GetObjectFile();
     if (kernel_object_file) {
       addr_t file_address =
