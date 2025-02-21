@@ -198,6 +198,16 @@ public:
   /// Returns the *entry* mask for the block \p BB.
   VPValue *getBlockInMask(BasicBlock *BB) const;
 
+  /// Set the block entry block mask for \p BB to \p Mask.
+  void setBlockInMask(BasicBlock *BB, VPValue *Mask) {
+    BlockMaskCache[BB] = Mask;
+  }
+
+  /// Return true of there already is a entry block mask for \p BB.
+  bool hasBlockInMask(const BasicBlock *BB) const {
+    return BlockMaskCache.contains(BB);
+  }
+
   /// Create an edge mask for every destination of cases and/or default.
   void createSwitchEdgeMasks(SwitchInst *SI);
 
