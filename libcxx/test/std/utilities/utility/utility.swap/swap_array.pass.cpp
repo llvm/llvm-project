@@ -49,6 +49,22 @@ template <class Tp>
 constexpr bool can_swap() {
   return std::is_same<decltype(can_swap_test<Tp>(0)), void>::value;
 }
+
+TEST_CONSTEXPR_CXX23 void test_unique_ptr() {
+  std::unique_ptr<int> i[3];
+  for (int k = 0; k < 3; ++k)
+    i[k].reset(new int(k + 1));
+  std::unique_ptr<int> j[3];
+  for (int k = 0; k < 3; ++k)
+    j[k].reset(new int(k + 4));
+  std::swap(i, j);
+  assert(*i[0] == 4);
+  assert(*i[1] == 5);
+  assert(*i[2] == 6);
+  assert(*j[0] == 1);
+  assert(*j[1] == 2);
+  assert(*j[2] == 3);
+}
 #endif
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -121,22 +137,10 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(noexcept(std::swap(ma, ma)), "");
   }
 
-  // We can't test unique_ptr in constant evaluation before C++23 as it's constexpr only since C++23.
-  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED) {
-    std::unique_ptr<int> i[3];
-    for (int k = 0; k < 3; ++k)
-      i[k].reset(new int(k + 1));
-    std::unique_ptr<int> j[3];
-    for (int k = 0; k < 3; ++k)
-      j[k].reset(new int(k + 4));
-    std::swap(i, j);
-    assert(*i[0] == 4);
-    assert(*i[1] == 5);
-    assert(*i[2] == 6);
-    assert(*j[0] == 1);
-    assert(*j[1] == 2);
-    assert(*j[2] == 3);
-  }
+  // `unique_ptr` is constexpr only since C++23, so we can't inline `test_unique_ptr()` into `test()`
+  // because `test()` is constexpr since C++20.
+  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
+    test_unique_ptr();
 #endif
 
   return true;
