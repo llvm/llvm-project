@@ -1770,7 +1770,8 @@ public:
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
-  void makeModuleVisible(Module *M, SourceLocation Loc);
+  void makeModuleVisible(Module *M, SourceLocation Loc,
+                         bool IncludeExports = true);
 
   SourceLocation getModuleImportLoc(Module *M) const {
     return CurSubmoduleState->VisibleModules.getImportLoc(M);
