@@ -3397,7 +3397,8 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
           CtorFunc = getFunction(CE->getConstructor());
           if (!CtorFunc)
             return false;
-        }
+        } else if (!DynamicInit)
+          DynamicInit = Init;
 
         LabelTy EndLabel = this->getLabel();
         LabelTy StartLabel = this->getLabel();
