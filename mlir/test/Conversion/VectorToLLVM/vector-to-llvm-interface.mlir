@@ -839,7 +839,7 @@ func.func @type_cast_f32(%arg0: memref<8x8x8xf32>) -> memref<vector<8x8x8xf32>> 
 //       CHECK:   llvm.insertvalue %[[allocated]], {{.*}}[0] : !llvm.struct<(ptr, ptr, i64)>
 //       CHECK:   %[[aligned:.*]] = llvm.extractvalue {{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:   llvm.insertvalue %[[aligned]], {{.*}}[1] : !llvm.struct<(ptr, ptr, i64)>
-//       CHECK:   llvm.mlir.constant(0 : index
+//       CHECK:   llvm.mlir.constant(0 : index) : i64
 //       CHECK:   llvm.insertvalue {{.*}}[2] : !llvm.struct<(ptr, ptr, i64)>
 
 // NOTE: No test for scalable vectors - the input memref is fixed size.
@@ -870,7 +870,7 @@ func.func @type_cast_non_zero_addrspace(%arg0: memref<8x8x8xf32, 3>) -> memref<v
 //       CHECK:   llvm.insertvalue %[[allocated]], {{.*}}[0] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
 //       CHECK:   %[[aligned:.*]] = llvm.extractvalue {{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:   llvm.insertvalue %[[aligned]], {{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
-//       CHECK:   llvm.mlir.constant(0 : index
+//       CHECK:   llvm.mlir.constant(0 : index) : i64
 //       CHECK:   llvm.insertvalue {{.*}}[2] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
 
 // NOTE: No test for scalable vectors - the input memref is fixed size.
@@ -1849,7 +1849,7 @@ func.func @store_0d(%memref : memref<200x100xf32>, %i : index, %j : index) {
 // CHECK: %[[CAST_MEMREF:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<200x100xf32> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[CST:.*]] = arith.constant dense<1.100000e+01> : vector<f32>
 // CHECK: %[[VAL:.*]] = builtin.unrealized_conversion_cast %[[CST]] : vector<f32> to vector<1xf32>
-// CHECK: %[[REF:.*]] = llvm.extractvalue %[[CAST_MEMREF]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> 
+// CHECK: %[[REF:.*]] = llvm.extractvalue %[[CAST_MEMREF]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
 // CHECK: %[[MUL:.*]] = llvm.mul %[[I]], %[[C100]] : i64
 // CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %[[J]] : i64
