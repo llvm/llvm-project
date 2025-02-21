@@ -161,6 +161,12 @@ functions:
     return_type: int
     arguments:
       - type: void
+  - name: getsid
+    standards:
+      - POSIX
+    return_type: pid_t
+    arguments:
+      - type: pid_t
   - name: gettid
     standards:
       - Linux

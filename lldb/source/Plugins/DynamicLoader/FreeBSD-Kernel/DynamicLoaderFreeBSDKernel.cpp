@@ -327,7 +327,7 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
   Target &target = process->GetTarget();
 
   if (IsKernel() && m_uuid.IsValid()) {
-    lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
+    lldb::StreamUP s = target.GetDebugger().GetAsyncOutputStream();
     s->Printf("Kernel UUID: %s\n", m_uuid.GetAsString().c_str());
     s->Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
   }
@@ -355,9 +355,9 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
       if (!m_module_sp)
         m_module_sp = target.GetOrCreateModule(module_spec, true);
       if (IsKernel() && !m_module_sp) {
-        lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
-        s->Printf("WARNING: Unable to locate kernel binary on the debugger "
-                  "system.\n");
+        target.GetDebugger().GetAsyncOutputStream()->Printf(
+            "WARNING: Unable to locate kernel binary on the debugger "
+            "system.\n");
       }
     }
 
@@ -464,7 +464,7 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
   }
 
   if (IsLoaded() && m_module_sp && IsKernel()) {
-    lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
+    lldb::StreamUP s = target.GetDebugger().GetAsyncOutputStream();
     ObjectFile *kernel_object_file = m_module_sp->GetObjectFile();
     if (kernel_object_file) {
       addr_t file_address =
