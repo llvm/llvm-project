@@ -7340,8 +7340,10 @@ static bool hasSuitableMoveAssignmentOperatorForReplaceability(CXXRecordDecl *D,
 }
 
 void Sema::CheckCXX2CTriviallyRelocatable(CXXRecordDecl *D) {
-  if (!D->hasDefinition() || D->isInvalidDecl())
+  if (D->isInvalidDecl())
     return;
+
+  assert(D->hasDefinition());
 
   bool MarkedTriviallyRelocatable =
       D->getTriviallyRelocatableSpecifier().isSet();
@@ -7425,8 +7427,10 @@ void Sema::CheckCXX2CTriviallyRelocatable(CXXRecordDecl *D) {
 }
 
 void Sema::CheckCXX2CReplaceable(CXXRecordDecl *D) {
-  if (!D->hasDefinition() || D->isInvalidDecl())
+  if (D->isInvalidDecl())
     return;
+
+  assert(D->hasDefinition());
 
   bool MarkedCXX2CReplaceable = D->getReplaceableSpecifier().isSet();
 
