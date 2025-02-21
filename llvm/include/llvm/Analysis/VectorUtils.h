@@ -41,7 +41,7 @@ class VFDatabase {
   /// a vector Function ABI.
   static void getVFABIMappings(const CallInst &CI,
                                SmallVectorImpl<VFInfo> &Mappings) {
-    const auto ScalarName = CI.getCalledFunctionName();
+    const std::optional<StringRef> ScalarName = CI.getCalledFunctionName();
     if (!ScalarName.has_value())
       return;
 

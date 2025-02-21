@@ -58,7 +58,7 @@ public:
   bool perform() {
     bool Changed = false;
     for (auto &CI : WorkList) {
-      auto CalleeName = CI->getCalledFunctionName();
+      std::optional<StringRef> CalleeName = CI->getCalledFunctionName();
       assert(CalleeName.has_value() &&
              "perform() should apply to a non-empty callee");
 

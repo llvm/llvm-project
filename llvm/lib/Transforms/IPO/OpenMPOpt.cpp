@@ -5278,12 +5278,12 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
 
       CallBase *CB = dyn_cast<CallBase>(&I);
       auto Remark = [&](OptimizationRemark OR) {
+        const std::optional<StringRef> CalleeName = CB->getCalledFunctionName();
         if (auto *C = dyn_cast<ConstantInt>(*SimplifiedValue))
-          return OR << "Replacing OpenMP runtime call "
-                    << CB->getCalledFunction()->getName() << " with "
-                    << ore::NV("FoldedValue", C->getZExtValue()) << ".";
-        return OR << "Replacing OpenMP runtime call "
-                  << CB->getCalledFunction()->getName() << ".";
+          return OR << "Replacing OpenMP runtime call " << *CalleeName
+                    << " with " << ore::NV("FoldedValue", C->getZExtValue())
+                    << ".";
+        return OR << "Replacing OpenMP runtime call " << *CalleeName << ".";
       };
 
       if (CB && EnableVerboseRemarks)
