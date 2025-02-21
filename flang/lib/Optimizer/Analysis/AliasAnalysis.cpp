@@ -598,7 +598,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           } else
             breakFromLoop = true;
         })
-        .Case<fir::LoadOp>([&,&breakFromLoop](auto op) {
+        .Case<fir::LoadOp>([&v, &defOp, &ty, &followingData, &attributes,
+                            &isCapturedInInternalProcedure, &approximateSource,
+                            &global, &type, &breakFromLoop](auto op) {
           // If load is inside target and it points to mapped item,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
