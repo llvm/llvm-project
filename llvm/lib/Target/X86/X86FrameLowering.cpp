@@ -528,7 +528,7 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
   // Calculate offsets.
   for (const CalleeSavedInfo &I : CSI) {
     int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
 
     if (IsPrologue) {
@@ -2936,7 +2936,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
 
   // Assign slots for GPRs. It increases frame size.
   for (CalleeSavedInfo &I : llvm::reverse(CSI)) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
 
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
@@ -2974,7 +2974,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
 
   // Assign slots for XMMs.
   for (CalleeSavedInfo &I : llvm::reverse(CSI)) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
 
@@ -3045,12 +3045,12 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
   };
 
   for (auto RI = CSI.rbegin(), RE = CSI.rend(); RI != RE; ++RI) {
-    Register Reg = RI->getReg();
+    MCRegister Reg = RI->getReg();
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
 
     if (X86FI->isCandidateForPush2Pop2(Reg)) {
-      Register Reg2 = (++RI)->getReg();
+      MCRegister Reg2 = (++RI)->getReg();
       BuildMI(MBB, MI, DL, TII.get(getPUSH2Opcode(STI)))
           .addReg(Reg, UpdateLiveInGetKillRegState(Reg))
           .addReg(Reg2, UpdateLiveInGetKillRegState(Reg2))
@@ -3073,7 +3073,7 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
   // Make XMM regs spilled. X86 does not have ability of push/pop XMM.
   // It can be done by spilling XMMs to stack frame.
   for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
 
@@ -3149,7 +3149,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
 
   // Reload XMMs from stack frame.
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     if (X86::GR64RegClass.contains(Reg) || X86::GR32RegClass.contains(Reg))
       continue;
 
@@ -3175,7 +3175,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
 
   // POP GPRs.
   for (auto I = CSI.begin(), E = CSI.end(); I != E; ++I) {
-    Register Reg = I->getReg();
+    MCRegister Reg = I->getReg();
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
 
