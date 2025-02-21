@@ -97,6 +97,9 @@ Improvements to clang-tidy
   Note: this may lead to false negatives; downstream users may need to adjust
   their checks to preserve existing behavior.
 
+- Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
+  argument to treat warnings as errors.
+
 New checks
 ^^^^^^^^^^
 
