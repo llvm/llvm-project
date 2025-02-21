@@ -16164,6 +16164,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       return SDValue(N, 0);
   }
 
+  assert(N->getOpcode() != ISD::DELETED_NODE && "Node was deleted!");
+
   // The whole node may have been updated, so the value we were holding
   // may no longer be valid. Re-fetch the operand we're `freeze`ing.
   N0 = N->getOperand(0);
