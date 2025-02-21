@@ -5,8 +5,17 @@ if(NOT (TARGET libc.src.__support.threads.mutex) OR LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
 
+# TODO: Investigate the precommit bots' failures of this test and re-enable it.
+# https://github.com/llvm/llvm-project/issues/128185.
+set(file_test_hermetic_only "")
+if(LIBC_TARGET_ARCHITECTURE_IS_X86_64 AND LIBC_TARGET_OS_IS_LINUX AND
+   LLVM_LIBC_FULL_BUILD)
+  set(file_test_hermetic_only "HERMETIC_TEST_ONLY")
+endif()
+
 add_libc_test(
   file_test
+  ${file_test_hermetic_only}
   SUITE
     libc-support-tests
   SRCS
@@ -23,6 +32,7 @@ add_libc_test(
 
 add_libc_test(
   platform_file_test
+  ${file_test_hermetic_only}
   SUITE
     libc-support-tests
   SRCS
