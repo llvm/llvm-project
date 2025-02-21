@@ -62,6 +62,8 @@ public:
 
   explicit MPIImplTraits(ModuleOp &moduleOp) : moduleOp(moduleOp) {}
 
+  virtual ~MPIImplTraits() = default;
+
   ModuleOp &getModuleOp() { return moduleOp; }
 
   /// Gets or creates MPI_COMM_WORLD as a Value.
@@ -95,6 +97,8 @@ class MPICHImplTraits : public MPIImplTraits {
 
 public:
   using MPIImplTraits::MPIImplTraits;
+
+  virtual ~MPICHImplTraits() = default;
 
   Value getCommWorld(const Location loc,
                      ConversionPatternRewriter &rewriter) override {
@@ -151,6 +155,8 @@ class OMPIImplTraits : public MPIImplTraits {
 
 public:
   using MPIImplTraits::MPIImplTraits;
+
+  virtual ~OMPIImplTraits() = default;
 
   Value getCommWorld(const Location loc,
                      ConversionPatternRewriter &rewriter) override {
