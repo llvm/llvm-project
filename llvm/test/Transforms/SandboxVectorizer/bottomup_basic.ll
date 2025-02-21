@@ -352,3 +352,67 @@ define void @diamondWithConstantVector(ptr %ptr) {
   store i32 %orB1, ptr %gepB1
   ret void
 }
+
+; Check that we don't get def-after-use errors due to wrong placement
+; of new vector instructions.
+define void @vecInstrsPlacement(ptr %ptr0) {
+; CHECK-LABEL: define void @vecInstrsPlacement(
+; CHECK-SAME: ptr [[PTR0:%.*]]) {
+; CHECK-NEXT:    [[VECL2:%.*]] = load <2 x double>, ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x double>, ptr [[PTR0]], align 8
+; CHECK-NEXT:    [[VEC2:%.*]] = fmul <2 x double> [[VECL]], [[VECL2]]
+; CHECK-NEXT:    [[VEC:%.*]] = fmul <2 x double> [[VECL]], [[VECL2]]
+; CHECK-NEXT:    [[VEC5:%.*]] = fadd <2 x double> [[VEC]], [[VEC2]]
+; CHECK-NEXT:    store <2 x double> [[VEC5]], ptr [[PTR0]], align 8
+; CHECK-NEXT:    ret void
+;
+  %ptr1 = getelementptr inbounds double, ptr %ptr0, i64 1
+  %ldA_0 = load double, ptr %ptr0
+  %ldA_1 = load double, ptr %ptr1
+
+  %ldB_0 = load double, ptr %ptr0
+  %ldB_1 = load double, ptr %ptr1
+
+  %mul0 = fmul double %ldA_0, %ldB_0
+  %mul1 = fmul double %ldA_1, %ldB_1
+
+  %mul2 = fmul double %ldA_0, %ldB_0
+  %mul3 = fmul double %ldA_1, %ldB_1
+
+  %add0 = fadd double %mul0, %mul2
+  %add1 = fadd double %mul1, %mul3
+
+  store double %add0, ptr %ptr0
+  store double %add1, ptr %ptr1
+  ret void
+}
+
+; During the bottom-up traversal we form bundle {ldA0,ldA1} but later when we
+; visit the RHS operands of the additions we try to form {ldA1,ldA2}
+; which is not allowed.
+define void @instrsInMultipleBundles(ptr noalias %ptr) {
+; CHECK-LABEL: define void @instrsInMultipleBundles(
+; CHECK-SAME: ptr noalias [[PTR:%.*]]) {
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 2
+; CHECK-NEXT:    [[LDA2:%.*]] = load i8, ptr [[GEP2]], align 1
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x i8>, ptr [[GEP0]], align 1
+; CHECK-NEXT:    [[VEXT:%.*]] = extractelement <2 x i8> [[VECL]], i32 1
+; CHECK-NEXT:    [[VINS:%.*]] = insertelement <2 x i8> poison, i8 [[VEXT]], i32 0
+; CHECK-NEXT:    [[VINS1:%.*]] = insertelement <2 x i8> [[VINS]], i8 [[LDA2]], i32 1
+; CHECK-NEXT:    [[VEC:%.*]] = add <2 x i8> [[VECL]], [[VINS1]]
+; CHECK-NEXT:    store <2 x i8> [[VEC]], ptr [[GEP0]], align 1
+; CHECK-NEXT:    ret void
+;
+  %gep0 = getelementptr i8, ptr %ptr, i64 0
+  %gep1 = getelementptr i8, ptr %ptr, i64 1
+  %gep2 = getelementptr i8, ptr %ptr, i64 2
+  %ldA0 = load i8, ptr %gep0
+  %ldA1 = load i8, ptr %gep1
+  %ldA2 = load i8, ptr %gep2
+  %add0 = add i8 %ldA0, %ldA1
+  %add1 = add i8 %ldA1, %ldA2
+  store i8 %add0, ptr %gep0
+  store i8 %add1, ptr %gep1
+  ret void
+}

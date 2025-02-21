@@ -24,9 +24,6 @@
 #include <clc/clcmacro.h>
 #include <clc/utils.h>
 
-#define __CLC_AS_GENTYPE __CLC_XCONCAT(__clc_as_, __CLC_GENTYPE)
-#define __CLC_AS_INTN __CLC_XCONCAT(__clc_as_, __CLC_INTN)
-
 #if __CLC_FPSIZE == 32
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
 __clc_frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
@@ -46,31 +43,15 @@ __clc_frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
 #endif
 
 #if __CLC_FPSIZE == 16
-#ifdef __CLC_SCALAR
-#define __CLC_CONVERT_HALFN __clc_convert_half
-#define __CLC_CONVERT_FLOATN __clc_convert_float
-#else
-#define __CLC_CONVERT_HALFN __CLC_XCONCAT(__clc_convert_half, __CLC_VECSIZE)
-#define __CLC_CONVERT_FLOATN __CLC_XCONCAT(__clc_convert_float, __CLC_VECSIZE)
-#endif
+
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
 __clc_frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
   return __CLC_CONVERT_HALFN(__clc_frexp(__CLC_CONVERT_FLOATN(x), ep));
 }
-#undef __CLC_CONVERT_FLOATN
-#undef __CLC_CONVERT_HALFN
+
 #endif
 
 #if __CLC_FPSIZE == 64
-#ifdef __CLC_SCALAR
-#define __CLC_AS_LONGN __clc_as_long
-#define __CLC_LONGN long
-#define __CLC_CONVERT_INTN __clc_convert_int
-#else
-#define __CLC_AS_LONGN __CLC_XCONCAT(__clc_as_long, __CLC_VECSIZE)
-#define __CLC_LONGN __CLC_XCONCAT(long, __CLC_VECSIZE)
-#define __CLC_CONVERT_INTN __CLC_XCONCAT(__clc_convert_int, __CLC_VECSIZE)
-#endif
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
 __clc_frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
@@ -90,10 +71,4 @@ __clc_frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
   return __clc_select(__CLC_AS_GENTYPE(i), x, t);
 }
 
-#undef __CLC_AS_LONGN
-#undef __CLC_LONGN
-#undef __CLC_CONVERT_INTN
 #endif
-
-#undef __CLC_AS_GENTYPE
-#undef __CLC_AS_INTN
