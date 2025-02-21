@@ -21,7 +21,7 @@ TEST(LlvmLibcGetHostNameTest, GetCurrHostName) {
   ASSERT_ERRNO_EQ(ENAMETOOLONG);
 
   // test for invalid pointer
-  char* nptr = nullptr;
+  char *nptr = nullptr;
   ret = LIBC_NAMESPACE::gethostname(nptr, 1);
   ASSERT_EQ(ret, -1);
   ASSERT_ERRNO_EQ(EFAULT);
