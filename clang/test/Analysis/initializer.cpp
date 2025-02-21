@@ -451,20 +451,20 @@ struct S {
 };
 void aggregate_struct() {
   S s;
-  new (&s) S{1};
-  clang_analyzer_eval(1 == s.x); // expected-warning{{TRUE}}
+  S *s_ptr = new (&s) S{1};
+  clang_analyzer_eval(1 == s_ptr->x); // expected-warning{{TRUE}}
 
   S vi;
-  new (&vi) S{};
-  clang_analyzer_eval(0 == vi.x); // expected-warning{{TRUE}}
+  S *vi_ptr = new (&vi) S{};
+  clang_analyzer_eval(0 == vi_ptr->x); // expected-warning{{TRUE}}
 
   S di;
-  new (&di) S;
-  int z = di.x + 1; // expected-warning{{The left operand of '+' is a garbage value}}
+  S *di_ptr = new (&di) S;
+  int z = di_ptr->x + 1; // expected-warning{{The left operand of '+' is a garbage value}}
 }
 void initialize_non_zeroth_element(S arr[2]) {
-  new (&arr[1]) S{1};
-  clang_analyzer_eval(1 == arr[1].x); // expected-warning{{TRUE}}
+  S *s = new (&arr[1]) S{1};
+  clang_analyzer_eval(1 == s->x); // expected-warning{{TRUE}}
 }
 void initialize_non_zeroth_argument_pointers(S *arr[2]) {
   arr[1] = new (arr[1]) S{1};
