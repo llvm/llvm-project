@@ -34,6 +34,7 @@ class AsanSwiftTestCase(lldbtest.TestBase):
 
     @skipIf(oslist=no_match(["macosx"]))
     @skipIf(macos_version=["<", "15.0"])
+    @expectedFailureAll(bugnumber="rdar://142836595")
     def test_libsanitizers_swift(self):
         try:
             self.build(make_targets=["libsanitizers"])
