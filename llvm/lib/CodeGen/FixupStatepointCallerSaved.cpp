@@ -179,19 +179,11 @@ class RegReloadCache {
 public:
   RegReloadCache() = default;
 
-  // Record reload of Reg from FI in block MBB
-  void recordReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
+  // Record reload of Reg from FI in block MBB if not present yet.
+  // Return true if the reload is successfully recorded.
+  bool tryRecordReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
     RegSlotPair RSP(Reg, FI);
-    auto Res = Reloads[MBB].insert(RSP);
-    (void)Res;
-    assert(Res.second && "reload already exists");
-  }
-
-  // Does basic block MBB contains reload of Reg from FI?
-  bool hasReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
-    RegSlotPair RSP(Reg, FI);
-    auto It = Reloads.find(MBB);
-    return It != Reloads.end() && It->second.count(RSP);
+    return Reloads[MBB].insert(RSP).second;
   }
 };
 
@@ -459,8 +451,7 @@ public:
       LLVM_DEBUG(dbgs() << "Reloading " << printReg(Reg, &TRI) << " from FI "
                         << RegToSlotIdx[Reg] << " after statepoint\n");
 
-      if (EHPad && !RC.hasReload(Reg, RegToSlotIdx[Reg], EHPad)) {
-        RC.recordReload(Reg, RegToSlotIdx[Reg], EHPad);
+      if (EHPad && RC.tryRecordReload(Reg, RegToSlotIdx[Reg], EHPad)) {
         auto EHPadInsertPoint =
             EHPad->SkipPHIsLabelsAndDebug(EHPad->begin(), Reg);
         insertReloadBefore(Reg, EHPadInsertPoint, EHPad);
