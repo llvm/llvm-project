@@ -3370,8 +3370,8 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       Ops.push_back(
           DAG.getTargetConstant(Intrinsic::wasm_throw, getCurSDLoc(),
                                 TLI.getPointerTy(DAG.getDataLayout())));
-      Ops.push_back(getValue(I.getArgOperand(0))); // tag
-      Ops.push_back(getValue(I.getArgOperand(1))); // thrown value
+      Ops.push_back(getValue(I.getArgOperand(0)));               // tag
+      Ops.push_back(getValue(I.getArgOperand(1)));               // thrown value
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
