@@ -454,13 +454,16 @@ public:
     BS_CHK_EndedByLowerBound = 1 << 3,   // rdar://91596663
     BS_CHK_CompoundLiteralInit = 1 << 4, // rdar://110871666
     BS_CHK_LibCAttributes = 1 << 5,      // rdar://84733153
+    BS_CHK_ArraySubscriptAgg = 1 << 6,   // rdar://145020583
 
     BS_CHK_All = BS_CHK_AccessSize | BS_CHK_IndirectCountUpdate |
                  BS_CHK_ReturnSize | BS_CHK_EndedByLowerBound |
-                 BS_CHK_CompoundLiteralInit | BS_CHK_LibCAttributes,
+                 BS_CHK_CompoundLiteralInit | BS_CHK_LibCAttributes |
+                 BS_CHK_ArraySubscriptAgg,
 
     // This sets the default value assumed by clang if no
-    // `-fbounds-safety-bringup-missing-checks` flags are passed to clang.
+    // `-fbounds-safety-bringup-missing-checks` flags are
+    // passed to clang.
     BS_CHK_Default = BS_CHK_None,
   };
 

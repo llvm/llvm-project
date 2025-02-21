@@ -49,6 +49,8 @@ ParseBoundsSafetyNewChecksMaskFromArgs(const llvm::opt::ArgList &Args,
               .Case("compound_literal_init",
                     LangOptions::BS_CHK_CompoundLiteralInit)
               .Case("libc_attributes", LangOptions::BS_CHK_LibCAttributes)
+              .Case("array_subscript_agg",
+                    LangOptions::BS_CHK_ArraySubscriptAgg)
               .Case("all", LangOptions::BS_CHK_All)
               .Case("none", LangOptions::BS_CHK_None)
               .Default(std::nullopt);

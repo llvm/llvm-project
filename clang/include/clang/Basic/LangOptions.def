@@ -548,7 +548,7 @@ LANGOPT(BoundsAttributesCXXExperimental, 1, 0, "Experimental bounds attributes f
 LANGOPT(BoundsAttributesObjCExperimental, 1, 0, "Experimental bounds attributes for Objective-C")
 LANGOPT(BoundsSafetyRelaxedSystemHeaders, 1, 1,
         "Relax bounds safety assignment rules in system headers")
-ENUM_LANGOPT(BoundsSafetyBringUpMissingChecks, BoundsSafetyNewChecksMask, 6, BS_CHK_Default,
+ENUM_LANGOPT(BoundsSafetyBringUpMissingChecks, BoundsSafetyNewChecksMask, 7, BS_CHK_Default,
         "Bring up new -fbounds-safety run-time checks")
 /* TO_UPSTREAM(BoundsSafety) OFF*/
 

@@ -81,7 +81,9 @@ public:
   /// EmitAggLoadOfLValue - Given an expression with aggregate type that
   /// represents a value lvalue, this method emits the address of the lvalue,
   /// then loads the result into DestPtr.
-  void EmitAggLoadOfLValue(const Expr *E);
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  void EmitAggLoadOfLValue(const Expr *E, bool Checked = false);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
   /// SrcIsRValue is true if source comes from an RValue.
@@ -171,7 +173,9 @@ public:
   void VisitStringLiteral(StringLiteral *E) { EmitAggLoadOfLValue(E); }
   void VisitCompoundLiteralExpr(CompoundLiteralExpr *E);
   void VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
-    EmitAggLoadOfLValue(E);
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    EmitAggLoadOfLValue(E, E->getBase()->getType()->isPointerTypeWithBounds());
+    /* TO_UPSTREAM(BoundsSafety) OFF */
   }
   void VisitPredefinedExpr(const PredefinedExpr *E) {
     EmitAggLoadOfLValue(E);
@@ -372,10 +376,30 @@ AggExprEmitter::WidePointerElemCallback AggExprEmitter::DefaultElemCallback =
 /// EmitAggLoadOfLValue - Given an expression with aggregate type that
 /// represents a value lvalue, this method emits the address of the lvalue,
 /// then loads the result into DestPtr.
-void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
+void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E, bool Checked) {
   /*TO_UPSTREAM(BoundsSafety) ON*/
-  LValue LV = E->getType()->isPointerTypeWithBounds() ?
-      CGF.EmitCheckedLValue(E, CodeGenFunction::TCK_Load) : CGF.EmitLValue(E);
+  if (CGF.getLangOpts().hasNewBoundsSafetyCheck(
+          clang::LangOptionsBase::BS_CHK_ArraySubscriptAgg)) {
+    // TODO(dliew): Modifying `Checked` should probably be removed.
+    // Calling `EmitCheckedLValue` does two things:
+    //
+    // 1. If `E` is an ArraySubscriptExpr then emits bound checks if UBSan is
+    //    on or if the base pointer has bounds information
+    // 2. Calls `CodeGenFunction::EmitTypeCheck()` in some cases.
+    //
+    // (1.) is already handled by `AggExprEmitter::VisitArraySubscriptExpr()` so
+    // modifying `Checked` isn't need for that. However, (2.) adds UBSan type
+    // checks.
+    //
+    // We should audit this interaction with UBSan to see if its safe to remove
+    // setting `Checked`. (rdar://145257962).
+    Checked |= E->getType()->isPointerTypeWithBounds();
+  } else {
+    // Preserve old buggy behavior
+    Checked = E->getType()->isPointerTypeWithBounds();
+  }
+  LValue LV = Checked ? CGF.EmitCheckedLValue(E, CodeGenFunction::TCK_Load)
+                      : CGF.EmitLValue(E);
   /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   // If the type of the l-value is atomic, then do an atomic load.

@@ -1964,12 +1964,12 @@ defm bounds_safety_adoption_mode : BoolFOption<"bounds-safety-adoption-mode",
 def fbounds_safety_bringup_missing_checks_EQ : CommaJoined<["-"], "fbounds-safety-bringup-missing-checks=">, Group<f_Group>,
   MetaVarName<"<check>">,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable a set of new -fbounds-safety run-time checks, (option: access_size, indirect_count_update, return_size, ended_by_lower_bound, compound_literal_init, libc_attributes, all)">;
+  HelpText<"Enable a set of new -fbounds-safety run-time checks, (option: access_size, indirect_count_update, return_size, ended_by_lower_bound, compound_literal_init, libc_attributes, array_subscript_agg, all)">;
 
 def fno_bounds_safety_bringup_missing_checks_EQ : CommaJoined<["-"], "fno-bounds-safety-bringup-missing-checks=">, Group<f_Group>,
   MetaVarName<"<check>">,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Disable a set of new -fbounds-safety run-time checks, (option: access_size, indirect_count_update, return_size, ended_by_lower_bound, compound_literal_init, libc_attributes, all)">;
+  HelpText<"Disable a set of new -fbounds-safety run-time checks, (option: access_size, indirect_count_update, return_size, ended_by_lower_bound, compound_literal_init, libc_attributes, array_subscript_agg, all)">;
 
 def fbounds_safety_bringup_missing_checks : Flag<["-"], "fbounds-safety-bringup-missing-checks">, Group<f_Group>,
   Visibility<[ClangOption]>,

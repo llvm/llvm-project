@@ -142,9 +142,10 @@ ChkPair Pairs[] = {
     {"return_size", LangOptions::BS_CHK_ReturnSize},
     {"ended_by_lower_bound", LangOptions::BS_CHK_EndedByLowerBound},
     {"compound_literal_init", LangOptions::BS_CHK_CompoundLiteralInit},
-    {"libc_attributes", LangOptions::BS_CHK_LibCAttributes}};
+    {"libc_attributes", LangOptions::BS_CHK_LibCAttributes},
+    {"array_subscript_agg", LangOptions::BS_CHK_ArraySubscriptAgg}};
 const size_t NumPairs = sizeof(Pairs) / sizeof(Pairs[0]);
-static_assert(NumPairs == 6, "Unexpected value");
+static_assert(NumPairs == 7, "Unexpected value");
 
 // Check that `Pairs` is in sync with the `BoundsSafetyNewChecksMask`
 // enum.

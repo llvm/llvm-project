@@ -4056,6 +4056,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
         Checks += "compound_literal_init,";
       if (Opts.hasNewBoundsSafetyCheck(LangOptions::BS_CHK_LibCAttributes))
         Checks += "libc_attributes,";
+      if (Opts.hasNewBoundsSafetyCheck(LangOptions::BS_CHK_ArraySubscriptAgg))
+        Checks += "array_subscript_agg";
       if (StringRef(Checks).ends_with(","))
         Checks.pop_back();
     }
