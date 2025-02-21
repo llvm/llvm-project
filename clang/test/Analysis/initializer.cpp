@@ -336,7 +336,6 @@ void considered_fields_initd() {
 #if __cplusplus >= 201703L
 enum Enum : int {
 };
-// FIXME: uncomment when CSA supports list init of enums
 void list_init_enum() {
   Enum *E = new Enum{53};
   clang_analyzer_eval(53 == *E); // expected-warning{{TRUE}}
