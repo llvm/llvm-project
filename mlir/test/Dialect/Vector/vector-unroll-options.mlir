@@ -188,18 +188,13 @@ func.func @vector_fma(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %c: vector<4x4xf
 //   CHECK-LABEL: func @vector_fma
 // CHECK-COUNT-4: vector.fma %{{.+}}, %{{.+}}, %{{.+}} : vector<2x2xf32>
 
-func.func @higher_rank_unroll() {
-  %cst_25 = arith.constant dense<3.718400e+04> : vector<4x2x2xf16>
-  %cst_26 = arith.constant dense<1.000000e+00> : vector<24x2x2xf32>
-  %47 = vector.fma %cst_26, %cst_26, %cst_26 : vector<24x2x2xf32>
-  %818 = scf.execute_region -> vector<24x2x2xf32> {
-      scf.yield %47 : vector<24x2x2xf32>
-    }
-  %823 = vector.extract_strided_slice %cst_25 {offsets = [2], sizes = [1], strides = [1]} : vector<4x2x2xf16> to vector<1x2x2xf16>
-  return
+func.func @negative_vector_fma_3d(%a: vector<3x2x2xf32>) {
+  %0 = vector.fma %a, %a, %a : vector<3x2x2xf32>
+  return 
 }
-
-// CHECK-LABEL: func @higher_rank_unroll
+// CHECK-LABEL: func @negative_vector_fma_3d
+//   CHECK-NOT: vector.extract_strided_slice
+//       CHECK: %0 = vector.fma %a, %a, %a : vector<3x2x2xf32>
 //       CHECK: return 
 
 func.func @vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
