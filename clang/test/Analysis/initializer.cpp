@@ -445,6 +445,25 @@ void nested_aggregates() {
 }
 } // namespace newexpr_init_list_initialization
 
+namespace initializer_list_arg {
+struct S {
+  int x;
+};
+void aggregate_struct() {
+  S s;
+  ::new (&s) S{1};
+  clang_analyzer_eval(1 == s.x); // expected-warning{{TRUE}}
+
+  S vi;
+  ::new (&vi) S{};
+  clang_analyzer_eval(0 == vi.x); // expected-warning{{TRUE}}
+
+  S di;
+  ::new (&di) S;
+  int z = di.x + 1; // expected-warning{{The left operand of '+' is a garbage value}}
+}
+} // namespace initializer_list_arg
+
 namespace CXX17_transparent_init_list_exprs {
 class A {};
 
