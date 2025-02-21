@@ -58,6 +58,23 @@ define i64 @shl_metadata_out_of_range(i64 %arg0, ptr %arg1.ptr) {
   ret i64 %shl
 }
 
+; Bounds cannot be truncated to i32 when load is narrowed to i32.
+; Reduction not done.
+; Bounds were chosen so that if bounds were truncated to i32 the
+; known minimum would be 32 and the shl would be erroneously reduced.
+define i64 @shl_metadata_cant_be_narrowed_to_i32(i64 %arg0, ptr %arg1.ptr) {
+; CHECK-LABEL: shl_metadata_cant_be_narrowed_to_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_load_dword v2, v[2:3]
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %shift.amt = load i64, ptr %arg1.ptr, !range !3, !noundef !{}
+  %shl = shl i64 %arg0, %shift.amt
+  ret i64 %shl
+}
+
 define <2 x i64> @shl_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v2_metadata:
 ; CHECK:       ; %bb.0:
@@ -110,6 +127,7 @@ define <4 x i64> @shl_v4_metadata(<4 x i64> %arg0, ptr %arg1.ptr) {
 !0 = !{i64 32, i64 64}
 !1 = !{i64 32, i64 38, i64 42, i64 48}
 !2 = !{i64 31, i64 38, i64 42, i64 48}
+!3 = !{i64 32, i64 38, i64 2147483680, i64 2147483681}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Test range with an "or X, 16"
