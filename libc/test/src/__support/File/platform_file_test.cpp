@@ -20,6 +20,9 @@ LIBC_INLINE File *openfile(const char *file_name, const char *mode) {
   return error_or_file.has_value() ? error_or_file.value() : nullptr;
 }
 
+// TODO: Investigate the precommit bots' failures of this test and re-enable it.
+// https://github.com/llvm/llvm-project/issues/128185.
+#if 0
 TEST(LlvmLibcPlatformFileTest, CreateWriteCloseAndReadBack) {
   constexpr char FILENAME[] = "testdata/create_write_close_and_readback.test";
   File *file = openfile(FILENAME, "w");
@@ -40,6 +43,7 @@ TEST(LlvmLibcPlatformFileTest, CreateWriteCloseAndReadBack) {
 
   ASSERT_EQ(file->close(), 0);
 }
+#endif
 
 TEST(LlvmLibcPlatformFileTest, CreateWriteSeekAndReadBack) {
   constexpr char FILENAME[] = "testdata/create_write_seek_and_readback.test";
