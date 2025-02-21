@@ -49,17 +49,18 @@ static LLVM::LLVMFuncOp getOrDefineFunction(ModuleOp &moduleOp,
 //===----------------------------------------------------------------------===//
 // Implementation details for MPICH ABI compatible MPI implementations
 //===----------------------------------------------------------------------===//
+
 struct MPICHImplTraits {
   static constexpr int MPI_FLOAT = 0x4c00040a;
-  static const int MPI_DOUBLE = 0x4c00080b;
-  static const int MPI_INT8_T = 0x4c000137;
-  static const int MPI_INT16_T = 0x4c000238;
-  static const int MPI_INT32_T = 0x4c000439;
-  static const int MPI_INT64_T = 0x4c00083a;
-  static const int MPI_UINT8_T = 0x4c00013b;
-  static const int MPI_UINT16_T = 0x4c00023c;
-  static const int MPI_UINT32_T = 0x4c00043d;
-  static const int MPI_UINT64_T = 0x4c00083e;
+  static constexpr int MPI_DOUBLE = 0x4c00080b;
+  static constexpr int MPI_INT8_T = 0x4c000137;
+  static constexpr int MPI_INT16_T = 0x4c000238;
+  static constexpr int MPI_INT32_T = 0x4c000439;
+  static constexpr int MPI_INT64_T = 0x4c00083a;
+  static constexpr int MPI_UINT8_T = 0x4c00013b;
+  static constexpr int MPI_UINT16_T = 0x4c00023c;
+  static constexpr int MPI_UINT32_T = 0x4c00043d;
+  static constexpr int MPI_UINT64_T = 0x4c00083e;
 
   static mlir::Value getCommWorld(mlir::ModuleOp &moduleOp,
                                   const mlir::Location loc,
@@ -196,13 +197,11 @@ struct MPIImplTraits {
     if (failed(attr))
       return MPICH;
     auto strAttr = dyn_cast<StringAttr>(attr.value());
-    if (strAttr && strAttr.getValue() == "OpenMPI") {
+    if (strAttr && strAttr.getValue() == "OpenMPI")
       return OMPI;
-    }
-    if (!strAttr || strAttr.getValue() != "MPICH") {
-      moduleOp.emitWarning() << "Unknown \"MPI:Implementation\" value in DLTI (" << strAttr.getValue() << "), "
-                           "defaulting to MPICH");
-    }
+    if (!strAttr || strAttr.getValue() != "MPICH")
+      moduleOp.emitWarning() << "Unknown \"MPI:Implementation\" value in DLTI ("
+                             << strAttr.getValue() << "), defaulting to MPICH";
     return MPICH;
   }
 
@@ -210,29 +209,26 @@ struct MPIImplTraits {
   static mlir::Value getCommWorld(mlir::ModuleOp &moduleOp,
                                   const mlir::Location loc,
                                   mlir::ConversionPatternRewriter &rewriter) {
-    if (MPIImplTraits::getMPIImpl(moduleOp) == OMPI) {
+    if (MPIImplTraits::getMPIImpl(moduleOp) == OMPI)
       return OMPIImplTraits::getCommWorld(moduleOp, loc, rewriter);
-    }
     return MPICHImplTraits::getCommWorld(moduleOp, loc, rewriter);
   }
 
-  // Get the MPI_STATUS_IGNORE value (typically a pointer type).
+  /// Get the MPI_STATUS_IGNORE value (typically a pointer type).
   static intptr_t getStatusIgnore(mlir::ModuleOp &moduleOp) {
-    if (MPIImplTraits::getMPIImpl(moduleOp) == OMPI) {
+    if (MPIImplTraits::getMPIImpl(moduleOp) == OMPI)
       return OMPIImplTraits::getStatusIgnore();
-    }
     return MPICHImplTraits::getStatusIgnore();
   }
 
-  // get/create MPI datatype as a mlir::Value which corresponds to the given
-  // mlir::Type
+  /// get/create MPI datatype as a mlir::Value which corresponds to the given
+  /// mlir::Type
   static mlir::Value getDataType(mlir::ModuleOp &moduleOp,
                                  const mlir::Location loc,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  mlir::Type type) {
-    if (MPIImplTraits::getMPIImpl(moduleOp) == OMPI) {
+    if (MPIImplTraits::getMPIImpl(moduleOp) == OMPI)
       return OMPIImplTraits::getDataType(moduleOp, loc, rewriter, type);
-    }
     return MPICHImplTraits::getDataType(moduleOp, loc, rewriter, type);
   }
 };
@@ -347,9 +343,9 @@ struct CommRankOpLowering : public ConvertOpToLLVMPattern<mpi::CommRankOp> {
     // if retval is checked, replace uses of retval with the results from the
     // call op
     SmallVector<Value> replacements;
-    if (op.getRetval()) {
+    if (op.getRetval())
       replacements.push_back(callOp.getResult());
-    }
+
     // replace all uses, then erase op
     replacements.push_back(loadedRank.getRes());
     rewriter.replaceOp(op, replacements);
@@ -408,11 +404,10 @@ struct SendOpLowering : public ConvertOpToLLVMPattern<mpi::SendOp> {
         loc, funcDecl,
         ValueRange{dataPtr, size, dataType, adaptor.getDest(), adaptor.getTag(),
                    commWorld});
-    if (op.getRetval()) {
+    if (op.getRetval())
       rewriter.replaceOp(op, funcCall.getResult());
-    } else {
+    else
       rewriter.eraseOp(op);
-    }
 
     return success();
   }
@@ -473,11 +468,10 @@ struct RecvOpLowering : public ConvertOpToLLVMPattern<mpi::RecvOp> {
         loc, funcDecl,
         ValueRange{dataPtr, size, dataType, adaptor.getSource(),
                    adaptor.getTag(), commWorld, statusIgnore});
-    if (op.getRetval()) {
+    if (op.getRetval())
       rewriter.replaceOp(op, funcCall.getResult());
-    } else {
+    else
       rewriter.eraseOp(op);
-    }
 
     return success();
   }
