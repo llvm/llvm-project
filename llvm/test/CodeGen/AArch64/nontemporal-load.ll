@@ -621,11 +621,12 @@ define <vscale x 20 x float> @test_ldnp_v20f32_vscale(ptr %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v20f32_vscale:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldr z0, [x0]
-; CHECK-BE-NEXT:    ldr z1, [x0, #1, mul vl]
-; CHECK-BE-NEXT:    ldr z2, [x0, #2, mul vl]
-; CHECK-BE-NEXT:    ldr z3, [x0, #3, mul vl]
-; CHECK-BE-NEXT:    ldr z4, [x0, #4, mul vl]
+; CHECK-BE-NEXT:    ptrue p0.s
+; CHECK-BE-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-BE-NEXT:    ld1w { z1.s }, p0/z, [x0, #1, mul vl]
+; CHECK-BE-NEXT:    ld1w { z2.s }, p0/z, [x0, #2, mul vl]
+; CHECK-BE-NEXT:    ld1w { z3.s }, p0/z, [x0, #3, mul vl]
+; CHECK-BE-NEXT:    ld1w { z4.s }, p0/z, [x0, #4, mul vl]
 ; CHECK-BE-NEXT:    ret
   %lv = load<vscale x 20 x float>, ptr %A, align 8, !nontemporal !0
   ret <vscale x 20 x float> %lv

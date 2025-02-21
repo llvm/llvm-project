@@ -2977,14 +2977,25 @@ let Predicates = [HasSVE_or_SME] in {
   // Allow using the reg+reg form of ld1b/st1b for memory accesses with the
   // same width as nxv16i8.  This saves an add in cases where we would
   // otherwise compute the address separately.
-  // Also allow using LDR/STR to avoid the predicate dependence.
   multiclass unpred_loadstore_bitcast<ValueType Ty> {
     let Predicates = [IsLE] in {
       def : Pat<(Ty (load (am_sve_regreg_lsl0 GPR64sp:$base, GPR64:$offset))),
                 (LD1B (PTRUE_B 31), GPR64sp:$base, GPR64:$offset)>;
       def : Pat<(store Ty:$val, (am_sve_regreg_lsl0 GPR64sp:$base, GPR64:$offset)),
                 (ST1B ZPR:$val, (PTRUE_B 31), GPR64sp:$base, GPR64:$offset)>;
+    }
+  }
+  defm : unpred_loadstore_bitcast<nxv8i16>;
+  defm : unpred_loadstore_bitcast<nxv8f16>;
+  defm : unpred_loadstore_bitcast<nxv8bf16>;
+  defm : unpred_loadstore_bitcast<nxv4f32>;
+  defm : unpred_loadstore_bitcast<nxv4i32>;
+  defm : unpred_loadstore_bitcast<nxv2i64>;
+  defm : unpred_loadstore_bitcast<nxv2f64>;
 
+  // Allow using LDR/STR to avoid the predicate dependence.
+  let Predicates = [IsLE, AllowMisalignedMemAccesses] in
+    foreach Ty = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in {
       let AddedComplexity = 2 in {
         def : Pat<(Ty (load (am_sve_indexed_s9 GPR64sp:$base, simm9:$offset))),
                   (LDR_ZXI GPR64sp:$base, simm9:$offset)>;
@@ -2997,15 +3008,6 @@ let Predicates = [HasSVE_or_SME] in {
       def : Pat<(store Ty:$val, GPR64sp:$base),
                 (STR_ZXI ZPR:$val, GPR64sp:$base, (i64 0))>;
     }
-  }
-  defm : unpred_loadstore_bitcast<nxv16i8>;
-  defm : unpred_loadstore_bitcast<nxv8i16>;
-  defm : unpred_loadstore_bitcast<nxv8f16>;
-  defm : unpred_loadstore_bitcast<nxv8bf16>;
-  defm : unpred_loadstore_bitcast<nxv4f32>;
-  defm : unpred_loadstore_bitcast<nxv4i32>;
-  defm : unpred_loadstore_bitcast<nxv2i64>;
-  defm : unpred_loadstore_bitcast<nxv2f64>;
 
   multiclass unpred_store_predicate<ValueType Ty, Instruction Store> {
     def _fi : Pat<(store (Ty PPR:$val), (am_sve_fi GPR64sp:$base, simm9:$offset)),
