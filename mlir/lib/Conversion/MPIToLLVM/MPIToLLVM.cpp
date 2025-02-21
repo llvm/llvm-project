@@ -50,7 +50,7 @@ static LLVM::LLVMFuncOp getOrDefineFunction(ModuleOp &moduleOp,
 // Implementation details for MPICH ABI compatible MPI implementations
 //===----------------------------------------------------------------------===//
 struct MPICHImplTraits {
-  static const int MPI_FLOAT = 0x4c00040a;
+  static constexpr int MPI_FLOAT = 0x4c00040a;
   static const int MPI_DOUBLE = 0x4c00080b;
   static const int MPI_INT8_T = 0x4c000137;
   static const int MPI_INT16_T = 0x4c000238;
@@ -182,34 +182,31 @@ struct OMPIImplTraits {
   }
 };
 
-//===----------------------------------------------------------------------===//
-// When lowering the mpi dialect to functions calls certain details
-// differ between various MPI implementations. This class will provide
-// these in a generic way, depending on the MPI implementation that got
-// selected by the DLTI attribute on the module.
-//===----------------------------------------------------------------------===//
+/// When lowering the mpi dialect to functions calls certain details
+/// differ between various MPI implementations. This class will provide
+/// these in a generic way, depending on the MPI implementation that got
+/// selected by the DLTI attribute on the module.
 struct MPIImplTraits {
   enum MPIImpl { MPICH, OMPI };
 
-  // Get the MPI implementation from a DLTI attribute on the module.
-  // Default to MPICH (and ABI compatible).
+  /// Gets the MPI implementation from a DLTI attribute on the module.
+  /// Defaults to MPICH (and ABI compatible).
   static MPIImpl getMPIImpl(mlir::ModuleOp &moduleOp) {
     auto attr = dlti::query(*&moduleOp, {"MPI:Implementation"}, true);
-    if (failed(attr)) {
+    if (failed(attr))
       return MPICH;
-    }
     auto strAttr = dyn_cast<StringAttr>(attr.value());
     if (strAttr && strAttr.getValue() == "OpenMPI") {
       return OMPI;
     }
     if (!strAttr || strAttr.getValue() != "MPICH") {
-      moduleOp.emitWarning("Unknown \"MPI:Implementation\" specified in DLTI, "
+      moduleOp.emitWarning() << "Unknown \"MPI:Implementation\" value in DLTI (" << strAttr.getValue() << "), "
                            "defaulting to MPICH");
     }
     return MPICH;
   }
 
-  // get/create MPI_COMM_WORLD as a mlir::Value
+  /// Gets or creates MPI_COMM_WORLD as a mlir::Value.
   static mlir::Value getCommWorld(mlir::ModuleOp &moduleOp,
                                   const mlir::Location loc,
                                   mlir::ConversionPatternRewriter &rewriter) {
@@ -250,7 +247,6 @@ struct InitOpLowering : public ConvertOpToLLVMPattern<mpi::InitOp> {
   LogicalResult
   matchAndRewrite(mpi::InitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // get loc
     Location loc = op.getLoc();
 
     // ptrType `!llvm.ptr`
