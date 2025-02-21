@@ -1310,6 +1310,10 @@ def VGPRSrc_96 : RegisterOperand<VReg_96> {
   let DecoderMethod = "DecodeVReg_96RegisterClass";
 }
 
+def VGPRSrc_128 : RegisterOperand<VReg_128> {
+  let DecoderMethod = "DecodeVReg_128RegisterClass";
+}
+
 def VGPRSrc_192 : RegisterOperand<VReg_192> {
   let DecoderMethod = "DecodeVReg_192RegisterClass";
 }
