@@ -535,7 +535,6 @@ StructType *DXILOpBuilder::getResRetType(Type *ElementTy) {
   return ::getResRetType(ElementTy);
 }
 
-
 StructType *DXILOpBuilder::getHandleType() {
   return ::getHandleType(IRB.getContext());
 }
