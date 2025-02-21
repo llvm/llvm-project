@@ -1182,6 +1182,14 @@ static void VerifySDNode(SDNode *N, const TargetLowering *TLI) {
     }
     break;
   }
+  case ISD::CHAIN_BARRIER: {
+    assert(N->getNumValues() == 1 && "Expected single result!");
+    assert(N->getNumOperands() == 1 && "Expected single operand!");
+    assert(N->getValueType(0) == MVT::Other &&
+           N->getOperand(0).getValueType() == MVT::Other &&
+           "Expected result and operand to be chains!");
+    break;
+  }
   }
 }
 #endif // NDEBUG
