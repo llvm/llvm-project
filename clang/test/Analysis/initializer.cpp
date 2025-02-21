@@ -451,15 +451,15 @@ struct S {
 };
 void aggregate_struct() {
   S s;
-  ::new (&s) S{1};
+  new (&s) S{1};
   clang_analyzer_eval(1 == s.x); // expected-warning{{TRUE}}
 
   S vi;
-  ::new (&vi) S{};
+  new (&vi) S{};
   clang_analyzer_eval(0 == vi.x); // expected-warning{{TRUE}}
 
   S di;
-  ::new (&di) S;
+  new (&di) S;
   int z = di.x + 1; // expected-warning{{The left operand of '+' is a garbage value}}
 }
 void initialize_non_zeroth_element(S arr[2]) {
