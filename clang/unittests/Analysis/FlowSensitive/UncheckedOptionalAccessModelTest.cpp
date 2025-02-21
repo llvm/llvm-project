@@ -3881,7 +3881,6 @@ TEST_P(UncheckedOptionalAccessTest, ConstructorOtherStructField) {
   )cc");
 }
 
-
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
