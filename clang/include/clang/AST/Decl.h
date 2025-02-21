@@ -5045,6 +5045,11 @@ class HLSLBufferDecl final : public NamedDecl, public DeclContext {
   // LayoutStruct - Layout struct for the buffer
   CXXRecordDecl *LayoutStruct;
 
+  // For default (implicit) constant buffer, a lisf of references of global
+  // decls that belong to the buffer. The decls are already parented by the
+  // translation unit context.
+  SmallVector<Decl *> DefaultBufferDecls;
+
   HLSLBufferDecl(DeclContext *DC, bool CBuffer, SourceLocation KwLoc,
                  IdentifierInfo *ID, SourceLocation IDLoc,
                  SourceLocation LBrace);
@@ -5054,6 +5059,8 @@ public:
                                 bool CBuffer, SourceLocation KwLoc,
                                 IdentifierInfo *ID, SourceLocation IDLoc,
                                 SourceLocation LBrace);
+  static HLSLBufferDecl *CreateDefaultCBuffer(ASTContext &C,
+                                              DeclContext *LexicalParent);
   static HLSLBufferDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY {
@@ -5068,6 +5075,7 @@ public:
   bool hasValidPackoffset() const { return HasValidPackoffset; }
   const CXXRecordDecl *getLayoutStruct() const { return LayoutStruct; }
   void addLayoutStruct(CXXRecordDecl *LS);
+  void addDefaultBufferDecl(Decl *D);
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -5078,6 +5086,28 @@ public:
   static HLSLBufferDecl *castFromDeclContext(const DeclContext *DC) {
     return static_cast<HLSLBufferDecl *>(const_cast<DeclContext *>(DC));
   }
+
+  // Iterator for the buffer decls. For constant buffers explicitly declared
+  // with `cbuffer` keyword this will the list of decls parented by this
+  // HLSLBufferDecl (equal to `decls()`).
+  // For implicit $Globals buffer this will be the list of default buffer
+  // declarations stored in DefaultBufferDecls plus the implicit layout
+  // struct (the only child of HLSLBufferDecl in this case).
+  //
+  // The iterator uses llvm::concat_iterator to concatenate the lists
+  // `decls()` and `DefaultBufferDecls`. For non-default buffers
+  // `DefaultBufferDecls` is always empty.
+  using buffer_decl_iterator =
+      llvm::concat_iterator<Decl *const, SmallVector<Decl *>::const_iterator,
+                            decl_iterator>;
+  using buffer_decl_range = llvm::iterator_range<buffer_decl_iterator>;
+
+  buffer_decl_range buffer_decls() const {
+    return buffer_decl_range(buffer_decls_begin(), buffer_decls_end());
+  }
+  buffer_decl_iterator buffer_decls_begin() const;
+  buffer_decl_iterator buffer_decls_end() const;
+  bool buffer_decls_empty();
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
