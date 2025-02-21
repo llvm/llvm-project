@@ -748,15 +748,15 @@ public:
   /// deleted.
   bool defaultedMoveConstructorIsDeleted() const {
     assert((!needsOverloadResolutionForMoveConstructor() ||
-             (data().DeclaredSpecialMembers & SMF_MoveConstructor)) &&
-            "this property has not yet been computed by Sema");
+            (data().DeclaredSpecialMembers & SMF_MoveConstructor)) &&
+           "this property has not yet been computed by Sema");
     return data().DefaultedMoveConstructorIsDeleted;
   }
 
   bool defaultedMoveAssignmentIsDeleted() const {
     assert((!needsOverloadResolutionForMoveAssignment() ||
-             (data().DeclaredSpecialMembers & SMF_MoveAssignment)) &&
-            "this property has not yet been computed by Sema");
+            (data().DeclaredSpecialMembers & SMF_MoveAssignment)) &&
+           "this property has not yet been computed by Sema");
     return data().DefaultedMoveAssignmentIsDeleted;
   }
 
