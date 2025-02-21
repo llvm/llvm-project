@@ -14903,12 +14903,39 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   AddToWorklist(NewPtr.getNode());
 
   SDValue Load;
-  if (ExtType == ISD::NON_EXTLOAD)
-    Load = DAG.getLoad(VT, DL, LN0->getChain(), NewPtr,
-                       LN0->getPointerInfo().getWithOffset(PtrOff),
-                       LN0->getOriginalAlign(),
-                       LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
-  else
+  if (ExtType == ISD::NON_EXTLOAD) {
+    const MDNode *OldRanges = LN0->getRanges();
+    const MDNode *NewRanges = nullptr;
+    /* If LSBs are loaded and all bounds in the OldRanges metadata fit in
+       the narrower size, preserve the range information by translating
+       to the the new narrower type, NewTy */
+    if (ShAmt == 0 && OldRanges) {
+      Type *NewTy = VT.getTypeForEVT(*DAG.getContext());
+      const unsigned NumOperands = OldRanges->getNumOperands();
+      const unsigned NewWidth = NewTy->getIntegerBitWidth();
+      bool InRange = true;
+      SmallVector<Metadata *, 4> Bounds;
+      Bounds.reserve(NumOperands);
+
+      for (unsigned i = 0; i < NumOperands; ++i) {
+        const APInt &BoundValue =
+            mdconst::extract<ConstantInt>(OldRanges->getOperand(i))->getValue();
+        if (BoundValue.getBitWidth() - BoundValue.getNumSignBits() >=
+            NewWidth) {
+          InRange = false;
+          break;
+        }
+        Bounds.push_back(ConstantAsMetadata::get(
+            ConstantInt::get(NewTy, BoundValue.trunc(NewWidth))));
+      }
+      if (InRange)
+        NewRanges = MDNode::get(*DAG.getContext(), Bounds);
+    }
+    Load = DAG.getLoad(
+        VT, DL, LN0->getChain(), NewPtr,
+        LN0->getPointerInfo().getWithOffset(PtrOff), LN0->getOriginalAlign(),
+        LN0->getMemOperand()->getFlags(), LN0->getAAInfo(), NewRanges);
+  } else
     Load = DAG.getExtLoad(ExtType, DL, VT, LN0->getChain(), NewPtr,
                           LN0->getPointerInfo().getWithOffset(PtrOff), ExtVT,
                           LN0->getOriginalAlign(),
