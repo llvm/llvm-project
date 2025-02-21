@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
@@ -36,7 +37,7 @@ STATISTIC(NumRemoved, "Number of redundant instructions removed.");
 
 namespace {
 
-class MachineLateInstrsCleanup : public MachineFunctionPass {
+class MachineLateInstrsCleanup {
   const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
 
@@ -60,10 +61,16 @@ class MachineLateInstrsCleanup : public MachineFunctionPass {
                         BitVector &VisitedPreds);
 
 public:
+  bool run(MachineFunction &MF);
+};
+
+class MachineLateInstrsCleanupLegacy : public MachineFunctionPass {
+public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineLateInstrsCleanup() : MachineFunctionPass(ID) {
-    initializeMachineLateInstrsCleanupPass(*PassRegistry::getPassRegistry());
+  MachineLateInstrsCleanupLegacy() : MachineFunctionPass(ID) {
+    initializeMachineLateInstrsCleanupLegacyPass(
+        *PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -81,17 +88,32 @@ public:
 
 } // end anonymous namespace
 
-char MachineLateInstrsCleanup::ID = 0;
+char MachineLateInstrsCleanupLegacy::ID = 0;
 
-char &llvm::MachineLateInstrsCleanupID = MachineLateInstrsCleanup::ID;
+char &llvm::MachineLateInstrsCleanupID = MachineLateInstrsCleanupLegacy::ID;
 
-INITIALIZE_PASS(MachineLateInstrsCleanup, DEBUG_TYPE,
+INITIALIZE_PASS(MachineLateInstrsCleanupLegacy, DEBUG_TYPE,
                 "Machine Late Instructions Cleanup Pass", false, false)
 
-bool MachineLateInstrsCleanup::runOnMachineFunction(MachineFunction &MF) {
+bool MachineLateInstrsCleanupLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  return MachineLateInstrsCleanup().run(MF);
+}
+
+PreservedAnalyses
+MachineLateInstrsCleanupPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  if (!MachineLateInstrsCleanup().run(MF))
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool MachineLateInstrsCleanup::run(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
 
