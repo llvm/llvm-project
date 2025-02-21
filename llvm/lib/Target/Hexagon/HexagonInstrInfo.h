@@ -145,7 +145,7 @@ public:
 
   /// Second variant of isProfitableToIfCvt. This one
   /// checks for the case where two basic blocks from true and false path
-  /// of a if-then-else (diamond) are predicated on mutally exclusive
+  /// of a if-then-else (diamond) are predicated on mutually exclusive
   /// predicates, where the probability of the true path being taken is given
   /// by Probability, and Confidence is a measure of our confidence that it
   /// will be properly predicted.
@@ -307,8 +307,9 @@ public:
   /// operand latency. But it may not be possible for instructions with variable
   /// number of defs / uses.
   ///
-  /// This is a raw interface to the itinerary that may be directly overriden by
-  /// a target. Use computeOperandLatency to get the best estimate of latency.
+  /// This is a raw interface to the itinerary that may be directly overridden
+  /// by a target. Use computeOperandLatency to get the best estimate of
+  /// latency.
   std::optional<unsigned> getOperandLatency(const InstrItineraryData *ItinData,
                                             const MachineInstr &DefMI,
                                             unsigned DefIdx,

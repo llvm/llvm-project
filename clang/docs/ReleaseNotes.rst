@@ -54,6 +54,8 @@ ABI Changes in This Version
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+- Added support for dumping template arguments of structural value kinds.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
@@ -68,6 +70,8 @@ C++ Language Changes
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Implemented `P1061R10 Structured Bindings can introduce a Pack <https://wg21.link/P1061R10>`_.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -91,6 +95,7 @@ C Language Changes
 
 - Clang now allows an ``inline`` specifier on a typedef declaration of a
   function type in Microsoft compatibility mode. #GH124869
+- Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -103,6 +108,10 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+
+- New option ``-fprofile-continuous`` added to enable continuous profile syncing to file (#GH124353, `docs <https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous>`_).
+  The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
+  for a while and this is just a user facing option.
 
 Deprecated Compiler Flags
 -------------------------
@@ -117,6 +126,11 @@ Attribute Changes in Clang
 --------------------------
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+- Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
+- Clang now allows ``__attribute__((model("small")))`` and
+  ``__attribute__((model("large")))`` on non-TLS globals in x86-64 compilations.
+  This forces the global to be considered small or large in regards to the
+  x86-64 code model, regardless of the code model specified for the compilation.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -128,6 +142,11 @@ Improvements to Clang's diagnostics
   which are supposed to only exist once per program, but may get duplicated when
   built into a shared library.
 - Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
+- A statement attribute applied to a ``case`` label no longer suppresses
+  'bypassing variable initialization' diagnostics (#84072).
+- The ``-Wunsafe-buffer-usage`` warning has been updated to warn
+  about unsafe libc function calls.  Those new warnings are emitted
+  under the subgroup ``-Wunsafe-buffer-usage-in-libc-call``.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -137,6 +156,9 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+
+- Clang now outputs correct values when #embed data contains bytes with negative
+  signed char values (#GH102798).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -151,11 +173,15 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+- Clang now prints the correct instantiation context for diagnostics suppressed
+  by template argument deduction.
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
+- Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -205,6 +231,8 @@ LoongArch Support
 RISC-V Support
 ^^^^^^^^^^^^^^
 
+- Add support for `-mtune=generic-ooo` (a generic out-of-order model).
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -245,11 +273,18 @@ clang-format
 libclang
 --------
 
+- Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
+  increased memory allocation.
+
 Code Completion
 ---------------
 
 Static Analyzer
 ---------------
+
+- Clang currently support extending lifetime of object bound to
+  reference members of aggregates in CFG and ExprEngine, that are
+  created from default member initializer.
 
 New features
 ^^^^^^^^^^^^
@@ -284,6 +319,7 @@ Python Binding Changes
 OpenMP Support
 --------------
 - Added support 'no_openmp_constructs' assumption clause.
+- Added support for 'omp stripe' directive.
 
 Improvements
 ^^^^^^^^^^^^

@@ -1,5 +1,6 @@
 common/clc_degrees.cl
 common/clc_radians.cl
+common/clc_sign.cl
 common/clc_smoothstep.cl
 geometric/clc_dot.cl
 integer/clc_abs.cl
@@ -20,7 +21,9 @@ math/clc_ceil.cl
 math/clc_copysign.cl
 math/clc_fabs.cl
 math/clc_floor.cl
+math/clc_frexp.cl
 math/clc_mad.cl
+math/clc_modf.cl
 math/clc_nextafter.cl
 math/clc_rint.cl
 math/clc_trunc.cl

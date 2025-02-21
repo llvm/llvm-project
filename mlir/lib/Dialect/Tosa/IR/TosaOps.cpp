@@ -42,7 +42,10 @@ using namespace mlir::tosa;
 // Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TosaAvailability.cpp.inc"
+#include "mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
+#include "mlir/Dialect/Tosa/IR/TosaOpAvailabilityImpl.inc"
 
 namespace {
 #include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
@@ -240,16 +243,13 @@ static LogicalResult verifyConvOp(T op) {
   bool biasIsFloat = llvm::isa<FloatType>(biasEType);
   bool resultIsFloat = llvm::isa<FloatType>(resultEType);
 
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputEType))
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
     inputEType = quantType.getStorageType();
 
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(biasEType))
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(biasEType))
     biasEType = quantType.getStorageType();
 
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(resultEType))
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(resultEType))
     resultEType = quantType.getStorageType();
 
   if (biasIsFloat && resultIsFloat && (biasEType != resultEType)) {
@@ -346,8 +346,7 @@ static LogicalResult verifyConvOpModes(T op) {
   auto inputEType =
       llvm::cast<ShapedType>(op.getInput().getType()).getElementType();
 
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputEType))
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
     inputEType = quantType.getStorageType();
 
   auto accType = op.getAccType();
@@ -369,7 +368,23 @@ static LogicalResult verifyConvOpModes(T op) {
   if (inputEType.isF32() && !accType.isF32())
     return op.emitOpError("accumulator type for f32 tensor is not f32");
 
-  return success();
+  auto resultEType =
+      llvm::cast<ShapedType>(op.getResult().getType()).getElementType();
+
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(resultEType))
+    resultEType = quantType.getStorageType();
+
+  // check allowed input/result element types combinations
+  if ((inputEType.isInteger(8) && resultEType.isInteger(32)) ||
+      (inputEType.isInteger(16) && resultEType.isInteger(48)) ||
+      (isa<Float8E5M2Type>(inputEType) && resultEType.isF16()) ||
+      (isa<Float8E4M3FNType>(inputEType) && resultEType.isF16()) ||
+      (inputEType.isF16() && resultEType.isF16()) ||
+      (inputEType.isBF16() && resultEType.isBF16()) ||
+      (inputEType.isF32() && resultEType.isF32()))
+    return success();
+
+  return op.emitOpError("input/output element types are incompatible.");
 }
 
 // verify that inType and outType have same element types
@@ -464,26 +479,40 @@ LogicalResult tosa::ClampOp::verify() {
           llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputETy)) {
     inputETy = quantType.getStorageType();
   }
-  mlir::Type maxFpType = getMaxFpAttr().getType();
-  mlir::Type minFpType = getMinFpAttr().getType();
   mlir::Type outputETy =
       llvm::cast<ShapedType>(getOutput().getType()).getElementType();
   if (auto quantType =
           llvm::dyn_cast<mlir::quant::UniformQuantizedType>(outputETy)) {
     outputETy = quantType.getStorageType();
   }
-  unsigned dataTypeBitWidth = inputETy.getIntOrFloatBitWidth();
-
   if (inputETy != outputETy)
     return emitOpError("input/output element types are incompatible.");
 
-  // If input datatype is float, check that the two min/max_fp attributes
-  // share the same type and that their type is either the same of the input's
-  // datatype, or a float type whose bitwidth > input datatype bitwidth.
-  if (!inputETy.isInteger(dataTypeBitWidth)) {
-    if (((maxFpType != minFpType) ||
-         (maxFpType != inputETy && maxFpType.getIntOrFloatBitWidth() <=
-                                       inputETy.getIntOrFloatBitWidth())))
+  auto maxValAttr = getMaxValAttr();
+  auto minValAttr = getMinValAttr();
+
+  unsigned dataTypeBitWidth = inputETy.getIntOrFloatBitWidth();
+
+  if (inputETy.isInteger(dataTypeBitWidth)) {
+    // if input datatype is integer, check that the min_val/max_val attributes
+    // are integer attributes, and that their type is the same as the input's
+    // datatype
+    auto intMaxValAttr = mlir::dyn_cast<mlir::IntegerAttr>(maxValAttr);
+    auto intMinValAttr = mlir::dyn_cast<mlir::IntegerAttr>(minValAttr);
+    if (!intMaxValAttr || !intMinValAttr ||
+        (intMaxValAttr.getType() != intMinValAttr.getType()) ||
+        (intMaxValAttr.getType() != inputETy))
+      return emitOpError("min/max attributes types are incompatible with "
+                         "input/output element types.");
+  } else {
+    // otherwise, input datatype is float, check that the min_val/max_val
+    // attributes share the same type and that their type is the same as the
+    // input's datatype
+    auto floatMaxValAttr = mlir::dyn_cast<mlir::FloatAttr>(maxValAttr);
+    auto floatMinValAttr = mlir::dyn_cast<mlir::FloatAttr>(minValAttr);
+    if (!floatMaxValAttr || !floatMinValAttr ||
+        (floatMaxValAttr.getType() != floatMinValAttr.getType()) ||
+        (floatMaxValAttr.getType() != inputETy))
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
   }
@@ -510,7 +539,13 @@ static void buildConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
   result.addAttribute("stride", stride);
   result.addAttribute("dilation", dilation);
   result.addAttribute("acc_type", accType);
-  result.addTypes(outputType);
+  Type finalOutputType = outputType;
+  auto quantAttr = buildConvOpQuantizationAttr(builder, input, weight);
+  if (quantAttr) {
+    finalOutputType =
+        buildConvOpResultTypeInfo(builder, outputType, input, weight);
+  }
+  result.addTypes(finalOutputType);
 }
 
 /// Handles tosa.transpose_conv2d which has outpad and output shape
@@ -519,47 +554,24 @@ static void buildTransConvOpWithQuantInfo(
     OpBuilder &builder, OperationState &result, Type outputType, Value input,
     Value weight, Value bias, DenseI64ArrayAttr outpad,
     DenseI64ArrayAttr stride, DenseI64ArrayAttr outputShape, TypeAttr accType) {
-  result.addOperands({input, weight, bias});
+  auto zps = createZPsAsConst(builder, input, weight);
+  result.addOperands({input, weight, bias, zps.first, zps.second});
   result.addAttribute("out_pad", outpad);
   result.addAttribute("stride", stride);
   result.addAttribute("out_shape", outputShape);
   result.addAttribute("acc_type", accType);
-  auto quantAttr = ::buildConvOpQuantizationAttr(builder, input, weight);
-
+  Type finalOutputType = outputType;
+  auto quantAttr = buildConvOpQuantizationAttr(builder, input, weight);
   if (quantAttr) {
-    result.addAttribute("input_zp",
-                        builder.getI32IntegerAttr(
-                            static_cast<int32_t>(quantAttr.getInputZp())));
-    result.addAttribute("weight_zp",
-                        builder.getI32IntegerAttr(
-                            static_cast<int32_t>(quantAttr.getWeightZp())));
-    result.addTypes(
-        buildConvOpResultTypeInfo(builder, outputType, input, weight));
-  } else {
-    result.addTypes(outputType);
+    finalOutputType =
+        buildConvOpResultTypeInfo(builder, outputType, input, weight);
   }
+  result.addTypes(finalOutputType);
 }
 
-/// The tosa.fully_connected op has its own builder as it does not have
-/// strides/dilation/padding.
-static void buildFCOpWithQuantInfo(OpBuilder &builder, OperationState &result,
-                                   Type outputType, Value input, Value weight,
-                                   Value bias) {
-
-  result.addOperands({input, weight, bias});
-  auto quantAttr = ::buildConvOpQuantizationAttr(builder, input, weight);
-  if (quantAttr) {
-    result.addAttribute("quantization_info", quantAttr);
-    result.addTypes(
-        buildConvOpResultTypeInfo(builder, outputType, input, weight));
-  } else {
-    result.addTypes(outputType);
-  }
-}
-
-/// The tosa.matmul op is also intended to be generated where a
-/// fully_connected op must be constructed where the weight is not a constant.
-/// In this case, the fully_connected op must be expressed using matmul.
+/// The tosa.matmul op is also intended to be generated where a fully_connected
+/// op must be constructed where the weight is not a constant. In this case,
+/// the fully_connected op must be expressed using matmul.
 /// TODO: Add link to the leglization document explaining this.
 static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
                                        OperationState &result, Type outputType,
@@ -863,76 +875,6 @@ bool tosa::EqualOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   return succeeded(verifyCompatibleShape(l[0], r[0]));
 }
 
-LogicalResult tosa::FullyConnectedOp::inferReturnTypeComponents(
-    MLIRContext *context, ::std::optional<Location> location,
-    FullyConnectedOp::Adaptor adaptor,
-    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ShapeAdaptor inputShape(adaptor.getInput().getType());
-  ShapeAdaptor weightShape(adaptor.getWeight().getType());
-  ShapeAdaptor biasShape(adaptor.getBias().getType());
-
-  // All shapes are dynamic.
-  SmallVector<int64_t> outShape;
-  outShape.resize(2, ShapedType::kDynamic);
-
-  if (inputShape.hasRank()) {
-    outShape[0] = inputShape.getDimSize(0);
-  }
-
-  if (weightShape.hasRank()) {
-    outShape[1] = weightShape.getDimSize(0);
-  }
-
-  if (biasShape.hasRank()) {
-    outShape[1] = outShape[1] == ShapedType::kDynamic ? biasShape.getDimSize(0)
-                                                      : outShape[1];
-  }
-
-  inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
-  return success();
-}
-
-LogicalResult FullyConnectedOp::verify() {
-  // All TOSA conv ops have an input() and weight().
-  auto inputType = llvm::dyn_cast<RankedTensorType>(getInput().getType());
-
-  RankedTensorType weightType =
-      llvm::dyn_cast<RankedTensorType>(getWeight().getType());
-
-  // Must be ranked tensor types
-  if (!inputType) {
-    emitOpError("expect a ranked tensor for input, got ") << getInput();
-    return failure();
-  }
-  if (!weightType) {
-    emitOpError("expect a ranked tensor for weight, got ") << getWeight();
-    return failure();
-  }
-
-  auto inputEType = inputType.getElementType();
-  auto weightEType = weightType.getElementType();
-
-  bool inputIsQuant = !llvm::isa<FloatType>(inputEType);
-  bool weightIsQuant = !llvm::isa<FloatType>(weightEType);
-
-  // Either both must be quantized or both unquantized.
-  if (inputIsQuant != weightIsQuant) {
-    emitOpError(
-        "expect both input and weight to be float or not together, got ")
-        << inputEType << " and " << weightEType;
-    return failure();
-  }
-
-  // Quantized type must have constructed the quantizationattr, and unquantized
-  // types should not have a quantizationattr.
-  if ((inputIsQuant && !getInputZp()) || (!inputIsQuant && getInputZp())) {
-    emitOpError("input zero point is required for quantized type, and not "
-                "allowed for float type");
-    return failure();
-  }
-  return success();
-}
-
 LogicalResult tosa::MatMulOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     MatMulOp::Adaptor adaptor,
@@ -1104,16 +1046,10 @@ LogicalResult tosa::MulOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  LogicalResult status = success();
+  // mul op's output shape only depend on input1 and input2, not on shift
+  ValueShapeRange twoInputs = operands.drop_back();
   llvm::SmallVector<int64_t> outShape;
-  if (operands.size() == 2) {
-    status = resolveBroadcastShape(operands, outShape);
-  } else {
-    // mul op's output shape only depend on input1 and input2, not on shift
-    ValueShapeRange two_inputs = operands.drop_back();
-    status = resolveBroadcastShape(two_inputs, outShape);
-  }
-  if (status.failed()) {
+  if (resolveBroadcastShape(twoInputs, outShape).failed()) {
     inferredReturnShapes.push_back(ShapedTypeComponents());
   } else {
     inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
@@ -1147,6 +1083,15 @@ LogicalResult tosa::MulOp::verify() {
       if (getElementTypeOrSelf(getOperand(i)) != resElemType)
         return emitOpError(
             "requires the same element type for all operands and results");
+    }
+
+    // verify shift has value 0 for non-integer types
+    ElementsAttr shift_elem;
+    if (matchPattern(getShift(), m_Constant(&shift_elem))) {
+      int32_t shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+      if (shift != 0) {
+        return emitOpError() << "require shift to be 0 for float type";
+      }
     }
   }
 
@@ -1656,9 +1601,14 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
       (inputWidth == ShapedType::kDynamic))
     return failure();
 
-  llvm::ArrayRef<int64_t> scaleInt = adaptor.getScale();
-  llvm::ArrayRef<int64_t> offsetInt = adaptor.getOffset();
-  llvm::ArrayRef<int64_t> borderInt = adaptor.getBorder();
+  SmallVector<int64_t> scaleInt, offsetInt, borderInt;
+  if (!tosa::getConstShapeValue(adaptor.getScale().getDefiningOp(), scaleInt) ||
+      !tosa::getConstShapeValue(adaptor.getOffset().getDefiningOp(),
+                                offsetInt) ||
+      !tosa::getConstShapeValue(adaptor.getBorder().getDefiningOp(),
+                                borderInt)) {
+    return failure();
+  }
 
   // Compute the output shape based on attributes: scale, offset, and border.
   outputShape[1] =
@@ -1672,6 +1622,98 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
       1;
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
+LogicalResult tosa::ResizeOp::verify() {
+  const Value input = getInput();
+  const Value output = getOutput();
+  const RankedTensorType inputType =
+      llvm::dyn_cast<RankedTensorType>(input.getType());
+  const RankedTensorType outputType =
+      llvm::dyn_cast<RankedTensorType>(output.getType());
+
+  if (!inputType)
+    return emitOpError("expect a ranked input tensor");
+  if (!outputType)
+    return emitOpError("expect a ranked output tensor");
+
+  const int64_t oh = outputType.getDimSize(1);
+  const int64_t ow = outputType.getDimSize(2);
+  const int64_t ih = inputType.getDimSize(1);
+  const int64_t iw = inputType.getDimSize(2);
+
+  SmallVector<int64_t> scaleValues;
+  SmallVector<int64_t> offsetValues;
+  SmallVector<int64_t> borderValues;
+  if (!tosa::getConstShapeValue(getScale().getDefiningOp(), scaleValues) ||
+      !tosa::getConstShapeValue(getOffset().getDefiningOp(), offsetValues) ||
+      !tosa::getConstShapeValue(getBorder().getDefiningOp(), borderValues)) {
+    // Skip following checks if shape is not constant
+    return success();
+  }
+
+  if (llvm::any_of(scaleValues, [](int64_t s) { return s <= 0; }))
+    return emitOpError("expect all scale values to be > 0, got ")
+           << scaleValues;
+
+  const int64_t scaleYN = scaleValues[0];
+  const int64_t scaleYD = scaleValues[1];
+  const int64_t scaleXN = scaleValues[2];
+  const int64_t scaleXD = scaleValues[3];
+
+  const int64_t offsetY = offsetValues[0];
+  const int64_t offsetX = offsetValues[1];
+
+  const int64_t borderY = borderValues[0];
+  const int64_t borderX = borderValues[1];
+
+  auto idivCheck = [](const int64_t lhs,
+                      const int64_t rhs) -> std::optional<int64_t> {
+    if (lhs % rhs != 0)
+      return std::nullopt;
+    return lhs / rhs;
+  };
+
+  // Don't check with input height that could be broadcast (ih != 1)
+  // since Linalg, a consumer of TOSA, expects broadcasting support
+  // in resize to be available. Taking the cautious approach for now,
+  // we can consider removing support for broadcasting later.
+  if (ih != ShapedType::kDynamic && ih != 1) {
+    const std::optional<int64_t> calculatedOutHeightMinusOne =
+        idivCheck((ih - 1) * scaleYN - offsetY + borderY, scaleYD);
+    if (!calculatedOutHeightMinusOne.has_value())
+      return emitOpError("expected (input_height - 1) * scale_y_n - offset_y + "
+                         "border_y ")
+             << "to be wholly divisible by scale_y_d, got ((" << ih
+             << " - 1) * " << scaleYN << " - " << offsetY << " + " << borderY
+             << ") / " << scaleYD;
+    const int64_t calculatedOutHeight = calculatedOutHeightMinusOne.value() + 1;
+    if (oh != ShapedType::kDynamic && calculatedOutHeight != oh)
+      return emitOpError("calculated output height did not match expected: ")
+             << "calculated=" << calculatedOutHeight << ", expected=" << oh;
+  }
+
+  // Don't check with input width that could be broadcast (iw != 1)
+  // since Linalg, a consumer of TOSA, expects broadcasting support
+  // in resize to be available. Taking the cautious approach for now,
+  // we can consider removing support for broadcasting later.
+  if (iw != ShapedType::kDynamic && iw != 1) {
+    const int64_t scaledInWidth = (iw - 1) * scaleXN - offsetX + borderX;
+    const std::optional<int64_t> calculatedOutWidthMinusOne =
+        idivCheck(scaledInWidth, scaleXD);
+    if (!calculatedOutWidthMinusOne.has_value())
+      return emitOpError("expected (input_width - 1) * scale_x_n - offset_x + "
+                         "border_x ")
+             << "to be wholly divisible by scale_x_d, got ((" << iw
+             << " - 1) * " << scaleXN << " - " << offsetX << " + " << borderX
+             << ") / " << scaleXD;
+    const int64_t calculatedOutWidth = calculatedOutWidthMinusOne.value() + 1;
+    if (ow != ShapedType::kDynamic && calculatedOutWidth != ow)
+      return emitOpError("calculated output width did not match expected: ")
+             << "calculated=" << calculatedOutWidth << ", expected=" << ow;
+  }
+
   return success();
 }
 
@@ -2492,18 +2534,15 @@ LogicalResult mlir::tosa::getZeroPoint(ElementsAttr zpAttr, int64_t &zp) {
   return failure();
 }
 
-// Create a rank-0 const tensor for zero point of the source tensor.
+// Create a rank-1 const tensor for zero point of the source tensor.
 std::optional<Value> mlir::tosa::createZeroPointTensor(OpBuilder &builder,
                                                        Location loc,
                                                        Type srcElemType,
                                                        int64_t zp) {
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(srcElemType))
-    srcElemType = quantType.getStorageType();
-
-  auto zpType = mlir::RankedTensorType::get({1}, srcElemType);
+  srcElemType = getElementTypeOrSelf(srcElemType);
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcElemType))
     srcElemType = quantType.getStorageType();
+  auto zpType = mlir::RankedTensorType::get({1}, srcElemType);
   if (llvm::isa<FloatType>(srcElemType)) {
     auto zpAttr = DenseElementsAttr::get(
         zpType, builder.getFloatAttr(srcElemType, static_cast<double>(zp)));
@@ -2592,6 +2631,10 @@ OpTrait::tosa::verifyTosaShapeOperatorWithSameRanks(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult tosa::ConstShapeOp::verify() {
+  // check one dimensional rank
+  auto valuesRank = getValue().getType().getRank();
+  if (valuesRank != 1)
+    return emitOpError("expect elements in attribute value with rank 1");
   // check that number of elements in value attr equal to rank of result shape
   auto count = getValue().getNumElements();
   auto rank = (cast<tosa::shapeType>(getResult().getType())).getRank();

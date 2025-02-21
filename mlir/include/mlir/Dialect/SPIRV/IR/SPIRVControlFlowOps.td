@@ -242,6 +242,48 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
 
 // -----
 
+def SPIRV_KillOp : SPIRV_Op<"Kill", [Terminator]> {
+  let summary = [{
+    Deprecated (use OpTerminateInvocation or OpDemoteToHelperInvocation).
+  }];
+
+  let description = [{
+    Fragment-shader discard.
+
+    Ceases all further processing in any invocation that executes it: Only
+    instructions these invocations executed before OpKill have observable
+    side effects. If this instruction is executed in non-uniform control
+    flow, all subsequent control flow is non-uniform (for invocations that
+    continue to execute).
+
+    This instruction must be the last instruction in a block.
+
+    This instruction is only valid in the Fragment Execution Model.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    spirv.Kill
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Shader]>
+  ];
+
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 0;
+}
+
+// -----
+
 def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
   let summary = "Define a structured loop.";
 

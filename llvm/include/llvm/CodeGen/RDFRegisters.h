@@ -116,9 +116,7 @@ struct RegisterRef {
   static constexpr bool isUnitId(unsigned Id) {
     return Register::isVirtualRegister(Id);
   }
-  static constexpr bool isMaskId(unsigned Id) {
-    return Register::isStackSlot(Id);
-  }
+  static constexpr bool isMaskId(unsigned Id) { return Register(Id).isStack(); }
 
   static constexpr RegisterId toUnitId(unsigned Idx) {
     return Idx | MCRegister::VirtualRegFlag;
@@ -147,7 +145,7 @@ struct PhysicalRegisterInfo {
   }
 
   const uint32_t *getRegMaskBits(RegisterId R) const {
-    return RegMasks.get(Register::stackSlot2Index(R));
+    return RegMasks.get(Register(R).stackSlotIndex());
   }
 
   bool alias(RegisterRef RA, RegisterRef RB) const;
@@ -160,7 +158,7 @@ struct PhysicalRegisterInfo {
   }
 
   const BitVector &getMaskUnits(RegisterId MaskId) const {
-    return MaskInfos[Register::stackSlot2Index(MaskId)].Units;
+    return MaskInfos[Register(MaskId).stackSlotIndex()].Units;
   }
 
   std::set<RegisterId> getUnits(RegisterRef RR) const;

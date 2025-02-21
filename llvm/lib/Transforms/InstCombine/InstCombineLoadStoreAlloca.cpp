@@ -1437,6 +1437,20 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
 
+  // TODO: Add a helper to simplify the pointer operand for all memory
+  // instructions.
+  // store val, (select (cond, null, P)) -> store val, P
+  // store val, (select (cond, P, null)) -> store val, P
+  if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace())) {
+    if (SelectInst *Sel = dyn_cast<SelectInst>(Ptr)) {
+      if (isa<ConstantPointerNull>(Sel->getOperand(1)))
+        return replaceOperand(SI, 1, Sel->getOperand(2));
+
+      if (isa<ConstantPointerNull>(Sel->getOperand(2)))
+        return replaceOperand(SI, 1, Sel->getOperand(1));
+    }
+  }
+
   return nullptr;
 }
 

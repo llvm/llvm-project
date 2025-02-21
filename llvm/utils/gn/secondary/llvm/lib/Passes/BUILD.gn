@@ -21,7 +21,6 @@ static_library("Passes") {
   ]
   sources = [
     "CodeGenPassBuilder.cpp",
-    "DroppedVariableStatsIR.cpp",
     "OptimizationLevel.cpp",
     "PassBuilder.cpp",
     "PassBuilderBindings.cpp",

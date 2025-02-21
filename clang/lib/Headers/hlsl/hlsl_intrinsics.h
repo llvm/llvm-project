@@ -250,6 +250,28 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double4);
 
 //===----------------------------------------------------------------------===//
+// and builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool and(bool x, bool y)
+/// \brief Logically ands two boolean vectors elementwise and produces a bool
+/// vector output.
+
+// TODO: Clean up clang-format marker once we've resolved
+//       https://github.com/llvm/llvm-project/issues/127851
+//
+// clang-format off
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool and(bool x, bool y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2 and(bool2 x, bool2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3 and(bool3 x, bool3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4 and(bool4 x, bool4 y);
+// clang-format on
+
+//===----------------------------------------------------------------------===//
 // any builtins
 //===----------------------------------------------------------------------===//
 

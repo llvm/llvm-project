@@ -853,6 +853,12 @@ bool llvm::isEscapeSource(const Value *V) {
   if (isa<IntToPtrInst>(V))
     return true;
 
+  // Capture tracking considers insertions into aggregates and vectors as
+  // captures. As such, extractions from aggregates and vectors are escape
+  // sources.
+  if (isa<ExtractValueInst, ExtractElementInst>(V))
+    return true;
+
   // Same for inttoptr constant expressions.
   if (auto *CE = dyn_cast<ConstantExpr>(V))
     if (CE->getOpcode() == Instruction::IntToPtr)

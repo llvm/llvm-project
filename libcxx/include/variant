@@ -1585,10 +1585,12 @@ swap(variant<_Types...>& __lhs,
 
 template <class... _Types>
 struct _LIBCPP_TEMPLATE_VIS hash< __enable_hash_helper<variant<_Types...>, remove_const_t<_Types>...>> {
-  using argument_type = variant<_Types...>;
-  using result_type   = size_t;
+#    if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+  using argument_type _LIBCPP_DEPRECATED_IN_CXX17 = variant<_Types...>;
+  using result_type _LIBCPP_DEPRECATED_IN_CXX17   = size_t;
+#    endif
 
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(const argument_type& __v) const {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const variant<_Types...>& __v) const {
     using __variant_detail::__visitation::__variant;
     size_t __res =
         __v.valueless_by_exception()

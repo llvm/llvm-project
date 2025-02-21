@@ -1189,6 +1189,11 @@ void Sema::ActOnPragmaAttributePop(SourceLocation PragmaLoc,
 void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   if (PragmaAttributeStack.empty())
     return;
+
+  if (const auto *P = dyn_cast<ParmVarDecl>(D))
+    if (P->getType()->isVoidType())
+      return;
+
   for (auto &Group : PragmaAttributeStack) {
     for (auto &Entry : Group.Entries) {
       ParsedAttr *Attribute = Entry.Attribute;
@@ -1216,10 +1221,11 @@ void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   }
 }
 
-void Sema::PrintPragmaAttributeInstantiationPoint() {
+void Sema::PrintPragmaAttributeInstantiationPoint(
+    InstantiationContextDiagFuncRef DiagFunc) {
   assert(PragmaAttributeCurrentTargetDecl && "Expected an active declaration");
-  Diags.Report(PragmaAttributeCurrentTargetDecl->getBeginLoc(),
-               diag::note_pragma_attribute_applied_decl_here);
+  DiagFunc(PragmaAttributeCurrentTargetDecl->getBeginLoc(),
+           PDiag(diag::note_pragma_attribute_applied_decl_here));
 }
 
 void Sema::DiagnosePrecisionLossInComplexDivision() {

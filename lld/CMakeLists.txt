@@ -180,14 +180,6 @@ include_directories(BEFORE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
 
-if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  install(DIRECTORY include/
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-    FILES_MATCHING
-    PATTERN "*.h"
-    )
-endif()
-
 add_subdirectory(Common)
 add_subdirectory(tools/lld)
 
@@ -206,5 +198,42 @@ add_subdirectory(ELF)
 add_subdirectory(MachO)
 add_subdirectory(MinGW)
 add_subdirectory(wasm)
+
+add_custom_target(lld-headers)
+set_target_properties(lld-headers PROPERTIES FOLDER "Misc")
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  install(DIRECTORY include/lld
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    COMPONENT lld-headers
+    FILES_MATCHING
+    PATTERN "*.h"
+    )
+
+  if (NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-lld-headers
+                             DEPENDS lld-headers
+                             COMPONENT lld-headers)
+  endif()
+endif()
+
+# Custom target to install all lld libraries
+add_custom_target(lld-libraries)
+if (NOT LLVM_ENABLE_IDE)
+  add_llvm_install_targets(install-lld-libraries
+                           DEPENDS lld-libraries
+                           COMPONENT lld-libraries)
+endif()
+
+get_property(LLD_LIBS GLOBAL PROPERTY LLD_ALL_LIBS)
+if(LLD_LIBS)
+  list(REMOVE_DUPLICATES LLD_LIBS)
+  foreach(lib ${LLD_LIBS})
+    add_dependencies(lld-libraries ${lib})
+    if(NOT LLVM_ENABLE_IDE)
+      add_dependencies(install-lld-libraries install-${lib})
+      add_dependencies(install-lld-libraries-stripped install-${lib}-stripped)
+    endif()
+  endforeach()
+endif()
 
 add_subdirectory(cmake/modules)

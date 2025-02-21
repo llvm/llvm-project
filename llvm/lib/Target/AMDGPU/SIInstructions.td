@@ -3287,6 +3287,14 @@ def : GCNPat <
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (fma (f16 (VOP3NoMods f16:$src0)),
+       (f16 (VOP3NoMods f16:$src1)),
+       (f16 (VOP3NoMods f16:$src2))),
+  (V_FMAC_F16_t16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                  SRCMODS.NONE, $src2)
+>;
 let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
   (fma (f16 (VOP3NoMods f16:$src0)),
@@ -4268,3 +4276,9 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
 }
+
+// FIXME: Would be nice if we could set the register class for the destination
+// register too.
+def IMP_DEF_FROM_INTRINSIC: Pat<
+  (i32 (int_amdgcn_dead)), (IMPLICIT_DEF)>;
+

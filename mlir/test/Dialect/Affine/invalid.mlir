@@ -297,6 +297,24 @@ func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @no_upper_bound_affine_parallel() {
+  // expected-error@+1 {{expected lower bound map to have at least one result}}
+  affine.parallel (%arg2) = (max()) to (1) {
+  }
+  return
+}
+
+// -----
+
+func.func @no_upper_bound_affine_parallel() {
+  // expected-error@+1 {{expected upper bound map to have at least one result}}
+  affine.parallel (%arg3) = (0) to (min()) {
+  }
+  return
+}
+
+// -----
+
 func.func @vector_load_invalid_vector_type() {
   %0 = memref.alloc() : memref<100xf32>
   affine.for %i0 = 0 to 16 step 8 {

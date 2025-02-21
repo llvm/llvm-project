@@ -18,6 +18,7 @@
 #include <__bit_reference>
 #include <__config>
 #include <__functional/unary_function.h>
+#include <__fwd/bit_reference.h>
 #include <__fwd/functional.h>
 #include <__fwd/vector.h>
 #include <__iterator/distance.h>

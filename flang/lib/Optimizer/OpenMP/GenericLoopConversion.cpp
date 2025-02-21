@@ -84,9 +84,10 @@ public:
              << loopOp->getName() << " operation";
     };
 
-    // For standalone directives, `bind` is already supported. Other combined
-    // forms will be supported in a follow-up PR.
-    if (combinedInfo != GenericLoopCombinedInfo::Standalone &&
+    // For `loop` and `teams loop` directives, `bind` is supported.
+    // Additionally, for `teams loop`, semantic checking verifies that the
+    // `bind` clause modifier is `teams`, so no need to check this here again.
+    if (combinedInfo == GenericLoopCombinedInfo::ParallelLoop &&
         loopOp.getBindKind())
       return todo("bind");
 

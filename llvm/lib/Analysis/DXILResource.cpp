@@ -770,6 +770,45 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
   }
 }
 
+SmallVector<dxil::ResourceBindingInfo>
+DXILBindingMap::findByUse(const Value *Key) const {
+  if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
+    SmallVector<dxil::ResourceBindingInfo> Children;
+    for (const Value *V : Phi->operands()) {
+      Children.append(findByUse(V));
+    }
+    return Children;
+  }
+
+  const CallInst *CI = dyn_cast<CallInst>(Key);
+  if (!CI)
+    return {};
+
+  switch (CI->getIntrinsicID()) {
+  // Found the create, return the binding
+  case Intrinsic::dx_resource_handlefrombinding: {
+    const auto *It = find(CI);
+    assert(It != Infos.end() && "HandleFromBinding must be in resource map");
+    return {*It};
+  }
+  default:
+    break;
+  }
+
+  // Check if any of the parameters are the resource we are following. If so
+  // keep searching. If none of them are return an empty list
+  const Type *UseType = CI->getType();
+  SmallVector<dxil::ResourceBindingInfo> Children;
+  for (const Value *V : CI->args()) {
+    if (V->getType() != UseType)
+      continue;
+
+    Children.append(findByUse(V));
+  }
+
+  return Children;
+}
+
 //===----------------------------------------------------------------------===//
 
 AnalysisKey DXILResourceTypeAnalysis::Key;

@@ -2809,13 +2809,23 @@ getRefPtrIfDeclareTarget(mlir::Value value,
 }
 
 namespace {
+// Append customMappers information to existing MapInfosTy
+struct MapInfosTy : llvm::OpenMPIRBuilder::MapInfosTy {
+  SmallVector<Operation *, 4> Mappers;
+
+  /// Append arrays in \a CurInfo.
+  void append(MapInfosTy &curInfo) {
+    Mappers.append(curInfo.Mappers.begin(), curInfo.Mappers.end());
+    llvm::OpenMPIRBuilder::MapInfosTy::append(curInfo);
+  }
+};
 // A small helper structure to contain data gathered
 // for map lowering and coalese it into one area and
 // avoiding extra computations such as searches in the
 // llvm module for lowered mapped variables or checking
 // if something is declare target (and retrieving the
 // value) more than neccessary.
-struct MapInfoData : llvm::OpenMPIRBuilder::MapInfosTy {
+struct MapInfoData : MapInfosTy {
   llvm::SmallVector<bool, 4> IsDeclareTarget;
   llvm::SmallVector<bool, 4> IsAMember;
   // Identify if mapping was added by mapClause or use_device clauses.
@@ -2834,7 +2844,7 @@ struct MapInfoData : llvm::OpenMPIRBuilder::MapInfosTy {
     OriginalValue.append(CurInfo.OriginalValue.begin(),
                          CurInfo.OriginalValue.end());
     BaseType.append(CurInfo.BaseType.begin(), CurInfo.BaseType.end());
-    llvm::OpenMPIRBuilder::MapInfosTy::append(CurInfo);
+    MapInfosTy::append(CurInfo);
   }
 };
 } // namespace
@@ -2955,6 +2965,12 @@ static void collectMapDataFromMapOperands(
     mapData.Names.push_back(LLVM::createMappingInformation(
         mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
     mapData.DevicePointers.push_back(llvm::OpenMPIRBuilder::DeviceInfoTy::None);
+    if (mapOp.getMapperId())
+      mapData.Mappers.push_back(
+          SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+              mapOp, mapOp.getMapperIdAttr()));
+    else
+      mapData.Mappers.push_back(nullptr);
     mapData.IsAMapping.push_back(true);
     mapData.IsAMember.push_back(checkIsAMember(mapVars, mapOp));
   }
@@ -2999,6 +3015,7 @@ static void collectMapDataFromMapOperands(
         mapData.Names.push_back(LLVM::createMappingInformation(
             mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
         mapData.DevicePointers.push_back(devInfoTy);
+        mapData.Mappers.push_back(nullptr);
         mapData.IsAMapping.push_back(false);
         mapData.IsAMember.push_back(checkIsAMember(useDevOperands, mapOp));
       }
@@ -3164,9 +3181,8 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
 // inside of CGOpenMPRuntime.cpp
 static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
     LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder,
-    llvm::OpenMPIRBuilder &ompBuilder, DataLayout &dl,
-    llvm::OpenMPIRBuilder::MapInfosTy &combinedInfo, MapInfoData &mapData,
-    uint64_t mapDataIndex, bool isTargetParams) {
+    llvm::OpenMPIRBuilder &ompBuilder, DataLayout &dl, MapInfosTy &combinedInfo,
+    MapInfoData &mapData, uint64_t mapDataIndex, bool isTargetParams) {
   // Map the first segment of our structure
   combinedInfo.Types.emplace_back(
       isTargetParams
@@ -3174,6 +3190,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
           : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE);
   combinedInfo.DevicePointers.emplace_back(
       mapData.DevicePointers[mapDataIndex]);
+  combinedInfo.Mappers.emplace_back(mapData.Mappers[mapDataIndex]);
   combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
       mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
   combinedInfo.BasePointers.emplace_back(mapData.BasePointers[mapDataIndex]);
@@ -3237,6 +3254,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
     combinedInfo.Types.emplace_back(mapFlag);
     combinedInfo.DevicePointers.emplace_back(
         llvm::OpenMPIRBuilder::DeviceInfoTy::None);
+    combinedInfo.Mappers.emplace_back(nullptr);
     combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
         mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
     combinedInfo.BasePointers.emplace_back(mapData.BasePointers[mapDataIndex]);
@@ -3270,9 +3288,9 @@ static bool checkIfPointerMap(omp::MapInfoOp mapOp) {
 // This function is intended to add explicit mappings of members
 static void processMapMembersWithParent(
     LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder,
-    llvm::OpenMPIRBuilder &ompBuilder, DataLayout &dl,
-    llvm::OpenMPIRBuilder::MapInfosTy &combinedInfo, MapInfoData &mapData,
-    uint64_t mapDataIndex, llvm::omp::OpenMPOffloadMappingFlags memberOfFlag) {
+    llvm::OpenMPIRBuilder &ompBuilder, DataLayout &dl, MapInfosTy &combinedInfo,
+    MapInfoData &mapData, uint64_t mapDataIndex,
+    llvm::omp::OpenMPOffloadMappingFlags memberOfFlag) {
 
   auto parentClause =
       llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
@@ -3300,6 +3318,7 @@ static void processMapMembersWithParent(
       combinedInfo.Types.emplace_back(mapFlag);
       combinedInfo.DevicePointers.emplace_back(
           llvm::OpenMPIRBuilder::DeviceInfoTy::None);
+      combinedInfo.Mappers.emplace_back(nullptr);
       combinedInfo.Names.emplace_back(
           LLVM::createMappingInformation(memberClause.getLoc(), ompBuilder));
       combinedInfo.BasePointers.emplace_back(
@@ -3322,6 +3341,7 @@ static void processMapMembersWithParent(
     combinedInfo.Types.emplace_back(mapFlag);
     combinedInfo.DevicePointers.emplace_back(
         mapData.DevicePointers[memberDataIdx]);
+    combinedInfo.Mappers.emplace_back(mapData.Mappers[memberDataIdx]);
     combinedInfo.Names.emplace_back(
         LLVM::createMappingInformation(memberClause.getLoc(), ompBuilder));
     uint64_t basePointerIndex =
@@ -3341,10 +3361,9 @@ static void processMapMembersWithParent(
   }
 }
 
-static void
-processIndividualMap(MapInfoData &mapData, size_t mapDataIdx,
-                     llvm::OpenMPIRBuilder::MapInfosTy &combinedInfo,
-                     bool isTargetParams, int mapDataParentIdx = -1) {
+static void processIndividualMap(MapInfoData &mapData, size_t mapDataIdx,
+                                 MapInfosTy &combinedInfo, bool isTargetParams,
+                                 int mapDataParentIdx = -1) {
   // Declare Target Mappings are excluded from being marked as
   // OMP_MAP_TARGET_PARAM as they are not passed as parameters, they're
   // marked with OMP_MAP_PTR_AND_OBJ instead.
@@ -3374,16 +3393,18 @@ processIndividualMap(MapInfoData &mapData, size_t mapDataIdx,
 
   combinedInfo.Pointers.emplace_back(mapData.Pointers[mapDataIdx]);
   combinedInfo.DevicePointers.emplace_back(mapData.DevicePointers[mapDataIdx]);
+  combinedInfo.Mappers.emplace_back(mapData.Mappers[mapDataIdx]);
   combinedInfo.Names.emplace_back(mapData.Names[mapDataIdx]);
   combinedInfo.Types.emplace_back(mapFlag);
   combinedInfo.Sizes.emplace_back(mapData.Sizes[mapDataIdx]);
 }
 
-static void processMapWithMembersOf(
-    LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder,
-    llvm::OpenMPIRBuilder &ompBuilder, DataLayout &dl,
-    llvm::OpenMPIRBuilder::MapInfosTy &combinedInfo, MapInfoData &mapData,
-    uint64_t mapDataIndex, bool isTargetParams) {
+static void processMapWithMembersOf(LLVM::ModuleTranslation &moduleTranslation,
+                                    llvm::IRBuilderBase &builder,
+                                    llvm::OpenMPIRBuilder &ompBuilder,
+                                    DataLayout &dl, MapInfosTy &combinedInfo,
+                                    MapInfoData &mapData, uint64_t mapDataIndex,
+                                    bool isTargetParams) {
   auto parentClause =
       llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
 
@@ -3488,8 +3509,7 @@ createAlteredByCaptureMap(MapInfoData &mapData,
 // Generate all map related information and fill the combinedInfo.
 static void genMapInfos(llvm::IRBuilderBase &builder,
                         LLVM::ModuleTranslation &moduleTranslation,
-                        DataLayout &dl,
-                        llvm::OpenMPIRBuilder::MapInfosTy &combinedInfo,
+                        DataLayout &dl, MapInfosTy &combinedInfo,
                         MapInfoData &mapData, bool isTargetParams = false) {
   // We wish to modify some of the methods in which arguments are
   // passed based on their capture type by the target region, this can
@@ -3527,6 +3547,78 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
 
     processIndividualMap(mapData, i, combinedInfo, isTargetParams);
   }
+}
+
+static llvm::Expected<llvm::Function *>
+emitUserDefinedMapper(Operation *declMapperOp, llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation,
+                      llvm::StringRef mapperFuncName);
+
+static llvm::Expected<llvm::Function *>
+getOrCreateUserDefinedMapperFunc(Operation *op, llvm::IRBuilderBase &builder,
+                                 LLVM::ModuleTranslation &moduleTranslation) {
+  auto declMapperOp = cast<omp::DeclareMapperOp>(op);
+  std::string mapperFuncName =
+      moduleTranslation.getOpenMPBuilder()->createPlatformSpecificName(
+          {"omp_mapper", declMapperOp.getSymName()});
+
+  if (auto *lookupFunc = moduleTranslation.lookupFunction(mapperFuncName))
+    return lookupFunc;
+
+  return emitUserDefinedMapper(declMapperOp, builder, moduleTranslation,
+                               mapperFuncName);
+}
+
+static llvm::Expected<llvm::Function *>
+emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation,
+                      llvm::StringRef mapperFuncName) {
+  auto declMapperOp = cast<omp::DeclareMapperOp>(op);
+  auto declMapperInfoOp = declMapperOp.getDeclareMapperInfo();
+  DataLayout dl = DataLayout(declMapperOp->getParentOfType<ModuleOp>());
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::Type *varType = moduleTranslation.convertType(declMapperOp.getType());
+  SmallVector<Value> mapVars = declMapperInfoOp.getMapVars();
+
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+
+  // Fill up the arrays with all the mapped variables.
+  MapInfosTy combinedInfo;
+  auto genMapInfoCB =
+      [&](InsertPointTy codeGenIP, llvm::Value *ptrPHI,
+          llvm::Value *unused2) -> llvm::OpenMPIRBuilder::MapInfosOrErrorTy {
+    builder.restoreIP(codeGenIP);
+    moduleTranslation.mapValue(declMapperOp.getSymVal(), ptrPHI);
+    moduleTranslation.mapBlock(&declMapperOp.getRegion().front(),
+                               builder.GetInsertBlock());
+    if (failed(moduleTranslation.convertBlock(declMapperOp.getRegion().front(),
+                                              /*ignoreArguments=*/true,
+                                              builder)))
+      return llvm::make_error<PreviouslyReportedError>();
+    MapInfoData mapData;
+    collectMapDataFromMapOperands(mapData, mapVars, moduleTranslation, dl,
+                                  builder);
+    genMapInfos(builder, moduleTranslation, dl, combinedInfo, mapData);
+
+    // Drop the mapping that is no longer necessary so that the same region can
+    // be processed multiple times.
+    moduleTranslation.forgetMapping(declMapperOp.getRegion());
+    return combinedInfo;
+  };
+
+  auto customMapperCB = [&](unsigned i) -> llvm::Expected<llvm::Function *> {
+    if (!combinedInfo.Mappers[i])
+      return nullptr;
+    return getOrCreateUserDefinedMapperFunc(combinedInfo.Mappers[i], builder,
+                                            moduleTranslation);
+  };
+
+  llvm::Expected<llvm::Function *> newFn = ompBuilder->emitUserDefinedMapper(
+      genMapInfoCB, varType, mapperFuncName, customMapperCB);
+  if (!newFn)
+    return newFn.takeError();
+  moduleTranslation.mapFunction(mapperFuncName, *newFn);
+  return *newFn;
 }
 
 static LogicalResult
@@ -3640,9 +3732,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                                 builder, useDevicePtrVars, useDeviceAddrVars);
 
   // Fill up the arrays with all the mapped variables.
-  llvm::OpenMPIRBuilder::MapInfosTy combinedInfo;
-  auto genMapInfoCB =
-      [&](InsertPointTy codeGenIP) -> llvm::OpenMPIRBuilder::MapInfosTy & {
+  MapInfosTy combinedInfo;
+  auto genMapInfoCB = [&](InsertPointTy codeGenIP) -> MapInfosTy & {
     builder.restoreIP(codeGenIP);
     genMapInfos(builder, moduleTranslation, DL, combinedInfo, mapData);
     return combinedInfo;
@@ -3685,6 +3776,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   using BodyGenTy = llvm::OpenMPIRBuilder::BodyGenTy;
   auto bodyGenCB = [&](InsertPointTy codeGenIP, BodyGenTy bodyGenType)
       -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+    builder.restoreIP(codeGenIP);
     assert(isa<omp::TargetDataOp>(op) &&
            "BodyGen requested for non TargetDataOp");
     auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(op);
@@ -3693,8 +3785,6 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
     case BodyGenTy::Priv:
       // Check if any device ptr/addr info is available
       if (!info.DevicePtrInfoMap.empty()) {
-        builder.restoreIP(codeGenIP);
-
         mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Address,
                      blockArgIface.getUseDeviceAddrBlockArgs(),
                      useDeviceAddrVars, mapData,
@@ -3724,7 +3814,6 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
     case BodyGenTy::NoPriv:
       // If device info is available then region has already been generated
       if (info.DevicePtrInfoMap.empty()) {
-        builder.restoreIP(codeGenIP);
         // For device pass, if use_device_ptr(addr) mappings were present,
         // we need to link them here before codegen.
         if (ompBuilder->Config.IsTargetDevice.value_or(false)) {
@@ -3745,17 +3834,28 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
     return builder.saveIP();
   };
 
+  auto customMapperCB =
+      [&](unsigned int i) -> llvm::Expected<llvm::Function *> {
+    if (!combinedInfo.Mappers[i])
+      return nullptr;
+    info.HasMapper = true;
+    return getOrCreateUserDefinedMapperFunc(combinedInfo.Mappers[i], builder,
+                                            moduleTranslation);
+  };
+
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP = [&]() {
     if (isa<omp::TargetDataOp>(op))
-      return ompBuilder->createTargetData(
-          ompLoc, allocaIP, builder.saveIP(), builder.getInt64(deviceID),
-          ifCond, info, genMapInfoCB, nullptr, bodyGenCB);
-    return ompBuilder->createTargetData(ompLoc, allocaIP, builder.saveIP(),
-                                        builder.getInt64(deviceID), ifCond,
-                                        info, genMapInfoCB, &RTLFn);
+      return ompBuilder->createTargetData(ompLoc, allocaIP, builder.saveIP(),
+                                          builder.getInt64(deviceID), ifCond,
+                                          info, genMapInfoCB, customMapperCB,
+                                          /*MapperFunc=*/nullptr, bodyGenCB,
+                                          /*DeviceAddrCB=*/nullptr);
+    return ompBuilder->createTargetData(
+        ompLoc, allocaIP, builder.saveIP(), builder.getInt64(deviceID), ifCond,
+        info, genMapInfoCB, customMapperCB, &RTLFn);
   }();
 
   if (failed(handleError(afterIP, *op)))
@@ -4367,9 +4467,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   collectMapDataFromMapOperands(mapData, mapVars, moduleTranslation, dl,
                                 builder);
 
-  llvm::OpenMPIRBuilder::MapInfosTy combinedInfos;
-  auto genMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy codeGenIP)
-      -> llvm::OpenMPIRBuilder::MapInfosTy & {
+  MapInfosTy combinedInfos;
+  auto genMapInfoCB =
+      [&](llvm::OpenMPIRBuilder::InsertPointTy codeGenIP) -> MapInfosTy & {
     builder.restoreIP(codeGenIP);
     genMapInfos(builder, moduleTranslation, dl, combinedInfos, mapData, true);
     return combinedInfos;
@@ -4438,15 +4538,28 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
+  llvm::OpenMPIRBuilder::TargetDataInfo info(
+      /*RequiresDevicePointerInfo=*/false,
+      /*SeparateBeginEndCalls=*/true);
+
+  auto customMapperCB =
+      [&](unsigned int i) -> llvm::Expected<llvm::Function *> {
+    if (!combinedInfos.Mappers[i])
+      return nullptr;
+    info.HasMapper = true;
+    return getOrCreateUserDefinedMapperFunc(combinedInfos.Mappers[i], builder,
+                                            moduleTranslation);
+  };
+
   llvm::Value *ifCond = nullptr;
   if (Value targetIfCond = targetOp.getIfExpr())
     ifCond = moduleTranslation.lookupValue(targetIfCond);
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
-          ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), entryInfo,
+          ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), info, entryInfo,
           defaultAttrs, runtimeAttrs, ifCond, kernelInput, genMapInfoCB, bodyCB,
-          argAccessorCB, dds, targetOp.getNowait());
+          argAccessorCB, customMapperCB, dds, targetOp.getNowait());
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
@@ -4673,12 +4786,15 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
       .Case([&](omp::TaskwaitOp op) {
         return convertOmpTaskwaitOp(op, builder, moduleTranslation);
       })
-      .Case<omp::YieldOp, omp::TerminatorOp, omp::DeclareReductionOp,
+      .Case<omp::YieldOp, omp::TerminatorOp, omp::DeclareMapperOp,
+            omp::DeclareMapperInfoOp, omp::DeclareReductionOp,
             omp::CriticalDeclareOp>([](auto op) {
         // `yield` and `terminator` can be just omitted. The block structure
         // was created in the region that handles their parent operation.
         // `declare_reduction` will be used by reductions and is not
         // converted directly, skip it.
+        // `declare_mapper` and `declare_mapper.info` are handled whenever they
+        // are referred to through a `map` clause.
         // `critical.declare` is only used to declare names of critical
         // sections which will be used by `critical` ops and hence can be
         // ignored for lowering. The OpenMP IRBuilder will create unique

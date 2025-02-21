@@ -170,6 +170,10 @@ def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
 
+def LLVM_ASinOp : LLVM_UnaryIntrOpF<"asin">;
+def LLVM_ACosOp : LLVM_UnaryIntrOpF<"acos">;
+def LLVM_ATanOp : LLVM_UnaryIntrOpF<"atan">;
+
 def LLVM_SinhOp : LLVM_UnaryIntrOpF<"sinh">;
 def LLVM_CoshOp : LLVM_UnaryIntrOpF<"cosh">;
 def LLVM_TanhOp : LLVM_UnaryIntrOpF<"tanh">;

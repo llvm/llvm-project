@@ -241,7 +241,7 @@ struct VPTransformState {
       set(Def, V, VPLane(0));
       return;
     }
-    assert((VF.isScalar() || V->getType()->isVectorTy()) &&
+    assert((VF.isScalar() || isVectorizedTy(V->getType())) &&
            "scalar values must be stored as (0, 0)");
     Data.VPV2Vector[Def] = V;
   }
@@ -290,8 +290,9 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Construct the vector value of a scalarized value \p V one lane at a time.
-  void packScalarIntoVectorValue(VPValue *Def, const VPLane &Lane);
+  /// Construct the vectorized value of a scalarized value \p V one lane at a
+  /// time.
+  void packScalarIntoVectorizedValue(VPValue *Def, const VPLane &Lane);
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.

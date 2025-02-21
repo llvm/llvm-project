@@ -51,7 +51,7 @@ set(LIBC_KERNEL_HEADERS "/usr/include" CACHE STRING "Path to Linux kernel header
 # Defining a global namespace to enclose all libc functions.
 set(default_namespace "__llvm_libc")
 if(LLVM_VERSION_MAJOR)
-  string(REPLACE "-" "" NS_LLVM_VERSION_SUFFIX ${LLVM_VERSION_SUFFIX})
+  string(REPLACE "-" "" NS_LLVM_VERSION_SUFFIX "${LLVM_VERSION_SUFFIX}")
   set(default_namespace "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${NS_LLVM_VERSION_SUFFIX}")
 endif()
 set(LIBC_NAMESPACE ${default_namespace}

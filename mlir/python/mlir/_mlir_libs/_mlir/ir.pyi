@@ -2124,9 +2124,18 @@ class Module:
         Creates an empty module
         """
     @staticmethod
-    def parse(asm: str | bytes | Path, context: Context | None = None) -> Module:
+    def parse(asm: str | bytes, context: Context | None = None) -> Module:
         """
         Parses a module's assembly format from a string.
+
+        Returns a new MlirModule or raises an MLIRError if the parsing fails.
+
+        See also: https://mlir.llvm.org/docs/LangRef/
+        """
+    @staticmethod
+    def parseFile(path: str, context: Context | None = None) -> Module:
+        """
+        Parses a module's assembly format from file.
 
         Returns a new MlirModule or raises an MLIRError if the parsing fails.
 

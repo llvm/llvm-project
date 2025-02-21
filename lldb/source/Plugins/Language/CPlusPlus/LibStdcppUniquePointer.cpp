@@ -32,8 +32,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
   bool GetSummary(Stream &stream, const TypeSummaryOptions &options);
@@ -112,8 +110,6 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
 
   return lldb::ChildCacheState::eRefetch;
 }
-
-bool LibStdcppUniquePtrSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 lldb::ValueObjectSP
 LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
