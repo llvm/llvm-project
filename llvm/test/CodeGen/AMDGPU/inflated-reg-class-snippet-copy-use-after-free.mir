@@ -27,10 +27,10 @@
 # CHECK-LABEL: name: inflated_reg_class_copy_use_after_free
 # CHECK: S_NOP 0, implicit-def [[ORIG_REG:%[0-9]+]].sub0_sub1_sub2_sub3
 # CHECK-NEXT: SI_SPILL_AV512_SAVE [[ORIG_REG]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
-# CHECK-NEXT: dead [[RESTORE0:%[0-9]+]]:vreg_512_align2 = SI_SPILL_V512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
-# CHECK-NEXT: dead early-clobber [[MFMA0:%[0-9]+]]:vreg_512_align2 = V_MFMA_F32_16X16X1F32_vgprcd_e64 undef %3:vgpr_32, undef %3:vgpr_32, undef [[RESTORE0]], 0, 0, 0, implicit $mode, implicit $exec, implicit $mode, implicit $exec
-# CHECK-NEXT: undef [[SPLIT0:%[0-9]+]].sub2_sub3:av_512_align2 = COPY undef [[MFMA0]].sub2_sub3 {
-# CHECK-NEXT: internal [[SPLIT0]].sub0:av_512_align2 = COPY undef [[MFMA0]].sub0
+# CHECK-NEXT: [[RESTORE0:%[0-9]+]]:vreg_512_align2 = SI_SPILL_V512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: early-clobber [[MFMA0:%[0-9]+]]:vreg_512_align2 = V_MFMA_F32_16X16X1F32_vgprcd_e64 undef %3:vgpr_32, undef %3:vgpr_32, [[RESTORE0]], 0, 0, 0, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+# CHECK-NEXT: undef [[SPLIT0:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[MFMA0]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT0]].sub0:av_512_align2 = COPY [[MFMA0]].sub0
 # CHECK-NEXT: }
 # CHECK-NEXT: undef [[SPLIT1:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT0]].sub2_sub3 {
 # CHECK-NEXT: internal [[SPLIT1]].sub0:av_512_align2 = COPY [[SPLIT0]].sub0
@@ -118,10 +118,10 @@ body:             |
 # CHECK-LABEL: name: inflated_reg_class_copy_use_after_free_lane_subset
 # CHECK: S_NOP 0, implicit-def [[ORIG_REG:%[0-9]+]].sub0_sub1_sub2_sub3
 # CHECK-NEXT: SI_SPILL_AV512_SAVE [[ORIG_REG]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
-# CHECK-NEXT: dead [[RESTORE_0:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
-# CHECK-NEXT: S_NOP 0, implicit-def dead early-clobber [[REG1:%[0-9]+]], implicit undef [[RESTORE_0]].sub0_sub1_sub2_sub3, implicit undef [[RESTORE_0]].sub4_sub5_sub6_sub7
-# CHECK-NEXT: undef [[SPLIT0:%[0-9]+]].sub2_sub3:av_512_align2 = COPY undef [[REG1]].sub2_sub3 {
-# CHECK-NEXT: internal [[SPLIT0]].sub0:av_512_align2 = COPY undef [[REG1]].sub0
+# CHECK-NEXT: [[RESTORE_0:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: S_NOP 0, implicit-def early-clobber [[REG1:%[0-9]+]], implicit [[RESTORE_0]].sub0_sub1_sub2_sub3, implicit [[RESTORE_0]].sub4_sub5_sub6_sub7
+# CHECK-NEXT: undef [[SPLIT0:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[REG1]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT0]].sub0:av_512_align2 = COPY [[REG1]].sub0
 # CHECK-NEXT: }
 # CHECK-NEXT: undef [[SPLIT1:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT0]].sub2_sub3 {
 # CHECK-NEXT: internal [[SPLIT1]].sub0:av_512_align2 = COPY [[SPLIT0]].sub0
