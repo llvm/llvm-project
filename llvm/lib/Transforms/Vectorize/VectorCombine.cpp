@@ -3036,8 +3036,6 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   Worklist.pushValue(NSV0B);
   Worklist.pushValue(NSV1A);
   Worklist.pushValue(NSV1B);
-  for (auto *S : Shuffles)
-    Worklist.add(S);
   return true;
 }
 
