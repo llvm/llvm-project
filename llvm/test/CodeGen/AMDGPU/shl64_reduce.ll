@@ -13,10 +13,6 @@
 ; Test range with metadata
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; FIXME: This case should be reduced, but SelectionDAG::computeKnownBits() cannot
-;        determine the minimum from metadata in this case.  Match current results
-;        for now.
-
 define i64 @shl_metadata(i64 %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_metadata:
 ; CHECK:       ; %bb.0:
@@ -45,6 +41,7 @@ define i64 @shl_metadata_two_ranges(i64 %arg0, ptr %arg1.ptr) {
   ret i64 %shl
 }
 
+; Known minimum is too low.  Reduction must not be done.
 define i64 @shl_metadata_out_of_range(i64 %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_metadata_out_of_range:
 ; CHECK:       ; %bb.0:
@@ -59,7 +56,7 @@ define i64 @shl_metadata_out_of_range(i64 %arg0, ptr %arg1.ptr) {
 }
 
 ; Bounds cannot be truncated to i32 when load is narrowed to i32.
-; Reduction not done.
+; Reduction must not be done.
 ; Bounds were chosen so that if bounds were truncated to i32 the
 ; known minimum would be 32 and the shl would be erroneously reduced.
 define i64 @shl_metadata_cant_be_narrowed_to_i32(i64 %arg0, ptr %arg1.ptr) {
@@ -75,6 +72,7 @@ define i64 @shl_metadata_cant_be_narrowed_to_i32(i64 %arg0, ptr %arg1.ptr) {
   ret i64 %shl
 }
 
+; FIXME: This case should be reduced
 define <2 x i64> @shl_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v2_metadata:
 ; CHECK:       ; %bb.0:
@@ -89,6 +87,7 @@ define <2 x i64> @shl_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
   ret <2 x i64> %shl
 }
 
+; FIXME: This case should be reduced
 define <3 x i64> @shl_v3_metadata(<3 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v3_metadata:
 ; CHECK:       ; %bb.0:
@@ -105,6 +104,7 @@ define <3 x i64> @shl_v3_metadata(<3 x i64> %arg0, ptr %arg1.ptr) {
   ret <3 x i64> %shl
 }
 
+; FIXME: This case should be reduced
 define <4 x i64> @shl_v4_metadata(<4 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: shl_v4_metadata:
 ; CHECK:       ; %bb.0:
