@@ -1,6 +1,6 @@
 // RUN: mlir-opt -split-input-file -convert-to-llvm %s | FileCheck %s
 
-// COM: Test MPICh ABI
+// COM: Test MPICH ABI
 // CHECK: module attributes {mpi.dlti = #dlti.map<"MPI:Implementation" = "MPICH">} {
 // CHECK: llvm.func @MPI_Finalize() -> i32
 // CHECK: llvm.func @MPI_Recv(!llvm.ptr, i32, i32, i32, i32, i32, !llvm.ptr) -> i32

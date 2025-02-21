@@ -59,7 +59,7 @@ public:
   /// on the given module.
   static std::unique_ptr<MPIImplTraits> get(ModuleOp &moduleOp);
 
-  MPIImplTraits(ModuleOp &moduleOp) : moduleOp(moduleOp) {}
+  explicit MPIImplTraits(ModuleOp &moduleOp) : moduleOp(moduleOp) {}
 
   ModuleOp &getModuleOp() { return moduleOp; }
 
@@ -70,8 +70,8 @@ public:
   /// Get the MPI_STATUS_IGNORE value (typically a pointer type).
   virtual intptr_t getStatusIgnore() = 0;
 
-  /// get/create MPI datatype as a Value which corresponds to the given
-  /// Type
+  /// Gets or creates an MPI datatype as a value which corresponds to the given
+  /// type.
   virtual Value getDataType(const Location loc,
                             ConversionPatternRewriter &rewriter, Type type) = 0;
 };
@@ -97,7 +97,7 @@ public:
 
   Value getCommWorld(const Location loc,
                      ConversionPatternRewriter &rewriter) override {
-    static const int MPI_COMM_WORLD = 0x44000000;
+    static constexpr int MPI_COMM_WORLD = 0x44000000;
     return rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI32Type(),
                                              MPI_COMM_WORLD);
   }
@@ -160,7 +160,7 @@ public:
     StringRef name = "ompi_mpi_comm_world";
 
     // make sure global op definition exists
-    (void)getOrDefineExternalStruct(loc, rewriter, name, commStructT);
+    getOrDefineExternalStruct(loc, rewriter, name, commStructT);
 
     // get address of symbol
     return rewriter.create<LLVM::AddressOfOp>(
@@ -201,7 +201,7 @@ public:
     auto commStructT =
         LLVM::LLVMStructType::getOpaque("ompi_predefined_datatype_t", context);
     // make sure global op definition exists
-    (void)getOrDefineExternalStruct(loc, rewriter, mtype, commStructT);
+    getOrDefineExternalStruct(loc, rewriter, mtype, commStructT);
     // get address of symbol
     return rewriter.create<LLVM::AddressOfOp>(
         loc, LLVM::LLVMPointerType::get(context),
