@@ -194,6 +194,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  gethostname
+  SRCS
+    gethostname.cpp
+  HDRS
+    ../gethostname.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.include.sys_syscall
+    libc.include.sys_utsname
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.string.strlen
+    libc.src.string.strncpy
+)
+
+add_entrypoint_object(
   geteuid
   SRCS
     geteuid.cpp
