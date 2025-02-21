@@ -349,13 +349,13 @@ define <8 x half> @shuffle_v8f16(<8 x half> %x, <8 x half> %y) {
   ret <8 x half> %res
 }
 
-define <8 x half> @shuffle_undef_v8f16(<8 x half> %x, <8 x half> %y) {
-; CHECK-LABEL: shuffle_undef_v8f16:
-; CHECK:         .functype shuffle_undef_v8f16 (v128, v128) -> (v128)
+define <8 x half> @shuffle_poison_v8f16(<8 x half> %x, <8 x half> %y) {
+; CHECK-LABEL: shuffle_poison_v8f16:
+; CHECK:         .functype shuffle_poison_v8f16 (v128, v128) -> (v128)
 ; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
 ; CHECK-NEXT:    return $pop0
   %res = shufflevector <8 x half> %x, <8 x half> %y,
-    <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef,
-               i32 undef, i32 undef, i32 undef, i32 undef>
+    <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison,
+               i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x half> %res
 }
