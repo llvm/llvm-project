@@ -836,8 +836,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SET_FPENV, VT, Expand);
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
 
-    for (MVT InputVT : MVT::all_valuetypes())
-      setPartialReduceMLAAction(VT, InputVT, Expand);
+    // PartialReduceMLA operations default to expand.
+    setOperationAction({ISD::PARTIAL_REDUCE_UMLA, ISD::PARTIAL_REDUCE_SMLA}, VT,
+                       Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.

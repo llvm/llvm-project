@@ -622,8 +622,6 @@ namespace {
     SDValue CombineConsecutiveLoads(SDNode *N, EVT VT);
     SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
                                  const TargetLowering &TLI);
-    SDValue foldMulPARTIAL_REDUCE_MLA(SDNode *N);
-    SDValue foldExtendPARTIAL_REDUCE_MLA(SDNode *N);
 
     SDValue CombineExtLoad(SDNode *N);
     SDValue CombineZExtLogicopShiftLoad(SDNode *N);
