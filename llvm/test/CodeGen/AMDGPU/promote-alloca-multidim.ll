@@ -288,5 +288,104 @@ define amdgpu_kernel void @i32_3d_load_store(ptr %out) {
   ret void
 }
 
+define amdgpu_kernel void @i16_2d_load_store(ptr %out, i32 %sel) {
+; CHECK-LABEL: define amdgpu_kernel void @i16_2d_load_store(
+; CHECK-SAME: ptr [[OUT:%.*]], i32 [[SEL:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 3, [[SEL]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5>, i32 [[TMP1]]
+; CHECK-NEXT:    store i16 [[TMP2]], ptr [[OUT]], align 2
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [2 x [3 x i16]], align 16, addrspace(5)
+  %gep.00 = getelementptr inbounds [2 x [3 x i16]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 0
+  %gep.01 = getelementptr inbounds [2 x [3 x i16]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
+  %gep.02 = getelementptr inbounds [2 x [3 x i16]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 2
+  %gep.10 = getelementptr inbounds [2 x [3 x i16]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 0
+  %gep.11 = getelementptr inbounds [2 x [3 x i16]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 1
+  %gep.12 = getelementptr inbounds [2 x [3 x i16]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 2
+  store i16 0, ptr addrspace(5) %gep.00
+  store i16 1, ptr addrspace(5) %gep.01
+  store i16 2, ptr addrspace(5) %gep.02
+  store i16 3, ptr addrspace(5) %gep.10
+  store i16 4, ptr addrspace(5) %gep.11
+  store i16 5, ptr addrspace(5) %gep.12
+  %gep = getelementptr inbounds [2 x [3 x i16]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 %sel
+  %load = load i16, ptr addrspace(5) %gep
+  store i16 %load, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @float_2d_load_store(ptr %out, i32 %sel) {
+; CHECK-LABEL: define amdgpu_kernel void @float_2d_load_store(
+; CHECK-SAME: ptr [[OUT:%.*]], i32 [[SEL:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 3, [[SEL]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x float> <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 5.000000e+00>, i32 [[TMP1]]
+; CHECK-NEXT:    store float [[TMP2]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [2 x [3 x float]], align 16, addrspace(5)
+  %gep.00 = getelementptr inbounds [2 x [3 x float]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 0
+  %gep.01 = getelementptr inbounds [2 x [3 x float]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
+  %gep.02 = getelementptr inbounds [2 x [3 x float]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 2
+  %gep.10 = getelementptr inbounds [2 x [3 x float]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 0
+  %gep.11 = getelementptr inbounds [2 x [3 x float]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 1
+  %gep.12 = getelementptr inbounds [2 x [3 x float]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 2
+  store float 0.0, ptr addrspace(5) %gep.00
+  store float 1.0, ptr addrspace(5) %gep.01
+  store float 2.0, ptr addrspace(5) %gep.02
+  store float 3.0, ptr addrspace(5) %gep.10
+  store float 4.0, ptr addrspace(5) %gep.11
+  store float 5.0, ptr addrspace(5) %gep.12
+  %gep = getelementptr inbounds [2 x [3 x float]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 %sel
+  %load = load float, ptr addrspace(5) %gep
+  store float %load, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @ptr_2d_load_store(ptr %out, i32 %sel) {
+; CHECK-LABEL: define amdgpu_kernel void @ptr_2d_load_store(
+; CHECK-SAME: ptr [[OUT:%.*]], i32 [[SEL:%.*]]) {
+; CHECK-NEXT:    [[PTR_0:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 0
+; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 1
+; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 2
+; CHECK-NEXT:    [[PTR_3:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 3
+; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 4
+; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 5
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x ptr> undef, ptr [[PTR_0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <6 x ptr> [[TMP1]], ptr [[PTR_1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <6 x ptr> [[TMP2]], ptr [[PTR_2]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x ptr> [[TMP3]], ptr [[PTR_3]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x ptr> [[TMP4]], ptr [[PTR_4]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x ptr> [[TMP5]], ptr [[PTR_5]], i32 5
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 3, [[SEL]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <6 x ptr> [[TMP6]], i32 [[TMP7]]
+; CHECK-NEXT:    store ptr [[TMP8]], ptr [[OUT]], align 8
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [2 x [3 x ptr]], align 16, addrspace(5)
+  %gep.00 = getelementptr inbounds [2 x [3 x ptr]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 0
+  %gep.01 = getelementptr inbounds [2 x [3 x ptr]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 1
+  %gep.02 = getelementptr inbounds [2 x [3 x ptr]], ptr addrspace(5) %alloca, i32 0, i32 0, i32 2
+  %gep.10 = getelementptr inbounds [2 x [3 x ptr]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 0
+  %gep.11 = getelementptr inbounds [2 x [3 x ptr]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 1
+  %gep.12 = getelementptr inbounds [2 x [3 x ptr]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 2
+  %ptr.0 = getelementptr inbounds ptr, ptr %out, i32 0
+  %ptr.1 = getelementptr inbounds ptr, ptr %out, i32 1
+  %ptr.2 = getelementptr inbounds ptr, ptr %out, i32 2
+  %ptr.3 = getelementptr inbounds ptr, ptr %out, i32 3
+  %ptr.4 = getelementptr inbounds ptr, ptr %out, i32 4
+  %ptr.5 = getelementptr inbounds ptr, ptr %out, i32 5
+  store ptr %ptr.0, ptr addrspace(5) %gep.00
+  store ptr %ptr.1, ptr addrspace(5) %gep.01
+  store ptr %ptr.2, ptr addrspace(5) %gep.02
+  store ptr %ptr.3, ptr addrspace(5) %gep.10
+  store ptr %ptr.4, ptr addrspace(5) %gep.11
+  store ptr %ptr.5, ptr addrspace(5) %gep.12
+  %gep = getelementptr inbounds [2 x [3 x ptr]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 %sel
+  %load = load ptr, ptr addrspace(5) %gep
+  store ptr %load, ptr %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.workitem.id.y()

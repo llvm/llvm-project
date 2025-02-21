@@ -66,9 +66,10 @@ static cl::opt<unsigned> PromoteAllocaToVectorLimit(
     cl::desc("Maximum byte size to consider promote alloca to vector"),
     cl::init(0));
 
-static cl::opt<unsigned> PromoteAllocaToVectorMaxElements(
-    "amdgpu-promote-alloca-to-vector-max-elements",
-    cl::desc("Maximum vector size (in elements) to use when promoting alloca"),
+static cl::opt<unsigned> PromoteAllocaToVectorMaxRegs(
+    "amdgpu-promote-alloca-to-vector-max-regs",
+    cl::desc(
+        "Maximum vector size (in 32b registers) to use when promoting alloca"),
     cl::init(16));
 
 // Use up to 1/4 of available register budget for vectorization.
@@ -96,6 +97,8 @@ private:
   uint32_t LocalMemLimit = 0;
   uint32_t CurrentLocalMemUsage = 0;
   unsigned MaxVGPRs;
+  unsigned VGPRBudgetRatio;
+  unsigned MaxVectorRegs;
 
   bool IsAMDGCN = false;
   bool IsAMDHSA = false;
@@ -123,6 +126,8 @@ private:
   bool tryPromoteAllocaToLDS(AllocaInst &I, bool SufficientLDS);
 
   void sortAllocasToPromote(SmallVectorImpl<AllocaInst *> &Allocas);
+
+  void setFunctionLimits(const Function &F);
 
 public:
   AMDGPUPromoteAllocaImpl(TargetMachine &TM, LoopInfo &LI) : TM(TM), LI(LI) {
@@ -310,6 +315,19 @@ void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
   // clang-format on
 }
 
+void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
+  // Load per function limits, overriding with global options where appropriate.
+  MaxVectorRegs = F.getFnAttributeAsParsedInteger(
+      "amdgpu-promote-alloca-to-vector-max-regs", PromoteAllocaToVectorMaxRegs);
+  if (PromoteAllocaToVectorMaxRegs.getNumOccurrences())
+    MaxVectorRegs = PromoteAllocaToVectorMaxRegs;
+  VGPRBudgetRatio = F.getFnAttributeAsParsedInteger(
+      "amdgpu-promote-alloca-to-vector-vgpr-ratio",
+      PromoteAllocaToVectorVGPRRatio);
+  if (PromoteAllocaToVectorVGPRRatio.getNumOccurrences())
+    VGPRBudgetRatio = PromoteAllocaToVectorVGPRRatio;
+}
+
 bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   Mod = F.getParent();
   DL = &Mod->getDataLayout();
@@ -319,20 +337,14 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
     return false;
 
   MaxVGPRs = getMaxVGPRs(TM, F);
+  setFunctionLimits(F);
 
   bool SufficientLDS = PromoteToLDS ? hasSufficientLocalMem(F) : false;
-
-  const unsigned VGPRRatio =
-      PromoteAllocaToVectorVGPRRatio.getNumOccurrences()
-          ? PromoteAllocaToVectorVGPRRatio
-          : F.getFnAttributeAsParsedInteger(
-                "amdgpu-promote-alloca-to-vector-vgpr-ratio",
-                PromoteAllocaToVectorVGPRRatio);
 
   unsigned VectorizationBudget =
       (PromoteAllocaToVectorLimit ? PromoteAllocaToVectorLimit * 8
                                   : (MaxVGPRs * 32)) /
-      VGPRRatio;
+      VGPRBudgetRatio;
 
   SmallVector<AllocaInst *, 16> Allocas;
   for (Instruction &I : F.getEntryBlock()) {
@@ -802,11 +814,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   }
 
   const unsigned MaxElements =
-      PromoteAllocaToVectorMaxElements.getNumOccurrences()
-          ? PromoteAllocaToVectorMaxElements
-          : Alloca.getParent()->getParent()->getFnAttributeAsParsedInteger(
-                "amdgpu-promote-alloca-to-vector-max-elements",
-                PromoteAllocaToVectorMaxElements);
+      (MaxVectorRegs * 32) / DL->getTypeSizeInBits(VectorTy->getElementType());
 
   if (VectorTy->getNumElements() > MaxElements ||
       VectorTy->getNumElements() < 2) {
