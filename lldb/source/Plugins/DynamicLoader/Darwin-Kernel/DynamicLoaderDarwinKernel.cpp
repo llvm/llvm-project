@@ -738,7 +738,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
   }
 
   if (IsKernel() && m_uuid.IsValid()) {
-    lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
+    lldb::StreamUP s = target.GetDebugger().GetAsyncOutputStream();
     s->Printf("Kernel UUID: %s\n", m_uuid.GetAsString().c_str());
     s->Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
 
@@ -830,7 +830,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       }
 
       if (IsKernel() && !m_module_sp) {
-        lldb::StreamSP s = target.GetDebugger().GetAsyncErrorStream();
+        lldb::StreamUP s = target.GetDebugger().GetAsyncErrorStream();
         s->Printf("WARNING: Unable to locate kernel binary on the debugger "
                   "system.\n");
         if (kernel_search_error.Fail() && kernel_search_error.AsCString("") &&
@@ -974,7 +974,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
   bool is_loaded = IsLoaded();
 
   if (is_loaded && m_module_sp && IsKernel()) {
-    lldb::StreamSP s = target.GetDebugger().GetAsyncOutputStream();
+    lldb::StreamUP s = target.GetDebugger().GetAsyncOutputStream();
     ObjectFile *kernel_object_file = m_module_sp->GetObjectFile();
     if (kernel_object_file) {
       addr_t file_address =
@@ -1193,7 +1193,7 @@ bool DynamicLoaderDarwinKernel::ReadKextSummaryHeader() {
           m_kext_summary_header.version = data.GetU32(&offset);
           if (m_kext_summary_header.version > 128) {
             lldb::StreamSP s =
-                m_process->GetTarget().GetDebugger().GetOutputStreamSP();
+                m_process->GetTarget().GetDebugger().GetAsyncOutputStream();
             s->Printf("WARNING: Unable to read kext summary header, got "
                       "improbable version number %u\n",
                       m_kext_summary_header.version);
@@ -1208,7 +1208,7 @@ bool DynamicLoaderDarwinKernel::ReadKextSummaryHeader() {
               // If we get an improbably large entry_size, we're probably
               // getting bad memory.
               lldb::StreamSP s =
-                  m_process->GetTarget().GetDebugger().GetOutputStreamSP();
+                  m_process->GetTarget().GetDebugger().GetAsyncOutputStream();
               s->Printf("WARNING: Unable to read kext summary header, got "
                         "improbable entry_size %u\n",
                         m_kext_summary_header.entry_size);
@@ -1226,7 +1226,7 @@ bool DynamicLoaderDarwinKernel::ReadKextSummaryHeader() {
             // If we get an improbably large number of kexts, we're probably
             // getting bad memory.
             lldb::StreamSP s =
-                m_process->GetTarget().GetDebugger().GetOutputStreamSP();
+                m_process->GetTarget().GetDebugger().GetAsyncOutputStream();
             s->Printf("WARNING: Unable to read kext summary header, got "
                       "improbable number of kexts %u\n",
                       m_kext_summary_header.entry_count);
@@ -1330,7 +1330,8 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
       number_of_old_kexts_being_removed == 0)
     return true;
 
-  lldb::StreamSP s = m_process->GetTarget().GetDebugger().GetOutputStreamSP();
+  lldb::StreamSP s =
+      m_process->GetTarget().GetDebugger().GetAsyncOutputStream();
   if (load_kexts) {
     if (number_of_new_kexts_being_added > 0 &&
         number_of_old_kexts_being_removed > 0) {

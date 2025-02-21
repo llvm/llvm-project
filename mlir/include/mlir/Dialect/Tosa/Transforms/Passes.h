@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_TOSA_TRANSFORMS_PASSES_H
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/PassesEnums.h.inc"
 #include "mlir/Pass/Pass.h"
 
@@ -47,28 +48,6 @@ std::unique_ptr<Pass> createTosaInferShapesPass();
 std::unique_ptr<Pass> createTosaMakeBroadcastablePass();
 std::unique_ptr<Pass> createTosaTestQuantUtilAPIPass();
 std::unique_ptr<Pass> createTosaOptionalDecompositions();
-
-struct ValidationOptions {
-  /// Validate if operations match for the given profile.
-  TosaProfileEnum profile = TosaProfileEnum::Undefined;
-  ValidationOptions &setProfile(TosaProfileEnum profile) {
-    this->profile = profile;
-    return *this;
-  }
-  /// Verify if the properties of certain operations align the spec requirement.
-  bool strictOperationSpecAlignment = false;
-  ValidationOptions &enableStrictOperationSpecAlignment(bool enable = true) {
-    strictOperationSpecAlignment = enable;
-    return *this;
-  }
-  /// Validate if operator parameters are within specfication for the given
-  /// level.
-  TosaLevelEnum level = TosaLevelEnum::EightK;
-  ValidationOptions &setLevel(TosaLevelEnum level) {
-    this->level = level;
-    return *this;
-  }
-};
 
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
