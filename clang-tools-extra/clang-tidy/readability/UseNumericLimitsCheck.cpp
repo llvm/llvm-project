@@ -37,7 +37,6 @@ UseNumericLimitsCheck::UseNumericLimitsCheck(StringRef Name,
            "std::numeric_limits<int64_t>::min()"},
           {std::numeric_limits<int64_t>::max(),
            "std::numeric_limits<int64_t>::max()"},
-
       },
       UnsignedConstants{
           {std::numeric_limits<uint8_t>::max(),

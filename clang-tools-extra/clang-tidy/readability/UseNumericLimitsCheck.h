@@ -11,7 +11,6 @@
 
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
-#include <vector>
 
 namespace clang::tidy::readability {
 
@@ -29,8 +28,8 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const std::vector<std::tuple<int64_t, std::string>> SignedConstants;
-  const std::vector<std::tuple<uint64_t, std::string>> UnsignedConstants;
+  const llvm::SmallVector<std::pair<int64_t, std::string>> SignedConstants;
+  const llvm::SmallVector<std::pair<uint64_t, std::string>> UnsignedConstants;
   utils::IncludeInserter Inserter;
 };
 
