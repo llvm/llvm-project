@@ -8,8 +8,7 @@ endif()
 # TODO: Investigate the precommit bots' failures of this test and re-enable it.
 # https://github.com/llvm/llvm-project/issues/128185.
 set(file_test_hermetic_only "")
-if(LIBC_TARGET_ARCHITECTURE_IS_X86_64 AND LIBC_TARGET_OS_IS_LINUX AND
-   LLVM_LIBC_FULL_BUILD)
+if(LIBC_TARGET_OS_IS_LINUX AND LLVM_LIBC_FULL_BUILD)
   set(file_test_hermetic_only "HERMETIC_TEST_ONLY")
 endif()
 
