@@ -33,7 +33,7 @@ define amdgpu_cs_chain void @bad_exec(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr,
 }
 
 define amdgpu_cs_chain void @not_unreachable(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr) {
-  ; CHECK: amdgcn_cs_chain must precede unreachable
+  ; CHECK: llvm.amdgcn.cs.chain must be followed by unreachable
   ; CHECK-NEXT: @llvm.amdgcn.cs.chain
   call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr, i32 0)
   ret void
