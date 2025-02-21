@@ -112,6 +112,8 @@ private:
                                    const DebugLoc &DL, int64_t Amount,
                                    MachineInstr::MIFlag Flag, bool EmitCFI,
                                    bool DynAllocation) const;
+  int getInitialCFAOffset(const MachineFunction &MF) const override;
+  Register getInitialCFARegister(const MachineFunction &MF) const override;
 };
 } // namespace llvm
 #endif
