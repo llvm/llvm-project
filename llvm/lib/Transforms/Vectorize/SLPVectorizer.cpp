@@ -8795,12 +8795,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   BlockScheduling &BS = *BSRef;
 
-  SmallVector<Value *> MainOpIsTheFirst(UniqueValues);
-  auto MainOpIter = find(MainOpIsTheFirst, S.getMainOp());
-  std::rotate(MainOpIsTheFirst.begin(), MainOpIter, std::next(MainOpIter));
-
   std::optional<ScheduleData *> Bundle =
-      BS.tryScheduleBundle(MainOpIsTheFirst, this, S);
+      BS.tryScheduleBundle(UniqueValues, this, S);
 #ifdef EXPENSIVE_CHECKS
   // Make sure we didn't break any internal invariants
   BS.verify();
@@ -17467,7 +17463,6 @@ BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL) {
 std::optional<BoUpSLP::ScheduleData *>
 BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S) {
-  assert(VL[0] == S.getMainOp() && "MainOp must be the first element of VL.");
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
   if (isa<PHINode>(S.getMainOp()) ||
@@ -17557,21 +17552,21 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   auto *Bundle = buildBundle(VL);
   TryScheduleBundleImpl(ReSchedule, Bundle);
   if (!Bundle->isReady()) {
-    cancelScheduling(VL, S.getMainOp());
+    cancelScheduling(VL, Bundle->Inst);
     return std::nullopt;
   }
   return Bundle;
 }
 
 void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
-                                                Value *OpValue) {
-  if (isa<PHINode>(OpValue) || isVectorLikeInstWithConstOps(OpValue) ||
+                                                Value *Inst) {
+  if (isa<PHINode>(Inst) || isVectorLikeInstWithConstOps(Inst) ||
       doesNotNeedToSchedule(VL))
     return;
 
-  if (doesNotNeedToBeScheduled(OpValue))
-    OpValue = *find_if_not(VL, doesNotNeedToBeScheduled);
-  ScheduleData *Bundle = getScheduleData(OpValue);
+  if (doesNotNeedToBeScheduled(Inst))
+    Inst = *find_if_not(VL, doesNotNeedToBeScheduled);
+  ScheduleData *Bundle = getScheduleData(Inst);
   LLVM_DEBUG(dbgs() << "SLP:  cancel scheduling of " << *Bundle << "\n");
   assert(!Bundle->IsScheduled &&
          "Can't cancel bundle which is already scheduled");
