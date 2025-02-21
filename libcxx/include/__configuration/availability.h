@@ -78,6 +78,9 @@
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_21 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_20 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE /* nothing */
 
@@ -113,6 +116,11 @@
 #elif defined(__APPLE__)
 
 // clang-format off
+
+// LLVM 21
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_21 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 20
 // TODO: Fill this in
@@ -353,6 +361,11 @@
 #define _LIBCPP_AVAILABILITY_BAD_FUNCTION_CALL_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
 #define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19
 #define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
+
+// This controls the availability of the C++26 debugging functions.
+// The platform specific implementation is built in the library.
+#define _LIBCPP_AVAILABILITY_HAS_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_21
+#define _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE
 
 // This controls the availability of floating-point std::from_chars functions.
 // These overloads were added later than the integer overloads.
