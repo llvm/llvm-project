@@ -1223,6 +1223,8 @@ bool RegAllocFastImpl::setPhysReg(MachineInstr &MI, MachineOperand &MO,
   assert(PhysReg && "assignments should always be to a valid physreg");
 
   if (LLVM_UNLIKELY(Assignment.Error)) {
+    // Make sure we don't set renamable in error scenarios, as we may have
+    // assigned to a reserved register.
     if (MO.isUse())
       MO.setIsUndef(true);
   }
