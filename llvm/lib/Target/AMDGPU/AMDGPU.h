@@ -428,8 +428,8 @@ extern char &SIInsertWaitcntsID;
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
 extern char &SIFormMemoryClausesID;
 
-void initializeSIPostRABundlerPass(PassRegistry&);
-extern char &SIPostRABundlerID;
+void initializeSIPostRABundlerLegacyPass(PassRegistry &);
+extern char &SIPostRABundlerLegacyID;
 
 void initializeGCNCreateVOPDPass(PassRegistry &);
 extern char &GCNCreateVOPDID;
