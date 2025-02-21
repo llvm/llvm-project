@@ -52,8 +52,7 @@ public:
       rewriteStandaloneLoop(loopOp, rewriter);
       break;
     case GenericLoopCombinedInfo::ParallelLoop:
-      llvm_unreachable(
-          "not yet implemented: Combined `parallel loop` directive");
+      rewriteToWsloop(loopOp, rewriter);
       break;
     case GenericLoopCombinedInfo::TeamsLoop:
       if (teamsLoopCanBeParallelFor(loopOp))
@@ -69,30 +68,11 @@ public:
 
   static mlir::LogicalResult
   checkLoopConversionSupportStatus(mlir::omp::LoopOp loopOp) {
-    GenericLoopCombinedInfo combinedInfo = findGenericLoopCombineInfo(loopOp);
-
-    switch (combinedInfo) {
-    case GenericLoopCombinedInfo::Standalone:
-      break;
-    case GenericLoopCombinedInfo::ParallelLoop:
-      return loopOp.emitError(
-          "not yet implemented: Combined `parallel loop` directive");
-    case GenericLoopCombinedInfo::TeamsLoop:
-      break;
-    }
-
     auto todo = [&loopOp](mlir::StringRef clauseName) {
       return loopOp.emitError()
              << "not yet implemented: Unhandled clause " << clauseName << " in "
              << loopOp->getName() << " operation";
     };
-
-    // For `loop` and `teams loop` directives, `bind` is supported.
-    // Additionally, for `teams loop`, semantic checking verifies that the
-    // `bind` clause modifier is `teams`, so no need to check this here again.
-    if (combinedInfo == GenericLoopCombinedInfo::ParallelLoop &&
-        loopOp.getBindKind())
-      return todo("bind");
 
     if (loopOp.getOrder())
       return todo("order");
@@ -147,8 +127,9 @@ private:
                          mlir::omp::ClauseBindKind::Parallel)
                    return mlir::WalkResult::interrupt();
 
-                 // TODO check for combined `parallel loop` when we support
-                 // it.
+                 if (combinedInfo == GenericLoopCombinedInfo::ParallelLoop)
+                   return mlir::WalkResult::interrupt();
+
                } else if (auto callOp =
                               mlir::dyn_cast<mlir::CallOpInterface>(nestedOp)) {
                  // Calls to non-OpenMP API runtime functions inhibits
