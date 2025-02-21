@@ -255,6 +255,9 @@ void foo() {
 } // namespace CXX17_aggregate_construction
 
 namespace newexpr_init_list_initialization {
+template <class FirstT, class... Rest>
+void escape(FirstT first, Rest... args);
+
 struct S {
   int foo;
   int bar;
@@ -330,14 +333,16 @@ void considered_fields_initd() {
   delete S;
 }
 
+#if __cplusplus >= 201703L
 enum Enum : int {
 };
 // FIXME: uncomment when CSA supports list init of enums
 void list_init_enum() {
-  // Enum *E = new Enum{53};
-  // clang_analyzer_eval(53 == *E); // should be TRUE
-  // delete E;
+  Enum *E = new Enum{53};
+  clang_analyzer_eval(53 == *E); // expected-warning{{TRUE}}
+  delete E;
 }
+#endif // __cplusplus >= 201703L
 
 class PubClass {
 public:
@@ -437,14 +442,7 @@ void nested_aggregates() {
   clang_analyzer_eval(2 == N7->inner.bar); // expected-warning{{TRUE}}
   clang_analyzer_eval(3 == N7->baz); // expected-warning{{TRUE}}
 
-  delete N;
-  delete N1;
-  delete N2;
-  delete N3;
-  delete N4;
-  delete N5;
-  delete N6;
-  delete N7;
+  escape(N,N1,N2,N3,N4,N5,N6,N7);
 }
 } // namespace newexpr_init_list_initialization
 
