@@ -51,26 +51,6 @@ constexpr bool can_swap() {
 }
 #endif
 
-#if TEST_STD_VER >= 11
-// This test is constexpr only since C++23 because constexpr std::unique_ptr is only available since C++23
-TEST_CONSTEXPR_CXX23 bool test_unique_ptr() {
-  std::unique_ptr<int> i[3];
-  for (int k = 0; k < 3; ++k)
-    i[k].reset(new int(k + 1));
-  std::unique_ptr<int> j[3];
-  for (int k = 0; k < 3; ++k)
-    j[k].reset(new int(k + 4));
-  std::swap(i, j);
-  assert(*i[0] == 4);
-  assert(*i[1] == 5);
-  assert(*i[2] == 6);
-  assert(*j[0] == 1);
-  assert(*j[1] == 2);
-  assert(*j[2] == 3);
-  return true;
-}
-#endif
-
 TEST_CONSTEXPR_CXX20 bool test() {
   {
     int i[3] = {1, 2, 3};
@@ -140,6 +120,23 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(!noexcept(std::swap(ca, ca)), "");
     static_assert(noexcept(std::swap(ma, ma)), "");
   }
+
+  // We can't test unique_ptr in constant evaluation before C++23 as it's constexpr only since C++23.
+  if (!TEST_IS_CONSTANT_EVALUATED || TEST_STD_VER >= 23) {
+    std::unique_ptr<int> i[3];
+    for (int k = 0; k < 3; ++k)
+      i[k].reset(new int(k + 1));
+    std::unique_ptr<int> j[3];
+    for (int k = 0; k < 3; ++k)
+      j[k].reset(new int(k + 4));
+    std::swap(i, j);
+    assert(*i[0] == 4);
+    assert(*i[1] == 5);
+    assert(*i[2] == 6);
+    assert(*j[0] == 1);
+    assert(*j[1] == 2);
+    assert(*j[2] == 3);
+  }
 #endif
 
   return true;
@@ -147,14 +144,8 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER >= 11
-  test_unique_ptr();
-#endif
 #if TEST_STD_VER >= 20
   static_assert(test());
-#endif
-#if TEST_STD_VER >= 23
-  static_assert(test_unique_ptr());
 #endif
 
   return 0;

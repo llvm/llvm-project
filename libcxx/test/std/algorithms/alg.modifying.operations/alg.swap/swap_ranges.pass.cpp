@@ -124,13 +124,10 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
   types::for_each(types::forward_iterator_list<int*>(), TestPtr());
 
-#if TEST_STD_VER >= 11 && TEST_STD_VER <= 17
-  types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtr());
-#elif TEST_STD_VER == 20
-  if (!std::is_constant_evaluated())
+#if TEST_STD_VER >= 11
+  // We can't test unique_ptr in constant evaluation before C++23 as it's constexpr only since C++23.
+  if (!TEST_IS_CONSTANT_EVALUATED || TEST_STD_VER >= 23)
     types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtr());
-#elif TEST_STD_VER >= 23
-  types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtr());
 #endif
 
   return true;
