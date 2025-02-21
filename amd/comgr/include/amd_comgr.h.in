@@ -136,7 +136,7 @@ extern "C" {
  * @p amd_comgr_action_kind_t.
  *
  * Data objects are reference counted and are destroyed when the
- * reference count reaches 0. When a data object is created its
+ * reference count reaches 0. When a data object is created, its
  * reference count is 1, it has 0 bytes of data, it has an empty name,
  * and it has no metadata.
  *
