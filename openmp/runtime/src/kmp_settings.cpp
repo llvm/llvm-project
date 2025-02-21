@@ -5354,6 +5354,98 @@ static void __kmp_stg_print_task_throttling(kmp_str_buf_t *buffer,
   __kmp_stg_print_bool(buffer, name, __kmp_enable_task_throttling);
 } // __kmp_stg_print_task_throttling
 
+// -----------------------------------------------------------------------------
+// KMP_ENABLE_TASK_THROTTLING_GLOBAL
+
+#if KMP_TASK_THROTTLING_GLOBAL
+static void __kmp_stg_parse_task_throttling_global(char const *name,
+                                                   char const *value,
+                                                   void *data) {
+  __kmp_stg_parse_bool(name, value, &__kmp_enable_task_throttling_global);
+} // __kmp_stg_parse_task_throttling_global
+
+static void __kmp_stg_print_task_throttling_global(kmp_str_buf_t *buffer,
+                                                   char const *name,
+                                                   void *data) {
+  __kmp_stg_print_bool(buffer, name, __kmp_enable_task_throttling_global);
+} // __kmp_stg_print_task_throttling_global
+#endif /* KMP_TASK_THROTTLING_GLOBAL */
+
+// -----------------------------------------------------------------------------
+// KMP_ENABLE_TASK_THROTTLING_READY_PER_THREAD
+
+static void __kmp_stg_parse_task_throttling_ready_per_thread(char const *name,
+                                                             char const *value,
+                                                             void *data) {
+  __kmp_stg_parse_bool(name, value,
+                       &__kmp_enable_task_throttling_ready_per_thread);
+} // __kmp_stg_parse_task_throttling_ready_per_thread
+
+static void
+__kmp_stg_print_task_throttling_ready_per_thread(kmp_str_buf_t *buffer,
+                                                 char const *name, void *data) {
+  __kmp_stg_print_bool(buffer, name,
+                       __kmp_enable_task_throttling_ready_per_thread);
+} // __kmp_stg_print_task_throttling_ready_per_thread
+
+// -----------------------------------------------------------------------------
+// KMP_ENABLE_TASK_THROTTLING_CHILDREN
+
+static void __kmp_stg_parse_task_throttling_children(char const *name,
+                                                     char const *value,
+                                                     void *data) {
+  __kmp_stg_parse_bool(name, value, &__kmp_enable_task_throttling_children);
+} // __kmp_stg_parse_task_throttling_children
+
+static void __kmp_stg_print_task_throttling_children(kmp_str_buf_t *buffer,
+                                                     char const *name,
+                                                     void *data) {
+  __kmp_stg_print_bool(buffer, name, __kmp_enable_task_throttling_children);
+} // __kmp_stg_print_task_throttling_children
+
+// -----------------------------------------------------------------------------
+// KMP_TASK_MAXIMUM_GLOBAL
+#if KMP_TASK_THROTTLING_GLOBAL
+static void __kmp_stg_parse_task_maximum_global(char const *name,
+                                                char const *value, void *data) {
+  __kmp_stg_parse_int(name, value, 1, INT_MAX, &__kmp_task_maximum_global);
+} // __kmp_stg_parse_task_maximum_global
+
+static void __kmp_stg_print_task_maximum_global(kmp_str_buf_t *buffer,
+                                                char const *name, void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_task_maximum_global);
+} // __kmp_stg_print_task_maximum_global
+#endif /* KMP_TASK_THROTTLING_GLOBAL */
+
+// -----------------------------------------------------------------------------
+// KMP_TASK_MAXIMUM_READY_PER_THREAD
+static void __kmp_stg_parse_task_maximum_ready_per_thread(char const *name,
+                                                          char const *value,
+                                                          void *data) {
+  __kmp_stg_parse_int(name, value, 1, INT_MAX,
+                      &__kmp_task_maximum_ready_per_thread);
+} // __kmp_stg_parse_task_maximum_ready_per_thread
+
+static void __kmp_stg_print_task_maximum_ready_per_thread(kmp_str_buf_t *buffer,
+                                                          char const *name,
+                                                          void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_task_maximum_ready_per_thread);
+} // __kmp_stg_print_task_maximum_ready_per_thread
+
+// -----------------------------------------------------------------------------
+// KMP_TASK_MAXIMUM_CHILDREN
+static void __kmp_stg_parse_task_maximum_children(char const *name,
+                                                  char const *value,
+                                                  void *data) {
+  __kmp_stg_parse_int(name, value, 1, INT_MAX, &__kmp_task_maximum_children);
+} // __kmp_stg_parse_task_maximum_children
+
+static void __kmp_stg_print_task_maximum_children(kmp_str_buf_t *buffer,
+                                                  char const *name,
+                                                  void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_task_maximum_children);
+} // __kmp_stg_print_task_maximum_children
+
 #if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
 // -----------------------------------------------------------------------------
 // KMP_USER_LEVEL_MWAIT
@@ -5741,8 +5833,30 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"KMP_FORKJOIN_FRAMES_MODE", __kmp_stg_parse_forkjoin_frames_mode,
      __kmp_stg_print_forkjoin_frames_mode, NULL, 0, 0},
 #endif
+
     {"KMP_ENABLE_TASK_THROTTLING", __kmp_stg_parse_task_throttling,
      __kmp_stg_print_task_throttling, NULL, 0, 0},
+    {"KMP_ENABLE_TASK_THROTTLING_CHILDREN",
+     __kmp_stg_parse_task_throttling_children,
+     __kmp_stg_print_task_throttling_children, NULL, 0, 0},
+    {"KMP_ENABLE_TASK_THROTTLING_READY_PER_THREAD",
+     __kmp_stg_parse_task_throttling_ready_per_thread,
+     __kmp_stg_print_task_throttling_ready_per_thread, NULL, 0, 0},
+#if KMP_TASK_THROTTLING_GLOBAL
+    {"KMP_ENABLE_TASK_THROTTLING_GLOBAL",
+     __kmp_stg_parse_task_throttling_global,
+     __kmp_stg_print_task_throttling_global, NULL, 0, 0},
+#endif /* KMP_TASK_THROTTLING_GLOBAL */
+
+    {"KMP_TASK_MAXIMUM_CHILDREN", __kmp_stg_parse_task_maximum_children,
+     __kmp_stg_print_task_maximum_children, NULL, 0, 0},
+    {"KMP_TASK_MAXIMUM_READY_PER_THREAD",
+     __kmp_stg_parse_task_maximum_ready_per_thread,
+     __kmp_stg_print_task_maximum_ready_per_thread, NULL, 0, 0},
+#if KMP_TASK_THROTTLING_GLOBAL
+    {"KMP_TASK_MAXIMUM_GLOBAL", __kmp_stg_parse_task_maximum_global,
+     __kmp_stg_print_task_maximum_global, NULL, 0, 0},
+#endif /* KMP_TASK_THROTTLING_GLOBAL */
 
     {"OMP_DISPLAY_ENV", __kmp_stg_parse_omp_display_env,
      __kmp_stg_print_omp_display_env, NULL, 0, 0},
@@ -5758,7 +5872,8 @@ static kmp_setting_t __kmp_stg_table[] = {
 #if OMPX_TASKGRAPH
     {"KMP_MAX_TDGS", __kmp_stg_parse_max_tdgs, __kmp_std_print_max_tdgs, NULL,
      0, 0},
-    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0, 0},
+    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0,
+     0},
 #endif
 
 #if OMPT_SUPPORT
