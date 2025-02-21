@@ -13,7 +13,7 @@ define void @byte(ptr %p0) {
   store volatile i8  1, ptr %p0, align 1
   store volatile i8 -1, ptr %p1, align 1
 
-  unreachable
+  ret void
 }
 
 define void @half(ptr, ptr %p0) {
@@ -26,7 +26,7 @@ define void @half(ptr, ptr %p0) {
   store volatile i16  1, ptr %p0, align 2
   store volatile i16 -1, ptr %p1, align 2
 
-  unreachable
+  ret void
 }
 
 define void @word(ptr, ptr, ptr %p0) {
@@ -47,7 +47,7 @@ define void @word(ptr, ptr, ptr %p0) {
   store volatile i32  4294967295, ptr %p3, align 4
   store volatile i32  4294967296, ptr %p3, align 4
 
-  unreachable
+  ret void
 }
 
 define void @dword(ptr, ptr, ptr, ptr %p0) {
@@ -69,7 +69,7 @@ define void @dword(ptr, ptr, ptr, ptr %p0) {
   store volatile i64 -2000000000, ptr %p2, align 8
   store volatile i64  4294967295, ptr %p3, align 8
 
-  unreachable
+  ret void
 }
 
 define void @unaligned(ptr %p0) {
@@ -88,7 +88,7 @@ define void @unaligned(ptr %p0) {
   store volatile i32 -2, ptr %p1, align 2
   store volatile i64 -2, ptr %p2, align 4
 
-  unreachable
+  ret void
 }
 
 define void @inline_asm(ptr %p0) {
@@ -100,5 +100,5 @@ define void @inline_asm(ptr %p0) {
 ; CHECK-NEXT:    #NO_APP
   call void asm "*(u32 *)(r0 + 42) = 7;", "~{r0},~{mem}"()
 
-  unreachable
+  ret void
 }

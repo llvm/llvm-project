@@ -37,5 +37,5 @@ define dso_local void @normal() "frame-pointer"="all" {
 ; CHECK-BE-NEXT:  # %bb.0:
 ; CHECK-BE-NEXT:    call main
   call void @main()
-  unreachable
+  ret void
 }
