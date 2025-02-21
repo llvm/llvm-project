@@ -220,7 +220,7 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
     Builder.defineMacro("_MSC_FULL_VER", Twine(Opts.MSCompatibilityVersion));
     // FIXME We cannot encode the revision information into 32-bits
     Builder.defineMacro("_MSC_BUILD", Twine(1));
-    // https://github.com/llvm/llvm-project/issues/59689
+    // Exposed by MSVC, used in their stddef.h.
     Builder.defineMacro("_CRT_USE_BUILTIN_OFFSETOF", Twine(1));
 
     if (Opts.CPlusPlus11 && Opts.isCompatibleWithMSVC(LangOptions::MSVC2015))

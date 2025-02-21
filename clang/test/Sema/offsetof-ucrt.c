@@ -1,7 +1,18 @@
 // RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -verify -fms-compatibility
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -verify
 // expected-no-diagnostics
 
 typedef __typeof__(sizeof(0)) size_t;
+
+#ifdef _MSC_VER
+#ifndef _CRT_USE_BUILTIN_OFFSETOF
+#error _CRT_USE_BUILTIN_OFFSETOF should be predefined in MSVC-compatible modes.
+#endif
+#else
+#ifdef _CRT_USE_BUILTIN_OFFSETOF
+#error _CRT_USE_BUILTIN_OFFSETOF should not be predefined in non-MSVC-compatible modes.
+#endif
+#endif
 
 #if defined _MSC_VER && !defined _CRT_USE_BUILTIN_OFFSETOF
 #ifdef __cplusplus
