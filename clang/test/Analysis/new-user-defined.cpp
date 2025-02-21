@@ -5,6 +5,9 @@ void clang_analyzer_eval(bool);
 
 using size_t = decltype(sizeof(int));
 
+template <class FirstT, class... Rest>
+void escape(FirstT first, Rest... args);
+
 namespace CustomClassType {
 struct S {
   int x;
@@ -21,5 +24,7 @@ void F() {
 
   S *s3 = new S{1};
   clang_analyzer_eval(1 == s3->x); // expected-warning{{TRUE}}
+
+  escape(s, s2, s3);
 }
 } // namespace CustomClassType
