@@ -279,6 +279,7 @@ verifyAffineMapAsLayout(AffineMap m, ArrayRef<int64_t> shape,
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinAttributeInterfaces.h.inc"
+#include "mlir/IR/OpAsmAttrInterface.h.inc"
 
 //===----------------------------------------------------------------------===//
 // ElementsAttr
