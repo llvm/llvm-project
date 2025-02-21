@@ -73,5 +73,5 @@ void fixed_test_no_address_space_condition(int *cpu_data) {
                    // x86-nosuppress-warning{{Dereference}} \
                    // other-suppress-warning{{Dereference}} \
                    // x86-suppress-warning{{Dereference}}
-}
+  }
 }
