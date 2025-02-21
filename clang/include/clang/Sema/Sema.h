@@ -8239,10 +8239,9 @@ public:
 
   bool FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
                                 DeclarationName Name, FunctionDecl *&Operator,
-                                QualType DeallocType,
                                 ImplicitDeallocationParameters,
                                 bool Diagnose = true);
-  FunctionDecl *FindUsualDeallocationFunction(QualType, SourceLocation StartLoc,
+  FunctionDecl *FindUsualDeallocationFunction(SourceLocation StartLoc,
                                               ImplicitDeallocationParameters,
                                               DeclarationName Name);
   FunctionDecl *FindDeallocationFunctionForDestructor(SourceLocation StartLoc,

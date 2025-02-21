@@ -17,10 +17,10 @@ struct resumable {
     promise_type();
     void *operator new(std::size_t sz, int);
     void *operator new(std::size_t sz, float);
-    void *operator new(std::type_identity<promise_type>, std::size_t sz, int);
-    void *operator new(std::type_identity<promise_type>, std::size_t sz, float);
-    void operator delete(std::type_identity<promise_type>, void *);
-    template <typename T> void operator delete(std::type_identity<T>, void *) = delete;
+    void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, int);
+    void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, float);
+    void operator delete(std::type_identity<promise_type>, void *, std::size_t sz, std::align_val_t);
+    template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t sz, std::align_val_t) = delete;
     void operator delete(void *);
 
     resumable get_return_object() { return {}; }
@@ -36,8 +36,8 @@ struct resumable2 {
   struct promise_type {
     promise_type();
     template <typename... Args> void *operator new(std::size_t sz, Args...);
-    template <typename... Args> void *operator new(std::type_identity<promise_type>, std::size_t sz, Args...);
-    void operator delete(std::type_identity<promise_type>, void *);
+    template <typename... Args> void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, Args...);
+    void operator delete(std::type_identity<promise_type>, void *, std::size_t sz, std::align_val_t);
     void operator delete(void *);
 
     resumable2 get_return_object() { return {}; }
@@ -99,10 +99,10 @@ struct resumable3 {
     std::suspend_always yield_value(int i);
   };
 };
-template <typename T> void *operator new(std::type_identity<T>, std::size_t);
-template <typename T, typename... Args> void *operator new(std::type_identity<T>, std::size_t, Args...);
-template <typename T> void operator delete(std::type_identity<T>, void *);
-template <typename T, typename... Args> void operator delete(std::type_identity<T>, void *, Args...);
+template <typename T> void *operator new(std::type_identity<T>, std::size_t sz, std::align_val_t);
+template <typename T, typename... Args> void *operator new(std::type_identity<T>, std::size_t sz, std::align_val_t, Args...);
+template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t sz, std::align_val_t);
+template <typename T, typename... Args> void operator delete(std::type_identity<T>, void *, std::size_t sz, std::align_val_t, Args...);
 
 // CHECK-LABEL: void @f5
 extern "C" resumable3 f5(float) {

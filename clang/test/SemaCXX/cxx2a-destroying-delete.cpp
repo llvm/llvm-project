@@ -27,7 +27,7 @@ struct A {
   // FIXME: It's probably a language defect that we permit usual operator delete to be variadic.
   void operator delete(A*, std::destroying_delete_t, std::size_t, ...);
 
-  void operator delete(struct X*, std::destroying_delete_t, std::size_t, ...); // expected-error {{first parameter of 'operator delete' must have type 'A *'}}
+  void operator delete(struct X*, std::destroying_delete_t, std::size_t, ...); // expected-error {{first parameter of destroying 'operator delete' must have type 'A *'}}
 
   void operator delete(void*, std::size_t);
 };

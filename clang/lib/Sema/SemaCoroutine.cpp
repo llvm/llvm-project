@@ -1141,7 +1141,7 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
   ImplicitDeallocationParameters IDP = {
       alignedAllocationModeFromBool(Overaligned), SizedDeallocationMode::Yes};
   if (S.FindDeallocationFunction(Loc, PointeeRD, DeleteName, OperatorDelete,
-                                 PromiseType, IDP, /*Diagnose*/ true))
+                                 IDP, /*Diagnose*/ true))
     return false;
 
   // [dcl.fct.def.coroutine]p12
@@ -1157,8 +1157,7 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
     // parameter if failed.
     // Coroutines can always provide their required size.
     IDP.PassSize = SizedDeallocationMode::Yes;
-    OperatorDelete =
-        S.FindUsualDeallocationFunction(PromiseType, Loc, IDP, DeleteName);
+    OperatorDelete = S.FindUsualDeallocationFunction(Loc, IDP, DeleteName);
 
     if (!OperatorDelete)
       return false;

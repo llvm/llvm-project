@@ -28,102 +28,85 @@ template <class Tp> struct is_volatile<Tp volatile> {
 template <class T> static const bool is_const_v = is_const<T>::value;
 template <class T> static const bool is_volatile_v = is_volatile<T>::value;
 
-template <bool expectConst, bool expectVolatile>
 struct VerifyQualifiers {
-  template <typename T> void *operator new(std::type_identity<T>, size_t) throw() {
-    static_assert(is_const_v<T> == expectConst); // #1
-    static_assert(is_volatile_v<T> == expectVolatile); // #2
+  template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t) throw() {
+    static_assert(is_const_v<T> == false); // #1
+    static_assert(is_volatile_v<T> == false); // #2
     return 0;
   }
-  template <typename T> void operator delete(std::type_identity<T>, void*) {
-    static_assert(is_const_v<T> == expectConst); // #3
-    static_assert(is_volatile_v<T> == expectVolatile); // #4
+  template <typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t) {
+    static_assert(is_const_v<T> == false); // #3
+    static_assert(is_volatile_v<T> == false); // #4
+  }
+  template <typename T> void *operator new(std::type_identity<_Atomic T>, size_t, std::align_val_t) throw() {
+    static_assert(is_const_v<T> == false);
+    static_assert(is_volatile_v<T> == false);
   }
 };
 
-template <bool expectConst, bool expectVolatile> void *operator new(std::type_identity<VerifyQualifiers<expectConst, expectVolatile> > type, size_t) throw() {
-  static_assert(is_const_v<typename decltype(type)::type> == expectConst); // #5
-  static_assert(is_volatile_v<typename decltype(type)::type> == expectVolatile); // #6
+void *operator new(std::type_identity<VerifyQualifiers> type, size_t, std::align_val_t) throw() { // #11
+  static_assert(is_const_v<typename decltype(type)::type> == false); // #5
+  static_assert(is_volatile_v<typename decltype(type)::type> == false); // #6
   return 0;
 }
 
-template <bool expectConst, bool expectVolatile> void operator delete(std::type_identity<VerifyQualifiers<expectConst, expectVolatile> > type, void*) {
-  static_assert(is_const_v<typename decltype(type)::type> == expectConst); // #7
-  static_assert(is_volatile_v<typename decltype(type)::type> == expectVolatile); // #8
+void operator delete(std::type_identity<VerifyQualifiers> type, void*, size_t, std::align_val_t) {
+  static_assert(is_const_v<typename decltype(type)::type> == false); // #7
+  static_assert(is_volatile_v<typename decltype(type)::type> == false); // #8
 }
+
+void *operator new(std::type_identity<int>, size_t, std::align_val_t) throw() = delete; // #12
+void operator delete(std::type_identity<int>, void*, size_t, std::align_val_t) = delete;
+
+struct TestAtomic1 {
+
+};
+struct TestAtomic2 {
+};
+
+void *operator new(std::type_identity<TestAtomic1>, size_t, std::align_val_t) throw() = delete; // #13
+void operator delete(std::type_identity<_Atomic TestAtomic1>, void*, size_t, std::align_val_t) = delete; // #9
+void *operator new(std::type_identity<_Atomic TestAtomic2>, size_t, std::align_val_t) = delete; // #10
+void operator delete(std::type_identity<TestAtomic2>, void*, size_t, std::align_val_t) = delete;
 
 // Success tests
 void test_member_allocators() {
-  auto *unqualified_obj = new VerifyQualifiers<false, false>();
+  auto *unqualified_obj = new VerifyQualifiers();
   delete unqualified_obj;
-  auto *const_obj = new const VerifyQualifiers<true, false>();
+  auto *const_obj = new const VerifyQualifiers();
   delete const_obj;
-  auto *volatile_obj = new volatile VerifyQualifiers<false, true>();
+  auto *volatile_obj = new volatile VerifyQualifiers();
   delete volatile_obj;
-  auto *const_volatile_obj = new const volatile VerifyQualifiers<true, true>();
+  auto *const_volatile_obj = new const volatile VerifyQualifiers();
   delete const_volatile_obj;
+  auto *atomic_obj = new _Atomic VerifyQualifiers();
+  delete atomic_obj;
+  auto *atomic_test1 = new _Atomic TestAtomic1;
+  delete atomic_test1;
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#9 {{'operator delete' has been explicitly marked deleted here}}
+  auto *atomic_test2 = new _Atomic TestAtomic2;
+  // expected-error@-1 {{call to deleted function 'operator new'}}
+  // expected-note@#10 {{candidate function has been explicitly deleted}}
+  // expected-note@#11 {{candidate function not viable}}
+  // expected-note@#12 {{candidate function not viable}}
+  // expected-note@#13 {{candidate function not viable}}
+  delete atomic_test2;
 }
+
+
 
 void test_global_allocators() {
-  auto *unqualified_obj = ::new VerifyQualifiers<false, false>();
+  auto *unqualified_obj = ::new VerifyQualifiers();
   ::delete unqualified_obj;
-  auto *const_obj = ::new const VerifyQualifiers<true, false>();
+  auto *const_obj = ::new const VerifyQualifiers();
   ::delete const_obj;
-  auto *volatile_obj = ::new volatile VerifyQualifiers<false, true>();
+  auto *volatile_obj = ::new volatile VerifyQualifiers();
   ::delete volatile_obj;
-  auto *const_volatile_obj = ::new const volatile VerifyQualifiers<true, true>();
+  auto *const_volatile_obj = ::new const volatile VerifyQualifiers();
   ::delete const_volatile_obj;
-}
-
-// Verify mismatches
-void test_incorrect_member_allocators() {
-  VerifyQualifiers<true, false> *incorrect_const_obj = new VerifyQualifiers<true, false>();
-  // expected-error@#1 {{static assertion failed due to requirement 'is_const_v<VerifyQualifiers<true, false>> == true'}}
-  // expected-note@-2 {{in instantiation of function template specialization 'VerifyQualifiers<true, false>::operator new<VerifyQualifiers<true, false>>' requested here}}
-  delete incorrect_const_obj;
-  // expected-error@#3 {{static assertion failed due to requirement 'is_const_v<VerifyQualifiers<true, false>> == true'}}
-  // expected-note@-2 {{in instantiation of function template specialization 'VerifyQualifiers<true, false>::operator delete<VerifyQualifiers<true, false>>' requested here}}
-
-  VerifyQualifiers<false, true> *incorrect_volatile_obj = new VerifyQualifiers<false, true>();
-  // expected-error@#2 {{static assertion failed due to requirement 'is_volatile_v<VerifyQualifiers<false, true>> == true'}}
-  // expected-note@-2 {{in instantiation of function template specialization 'VerifyQualifiers<false, true>::operator new<VerifyQualifiers<false, true>>' requested here}}
-  delete incorrect_volatile_obj;
-  // expected-error@#4 {{static assertion failed due to requirement 'is_volatile_v<VerifyQualifiers<false, true>> == true'}}
-  // expected-note@-2 {{in instantiation of function template specialization 'VerifyQualifiers<false, true>::operator delete<VerifyQualifiers<false, true>>' requested here}}
-
-  VerifyQualifiers<true, true> *incorrect_const_volatile_obj = new VerifyQualifiers<true, true>();
-  // expected-error@#1 {{static assertion failed due to requirement 'is_const_v<VerifyQualifiers<true, true>> == true'}}
-  // expected-error@#2 {{static assertion failed due to requirement 'is_volatile_v<VerifyQualifiers<true, true>> == true'}}
-  // expected-note@-3 {{in instantiation of function template specialization 'VerifyQualifiers<true, true>::operator new<VerifyQualifiers<true, true>>' requested here}}
-  delete incorrect_const_volatile_obj;
-  // expected-error@#3 {{static assertion failed due to requirement 'is_const_v<VerifyQualifiers<true, true>> == true'}}
-  // expected-error@#4 {{static assertion failed due to requirement 'is_volatile_v<VerifyQualifiers<true, true>> == true'}}
-  // expected-note@-3 {{in instantiation of function template specialization 'VerifyQualifiers<true, true>::operator delete<VerifyQualifiers<true, true>>' requested here}}
-}
-
-
-// Verify mismatches
-void test_incorrect_global_allocators() {
-  VerifyQualifiers<true, false> *incorrect_const_obj = ::new VerifyQualifiers<true, false>();
-  // expected-error@#5 {{static assertion failed due to requirement 'is_const_v<VerifyQualifiers<true, false>> == true'}}
-  // expected-note@-2 {{in instantiation of function template specialization 'operator new<true, false>' requested here}}
-  ::delete incorrect_const_obj;
-  // expected-error@#7 {{static assertion failed due to requirement 'is_const_v<VerifyQualifiers<true, false>> == true'}}
-  // expected-note@-2 {{in instantiation of function template specialization 'operator delete<true, false>' requested here}}
-
-  VerifyQualifiers<false, true> *incorrect_volatile_obj = ::new VerifyQualifiers<false, true>();
-  // expected-error@#6 {{static assertion failed due to requirement 'is_volatile_v<VerifyQualifiers<false, true>> == true'}}
-  // expected-note@-2 {{in instantiation of function template specialization 'operator new<false, true>' requested here}}
-  ::delete incorrect_volatile_obj;
-  // expected-error@#8 {{static assertion failed due to requirement 'is_volatile_v<VerifyQualifiers<false, true>> == true'}}
-  // expected-note@-2 {{in instantiation of function template specialization 'operator delete<false, true>' requested here}}
-
-  VerifyQualifiers<true, true> *incorrect_const_volatile_obj = ::new VerifyQualifiers<true, true>();
-  // expected-error@#5 {{static assertion failed due to requirement 'is_const_v<VerifyQualifiers<true, true>> == true'}}
-  // expected-error@#6 {{static assertion failed due to requirement 'is_volatile_v<VerifyQualifiers<true, true>> == true'}}
-  // expected-note@-3 {{in instantiation of function template specialization 'operator new<true, true>' requested here}}
-  ::delete incorrect_const_volatile_obj;
-  // expected-error@#7 {{static assertion failed due to requirement 'is_const_v<VerifyQualifiers<true, true>> == true'}}
-  // expected-error@#8 {{static assertion failed due to requirement 'is_volatile_v<VerifyQualifiers<true, true>> == true'}}
-  // expected-note@-3 {{in instantiation of function template specialization 'operator delete<true, true>' requested here}}
+  _Atomic VerifyQualifiers *atomic_obj = ::new _Atomic VerifyQualifiers();
+  ::delete atomic_obj;
+  _Atomic int *atomic_int = new _Atomic int;
+  delete atomic_int;
 }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions
+// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fcxx-exceptions
 
 namespace std {
   template <class T> struct type_identity {};
@@ -7,24 +7,26 @@ namespace std {
 }
 
 static_assert(__has_feature(cxx_type_aware_allocators));
-#ifdef TADD
-static_assert(__has_feature(cxx_type_aware_destroying_delete));
-#else
-static_assert(!__has_feature(cxx_type_aware_destroying_delete));
-#endif
 
 using size_t = __SIZE_TYPE__;
 struct Context;
 struct S1 {
-  S1() throw();
+  S1();
 };
-void *operator new(std::type_identity<S1>, size_t, Context&);
-void operator delete(std::type_identity<S1>, void*, Context&) = delete; // #1
+void *operator new(std::type_identity<S1>, size_t, std::align_val_t, Context&);
+void operator delete(std::type_identity<S1>, void*, size_t, std::align_val_t, Context&) = delete; // #1
 
 struct S2 {
-  S2() throw();
-  template<typename T> void *operator new(std::type_identity<T>, size_t, Context&);
-  template<typename T> void operator delete(std::type_identity<T>, void*, Context&) = delete; // #2
+  S2();
+  template<typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t, Context&);
+  template<typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t, Context&) = delete; // #2
+  template<typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t) = delete; // #3
+};
+
+struct S3 {
+  S3();
+  template<typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t);
+  template<typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t) = delete; // #4
 };
 
 void test(Context& Ctx) {
@@ -32,10 +34,28 @@ void test(Context& Ctx) {
   // expected-error@-1 {{attempt to use a deleted function}}
   // expected-note@#1 {{'operator delete' has been explicitly marked deleted here}}
   delete s1;
-  S2 *s2 = new (Ctx) S2;
+  S2 *s2_1 = new (Ctx) S2;
   // expected-error@-1 {{attempt to use a deleted function}}
   // expected-note@#2 {{'operator delete<S2>' has been explicitly marked deleted here}}
-  delete s2;
-  // expected-error@-1 {{no suitable member 'operator delete' in 'S2'}}
-  // expected-note@#2 {{member 'operator delete' declared here}}
+  // expected-note@#3 {{'operator delete<S2>' has been explicitly marked deleted here}}
+  delete s2_1;
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#2 {{'operator delete<S2>' has been explicitly marked deleted here}}
+  S2 *s2_2 = new (std::align_val_t(128), Ctx) S2;
+  // expected-error@-1 {{attempt to use a deleted function}}
+  delete s2_2;
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#3 {{'operator delete<S2>' has been explicitly marked deleted here}}
+  S3 *s3_1 = new S3;
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#4 {{'operator delete<S3>' has been explicitly marked deleted here}}
+  delete s3_1;
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#4 {{'operator delete<S3>' has been explicitly marked deleted here}}
+  S3 *s3_2 = new (std::align_val_t(128)) S3;
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#4 {{'operator delete<S3>' has been explicitly marked deleted here}}
+  delete s3_2;
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#4 {{'operator delete<S3>' has been explicitly marked deleted here}}
 }

@@ -24,8 +24,8 @@ struct UntypedInclassNew {
   void *operator new(size_t) = delete; // #1
   void  operator delete(void *) = delete; //#2
 };
-void *operator new(std::type_identity<UntypedInclassNew>, size_t); // #3
-void  operator delete(std::type_identity<UntypedInclassNew>, void*); // #4
+void *operator new(std::type_identity<UntypedInclassNew>, size_t, std::align_val_t); // #3
+void  operator delete(std::type_identity<UntypedInclassNew>, void*, size_t, std::align_val_t); // #4
 
 
 struct __attribute__((aligned(128))) UntypedInclassNewOveraligned_NoAlignedAlloc {
@@ -33,84 +33,84 @@ struct __attribute__((aligned(128))) UntypedInclassNewOveraligned_NoAlignedAlloc
   void  operator delete(void *) = delete; // #6
 };
 void *operator new(std::type_identity<UntypedInclassNewOveraligned_NoAlignedAlloc>, size_t, std::align_val_t); // #7
-void operator delete(std::type_identity<UntypedInclassNewOveraligned_NoAlignedAlloc>, void *, std::align_val_t); // #8
+void operator delete(std::type_identity<UntypedInclassNewOveraligned_NoAlignedAlloc>, void *, size_t, std::align_val_t); // #8
 
 struct __attribute__((aligned(128))) UntypedInclassNewOveraligned_AlignedAlloc {
   void *operator new(size_t, std::align_val_t) = delete; // #9
   void  operator delete(void *, std::align_val_t) = delete; // #10
 };
 void *operator new(std::type_identity<UntypedInclassNewOveraligned_AlignedAlloc>, size_t, std::align_val_t); // #11
-void  operator delete(std::type_identity<UntypedInclassNewOveraligned_AlignedAlloc>, void *, std::align_val_t); // #12
+void  operator delete(std::type_identity<UntypedInclassNewOveraligned_AlignedAlloc>, void *, size_t, std::align_val_t); // #12
 
 struct BasicClass {};
-void *operator new(std::type_identity<BasicClass>, size_t) = delete; // #13
-void  operator delete(std::type_identity<BasicClass>, void *) = delete; // #14
+void *operator new(std::type_identity<BasicClass>, size_t, std::align_val_t) = delete; // #13
+void  operator delete(std::type_identity<BasicClass>, void *, size_t, std::align_val_t) = delete; // #14
 
 struct InclassNew1 {
-  void *operator new(std::type_identity<InclassNew1>, size_t) = delete; // #15
-  void  operator delete(std::type_identity<InclassNew1>, void *) = delete; // #16
+  void *operator new(std::type_identity<InclassNew1>, size_t, std::align_val_t) = delete; // #15
+  void  operator delete(std::type_identity<InclassNew1>, void *, size_t, std::align_val_t) = delete; // #16
 };
-void *operator new(std::type_identity<InclassNew1>, size_t); // #17
-void  operator delete(std::type_identity<InclassNew1>, void *); // #18
+void *operator new(std::type_identity<InclassNew1>, size_t, std::align_val_t); // #17
+void  operator delete(std::type_identity<InclassNew1>, void *, size_t, std::align_val_t); // #18
 
 struct InclassNew2 {
-  template <typename T> void *operator new(std::type_identity<T>, size_t) = delete; // #19
-  template <typename T> void  operator delete(std::type_identity<T>, void *) = delete; // #20
+  template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t) = delete; // #19
+  template <typename T> void  operator delete(std::type_identity<T>, void *, size_t, std::align_val_t) = delete; // #20
 };
-void *operator new(std::type_identity<InclassNew2>, size_t); // #21
-void  operator delete(std::type_identity<InclassNew2>, void *); // #22
+void *operator new(std::type_identity<InclassNew2>, size_t, std::align_val_t); // #21
+void  operator delete(std::type_identity<InclassNew2>, void *, size_t, std::align_val_t); // #22
 
 struct InclassNew3 {
-  void *operator new(std::type_identity<InclassNew3>, size_t) = delete; // #23
-  void  operator delete(std::type_identity<InclassNew3>, void *) = delete; // #24
-  template <typename T> void *operator new(std::type_identity<T>, size_t); // #25
-  template <typename T> void  operator delete(std::type_identity<T>, void *); // #26
+  void *operator new(std::type_identity<InclassNew3>, size_t, std::align_val_t) = delete; // #23
+  void  operator delete(std::type_identity<InclassNew3>, void*, size_t, std::align_val_t) = delete; // #24
+  template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #25
+  template <typename T> void  operator delete(std::type_identity<T>, void*, size_t, std::align_val_t); // #26
 };
 
 struct __attribute__((aligned(128))) InclassNew4 {
-  void *operator new(std::type_identity<InclassNew4>, size_t); // #27
-  void  operator delete(std::type_identity<InclassNew4>, void *); // #28
+  void *operator new(std::type_identity<InclassNew4>, size_t, std::align_val_t); // #27
+  void  operator delete(std::type_identity<InclassNew4>, void*, size_t, std::align_val_t); // #28
   template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t) = delete; // #29
-  template <typename T> void  operator delete(std::type_identity<T>, void *, std::align_val_t) = delete; // #30
+  template <typename T> void  operator delete(std::type_identity<T>, void *, size_t, std::align_val_t) = delete; // #30
 };
 
 struct InclassNew5 {
   InclassNew5();
-  void *operator new(std::type_identity<InclassNew5>, size_t); // #31
+  void *operator new(std::type_identity<InclassNew5>, size_t, std::align_val_t); // #31
   void  operator delete(void *); // #32
-  void  operator delete(std::type_identity<InclassNew5>, void *) = delete; // #33
+  void  operator delete(std::type_identity<InclassNew5>, void*, size_t, std::align_val_t) = delete; // #33
 };
 
 struct InclassNew6 {
   InclassNew6();
   void *operator new(size_t); // #34
   void  operator delete(void *) = delete; // #35
-  void  operator delete(std::type_identity<InclassNew6>, void *) = delete; // #36
+  void  operator delete(std::type_identity<InclassNew6>, void*, size_t, std::align_val_t) = delete; // #36
 };
 
 struct InclassNew7 {
   InclassNew7();
-  void *operator new(std::type_identity<InclassNew7>, size_t); // #37
-  void  operator delete(std::type_identity<InclassNew7>, void *); // #38
+  void *operator new(std::type_identity<InclassNew7>, size_t, std::align_val_t); // #37
+  void  operator delete(std::type_identity<InclassNew7>, void*, size_t, std::align_val_t); // #38
   void  operator delete(InclassNew7 *, std::destroying_delete_t) = delete; // #39
 };
 
 struct InclassNew8 {
   InclassNew8();
-  void *operator new(std::type_identity<InclassNew8>, size_t); // #40
+  void *operator new(std::type_identity<InclassNew8>, size_t, std::align_val_t); // #40
   void operator delete(void*); // #41
 };
 
 struct InclassNew9 {
   InclassNew9();
-  void *operator new(std::type_identity<InclassNew9>, size_t); // #42
+  void *operator new(std::type_identity<InclassNew9>, size_t, std::align_val_t); // #42
 };
 
-void operator delete(std::type_identity<InclassNew9>, void*); // #43
+void operator delete(std::type_identity<InclassNew9>, void*, size_t, std::align_val_t); // #43
 
 struct BaseClass1 {
-  template <typename T> void *operator new(std::type_identity<T>, size_t); // #44
-  template <typename T> void operator delete(std::type_identity<T>, void*) = delete; // #45
+  template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #44
+  template <typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t) = delete; // #45
   virtual ~BaseClass1();
 };
 BaseClass1::~BaseClass1() {
@@ -128,8 +128,8 @@ SubClass1::~SubClass1() {
 }
 
 struct BaseClass2 {
-  template <typename T> void *operator new(std::type_identity<T>, size_t); // #46
-  template <typename T> void operator delete(std::type_identity<T>, void*) = delete; // #47
+  template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #46
+  template <typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t) = delete; // #47
   void operator delete(BaseClass2 *, std::destroying_delete_t);  // #48
   virtual ~BaseClass2();
 };
@@ -144,8 +144,8 @@ SubClass2::~SubClass2(){
 }
 
 struct BaseClass3 {
-  template <typename T> void *operator new(std::type_identity<T>, size_t); // #49
-  template <typename T> void operator delete(std::type_identity<T>, void*); // #50
+  template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #49
+  template <typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t); // #50
   void operator delete(BaseClass3 *, std::destroying_delete_t) = delete; // #51
   virtual ~BaseClass3();
 };
@@ -167,10 +167,10 @@ template <typename A, typename B> concept Same = requires (std::type_identity<A>
 
 struct SubClass4;
 struct BaseClass4 {
-  template <Derived<SubClass4> T> void *operator new(std::type_identity<T>, size_t) = delete; // #52
-  template <Derived<SubClass4> T> void operator delete(std::type_identity<T>, void*) = delete; // #53
-  template <typename T> void *operator new(std::type_identity<T>, size_t); // #54
-  template <typename T> void operator delete(std::type_identity<T>, void*); // #55
+  template <Derived<SubClass4> T> void *operator new(std::type_identity<T>, size_t, std::align_val_t) = delete; // #52
+  template <Derived<SubClass4> T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t) = delete; // #53
+  template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #54
+  template <typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t); // #55
 
   virtual ~BaseClass4();
 };
@@ -193,10 +193,10 @@ struct SubClass4_2 : BaseClass4 {
 
 struct SubClass5;
 struct BaseClass5 {
-  template <Same<SubClass5> T> void *operator new(std::type_identity<T>, size_t); // #56
-  template <Same<SubClass5> T> void operator delete(std::type_identity<T>, void*); // #57
-  template <Derived<SubClass5> T> requires (!Same<SubClass5, T>) void *operator new(std::type_identity<T>, size_t) = delete; // #58
-  template <Derived<SubClass5> T> requires (!Same<SubClass5, T>) void operator delete(std::type_identity<T>, void*) = delete; // #59
+  template <Same<SubClass5> T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #56
+  template <Same<SubClass5> T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t); // #57
+  template <Derived<SubClass5> T> requires (!Same<SubClass5, T>) void *operator new(std::type_identity<T>, size_t, std::align_val_t) = delete; // #58
+  template <Derived<SubClass5> T> requires (!Same<SubClass5, T>) void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t) = delete; // #59
 };
 
 struct SubClass5 : BaseClass5 {
@@ -206,8 +206,8 @@ struct SubClass5_1 : SubClass5 {
 
 
 struct BaseClass6 {
-  template <typename T> void *operator new(std::type_identity<T>, size_t); // #60
-  template <typename T> void operator delete(std::type_identity<T>, void*); // #61
+  template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #60
+  template <typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t); // #61
   BaseClass6();
   virtual ~BaseClass6();
 };
@@ -215,33 +215,33 @@ BaseClass6::~BaseClass6(){
 }
 
 struct SubClass6_1 : BaseClass6 {
-  template <typename T> void *operator new(std::type_identity<T>, size_t); // #62
+  template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #62
   SubClass6_1();
 };
 struct SubClass6_2 : BaseClass6 {
-  template <typename T> void operator delete(std::type_identity<T>, void*); // #63
+  template <typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t); // #63
   SubClass6_2();
 };
 
 struct MultiDimensionArrayTest1 {
   int i;
   MultiDimensionArrayTest1();
-  template <typename T, unsigned N> void *operator new[](std::type_identity<T[N]>, size_t) = delete; // #64
-  template <typename T, unsigned N> void operator delete[](std::type_identity<T[N]>, void*) = delete; // #65
+  template <typename T, unsigned N> void *operator new[](std::type_identity<T[N]>, size_t, std::align_val_t) = delete; // #64
+  template <typename T, unsigned N> void operator delete[](std::type_identity<T[N]>, void*, size_t, std::align_val_t) = delete; // #65
 };
 
 struct MultiDimensionArrayTest2 {
   int i;
   MultiDimensionArrayTest2();
-  template <unsigned N> void *operator new[](std::type_identity<MultiDimensionArrayTest2[N]>, size_t) = delete; // #66
-  template <unsigned N> void operator delete[](std::type_identity<MultiDimensionArrayTest2[N]>, void*) = delete; // #67
+  template <unsigned N> void *operator new[](std::type_identity<MultiDimensionArrayTest2[N]>, size_t, std::align_val_t) = delete; // #66
+  template <unsigned N> void operator delete[](std::type_identity<MultiDimensionArrayTest2[N]>, void*, size_t, std::align_val_t) = delete; // #67
 };
 
 struct MultiDimensionArrayTest3 {
   int i;
   MultiDimensionArrayTest3();
-  template <unsigned N> requires (N%4 == 0) void *operator new[](std::type_identity<MultiDimensionArrayTest3[N]>, size_t) = delete; // #68
-  template <unsigned N> requires (N%4 == 0) void operator delete[](std::type_identity<MultiDimensionArrayTest3[N]>, void*) = delete; // #69
+  template <unsigned N> requires (N%4 == 0) void *operator new[](std::type_identity<MultiDimensionArrayTest3[N]>, size_t, std::align_val_t) = delete; // #68
+  template <unsigned N> requires (N%4 == 0) void operator delete[](std::type_identity<MultiDimensionArrayTest3[N]>, void*, size_t, std::align_val_t) = delete; // #69
 };
 
 void test() {
@@ -274,14 +274,15 @@ void test() {
   BasicClass *O4 = new BasicClass;
   // expected-error@-1 {{call to deleted function 'operator new'}}
   // expected-note@#13 {{candidate function has been explicitly deleted}}
-  delete O4;
-  // expected-error@-1 {{attempt to use a deleted function}}
-  // expected-note@#14 {{'operator delete' has been explicitly marked deleted here}}
   // expected-note@#3 {{candidate function not viable: no known conversion from 'type_identity<BasicClass>' to 'type_identity<UntypedInclassNew>' for 1st argument}}
   // expected-note@#17 {{candidate function not viable: no known conversion from 'type_identity<BasicClass>' to 'type_identity<InclassNew1>' for 1st argument}}
   // expected-note@#21 {{candidate function not viable: no known conversion from 'type_identity<BasicClass>' to 'type_identity<InclassNew2>' for 1st argument}}
-  // expected-note@#7 {{candidate function not viable: requires 3 arguments, but 2 were provided}}
-  // expected-note@#11 {{candidate function not viable: requires 3 arguments, but 2 were provided}}
+  // expected-note@#7 {{candidate function not viable: no known conversion from 'type_identity<BasicClass>' to 'type_identity<UntypedInclassNewOveraligned_NoAlignedAlloc>' for 1st argument}}
+  // expected-note@#11 {{candidate function not viable: no known conversion from 'type_identity<BasicClass>' to 'type_identity<UntypedInclassNewOveraligned_AlignedAlloc>' for 1st argument}}
+
+  delete O4;
+  // expected-error@-1 {{attempt to use a deleted function}}
+  // expected-note@#14 {{'operator delete' has been explicitly marked deleted here}}
 
   // We resolve the explicitly typed in class operator
   InclassNew1 *O5 = new InclassNew1;
@@ -308,16 +309,6 @@ void test() {
   // expected-error@-1 {{attempt to use a deleted function}}
   // expected-note@#24 {{'operator delete' has been explicitly marked deleted here}}
 
-  // We prefer the aligned but unconstrained operators over the unaligned but constrained variants
-  InclassNew4 *O8 = new InclassNew4;
-  // expected-error@-1 {{call to deleted function 'operator new'}}
-  // expected-note@#29 {{candidate function [with T = InclassNew4] has been explicitly deleted}}
-  // expected-note@#27 {{candidate function not viable: requires 2 arguments, but 3 were provided}}
-
-  delete O8;
-  // expected-error@-1 {{attempt to use a deleted function}}
-  // expected-note@#30 {{'operator delete<InclassNew4>' has been explicitly marked deleted here}}
-
   // Constructor clean up invokes typed operator if typed new was used
   InclassNew5 *O9 = new InclassNew5;
   // expected-error@-1 {{attempt to use a deleted function}}
@@ -332,7 +323,7 @@ void test() {
   InclassNew6 *O10 = new InclassNew6;
   // expected-error@-1 {{attempt to use a deleted function}}
   // expected-note@#36 {{'operator delete' has been explicitly marked deleted here}}
-  // expected-warning@-3 {{mismatched type aware allocation operators for constructor cleanup}}
+  // expected-error@-3 {{mismatched type aware allocation operators for constructor cleanup}}
   // expected-note@#34 {{non-type aware 'operator new' declared here}}
   // expected-note@#36 {{type aware 'operator delete' declared here}}
   delete O10;
@@ -346,15 +337,13 @@ void test() {
   // expected-note@#39 {{'operator delete' has been explicitly marked deleted here}}
 
   InclassNew8 *O12 = new InclassNew8;
-  // expected-warning@-1 {{mismatched type aware allocation operators for constructor cleanup}}
+  // expected-error@-1 {{mismatched type aware allocation operators for constructor cleanup}}
   // expected-note@#40 {{type aware 'operator new' declared here}}
   // expected-note@#41 {{non-type aware 'operator delete' declared here}}
   delete O12;
 
   InclassNew9 *O13 = new InclassNew9;
-  // expected-error@-1 {{type aware 'operator new' requires matching 'operator delete' in 'InclassNew9'}}
-  // expected-note@#42 {{type aware 'operator new' found in 'InclassNew9'}}
-  // expected-note@#43 {{type aware 'operator delete' found in the global namespace}}
+  // expected-error@-1 {{type aware 'operator new' requires matching cleanup 'operator delete' in 'InclassNew9'}}
 
   delete O13;
 

@@ -1445,6 +1445,7 @@ namespace {
     LLVM_PREFERRED_TYPE(TypeAwareAllocationMode)
     unsigned PassTypeToPlacementDelete : 1;
     const FunctionDecl *OperatorDelete;
+    RValueTy TypeIdentity;
     ValueTy Ptr;
     ValueTy AllocSize;
     CharUnits AllocAlign;
@@ -1459,15 +1460,15 @@ namespace {
     }
 
     CallDeleteDuringNew(size_t NumPlacementArgs,
-                        const FunctionDecl *OperatorDelete, ValueTy Ptr,
-                        ValueTy AllocSize,
+                        const FunctionDecl *OperatorDelete,
+                        RValueTy TypeIdentity, ValueTy Ptr, ValueTy AllocSize,
                         const ImplicitAllocationParameters &IAP,
                         CharUnits AllocAlign)
         : NumPlacementArgs(NumPlacementArgs),
           PassAlignmentToPlacementDelete(
               isAlignedAllocation(IAP.PassAlignment)),
-          OperatorDelete(OperatorDelete), Ptr(Ptr), AllocSize(AllocSize),
-          AllocAlign(AllocAlign) {}
+          OperatorDelete(OperatorDelete), TypeIdentity(TypeIdentity), Ptr(Ptr),
+          AllocSize(AllocSize), AllocAlign(AllocAlign) {}
 
     void setPlacementArg(unsigned I, RValueTy Arg, QualType Type) {
       assert(I < NumPlacementArgs && "index out of range");
@@ -1484,10 +1485,7 @@ namespace {
         TypeAwareDeallocation = TypeAwareAllocationMode::Yes;
         QualType SpecializedTypeIdentity = FPT->getParamType(0);
         ++FirstNonTypeArg;
-        CXXScalarValueInitExpr TypeIdentityParam(SpecializedTypeIdentity,
-                                                 nullptr, SourceLocation());
-        DeleteArgs.add(CGF.EmitAnyExprToTemp(&TypeIdentityParam),
-                       SpecializedTypeIdentity);
+        DeleteArgs.add(Traits::get(CGF, TypeIdentity), SpecializedTypeIdentity);
       }
       // The first non type tag argument is always a void* (or C* for a
       // destroying operator  delete for class type C).
@@ -1501,6 +1499,7 @@ namespace {
         Params.Alignment =
             alignedAllocationModeFromBool(PassAlignmentToPlacementDelete);
         Params.TypeAwareDelete = TypeAwareDeallocation;
+        Params.Size = isTypeAwareAllocation(Params.TypeAwareDelete);
       } else {
         // For a non-placement new-expression, 'operator delete' can take a
         // size and/or an alignment if it has the right parameters.
@@ -1538,11 +1537,9 @@ namespace {
 
 /// Enter a cleanup to call 'operator delete' if the initializer in a
 /// new-expression throws.
-static void EnterNewDeleteCleanup(CodeGenFunction &CGF,
-                                  const CXXNewExpr *E,
-                                  Address NewPtr,
-                                  llvm::Value *AllocSize,
-                                  CharUnits AllocAlign,
+static void EnterNewDeleteCleanup(CodeGenFunction &CGF, const CXXNewExpr *E,
+                                  RValue TypeIdentity, Address NewPtr,
+                                  llvm::Value *AllocSize, CharUnits AllocAlign,
                                   const CallArgList &NewArgs) {
   unsigned NumNonPlacementArgs = E->getNumImplicitArgs();
 
@@ -1560,7 +1557,7 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF,
 
     DirectCleanup *Cleanup = CGF.EHStack.pushCleanupWithExtra<DirectCleanup>(
         EHCleanup, E->getNumPlacementArgs(), E->getOperatorDelete(),
-        NewPtr.emitRawPointer(CGF), AllocSize,
+        TypeIdentity, NewPtr.emitRawPointer(CGF), AllocSize,
         E->implicitAllocationParameters(), AllocAlign);
     for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
       auto &Arg = NewArgs[I + NumNonPlacementArgs];
@@ -1575,7 +1572,8 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF,
       DominatingValue<RValue>::save(CGF, RValue::get(NewPtr, CGF));
   DominatingValue<RValue>::saved_type SavedAllocSize =
     DominatingValue<RValue>::save(CGF, RValue::get(AllocSize));
-
+  DominatingValue<RValue>::saved_type SavedTypeIdentity =
+      DominatingValue<RValue>::save(CGF, TypeIdentity);
   struct ConditionalCleanupTraits {
     typedef DominatingValue<RValue>::saved_type ValueTy;
     typedef DominatingValue<RValue>::saved_type RValueTy;
@@ -1588,8 +1586,8 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF,
   ConditionalCleanup *Cleanup =
       CGF.EHStack.pushCleanupWithExtra<ConditionalCleanup>(
           EHCleanup, E->getNumPlacementArgs(), E->getOperatorDelete(),
-          SavedNewPtr, SavedAllocSize, E->implicitAllocationParameters(),
-          AllocAlign);
+          SavedTypeIdentity, SavedNewPtr, SavedAllocSize,
+          E->implicitAllocationParameters(), AllocAlign);
   for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
     auto &Arg = NewArgs[I + NumNonPlacementArgs];
     Cleanup->setPlacementArg(
@@ -1636,6 +1634,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // operator, just "inline" it directly.
   Address allocation = Address::invalid();
   CallArgList allocatorArgs;
+  RValue TypeIdentityArg;
   if (allocator->isReservedGlobalPlacementOperator()) {
     assert(E->getNumPlacementArgs() == 1);
     const Expr *arg = *E->placement_arguments().begin();
@@ -1666,8 +1665,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
       QualType SpecializedTypeIdentity = allocatorType->getParamType(0);
       CXXScalarValueInitExpr TypeIdentityParam(SpecializedTypeIdentity, nullptr,
                                                SourceLocation());
-      allocatorArgs.add(EmitAnyExprToTemp(&TypeIdentityParam),
-                        SpecializedTypeIdentity);
+      TypeIdentityArg = EmitAnyExprToTemp(&TypeIdentityParam);
+      allocatorArgs.add(TypeIdentityArg, SpecializedTypeIdentity);
       ++ParamsToSkip;
       ++IndexOfAlignArg;
     }
@@ -1762,8 +1761,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   llvm::Instruction *cleanupDominator = nullptr;
   if (E->getOperatorDelete() &&
       !E->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
-    EnterNewDeleteCleanup(*this, E, allocation, allocSize, allocAlign,
-                          allocatorArgs);
+    EnterNewDeleteCleanup(*this, E, TypeIdentityArg, allocation, allocSize,
+                          allocAlign, allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();
     cleanupDominator = Builder.CreateUnreachable();
   }

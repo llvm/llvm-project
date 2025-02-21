@@ -8,16 +8,17 @@ namespace std {
    typedef T type;
    };
    typedef __SIZE_TYPE__ size_t;
+   enum class align_val_t : size_t {};
 }
 
 struct Allocator {};
 
 struct resumable {
   struct promise_type {
-    void *operator new(std::type_identity<promise_type>, std::size_t sz, int); // #resumable_tan1
-    void *operator new(std::type_identity<promise_type>, std::size_t sz, float); // #resumable_tan2
-    void operator delete(std::type_identity<promise_type>, void *); // #resumable_tad1
-    template <typename T> void operator delete(std::type_identity<T>, void *) = delete; // #resumable_tad2
+    void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, int); // #resumable_tan1
+    void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, float); // #resumable_tan2
+    void operator delete(std::type_identity<promise_type>, void *, std::size_t sz, std::align_val_t); // #resumable_tad1
+    template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t sz, std::align_val_t) = delete; // #resumable_tad2
 
     resumable get_return_object() { return {}; }
     auto initial_suspend() { return std::suspend_always(); }
@@ -30,8 +31,8 @@ struct resumable {
 
 struct resumable2 {
   struct promise_type {
-    template <typename... Args> void *operator new(std::type_identity<promise_type>, std::size_t sz, Args...); // #resumable2_tan1
-    void operator delete(std::type_identity<promise_type>, void *); // #resumable2_tad2
+    template <typename... Args> void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, Args...); // #resumable2_tan1
+    void operator delete(std::type_identity<promise_type>, void *, std::size_t sz, std::align_val_t); // #resumable2_tad2
 
     resumable2 get_return_object() { return {}; }
     auto initial_suspend() { return std::suspend_always(); }
@@ -46,7 +47,7 @@ struct resumable2 {
 struct resumable3 {
   struct promise_type {
     void *operator new(std::size_t sz, float);
-    void *operator new(std::type_identity<promise_type>, std::size_t sz, float); // #resumable3_tan
+    void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, float); // #resumable3_tan
     void operator delete(void *);
 
     resumable3 get_return_object() { return {}; }
@@ -60,7 +61,7 @@ struct resumable3 {
 struct resumable4 {
   struct promise_type {
     void *operator new(std::size_t sz, float);
-    template <typename T> void operator delete(std::type_identity<T>, void *); // #resumable4_tad
+    template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t, std::align_val_t); // #resumable4_tad
 
     resumable4 get_return_object() { return {}; }
     auto initial_suspend() { return std::suspend_always(); }
@@ -74,7 +75,7 @@ struct resumable5 {
   struct promise_type {
     void *operator new(std::size_t sz, float);
     void operator delete(void *);
-    template <typename T> void operator delete(std::type_identity<T>, void *); // #resumable5_tad
+    template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t, std::align_val_t); // #resumable5_tad
 
     resumable5 get_return_object() { return {}; }
     auto initial_suspend() { return std::suspend_always(); }

@@ -11,8 +11,8 @@ namespace std {
 }
 
 
-template <typename T> void *operator new(std::type_identity<T>, size_t);
-template <typename T> void operator delete(std::type_identity<T>, void *);
+template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t);
+template <typename T> void operator delete(std::type_identity<T>, void *, size_t, std::align_val_t);
 struct S {
   int i = 0;
   constexpr S() __attribute__((noinline)) {}
@@ -50,4 +50,4 @@ int main() {
 // CHECK: call void @_ZdlI1SEvSt13type_identityIT_EPv
 // CHECK: ret
 // CHECK: [[LPAD]]:
-// call void @_ZdlI1SEvSt13type_identityIT_EPv({{.*}} [[ALLOC]])
+// call void @_ZdlI1SEvSt13type_identityIT_EPvmSt11align_val_t({{.*}} [[ALLOC]])

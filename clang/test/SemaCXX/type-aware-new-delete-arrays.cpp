@@ -9,26 +9,26 @@ namespace std {
 using size_t = __SIZE_TYPE__;
 
 struct BasicTypeAwareArrayAllocator {
-   template <typename T> void *operator new[](std::type_identity<T>, size_t) = delete; // #1
-   template <typename T> void  operator delete[](std::type_identity<T>, void*) = delete; // #2
+   template <typename T> void *operator new[](std::type_identity<T>, size_t, std::align_val_t) = delete; // #1
+   template <typename T> void  operator delete[](std::type_identity<T>, void*, size_t, std::align_val_t) = delete; // #2
 };
-void *operator new[](std::type_identity<BasicTypeAwareArrayAllocator>, size_t);
-void  operator delete[](std::type_identity<BasicTypeAwareArrayAllocator>, void*);
+void *operator new[](std::type_identity<BasicTypeAwareArrayAllocator>, size_t, std::align_val_t);
+void  operator delete[](std::type_identity<BasicTypeAwareArrayAllocator>, void*, size_t, std::align_val_t);
 
 struct BasicTypeAwareNonArrayAllocator {
-   template <typename T> void *operator new[](std::type_identity<T>, size_t);
-   template <typename T> void  operator delete[](std::type_identity<T>, void*);
+   template <typename T> void *operator new[](std::type_identity<T>, size_t, std::align_val_t);
+   template <typename T> void  operator delete[](std::type_identity<T>, void*, size_t, std::align_val_t);
    void *operator new(size_t) = delete;
    void operator delete(void*) = delete;
 };
 
 struct WorkingTypeAwareAllocator {
-   template <typename T> void *operator new[](std::type_identity<T>, size_t);
-   template <typename T> void  operator delete[](std::type_identity<T>, void*);
+   template <typename T> void *operator new[](std::type_identity<T>, size_t, std::align_val_t);
+   template <typename T> void  operator delete[](std::type_identity<T>, void*, size_t, std::align_val_t);
 };
 
-void *operator new[](std::type_identity<WorkingTypeAwareAllocator>, size_t) = delete;
-void  operator delete[](std::type_identity<WorkingTypeAwareAllocator>, void*) = delete;
+void *operator new[](std::type_identity<WorkingTypeAwareAllocator>, size_t, std::align_val_t) = delete;
+void  operator delete[](std::type_identity<WorkingTypeAwareAllocator>, void*, size_t, std::align_val_t) = delete;
 
 
 void test() {

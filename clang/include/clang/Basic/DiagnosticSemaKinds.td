@@ -9768,7 +9768,7 @@ def err_operator_new_delete_invalid_result_type : Error<
 def err_operator_new_delete_dependent_result_type : Error<
   "%0 cannot have a dependent return type; use %1 instead">;
 def err_operator_new_delete_too_few_parameters : Error<
-  "%select{|type aware }0%1 must have at least %select{|one|two|three|four}2 parameter%s2">;
+  "%select{|type aware }0%select{|destroying }1%2 must have at least %select{|one|two|three|four|five}3 parameter%s3">;
 def err_operator_new_delete_template_too_few_parameters : Error<
   "%0 template must have at least two parameters">;
 def warn_operator_new_returns_null : Warning<
@@ -9776,17 +9776,17 @@ def warn_operator_new_returns_null : Warning<
   "%select{| or 'noexcept'}1">, InGroup<OperatorNewReturnsNull>;
 
 def err_operator_new_dependent_param_type : Error<
-  "%select{|type aware }0%1 cannot take a dependent type as %select{first|second|third|fourth}2 parameter; "
-  "use %4 (%3) instead">;
+  "%select{|type aware }0%select{|destroying }1%2 cannot take a dependent type as its %select{first|second|third|fourth|fifth}3 parameter; "
+  "use %5 (%4) instead">;
 def err_operator_new_param_type : Error<
-  "%select{|type aware }0%1 takes type %4 (%3) as %select{first|second|third|fourth}2 parameter">;
+  "%select{|type aware }0%select{|destroying }1%2 takes type %5 (%4) as %select{first|second|third|fourth|fifth}3 parameter">;
 def err_operator_new_default_arg: Error<
   "parameter of %0 cannot have a default argument">;
 def err_operator_delete_dependent_param_type : Error<
-  "%select{|type aware }0%1 cannot take a dependent type as %select{first|second|third|fourth}2 parameter; "
-  "use %3 instead">;
+  "%select{|type aware }0%select{|destroying }1%2 cannot take a dependent type as its %select{first|second|third|fourth|fifth}3 parameter; "
+  "use %4 instead">;
 def err_operator_delete_param_type : Error<
-  "%select{first|second|third|fourth}2 parameter of%select{| type aware}0 %1 must have type %3">;
+  "%select{first|second|third|fourth|fifth}3 parameter of%select{| type aware}0%select{| destroying}1 %2 must have type %4">;
 def err_destroying_operator_delete_not_usual : Error<
   "destroying operator delete can have only an optional size and optional "
   "alignment parameter">;
@@ -9794,14 +9794,14 @@ def err_type_aware_destroying_operator_delete : Error<
   "type aware destroying delete is not permitted, enable with '-fexperimental-cxx-type-aware-destroying-delete'">;
 def err_unsupported_type_aware_allocator : Error<
   "type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'">;
-def warn_type_aware_cleanup_deallocator_context_mismatch : Warning<
-  "type aware %0 requires matching %1 in %2">,
-  InGroup<StrictTypeAwareAllocators>, DefaultError;
+def err_no_type_aware_cleanup_operator_delete : Error<
+  "type aware %0 requires matching cleanup %1 in %2">;
+def err_type_aware_cleanup_deallocator_context_mismatch : Error<
+  "type aware %0 requires matching %1 in %2">;
 def note_type_aware_operator_found : Note<
   "type aware %0 found in %1">;
-def warn_mismatching_type_aware_cleanup_deallocator : Warning<
-  "mismatched type aware allocation operators for constructor cleanup">,
-  InGroup<StrictTypeAwareAllocators>;
+def err_mismatching_type_aware_cleanup_deallocator : Error<
+  "mismatched type aware allocation operators for constructor cleanup">;
 def note_type_aware_operator_declared : Note<
   "%select{|non-}0type aware %1 declared here">;
 def note_implicit_delete_this_in_destructor_here : Note<

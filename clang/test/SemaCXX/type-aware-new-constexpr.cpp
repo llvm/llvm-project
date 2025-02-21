@@ -14,8 +14,8 @@ struct S1 {
   const int i;
 };
 
-void *operator new(std::type_identity<S1>, size_t sz); // #1
-void operator delete(std::type_identity<S1>, void* ptr); // #2
+void *operator new(std::type_identity<S1>, size_t sz, std::align_val_t); // #1
+void operator delete(std::type_identity<S1>, void* ptr, size_t sz, std::align_val_t); // #2
 
 constexpr int ensure_consteval_skips_typed_allocators() {
   // Verify we dont resolve typed allocators in const contexts
@@ -30,8 +30,8 @@ struct S2 {
   const int i;
 };
 
-void *operator new(std::type_identity<S2>, size_t sz) = delete; // #3
-void operator delete(std::type_identity<S2>, void* ptr) = delete; // #4
+void *operator new(std::type_identity<S2>, size_t sz, std::align_val_t) = delete; // #3
+void operator delete(std::type_identity<S2>, void* ptr, size_t sz, std::align_val_t) = delete; // #4
 
 constexpr int ensure_constexpr_retains_types_at_runtime() {
   // Verify we dont resolve typed allocators in const contexts
@@ -50,12 +50,12 @@ constexpr int ensure_constexpr_retains_types_at_runtime() {
 struct S3 {
   constexpr explicit S3() : i(5) {  }
   const int i;
-  template <typename T> void* operator new(std::type_identity<T>, size_t sz) = delete; // #5
-  template <typename T> void operator delete(std::type_identity<T>, void *) = delete; // #6
+  template <typename T> void* operator new(std::type_identity<T>, size_t sz, std::align_val_t) = delete; // #5
+  template <typename T> void operator delete(std::type_identity<T>, void *, size_t sz, std::align_val_t) = delete; // #6
 };
 
-template <typename T> void* operator new(std::type_identity<T>, size_t sz) = delete; // #7
-template <typename T> void operator delete(std::type_identity<T>, void *) = delete; // #8
+template <typename T> void* operator new(std::type_identity<T>, size_t sz, std::align_val_t) = delete; // #7
+template <typename T> void operator delete(std::type_identity<T>, void *, size_t sz, std::align_val_t) = delete; // #8
 
 constexpr int constexpr_vs_inclass_operators() {
   S3 *s;
@@ -89,8 +89,8 @@ struct S4 {
   constexpr S4() __attribute__((noinline)) {}
 };
 
-void* operator new(std::type_identity<S4>, size_t sz);
-void operator delete(std::type_identity<S4>, void *);
+void* operator new(std::type_identity<S4>, size_t sz, std::align_val_t);
+void operator delete(std::type_identity<S4>, void *, size_t sz, std::align_val_t);
 
 constexpr int do_dynamic_alloc(int n) {
   S4* s = new S4;
