@@ -1148,7 +1148,7 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
     // Global variable with an initial values.
     emitc.global @x : !emitc.array<3xi32> = dense<[0, 1, 2]>
     // Global variable with an opaque initial value.
-    emitc.global @y : !emitc.opaque<"char"> = #emitc.opaque<"CHAR_MIN">
+    emitc.global @x : !emitc.opaque<"char"> = #emitc.opaque<"CHAR_MIN">
     // External global variable
     emitc.global extern @x : !emitc.array<2xf32>
     // Constant global variable with internal linkage
