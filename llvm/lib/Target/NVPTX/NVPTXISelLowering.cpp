@@ -1405,6 +1405,19 @@ static bool shouldConvertToIndirectCall(const CallBase *CB,
   return false;
 }
 
+static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
+                                      const DataLayout &DL,
+                                      const TargetLowering &TL) {
+  if (Ptr->getOpcode() == ISD::FrameIndex) {
+    auto Ty = TL.getPointerTy(DL, ADDRESS_SPACE_LOCAL);
+    Ptr = DAG.getAddrSpaceCast(SDLoc(), Ty, Ptr, ADDRESS_SPACE_GENERIC,
+                               ADDRESS_SPACE_LOCAL);
+
+    return MachinePointerInfo(ADDRESS_SPACE_LOCAL);
+  }
+  return MachinePointerInfo();
+}
+
 SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
 
@@ -1564,11 +1577,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       }
 
       if (IsByVal) {
-        auto PtrVT = getPointerTy(DL);
-        SDValue srcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, StVal,
+        auto MPI = refinePtrAS(StVal, DAG, DL, *this);
+        const EVT PtrVT = StVal.getValueType();
+        SDValue SrcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, StVal,
                                       DAG.getConstant(CurOffset, dl, PtrVT));
-        StVal = DAG.getLoad(EltVT, dl, TempChain, srcAddr, MachinePointerInfo(),
-                            PartAlign);
+
+        StVal = DAG.getLoad(EltVT, dl, TempChain, SrcAddr, MPI, PartAlign);
       } else if (ExtendIntegerParam) {
         assert(VTs.size() == 1 && "Scalar can't have multiple parts.");
         // zext/sext to i32
