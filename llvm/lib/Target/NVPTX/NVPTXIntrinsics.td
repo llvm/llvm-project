@@ -790,15 +790,19 @@ def PREFETCH_GLOBAL_L2_EVICT_LAST   : NVPTXInst<(outs), (ins Int64Regs:$addr),
 def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
 
 //Applypriority intrinsics
-class APPLYPRIORITY_L2_INTRS<string InstName> :
+class APPLYPRIORITY_STRINGS<string addr> {
+  string InstName = StrJoin<".", ["applypriority", !if(!eq(addr, ""), "", addr) , "L2::evict_normal"]>.ret;
+  string IntrName = StrJoin<"_", ["int_nvvm_applypriority", !if(!eq(addr, ""), "", addr) , "L2_evict_normal"]>.ret;
+}
+class APPLYPRIORITY_L2_INTRS<string addr> :
           NVPTXInst<(outs), (ins Int64Regs:$addr, Int64Regs:$size),
-          InstName # " [$addr], $size;",
-          [(!cast<Intrinsic>("int_nvvm_" # !subst("::", "_", !subst(".", "_", InstName)))
+          APPLYPRIORITY_STRINGS<addr>.InstName # " [$addr], $size;",
+          [(!cast<Intrinsic>(APPLYPRIORITY_STRINGS<addr>.IntrName)
           i64:$addr, i64:$size)]>,
           Requires<[hasPTX<74>, hasSM<80>]>;
 
-def APPLYPRIORITY_L2_EVICT_NORMAL        : APPLYPRIORITY_L2_INTRS<"applypriority.L2::evict_normal">;
-def APPLYPRIORITY_GLOBAL_L2_EVICT_NORMAL : APPLYPRIORITY_L2_INTRS<"applypriority.global.L2::evict_normal">;
+def APPLYPRIORITY_L2_EVICT_NORMAL        : APPLYPRIORITY_L2_INTRS<"">;
+def APPLYPRIORITY_GLOBAL_L2_EVICT_NORMAL : APPLYPRIORITY_L2_INTRS<"global">;
 
 //-----------------------------------
 // MBarrier Functions

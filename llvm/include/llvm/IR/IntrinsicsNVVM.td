@@ -5044,14 +5044,14 @@ def int_nvvm_prefetchu_L1 : Intrinsic<[], [llvm_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
 def int_nvvm_applypriority_global_L2_evict_normal
-  : Intrinsic<[], [llvm_global_ptr_ty, llvm_i64_ty],
-              [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
-               ImmArg<ArgIndex<1>>]>;
+  : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty, llvm_i64_ty],
+    [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>]>;
 
 def int_nvvm_applypriority_L2_evict_normal
-  : Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty],
-              [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
-               ImmArg<ArgIndex<1>>]>;
+  : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty],
+    [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>]>;
 
 
 // Intrinsics for Bulk Copy using TMA (non-tensor)
