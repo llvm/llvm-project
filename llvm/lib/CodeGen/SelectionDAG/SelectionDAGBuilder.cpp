@@ -3364,14 +3364,14 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     // but this intrinsic is special because it can be invoked, so we manually
     // lower it to a DAG node here.
     case Intrinsic::wasm_throw: {
-      SmallVector<SDValue, 8> Ops;
-      Ops.push_back(getControlRoot()); // inchain for the terminator node
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      Ops.push_back(
+      SmallVector<SDValue, 8> Ops = {
+          getControlRoot(), // inchain for the terminator node
           DAG.getTargetConstant(Intrinsic::wasm_throw, getCurSDLoc(),
-                                TLI.getPointerTy(DAG.getDataLayout())));
-      Ops.push_back(getValue(I.getArgOperand(0)));               // tag
-      Ops.push_back(getValue(I.getArgOperand(1)));               // thrown value
+                                TLI.getPointerTy(DAG.getDataLayout())),
+          getValue(I.getArgOperand(0)), // tag
+          getValue(I.getArgOperand(1))  // thrown value
+      };
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
