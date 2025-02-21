@@ -1,10 +1,13 @@
-
-typedef const void * CFTypeRef;
+@class NSString;
+@class NSArray;
+@class NSMutableArray;
+#define CF_BRIDGED_TYPE(T) __attribute__((objc_bridge(T)))
+typedef CF_BRIDGED_TYPE(id) void * CFTypeRef;
 typedef signed long CFIndex;
 typedef const struct __CFAllocator * CFAllocatorRef;
-typedef const struct __CFString * CFStringRef;
-typedef const struct __CFArray * CFArrayRef;
-typedef struct __CFArray * CFMutableArrayRef;
+typedef const struct CF_BRIDGED_TYPE(NSString) __CFString * CFStringRef;
+typedef const struct CF_BRIDGED_TYPE(NSArray) __CFArray * CFArrayRef;
+typedef struct CF_BRIDGED_TYPE(NSMutableArray) __CFArray * CFMutableArrayRef;
 extern const CFAllocatorRef kCFAllocatorDefault;
 CFMutableArrayRef CFArrayCreateMutable(CFAllocatorRef allocator, CFIndex capacity);
 extern void CFArrayAppendValue(CFMutableArrayRef theArray, const void *value);
@@ -48,29 +51,9 @@ template <typename T> struct RemovePointer<T*> {
   typedef T Type;
 };
 
-template <typename T> struct IsPointer {
-  static constexpr bool value = false;
-};
-
-template <typename T> struct IsPointer<T*> {
-  static constexpr bool value = true;
-};
-
-template <typename T, bool isPointer> struct PtrTypeToCFOrObjC {
-  using PtrType = T;
-};
-
-template <typename T> struct PtrTypeToCFOrObjC<T, true> {
-  using PtrType = T;
-};
-
-template <typename T> struct PtrTypeToCFOrObjC<T, false> {
-  using PtrType = T*;
-};
-
 template <typename T> struct RetainPtr {
-//  using ValueType = typename RemovePointer<T>::Type;
-  using PtrType = typename PtrTypeToCFOrObjC<T, IsPointer<T>::value>::PtrType;
+  using ValueType = typename RemovePointer<T>::Type;
+  using PtrType = ValueType*;
   PtrType t;
 
   RetainPtr() : t(nullptr) { }

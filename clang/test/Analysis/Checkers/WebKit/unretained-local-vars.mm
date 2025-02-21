@@ -358,3 +358,16 @@ namespace local_var_for_singleton {
     CFMutableArrayRef cf = cfSingleton();
   }
 }
+
+bool doMoreWorkOpaque(OtherObj*);
+
+@implementation OtherObj
+- (instancetype)init {
+  self = [super init];
+  return self;
+}
+
+- (void)doMoreWork:(OtherObj *)other {
+  doMoreWorkOpaque(other);
+}
+@end

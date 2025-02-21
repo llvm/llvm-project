@@ -324,6 +324,8 @@ public:
 
   bool shouldSkipVarDecl(const VarDecl *V) const {
     assert(V);
+    if (isa<ImplicitParamDecl>(V))
+      return true;
     return BR->getSourceManager().isInSystemHeader(V->getLocation());
   }
 
