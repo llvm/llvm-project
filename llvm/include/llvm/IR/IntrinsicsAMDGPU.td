@@ -154,6 +154,9 @@ defm int_amdgcn_cluster_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                              <"__builtin_amdgcn_cluster_id">;
 defm int_amdgcn_cluster_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                        <"__builtin_amdgcn_cluster_workgroup_id">;
+def int_amdgcn_cluster_workgroup_flat_id:
+  ClangBuiltin<"__builtin_amdgcn_cluster_workgroup_flat_id">,
+  Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 defm int_amdgcn_cluster_workgroup_max_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                            <"__builtin_amdgcn_cluster_workgroup_max_id">;
 def int_amdgcn_cluster_workgroup_max_flat_id:

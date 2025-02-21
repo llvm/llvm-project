@@ -9035,6 +9035,19 @@ SDValue SITargetLowering::lowerWaveID(SelectionDAG &DAG, SDValue Op) const {
                      DAG.getConstant(25, SL, VT), DAG.getConstant(5, SL, VT));
 }
 
+SDValue SITargetLowering::lowerHwRegRead(SelectionDAG &DAG, SDValue Op,
+                                         AMDGPU::Hwreg::Id HwReg,
+                                         unsigned LowBit,
+                                         unsigned Width) const {
+  SDLoc SL(Op);
+  using namespace AMDGPU::Hwreg;
+  return {DAG.getMachineNode(
+              AMDGPU::S_GETREG_B32, SL, MVT::i32,
+              DAG.getTargetConstant(HwregEncoding::encode(HwReg, LowBit, Width),
+                                    SL, MVT::i32)),
+          0};
+}
+
 SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
                                           unsigned Dim,
                                           const ArgDescriptor &Arg) const {
@@ -9244,6 +9257,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z)
                : DAG.getUNDEF(VT);
+  case Intrinsic::amdgcn_cluster_workgroup_flat_id:
+    return AMDGPU::isGFX1250(*Subtarget)
+               ? lowerHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_IB_STS2, 21, 4)
+               : SDValue();
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
     return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(

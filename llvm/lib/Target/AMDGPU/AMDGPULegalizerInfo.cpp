@@ -7466,6 +7466,22 @@ bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeHwRegRead(MachineInstr &MI,
+                                            MachineIRBuilder &B,
+                                            AMDGPU::Hwreg::Id HwReg,
+                                            unsigned LowBit,
+                                            unsigned Width) const {
+  MachineRegisterInfo &MRI = *B.getMRI();
+  Register DstReg = MI.getOperand(0).getReg();
+  if (!MRI.getRegClassOrNull(DstReg))
+    MRI.setRegClass(DstReg, &AMDGPU::SReg_32RegClass);
+  B.buildInstr(AMDGPU::S_GETREG_B32)
+      .addDef(DstReg)
+      .addImm(AMDGPU::Hwreg::HwregEncoding::encode(HwReg, LowBit, Width));
+  MI.eraseFromParent();
+  return true;
+}
+
 static constexpr unsigned FPEnvModeBitField =
     AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 23);
 
@@ -7660,6 +7676,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_cluster_workgroup_flat_id:
+    return AMDGPU::isGFX1250(ST) &&
+           legalizeHwRegRead(MI, B, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
     return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(

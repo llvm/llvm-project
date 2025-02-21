@@ -400,6 +400,7 @@ def : AlwaysUniform<int_amdgcn_if_break>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_x>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_y>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_z>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_flat_id>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_x>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_y>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_z>;
