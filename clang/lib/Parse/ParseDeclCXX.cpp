@@ -2715,6 +2715,12 @@ void Parser::ParseOptionalCXX2CTriviallyRelocatableSpecifier(
     TriviallyRelocatableSpecifier &TRS) {
   assert(isCXX2CTriviallyRelocatableKeyword() &&
          "expected a trivially_relocatable specifier");
+
+  Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
+                              ? diag::warn_relocatable_keyword
+                              : diag::ext_relocatable_keyword)
+      << /*relocatable*/ 0;
+
   TRS = Actions.ActOnTriviallyRelocatableSpecifier(ConsumeToken());
 }
 
@@ -2735,6 +2741,12 @@ bool Parser::isCXX2CReplaceableKeyword() const {
 void Parser::ParseOptionalCXX2CReplaceableSpecifier(ReplaceableSpecifier &MRS) {
   assert(isCXX2CReplaceableKeyword() &&
          "expected a replaceable_if_eligible specifier");
+
+  Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
+                              ? diag::warn_relocatable_keyword
+                              : diag::ext_relocatable_keyword)
+      << /*replaceable*/ 1;
+
   MRS = Actions.ActOnReplaceableSpecifier(ConsumeToken());
 }
 
