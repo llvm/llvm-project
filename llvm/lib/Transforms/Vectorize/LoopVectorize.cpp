@@ -1567,7 +1567,7 @@ public:
 
   /// Returns true if \p Op should be considered invariant and if it is
   /// trivially hoistable.
-  bool shouldConsiderInvariant(Value *Op);
+  bool shouldConsiderInvariant(Value *Op) const;
 
   /// Return the value of vscale used for tuning the cost model.
   std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
@@ -1763,8 +1763,7 @@ private:
   /// extracted.
   bool needsExtract(Value *V, ElementCount VF) const {
     Instruction *I = dyn_cast<Instruction>(V);
-    if (VF.isScalar() || !I || !TheLoop->contains(I) ||
-        TheLoop->isLoopInvariant(I) ||
+    if (VF.isScalar() || !I || shouldConsiderInvariant(I) ||
         getWideningDecision(I, VF) == CM_Scalarize)
       return false;
 
@@ -3118,7 +3117,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   // A helper that returns true if the given value is a getelementptr
   // instruction contained in the loop.
   auto IsLoopVaryingGEP = [&](Value *V) {
-    return isa<GetElementPtrInst>(V) && !TheLoop->isLoopInvariant(V);
+    return isa<GetElementPtrInst>(V) && !shouldConsiderInvariant(V);
   };
 
   // A helper that evaluates a memory access's use of a pointer. If the use will
@@ -3346,14 +3345,14 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
     // is correct.  The easiest form of the later is to require that all values
     // stored are the same.
     return !(Legal->isInvariant(getLoadStorePointerOperand(I)) &&
-             TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
+             Legal->isInvariant(cast<StoreInst>(I)->getValueOperand()));
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::SRem:
   case Instruction::URem:
     // If the divisor is loop-invariant no predication is needed.
-    return !TheLoop->isLoopInvariant(I->getOperand(1));
+    return !Legal->isInvariant(I->getOperand(1));
   }
 }
 
@@ -3410,7 +3409,7 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
   Value *Op2 = I->getOperand(1);
   auto Op2Info = TTI.getOperandInfo(Op2);
   if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue &&
-      Legal->isInvariant(Op2))
+      shouldConsiderInvariant(Op2))
     Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
 
   SmallVector<const Value *, 4> Operands(I->operand_values());
@@ -3600,7 +3599,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       // assuming aliasing and ordering which have already been checked.
       return true;
     // Storing the same value on every iteration.
-    return TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand());
+    return Legal->isInvariant(cast<StoreInst>(I)->getValueOperand());
   };
 
   auto IsUniformDecision = [&](Instruction *I, ElementCount VF) {
@@ -5630,12 +5629,10 @@ static const SCEV *getAddressAccessSCEV(
 
   // We are looking for a gep with all loop invariant indices except for one
   // which should be an induction variable.
-  auto *SE = PSE.getSE();
   unsigned NumOperands = Gep->getNumOperands();
   for (unsigned Idx = 1; Idx < NumOperands; ++Idx) {
     Value *Opd = Gep->getOperand(Idx);
-    if (!SE->isLoopInvariant(SE->getSCEV(Opd), TheLoop) &&
-        !Legal->isInductionVariable(Opd))
+    if (!Legal->isInvariant(Opd) && !Legal->isInductionVariable(Opd))
       return nullptr;
   }
 
@@ -5747,9 +5744,8 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
            TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy, {},
                               CostKind);
   }
-  StoreInst *SI = cast<StoreInst>(I);
 
-  bool IsLoopInvariantStoreValue = Legal->isInvariant(SI->getValueOperand());
+  bool IsLoopInvariantStoreValue = shouldConsiderInvariant(I);
   return TTI.getAddressComputationCost(ValTy) +
          TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS,
                              CostKind) +
@@ -5900,7 +5896,7 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
       match(Op0, m_ZExtOrSExt(m_Value())) &&
       Op0->getOpcode() == Op1->getOpcode() &&
       Op0->getOperand(0)->getType() == Op1->getOperand(0)->getType() &&
-      !TheLoop->isLoopInvariant(Op0) && !TheLoop->isLoopInvariant(Op1) &&
+      !shouldConsiderInvariant(Op0) && !shouldConsiderInvariant(Op1) &&
       (Op0->getOpcode() == RedOp->getOpcode() || Op0 == Op1)) {
 
     // Matched reduce.add(ext(mul(ext(A), ext(B)))
@@ -5927,7 +5923,7 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
         RedCost < ExtCost * 2 + MulCost + Ext2Cost + BaseCost)
       return I == RetI ? RedCost : 0;
   } else if (RedOp && match(RedOp, m_ZExtOrSExt(m_Value())) &&
-             !TheLoop->isLoopInvariant(RedOp)) {
+             !shouldConsiderInvariant(RedOp)) {
     // Matched reduce(ext(A))
     bool IsUnsigned = isa<ZExtInst>(RedOp);
     auto *ExtType = VectorType::get(RedOp->getOperand(0)->getType(), VectorTy);
@@ -5943,8 +5939,8 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
   } else if (RedOp && RdxDesc.getOpcode() == Instruction::Add &&
              match(RedOp, m_Mul(m_Instruction(Op0), m_Instruction(Op1)))) {
     if (match(Op0, m_ZExtOrSExt(m_Value())) &&
-        Op0->getOpcode() == Op1->getOpcode() &&
-        !TheLoop->isLoopInvariant(Op0) && !TheLoop->isLoopInvariant(Op1)) {
+        Op0->getOpcode() == Op1->getOpcode() && !shouldConsiderInvariant(Op0) &&
+        !shouldConsiderInvariant(Op1)) {
       bool IsUnsigned = isa<ZExtInst>(Op0);
       Type *Op0Ty = Op0->getOperand(0)->getType();
       Type *Op1Ty = Op1->getOperand(0)->getType();
@@ -6097,8 +6093,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
 
           // A uniform store isn't neccessarily uniform-by-part
           // and we can't assume scalarization.
-          auto &SI = cast<StoreInst>(I);
-          return TheLoop->isLoopInvariant(SI.getValueOperand());
+          return shouldConsiderInvariant(&I);
         };
 
         const InstructionCost GatherScatterCost =
@@ -6331,8 +6326,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
           case VFParamKind::OMP_Uniform: {
             Value *ScalarParam = CI->getArgOperand(Param.ParamPos);
             // Make sure the scalar parameter in the loop is invariant.
-            if (!PSE.getSE()->isLoopInvariant(PSE.getSCEV(ScalarParam),
-                                              TheLoop))
+            if (!Legal->isInvariant(ScalarParam))
               ParamsOk = false;
             break;
           }
@@ -6405,7 +6399,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
   }
 }
 
-bool LoopVectorizationCostModel::shouldConsiderInvariant(Value *Op) {
+bool LoopVectorizationCostModel::shouldConsiderInvariant(Value *Op) const {
   if (!Legal->isInvariant(Op))
     return false;
   // Consider Op invariant, if it or its operands aren't predicated
@@ -6441,7 +6435,6 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   Type *RetTy = I->getType();
   if (canTruncateToMinimalBitwidth(I, VF))
     RetTy = IntegerType::get(RetTy->getContext(), MinBWs[I]);
-  auto *SE = PSE.getSE();
 
   auto HasSingleCopyAfterVectorization = [this](Instruction *I,
                                                 ElementCount VF) -> bool {
@@ -6687,8 +6680,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   }
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
-    const SCEV *CondSCEV = SE->getSCEV(SI->getCondition());
-    bool ScalarCond = (SE->isLoopInvariant(CondSCEV, TheLoop));
+    bool ScalarCond = shouldConsiderInvariant(SI->getCondition());
 
     const Value *Op0, *Op1;
     using namespace llvm::PatternMatch;
