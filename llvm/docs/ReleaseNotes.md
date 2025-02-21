@@ -159,6 +159,17 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Initial support for gfx950
+
+* Improved ``llvm.memcpy``, ``llvm.memmove`` and ``llvm.memset`` lowering
+
+* Fixed expansion of 64-bit flat address space ``atomicrmw`` and
+  ``cmpxchg`` operations which may access private
+  memory. `noalias.addrspace` metadat may be used to avoid the
+  expansion if the target address is known to not be on the stack.
+
+* Fix compile failures when emitting unreachable functions.
+
 * Removed `llvm.amdgcn.flat.atomic.fadd` and
   `llvm.amdgcn.global.atomic.fadd` intrinsics. Users should use the
   {ref}`atomicrmw <i_atomicrmw>` instruction with `fadd` and
