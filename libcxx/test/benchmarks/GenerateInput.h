@@ -209,7 +209,7 @@ T random_different_from(std::initializer_list<T> others) {
   T value;
   do {
     value = Generate<T>::random();
-  } while (std::ranges::contains(others, value));
+  } while (std::find(others.begin(), others.end(), value) != others.end());
   return value;
 }
 
