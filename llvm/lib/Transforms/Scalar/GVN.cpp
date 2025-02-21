@@ -137,40 +137,6 @@ static cl::opt<uint32_t> MaxNumInsnsPerBlock(
     cl::desc("Max number of instructions to scan in each basic block in GVN "
              "(default = 100)"));
 
-struct llvm::GVNPass::Expression {
-  uint32_t opcode;
-  bool commutative = false;
-  // The type is not necessarily the result type of the expression, it may be
-  // any additional type needed to disambiguate the expression.
-  Type *type = nullptr;
-  SmallVector<uint32_t, 4> varargs;
-
-  AttributeList attrs;
-
-  Expression(uint32_t o = ~2U) : opcode(o) {}
-
-  bool operator==(const Expression &other) const {
-    if (opcode != other.opcode)
-      return false;
-    if (opcode == ~0U || opcode == ~1U)
-      return true;
-    if (type != other.type)
-      return false;
-    if (varargs != other.varargs)
-      return false;
-    if ((!attrs.isEmpty() || !other.attrs.isEmpty()) &&
-        !attrs.intersectWith(type->getContext(), other.attrs).has_value())
-      return false;
-    return true;
-  }
-
-  friend hash_code hash_value(const Expression &Value) {
-    return hash_combine(
-        Value.opcode, Value.type,
-        hash_combine_range(Value.varargs.begin(), Value.varargs.end()));
-  }
-};
-
 namespace llvm {
 
 template <> struct DenseMapInfo<GVNPass::Expression> {
