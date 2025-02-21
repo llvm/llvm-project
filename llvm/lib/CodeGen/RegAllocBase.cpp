@@ -65,6 +65,7 @@ void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis,
   Matrix = &mat;
   MRI->freezeReservedRegs();
   RegClassInfo.runOnMachineFunction(vrm.getMachineFunction());
+  FailedVRegs.clear();
 }
 
 // Visit all the live registers. If they are already assigned to a physical
@@ -128,6 +129,7 @@ void RegAllocBase::allocatePhysRegs() {
 
       // Keep going after reporting the error.
       VRM->assignVirt2Phys(VirtReg->reg(), AvailablePhysReg);
+      FailedVRegs.insert(VirtReg->reg());
     } else if (AvailablePhysReg)
       Matrix->assign(*VirtReg, AvailablePhysReg);
 
@@ -159,6 +161,40 @@ void RegAllocBase::postOptimization() {
     DeadInst->eraseFromParent();
   }
   DeadRemats.clear();
+}
+
+void RegAllocBase::cleanupFailedVRegs() {
+  SmallSet<Register, 8> JunkRegs;
+
+  for (Register FailedReg : FailedVRegs) {
+    JunkRegs.insert(FailedReg);
+
+    MCRegister PhysReg = VRM->getPhys(FailedReg);
+    LiveInterval &FailedInterval = LIS->getInterval(FailedReg);
+
+    // The liveness information for the failed register and anything interfering
+    // with the physical register we arbitrarily chose is junk and needs to be
+    // deleted.
+    for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
+      LiveIntervalUnion::Query &Q = Matrix->query(FailedInterval, *Units);
+      for (const LiveInterval *InterferingReg : Q.interferingVRegs())
+        JunkRegs.insert(InterferingReg->reg());
+    }
+  }
+
+  // TODO: Probably need to set undef on any physreg uses not associated with
+  // a virtual register.
+  for (Register JunkReg : JunkRegs) {
+    // We still should produce valid IR. Kill all the uses and reduce the live
+    // ranges so that we don't think it's possible to introduce kill flags
+    // later which will fail the verifier.
+    for (MachineOperand &MO : MRI->reg_operands(JunkReg)) {
+      if (MO.readsReg())
+        MO.setIsUndef(true);
+    }
+
+    LIS->shrinkToUses(&LIS->getInterval(JunkReg));
+  }
 }
 
 void RegAllocBase::enqueue(const LiveInterval *LI) {

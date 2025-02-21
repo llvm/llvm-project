@@ -41,7 +41,7 @@ func.func @unary_too_many_args(%A : memref<8x16x32xf32>, %B: memref<8x16x32xf32>
   // expected-error@+3 {{custom op 'linalg.elementwise' [parseNamedStructuredOpRegion] ods-gen generated region expects 2 args, got 3}}
   // expected-error@+2 {{custom op 'linalg.elementwise' unable to parse elemwise op}}
   linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%A, %B : memref<8x16x32xf32>,  memref<8x16x32xf32>) outs(%C: memref<8x16x32xf32>)
-  return 
+  return
 }
 
 // -----
@@ -50,5 +50,5 @@ func.func @binary_too_few_args(%A : memref<8x16x32xf32>, %B: memref<8x16x32xf32>
   // expected-error@+3 {{custom op 'linalg.elementwise' [parseNamedStructuredOpRegion] ods-gen generated region expects 3 args, got 2}}
   // expected-error@+2 {{custom op 'linalg.elementwise' unable to parse elemwise op}}
   linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%A : memref<8x16x32xf32>) outs(%B: memref<8x16x32xf32>)
-  return 
+  return
 }

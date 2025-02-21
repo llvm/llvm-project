@@ -147,6 +147,8 @@ Improvements to Clang's diagnostics
 - The ``-Wunsafe-buffer-usage`` warning has been updated to warn
   about unsafe libc function calls.  Those new warnings are emitted
   under the subgroup ``-Wunsafe-buffer-usage-in-libc-call``.
+- Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
+  ``-Wno-error=parentheses``.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
 
 Improvements to Clang's time-trace

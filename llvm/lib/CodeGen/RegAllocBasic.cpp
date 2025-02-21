@@ -329,6 +329,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
 
   allocatePhysRegs();
   postOptimization();
+  cleanupFailedVRegs();
 
   // Diagnostic output before rewriting
   LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");

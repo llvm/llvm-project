@@ -8,9 +8,9 @@
 //
 func.func @unary_identity_exp(%A : tensor<8x16x32xf32>, %B: tensor<8x16x32xf32>) ->  tensor<8x16x32xf32> {
   %r = linalg.elementwise
-         kind=#linalg.elementwise_kind<exp>
-         ins(%A : tensor<8x16x32xf32>)
-         outs(%B: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
+      kind=#linalg.elementwise_kind<exp>
+      ins(%A : tensor<8x16x32xf32>)
+      outs(%B: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
   return %r : tensor<8x16x32xf32>
 }
 
@@ -28,11 +28,11 @@ func.func @unary_identity_exp(%A : tensor<8x16x32xf32>, %B: tensor<8x16x32xf32>)
 func.func @unary_projection_tanh(%A: tensor<?x16xf32>,
                                           %B: tensor<8x16x?xf32>) ->  tensor<8x16x?xf32> {
   %r = linalg.elementwise
-         kind=#linalg.elementwise_kind<tanh>
-         indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d1)>,
-                          affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
-         ins(%A : tensor<?x16xf32>)
-         outs(%B: tensor<8x16x?xf32>) -> tensor<8x16x?xf32>
+      kind=#linalg.elementwise_kind<tanh>
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
+      ins(%A : tensor<?x16xf32>)
+      outs(%B: tensor<8x16x?xf32>) -> tensor<8x16x?xf32>
   return %r : tensor<8x16x?xf32>
 }
 
@@ -48,9 +48,9 @@ func.func @unary_projection_tanh(%A: tensor<?x16xf32>,
 func.func @binary_identity_div(%A: tensor<16x8xf32>, %B: tensor<16x8xf32>,
                       %C: tensor<16x8xf32>) ->  tensor<16x8xf32> {
   %r = linalg.elementwise
-         kind=#linalg.elementwise_kind<div>
-         ins(%A, %B: tensor<16x8xf32>, tensor<16x8xf32>)
-         outs(%C: tensor<16x8xf32>) -> tensor<16x8xf32>
+      kind=#linalg.elementwise_kind<div>
+      ins(%A, %B: tensor<16x8xf32>, tensor<16x8xf32>)
+      outs(%C: tensor<16x8xf32>) -> tensor<16x8xf32>
   return %r : tensor<16x8xf32>
 }
 
@@ -67,9 +67,9 @@ func.func @binary_identity_div(%A: tensor<16x8xf32>, %B: tensor<16x8xf32>,
 func.func @binary_identity_mul_5Di(%A: tensor<1x2x3x4x5xi32>, %B: tensor<1x2x3x4x5xi32>,
                                    %C: tensor<1x2x3x4x5xi32>) ->  tensor<1x2x3x4x5xi32> {
   %r = linalg.elementwise
-         kind=#linalg.elementwise_kind<mul>
-         ins(%A, %B: tensor<1x2x3x4x5xi32>, tensor<1x2x3x4x5xi32>)
-         outs(%C: tensor<1x2x3x4x5xi32>) -> tensor<1x2x3x4x5xi32>
+      kind=#linalg.elementwise_kind<mul>
+      ins(%A, %B: tensor<1x2x3x4x5xi32>, tensor<1x2x3x4x5xi32>)
+      outs(%C: tensor<1x2x3x4x5xi32>) -> tensor<1x2x3x4x5xi32>
   return %r : tensor<1x2x3x4x5xi32>
 }
 
@@ -82,9 +82,9 @@ func.func @binary_identity_mul_5Di(%A: tensor<1x2x3x4x5xi32>, %B: tensor<1x2x3x4
 func.func @redundant_maps(%A: tensor<1x2x3x4x5xi32>, %B: tensor<1x2x3x4x5xi32>,
                           %C: tensor<1x2x3x4x5xi32>) ->  tensor<1x2x3x4x5xi32> {
   %r = linalg.elementwise
-         kind=#linalg.elementwise_kind<mul>
-         indexing_maps = [#map, #map, #map]
-         ins(%A, %B: tensor<1x2x3x4x5xi32>, tensor<1x2x3x4x5xi32>)
-         outs(%C: tensor<1x2x3x4x5xi32>) -> tensor<1x2x3x4x5xi32>
+      kind=#linalg.elementwise_kind<mul>
+      indexing_maps = [#map, #map, #map]
+      ins(%A, %B: tensor<1x2x3x4x5xi32>, tensor<1x2x3x4x5xi32>)
+      outs(%C: tensor<1x2x3x4x5xi32>) -> tensor<1x2x3x4x5xi32>
   return %r : tensor<1x2x3x4x5xi32>
 }
