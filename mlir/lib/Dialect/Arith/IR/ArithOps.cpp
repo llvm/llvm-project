@@ -1533,12 +1533,6 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
       return src;
   }
 
-  // truncf(truncf(a)) -> truncf(a)
-  if (auto truncOp = getOperand().getDefiningOp<arith::TruncFOp>()) {
-    setOperand(truncOp.getIn());
-    return getResult();
-  }
-
   auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
   const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
   return constFoldCastOp<FloatAttr, FloatAttr>(

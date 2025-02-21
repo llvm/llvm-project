@@ -733,16 +733,6 @@ func.func @truncExtf2(%arg0: f32) -> f16 {
   return %truncf : f16
 }
 
-// CHECK-LABEL: @truncTruncf
-//       CHECK:  %[[ARG0:.+]]: f64
-//       CHECK:  %[[CST:.*]] = arith.truncf %[[ARG0:.+]] : f64 to f16
-//       CHECK:   return  %[[CST:.*]]
-func.func @truncTruncf(%arg0: f64) -> f16 {
-  %truncf = arith.truncf %arg0 : f64 to f32
-  %truncf1 = arith.truncf %truncf : f32 to f16
-  return %truncf1 : f16
-}
-
 // TODO: We should also add a test for not folding arith.extf on information loss.
 // This may happen when extending f8E5M2FNUZ to f16.
 
