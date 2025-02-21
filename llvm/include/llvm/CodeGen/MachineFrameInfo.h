@@ -32,7 +32,7 @@ class AllocaInst;
 /// Callee saved reg can also be saved to a different register rather than
 /// on the stack by setting DstReg instead of FrameIdx.
 class CalleeSavedInfo {
-  Register Reg;
+  MCRegister Reg;
   union {
     int FrameIdx;
     unsigned DstReg;
@@ -61,7 +61,7 @@ public:
   explicit CalleeSavedInfo(unsigned R, int FI = 0) : Reg(R), FrameIdx(FI) {}
 
   // Accessors.
-  Register getReg()                        const { return Reg; }
+  MCRegister getReg()                      const { return Reg; }
   int getFrameIdx()                        const { return FrameIdx; }
   unsigned getDstReg()                     const { return DstReg; }
   void setReg(Register R) { Reg = R; }

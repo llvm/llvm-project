@@ -1320,6 +1320,17 @@ void SymbolTable::parseModuleDefs(StringRef path) {
   }
 }
 
+// Parse a string of the form of "<from>=<to>".
+void SymbolTable::parseAlternateName(StringRef s) {
+  auto [from, to] = s.split('=');
+  if (from.empty() || to.empty())
+    Fatal(ctx) << "/alternatename: invalid argument: " << s;
+  auto it = alternateNames.find(from);
+  if (it != alternateNames.end() && it->second != to)
+    Fatal(ctx) << "/alternatename: conflicts: " << s;
+  alternateNames.insert(it, std::make_pair(from, to));
+}
+
 Symbol *SymbolTable::addUndefined(StringRef name) {
   return addUndefined(name, nullptr, false);
 }

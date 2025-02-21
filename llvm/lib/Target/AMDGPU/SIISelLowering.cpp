@@ -885,8 +885,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     if (Subtarget->hasMinimum3Maximum3F32())
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
 
-    if (Subtarget->hasMinimum3Maximum3PKF16())
+    if (Subtarget->hasMinimum3Maximum3PKF16()) {
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::v2f16, Legal);
+
+      // If only the vector form is available, we need to widen to a vector.
+      if (!Subtarget->hasMinimum3Maximum3F16())
+        setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
+    }
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,

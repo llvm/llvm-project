@@ -43,7 +43,7 @@ template <typename _Fm, typename _To>
 bool_constant<noexcept(std::__test_noexcept<_To>(std::declval<_Fm>()))> __is_nothrow_convertible_test();
 
 template <typename _Fm, typename _To>
-struct __is_nothrow_convertible_helper : decltype(__is_nothrow_convertible_test<_Fm, _To>()) {};
+struct __is_nothrow_convertible_helper : decltype(std::__is_nothrow_convertible_test<_Fm, _To>()) {};
 
 template <typename _Fm, typename _To>
 struct is_nothrow_convertible

@@ -1271,19 +1271,6 @@ define half @v_fminimum3_f16(half %a, half %b, half %c) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e32 v3, v0, v1
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, v0, v2
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v2
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call half @llvm.minimum.f16(half %a, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c)
   ret half %max1
@@ -1319,19 +1306,6 @@ define half @v_fminimum3_f16_commute(half %a, half %b, half %c) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v2, v0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_commute:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e32 v3, v0, v1
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, v2, v0
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v2, v0
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call half @llvm.minimum.f16(half %a, half %b)
   %max1 = call half @llvm.minimum.f16(half %c, half %max0)
   ret half %max1
@@ -1376,22 +1350,6 @@ define amdgpu_ps i32 @s_fminimum3_f16(half inreg %a, half inreg %b, half inreg %
 ; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-NEXT:    ; return to shader part epilog
-; GFX940-LABEL: s_fminimum3_f16:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    v_mov_b32_e32 v0, s1
-; GFX940-NEXT:    v_min_f16_e32 v1, s0, v0
-; GFX940-NEXT:    v_mov_b32_e32 v2, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, s0, v0
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, s2, v0
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, s2, v0
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX940-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX940-NEXT:    ; return to shader part epilog
   %max0 = call half @llvm.minimum.f16(half %a, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c)
   %cast = bitcast half %max1 to i16
@@ -1431,19 +1389,6 @@ define half @v_fminimum3_f16_fabs0(half %a, half %b, half %c) {
 ; GFX950-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_fabs0:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e64 v3, |v0|, v1
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, |v0|, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, v0, v2
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v2
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call half @llvm.fabs.f16(half %a)
   %max0 = call half @llvm.minimum.f16(half %a.fabs, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c)
@@ -1481,19 +1426,6 @@ define half @v_fminimum3_f16_fabs1(half %a, half %b, half %c) {
 ; GFX950-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_fabs1:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e64 v3, v0, |v1|
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, v0, |v1|
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, v0, v2
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v2
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %b.fabs = call half @llvm.fabs.f16(half %b)
   %max0 = call half @llvm.minimum.f16(half %a, half %b.fabs)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c)
@@ -1531,19 +1463,6 @@ define half @v_fminimum3_f16_fabs2(half %a, half %b, half %c) {
 ; GFX950-NEXT:    v_and_b32_e32 v2, 0x7fff, v2
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_fabs2:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e32 v3, v0, v1
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e64 v1, v0, |v2|
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, v0, |v2|
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %c.fabs = call half @llvm.fabs.f16(half %c)
   %max0 = call half @llvm.minimum.f16(half %a, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c.fabs)
@@ -1583,19 +1502,6 @@ define half @v_fminimum3_f16_fabs_all(half %a, half %b, half %c) {
 ; GFX950-NEXT:    v_and_b32_e32 v2, 0x7fff, v2
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_fabs_all:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e64 v3, |v0|, |v1|
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, |v0|, |v1|
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e64 v1, v0, |v2|
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, v0, |v2|
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call half @llvm.fabs.f16(half %a)
   %b.fabs = call half @llvm.fabs.f16(half %b)
   %c.fabs = call half @llvm.fabs.f16(half %c)
@@ -1637,19 +1543,6 @@ define half @v_fminimum3_f16_fneg_all(half %a, half %b, half %c) {
 ; GFX950-NEXT:    v_xor_b32_e32 v2, 0x8000, v2
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_fneg_all:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e64 v3, -v0, -v1
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, -v0, -v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e64 v1, v0, -v2
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, v0, -v2
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %a.fneg = fneg half %a
   %b.fneg = fneg half %b
   %c.fneg = fneg half %c
@@ -1691,19 +1584,6 @@ define half @v_fminimum3_f16_fneg_fabs_all(half %a, half %b, half %c) {
 ; GFX950-NEXT:    v_or_b32_e32 v2, 0x8000, v2
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_fneg_fabs_all:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e64 v3, -|v0|, -|v1|
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, -|v0|, -|v1|
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e64 v1, v0, -|v2|
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, v0, -|v2|
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call half @llvm.fabs.f16(half %a)
   %b.fabs = call half @llvm.fabs.f16(half %b)
   %c.fabs = call half @llvm.fabs.f16(half %c)
@@ -1746,19 +1626,6 @@ define half @v_fminimum3_f16_fneg0(half %a, half %b, half %c) {
 ; GFX950-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_fneg0:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e64 v3, -v0, v1
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, -v0, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, v0, v2
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v2
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %a.fneg = fneg half %a
   %max0 = call half @llvm.minimum.f16(half %a.fneg, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c)
@@ -1796,19 +1663,6 @@ define half @v_fminimum3_f16_fneg1(half %a, half %b, half %c) {
 ; GFX950-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_fneg1:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e64 v3, v0, -v1
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, v0, -v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, v0, v2
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v2
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %b.fneg = fneg half %b
   %max0 = call half @llvm.minimum.f16(half %a, half %b.fneg)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c)
@@ -1846,19 +1700,6 @@ define half @v_fminimum3_f16_fneg2(half %a, half %b, half %c) {
 ; GFX950-NEXT:    v_xor_b32_e32 v2, 0x8000, v2
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_fneg2:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e32 v3, v0, v1
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e64 v1, v0, -v2
-; GFX940-NEXT:    v_cmp_o_f16_e64 vcc, v0, -v2
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %c.fneg = fneg half %c
   %max0 = call half @llvm.minimum.f16(half %a, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c.fneg)
@@ -1896,19 +1737,6 @@ define half @v_fminimum3_f16_const0(half %b, half %c) {
 ; GFX950-NEXT:    s_movk_i32 s0, 0x4800
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, s0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_const0:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e32 v2, 0x4800, v0
-; GFX940-NEXT:    v_mov_b32_e32 v3, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v0
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
-; GFX940-NEXT:    v_min_f16_e32 v2, v0, v1
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call half @llvm.minimum.f16(half 8.0, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c)
   ret half %max1
@@ -1945,19 +1773,6 @@ define half @v_fminimum3_f16__const2(half %a, half %b) {
 ; GFX950-NEXT:    s_movk_i32 s0, 0x4800
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, s0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16__const2:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e32 v2, v0, v1
-; GFX940-NEXT:    v_mov_b32_e32 v3, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, 0x4800, v0
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v0
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call half @llvm.minimum.f16(half %a, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half 8.0)
   ret half %max1
@@ -1993,19 +1808,6 @@ define half @v_fminimum3_f16_inlineimm0(half %b, half %c) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, 4.0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_inlineimm0:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e32 v2, 4.0, v0
-; GFX940-NEXT:    v_mov_b32_e32 v3, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v0
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
-; GFX940-NEXT:    v_min_f16_e32 v2, v0, v1
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call half @llvm.minimum.f16(half 4.0, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c)
   ret half %max1
@@ -2041,19 +1843,6 @@ define half @v_fminimum3_f16__inlineimm(half %a, half %b) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, 4.0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16__inlineimm:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e32 v2, v0, v1
-; GFX940-NEXT:    v_mov_b32_e32 v3, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, 4.0, v0
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v0
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call half @llvm.minimum.f16(half %a, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half 4.0)
   ret half %max1
@@ -2093,19 +1882,6 @@ define half @v_fminimum3_f16_const1_const2(half %a) {
 ; GFX950-NEXT:    v_mov_b32_e32 v1, 0x4c00
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, s0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_fminimum3_f16_const1_const2:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e32 v1, 0x4800, v0
-; GFX940-NEXT:    v_mov_b32_e32 v2, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v0
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, 0x4c00, v0
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v0
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call half @llvm.minimum.f16(half %a, half 8.0)
   %max1 = call half @llvm.minimum.f16(half %max0, half 16.0)
   ret half %max1
@@ -3955,20 +3731,6 @@ define <2 x half> @v_no_fminimum3_f16__multi_use(half %a, half %b, half %c) {
 ; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
-; GFX940-LABEL: v_no_fminimum3_f16__multi_use:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    v_min_f16_e32 v3, v0, v1
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v1
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, v0, v2
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, v0, v2
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
-; GFX940-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call half @llvm.minimum.f16(half %a, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c)
   %insert.0 = insertelement <2 x half> poison, half %max0, i32 0
@@ -4015,23 +3777,6 @@ define amdgpu_ps <2 x i32> @s_no_fminimum3_f16__multi_use(half inreg %a, half in
 ; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX950-NEXT:    ; return to shader part epilog
-; GFX940-LABEL: s_no_fminimum3_f16__multi_use:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    v_mov_b32_e32 v0, s1
-; GFX940-NEXT:    v_min_f16_e32 v1, s0, v0
-; GFX940-NEXT:    v_mov_b32_e32 v2, 0x7e00
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, s0, v0
-; GFX940-NEXT:    s_nop 1
-; GFX940-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX940-NEXT:    v_min_f16_e32 v1, s2, v0
-; GFX940-NEXT:    v_cmp_o_f16_e32 vcc, s2, v0
-; GFX940-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
-; GFX940-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX940-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX940-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX940-NEXT:    ; return to shader part epilog
   %max0 = call half @llvm.minimum.f16(half %a, half %b)
   %max1 = call half @llvm.minimum.f16(half %max0, half %c)
   %cast0 = bitcast half %max0 to i16

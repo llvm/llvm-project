@@ -687,6 +687,15 @@ llvm.func @rocdl.raw.ptr.buffer.f32(%rsrc : !llvm.ptr<8>,
   llvm.return
 }
 
+llvm.func @rocdl.raw.ptr.buffer.load.lds(%rsrc : !llvm.ptr<8>, %dstLds : !llvm.ptr<3>,
+                       %size: i32, %voffset : i32, %soffset : i32, %offset : i32,
+                       %aux : i32) {
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.load.lds
+  // CHECK: rocdl.raw.ptr.buffer.load.lds %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}
+  rocdl.raw.ptr.buffer.load.lds %rsrc, %dstLds, %size, %voffset, %soffset, %offset, %aux
+
+  llvm.return
+}
 
 llvm.func @rocdl.raw.ptr.buffer.i32(%rsrc : !llvm.ptr<8>,
                        %offset : i32, %soffset : i32,
