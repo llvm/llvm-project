@@ -578,3 +578,20 @@ module @test_module {
     func.return %result : vector<2x2xf16>
   }
 }
+
+// -----
+
+module @test_module {
+  // This test case covers the case of math ops that do not have a lowering to
+  // a function call. When lowerings to call were lumped together with
+  // scalarization in the same pattern application, they were preventing
+  // scalarization.
+  // CHECK-LABEL: func @math_log_f32_vector_0d
+  func.func @math_log_f32_vector_0d(%arg : vector<f32>) -> vector<f32> {
+    // CHECK: llvm.extractelement {{.*}} : vector<1xf32>
+    // CHECK: math.log {{.*}} : f32
+    // CHECK: llvm.insertelement {{.*}} : vector<1xf32>
+    %result = math.log %arg : vector<f32>
+    func.return %result : vector<f32>
+  }
+}
