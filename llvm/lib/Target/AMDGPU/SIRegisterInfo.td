@@ -1519,6 +1519,10 @@ def VGPRSrc_96 : RegisterOperand<VReg_96_STAGING> {
   let DecoderMethod = "DecodeVReg_96RegisterClass";
 }
 
+def VGPRSrc_128 : RegisterOperand<VReg_128_STAGING> {
+  let DecoderMethod = "DecodeVReg_128RegisterClass";
+}
+
 def VGPRSrc_192 : RegisterOperand<VReg_192_STAGING> {
   let DecoderMethod = "DecodeVReg_192RegisterClass";
 }

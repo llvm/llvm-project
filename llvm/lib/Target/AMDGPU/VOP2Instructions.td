@@ -473,7 +473,7 @@ def VOP_MADMK_F64 : VOP_MADMK <f64>;
 class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, vt0]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, getVregSrcForVT<Src2VT>.ret:$src2);
   // Src2 must accept the same operand types as vdst, namely VGPRs only
-  let Src2RC64 = getVOP3VRegForVT<Src2VT, IsTrue16, !not(IsRealTrue16)>.ret;
+  let Src2RC64 = getVGPRSrcForVT<Src2VT, IsTrue16, !not(IsRealTrue16)>.ret;
   let Ins64 = getIns64<Src0RC64, Src1RC64, Src2RC64, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
                        Src0Mod, Src1Mod, Src2Mod>.ret;
