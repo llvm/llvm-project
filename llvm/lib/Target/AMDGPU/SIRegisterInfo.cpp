@@ -1139,6 +1139,16 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                 SIInstrFlags::FlatScratch);
 }
 
+std::optional<unsigned> SIRegisterInfo::getDwarfRegLaneSize(int64_t DwarfReg,
+                                                            bool IsEH) const {
+  if (std::optional<MCRegister> Reg = getLLVMRegNum(DwarfReg, IsEH)) {
+    const TargetRegisterClass *RC = getPhysRegBaseClass(*Reg);
+    if (RC == &AMDGPU::VGPR_32RegClass || RC == &AMDGPU::AGPR_32RegClass)
+      return 4;
+  }
+  return std::nullopt;
+}
+
 const TargetRegisterClass *SIRegisterInfo::getPointerRegClass(
   const MachineFunction &MF, unsigned Kind) const {
   // This is inaccurate. It depends on the instruction and address space. The
