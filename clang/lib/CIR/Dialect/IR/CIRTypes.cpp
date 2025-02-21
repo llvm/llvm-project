@@ -347,12 +347,13 @@ static mlir::ParseResult parseFuncTypeReturn(mlir::AsmParser &p,
   mlir::Type type;
   if (p.parseType(type))
     return mlir::failure();
-  if (isa<cir::VoidType>(type))
+  if (isa<cir::VoidType>(type)) {
     // An explicit !cir.void means also no return type.
     optionalReturnType = {};
-  else
+  } else {
     // Otherwise use the actual type.
     optionalReturnType = type;
+  }
   return p.parseLParen();
 }
 
@@ -361,7 +362,6 @@ static void printFuncTypeReturn(mlir::AsmPrinter &p,
                                 mlir::Type optionalReturnType) {
   if (optionalReturnType)
     p << optionalReturnType << ' ';
-  p << '(';
 }
 
 static mlir::ParseResult
@@ -399,6 +399,7 @@ parseFuncTypeArgs(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
 static void printFuncTypeArgs(mlir::AsmPrinter &p,
                               mlir::ArrayRef<mlir::Type> params,
                               bool isVarArg) {
+  p << '(';
   llvm::interleaveComma(params, p,
                         [&p](mlir::Type type) { p.printType(type); });
   if (isVarArg) {

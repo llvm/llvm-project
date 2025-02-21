@@ -296,7 +296,7 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
   }];
 
   let builders = [
-    // Construct with an actual return type or explicit !cir.void
+    // Construct with an actual return type or implicit !cir.void.
     TypeBuilderWithInferredContext<(ins
       "llvm::ArrayRef<mlir::Type>":$inputs, "mlir::Type":$returnType,
       CArg<"bool", "false">:$isVarArg), [{
@@ -317,7 +317,7 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     unsigned getNumInputs() const { return getInputs().size(); }
 
     /// Returns the result type of the function as an actual return type or
-    /// explicit !cir.void
+    /// explicit !cir.void.
     mlir::Type getReturnType() const;
 
     /// Returns the result type of the function as an ArrayRef, enabling better
