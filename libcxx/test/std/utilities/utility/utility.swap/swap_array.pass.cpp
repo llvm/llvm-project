@@ -122,7 +122,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 
   // We can't test unique_ptr in constant evaluation before C++23 as it's constexpr only since C++23.
-  if (!TEST_IS_CONSTANT_EVALUATED || TEST_STD_VER >= 23) {
+  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED) {
     std::unique_ptr<int> i[3];
     for (int k = 0; k < 3; ++k)
       i[k].reset(new int(k + 1));
