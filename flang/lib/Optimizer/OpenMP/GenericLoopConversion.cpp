@@ -56,7 +56,10 @@ public:
           "not yet implemented: Combined `parallel loop` directive");
       break;
     case GenericLoopCombinedInfo::TeamsLoop:
-      rewriteToDistributeParallelDo(loopOp, rewriter);
+      if (teamsLoopCanBeParallelFor(loopOp))
+        rewriteToDistributeParallelDo(loopOp, rewriter);
+      else
+        rewriteToDistrbute(loopOp, rewriter);
       break;
     }
 
@@ -97,8 +100,6 @@ public:
     if (!loopOp.getReductionVars().empty())
       return todo("reduction");
 
-    // TODO For `teams loop`, check similar constrains to what is checked
-    // by `TeamsLoopChecker` in SemaOpenMP.cpp.
     return mlir::success();
   }
 
@@ -116,6 +117,62 @@ private:
       result = GenericLoopCombinedInfo::ParallelLoop;
 
     return result;
+  }
+
+  /// Checks whether a `teams loop` construct can be rewriten to `teams
+  /// distribute parallel do` or it has to be converted to `teams distribute`.
+  ///
+  /// This checks similar constrains to what is checked by `TeamsLoopChecker` in
+  /// SemaOpenMP.cpp in clang.
+  static bool teamsLoopCanBeParallelFor(mlir::omp::LoopOp loopOp) {
+    bool canBeParallelFor =
+        !loopOp
+             .walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
+               if (nestedOp == loopOp)
+                 return mlir::WalkResult::advance();
+
+               if (auto nestedLoopOp =
+                       mlir::dyn_cast<mlir::omp::LoopOp>(nestedOp)) {
+                 GenericLoopCombinedInfo combinedInfo =
+                     findGenericLoopCombineInfo(nestedLoopOp);
+
+                 // Worksharing loops cannot be nested inside each other.
+                 // Therefore, if the current `loop` directive nests another
+                 // `loop` whose `bind` modifier is `parallel`, this `loop`
+                 // directive cannot be mapped to `distribute parallel for`
+                 // but rather only to `distribute`.
+                 if (combinedInfo == GenericLoopCombinedInfo::Standalone &&
+                     nestedLoopOp.getBindKind() &&
+                     *nestedLoopOp.getBindKind() ==
+                         mlir::omp::ClauseBindKind::Parallel)
+                   return mlir::WalkResult::interrupt();
+
+                 // TODO check for combined `parallel loop` when we support
+                 // it.
+               } else if (auto callOp =
+                              mlir::dyn_cast<mlir::CallOpInterface>(nestedOp)) {
+                 // Calls to non-OpenMP API runtime functions inhibits
+                 // transformation to `teams distribute parallel do` since the
+                 // called functions might have nested parallelism themselves.
+                 bool isOpenMPAPI = false;
+                 mlir::CallInterfaceCallable callable =
+                     callOp.getCallableForCallee();
+
+                 if (auto callableSymRef =
+                         mlir::dyn_cast<mlir::SymbolRefAttr>(callable))
+                   isOpenMPAPI =
+                       callableSymRef.getRootReference().strref().starts_with(
+                           "omp_");
+
+                 if (!isOpenMPAPI)
+                   return mlir::WalkResult::interrupt();
+               }
+
+               return mlir::WalkResult::advance();
+             })
+             .wasInterrupted();
+
+    return canBeParallelFor;
   }
 
   void rewriteStandaloneLoop(mlir::omp::LoopOp loopOp,
