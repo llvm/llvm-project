@@ -3047,7 +3047,6 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
                                       .str();
     AttributeString +=
         (Twine(",fillcolor=\"") + getColor(Node->AllocTypes) + "\"").str();
-    AttributeString += ",style=\"filled\"";
     if (Node->CloneOf) {
       AttributeString += ",color=\"blue\"";
       AttributeString += ",style=\"filled,bold,dashed\"";
@@ -3059,8 +3058,11 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
   static std::string getEdgeAttributes(NodeRef, ChildIteratorType ChildIter,
                                        GraphType) {
     auto &Edge = *(ChildIter.getCurrent());
+    auto Color = getColor(Edge->AllocTypes);
     return (Twine("tooltip=\"") + getContextIds(Edge->ContextIds) + "\"" +
-            Twine(",fillcolor=\"") + getColor(Edge->AllocTypes) + "\"")
+            // fillcolor is the arrow head and color is the line
+            Twine(",fillcolor=\"") + Color + "\"" + Twine(",color=\"") + Color +
+            "\"")
         .str();
   }
 
