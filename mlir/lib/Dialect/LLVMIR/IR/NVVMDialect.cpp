@@ -1133,8 +1133,6 @@ LogicalResult NVVM::Tcgen05CpOp::verify() {
       return emitError(
           "Shape 32x128b requires multicast warpx4 for tcgen05.cp Op");
     break;
-  default:
-    return emitError("Invalid shape for tcgen05.cp Op");
   }
   return success();
 }
@@ -1385,9 +1383,8 @@ llvm::Intrinsic::ID Tcgen05CpOp::getIntrinsicID(Operation &op) {
     return (mc == Tcgen05CpMulticast::WARPX2_01_23)
                ? GET_TCGEN05_CP_ID(_64x128b_warpx2_01_23, srcFmt, is2CTA)
                : GET_TCGEN05_CP_ID(_64x128b_warpx2_02_13, srcFmt, is2CTA);
-  default:
-    llvm_unreachable("Invalid shape in tcgen05 cp Op");
   }
+  llvm_unreachable("Invalid shape in tcgen05 cp Op");
 }
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
