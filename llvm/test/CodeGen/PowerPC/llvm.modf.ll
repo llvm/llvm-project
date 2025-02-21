@@ -68,7 +68,6 @@ define half @test_modf_f16_only_use_integral_part(half %a) {
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl modff
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # fake_use: $x3
 ; CHECK-NEXT:    lfs f1, 44(r1)
 ; CHECK-NEXT:    addi r1, r1, 48
 ; CHECK-NEXT:    ld r0, 16(r1)
@@ -341,7 +340,6 @@ define ppc_fp128 @test_modf_ppcf128_only_use_intergral(ppc_fp128 %a) {
 ; CHECK-NEXT:    addi r5, r1, 32
 ; CHECK-NEXT:    bl modfl
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # fake_use: $x3
 ; CHECK-NEXT:    lfd f1, 32(r1)
 ; CHECK-NEXT:    lfd f2, 40(r1)
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -405,7 +403,6 @@ define ppc_fp128 @test_modf_ppcf128_only_use_intergral_tail_call(ppc_fp128 %a) {
 ; CHECK-NEXT:    addi r5, r1, 32
 ; CHECK-NEXT:    bl modfl
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # fake_use: $x3
 ; CHECK-NEXT:    lfd f1, 32(r1)
 ; CHECK-NEXT:    lfd f2, 40(r1)
 ; CHECK-NEXT:    addi r1, r1, 48

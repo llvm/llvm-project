@@ -1400,6 +1400,11 @@ enum NodeType {
   /// debugging purposes.
   FAKE_USE,
 
+  /// OutChain = CHAIN_BARRIER(InChain) marks that optimizations should not
+  /// optimize any users of a chain that contains a CHAIN_BARRIER use a new
+  /// chain from a point earlier than the CHAIN_BARRIER.
+  CHAIN_BARRIER,
+
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
   /// information that target might need for lowering.  The first operand is

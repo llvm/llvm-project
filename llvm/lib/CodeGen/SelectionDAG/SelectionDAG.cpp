@@ -2622,12 +2622,10 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     // is returned by the call, and one integer result, returned via an output
     // pointer. If only the integer result is used then the `CopyFromReg` for
     // the FP result may be optimized out. This prevents an FP stack pop from
-    // being emitted for it. The `FAKE_USE` node prevents optimizations from
-    // removing the `CopyFromReg` from the chain, and ensures the FP pop will be
-    // emitted. Note: We use an UNDEF pointer as the argument to prevent keeping
-    // any real values live longer than we need to.
-    CallChain = getNode(ISD::FAKE_USE, DL, MVT::Other, CallChain,
-                        getUNDEF(TLI->getPointerTy(getDataLayout())));
+    // being emitted for it. The `CHAIN_BARRIER` node prevents optimizations
+    // from removing the `CopyFromReg` from the chain, and ensures the FP pop
+    // will be emitted.
+    CallChain = getNode(ISD::CHAIN_BARRIER, DL, MVT::Other, CallChain);
   }
 
   for (auto [ResNo, ResultPtr] : llvm::enumerate(ResultPtrs)) {

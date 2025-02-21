@@ -41,7 +41,6 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    add r1, sp, #4
 ; CHECK-NEXT:    bl frexpf
-; CHECK-NEXT:    @ fake_use: $r0
 ; CHECK-NEXT:    ldr r0, [sp, #4]
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
@@ -133,8 +132,6 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r5:32]
-; CHECK-NEXT:    @ fake_use: $r0
-; CHECK-NEXT:    @ fake_use: $r0
 ; CHECK-NEXT:    vld1.32 {d16[1]}, [r4:32]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    add sp, #8
@@ -193,7 +190,6 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) {
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    add r1, sp, #4
 ; CHECK-NEXT:    bl frexpf
-; CHECK-NEXT:    @ fake_use: $r0
 ; CHECK-NEXT:    ldr r0, [sp, #4]
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
@@ -269,8 +265,6 @@ define <2 x i32> @test_frexp_v2f32_v2i32_only_use_exp(<2 x float> %a) {
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r4:32]
-; CHECK-NEXT:    @ fake_use: $r0
-; CHECK-NEXT:    @ fake_use: $r0
 ; CHECK-NEXT:    vld1.32 {d16[1]}, [r5:32]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    add sp, #8
@@ -382,13 +376,8 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) {
 ; CHECK-NEXT:    mov r1, sp
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl frexpf
-; CHECK-NEXT:    @ fake_use: $r0
-; CHECK-NEXT:    @ fake_use: $r0
-; CHECK-NEXT:    ldr r0, [sp, #12]
-; CHECK-NEXT:    @ fake_use: $r0
-; CHECK-NEXT:    ldrd r2, r1, [sp, #4]
-; CHECK-NEXT:    @ fake_use: $r0
-; CHECK-NEXT:    ldr r3, [sp], #16
+; CHECK-NEXT:    ldrd r1, r0, [sp, #8]
+; CHECK-NEXT:    ldrd r3, r2, [sp], #16
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
   %result = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> %a)
   %result.1 = extractvalue { <4 x float>, <4 x i32> } %result, 1
@@ -430,7 +419,6 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) {
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    add r2, sp, #4
 ; CHECK-NEXT:    bl frexp
-; CHECK-NEXT:    @ fake_use: $r0
 ; CHECK-NEXT:    ldr r0, [sp, #4]
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
@@ -510,8 +498,6 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) {
 ; CHECK-NEXT:    mov r2, r7
 ; CHECK-NEXT:    bl frexp
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r6:32]
-; CHECK-NEXT:    @ fake_use: $r0
-; CHECK-NEXT:    @ fake_use: $r0
 ; CHECK-NEXT:    vld1.32 {d16[1]}, [r7:32]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    add sp, #12

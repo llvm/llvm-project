@@ -45,7 +45,6 @@ define half @test_modf_f16_only_use_integral_part(half %a) {
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    add x0, sp, #12
 ; CHECK-NEXT:    bl modff
-; CHECK-NEXT:    // fake_use: $x0
 ; CHECK-NEXT:    ldr s0, [sp, #12]
 ; CHECK-NEXT:    fcvt h0, s0
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload

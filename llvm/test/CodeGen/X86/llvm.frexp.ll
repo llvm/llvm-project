@@ -152,7 +152,6 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    # fake_use: $eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    addl $16, %esp
 ; WIN32-NEXT:    retl
@@ -243,7 +242,6 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) {
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
-; X64-NEXT:    # fake_use: $rax
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
@@ -258,7 +256,6 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) {
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    # fake_use: $eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    addl $16, %esp
 ; WIN32-NEXT:    retl
@@ -479,10 +476,6 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) {
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
-; X64-NEXT:    # fake_use: $rax
-; X64-NEXT:    # fake_use: $rax
-; X64-NEXT:    # fake_use: $rax
-; X64-NEXT:    # fake_use: $rax
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -520,12 +513,8 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) {
 ; WIN32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
-; WIN32-NEXT:    # fake_use: $eax
-; WIN32-NEXT:    # fake_use: $eax
-; WIN32-NEXT:    # fake_use: $eax
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    # fake_use: $eax
 ; WIN32-NEXT:    movl %esi, %eax
 ; WIN32-NEXT:    addl $12, %esp
 ; WIN32-NEXT:    popl %esi
@@ -595,7 +584,6 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) {
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexp@PLT
-; X64-NEXT:    # fake_use: $rax
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
@@ -610,7 +598,6 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) {
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    # fake_use: $eax
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    addl $16, %esp
 ; WIN32-NEXT:    retl

@@ -1440,6 +1440,19 @@ def FAKE_USE : StandardPseudoInstruction {
   let hasSideEffects = 0;
   let isMeta = true;
 }
+
+
+def CHAIN_BARRIER : StandardPseudoInstruction {
+  // An instruction that takes a chain to mark that optimizations should not
+  // optimize any users of a chain that contains a CHAIN_BARRIER use a new chain
+  // from a point earlier than the CHAIN_BARRIER.
+  let OutOperandList = (outs);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "CHAIN_BARRIER";
+  let hasSideEffects = 0;
+  let isMeta = true;
+}
+
 def PATCHABLE_OP : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);

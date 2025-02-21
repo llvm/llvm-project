@@ -75,7 +75,6 @@ define half @test_modf_f16_only_use_integral_part(half %a) {
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    add r1, sp, #4
 ; CHECK-NEXT:    bl modff
-; CHECK-NEXT:    @ fake_use: $r0
 ; CHECK-NEXT:    ldr r0, [sp, #4]
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    add sp, #8
@@ -391,7 +390,6 @@ define double @test_modf_f64_only_use_intergral(double %a) {
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    mov r2, sp
 ; CHECK-NEXT:    bl modf
-; CHECK-NEXT:    @ fake_use: $r0
 ; CHECK-NEXT:    ldrd r0, r1, [sp], #8
 ; CHECK-NEXT:    pop {r7, pc}
 ;
@@ -464,7 +462,6 @@ define double @test_modf_f64_only_use_intergral_tail_call(double %a) {
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    mov r2, sp
 ; CHECK-NEXT:    bl modf
-; CHECK-NEXT:    @ fake_use: $r0
 ; CHECK-NEXT:    ldrd r0, r1, [sp], #8
 ; CHECK-NEXT:    pop {r7, pc}
 ;
