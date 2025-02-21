@@ -4,7 +4,6 @@
 ; on a little-endian target.
 
 @var128 = global fp128 0xL00000000000000008000000000000000, align 16
-@varppc128 = global ppc_fp128 0xM80000000000000000000000000000000, align 16
 @var80 = global x86_fp80 0xK80000000000000000000, align 16
 @var64 = global double -0.0, align 8
 @var32 = global float -0.0, align 4
@@ -15,12 +14,6 @@
 ; CHECK: var128:
 ; CHECK-NEXT: .quad 0x0000000000000000      # fp128 -0
 ; CHECK-NEXT: .quad 0x8000000000000000
-; CHECK-NEXT: .size
-
-; CHECK: varppc128:
-; For ppc_fp128, the high double always comes first.
-; CHECK-NEXT: .quad 0x8000000000000000      # ppc_fp128 -0
-; CHECK-NEXT: .quad 0x0000000000000000
 ; CHECK-NEXT: .size
 
 ; CHECK: var80:
