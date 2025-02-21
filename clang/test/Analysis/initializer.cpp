@@ -462,6 +462,14 @@ void aggregate_struct() {
   ::new (&di) S;
   int z = di.x + 1; // expected-warning{{The left operand of '+' is a garbage value}}
 }
+void initialize_non_zeroth_element(S arr[2]) {
+  new (&arr[1]) S{1};
+  clang_analyzer_eval(1 == arr[1].x); // expected-warning{{TRUE}}
+}
+void initialize_non_zeroth_argument_pointers(S *arr[2]) {
+  arr[1] = new (arr[1]) S{1};
+  clang_analyzer_eval(1 == arr[1]->x); // expected-warning{{TRUE}}
+}
 } // namespace initializer_list_arg
 
 namespace CXX17_transparent_init_list_exprs {
