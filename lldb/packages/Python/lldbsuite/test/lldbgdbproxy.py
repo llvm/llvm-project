@@ -39,10 +39,10 @@ class GDBProxyTestBase(TestBase):
         self.logger.setLevel(logging.DEBUG)
 
         # log all warnings to stderr
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.WARNING)
-        handler.setFormatter(self._log_formatter)
-        self.logger.addHandler(handler)
+        self._stderr_log_handler = logging.StreamHandler()
+        self._stderr_log_handler.setLevel(logging.DEBUG if self.TraceOn() else logging.WARNING)
+        self._stderr_log_handler.setFormatter(self._log_formatter)
+        self.logger.addHandler(self._stderr_log_handler)
 
     def setUp(self):
         TestBase.setUp(self)
@@ -78,6 +78,8 @@ class GDBProxyTestBase(TestBase):
 
         self.logger.removeHandler(self._verbose_log_handler)
         self._verbose_log_handler = None
+        self.logger.removeHandler(self._stderr_log_handler)
+        self._stderr_log_handler = None
 
         TestBase.tearDown(self)
 
