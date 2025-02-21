@@ -46,8 +46,6 @@ public:
   std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
-  bool CanDebugProcess() override;
-
   void CalculateTrapHandlerSymbolNames() override;
 
   lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const llvm::Triple &triple,

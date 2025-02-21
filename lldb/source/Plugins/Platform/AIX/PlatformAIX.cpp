@@ -29,12 +29,15 @@
 // Use defined constants from AIX mman.h for use when targeting remote aix
 // systems even when host has different values.
 
+// For remotely cross debugging aix
+constexpr int MapVariable = 0x0;
+constexpr int MapPrivate = 0x2;
+constexpr int MapAnonymous = 0x10;
 #if defined(_AIX)
 #include <sys/mman.h>
-#else // For remotely cross debugging aix
-#define MAP_VARIABLE 0x0
-#define MAP_PRIVATE 0x2
-#define MAP_ANONYMOUS 0x10
+static_assert(MapVariable == MAP_VARIABLE);
+static_assert(MapPrivate == MAP_PRIVATE);
+static_assert(MapAnonymous = MAP_ANONYMOUS);
 #endif
 
 using namespace lldb;
@@ -51,19 +54,8 @@ PlatformSP PlatformAIX::CreateInstance(bool force, const ArchSpec *arch) {
            arch ? arch->GetArchitectureName() : "<null>",
            arch ? arch->GetTriple().getTriple() : "<null>");
 
-  bool create = force;
-  if (!create && arch && arch->IsValid()) {
-    const llvm::Triple &triple = arch->GetTriple();
-    switch (triple.getOS()) {
-    case llvm::Triple::AIX:
-      create = true;
-      break;
-
-    default:
-      break;
-    }
-  }
-
+  bool create = force || (arch && arch->IsValid() &&
+                          arch->GetTriple().getOS() == llvm::Triple::AIX);
   LLDB_LOG(log, "create = {0}", create);
   if (create) {
     return PlatformSP(new PlatformAIX(false));
@@ -94,26 +86,17 @@ void PlatformAIX::Initialize() {
 }
 
 void PlatformAIX::Terminate() {
-  if (g_initialize_count > 0) {
-    if (--g_initialize_count == 0) {
+  if (g_initialize_count > 0)
+    if (--g_initialize_count == 0)
       PluginManager::UnregisterPlugin(PlatformAIX::CreateInstance);
-    }
-  }
 
   PlatformPOSIX::Terminate();
 }
 
-/// Default Constructor
-PlatformAIX::PlatformAIX(bool is_host)
-    : PlatformPOSIX(is_host) // This is the local host platform
-{
+PlatformAIX::PlatformAIX(bool is_host) : PlatformPOSIX(is_host) {
   if (is_host) {
     ArchSpec hostArch = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
     m_supported_architectures.push_back(hostArch);
-    if (hostArch.GetTriple().isArch64Bit()) {
-      m_supported_architectures.push_back(
-          HostInfo::GetArchitecture(HostInfo::eArchKind32));
-    }
   } else {
     m_supported_architectures =
         CreateArchList({llvm::Triple::ppc64}, llvm::Triple::AIX);
@@ -147,8 +130,6 @@ void PlatformAIX::GetStatus(Stream &strm) {
 #endif
 }
 
-bool PlatformAIX::CanDebugProcess() { return IsHost() ? true : IsConnected(); }
-
 void PlatformAIX::CalculateTrapHandlerSymbolNames() {}
 
 lldb::UnwindPlanSP
@@ -161,33 +142,14 @@ MmapArgList PlatformAIX::GetMmapArgumentList(const ArchSpec &arch, addr_t addr,
                                              addr_t length, unsigned prot,
                                              unsigned flags, addr_t fd,
                                              addr_t offset) {
-#if defined(_AIX)
-  unsigned flags_platform = MAP_VARIABLE | MAP_PRIVATE | MAP_ANONYMOUS;
-#else
   unsigned flags_platform = 0;
+#if defined(_AIX)
+  flags_platform = MapPrivate | MapVariable | MapAnon;
 #endif
   MmapArgList args({addr, length, prot, flags_platform, fd, offset});
   return args;
 }
 
 CompilerType PlatformAIX::GetSiginfoType(const llvm::Triple &triple) {
-  if (!m_type_system_up)
-    m_type_system_up.reset(new TypeSystemClang("siginfo", triple));
-  TypeSystemClang *ast = m_type_system_up.get();
-
-  // generic types
-  CompilerType int_type = ast->GetBasicType(eBasicTypeInt);
-  CompilerType uint_type = ast->GetBasicType(eBasicTypeUnsignedInt);
-  CompilerType short_type = ast->GetBasicType(eBasicTypeShort);
-  CompilerType long_type = ast->GetBasicType(eBasicTypeLong);
-  CompilerType voidp_type = ast->GetBasicType(eBasicTypeVoid).GetPointerType();
-
-  // siginfo_t
-  CompilerType siginfo_type = ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_siginfo_t",
-      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
-  ast->StartTagDeclarationDefinition(siginfo_type);
-
-  ast->CompleteTagDeclarationDefinition(siginfo_type);
-  return siginfo_type;
+  return CompilerType();
 }
