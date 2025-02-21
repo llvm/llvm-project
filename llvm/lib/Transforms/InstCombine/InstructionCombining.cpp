@@ -3590,15 +3590,20 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   if (!RetVal)
     return nullptr;
 
-  if (RetVal->getType()->isPointerTy() && RI.getFunction()->isReturnNonNull()) {
-    if (Value *V = simplifyNonNullOperand(RetVal))
-      return replaceOperand(RI, 0, V);
+  Function *F = RI.getFunction();
+  Type *RetTy = RetVal->getType();
+  if (RetTy->isPointerTy()) {
+    if (F->hasRetAttribute(Attribute::NonNull) ||
+        (F->getAttributes().getRetDereferenceableBytes() > 0 &&
+         !NullPointerIsDefined(F, RetTy->getPointerAddressSpace()))) {
+      if (Value *V = simplifyNonNullOperand(RetVal))
+        return replaceOperand(RI, 0, V);
+    }
   }
 
-  if (!AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
+  if (!AttributeFuncs::isNoFPClassCompatibleType(RetTy))
     return nullptr;
 
-  Function *F = RI.getFunction();
   FPClassTest ReturnClass = F->getAttributes().getRetNoFPClass();
   if (ReturnClass == fcNone)
     return nullptr;
