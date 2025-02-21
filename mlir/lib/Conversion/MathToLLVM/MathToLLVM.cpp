@@ -18,6 +18,8 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 
+#include "llvm/ADT/FloatingPointMode.h"
+
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -297,8 +299,8 @@ struct IsNaNOpLowering : public ConvertOpToLLVMPattern<math::IsNaNOp> {
     if (!operandType || !LLVM::isCompatibleType(operandType))
       return failure();
 
-    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(op, op.getType(),
-                                                 adaptor.getOperand(), 3);
+    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(
+        op, op.getType(), adaptor.getOperand(), llvm::fcNan);
     return success();
   }
 };
@@ -314,8 +316,8 @@ struct IsFiniteOpLowering : public ConvertOpToLLVMPattern<math::IsFiniteOp> {
     if (!operandType || !LLVM::isCompatibleType(operandType))
       return failure();
 
-    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(op, op.getType(),
-                                                 adaptor.getOperand(), 504);
+    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(
+        op, op.getType(), adaptor.getOperand(), llvm::fcFinite);
     return success();
   }
 };
@@ -341,10 +343,10 @@ void mlir::populateMathToLLVMConversionPatterns(
     bool approximateLog1p, PatternBenefit benefit) {
   if (approximateLog1p)
     patterns.add<Log1pOpLowering>(converter, benefit);
-  patterns.add<IsNaNOpLowering, IsFiniteOpLowering>(converter);
-
   // clang-format off
   patterns.add<
+    IsNaNOpLowering,
+    IsFiniteOpLowering,
     AbsFOpLowering,
     AbsIOpLowering,
     CeilOpLowering,
