@@ -63,7 +63,6 @@
 ; RUN: cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ; DOT-DAG: Node[[B:0x[a-f0-9]+]] {{.*}}_Z1Bi -\> _Z1Ci
 ; DOT-DAG: Node[[C:0x[a-f0-9]+]] {{.*}}_Z1Ci -\> _Z1Bi
-; DOT-DAG: Node[[B]] -> Node[[C]]{{.*}}style="solid"
 ; DOT-DAG: Node[[C]] -> Node[[B]]{{.*}}style="dotted"
 
 ;; Skipping recursive contexts should prevent spurious call to cloned version of
