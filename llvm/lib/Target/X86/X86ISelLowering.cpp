@@ -6128,10 +6128,26 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     SDValue Sub = N.getOperand(1);
     EVT SubVT = Sub.getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
+    uint64_t InsertIdx = N.getConstantOperandVal(2);
+    // Handle CONCAT(SUB0, SUB1).
+    // Limit this to vXi64 vector cases to make the most of cross lane shuffles.
+    if (Depth > 0 && InsertIdx == NumSubElts && NumElts == (2 * NumSubElts) &&
+        NumBitsPerElt == 64 && Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        Src.getOperand(0).isUndef() &&
+        Src.getOperand(1).getValueType() == SubVT &&
+        Src.getConstantOperandVal(2) == 0 &&
+        SDNode::areOnlyUsersOf({N.getNode(), Src.getNode()}, Sub.getNode())) {
+      for (int i = 0; i != (int)NumSubElts; ++i)
+        Mask.push_back(i);
+      for (int i = 0; i != (int)NumSubElts; ++i)
+        Mask.push_back(i + NumElts);
+      Ops.push_back(Src.getOperand(1));
+      Ops.push_back(Sub);
+      return true;
+    }
     if (!N->isOnlyUserOf(Sub.getNode()))
       return false;
     SDValue SubBC = peekThroughBitcasts(Sub);
-    uint64_t InsertIdx = N.getConstantOperandVal(2);
     // Handle INSERT_SUBVECTOR(SRC0, EXTRACT_SUBVECTOR(SRC1)).
     if (SubBC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         SubBC.getOperand(0).getValueSizeInBits() == NumSizeInBits) {
@@ -6152,21 +6168,6 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       if (!SrcIsUndef)
         Ops.push_back(Src);
       Ops.push_back(SubBCSrc);
-      return true;
-    }
-    // Handle CONCAT(SUB0, SUB1).
-    // Limit this to vXi64 vector cases to make the most of cross lane shuffles.
-    if (Depth > 0 && InsertIdx == NumSubElts && NumElts == (2 * NumSubElts) &&
-        NumBitsPerElt == 64 && Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
-        Src.getOperand(0).isUndef() &&
-        Src.getOperand(1).getValueType() == SubVT &&
-        Src.getConstantOperandVal(2) == 0) {
-      for (int i = 0; i != (int)NumSubElts; ++i)
-        Mask.push_back(i);
-      for (int i = 0; i != (int)NumSubElts; ++i)
-        Mask.push_back(i + NumElts);
-      Ops.push_back(Src.getOperand(1));
-      Ops.push_back(Sub);
       return true;
     }
     // Handle INSERT_SUBVECTOR(SRC0, SHUFFLE(SRC1)).
@@ -41083,12 +41084,17 @@ static SDValue combineX86ShufflesRecursively(
     }
   }
 
-  // Peek through any free extract_subvector nodes back to root size.
-  for (SDValue &Op : Ops)
-    while (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-           (RootSizeInBits % Op.getOperand(0).getValueSizeInBits()) == 0 &&
-           isNullConstant(Op.getOperand(1)))
-      Op = Op.getOperand(0);
+  // Peek through any free bitcasts/extract_subvector nodes back to root size.
+  for (SDValue &Op : Ops){
+    SDValue BC = Op;
+    if (BC.getOpcode() == ISD::BITCAST && BC.hasOneUse())
+      BC = peekThroughOneUseBitcasts(BC);
+    while (BC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+           (RootSizeInBits % BC.getOperand(0).getValueSizeInBits()) == 0 &&
+           isNullConstant(BC.getOperand(1))) {
+      Op = BC = BC.getOperand(0);
+    }
+  }
 
   // Remove unused/repeated shuffle source ops.
   resolveTargetShuffleInputsAndMask(Ops, Mask);

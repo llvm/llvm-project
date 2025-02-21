@@ -231,6 +231,7 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
         (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
             *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
             *details->cudaDataAttr() == common::CUDADataAttr::Unified ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
             *details->cudaDataAttr() == common::CUDADataAttr::Pinned)) {
       return true;
     }
