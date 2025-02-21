@@ -9,7 +9,6 @@
 #ifndef LLVM_CODEGEN_REGALLOCFAST_H
 #define LLVM_CODEGEN_REGALLOCFAST_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/RegAllocCommon.h"
 
