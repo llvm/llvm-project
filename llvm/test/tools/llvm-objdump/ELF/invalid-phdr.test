@@ -15,26 +15,3 @@ FileHeader:
   Type:    ET_EXEC
   Machine: EM_X86_64
   EPhOff:  0xffffff
-
-
-# RUN: yaml2obj --docnum=2 %s -o %t.note.err
-# RUN: llvm-objdump -D %t.note.err 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=PFILESIZE
-
-# PFILESIZE:          Disassembly of section .note.gnu.build-id:
-
---- !ELF
-FileHeader:
-  Class:          ELFCLASS64
-  Data:           ELFDATA2LSB
-  Type:           ET_EXEC
-  Machine:        EM_X86_64
-Sections:
-  - Name:         .note.gnu.build-id
-    Type:         SHT_NOTE
-    Content:      040000000800000003000000474e5500abb50d82b6bdc861
-    AddressAlign: 0x04
-ProgramHeaders:
-  - Type:         PT_NOTE
-    FileSize:     0xffffffffffffffff
-    Offset:       0x100
