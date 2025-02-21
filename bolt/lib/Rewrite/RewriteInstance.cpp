@@ -108,33 +108,34 @@ cl::opt<std::string>
 
 cl::opt<bool> DumpDotAll(
     "dump-dot-all",
-    cl::desc("dump function CFGs to graphviz format after each stage;"
+    cl::desc("dump function CFGs to graphviz format after each stage; "
              "enable '-print-loops' for color-coded blocks"),
     cl::Hidden, cl::cat(BoltCategory));
 
 static cl::list<std::string>
-ForceFunctionNames("funcs",
-  cl::CommaSeparated,
-  cl::desc("limit optimizations to functions from the list"),
-  cl::value_desc("func1,func2,func3,..."),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    ForceFunctionNames("funcs", cl::CommaSeparated,
+                       cl::desc("limit optimizations to functions from the "
+                                "list; local symbols must be suffixed"),
+                       cl::value_desc("func1,func2,func3,..."), cl::Hidden,
+                       cl::cat(BoltCategory));
 
 static cl::opt<std::string>
-FunctionNamesFile("funcs-file",
-  cl::desc("file with list of functions to optimize"),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    FunctionNamesFile("funcs-file",
+                      cl::desc("file with list of functions to optimize; local "
+                               "symbols must be suffixed"),
+                      cl::Hidden, cl::cat(BoltCategory));
 
 static cl::list<std::string> ForceFunctionNamesNR(
     "funcs-no-regex", cl::CommaSeparated,
-    cl::desc("limit optimizations to functions from the list (non-regex)"),
+    cl::desc("limit optimizations to functions from the list (non-regex); "
+             "local symbols must be suffixed"),
     cl::value_desc("func1,func2,func3,..."), cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<std::string> FunctionNamesFileNR(
-    "funcs-file-no-regex",
-    cl::desc("file with list of functions to optimize (non-regex)"), cl::Hidden,
-    cl::cat(BoltCategory));
+static cl::opt<std::string>
+    FunctionNamesFileNR("funcs-file-no-regex",
+                        cl::desc("file with list of functions to optimize "
+                                 "(non-regex); local symbols must be suffixed"),
+                        cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool>
 KeepTmp("keep-tmp",
