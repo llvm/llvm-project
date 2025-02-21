@@ -12,6 +12,19 @@ struct Parrot : public Bird {
 
 Bird::~Bird() {}
 
+// For the weird bird we first emit scalar deleting destructor, then find out
+// that we need vector deleting destructor and remove the alias.
+struct JustAWeirdBird {
+  virtual ~JustAWeirdBird() {}
+
+  bool doSmth(int n) {
+    JustAWeirdBird *c = new JustAWeirdBird[n];
+
+    delete[] c;
+    return true;
+  }
+};
+
 // Vector deleting dtor for Bird is an alias because no new Bird[] expressions
 // in the TU.
 // CHECK: @"??_EBird@@UEAAPEAXI@Z" = weak dso_local unnamed_addr alias ptr (ptr, i32), ptr @"??_GBird@@UEAAPEAXI@Z"
@@ -19,6 +32,8 @@ Bird::~Bird() {}
 // CHECK-NOT: @"??_GParrot"
 // No vector destructor definition for Bird.
 // CHECK-NOT: define{{.*}}@"??_EBird"
+// No scalar deleting dtor for JustAWeirdBird.
+// CHECK-NOT: @"??_GJustAWeirdBird"
 
 void dealloc(Bird *p) {
   delete[] p;
@@ -31,6 +46,9 @@ Bird* alloc() {
 
 void bar() {
   dealloc(alloc());
+
+  JustAWeirdBird B;
+  B.doSmth(38);
 }
 
 // CHECK-LABEL: define dso_local void @{{.*}}dealloc{{.*}}(
@@ -101,8 +119,11 @@ void bar() {
 // CHECK-NEXT:   %[[ISFIRSTBITZERO:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
 // CHECK-NEXT:   br i1 %[[ISFIRSTBITZERO]], label %dtor.continue, label %dtor.call_delete
 // CHECK: dtor.call_delete:
-// CHECK-NEXT:   call void @"??3@YAXPEAX_K@Z"(ptr noundef %[[LTHIS]], i64 noundef 8) #3
+// CHECK-NEXT:   call void @"??3@YAXPEAX_K@Z"(ptr noundef %[[LTHIS]], i64 noundef 8)
 // CHECK-NEXT:   br label %dtor.continue
 // CHECK: dtor.continue:
 // CHECK-NEXT:   %[[LOADRET:.*]] = load ptr, ptr %[[RET]], align 8
 // CHECK-NEXT:   ret ptr %[[LOADRET]]
+
+// CHECK: define weak dso_local ptr @"??_EJustAWeirdBird@@UEAAPEAXI@Z"(
+// CHECK-SAME: ptr %this, i32 %should_call_delete)
