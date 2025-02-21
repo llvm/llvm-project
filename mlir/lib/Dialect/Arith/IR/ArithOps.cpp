@@ -1523,7 +1523,7 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
     auto srcType = cast<FloatType>(getElementTypeOrSelf(src.getType()));
     auto intermediateType =
         cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
-    // Check if the srcType is representable in the intermediateType
+    // Check if the srcType is representable in the intermediateType.
     if (llvm::APFloatBase::isRepresentableBy(
             srcType.getFloatSemantics(),
             intermediateType.getFloatSemantics())) {
