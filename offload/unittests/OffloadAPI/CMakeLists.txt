@@ -31,8 +31,6 @@ add_libompt_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olCreateKernel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olReleaseKernel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olRetainKernel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olSetKernelArgValue.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olSetKernelArgsData.cpp
     )
 add_dependencies("offload.unittests" ${PLUGINS_TEST_COMMON} LibompUnitTestsDeviceBins)
 target_compile_definitions("offload.unittests" PRIVATE DEVICE_CODE_PATH="${OFFLOAD_TEST_DEVICE_CODE_PATH}")

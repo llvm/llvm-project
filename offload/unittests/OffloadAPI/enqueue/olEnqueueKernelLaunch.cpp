@@ -37,7 +37,7 @@ struct olEnqueueKernelLaunchTest : offloadQueueTest {
 
 TEST_F(olEnqueueKernelLaunchTest, Success) {
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 1024, &Mem));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 64, &Mem));
   ol_kernel_launch_size_args_t LaunchArgs{};
   LaunchArgs.Dimensions = 1;
   LaunchArgs.GroupSizeX = 64;
@@ -48,8 +48,12 @@ TEST_F(olEnqueueKernelLaunchTest, Success) {
   LaunchArgs.NumGroupsY = 1;
   LaunchArgs.NumGroupsZ = 1;
 
-  ASSERT_SUCCESS(olSetKernelArgValue(Kernel, 0, sizeof(Mem), &Mem));
-  ASSERT_SUCCESS(olEnqueueKernelLaunch(Queue, Kernel, &LaunchArgs, nullptr));
+  struct {
+    void *Mem;
+  } Args{Mem};
+
+  ASSERT_SUCCESS(olEnqueueKernelLaunch(Queue, Kernel, &Args, sizeof(Args),
+                                       &LaunchArgs, nullptr));
 
   ASSERT_SUCCESS(olFinishQueue(Queue));
 
