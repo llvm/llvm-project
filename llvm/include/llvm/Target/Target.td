@@ -1440,8 +1440,6 @@ def FAKE_USE : StandardPseudoInstruction {
   let hasSideEffects = 0;
   let isMeta = true;
 }
-
-
 def PATCHABLE_OP : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
