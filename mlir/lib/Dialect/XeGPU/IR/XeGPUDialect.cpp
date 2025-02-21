@@ -244,6 +244,7 @@ LogicalResult TensorDescType::verify(
     llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
     mlir::Attribute encoding, mlir::Attribute sg_map) {
   size_t rank = shape.size();
+  unsigned packingFactor = 32 / elementType.getIntOrFloatBitWidth();
   if (rank != 1 && rank != 2)
     return emitError() << "expected 1D or 2D tensor";
 
@@ -257,6 +258,16 @@ LogicalResult TensorDescType::verify(
       return emitError() << "expected non-contiguous elements for 1D tensor";
     if (rank == 2 && chunkSize < 2)
       return emitError() << "expected chunk blocks for 2D tensor";
+    // If chunk size > 1, the the second dimension of the tensor shape must be
+    // equal to chunk size and it must be a multiple of the packing factor.
+    if (chunkSize > 1) {
+      if (shape.back() != chunkSize)
+        return emitError() << "expected tensor shape[1] to match chunk size";
+      if (shape.back() % packingFactor != 0)
+        return emitError()
+               << "expected tensor shape[1] to be a multiple of packing factor "
+               << packingFactor;
+    }
   }
 
   if (auto blockAttr =
@@ -287,7 +298,7 @@ LogicalResult TensorDescType::verify(
       if (wiData[0] != 1)
         return emitError()
                << "cannot map over non-contiguous scattered row elements";
-      if (wiData[1] != (32 / elementType.getIntOrFloatBitWidth()))
+      if (wiData[1] != packingFactor)
         return emitError() << "work item data mapping must match the number of "
                               "contiguous elements";
     }

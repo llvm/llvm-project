@@ -208,6 +208,25 @@ func.func @test_create_tdesc_vc_4(%src: memref<?xf32>) {
 }
 
 // -----
+func.func @test_create_tdesc_vc_5(%src: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %0 : memref<?xf32>, vector<4xindex>
+  // expected-error@+1 {{expected tensor shape[1] to match chunk size}}
+          -> !xegpu.tensor_desc<4x5xf32, #xegpu.scatter_tdesc_attr<chunk_size = 4>>
+  return
+}
+
+// -----
+func.func @test_create_tdesc_vc_6(%src: memref<?xf16>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %0 : memref<?xf16>, vector<4xindex>
+  // expected-error@+1 {{tensor shape[1] to be a multiple of packing factor 2}}
+          -> !xegpu.tensor_desc<4x3xf16, #xegpu.scatter_tdesc_attr<chunk_size = 3>>
+  return
+}
+
+
+// -----
 func.func @test_prefetch_vc_1(%src: memref<24x32xf16>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16>
   // expected-error@+1 {{Expects a scattered TensorDesc}}
