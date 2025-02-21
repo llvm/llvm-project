@@ -27,6 +27,8 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -44,6 +46,7 @@
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -135,8 +138,11 @@ class MachineSinking {
   AliasAnalysis *AA = nullptr;
   RegisterClassInfo RegClassInfo;
   TargetSchedModel SchedModel;
-  Pass *LegacyPass;
-  MachineFunctionAnalysisManager *MFAM;
+  // Required for split critical edge
+  LiveIntervals *LIS;
+  SlotIndexes *SI;
+  LiveVariables *LV;
+  MachineLoopInfo *MLI;
 
   // Remember which edges have been considered for breaking.
   SmallSet<std::pair<MachineBasicBlock *, MachineBasicBlock *>, 8>
@@ -194,9 +200,14 @@ class MachineSinking {
   bool EnableSinkAndFold;
 
 public:
-  MachineSinking(Pass *LegacyPass, MachineFunctionAnalysisManager *MFAM,
-                 bool EnableSinkAndFold)
-      : LegacyPass(LegacyPass), MFAM(MFAM),
+  MachineSinking(bool EnableSinkAndFold, MachineDominatorTree *DT,
+                 MachinePostDominatorTree *PDT, LiveVariables *LV,
+                 MachineLoopInfo *MLI, SlotIndexes *SI, LiveIntervals *LIS,
+                 MachineCycleInfo *CI, ProfileSummaryInfo *PSI,
+                 MachineBlockFrequencyInfo *MBFI,
+                 const MachineBranchProbabilityInfo *MBPI, AliasAnalysis *AA)
+      : DT(DT), PDT(PDT), CI(CI), PSI(PSI), MBFI(MBFI), MBPI(MBPI), AA(AA),
+        LIS(LIS), SI(SI), LV(LV), MLI(MLI),
         EnableSinkAndFold(EnableSinkAndFold) {}
 
   bool run(MachineFunction &MF);
@@ -746,7 +757,23 @@ void MachineSinking::FindCycleSinkCandidates(
 PreservedAnalyses
 MachineSinkingPass::run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM) {
-  MachineSinking Impl(nullptr, &MFAM, EnableSinkAndFold);
+  auto *DT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  auto *PDT = &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
+  auto *CI = &MFAM.getResult<MachineCycleAnalysis>(MF);
+  auto *PSI = MFAM.getCachedResult<ProfileSummaryAnalysis>(MF);
+  auto *MBFI = UseBlockFreqInfo
+                   ? &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF)
+                   : nullptr;
+  auto *MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  auto *AA = &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager()
+                  .getResult<AAManager>(MF.getFunction());
+  auto *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  auto *SI = &MFAM.getResult<SlotIndexesAnalysis>(MF);
+  auto *LV = &MFAM.getResult<LiveVariablesAnalysis>(MF);
+  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
+                      MBFI, MBPI, AA);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -770,7 +797,25 @@ bool MachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
   TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
   bool EnableSinkAndFold = PassConfig->getEnableSinkAndFold();
 
-  MachineSinking Impl(this, nullptr, EnableSinkAndFold);
+  auto *DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto *PDT =
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  auto *CI = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
+  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto *MBFI =
+      UseBlockFreqInfo
+          ? &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI()
+          : nullptr;
+  auto *MBPI =
+      &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto *SI = &getAnalysis<SlotIndexesWrapperPass>().getSI();
+  auto *LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
+  auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+
+  MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
+                      MBFI, MBPI, AA);
   return Impl.run(MF);
 }
 
@@ -786,21 +831,6 @@ bool MachineSinking::run(MachineFunction &MF) {
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   MRI = &MF.getRegInfo();
-  DT = GET_ANALYSIS(MachineDominatorTree, , getDomTree);
-  PDT = GET_ANALYSIS(MachinePostDominatorTree, , getPostDomTree);
-  CI = GET_ANALYSIS(MachineCycle, Info, getCycleInfo);
-  PSI = (LegacyPass)
-            ? &LegacyPass->getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI()
-            : MFAM->getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-                   .getCachedResult<ProfileSummaryAnalysis>(*MF.getFunction().getParent());
-  MBFI = UseBlockFreqInfo ? GET_ANALYSIS(MachineBlockFrequency, Info, getMBFI)
-                          : nullptr;
-  MBPI = GET_ANALYSIS(MachineBranchProbability, Info, getMBPI);
-  AA = (LegacyPass)
-           ? &LegacyPass->getAnalysis<AAResultsWrapperPass>().getAAResults()
-           : &MFAM->getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
-                  .getManager()
-                  .getResult<AAManager>(MF.getFunction());
 
   RegClassInfo.runOnMachineFunction(MF);
 
@@ -820,8 +850,8 @@ bool MachineSinking::run(MachineFunction &MF) {
     MachineDomTreeUpdater MDTU(DT, PDT,
                                MachineDomTreeUpdater::UpdateStrategy::Lazy);
     for (const auto &Pair : ToSplit) {
-      auto NewSucc =
-          Pair.first->SplitCriticalEdge(Pair.second, LegacyPass, MFAM, nullptr, &MDTU);
+      auto NewSucc = Pair.first->SplitCriticalEdge(
+          Pair.second, {LIS, SI, LV, MLI}, nullptr, &MDTU);
       if (NewSucc != nullptr) {
         LLVM_DEBUG(dbgs() << " *** Splitting critical edge: "
                           << printMBBReference(*Pair.first) << " -- "
