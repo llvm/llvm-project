@@ -12,6 +12,7 @@
 #include <cassert>
 #include <cstddef>
 #include <deque>
+#include <iterator>
 #include <limits>
 #include <list>
 #include <string>

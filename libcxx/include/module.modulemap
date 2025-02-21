@@ -543,11 +543,17 @@ module std [system] {
     }
     module ranges_fill_n                          { header "__algorithm/ranges_fill_n.h" }
     module ranges_fill                            { header "__algorithm/ranges_fill.h" }
-    module ranges_find_end                        { header "__algorithm/ranges_find_end.h" }
+    module ranges_find_end {
+      header "__algorithm/ranges_find_end.h"
+      export std.ranges.subrange // return type
+    }
     module ranges_find_first_of                   { header "__algorithm/ranges_find_first_of.h" }
     module ranges_find_if_not                     { header "__algorithm/ranges_find_if_not.h" }
     module ranges_find_if                         { header "__algorithm/ranges_find_if.h" }
-    module ranges_find_last                       { header "__algorithm/ranges_find_last.h" }
+    module ranges_find_last {
+      header "__algorithm/ranges_find_last.h"
+      export std.ranges.subrange // return type
+    }
     module ranges_find                            { header "__algorithm/ranges_find.h" }
     module ranges_fold                            { header "__algorithm/ranges_fold.h" }
     module ranges_for_each_n {
@@ -737,8 +743,14 @@ module std [system] {
     }
     module ranges_rotate                          { header "__algorithm/ranges_rotate.h" }
     module ranges_sample                          { header "__algorithm/ranges_sample.h" }
-    module ranges_search_n                        { header "__algorithm/ranges_search_n.h" }
-    module ranges_search                          { header "__algorithm/ranges_search.h" }
+    module ranges_search_n {
+      header "__algorithm/ranges_search_n.h"
+      export std.ranges.subrange // return type
+    }
+    module ranges_search {
+      header "__algorithm/ranges_search.h"
+      export std.ranges.subrange // return type
+    }
     module ranges_set_difference {
       header "__algorithm/ranges_set_difference.h"
       export std.functional.ranges_operations
