@@ -174,23 +174,19 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
 
 static unsigned calculateLegacyCbufferFieldAlign(const ASTContext &Context,
                                                  QualType T) {
-  // Aggregate types are always aligned to new buffer rows
-  if (T->isAggregateType())
+  // Arrays and Structs are always aligned to new buffer rows
+  if (T->isArrayType() || T->isStructureType())
     return 16;
+
+  // Vectors are aligned to the type they contain
+  if (const VectorType *VT = T->getAs<VectorType>())
+    return calculateLegacyCbufferFieldAlign(Context, VT->getElementType());
 
   assert(Context.getTypeSize(T) <= 64 &&
          "Scalar bit widths larger than 64 not supported");
 
-  // 64 bit types such as double and uint64_t align to 8 bytes
-  if (Context.getTypeSize(T) == 64)
-    return 8;
-
-  // Half types align to 2 bytes only if native half is available
-  if (T->isHalfType() && Context.getLangOpts().NativeHalfType)
-    return 2;
-
-  // Everything else aligns to 4 bytes
-  return 4;
+  // Scalar types are aligned to their byte width
+  return Context.getTypeSize(T) / 8;
 }
 
 // Calculate the size of a legacy cbuffer type in bytes based on
@@ -205,6 +201,14 @@ static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
       QualType Ty = Field->getType();
       unsigned FieldSize = calculateLegacyCbufferSize(Context, Ty);
       unsigned FieldAlign = calculateLegacyCbufferFieldAlign(Context, Ty);
+
+      // If the field crosses the row boundary after alignment it drops to the
+      // next row
+      unsigned AlignSize = llvm::alignTo(Size, FieldAlign);
+      if ((AlignSize % CBufferAlign) + FieldSize > CBufferAlign) {
+        FieldAlign = CBufferAlign;
+      }
+
       Size = llvm::alignTo(Size, FieldAlign);
       Size += FieldSize;
     }
