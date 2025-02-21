@@ -7924,6 +7924,9 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
 
 bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
   CXXDestructorDecl *Dtor = RD->getDestructor();
+  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
+  // so just force vector deleting destructor emission if dllexport is present.
+  // This matches MSVC behavior.
   if (Dtor && Dtor->isVirtual() && Dtor->isDefined() &&
       Dtor->hasAttr<DLLExportAttr>())
     return true;
@@ -7935,6 +7938,14 @@ bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
 void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
   assert(getCXXABI().hasVectorDeletingDtors());
   RequireVectorDeletingDtor.insert(RD);
+
+  // To reduce code size in general case we lazily emit scalar deleting
+  // destructor definition and an alias from vector deleting destructor to
+  // scalar deleting destructor. It may happen that we first emitted the scalar
+  // deleting destructor definition and the alias and then discovered that the
+  // definition of the vector deleting destructor is required. Then we need to
+  // remove the alias and the scalar deleting destructor and queue vector
+  // deleting destructor body for emission. Check if that is the case.
   CXXDestructorDecl *DtorD = RD->getDestructor();
   GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
   StringRef MangledName = getMangledName(ScalarDtorGD);
