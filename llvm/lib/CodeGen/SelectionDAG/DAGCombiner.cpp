@@ -14912,21 +14912,29 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     if (ShAmt == 0 && OldRanges) {
       Type *NewTy = VT.getTypeForEVT(*DAG.getContext());
       const unsigned NumOperands = OldRanges->getNumOperands();
+      unsigned NumRanges = NumOperands / 2;
       const unsigned NewWidth = NewTy->getIntegerBitWidth();
       bool InRange = true;
       SmallVector<Metadata *, 4> Bounds;
       Bounds.reserve(NumOperands);
 
-      for (unsigned i = 0; i < NumOperands; ++i) {
-        const APInt &BoundValue =
-            mdconst::extract<ConstantInt>(OldRanges->getOperand(i))->getValue();
-        if (BoundValue.getBitWidth() - BoundValue.getNumSignBits() >=
-            NewWidth) {
+      for (unsigned i = 0; i < NumRanges; ++i) {
+        const APInt &LowValue =
+            mdconst::extract<ConstantInt>(OldRanges->getOperand(2 * i))
+                ->getValue();
+        const APInt &HighValue =
+            mdconst::extract<ConstantInt>(OldRanges->getOperand(2 * i + 1))
+                ->getValue();
+        ConstantRange CurRange(LowValue, HighValue);
+
+        if (CurRange.getMinSignedBits() > NewWidth) {
           InRange = false;
           break;
         }
         Bounds.push_back(ConstantAsMetadata::get(
-            ConstantInt::get(NewTy, BoundValue.trunc(NewWidth))));
+            ConstantInt::get(NewTy, LowValue.trunc(NewWidth))));
+        Bounds.push_back(ConstantAsMetadata::get(
+            ConstantInt::get(NewTy, HighValue.trunc(NewWidth))));
       }
       if (InRange)
         NewRanges = MDNode::get(*DAG.getContext(), Bounds);
