@@ -608,8 +608,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
       return getElementTypeOrSelf(type);
     }
 
-    Type getValueType() {
-      return getValue().getType();
+    VectorType getValueType() {
+      return llvm::dyn_cast<VectorType>(getValue().getType());
     }
 
     Type getMaskType() {
@@ -668,8 +668,8 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
       return getTensorDesc().getType();
     }
 
-    Type getValueType() {
-      return getValue().getType();
+    VectorType getValueType() {
+      return llvm::dyn_cast<VectorType>(getValue().getType());
     }
 
     Type getMaskType() {
