@@ -904,6 +904,18 @@ llvm.func @rocdl.raw.ptr.buffer(%rsrc : !llvm.ptr<8>,
   llvm.return
 }
 
+llvm.func @rocdl.raw.ptr.buffer.load.lds(%rsrc : !llvm.ptr<8>, %dstLds : !llvm.ptr<3>,
+                        %voffset : i32, %soffset : i32) {
+  %size = llvm.mlir.constant(4 : i32) : i32
+  %offset = llvm.mlir.constant(128 : i32) : i32
+  %aux = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.load.lds
+  // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %{{.*}}, ptr addrspace(3) %{{.*}}, i32 4, i32 %{{.*}}, i32 %{{.*}}, i32 128, i32 1
+  rocdl.raw.ptr.buffer.load.lds %rsrc, %dstLds, %size, %voffset, %soffset, %offset, %aux
+
+  llvm.return
+}
+
 llvm.func @rocdl.raw.ptr.buffer.atomic.f32(%rsrc : !llvm.ptr<8>,
                         %offset : i32, %soffset : i32,
                         %vdata1 : f32) {

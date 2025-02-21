@@ -3548,7 +3548,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::UDIV: {
     auto VT = TLI->getValueType(DL, Ty);
     if (Op2Info.isConstant() && Op2Info.isUniform()) {
-      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
+      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT) &&
+          !VT.isScalableVector()) {
         // Vector signed division by constant are expanded to the
         // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
         // to MULHS + SUB + SRL + ADD + SRL.

@@ -876,7 +876,7 @@ static void stripValuesNotDefiningMask(unsigned Reg, LiveInterval::SubRange &SR,
                                        unsigned ComposeSubRegIdx) {
   // Phys reg should not be tracked at subreg level.
   // Same for noreg (Reg == 0).
-  if (!Register(Reg).isVirtual() || !Reg)
+  if (!Register::isVirtualRegister(Reg) || !Reg)
     return;
   // Remove the values that don't define those lanes.
   SmallVector<VNInfo *, 8> ToBeRemoved;

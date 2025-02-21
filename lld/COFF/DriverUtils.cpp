@@ -147,18 +147,6 @@ void LinkerDriver::parseSubsystem(StringRef arg, WindowsSubsystem *sys,
 
 // Parse a string of the form of "<from>=<to>".
 // Results are directly written to Config.
-void LinkerDriver::parseAlternateName(StringRef s) {
-  auto [from, to] = s.split('=');
-  if (from.empty() || to.empty())
-    Fatal(ctx) << "/alternatename: invalid argument: " << s;
-  auto it = ctx.config.alternateNames.find(from);
-  if (it != ctx.config.alternateNames.end() && it->second != to)
-    Fatal(ctx) << "/alternatename: conflicts: " << s;
-  ctx.config.alternateNames.insert(it, std::make_pair(from, to));
-}
-
-// Parse a string of the form of "<from>=<to>".
-// Results are directly written to Config.
 void LinkerDriver::parseMerge(StringRef s) {
   auto [from, to] = s.split('=');
   if (from.empty() || to.empty())
