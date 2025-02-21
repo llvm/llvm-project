@@ -828,7 +828,7 @@ protected:
 
 public:
   InterchangeableInstruction(Instruction *MainOp) : MainOp(MainOp) {}
-  virtual bool isSame(Instruction *I) {
+  virtual bool isSame(Instruction *I) const {
     return MainOp->getOpcode() == I->getOpcode();
   }
   virtual unsigned getOpcode() const { return MainOp->getOpcode(); }
@@ -857,13 +857,13 @@ class InterchangeableBinOp final : public InterchangeableInstruction {
     Xor_BIT = 0b10000000,
   };
   // The bit it sets represents whether MainOp can be converted to.
-  MaskType Mask = Xor_BIT | Or_BIT | And_BIT | Sub_BIT | Add_BIT | Mul_BIT |
-                  AShr_BIT | SHL_BIT;
+  mutable MaskType Mask = Xor_BIT | Or_BIT | And_BIT | Sub_BIT | Add_BIT |
+                          Mul_BIT | AShr_BIT | SHL_BIT;
   // We cannot create an interchangeable instruction that does not exist in VL.
   // For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0], but
   // 'shl' does not exist in VL. In the end, we convert VL to [x * 1, y * 1].
   // SeenBefore is used to know what operations have been seen before.
-  MaskType SeenBefore = 0;
+  mutable MaskType SeenBefore = 0;
 
   /// Return a non-nullptr if either operand of I is a ConstantInt.
   static std::pair<ConstantInt *, unsigned>
@@ -910,7 +910,7 @@ class InterchangeableBinOp final : public InterchangeableInstruction {
     llvm_unreachable("Unsupported opcode.");
   }
 
-  bool tryAnd(MaskType X) {
+  bool tryAnd(MaskType X) const {
     if (Mask & X) {
       Mask &= X;
       return true;
@@ -920,7 +920,7 @@ class InterchangeableBinOp final : public InterchangeableInstruction {
 
 public:
   using InterchangeableInstruction::InterchangeableInstruction;
-  bool isSame(Instruction *I) override {
+  bool isSame(Instruction *I) const override {
     unsigned Opcode = I->getOpcode();
     if (!binary_search(SupportedOp, Opcode))
       return false;
