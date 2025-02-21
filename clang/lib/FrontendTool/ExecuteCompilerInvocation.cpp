@@ -80,7 +80,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #else
     llvm_unreachable("CIR suppport not built into clang");
 #endif
-  case EmitCoreMLIR:
+  case EmitMLIR:
 #if CLANG_ENABLE_CIR
     return std::make_unique<cir::EmitMLIRAction>();
 #else

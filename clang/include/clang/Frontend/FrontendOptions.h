@@ -69,7 +69,7 @@ enum ActionKind {
   EmitCIR,
 
   /// Emit a .mlir file
-  EmitCoreMLIR,
+  EmitMLIR,
 
   /// Emit a .ll file.
   EmitLLVM,
@@ -150,6 +150,8 @@ enum ActionKind {
   /// Print the output of the dependency directives source minimizer.
   PrintDependencyDirectivesSourceMinimizerOutput
 };
+
+enum MLIRDialectKind { MLIR_CIR, MLIR_Core };
 
 } // namespace frontend
 
@@ -419,6 +421,8 @@ public:
 
   /// Specifies the output format of the AST.
   ASTDumpOutputFormat ASTDumpFormat = ADOF_Default;
+
+  frontend::MLIRDialectKind MLIRTargetDialect = frontend::MLIR_CIR;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.

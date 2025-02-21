@@ -1,5 +1,5 @@
 // Global variables of intergal types
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o -  | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-mlir=cir %s -o -  | FileCheck %s
 
 char c;
 // CHECK: cir.global @c : !cir.int<s, 8>
