@@ -287,6 +287,8 @@ bool shouldRecordCommandLine(const ToolChain &TC,
 void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
                                         llvm::opt::ArgStringList &CmdArgs);
 
+bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
+                                    bool isSlpVec);
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang
