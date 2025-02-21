@@ -557,10 +557,12 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
               RetTy =
                   TypedPointerType::get(ElemTy, PtrRetTy->getAddressSpace());
         }
-        setRegClassType(ResVReg, RetTy, GR, MIRBuilder);
+        setRegClassType(ResVReg, RetTy, GR, MIRBuilder,
+                        SPIRV::AccessQualifier::ReadWrite, true);
       }
     } else {
-      ResVReg = createVirtualRegister(OrigRetTy, GR, MIRBuilder);
+      ResVReg = createVirtualRegister(OrigRetTy, GR, MIRBuilder,
+                                      SPIRV::AccessQualifier::ReadWrite, true);
     }
     SmallVector<Register, 8> ArgVRegs;
     for (auto Arg : Info.OrigArgs) {

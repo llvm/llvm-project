@@ -411,7 +411,9 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
-                     MachineIRBuilder &MIRBuilder, bool Force = false);
+                     MachineIRBuilder &MIRBuilder,
+                     SPIRV::AccessQualifier::AccessQualifier AccessQual,
+                     bool EmitIR, bool Force = false);
 void setRegClassType(Register Reg, const MachineInstr *SpvType,
                      SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
                      const MachineFunction &MF, bool Force = false);
@@ -422,8 +424,9 @@ Register createVirtualRegister(const MachineInstr *SpvType,
 Register createVirtualRegister(const MachineInstr *SpvType,
                                SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder);
-Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
-                               MachineIRBuilder &MIRBuilder);
+Register createVirtualRegister(
+    const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR);
 
 // Return true if there is an opaque pointer type nested in the argument.
 bool isNestedPointer(const Type *Ty);
