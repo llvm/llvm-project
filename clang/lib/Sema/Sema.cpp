@@ -1621,7 +1621,8 @@ void Sema::ActOnEndOfTranslationUnit() {
   }
 
   if (LangOpts.HLSL)
-    HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());
+    HLSL().DiagnoseAvailabilityViolations(
+        getASTContext().getTranslationUnitDecl());
 
   // If there were errors, disable 'unused' warnings since they will mostly be
   // noise. Don't warn for a use from a module: either we should warn on all
