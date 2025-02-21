@@ -74,6 +74,10 @@ public:
   /// returns the list of supported intrinsic identifiers.
   virtual ArrayRef<unsigned> getSupportedIntrinsics() const { return {}; }
 
+  /// Returns the list of LLVM IR intrinsic identifiers that are unsupported
+  /// but dialects might have a generic way to represent them.
+  virtual ArrayRef<unsigned> getUnregisteredIntrinsics() const { return {}; }
+
   /// Hook for derived dialect interfaces to publish the supported instructions.
   /// As every LLVM IR instruction has a unique integer identifier, the function
   /// returns the list of supported instruction identifiers. These identifiers
@@ -139,6 +143,9 @@ public:
       // Add a mapping for all supported intrinsic identifiers.
       for (unsigned id : iface.getSupportedIntrinsics())
         intrinsicToDialect[id] = iface.getDialect();
+      // Add a mapping for all unregistered intrinsic identifiers.
+      for (unsigned id : iface.getUnregisteredIntrinsics())
+        unregisteredIntrinscToDialect[id] = iface.getDialect();
       // Add a mapping for all supported instruction identifiers.
       for (unsigned id : iface.getSupportedInstructions())
         instructionToDialect[id] = &iface;
@@ -155,7 +162,19 @@ public:
   LogicalResult convertIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
                                  LLVM::ModuleImport &moduleImport) const {
     // Lookup the dialect interface for the given intrinsic.
-    Dialect *dialect = intrinsicToDialect.lookup(inst->getIntrinsicID());
+    llvm::Intrinsic::ID intrinId = inst->getIntrinsicID();
+    if (intrinId == llvm::Intrinsic::not_intrinsic)
+      return failure();
+
+    // First lookup intrinsic across different dialects for known
+    // supported converstions, examples include arm-neon, nvm-sve, etc
+    Dialect *dialect = intrinsicToDialect.lookup(intrinId);
+
+    // No specialized (supported) intrinsics, attempt to generate a generic
+    // version via llvm.call_intrinsic (if available).
+    if (!dialect)
+      dialect = unregisteredIntrinscToDialect.lookup(intrinId);
+
     if (!dialect)
       return failure();
 
@@ -227,6 +246,9 @@ private:
   DenseMap<unsigned, Dialect *> intrinsicToDialect;
   DenseMap<unsigned, const LLVMImportDialectInterface *> instructionToDialect;
   DenseMap<unsigned, SmallVector<Dialect *, 1>> metadataToDialect;
+
+  /// Unregistered generic and target independent intrinsics.
+  DenseMap<unsigned, Dialect *> unregisteredIntrinscToDialect;
 };
 
 } // namespace mlir
