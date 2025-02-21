@@ -1,8 +1,6 @@
 ; RUN: not llvm-as -disable-output 2>&1 %s | FileCheck %s
 
-; Function Attrs: convergent nocallback nofree nounwind willreturn
-declare void @llvm.amdgcn.init.exec.from.input(i32, i32 immarg) #0
-attributes #0 = { convergent nocallback nofree nounwind willreturn }
+declare void @llvm.amdgcn.init.exec.from.input(i32, i32 immarg)
 
 ; CHECK: only inreg arguments to the parent function are valid as inputs to this intrinsic
 ; CHECK-NEXT: call void @llvm.amdgcn.init.exec.from.input(i32 0, i32 0)
