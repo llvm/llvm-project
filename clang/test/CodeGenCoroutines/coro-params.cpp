@@ -3,6 +3,7 @@
 // Vefifies that parameter copies are used in the body of the coroutine
 // Verifies that parameter copies are used to construct the promise type, if that type has a matching constructor
 // RUN: %clang_cc1 -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes -fexceptions | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple=x86_64-pc-win32          -emit-llvm -o - %s -disable-llvm-passes -fexceptions | FileCheck %s --check-prefix=MSABI
 
 namespace std {
 template <typename... T> struct coroutine_traits;
@@ -208,4 +209,38 @@ struct some_class {
 method some_class::good_coroutine_calls_custom_constructor(float) {
   // CHECK: invoke void @_ZNSt16coroutine_traitsIJ6methodR10some_classfEE12promise_typeC1ES2_f(ptr {{[^,]*}} %__promise, ptr noundef nonnull align 1 dereferenceable(1) %{{.+}}, float
   co_return;
+}
+
+
+struct MSParm {
+  int val;
+  ~MSParm();
+};
+
+void consume(int) noexcept;
+
+// Similarly to the [[clang::trivial_abi]] parameters, with the MSVC ABI
+// parameters are also destroyed by the callee, and on x86-64 such parameters
+// may get passed in registers. In that case it's again important that the
+// parameter's local alloca does not become part of the coro frame since that
+// may be destroyed before the destructor call.
+void msabi(MSParm p) {
+  // MSABI: define{{.*}} void @"?msabi@@YAXUMSParm@@@Z"(i32 %[[Param:.+]])
+  // MSABI: %[[ParamAlloca:.+]] = alloca %struct.MSParm
+  // MSABI: %[[ParamCopy:.+]] = alloca %struct.MSParm
+
+  // The parameter's local alloca is marked not part of the frame.
+  // MSABI: call void @llvm.coro.outside.frame(ptr %[[ParamAlloca]])
+
+  consume(p.val);
+  // The parameter's copy is used by the coroutine.
+  // MSABI: %[[ValPtr:.+]] = getelementptr inbounds nuw %struct.MSParm, ptr %[[ParamCopy]], i32 0, i32 0
+  // MSABI: %[[Val:.+]] = load i32, ptr %[[ValPtr]]
+  // MSABI: call void @"?consume@@YAXH@Z"(i32{{.*}} %[[Val]])
+
+  co_return;
+
+  // The local alloca is used for the destructor call at the end of the ramp.
+  // MSABI: call i1 @llvm.coro.end
+  // MSABI: call void @"??1MSParm@@QEAA@XZ"(ptr{{.*}} %[[ParamAlloca]])
 }
