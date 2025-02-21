@@ -135,10 +135,12 @@ public:
     for (Use &U : make_early_inc_range(Intrin->uses()))
       if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser()))
         EVI->setOperand(0, DXILOp);
+      else if (auto *IVI = dyn_cast<InsertValueInst>(U.getUser()))
+        IVI->setOperand(0, DXILOp);
       else
-        return make_error<StringError>(
-            "DXIL ops that return structs may only be used by extractvalue",
-            inconvertibleErrorCode());
+        return make_error<StringError>("DXIL ops that return structs may only "
+                                       "be used by insert- and extractvalue",
+                                       inconvertibleErrorCode());
     return Error::success();
   }
 
