@@ -69,7 +69,7 @@ bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(
     Intrinsic::ID Id, const CallBase &CI, InstructionCost ScalarizationCost,
-    bool TypeBasedOnly, TargetLibraryInfo const *LibInfo)
+    bool TypeBasedOnly, const TargetLibraryInfo *LibInfo)
     : II(dyn_cast<IntrinsicInst>(&CI)), RetTy(CI.getType()), IID(Id),
       ScalarizationCost(ScalarizationCost), LibInfo(LibInfo) {
 

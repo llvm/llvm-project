@@ -2078,7 +2078,7 @@ public:
         for (Type *VectorTy : getContainedTypes(RetTy)) {
           ScalarizationCost += getScalarizationOverhead(
               cast<VectorType>(VectorTy),
-              /*Insert*/ true, /*Extract*/ false, CostKind);
+              /*Insert=*/true, /*Extract=*/false, CostKind);
         }
       }
       ScalarizationCost +=
@@ -2774,8 +2774,8 @@ public:
         ScalarizationCost = 0;
         for (Type *RetVTy : RetVTys) {
           ScalarizationCost += getScalarizationOverhead(
-              cast<VectorType>(RetVTy), /*Insert*/ true,
-              /*Extract*/ false, CostKind);
+              cast<VectorType>(RetVTy), /*Insert=*/true,
+              /*Extract=*/false, CostKind);
         }
       }
 
