@@ -46,7 +46,7 @@ void thread::join() {
   }
 
   if (ec)
-    __throw_system_error(ec, "thread::join failed");
+    std::__throw_system_error(ec, "thread::join failed");
 }
 
 void thread::detach() {
@@ -58,7 +58,7 @@ void thread::detach() {
   }
 
   if (ec)
-    __throw_system_error(ec, "thread::detach failed");
+    std::__throw_system_error(ec, "thread::detach failed");
 }
 
 unsigned thread::hardware_concurrency() noexcept {

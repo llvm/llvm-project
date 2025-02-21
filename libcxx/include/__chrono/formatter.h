@@ -315,7 +315,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
       case _CharT('T'):
         __facet.put(
             {__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
-        if constexpr (__use_fraction<_Tp>())
+        if constexpr (__formatter::__use_fraction<_Tp>())
           __formatter::__format_sub_seconds(__sstr, __value);
         break;
 
@@ -378,7 +378,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         break;
 
       case _CharT('O'):
-        if constexpr (__use_fraction<_Tp>()) {
+        if constexpr (__formatter::__use_fraction<_Tp>()) {
           // Handle OS using the normal representation for the non-fractional
           // part. There seems to be no locale information regarding how the
           // fractional part should be formatted.
