@@ -286,6 +286,40 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
   }
 };
 
+struct IsNaNOpLowering : public ConvertOpToLLVMPattern<math::IsNaNOp> {
+  using ConvertOpToLLVMPattern<math::IsNaNOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(math::IsNaNOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto operandType = adaptor.getOperand().getType();
+
+    if (!operandType || !LLVM::isCompatibleType(operandType))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(op, op.getType(),
+                                                 adaptor.getOperand(), 3);
+    return success();
+  }
+};
+
+struct IsFiniteOpLowering : public ConvertOpToLLVMPattern<math::IsFiniteOp> {
+  using ConvertOpToLLVMPattern<math::IsFiniteOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(math::IsFiniteOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto operandType = adaptor.getOperand().getType();
+
+    if (!operandType || !LLVM::isCompatibleType(operandType))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(op, op.getType(),
+                                                 adaptor.getOperand(), 504);
+    return success();
+  }
+};
+
 struct ConvertMathToLLVMPass
     : public impl::ConvertMathToLLVMPassBase<ConvertMathToLLVMPass> {
   using Base::Base;
@@ -307,6 +341,8 @@ void mlir::populateMathToLLVMConversionPatterns(
     bool approximateLog1p, PatternBenefit benefit) {
   if (approximateLog1p)
     patterns.add<Log1pOpLowering>(converter, benefit);
+  patterns.add<IsNaNOpLowering, IsFiniteOpLowering>(converter);
+
   // clang-format off
   patterns.add<
     AbsFOpLowering,
