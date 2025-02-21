@@ -2507,9 +2507,11 @@ void SelectionDAGISel::Select_FAKE_USE(SDNode *N) {
   CurDAG->SelectNodeTo(N, TargetOpcode::FAKE_USE, N->getValueType(0),
                        N->getOperand(1), N->getOperand(0));
 }
+
 void SelectionDAGISel::Select_CHAIN_BARRIER(SDNode *N) {
-  CurDAG->SelectNodeTo(N, TargetOpcode::CHAIN_BARRIER, N->getValueType(0),
-                       N->getOperand(0));
+  // CHAIN_BARRIER exists only for SDAG. Remove it before lowering to MIs.
+  CurDAG->ReplaceAllUsesWith(SDValue(N, 0), N->getOperand(0));
+  CurDAG->RemoveDeadNode(N);
 }
 
 void SelectionDAGISel::Select_FREEZE(SDNode *N) {
