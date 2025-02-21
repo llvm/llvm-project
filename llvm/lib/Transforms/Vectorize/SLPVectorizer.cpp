@@ -824,16 +824,17 @@ namespace {
 /// - Get the operands for the interchangeable form (getOperand)
 class InterchangeableInstruction {
 protected:
-  Instruction *const MainOp;
+  Instruction *const MainOp = nullptr;
 
 public:
   InterchangeableInstruction(Instruction *MainOp) : MainOp(MainOp) {}
   virtual bool isSame(Instruction *I) {
     return MainOp->getOpcode() == I->getOpcode();
   }
-  virtual unsigned getOpcode() { return MainOp->getOpcode(); }
-  virtual SmallVector<Value *> getOperand(Instruction *I) {
-    assert(MainOp->getOpcode() == I->getOpcode());
+  virtual unsigned getOpcode() const { return MainOp->getOpcode(); }
+  virtual SmallVector<Value *> getOperand(Instruction *I) const {
+    assert(MainOp->getOpcode() == I->getOpcode() &&
+           "Cannot convert the instruction.");
     return SmallVector<Value *>(MainOp->operands());
   }
   virtual ~InterchangeableInstruction() = default;
@@ -841,6 +842,7 @@ public:
 
 class InterchangeableBinOp final : public InterchangeableInstruction {
   using MaskType = std::uint_fast8_t;
+  // Sort SupportedOp because it is used by binary_search.
   constexpr static std::initializer_list<unsigned> SupportedOp = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
       Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
@@ -934,7 +936,7 @@ public:
     }
     return tryAnd(opcodeToMask(Opcode));
   }
-  unsigned getOpcode() override {
+  unsigned getOpcode() const override {
     MaskType Candidate = Mask & SeenBefore;
     if (Candidate & 0b1)
       return Instruction::Shl;
@@ -954,7 +956,7 @@ public:
       return Instruction::Xor;
     llvm_unreachable("Cannot find interchangeable instruction.");
   }
-  SmallVector<Value *> getOperand(Instruction *I) override {
+  SmallVector<Value *> getOperand(Instruction *I) const override {
     unsigned ToOpcode = I->getOpcode();
     assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
     unsigned FromOpcode = MainOp->getOpcode();
@@ -997,8 +999,9 @@ public:
       ToCIValue = APInt::getZero(FromCIValueBitWidth);
       break;
     }
-    auto LHS = MainOp->getOperand(1 - Pos);
-    auto RHS = ConstantInt::get(MainOp->getOperand(Pos)->getType(), ToCIValue);
+    Value *LHS = MainOp->getOperand(1 - Pos);
+    Constant *RHS =
+        ConstantInt::get(MainOp->getOperand(Pos)->getType(), ToCIValue);
     if (Pos == 1)
       return SmallVector<Value *>({LHS, RHS});
     return SmallVector<Value *>({RHS, LHS});
@@ -1363,7 +1366,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
             for (Value *V : VL) {
               if (isa<PoisonValue>(V))
                 continue;
-              Instruction *Inst = cast<Instruction>(V);
+              auto *Inst = cast<Instruction>(V);
               if (Inst->getOpcode() == InterchangeableInstructionOpcode)
                 return Inst;
             }
