@@ -1220,8 +1220,7 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
 bool RegAllocFastImpl::setPhysReg(MachineInstr &MI, MachineOperand &MO,
                                   const LiveReg &Assignment) {
   MCPhysReg PhysReg = Assignment.PhysReg;
-
-  assert(PhysReg);
+  assert(PhysReg && "assignments should always be to a valid physreg");
 
   if (LLVM_UNLIKELY(Assignment.Error)) {
     if (MO.isUse())
@@ -1234,13 +1233,9 @@ bool RegAllocFastImpl::setPhysReg(MachineInstr &MI, MachineOperand &MO,
     return false;
   }
 
-  assert(PhysReg);
-
   // Handle subregister index.
-  MO.setReg(PhysReg ? TRI->getSubReg(PhysReg, MO.getSubReg()) : MCRegister());
-
-  if (PhysReg)
-    MO.setIsRenamable(!Assignment.Error);
+  MO.setReg(TRI->getSubReg(PhysReg, MO.getSubReg()));
+  MO.setIsRenamable(!Assignment.Error);
 
   // Note: We leave the subreg number around a little longer in case of defs.
   // This is so that the register freeing logic in allocateInstruction can still
