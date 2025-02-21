@@ -210,9 +210,9 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   bool HasFrameRecordArea = hasFP(MF) && ARM::hGPRRegClass.contains(FramePtr);
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     int FI = I.getFrameIdx();
-    if (Reg == FramePtr)
+    if (Reg == FramePtr.asMCReg())
       FramePtrSpillFI = FI;
     switch (Reg) {
     case ARM::R11:
@@ -371,7 +371,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
           .setMIFlags(MachineInstr::FrameSetup);
     }
     for (const CalleeSavedInfo &I : CSI) {
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
       int FI = I.getFrameIdx();
       switch (Reg) {
       case ARM::R8:
@@ -403,7 +403,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   if (GPRCS2Size > 0) {
     MachineBasicBlock::iterator Pos = std::next(GPRCS2Push);
     for (auto &I : CSI) {
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
       int FI = I.getFrameIdx();
       switch (Reg) {
       case ARM::R8:
@@ -432,8 +432,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     // at this point in the prologue, so pick one.
     unsigned ScratchRegister = ARM::NoRegister;
     for (auto &I : CSI) {
-      Register Reg = I.getReg();
-      if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr)) {
+      MCRegister Reg = I.getReg();
+      if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr.asMCReg())) {
         ScratchRegister = Reg;
         break;
       }
@@ -552,8 +552,8 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
     unsigned ScratchRegister = ARM::NoRegister;
     bool HasFP = hasFP(MF);
     for (auto &I : MFI.getCalleeSavedInfo()) {
-      Register Reg = I.getReg();
-      if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr)) {
+      MCRegister Reg = I.getReg();
+      if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr.asMCReg())) {
         ScratchRegister = Reg;
         break;
       }
@@ -1118,8 +1118,8 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
   std::set<Register> FrameRecord;
   std::set<Register> SpilledGPRs;
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
-    if (NeedsFrameRecordPush && (Reg == FPReg || Reg == ARM::LR))
+    MCRegister Reg = I.getReg();
+    if (NeedsFrameRecordPush && (Reg == FPReg.asMCReg() || Reg == ARM::LR))
       FrameRecord.insert(Reg);
     else
       SpilledGPRs.insert(Reg);
@@ -1206,8 +1206,8 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
   std::set<Register> FrameRecord;
   std::set<Register> SpilledGPRs;
   for (CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
-    if (NeedsFrameRecordPop && (Reg == FPReg || Reg == ARM::LR))
+    MCRegister Reg = I.getReg();
+    if (NeedsFrameRecordPop && (Reg == FPReg.asMCReg() || Reg == ARM::LR))
       FrameRecord.insert(Reg);
     else
       SpilledGPRs.insert(Reg);
