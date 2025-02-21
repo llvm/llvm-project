@@ -873,17 +873,6 @@ void Function::copyAttributesFrom(const Function *Src) {
     setPrologueData(Src->getPrologueData());
 }
 
-bool Function::isReturnNonNull() const {
-  if (hasRetAttribute(Attribute::NonNull))
-    return true;
-
-  if (AttributeSets.getRetDereferenceableBytes() > 0 &&
-      !NullPointerIsDefined(this, getReturnType()->getPointerAddressSpace()))
-    return true;
-
-  return false;
-}
-
 MemoryEffects Function::getMemoryEffects() const {
   return getAttributes().getMemoryEffects();
 }

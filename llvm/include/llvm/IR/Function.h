@@ -731,11 +731,6 @@ public:
   /// create a Function) from the Function Src to this one.
   void copyAttributesFrom(const Function *Src);
 
-  /// Return true if the return value is known to be not null.
-  /// This may be because it has the nonnull attribute, or because at least
-  /// one byte is dereferenceable and the pointer is in addrspace(0).
-  bool isReturnNonNull() const;
-
   /// deleteBody - This method deletes the body of the function, and converts
   /// the linkage to external.
   ///
