@@ -4,20 +4,19 @@
 define float @test(ptr %call78) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> <ptr null, ptr poison>, ptr [[CALL78:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> <ptr poison, ptr null>, ptr [[CALL78:%.*]], i32 0
 ; CHECK-NEXT:    br label [[FOR_BODY194:%.*]]
 ; CHECK:       for.body194:
 ; CHECK-NEXT:    [[INDVARS_IV132:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[FOR_BODY194]] ]
 ; CHECK-NEXT:    [[CURRENTW_031:%.*]] = phi ptr [ [[CALL78]], [[ENTRY]] ], [ [[PREVIOUSW_030:%.*]], [[FOR_BODY194]] ]
 ; CHECK-NEXT:    [[PREVIOUSW_030]] = phi ptr [ null, [[ENTRY]] ], [ [[CURRENTW_031]], [[FOR_BODY194]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x ptr> [ [[TMP0]], [[ENTRY]] ], [ [[TMP3:%.*]], [[FOR_BODY194]] ]
+; CHECK-NEXT:    [[TMP3]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[CURRENTW_031]], align 4
 ; CHECK-NEXT:    tail call void null(ptr [[PREVIOUSW_030]], ptr null, ptr null, i32 0, i32 0, ptr null, ptr null, i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> poison, ptr [[CURRENTW_031]], i32 0
-; CHECK-NEXT:    [[TMP3]] = insertelement <2 x ptr> [[TMP2]], ptr [[PREVIOUSW_030]], i32 1
 ; CHECK-NEXT:    br i1 false, label [[FOR_END286_LOOPEXIT:%.*]], label [[FOR_BODY194]]
 ; CHECK:       for.end286.loopexit:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x ptr> [ [[TMP1]], [[FOR_BODY194]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x ptr> [ [[TMP3]], [[FOR_BODY194]] ]
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
 entry:
