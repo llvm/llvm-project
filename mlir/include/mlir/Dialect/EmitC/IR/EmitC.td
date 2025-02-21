@@ -802,14 +802,12 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
     Example:
 
     ```mlir
-    %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-    %one = literal "1" : i32
-    "emitc.assign"(%x, %one) : (!emitc.lvalue<i32>, i32) -> ()
+    %p0 = emitc.literal "M_PI" : f32
+    %1 = "emitc.add" (%arg0, %p0) : (f32, f32) -> f32
     ```
     ```c++
     // Code emitted for the operation above.
-    int32_t v1;
-    v1 = 1;
+    float v2 = v1 + M_PI;
     ```
   }];
 
