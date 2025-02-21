@@ -2993,6 +2993,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CTTZ_ELTS)
     MAKE_CASE(AArch64ISD::CALL_ARM64EC_TO_X64)
     MAKE_CASE(AArch64ISD::URSHR_I_PRED)
+    MAKE_CASE(AArch64ISD::CB)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -10601,6 +10602,17 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
       std::tie(LHS, SignBitPos) = lookThroughSignExtension(LHS);
       return DAG.getNode(AArch64ISD::TBZ, dl, MVT::Other, Chain, LHS,
                          DAG.getConstant(SignBitPos, dl, MVT::i64), Dest);
+    }
+
+    // Try to emit Armv9.6 CB instructions. We prefer tb{n}z/cb{n}z due to their
+    // larger branch displacement but do prefer CB over cmp + br.
+    if (Subtarget->hasCMPBR() &&
+        AArch64CC::isValidCBCond(changeIntCCToAArch64CC(CC)) &&
+        ProduceNonFlagSettingCondBr) {
+      SDValue Cond =
+          DAG.getTargetConstant(changeIntCCToAArch64CC(CC), dl, MVT::i32);
+      return DAG.getNode(AArch64ISD::CB, dl, MVT::Other, Chain, Cond, LHS, RHS,
+                         Dest);
     }
 
     SDValue CCVal;

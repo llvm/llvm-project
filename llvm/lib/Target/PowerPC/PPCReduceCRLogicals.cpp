@@ -537,7 +537,7 @@ MachineInstr *PPCReduceCRLogicals::lookThroughCRCopy(unsigned Reg,
                                                      unsigned &Subreg,
                                                      MachineInstr *&CpDef) {
   Subreg = -1;
-  if (!Register::isVirtualRegister(Reg))
+  if (!Register(Reg).isVirtual())
     return nullptr;
   MachineInstr *Copy = MRI->getVRegDef(Reg);
   CpDef = Copy;

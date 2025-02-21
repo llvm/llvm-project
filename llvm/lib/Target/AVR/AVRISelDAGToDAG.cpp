@@ -253,15 +253,15 @@ bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(
     SDValue ImmOp = Op->getOperand(1);
     ConstantSDNode *ImmNode = dyn_cast<ConstantSDNode>(ImmOp);
 
-    unsigned Reg;
+    Register Reg;
     bool CanHandleRegImmOpt = ImmNode && ImmNode->getAPIntValue().ult(64);
 
     if (CopyFromRegOp->getOpcode() == ISD::CopyFromReg) {
       RegisterSDNode *RegNode =
           cast<RegisterSDNode>(CopyFromRegOp->getOperand(1));
       Reg = RegNode->getReg();
-      CanHandleRegImmOpt &= (Register::isVirtualRegister(Reg) ||
-                             AVR::PTRDISPREGSRegClass.contains(Reg));
+      CanHandleRegImmOpt &=
+          (Reg.isVirtual() || AVR::PTRDISPREGSRegClass.contains(Reg));
     } else {
       CanHandleRegImmOpt = false;
     }

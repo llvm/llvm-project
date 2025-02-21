@@ -155,6 +155,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds atomic min and max instruction on floating-point numbers.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
+   * - ``SPV_INTEL_bindless_images``
+     - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
