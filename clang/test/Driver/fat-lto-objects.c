@@ -41,7 +41,6 @@
 // CHECK-CC-NOLTO-SAME: -emit-obj
 // CHECK-CC-NOLTO-NOT: -ffat-lto-objects
 
-/// Disable fat LTO when it is overridden by -fno-fat-lto-objects
 // RUN: %clang --target=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -fno-fat-lto-objects -### %s -c 2>&1 | FileCheck %s -check-prefix=CHECK-CC-NOLTO
 
 /// We need to pass an additional flag (--fat-lto-objects) to lld when linking w/ -flto -ffat-lto-objects
