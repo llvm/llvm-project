@@ -12,8 +12,7 @@
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
-namespace lldb_private {
-namespace platform_aix {
+namespace lldb_private::platform_aix {
 
 class PlatformAIX : public PlatformPOSIX {
 public:
@@ -46,10 +45,6 @@ public:
   std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
-  uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) override;
-
-  bool CanDebugProcess() override;
-
   void CalculateTrapHandlerSymbolNames() override;
 
   lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
@@ -68,7 +63,6 @@ private:
   std::unique_ptr<TypeSystemClang> m_type_system_up;
 };
 
-} // namespace platform_AIX
-} // namespace lldb_private
+} // namespace lldb_private::platform_aix
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_AIX_PLATFORMAIX_H
