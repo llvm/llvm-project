@@ -232,7 +232,10 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 #endif   // _LIBCPP_BUILDING_LIBRARY
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __snprintf(
+#ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
+_LIBCPP_HIDE_FROM_ABI
+#endif
+inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __snprintf(
     char* __s, size_t __n, __locale_t __loc, const char* __format, ...) {
   va_list __va;
   va_start(__va, __format);
@@ -242,8 +245,11 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __sn
   return __res;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(char** __s, __locale_t __loc, const char* __format, ...) {
+#ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
+_LIBCPP_HIDE_FROM_ABI
+#endif
+inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
+    char** __s, __locale_t __loc, const char* __format, ...) {
   va_list __va;
   va_start(__va, __format);
   __locale_guard __current(__loc);
@@ -252,8 +258,11 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(char** __s, __locale_t
   return __res;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(const char* __s, __locale_t __loc, const char* __format, ...) {
+#ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
+_LIBCPP_HIDE_FROM_ABI
+#endif
+inline _LIBCPP_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
+    const char* __s, __locale_t __loc, const char* __format, ...) {
   va_list __va;
   va_start(__va, __format);
   __locale_guard __current(__loc);
