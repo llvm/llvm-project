@@ -237,7 +237,7 @@ void CIRGenFunction::emitAnyExprToExn(const Expr *e, Address addr) {
   // __cxa_allocate_exception returns a void*;  we need to cast this
   // to the appropriate type for the object.
   auto ty = convertTypeForMem(e->getType());
-  Address typedAddr = addr.withElementType(ty);
+  Address typedAddr = addr.withElementType(builder, ty);
 
   // From LLVM's codegen:
   // FIXME: this isn't quite right!  If there's a final unelided call

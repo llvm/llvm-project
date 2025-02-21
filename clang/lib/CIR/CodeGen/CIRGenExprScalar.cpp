@@ -1606,8 +1606,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     mlir::Value DestPtr = CGF.getBuilder().createBitcast(
         CGF.getLoc(E->getExprLoc()), SourceAddr.getPointer(), DestPtrTy);
 
-    Address DestAddr =
-        SourceAddr.withPointer(DestPtr).withElementType(DestElemTy);
+    Address DestAddr = Address(DestPtr, DestElemTy, SourceAddr.getAlignment(),
+                               SourceAddr.isKnownNonNull());
     LValue DestLVal = CGF.makeAddrLValue(DestAddr, DestTy);
     DestLVal.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
     return emitLoadOfLValue(DestLVal, CE->getExprLoc());

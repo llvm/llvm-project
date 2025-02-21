@@ -408,8 +408,7 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
   builder.setInsertionPointToStart(block);
   auto getGlobal = builder.createGetGlobal(addr);
 
-  Address declAddr(getGlobal, getGlobal.getType(),
-                   getASTContext().getDeclAlign(varDecl));
+  Address declAddr(getGlobal, getASTContext().getDeclAlign(varDecl));
   assert(performInit && "cannot have constant initializer which needs "
                         "destruction for reference");
   RValue rv = cgf.emitReferenceBindingToExpr(init);

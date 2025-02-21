@@ -134,3 +134,15 @@ uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
 
   return offset;
 }
+
+// This can't be defined in Address.h because that file is included by
+// CIRGenBuilder.h
+Address Address::withElementType(CIRGenBuilderTy &builder,
+                                 mlir::Type ElemTy) const {
+  if (!hasOffset())
+    return Address(builder.createPtrBitcast(getBasePointer(), ElemTy), ElemTy,
+                   getAlignment(), getPointerAuthInfo(), /*Offset=*/nullptr,
+                   isKnownNonNull());
+  return Address(builder.createPtrBitcast(getPointer(), ElemTy), ElemTy,
+                 getAlignment(), isKnownNonNull());
+}

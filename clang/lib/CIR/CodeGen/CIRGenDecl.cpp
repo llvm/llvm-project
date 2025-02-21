@@ -244,11 +244,8 @@ static void emitStoresForConstant(CIRGenModule &CGM, const VarDecl &D,
   // FIXME(cir): This is closer to memcpy behavior but less optimal, instead of
   // copy from a global, we just create a cir.const out of it.
 
-  if (addr.getElementType() != Ty) {
-    auto ptr = addr.getPointer();
-    ptr = builder.createBitcast(ptr.getLoc(), ptr, builder.getPointerTo(Ty));
-    addr = addr.withPointer(ptr, addr.isKnownNonNull());
-  }
+  if (addr.getElementType() != Ty)
+    addr = addr.withElementType(builder, Ty);
 
   auto loc = CGM.getLoc(D.getSourceRange());
   builder.createStore(loc, builder.getConstant(loc, constant), addr);
@@ -1108,7 +1105,7 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin, mlir::Value end,
   builder.create<cir::ArrayDtor>(
       *currSrcLoc, begin, [&](mlir::OpBuilder &b, mlir::Location loc) {
         auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
-        Address curAddr = Address(arg, ptrToElmType, elementAlign);
+        Address curAddr = Address(arg, cirElementType, elementAlign);
         if (useEHCleanup) {
           pushRegularPartialArrayCleanup(arg, arg, elementType, elementAlign,
                                          destroyer);

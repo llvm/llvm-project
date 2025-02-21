@@ -379,7 +379,7 @@ static void emitNullBaseClassInitialization(CIRGenFunction &CGF,
   if (Base->isEmpty())
     return;
 
-  DestPtr = DestPtr.withElementType(CGF.UInt8Ty);
+  DestPtr = DestPtr.withElementType(CGF.getBuilder(), CGF.UInt8Ty);
 
   const ASTRecordLayout &Layout = CGF.getContext().getASTRecordLayout(Base);
   CharUnits NVSize = Layout.getNonVirtualSize();
@@ -1049,8 +1049,7 @@ void CIRGenFunction::emitNewArrayInitializer(
     if (const ConstantArrayType *CAT = dyn_cast_or_null<ConstantArrayType>(
             AllocType->getAsArrayTypeUnsafe())) {
       ElementTy = convertTypeForMem(AllocType);
-      auto CastOp = builder.createPtrBitcast(CurPtr.getPointer(), ElementTy);
-      CurPtr = Address(CastOp, ElementTy, CurPtr.getAlignment());
+      CurPtr = CurPtr.withElementType(builder, ElementTy);
       InitListElements *= getContext().getConstantArrayElementCount(CAT);
     }
 
@@ -1095,7 +1094,7 @@ void CIRGenFunction::emitNewArrayInitializer(
     }
 
     // Switch back to initializing one base element at a time.
-    CurPtr = CurPtr.withElementType(BeginPtr.getElementType());
+    CurPtr = CurPtr.withElementType(builder, BeginPtr.getElementType());
   }
 
   // If all elements have already been initialized, skip any further
@@ -1134,7 +1133,7 @@ void CIRGenFunction::emitNewArrayInitializer(
     if (InitListElements)
       llvm_unreachable("NYI");
     auto arrayType = convertType(CCE->getType());
-    CurPtr = CurPtr.withElementType(arrayType);
+    CurPtr = CurPtr.withElementType(builder, arrayType);
     emitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
                                /*NewPointerIsChecked*/ true,
                                CCE->requiresZeroInitialization());
@@ -1412,7 +1411,10 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *E) {
           allocationAlign, getContext().toCharUnitsFromBits(AllocatorAlign));
     }
 
-    allocation = Address(RV.getScalarVal(), UInt8Ty, allocationAlign);
+    auto allocPtr = RV.getScalarVal();
+    allocation = Address(
+        allocPtr, mlir::cast<cir::PointerType>(allocPtr.getType()).getPointee(),
+        allocationAlign);
   }
 
   // Emit a null check on the allocation result if the allocation

@@ -54,9 +54,9 @@ typedef union {
 // CHECK: %[[VAL_0:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
 // CHECK: %[[VAL_1:.*]] = cir.alloca !ty_U, !cir.ptr<!ty_U>, ["u", init] {alignment = 4 : i64}
 // CHECK: cir.store %arg0, %[[VAL_0]] : !s32i, !cir.ptr<!s32i>
-// CHECK: %[[VAL_2:.*]] = cir.load %[[VAL_0]] : !cir.ptr<!s32i>, !s32i
-// CHECK: %[[VAL_3:.*]] = cir.cast(bitcast, %[[VAL_1]] : !cir.ptr<!ty_U>), !cir.ptr<!s32i>
-// CHECK: cir.store %[[VAL_2]], %[[VAL_3]] : !s32i, !cir.ptr<!s32i>
+// CHECK: %[[VAL_2:.*]] = cir.cast(bitcast, %[[VAL_1]] : !cir.ptr<!ty_U>), !cir.ptr<!s32i>
+// CHECK: %[[VAL_3:.*]] = cir.load %[[VAL_0]] : !cir.ptr<!s32i>, !s32i
+// CHECK: cir.store %[[VAL_3]], %[[VAL_2]] : !s32i, !cir.ptr<!s32i>
 
 void union_cast(int x) {
   U u = (U) x;

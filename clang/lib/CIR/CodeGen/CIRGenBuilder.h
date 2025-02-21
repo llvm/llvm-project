@@ -733,7 +733,7 @@ public:
     auto ptrTy = getPointerTo(destType);
     auto baseAddr = create<cir::BaseClassAddrOp>(
         loc, ptrTy, addr.getPointer(), mlir::APInt(64, offset), assumeNotNull);
-    return Address(baseAddr, ptrTy, addr.getAlignment());
+    return Address(baseAddr, destType, addr.getAlignment());
   }
 
   Address createDerivedClassAddr(mlir::Location loc, Address addr,
@@ -745,7 +745,7 @@ public:
     auto ptrTy = getPointerTo(destType);
     auto derivedAddr = create<cir::DerivedClassAddrOp>(
         loc, ptrTy, addr.getPointer(), mlir::APInt(64, offset), assumeNotNull);
-    return Address(derivedAddr, ptrTy, addr.getAlignment());
+    return Address(derivedAddr, destType, addr.getAlignment());
   }
 
   mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,

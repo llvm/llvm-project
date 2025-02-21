@@ -25,6 +25,9 @@
 
 namespace clang::CIRGen {
 
+// Forward declaration to avoid a circular dependency
+class CIRGenBuilderTy;
+
 // Indicates whether a pointer is known not to be null.
 enum KnownNonNull_t { NotKnownNonNull, KnownNonNull };
 
@@ -64,6 +67,9 @@ public:
     assert(pointer && "Pointer cannot be null");
     assert(elementType && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
+
+    assert(mlir::cast<cir::PointerType>(pointer.getType()).getPointee() ==
+           ElementType);
   }
 
   Address(mlir::Value basePtr, mlir::Type elementType,
@@ -104,15 +110,9 @@ public:
 
   bool hasOffset() const { return bool(offset); }
 
-  /// Return address with different element type, but same pointer and
-  /// alignment.
-  Address withElementType(mlir::Type ElemTy) const {
-    if (!hasOffset())
-      return Address(getBasePointer(), ElemTy, getAlignment(),
-                     getPointerAuthInfo(), /*Offset=*/nullptr,
-                     isKnownNonNull());
-    return Address(getPointer(), ElemTy, getAlignment(), isKnownNonNull());
-  }
+  /// Return address with different element type, a bitcast pointer, and
+  /// the same alignment.
+  Address withElementType(CIRGenBuilderTy &builder, mlir::Type ElemTy) const;
 
   mlir::Value getPointer() const {
     assert(isValid());
@@ -142,11 +142,17 @@ public:
 
   /// Return the type of the pointer value.
   cir::PointerType getType() const {
+    assert(mlir::cast<cir::PointerType>(
+               PointerAndKnownNonNull.getPointer().getType())
+               .getPointee() == ElementType);
     return mlir::cast<cir::PointerType>(getPointer().getType());
   }
 
   mlir::Type getElementType() const {
     assert(isValid());
+    assert(mlir::cast<cir::PointerType>(
+               PointerAndKnownNonNull.getPointer().getType())
+               .getPointee() == ElementType);
     return ElementType;
   }
 

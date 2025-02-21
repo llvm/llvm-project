@@ -87,10 +87,11 @@ void loadWithThreadFence(DataPtr d) {
 // CIR:    %[[LOAD_DATA:.*]] = cir.load %[[DATA]] : !cir.ptr<!cir.ptr<!ty_Data>>, !cir.ptr<!ty_Data>
 // CIR:    %[[DATA_VALUE:.*]] = cir.get_member %[[LOAD_DATA]][1] {name = "ptr"} : !cir.ptr<!ty_Data> -> !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[CASTED_DATA_VALUE:.*]] = cir.cast(bitcast, %[[DATA_VALUE]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!u64i>
-// CIR:    %[[ATOMIC_LOAD:.*]] = cir.load atomic(seq_cst) %[[CASTED_DATA_VALUE]] : !cir.ptr<!u64i>, !u64i
 // CIR:    %[[CASTED_ATOMIC_TEMP:.*]] = cir.cast(bitcast, %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!u64i>
+// CIR:    %[[ATOMIC_LOAD:.*]] = cir.load atomic(seq_cst) %[[CASTED_DATA_VALUE]] : !cir.ptr<!u64i>, !u64i
 // CIR:    cir.store %[[ATOMIC_LOAD]], %[[CASTED_ATOMIC_TEMP]] : !u64i, !cir.ptr<!u64i>
-// CIR:    %[[ATOMIC_LOAD_PTR:.*]] = cir.load %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR:    %[[DOUBLE_CASTED_ATOMIC_TEMP:.*]] = cir.cast(bitcast, %[[CASTED_ATOMIC_TEMP]] : !cir.ptr<!u64i>), !cir.ptr<!cir.ptr<!void>>
+// CIR:    %[[ATOMIC_LOAD_PTR:.*]] = cir.load %[[DOUBLE_CASTED_ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:    cir.return
 
 // LLVM-LABEL: @loadWithThreadFence
@@ -115,10 +116,11 @@ void loadWithSignalFence(DataPtr d) {
 // CIR:    %[[LOAD_DATA:.*]] = cir.load %[[DATA]] : !cir.ptr<!cir.ptr<!ty_Data>>, !cir.ptr<!ty_Data>
 // CIR:    %[[DATA_PTR:.*]] = cir.get_member %[[LOAD_DATA]][1] {name = "ptr"} : !cir.ptr<!ty_Data> -> !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[CASTED_DATA_PTR:.*]] = cir.cast(bitcast, %[[DATA_PTR]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!u64i>
-// CIR:    %[[ATOMIC_LOAD:.*]] = cir.load atomic(seq_cst) %[[CASTED_DATA_PTR]] : !cir.ptr<!u64i>, !u64i
 // CIR:    %[[CASTED_ATOMIC_TEMP:.*]] = cir.cast(bitcast, %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!u64i>
+// CIR:    %[[ATOMIC_LOAD:.*]] = cir.load atomic(seq_cst) %[[CASTED_DATA_PTR]] : !cir.ptr<!u64i>, !u64i
 // CIR:    cir.store %[[ATOMIC_LOAD]], %[[CASTED_ATOMIC_TEMP]] : !u64i, !cir.ptr<!u64i>
-// CIR:    %[[LOAD_ATOMIC_TEMP:.*]] = cir.load %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR:    %[[DOUBLE_CASTED_ATOMIC_TEMP:.*]] = cir.cast(bitcast, %[[CASTED_ATOMIC_TEMP]] : !cir.ptr<!u64i>), !cir.ptr<!cir.ptr<!void>>
+// CIR:    %[[LOAD_ATOMIC_TEMP:.*]] = cir.load %[[DOUBLE_CASTED_ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:    cir.return
 
 // LLVM-LABEL: @loadWithSignalFence

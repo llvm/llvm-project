@@ -2386,8 +2386,10 @@ mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
         loc, Address(VBaseOffsetPtr, CGM.SInt32Ty,
                      CharUnits::fromQuantity(4))); // vbase.offset
   } else {
+    auto OffsetPtr = CGF.getBuilder().createBitcast(
+        VBaseOffsetPtr, CGF.getBuilder().getPointerTo(CGM.PtrDiffTy));
     VBaseOffset = CGF.getBuilder().createLoad(
-        loc, Address(VBaseOffsetPtr, CGM.PtrDiffTy,
+        loc, Address(OffsetPtr, CGM.PtrDiffTy,
                      CGF.getPointerAlign())); // vbase.offset
   }
   return VBaseOffset;
@@ -2744,11 +2746,13 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &CGF,
     auto OffsetOp = CGF.getBuilder().getSignedInt(
         Loc, CookieOffset.getQuantity(), /*width=*/32);
     auto DataPtr = CGF.getBuilder().createPtrStride(Loc, CastOp, OffsetOp);
-    CookiePtr = Address(DataPtr, NewPtr.getType(), NewPtr.getAlignment());
+    CookiePtr =
+        Address(DataPtr, CGF.getBuilder().getUIntNTy(8), NewPtr.getAlignment());
   }
 
   // Write the number of elements into the appropriate slot.
-  Address NumElementsPtr = CookiePtr.withElementType(CGF.SizeTy);
+  Address NumElementsPtr =
+      CookiePtr.withElementType(CGF.getBuilder(), CGF.SizeTy);
   CGF.getBuilder().createStore(Loc, NumElements, NumElementsPtr);
 
   if (CGF.SanOpts.has(SanitizerKind::Address))
@@ -2761,7 +2765,8 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &CGF,
       NewPtr.getPointer(), CGF.getBuilder().getUIntNTy(8));
   auto OffsetOp = CGF.getBuilder().getSignedInt(Loc, Offset, /*width=*/32);
   auto DataPtr = CGF.getBuilder().createPtrStride(Loc, CastOp, OffsetOp);
-  return Address(DataPtr, NewPtr.getType(), NewPtr.getAlignment());
+  return Address(DataPtr, CGF.getBuilder().getUIntNTy(8),
+                 NewPtr.getAlignment());
 }
 
 CharUnits CIRGenARMCXXABI::getArrayCookieSizeImpl(QualType elementType) {
@@ -2812,5 +2817,6 @@ Address CIRGenARMCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
   auto castOp = cgf.getBuilder().createPtrBitcast(
       newPtr.getPointer(), cgf.getBuilder().getUIntNTy(8));
   dataPtr = cgf.getBuilder().createPtrStride(loc, castOp, offsetOp);
-  return Address(dataPtr, newPtr.getType(), newPtr.getAlignment());
+  return Address(dataPtr, cgf.getBuilder().getUIntNTy(8),
+                 newPtr.getAlignment());
 }

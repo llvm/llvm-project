@@ -27,7 +27,8 @@ void field_access(wPtr item) {
 // CHECK-NEXT: %[[WADDR:.*]] = cir.alloca !cir.ptr<![[W]]>, {{.*}} {alignment = 8 : i64}
 // CHECK: %[[FIELD:.*]] = cir.load %[[WADDR]]
 // CHECK: %[[MEMBER:.*]] = cir.get_member %[[FIELD]][1] {name = "ref"}
-// CHECK: cir.atomic.xchg(%[[MEMBER]] : !cir.ptr<!cir.ptr<!void>>, {{.*}} : !u64i, seq_cst)
+// CHECK: %[[CASTED_MEMBER:.*]] = cir.cast(bitcast, %[[MEMBER]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!u64i>
+// CHECK: cir.atomic.xchg(%[[CASTED_MEMBER]] : !cir.ptr<!u64i>, {{.*}} : !u64i, seq_cst)
 
 // LLVM-LABEL: @field_access
 // LLVM: = alloca ptr, i64 1, align 8
@@ -77,8 +78,8 @@ void structLoad(unsigned referenceCount, wPtr item) {
 
 // CHECK-LABEL: @structLoad
 // CHECK:    %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["atomic-temp"]
-// CHECK:    %[[ATOMIC_LOAD:.*]] = cir.load atomic(seq_cst) %6 : !cir.ptr<!u64i>, !u64i
 // CHECK:    %[[RES:.*]] = cir.cast(bitcast, %[[ATOMIC_TEMP]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!u64i>
+// CHECK:    %[[ATOMIC_LOAD:.*]] = cir.load atomic(seq_cst) %6 : !cir.ptr<!u64i>, !u64i
 // CHECK:    cir.store %[[ATOMIC_LOAD]], %[[RES]] : !u64i, !cir.ptr<!u64i>
 
 // No LLVM tests needed for this one, already covered elsewhere.

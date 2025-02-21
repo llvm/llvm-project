@@ -4502,7 +4502,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vld1_dup_v:
   case NEON::BI__builtin_neon_vld1q_dup_v: {
-    Address ptrAddr = PtrOp0.withElementType(vTy.getEltType());
+    Address ptrAddr = PtrOp0.withElementType(builder, vTy.getEltType());
     mlir::Value val = builder.createLoad(getLoc(E->getExprLoc()), ptrAddr);
     cir::VecSplatOp vecSplat =
         builder.create<cir::VecSplatOp>(getLoc(E->getExprLoc()), vTy, val);

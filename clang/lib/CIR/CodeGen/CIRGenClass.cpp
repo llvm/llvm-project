@@ -1672,7 +1672,7 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
       VBase, BaseValueTy, not NullCheckValue);
 
   // Cast to the destination type.
-  Value = Value.withElementType(BaseValueTy);
+  Value = Value.withElementType(builder, BaseValueTy);
 
   return Value;
 }
@@ -1894,7 +1894,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     builder.create<cir::ArrayCtor>(
         *currSrcLoc, arrayOp, [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
-          Address curAddr = Address(arg, ptrToElmType, eltAlignment);
+          Address curAddr = Address(arg, elementType, eltAlignment);
           auto currAVS = AggValueSlot::forAddr(
               curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
               AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
