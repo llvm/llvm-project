@@ -6370,15 +6370,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::amdgcn_init_exec_from_input: {
-    const Value *InputVal = Call.getOperand(0);
-    bool InRegArgFound = false;
-    for (const Argument &Arg : Call.getCaller()->args()) {
-      if (Arg.hasInRegAttr() && &Arg == InputVal) {
-        InRegArgFound = true;
-        break;
-      }
-    }
-    Check(InRegArgFound,
+    const Argument *Arg = dyn_cast<Argument>(Call.getOperand(0));
+    Check(Arg && Arg->hasInRegAttr(),
           "only inreg arguments to the parent function are valid as inputs to "
           "this intrinsic",
           &Call);
