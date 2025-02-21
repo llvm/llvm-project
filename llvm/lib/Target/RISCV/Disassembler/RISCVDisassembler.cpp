@@ -638,27 +638,21 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBs, DecoderTableXTHeadBs32,
                         "XTHeadBs");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCondMov,
-                        DecoderTableXTHeadCondMov32,
-                        "XTHeadCondMov");
+                        DecoderTableXTHeadCondMov32, "XTHeadCondMov");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCmo, DecoderTableXTHeadCmo32,
                         "XTHeadCmo");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadFMemIdx,
-                        DecoderTableXTHeadFMemIdx32,
-                        "XTHeadFMemIdx");
+                        DecoderTableXTHeadFMemIdx32, "XTHeadFMemIdx");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMac, DecoderTableXTHeadMac32,
                         "XTHeadMac");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMemIdx,
-                        DecoderTableXTHeadMemIdx32,
-                        "XTHeadMemIdx");
+                        DecoderTableXTHeadMemIdx32, "XTHeadMemIdx");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMemPair,
-                        DecoderTableXTHeadMemPair32,
-                        "XTHeadMemPair");
+                        DecoderTableXTHeadMemPair32, "XTHeadMemPair");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadSync,
-                        DecoderTableXTHeadSync32,
-                        "XTHeadSync");
+                        DecoderTableXTHeadSync32, "XTHeadSync");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadVdot,
-                        DecoderTableXTHeadVdot32,
-                        "XTHeadVdot");
+                        DecoderTableXTHeadVdot32, "XTHeadVdot");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfvcp, DecoderTableXSfvcp32,
                         "SiFive VCIX");
   TRY_TO_DECODE_FEATURE(
@@ -667,12 +661,12 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(
       RISCV::FeatureVendorXSfvqmaccqoq, DecoderTableXSfvqmaccqoq32,
       "SiFive Matrix Multiplication (4x8 and 8x4) Instruction");
-  TRY_TO_DECODE_FEATURE(
-      RISCV::FeatureVendorXSfvfwmaccqqq, DecoderTableXSfvfwmaccqqq32,
-      "SiFive Matrix Multiplication Instruction");
-  TRY_TO_DECODE_FEATURE(
-      RISCV::FeatureVendorXSfvfnrclipxfqf, DecoderTableXSfvfnrclipxfqf32,
-      "SiFive FP32-to-int8 Ranged Clip Instructions");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfvfwmaccqqq,
+                        DecoderTableXSfvfwmaccqqq32,
+                        "SiFive Matrix Multiplication Instruction");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfvfnrclipxfqf,
+                        DecoderTableXSfvfnrclipxfqf32,
+                        "SiFive FP32-to-int8 Ranged Clip Instructions");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSiFivecdiscarddlone,
                         DecoderTableXSiFivecdiscarddlone32,
                         "SiFive sf.cdiscard.d.l1");
@@ -684,11 +678,9 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXMIPSLSP, DecoderTableXmipslsp32,
                         "MIPS mips.lsp");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXMIPSCMove,
-                        DecoderTableXmipscmove32,
-                        "MIPS mips.ccmov");
+                        DecoderTableXmipscmove32, "MIPS mips.ccmov");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
-                        DecoderTableXCVbitmanip32,
-                        "CORE-V Bit Manipulation");
+                        DecoderTableXCVbitmanip32, "CORE-V Bit Manipulation");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVelw, DecoderTableXCVelw32,
                         "CORE-V Event load");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVmac, DecoderTableXCVmac32,
@@ -711,12 +703,10 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                         "Qualcomm uC Conditional Select");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcilsm, DecoderTableXqcilsm32,
                         "Qualcomm uC Load Store Multiple");
-  TRY_TO_DECODE_FEATURE(
-      RISCV::FeatureVendorXqciac, DecoderTableXqciac32,
-      "Qualcomm uC Load-Store Address Calculation");
-  TRY_TO_DECODE_FEATURE(
-      RISCV::FeatureVendorXqcicli, DecoderTableXqcicli32,
-      "Qualcomm uC Conditional Load Immediate");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciac, DecoderTableXqciac32,
+                        "Qualcomm uC Load-Store Address Calculation");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcicli, DecoderTableXqcicli32,
+                        "Qualcomm uC Conditional Load Immediate");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcicm, DecoderTableXqcicm32,
                         "Qualcomm uC Conditional Move");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciint, DecoderTableXqciint32,
@@ -744,20 +734,16 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
                         "RVZicfiss (Shadow Stack)");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZcmt, DecoderTableRVZcmt16,
                         "Zcmt (16-bit Table Jump Instructions)");
-  TRY_TO_DECODE_FEATURE(
-      RISCV::FeatureStdExtZcmp, DecoderTableRVZcmp16,
-      "Zcmp (16-bit Push/Pop & Double Move Instructions)");
-  TRY_TO_DECODE_FEATURE(
-      RISCV::FeatureVendorXqciac, DecoderTableXqciac16,
-      "Qualcomm uC Load-Store Address Calculation 16bit");
-  TRY_TO_DECODE_FEATURE(
-      RISCV::FeatureVendorXqcicm, DecoderTableXqcicm16,
-      "Qualcomm uC Conditional Move 16bit");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZcmp, DecoderTableRVZcmp16,
+                        "Zcmp (16-bit Push/Pop & Double Move Instructions)");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciac, DecoderTableXqciac16,
+                        "Qualcomm uC Load-Store Address Calculation 16bit");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcicm, DecoderTableXqcicm16,
+                        "Qualcomm uC Conditional Move 16bit");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqciint, DecoderTableXqciint16,
                         "Qualcomm uC Interrupts 16bit");
   TRY_TO_DECODE_AND_ADD_SP(STI.hasFeature(RISCV::FeatureVendorXwchc),
-                           DecoderTableXwchc16,
-                           "WCH QingKe XW");
+                           DecoderTableXwchc16, "WCH QingKe XW");
   TRY_TO_DECODE_AND_ADD_SP(true, DecoderTable16,
                            "RISCV_C (16-bit Instruction)");
 
@@ -778,9 +764,8 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
   for (size_t i = Size; i-- != 0;) {
     Insn += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
   }
-  TRY_TO_DECODE_FEATURE(
-      RISCV::FeatureVendorXqcilo, DecoderTableXqcilo48,
-      "Qualcomm uC Large Offset Load Store 48bit");
+  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXqcilo, DecoderTableXqcilo48,
+                        "Qualcomm uC Large Offset Load Store 48bit");
 
   return MCDisassembler::Fail;
 }
