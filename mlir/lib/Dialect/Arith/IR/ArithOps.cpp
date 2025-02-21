@@ -1517,23 +1517,25 @@ LogicalResult arith::TruncIOp::verify() {
 /// Perform safe const propagation for truncf, i.e., only propagate if FP value
 /// can be represented without precision loss.
 OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
   if (auto extOp = getOperand().getDefiningOp<arith::ExtFOp>()) {
     Value src = extOp.getIn();
-    Type srcType = getElementTypeOrSelf(src.getType());
-    Type dstType = getElementTypeOrSelf(getType());
-    // truncf(extf(a)) -> truncf(a)
-    if (llvm::cast<FloatType>(srcType).getWidth() >
-        llvm::cast<FloatType>(dstType).getWidth()) {
-      setOperand(src);
-      return getResult();
-    }
+    auto srcType = cast<FloatType>(getElementTypeOrSelf(src.getType()));
+    auto intermediateType = cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
+    // Check if the srcType is representable in the intermediateType
+    if(llvm::APFloatBase::isRepresentableBy(srcType.getFloatSemantics(), intermediateType.getFloatSemantics())) {
+      // truncf(extf(a)) -> truncf(a)
+      if (srcType.getWidth() > resElemType.getWidth()) {
+        setOperand(src);
+        return getResult();
+      }
 
-    // truncf(extf(a)) -> a
-    if (srcType == dstType)
-      return src;
+      // truncf(extf(a)) -> a
+      if (srcType == resElemType)
+        return src;
+    }
   }
 
-  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
   const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
