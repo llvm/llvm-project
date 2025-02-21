@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
             using ValueType        = typename Container::value_type;
             Container c(size);
             ValueType x = Generate<ValueType>::random();
-            ValueType y = Generate<ValueType>::random();
+            ValueType y = random_different_from({x});
             auto half   = size / 2;
             std::fill_n(std::fill_n(c.begin(), half, x), half, y);
 
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
             using ValueType        = typename Container::value_type;
             Container c(size);
             ValueType x    = Generate<ValueType>::random();
-            ValueType y    = Generate<ValueType>::random();
+            ValueType y    = random_different_from({x});
             auto alternate = [&](auto out, auto n) {
               for (std::size_t i = 0; i != n; i += 2) {
                 *out++ = (i % 4 == 0 ? x : y);
