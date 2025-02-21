@@ -89,6 +89,22 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
   )
 endforeach()
 
+foreach(suffix IN ITEMS hk k lk r lr)
+  add_libc_test(
+    bits${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      BitsFxTest.h
+    SRCS
+      bits${suffix}_test.cpp
+    DEPENDS
+      libc.src.stdfix.bits${suffix}
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()
+
 add_libc_test(
   uhksqrtus_test
   SUITE
