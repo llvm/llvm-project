@@ -748,9 +748,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
       if (MD->isVirtual() && IK != PredefinedIdentKind::PrettyFunctionNoVirtual)
         Out << "virtual ";
       if (MD->isStatic()) {
-        bool IsFunctionInMSVCCommpatEnv =
-            IK == PredefinedIdentKind::Function && LO.MSVCCompat;
-        if (ForceElaboratedPrinting && !IsFunctionInMSVCCommpatEnv)
+        if (!ForceElaboratedPrinting)
           Out << "static ";
       }
     }
