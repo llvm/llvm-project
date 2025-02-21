@@ -13,6 +13,8 @@ class TestSwiftForwardInteropSTLTypes(TestBase):
     @swiftTest
     def test(self):
         self.build()
+        log = self.getBuildArtifact("types.log")
+        self.runCmd('log enable lldb types -f "%s"' % log)
         
         _, _, _, _= lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
@@ -56,3 +58,7 @@ class TestSwiftForwardInteropSTLTypes(TestBase):
             '[2] = 9.19'])
         self.expect('expr vector', substrs=['CxxVector', '[0] = 4.1', '[1] = 3.7',
             '[2] = 9.19'])
+
+        # Make sure lldb picks the correct C++ stdlib.
+        self.filecheck('platform shell cat "%s"' % log, __file__)
+#       CHECK-NOT: but current compilation uses unknown C++ stdlib

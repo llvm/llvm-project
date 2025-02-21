@@ -3642,6 +3642,8 @@ void SwiftASTContext::InitializeSearchPathOptions(
   }
   invocation.getSearchPathOptions().setFrameworkSearchPaths(
       invocation_framework_paths);
+
+  invocation.computeCXXStdlibOptions();
 }
 
 ThreadSafeASTContext SwiftASTContext::GetASTContext() {
