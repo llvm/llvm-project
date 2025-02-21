@@ -56,7 +56,8 @@ class MPIImplTraits {
 
 public:
   /// Instantiate a new MPIImplTraits object according to the DLTI attribute
-  /// on the given module.
+  /// on the given module. Default to MPICH if no attribute is present or
+  /// the value is unknown.
   static std::unique_ptr<MPIImplTraits> get(ModuleOp &moduleOp);
 
   explicit MPIImplTraits(ModuleOp &moduleOp) : moduleOp(moduleOp) {}
