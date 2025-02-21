@@ -25,7 +25,6 @@ include "mlir/Dialect/Tosa/IR/TosaTypesBase.td"
 include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.2
 // Operator Class: Tensor Data Engine Operators.
 //===----------------------------------------------------------------------===//
 
@@ -398,7 +397,6 @@ def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.3
 // Operator Class: Activation Functions.
 //===----------------------------------------------------------------------===//
 
@@ -521,7 +519,6 @@ def Tosa_ErfOp : Tosa_ElementwiseUnaryOp<"erf"> {
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.4
 // Operator Class: Elementwise unary/binary/ternary operators.
 // Operator Subclass: Elementwise binary ops.
 //===----------------------------------------------------------------------===//
@@ -1045,7 +1042,6 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.5
 // Operator Class: Elementwise unary/binary/ternary operators.
 // Operator Subclass: Elementwise unary ops.
 //===----------------------------------------------------------------------===//
@@ -1394,7 +1390,6 @@ def Tosa_SinOp : Tosa_ElementwiseUnaryOp<"sin"> {
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.6
 // Operator Class: Elementwise unary/binary/ternary operators.
 // Operator Subclass: Elementwise ternary ops.
 //===----------------------------------------------------------------------===//
@@ -1434,7 +1429,6 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.7
 // Operator Class: Logical Operations.
 //===----------------------------------------------------------------------===//
 
@@ -1530,7 +1524,6 @@ def Tosa_GreaterEqualOp : Tosa_ElementwiseOp<"greater_equal",
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.8
 // Operator Class: Reduction Ops.
 //===----------------------------------------------------------------------===//
 
@@ -1773,7 +1766,6 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.9
 // Operator Class: Data Layout / Memory Reinterpretation.
 //===----------------------------------------------------------------------===//
 
@@ -2033,7 +2025,6 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.10
 // Operator Class: Scatter/gather Operations.
 //===----------------------------------------------------------------------===//
 
@@ -2091,7 +2082,6 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.11
 // Operator Class: Image Frontend Functions.
 //===----------------------------------------------------------------------===//
 
@@ -2132,7 +2122,6 @@ def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize"> {
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.12
 // Operator Class: Type Conversion.
 //===----------------------------------------------------------------------===//
 
@@ -2243,7 +2232,6 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.13
 // Operator Class: Data Node Ops.
 //===----------------------------------------------------------------------===//
 
@@ -2313,7 +2301,6 @@ def Tosa_IdentityOp: Tosa_Op<"identity", [Pure,
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.14
 // Operator Class: Custom Operators.
 //===----------------------------------------------------------------------===//
 
@@ -2373,7 +2360,6 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 2.15
 // Operator Class: Control Flow Operators.
 //===----------------------------------------------------------------------===//
 
