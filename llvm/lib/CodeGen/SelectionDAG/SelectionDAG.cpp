@@ -2617,7 +2617,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   auto [Call, CallChain] = TLI->LowerCallTo(CLI);
 
   if (CallRetResNo && !Node->hasAnyUseOfValue(*CallRetResNo)) {
-    // FIXME: This is needed for x87, which uses a floating-point stack. If (for
+    // This is needed for x87, which uses a floating-point stack. If (for
     // example) the node to be expanded has two results one floating-point which
     // is returned by the call, and one integer result, returned via an output
     // pointer. If only the integer result is used then the `CopyFromReg` for
