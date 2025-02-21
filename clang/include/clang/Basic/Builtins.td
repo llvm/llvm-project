@@ -521,6 +521,12 @@ def TruncF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
+def Sincospi : Builtin, FPMathTemplate {
+  let Spellings = ["__builtin_sincospi"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Prototype = "void(T, T*, T*)";
+}
+
 // Access to floating point environment.
 def BuiltinFltRounds : Builtin {
   let Spellings = ["__builtin_flt_rounds"];
