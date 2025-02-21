@@ -2325,24 +2325,11 @@ static bool canSinkInstructions(
   return true;
 }
 
-// Assuming canSinkInstructions(Blocks) has returned true, sink the last
-// instruction of every block in Blocks to their common successor, commoning
-// into one instruction.
-static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
-  auto *BBEnd = Blocks[0]->getTerminator()->getSuccessor(0);
-
-  // canSinkInstructions returning true guarantees that every block has at
-  // least one non-terminator instruction.
-  SmallVector<Instruction*,4> Insts;
-  for (auto *BB : Blocks) {
-    Instruction *I = BB->getTerminator();
-    do {
-      I = I->getPrevNode();
-    } while (isa<DbgInfoIntrinsic>(I) && I != &BB->front());
-    if (!isa<DbgInfoIntrinsic>(I))
-      Insts.push_back(I);
-  }
-
+static void sinkCandidatesImpl(BasicBlock *BBEnd,
+                               ArrayRef<BasicBlock *> IncomingBBs,
+                               ArrayRef<Instruction *> Insts) {
+  assert(IncomingBBs.size() == Insts.size() &&
+         "We already guarentee they are the same size!");
   // We don't need to do any more checking here; canSinkInstructions should
   // have done it all for us.
   SmallVector<Value*, 4> NewOperands;
@@ -2368,8 +2355,8 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
     auto *PN =
         PHINode::Create(Op->getType(), Insts.size(), Op->getName() + ".sink");
     PN->insertBefore(BBEnd->begin());
-    for (auto *I : Insts)
-      PN->addIncoming(I->getOperand(O), I->getParent());
+    for (decltype(Insts.size()) i = 0, E = Insts.size(); i < E; i++)
+      PN->addIncoming(Insts[i]->getOperand(O), IncomingBBs[i]);
     NewOperands.push_back(PN);
   }
 
@@ -2421,6 +2408,27 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
     I->replaceAllUsesWith(I0);
     I->eraseFromParent();
   }
+}
+
+// Assuming canSinkInstructions(Blocks) has returned true, sink the last
+// instruction of every block in Blocks to their common successor, commoning
+// into one instruction.
+static bool sinkLastInstruction(ArrayRef<BasicBlock *> Blocks) {
+  auto *BBEnd = Blocks[0]->getTerminator()->getSuccessor(0);
+
+  // canSinkInstructions returning true guarantees that every block has at
+  // least one non-terminator instruction.
+  SmallVector<Instruction *, 4> Insts;
+  for (auto *BB : Blocks) {
+    Instruction *I = BB->getTerminator();
+    do {
+      I = I->getPrevNode();
+    } while (isa<DbgInfoIntrinsic>(I) && I != &BB->front());
+    if (!isa<DbgInfoIntrinsic>(I))
+      Insts.push_back(I);
+  }
+  sinkCandidatesImpl(BBEnd, Blocks, Insts);
+  return true;
 }
 
 /// Check whether BB's predecessors end with unconditional branches. If it is
@@ -2679,6 +2687,174 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
     Changed = true;
   }
   if (SinkIdx != 0)
+    ++NumSinkCommonCode;
+  return Changed;
+}
+
+using SinkCandidatesType = std::vector<std::vector<Instruction *>>;
+using HerusticGetCandidatesCallback = std::function<bool(
+    SinkCandidatesType &, bool &, BasicBlock *, DomTreeUpdater *)>;
+
+// There might be instruction like:
+// arr = alloca something
+// ...
+// phi (gep (arr ...), gep (arr ...), arr)
+// Transform the direct use of this arr to gep on this arr with zero offset and
+// of the same structure with previous phi. In the entry block of the function
+// we insert instruction like isomorphicGEP = gep arr 0, ...(following a set of
+// zero). And we only change the uses of the alloca in the specific PHINode.
+// Return true if there's any modification on the IR.
+static bool transformAllocaToIsomorphicGEP(PHINode &PN) {
+  // We need at least one GEP to construct a gep with zero offset for
+  // over-optimized alloca, if any.
+  GetElementPtrInst *oneGEP = nullptr;
+  for (auto &IncomingValue : PN.incoming_values())
+    if ((oneGEP = dyn_cast<GetElementPtrInst>(IncomingValue)))
+      break;
+
+  // If there is no GEP, we can't sink the instruction.
+  if (oneGEP == nullptr)
+    return false;
+
+  // There might be serveral identical alloca incoming from different blocks.
+  // We only need a same alloca.
+  AllocaInst *CandidateAlloca = nullptr;
+  // Get the function entry. We insert newly created isomorphicGEP there.
+  auto &EntryBB = PN.getParent()->getParent()->getEntryBlock();
+  auto NumOperands = oneGEP->getNumOperands();
+  for (auto &IncomingValue : PN.incoming_values()) {
+    if (auto AI = dyn_cast<AllocaInst>(IncomingValue)) {
+      // We only do this on static alloca. We fail the whole process.
+      if (!AI->isStaticAlloca())
+        return false;
+
+      if (CandidateAlloca != nullptr) {
+        if (CandidateAlloca == AI)
+          continue;
+        return false;
+      }
+      CandidateAlloca = AI;
+    }
+  }
+
+  if (CandidateAlloca == nullptr)
+    return false;
+
+  for (auto &IncomingValue : PN.incoming_values()) {
+    if (IncomingValue == CandidateAlloca)
+      continue;
+    if (auto GEPAsIncoming = dyn_cast<GetElementPtrInst>(IncomingValue)) {
+      if (GEPAsIncoming->getPointerOperand() != CandidateAlloca ||
+          GEPAsIncoming->getNumOperands() != NumOperands)
+        return false;
+    } else
+      return false;
+  }
+
+  // Change the alloca's use in this PHINode with corresonding gep.
+  GetElementPtrInst *IsomorphicGEP =
+      dyn_cast<GetElementPtrInst>(oneGEP->clone());
+  for (unsigned i = 1; i < NumOperands; ++i) {
+    auto IntTy = IsomorphicGEP->getOperand(i)->getType();
+    IsomorphicGEP->setOperand(i, ConstantInt::get(IntTy, 0));
+  }
+  PN.replaceUsesOfWith(CandidateAlloca, IsomorphicGEP);
+  IsomorphicGEP->insertBefore(EntryBB.getTerminator()->getIterator());
+
+  return true;
+}
+
+// Change phi (gep (same_ptr, ...), gep(same_ptr, ...), ...) to gep same_ptr
+// phi(...)
+static bool
+herusticGetPhiGEPCandidate(SinkCandidatesType &ResultsSinkCandidates,
+                           bool &Changed, BasicBlock *BB, DomTreeUpdater *DTU) {
+
+  // Collect all the predecessors.
+  auto Preds = std::vector<BasicBlock *>();
+  for (auto *PredBB : predecessors(BB))
+    Preds.push_back(PredBB);
+
+  // If it has less than 2 predecessor, just skip.
+  // TODO: Maybe we should only do for more predecessors.
+  if (Preds.size() < 2)
+    return false;
+
+  DenseMap<const Use *, SmallVector<Value *, 4>> PHIOperands;
+  for (PHINode &PN : BB->phis()) {
+    // If the same_ptr is an alloca, we try to transform it to gep with zero
+    // offset.
+    Changed |= transformAllocaToIsomorphicGEP(PN);
+    SmallDenseMap<BasicBlock *, const Use *, 4> IncomingVals;
+    for (const Use &U : PN.incoming_values())
+      IncomingVals.insert({PN.getIncomingBlock(U), &U});
+    auto &Ops = PHIOperands[IncomingVals[Preds[0]]];
+    for (BasicBlock *Pred : Preds)
+      Ops.push_back(*IncomingVals[Pred]);
+  }
+
+  SinkCandidatesType SinkCandidates;
+  for (auto &[U, IncomingValues] : PHIOperands) {
+    auto CorrespondingPhiNode = dyn_cast<PHINode>(U->getUser());
+    assert(CorrespondingPhiNode &&
+           "PHIOperands should only contain PHINode's operands.");
+
+    std::vector<Instruction *> Candidates;
+
+    for (auto IncomingValue : IncomingValues) {
+      if (auto GEP = dyn_cast<GetElementPtrInst>(IncomingValue)) {
+        Candidates.push_back(GEP);
+      } else {
+        Candidates.clear();
+        break;
+      }
+    }
+
+    if (Candidates.empty())
+      continue;
+
+    auto BasePtr = Candidates[0]->getOperand(0);
+    for (auto Candidate : Candidates) {
+      if (Candidate->getOperand(0) != BasePtr) {
+        Candidates.clear();
+        break;
+      }
+    }
+
+    if (Candidates.empty())
+      continue;
+
+    SinkCandidates.emplace_back(std::move(Candidates));
+  }
+
+  for (auto &Candidates : SinkCandidates)
+    if (canSinkInstructions(Candidates, PHIOperands))
+      ResultsSinkCandidates.emplace_back(std::move(Candidates));
+
+  if (ResultsSinkCandidates.size() != 0)
+    return true;
+  return false;
+}
+
+static bool herusticPhiSinker(BasicBlock *BB, DomTreeUpdater *DTU,
+                              HerusticGetCandidatesCallback GetCandidates) {
+  SinkCandidatesType SinkCandidates;
+  bool Changed = false;
+  if (!GetCandidates(SinkCandidates, Changed, BB, DTU) ||
+      SinkCandidates.size() == 0)
+    return Changed;
+
+  std::vector<BasicBlock *> Preds;
+  for (auto *PredBB : predecessors(BB))
+    Preds.push_back(PredBB);
+
+  for (auto Candidates : SinkCandidates) {
+    LLVM_DEBUG(dbgs() << "SINK: Sink: " << *Candidates[0] << "\n");
+    sinkCandidatesImpl(BB, Preds, Candidates);
+    NumSinkCommonInstrs++;
+    Changed = true;
+  }
+  if (SinkCandidates.size() != 0)
     ++NumSinkCommonCode;
   return Changed;
 }
@@ -8380,6 +8556,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
 
   if (SinkCommon && Options.SinkCommonInsts)
     if (sinkCommonCodeFromPredecessors(BB, DTU) ||
+        herusticPhiSinker(BB, DTU, herusticGetPhiGEPCandidate) ||
         mergeCompatibleInvokes(BB, DTU)) {
       // sinkCommonCodeFromPredecessors() does not automatically CSE PHI's,
       // so we may now how duplicate PHI's.
