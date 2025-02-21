@@ -40,7 +40,7 @@ static MCInst loadZPRImmediate(MCRegister Reg, unsigned RegBitWidth,
   // For ZPR, we typically use DUPM instruction to load immediate values
   return MCInstBuilder(AArch64::DUPM_ZI)
       .addReg(Reg)
-      .addImm(0x1);
+      .addImm(Value.getZExtValue());
 }
 
 static MCInst loadPPRImmediate(MCRegister Reg, unsigned RegBitWidth,
@@ -89,15 +89,12 @@ private:
       return {loadImmediate(Reg, 32, Value)};
     if (AArch64::GPR64RegClass.contains(Reg))
       return {loadImmediate(Reg, 64, Value)};
-
     if (AArch64::PPRRegClass.contains(Reg))
       return {loadPPRImmediate(Reg, 16, Value)}; 
-
     if (AArch64::FPR64RegClass.contains(Reg)) 
       return {loadFPImmediate(Reg, 64, Value)};
     if (AArch64::FPR128RegClass.contains(Reg)) 
       return {loadFPImmediate(Reg, 128, Value)};
-
     if (AArch64::ZPRRegClass.contains(Reg)) 
       return {loadZPRImmediate(Reg, 128, Value)};
     
