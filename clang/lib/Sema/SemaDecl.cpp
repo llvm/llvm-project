@@ -13446,7 +13446,7 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
 // Not perfect: doesn't account for mutable members, for example, or
 // elements of container types.
 // For nested pointers, any individual level being non-const is sufficient.
-bool looksMutable(QualType T, const ASTContext &Ctx) {
+static bool looksMutable(QualType T, const ASTContext &Ctx) {
   T = T.getNonReferenceType();
   if (T->isFunctionType())
     return false;
