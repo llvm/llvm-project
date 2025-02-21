@@ -463,6 +463,11 @@ static bool dominatesMergePoint(
   if (!isSafeToSpeculativelyExecute(I, InsertPt, AC))
     return false;
 
+  // Overflow arithmetic instruction plus extract value are usually generated
+  // when a division is being replaced. But, in this case, the zero check may
+  // still be kept in the code. In that case it would be worth to hoist these
+  // two instruction out of the basic block. Let's treat this pattern as one
+  // single cheap instruction here!
   WithOverflowInst *OverflowInst;
   if (match(I, m_ExtractValue<1>(m_OneUse(m_WithOverflowInst(OverflowInst))))) {
     ZeroCostInstructions.insert(OverflowInst);
