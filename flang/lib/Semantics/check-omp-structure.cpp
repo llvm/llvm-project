@@ -1477,7 +1477,20 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                 }
               }
             },
-            [&](const parser::Name &) {}, // common block
+            [&](const parser::Name &name) {
+              if (name.symbol) {
+                if (auto *cb{name.symbol->detailsIf<CommonBlockDetails>()}) {
+                  for (const auto &obj : cb->objects()) {
+                    if (FindEquivalenceSet(*obj)) {
+                      context_.Say(name.source,
+                          "A variable in a %s directive cannot appear in an EQUIVALENCE statement (variable '%s' from common block '/%s/')"_err_en_US,
+                          ContextDirectiveAsFortran(), obj->name(),
+                          name.symbol->name());
+                    }
+                  }
+                }
+              }
+            },
         },
         ompObject.u);
   }
@@ -3178,6 +3191,10 @@ bool OmpStructureChecker::CheckReductionOperator(
       const SourceName &realName{name->symbol->GetUltimate().name()};
       valid =
           llvm::is_contained({"max", "min", "iand", "ior", "ieor"}, realName);
+      if (!valid) {
+        auto *misc{name->symbol->detailsIf<MiscDetails>()};
+        valid = misc && misc->kind() == MiscDetails::Kind::ConstructName;
+      }
     }
     if (!valid) {
       context_.Say(source,

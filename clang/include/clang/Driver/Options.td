@@ -932,9 +932,20 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
-def Xarch__ : JoinedAndSeparate<["-"], "Xarch_">, Flags<[NoXarchOption]>,
-  HelpText<"Pass <arg> to the compiliation if the target matches <arch>">,
-  MetaVarName<"<arch> <arg>">;
+def Xarch__
+    : JoinedAndSeparate<["-"], "Xarch_">,
+      Flags<[NoXarchOption]>,
+      HelpText<"Pass <arg> to the compilation if the target matches <arch>">,
+      DocBrief<
+          [{Specifies that the argument should only be used if the compilation
+  target matches the specified architecture. This can be used with the target
+  CPU, triple architecture, or offloading host and device. It is most useful
+  for separating behavior undesirable on one of the targets when combining many
+  compilation jobs, as is commong with offloading. For example, -Xarch_x86_64,
+  -Xarch_gfx90a, and -Xarch_device are all valid selectors. -Xarch_device will
+  forward the argument to the offloading device while -Xarch_host will target
+  the host system, which can be used to suppress incompatible GPU arguments.}]>,
+      MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
   HelpText<"Pass <arg> to the CUDA/HIP host compilation">, MetaVarName<"<arg>">;
 def Xarch_device : Separate<["-"], "Xarch_device">, Flags<[NoXarchOption]>,
@@ -3986,11 +3997,15 @@ defm assumptions : BoolFOption<"assumptions",
           "Disable codegen and compile-time checks for C++23's [[assume]] attribute">,
   PosFlag<SetTrue>>;
 
+
+let Visibility = [ClangOption, FlangOption] in {
 def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
   HelpText<"Enable the loop vectorization passes">;
 def fno_vectorize : Flag<["-"], "fno-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-vectorize">, Alias<fvectorize>;
 def : Flag<["-"], "fno-tree-vectorize">, Alias<fno_vectorize>;
+}
+
 def fslp_vectorize : Flag<["-"], "fslp-vectorize">, Group<f_Group>,
   HelpText<"Enable the superword-level parallelism vectorization passes">;
 def fno_slp_vectorize : Flag<["-"], "fno-slp-vectorize">, Group<f_Group>;
@@ -7332,6 +7347,10 @@ def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
 def mlink_bitcode_file
     : Separate<["-"], "mlink-bitcode-file">,
       HelpText<"Link the given bitcode file before performing optimizations.">;
+
+def vectorize_loops : Flag<["-"], "vectorize-loops">,
+  HelpText<"Run the Loop vectorization passes">,
+  MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7447,9 +7466,6 @@ defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
   "optimization pipeline">,
   NegFlag<SetFalse, [], [ClangOption]>>;
-def vectorize_loops : Flag<["-"], "vectorize-loops">,
-  HelpText<"Run the Loop vectorization passes">,
-  MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
 def vectorize_slp : Flag<["-"], "vectorize-slp">,
   HelpText<"Run the SLP vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;

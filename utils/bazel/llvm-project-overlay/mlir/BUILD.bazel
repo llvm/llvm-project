@@ -11136,6 +11136,7 @@ td_library(
         "include/mlir/Dialect/Linalg/IR/LinalgEnums.td",
         "include/mlir/Dialect/Linalg/IR/LinalgInterfaces.td",
         "include/mlir/Dialect/Linalg/IR/LinalgOps.td",
+        "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.td",
     ],
     includes = ["include"],
     deps = [
@@ -12239,6 +12240,42 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Tosa/IR/TosaOps.td",
     deps = [":TosaDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRTosaEnumsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/Tosa/IR/TosaEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Tosa/IR/TosaOpBase.td",
+)
+
+gentbl_cc_library(
+    name = "MLIRTosaAvailabilityIncGen",
+    tbl_outs = [
+        (
+            ["-gen-avail-interface-decls"],
+            "include/mlir/Dialect/Tosa/IR/TosaAvailability.h.inc",
+        ),
+        (
+            ["-gen-avail-interface-defs"],
+            "include/mlir/Dialect/Tosa/IR/TosaAvailability.cpp.inc",
+        ),
+        (
+            ["-gen-tosa-avail-impls"],
+            "include/mlir/Dialect/Tosa/IR/TosaOpAvailabilityImpl.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Tosa/IR/TosaOps.td",
 )
 
 gentbl_cc_library(

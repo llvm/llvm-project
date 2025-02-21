@@ -5,7 +5,7 @@
 ## If we don't merge adjacent duplicate entries, __code_size will be negative and
 ## . += __code_size will trigger a "move location counter backward" error.
 ## LLD may report more errors further down, but there is only one "move location counter backward" error.
-# RUN: not ld.lld -z norelro -z max-page-size=4096 -T a.t a.o -o /dev/null --no-merge-exidx-entries 2>&1 | \
+# RUN: not ld.lld -z norelro -z max-page-size=4096 -T a.t a.o --no-merge-exidx-entries 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 # ERR:      error: a.t:9: unable to move location counter (0x1000) backward to 0xf6c for section 'dummy1'
