@@ -95,19 +95,10 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
 
 bool AMDGPUUniformIntrinsicCombineImpl::run(Function &F) {
   bool IsChanged{false};
-  Module *M = F.getParent();
-  
-  // If none of the relevant intrinsics are declared, return early.
-  // if (!Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_permlane64, {}) &&
-  //     !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_readfirstlane, {}) &&
-  //     !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_readlane, {}) &&
-  //     !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_ballot, {})) {
-  //   return false;
-  // }
 
   // Iterate over each instruction in the function to get the desired intrinsic
   // inst to check for optimization.
-  for (Instruction &I : instructions(F)) {
+  for (Instruction &I : make_early_inc_range(instructions(F))) {
     if (auto *Intrinsic = dyn_cast<IntrinsicInst>(&I)) {
       IsChanged |= optimizeUniformIntrinsicInst(*Intrinsic);
     }
@@ -135,22 +126,24 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
     Value *Src = II.getArgOperand(0);
     if (UI->isDivergentUse(II.getOperandUse(0)))
       return false;
-
     LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << "\n");
 
-    // Look for a direct `icmp eq` use of the ballot result.
     bool Changed = false;
     for (User *U : make_early_inc_range(II.users())) {
-      if (match(U, m_ICmp(m_Specific(&II), m_Zero()))) {
-        ICmpInst *ICmp = dyn_cast<ICmpInst>(U);
-        IRBuilder<> Builder(ICmp);
-        Value *ConvertedSrc = Builder.CreateZExtOrTrunc(Src, II.getType());
+      if (auto *ICmp = dyn_cast<ICmpInst>(U)) {
+        Value *Op0 = ICmp->getOperand(0);
+        Value *Op1 = ICmp->getOperand(1);
 
-        LLVM_DEBUG(dbgs() << "Replacing ballot result in icmp: " << *ICmp
-                          << " with " << *ConvertedSrc << "\n");
+        if (ICmp->getPredicate() == ICmpInst::ICMP_EQ &&
+            ((Op0 == &II && match(Op1, m_Zero())) ||
+             (Op1 == &II && match(Op0, m_Zero())))) {
 
-        ICmp->setOperand(0, ConvertedSrc);
-        Changed = true;
+          IRBuilder<> Builder(ICmp);
+          Value *Xor = Builder.CreateXor(Src, Builder.getTrue());
+          LLVM_DEBUG(dbgs() << "Replacing with XOR: " << *Xor << "\n");
+          ICmp->replaceAllUsesWith(Xor);
+          Changed = true;
+        }
       }
     }
     return Changed;
