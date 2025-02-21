@@ -134,7 +134,7 @@ endif
 # Check if we should compile in Swift embedded mode
 #----------------------------------------------------------------------
 ifeq "$(SWIFT_EMBEDDED_MODE)" "1"
-	SWIFTFLAGS += -gdwarf-types -enable-experimental-feature Embedded -Xfrontend -disable-objc-interop -runtime-compatibility-version none
+	SWIFTFLAGS += -gdwarf-types -enable-experimental-feature Embedded -enable-experimental-feature ValueGenerics -Xfrontend -disable-objc-interop -runtime-compatibility-version none
 	ifeq "$(OS)" "Darwin"
 		SWIFTFLAGS += -target $(ARCH)-apple-macos14
 	endif
