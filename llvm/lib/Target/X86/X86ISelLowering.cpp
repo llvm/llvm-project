@@ -4070,6 +4070,9 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
       (VT.getVectorNumElements() * vectorWidth) / VT.getSizeInBits();
   EVT ResultVT = EVT::getVectorVT(*DAG.getContext(), ElVT, ResultNumElts);
 
+  assert(ResultVT.getSizeInBits() == vectorWidth &&
+         "Illegal subvector extraction");
+
   // Extract the relevant vectorWidth bits.  Generate an EXTRACT_SUBVECTOR
   unsigned ElemsPerChunk = vectorWidth / ElVT.getSizeInBits();
   assert(isPowerOf2_32(ElemsPerChunk) && "Elements per chunk not power of 2");
