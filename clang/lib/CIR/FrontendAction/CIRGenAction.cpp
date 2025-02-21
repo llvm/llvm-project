@@ -13,6 +13,7 @@
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "llvm/IR/Module.h"
 
 using namespace cir;
@@ -86,21 +87,26 @@ public:
     mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:
-      if (OutputStream && MlirModule) {
+      assert(CI.getFrontendOpts().MLIRTargetDialect == frontend::MLIR_CIR);
+    case CIRGenAction::OutputType::EmitMLIR: {
+      switch (CI.getFrontendOpts().MLIRTargetDialect) {
+      case frontend::MLIR_CIR:
+        if (OutputStream && MlirModule) {
+          mlir::OpPrintingFlags Flags;
+          Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
+          MlirModule->print(*OutputStream, Flags);
+        }
+        break;
+      case frontend::MLIR_Core:
+        mlir::ModuleOp LoweredMlirModule =
+            lowerFromCIRToMLIR(MlirModule, MlirCtx);
+        assert(OutputStream && "No output stream when lowering to MLIR!");
+        // FIXME: we cannot roundtrip prettyForm=true right now.
         mlir::OpPrintingFlags Flags;
         Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
-        MlirModule->print(*OutputStream, Flags);
+        LoweredMlirModule->print(*OutputStream, Flags);
+        break;
       }
-      break;
-    case CIRGenAction::OutputType::EmitMLIR: {
-      mlir::ModuleOp LoweredMlirModule =
-          lowerFromCIRToMLIR(MlirModule, MlirCtx);
-      assert(OutputStream && "No output stream when lowering to MLIR!");
-      // FIXME: we cannot roundtrip prettyForm=true right now.
-      mlir::OpPrintingFlags Flags;
-      Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
-      LoweredMlirModule->print(*OutputStream, Flags);
-      break;
     }
     case CIRGenAction::OutputType::EmitLLVM:
     case CIRGenAction::OutputType::EmitBC:

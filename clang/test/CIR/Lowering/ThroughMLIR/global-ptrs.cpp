@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-core-mlir %s -o %t.mlir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-mlir=core %s -o %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s
 
 // XFAIL: *
