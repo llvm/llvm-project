@@ -524,6 +524,37 @@ TestClass<test_func::C> t2;
 TestStruct<test_func::S> t3;
 TestEnum<test_func::E> t4;
 
+class A { int b;};
+namespace inner {
+  template <class Ty>
+  class C {
+  public:
+    template <class T>
+    static void f(int i) {
+      (void)i;
+#ifdef MS
+     static_assert(is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::f"));
+#else
+     static_assert(is_equal(__FUNCTION__, "f"));
+#endif
+    }
+    template <class T>
+    static void f(double f) {
+      (void)f;
+#ifdef MS
+     static_assert(is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::f"));
+#else
+     static_assert(is_equal(__FUNCTION__, "f"));
+#endif
+    }
+  };
+}
+
+  void foo() {
+  test_func::inner::C<test_func::A>::f<char>(1);
+  test_func::inner::C<test_func::A>::f<void>(1.0);
+}
+
 } // namespace test_func
 
 

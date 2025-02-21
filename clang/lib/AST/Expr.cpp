@@ -747,8 +747,12 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
       if (MD->isVirtual() && IK != PredefinedIdentKind::PrettyFunctionNoVirtual)
         Out << "virtual ";
-      if (MD->isStatic())
-        Out << "static ";
+      if (MD->isStatic()) {
+        bool IsFunctionInMSVCCommpatEnv =
+            IK == PredefinedIdentKind::Function && LO.MSVCCompat;
+        if (ForceElaboratedPrinting && !IsFunctionInMSVCCommpatEnv)
+          Out << "static ";
+      }
     }
 
     class PrettyCallbacks final : public PrintingCallbacks {
