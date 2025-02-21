@@ -40,7 +40,9 @@ class GDBProxyTestBase(TestBase):
 
         # log all warnings to stderr
         self._stderr_log_handler = logging.StreamHandler()
-        self._stderr_log_handler.setLevel(logging.DEBUG if self.TraceOn() else logging.WARNING)
+        self._stderr_log_handler.setLevel(
+            logging.DEBUG if self.TraceOn() else logging.WARNING
+        )
         self._stderr_log_handler.setFormatter(self._log_formatter)
         self.logger.addHandler(self._stderr_log_handler)
 
