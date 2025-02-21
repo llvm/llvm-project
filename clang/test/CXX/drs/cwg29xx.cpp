@@ -125,12 +125,12 @@ namespace Example3 {
 
 template <typename T> void f(T &&, void (*)(T &&)); // #cwg2918_f
 
-void g(int &); // #1
+void g(int &);
 inline namespace A {
-void g(short &&); // #2
+void g(short &&);
 }
 inline namespace B {
-void g(short &&); // #3
+void g(short &&);
 }
 
 void q() {
