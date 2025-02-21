@@ -1,5 +1,5 @@
-// Global variables of scalar typees with initial values
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o -  | FileCheck %s
+// Global variables of scalar types with initial values
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-mlir=cir %s -o -  | FileCheck %s
 
 char c;
 // CHECK: cir.global external @c : !cir.int<s, 8>
