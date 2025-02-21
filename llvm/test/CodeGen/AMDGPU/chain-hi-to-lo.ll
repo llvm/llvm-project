@@ -587,34 +587,63 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; FLATSCR_GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; FLATSCR_GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: vload2_private:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v0, v2, s[0:1]
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b16 off, v0, off dlc
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_load_u16 v0, v2, s[0:1] offset:2
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b16 off, v0, off offset:2 dlc
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_load_u16 v0, v2, s[0:1] offset:4
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b16 off, v0, off offset:4 dlc
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    scratch_load_u16 v0, off, off offset:2
-; GFX11-NEXT:    scratch_load_u16 v3, off, off
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_mov_b32_e32 v1, v0
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v0, v0, v3, 0x5040100
-; GFX11-NEXT:    scratch_load_d16_hi_b16 v1, off, off offset:4
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: vload2_private:
+; GFX11-TRUE16:       ; %bb.0: ; %entry
+; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v2, s[0:1]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    scratch_store_b16 off, v0, off dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v2, s[0:1] offset:2
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    scratch_store_b16 off, v0, off offset:2 dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-TRUE16-NEXT:    global_load_u16 v0, v2, s[0:1] offset:4
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    scratch_store_b16 off, v0, off offset:4 dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-TRUE16-NEXT:    s_clause 0x1
+; GFX11-TRUE16-NEXT:    scratch_load_u16 v3, off, off offset:2
+; GFX11-TRUE16-NEXT:    scratch_load_u16 v0, off, off
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, v3
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v3.l
+; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v1, off, off offset:4
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: vload2_private:
+; GFX11-FAKE16:       ; %bb.0: ; %entry
+; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    global_load_u16 v0, v2, s[0:1]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    scratch_store_b16 off, v0, off dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FAKE16-NEXT:    global_load_u16 v0, v2, s[0:1] offset:2
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    scratch_store_b16 off, v0, off offset:2 dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FAKE16-NEXT:    global_load_u16 v0, v2, s[0:1] offset:4
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    scratch_store_b16 off, v0, off offset:4 dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FAKE16-NEXT:    s_clause 0x1
+; GFX11-FAKE16-NEXT:    scratch_load_u16 v0, off, off offset:2
+; GFX11-FAKE16-NEXT:    scratch_load_u16 v3, off, off
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v0, v3, 0x5040100
+; GFX11-FAKE16-NEXT:    scratch_load_d16_hi_b16 v1, off, off offset:4
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX11-FAKE16-NEXT:    s_endpgm
 entry:
   %loc = alloca [3 x i16], align 2, addrspace(5)
   %tmp = load i16, ptr addrspace(1) %in, align 2
@@ -968,16 +997,27 @@ define <2 x i16> @chain_hi_to_lo_group_may_alias_store(ptr addrspace(3) %ptr, pt
 ; GFX10-NEXT:    v_perm_b32 v0, v3, v0, 0x5040100
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: chain_hi_to_lo_group_may_alias_store:
-; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0x7b
-; GFX11-NEXT:    ds_load_u16 v3, v0
-; GFX11-NEXT:    ds_store_b16 v1, v2
-; GFX11-NEXT:    ds_load_u16 v0, v0 offset:2
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v0, v3, v0, 0x5040100
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: chain_hi_to_lo_group_may_alias_store:
+; GFX11-TRUE16:       ; %bb.0: ; %bb
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0x7b
+; GFX11-TRUE16-NEXT:    ds_load_u16 v3, v0
+; GFX11-TRUE16-NEXT:    ds_store_b16 v1, v2
+; GFX11-TRUE16-NEXT:    ds_load_u16 v0, v0 offset:2
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v3.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: chain_hi_to_lo_group_may_alias_store:
+; GFX11-FAKE16:       ; %bb.0: ; %bb
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, 0x7b
+; GFX11-FAKE16-NEXT:    ds_load_u16 v3, v0
+; GFX11-FAKE16-NEXT:    ds_store_b16 v1, v2
+; GFX11-FAKE16-NEXT:    ds_load_u16 v0, v0 offset:2
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v3, v0, 0x5040100
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(3) %ptr, i64 1
   %load_hi = load i16, ptr addrspace(3) %ptr
