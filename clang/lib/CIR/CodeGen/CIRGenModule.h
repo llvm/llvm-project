@@ -17,6 +17,8 @@
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -35,6 +37,8 @@ class TargetInfo;
 class VarDecl;
 
 namespace CIRGen {
+
+enum ForDefinition_t : bool { NotForDefinition = false, ForDefinition = true };
 
 /// This class organizes the cross-function state that is used while generating
 /// CIR code.
@@ -71,6 +75,7 @@ public:
   CIRGenBuilderTy &getBuilder() { return builder; }
   clang::ASTContext &getASTContext() const { return astContext; }
   CIRGenTypes &getTypes() { return genTypes; }
+  const clang::LangOptions &getLangOpts() const { return langOpts; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
 
   /// Helpers to convert the presumed location of Clang's SourceLocation to an
@@ -80,15 +85,36 @@ public:
 
   void emitTopLevelDecl(clang::Decl *decl);
 
+  /// Return the address of the given function. If funcType is non-null, then
+  /// this function will use the specified type if it has to create it.
+  // TODO: this is a bit weird as `GetAddr` given we give back a FuncOp?
+  cir::FuncOp
+  getAddrOfFunction(clang::GlobalDecl gd, mlir::Type funcType = nullptr,
+                    bool forVTable = false, bool dontDefer = false,
+                    ForDefinition_t isForDefinition = NotForDefinition);
+
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
+
+  mlir::Type convertType(clang::QualType type);
 
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
+
+  cir::FuncOp
+  getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,
+                         clang::GlobalDecl gd, bool forVTable,
+                         bool dontDefer = false, bool isThunk = false,
+                         ForDefinition_t isForDefinition = NotForDefinition,
+                         mlir::ArrayAttr extraAttrs = {});
+
+  cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
+                                cir::FuncType funcType,
+                                const clang::FunctionDecl *funcDecl);
 
   const llvm::Triple &getTriple() const { return target.getTriple(); }
 

@@ -5314,8 +5314,7 @@ public:
                         SelectionDAG &DAG) const;
 
   /// Expand fminnum/fmaxnum into fminnum_ieee/fmaxnum_ieee with quieted inputs.
-  SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG,
-                                bool ShouldCanonicalize = true) const;
+  SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand fminimum/fmaximum into multiple comparison with selects.
   SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;

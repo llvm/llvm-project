@@ -2682,6 +2682,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::ZERO_EXTEND_VECTOR_INREG,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
+                       ISD::FP_TO_SINT,
                        ISD::STRICT_SINT_TO_FP,
                        ISD::STRICT_UINT_TO_FP,
                        ISD::FP_TO_SINT_SAT,
@@ -6128,10 +6129,26 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     SDValue Sub = N.getOperand(1);
     EVT SubVT = Sub.getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
+    uint64_t InsertIdx = N.getConstantOperandVal(2);
+    // Handle CONCAT(SUB0, SUB1).
+    // Limit this to vXi64 vector cases to make the most of cross lane shuffles.
+    if (Depth > 0 && InsertIdx == NumSubElts && NumElts == (2 * NumSubElts) &&
+        NumBitsPerElt == 64 && Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        Src.getOperand(0).isUndef() &&
+        Src.getOperand(1).getValueType() == SubVT &&
+        Src.getConstantOperandVal(2) == 0 &&
+        SDNode::areOnlyUsersOf({N.getNode(), Src.getNode()}, Sub.getNode())) {
+      for (int i = 0; i != (int)NumSubElts; ++i)
+        Mask.push_back(i);
+      for (int i = 0; i != (int)NumSubElts; ++i)
+        Mask.push_back(i + NumElts);
+      Ops.push_back(Src.getOperand(1));
+      Ops.push_back(Sub);
+      return true;
+    }
     if (!N->isOnlyUserOf(Sub.getNode()))
       return false;
     SDValue SubBC = peekThroughBitcasts(Sub);
-    uint64_t InsertIdx = N.getConstantOperandVal(2);
     // Handle INSERT_SUBVECTOR(SRC0, EXTRACT_SUBVECTOR(SRC1)).
     if (SubBC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         SubBC.getOperand(0).getValueSizeInBits() == NumSizeInBits) {
@@ -6152,21 +6169,6 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       if (!SrcIsUndef)
         Ops.push_back(Src);
       Ops.push_back(SubBCSrc);
-      return true;
-    }
-    // Handle CONCAT(SUB0, SUB1).
-    // Limit this to vXi64 vector cases to make the most of cross lane shuffles.
-    if (Depth > 0 && InsertIdx == NumSubElts && NumElts == (2 * NumSubElts) &&
-        NumBitsPerElt == 64 && Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
-        Src.getOperand(0).isUndef() &&
-        Src.getOperand(1).getValueType() == SubVT &&
-        Src.getConstantOperandVal(2) == 0) {
-      for (int i = 0; i != (int)NumSubElts; ++i)
-        Mask.push_back(i);
-      for (int i = 0; i != (int)NumSubElts; ++i)
-        Mask.push_back(i + NumElts);
-      Ops.push_back(Src.getOperand(1));
-      Ops.push_back(Sub);
       return true;
     }
     // Handle INSERT_SUBVECTOR(SRC0, SHUFFLE(SRC1)).
@@ -40064,8 +40066,12 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   if (Depth < 1)
     return SDValue();
 
-  bool HasVariableMask = llvm::any_of(SrcNodes, [](const SDNode *N) {
+  int NumVariableMasks = llvm::count_if(SrcNodes, [](const SDNode *N) {
     return isTargetShuffleVariableMask(N->getOpcode());
+  });
+  bool HasSlowVariableMask = llvm::any_of(SrcNodes, [](const SDNode *N) {
+    return (N->getOpcode() == X86ISD::VPERMV3 ||
+            N->getOpcode() == X86ISD::VPERMV);
   });
 
   // Depth threshold above which we can efficiently use variable mask shuffles.
@@ -40074,13 +40080,15 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   int VariablePerLaneShuffleDepth =
       Subtarget.hasFastVariablePerLaneShuffle() ? 1 : 2;
   AllowVariableCrossLaneMask &=
-      (Depth >= VariableCrossLaneShuffleDepth) || HasVariableMask;
+      (Depth >= VariableCrossLaneShuffleDepth) || NumVariableMasks;
   AllowVariablePerLaneMask &=
-      (Depth >= VariablePerLaneShuffleDepth) || HasVariableMask;
-  // VPERMI2W/VPERMI2B are 3 uops on Skylake and Icelake so we require a
+      (Depth >= VariablePerLaneShuffleDepth) || NumVariableMasks;
+  // VPERM2W/VPERM2B are 3 uops on Skylake and Icelake so we require a
   // higher depth before combining them.
+  int BWIVPERMV3ShuffleDepth =
+      VariableCrossLaneShuffleDepth + 2 - NumVariableMasks;
   bool AllowBWIVPERMV3 =
-      (Depth >= (VariableCrossLaneShuffleDepth + 2) || HasVariableMask);
+      (Depth >= BWIVPERMV3ShuffleDepth || HasSlowVariableMask);
 
   // If root was a VPERMV3 node, always allow a variable shuffle.
   if (Root.getOpcode() == X86ISD::VPERMV3)
@@ -41077,12 +41085,17 @@ static SDValue combineX86ShufflesRecursively(
     }
   }
 
-  // Peek through any free extract_subvector nodes back to root size.
-  for (SDValue &Op : Ops)
-    while (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-           (RootSizeInBits % Op.getOperand(0).getValueSizeInBits()) == 0 &&
-           isNullConstant(Op.getOperand(1)))
-      Op = Op.getOperand(0);
+  // Peek through any free bitcasts/extract_subvector nodes back to root size.
+  for (SDValue &Op : Ops){
+    SDValue BC = Op;
+    if (BC.getOpcode() == ISD::BITCAST && BC.hasOneUse())
+      BC = peekThroughOneUseBitcasts(BC);
+    while (BC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+           (RootSizeInBits % BC.getOperand(0).getValueSizeInBits()) == 0 &&
+           isNullConstant(BC.getOperand(1))) {
+      Op = BC = BC.getOperand(0);
+    }
+  }
 
   // Remove unused/repeated shuffle source ops.
   resolveTargetShuffleInputsAndMask(Ops, Mask);
@@ -53684,6 +53697,41 @@ static SDValue combineLRINT_LLRINT(SDNode *N, SelectionDAG &DAG,
                                  DAG.getUNDEF(SrcVT)));
 }
 
+// Attempt to fold some (truncate (srl (add X, C1), C2)) patterns to
+// (add (truncate (srl X, C2)), C1'). C1' will be smaller than C1 so we are able
+// to avoid generating code with MOVABS and large constants in certain cases.
+static SDValue combinei64TruncSrlAdd(SDValue N, EVT VT, SelectionDAG &DAG,
+                                     const SDLoc &DL) {
+  using namespace llvm::SDPatternMatch;
+
+  SDValue AddLhs;
+  APInt AddConst, SrlConst;
+  if (VT != MVT::i32 ||
+      !sd_match(N, m_AllOf(m_SpecificVT(MVT::i64),
+                           m_Srl(m_OneUse(m_Add(m_Value(AddLhs),
+                                                m_ConstInt(AddConst))),
+                                 m_ConstInt(SrlConst)))))
+    return SDValue();
+
+  if (SrlConst.ule(31) || AddConst.lshr(SrlConst).shl(SrlConst) != AddConst)
+    return SDValue();
+
+  SDValue AddLHSSrl =
+      DAG.getNode(ISD::SRL, DL, MVT::i64, AddLhs, N.getOperand(1));
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
+
+  APInt NewAddConstVal =
+      (~((~AddConst).lshr(SrlConst))).trunc(VT.getSizeInBits());
+  SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
+  SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
+
+  APInt CleanupSizeConstVal = (SrlConst - 32).zextOrTrunc(VT.getSizeInBits());
+  EVT CleanUpVT =
+      EVT::getIntegerVT(*DAG.getContext(), CleanupSizeConstVal.getZExtValue());
+  SDValue CleanUp = DAG.getAnyExtOrTrunc(NewAddNode, DL, CleanUpVT);
+  return DAG.getAnyExtOrTrunc(CleanUp, DL, VT);
+}
+
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify
 /// the codegen.
 /// e.g. TRUNC( BINOP( X, Y ) ) --> BINOP( TRUNC( X ), TRUNC( Y ) )
@@ -53728,6 +53776,9 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   // Don't combine if the operation has other uses.
   if (!Src.hasOneUse())
     return SDValue();
+
+  if (SDValue R = combinei64TruncSrlAdd(Src, VT, DAG, DL))
+    return R;
 
   // Only support vector truncation for now.
   // TODO: i64 scalar math would benefit as well.
@@ -56478,6 +56529,17 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineToFPTruncExtElt(N, DAG))
     return V;
+
+  return SDValue();
+}
+
+static SDValue combineFPToSInt(SDNode *N, SelectionDAG &DAG,
+                               const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  if (Subtarget.hasSSE2() && Src.getOpcode() == ISD::FRINT &&
+      VT.getScalarType() == MVT::i32 && Src.hasOneUse())
+    return DAG.getNode(ISD::LRINT, SDLoc(N), VT, Src.getOperand(0));
 
   return SDValue();
 }
@@ -59560,6 +59622,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
     return combineUIntToFP(N, DAG, Subtarget);
+  case ISD::FP_TO_SINT:     return combineFPToSInt(N, DAG, Subtarget);
   case ISD::LRINT:
   case ISD::LLRINT:         return combineLRINT_LLRINT(N, DAG, Subtarget);
   case ISD::FADD:

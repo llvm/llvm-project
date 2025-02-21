@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRTosaTransforms
   TosaOptionalDecompositions.cpp
   TosaReduceTransposes.cpp
   TosaTypeConverters.cpp
+  TosaProfileCompliance.cpp
   TosaValidation.cpp
 
   ADDITIONAL_HEADER_DIRS
