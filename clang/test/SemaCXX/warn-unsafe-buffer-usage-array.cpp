@@ -39,11 +39,14 @@ int array[10]; // expected-warning {{'array' is an unsafe buffer that does not p
 
 void masked_idx1(unsigned long long idx, Foo f) {
   // Bitwise and operation
-  array[idx & 5] = 10; // no warning
+  array[idx & 5] = 10; // no-warning
+  array[5 &idx] = 12; // no-warning
   array[idx & 11 & 5] = 3; // no warning
   array[idx & 11] = 20; // expected-note{{used in buffer access here}}
   array[idx &=5]; // expected-note{{used in buffer access here}}
-  array[f.x & 5];
+  array[f.x & 5]; // no-warning
+  array[5 & f.x]; // no-warning
+  array[f.x & (-5)]; // expected-note{{used in buffer access here}}
 }
 
 typedef unsigned long long uint64_t;
@@ -62,7 +65,6 @@ void masked_idx_safe(unsigned long long idx) {
   array2[6 & 5]; // no warning
   array2[6 & idx & (idx + 1) & 5]; // expected-note{{used in buffer access here}}
 }
-
 
 void constant_idx_unsafe(unsigned idx) {
   int buffer[10];       // expected-warning{{'buffer' is an unsafe buffer that does not perform bounds checks}}

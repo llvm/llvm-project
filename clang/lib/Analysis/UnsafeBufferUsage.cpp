@@ -463,6 +463,8 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < limit)
       return true;
   } else if (const auto *BE = dyn_cast<BinaryOperator>(IndexExpr)) {
+    // For an integer expression `e` and an integer constant `n`, `e & n` and
+    // `n & e` are bounded by `n`:
     if (BE->getOpcode() != BO_And)
       return false;
 
@@ -470,17 +472,17 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     const Expr *RHS = BE->getRHS();
 
     if ((!LHS->isValueDependent() &&
-         LHS->EvaluateAsInt(EVResult, Finder->getASTContext())) ||
+         LHS->EvaluateAsInt(EVResult,
+                            Finder->getASTContext())) || // case: `n & e`
         (!RHS->isValueDependent() &&
-         RHS->EvaluateAsInt(EVResult, Finder->getASTContext()))) {
+         RHS->EvaluateAsInt(EVResult, Finder->getASTContext()))) { // `e & n`
       llvm::APSInt result = EVResult.Val.getInt();
       if (result.isNonNegative() && result.getLimitedValue() < limit)
         return true;
     }
     return false;
-
-  } else
-    return false;
+  }
+  return false;
 }
 
 AST_MATCHER_P(CallExpr, hasNumArgs, unsigned, Num) {
