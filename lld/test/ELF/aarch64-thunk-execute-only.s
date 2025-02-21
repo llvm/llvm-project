@@ -7,11 +7,13 @@
 .globl _start
 _start:
     bl big
+    b  big
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-LABEL: <_start>:
 // CHECK-NEXT:             bl      {{.*}} <__AArch64AbsXOLongThunk_big>
+// CHECK-NEXT:             b       {{.*}} <__AArch64AbsXOLongThunk_big>
 // CHECK-LABEL: <__AArch64AbsXOLongThunk_big>:
 // CHECK-NEXT:             mov     x16, #0x4444
 // CHECK-NEXT:             movk    x16, #0x3333, lsl #16
