@@ -1,12 +1,15 @@
-//===--- ELFAttributeParser.cpp - ELF Attribute Parser --------------------===//
+//===--- ELFCompactAttrParser.cpp - ELF Compact Attribute Parser ------  ===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------------===//
+// ELF Compact Attribute Parser parse ELF build atrributes that are held
+// in a single Build Attributes Subsection.
+//
+//===--------------------------------------------------------------------===//
 
-#include "llvm/Support/ELFAttributeParser.h"
+#include "llvm/Support/ELFAttrParserCompact.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -20,8 +23,8 @@ static constexpr EnumEntry<unsigned> tagNames[] = {
     {"Tag_Symbol", ELFAttrs::Symbol},
 };
 
-Error ELFAttributeParser::parseStringAttribute(const char *name, unsigned tag,
-                                               ArrayRef<const char *> strings) {
+Error ELFCompactAttrParser::parseStringAttribute(
+    const char *name, unsigned tag, ArrayRef<const char *> strings) {
   uint64_t value = de.getULEB128(cursor);
   if (value >= strings.size()) {
     printAttribute(tag, value, "");
@@ -33,7 +36,7 @@ Error ELFAttributeParser::parseStringAttribute(const char *name, unsigned tag,
   return Error::success();
 }
 
-Error ELFAttributeParser::integerAttribute(unsigned tag) {
+Error ELFCompactAttrParser::integerAttribute(unsigned tag) {
   StringRef tagName =
       ELFAttrs::attrTypeAsString(tag, tagToStringMap, /*hasTagPrefix=*/false);
   uint64_t value = de.getULEB128(cursor);
@@ -49,7 +52,7 @@ Error ELFAttributeParser::integerAttribute(unsigned tag) {
   return Error::success();
 }
 
-Error ELFAttributeParser::stringAttribute(unsigned tag) {
+Error ELFCompactAttrParser::stringAttribute(unsigned tag) {
   StringRef tagName =
       ELFAttrs::attrTypeAsString(tag, tagToStringMap, /*hasTagPrefix=*/false);
   StringRef desc = de.getCStrRef(cursor);
@@ -65,8 +68,8 @@ Error ELFAttributeParser::stringAttribute(unsigned tag) {
   return Error::success();
 }
 
-void ELFAttributeParser::printAttribute(unsigned tag, unsigned value,
-                                        StringRef valueDesc) {
+void ELFCompactAttrParser::printAttribute(unsigned tag, unsigned value,
+                                          StringRef valueDesc) {
   attributes.insert(std::make_pair(tag, value));
 
   if (sw) {
@@ -82,7 +85,7 @@ void ELFAttributeParser::printAttribute(unsigned tag, unsigned value,
   }
 }
 
-void ELFAttributeParser::parseIndexList(SmallVectorImpl<uint8_t> &indexList) {
+void ELFCompactAttrParser::parseIndexList(SmallVectorImpl<uint8_t> &indexList) {
   for (;;) {
     uint64_t value = de.getULEB128(cursor);
     if (!cursor || !value)
@@ -91,7 +94,7 @@ void ELFAttributeParser::parseIndexList(SmallVectorImpl<uint8_t> &indexList) {
   }
 }
 
-Error ELFAttributeParser::parseAttributeList(uint32_t length) {
+Error ELFCompactAttrParser::parseAttributeList(uint32_t length) {
   uint64_t pos;
   uint64_t end = cursor.tell() + length;
   while ((pos = cursor.tell()) < end) {
@@ -119,7 +122,7 @@ Error ELFAttributeParser::parseAttributeList(uint32_t length) {
   return Error::success();
 }
 
-Error ELFAttributeParser::parseSubsection(uint32_t length) {
+Error ELFCompactAttrParser::parseSubsection(uint32_t length) {
   uint64_t end = cursor.tell() - sizeof(length) + length;
   StringRef vendorName = de.getCStrRef(cursor);
   if (sw) {
@@ -187,8 +190,8 @@ Error ELFAttributeParser::parseSubsection(uint32_t length) {
   return Error::success();
 }
 
-Error ELFAttributeParser::parse(ArrayRef<uint8_t> section,
-                                llvm::endianness endian) {
+Error ELFCompactAttrParser::parse(ArrayRef<uint8_t> section,
+                                  llvm::endianness endian) {
   unsigned sectionNumber = 0;
   de = DataExtractor(section, endian == llvm::endianness::little, 0);
 

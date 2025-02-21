@@ -9,24 +9,21 @@
 #ifndef LLVM_SUPPORT_AARCH64ATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_AARCH64ATTRIBUTEPARSER_H
 
-#include "ELFAttributeParser.h"
-#include "llvm/Support/Error.h"
+#include "llvm/Support/ELFAttrParserExtended.h"
+#include "llvm/Support/ELFAttributes.h"
 
 namespace llvm {
 
-class ScopedPrinter;
-
-class AArch64AttributeParser : public ELFAttributeParser {
-  Error handler(uint64_t Tag, bool &Handled) override {
-    return Error::success();
-  }
+class AArch64AttributeParser : public ELFExtendedAttrParser {
+  static const std::vector<SubsectionAndTagToTagName> returnTagsNamesMap();
 
 public:
-  Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian) override;
-
-  AArch64AttributeParser(ScopedPrinter *Sw) : ELFAttributeParser(Sw) {}
-  AArch64AttributeParser() {}
+  AArch64AttributeParser(ScopedPrinter *Sw)
+      : ELFExtendedAttrParser(Sw, returnTagsNamesMap()) {}
+  AArch64AttributeParser()
+      : ELFExtendedAttrParser(nullptr, returnTagsNamesMap()) {}
 };
+
 } // namespace llvm
 
 #endif // LLVM_SUPPORT_AARCH64ATTRIBUTEPARSER_H

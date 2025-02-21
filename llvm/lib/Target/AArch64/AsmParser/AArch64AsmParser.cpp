@@ -7995,7 +7995,7 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   } else if (Parser.getTok().is(AsmToken::Identifier)) {
     TagStr = Parser.getTok().getIdentifier();
     switch (ActiveSubsectionID) {
-    case AArch64BuildAttrs::VENDOR_UNKNOWN:
+    case AArch64BuildAttributes::VENDOR_UNKNOWN:
       // Tag was provided as an unrecognized string instead of an unsigned
       // integer
       Error(Parser.getTok().getLoc(), "unrecognized Tag: '" + TagStr +

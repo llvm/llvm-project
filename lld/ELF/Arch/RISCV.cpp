@@ -1175,7 +1175,7 @@ mergeAttributesSection(Ctx &ctx,
       switch (RISCVAttrs::AttrType(tag.attr)) {
         // Integer attributes.
       case RISCVAttrs::STACK_ALIGN:
-        if (auto i = parser.getAttributeValue(tag.attr)) {
+        if (auto i = parser.getAttributeValue("", tag.attr)) {
           auto r = merged.intAttr.try_emplace(tag.attr, *i);
           if (r.second) {
             firstStackAlign = sec;
@@ -1188,13 +1188,13 @@ mergeAttributesSection(Ctx &ctx,
         }
         continue;
       case RISCVAttrs::UNALIGNED_ACCESS:
-        if (auto i = parser.getAttributeValue(tag.attr))
+        if (auto i = parser.getAttributeValue("", tag.attr))
           merged.intAttr[tag.attr] |= *i;
         continue;
 
         // String attributes.
       case RISCVAttrs::ARCH:
-        if (auto s = parser.getAttributeString(tag.attr)) {
+        if (auto s = parser.getAttributeString("", tag.attr)) {
           hasArch = true;
           mergeArch(ctx, exts, xlen, sec, *s);
         }
@@ -1207,7 +1207,7 @@ mergeAttributesSection(Ctx &ctx,
         break;
 
       case RISCVAttrs::AttrType::ATOMIC_ABI:
-        if (auto i = parser.getAttributeValue(tag.attr)) {
+        if (auto i = parser.getAttributeValue("", tag.attr)) {
           auto r = merged.intAttr.try_emplace(tag.attr, *i);
           if (r.second)
             firstAtomicAbi = sec;
@@ -1225,12 +1225,12 @@ mergeAttributesSection(Ctx &ctx,
       // TODO Adjust after resolution to
       // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/issues/352
       if (tag.attr % 2 == 0) {
-        if (auto i = parser.getAttributeValue(tag.attr)) {
+        if (auto i = parser.getAttributeValue("", tag.attr)) {
           auto r = merged.intAttr.try_emplace(tag.attr, *i);
           if (!r.second && r.first->second != *i)
             r.first->second = 0;
         }
-      } else if (auto s = parser.getAttributeString(tag.attr)) {
+      } else if (auto s = parser.getAttributeString("", tag.attr)) {
         auto r = merged.strAttr.try_emplace(tag.attr, *s);
         if (!r.second && r.first->second != *s)
           r.first->second = {};

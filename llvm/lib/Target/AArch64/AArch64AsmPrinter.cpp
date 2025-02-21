@@ -480,12 +480,14 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
         AArch64BuildAttributes::getVendorName(AArch64BuildAttributes::AEABI_PAUTHABI),
         AArch64BuildAttributes::SubsectionOptional::REQUIRED,
         AArch64BuildAttributes::SubsectionType::ULEB128);
-    TS->emitAttribute(
-        AArch64BuildAttributes::getVendorName(AArch64BuildAttributes::AEABI_PAUTHABI),
-        AArch64BuildAttributes::TAG_PAUTH_PLATFORM, PAuthABIPlatform, "", false);
-    TS->emitAttribute(
-        AArch64BuildAttributes::getVendorName(AArch64BuildAttributes::AEABI_PAUTHABI),
-        AArch64BuildAttributes::TAG_PAUTH_SCHEMA, PAuthABIVersion, "", false);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_PAUTHABI),
+                      AArch64BuildAttributes::TAG_PAUTH_PLATFORM,
+                      PAuthABIPlatform, "");
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_PAUTHABI),
+                      AArch64BuildAttributes::TAG_PAUTH_SCHEMA, PAuthABIVersion,
+                      "");
   }
 
   unsigned BTIValue = (Flags & AArch64BuildAttributes::Feature_BTI_Flag) ? 1 : 0;
@@ -499,13 +501,13 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
                                 AArch64BuildAttributes::SubsectionType::ULEB128);
     TS->emitAttribute(AArch64BuildAttributes::getVendorName(
                           AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttributes::TAG_FEATURE_BTI, BTIValue, "", false);
+                      AArch64BuildAttributes::TAG_FEATURE_BTI, BTIValue, "");
     TS->emitAttribute(AArch64BuildAttributes::getVendorName(
                           AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttributes::TAG_FEATURE_PAC, PACValue, "", false);
+                      AArch64BuildAttributes::TAG_FEATURE_PAC, PACValue, "");
     TS->emitAttribute(AArch64BuildAttributes::getVendorName(
                           AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttributes::TAG_FEATURE_GCS, GCSValue, "", false);
+                      AArch64BuildAttributes::TAG_FEATURE_GCS, GCSValue, "");
   }
 }
 

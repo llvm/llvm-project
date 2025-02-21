@@ -164,7 +164,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     unsigned VendorID = AArch64BuildAttributes::getVendorID(VendorName);
 
     switch (VendorID) {
-    case AArch64BuildAttrs::VENDOR_UNKNOWN:
+    case AArch64BuildAttributes::VENDOR_UNKNOWN:
       if (unsigned(-1) != Value) {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
@@ -188,7 +188,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       case AArch64BuildAttributes::TAG_FEATURE_GCS:
       case AArch64BuildAttributes::TAG_FEATURE_PAC:
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value << "\t// "
-           << AArch64BuildAttrs::getFeatureAndBitsTagsStr(Tag);
+           << AArch64BuildAttributes::getFeatureAndBitsTagsStr(Tag);
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
         break;
       }
@@ -205,7 +205,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       case AArch64BuildAttributes::TAG_PAUTH_PLATFORM:
       case AArch64BuildAttributes::TAG_PAUTH_SCHEMA:
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value << "\t// "
-           << AArch64BuildAttrs::getPauthABITagsStr(Tag);
+           << AArch64BuildAttributes::getPauthABITagsStr(Tag);
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
         break;
       }
@@ -233,7 +233,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     StringRef ParameterStr = getTypeStr(ParameterType);
 
     switch (SubsectionID) {
-    case AArch64BuildAttrs::VENDOR_UNKNOWN: {
+    case AArch64BuildAttributes::VENDOR_UNKNOWN: {
       // Private subsection
       break;
     }
