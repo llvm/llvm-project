@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <deque>
+#include <iterator>
 #include <list>
 #include <string>
 #include <vector>
