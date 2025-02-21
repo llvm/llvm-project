@@ -846,8 +846,23 @@ class InterchangeableBinOp final : public InterchangeableInstruction {
   constexpr static std::initializer_list<unsigned> SupportedOp = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
       Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
-  // from high to low bit: Xor Or And Sub Add Mul AShr Shl
-  MaskType Mask = 0b11111111;
+  enum : MaskType {
+    SHL_BIT = 0b1,
+    AShr_BIT = 0b10,
+    Mul_BIT = 0b100,
+    Add_BIT = 0b1000,
+    Sub_BIT = 0b10000,
+    And_BIT = 0b100000,
+    Or_BIT = 0b1000000,
+    Xor_BIT = 0b10000000,
+  };
+  // The bit it sets represents whether MainOp can be converted to.
+  MaskType Mask = Xor_BIT | Or_BIT | And_BIT | Sub_BIT | Add_BIT | Mul_BIT |
+                  AShr_BIT | SHL_BIT;
+  // We cannot create an interchangeable instruction that does not exist in VL.
+  // For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0], but
+  // 'shl' does not exist in VL. In the end, we convert VL to [x * 1, y * 1].
+  // SeenBefore is used to know what operations have been seen before.
   MaskType SeenBefore = 0;
 
   /// Return a non-nullptr if either operand of I is a ConstantInt.
@@ -876,21 +891,21 @@ class InterchangeableBinOp final : public InterchangeableInstruction {
   static MaskType opcodeToMask(unsigned Opcode) {
     switch (Opcode) {
     case Instruction::Shl:
-      return 0b1;
+      return SHL_BIT;
     case Instruction::AShr:
-      return 0b10;
+      return AShr_BIT;
     case Instruction::Mul:
-      return 0b100;
+      return Mul_BIT;
     case Instruction::Add:
-      return 0b1000;
+      return Add_BIT;
     case Instruction::Sub:
-      return 0b10000;
+      return Sub_BIT;
     case Instruction::And:
-      return 0b100000;
+      return And_BIT;
     case Instruction::Or:
-      return 0b1000000;
+      return Or_BIT;
     case Instruction::Xor:
-      return 0b10000000;
+      return Xor_BIT;
     }
     llvm_unreachable("Unsupported opcode.");
   }
@@ -917,12 +932,12 @@ public:
       case Instruction::Shl:
         if (CIValue.isZero())
           return true;
-        return tryAnd(0b101);
+        return tryAnd(Mul_BIT | SHL_BIT);
       case Instruction::Mul:
         if (CIValue.isOne())
           return true;
         if (CIValue.isPowerOf2())
-          return tryAnd(0b101);
+          return tryAnd(Mul_BIT | SHL_BIT);
         break;
       case Instruction::And:
         if (CIValue.isAllOnes())
@@ -938,21 +953,21 @@ public:
   }
   unsigned getOpcode() const override {
     MaskType Candidate = Mask & SeenBefore;
-    if (Candidate & 0b1)
+    if (Candidate & SHL_BIT)
       return Instruction::Shl;
-    if (Candidate & 0b10)
+    if (Candidate & AShr_BIT)
       return Instruction::AShr;
-    if (Candidate & 0b100)
+    if (Candidate & Mul_BIT)
       return Instruction::Mul;
-    if (Candidate & 0b1000)
+    if (Candidate & Add_BIT)
       return Instruction::Add;
-    if (Candidate & 0b10000)
+    if (Candidate & Sub_BIT)
       return Instruction::Sub;
-    if (Candidate & 0b100000)
+    if (Candidate & And_BIT)
       return Instruction::And;
-    if (Candidate & 0b1000000)
+    if (Candidate & Or_BIT)
       return Instruction::Or;
-    if (Candidate & 0b10000000)
+    if (Candidate & Xor_BIT)
       return Instruction::Xor;
     llvm_unreachable("Cannot find interchangeable instruction.");
   }
