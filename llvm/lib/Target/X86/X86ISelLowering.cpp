@@ -40090,8 +40090,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   bool AllowBWIVPERMV3 =
       (Depth >= BWIVPERMV3ShuffleDepth || HasSlowVariableMask);
 
-  // If root was a VPERMV3 node, always allow a variable shuffle.
-  if (Root.getOpcode() == X86ISD::VPERMV3)
+  // If root was a VPERMV/VPERMV3 node, always allow a variable shuffle.
+  if ((UnaryShuffle && Root.getOpcode() == X86ISD::VPERMV) ||
+      Root.getOpcode() == X86ISD::VPERMV3)
     AllowVariableCrossLaneMask = AllowVariablePerLaneMask = true;
 
   bool MaskContainsZeros = isAnyZero(Mask);
