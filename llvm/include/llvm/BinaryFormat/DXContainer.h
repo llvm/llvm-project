@@ -17,7 +17,6 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <cstdint>
 #include <stdint.h>
 
 namespace llvm {
