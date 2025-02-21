@@ -316,11 +316,15 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     do {
       StringRef Line(FdataLine);
       CounterTy Count;
+      unsigned Type = 0;
+      if (Line.split(' ').first.getAsInteger(10, Type))
+        report_error(Filename, "Malformed / corrupted entry type");
+      bool IsBranchEntry = Type < 3;
       auto [Signature, ExecCount] = Line.rsplit(' ');
       if (ExecCount.getAsInteger(10, Count.Exec))
         report_error(Filename, "Malformed / corrupted execution count");
-      // Only LBR profile has misprediction field
-      if (!NoLBRCollection.value_or(false)) {
+      // Only LBR profile has misprediction field, branch entries
+      if (!NoLBRCollection.value_or(false) && IsBranchEntry) {
         auto [SignatureLBR, MispredCount] = Signature.rsplit(' ');
         Signature = SignatureLBR;
         if (MispredCount.getAsInteger(10, Count.Mispred))
@@ -356,7 +360,10 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     output() << "no_lbr\n";
   for (const auto &[Key, Value] : MergedProfile) {
     output() << Key << " ";
-    if (!NoLBRCollection.value_or(false))
+    unsigned Type = 0;
+    Key.split(' ').first.getAsInteger(10, Type);
+    bool IsBranchEntry = Type < 3;
+    if (!NoLBRCollection.value_or(false) && IsBranchEntry)
       output() << Value.Mispred << " ";
     output() << Value.Exec << "\n";
   }

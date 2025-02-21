@@ -1,0 +1,13 @@
+## Check that merge-fdata tool correctly handles memory profile
+
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: merge-fdata %t/a.fdata -o %t/merged.fdata
+# RUN: FileCheck %s --input-file %t/merged.fdata
+
+# CHECK: 4 Curl_cf_def_query c 4 Curl_cft_h1_proxy 68 3
+
+#--- a.fdata
+4 Curl_cf_def_query c 4 Curl_cft_h1_proxy 68 1
+4 Curl_cf_def_query c 4 Curl_cft_h1_proxy 68 2
