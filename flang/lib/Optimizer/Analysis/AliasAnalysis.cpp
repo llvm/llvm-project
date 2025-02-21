@@ -598,9 +598,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           } else
             breakFromLoop = true;
         })
-        .Case<fir::LoadOp>([&v, &defOp, &ty, &followingData, &attributes,
-                            &isCapturedInInternalProcedure, &approximateSource,
-                            &global, &type, &breakFromLoop](auto op) {
+        .Case<fir::LoadOp>([&](auto op) {
           // If load is inside target and it points to mapped item,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
@@ -643,6 +641,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             } else if (isDummyArgument(def)) {
               defOp = nullptr;
               v = def;
+            } else {
+              type = SourceKind::Indirect;
             }
           } else {
             // No further tracking for addresses loaded from memory for now.
