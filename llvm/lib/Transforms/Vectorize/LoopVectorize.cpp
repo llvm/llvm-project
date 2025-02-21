@@ -1115,6 +1115,7 @@ public:
     CM_Widen_Reverse, // For consecutive accesses with stride -1.
     CM_Interleave,
     CM_GatherScatter,
+    CM_Strided,
     CM_Scalarize,
     CM_VectorCall,
     CM_IntrinsicCall
@@ -6148,6 +6149,17 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
                "Expected consecutive stride.");
         InstWidening Decision =
             ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
+        // Consider using strided load/store for consecutive reverse accesses to
+        // achieve more efficient memory operations.
+        if (ConsecutiveStride == -1) {
+          const InstructionCost StridedLoadStoreCost =
+              isLegalStridedLoadStore(&I, VF) ? getStridedLoadStoreCost(&I, VF)
+                                              : InstructionCost::getInvalid();
+          if (StridedLoadStoreCost < Cost) {
+            Decision = CM_Strided;
+            Cost = StridedLoadStoreCost;
+          }
+        }
         setWideningDecision(&I, VF, Decision, Cost);
         continue;
       }
@@ -6794,6 +6806,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Normal;
 
       switch (getWideningDecision(I, VF)) {
+      // TODO: New CastContextHint for strided accesses.
+      case LoopVectorizationCostModel::CM_Strided:
       case LoopVectorizationCostModel::CM_GatherScatter:
         return TTI::CastContextHint::GatherScatter;
       case LoopVectorizationCostModel::CM_Interleave:
@@ -8355,6 +8369,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
+  bool Strided = Decision == LoopVectorizationCostModel::CM_Strided;
 
   VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
   if (Consecutive) {
@@ -8381,12 +8396,12 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     Ptr = VectorPtr;
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
-    return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse, false,
-                                 I->getDebugLoc());
+    return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
+                                 Strided, I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
   return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
-                                Reverse, false, I->getDebugLoc());
+                                Reverse, Strided, I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
