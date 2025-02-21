@@ -1,4 +1,5 @@
 // RUN: mlir-opt -split-input-file -convert-arith-to-emitc -verify-diagnostics %s
+// RUN: mlir-opt -split-input-file -convert-to-emitc="filter-dialects=arith" -verify-diagnostics %s
 
 func.func @arith_cast_tensor(%arg0: tensor<5xf32>) -> tensor<5xi32> {
   // expected-error @+1 {{failed to legalize operation 'arith.fptosi'}}
