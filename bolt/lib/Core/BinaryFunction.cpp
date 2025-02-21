@@ -498,6 +498,11 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     if (!IslandOffset)
       return;
 
+    // Print label if it exists at this offset.
+    if (const BinaryData *BD =
+            BC.getBinaryDataAtAddress(getAddress() + *IslandOffset))
+      OS << BD->getName() << ":\n";
+
     const size_t IslandSize = getSizeOfDataInCodeAt(*IslandOffset);
     BC.printData(OS, BC.extractData(getAddress() + *IslandOffset, IslandSize),
                  *IslandOffset);
@@ -1066,7 +1071,7 @@ size_t BinaryFunction::getSizeOfDataInCodeAt(uint64_t Offset) const {
   auto Iter = Islands->CodeOffsets.upper_bound(Offset);
   if (Iter != Islands->CodeOffsets.end())
     return *Iter - Offset;
-  return getSize() - Offset;
+  return getMaxSize() - Offset;
 }
 
 std::optional<uint64_t>

@@ -708,7 +708,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
 /// not used by a virtreg. Kill the physreg, marking it free. This may add
 /// implicit kills to MO->getParent() and invalidate MO.
 bool RegAllocFastImpl::usePhysReg(MachineInstr &MI, MCPhysReg Reg) {
-  assert(Register::isPhysicalRegister(Reg) && "expected physreg");
+  assert(Register(Reg).isPhysical() && "expected physreg");
   bool displacedAny = displacePhysReg(MI, Reg);
   setPhysRegState(Reg, regPreAssigned);
   markRegUsedInInstr(Reg);
@@ -1289,7 +1289,7 @@ void RegAllocFastImpl::dumpState() const {
     assert(VirtReg.isVirtual() && "Bad map key");
     MCPhysReg PhysReg = LR.PhysReg;
     if (PhysReg != 0) {
-      assert(Register::isPhysicalRegister(PhysReg) && "mapped to physreg");
+      assert(Register(PhysReg).isPhysical() && "mapped to physreg");
       for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
         assert(RegUnitStates[Unit] == VirtReg && "inverse map valid");
       }
