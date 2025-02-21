@@ -3067,11 +3067,15 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
                                        GraphType) {
     auto &Edge = *(ChildIter.getCurrent());
     auto Color = getColor(Edge->AllocTypes);
-    return (Twine("tooltip=\"") + getContextIds(Edge->ContextIds) + "\"" +
-            // fillcolor is the arrow head and color is the line
-            Twine(",fillcolor=\"") + Color + "\"" + Twine(",color=\"") + Color +
-            "\"")
-        .str();
+    std::string AttributeString =
+        (Twine("tooltip=\"") + getContextIds(Edge->ContextIds) + "\"" +
+         // fillcolor is the arrow head and color is the line
+         Twine(",fillcolor=\"") + Color + "\"" + Twine(",color=\"") + Color +
+         "\"")
+            .str();
+    if (Edge->IsBackedge)
+      AttributeString += ",style=\"dotted\"";
+    return AttributeString;
   }
 
   // Since the NodeOwners list includes nodes that are no longer connected to
