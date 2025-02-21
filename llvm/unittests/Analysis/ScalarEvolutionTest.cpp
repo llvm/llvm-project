@@ -1087,6 +1087,35 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeExpressionSize) {
   EXPECT_EQ(S2S->getExpressionSize(), 5u);
 }
 
+TEST_F(ScalarEvolutionsTest, AssumeLoopExists) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define void @foo(i32 %N) { "
+      "entry: "
+      "  %cmp3 = icmp sgt i32 %N, 0 "
+      "  br i1 %cmp3, label %for.body, label %for.cond.cleanup "
+      "for.cond.cleanup: "
+      "  ret void "
+      "for.body: "
+      "  br label %for.body "
+      "} "
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    BasicBlock *L = F.begin()->getNextNode()->getNextNode();
+    auto *Loop = LI.getLoopFor(L);
+    bool IsFinite = SE.loopIsFiniteByAssumption(Loop);
+    EXPECT_FALSE(IsFinite);
+    SE.setAssumeLoopExits();
+    IsFinite = SE.loopIsFiniteByAssumption(Loop);
+    EXPECT_TRUE(IsFinite);
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, SCEVLoopDecIntrinsic) {
   LLVMContext C;
   SMDiagnostic Err;
