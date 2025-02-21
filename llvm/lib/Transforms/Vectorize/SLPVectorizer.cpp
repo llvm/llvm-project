@@ -11096,9 +11096,6 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     if ((!Root && allConstant(VL)) || all_of(VL, IsaPred<UndefValue>))
       return TTI::TCC_Free;
     auto *VecTy = getWidenedType(ScalarTy, VL.size());
-    if (auto Cost = TTI.getBuildVectorCost(VecTy, VL, CostKind);
-        Cost.has_value())
-      return *Cost;
     InstructionCost GatherCost = 0;
     SmallVector<Value *> Gathers(VL);
     if (!Root && isSplat(VL)) {

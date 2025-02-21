@@ -741,12 +741,6 @@ public:
     return 1;
   }
 
-  std::optional<InstructionCost>
-  getBuildVectorCost(VectorType *Val, ArrayRef<Value *> Operands,
-                     TTI::TargetCostKind CostKind) const {
-    return std::nullopt;
-  }
-
   unsigned getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
                                      const APInt &DemandedDstElts,
                                      TTI::TargetCostKind CostKind) {
