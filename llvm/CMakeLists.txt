@@ -187,6 +187,19 @@ foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
   endif()
 endforeach()
 
+option(FLANG_ENABLE_FLANG_RT "Implicitly add LLVM_ENABLE_RUNTIMES=flang-rt when compiling Flang" ON)
+if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+  if (NOT "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    message(STATUS "Enabling Flang-RT as a dependency of Flang"
+      "Flang-RT is required for a fully working Flang toolchain."
+      "If you intend to compile Flang-RT separately following the instructions at"
+      "https://github.com/llvm/llvm-project/blob/main/flang-rt/README.md#standalone-runtimes-build"
+      "you should use -DFLANG_ENABLE_FLANG_RT=OFF to not build Flang-RT as part of this build."
+    )
+    list(APPEND LLVM_ENABLE_RUNTIMES "flang-rt")
+  endif()
+endif ()
+
 # Set a shorthand option to enable the GPU build of the 'libc' project.
 option(LIBC_GPU_BUILD "Enable the 'libc' project targeting the GPU" OFF)
 if(LIBC_GPU_BUILD)
