@@ -115,44 +115,45 @@ StringFile *new_string_file(char *buffer, size_t buflen, int bufmode,
 
 // TODO: Investigate the precommit bots' failures of this test and re-enable it.
 // https://github.com/llvm/llvm-project/issues/128185.
-//
-// TEST(LlvmLibcFileTest, WriteOnly) {
-//   const char data[] = "hello, file";
-//   constexpr size_t FILE_BUFFER_SIZE = sizeof(data) * 3 / 2;
-//   char file_buffer[FILE_BUFFER_SIZE];
-//   StringFile *f =
-//       new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w");
+#if 0
+TEST(LlvmLibcFileTest, WriteOnly) {
+  const char data[] = "hello, file";
+  constexpr size_t FILE_BUFFER_SIZE = sizeof(data) * 3 / 2;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w");
 
-//   ASSERT_EQ(sizeof(data), f->write(data, sizeof(data)).value);
-//   EXPECT_EQ(f->get_pos(), size_t(0)); // Data is buffered in the file stream
-//   ASSERT_EQ(f->flush(), 0);
-//   EXPECT_EQ(f->get_pos(), sizeof(data)); // Data should now be available
-//   EXPECT_STREQ(f->get_str(), data);
+  ASSERT_EQ(sizeof(data), f->write(data, sizeof(data)).value);
+  EXPECT_EQ(f->get_pos(), size_t(0)); // Data is buffered in the file stream
+  ASSERT_EQ(f->flush(), 0);
+  EXPECT_EQ(f->get_pos(), sizeof(data)); // Data should now be available
+  EXPECT_STREQ(f->get_str(), data);
 
-//   f->reset();
-//   ASSERT_EQ(f->get_pos(), size_t(0));
-//   ASSERT_EQ(sizeof(data), f->write(data, sizeof(data)).value);
-//   EXPECT_EQ(f->get_pos(), size_t(0)); // Data is buffered in the file stream
-//   // The second write should trigger a buffer flush.
-//   ASSERT_EQ(sizeof(data), f->write(data, sizeof(data)).value);
-//   EXPECT_GE(f->get_pos(), size_t(0));
-//   ASSERT_EQ(f->flush(), 0);
-//   EXPECT_EQ(f->get_pos(), 2 * sizeof(data));
-//   MemoryView src1("hello, file\0hello, file", sizeof(data) * 2),
-//       dst1(f->get_str(), sizeof(data) * 2);
-//   EXPECT_MEM_EQ(src1, dst1);
+  f->reset();
+  ASSERT_EQ(f->get_pos(), size_t(0));
+  ASSERT_EQ(sizeof(data), f->write(data, sizeof(data)).value);
+  EXPECT_EQ(f->get_pos(), size_t(0)); // Data is buffered in the file stream
+  // The second write should trigger a buffer flush.
+  ASSERT_EQ(sizeof(data), f->write(data, sizeof(data)).value);
+  EXPECT_GE(f->get_pos(), size_t(0));
+  ASSERT_EQ(f->flush(), 0);
+  EXPECT_EQ(f->get_pos(), 2 * sizeof(data));
+  MemoryView src1("hello, file\0hello, file", sizeof(data) * 2),
+      dst1(f->get_str(), sizeof(data) * 2);
+  EXPECT_MEM_EQ(src1, dst1);
 
-//   char read_data[sizeof(data)];
-//   {
-//     // This is not a readable file.
-//     auto result = f->read(read_data, sizeof(data));
-//     EXPECT_EQ(result.value, size_t(0));
-//     EXPECT_TRUE(f->error());
-//     EXPECT_TRUE(result.has_error());
-//   }
+  char read_data[sizeof(data)];
+  {
+    // This is not a readable file.
+    auto result = f->read(read_data, sizeof(data));
+    EXPECT_EQ(result.value, size_t(0));
+    EXPECT_TRUE(f->error());
+    EXPECT_TRUE(result.has_error());
+  }
 
-//   ASSERT_EQ(f->close(), 0);
-// }
+  ASSERT_EQ(f->close(), 0);
+}
+#endif
 
 TEST(LlvmLibcFileTest, WriteLineBuffered) {
   const char data[] = "hello\n file";
