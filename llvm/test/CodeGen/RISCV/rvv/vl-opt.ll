@@ -217,3 +217,36 @@ define void @optimize_ternary_use(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b, 
   call void @llvm.riscv.vse(<vscale x 4 x i32> %3, ptr %p, iXLen %vl)
   ret void
 }
+
+; This function has a copy between two vrm2 virtual registers, make sure we can
+; reduce vl between it.
+define void @fadd_fcmp_select_copy(<vscale x 4 x float> %v, <vscale x 4 x i1> %c, ptr %p, iXLen %vl) {
+; NOVLOPT-LABEL: fadd_fcmp_select_copy:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v8, v8
+; NOVLOPT-NEXT:    fmv.w.x fa5, zero
+; NOVLOPT-NEXT:    vmflt.vf v10, v8, fa5
+; NOVLOPT-NEXT:    vmand.mm v10, v0, v10
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vse32.v v8, (a0)
+; NOVLOPT-NEXT:    vsm.v v10, (a0)
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: fadd_fcmp_select_copy:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vfadd.vv v8, v8, v8
+; VLOPT-NEXT:    fmv.w.x fa5, zero
+; VLOPT-NEXT:    vmflt.vf v10, v8, fa5
+; VLOPT-NEXT:    vmand.mm v10, v0, v10
+; VLOPT-NEXT:    vse32.v v8, (a0)
+; VLOPT-NEXT:    vsm.v v10, (a0)
+; VLOPT-NEXT:    ret
+  %fadd = fadd <vscale x 4 x float> %v, %v
+  %fcmp = fcmp olt <vscale x 4 x float> %fadd, zeroinitializer
+  %select = select <vscale x 4 x i1> %c, <vscale x 4 x i1> %fcmp, <vscale x 4 x i1> zeroinitializer
+  call void @llvm.riscv.vse(<vscale x 4 x float> %fadd, ptr %p, iXLen %vl)
+  call void @llvm.riscv.vsm(<vscale x 4 x i1> %select, ptr %p, iXLen %vl)
+  ret void
+}

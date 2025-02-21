@@ -98,7 +98,7 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
     // directives.
     for (const auto &I : CSI) {
       int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
 
       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
           nullptr, MRI->getDwarfRegNum(Reg, 1), Offset));
@@ -203,7 +203,7 @@ bool XtensaFrameLowering::spillCalleeSavedRegisters(
     // method XtensaTargetLowering::LowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
-    Register Reg = CSI[i].getReg();
+    MCRegister Reg = CSI[i].getReg();
     bool IsA0AndRetAddrIsTaken =
         (Reg == Xtensa::A0) && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsA0AndRetAddrIsTaken)

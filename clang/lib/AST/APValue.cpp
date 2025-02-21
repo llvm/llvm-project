@@ -390,7 +390,6 @@ APValue &APValue::operator=(const APValue &RHS) {
   if (this != &RHS)
     *this = APValue(RHS);
 
-  AllowConstexprUnknown = RHS.AllowConstexprUnknown;
   return *this;
 }
 

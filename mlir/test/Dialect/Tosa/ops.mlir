@@ -346,7 +346,15 @@ func.func @test_mul_scalar_with_unranked_output(%arg0: tensor<f32>, %arg1: tenso
 }
 
 // -----
-// CHECK-LABEL: mul
+// CHECK-LABEL: test_mul_scalar
+func.func @test_mul_scalar(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
+  %shift = "tosa.const"() <{value = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<f32>, tensor<f32>, tensor<1xi8>) -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+// CHECK-LABEL: test_mul
 func.func @test_mul(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x1x3xf32>) -> tensor<13x21x3xf32> {
   %shift = "tosa.const"() <{value = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xf32>, tensor<13x1x3xf32>, tensor<1xi8>) -> tensor<13x21x3xf32>
@@ -670,7 +678,10 @@ func.func @test_scatter(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>, %a
 // -----
 // CHECK-LABEL: resize
 func.func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
-  %1 = tosa.resize %arg0 { scale = array<i64: 4, 2, 4, 2>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR" } : (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
+  %scale = tosa.const_shape { value = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf32>
   return %1 : tensor<1x64x64x8xf32>
 }
 
