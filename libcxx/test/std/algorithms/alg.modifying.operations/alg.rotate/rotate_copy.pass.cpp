@@ -22,7 +22,9 @@
 struct TestIter {
   template <class InIter>
   TEST_CONSTEXPR_CXX20 void operator()() const {
-    types::for_each(types::cpp17_output_iterator_list<int*>(), TestImpl<InIter>());
+    types::for_each(
+        types::concatenate_t<types::forward_iterator_list<int*>, types::type_list<cpp17_output_iterator<int*> > >(),
+        TestImpl<InIter>());
   }
 
   template <class InIter>

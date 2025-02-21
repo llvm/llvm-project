@@ -73,7 +73,7 @@ constexpr void test(std::array<int, N> value, std::size_t middle, std::array<int
   }
 }
 
-template <class Iter, class OutIter, class Sent = Iter>
+template <class Iter, class OutIter, class Sent>
 constexpr void test_iterators() {
   // simple test
   test<Iter, OutIter, Sent, 4>({1, 2, 3, 4}, 2, {3, 4, 1, 2});
@@ -101,10 +101,10 @@ constexpr void test_iterators() {
 }
 
 constexpr bool test() {
-  types::for_each(types::forward_iterator_list<int*>(), []<class Iter>() {
-    types::for_each(types::cpp20_output_iterator_list<int*>(), []<class OutIter>() {
-      test_iterators<Iter, OutIter>();
-    });
+  types::for_each(types::forward_iterator_list<const int*>(), []<class Iter>() {
+    types::for_each(
+        types::concatenate_t<types::forward_iterator_list<int*>, types::type_list<cpp20_output_iterator<int*> > >(),
+        []<class OutIter>() { test_iterators<Iter, OutIter, Iter>(); });
   });
 
   {
