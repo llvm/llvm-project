@@ -12536,10 +12536,9 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   EVT MulOpLHSVT = MulOpLHS.getValueType();
   if (MulOpLHSVT != MulOpRHS.getValueType())
     return SDValue();
-  // Only perform the DAG combine if there is custom lowering provided by the
-  // target
-  if (!TLI.isPartialReduceMLALegalOrCustom(N->getValueType(0), MulOpLHSVT))
-    return SDValue();
+
+  // FIXME: Add a check to only perform the DAG combine if there is lowering
+  // provided by the target
 
   bool LHSIsSigned = ExtMulOpLHSOpcode == ISD::SIGN_EXTEND;
   bool RHSIsSigned = ExtMulOpRHSOpcode == ISD::SIGN_EXTEND;
