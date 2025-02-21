@@ -865,7 +865,6 @@ constexpr unsigned short ssmall = SS<unsigned short>(100)[42];
 constexpr auto Ss = SS<S>()[0];
 
 
-
 namespace IncompleteArray {
   struct A {
     int b = 10;
@@ -910,6 +909,37 @@ namespace IncompleteArray {
   static_assert(test4() == 12);
 
 
+  constexpr char *f(int n) {
+    return new char[n]();
+  }
+  static_assert((delete[] f(2), true));
+}
+
+namespace NonConstexprArrayCtor {
+  struct S {
+    S() {} // both-note 2{{declared here}}
+  };
+
+  constexpr bool test() { // both-error {{never produces a constant expression}}
+     auto s = new S[1]; // both-note 2{{non-constexpr constructor}}
+     return true;
+  }
+  static_assert(test()); // both-error {{not an integral constant expression}} \
+                         // both-note {{in call to}}
+}
+
+namespace ArrayBaseCast {
+  struct A {};
+  struct B : A {};
+  constexpr bool test() {
+    B *b = new B[2];
+
+    A* a = b;
+
+    delete[] b;
+    return true;
+  }
+  static_assert(test());
 }
 
 #else

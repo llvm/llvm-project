@@ -1,9 +1,8 @@
 //--------------------------------------------------------------------------------------------------
-// Enable all supported profiles to focus the verification of expected level errors.
+// Enable all supported profiles and extensions to focus the verification of expected level errors.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=bi,mi,mt"
-
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=pro_int,pro_fp,mt extension=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable"
 
 func.func @test_argmax(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32> {
   // expected-error@+1 {{'tosa.argmax' op failed level check: operand rank(shape) <= MAX_RANK}}
@@ -676,20 +675,26 @@ func.func @test_transpose_conv2d_stride_x(%arg0: tensor<1x32x32x8xf32>, %arg1: t
 
 // -----
 
-func.func @test_resize_scale_y(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
+func.func @test_resize_scale_y(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x7970x64x8xf32> {
+  %scale = tosa.const_shape { value = dense<[257, 1, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.resize' op failed level check: scale_y_n/scale_y_d <= MAX_SCALE}}
-  %1 = "tosa.resize"(%arg0) { scale = array<i64: 257, 1, 4, 2>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR"} :
-                (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
-  return %1 : tensor<1x64x64x8xf32>
+  %1 = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} :
+                (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x7970x64x8xf32>
+  return %1 : tensor<1x7970x64x8xf32>
 }
 
 // -----
 
-func.func @test_resize_scale_x(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
+func.func @test_resize_scale_x(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x7970x8xf32> {
+  %scale = tosa.const_shape { value = dense<[4, 2, 257, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.resize' op failed level check: scale_x_n/scale_x_d <= MAX_SCALE}}
-  %1 = "tosa.resize"(%arg0) { scale = array<i64: 4, 2, 257, 1>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR"} :
-                (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
-  return %1 : tensor<1x64x64x8xf32>
+  %1 = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} :
+                (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x7970x8xf32>
+  return %1 : tensor<1x64x7970x8xf32>
 }
 
 // -----
