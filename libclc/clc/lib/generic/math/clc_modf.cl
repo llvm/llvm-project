@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015 Advanced Micro Devices, Inc.
+ * Copyright (c) 2015 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,11 @@
  * THE SOFTWARE.
  */
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE modf(__CLC_GENTYPE x, global __CLC_GENTYPE *iptr);
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE modf(__CLC_GENTYPE x, local __CLC_GENTYPE *iptr);
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE modf(__CLC_GENTYPE x, private __CLC_GENTYPE *iptr);
+#include <clc/internal/clc.h>
+#include <clc/math/clc_copysign.h>
+#include <clc/math/clc_trunc.h>
+#include <clc/math/math.h>
+#include <clc/relational/clc_isinf.h>
+
+#define __CLC_BODY <clc_modf.inc>
+#include <clc/math/gentype.inc>

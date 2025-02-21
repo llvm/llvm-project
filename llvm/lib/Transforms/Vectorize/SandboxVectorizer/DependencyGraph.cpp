@@ -71,6 +71,12 @@ bool PredIterator::operator==(const PredIterator &Other) const {
   return OpIt == Other.OpIt && MemIt == Other.MemIt;
 }
 
+void DGNode::setSchedBundle(SchedBundle &SB) {
+  if (this->SB != nullptr)
+    this->SB->eraseFromBundle(this);
+  this->SB = &SB;
+}
+
 DGNode::~DGNode() {
   if (SB == nullptr)
     return;
