@@ -39,6 +39,7 @@ CHECK_NOT_STR = "// CHECK-NOT: func.func"
 CHECK_STR = "// CHECK:"
 CHECK_NEXT_STR = "// CHECK-NEXT:"
 
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
@@ -74,6 +75,7 @@ def main():
         output.write(line + "\n")
 
     output.close()
+
 
 if __name__ == "__main__":
     main()
