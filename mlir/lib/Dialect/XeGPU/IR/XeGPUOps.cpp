@@ -96,10 +96,9 @@ isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
   // sg_map present means IR is in SIMT mode. In this case sg_map determines the
   // value shape.
   auto expectedValueShapeOrFailure = tdescTy.getDistributedVectorType();
-  if (failed(expectedValueShapeOrFailure))
-    return emitError() << "Failed to compute distributed vector shape for "
-                          "tensor descriptor "
-                       << tdescTy;
+  assert(succeeded(expectedValueShapeOrFailure) &&
+         "Failed to compute distributed vector shape for "
+         "tensor descriptor ");
 
   return valueTy == expectedValueShapeOrFailure.value()
              ? success()
