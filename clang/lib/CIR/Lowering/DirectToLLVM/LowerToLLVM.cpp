@@ -27,6 +27,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CIR/Passes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -304,11 +305,11 @@ void ConvertCIRToLLVMPass::runOnOperation() {
     signalPassFailure();
 }
 
-static std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
+std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
   return std::make_unique<ConvertCIRToLLVMPass>();
 }
 
-static void populateCIRToLLVMPasses(mlir::OpPassManager &pm) {
+void populateCIRToLLVMPasses(mlir::OpPassManager &pm) {
   pm.addPass(createConvertCIRToLLVMPass());
 }
 
