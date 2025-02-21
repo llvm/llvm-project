@@ -1,5 +1,3 @@
-add_definitions("-D_ALL_SOURCE")
-
 add_lldb_library(lldbPluginPlatformAIX PLUGIN
   PlatformAIX.cpp
 
@@ -11,3 +9,5 @@ add_lldb_library(lldbPluginPlatformAIX PLUGIN
     lldbTarget
     lldbPluginPlatformPOSIX
   )
+
+target_compile_definitions(lldbPluginPlatformAIX PRIVATE "-D_ALL_SOURCE")

@@ -37,7 +37,7 @@ constexpr int MapAnonymous = 0x10;
 #include <sys/mman.h>
 static_assert(MapVariable == MAP_VARIABLE);
 static_assert(MapPrivate == MAP_PRIVATE);
-static_assert(MapAnonymous = MAP_ANONYMOUS);
+static_assert(MapAnonymous == MAP_ANONYMOUS);
 #endif
 
 using namespace lldb;
@@ -142,10 +142,13 @@ MmapArgList PlatformAIX::GetMmapArgumentList(const ArchSpec &arch, addr_t addr,
                                              addr_t length, unsigned prot,
                                              unsigned flags, addr_t fd,
                                              addr_t offset) {
-  unsigned flags_platform = 0;
-#if defined(_AIX)
-  flags_platform = MapPrivate | MapVariable | MapAnon;
-#endif
+  unsigned flags_platform = MapVariable;
+
+  if (flags & eMmapFlagsPrivate)
+    flags_platform |= MapPrivate;
+  if (flags & eMmapFlagsAnon)
+    flags_platform |= MapAnonymous;
+
   MmapArgList args({addr, length, prot, flags_platform, fd, offset});
   return args;
 }
