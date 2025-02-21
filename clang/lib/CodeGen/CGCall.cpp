@@ -5167,16 +5167,17 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // chosen IndirectAS can happen e.g. when passing the this pointer through
       // a chain involving stores to / loads from the DefaultAS; we address this
       // here, symmetrically with the handling we have for normal pointer args.
-      if (SRetPtr.getAddressSpace() != RetAI.getIndirectAddrSpace())
+      if (SRetPtr.getAddressSpace() != RetAI.getIndirectAddrSpace()) {
+        llvm::Value *V = SRetPtr.getBasePointer();
+        LangAS SAS = getLangASFromTargetAS(SRetPtr.getAddressSpace());
+        LangAS DAS = getLangASFromTargetAS(RetAI.getIndirectAddrSpace());
+        llvm::Type *Ty = llvm::PointerType::get(getLLVMContext(),
+                                                RetAI.getIndirectAddrSpace());
+
         SRetPtr = SRetPtr.withPointer(
-            getTargetHooks().performAddrSpaceCast(
-                *this, SRetPtr.getBasePointer(),
-                getLangASFromTargetAS(SRetPtr.getAddressSpace()),
-                getLangASFromTargetAS(RetAI.getIndirectAddrSpace()),
-                llvm::PointerType::get(getLLVMContext(),
-                                       RetAI.getIndirectAddrSpace()),
-                true),
+            getTargetHooks().performAddrSpaceCast(*this, V, SAS, DAS, Ty, true),
             SRetPtr.isKnownNonNull());
+      }
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
           getAsNaturalPointerTo(SRetPtr, RetTy);
     } else if (RetAI.isInAlloca()) {
