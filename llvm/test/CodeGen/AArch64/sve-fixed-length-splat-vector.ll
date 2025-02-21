@@ -624,9 +624,7 @@ define void @splat_imm_v64i8(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %insert = insertelement <64 x i8> undef, i8 1, i64 0
-  %splat = shufflevector <64 x i8> %insert, <64 x i8> undef, <64 x i32> zeroinitializer
-  store <64 x i8> %splat, ptr %a
+  store <64 x i8> splat (i8 1), ptr %a
   ret void
 }
 
@@ -637,9 +635,7 @@ define void @splat_imm_v32i16(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %insert = insertelement <32 x i16> undef, i16 2, i64 0
-  %splat = shufflevector <32 x i16> %insert, <32 x i16> undef, <32 x i32> zeroinitializer
-  store <32 x i16> %splat, ptr %a
+  store <32 x i16> splat (i16 2), ptr %a
   ret void
 }
 
@@ -650,9 +646,7 @@ define void @splat_imm_v16i32(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %insert = insertelement <16 x i32> undef, i32 3, i64 0
-  %splat = shufflevector <16 x i32> %insert, <16 x i32> undef, <16 x i32> zeroinitializer
-  store <16 x i32> %splat, ptr %a
+  store <16 x i32> splat (i32 3), ptr %a
   ret void
 }
 
@@ -663,9 +657,7 @@ define void @splat_imm_v8i64(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl8
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %insert = insertelement <8 x i64> undef, i64 4, i64 0
-  %splat = shufflevector <8 x i64> %insert, <8 x i64> undef, <8 x i32> zeroinitializer
-  store <8 x i64> %splat, ptr %a
+  store <8 x i64> splat (i64 4), ptr %a
   ret void
 }
 
@@ -680,9 +672,7 @@ define void @splat_imm_v32f16(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %insert = insertelement <32 x half> undef, half 5.0, i64 0
-  %splat = shufflevector <32 x half> %insert, <32 x half> undef, <32 x i32> zeroinitializer
-  store <32 x half> %splat, ptr %a
+  store <32 x half> splat (half 5.0), ptr %a
   ret void
 }
 
@@ -693,9 +683,7 @@ define void @splat_imm_v16f32(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %insert = insertelement <16 x float> undef, float 6.0, i64 0
-  %splat = shufflevector <16 x float> %insert, <16 x float> undef, <16 x i32> zeroinitializer
-  store <16 x float> %splat, ptr %a
+  store <16 x float> splat (float 6.0), ptr %a
   ret void
 }
 
@@ -706,9 +694,7 @@ define void @splat_imm_v8f64(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl8
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %insert = insertelement <8 x double> undef, double 7.0, i64 0
-  %splat = shufflevector <8 x double> %insert, <8 x double> undef, <8 x i32> zeroinitializer
-  store <8 x double> %splat, ptr %a
+  store <8 x double> splat (double 7.0), ptr %a
   ret void
 }
 

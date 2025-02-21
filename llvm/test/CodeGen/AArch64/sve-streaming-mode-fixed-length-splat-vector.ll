@@ -599,9 +599,7 @@ define void @splat_imm_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI24_0]
 ; NONEON-NOSVE-NEXT:    stp q0, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ret
-  %insert = insertelement <32 x i8> undef, i8 1, i64 0
-  %splat = shufflevector <32 x i8> %insert, <32 x i8> undef, <32 x i32> zeroinitializer
-  store <32 x i8> %splat, ptr %a
+  store <32 x i8> splat (i8 1), ptr %a
   ret void
 }
 
@@ -618,9 +616,7 @@ define void @splat_imm_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI25_0]
 ; NONEON-NOSVE-NEXT:    stp q0, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ret
-  %insert = insertelement <16 x i16> undef, i16 2, i64 0
-  %splat = shufflevector <16 x i16> %insert, <16 x i16> undef, <16 x i32> zeroinitializer
-  store <16 x i16> %splat, ptr %a
+  store <16 x i16> splat (i16 2), ptr %a
   ret void
 }
 
@@ -637,9 +633,7 @@ define void @splat_imm_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI26_0]
 ; NONEON-NOSVE-NEXT:    stp q0, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ret
-  %insert = insertelement <8 x i32> undef, i32 3, i64 0
-  %splat = shufflevector <8 x i32> %insert, <8 x i32> undef, <8 x i32> zeroinitializer
-  store <8 x i32> %splat, ptr %a
+  store <8 x i32> splat (i32 3), ptr %a
   ret void
 }
 
@@ -656,9 +650,7 @@ define void @splat_imm_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI27_0]
 ; NONEON-NOSVE-NEXT:    stp q0, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ret
-  %insert = insertelement <4 x i64> undef, i64 4, i64 0
-  %splat = shufflevector <4 x i64> %insert, <4 x i64> undef, <4 x i32> zeroinitializer
-  store <4 x i64> %splat, ptr %a
+  store <4 x i64> splat (i64 4), ptr %a
   ret void
 }
 
@@ -679,9 +671,7 @@ define void @splat_imm_v16f16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI28_0]
 ; NONEON-NOSVE-NEXT:    stp q0, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ret
-  %insert = insertelement <16 x half> undef, half 5.0, i64 0
-  %splat = shufflevector <16 x half> %insert, <16 x half> undef, <16 x i32> zeroinitializer
-  store <16 x half> %splat, ptr %a
+  store <16 x half> splat (half 5.0), ptr %a
   ret void
 }
 
@@ -698,9 +688,7 @@ define void @splat_imm_v8f32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI29_0]
 ; NONEON-NOSVE-NEXT:    stp q0, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ret
-  %insert = insertelement <8 x float> undef, float 6.0, i64 0
-  %splat = shufflevector <8 x float> %insert, <8 x float> undef, <8 x i32> zeroinitializer
-  store <8 x float> %splat, ptr %a
+  store <8 x float> splat (float 6.0), ptr %a
   ret void
 }
 
@@ -717,8 +705,6 @@ define void @splat_imm_v4f64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI30_0]
 ; NONEON-NOSVE-NEXT:    stp q0, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ret
-  %insert = insertelement <4 x double> undef, double 7.0, i64 0
-  %splat = shufflevector <4 x double> %insert, <4 x double> undef, <4 x i32> zeroinitializer
-  store <4 x double> %splat, ptr %a
+  store <4 x double> splat (double 7.0), ptr %a
   ret void
 }
