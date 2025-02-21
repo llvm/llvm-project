@@ -2682,6 +2682,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::ZERO_EXTEND_VECTOR_INREG,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
+                       ISD::FP_TO_SINT,
                        ISD::STRICT_SINT_TO_FP,
                        ISD::STRICT_UINT_TO_FP,
                        ISD::FP_TO_SINT_SAT,
@@ -56494,6 +56495,17 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineFPToSInt(SDNode *N, SelectionDAG &DAG,
+                               const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  if (Subtarget.hasSSE2() && Src.getOpcode() == ISD::FRINT &&
+      VT.getScalarType() == MVT::i32 && Src.hasOneUse())
+    return DAG.getNode(ISD::LRINT, SDLoc(N), VT, Src.getOperand(0));
+
+  return SDValue();
+}
+
 // Custom handling for VCVTTPS2QQS/VCVTTPS2UQQS
 static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
@@ -59572,6 +59584,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
     return combineUIntToFP(N, DAG, Subtarget);
+  case ISD::FP_TO_SINT:     return combineFPToSInt(N, DAG, Subtarget);
   case ISD::LRINT:
   case ISD::LLRINT:         return combineLRINT_LLRINT(N, DAG, Subtarget);
   case ISD::FADD:

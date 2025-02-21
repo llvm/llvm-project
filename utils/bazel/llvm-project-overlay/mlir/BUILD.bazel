@@ -8963,6 +8963,7 @@ cc_library(
         ":LLVMDialect",
         ":MathDialect",
         ":Pass",
+        "//llvm:Support",
     ],
 )
 
@@ -12243,7 +12244,7 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "MLIRTosaEnumsIncGen",
+    name = "TosaEnumsIncGen",
     tbl_outs = [
         (
             ["-gen-enum-decls"],
@@ -12256,10 +12257,11 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Tosa/IR/TosaOpBase.td",
+    deps = [":TosaDialectTdFiles"],
 )
 
 gentbl_cc_library(
-    name = "MLIRTosaAvailabilityIncGen",
+    name = "TosaAvailabilityIncGen",
     tbl_outs = [
         (
             ["-gen-avail-interface-decls"],
@@ -12276,6 +12278,7 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Tosa/IR/TosaOps.td",
+    deps = [":TosaDialectTdFiles"],
 )
 
 gentbl_cc_library(
@@ -12377,8 +12380,10 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TensorDialect",
+        ":TosaAvailabilityIncGen",
         ":TosaDialectBytecodeGen",
         ":TosaDialectIncGen",
+        ":TosaEnumsIncGen",
         ":TosaInterfacesIncGen",
         ":TosaPassIncGen",
         ":TransformUtils",
