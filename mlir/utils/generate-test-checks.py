@@ -397,7 +397,9 @@ def main():
                 output_line += " " * len(ssa_split[0])
 
                 # Process the rest of the line.
-                output_line += process_line([argument], variable_namer, strict_name_re=True)
+                output_line += process_line(
+                    [argument], variable_namer, strict_name_re=True
+                )
 
         # Append the output line.
         output_segments[-1].append(output_line)
