@@ -12356,7 +12356,9 @@ cc_library(
         "lib/Dialect/Tosa/IR/*.cpp",
         "lib/Dialect/Tosa/Utils/*.cpp",
         "lib/Dialect/Tosa/Transforms/*.cpp",
-    ]),
+    ]) + [
+        "include/mlir/Dialect/Tosa/IR/TosaComplianceData.h.inc",
+    ],
     hdrs = glob([
         "include/mlir/Dialect/Tosa/IR/*.h",
         "include/mlir/Dialect/Tosa/Utils/*.h",
