@@ -1583,8 +1583,8 @@ Restrict Visibility
 ^^^^^^^^^^^^^^^^^^^
 
 Functions and variables should have the most restricted visibility possible.
-For class members, that means using appropriate `private`, `protected` or `public`
-keyword to restrict their access. For non-member functions, variables and classes,
+For class members, that means using appropriate `private`, `protected`, or `public`
+keyword to restrict their access. For non-member functions, variables, and classes,
 that means restricting visibility to a single `.cpp` file if it's not referenced
 outside that file.
 
