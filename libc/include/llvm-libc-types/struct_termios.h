@@ -23,7 +23,6 @@ struct termios {
 #ifdef __linux__
   cc_t c_line; // Line discipline
 #endif         // __linux__
-  // NCCS is defined in llvm-libc-macros/termios-macros.h.
   cc_t c_cc[NCCS]; // Control characters
 #ifdef __linux__
   speed_t c_ispeed; // Input speed
