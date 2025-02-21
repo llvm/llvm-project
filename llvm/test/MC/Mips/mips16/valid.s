@@ -1,4 +1,3 @@
-# REQUIRES: mips-registered-target
 # RUN: llvm-mc -arch=mipsel -mcpu=mips32r2 -mattr=+mips16 -show-encoding -show-inst %s | FileCheck %s
 
 addiu $16, -16                  # CHECK: addiu $16, -16                 # encoding: [0xf0,0x48]

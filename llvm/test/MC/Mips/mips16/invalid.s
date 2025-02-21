@@ -1,4 +1,3 @@
-# REQUIRES: mips-registered-target
 # RUN: not llvm-mc -arch=mipsel -mcpu=mips32r2 -mattr=+mips16 %s 2> %t
 # RUN: FileCheck %s < %t
 
