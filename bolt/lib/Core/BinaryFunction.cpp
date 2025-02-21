@@ -491,10 +491,26 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
   // Offset of the instruction in function.
   uint64_t Offset = 0;
 
+  auto printConstantIslandInRange = [&](uint64_t Start, uint64_t End) {
+    assert(Start <= End && "Invalid range");
+    std::optional<uint64_t> IslandOffset = getIslandInRange(Start, End);
+
+    if (!IslandOffset)
+      return;
+
+    const size_t IslandSize = getSizeOfDataInCodeAt(*IslandOffset);
+    BC.printData(OS, BC.extractData(getAddress() + *IslandOffset, IslandSize),
+                 *IslandOffset);
+  };
+
   if (BasicBlocks.empty() && !Instructions.empty()) {
     // Print before CFG was built.
+    uint64_t PrevOffset = 0;
     for (const std::pair<const uint32_t, MCInst> &II : Instructions) {
       Offset = II.first;
+
+      // Print any constant islands inbeetween the instructions.
+      printConstantIslandInRange(PrevOffset, Offset);
 
       // Print label if exists at this offset.
       auto LI = Labels.find(Offset);
@@ -506,7 +522,12 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
       }
 
       BC.printInstruction(OS, II.second, Offset, this);
+
+      PrevOffset = Offset;
     }
+
+    // Print any data at the end of the function.
+    printConstantIslandInRange(PrevOffset, getMaxSize());
   }
 
   StringRef SplitPointMsg = "";
@@ -1046,6 +1067,19 @@ size_t BinaryFunction::getSizeOfDataInCodeAt(uint64_t Offset) const {
   if (Iter != Islands->CodeOffsets.end())
     return *Iter - Offset;
   return getSize() - Offset;
+}
+
+std::optional<uint64_t>
+BinaryFunction::getIslandInRange(uint64_t StartOffset,
+                                 uint64_t EndOffset) const {
+  if (!Islands)
+    return std::nullopt;
+
+  auto Iter = llvm::lower_bound(Islands->DataOffsets, StartOffset);
+  if (Iter != Islands->DataOffsets.end() && *Iter < EndOffset)
+    return *Iter;
+
+  return std::nullopt;
 }
 
 bool BinaryFunction::isZeroPaddingAt(uint64_t Offset) const {

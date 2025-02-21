@@ -176,7 +176,7 @@ namespace {
     }
 
     static inline unsigned v2x(unsigned v) {
-      return Register::virtReg2Index(v);
+      return Register(v).virtRegIndex();
     }
 
     static inline unsigned x2v(unsigned x) {
@@ -2854,7 +2854,7 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
 // Recognize loops where the code at the end of the loop matches the code
 // before the entry of the loop, and the matching code is such that is can
 // be simplified. This pass relies on the bit simplification above and only
-// prepares code in a way that can be handled by the bit simplifcation.
+// prepares code in a way that can be handled by the bit simplification.
 //
 // This is the motivating testcase (and explanation):
 //

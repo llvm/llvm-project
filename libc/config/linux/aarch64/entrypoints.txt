@@ -329,6 +329,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.geteuid
     libc.src.unistd.getpid
     libc.src.unistd.getppid
+    libc.src.unistd.getsid
     libc.src.unistd.gettid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
@@ -359,6 +360,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
+    libc.src.sys.uio.readv
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)

@@ -1147,6 +1147,8 @@ void DwarfUnit::constructTemplateValueParameterDIE(
   if (Metadata *Val = VP->getValue()) {
     if (ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Val))
       addConstantValue(ParamDIE, CI, VP->getType());
+    else if (ConstantFP *CF = mdconst::dyn_extract<ConstantFP>(Val))
+      addConstantFPValue(ParamDIE, CF);
     else if (GlobalValue *GV = mdconst::dyn_extract<GlobalValue>(Val)) {
       // We cannot describe the location of dllimport'd entities: the
       // computation of their address requires loads from the IAT.
@@ -1628,6 +1630,9 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     if (DD->getDwarfVersion() >= 4 && (CTy->getFlags() & DINode::FlagEnumClass))
       addFlag(Buffer, dwarf::DW_AT_enum_class);
   }
+
+  if (auto Kind = CTy->getEnumKind())
+    addUInt(Buffer, dwarf::DW_AT_APPLE_enum_kind, dwarf::DW_FORM_data1, *Kind);
 
   auto *Context = CTy->getScope();
   bool IndexEnumerators = !Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||

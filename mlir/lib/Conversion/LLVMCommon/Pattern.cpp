@@ -218,7 +218,7 @@ MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
     ArrayRef<Value> sizes, ArrayRef<Value> strides,
     ConversionPatternRewriter &rewriter) const {
   auto structType = typeConverter->convertType(memRefType);
-  auto memRefDescriptor = MemRefDescriptor::undef(rewriter, loc, structType);
+  auto memRefDescriptor = MemRefDescriptor::poison(rewriter, loc, structType);
 
   // Field 1: Allocated pointer, used for malloc/free.
   memRefDescriptor.setAllocatedPtr(rewriter, loc, allocatedPtr);
@@ -319,7 +319,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     if (!descriptorType)
       return failure();
     auto updatedDesc =
-        UnrankedMemRefDescriptor::undef(builder, loc, descriptorType);
+        UnrankedMemRefDescriptor::poison(builder, loc, descriptorType);
     Value rank = desc.rank(builder, loc);
     updatedDesc.setRank(builder, loc, rank);
     updatedDesc.setMemRefDescPtr(builder, loc, memory);

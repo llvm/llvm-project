@@ -147,3 +147,58 @@ class GenericOp_(GenericOp):
 
 
 generic = region_op(GenericOp_, terminator=YieldOp)
+
+
+def create_op(
+    op_type,
+    *ins: Union[Operation, OpView, Value],
+    outs: Sequence[Union[Operation, OpView, Value]],
+    indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
+    cast: Optional[Union[TypeFn, Attribute]] = None,
+):
+    ins = [_get_op_result_or_value(input) for input in ins]
+    if len(outs) > 1:
+        raise ValueError(f"{outs=} must have length 1.")
+    init = _get_op_result_or_value(outs[0])
+    result_types = [init.type] if isinstance(init.type, RankedTensorType) else []
+
+    op = op_type(
+        result_tensors=result_types,
+        inputs=ins,
+        outputs=[init],
+        indexing_maps=indexing_maps,
+        cast=cast,
+    )
+    fill_builtin_region(op.operation)
+    return op
+
+
+def matmul(
+    *ins: Union[Operation, OpView, Value],
+    outs: Sequence[Union[Operation, OpView, Value]],
+    indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
+    cast: Optional[Union[TypeFn, Attribute]] = None,
+):
+    return create_op(MatmulOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast)
+
+
+def batch_matmul(
+    *ins: Union[Operation, OpView, Value],
+    outs: Sequence[Union[Operation, OpView, Value]],
+    indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
+    cast: Optional[Union[TypeFn, Attribute]] = None,
+):
+    return create_op(
+        BatchMatmulOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
+    )
+
+
+def contract(
+    *ins: Union[Operation, OpView, Value],
+    outs: Sequence[Union[Operation, OpView, Value]],
+    indexing_maps: Sequence[AffineMapAttr],
+    cast: Optional[Union[TypeFn, Attribute]] = None,
+):
+    return create_op(
+        ContractOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
+    )
