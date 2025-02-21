@@ -196,7 +196,7 @@ void pop_front(std::list<int> &L, int n) {
 void push_back() {
   std::vector<int> V;
   V.end();
-  
+
   clang_analyzer_denote(clang_analyzer_container_end(V), "$V.end()");
 
   V.push_back(1); // expected-note{{Container 'V' extended to the back by 1 position}}
@@ -251,15 +251,15 @@ void print_state(std::vector<int> &V) {
 // CHECK:      "checker_messages": [
 // CHECK-NEXT:   { "checker": "alpha.cplusplus.ContainerModeling", "messages": [
 // CHECK-NEXT:     "Container Data :",
-// CHECK-NEXT:     "SymRegion{reg_$[[#]]<std::vector<int> & V>} : [ conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]} .. <Unknown> ]"
+// CHECK-NEXT:     "SymRegion{reg_$[[#]]<std::vector<int> & V>} : [ conj_$[[#]]{long, LC[[#]], CFGElemRef[[#]], #[[#]]} .. <Unknown> ]"
 // CHECK-NEXT:   ]}
 
   V.cend();
   clang_analyzer_printState();
-  
+
 // CHECK:      "checker_messages": [
 // CHECK-NEXT:   { "checker": "alpha.cplusplus.ContainerModeling", "messages": [
 // CHECK-NEXT:     "Container Data :",
-// CHECK-NEXT:     "SymRegion{reg_$[[#]]<std::vector<int> & V>} : [ conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]} .. conj_$[[#]]{long, LC[[#]], S[[#]], #[[#]]} ]"
+// CHECK-NEXT:     "SymRegion{reg_$[[#]]<std::vector<int> & V>} : [ conj_$[[#]]{long, LC[[#]], CFGElemRef[[#]], #[[#]]} .. conj_$[[#]]{long, LC[[#]], CFGElemRef[[#]], #[[#]]} ]"
 // CHECK-NEXT:   ]}
 }
