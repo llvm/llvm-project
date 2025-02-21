@@ -5113,6 +5113,136 @@ validateConnection(llvm::StringRef conn) {
       conn.str().c_str());
 }
 
+static llvm::Error
+serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
+                std::ofstream *log, llvm::StringRef program_path,
+                const ReplMode default_repl_mode,
+                const std::vector<std::string> &pre_init_commands) {
+  Status status;
+  static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
+  if (status.Fail()) {
+    return status.takeError();
+  }
+
+  status = listener->Listen(name, /*backlog=*/5);
+  if (status.Fail()) {
+    return status.takeError();
+  }
+
+  std::string address = llvm::join(listener->GetListeningConnectionURI(), ", ");
+  if (log)
+    *log << "started with connection listeners " << address << "\n";
+
+  llvm::outs() << "Listening for: " << address << "\n";
+  // Ensure listening address are flushed for calles to retrieve the resolve
+  // address.
+  llvm::outs().flush();
+
+  static lldb_private::MainLoop g_loop;
+  llvm::sys::SetInterruptFunction([]() {
+    g_loop.AddPendingCallback(
+        [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  });
+  std::condition_variable dap_sessions_condition;
+  std::mutex dap_sessions_mutex;
+  std::map<Socket *, DAP *> dap_sessions;
+  unsigned int clientCount = 0;
+  auto handle = listener->Accept(g_loop, [=, &dap_sessions_condition,
+                                          &dap_sessions_mutex, &dap_sessions,
+                                          &clientCount](
+                                             std::unique_ptr<Socket> sock) {
+    std::string name = llvm::formatv("client_{0}", clientCount++).str();
+    if (log) {
+      auto now = std::chrono::duration<double>(
+          std::chrono::system_clock::now().time_since_epoch());
+      *log << llvm::formatv("{0:f9}", now.count()).str()
+           << " client connected: " << name << "\n";
+    }
+
+    // Move the client into a background thread to unblock accepting the next
+    // client.
+    std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
+                        &dap_sessions, sock = std::move(sock)]() {
+      llvm::set_thread_name(name + ".runloop");
+      StreamDescriptor input =
+          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
+      // Close the output last for the best chance at error reporting.
+      StreamDescriptor output =
+          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
+      DAP dap = DAP(name, program_path, log, std::move(input),
+                    std::move(output), default_repl_mode, pre_init_commands);
+
+      if (auto Err = dap.ConfigureIO()) {
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                    "Failed to configure stdout redirect: ");
+        return;
+      }
+
+      RegisterRequestCallbacks(dap);
+
+      {
+        std::scoped_lock lock(dap_sessions_mutex);
+        dap_sessions[sock.get()] = &dap;
+      }
+
+      if (auto Err = dap.Loop()) {
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                    "DAP session error: ");
+      }
+
+      if (log) {
+        auto now = std::chrono::duration<double>(
+            std::chrono::system_clock::now().time_since_epoch());
+        *log << llvm::formatv("{0:f9}", now.count()).str()
+             << " client closed: " << name << "\n";
+      }
+
+      std::unique_lock lock(dap_sessions_mutex);
+      dap_sessions.erase(sock.get());
+      std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
+    });
+    client.detach();
+  });
+
+  if (auto Err = handle.takeError()) {
+    return Err;
+  }
+
+  status = g_loop.Run();
+  if (status.Fail()) {
+    return status.takeError();
+  }
+
+  if (log)
+    *log << "lldb-dap server shutdown requested, disconnecting remaining "
+            "clients...\n";
+
+  bool client_failed = false;
+  {
+    std::scoped_lock lock(dap_sessions_mutex);
+    for (auto [sock, dap] : dap_sessions) {
+      auto error = dap->Disconnect();
+      if (error.Fail()) {
+        client_failed = true;
+        llvm::errs() << "DAP client " << dap->name
+                     << " disconnected failed: " << error.GetCString() << "\n";
+      }
+      // Close the socket to ensure the DAP::Loop read finishes.
+      sock->Close();
+    }
+  }
+
+  // Wait for all clients to finish disconnecting.
+  std::unique_lock lock(dap_sessions_mutex);
+  dap_sessions_condition.wait(lock, [&] { return dap_sessions.empty(); });
+
+  if (client_failed)
+    return llvm::make_error<llvm::StringError>(
+        "disconnecting all clients failed", llvm::inconvertibleErrorCode());
+
+  return llvm::Error::success();
+}
+
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
 #if !defined(__APPLE__)
@@ -5231,135 +5361,14 @@ int main(int argc, char *argv[]) {
     Socket::SocketProtocol protocol;
     std::string name;
     std::tie(protocol, name) = *maybeProtoclAndName;
-
-    Status error;
-    static std::unique_ptr<Socket> listener = Socket::Create(protocol, error);
-    if (error.Fail()) {
-      llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
+    if (auto Err = serveConnection(protocol, name, log.get(), program_path,
+                                   default_repl_mode, pre_init_commands)) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Failed to create socket listener: ");
       return EXIT_FAILURE;
     }
 
-    error = listener->Listen(name, /*backlog=*/5);
-    if (error.Fail()) {
-      llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
-                                  "Failed to listen for connections: ");
-      return EXIT_FAILURE;
-    }
-
-    std::string address =
-        llvm::join(listener->GetListeningConnectionURI(), ", ");
-    if (log)
-      *log << "started with connection listeners " << address << "\n";
-
-    llvm::outs() << "Listening for: " << address << "\n";
-    // Ensure listening address are flushed for calles to retrieve the resolve
-    // address.
-    llvm::outs().flush();
-
-    static lldb_private::MainLoop g_loop;
-    llvm::sys::SetInterruptFunction([]() {
-      g_loop.AddPendingCallback(
-          [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
-    });
-    std::condition_variable dap_sessions_condition;
-    std::mutex dap_sessions_mutex;
-    std::map<Socket *, DAP *> dap_sessions;
-    unsigned int clientCount = 0;
-    auto handle = listener->Accept(g_loop, [=, &dap_sessions_condition,
-                                            &dap_sessions_mutex, &dap_sessions,
-                                            &clientCount, log = log.get()](
-                                               std::unique_ptr<Socket> sock) {
-      std::string name = llvm::formatv("client_{0}", clientCount++).str();
-      if (log) {
-        auto now = std::chrono::duration<double>(
-            std::chrono::system_clock::now().time_since_epoch());
-        *log << llvm::formatv("{0:f9}", now.count()).str()
-             << " client connected: " << name << "\n";
-      }
-
-      // Move the client into a background thread to unblock accepting the next
-      // client.
-      std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
-                          &dap_sessions, sock = std::move(sock)]() {
-        llvm::set_thread_name(name + ".runloop");
-        StreamDescriptor input =
-            StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
-        // Close the output last for the best chance at error reporting.
-        StreamDescriptor output =
-            StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
-        DAP dap = DAP(name, program_path, log, std::move(input),
-                      std::move(output), default_repl_mode, pre_init_commands);
-
-        if (auto Err = dap.ConfigureIO()) {
-          llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                      "Failed to configure stdout redirect: ");
-          return;
-        }
-
-        RegisterRequestCallbacks(dap);
-
-        {
-          std::scoped_lock lock(dap_sessions_mutex);
-          dap_sessions[sock.get()] = &dap;
-        }
-
-        if (auto Err = dap.Loop()) {
-          llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                      "DAP session error: ");
-        }
-
-        if (log) {
-          auto now = std::chrono::duration<double>(
-              std::chrono::system_clock::now().time_since_epoch());
-          *log << llvm::formatv("{0:f9}", now.count()).str()
-               << " client closed: " << name << "\n";
-        }
-
-        std::unique_lock lock(dap_sessions_mutex);
-        dap_sessions.erase(sock.get());
-        std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
-      });
-      client.detach();
-    });
-    if (auto Err = handle.takeError()) {
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                  "Registering accept handler failed: ");
-      return EXIT_FAILURE;
-    }
-
-    error = g_loop.Run();
-    if (error.Fail()) {
-      llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
-                                  "MainLoop failed: ");
-      return EXIT_FAILURE;
-    }
-
-    if (log)
-      *log << "lldb-dap server shutdown requested, disconnecting remaining "
-              "clients...\n";
-
-    bool client_failed = false;
-    {
-      std::scoped_lock lock(dap_sessions_mutex);
-      for (auto [sock, dap] : dap_sessions) {
-        auto error = dap->Disconnect();
-        if (error.Fail()) {
-          client_failed = true;
-          llvm::errs() << "DAP client " << dap->name
-                       << " disconnected failed: " << error.GetCString()
-                       << "\n";
-        }
-        // Close the socket to ensure the DAP::Loop read finishes.
-        sock->Close();
-      }
-    }
-
-    // Wait for all clients to finish disconnecting.
-    std::unique_lock lock(dap_sessions_mutex);
-    dap_sessions_condition.wait(lock, [&] { return dap_sessions.empty(); });
-
-    return client_failed ? EXIT_FAILURE : EXIT_SUCCESS;
+    return EXIT_SUCCESS;
   }
 
 #if defined(_WIN32)
