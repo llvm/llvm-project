@@ -985,15 +985,27 @@ static void createOptionalSymbols() {
 
   ctx.sym.dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
 
-  if (!ctx.arg.shared)
-    ctx.sym.dataEnd = symtab->addOptionalDataSymbol("__data_end");
+  auto addDataLayoutSymbol = [&](StringRef s) -> DefinedData * {
+    // Data layout symbols are either defined by lld, or (in the case
+    // of PIC code) defined by the dynamic linker / embedder.
+    if (ctx.isPic) {
+      ctx.arg.allowUndefinedSymbols.insert(s);
+      return nullptr;
+    } else {
+      return symtab->addOptionalDataSymbol(s);
+    }
+  };
 
+  ctx.sym.dataEnd = addDataLayoutSymbol("__data_end");
+  ctx.sym.stackLow = addDataLayoutSymbol("__stack_low");
+  ctx.sym.stackHigh = addDataLayoutSymbol("__stack_high");
+  ctx.sym.globalBase = addDataLayoutSymbol("__global_base");
+  ctx.sym.heapBase = addDataLayoutSymbol("__heap_base");
+  ctx.sym.heapEnd = addDataLayoutSymbol("__heap_end");
+
+  // for pic, __memory_base and __table_base are handled in
+  // createSyntheticSymbols.
   if (!ctx.isPic) {
-    ctx.sym.stackLow = symtab->addOptionalDataSymbol("__stack_low");
-    ctx.sym.stackHigh = symtab->addOptionalDataSymbol("__stack_high");
-    ctx.sym.globalBase = symtab->addOptionalDataSymbol("__global_base");
-    ctx.sym.heapBase = symtab->addOptionalDataSymbol("__heap_base");
-    ctx.sym.heapEnd = symtab->addOptionalDataSymbol("__heap_end");
     ctx.sym.definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
     ctx.sym.definedTableBase = symtab->addOptionalDataSymbol("__table_base");
   }
