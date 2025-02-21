@@ -96,6 +96,15 @@ SHADER_VISIBILITY(8, Empty)
 #undef SHADER_VISIBILITY
 #endif // SHADER_VISIBILITY
 
+#ifdef ROOT_DESCRIPTOR_FLAG
+
+ROOT_DESCRIPTOR_FLAG(0, None)
+ROOT_DESCRIPTOR_FLAG(1, DataVolatile)
+ROOT_DESCRIPTOR_FLAG(2, DataStaticWhileSetAtExecute)
+ROOT_DESCRIPTOR_FLAG(3, DataStatic)
+#undef ROOT_DESCRIPTOR_FLAG
+#endif // ROOT_DESCRIPTOR_FLAG
+
 #ifdef DXIL_MODULE_FLAG
 
 // Only save DXIL module flags which not map to feature flags here.

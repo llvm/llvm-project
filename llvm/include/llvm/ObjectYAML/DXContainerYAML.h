@@ -203,6 +203,7 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::RootParameterType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ShaderVisibility)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::RootDescriptorFlag)
 
 namespace llvm {
 
@@ -273,6 +274,10 @@ template <> struct MappingTraits<dxbc::RootParameter> {
 
 template <> struct MappingTraits<dxbc::RootConstants> {
   static void mapping(IO &IO, dxbc::RootConstants &C);
+};
+
+template <> struct MappingTraits<dxbc::RootDescriptor> {
+  static void mapping(IO &IO, dxbc::RootDescriptor &D);
 };
 
 } // namespace yaml

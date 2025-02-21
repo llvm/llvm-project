@@ -80,6 +80,16 @@ ArrayRef<EnumEntry<RootParameterType>> dxbc::getRootParameterTypes() {
   return ArrayRef(RootParameterTypes);
 }
 
+#define ROOT_DESCRIPTOR_FLAG(Val, Enum) {#Enum, RootDescriptorFlag::Enum},
+
+static const EnumEntry<dxbc::RootDescriptorFlag> RootDescriptorFlags[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<dxbc::RootDescriptorFlag>> dxbc::getRootDescriptorFlags() {
+  return ArrayRef(RootDescriptorFlags);
+}
+
 #define SEMANTIC_KIND(Val, Enum) {#Enum, PSV::SemanticKind::Enum},
 
 static const EnumEntry<PSV::SemanticKind> SemanticKindNames[] = {
