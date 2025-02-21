@@ -1951,7 +1951,7 @@ static ExprResult BuiltinTriviallyRelocate(Sema &S, CallExpr *TheCall) {
 
   QualType Src = TheCall->getArg(1)->getType();
   if (Src.getCanonicalType() != Dest.getCanonicalType()) {
-    S.Diag(TheCall->getArg(0)->getExprLoc(),
+    S.Diag(TheCall->getArg(1)->getExprLoc(),
            diag::err_builtin_trivially_relocate_invalid_arg_type)
         << /*the same*/ 3;
     return ExprError();

@@ -71,6 +71,11 @@ struct UserMoveDefault{
     UserMoveDefault(UserMoveDefault&&) = default;
 };
 
+struct UserMoveAssignDefault {
+    UserMoveAssignDefault(UserMoveAssignDefault&&) = default;
+    UserMoveAssignDefault& operator=(UserMoveAssignDefault&&) = default;
+};
+
 struct UserCopy{
     UserCopy(const UserCopy&);
 };
@@ -90,9 +95,10 @@ static_assert(__builtin_is_cpp_trivially_relocatable(DefaultedDtr));
 static_assert(!__builtin_is_cpp_trivially_relocatable(UserMoveWithDefaultCopy));
 static_assert(!__builtin_is_cpp_trivially_relocatable(UserMove));
 static_assert(!__builtin_is_cpp_trivially_relocatable(UserCopy));
-static_assert(__builtin_is_cpp_trivially_relocatable(UserMoveDefault));
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserMoveDefault));
+static_assert(__builtin_is_cpp_trivially_relocatable(UserMoveAssignDefault));
 static_assert(__builtin_is_cpp_trivially_relocatable(UserCopyDefault));
-static_assert(__builtin_is_cpp_trivially_relocatable(UserDeletedMove));
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeletedMove));
 
 template <typename T>
 class TestDependentErrors trivially_relocatable_if_eligible : T {};
@@ -202,7 +208,7 @@ static_assert(!__builtin_is_replaceable(S<const int[2]>));
 static_assert(__builtin_is_replaceable(WithBase<S<int>>));
 static_assert(!__builtin_is_replaceable(WithBase<S<const int>>));
 static_assert(!__builtin_is_replaceable(WithBase<UserProvidedMove>));
-static_assert(!__builtin_is_replaceable(WithVBase<S<int>>));
+static_assert(__builtin_is_replaceable(WithVBase<S<int>>));
 static_assert(!__builtin_is_replaceable(WithVBase<S<const int>>));
 static_assert(!__builtin_is_replaceable(WithVBase<UserProvidedMove>));
 static_assert(__builtin_is_replaceable(WithVirtual));
@@ -214,7 +220,7 @@ struct U1 replaceable_if_eligible {
     U1& operator=(U1&&) = default;
 
 };
-static_assert(__builtin_is_replaceable(U1));
+static_assert(!__builtin_is_replaceable(U1));
 
 struct U2 replaceable_if_eligible {
     U2(const U2&) = delete;
@@ -224,7 +230,7 @@ static_assert(!__builtin_is_replaceable(U2));
 
 template <typename T>
 struct WithVBaseExplicit replaceable_if_eligible : virtual T{};
-static_assert(__builtin_is_replaceable(WithVBaseExplicit<S<int>>)); // expected-error {{failed}}
+static_assert(__builtin_is_replaceable(WithVBaseExplicit<S<int>>));
 
 struct S42 trivially_relocatable_if_eligible replaceable_if_eligible {
     S42(S42&&);

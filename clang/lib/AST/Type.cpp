@@ -2931,7 +2931,7 @@ bool QualType::isCppTriviallyRelocatableType(const ASTContext &Context) const {
 }
 
 bool QualType::isReplaceableType(const ASTContext &Context) const {
-  if (isConstQualified())
+  if (isConstQualified() || isVolatileQualified())
     return false;
   QualType BaseElementType = Context.getBaseElementType(getUnqualifiedType());
   if (BaseElementType->isIncompleteType())

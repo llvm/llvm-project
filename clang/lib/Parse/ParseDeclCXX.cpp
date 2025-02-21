@@ -2751,7 +2751,9 @@ void Parser::ParseOptionalCXX2CReplaceableSpecifier(ReplaceableSpecifier &MRS) {
 }
 
 /// isClassCompatibleKeyword - Determine whether the next token is a C++11
-/// 'final' or Microsoft 'sealed' or 'abstract' contextual keywords.
+/// 'final', a C++26 'trivially_relocatable_if_eligible',
+/// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
+/// keyword.
 bool Parser::isClassCompatibleKeyword(Token Tok) const {
   if (isCXX2CTriviallyRelocatableKeyword(Tok) || isCXX2CReplaceableKeyword(Tok))
     return true;

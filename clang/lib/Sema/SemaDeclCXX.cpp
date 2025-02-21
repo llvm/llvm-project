@@ -7372,15 +7372,16 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   CheckMismatchedTypeAwareAllocators(OO_Array_New, OO_Array_Delete);
 }
 
-static bool hasSuitableConstructorForReplaceability(CXXRecordDecl *D,
-                                                    bool Implicit) {
+static bool hasSuitableConstructorForRelocation(CXXRecordDecl *D,
+                                                bool AllowUserDefined) {
   assert(D->hasDefinition() && !D->isInvalidDecl());
 
   bool HasDeletedMoveConstructor = false;
   bool HasDeletedCopyConstructor = false;
   bool HasMoveConstructor = D->needsImplicitMoveConstructor();
+  bool HasCopyConstructor = D->needsImplicitCopyConstructor();
   bool HasDefaultedMoveConstructor = D->needsImplicitMoveConstructor();
-  bool HasDefaultedCopyConstructor = D->needsImplicitMoveConstructor();
+  bool HasDefaultedCopyConstructor = D->needsImplicitCopyConstructor();
 
   for (const Decl *D : D->decls()) {
     auto *MD = dyn_cast<CXXConstructorDecl>(D);
@@ -7393,8 +7394,8 @@ static bool hasSuitableConstructorForReplaceability(CXXRecordDecl *D,
         HasDefaultedMoveConstructor = true;
       if (MD->isDeleted())
         HasDeletedMoveConstructor = true;
-    }
-    if (MD->isCopyConstructor()) {
+    } else if (MD->isCopyConstructor()) {
+      HasCopyConstructor = true;
       if (MD->isDefaulted())
         HasDefaultedCopyConstructor = true;
       if (MD->isDeleted())
@@ -7404,14 +7405,14 @@ static bool hasSuitableConstructorForReplaceability(CXXRecordDecl *D,
 
   if (HasMoveConstructor)
     return !HasDeletedMoveConstructor &&
-           (Implicit ? HasDefaultedMoveConstructor : true);
-  return !HasDeletedCopyConstructor &&
-         (Implicit ? HasDefaultedCopyConstructor : true);
-  ;
+           (AllowUserDefined ? true : HasDefaultedMoveConstructor);
+  return HasCopyConstructor && !HasDeletedCopyConstructor &&
+         (AllowUserDefined ? true : HasDefaultedCopyConstructor);
 }
 
-static bool hasSuitableMoveAssignmentOperatorForReplaceability(CXXRecordDecl *D,
-                                                               bool Implicit) {
+static bool
+hasSuitableMoveAssignmentOperatorForRelocation(CXXRecordDecl *D,
+                                               bool AllowUserDefined) {
   assert(D->hasDefinition() && !D->isInvalidDecl());
 
   if (D->hasExplicitlyDeletedMoveAssignment())
@@ -7434,8 +7435,7 @@ static bool hasSuitableMoveAssignmentOperatorForReplaceability(CXXRecordDecl *D,
         HasDefaultedMoveAssignment = true;
       if (MD->isDeleted())
         HasDeletedMoveAssignment = true;
-    }
-    if (MD->isCopyAssignmentOperator()) {
+    } else if (MD->isCopyAssignmentOperator()) {
       if (MD->isDefaulted())
         HasDefaultedCopyAssignment = true;
       if (MD->isDeleted())
@@ -7445,29 +7445,45 @@ static bool hasSuitableMoveAssignmentOperatorForReplaceability(CXXRecordDecl *D,
 
   if (HasMoveAssignment)
     return !HasDeletedMoveAssignment &&
-           (Implicit ? HasDefaultedMoveAssignment : true);
+           (AllowUserDefined ? true : HasDefaultedMoveAssignment);
   return !HasDeletedCopyAssignment &&
-         (Implicit ? HasDefaultedCopyAssignment : true);
+         (AllowUserDefined ? true : HasDefaultedCopyAssignment);
 }
 
-void Sema::CheckCXX2CTriviallyRelocatable(CXXRecordDecl *D) {
-  if (D->isInvalidDecl())
-    return;
+static bool isDefaultMovable(CXXRecordDecl *D) {
+  if (!hasSuitableConstructorForRelocation(D, /*AllowUserDefined*/ false))
+    return false;
 
-  assert(D->hasDefinition());
+  if (!hasSuitableMoveAssignmentOperatorForRelocation(
+          D, /*AllowUserDefined*/ false))
+    return false;
 
-  bool MarkedTriviallyRelocatable =
-      D->getTriviallyRelocatableSpecifier().isSet();
+  const auto *Dtr = D->getDestructor();
+  if (!Dtr)
+    return true;
 
-  bool IsTriviallyRelocatable = true;
+  if (Dtr->isUserProvided() && (!Dtr->isDefaulted() || Dtr->isDeleted()))
+    return false;
+
+  return !Dtr->isDeleted();
+}
+
+static bool hasDeletedDestructor(CXXRecordDecl *D) {
+  const auto *Dtr = D->getDestructor();
+  if (Dtr)
+    return Dtr->isDeleted();
+  return false;
+}
+
+static bool isEligibleForTrivialRelocation(Sema &SemaRef, CXXRecordDecl *D) {
+
   for (const CXXBaseSpecifier &B : D->bases()) {
     const auto *BaseDecl = B.getType()->getAsCXXRecordDecl();
     if (!BaseDecl)
       continue;
     if (B.isVirtual() ||
-        (!BaseDecl->isDependentType() && !BaseDecl->isTriviallyRelocatable())) {
-      IsTriviallyRelocatable = false;
-    }
+        (!BaseDecl->isDependentType() && !BaseDecl->isTriviallyRelocatable()))
+      return false;
   }
 
   for (const FieldDecl *Field : D->fields()) {
@@ -7475,114 +7491,105 @@ void Sema::CheckCXX2CTriviallyRelocatable(CXXRecordDecl *D) {
       continue;
     if (Field->getType()->isReferenceType())
       continue;
-    QualType T = getASTContext().getBaseElementType(
+    QualType T = SemaRef.getASTContext().getBaseElementType(
         Field->getType().getUnqualifiedType());
     if (CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
-      if (RD->isTriviallyRelocatable())
-        continue;
-      IsTriviallyRelocatable = false;
-      break;
+      if (!RD->isTriviallyRelocatable())
+        return false;
     }
   }
 
-  if (!D->isDependentType() && !MarkedTriviallyRelocatable) {
-    bool HasSuitableMoveCtr = D->needsImplicitMoveConstructor();
-    bool HasSuitableCopyCtr = false;
-    if (D->hasUserDeclaredDestructor()) {
-      const auto *Dtr = D->getDestructor();
-      if (Dtr && (!Dtr->isDefaulted() || Dtr->isDeleted()))
-        IsTriviallyRelocatable = false;
-    }
-    if (IsTriviallyRelocatable && !HasSuitableMoveCtr) {
-      for (const CXXConstructorDecl *CD : D->ctors()) {
-        if (CD->isMoveConstructor() && CD->isDefaulted() &&
-            !CD->isIneligibleOrNotSelected()) {
-          HasSuitableMoveCtr = true;
-          break;
-        }
-      }
-    }
-    if (!HasSuitableMoveCtr && !D->hasMoveConstructor()) {
-      HasSuitableCopyCtr = D->needsImplicitCopyConstructor();
-      if (!HasSuitableCopyCtr) {
-        for (const CXXConstructorDecl *CD : D->ctors()) {
-          if (CD->isCopyConstructor() && CD->isDefaulted() &&
-              !CD->isIneligibleOrNotSelected()) {
-            HasSuitableCopyCtr = true;
-            break;
-          }
-        }
-      }
-    }
+  return !hasDeletedDestructor(D);
+}
+
+void Sema::CheckCXX2CTriviallyRelocatable(CXXRecordDecl *D) {
+  if (!getLangOpts().CPlusPlus || D->isInvalidDecl())
+    return;
+
+  assert(D->hasDefinition());
+
+  bool MarkedTriviallyRelocatable =
+      D->getTriviallyRelocatableSpecifier().isSet();
+
+  bool IsTriviallyRelocatable = [&] {
+    if (!isEligibleForTrivialRelocation(*this, D))
+      return false;
+
+    if (D->isDependentType() || MarkedTriviallyRelocatable)
+      return true;
 
     if (D->isUnion() && !D->hasUserDeclaredCopyConstructor() &&
         !D->hasUserDeclaredCopyAssignment() &&
         !D->hasUserDeclaredMoveOperation() && !D->hasUserDeclaredDestructor()) {
-      // Do nothing
+      return true;
     }
 
-    else if (!HasSuitableMoveCtr && !HasSuitableCopyCtr)
-      IsTriviallyRelocatable = false;
-
-    else if (IsTriviallyRelocatable &&
-             ((!D->needsImplicitMoveAssignment() &&
-               (D->hasUserProvidedMoveAssignment() ||
-                D->hasExplicitlyDeletedMoveAssignment())) ||
-              (!D->hasMoveAssignment() &&
-               D->hasUserProvidedCopyAssignment()))) {
-      IsTriviallyRelocatable = false;
-    }
-  }
+    return isDefaultMovable(D);
+  }();
 
   D->setIsTriviallyRelocatable(IsTriviallyRelocatable);
 }
 
+static bool isEligibleForReplacement(Sema &SemaRef, CXXRecordDecl *D) {
+
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    const auto *BaseDecl = B.getType()->getAsCXXRecordDecl();
+    if (!BaseDecl)
+      continue;
+    if ((!BaseDecl->isDependentType() && !BaseDecl->isReplaceable()))
+      return false;
+  }
+
+  for (const FieldDecl *Field : D->fields()) {
+    if (Field->getType()->isDependentType())
+      continue;
+
+    if (Field->getType()->isReferenceType())
+      return false;
+
+    if (Field->getType().isConstQualified())
+      return false;
+
+    QualType T = SemaRef.getASTContext().getBaseElementType(
+        Field->getType().getUnqualifiedType());
+    if (CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
+      if (!RD->isReplaceable())
+        return false;
+    }
+  }
+
+  return !hasDeletedDestructor(D);
+}
+
 void Sema::CheckCXX2CReplaceable(CXXRecordDecl *D) {
-  if (D->isInvalidDecl())
+  if (!getLangOpts().CPlusPlus || D->isInvalidDecl())
     return;
 
   assert(D->hasDefinition());
 
   bool MarkedCXX2CReplaceable = D->getReplaceableSpecifier().isSet();
 
-  bool IsReplaceable = true;
+  auto HasSuitableSMP = [&] {
+    return hasSuitableConstructorForRelocation(D, /*AllowUserDefined=*/true) &&
+           hasSuitableMoveAssignmentOperatorForRelocation(
+               D, /*AllowUserDefined=*/true);
+  };
 
-  for (const CXXBaseSpecifier &B : D->bases()) {
-    const auto *BaseDecl = B.getType()->getAsCXXRecordDecl();
-    if (!BaseDecl)
-      continue;
-    if ((!BaseDecl->isDependentType() && !BaseDecl->isReplaceable()) ||
-        B.isVirtual())
-      IsReplaceable = false;
-  }
+  bool IsReplaceable = [&] {
+    if (!isEligibleForReplacement(*this, D))
+      return false;
 
-  if (!hasSuitableConstructorForReplaceability(D, !MarkedCXX2CReplaceable) ||
-      !hasSuitableMoveAssignmentOperatorForReplaceability(
-          D, !MarkedCXX2CReplaceable)) {
-    IsReplaceable = false;
-  }
+    if (D->isDependentType() || MarkedCXX2CReplaceable)
+      return HasSuitableSMP();
 
-  if (IsReplaceable) {
-    for (const FieldDecl *Field : D->fields()) {
-      if (Field->getType()->isDependentType())
-        continue;
-      if (Field->getType()->isReferenceType()) {
-        IsReplaceable = false;
-        break;
-      }
-      if (Field->getType().isConstQualified()) {
-        IsReplaceable = false;
-        break;
-      }
-      QualType T = getASTContext().getBaseElementType(
-          Field->getType().getUnqualifiedType());
-      if (CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
-        if (RD->isReplaceable())
-          continue;
-        IsReplaceable = false;
-      }
+    if (D->isUnion() && !D->hasUserDeclaredCopyConstructor() &&
+        !D->hasUserDeclaredCopyAssignment() &&
+        !D->hasUserDeclaredMoveOperation() && !D->hasUserDeclaredDestructor()) {
+      return HasSuitableSMP();
     }
-  }
+
+    return isDefaultMovable(D);
+  }();
 
   D->setIsReplaceable(IsReplaceable);
 }
