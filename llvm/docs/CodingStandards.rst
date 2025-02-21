@@ -1588,7 +1588,7 @@ keyword to restrict their access. For non-member functions, variables, and class
 that means restricting visibility to a single `.cpp` file if it's not referenced
 outside that file.
 
-Visibility of file-scoped non-members variables and functions can be restricted to
+Visibility of file-scope non-member variables and functions can be restricted to
 the current translation unit by using either `static` keyword or anonymous namespace.
 Anonymous namespaces are a great language feature that tells the C++ compiler that
 the contents of the namespace are only visible within the current translation unit,
