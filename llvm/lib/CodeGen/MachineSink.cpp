@@ -819,11 +819,6 @@ bool MachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
   return Impl.run(MF);
 }
 
-#define GET_ANALYSIS(ANALYSIS, INFIX, GETTER)                                  \
-  ((LegacyPass)                                                                \
-       ? &LegacyPass->getAnalysis<ANALYSIS##INFIX##WrapperPass>().GETTER()     \
-       : &MFAM->getResult<ANALYSIS##Analysis>(MF))
-
 bool MachineSinking::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "******** Machine Sinking ********\n");
 
