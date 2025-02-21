@@ -42,104 +42,104 @@ def MPI_Dialect : Dialect {
 // Error classes enum:
 //===----------------------------------------------------------------------===//
 
-def MPI_CodeSuccess : I32EnumAttrCase<"_MPI_SUCCESS", 0, "MPI_SUCCESS">;
-def MPI_CodeErrAccess : I32EnumAttrCase<"_MPI_ERR_ACCESS", 1, "MPI_ERR_ACCESS">;
-def MPI_CodeErrAmode : I32EnumAttrCase<"_MPI_ERR_AMODE", 2, "MPI_ERR_AMODE">;
-def MPI_CodeErrArg : I32EnumAttrCase<"_MPI_ERR_ARG", 3, "MPI_ERR_ARG">;
-def MPI_CodeErrAssert : I32EnumAttrCase<"_MPI_ERR_ASSERT", 4, "MPI_ERR_ASSERT">;
+def MPI_CodeSuccess : I32EnumAttrCase<"MPI_SUCCESS", 0, "MPI_SUCCESS">;
+def MPI_CodeErrAccess : I32EnumAttrCase<"MPI_ERR_ACCESS", 1, "MPI_ERR_ACCESS">;
+def MPI_CodeErrAmode : I32EnumAttrCase<"MPI_ERR_AMODE", 2, "MPI_ERR_AMODE">;
+def MPI_CodeErrArg : I32EnumAttrCase<"MPI_ERR_ARG", 3, "MPI_ERR_ARG">;
+def MPI_CodeErrAssert : I32EnumAttrCase<"MPI_ERR_ASSERT", 4, "MPI_ERR_ASSERT">;
 def MPI_CodeErrBadFile
-    : I32EnumAttrCase<"_MPI_ERR_BAD_FILE", 5, "MPI_ERR_BAD_FILE">;
-def MPI_CodeErrBase : I32EnumAttrCase<"_MPI_ERR_BASE", 6, "MPI_ERR_BASE">;
-def MPI_CodeErrBuffer : I32EnumAttrCase<"_MPI_ERR_BUFFER", 7, "MPI_ERR_BUFFER">;
-def MPI_CodeErrComm : I32EnumAttrCase<"_MPI_ERR_COMM", 8, "MPI_ERR_COMM">;
+    : I32EnumAttrCase<"MPI_ERR_BAD_FILE", 5, "MPI_ERR_BAD_FILE">;
+def MPI_CodeErrBase : I32EnumAttrCase<"MPI_ERR_BASE", 6, "MPI_ERR_BASE">;
+def MPI_CodeErrBuffer : I32EnumAttrCase<"MPI_ERR_BUFFER", 7, "MPI_ERR_BUFFER">;
+def MPI_CodeErrComm : I32EnumAttrCase<"MPI_ERR_COMM", 8, "MPI_ERR_COMM">;
 def MPI_CodeErrConversion
-    : I32EnumAttrCase<"_MPI_ERR_CONVERSION", 9, "MPI_ERR_CONVERSION">;
-def MPI_CodeErrCount : I32EnumAttrCase<"_MPI_ERR_COUNT", 10, "MPI_ERR_COUNT">;
-def MPI_CodeErrDims : I32EnumAttrCase<"_MPI_ERR_DIMS", 11, "MPI_ERR_DIMS">;
-def MPI_CodeErrDisp : I32EnumAttrCase<"_MPI_ERR_DISP", 12, "MPI_ERR_DISP">;
+    : I32EnumAttrCase<"MPI_ERR_CONVERSION", 9, "MPI_ERR_CONVERSION">;
+def MPI_CodeErrCount : I32EnumAttrCase<"MPI_ERR_COUNT", 10, "MPI_ERR_COUNT">;
+def MPI_CodeErrDims : I32EnumAttrCase<"MPI_ERR_DIMS", 11, "MPI_ERR_DIMS">;
+def MPI_CodeErrDisp : I32EnumAttrCase<"MPI_ERR_DISP", 12, "MPI_ERR_DISP">;
 def MPI_CodeErrDupDatarep
-    : I32EnumAttrCase<"_MPI_ERR_DUP_DATAREP", 13, "MPI_ERR_DUP_DATAREP">;
+    : I32EnumAttrCase<"MPI_ERR_DUP_DATAREP", 13, "MPI_ERR_DUP_DATAREP">;
 def MPI_CodeErrErrhandler
-    : I32EnumAttrCase<"_MPI_ERR_ERRHANDLER", 14, "MPI_ERR_ERRHANDLER">;
-def MPI_CodeErrFile : I32EnumAttrCase<"_MPI_ERR_FILE", 15, "MPI_ERR_FILE">;
+    : I32EnumAttrCase<"MPI_ERR_ERRHANDLER", 14, "MPI_ERR_ERRHANDLER">;
+def MPI_CodeErrFile : I32EnumAttrCase<"MPI_ERR_FILE", 15, "MPI_ERR_FILE">;
 def MPI_CodeErrFileExists
-    : I32EnumAttrCase<"_MPI_ERR_FILE_EXISTS", 16, "MPI_ERR_FILE_EXISTS">;
+    : I32EnumAttrCase<"MPI_ERR_FILE_EXISTS", 16, "MPI_ERR_FILE_EXISTS">;
 def MPI_CodeErrFileInUse
-    : I32EnumAttrCase<"_MPI_ERR_FILE_IN_USE", 17, "MPI_ERR_FILE_IN_USE">;
-def MPI_CodeErrGroup : I32EnumAttrCase<"_MPI_ERR_GROUP", 18, "MPI_ERR_GROUP">;
-def MPI_CodeErrInfo : I32EnumAttrCase<"_MPI_ERR_INFO", 19, "MPI_ERR_INFO">;
+    : I32EnumAttrCase<"MPI_ERR_FILE_IN_USE", 17, "MPI_ERR_FILE_IN_USE">;
+def MPI_CodeErrGroup : I32EnumAttrCase<"MPI_ERR_GROUP", 18, "MPI_ERR_GROUP">;
+def MPI_CodeErrInfo : I32EnumAttrCase<"MPI_ERR_INFO", 19, "MPI_ERR_INFO">;
 def MPI_CodeErrInfoKey
-    : I32EnumAttrCase<"_MPI_ERR_INFO_KEY", 20, "MPI_ERR_INFO_KEY">;
+    : I32EnumAttrCase<"MPI_ERR_INFO_KEY", 20, "MPI_ERR_INFO_KEY">;
 def MPI_CodeErrInfoNokey
-    : I32EnumAttrCase<"_MPI_ERR_INFO_NOKEY", 21, "MPI_ERR_INFO_NOKEY">;
+    : I32EnumAttrCase<"MPI_ERR_INFO_NOKEY", 21, "MPI_ERR_INFO_NOKEY">;
 def MPI_CodeErrInfoValue
-    : I32EnumAttrCase<"_MPI_ERR_INFO_VALUE", 22, "MPI_ERR_INFO_VALUE">;
+    : I32EnumAttrCase<"MPI_ERR_INFO_VALUE", 22, "MPI_ERR_INFO_VALUE">;
 def MPI_CodeErrInStatus
-    : I32EnumAttrCase<"_MPI_ERR_IN_STATUS", 23, "MPI_ERR_IN_STATUS">;
-def MPI_CodeErrIntern : I32EnumAttrCase<"_MPI_ERR_INTERN", 24, "MPI_ERR_INTERN">;
-def MPI_CodeErrIo : I32EnumAttrCase<"_MPI_ERR_IO", 25, "MPI_ERR_IO">;
-def MPI_CodeErrKeyval : I32EnumAttrCase<"_MPI_ERR_KEYVAL", 26, "MPI_ERR_KEYVAL">;
+    : I32EnumAttrCase<"MPI_ERR_IN_STATUS", 23, "MPI_ERR_IN_STATUS">;
+def MPI_CodeErrIntern : I32EnumAttrCase<"MPI_ERR_INTERN", 24, "MPI_ERR_INTERN">;
+def MPI_CodeErrIo : I32EnumAttrCase<"MPI_ERR_IO", 25, "MPI_ERR_IO">;
+def MPI_CodeErrKeyval : I32EnumAttrCase<"MPI_ERR_KEYVAL", 26, "MPI_ERR_KEYVAL">;
 def MPI_CodeErrLocktype
-    : I32EnumAttrCase<"_MPI_ERR_LOCKTYPE", 27, "MPI_ERR_LOCKTYPE">;
-def MPI_CodeErrName : I32EnumAttrCase<"_MPI_ERR_NAME", 28, "MPI_ERR_NAME">;
-def MPI_CodeErrNoMem : I32EnumAttrCase<"_MPI_ERR_NO_MEM", 29, "MPI_ERR_NO_MEM">;
+    : I32EnumAttrCase<"MPI_ERR_LOCKTYPE", 27, "MPI_ERR_LOCKTYPE">;
+def MPI_CodeErrName : I32EnumAttrCase<"MPI_ERR_NAME", 28, "MPI_ERR_NAME">;
+def MPI_CodeErrNoMem : I32EnumAttrCase<"MPI_ERR_NO_MEM", 29, "MPI_ERR_NO_MEM">;
 def MPI_CodeErrNoSpace
-    : I32EnumAttrCase<"_MPI_ERR_NO_SPACE", 30, "MPI_ERR_NO_SPACE">;
+    : I32EnumAttrCase<"MPI_ERR_NO_SPACE", 30, "MPI_ERR_NO_SPACE">;
 def MPI_CodeErrNoSuchFile
-    : I32EnumAttrCase<"_MPI_ERR_NO_SUCH_FILE", 31, "MPI_ERR_NO_SUCH_FILE">;
+    : I32EnumAttrCase<"MPI_ERR_NO_SUCH_FILE", 31, "MPI_ERR_NO_SUCH_FILE">;
 def MPI_CodeErrNotSame
-    : I32EnumAttrCase<"_MPI_ERR_NOT_SAME", 32, "MPI_ERR_NOT_SAME">;
-def MPI_CodeErrOp : I32EnumAttrCase<"_MPI_ERR_OP", 33, "MPI_ERR_OP">;
-def MPI_CodeErrOther : I32EnumAttrCase<"_MPI_ERR_OTHER", 34, "MPI_ERR_OTHER">;
+    : I32EnumAttrCase<"MPI_ERR_NOT_SAME", 32, "MPI_ERR_NOT_SAME">;
+def MPI_CodeErrOp : I32EnumAttrCase<"MPI_ERR_OP", 33, "MPI_ERR_OP">;
+def MPI_CodeErrOther : I32EnumAttrCase<"MPI_ERR_OTHER", 34, "MPI_ERR_OTHER">;
 def MPI_CodeErrPending
-    : I32EnumAttrCase<"_MPI_ERR_PENDING", 35, "MPI_ERR_PENDING">;
-def MPI_CodeErrPort : I32EnumAttrCase<"_MPI_ERR_PORT", 36, "MPI_ERR_PORT">;
+    : I32EnumAttrCase<"MPI_ERR_PENDING", 35, "MPI_ERR_PENDING">;
+def MPI_CodeErrPort : I32EnumAttrCase<"MPI_ERR_PORT", 36, "MPI_ERR_PORT">;
 def MPI_CodeErrProcAborted
-    : I32EnumAttrCase<"_MPI_ERR_PROC_ABORTED", 37, "MPI_ERR_PROC_ABORTED">;
-def MPI_CodeErrQuota : I32EnumAttrCase<"_MPI_ERR_QUOTA", 38, "MPI_ERR_QUOTA">;
-def MPI_CodeErrRank : I32EnumAttrCase<"_MPI_ERR_RANK", 39, "MPI_ERR_RANK">;
+    : I32EnumAttrCase<"MPI_ERR_PROC_ABORTED", 37, "MPI_ERR_PROC_ABORTED">;
+def MPI_CodeErrQuota : I32EnumAttrCase<"MPI_ERR_QUOTA", 38, "MPI_ERR_QUOTA">;
+def MPI_CodeErrRank : I32EnumAttrCase<"MPI_ERR_RANK", 39, "MPI_ERR_RANK">;
 def MPI_CodeErrReadOnly
-    : I32EnumAttrCase<"_MPI_ERR_READ_ONLY", 40, "MPI_ERR_READ_ONLY">;
+    : I32EnumAttrCase<"MPI_ERR_READ_ONLY", 40, "MPI_ERR_READ_ONLY">;
 def MPI_CodeErrRequest
-    : I32EnumAttrCase<"_MPI_ERR_REQUEST", 41, "MPI_ERR_REQUEST">;
+    : I32EnumAttrCase<"MPI_ERR_REQUEST", 41, "MPI_ERR_REQUEST">;
 def MPI_CodeErrRmaAttach
-    : I32EnumAttrCase<"_MPI_ERR_RMA_ATTACH", 42, "MPI_ERR_RMA_ATTACH">;
+    : I32EnumAttrCase<"MPI_ERR_RMA_ATTACH", 42, "MPI_ERR_RMA_ATTACH">;
 def MPI_CodeErrRmaConflict
-    : I32EnumAttrCase<"_MPI_ERR_RMA_CONFLICT", 43, "MPI_ERR_RMA_CONFLICT">;
+    : I32EnumAttrCase<"MPI_ERR_RMA_CONFLICT", 43, "MPI_ERR_RMA_CONFLICT">;
 def MPI_CodeErrRmaFlavor
-    : I32EnumAttrCase<"_MPI_ERR_RMA_FLAVOR", 44, "MPI_ERR_RMA_FLAVOR">;
+    : I32EnumAttrCase<"MPI_ERR_RMA_FLAVOR", 44, "MPI_ERR_RMA_FLAVOR">;
 def MPI_CodeErrRmaRange
-    : I32EnumAttrCase<"_MPI_ERR_RMA_RANGE", 45, "MPI_ERR_RMA_RANGE">;
+    : I32EnumAttrCase<"MPI_ERR_RMA_RANGE", 45, "MPI_ERR_RMA_RANGE">;
 def MPI_CodeErrRmaShared
-    : I32EnumAttrCase<"_MPI_ERR_RMA_SHARED", 46, "MPI_ERR_RMA_SHARED">;
+    : I32EnumAttrCase<"MPI_ERR_RMA_SHARED", 46, "MPI_ERR_RMA_SHARED">;
 def MPI_CodeErrRmaSync
-    : I32EnumAttrCase<"_MPI_ERR_RMA_SYNC", 47, "MPI_ERR_RMA_SYNC">;
-def MPI_CodeErrRoot : I32EnumAttrCase<"_MPI_ERR_ROOT", 48, "MPI_ERR_ROOT">;
+    : I32EnumAttrCase<"MPI_ERR_RMA_SYNC", 47, "MPI_ERR_RMA_SYNC">;
+def MPI_CodeErrRoot : I32EnumAttrCase<"MPI_ERR_ROOT", 48, "MPI_ERR_ROOT">;
 def MPI_CodeErrService
-    : I32EnumAttrCase<"_MPI_ERR_SERVICE", 49, "MPI_ERR_SERVICE">;
+    : I32EnumAttrCase<"MPI_ERR_SERVICE", 49, "MPI_ERR_SERVICE">;
 def MPI_CodeErrSession
-    : I32EnumAttrCase<"_MPI_ERR_SESSION", 50, "MPI_ERR_SESSION">;
-def MPI_CodeErrSize : I32EnumAttrCase<"_MPI_ERR_SIZE", 51, "MPI_ERR_SIZE">;
-def MPI_CodeErrSpawn : I32EnumAttrCase<"_MPI_ERR_SPAWN", 52, "MPI_ERR_SPAWN">;
-def MPI_CodeErrTag : I32EnumAttrCase<"_MPI_ERR_TAG", 53, "MPI_ERR_TAG">;
+    : I32EnumAttrCase<"MPI_ERR_SESSION", 50, "MPI_ERR_SESSION">;
+def MPI_CodeErrSize : I32EnumAttrCase<"MPI_ERR_SIZE", 51, "MPI_ERR_SIZE">;
+def MPI_CodeErrSpawn : I32EnumAttrCase<"MPI_ERR_SPAWN", 52, "MPI_ERR_SPAWN">;
+def MPI_CodeErrTag : I32EnumAttrCase<"MPI_ERR_TAG", 53, "MPI_ERR_TAG">;
 def MPI_CodeErrTopology
-    : I32EnumAttrCase<"_MPI_ERR_TOPOLOGY", 54, "MPI_ERR_TOPOLOGY">;
+    : I32EnumAttrCase<"MPI_ERR_TOPOLOGY", 54, "MPI_ERR_TOPOLOGY">;
 def MPI_CodeErrTruncate
-    : I32EnumAttrCase<"_MPI_ERR_TRUNCATE", 55, "MPI_ERR_TRUNCATE">;
-def MPI_CodeErrType : I32EnumAttrCase<"_MPI_ERR_TYPE", 56, "MPI_ERR_TYPE">;
+    : I32EnumAttrCase<"MPI_ERR_TRUNCATE", 55, "MPI_ERR_TRUNCATE">;
+def MPI_CodeErrType : I32EnumAttrCase<"MPI_ERR_TYPE", 56, "MPI_ERR_TYPE">;
 def MPI_CodeErrUnknown
-    : I32EnumAttrCase<"_MPI_ERR_UNKNOWN", 57, "MPI_ERR_UNKNOWN">;
+    : I32EnumAttrCase<"MPI_ERR_UNKNOWN", 57, "MPI_ERR_UNKNOWN">;
 def MPI_CodeErrUnsupportedDatarep
-    : I32EnumAttrCase<"_MPI_ERR_UNSUPPORTED_DATAREP", 58,
+    : I32EnumAttrCase<"MPI_ERR_UNSUPPORTED_DATAREP", 58,
                       "MPI_ERR_UNSUPPORTED_DATAREP">;
 def MPI_CodeErrUnsupportedOperation
-    : I32EnumAttrCase<"_MPI_ERR_UNSUPPORTED_OPERATION", 59,
+    : I32EnumAttrCase<"MPI_ERR_UNSUPPORTED_OPERATION", 59,
                       "MPI_ERR_UNSUPPORTED_OPERATION">;
 def MPI_CodeErrValueTooLarge
-    : I32EnumAttrCase<"_MPI_ERR_VALUE_TOO_LARGE", 60, "MPI_ERR_VALUE_TOO_LARGE">;
-def MPI_CodeErrWin : I32EnumAttrCase<"_MPI_ERR_WIN", 61, "MPI_ERR_WIN">;
+    : I32EnumAttrCase<"MPI_ERR_VALUE_TOO_LARGE", 60, "MPI_ERR_VALUE_TOO_LARGE">;
+def MPI_CodeErrWin : I32EnumAttrCase<"MPI_ERR_WIN", 61, "MPI_ERR_WIN">;
 def MPI_CodeErrLastcode
-    : I32EnumAttrCase<"_MPI_ERR_LASTCODE", 62, "MPI_ERR_LASTCODE">;
+    : I32EnumAttrCase<"MPI_ERR_LASTCODE", 62, "MPI_ERR_LASTCODE">;
 
 def MPI_ErrorClassEnum
     : I32EnumAttr<"MPI_ErrorClassEnum", "MPI error class name", [
@@ -215,20 +215,20 @@ def MPI_ErrorClassAttr : EnumAttr<MPI_Dialect, MPI_ErrorClassEnum, "errclass"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def MPI_OpNull : I32EnumAttrCase<"_MPI_OP_NULL", 0, "MPI_OP_NULL">;
-def MPI_OpMax : I32EnumAttrCase<"_MPI_MAX", 1, "MPI_MAX">;
-def MPI_OpMin : I32EnumAttrCase<"_MPI_MIN", 2, "MPI_MIN">;
-def MPI_OpSum : I32EnumAttrCase<"_MPI_SUM", 3, "MPI_SUM">;
-def MPI_OpProd : I32EnumAttrCase<"_MPI_PROD", 4, "MPI_PROD">;
-def MPI_OpLand : I32EnumAttrCase<"_MPI_LAND", 5, "MPI_LAND">;
-def MPI_OpBand : I32EnumAttrCase<"_MPI_BAND", 6, "MPI_BAND">;
-def MPI_OpLor : I32EnumAttrCase<"_MPI_LOR", 7, "MPI_LOR">;
-def MPI_OpBor : I32EnumAttrCase<"_MPI_BOR", 8, "MPI_BOR">;
-def MPI_OpLxor : I32EnumAttrCase<"_MPI_LXOR", 9, "MPI_LXOR">;
-def MPI_OpBxor : I32EnumAttrCase<"_MPI_BXOR", 10, "MPI_BXOR">;
-def MPI_OpMinloc : I32EnumAttrCase<"_MPI_MINLOC", 11, "MPI_MINLOC">;
-def MPI_OpMaxloc : I32EnumAttrCase<"_MPI_MAXLOC", 12, "MPI_MAXLOC">;
-def MPI_OpReplace : I32EnumAttrCase<"_MPI_REPLACE", 13, "MPI_REPLACE">;
+def MPI_OpNull : I32EnumAttrCase<"MPI_OP_NULL", 0, "MPI_OP_NULL">;
+def MPI_OpMax : I32EnumAttrCase<"MPI_MAX", 1, "MPI_MAX">;
+def MPI_OpMin : I32EnumAttrCase<"MPI_MIN", 2, "MPI_MIN">;
+def MPI_OpSum : I32EnumAttrCase<"MPI_SUM", 3, "MPI_SUM">;
+def MPI_OpProd : I32EnumAttrCase<"MPI_PROD", 4, "MPI_PROD">;
+def MPI_OpLand : I32EnumAttrCase<"MPI_LAND", 5, "MPI_LAND">;
+def MPI_OpBand : I32EnumAttrCase<"MPI_BAND", 6, "MPI_BAND">;
+def MPI_OpLor : I32EnumAttrCase<"MPI_LOR", 7, "MPI_LOR">;
+def MPI_OpBor : I32EnumAttrCase<"MPI_BOR", 8, "MPI_BOR">;
+def MPI_OpLxor : I32EnumAttrCase<"MPI_LXOR", 9, "MPI_LXOR">;
+def MPI_OpBxor : I32EnumAttrCase<"MPI_BXOR", 10, "MPI_BXOR">;
+def MPI_OpMinloc : I32EnumAttrCase<"MPI_MINLOC", 11, "MPI_MINLOC">;
+def MPI_OpMaxloc : I32EnumAttrCase<"MPI_MAXLOC", 12, "MPI_MAXLOC">;
+def MPI_OpReplace : I32EnumAttrCase<"MPI_REPLACE", 13, "MPI_REPLACE">;
 
 def MPI_OpClassEnum : I32EnumAttr<"MPI_OpClassEnum", "MPI operation class", [
       MPI_OpNull,
