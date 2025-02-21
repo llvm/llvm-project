@@ -186,7 +186,7 @@ define <vscale x 8 x i16> @test_lane6_undef_8xi16(i16 %a) {
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    mov z0.h, p0/m, w0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 8 x i16> undef, i16 %a, i32 6
+  %b = insertelement <vscale x 8 x i16> poison, i16 %a, i32 6
   ret <vscale x 8 x i16> %b
 }
 
@@ -195,7 +195,7 @@ define <vscale x 16 x i8> @test_lane0_undef_16xi8(i8 %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 16 x i8> undef, i8 %a, i32 0
+  %b = insertelement <vscale x 16 x i8> poison, i8 %a, i32 0
   ret <vscale x 16 x i8> %b
 }
 
@@ -249,7 +249,7 @@ define <vscale x 8 x half> @test_insert_into_undef_nxv8f16(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 8 x half> undef, half %a, i32 0
+  %b = insertelement <vscale x 8 x half> poison, half %a, i32 0
   ret <vscale x 8 x half> %b
 }
 
@@ -258,7 +258,7 @@ define <vscale x 4 x half> @test_insert_into_undef_nxv4f16(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 4 x half> undef, half %a, i32 0
+  %b = insertelement <vscale x 4 x half> poison, half %a, i32 0
   ret <vscale x 4 x half> %b
 }
 
@@ -267,7 +267,7 @@ define <vscale x 2 x half> @test_insert_into_undef_nxv2f16(half %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 2 x half> undef, half %a, i32 0
+  %b = insertelement <vscale x 2 x half> poison, half %a, i32 0
   ret <vscale x 2 x half> %b
 }
 
@@ -276,7 +276,7 @@ define <vscale x 8 x bfloat> @test_insert_into_undef_nxv8bf16(bfloat %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 8 x bfloat> undef, bfloat %a, i32 0
+  %b = insertelement <vscale x 8 x bfloat> poison, bfloat %a, i32 0
   ret <vscale x 8 x bfloat> %b
 }
 
@@ -285,7 +285,7 @@ define <vscale x 4 x bfloat> @test_insert_into_undef_nxv4bf16(bfloat %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 4 x bfloat> undef, bfloat %a, i32 0
+  %b = insertelement <vscale x 4 x bfloat> poison, bfloat %a, i32 0
   ret <vscale x 4 x bfloat> %b
 }
 
@@ -294,7 +294,7 @@ define <vscale x 2 x bfloat> @test_insert_into_undef_nxv2bf16(bfloat %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 2 x bfloat> undef, bfloat %a, i32 0
+  %b = insertelement <vscale x 2 x bfloat> poison, bfloat %a, i32 0
   ret <vscale x 2 x bfloat> %b
 }
 
@@ -303,7 +303,7 @@ define <vscale x 4 x float> @test_insert_into_undef_nxv4f32(float %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 4 x float> undef, float %a, i32 0
+  %b = insertelement <vscale x 4 x float> poison, float %a, i32 0
   ret <vscale x 4 x float> %b
 }
 
@@ -312,7 +312,7 @@ define <vscale x 2 x float> @test_insert_into_undef_nxv2f32(float %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 2 x float> undef, float %a, i32 0
+  %b = insertelement <vscale x 2 x float> poison, float %a, i32 0
   ret <vscale x 2 x float> %b
 }
 
@@ -321,7 +321,7 @@ define <vscale x 2 x double> @test_insert_into_undef_nxv2f64(double %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ret
-  %b = insertelement <vscale x 2 x double> undef, double %a, i32 0
+  %b = insertelement <vscale x 2 x double> poison, double %a, i32 0
   ret <vscale x 2 x double> %b
 }
 
@@ -335,7 +335,7 @@ define <vscale x 2 x half> @test_insert_with_index_nxv2f16(half %h, i64 %idx) {
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.h, p0/m, h0
 ; CHECK-NEXT:    ret
-  %res = insertelement <vscale x 2 x half> undef, half %h, i64 %idx
+  %res = insertelement <vscale x 2 x half> poison, half %h, i64 %idx
   ret <vscale x 2 x half> %res
 }
 
@@ -348,7 +348,7 @@ define <vscale x 4 x half> @test_insert_with_index_nxv4f16(half %h, i64 %idx) {
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.h, p0/m, h0
 ; CHECK-NEXT:    ret
-  %res = insertelement <vscale x 4 x half> undef, half %h, i64 %idx
+  %res = insertelement <vscale x 4 x half> poison, half %h, i64 %idx
   ret <vscale x 4 x half> %res
 }
 
@@ -361,7 +361,7 @@ define <vscale x 8 x half> @test_insert_with_index_nxv8f16(half %h, i64 %idx) {
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, h0
 ; CHECK-NEXT:    ret
-  %res = insertelement <vscale x 8 x half> undef, half %h, i64 %idx
+  %res = insertelement <vscale x 8 x half> poison, half %h, i64 %idx
   ret <vscale x 8 x half> %res
 }
 
@@ -374,7 +374,7 @@ define <vscale x 2 x bfloat> @test_insert_with_index_nxv2bf16(bfloat %h, i64 %id
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.h, p0/m, h0
 ; CHECK-NEXT:    ret
-  %res = insertelement <vscale x 2 x bfloat> undef, bfloat %h, i64 %idx
+  %res = insertelement <vscale x 2 x bfloat> poison, bfloat %h, i64 %idx
   ret <vscale x 2 x bfloat> %res
 }
 
@@ -387,7 +387,7 @@ define <vscale x 4 x bfloat> @test_insert_with_index_nxv4bf16(bfloat %h, i64 %id
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.h, p0/m, h0
 ; CHECK-NEXT:    ret
-  %res = insertelement <vscale x 4 x bfloat> undef, bfloat %h, i64 %idx
+  %res = insertelement <vscale x 4 x bfloat> poison, bfloat %h, i64 %idx
   ret <vscale x 4 x bfloat> %res
 }
 
@@ -400,7 +400,7 @@ define <vscale x 8 x bfloat> @test_insert_with_index_nxv8bf16(bfloat %h, i64 %id
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, h0
 ; CHECK-NEXT:    ret
-  %res = insertelement <vscale x 8 x bfloat> undef, bfloat %h, i64 %idx
+  %res = insertelement <vscale x 8 x bfloat> poison, bfloat %h, i64 %idx
   ret <vscale x 8 x bfloat> %res
 }
 
@@ -413,7 +413,7 @@ define <vscale x 2 x float> @test_insert_with_index_nxv2f32(float %f, i64 %idx) 
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.s, p0/m, s0
 ; CHECK-NEXT:    ret
-  %res = insertelement <vscale x 2 x float> undef, float %f, i64 %idx
+  %res = insertelement <vscale x 2 x float> poison, float %f, i64 %idx
   ret <vscale x 2 x float> %res
 }
 
@@ -426,7 +426,7 @@ define <vscale x 4 x float> @test_insert_with_index_nxv4f32(float %f, i64 %idx) 
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, s0
 ; CHECK-NEXT:    ret
-  %res = insertelement <vscale x 4 x float> undef, float %f, i64 %idx
+  %res = insertelement <vscale x 4 x float> poison, float %f, i64 %idx
   ret <vscale x 4 x float> %res
 }
 
@@ -439,7 +439,7 @@ define <vscale x 2 x double> @test_insert_with_index_nxv2f64(double %d, i64 %idx
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.d, p0/m, d0
 ; CHECK-NEXT:    ret
-  %res = insertelement <vscale x 2 x double> undef, double %d, i64 %idx
+  %res = insertelement <vscale x 2 x double> poison, double %d, i64 %idx
   ret <vscale x 2 x double> %res
 }
 

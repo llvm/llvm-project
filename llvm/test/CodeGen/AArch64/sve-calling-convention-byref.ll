@@ -266,10 +266,10 @@ define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_
   %r1 = and <vscale x 16 x i1> %p1, %p5
   %r2 = and <vscale x 16 x i1> %p2, %p6
   %r3 = and <vscale x 16 x i1> %p3, %p7
-  %1 = insertvalue  [4 x <vscale x 16 x i1>] undef, <vscale x 16 x i1> %r0, 0
-  %2 = insertvalue  [4 x <vscale x 16 x i1>]    %1, <vscale x 16 x i1> %r1, 1
-  %3 = insertvalue  [4 x <vscale x 16 x i1>]    %2, <vscale x 16 x i1> %r2, 2
-  %4 = insertvalue  [4 x <vscale x 16 x i1>]    %3, <vscale x 16 x i1> %r3, 3
+  %1 = insertvalue  [4 x <vscale x 16 x i1>] poison, <vscale x 16 x i1> %r0, 0
+  %2 = insertvalue  [4 x <vscale x 16 x i1>] %1, <vscale x 16 x i1> %r1, 1
+  %3 = insertvalue  [4 x <vscale x 16 x i1>] %2, <vscale x 16 x i1> %r2, 2
+  %4 = insertvalue  [4 x <vscale x 16 x i1>] %3, <vscale x 16 x i1> %r3, 3
   ret [4 x <vscale x 16 x i1>] %4
 }
 

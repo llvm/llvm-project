@@ -6,7 +6,7 @@ define <vscale x 2 x i8> @test_compress_nxv2i8(<vscale x 2 x i8> %vec, <vscale x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 2 x i8> @llvm.experimental.vector.compress(<vscale x 2 x i8> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+    %out = call <vscale x 2 x i8> @llvm.experimental.vector.compress(<vscale x 2 x i8> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
     ret <vscale x 2 x i8> %out
 }
 
@@ -15,7 +15,7 @@ define <vscale x 2 x i16> @test_compress_nxv2i16(<vscale x 2 x i16> %vec, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 2 x i16> @llvm.experimental.vector.compress(<vscale x 2 x i16> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
+    %out = call <vscale x 2 x i16> @llvm.experimental.vector.compress(<vscale x 2 x i16> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x i16> poison)
     ret <vscale x 2 x i16> %out
 }
 
@@ -24,7 +24,7 @@ define <vscale x 2 x i32> @test_compress_nxv2i32(<vscale x 2 x i32> %vec, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 2 x i32> @llvm.experimental.vector.compress(<vscale x 2 x i32> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
+    %out = call <vscale x 2 x i32> @llvm.experimental.vector.compress(<vscale x 2 x i32> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x i32> poison)
     ret <vscale x 2 x i32> %out
 }
 
@@ -33,7 +33,7 @@ define <vscale x 2 x i64> @test_compress_nxv2i64(<vscale x 2 x i64> %vec, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 2 x i64> @llvm.experimental.vector.compress(<vscale x 2 x i64> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x i64> undef)
+    %out = call <vscale x 2 x i64> @llvm.experimental.vector.compress(<vscale x 2 x i64> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x i64> poison)
     ret <vscale x 2 x i64> %out
 }
 
@@ -42,7 +42,7 @@ define <vscale x 2 x float> @test_compress_nxv2f32(<vscale x 2 x float> %vec, <v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 2 x float> @llvm.experimental.vector.compress(<vscale x 2 x float> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x float> undef)
+    %out = call <vscale x 2 x float> @llvm.experimental.vector.compress(<vscale x 2 x float> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x float> poison)
     ret <vscale x 2 x float> %out
 }
 
@@ -51,7 +51,7 @@ define <vscale x 2 x double> @test_compress_nxv2f64(<vscale x 2 x double> %vec, 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 2 x double> @llvm.experimental.vector.compress(<vscale x 2 x double> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x double> undef)
+    %out = call <vscale x 2 x double> @llvm.experimental.vector.compress(<vscale x 2 x double> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x double> poison)
     ret <vscale x 2 x double> %out
 }
 
@@ -60,7 +60,7 @@ define <vscale x 4 x i8> @test_compress_nxv4i8(<vscale x 4 x i8> %vec, <vscale x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 4 x i8> @llvm.experimental.vector.compress(<vscale x 4 x i8> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i8> undef)
+    %out = call <vscale x 4 x i8> @llvm.experimental.vector.compress(<vscale x 4 x i8> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i8> poison)
     ret <vscale x 4 x i8> %out
 }
 
@@ -69,7 +69,7 @@ define <vscale x 4 x i16> @test_compress_nxv4i16(<vscale x 4 x i16> %vec, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 4 x i16> @llvm.experimental.vector.compress(<vscale x 4 x i16> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i16> undef)
+    %out = call <vscale x 4 x i16> @llvm.experimental.vector.compress(<vscale x 4 x i16> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i16> poison)
     ret <vscale x 4 x i16> %out
 }
 
@@ -78,7 +78,7 @@ define <vscale x 4 x i32> @test_compress_nxv4i32(<vscale x 4 x i32> %vec, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef)
+    %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> poison)
     ret <vscale x 4 x i32> %out
 }
 
@@ -87,7 +87,7 @@ define <vscale x 4 x float> @test_compress_nxv4f32(<vscale x 4 x float> %vec, <v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 4 x float> @llvm.experimental.vector.compress(<vscale x 4 x float> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x float> undef)
+    %out = call <vscale x 4 x float> @llvm.experimental.vector.compress(<vscale x 4 x float> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x float> poison)
     ret <vscale x 4 x float> %out
 }
 
@@ -96,7 +96,7 @@ define <vscale x 4 x i4> @test_compress_illegal_element_type(<vscale x 4 x i4> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 4 x i4> @llvm.experimental.vector.compress(<vscale x 4 x i4> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i4> undef)
+    %out = call <vscale x 4 x i4> @llvm.experimental.vector.compress(<vscale x 4 x i4> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i4> poison)
     ret <vscale x 4 x i4> %out
 }
 
@@ -126,7 +126,7 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 8 x i32> @llvm.experimental.vector.compress(<vscale x 8 x i32> %vec, <vscale x 8 x i1> %mask, <vscale x 8 x i32> undef)
+    %out = call <vscale x 8 x i32> @llvm.experimental.vector.compress(<vscale x 8 x i32> %vec, <vscale x 8 x i1> %mask, <vscale x 8 x i32> poison)
     ret <vscale x 8 x i32> %out
 }
 
@@ -137,21 +137,21 @@ define <vscale x 4 x i32> @test_compress_const_splat1_mask(<vscale x 4 x i32> %i
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> splat (i1 -1), <vscale x 4 x i32> undef)
+    %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> splat (i1 -1), <vscale x 4 x i32> poison)
     ret <vscale x 4 x i32> %out
 }
 define <vscale x 4 x i32> @test_compress_const_splat0_mask(<vscale x 4 x i32> %ignore, <vscale x 4 x i32> %vec) {
 ; CHECK-LABEL: test_compress_const_splat0_mask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> splat (i1 0), <vscale x 4 x i32> undef)
+    %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> splat (i1 0), <vscale x 4 x i32> poison)
     ret <vscale x 4 x i32> %out
 }
-define <vscale x 4 x i32> @test_compress_undef_mask(<vscale x 4 x i32> %ignore, <vscale x 4 x i32> %vec) {
-; CHECK-LABEL: test_compress_undef_mask:
+define <vscale x 4 x i32> @test_compress_poison_mask(<vscale x 4 x i32> %ignore, <vscale x 4 x i32> %vec) {
+; CHECK-LABEL: test_compress_poison_mask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-    %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> undef, <vscale x 4 x i32> undef)
+    %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %vec, <vscale x 4 x i1> poison, <vscale x 4 x i32> poison)
     ret <vscale x 4 x i32> %out
 }
 
@@ -168,7 +168,7 @@ define <4 x i32> @test_compress_v4i32_with_sve(<4 x i32> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    compact z0.s, p0, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> undef)
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> poison)
     ret <4 x i32> %out
 }
 
@@ -186,7 +186,7 @@ define <1 x i32> @test_compress_v1i32_with_sve(<1 x i32> %vec, <1 x i1> %mask) {
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
-    %out = call <1 x i32> @llvm.experimental.vector.compress(<1 x i32> %vec, <1 x i1> %mask, <1 x i32> undef)
+    %out = call <1 x i32> @llvm.experimental.vector.compress(<1 x i32> %vec, <1 x i1> %mask, <1 x i32> poison)
     ret <1 x i32> %out
 }
 
@@ -221,7 +221,7 @@ define <4 x double> @test_compress_v4f64_with_sve(<4 x double> %vec, <4 x i1> %m
 ; CHECK-NEXT:    str q1, [x9, x8]
 ; CHECK-NEXT:    ldp q0, q1, [sp], #32
 ; CHECK-NEXT:    ret
-    %out = call <4 x double> @llvm.experimental.vector.compress(<4 x double> %vec, <4 x i1> %mask, <4 x double> undef)
+    %out = call <4 x double> @llvm.experimental.vector.compress(<4 x double> %vec, <4 x i1> %mask, <4 x double> poison)
     ret <4 x double> %out
 }
 
@@ -236,7 +236,7 @@ define <2 x i16> @test_compress_v2i16_with_sve(<2 x i16> %vec, <2 x i1> %mask) {
 ; CHECK-NEXT:    compact z0.d, p0, z0.d
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
-    %out = call <2 x i16> @llvm.experimental.vector.compress(<2 x i16> %vec, <2 x i1> %mask, <2 x i16> undef)
+    %out = call <2 x i16> @llvm.experimental.vector.compress(<2 x i16> %vec, <2 x i1> %mask, <2 x i16> poison)
     ret <2 x i16> %out
 }
 

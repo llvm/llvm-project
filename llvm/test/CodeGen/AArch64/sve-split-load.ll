@@ -73,7 +73,7 @@ define <vscale x 2 x i32> @masked_load_promote_2i32(ptr %a, <vscale x 2 x i1> %p
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %a, i32 1, <vscale x 2 x i1> %pg, <vscale x 2 x i32> undef)
+  %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %a, i32 1, <vscale x 2 x i1> %pg, <vscale x 2 x i32> poison)
   ret <vscale x 2 x i32> %load
 }
 
@@ -83,7 +83,7 @@ define <vscale x 32 x i8> @masked_load_split_32i8(ptr %a, <vscale x 32 x i1> %pg
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8(ptr %a, i32 1, <vscale x 32 x i1> %pg, <vscale x 32 x i8> undef)
+  %load = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8(ptr %a, i32 1, <vscale x 32 x i1> %pg, <vscale x 32 x i8> poison)
   ret <vscale x 32 x i8> %load
 }
 
@@ -99,7 +99,7 @@ define <vscale x 32 x i16> @masked_load_split_32i16(ptr %a, <vscale x 32 x i1> %
 ; CHECK-NEXT:    ld1h { z2.h }, p3/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1h { z3.h }, p1/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 32 x i16> @llvm.masked.load.nxv32i16(ptr %a, i32 1, <vscale x 32 x i1> %pg, <vscale x 32 x i16> undef)
+  %load = call <vscale x 32 x i16> @llvm.masked.load.nxv32i16(ptr %a, i32 1, <vscale x 32 x i1> %pg, <vscale x 32 x i16> poison)
   ret <vscale x 32 x i16> %load
 }
 
@@ -111,7 +111,7 @@ define <vscale x 8 x i32> @masked_load_split_8i32(ptr %a, <vscale x 8 x i1> %pg)
 ; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 8 x i32> @llvm.masked.load.nxv8i32(ptr %a, i32 1, <vscale x 8 x i1> %pg, <vscale x 8 x i32> undef)
+  %load = call <vscale x 8 x i32> @llvm.masked.load.nxv8i32(ptr %a, i32 1, <vscale x 8 x i1> %pg, <vscale x 8 x i32> poison)
   ret <vscale x 8 x i32> %load
 }
 
@@ -129,7 +129,7 @@ define <vscale x 8 x i64> @masked_load_split_8i64(ptr %a, <vscale x 8 x i1> %pg)
 ; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 8 x i64> @llvm.masked.load.nxv8i64(ptr %a, i32 1, <vscale x 8 x i1> %pg, <vscale x 8 x i64> undef)
+  %load = call <vscale x 8 x i64> @llvm.masked.load.nxv8i64(ptr %a, i32 1, <vscale x 8 x i1> %pg, <vscale x 8 x i64> poison)
   ret <vscale x 8 x i64> %load
 }
 
