@@ -91,7 +91,6 @@ Resolutions to C++ Defect Reports
 - Implemented `CWG2918 Consideration of constraints for address of overloaded `
   `function <https://cplusplus.github.io/CWG/issues/2918.html>`_
 
-
 C Language Changes
 ------------------
 
