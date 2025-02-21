@@ -5184,6 +5184,8 @@ static void updateDebugInfoForDeclareTargetVariables(
     ExprBuilder.append<llvm::DIOp::Arg>(0u, ptrTy);
     ExprBuilder.append<llvm::DIOp::Deref>(GV->getType());
     for (auto *GVE : GVEs) {
+      llvm::DIExpression *Old = GVE->getExpression();
+      assert((Old == nullptr) || (Old->getNumElements() == 0));
       auto *newGVE = llvm::DIGlobalVariableExpression::get(
           M->getContext(), GVE->getVariable(), ExprBuilder.intoExpression());
       GV->addDebugInfo(newGVE);
