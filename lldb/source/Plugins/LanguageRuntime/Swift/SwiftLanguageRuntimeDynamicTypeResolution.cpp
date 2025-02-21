@@ -1201,7 +1201,7 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
   auto get_from_field_info =
       [&](const swift::reflection::FieldInfo &field,
           std::optional<TypeSystemSwift::TupleElement> tuple,
-          bool hide_existentials, bool is_enum) -> CompilerType {
+          bool hide_existentials, bool is_enum) -> llvm::Expected<CompilerType> {
     bool is_indirect_enum =
         is_enum && !field.Offset && field.TR &&
         llvm::isa<swift::reflection::BuiltinTypeRef>(field.TR) &&
@@ -1228,20 +1228,18 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     else if (is_indirect_enum) {
       ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
       if (!reflection_ctx)
-        return {};
+        return llvm::createStringError("no reflection context");
       // The indirect enum field should point to a closure context.
       LLDBTypeInfoProvider tip(*this, &exe_ctx);
       lldb::addr_t instance = ::MaskMaybeBridgedPointer(GetProcess(), pointer);
       auto ti_or_err = reflection_ctx->GetTypeInfoFromInstance(
           instance, &tip, ts->GetDescriptorFinder());
-      if (!ti_or_err) {
-        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), ti_or_err.takeError(), "{0}");
-        return {};
-      }
+      if (!ti_or_err)
+        return ti_or_err.takeError();
       auto *ti = &*ti_or_err;
       auto *rti = llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti);
       if (rti->getFields().size() < 1)
-        return {};
+        return llvm::createStringError("no fields in indirect enum");
       auto &field = rti->getFields()[0];
       auto *type_ref = field.TR;
       result = GetTypeFromTypeRef(*ts, type_ref);
