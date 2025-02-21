@@ -273,9 +273,9 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[BAR2]] to Caller: [[BAZ2]] AllocTypes: Cold ContextIds: 2
 ; DUMP:		Clone of [[BAR]]
 
-; SIZES: NotCold full allocation context 123 with total size 100 is NotCold after cloning
-; SIZES: Cold full allocation context 456 with total size 200 is Cold after cloning
-; SIZES: Cold full allocation context 789 with total size 300 is Cold after cloning
+; SIZES: NotCold full allocation context 123 with total size 100 is NotCold after cloning (context id 1)
+; SIZES: Cold full allocation context 456 with total size 200 is Cold after cloning (context id 2)
+; SIZES: Cold full allocation context 789 with total size 300 is Cold after cloning (context id 2)
 
 ; REMARKS: call in clone main assigned to call function clone _Z3foov.memprof.1
 ; REMARKS: created clone _Z3barv.memprof.1
