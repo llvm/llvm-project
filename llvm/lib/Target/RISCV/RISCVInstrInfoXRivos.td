@@ -16,6 +16,7 @@
 
 
 let Predicates = [HasVendorXRivosVizip], DecoderNamespace = "XRivos",
+  Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather,
   Inst<6-0> = OPC_CUSTOM_2.Value in  {
 defm RV_VZIPEVEN_V : VALU_IV_V<"rv.vzipeven", 0b001100>;
 defm RV_VZIPODD_V : VALU_IV_V<"rv.vzipodd", 0b011100>;
