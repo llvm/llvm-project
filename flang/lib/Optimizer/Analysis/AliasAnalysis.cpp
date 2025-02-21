@@ -644,6 +644,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             } else {
               type = SourceKind::Indirect;
             }
+	    // TODO: This assignment is redundant but somehow works around an
+	    // apparent MSVC bug reporting "undeclared identifier" at the next
+	    // "breakFromLoop = true;".  See
+	    // <https://github.com/llvm/llvm-project/pull/127845#issuecomment-2669829610>.
+            breakFromLoop = true;
           } else {
             // No further tracking for addresses loaded from memory for now.
             type = SourceKind::Indirect;
