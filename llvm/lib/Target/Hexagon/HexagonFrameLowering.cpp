@@ -1076,20 +1076,18 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
         .addCFIIndex(MF.addFrameInst(OffR30));
   }
 
-  static MCRegister RegsToMove[] = {
+  static const MCPhysReg RegsToMove[] = {
     Hexagon::R1,  Hexagon::R0,  Hexagon::R3,  Hexagon::R2,
     Hexagon::R17, Hexagon::R16, Hexagon::R19, Hexagon::R18,
     Hexagon::R21, Hexagon::R20, Hexagon::R23, Hexagon::R22,
     Hexagon::R25, Hexagon::R24, Hexagon::R27, Hexagon::R26,
     Hexagon::D0,  Hexagon::D1,  Hexagon::D8,  Hexagon::D9,
-    Hexagon::D10, Hexagon::D11, Hexagon::D12, Hexagon::D13,
-    Hexagon::NoRegister
+    Hexagon::D10, Hexagon::D11, Hexagon::D12, Hexagon::D13
   };
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
-  for (unsigned i = 0; RegsToMove[i] != Hexagon::NoRegister; ++i) {
-    MCRegister Reg = RegsToMove[i];
+  for (MCPhysReg Reg : RegsToMove) {
     auto IfR = [Reg] (const CalleeSavedInfo &C) -> bool {
       return C.getReg() == Reg;
     };
