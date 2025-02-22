@@ -55,8 +55,9 @@ DynamicLoader *DynamicLoaderMacOS::CreateInstance(Process *process,
       case llvm::Triple::IOS:
       case llvm::Triple::TvOS:
       case llvm::Triple::WatchOS:
-      case llvm::Triple::XROS:
       case llvm::Triple::BridgeOS:
+      case llvm::Triple::DriverKit:
+      case llvm::Triple::XROS:
         create = triple_ref.getVendor() == llvm::Triple::Apple;
         break;
       default:
@@ -368,7 +369,7 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
               dyld_instance->UnloadAllImages();
               dyld_instance->ClearDYLDModule();
               process->GetTarget().GetImages().Clear();
-              process->GetTarget().GetSectionLoadList().Clear();
+              process->GetTarget().ClearSectionLoadList();
 
               addr_t all_image_infos = process->GetImageInfoAddress();
               int addr_size =

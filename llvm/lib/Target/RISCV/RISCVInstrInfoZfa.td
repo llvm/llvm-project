@@ -30,6 +30,7 @@ def LoadFPImmOperand : AsmOperandClass {
   let ParserMethod = "parseFPImm";
   let RenderMethod = "addFPImmOperands";
   let DiagnosticType = "InvalidLoadFPImm";
+  let DiagnosticString = "operand must be a valid floating-point constant";
 }
 
 def loadfpimm : Operand<XLenVT> {
@@ -43,6 +44,7 @@ def RTZArg : AsmOperandClass {
   let Name = "RTZArg";
   let RenderMethod = "addFRMArgOperands";
   let DiagnosticType = "InvalidRTZArg";
+  let DiagnosticString = "operand must be 'rtz' floating-point rounding mode";
   let ParserMethod = "parseFRMArg";
 }
 

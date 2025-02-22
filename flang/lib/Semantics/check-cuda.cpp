@@ -520,10 +520,26 @@ void CUDAChecker::Enter(const parser::SeparateModuleSubprogram &x) {
 
 static int DoConstructTightNesting(
     const parser::DoConstruct *doConstruct, const parser::Block *&innerBlock) {
-  if (!doConstruct || !doConstruct->IsDoNormal()) {
+  if (!doConstruct ||
+      (!doConstruct->IsDoNormal() && !doConstruct->IsDoConcurrent())) {
     return 0;
   }
   innerBlock = &std::get<parser::Block>(doConstruct->t);
+  if (doConstruct->IsDoConcurrent()) {
+    const auto &loopControl = doConstruct->GetLoopControl();
+    if (loopControl) {
+      if (const auto *concurrentControl{
+              std::get_if<parser::LoopControl::Concurrent>(&loopControl->u)}) {
+        const auto &concurrentHeader =
+            std::get<Fortran::parser::ConcurrentHeader>(concurrentControl->t);
+        const auto &controls =
+            std::get<std::list<Fortran::parser::ConcurrentControl>>(
+                concurrentHeader.t);
+        return controls.size();
+      }
+    }
+    return 0;
+  }
   if (innerBlock->size() == 1) {
     if (const auto *execConstruct{
             std::get_if<parser::ExecutableConstruct>(&innerBlock->front().u)}) {
@@ -553,7 +569,8 @@ static void CheckReduce(
         case parser::ReductionOperator::Operator::Multiply:
         case parser::ReductionOperator::Operator::Max:
         case parser::ReductionOperator::Operator::Min:
-          isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real;
+          isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real ||
+              cat == TypeCategory::Complex;
           break;
         case parser::ReductionOperator::Operator::Iand:
         case parser::ReductionOperator::Operator::Ior:
@@ -596,9 +613,14 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
       std::get<std::optional<parser::DoConstruct>>(x.t))};
   const parser::Block *innerBlock{nullptr};
   if (DoConstructTightNesting(doConstruct, innerBlock) < depth) {
-    context_.Say(source,
-        "!$CUF KERNEL DO (%jd) must be followed by a DO construct with tightly nested outer levels of counted DO loops"_err_en_US,
-        std::intmax_t{depth});
+    if (doConstruct && doConstruct->IsDoConcurrent())
+      context_.Say(source,
+          "!$CUF KERNEL DO (%jd) must be followed by a DO CONCURRENT construct with at least %jd indices"_err_en_US,
+          std::intmax_t{depth}, std::intmax_t{depth});
+    else
+      context_.Say(source,
+          "!$CUF KERNEL DO (%jd) must be followed by a DO construct with tightly nested outer levels of counted DO loops"_err_en_US,
+          std::intmax_t{depth});
   }
   if (innerBlock) {
     DeviceContextChecker<true>{context_}.Check(*innerBlock);

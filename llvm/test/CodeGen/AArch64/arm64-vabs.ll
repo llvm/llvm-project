@@ -443,8 +443,8 @@ define i32 @sabd8h_rdx(<8 x i16> %a, <8 x i16> %b) {
 define i32 @uabdl4s_rdx_i32(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: uabdl4s_rdx_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uabdl.4s v0, v0, v1
-; CHECK-SD-NEXT:    addv.4s s0, v0
+; CHECK-SD-NEXT:    uabd.4h v0, v0, v1
+; CHECK-SD-NEXT:    uaddlv.4h s0, v0
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;

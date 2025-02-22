@@ -80,7 +80,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
 #pragma acc loop auto detach(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'loop' directive}}
 #pragma acc loop auto device(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
@@ -92,7 +92,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
 #pragma acc loop auto firstprivate(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop auto host(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
@@ -214,7 +214,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
 #pragma acc loop detach(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'loop' directive}}
 #pragma acc loop device(VarPtr) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
@@ -226,7 +226,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
 #pragma acc loop firstprivate(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop host(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
@@ -349,7 +349,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
 #pragma acc loop independent detach(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'loop' directive}}
 #pragma acc loop independent device(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
@@ -361,7 +361,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
 #pragma acc loop independent firstprivate(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop independent host(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
@@ -483,7 +483,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
 #pragma acc loop detach(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'loop' directive}}
 #pragma acc loop device(VarPtr) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
@@ -495,7 +495,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
 #pragma acc loop firstprivate(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop host(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
@@ -626,7 +626,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
 #pragma acc loop seq detach(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'loop' directive}}
 #pragma acc loop seq device(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
@@ -638,7 +638,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
 #pragma acc loop seq firstprivate(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop seq host(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
@@ -766,7 +766,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
 #pragma acc loop detach(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'loop' directive}}
 #pragma acc loop device(VarPtr) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
@@ -778,7 +778,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
 #pragma acc loop firstprivate(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop host(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}

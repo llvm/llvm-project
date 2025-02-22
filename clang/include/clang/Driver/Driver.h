@@ -72,6 +72,28 @@ enum ModuleHeaderMode {
   HeaderMode_System
 };
 
+/// Options for specifying CUID used by CUDA/HIP for uniquely identifying
+/// compilation units.
+class CUIDOptions {
+public:
+  enum class Kind { Hash, Random, Fixed, None, Invalid };
+
+  CUIDOptions() = default;
+  CUIDOptions(llvm::opt::DerivedArgList &Args, const Driver &D);
+
+  // Get the CUID for an input string
+  std::string getCUID(StringRef InputFile,
+                      llvm::opt::DerivedArgList &Args) const;
+
+  bool isEnabled() const {
+    return UseCUID != Kind::None && UseCUID != Kind::Invalid;
+  }
+
+private:
+  Kind UseCUID = Kind::None;
+  StringRef FixedCUID;
+};
+
 /// Driver - Encapsulate logic for constructing compilation processes
 /// from a set of gcc-driver-like command line arguments.
 class Driver {
@@ -118,6 +140,9 @@ class Driver {
 
   /// LTO mode selected via -f(no-offload-)?lto(=.*)? options.
   LTOKind OffloadLTOMode;
+
+  /// Options for CUID
+  CUIDOptions CUIDOpts;
 
 public:
   enum OpenMPRuntimeKind {
@@ -466,7 +491,7 @@ public:
   /// ArgList.
   llvm::opt::InputArgList ParseArgStrings(ArrayRef<const char *> Args,
                                           bool UseDriverMode,
-                                          bool &ContainsError);
+                                          bool &ContainsError) const;
 
   /// BuildInputs - Construct the list of inputs and their types from
   /// the given arguments.
@@ -501,10 +526,11 @@ public:
   /// \param C - The compilation that is being built.
   /// \param Args - The input arguments.
   /// \param Input - The input type and arguments
+  /// \param CUID - The CUID for \p Input
   /// \param HostAction - The host action used in the offloading toolchain.
   Action *BuildOffloadingActions(Compilation &C,
                                  llvm::opt::DerivedArgList &Args,
-                                 const InputTy &Input,
+                                 const InputTy &Input, StringRef CUID,
                                  Action *HostAction) const;
 
   /// Returns the set of bound architectures active for this offload kind.
@@ -728,6 +754,9 @@ public:
   /// Get the specific kind of offload LTO being performed.
   LTOKind getOffloadLTOMode() const { return OffloadLTOMode; }
 
+  /// Get the CUID option.
+  const CUIDOptions &getCUIDOpts() const { return CUIDOpts; }
+
 private:
 
   /// Tries to load options from configuration files.
@@ -768,22 +797,14 @@ private:
   const ToolChain &getToolChain(const llvm::opt::ArgList &Args,
                                 const llvm::Triple &Target) const;
 
-  /// @}
-
-  /// Retrieves a ToolChain for a particular device \p Target triple
-  ///
-  /// \param[in] HostTC is the host ToolChain paired with the device
-  ///
-  /// \param[in] TargetDeviceOffloadKind (e.g. OFK_Cuda/OFK_OpenMP/OFK_SYCL) is
-  /// an Offloading action that is optionally passed to a ToolChain (used by
-  /// CUDA, to specify if it's used in conjunction with OpenMP)
+  /// Retrieves a ToolChain for a particular \p Target triple for offloading.
   ///
   /// Will cache ToolChains for the life of the driver object, and create them
   /// on-demand.
-  const ToolChain &getOffloadingDeviceToolChain(
-      const llvm::opt::ArgList &Args, const llvm::Triple &Target,
-      const ToolChain &HostTC,
-      const Action::OffloadKind &TargetDeviceOffloadKind) const;
+  const ToolChain &getOffloadToolChain(const llvm::opt::ArgList &Args,
+                                       const Action::OffloadKind Kind,
+                                       const llvm::Triple &Target,
+                                       const llvm::Triple &AuxTarget) const;
 
   /// Get bitmasks for which option flags to include and exclude based on
   /// the driver mode.

@@ -2,7 +2,9 @@
 
 #include "clang-c/BuildSystem.h"
 #include "clang-c/CXCompilationDatabase.h"
+#include "clang-c/CXDiagnostic.h"
 #include "clang-c/CXErrorCode.h"
+#include "clang-c/CXFile.h"
 #include "clang-c/CXSourceLocation.h"
 #include "clang-c/CXString.h"
 #include "clang-c/Documentation.h"
@@ -1211,28 +1213,36 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
   }
 }
 
-static const char* GetCursorSource(CXCursor Cursor) {
+static CXString createCXString(const char *CS) {
+  CXString Str;
+  Str.data = (const void *)CS;
+  Str.private_flags = 0;
+  return Str;
+}
+
+static CXString duplicateCXString(const char *CS) {
+  CXString Str;
+  Str.data = strdup(CS);
+  Str.private_flags = 1; // CXS_Malloc
+  return Str;
+}
+
+static CXString GetCursorSource(CXCursor Cursor) {
   CXSourceLocation Loc = clang_getCursorLocation(Cursor);
   CXString source;
   CXFile file;
+  const char *b;
+  CXString result;
   clang_getExpansionLocation(Loc, &file, 0, 0, 0);
   source = clang_getFileName(file);
   if (!clang_getCString(source)) {
     clang_disposeString(source);
-    return "<invalid loc>";
+    return createCXString("<invalid loc>");
   }
-  else {
-    const char *b = basename(clang_getCString(source));
-    clang_disposeString(source);
-    return b;
-  }
-}
-
-static CXString createCXString(const char *CS) {
-  CXString Str;
-  Str.data = (const void *) CS;
-  Str.private_flags = 0;
-  return Str;
+  b = basename(clang_getCString(source));
+  result = duplicateCXString(b);
+  clang_disposeString(source);
+  return result;
 }
 
 /******************************************************************************/
@@ -1355,9 +1365,12 @@ enum CXChildVisitResult FilteredPrintingVisitor(CXCursor Cursor,
   if (!Data->Filter || (Cursor.kind == *(enum CXCursorKind *)Data->Filter)) {
     CXSourceLocation Loc = clang_getCursorLocation(Cursor);
     unsigned line, column;
+    CXString source;
     clang_getFileLocation(Loc, 0, &line, &column, 0);
-    printf("// %s: %s:%d:%d: ", FileCheckPrefix,
-           GetCursorSource(Cursor), line, column);
+    source = GetCursorSource(Cursor);
+    printf("// %s: %s:%d:%d: ", FileCheckPrefix, clang_getCString(source), line,
+           column);
+    clang_disposeString(source);
     PrintCursor(Cursor, Data->CommentSchemaFile);
     PrintCursorExtent(Cursor);
     if (clang_isDeclaration(Cursor.kind)) {
@@ -1426,8 +1439,10 @@ static enum CXChildVisitResult FunctionScanVisitor(CXCursor Cursor,
       if (Ref.kind == CXCursor_NoDeclFound) {
         /* Nothing found here; that's fine. */
       } else if (Ref.kind != CXCursor_FunctionDecl) {
-        printf("// %s: %s:%d:%d: ", FileCheckPrefix, GetCursorSource(Ref),
-               curLine, curColumn);
+        CXString CursorSource = GetCursorSource(Ref);
+        printf("// %s: %s:%d:%d: ", FileCheckPrefix,
+               clang_getCString(CursorSource), curLine, curColumn);
+        clang_disposeString(CursorSource);
         PrintCursor(Ref, Data->CommentSchemaFile);
         printf("\n");
       }
@@ -1449,11 +1464,15 @@ enum CXChildVisitResult USRVisitor(CXCursor C, CXCursor parent,
   if (!Data->Filter || (C.kind == *(enum CXCursorKind *)Data->Filter)) {
     CXString USR = clang_getCursorUSR(C);
     const char *cstr = clang_getCString(USR);
+    CXString CursorSource;
     if (!cstr || cstr[0] == '\0') {
       clang_disposeString(USR);
       return CXChildVisit_Recurse;
     }
-    printf("// %s: %s %s", FileCheckPrefix, GetCursorSource(C), cstr);
+    CursorSource = GetCursorSource(C);
+    printf("// %s: %s %s", FileCheckPrefix, clang_getCString(CursorSource),
+           cstr);
+    clang_disposeString(CursorSource);
 
     PrintCursorExtent(C);
     printf("\n");

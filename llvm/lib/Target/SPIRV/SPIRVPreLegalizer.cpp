@@ -17,11 +17,12 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 
 #define DEBUG_TYPE "spirv-prelegalizer"
 
@@ -35,8 +36,14 @@ public:
     initializeSPIRVPreLegalizerPass(*PassRegistry::getPassRegistry());
   }
   bool runOnMachineFunction(MachineFunction &MF) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 } // namespace
+
+void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addPreserved<GISelKnownBitsAnalysis>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
 
 static void
 addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,

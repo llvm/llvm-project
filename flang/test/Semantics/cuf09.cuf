@@ -130,8 +130,11 @@ program main
   do
     exit
   end do
-  !ERROR: !$CUF KERNEL DO (1) must be followed by a DO construct with tightly nested outer levels of counted DO loops
   !$cuf kernel do <<< 1, 2 >>>
+  do concurrent (j=1:10)
+  end do
+  !ERROR: !$CUF KERNEL DO (2) must be followed by a DO CONCURRENT construct with at least 2 indices
+  !$cuf kernel do(2) <<< 1, 2 >>>
   do concurrent (j=1:10)
   end do
   !$cuf kernel do <<< 1, 2 >>>
@@ -193,3 +196,16 @@ program main
      enddo
   enddo
 end
+
+subroutine host1()
+  integer, device :: a(32)
+  integer :: i, j
+
+  !$cuf kernel do(1) <<<*,32>>>
+  do i = 1, 32
+    a(i) = a(i) * 2.0
+    !ERROR: 'syncthreads' may not be called in device code
+    call syncthreads() ! missing explicit use cudadevice
+    a(i) = a(i) + a(j) - 34.0
+  end do
+end 

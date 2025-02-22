@@ -198,7 +198,9 @@ public:
 
   /// Determine where to insert the alloca operation. The returned value should
   /// be checked to see if it is inside a loop
-  static InsertionPoint findAllocaInsertionPoint(fir::AllocMemOp &oldAlloc);
+  static InsertionPoint
+  findAllocaInsertionPoint(fir::AllocMemOp &oldAlloc,
+                           const llvm::SmallVector<mlir::Operation *> &freeOps);
 
 private:
   /// Handle to the DFA (already run)
@@ -206,7 +208,9 @@ private:
 
   /// If we failed to find an insertion point not inside a loop, see if it would
   /// be safe to use an llvm.stacksave/llvm.stackrestore inside the loop
-  static InsertionPoint findAllocaLoopInsertionPoint(fir::AllocMemOp &oldAlloc);
+  static InsertionPoint findAllocaLoopInsertionPoint(
+      fir::AllocMemOp &oldAlloc,
+      const llvm::SmallVector<mlir::Operation *> &freeOps);
 
   /// Returns the alloca if it was successfully inserted, otherwise {}
   std::optional<fir::AllocaOp>
@@ -484,6 +488,22 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   llvm::DenseSet<mlir::Value> freedValues;
   point.appendFreedValues(freedValues);
 
+  // Find all fir.freemem operations corresponding to fir.allocmem
+  // in freedValues. It is best to find the association going back
+  // from fir.freemem to fir.allocmem through the def-use chains,
+  // so that we can use lookThroughDeclaresAndConverts same way
+  // the AllocationAnalysis is handling them.
+  llvm::DenseMap<mlir::Operation *, llvm::SmallVector<mlir::Operation *>>
+      allocToFreeMemMap;
+  func->walk([&](fir::FreeMemOp freeOp) {
+    mlir::Value memref = lookThroughDeclaresAndConverts(freeOp.getHeapref());
+    if (!freedValues.count(memref))
+      return;
+
+    auto allocMem = memref.getDefiningOp<fir::AllocMemOp>();
+    allocToFreeMemMap[allocMem].push_back(freeOp);
+  });
+
   // We only replace allocations which are definately freed on all routes
   // through the function because otherwise the allocation may have an intende
   // lifetime longer than the current stack frame (e.g. a heap allocation which
@@ -491,7 +511,8 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   for (mlir::Value freedValue : freedValues) {
     fir::AllocMemOp allocmem = freedValue.getDefiningOp<fir::AllocMemOp>();
     InsertionPoint insertionPoint =
-        AllocMemConversion::findAllocaInsertionPoint(allocmem);
+        AllocMemConversion::findAllocaInsertionPoint(
+            allocmem, allocToFreeMemMap[allocmem]);
     if (insertionPoint)
       candidateOps.insert({allocmem, insertionPoint});
   }
@@ -578,8 +599,9 @@ static bool isInLoop(mlir::Operation *op) {
          op->getParentOfType<mlir::LoopLikeOpInterface>();
 }
 
-InsertionPoint
-AllocMemConversion::findAllocaInsertionPoint(fir::AllocMemOp &oldAlloc) {
+InsertionPoint AllocMemConversion::findAllocaInsertionPoint(
+    fir::AllocMemOp &oldAlloc,
+    const llvm::SmallVector<mlir::Operation *> &freeOps) {
   // Ideally the alloca should be inserted at the end of the function entry
   // block so that we do not allocate stack space in a loop. However,
   // the operands to the alloca may not be available that early, so insert it
@@ -596,7 +618,7 @@ AllocMemConversion::findAllocaInsertionPoint(fir::AllocMemOp &oldAlloc) {
       if (isInLoop(oldAllocOp)) {
         // where we want to put it is in a loop, and even the old location is in
         // a loop. Give up.
-        return findAllocaLoopInsertionPoint(oldAlloc);
+        return findAllocaLoopInsertionPoint(oldAlloc, freeOps);
       }
       return {oldAllocOp};
     }
@@ -657,27 +679,13 @@ AllocMemConversion::findAllocaInsertionPoint(fir::AllocMemOp &oldAlloc) {
   return checkReturn(&entryBlock);
 }
 
-InsertionPoint
-AllocMemConversion::findAllocaLoopInsertionPoint(fir::AllocMemOp &oldAlloc) {
+InsertionPoint AllocMemConversion::findAllocaLoopInsertionPoint(
+    fir::AllocMemOp &oldAlloc,
+    const llvm::SmallVector<mlir::Operation *> &freeOps) {
   mlir::Operation *oldAllocOp = oldAlloc;
   // This is only called as a last resort. We should try to insert at the
   // location of the old allocation, which is inside of a loop, using
   // llvm.stacksave/llvm.stackrestore
-
-  // find freemem ops
-  llvm::SmallVector<mlir::Operation *, 1> freeOps;
-
-  for (mlir::Operation *user : oldAllocOp->getUsers()) {
-    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
-      for (mlir::Operation *user : declareOp->getUsers()) {
-        if (mlir::isa<fir::FreeMemOp>(user))
-          freeOps.push_back(user);
-      }
-    }
-
-    if (mlir::isa<fir::FreeMemOp>(user))
-      freeOps.push_back(user);
-  }
 
   assert(freeOps.size() && "DFA should only return freed memory");
 

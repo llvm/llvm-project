@@ -240,13 +240,12 @@ struct ConvertUpdateHaloOp
     auto loc = op.getLoc();
 
     // convert a OpFoldResult into a Value
-    auto toValue = [&rewriter, &loc](OpFoldResult &v) {
-      return v.is<Value>()
-                 ? v.get<Value>()
-                 : rewriter.create<::mlir::arith::ConstantOp>(
-                       loc,
-                       rewriter.getIndexAttr(
-                           cast<IntegerAttr>(v.get<Attribute>()).getInt()));
+    auto toValue = [&rewriter, &loc](OpFoldResult &v) -> Value {
+      if (auto value = dyn_cast<Value>(v))
+        return value;
+      return rewriter.create<::mlir::arith::ConstantOp>(
+          loc, rewriter.getIndexAttr(
+                   cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
     };
 
     auto dest = op.getDestination();
@@ -267,11 +266,11 @@ struct ConvertUpdateHaloOp
         getMixedValues(op.getStaticHaloSizes(), op.getHaloSizes(), rewriter);
     // subviews need Index values
     for (auto &sz : haloSizes) {
-      if (sz.is<Value>()) {
-        sz = rewriter
-                 .create<arith::IndexCastOp>(loc, rewriter.getIndexType(),
-                                             sz.get<Value>())
-                 .getResult();
+      if (auto value = dyn_cast<Value>(sz)) {
+        sz =
+            rewriter
+                .create<arith::IndexCastOp>(loc, rewriter.getIndexType(), value)
+                .getResult();
       }
     }
 
@@ -432,8 +431,3 @@ struct ConvertMeshToMPIPass
 };
 
 } // namespace
-
-// Create a pass that convert Mesh to MPI
-std::unique_ptr<::mlir::Pass> mlir::createConvertMeshToMPIPass() {
-  return std::make_unique<ConvertMeshToMPIPass>();
-}

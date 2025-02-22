@@ -65,13 +65,9 @@ enum {
   VLMulShift = ConstraintShift + 3,
   VLMulMask = 0b111 << VLMulShift,
 
-  // Force a tail agnostic policy even this instruction has a tied destination.
-  ForceTailAgnosticShift = VLMulShift + 3,
-  ForceTailAgnosticMask = 1 << ForceTailAgnosticShift,
-
   // Is this a _TIED vector pseudo instruction. For these instructions we
   // shouldn't skip the tied operand when converting to MC instructions.
-  IsTiedPseudoShift = ForceTailAgnosticShift + 1,
+  IsTiedPseudoShift = VLMulShift + 3,
   IsTiedPseudoMask = 1 << IsTiedPseudoShift,
 
   // Does this instruction have a SEW operand. It will be the last explicit
@@ -145,12 +141,8 @@ static inline unsigned getFormat(uint64_t TSFlags) {
   return (TSFlags & InstFormatMask) >> InstFormatShift;
 }
 /// \returns the LMUL for the instruction.
-static inline VLMUL getLMul(uint64_t TSFlags) {
-  return static_cast<VLMUL>((TSFlags & VLMulMask) >> VLMulShift);
-}
-/// \returns true if tail agnostic is enforced for the instruction.
-static inline bool doesForceTailAgnostic(uint64_t TSFlags) {
-  return TSFlags & ForceTailAgnosticMask;
+static inline RISCVVType::VLMUL getLMul(uint64_t TSFlags) {
+  return static_cast<RISCVVType::VLMUL>((TSFlags & VLMulMask) >> VLMulShift);
 }
 /// \returns true if this a _TIED pseudo.
 static inline bool isTiedPseudo(uint64_t TSFlags) {
@@ -308,11 +300,13 @@ enum OperandType : unsigned {
   OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
   OPERAND_UIMM7_LSB00,
+  OPERAND_UIMM7_LSB000,
   OPERAND_UIMM8_LSB00,
   OPERAND_UIMM8,
   OPERAND_UIMM8_LSB000,
   OPERAND_UIMM8_GE32,
   OPERAND_UIMM9_LSB000,
+  OPERAND_UIMM10,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
   OPERAND_UIMM12,
@@ -331,6 +325,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
+  OPERAND_SIMM26,
   OPERAND_CLUI_IMM,
   OPERAND_VTYPEI10,
   OPERAND_VTYPEI11,

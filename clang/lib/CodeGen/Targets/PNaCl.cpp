@@ -63,8 +63,9 @@ RValue PNaClABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 ABIArgInfo PNaClABIInfo::classifyArgumentType(QualType Ty) const {
   if (isAggregateTypeForABI(Ty)) {
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
-    return getNaturalAlignIndirect(Ty);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
   } else if (const EnumType *EnumTy = Ty->getAs<EnumType>()) {
     // Treat an enum type as its underlying type.
     Ty = EnumTy->getDecl()->getIntegerType();
@@ -75,7 +76,7 @@ ABIArgInfo PNaClABIInfo::classifyArgumentType(QualType Ty) const {
     // Treat bit-precise integers as integers if <= 64, otherwise pass
     // indirectly.
     if (EIT->getNumBits() > 64)
-      return getNaturalAlignIndirect(Ty);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
     return ABIArgInfo::getDirect();
   }
 
@@ -89,12 +90,13 @@ ABIArgInfo PNaClABIInfo::classifyReturnType(QualType RetTy) const {
 
   // In the PNaCl ABI we always return records/structures on the stack.
   if (isAggregateTypeForABI(RetTy))
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 
   // Treat bit-precise integers as integers if <= 64, otherwise pass indirectly.
   if (const auto *EIT = RetTy->getAs<BitIntType>()) {
     if (EIT->getNumBits() > 64)
-      return getNaturalAlignIndirect(RetTy);
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
     return ABIArgInfo::getDirect();
   }
 

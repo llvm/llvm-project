@@ -542,6 +542,48 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
+    Triple TT(Triple(M.getTargetTriple()));
+    VersionTuple DXILVersion = TT.getDXILVersion();
+    const DataLayout &DL = F.getDataLayout();
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getResRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = CI->getArgOperand(2);
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(OldTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+      Value *Align =
+          ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
+
+      Expected<CallInst *> OpCall =
+          DXILVersion >= VersionTuple(1, 2)
+              ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
+                                      {Handle, Index0, Index1, Mask, Align},
+                                      CI->getName(), NewRetTy)
+              : OpBuilder.tryCreateOp(OpCode::BufferLoad,
+                                      {Handle, Index0, Index1}, CI->getName(),
+                                      NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/true))
+        return E;
+
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -574,7 +616,10 @@ public:
     return false;
   }
 
-  [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
+  [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
+    Triple TT(Triple(M.getTargetTriple()));
+    VersionTuple DXILVersion = TT.getDXILVersion();
+    const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -585,51 +630,75 @@ public:
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Index0 = CI->getArgOperand(1);
-      Value *Index1 = UndefValue::get(Int32Ty);
-      // For typed stores, the mask must always cover all four elements.
-      Constant *Mask = ConstantInt::get(Int8Ty, 0xF);
+      Value *Index1 = IsRaw ? CI->getArgOperand(2) : UndefValue::get(Int32Ty);
 
-      Value *Data = CI->getArgOperand(2);
-      auto *DataTy = dyn_cast<FixedVectorType>(Data->getType());
-      if (!DataTy || DataTy->getNumElements() != 4)
+      Value *Data = CI->getArgOperand(IsRaw ? 3 : 2);
+      Type *DataTy = Data->getType();
+      Type *ScalarTy = DataTy->getScalarType();
+
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+
+      // TODO: check that we only have vector or scalar...
+      if (!IsRaw && NumElements != 4)
         return make_error<StringError>(
             "typedBufferStore data must be a vector of 4 elements",
             inconvertibleErrorCode());
+      else if (NumElements > 4)
+        return make_error<StringError>(
+            "rawBufferStore data must have at most 4 elements",
+            inconvertibleErrorCode());
 
-      // Since we're post-scalarizer, we likely have a vector that's constructed
-      // solely for the argument of the store. If so, just use the scalar values
-      // from before they're inserted into the temporary.
       std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
-      auto *IEI = dyn_cast<InsertElementInst>(Data);
-      while (IEI) {
-        auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
-        if (!IndexOp)
-          break;
-        size_t IndexVal = IndexOp->getZExtValue();
-        assert(IndexVal < 4 && "Too many elements for buffer store");
-        DataElements[IndexVal] = IEI->getOperand(1);
-        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      if (DataTy == ScalarTy)
+        DataElements[0] = Data;
+      else {
+        // Since we're post-scalarizer, if we see a vector here it's likely
+        // constructed solely for the argument of the store. Just use the scalar
+        // values from before they're inserted into the temporary.
+        auto *IEI = dyn_cast<InsertElementInst>(Data);
+        while (IEI) {
+          auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
+          if (!IndexOp)
+            break;
+          size_t IndexVal = IndexOp->getZExtValue();
+          assert(IndexVal < 4 && "Too many elements for buffer store");
+          DataElements[IndexVal] = IEI->getOperand(1);
+          IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+        }
       }
 
       // If for some reason we weren't able to forward the arguments from the
-      // scalarizer artifact, then we need to actually extract elements from the
-      // vector.
-      for (int I = 0, E = 4; I != E; ++I)
+      // scalarizer artifact, then we may need to actually extract elements from
+      // the vector.
+      for (int I = 0, E = NumElements; I < E; ++I)
         if (DataElements[I] == nullptr)
           DataElements[I] =
               IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
+      // For any elements beyond the length of the vector, fill up with undef.
+      for (int I = NumElements, E = 4; I < E; ++I)
+        if (DataElements[I] == nullptr)
+          DataElements[I] = UndefValue::get(ScalarTy);
 
-      std::array<Value *, 8> Args{
+      dxil::OpCode Op = OpCode::BufferStore;
+      SmallVector<Value *, 9> Args{
           Handle,          Index0,          Index1,          DataElements[0],
           DataElements[1], DataElements[2], DataElements[3], Mask};
+      if (IsRaw && DXILVersion >= VersionTuple(1, 2)) {
+        Op = OpCode::RawBufferStore;
+        // RawBufferStore requires the alignment
+        Args.push_back(
+            ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value()));
+      }
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
+          OpBuilder.tryCreateOp(Op, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
       CI->eraseFromParent();
       // Clean up any leftover `insertelement`s
-      IEI = dyn_cast<InsertElementInst>(Data);
+      auto *IEI = dyn_cast<InsertElementInst>(Data);
       while (IEI && IEI->use_empty()) {
         InsertElementInst *Tmp = IEI;
         IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
@@ -734,7 +803,13 @@ public:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
-        HasErrors |= lowerTypedBufferStore(F);
+        HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);
+        break;
+      case Intrinsic::dx_resource_load_rawbuffer:
+        HasErrors |= lowerRawBufferLoad(F);
+        break;
+      case Intrinsic::dx_resource_store_rawbuffer:
+        HasErrors |= lowerBufferStore(F, /*IsRaw=*/true);
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);

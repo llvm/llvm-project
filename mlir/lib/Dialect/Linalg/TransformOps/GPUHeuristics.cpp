@@ -222,7 +222,7 @@ transform::gpu::CopyMappingInfo::inferNumThreadsImpl(
   // Scale the most minor size to account for the chosen vector size and
   // maximize the number of threads without exceeding the total number of
   // threads.
-  SmallVector<int64_t> scaledSizes{sizes};
+  SmallVector<int64_t> scaledSizes(sizes);
   scaledSizes.back() /= desiredVectorSize;
   if (scaledSizes.back() > totalNumThreads) {
     LDBG("--Too few threads given the required vector size -> FAIL");

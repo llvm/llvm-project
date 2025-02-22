@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Transforms/CUFGPUToLLVMConversion.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/common.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
@@ -139,20 +139,26 @@ struct GPULaunchKernelConversion
                            adaptor.getBlockSizeY(), adaptor.getBlockSizeZ(),
                            dynamicMemorySize, kernelArgs, nullPtr});
     } else {
-      auto funcOp = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-          RTNAME_STRING(CUFLaunchKernel));
+      auto procAttr =
+          op->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName());
+      bool isGridGlobal =
+          procAttr && procAttr.getValue() == cuf::ProcAttribute::GridGlobal;
+      llvm::StringRef fctName = isGridGlobal
+                                    ? RTNAME_STRING(CUFLaunchCooperativeKernel)
+                                    : RTNAME_STRING(CUFLaunchKernel);
+      auto funcOp = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(fctName);
       auto funcTy = mlir::LLVM::LLVMFunctionType::get(
           voidTy,
           {ptrTy, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
            llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, i32Ty, ptrTy, ptrTy},
           /*isVarArg=*/false);
-      auto cufLaunchKernel = mlir::SymbolRefAttr::get(
-          mod.getContext(), RTNAME_STRING(CUFLaunchKernel));
+      auto cufLaunchKernel =
+          mlir::SymbolRefAttr::get(mod.getContext(), fctName);
       if (!funcOp) {
         mlir::OpBuilder::InsertionGuard insertGuard(rewriter);
         rewriter.setInsertionPointToStart(mod.getBody());
-        auto launchKernelFuncOp = rewriter.create<mlir::LLVM::LLVMFuncOp>(
-            loc, RTNAME_STRING(CUFLaunchKernel), funcTy);
+        auto launchKernelFuncOp =
+            rewriter.create<mlir::LLVM::LLVMFuncOp>(loc, fctName, funcTy);
         launchKernelFuncOp.setVisibility(
             mlir::SymbolTable::Visibility::Private);
       }
@@ -182,8 +188,8 @@ public:
     if (!module)
       return signalPassFailure();
 
-    std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
+    std::optional<mlir::DataLayout> dl = fir::support::getOrSetMLIRDataLayout(
+        module, /*allowDefaultLayout=*/false);
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
     cuf::populateCUFGPUToLLVMConversionPatterns(typeConverter, patterns);

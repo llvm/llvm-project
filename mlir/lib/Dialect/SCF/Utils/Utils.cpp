@@ -361,7 +361,7 @@ static void generateUnrolledLoop(
 
     // Update yielded values.
     for (unsigned i = 0, e = lastYielded.size(); i < e; i++)
-      lastYielded[i] = operandMap.lookup(yieldedValues[i]);
+      lastYielded[i] = operandMap.lookupOrDefault(yieldedValues[i]);
   }
 
   // Make sure we annotate the Ops in the original body. We do this last so that
@@ -496,6 +496,20 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   if (forOp.promoteIfSingleIteration(rewriter).failed())
     resultLoops.mainLoopOp = forOp;
   return resultLoops;
+}
+
+/// Unrolls this loop completely.
+LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
+  IRRewriter rewriter(forOp.getContext());
+  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  if (!mayBeConstantTripCount.has_value())
+    return failure();
+  uint64_t tripCount = *mayBeConstantTripCount;
+  if (tripCount == 0)
+    return success();
+  if (tripCount == 1)
+    return forOp.promoteIfSingleIteration(rewriter);
+  return loopUnrollByFactor(forOp, tripCount);
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`

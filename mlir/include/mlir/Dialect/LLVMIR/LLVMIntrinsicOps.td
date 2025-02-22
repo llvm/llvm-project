@@ -107,7 +107,6 @@ def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
 }
 
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
-def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
 def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
 def LLVM_FAbsOp : LLVM_UnaryIntrOpF<"fabs">;
@@ -125,7 +124,6 @@ def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0],
 > {
   let arguments = (ins LLVM_AnyPointer:$addr, I32Attr:$rw, I32Attr:$hint, I32Attr:$cache);
 }
-def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_RoundEvenOp : LLVM_UnaryIntrOpF<"roundeven">;
 def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
 def LLVM_FTruncOp : LLVM_UnaryIntrOpF<"trunc">;
@@ -167,6 +165,15 @@ def LLVM_SMaxOp : LLVM_BinarySameArgsIntrOpI<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
 def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
+
+def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
+def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
+def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
+
+def LLVM_ASinOp : LLVM_UnaryIntrOpF<"asin">;
+def LLVM_ACosOp : LLVM_UnaryIntrOpF<"acos">;
+def LLVM_ATanOp : LLVM_UnaryIntrOpF<"atan">;
+
 def LLVM_SinhOp : LLVM_UnaryIntrOpF<"sinh">;
 def LLVM_CoshOp : LLVM_UnaryIntrOpF<"cosh">;
 def LLVM_TanhOp : LLVM_UnaryIntrOpF<"tanh">;

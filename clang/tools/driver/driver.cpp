@@ -318,6 +318,10 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(Args);
+  // Driver's diagnostics don't use suppression mappings, so don't bother
+  // parsing them. CC1 still receives full args, so this doesn't impact other
+  // actions.
+  DiagOpts->DiagnosticSuppressionMappingsFile.clear();
 
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
@@ -439,7 +443,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!UseNewCC1Process && IsCrash) {
     // When crashing in -fintegrated-cc1 mode, bury the timer pointers, because
     // the internal linked list might point to already released stack frames.
-    llvm::BuryPointer(llvm::TimerGroup::aquireDefaultGroup());
+    llvm::BuryPointer(llvm::TimerGroup::acquireTimerGlobals());
   } else {
     // If any timers were active but haven't been destroyed yet, print their
     // results now.  This happens in -disable-free mode.

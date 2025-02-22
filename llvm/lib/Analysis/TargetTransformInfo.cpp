@@ -863,6 +863,15 @@ bool TargetTransformInfo::shouldPrefetchAddressSpace(unsigned AS) const {
   return TTIImpl->shouldPrefetchAddressSpace(AS);
 }
 
+InstructionCost TargetTransformInfo::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, PartialReductionExtendKind OpAExtend,
+    PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp) const {
+  return TTIImpl->getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
+                                          AccumType, VF, OpAExtend, OpBExtend,
+                                          BinOp);
+}
+
 unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
   return TTIImpl->getMaxInterleaveFactor(VF);
 }
@@ -893,9 +902,12 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
 
   // Check for a splat of a constant or for a non uniform vector of constants
   // and check if the constant(s) are all powers of two.
-  if (isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) {
-    OpInfo = OK_NonUniformConstantValue;
-    if (Splat) {
+  if (Splat) {
+    // Check for a splat of a uniform value. This is not loop aware, so return
+    // true only for the obviously uniform cases (argument, globalvalue)
+    if (isa<Argument>(Splat) || isa<GlobalValue>(Splat)) {
+      OpInfo = OK_UniformValue;
+    } else if (isa<Constant>(Splat)) {
       OpInfo = OK_UniformConstantValue;
       if (auto *CI = dyn_cast<ConstantInt>(Splat)) {
         if (CI->getValue().isPowerOf2())
@@ -903,27 +915,25 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
         else if (CI->getValue().isNegatedPowerOf2())
           OpProps = OP_NegatedPowerOf2;
       }
-    } else if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
-      bool AllPow2 = true, AllNegPow2 = true;
-      for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
-        if (auto *CI = dyn_cast<ConstantInt>(CDS->getElementAsConstant(I))) {
-          AllPow2 &= CI->getValue().isPowerOf2();
-          AllNegPow2 &= CI->getValue().isNegatedPowerOf2();
-          if (AllPow2 || AllNegPow2)
-            continue;
-        }
-        AllPow2 = AllNegPow2 = false;
-        break;
-      }
-      OpProps = AllPow2 ? OP_PowerOf2 : OpProps;
-      OpProps = AllNegPow2 ? OP_NegatedPowerOf2 : OpProps;
     }
+  } else if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
+    OpInfo = OK_NonUniformConstantValue;
+    bool AllPow2 = true, AllNegPow2 = true;
+    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+      if (auto *CI = dyn_cast<ConstantInt>(CDS->getElementAsConstant(I))) {
+        AllPow2 &= CI->getValue().isPowerOf2();
+        AllNegPow2 &= CI->getValue().isNegatedPowerOf2();
+        if (AllPow2 || AllNegPow2)
+          continue;
+      }
+      AllPow2 = AllNegPow2 = false;
+      break;
+    }
+    OpProps = AllPow2 ? OP_PowerOf2 : OpProps;
+    OpProps = AllNegPow2 ? OP_NegatedPowerOf2 : OpProps;
+  } else if (isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) {
+    OpInfo = OK_NonUniformConstantValue;
   }
-
-  // Check for a splat of a uniform value. This is not loop aware, so return
-  // true only for the obviously uniform cases (argument, globalvalue)
-  if (Splat && (isa<Argument>(Splat) || isa<GlobalValue>(Splat)))
-    OpInfo = OK_UniformValue;
 
   return {OpInfo, OpProps};
 }
@@ -972,6 +982,15 @@ InstructionCost TargetTransformInfo::getShuffleCost(
                                                  Index, SubTp, Args, CxtI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
+}
+
+TargetTransformInfo::PartialReductionExtendKind
+TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
+  if (isa<SExtInst>(I))
+    return PR_SignExtend;
+  if (isa<ZExtInst>(I))
+    return PR_ZeroExtend;
+  return PR_None;
 }
 
 TTI::CastContextHint
@@ -1095,6 +1114,16 @@ TargetTransformInfo::getVectorInstrCost(const Instruction &I, Type *Val,
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getInsertExtractValueCost(
+    unsigned Opcode, TTI::TargetCostKind CostKind) const {
+  assert((Opcode == Instruction::InsertValue ||
+          Opcode == Instruction::ExtractValue) &&
+         "Expecting Opcode to be insertvalue/extractvalue.");
+  InstructionCost Cost = TTIImpl->getInsertExtractValueCost(Opcode, CostKind);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getReplicationShuffleCost(
     Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedDstElts,
     TTI::TargetCostKind CostKind) const {
@@ -1132,6 +1161,15 @@ InstructionCost TargetTransformInfo::getGatherScatterOpCost(
       Opcode, DataTy, Ptr, VariableMask, Alignment, CostKind, I);
   assert((!Cost.isValid() || Cost >= 0) &&
          "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getExpandCompressMemoryOpCost(
+    unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+    TTI::TargetCostKind CostKind, const Instruction *I) const {
+  InstructionCost Cost = TTIImpl->getExpandCompressMemoryOpCost(
+      Opcode, DataTy, VariableMask, Alignment, CostKind, I);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
@@ -1365,6 +1403,14 @@ bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
   return TTIImpl->hasArmWideBranch(Thumb);
 }
 
+uint64_t TargetTransformInfo::getFeatureMask(const Function &F) const {
+  return TTIImpl->getFeatureMask(F);
+}
+
+bool TargetTransformInfo::isMultiversionedFunction(const Function &F) const {
+  return TTIImpl->isMultiversionedFunction(F);
+}
+
 unsigned TargetTransformInfo::getMaxNumArgs() const {
   return TTIImpl->getMaxNumArgs();
 }
@@ -1413,6 +1459,12 @@ unsigned
 TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
                                                  Type *ArrayType) const {
   return TTIImpl->getNumBytesToPadGlobalArray(Size, ArrayType);
+}
+
+void TargetTransformInfo::collectKernelLaunchBounds(
+    const Function &F,
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  return TTIImpl->collectKernelLaunchBounds(F, LB);
 }
 
 TargetTransformInfo::Concept::~Concept() = default;

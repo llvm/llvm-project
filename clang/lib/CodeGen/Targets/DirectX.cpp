@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABIInfoImpl.h"
+#include "CodeGenModule.h"
+#include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
+#include "clang/AST/Type.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Type.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -24,11 +29,14 @@ public:
   DirectXTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
-  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const override;
+  llvm::Type *getHLSLType(
+      CodeGenModule &CGM, const Type *T,
+      const SmallVector<unsigned> *Packoffsets = nullptr) const override;
 };
 
-llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
-                                                  const Type *Ty) const {
+llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
+    CodeGenModule &CGM, const Type *Ty,
+    const SmallVector<unsigned> *Packoffsets) const {
   auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
   if (!ResType)
     return nullptr;
@@ -56,9 +64,19 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
 
     return llvm::TargetExtType::get(Ctx, TypeName, {ElemType}, Ints);
   }
-  case llvm::dxil::ResourceClass::CBuffer:
-    llvm_unreachable("dx.CBuffer handles are not implemented yet");
-    break;
+  case llvm::dxil::ResourceClass::CBuffer: {
+    QualType ContainedTy = ResType->getContainedType();
+    if (ContainedTy.isNull() || !ContainedTy->isStructureType())
+      return nullptr;
+
+    llvm::Type *BufferLayoutTy =
+        HLSLBufferLayoutBuilder(CGM, "dx.Layout")
+            .createLayoutType(ContainedTy->getAsStructureType(), Packoffsets);
+    if (!BufferLayoutTy)
+      return nullptr;
+
+    return llvm::TargetExtType::get(Ctx, "dx.CBuffer", {BufferLayoutTy});
+  }
   case llvm::dxil::ResourceClass::Sampler:
     llvm_unreachable("dx.Sampler handles are not implemented yet");
     break;

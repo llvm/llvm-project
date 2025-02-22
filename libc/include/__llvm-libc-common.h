@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_COMMON_H
-#define LLVM_LIBC_COMMON_H
+#ifndef _LLVM_LIBC_COMMON_H
+#define _LLVM_LIBC_COMMON_H
+
+#define __LLVM_LIBC__ 1
 
 #ifdef __cplusplus
 
@@ -39,7 +41,16 @@
 #define _Thread_local thread_local
 
 #undef __NOEXCEPT
+#if __cplusplus >= 201103L
 #define __NOEXCEPT noexcept
+#else
+#define __NOEXCEPT throw()
+#endif
+
+// This macro serves as a generic cast implementation for use in both C and C++,
+// similar to `__BIONIC_CAST` in Android.
+#undef __LLVM_LIBC_CAST
+#define __LLVM_LIBC_CAST(cast, type, value) (cast<type>(value))
 
 #else // not __cplusplus
 
@@ -76,6 +87,12 @@
 #define __NOEXCEPT
 #endif
 
+#undef _Returns_twice
+#define _Returns_twice __attribute__((returns_twice))
+
+#undef __LLVM_LIBC_CAST
+#define __LLVM_LIBC_CAST(cast, type, value) ((type)(value))
+
 #endif // __cplusplus
 
-#endif // LLVM_LIBC_COMMON_H
+#endif // _LLVM_LIBC_COMMON_H

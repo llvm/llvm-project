@@ -84,7 +84,7 @@ namespace {
 
   raw_ostream &operator<< (raw_ostream &OS, const printv &PV) {
     if (PV.R)
-      OS << 'v' << Register::virtReg2Index(PV.R);
+      OS << 'v' << Register(PV.R).virtRegIndex();
     else
       OS << 's';
     return OS;

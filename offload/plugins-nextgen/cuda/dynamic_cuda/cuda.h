@@ -30,15 +30,16 @@ typedef uintptr_t CUdeviceptr;
 typedef struct CUmod_st *CUmodule;
 typedef struct CUctx_st *CUcontext;
 typedef struct CUfunc_st *CUfunction;
+typedef void (*CUhostFn)(void *userData);
 typedef struct CUstream_st *CUstream;
 typedef struct CUevent_st *CUevent;
 
-#define CU_DEVICE_INVALID ((CUdevice)-2)
+#define CU_DEVICE_INVALID ((CUdevice)(-2))
 
 typedef unsigned long long CUmemGenericAllocationHandle_v1;
 typedef CUmemGenericAllocationHandle_v1 CUmemGenericAllocationHandle;
 
-#define CU_DEVICE_INVALID ((CUdevice)-2)
+#define CU_DEVICE_INVALID ((CUdevice)(-2))
 
 typedef enum CUmemAllocationGranularity_flags_enum {
   CU_MEM_ALLOC_GRANULARITY_MINIMUM = 0x0,
@@ -286,6 +287,8 @@ static inline void *CU_LAUNCH_PARAM_END = (void *)0x00;
 static inline void *CU_LAUNCH_PARAM_BUFFER_POINTER = (void *)0x01;
 static inline void *CU_LAUNCH_PARAM_BUFFER_SIZE = (void *)0x02;
 
+typedef void (*CUstreamCallback)(CUstream, CUresult, void *);
+
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);
 CUresult cuDeviceGetAttribute(int *, CUdevice_attribute, CUdevice);
@@ -302,6 +305,7 @@ CUresult cuInit(unsigned);
 CUresult cuLaunchKernel(CUfunction, unsigned, unsigned, unsigned, unsigned,
                         unsigned, unsigned, unsigned, CUstream, void **,
                         void **);
+CUresult cuLaunchHostFunc(CUstream, CUhostFn, void *);
 
 CUresult cuMemAlloc(CUdeviceptr *, size_t);
 CUresult cuMemAllocHost(void **, size_t);
@@ -326,6 +330,7 @@ CUresult cuStreamCreate(CUstream *, unsigned);
 CUresult cuStreamDestroy(CUstream);
 CUresult cuStreamSynchronize(CUstream);
 CUresult cuStreamQuery(CUstream);
+CUresult cuStreamAddCallback(CUstream, CUstreamCallback, void *, unsigned int);
 CUresult cuCtxSetCurrent(CUcontext);
 CUresult cuDevicePrimaryCtxRelease(CUdevice);
 CUresult cuDevicePrimaryCtxGetState(CUdevice, unsigned *, int *);

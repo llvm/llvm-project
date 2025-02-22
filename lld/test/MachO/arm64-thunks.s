@@ -14,18 +14,16 @@
 
 # RUN: rm -rf %t; mkdir %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t/input.o
-# RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -map %t/thunk.map -o %t/thunk %t/input.o
+## Use --icf=safe_thunks to test that branch extension algo is compatible
+## with safe_thunks ICF.
+# RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -map %t/thunk.map -o %t/thunk %t/input.o --icf=safe_thunks
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/thunk | FileCheck %s
 
-## Check that the thunks appear in the map file and that everything is sorted by address
-# Because of the `.space` instructions, there will end up being a lot of dead symbols in the 
-# linker map (linker map will be ~2.7GB). So to avoid the test trying to (slowly) match regex
-# across all the ~2.7GB of the linker map - generate a version of the linker map without dead symbols.
-# RUN: awk '/# Dead Stripped Symbols:/ {exit} {print}' %t/thunk.map > %t/thunk_no_dead_syms.map
-
-# RUN: FileCheck %s --input-file %t/thunk_no_dead_syms.map --check-prefix=MAP
+# RUN: FileCheck %s --input-file %t/thunk.map --check-prefix=MAP
  
-# MAP:      0x{{[[:xdigit:]]+}} {{.*}} _b
+# MAP:      0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _a
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _b
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.0
@@ -41,10 +39,13 @@
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _b.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _h
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _main
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_high_addr
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d.thunk.1
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.1
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.1
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} ltmp0.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _z
 
 
@@ -206,7 +207,20 @@
 # CHECK: [[#%x, NAN_PAGE + NAN_OFFSET]] <__stubs>:
 
 .subsections_via_symbols
+
+.addrsig
+.addrsig_sym _fold_func_low_addr
+.addrsig_sym _fold_func_high_addr
+
 .text
+
+.globl _fold_func_low_addr
+.p2align 2
+_fold_func_low_addr:
+  add x0, x0, x0
+  add x1, x0, x1
+  add x2, x0, x2
+  ret
 
 .globl _a
 .p2align 2
@@ -335,11 +349,27 @@ _main:
   bl _f
   bl _g
   bl _h
+  bl _fold_func_low_addr
+  bl _fold_func_high_addr
   bl ___nan
   ret
 
+.globl _fold_func_high_addr
+.p2align 2
+_fold_func_high_addr:
+  add x0, x0, x0
+  add x1, x0, x1
+  add x2, x0, x2
+  ret
+
+
 .section __TEXT,__cstring
-  .space 0x4000000
+  # The .space below has to be composed of non-zero characters. Otherwise, the
+  # linker will create a symbol for every '0' in the section, leading to
+  # dramatic memory usage and a huge linker map file
+  .space 0x4000000, 'A'
+  .byte 0
+
 
 .section __TEXT,__lcxx_override,regular,pure_instructions
 

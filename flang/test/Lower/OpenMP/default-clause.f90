@@ -284,16 +284,13 @@ end subroutine
 !CHECK-LABEL: func @_QPnested_default_clause_test5
 !CHECK: omp.parallel {
 
-!CHECK: %[[X_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFnested_default_clause_test5Ex"}
-!CHECK: %[[X_DECLARE:.*]]:2 = hlfir.declare %[[X_ALLOCA]] {{.*}}
-
-!CHECK: %[[LOOP_VAR_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
-!CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR_ALLOCA]] {{.*}}
-
 !CHECK: %[[CONST_LB:.*]] = arith.constant 1 : i32
 !CHECK: %[[CONST_UB:.*]] = arith.constant 50 : i32
 !CHECK: %[[CONST_STEP:.*]] = arith.constant 1 : i32
+! CHECK: omp.wsloop private(@{{.*}} %{{.*}} -> %[[X_ALLOCA:.*]], @{{.*}} %{{.*}} -> %[[LOOP_VAR_ALLOCA:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = (%[[CONST_LB]]) to (%[[CONST_UB]]) inclusive step (%[[CONST_STEP]]) {
+!CHECK: %[[X_DECLARE:.*]]:2 = hlfir.declare %[[X_ALLOCA]] {{.*}}
+!CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR_ALLOCA]] {{.*}}
 !CHECK: fir.store %[[ARG]] to %[[LOOP_VAR_DECLARE]]#1 : !fir.ref<i32>
 !CHECK: %[[LOADED_X:.*]] = fir.load %[[X_DECLARE]]#0 : !fir.ref<i32>
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
@@ -321,13 +318,12 @@ end subroutine
 
 !CHECK: %[[Z_VAR_DECLARE:.*]]:2 = hlfir.declare %[[Z_VAR]] {{.*}}
 
-!CHECK: %[[LOOP_VAR:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
-!CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR]] {{.*}}
-
 !CHECK: %[[CONST_LB:.*]] = arith.constant 1 : i32
 !CHECK: %[[CONST_UB:.*]] = arith.constant 10 : i32
 !CHECK: %[[CONST_STEP:.*]] = arith.constant 1 : i32
+! CHECK: omp.wsloop private(@{{.*}} %{{.*}} -> %[[LOOP_VAR:.*]] : !fir.ref<i32>) {
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = (%[[CONST_LB]]) to (%[[CONST_UB]]) inclusive step (%[[CONST_STEP]]) {
+!CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR]] {{.*}}
 !CHECK: fir.store %[[ARG]] to %[[LOOP_VAR_DECLARE]]#1 : !fir.ref<i32>
 !CHECK: %[[LOADED_X:.*]] = fir.load %[[X_VAR_DECLARE]]#0 : !fir.ref<i32>
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
@@ -386,7 +382,7 @@ subroutine skipped_default_clause_checks()
        type(it)::iii
 
 !CHECK: omp.parallel {{.*}} {
-!CHECK: omp.wsloop reduction(@min_i32 %[[VAL_Z_DECLARE]]#0 -> %[[PRV:.+]] : !fir.ref<i32>) {
+!CHECK: omp.wsloop private({{.*}}) reduction(@min_i32 %[[VAL_Z_DECLARE]]#0 -> %[[PRV:.+]] : !fir.ref<i32>) {
 !CHECK-NEXT: omp.loop_nest (%[[ARG:.*]]) {{.*}} {
 !CHECK: omp.yield
 !CHECK: }
