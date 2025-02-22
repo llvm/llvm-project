@@ -203,9 +203,11 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
       return false;
 
     Value *Step, *Start;
-    if (!matchSimpleRecurrence(Phi, Inc, Start, Step) ||
+    Instruction *Inc2;
+    if (!matchSimpleRecurrence(Phi, Inc2, Start, Step) ||
         Inc->getOpcode() != Instruction::Add)
       return false;
+    Inc = cast<BinaryOperator>(Inc2);
     assert(Phi->getNumIncomingValues() == 2 && "Expected 2 operand phi.");
     unsigned IncrementingBlock = Phi->getIncomingValue(0) == Inc ? 0 : 1;
     assert(Phi->getIncomingValue(IncrementingBlock) == Inc &&
