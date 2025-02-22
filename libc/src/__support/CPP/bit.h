@@ -126,7 +126,7 @@ countl_zero(T value) {
 }
 #else
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, unsigned int>
 countl_zero(T value) {
   if (!value)
     return cpp::numeric_limits<T>::digits;
@@ -183,7 +183,7 @@ countr_one(T value) {
 ///
 /// Ex. bit_width(5) == 3.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, unsigned int>
 bit_width(T value) {
   return cpp::numeric_limits<T>::digits - cpp::countl_zero(value);
 }
