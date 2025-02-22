@@ -34,7 +34,7 @@ def main():
         "build_dir",
         nargs="?",
         default=os.getcwd(),
-        help="Path to BOLT build directory, default is current " "directory",
+        help="Path to BOLT build directory, default is current directory",
     )
     parser.add_argument(
         "--switch-back",
@@ -46,6 +46,12 @@ def main():
         "--cmp-rev",
         default="HEAD^",
         help="Revision to checkout to compare vs HEAD",
+    )
+    parser.add_argument(
+        "--cmp-bin",
+        default=True,
+        action="store_true",
+        help="Check old and new llvm-bolt binaries and exit with zero code if binaries are different",
     )
     args, wrapper_args = parser.parse_known_args()
     bolt_path = f"{args.build_dir}/bin/llvm-bolt"
@@ -116,6 +122,10 @@ def main():
         "\tbin/llvm-lit -sv tools/bolt/test\nor\n"
         "\tbin/llvm-lit -sv tools/bolttests"
     )
+    if args.cmp_bin:
+        return not subprocess.call(
+            shlex.split(f"cmp -s {bolt_path}.old {bolt_path}.new")
+        )
 
 
 if __name__ == "__main__":
