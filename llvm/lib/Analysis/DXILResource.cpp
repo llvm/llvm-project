@@ -749,6 +749,11 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
       NextID = 0;
     }
 
+    // We need to make sure the types of resource are ordered even if some are
+    // missing.
+    FirstCBuffer = std::min({FirstCBuffer, FirstSampler});
+    FirstUAV = std::min({FirstUAV, FirstCBuffer});
+
     // Adjust the resource binding to use the next ID.
     RBI.setBindingID(NextID++);
   }
