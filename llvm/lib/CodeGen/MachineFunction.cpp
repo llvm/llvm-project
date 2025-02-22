@@ -505,7 +505,11 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *BB,
   // allow robust mapping of profiles to basic blocks.
   if (Target.Options.BBAddrMap ||
       Target.getBBSectionsType() == BasicBlockSection::List)
-    MBB->setBBID(BBID.has_value() ? *BBID : UniqueBBID{NextBBID++, 0});
+    MBB->setBBID(BBID.has_value()
+                     ? *BBID
+                     : UniqueBBID{((NextBBID++ & 0x0000ffff) << 32) |
+                                      (MBB->size() & 0x0000ffff),
+                                  0});
   return MBB;
 }
 
