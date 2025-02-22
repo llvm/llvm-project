@@ -3960,7 +3960,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOpts.LineComment = 1;
 
   const auto Language = Style.Language;
-  LangOpts.C11 = Language == FormatStyle::LK_C;
+  LangOpts.C17 = Language == FormatStyle::LK_C;
   LangOpts.CXXOperatorNames =
       Language == FormatStyle::LK_Cpp || Language == FormatStyle::LK_ObjC;
 
