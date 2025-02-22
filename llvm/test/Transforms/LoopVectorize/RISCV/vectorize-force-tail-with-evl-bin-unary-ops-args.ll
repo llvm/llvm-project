@@ -42,7 +42,7 @@ define void @test_and(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.and.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = and <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 1)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -136,7 +136,7 @@ define void @test_or(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.or.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = or <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 1)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -230,7 +230,7 @@ define void @test_xor(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.xor.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = xor <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 1)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -324,7 +324,7 @@ define void @test_shl(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.shl.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = shl <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 1)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -418,7 +418,7 @@ define void @test_lshr(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.lshr.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = lshr <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 1)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -512,7 +512,7 @@ define void @test_ashr(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.ashr.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = ashr <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 1)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -606,7 +606,7 @@ define void @test_add(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.add.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = add <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 1)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -700,7 +700,7 @@ define void @test_sub(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.sub.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 1), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = sub <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 1)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -794,7 +794,7 @@ define void @test_mul(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.mul.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 3), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = mul <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 3)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -888,7 +888,7 @@ define void @test_sdiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.sdiv.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 3), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = sdiv <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 3)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -982,7 +982,7 @@ define void @test_udiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.udiv.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 3), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = udiv <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 3)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -1076,7 +1076,7 @@ define void @test_srem(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.srem.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 3), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = srem <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 3)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -1170,7 +1170,7 @@ define void @test_urem(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call <vscale x 16 x i8> @llvm.vp.urem.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i8> splat (i8 3), <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = urem <vscale x 16 x i8> [[VP_OP_LOAD]], splat (i8 3)
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[VP_OP]], ptr align 1 [[TMP17]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP11]])
@@ -1267,7 +1267,7 @@ define void @test_fadd(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fadd.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = fadd fast <vscale x 4 x float> [[VP_OP_LOAD]], splat (float 3.000000e+00)
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -1362,7 +1362,7 @@ define void @test_fsub(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fsub.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = fsub fast <vscale x 4 x float> [[VP_OP_LOAD]], splat (float 3.000000e+00)
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -1457,7 +1457,7 @@ define void @test_fmul(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fmul.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = fmul fast <vscale x 4 x float> [[VP_OP_LOAD]], splat (float 3.000000e+00)
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -1552,7 +1552,7 @@ define void @test_fdiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fdiv.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = fdiv fast <vscale x 4 x float> [[VP_OP_LOAD]], splat (float 3.000000e+00)
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
@@ -1700,7 +1700,7 @@ define void @test_fneg(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fneg.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
+; IF-EVL-NEXT:    [[VP_OP:%.*]] = fneg fast <vscale x 4 x float> [[VP_OP_LOAD]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
