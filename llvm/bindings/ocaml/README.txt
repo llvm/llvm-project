@@ -19,8 +19,8 @@ The bindings can also be built out-of-tree, i.e. targeting a preinstalled
 LLVM. To do this, configure the LLVM build tree as follows:
 
     $ cmake -DLLVM_OCAML_OUT_OF_TREE=TRUE \
-            -DCMAKE_INSTALL_PREFIX=[Preinstalled LLVM path] \
-            -DLLVM_OCAML_INSTALL_PATH=[OCaml install prefix] \
+            -DLLVM_OCAML_EXTERNAL_LLVM_LIBDIR=[LLVM libdir, e.g. `llvm-config --libdir`] \
+            -DLLVM_OCAML_INSTALL_PATH=[OCaml install prefix, e.g. `opam var lib`] \
             [... any other options]
 
 then build and install it as:
