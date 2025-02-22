@@ -13,12 +13,12 @@
     ret void
   }
 
-  attributes #0 = { "amdgpu-waves-per-eu"="8,8"  }
+  attributes #0 = { "amdgpu-waves-per-eu"="8,8" }
 
 ...
 
-# CHECK: S_NOP 0, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, implicit-def $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit-def $vgpr28_vgpr29_vgpr30_vgpr31, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
-# CHECK: S_NOP 0, implicit killed undef $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, implicit killed undef $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27, implicit killed undef $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed undef $vgpr28_vgpr29_vgpr30_vgpr31, implicit killed undef $vgpr0_vgpr1_vgpr2_vgpr3
+# CHECK: S_NOP 0, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, implicit-def $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27, implicit-def dead $vgpr0_vgpr1_vgpr2_vgpr3, implicit-def $vgpr28_vgpr29_vgpr30_vgpr31, implicit-def dead $vgpr0_vgpr1_vgpr2_vgpr3
+# CHECK: S_NOP 0, implicit killed undef $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, implicit killed undef $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27, implicit undef $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed undef $vgpr28_vgpr29_vgpr30_vgpr31, implicit undef $vgpr0_vgpr1_vgpr2_vgpr3
 
 ---
 name:            foo
