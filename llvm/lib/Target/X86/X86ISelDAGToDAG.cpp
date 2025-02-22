@@ -3067,11 +3067,19 @@ bool X86DAGToDAGISel::selectLEA64_Addr(SDValue N, SDValue &Base, SDValue &Scale,
     return false;
 
   EVT BaseType = Base.getValueType();
-  unsigned SubReg = (BaseType == MVT::i16) ? X86::sub_16bit : X86::sub_32bit;
+  unsigned SubReg;
+  if (BaseType == MVT::i8)
+    SubReg = X86::sub_8bit;
+  else if (BaseType == MVT::i16)
+    SubReg = X86::sub_16bit;
+  else
+    SubReg = X86::sub_32bit;
+
   auto *RN = dyn_cast<RegisterSDNode>(Base);
   if (RN && RN->getReg() == 0)
     Base = CurDAG->getRegister(0, MVT::i64);
-  else if ((BaseType == MVT::i16 || BaseType == MVT::i32) &&
+  else if ((BaseType == MVT::i8 || BaseType == MVT::i16 ||
+            BaseType == MVT::i32) &&
            !isa<FrameIndexSDNode>(Base)) {
     // Base could already be %rip, particularly in the x32 ABI.
     SDValue ImplDef = SDValue(CurDAG->getMachineNode(X86::IMPLICIT_DEF, DL,
@@ -3085,7 +3093,7 @@ bool X86DAGToDAGISel::selectLEA64_Addr(SDValue N, SDValue &Base, SDValue &Scale,
     Index = CurDAG->getRegister(0, MVT::i64);
   else {
     assert((IndexType == BaseType) &&
-           "Expect to be extending 16/32-bit registers for use in LEA");
+           "Expect to be extending 8/16/32-bit registers for use in LEA");
     SDValue ImplDef = SDValue(CurDAG->getMachineNode(X86::IMPLICIT_DEF, DL,
                                                      MVT::i64), 0);
     Index = CurDAG->getTargetInsertSubreg(SubReg, DL, MVT::i64, ImplDef, Index);
