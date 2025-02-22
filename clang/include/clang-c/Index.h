@@ -6636,15 +6636,15 @@ CINDEX_LINKAGE unsigned clang_visitCXXBaseClasses(CXType T,
  * visited method. The traversal may be ended prematurely, if
  * the visitor returns \c CXFieldVisit_Break.
  *
- * \param T the record type whose field may be visited.
+ * \param T The record type whose field may be visited.
  *
- * \param visitor the visitor function that will be invoked for each
+ * \param visitor The visitor function that will be invoked for each
  * field of \p T.
  *
- * \param client_data pointer data supplied by the client, which will
+ * \param client_data Pointer data supplied by the client, which will
  * be passed to the visitor each time it is invoked.
  *
- * \returns a non-zero value if the traversal was terminated
+ * \returns A non-zero value if the traversal was terminated
  * prematurely by the visitor returning \c CXFieldVisit_Break.
  */
 CINDEX_LINKAGE unsigned clang_visitCXXMethods(CXType T,
