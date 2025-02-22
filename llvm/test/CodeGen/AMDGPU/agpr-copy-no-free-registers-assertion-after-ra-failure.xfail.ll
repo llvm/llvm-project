@@ -2,7 +2,7 @@
 ; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=null %s 2>&1 | FileCheck -check-prefix=CRASH %s
 
 ; CRASH: error: <unknown>:0:0: no registers from class available to allocate in function 'no_free_vgprs_at_agpr_to_agpr_copy'
-; CRASH: Assertion failed: (valid() && "Cannot access invalid iterator")
+; CRASH: Cannot access invalid iterator
 
 define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
   %asm = call { <32 x i32>, <16 x float> } asm sideeffect "; def $0 $1", "=${v[0:31]},=${a[0:15]}"()
