@@ -29,7 +29,7 @@ define amdgpu_ps <2 x float> @test_sub_u64_vs(i64 %a, i64 inreg %b) {
 ;
 ; GFX1250-LABEL: test_sub_u64_vs:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_sub_nc_u64_e32 v[0:1], s[0:1], v[0:1]
+; GFX1250-NEXT:    v_sub_nc_u64_e64 v[0:1], v[0:1], s[0:1]
 ; GFX1250-NEXT:    ; return to shader part epilog
   %sub = sub i64 %a, %b
   %ret = bitcast i64 %sub to <2 x float>
