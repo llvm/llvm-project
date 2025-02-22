@@ -54,9 +54,10 @@
 #include <__type_traits/container_traits.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_const.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
-#include "__type_traits/remove_reference.h"
+#include <__type_traits/remove_reference.h>
 #include <__utility/as_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
@@ -666,7 +667,7 @@ private:
 
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
-    using __iter = _If<__is_const(__libcpp_remove_reference_t<_Self>), const_iterator, iterator>;
+    using __iter = _If<is_const_v<__libcpp_remove_reference_t<_Self>>, const_iterator, iterator>;
     auto __it    = ranges::lower_bound(__self.__keys_, __key, __self.__compare_);
     auto __last  = __self.__keys_.end();
     if (__it == __last || __self.__compare_(__key, *__it)) {
