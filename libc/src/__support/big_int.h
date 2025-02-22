@@ -272,15 +272,15 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
   if (LIBC_UNLIKELY(offset == 0))
     return array;
   const bool is_neg = is_signed && is_negative(array);
-  constexpr auto at = [](size_t index) -> int {
+  constexpr auto at = [](size_t index) -> size_t {
     // reverse iteration when direction == LEFT.
     if constexpr (direction == LEFT)
-      return int(N) - int(index) - 1;
-    return int(index);
+      return N - index - 1;
+    return index;
   };
   const auto safe_get_at = [&](size_t index) -> word {
     // return appropriate value when accessing out of bound elements.
-    const int i = at(index);
+    const size_t i = at(index);
     if (i < 0)
       return 0;
     if (i >= int(N))
