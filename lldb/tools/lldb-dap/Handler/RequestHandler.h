@@ -18,6 +18,13 @@ struct DAP;
 class RequestHandler {
 public:
   RequestHandler(DAP &dap) : dap(dap) {}
+
+  /// RequestHandler are not copyable.
+  /// @{
+  RequestHandler(const RequestHandler &) = delete;
+  RequestHandler &operator=(const RequestHandler &) = delete;
+  /// @}
+
   virtual ~RequestHandler() = default;
 
   virtual void operator()(const llvm::json::Object &request) = 0;
