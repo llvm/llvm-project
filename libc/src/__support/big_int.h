@@ -314,7 +314,7 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
   LIBC_INLINE constexpr size_t NAME(const cpp::array<word, N> &val) {             \
     size_t bit_count = 0;                                                         \
     for (size_t i = 0; i < N; ++i) {                                           \
-      const int word_count = cpp::NAME<word>(val[INDEX_EXPR]);                 \
+      const size_t word_count = cpp::NAME<word>(val[INDEX_EXPR]);                 \
       bit_count += word_count;                                                 \
       if (word_count != cpp::numeric_limits<word>::digits)                     \
         break;                                                                 \
