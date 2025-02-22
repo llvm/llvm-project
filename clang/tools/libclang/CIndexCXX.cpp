@@ -59,7 +59,7 @@ unsigned clang_visitCXXMethods(CXType PT, CXFieldVisitor visitor,
   CXCursor PC = clang_getTypeDeclaration(PT);
   if (clang_isInvalid(PC.kind))
     return false;
-  const CXXRecordDecl *RD =
+  const auto *RD =
       dyn_cast_if_present<CXXRecordDecl>(cxcursor::getCursorDecl(PC));
   if (!RD || RD->isInvalidDecl())
     return false;
