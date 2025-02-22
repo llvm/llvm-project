@@ -598,8 +598,9 @@ void VirtRegRewriter::rewrite() {
   SmallVector<Register, 8> SuperDefs;
   SmallVector<Register, 8> SuperKills;
 
-  const bool IsFailedAlloc = MF->getProperties().hasProperty(
+  const bool IsValidAlloc = !MF->getProperties().hasProperty(
       MachineFunctionProperties::Property::FailedRegAlloc);
+
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
     LLVM_DEBUG(MBBI->print(dbgs(), Indexes));
@@ -619,7 +620,7 @@ void VirtRegRewriter::rewrite() {
         assert(Register(PhysReg).isPhysical());
 
         RewriteRegs.insert(PhysReg);
-        assert((!MRI->isReserved(PhysReg) || IsFailedAlloc) &&
+        assert((!MRI->isReserved(PhysReg) || !IsValidAlloc) &&
                "Reserved register assignment");
 
         // Preserve semantics of sub-register operands.
