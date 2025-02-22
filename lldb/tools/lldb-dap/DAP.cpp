@@ -17,11 +17,11 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
@@ -58,12 +58,14 @@ const char DEV_NULL[] = "/dev/null";
 
 namespace lldb_dap {
 
-DAP::DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
-         StreamDescriptor input, StreamDescriptor output)
-    : debug_adaptor_path(path), log(log), input(std::move(input)),
-      output(std::move(output)), broadcaster("lldb-dap"),
-      exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
-      stop_at_entry(false), is_attach(false),
+DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
+         StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+         std::vector<std::string> pre_init_commands)
+    : name(std::move(name)), debug_adaptor_path(path), log(log),
+      input(std::move(input)), output(std::move(output)),
+      broadcaster("lldb-dap"), exception_breakpoints(),
+      pre_init_commands(std::move(pre_init_commands)),
+      focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
       display_extended_backtrace(false),
@@ -224,6 +226,15 @@ llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
 void DAP::StopIO() {
   out.Stop();
   err.Stop();
+
+  if (event_thread.joinable()) {
+    broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
+    event_thread.join();
+  }
+  if (progress_event_thread.joinable()) {
+    broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
+    progress_event_thread.join();
+  }
 }
 
 // Send the JSON in "json_str" to the "out" stream. Correctly send the
@@ -249,7 +260,8 @@ void DAP::SendJSON(const llvm::json::Value &json) {
   if (log) {
     auto now = std::chrono::duration<double>(
         std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} <-- ", now.count()).str() << std::endl
+    *log << llvm::formatv("{0:f9} {1} <-- ", now.count(), name).str()
+         << std::endl
          << "Content-Length: " << json_str.size() << "\r\n\r\n"
          << llvm::formatv("{0:2}", json).str() << std::endl;
   }
@@ -279,7 +291,8 @@ std::string DAP::ReadJSON() {
   if (log) {
     auto now = std::chrono::duration<double>(
         std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} --> ", now.count()).str() << std::endl
+    *log << llvm::formatv("{0:f9} {1} --> ", now.count(), name).str()
+         << std::endl
          << "Content-Length: " << length << "\r\n\r\n";
   }
   return json_str;
@@ -793,7 +806,51 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   return false;
 }
 
+void DAP::SendTerminatedEvent() {
+  // Prevent races if the process exits while we're being asked to disconnect.
+  llvm::call_once(terminated_event_flag, [&] {
+    RunTerminateCommands();
+    // Send a "terminated" event
+    llvm::json::Object event(CreateTerminatedEventObject(target));
+    SendJSON(llvm::json::Value(std::move(event)));
+  });
+}
+
+lldb::SBError DAP::Disconnect() { return Disconnect(is_attach); }
+
+lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
+  lldb::SBError error;
+  lldb::SBProcess process = target.GetProcess();
+  auto state = process.GetState();
+  switch (state) {
+  case lldb::eStateInvalid:
+  case lldb::eStateUnloaded:
+  case lldb::eStateDetached:
+  case lldb::eStateExited:
+    break;
+  case lldb::eStateConnected:
+  case lldb::eStateAttaching:
+  case lldb::eStateLaunching:
+  case lldb::eStateStepping:
+  case lldb::eStateCrashed:
+  case lldb::eStateSuspended:
+  case lldb::eStateStopped:
+  case lldb::eStateRunning:
+    debugger.SetAsync(false);
+    error = terminateDebuggee ? process.Kill() : process.Detach();
+    debugger.SetAsync(true);
+    break;
+  }
+
+  SendTerminatedEvent();
+
+  disconnecting = true;
+
+  return error;
+}
+
 llvm::Error DAP::Loop() {
+  auto stop_io = llvm::make_scope_exit([this]() { StopIO(); });
   while (!disconnecting) {
     llvm::json::Object object;
     lldb_dap::PacketStatus status = GetNextObject(object);
