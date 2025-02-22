@@ -1,4 +1,4 @@
-//===-- AttachRequest.cpp -------------------------------------------------===//
+//===-- AttachHandler.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 #include "DAP.h"
 #include "JSONUtils.h"
-#include "Request.h"
+#include "RequestHandler.h"
 #include "lldb/API/SBListener.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -50,7 +50,7 @@ static void PrintWelcomeMessage(DAP &dap) {
 //   }]
 // }
 
-void AttachRequest::operator()(const llvm::json::Object &request) {
+void AttachRequestHandler::operator()(const llvm::json::Object &request) {
   dap.is_attach = true;
   dap.last_launch_or_attach_request = request;
   llvm::json::Object response;

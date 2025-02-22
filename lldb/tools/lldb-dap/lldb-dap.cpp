@@ -8,9 +8,9 @@
 
 #include "DAP.h"
 #include "FifoFiles.h"
+#include "Handler/RequestHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
-#include "Request/Request.h"
 #include "RunInTerminal.h"
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
@@ -4813,7 +4813,7 @@ void request_setInstructionBreakpoints(DAP &dap,
 }
 
 void RegisterRequestCallbacks(DAP &dap) {
-  dap.RegisterRequest<AttachRequest>();
+  dap.RegisterRequest<AttachRequestHandler>();
 
   dap.RegisterRequestCallback("breakpointLocations",
                               request_breakpointLocations);

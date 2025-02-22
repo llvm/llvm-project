@@ -1,4 +1,4 @@
-//===-- Request.cpp -------------------------------------------------------===//
+//===-- Handler.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Request.h"
+#include "RequestHandler.h"
 #include "DAP.h"
 #include "JSONUtils.h"
 #include "lldb/API/SBFileSpec.h"
 
 namespace lldb_dap {
 
-void Request::SendProcessEvent(Request::LaunchMethod launch_method) {
+void RequestHandler::SendProcessEvent(
+    RequestHandler::LaunchMethod launch_method) {
   lldb::SBFileSpec exe_fspec = dap.target.GetExecutable();
   char exe_path[PATH_MAX];
   exe_fspec.GetPath(exe_path, sizeof(exe_path));
@@ -42,7 +43,8 @@ void Request::SendProcessEvent(Request::LaunchMethod launch_method) {
 
 // Both attach and launch take a either a sourcePath or sourceMap
 // argument (or neither), from which we need to set the target.source-map.
-void Request::SetSourceMapFromArguments(const llvm::json::Object &arguments) {
+void RequestHandler::SetSourceMapFromArguments(
+    const llvm::json::Object &arguments) {
   const char *sourceMapHelp =
       "source must be be an array of two-element arrays, "
       "each containing a source and replacement path string.\n";

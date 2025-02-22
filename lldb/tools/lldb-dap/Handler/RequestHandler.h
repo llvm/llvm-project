@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_LLDB_DAP_REQUEST_REQUEST_H
-#define LLDB_TOOLS_LLDB_DAP_REQUEST_REQUEST_H
+#ifndef LLDB_TOOLS_LLDB_DAP_HANDLER_HANDLER_H
+#define LLDB_TOOLS_LLDB_DAP_HANDLER_HANDLER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
@@ -15,28 +15,29 @@
 namespace lldb_dap {
 struct DAP;
 
-class Request {
+class RequestHandler {
 public:
-  Request(DAP &dap) : dap(dap) {}
-  virtual ~Request() = default;
+  RequestHandler(DAP &dap) : dap(dap) {}
+  virtual ~RequestHandler() = default;
 
   virtual void operator()(const llvm::json::Object &request) = 0;
 
-  static llvm::StringLiteral getName() { return "invalid"; };
-
+  /// Helpers used by multiple request handlers.
+  /// FIXME: Move these into the DAP class.
+  /// @{
   enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
-
   void SendProcessEvent(LaunchMethod launch_method);
   void SetSourceMapFromArguments(const llvm::json::Object &arguments);
+  /// @}
 
 protected:
   DAP &dap;
 };
 
-class AttachRequest : public Request {
+class AttachRequestHandler : public RequestHandler {
 public:
-  using Request::Request;
-  static llvm::StringLiteral getName() { return "attach"; }
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "attach"; }
   void operator()(const llvm::json::Object &request) override;
 };
 
