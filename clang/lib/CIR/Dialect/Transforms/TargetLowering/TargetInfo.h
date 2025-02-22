@@ -30,6 +30,9 @@ createAArch64TargetLoweringInfo(LowerModule &CGM, cir::AArch64ABIKind AVXLevel);
 std::unique_ptr<TargetLoweringInfo>
 createSPIRVTargetLoweringInfo(LowerModule &CGM);
 
+std::unique_ptr<TargetLoweringInfo>
+createNVPTXTargetLoweringInfo(LowerModule &CGM);
+
 } // namespace cir
 
 #endif // LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_TARGETINFO_H

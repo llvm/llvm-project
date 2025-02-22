@@ -32,6 +32,10 @@ __global__ void global_fn(int a) {}
 // CIR-HOST: cir.get_global @_Z24__device_stub__global_fni
 // CIR-HOST: cir.call @cudaLaunchKernel
 
+// COM: LLVM-HOST: void @_Z24__device_stub__global_fni
+// COM: LLVM-HOST: call i32 @__cudaPopCallConfiguration
+// COM: LLVM-HOST: call i32 @cudaLaunchKernel(ptr @_Z24__device_stub__global_fni
+
 int main() {
   global_fn<<<1, 1>>>(1);
 }
@@ -46,3 +50,16 @@ int main() {
 // CIR-HOST:   [[Arg:%[0-9]+]] = cir.const #cir.int<1>
 // CIR-HOST:   cir.call @_Z24__device_stub__global_fni([[Arg]])
 // CIR-HOST: }
+
+// COM: LLVM-HOST: define dso_local i32 @main
+// COM: LLVM-HOST: alloca %struct.dim3
+// COM: LLVM-HOST: alloca %struct.dim3
+// COM: LLVM-HOST: call void @_ZN4dim3C1Ejjj
+// COM: LLVM-HOST: call void @_ZN4dim3C1Ejjj
+// COM: LLVM-HOST: [[LLVMConfigOK:%[0-9]+]] = call i32 @__cudaPushCallConfiguration
+// COM: LLVM-HOST: br [[LLVMConfigOK]], label %[[Good:[0-9]+]], label [[Bad:[0-9]+]]
+// COM: LLVM-HOST: [[Good]]:
+// COM: LLVM-HOST:   call void @_Z24__device_stub__global_fni
+// COM: LLVM-HOST:   br label [[Bad]]
+// COM: LLVM-HOST: [[Bad]]:
+// COM: LLVM-HOST:   ret i32

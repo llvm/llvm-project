@@ -81,6 +81,8 @@ createTargetLoweringInfo(LowerModule &LM) {
   }
   case llvm::Triple::spirv64:
     return createSPIRVTargetLoweringInfo(LM);
+  case llvm::Triple::nvptx64:
+    return createNVPTXTargetLoweringInfo(LM);
   default:
     cir_cconv_unreachable("ABI NYI");
   }
