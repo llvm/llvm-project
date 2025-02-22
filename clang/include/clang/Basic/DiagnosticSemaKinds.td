@@ -2558,8 +2558,8 @@ def err_auto_non_deduced_not_alone : Error<
 def err_implied_std_initializer_list_not_found : Error<
   "cannot deduce type of initializer list because std::initializer_list was "
   "not found; include <initializer_list>">;
-def err_malformed_std_initializer_list : Error<
-  "std::initializer_list must be a class template with a single type parameter">;
+def err_malformed_std_class_template : Error<
+  "std::%0 must be a class template with a single type parameter">;
 def err_auto_init_list_from_c : Error<
   "cannot use %select{'auto'|<ERROR>|'__auto_type'}0 with "
   "%select{initializer list|array}1 in C">;

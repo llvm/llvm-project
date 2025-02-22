@@ -3507,13 +3507,8 @@ bool FunctionDecl::isDestroyingOperatorDelete() const {
   if (!isa<CXXMethodDecl>(this) || getOverloadedOperator() != OO_Delete)
     return false;
 
-  unsigned NumParams = getNumParams();
   unsigned DestroyingDeleteTagParam = 1;
-  bool IsTypeAware = false;
-  if (NumParams > 0)
-    IsTypeAware = getParamDecl(0)->getType()->isTypeIdentitySpecialization();
-
-  if (IsTypeAware)
+  if (isTypeAwareOperatorNewOrDelete())
     ++DestroyingDeleteTagParam;
 
   if (getNumParams() <= DestroyingDeleteTagParam)

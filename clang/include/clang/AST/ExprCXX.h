@@ -2235,6 +2235,7 @@ enum class CXXNewInitializationStyle {
 };
 
 enum class TypeAwareAllocationMode : unsigned { No, Yes };
+
 inline bool isTypeAwareAllocation(TypeAwareAllocationMode Mode) {
   return Mode == TypeAwareAllocationMode::Yes;
 }
@@ -2250,6 +2251,7 @@ enum class AlignedAllocationMode : unsigned { No, Yes };
 inline bool isAlignedAllocation(AlignedAllocationMode Mode) {
   return Mode == AlignedAllocationMode::Yes;
 }
+
 inline AlignedAllocationMode alignedAllocationModeFromBool(bool IsAligned) {
   return IsAligned ? AlignedAllocationMode::Yes : AlignedAllocationMode::No;
 }
@@ -2259,6 +2261,7 @@ enum class SizedDeallocationMode : unsigned { No, Yes };
 inline bool isSizedDeallocation(SizedDeallocationMode Mode) {
   return Mode == SizedDeallocationMode::Yes;
 }
+
 inline SizedDeallocationMode sizedDeallocationModeFromBool(bool IsSized) {
   return IsSized ? SizedDeallocationMode::Yes : SizedDeallocationMode::No;
 }
@@ -2271,7 +2274,6 @@ struct ImplicitAllocationParameters {
         PassAlignment(PassAlignment) {
     if (!Type.isNull())
       Type = Type.getUnqualifiedType();
-    assert(isValid());
   }
   explicit ImplicitAllocationParameters(AlignedAllocationMode PassAlignment)
       : PassTypeIdentity(TypeAwareAllocationMode::No),
@@ -2284,13 +2286,6 @@ struct ImplicitAllocationParameters {
     if (isAlignedAllocation(PassAlignment))
       ++Count;
     return Count;
-  }
-  bool isValid() const {
-    if (!Type.isNull() && Type.hasQualifiers())
-      return false;
-    if (!isTypeAwareAllocation(PassTypeIdentity))
-      return true;
-    return !Type.isNull();
   }
 
   QualType Type;
@@ -2307,7 +2302,6 @@ struct ImplicitDeallocationParameters {
         PassAlignment(PassAlignment), PassSize(PassSize) {
     if (!Type.isNull())
       Type = Type.getUnqualifiedType();
-    assert(isValid());
   }
 
   ImplicitDeallocationParameters(AlignedAllocationMode PassAlignment,
@@ -2324,15 +2318,6 @@ struct ImplicitDeallocationParameters {
     if (isSizedDeallocation(PassSize))
       ++Count;
     return Count;
-  }
-  bool isValid() const {
-    if (!Type.isNull()) {
-      assert(!Type.hasQualifiers());
-      return !Type.hasQualifiers();
-    }
-    if (!isTypeAwareAllocation(PassTypeIdentity))
-      return true;
-    return !Type.isNull();
   }
 
   QualType Type;

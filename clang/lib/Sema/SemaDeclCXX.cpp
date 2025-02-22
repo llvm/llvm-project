@@ -11027,18 +11027,18 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       // conversion from 'this' to the type of a destroying operator delete's
       // first parameter, perform that conversion now.
       if (OperatorDelete->isDestroyingOperatorDelete()) {
-        unsigned PointerParam = 0;
+        unsigned AddressParamIndex = 0;
         if (OperatorDelete->isTypeAwareOperatorNewOrDelete())
-          ++PointerParam;
+          ++AddressParamIndex;
         QualType ParamType =
-            OperatorDelete->getParamDecl(PointerParam)->getType();
+            OperatorDelete->getParamDecl(AddressParamIndex)->getType();
         if (!declaresSameEntity(ParamType->getAsCXXRecordDecl(), RD)) {
           // C++ [class.dtor]p13:
           //   ... as if for the expression 'delete this' appearing in a
           //   non-virtual destructor of the destructor's class.
           ContextRAII SwitchContext(*this, Destructor);
           ExprResult This = ActOnCXXThis(
-              OperatorDelete->getParamDecl(PointerParam)->getLocation());
+              OperatorDelete->getParamDecl(AddressParamIndex)->getLocation());
           assert(!This.isInvalid() && "couldn't form 'this' expr in dtor?");
           This = PerformImplicitConversion(This.get(), ParamType,
                                            AssignmentAction::Passing);
@@ -11896,14 +11896,43 @@ NamespaceDecl *Sema::getStdNamespace() const {
                                  StdNamespace.get(Context.getExternalSource()));
 }
 
-const ClassTemplateDecl *Sema::getStdTypeIdentity() const {
-  return cast_or_null<ClassTemplateDecl>(
-      StdTypeIdentity.get(Context.getExternalSource()));
-}
+static ClassTemplateDecl *LookupStdClassTemplate(Sema &S, SourceLocation Loc,
+                                                 const char *ClassName,
+                                                 bool *WasMalformed) {
+  NamespaceDecl *Std = S.getStdNamespace();
+  if (!Std)
+    return nullptr;
 
-ClassTemplateDecl *Sema::getStdTypeIdentity() {
-  return cast_or_null<ClassTemplateDecl>(
-      StdTypeIdentity.get(Context.getExternalSource()));
+  LookupResult Result(S, &S.PP.getIdentifierTable().get(ClassName), Loc,
+                      Sema::LookupOrdinaryName);
+  if (!S.LookupQualifiedName(Result, Std))
+    return nullptr;
+
+  ClassTemplateDecl *Template = Result.getAsSingle<ClassTemplateDecl>();
+  if (!Template) {
+    Result.suppressDiagnostics();
+    // We found something weird. Complain about the first thing we found.
+    NamedDecl *Found = *Result.begin();
+    S.Diag(Found->getLocation(), diag::err_malformed_std_class_template)
+        << ClassName;
+    if (WasMalformed)
+      *WasMalformed = true;
+    return nullptr;
+  }
+
+  // We found some template with the correct name. Now verify that it's
+  // correct.
+  TemplateParameterList *Params = Template->getTemplateParameters();
+  if (Params->getMinRequiredArguments() != 1 ||
+      !isa<TemplateTypeParmDecl>(Params->getParam(0))) {
+    S.Diag(Template->getLocation(), diag::err_malformed_std_class_template)
+        << ClassName;
+    if (WasMalformed)
+      *WasMalformed = true;
+    return nullptr;
+  }
+
+  return Template;
 }
 
 namespace {
@@ -12128,55 +12157,40 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
   return true;
 }
 
-static ClassTemplateDecl *LookupStdInitializerList(Sema &S, SourceLocation Loc){
-  NamespaceDecl *Std = S.getStdNamespace();
-  if (!Std) {
-    S.Diag(Loc, diag::err_implied_std_initializer_list_not_found);
-    return nullptr;
-  }
+static QualType BuildStdClassTemplate(Sema &S, ClassTemplateDecl *CTD,
+                                      QualType TypeParam, SourceLocation Loc) {
+  TemplateArgumentListInfo Args(Loc, Loc);
+  auto TSI = S.Context.getTrivialTypeSourceInfo(TypeParam, Loc);
+  Args.addArgument(TemplateArgumentLoc(TemplateArgument(TypeParam), TSI));
 
-  LookupResult Result(S, &S.PP.getIdentifierTable().get("initializer_list"),
-                      Loc, Sema::LookupOrdinaryName);
-  if (!S.LookupQualifiedName(Result, Std)) {
-    S.Diag(Loc, diag::err_implied_std_initializer_list_not_found);
-    return nullptr;
-  }
-  ClassTemplateDecl *Template = Result.getAsSingle<ClassTemplateDecl>();
-  if (!Template) {
-    Result.suppressDiagnostics();
-    // We found something weird. Complain about the first thing we found.
-    NamedDecl *Found = *Result.begin();
-    S.Diag(Found->getLocation(), diag::err_malformed_std_initializer_list);
-    return nullptr;
-  }
-
-  // We found some template called std::initializer_list. Now verify that it's
-  // correct.
-  TemplateParameterList *Params = Template->getTemplateParameters();
-  if (Params->getMinRequiredArguments() != 1 ||
-      !isa<TemplateTypeParmDecl>(Params->getParam(0))) {
-    S.Diag(Template->getLocation(), diag::err_malformed_std_initializer_list);
-    return nullptr;
-  }
-
-  return Template;
+  return S.Context.getElaboratedType(
+      ElaboratedTypeKeyword::None,
+      NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace()),
+      S.CheckTemplateIdType(TemplateName(CTD), Loc, Args));
 }
 
 QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
   if (!StdInitializerList) {
-    StdInitializerList = LookupStdInitializerList(*this, Loc);
-    if (!StdInitializerList)
+    bool WasMalformed = false;
+    StdInitializerList =
+        LookupStdClassTemplate(*this, Loc, "initializer_list", &WasMalformed);
+    if (!StdInitializerList) {
+      if (!WasMalformed)
+        Diag(Loc, diag::err_implied_std_initializer_list_not_found);
+      return QualType();
+    }
+  }
+  return BuildStdClassTemplate(*this, StdInitializerList, Element, Loc);
+}
+
+QualType Sema::TryBuildStdTypeIdentity(QualType Type, SourceLocation Loc) {
+  if (!StdTypeIdentity) {
+    StdTypeIdentity = LookupStdClassTemplate(*this, Loc, "type_identity",
+                                             /* WasMalformed */ nullptr);
+    if (!StdTypeIdentity)
       return QualType();
   }
-
-  TemplateArgumentListInfo Args(Loc, Loc);
-  Args.addArgument(TemplateArgumentLoc(TemplateArgument(Element),
-                                       Context.getTrivialTypeSourceInfo(Element,
-                                                                        Loc)));
-  return Context.getElaboratedType(
-      ElaboratedTypeKeyword::None,
-      NestedNameSpecifier::Create(Context, nullptr, getStdNamespace()),
-      CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args));
+  return BuildStdClassTemplate(*this, StdTypeIdentity, Type, Loc);
 }
 
 bool Sema::isInitListConstructor(const FunctionDecl *Ctor) {
@@ -16297,7 +16311,8 @@ bool Sema::isTypeAwareOperatorNewOrDelete(const NamedDecl *ND) const {
 
 FunctionDecl *
 Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
-                                      QualType DeallocType) {
+                                      QualType DeallocType,
+                                      SourceLocation Loc) {
   if (!getLangOpts().TypeAwareAllocators || DeallocType.isNull())
     return nullptr;
 
@@ -16325,10 +16340,10 @@ Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
       return nullptr;
   }
 
-  QualType SpecializedTypeIdentity =
-      instantiateSpecializedTypeIdentity(DeallocType);
+  QualType SpecializedTypeIdentity = TryBuildStdTypeIdentity(DeallocType, Loc);
   if (SpecializedTypeIdentity.isNull())
     return nullptr;
+
   SmallVector<QualType, 4> ArgTypes;
   ArgTypes.reserve(NumParams);
   ArgTypes.push_back(SpecializedTypeIdentity);
@@ -16362,29 +16377,11 @@ Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
   FunctionProtoType::ExtProtoInfo EPI;
   QualType ExpectedFunctionType =
       Context.getFunctionType(Context.VoidTy, ArgTypes, EPI);
-  SourceLocation Loc;
   sema::TemplateDeductionInfo Info(Loc);
   FunctionDecl *Result;
   if (DeduceTemplateArguments(FnTemplateDecl, nullptr, ExpectedFunctionType,
                               Result, Info) != TemplateDeductionResult::Success)
     return nullptr;
-  return Result;
-}
-
-QualType Sema::instantiateSpecializedTypeIdentity(QualType Subject) {
-  assert(getLangOpts().TypeAwareAllocators);
-  assert(!Subject.hasQualifiers());
-  ClassTemplateDecl *TypeIdentity = getStdTypeIdentity();
-  if (!TypeIdentity)
-    return QualType();
-
-  auto TN = TemplateName(TypeIdentity);
-  TemplateArgumentListInfo Arguments;
-  Arguments.addArgument(getTrivialTemplateArgumentLoc(
-      TemplateArgument(Subject), QualType(), SourceLocation()));
-  QualType Result = CheckTemplateIdType(TN, SourceLocation(), Arguments);
-  if (Result.isNull())
-    return QualType();
   return Result;
 }
 

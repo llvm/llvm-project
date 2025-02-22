@@ -1097,10 +1097,10 @@ static TypeSourceInfo *getTypeSourceInfoForStdAlignValT(Sema &S,
 
 // When searching for custom allocators on the PromiseType we want to
 // warn that we will ignore type aware allocators.
-static bool DiagnoseTypeAwareAllocatorsIfNecessary(Sema &S, SourceLocation Loc,
-                                                   unsigned DiagnosticID,
-                                                   DeclarationName Name,
-                                                   QualType PromiseType) {
+static bool DiagnoseTypeAwareAllocators(Sema &S, SourceLocation Loc,
+                                        unsigned DiagnosticID,
+                                        DeclarationName Name,
+                                        QualType PromiseType) {
   if (!S.getLangOpts().TypeAwareAllocators)
     return false;
   if (!PromiseType->isRecordType())
@@ -1126,9 +1126,9 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
                                  FunctionDecl *&OperatorDelete) {
   DeclarationName DeleteName =
       S.Context.DeclarationNames.getCXXOperatorName(OO_Delete);
-  DiagnoseTypeAwareAllocatorsIfNecessary(
-      S, Loc, diag::warn_coroutine_type_aware_allocator_ignored, DeleteName,
-      PromiseType);
+  DiagnoseTypeAwareAllocators(S, Loc,
+                              diag::warn_coroutine_type_aware_allocator_ignored,
+                              DeleteName, PromiseType);
   auto *PointeeRD = PromiseType->getAsCXXRecordDecl();
   assert(PointeeRD && "PromiseType must be a CxxRecordDecl type");
 
@@ -1568,7 +1568,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   if (!OperatorNew) {
     if (PromiseContainsNew) {
       S.Diag(Loc, diag::err_coroutine_unusable_new) << PromiseType << &FD;
-      DiagnoseTypeAwareAllocatorsIfNecessary(
+      DiagnoseTypeAwareAllocators(
           S, Loc, diag::note_coroutine_unusable_type_aware_allocators, NewName,
           PromiseType);
     } else if (RequiresNoThrowAlloc)
@@ -1579,9 +1579,9 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   }
   assert(!OperatorNew->isTypeAwareOperatorNewOrDelete());
 
-  DiagnoseTypeAwareAllocatorsIfNecessary(
-      S, Loc, diag::warn_coroutine_type_aware_allocator_ignored, NewName,
-      PromiseType);
+  DiagnoseTypeAwareAllocators(S, Loc,
+                              diag::warn_coroutine_type_aware_allocator_ignored,
+                              NewName, PromiseType);
 
   if (RequiresNoThrowAlloc) {
     const auto *FT = OperatorNew->getType()->castAs<FunctionProtoType>();

@@ -114,4 +114,29 @@ template <typename T, typename U> void operator delete(std::type_identity<T>, ty
 // expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its second parameter; use 'void *' instead}}
 template <typename T, typename U> void operator delete(std::type_identity<T>, void *, size_t, typename S<U>::align_val_ty);
 // expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its fourth parameter; use 'std::align_val_t' instead}}
+
+template <typename T> using Alias = T;
+template <typename T> using TypeIdentityAlias = std::type_identity<T>;
+typedef std::type_identity<double> TypedefAlias;
+using UsingAlias = std::type_identity<float>;
+void *operator new(Alias<size_t>, std::align_val_t);
+template <typename T> void *operator new(Alias<std::type_identity<T>>, Alias<size_t>, std::align_val_t);
+void *operator new(Alias<std::type_identity<int>>, size_t, std::align_val_t);
+template <typename T> void operator delete(Alias<std::type_identity<T>>, void *, size_t, std::align_val_t);
+void operator delete(Alias<std::type_identity<int>>, void *, size_t, std::align_val_t);
+
+template <typename T> void *operator new(TypeIdentityAlias<T>, size_t, std::align_val_t);
+void *operator new(TypeIdentityAlias<int>, size_t, std::align_val_t);
+template <typename T> void operator delete(TypeIdentityAlias<T>, void *, size_t, std::align_val_t);
+void operator delete(TypeIdentityAlias<int>, void *, size_t, std::align_val_t);
+
+template <typename T> void *operator new(TypedefAlias, size_t, std::align_val_t);
+void *operator new(TypedefAlias, size_t, std::align_val_t);
+template <typename T> void operator delete(TypedefAlias, void *, size_t, std::align_val_t);
+void operator delete(TypedefAlias, void *, size_t, std::align_val_t);
+
+template <typename T> void *operator new(UsingAlias, size_t, std::align_val_t);
+void *operator new(UsingAlias, size_t, std::align_val_t);
+template <typename T> void operator delete(UsingAlias, void *, size_t, std::align_val_t);
+void operator delete(UsingAlias, void *, size_t, std::align_val_t);
 #endif

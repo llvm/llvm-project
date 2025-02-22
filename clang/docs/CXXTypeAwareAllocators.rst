@@ -37,6 +37,13 @@ operators. This tag is a default initialized value of type
 Unlike the other placement arguments this tag is passed as the first parameter
 to the operator.
 
+Type aware allocation functions default to stricter semantics than non-type
+aware variants. The normally optional implicit size and alignment parameters are
+mandatory for type aware operators, and are not permitted to be dependent types.
+If a cleanup delete cannot be found it is a hard error rather than a silent leak
+and it is an error if the `operator new` and `operator delete` functions for a
+type are not defined in the same scope.
+
 Usage
 =====
 
@@ -48,18 +55,18 @@ The most basic usage is as follows
 .. code-block:: c++
 
   #include <new>
-  #include <type_identity>
+  #include <type_traits>
   
   struct S {
    // ...
   };
   
-  void *operator new(std::type_identity<S>, size_t);
-  void operator delete(std::type_identity<S>, void *);
+  void *operator new(std::type_identity<S>, size_t, std::align_val_t);
+  void operator delete(std::type_identity<S>, void *, size_t, std::align_val_t);
   
   void f() {
-    S *s = new S; // calls ::operator new(std::type_identity<S>(), sizeof(S))
-    delete s; // calls ::operator delete(std::type_identity<S>(), s)
+    S *s = new S; // calls ::operator new(std::type_identity<S>(), sizeof(S), std::align_val_t(alignof(S)))
+    delete s; // calls ::operator delete(std::type_identity<S>(), s, sizeof(S), std::align_val_t(alignof(S)))
   }
 
 While this functionality alone is powerful and useful, the true power comes
@@ -81,30 +88,30 @@ showing ``operator new`` for brevity)
    };
 
    // Starting with a concrete type
-   void *operator new(std::type_identity<Array<int, 5>>, size_t);
+   void *operator new(std::type_identity<Array<int, 5>>, size_t, std::align_val_t);
    
    // Only care about five element arrays
    template <typename T>
-   void *operator new(std::type_identity<Array<T, 5>>, size_t);
+   void *operator new(std::type_identity<Array<T, 5>>, size_t, std::align_val_t);
    
    // An array of N floats
    template <unsigned N>
-   void *operator new(std::type_identity<Array<float, N>>, size_t);
+   void *operator new(std::type_identity<Array<float, N>>, size_t, std::align_val_t);
 
    // Any array
    template <typename T, unsigned N>
-   void *operator new(std::type_identity<Array<T, N>>, size_t);
+   void *operator new(std::type_identity<Array<T, N>>, size_t, std::align_val_t);
 
    // A handy concept
    template <typename T> concept Polymorphic = std::is_polymorphic_v<T>;
 
    // Only applies is T is Polymorphic
    template <Polymorphic T, unsigned N>
-   void *operator new(std::type_identity<Array<T, N>>, size_t);
+   void *operator new(std::type_identity<Array<T, N>>, size_t, std::align_val_t);
 
    // Any even length array
    template <typename T, unsigned N>
-   void *operator new(std::type_identity<Array<T, N>>, size_t)
+   void *operator new(std::type_identity<Array<T, N>>, size_t, std::align_val_t)
        requires(N%2 == 0);
 
 Operator selection then proceeds according to the usual rules for choosing
@@ -197,20 +204,21 @@ allocated.
 Implicit and Placement Parameters
 ---------------------------------
 
-Type aware allocators support the implicit alignment and size (for delete)
+Type aware allocators require the implicit alignment and size (for delete)
 parameters, and allow any other explicit placement parameters supported in
 non-type aware operators.
 
 Constant Evaluation
 -------------------
 
-As currently specified type aware allocation functions are not considered when
-new or delete is performed in a constant evaluation context. This eases the use
-of dynamic allocation of types with type aware allocation functions within
-constant contexts. Unfortunately this does not resolve the problem of
-class-scoped new and delete in constant contexts, as the existence of such
-declarations precludes lookup in the global scope and as a result class-scoped
-operators still prevents the use of a type in a constant context.
+Type aware allocation functions declared in the global scope are considered
+usual deallocation functions if the only difference between the type aware
+declaration and a _usual deallocation function_ is the type-identity parameter.
+This eases the use of dynamic allocation of types with type aware allocation
+functions within constant contexts. Unfortunately this does not resolve the
+problem of class-scoped new and delete in constant contexts, as the existence of
+such declarations precludes lookup in the global scope and as a result
+class-scoped operators still prevents the use of a type in a constant context.
 
 Publication
 ===========

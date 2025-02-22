@@ -115,5 +115,41 @@ struct S8 {
 #endif
 };
 
+template <typename T> using Alias = T;
+template <typename T> using TypeIdentityAlias = std::type_identity<T>;
+typedef std::type_identity<double> TypedefAlias;
+using UsingAlias = std::type_identity<float>;
+struct S9 {
+  void *operator new(Alias<size_t>, std::align_val_t);
+  template <typename T> void *operator new(Alias<std::type_identity<T>>, Alias<size_t>, std::align_val_t);
+  void *operator new(Alias<std::type_identity<int>>, size_t, std::align_val_t);
+  template <typename T> void operator delete(Alias<std::type_identity<T>>, void *, size_t, std::align_val_t);
+  void operator delete(Alias<std::type_identity<int>>, void *, size_t, std::align_val_t);
+};
+struct S10 {
+  template <typename T> void *operator new(TypeIdentityAlias<T>, size_t, std::align_val_t);
+  void *operator new(TypeIdentityAlias<int>, size_t, std::align_val_t);
+  template <typename T> void operator delete(TypeIdentityAlias<T>, void *, size_t, std::align_val_t);
+  void operator delete(TypeIdentityAlias<int>, void *, size_t, std::align_val_t);
+};
 
+void test() {
+  S9 *s9 = new S9;
+  delete s9;
+  S10 *s10 = new S10;
+  delete s10;
+}
+
+struct S11 {
+  template <typename T> void *operator new(TypedefAlias, size_t, std::align_val_t);
+  void *operator new(TypedefAlias, size_t, std::align_val_t);
+  template <typename T> void operator delete(TypedefAlias, void *, size_t, std::align_val_t);
+  void operator delete(TypedefAlias, void *, size_t, std::align_val_t);
+};
+struct S12 {
+  template <typename T> void *operator new(UsingAlias, size_t, std::align_val_t);
+  void *operator new(UsingAlias, size_t, std::align_val_t);
+  template <typename T> void operator delete(UsingAlias, void *, size_t, std::align_val_t);
+  void operator delete(UsingAlias, void *, size_t, std::align_val_t);
+};
 #endif

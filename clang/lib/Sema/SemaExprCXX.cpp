@@ -1778,7 +1778,8 @@ namespace {
     UsualDeallocFnInfo()
         : Found(), FD(nullptr),
           IDP(AlignedAllocationMode::No, SizedDeallocationMode::No) {}
-    UsualDeallocFnInfo(Sema &S, DeclAccessPair Found, QualType AllocType)
+    UsualDeallocFnInfo(Sema &S, DeclAccessPair Found, QualType AllocType,
+                       SourceLocation Loc)
         : Found(Found), FD(dyn_cast<FunctionDecl>(Found->getUnderlyingDecl())),
           Destroying(false),
           IDP({AllocType, TypeAwareAllocationMode::No,
@@ -1793,7 +1794,7 @@ namespace {
         if (!FTD)
           return;
         FunctionDecl *InstantiatedDecl =
-            S.instantiateTypeAwareUsualDelete(FTD, AllocType);
+            S.instantiateTypeAwareUsualDelete(FTD, AllocType, Loc);
         if (!InstantiatedDecl)
           return;
         FD = InstantiatedDecl;
@@ -1807,7 +1808,7 @@ namespace {
         }
         QualType TypeIdentityTag = FD->getParamDecl(0)->getType();
         QualType ExpectedTypeIdentityTag =
-            S.instantiateSpecializedTypeIdentity(AllocType);
+            S.TryBuildStdTypeIdentity(AllocType, Loc);
         if (ExpectedTypeIdentityTag.isNull()) {
           FD = nullptr;
           return;
@@ -1849,8 +1850,6 @@ namespace {
 
     int Compare(Sema &S, const UsualDeallocFnInfo &Other,
                 ImplicitDeallocationParameters TargetIDP) const {
-      assert(TargetIDP.isValid());
-      assert(Other.IDP.isValid());
       assert(!TargetIDP.Type.isNull() ||
              !isTypeAwareAllocation(Other.IDP.PassTypeIdentity));
 
@@ -1956,11 +1955,12 @@ static bool CheckDeleteOperator(Sema &S, SourceLocation StartLoc,
 /// deallocation functions (either global or class-scope).
 static UsualDeallocFnInfo resolveDeallocationOverload(
     Sema &S, LookupResult &R, const ImplicitDeallocationParameters &IDP,
+    SourceLocation Loc,
     llvm::SmallVectorImpl<UsualDeallocFnInfo> *BestFns = nullptr) {
 
   UsualDeallocFnInfo Best;
   for (auto I = R.begin(), E = R.end(); I != E; ++I) {
-    UsualDeallocFnInfo Info(S, I.getPair(), IDP.Type);
+    UsualDeallocFnInfo Info(S, I.getPair(), IDP.Type, Loc);
     if (!Info || !isNonPlacementDeallocationFunction(S, Info.FD) ||
         Info.CUDAPref == SemaCUDA::CFP_Never)
       continue;
@@ -2026,7 +2026,7 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
       allocType, PassType,
       alignedAllocationModeFromBool(hasNewExtendedAlignment(S, allocType)),
       SizedDeallocationMode::No};
-  auto Best = resolveDeallocationOverload(S, ops, IDP);
+  auto Best = resolveDeallocationOverload(S, ops, IDP, loc);
   return Best && isSizedDeallocation(Best.IDP.PassSize);
 }
 
@@ -2952,7 +2952,7 @@ bool Sema::FindAllocationFunctions(
   QualType TypeIdentity = Context.getSizeType();
   if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
     QualType SpecializedTypeIdentity =
-        instantiateSpecializedTypeIdentity(IAP.Type);
+        TryBuildStdTypeIdentity(IAP.Type, StartLoc);
     if (!SpecializedTypeIdentity.isNull()) {
       TypeIdentity = SpecializedTypeIdentity;
       if (RequireCompleteType(StartLoc, TypeIdentity,
@@ -3203,8 +3203,8 @@ bool Sema::FindAllocationFunctions(
         alignedAllocationModeFromBool(
             hasNewExtendedAlignment(*this, AllocElemType)),
         sizedDeallocationModeFromBool(FoundGlobalDelete)};
-    UsualDeallocFnInfo Selected =
-        resolveDeallocationOverload(*this, FoundDelete, IDP, &BestDeallocFns);
+    UsualDeallocFnInfo Selected = resolveDeallocationOverload(
+        *this, FoundDelete, IDP, StartLoc, &BestDeallocFns);
     if (Selected && BestDeallocFns.empty())
       Matches.push_back(std::make_pair(Selected.Found, Selected.FD));
     else {
@@ -3250,7 +3250,7 @@ bool Sema::FindAllocationFunctions(
         isNonPlacementDeallocationFunction(*this, OperatorDelete)) {
       UsualDeallocFnInfo Info(*this,
                               DeclAccessPair::make(OperatorDelete, AS_public),
-                              AllocElemType);
+                              AllocElemType, StartLoc);
       // Core issue, per mail to core reflector, 2016-10-09:
       //   If this is a member operator delete, and there is a corresponding
       //   non-sized member operator delete, this isn't /really/ a sized
@@ -3260,8 +3260,8 @@ bool Sema::FindAllocationFunctions(
         ImplicitDeallocationParameters SizeTestingIDP = {
             AllocElemType, Info.IDP.PassTypeIdentity, Info.IDP.PassAlignment,
             SizedDeallocationMode::No};
-        auto NonSizedDelete =
-            resolveDeallocationOverload(*this, FoundDelete, SizeTestingIDP);
+        auto NonSizedDelete = resolveDeallocationOverload(
+            *this, FoundDelete, SizeTestingIDP, StartLoc);
         if (NonSizedDelete &&
             !isSizedDeallocation(NonSizedDelete.IDP.PassSize) &&
             NonSizedDelete.IDP.PassAlignment == Info.IDP.PassAlignment)
@@ -3561,7 +3561,7 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   // user-declared variadic operator delete or the enable_if attribute. We
   // should probably not consider those cases to be usual deallocation
   // functions. But for now we just make an arbitrary choice in that case.
-  auto Result = resolveDeallocationOverload(*this, FoundDelete, IDP);
+  auto Result = resolveDeallocationOverload(*this, FoundDelete, IDP, StartLoc);
   if (!Result)
     return nullptr;
 
@@ -3622,7 +3622,7 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   //   If the deallocation functions have class scope, the one without a
   //   parameter of type std::size_t is selected.
   llvm::SmallVector<UsualDeallocFnInfo, 4> Matches;
-  resolveDeallocationOverload(*this, Found, IDP, &Matches);
+  resolveDeallocationOverload(*this, Found, IDP, StartLoc, &Matches);
 
   // If we could find an overload, use it.
   if (Matches.size() == 1) {
@@ -4075,7 +4075,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         // function we just found.
         else if (isa_and_nonnull<CXXMethodDecl>(OperatorDelete)) {
           UsualDeallocFnInfo UDFI(
-              *this, DeclAccessPair::make(OperatorDelete, AS_public), Pointee);
+              *this, DeclAccessPair::make(OperatorDelete, AS_public), Pointee,
+              StartLoc);
           UsualArrayDeleteWantsSize = isSizedDeallocation(UDFI.IDP.PassSize);
         }
       }

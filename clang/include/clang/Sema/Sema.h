@@ -4810,12 +4810,11 @@ public:
 
   CXXRecordDecl *getStdBadAlloc() const;
   EnumDecl *getStdAlignValT() const;
-  const ClassTemplateDecl *getStdTypeIdentity() const;
-  ClassTemplateDecl *getStdTypeIdentity();
+
   bool isTypeAwareOperatorNewOrDelete(const NamedDecl *FnDecl) const;
-  QualType instantiateSpecializedTypeIdentity(QualType Subject);
   FunctionDecl *instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnDecl,
-                                                QualType AllocType);
+                                                QualType AllocType,
+                                                SourceLocation);
 
   ValueDecl *tryLookupUnambiguousFieldDecl(RecordDecl *ClassDecl,
                                            const IdentifierInfo *MemberOrBase);
@@ -4849,6 +4848,13 @@ public:
   ///
   /// \returns The instantiated template, or null on error.
   QualType BuildStdInitializerList(QualType Element, SourceLocation Loc);
+
+  /// Looks for the std::type_identity template and instantiates it
+  /// with Type, or returns a null type if type_identity has not been declared
+  ///
+  /// \returns The instantiated template, or null if std::type_identity is not
+  /// declared
+  QualType TryBuildStdTypeIdentity(QualType Type, SourceLocation Loc);
 
   /// Determine whether Ctor is an initializer-list constructor, as
   /// defined in [dcl.init.list]p2.
@@ -6088,6 +6094,10 @@ public:
   /// The C++ "std::initializer_list" template, which is defined in
   /// \<initializer_list>.
   ClassTemplateDecl *StdInitializerList;
+
+  /// The C++ "std::type_identity" template, which is defined in
+  /// \<type_traits>.
+  ClassTemplateDecl *StdTypeIdentity;
 
   // Contains the locations of the beginning of unparsed default
   // argument locations.
@@ -8009,10 +8019,6 @@ public:
 
   /// The C++ "type_info" declaration, which is defined in \<typeinfo>.
   RecordDecl *CXXTypeInfoDecl;
-
-  /// The C++ "std::type_identity" template class, which is defined by the C++
-  /// standard library.
-  LazyDeclPtr StdTypeIdentity;
 
   /// A flag to remember whether the implicit forms of operator new and delete
   /// have been declared.
