@@ -364,26 +364,6 @@ public:
     return lowerToBindAndAnnotateHandle(F);
   }
 
-  Error replaceSplitDoubleCallUsages(CallInst *Intrin, CallInst *Op) {
-    for (Use &U : make_early_inc_range(Intrin->uses())) {
-      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
-
-        if (EVI->getNumIndices() != 1)
-          return createStringError(std::errc::invalid_argument,
-                                   "Splitdouble has only 2 elements");
-        EVI->setOperand(0, Op);
-      } else {
-        return make_error<StringError>(
-            "Splitdouble use is not ExtractValueInst",
-            inconvertibleErrorCode());
-      }
-    }
-
-    Intrin->eraseFromParent();
-
-    return Error::success();
-  }
-
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
   /// Since we expect to be post-scalarization, make an effort to avoid vectors.
   Error replaceResRetUses(CallInst *Intrin, CallInst *Op, bool HasCheckBit) {
