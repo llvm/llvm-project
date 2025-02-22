@@ -1311,6 +1311,7 @@ module std [system] {
 
     header "flat_set"
     export std.flat_map.sorted_unique
+    export std.flat_map.sorted_equivalent
     export *
   }
 
