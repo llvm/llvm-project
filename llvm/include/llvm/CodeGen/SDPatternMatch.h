@@ -1183,7 +1183,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
                             SmallBitVector &Used, size_t Curr = 0) {
     if (Curr == Matches.size())
       return true;
-    for (size_t Match = 0; Match < Matches[Curr].size(); Match += 1) {
+    for (size_t Match = 0, N = Matches[Curr].size(); Match < N; Match++) {
       if (!Matches[Curr][Match] || Used[Match])
         continue;
       Used[Match] = true;
