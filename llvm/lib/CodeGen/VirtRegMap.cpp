@@ -598,9 +598,8 @@ void VirtRegRewriter::rewrite() {
   SmallVector<Register, 8> SuperDefs;
   SmallVector<Register, 8> SuperKills;
 
-  const bool IsValidAlloc = !MF->getProperties().hasProperty(
+  const bool IsFailedAlloc = !MF->getProperties().hasProperty(
       MachineFunctionProperties::Property::FailedRegAlloc);
-
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
     LLVM_DEBUG(MBBI->print(dbgs(), Indexes));
