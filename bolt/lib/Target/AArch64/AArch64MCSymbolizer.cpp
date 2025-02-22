@@ -12,7 +12,6 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "bolt-symbolizer"

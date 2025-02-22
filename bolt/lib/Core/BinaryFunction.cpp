@@ -1327,6 +1327,22 @@ Error BinaryFunction::disassemble() {
         BC.printInstruction(BC.errs(), Instruction, AbsoluteInstrAddr);
         BC.errs() << '\n';
       }
+
+      // Verify that we've symbolized an operand if the instruction has a
+      // relocation against it.
+      if (getRelocationInRange(Offset, Offset + Size)) {
+        bool HasSymbolicOp = false;
+        for (MCOperand &Op : Instruction) {
+          if (Op.isExpr()) {
+            HasSymbolicOp = true;
+            break;
+          }
+        }
+        if (!HasSymbolicOp)
+          return createFatalBOLTError(
+              "expected symbolized operand for instruction at 0x" +
+              Twine::utohexstr(AbsoluteInstrAddr));
+      }
     }
 
     // Special handling for AVX-512 instructions.

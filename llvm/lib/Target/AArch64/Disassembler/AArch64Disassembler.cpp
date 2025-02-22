@@ -744,7 +744,10 @@ static DecodeStatus DecodeMoveImmInstruction(MCInst &Inst, uint32_t insn,
       Inst.getOpcode() == AArch64::MOVKXi)
     Inst.addOperand(Inst.getOperand(0));
 
-  Inst.addOperand(MCOperand::createImm(imm));
+  if (!Decoder->tryAddingSymbolicOperand(Inst, imm, Addr, /*IsBranch*/ false, 0,
+                                         0, 4))
+    Inst.addOperand(MCOperand::createImm(imm));
+
   Inst.addOperand(MCOperand::createImm(shift));
   return Success;
 }
