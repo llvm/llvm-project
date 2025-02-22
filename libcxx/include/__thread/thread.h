@@ -100,7 +100,7 @@ template <class _Tp>
 __thread_specific_ptr<_Tp>::__thread_specific_ptr() {
   int __ec = __libcpp_tls_create(&__key_, &__thread_specific_ptr::__at_thread_exit);
   if (__ec)
-    __throw_system_error(__ec, "__thread_specific_ptr construction failed");
+    std::__throw_system_error(__ec, "__thread_specific_ptr construction failed");
 }
 
 template <class _Tp>
@@ -219,7 +219,7 @@ thread::thread(_Fp&& __f, _Args&&... __args) {
   if (__ec == 0)
     __p.release();
   else
-    __throw_system_error(__ec, "thread constructor failed");
+    std::__throw_system_error(__ec, "thread constructor failed");
 }
 
 #  else // _LIBCPP_CXX03_LANG
@@ -251,7 +251,7 @@ thread::thread(_Fp __f) {
   if (__ec == 0)
     __pp.release();
   else
-    __throw_system_error(__ec, "thread constructor failed");
+    std::__throw_system_error(__ec, "thread constructor failed");
 }
 
 #  endif // _LIBCPP_CXX03_LANG
