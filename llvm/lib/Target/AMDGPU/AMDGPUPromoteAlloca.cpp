@@ -397,6 +397,14 @@ calculateVectorIndex(Value *Ptr,
   return I->second;
 }
 
+static void updateVectorIndex(Value *OldIdx, Value *NewIdx,
+                              std::map<GetElementPtrInst *, Value *> &GEPIdx) {
+  for (auto &[GEP, Idx] : GEPIdx) {
+    if (Idx == OldIdx)
+      GEPIdx[GEP] = NewIdx;
+  }
+}
+
 static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
                                Type *VecElemTy, const DataLayout &DL) {
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
@@ -544,6 +552,9 @@ static Value *promoteAllocaUserToVector(
       ExtractElement = Builder.CreateBitOrPointerCast(ExtractElement, AccessTy);
 
     Inst->replaceAllUsesWith(ExtractElement);
+    // If the loaded value is used as an index into a GEP, update all its uses
+    // in the GEPVectorIdx map.
+    updateVectorIndex(Inst, ExtractElement, GEPVectorIdx);
     return nullptr;
   }
   case Instruction::Store: {
