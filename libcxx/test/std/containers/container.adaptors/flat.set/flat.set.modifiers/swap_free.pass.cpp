@@ -24,8 +24,6 @@
 #include "test_macros.h"
 #include "../helpers.h"
 
-#include "check_assertion.h"
-
 // test noexcept
 
 template <class T>

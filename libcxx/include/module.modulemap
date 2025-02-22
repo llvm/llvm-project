@@ -1302,10 +1302,6 @@ module std [system] {
       export std.vector.vector
       export std.vector.fwd
     }
-    module sorted_unique                  { 
-      header "__flat_map/sorted_unique.h" 
-      export *
-    }
 
     header "flat_set"
     export std.flat_map.sorted_unique

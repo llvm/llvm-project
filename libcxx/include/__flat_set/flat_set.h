@@ -61,8 +61,6 @@
 #include <__utility/scope_guard.h>
 #include <__vector/vector.h>
 #include <initializer_list>
-#include <stdexcept>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -173,31 +171,31 @@ public:
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
   _LIBCPP_HIDE_FROM_ABI explicit flat_set(const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_empty_tag{}, __alloc) {}
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_() {}
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
   _LIBCPP_HIDE_FROM_ABI flat_set(const key_compare& __comp, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_empty_tag{}, __alloc, __comp) {}
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_(__comp) {}
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
   _LIBCPP_HIDE_FROM_ABI flat_set(const container_type& __keys, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_tag{}, __alloc, __keys) {
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __keys)), __compare_() {
     __sort_and_unique();
   }
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
   _LIBCPP_HIDE_FROM_ABI flat_set(const container_type& __keys, const key_compare& __comp, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_tag{}, __alloc, __keys, __comp) {
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __keys)), __compare_(__comp) {
     __sort_and_unique();
   }
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
   _LIBCPP_HIDE_FROM_ABI flat_set(sorted_unique_t, const container_type& __keys, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_tag{}, __alloc, __keys) {
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __keys)), __compare_() {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
         __is_sorted_and_unique(__keys_), "Either the key container is not sorted or it contains duplicates");
   }
@@ -206,7 +204,7 @@ public:
     requires uses_allocator<container_type, _Allocator>::value
   _LIBCPP_HIDE_FROM_ABI
   flat_set(sorted_unique_t, const container_type& __keys, const key_compare& __comp, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_tag{}, __alloc, __keys, __comp) {
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __keys)), __compare_(__comp) {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
         __is_sorted_and_unique(__keys_), "Either the key container is not sorted or it contains duplicates");
   }
@@ -214,7 +212,8 @@ public:
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
   _LIBCPP_HIDE_FROM_ABI flat_set(const flat_set& __other, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_tag{}, __alloc, __other.__keys_, __other.__compare_) {}
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __other.__keys_)),
+        __compare_(__other.__compare_) {}
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
@@ -222,7 +221,8 @@ public:
 #  if _LIBCPP_HAS_EXCEPTIONS
       try
 #  endif // _LIBCPP_HAS_EXCEPTIONS
-      : flat_set(__ctor_uses_allocator_tag{}, __alloc, std::move(__other.__keys_), std::move(__other.__compare_)) {
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc, std::move(__other.__keys_))),
+        __compare_(std::move(__other.__compare_)) {
     __other.clear();
 #  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
@@ -234,7 +234,7 @@ public:
   template <class _InputIterator, class _Allocator>
     requires(__has_input_iterator_category<_InputIterator>::value && uses_allocator<container_type, _Allocator>::value)
   _LIBCPP_HIDE_FROM_ABI flat_set(_InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_empty_tag{}, __alloc) {
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_() {
     insert(__first, __last);
   }
 
@@ -242,7 +242,7 @@ public:
     requires(__has_input_iterator_category<_InputIterator>::value && uses_allocator<container_type, _Allocator>::value)
   _LIBCPP_HIDE_FROM_ABI
   flat_set(_InputIterator __first, _InputIterator __last, const key_compare& __comp, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_empty_tag{}, __alloc, __comp) {
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_(__comp) {
     insert(__first, __last);
   }
 
@@ -250,8 +250,9 @@ public:
     requires(__has_input_iterator_category<_InputIterator>::value && uses_allocator<container_type, _Allocator>::value)
   _LIBCPP_HIDE_FROM_ABI
   flat_set(sorted_unique_t, _InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_empty_tag{}, __alloc) {
-    insert(sorted_unique, __first, __last);
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __first, __last)), __compare_() {
+    _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+        __is_sorted_and_unique(__keys_), "Either the key container is not sorted or it contains duplicates");
   }
 
   template <class _InputIterator, class _Allocator>
@@ -262,21 +263,22 @@ public:
            _InputIterator __last,
            const key_compare& __comp,
            const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_empty_tag{}, __alloc, __comp) {
-    insert(sorted_unique, __first, __last);
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __first, __last)), __compare_(__comp) {
+    _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+        __is_sorted_and_unique(__keys_), "Either the key container is not sorted or it contains duplicates");
   }
 
   template <_ContainerCompatibleRange<value_type> _Range, class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
   _LIBCPP_HIDE_FROM_ABI flat_set(from_range_t, _Range&& __rg, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_empty_tag{}, __alloc) {
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_() {
     insert_range(std::forward<_Range>(__rg));
   }
 
   template <_ContainerCompatibleRange<value_type> _Range, class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
   _LIBCPP_HIDE_FROM_ABI flat_set(from_range_t, _Range&& __rg, const key_compare& __comp, const _Allocator& __alloc)
-      : flat_set(__ctor_uses_allocator_empty_tag{}, __alloc, __comp) {
+      : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_(__comp) {
     insert_range(std::forward<_Range>(__rg));
   }
 
@@ -593,26 +595,6 @@ public:
   friend _LIBCPP_HIDE_FROM_ABI void swap(flat_set& __x, flat_set& __y) noexcept { __x.swap(__y); }
 
 private:
-  struct __ctor_uses_allocator_tag {
-    explicit _LIBCPP_HIDE_FROM_ABI __ctor_uses_allocator_tag() = default;
-  };
-  struct __ctor_uses_allocator_empty_tag {
-    explicit _LIBCPP_HIDE_FROM_ABI __ctor_uses_allocator_empty_tag() = default;
-  };
-
-  template <class _Allocator, class _KeyCont, class... _CompArg>
-    requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI
-  flat_set(__ctor_uses_allocator_tag, const _Allocator& __alloc, _KeyCont&& __key_cont, _CompArg&&... __comp)
-      : __keys_(std::make_obj_using_allocator<container_type>(__alloc, std::forward<_KeyCont>(__key_cont))),
-        __compare_(std::forward<_CompArg>(__comp)...) {}
-
-  template <class _Allocator, class... _CompArg>
-    requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI flat_set(__ctor_uses_allocator_empty_tag, const _Allocator& __alloc, _CompArg&&... __comp)
-      : __keys_(std::make_obj_using_allocator<container_type>(__alloc)),
-        __compare_(std::forward<_CompArg>(__comp)...) {}
-
   _LIBCPP_HIDE_FROM_ABI bool __is_sorted_and_unique(auto&& __key_container) const {
     auto __greater_or_equal_to = [this](const auto& __x, const auto& __y) { return !__compare_(__x, __y); };
     return ranges::adjacent_find(__key_container, __greater_or_equal_to) == ranges::end(__key_container);
@@ -636,6 +618,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __append(_Range&& __rng) {
     if constexpr (requires { __keys_.insert_range(__keys_.end(), std::forward<_Range>(__rng)); }) {
       // C++23 Sequence Container should have insert_range member function
+      // Note that not all Sequence Containers provide append_range.
       __keys_.insert_range(__keys_.end(), std::forward<_Range>(__rng));
     } else if constexpr (ranges::common_range<_Range>) {
       __keys_.insert(__keys_.end(), ranges::begin(__rng), ranges::end(__rng));
