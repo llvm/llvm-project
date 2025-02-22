@@ -36,6 +36,9 @@ add_lldb_tool(lldb-dap
   SourceBreakpoint.cpp
   Watchpoint.cpp
 
+  Request/Request.cpp
+  Request/AttachRequest.cpp
+
   LINK_LIBS
     liblldb
     lldbHost
@@ -45,6 +48,8 @@ add_lldb_tool(lldb-dap
     Option
     Support
   )
+
+target_include_directories(lldb-dap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(LLDB_DAP_WELCOME_MESSAGE)
   target_compile_definitions(lldb-dap
