@@ -1146,9 +1146,8 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   bool match(const MatchContext &Ctx, SDValue N) {
     SmallVector<SDValue> Leaves;
     collectLeaves(N, Leaves);
-    if (Leaves.size() != std::tuple_size_v<std::tuple<PatternTs...>>) {
+    if (Leaves.size() != std::tuple_size_v<std::tuple<PatternTs...>>)
       return false;
-    }
 
     // Matches[I][J] == true iff sd_context_match(Leaves[I], Ctx,
     // std::get<J>(Patterns)) == true
@@ -1169,9 +1168,8 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
 
   void collectLeaves(SDValue V, SmallVector<SDValue> &Leaves) {
     if (V->getOpcode() == Opcode) {
-      for (size_t I = 0, N = V->getNumOperands(); I < N; I++) {
+      for (size_t I = 0, N = V->getNumOperands(); I < N; I++)
         collectLeaves(V->getOperand(I), Leaves);
-      }
     } else {
       Leaves.emplace_back(V);
     }
