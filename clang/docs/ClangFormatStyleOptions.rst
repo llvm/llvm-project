@@ -4788,7 +4788,7 @@ the configuration (without a prefix: ``Auto``).
 
    You can also specify the language (``Cpp`` or ``ObjC``) for ``.h`` files
    by adding a ``// clang-format Language:`` line before the first
-   non-comment and non-empty line, e.g. ``// clang-format Language: ObjC``.
+   non-comment (and non-empty) line, e.g. ``// clang-format Language: Cpp``.
 
   Possible values:
 

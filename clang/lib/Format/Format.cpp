@@ -4039,8 +4039,6 @@ static FormatStyle::LanguageKind getLanguageByComment(const Environment &Env) {
       continue;
 
     Text = Text.trim();
-    // if (Text == "C")
-    //   return FormatStyle::LK_C;
     if (Text == "Cpp")
       return FormatStyle::LK_Cpp;
     if (Text == "ObjC")
