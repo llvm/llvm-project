@@ -1169,7 +1169,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
 
   void collectLeaves(SDValue V, SmallVector<SDValue> &Leaves) {
     if (V->getOpcode() == Opcode) {
-      for (size_t I = 0; I < V->getNumOperands(); I += 1) {
+      for (size_t I = 0, N = V->getNumOperands(); I < N; I++) {
         collectLeaves(V->getOperand(I), Leaves);
       }
     } else {
