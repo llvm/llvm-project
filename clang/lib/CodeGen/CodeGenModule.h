@@ -1066,6 +1066,7 @@ public:
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
     return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
+           !getLangOpts().SYCLIsDevice &&
            !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
              (getTriple().isNVPTX() || getTriple().isAMDGPU() ||
               getTriple().isSPIRV()));
