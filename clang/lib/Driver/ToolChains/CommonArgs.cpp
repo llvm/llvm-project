@@ -878,7 +878,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     checkForAMDProprietaryOptOptions(ToolChain, D, Args, CmdArgs,
                                      false /*isLLD*/, true /*checkOnly*/);
 
-  const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
+  const bool IsFatLTO = Args.hasFlag(options::OPT_ffat_lto_objects,
+                                     options::OPT_fno_fat_lto_objects, false);
   const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
       llvm::sys::path::stem(Linker) != "ld.lld" && !ClosedNeeded &&
