@@ -26,6 +26,15 @@ def Vector_Dialect : Dialect {
 
 // Base class for Vector dialect ops.
 class Vector_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Vector_Dialect, mnemonic, traits>;
+    Op<Vector_Dialect, mnemonic, traits> {
+
+  // Includes definitions for operations that support the use of poison values
+  // within positive index ranges.
+  code extraPoisonClassDeclaration = [{
+    // Integer to represent a poison index within a static and positive integer
+    // range.
+    static constexpr int64_t kPoisonIndex = -1;
+  }];
+}
 
 #endif // MLIR_DIALECT_VECTOR_IR_VECTOR

@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TargetEnv.h"
+#include "mlir/Dialect/Tosa/IR/TosaProfileCompliance.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Transforms/PassesEnums.cpp.inc"
 
@@ -18,12 +20,14 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/StringExtras.h"
 
 namespace mlir {
 namespace tosa {
@@ -61,19 +65,6 @@ static LogicalResult checkConstantOperandTranspose(Operation *op) {
   return success();
 }
 
-static LogicalResult checkConstantOperandFullyConnected(Operation *op) {
-  if (auto fcOp = dyn_cast<tosa::FullyConnectedOp>(op)) {
-    DenseElementsAttr weight;
-    if (!matchPattern(fcOp.getWeight(), m_Constant(&weight)))
-      return op->emitOpError("weight of fully_connected is not constant");
-
-    DenseElementsAttr bias;
-    if (!matchPattern(fcOp.getBias(), m_Constant(&bias)))
-      return op->emitOpError("bias of fully_connected is not constant");
-  }
-  return success();
-}
-
 struct TosaLevel {
   int32_t MAX_RANK = 0;
   int32_t MAX_KERNEL = 0;
@@ -98,10 +89,12 @@ static constexpr TosaLevel TOSA_LEVEL_NONE = {0, 0, 0, 0};
 struct TosaValidation : public tosa::impl::TosaValidationBase<TosaValidation> {
 public:
   explicit TosaValidation() { populateConstantOperandChecks(); }
+
   explicit TosaValidation(const TosaValidationOptions &options)
       : TosaValidation() {
     this->profile = options.profile;
-    this->StrictOperationSpecAlignment = options.StrictOperationSpecAlignment;
+    this->extension = options.extension;
+    this->strictOpSpecAlignment = options.strictOpSpecAlignment;
     this->level = options.level;
   }
   void runOnOperation() final;
@@ -119,11 +112,13 @@ public:
   // check variable read/write data types against variable declarations
   LogicalResult applyVariableCheck(Operation *op);
 
+  // check error if conditions
+  LogicalResult applyErrorIfCheck(Operation *op);
+
 private:
   void populateConstantOperandChecks() {
     constCheckers.emplace_back(checkConstantOperandPad);
     constCheckers.emplace_back(checkConstantOperandTranspose);
-    constCheckers.emplace_back(checkConstantOperandFullyConnected);
   }
 
   bool levelCheckKernel(Operation *op, int32_t v,
@@ -357,7 +352,7 @@ private:
   bool levelCheckTransposeConv2d(Operation *op) {
     if (auto transpose = dyn_cast<tosa::TransposeConv2DOp>(op)) {
       if (ShapedType filterType =
-              dyn_cast<ShapedType>(transpose.getFilter().getType())) {
+              dyn_cast<ShapedType>(transpose.getWeight().getType())) {
         auto shape = filterType.getShape();
         assert(shape.size() == 4);
         // level check kernel sizes for kH and KW
@@ -383,11 +378,14 @@ private:
   // Resize op: level check max scales
   bool levelCheckResize(Operation *op) {
     if (auto resize = dyn_cast<tosa::ResizeOp>(op)) {
-      auto scale = resize.getScale();
-      int16_t scaleYN = scale[0];
-      int16_t scaleYD = scale[1];
-      int16_t scaleXN = scale[2];
-      int16_t scaleXD = scale[3];
+      SmallVector<int64_t> scale;
+      if (!tosa::getConstShapeValue(resize.getScale().getDefiningOp(), scale)) {
+        return false;
+      }
+      const int64_t scaleYN = scale[0];
+      const int64_t scaleYD = scale[1];
+      const int64_t scaleXN = scale[2];
+      const int64_t scaleXD = scale[3];
       if (!levelCheckScale(op, scaleYN / scaleYD,
                            "scale_y_n/scale_y_d <= MAX_SCALE") ||
           !levelCheckScale(op, scaleXN / scaleXD,
@@ -408,9 +406,27 @@ private:
 
     if (!profile.empty()) {
       for (std::string &prof : profile) {
-        auto profSymbol = symbolizeTosaProfileEnum(prof);
+        auto profSymbol = symbolizeProfile(prof);
         if (profSymbol) {
-          enabled_profiles.push_back(profSymbol.value());
+          targetEnv.addProfile(profSymbol.value());
+        } else {
+          llvm::errs() << "unknown TOSA profile name passed in: " << prof
+                       << ", supported profiles are `pro_int` and `pro_fp`\n";
+          return signalPassFailure();
+        }
+      }
+    }
+
+    if (!extension.empty()) {
+      for (std::string &ext : extension) {
+        auto extSymbol = symbolizeExtension(ext);
+        if (extSymbol) {
+          targetEnv.addExtension(extSymbol.value());
+        } else {
+          llvm::errs() << "unknown TOSA extension name passed in: " << ext
+                       << ", supported extension are int16, int4, bf16, "
+                       << "fp8e4m3, fp8e5m2, fft, and variable\n";
+          return signalPassFailure();
         }
       }
     }
@@ -418,17 +434,13 @@ private:
 
   bool CheckVariable(Operation *op);
   bool CheckVariableReadOrWrite(Operation *op);
-
   bool isValidElementType(Type type);
-  bool isEnabledProfile(TosaProfileEnum prof) {
-    return std::find(enabled_profiles.begin(), enabled_profiles.end(), prof) !=
-           std::end(enabled_profiles);
-  }
 
   SmallVector<std::function<LogicalResult(Operation *)>> constCheckers;
-  SmallVector<TosaProfileEnum, 3> enabled_profiles;
   TosaLevel tosaLevel;
   DenseMap<StringAttr, mlir::Type> variablesMap;
+  TosaProfileCompliance profileComp;
+  tosa::TargetEnv targetEnv;
 };
 
 LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
@@ -519,10 +531,171 @@ LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
   return success();
 }
 
+bool checkErrorIfResize(Operation *op) {
+  auto resize = dyn_cast<tosa::ResizeOp>(op);
+  if (!resize)
+    return true;
+
+  const Value input = resize.getInput();
+  const Value output = resize.getOutput();
+  const RankedTensorType inputType =
+      llvm::dyn_cast<RankedTensorType>(input.getType());
+  const RankedTensorType outputType =
+      llvm::dyn_cast<RankedTensorType>(output.getType());
+
+  if (!inputType || !outputType) {
+    op->emitOpError("expect ranked input/output tensor");
+    return false;
+  }
+
+  // Ensure the image size is supported by GPU APIs and that for integer
+  // implementations, position * stride does not overflow int32_t.
+  if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
+    const SmallVector<int64_t, 4> sizes = {
+        outputType.getDimSize(1), outputType.getDimSize(2),
+        inputType.getDimSize(1), inputType.getDimSize(2)};
+    const int64_t *maxDim = llvm::max_element(sizes);
+    if (maxDim != sizes.end() && *maxDim >= 16384) {
+      op->emitOpError("expect input/output height/width dims to be < 16384, ")
+          << "got [OH, OW, IH, IW] = " << sizes;
+      return false;
+    }
+  }
+
+  SmallVector<int64_t> scale;
+  if (!tosa::getConstShapeValue(resize.getScale().getDefiningOp(), scale)) {
+    return false;
+  }
+
+  const int64_t scaleYN = scale[0];
+  const int64_t scaleYD = scale[1];
+  const int64_t scaleXN = scale[2];
+  const int64_t scaleXD = scale[3];
+
+  // Ensure scale values don't overflow int32 accumulator
+  if (scaleYN > (1 << 11) || scaleXN > (1 << 11)) {
+    op->emitOpError("expect all scale numerator values to be <= (1 << 11), "
+                    "got scale_y_n=")
+        << scaleYN << ", scale_x_n=" << scaleXN;
+    return false;
+  }
+
+  if (scaleYD >= 16 * scaleYN || scaleXD >= 16 * scaleXN) {
+    op->emitOpError("expect a downscale ratio larger than 1/16, got y=")
+        << scaleYN << "/" << scaleYD << ", x=" << scaleXN << "/" << scaleXD;
+    return false;
+  }
+
+  SmallVector<int64_t> offset;
+  SmallVector<int64_t> border;
+  if (!tosa::getConstShapeValue(resize.getOffset().getDefiningOp(), offset) ||
+      !tosa::getConstShapeValue(resize.getBorder().getDefiningOp(), border)) {
+    return false;
+  }
+
+  const int64_t offsetY = offset[0];
+  const int64_t offsetX = offset[1];
+  // Set a consistent lower limit of 1/16 downscale to simplify
+  // implementations
+  if (offsetY < -scaleYN || offsetY >= 16 * scaleYN) {
+    op->emitOpError(
+        "expect offsetY / scaleYNumerator to be in range [-1, 16), got ")
+        << offsetY << "/" << scaleYN;
+    return false;
+  }
+  if (offsetX < -scaleXN || offsetX >= 16 * scaleXN) {
+    op->emitOpError(
+        "expect offsetX / scaleXNumerator to be in range [-1, 16), got ")
+        << offsetX << "/" << scaleXN;
+    return false;
+  }
+
+  const int64_t borderY = border[0];
+  const int64_t borderX = border[1];
+  if (borderY < -16 * scaleYN || borderY >= scaleYN) {
+    op->emitOpError(
+        "expect borderY / scaleYNumerator to be in range [-16, 1), got ")
+        << borderY << "/" << scaleYN;
+    return false;
+  }
+  if (borderX < -16 * scaleXN || borderX >= scaleXN) {
+    op->emitOpError(
+        "expect borderX / scaleXNumerator to be in range [-16, 1), got ")
+        << borderX << "/" << scaleXN;
+    return false;
+  }
+
+  // The following section of code is mostly duplicated with ResizeOp::verify().
+  //
+  // In TOSA specification, we do not support broadcast behavior.
+  // However, there is a rewrite pattern to materialize broadcast ResizeOp.
+  // It makes invalid TOSA ResizeOp into valid one. To avoid breaking
+  // existing code, we keep the rewrite pattern untouched. So, we need
+  // loose the checking in ResizeOp::verify() to support broadcast ResizeOp.
+  //
+  // Here is a strict checking to conform TOSA specification.
+  // FIXME: Remove the duplicated checkings when broadcast ResizeOp is removed.
+  auto idivCheck = [](const int64_t lhs,
+                      const int64_t rhs) -> std::optional<int64_t> {
+    if (lhs % rhs != 0)
+      return std::nullopt;
+    return lhs / rhs;
+  };
+
+  const int64_t oh = outputType.getDimSize(1);
+  const int64_t ow = outputType.getDimSize(2);
+  const int64_t ih = inputType.getDimSize(1);
+  const int64_t iw = inputType.getDimSize(2);
+
+  if (ih != ShapedType::kDynamic) {
+    const std::optional<int64_t> calculatedOutHeightMinusOne =
+        idivCheck((ih - 1) * scaleYN - offsetY + borderY, scaleYD);
+    if (!calculatedOutHeightMinusOne.has_value()) {
+      op->emitOpError("expected (input_height - 1) * scale_y_n - offset_y + "
+                      "border_y ")
+          << "to be wholly divisible by scale_y_d, got ((" << ih << " - 1) * "
+          << scaleYN << " - " << offsetY << " + " << borderY << ") / "
+          << scaleYD;
+      return false;
+    }
+    const int64_t calculatedOutHeight = calculatedOutHeightMinusOne.value() + 1;
+    if (oh != ShapedType::kDynamic && calculatedOutHeight != oh) {
+      op->emitOpError("calculated output height did not match expected: ")
+          << "calculated=" << calculatedOutHeight << ", expected=" << oh;
+      return false;
+    }
+  }
+
+  if (iw != ShapedType::kDynamic) {
+    const std::optional<int64_t> calculatedOutWidthMinusOne =
+        idivCheck((iw - 1) * scaleXN - offsetX + borderX, scaleXD);
+    if (!calculatedOutWidthMinusOne.has_value()) {
+      op->emitOpError("expected (input_width - 1) * scale_x_n - offset_x + "
+                      "border_x ")
+          << "to be wholly divisible by scale_x_d, got ((" << iw << " - 1) * "
+          << scaleXN << " - " << offsetX << " + " << borderX << ") / "
+          << scaleXD;
+      return false;
+    }
+    const int64_t calculatedOutWidth = calculatedOutWidthMinusOne.value() + 1;
+    if (ow != ShapedType::kDynamic && calculatedOutWidth != ow) {
+      op->emitOpError("calculated output width did not match expected: ")
+          << "calculated=" << calculatedOutWidth << ", expected=" << ow;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
+  if (!checkErrorIfResize(op))
+    return failure();
+  return success();
+}
+
 bool TosaValidation::isValidElementType(Type type) {
   if (isa<FloatType>(type)) {
-    if (!isEnabledProfile(TosaProfileEnum::MainInference))
-      return false;
     return type.isF32() || type.isF16() || type.isBF16();
   } else if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
@@ -553,6 +726,15 @@ void TosaValidation::runOnOperation() {
     if (op->getDialect() != tosaDialect)
       return;
 
+    // Profile-Extension based validation should be performed at the beginning.
+    if (strictOpSpecAlignment &&
+        failed(profileComp.checkProfile(op, targetEnv)))
+      return signalPassFailure();
+
+    if (strictOpSpecAlignment &&
+        failed(profileComp.checkExtension(op, targetEnv)))
+      return signalPassFailure();
+
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {
@@ -572,7 +754,7 @@ void TosaValidation::runOnOperation() {
 
     // Some uses of TOSA rely on the constant operands of particular
     // operations.
-    if (StrictOperationSpecAlignment && failed(applyConstantOperandCheck(op)))
+    if (strictOpSpecAlignment && failed(applyConstantOperandCheck(op)))
       signalPassFailure();
 
     // do level checks
@@ -581,6 +763,10 @@ void TosaValidation::runOnOperation() {
 
     // do variable type checks
     if (failed(applyVariableCheck(op)))
+      signalPassFailure();
+
+    // do error if checks
+    if (strictOpSpecAlignment && failed(applyErrorIfCheck(op)))
       signalPassFailure();
   });
 }

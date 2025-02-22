@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
@@ -480,6 +481,15 @@ MachOPlatform::MachOPlatform(
   ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));
   PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));
 
+  {
+    // Check for force-eh-frame
+    std::optional<bool> ForceEHFrames;
+    if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
+                                                   ForceEHFrames)))
+      return;
+    this->ForceEHFrames = ForceEHFrames.has_value() ? *ForceEHFrames : false;
+  }
+
   BootstrapInfo BI;
   Bootstrap = &BI;
 
@@ -625,11 +635,12 @@ void MachOPlatform::pushInitializersLoop(
       Worklist.pop_back();
 
       // If we've already visited this JITDylib on this iteration then continue.
-      if (JDDepMap.count(DepJD))
+      auto [It, Inserted] = JDDepMap.try_emplace(DepJD);
+      if (!Inserted)
         continue;
 
       // Add dep info.
-      auto &DM = JDDepMap[DepJD];
+      auto &DM = It->second;
       DepJD->withLinkOrderDo([&](const JITDylibSearchOrder &O) {
         for (auto &KV : O) {
           if (KV.first == DepJD)
@@ -809,6 +820,12 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
     if (I != MP.JITDylibToHeaderAddr.end())
       HeaderAddr = I->second;
   }
+
+  // If we're forcing eh-frame use then discard the compact-unwind section
+  // immediately to prevent FDEs from being stripped.
+  if (MP.ForceEHFrames)
+    if (auto *CUSec = LG.findSectionByName(MachOCompactUnwindSectionName))
+      LG.removeSection(*CUSec);
 
   // Point the libunwind dso-base absolute symbol at the header for the
   // JITDylib. This will prevent us from synthesizing a new header for
@@ -1070,7 +1087,7 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
       for (auto *B : Sec.blocks())
         for (auto &E : B->edges())
           if (E.getTarget().isDefined() &&
-              &E.getTarget().getBlock().getSection() == ObjCImageInfo)
+              &E.getTarget().getSection() == ObjCImageInfo)
             return make_error<StringError>(MachOObjCImageInfoSectionName +
                                                " is referenced within file " +
                                                G.getName(),
@@ -1256,7 +1273,8 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
   // ScanSection records a section range and adds any executable blocks that
   // that section points to to the CodeBlocks vector.
   SmallVector<Block *> CodeBlocks;
-  auto ScanUnwindInfoSection = [&](Section &Sec, ExecutorAddrRange &SecRange) {
+  auto ScanUnwindInfoSection = [&](Section &Sec, ExecutorAddrRange &SecRange,
+                                   auto AddCodeBlocks) {
     if (Sec.blocks().empty())
       return;
     SecRange = (*Sec.blocks().begin())->getRange();
@@ -1264,23 +1282,31 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
       auto R = B->getRange();
       SecRange.Start = std::min(SecRange.Start, R.Start);
       SecRange.End = std::max(SecRange.End, R.End);
-      for (auto &E : B->edges()) {
-        if (E.getKind() != Edge::KeepAlive || !E.getTarget().isDefined())
-          continue;
-        auto &TargetBlock = E.getTarget().getBlock();
-        auto &TargetSection = TargetBlock.getSection();
-        if ((TargetSection.getMemProt() & MemProt::Exec) == MemProt::Exec)
-          CodeBlocks.push_back(&TargetBlock);
-      }
+      AddCodeBlocks(*B);
     }
   };
 
-  if (Section *EHFrameSec = G.findSectionByName(MachOEHFrameSectionName))
-    ScanUnwindInfoSection(*EHFrameSec, US.DwarfSection);
+  if (Section *EHFrameSec = G.findSectionByName(MachOEHFrameSectionName)) {
+    ScanUnwindInfoSection(*EHFrameSec, US.DwarfSection, [&](Block &B) {
+      if (auto *Fn = jitlink::EHFrameCFIBlockInspector::FromEdgeScan(B)
+                         .getPCBeginEdge())
+        if (Fn->getTarget().isDefined())
+          CodeBlocks.push_back(&Fn->getTarget().getBlock());
+    });
+  }
 
-  if (Section *CUInfoSec =
-          G.findSectionByName(MachOCompactUnwindInfoSectionName))
-    ScanUnwindInfoSection(*CUInfoSec, US.CompactUnwindSection);
+  if (Section *CUInfoSec = G.findSectionByName(MachOUnwindInfoSectionName)) {
+    ScanUnwindInfoSection(
+        *CUInfoSec, US.CompactUnwindSection, [&](Block &B) {
+          for (auto &E : B.edges()) {
+            assert(E.getTarget().isDefined() &&
+                   "unwind-info record edge has external target");
+            assert(E.getKind() == Edge::KeepAlive &&
+                   "unwind-info record has unexpected edge kind");
+            CodeBlocks.push_back(&E.getTarget().getBlock());
+          }
+        });
+  }
 
   // If we didn't find any pointed-to code-blocks then there's no need to
   // register any info.

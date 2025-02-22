@@ -134,7 +134,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     }
 
     // Try to use SLLI_UW for Val when it is uint32 but not int32.
-    if (isUInt<32>((uint64_t)Val) && !isInt<32>((uint64_t)Val) &&
+    if (isUInt<32>(Val) && !isInt<32>(Val) &&
         STI.hasFeature(RISCV::FeatureStdExtZba)) {
       // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
       // SLLI_UW.
@@ -175,7 +175,7 @@ static unsigned extractRotateInfo(int64_t Val) {
 
 static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
                                         RISCVMatInt::InstSeq &Res) {
-  assert(Val > 0 && "Expected postive val");
+  assert(Val > 0 && "Expected positive val");
 
   unsigned LeadingZeros = llvm::countl_zero((uint64_t)Val);
   uint64_t ShiftedVal = (uint64_t)Val << LeadingZeros;

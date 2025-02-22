@@ -420,7 +420,7 @@ static bool LinearizeExprTree(Instruction *I,
   using LeafMap = DenseMap<Value *, uint64_t>;
   LeafMap Leaves; // Leaf -> Total weight so far.
   SmallVector<Value *, 8> LeafOrder; // Ensure deterministic leaf output order.
-  const DataLayout DL = I->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
 
 #ifndef NDEBUG
   SmallPtrSet<Value *, 8> Visited; // For checking the iteration scheme.
@@ -755,7 +755,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       if (ClearFlags)
         replaceDbgUsesWithUndef(ExpressionChangedStart);
 
-      ExpressionChangedStart->moveBefore(I);
+      ExpressionChangedStart->moveBefore(I->getIterator());
       ExpressionChangedStart =
           cast<BinaryOperator>(*ExpressionChangedStart->user_begin());
     } while (true);
@@ -808,7 +808,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
     // assured that the neg instructions we just inserted dominate the
     // instruction we are about to insert after them.
     //
-    I->moveBefore(BI);
+    I->moveBefore(BI->getIterator());
     I->setName(I->getName()+".neg");
 
     // Add the intermediate negates to the redo list as processing them later

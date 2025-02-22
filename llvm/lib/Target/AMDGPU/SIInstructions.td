@@ -228,15 +228,38 @@ def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
 // Pseudo instructions used for @llvm.fptrunc.round. The final codegen is done
 // in the ModeRegister pass.
 let Uses = [MODE, EXEC] in {
+let True16Predicate = NotHasTrue16BitInsts in
 def FPTRUNC_ROUND_F16_F32_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VGPR_32:$src0, i32imm:$round)>;
+
+let True16Predicate = UseFakeTrue16Insts in
+def FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32:$src0, i32imm:$round)>;
+
+let True16Predicate = UseRealTrue16Insts in
+// The operands of these pseudos should match V_CVT_F16_F32_t16_e64
+def FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 : VPseudoInstSI <(outs VOPDstOperand_t16:$vdst),
+  (ins FP32InputMods:$src0_modifiers, VSrc_f32:$src0, Clamp0:$clamp, omod0:$omod, op_sel0:$op_sel, i32imm:$round)> {
+   let FPClamp = 1;
+   let ClampLo = 1;
+   let UseNamedOperandTable = 1;
+}
 
 def FPTRUNC_ROUND_F32_F64_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VReg_64:$src0, i32imm:$round)>;
 } // End Uses = [MODE, EXEC]
 
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO $src0, (as_hw_round_mode $round))>;
+
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 $src0, (as_hw_round_mode $round))>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 $src0_modifiers, $src0, (as_hw_round_mode $round))>;
 
 def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;
@@ -1053,39 +1076,40 @@ def : GCNPat<
   (SI_ELSE $src, $target)
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_kill i1:$src),
   (SI_KILL_I1_PSEUDO SCSrc_i1:$src, 0)
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_kill (i1 (not i1:$src))),
   (SI_KILL_I1_PSEUDO SCSrc_i1:$src, -1)
 >;
 
-def : Pat <
+let SubtargetPredicate = NotHasSALUFloatInsts in
+def : GCNPat <
   (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
   (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_wqm_demote i1:$src),
   (SI_DEMOTE_I1 SCSrc_i1:$src, 0)
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_wqm_demote (i1 (not i1:$src))),
   (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
 >;
 
   // TODO: we could add more variants for other types of conditionals
 
-def : Pat <
+def : GCNPat <
   (i64 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
   (COPY $src) // Return the SGPRs representing i1 src
 >;
 
-def : Pat <
+def : GCNPat <
   (i32 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
   (COPY $src) // Return the SGPRs representing i1 src
 >;
@@ -2679,15 +2703,20 @@ class FPToI1Pat<Instruction Inst, int KOne, ValueType kone_type, ValueType vt, S
   (i1 (Inst 0, (kone_type KOne), $src0_modifiers, $src0, DSTCLAMP.NONE))
 >;
 
-let OtherPredicates = [NotHasTrue16BitInsts] in {
+let True16Predicate = NotHasTrue16BitInsts in {
   def : FPToI1Pat<V_CMP_EQ_F16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
   def : FPToI1Pat<V_CMP_EQ_F16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
-} // end OtherPredicates = [NotHasTrue16BitInsts]
+} // end True16Predicate = NotHasTrue16BitInsts
 
-let OtherPredicates = [HasTrue16BitInsts] in {
+let True16Predicate = UseRealTrue16Insts in {
+  def : FPToI1Pat<V_CMP_EQ_F16_t16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
+  def : FPToI1Pat<V_CMP_EQ_F16_t16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
+} // end True16Predicate = UseRealTrue16BitInsts
+
+let True16Predicate = UseFakeTrue16Insts in {
   def : FPToI1Pat<V_CMP_EQ_F16_fake16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
   def : FPToI1Pat<V_CMP_EQ_F16_fake16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
-} // end OtherPredicates = [HasTrue16BitInsts]
+} // end True16Predicate = UseFakeTrue16BitInsts
 
 def : FPToI1Pat<V_CMP_EQ_F32_e64, CONST.FP32_ONE, i32, f32, fp_to_uint>;
 def : FPToI1Pat<V_CMP_EQ_F32_e64, CONST.FP32_NEG_ONE, i32, f32, fp_to_sint>;
@@ -3093,7 +3122,7 @@ foreach vt = [f16, v2f16, f32, v2f32, f64] in {
 // Prefer selecting to max when legal, but using mul is always valid.
 let AddedComplexity = -5 in {
 
-let OtherPredicates = [NotHasTrue16BitInsts] in {
+let True16Predicate = NotHasTrue16BitInsts in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
   (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
@@ -3103,9 +3132,21 @@ def : GCNPat<
   (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
   (V_MUL_F16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
 >;
-} // End OtherPredicates
+} // End True16Predicate
 
-let OtherPredicates = [HasTrue16BitInsts] in {
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat<
+  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
+>;
+
+def : GCNPat<
+  (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
+  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_NEG_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
+>;
+} // End True16Predicate
+
+let True16Predicate = UseFakeTrue16Insts in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
   (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
@@ -3115,7 +3156,7 @@ def : GCNPat<
   (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
   (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
 >;
-} // End OtherPredicates
+} // End True16Predicate
 
 def : GCNPat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
@@ -3173,13 +3214,22 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
     (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
-    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, NotHasTrue16BitInsts]);
+    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
+    let True16Predicate = NotHasTrue16BitInsts;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+    (V_MAX_F16_t16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
+    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
+    let True16Predicate = UseRealTrue16Insts;
   }
 
   def : GCNPat<
     (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
     (V_MAX_F16_fake16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
-    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, HasTrue16BitInsts]);
+    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
+    let True16Predicate = UseFakeTrue16Insts;
   }
 
   def : GCNPat<
@@ -3235,6 +3285,14 @@ def : GCNPat <
        (f16 (VOP3NoMods f32:$src1)),
        (f16 (VOP3NoMods f32:$src2))),
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                  SRCMODS.NONE, $src2)
+>;
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (fma (f16 (VOP3NoMods f16:$src0)),
+       (f16 (VOP3NoMods f16:$src1)),
+       (f16 (VOP3NoMods f16:$src2))),
+  (V_FMAC_F16_t16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
 let True16Predicate = UseFakeTrue16Insts in
@@ -3301,6 +3359,8 @@ def : GCNPat <
   (COPY_TO_REGCLASS SReg_32:$src0, SReg_32)
 >;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$src0), (Ty undef))),
   (COPY_TO_REGCLASS VGPR_32:$src0, VGPR_32)
@@ -3310,6 +3370,7 @@ def : GCNPat <
   (vecTy (UniformBinFrag<build_vector> (Ty undef), (Ty SReg_32:$src1))),
   (S_LSHL_B32 SReg_32:$src1, (i32 16))
 >;
+}
 
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty undef), (Ty VGPR_32:$src1))),
@@ -3319,6 +3380,8 @@ def : GCNPat <
 }
 
 let SubtargetPredicate = HasVOP3PInsts in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
@@ -3348,12 +3411,24 @@ def : GCNPat <
   (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 // Take the lower 16 bits from each VGPR_32 and concat them
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$a), (Ty VGPR_32:$b))),
   (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x05040100)))
 >;
 
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$a), (Ty VGPR_16:$b))),
+  (REG_SEQUENCE VGPR_32, VGPR_16:$a, lo16, VGPR_16:$b, hi16)
+>;
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$src0), (Ty undef))),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (IMPLICIT_DEF), hi16)
+>;
+}
 
 // Take the lower 16 bits from V[0] and the upper 16 bits from V[1]
 // Special case, can use V_BFI (0xffff literal likely more reusable than 0x70601000)
@@ -3379,6 +3454,8 @@ def : GCNPat <
 
 // Take the upper 16 bits from V[0] and the lower 16 bits from V[1]
 // Special case, can use V_ALIGNBIT (always uses encoded literal)
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector>
     (Ty !if(!eq(Ty, i16),
@@ -3399,7 +3476,7 @@ def : GCNPat <
       (Ty (bitconvert (i16 (trunc (srl VGPR_32:$b, (i32 16)))))))))),
   (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x07060302)))
 >;
-
+}
 
 } // end foreach Ty
 
@@ -3745,6 +3822,13 @@ def : FPMinCanonMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>
 def : FPMinCanonMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
 }
 
+let True16Predicate = UseRealTrue16Insts in {
+def : FPMinMaxPat<V_MINMAX_F16_t16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinMaxPat<V_MAXMIN_F16_t16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MINMAX_F16_t16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MAXMIN_F16_t16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+}
+
 let True16Predicate = UseFakeTrue16Insts in {
 def : FPMinMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
@@ -3767,15 +3851,25 @@ let True16Predicate = UseFakeTrue16Insts in {
 }
 } // End SubtargetPredicate = [isGFX9Plus]
 
-let OtherPredicates = [isGFX12Plus] in {
+let SubtargetPredicate = isGFX12Plus in {
 def : FPMinMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
 def : FPMinMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
-def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
-def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
 def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
 def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
-def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
-def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+}
+
+let True16Predicate = UseRealTrue16Insts, SubtargetPredicate = isGFX12Plus in {
+def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_t16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_t16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F16_t16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F16_t16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+}
+
+let True16Predicate = UseFakeTrue16Insts, SubtargetPredicate = isGFX12Plus in {
+def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_fake16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_fake16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F16_fake16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F16_fake16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
 }
 
 // Convert a floating-point power of 2 to the integer exponent.
@@ -4158,6 +4252,36 @@ def G_SI_CALL : AMDGPUGenericInstruction {
   let isConvergent = 1;
 }
 
+// Uniform in vgpr - vgpr with same value in all active lanes.
+
+// $dst = $src0 != 0, selected as:
+// $dst(SCC) = s_cmp_lg $src0, 0
+// src0 is either exec or 0 (same value for all active lanes),
+// for example result of comparison of two uniform in vgpr.
+def G_AMDGPU_COPY_SCC_VCC : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
+}
+
+// $dst = $src0 ? exec : 0, selected as:
+// SCC = COPY $src0
+// $dst(SReg_32/64) = s_cselect exec, 0
+def G_AMDGPU_COPY_VCC_SCC : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
+}
+
+// Move uniform in vgpr to sgpr. Selected as v_readfirstlane_b32.
+// Semantic difference in READ ANY instead of FIRST(active) LANE allows for
+// vgpr to sgpr back-to vgpr combine, vgpr has same value in all active lanes
+// vgprDst = COPY (G_AMDGPU_READANYLANE vgprSrc) -> vgprDst = sgprSrc
+def G_AMDGPU_READANYLANE : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0);
+  let hasSideEffects = 0;
+}
 
 //============================================================================//
 // Dummy Instructions
@@ -4171,3 +4295,9 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
 }
+
+// FIXME: Would be nice if we could set the register class for the destination
+// register too.
+def IMP_DEF_FROM_INTRINSIC: Pat<
+  (i32 (int_amdgcn_dead)), (IMPLICIT_DEF)>;
+

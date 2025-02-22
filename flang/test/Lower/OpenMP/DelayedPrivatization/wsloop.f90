@@ -1,6 +1,6 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization-staging \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization-staging -o - %s 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp  -o - %s 2>&1 \
 ! RUN:   | FileCheck %s
 
 subroutine wsloop_private
@@ -13,8 +13,8 @@ subroutine wsloop_private
     end do
 end subroutine wsloop_private
 
-! CHECK: omp.private {type = private} @[[I_PRIVATIZER:.*i_private_ref_i32]]
-! CHECK: omp.private {type = firstprivate} @[[X_PRIVATIZER:.*x_firstprivate_ref_i32]]
+! CHECK: omp.private {type = private} @[[I_PRIVATIZER:.*i_private_i32]]
+! CHECK: omp.private {type = firstprivate} @[[X_PRIVATIZER:.*x_firstprivate_i32]]
 
 ! CHECK: func.func @{{.*}}() {
 ! CHECK:   %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}i"}

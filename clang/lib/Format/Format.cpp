@@ -995,6 +995,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AlwaysBreakBeforeMultilineStrings);
     IO.mapOptional("AttributeMacros", Style.AttributeMacros);
     IO.mapOptional("BinPackArguments", Style.BinPackArguments);
+    IO.mapOptional("BinPackLongBracedList", Style.BinPackLongBracedList);
     IO.mapOptional("BinPackParameters", Style.BinPackParameters);
     IO.mapOptional("BitFieldColonSpacing", Style.BitFieldColonSpacing);
     IO.mapOptional("BracedInitializerIndentWidth",
@@ -1014,6 +1015,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakBeforeBraces", Style.BreakBeforeBraces);
     IO.mapOptional("BreakBeforeInlineASMColon",
                    Style.BreakBeforeInlineASMColon);
+    IO.mapOptional("BreakBeforeTemplateCloser",
+                   Style.BreakBeforeTemplateCloser);
     IO.mapOptional("BreakBeforeTernaryOperators",
                    Style.BreakBeforeTernaryOperators);
     IO.mapOptional("BreakBinaryOperations", Style.BreakBinaryOperations);
@@ -1091,6 +1094,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("PenaltyBreakAssignment", Style.PenaltyBreakAssignment);
     IO.mapOptional("PenaltyBreakBeforeFirstCallParameter",
                    Style.PenaltyBreakBeforeFirstCallParameter);
+    IO.mapOptional("PenaltyBreakBeforeMemberAccess",
+                   Style.PenaltyBreakBeforeMemberAccess);
     IO.mapOptional("PenaltyBreakComment", Style.PenaltyBreakComment);
     IO.mapOptional("PenaltyBreakFirstLessLess",
                    Style.PenaltyBreakFirstLessLess);
@@ -1503,6 +1508,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AttributeMacros.push_back("__capability");
   LLVMStyle.BinPackArguments = true;
+  LLVMStyle.BinPackLongBracedList = true;
   LLVMStyle.BinPackParameters = FormatStyle::BPPS_BinPack;
   LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BracedInitializerIndentWidth = std::nullopt;
@@ -1533,6 +1539,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
+  LLVMStyle.BreakBeforeTemplateCloser = false;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakBinaryOperations = FormatStyle::BBO_Never;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
@@ -1659,6 +1666,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
 
   LLVMStyle.PenaltyBreakAssignment = prec::Assignment;
   LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
+  LLVMStyle.PenaltyBreakBeforeMemberAccess = 150;
   LLVMStyle.PenaltyBreakComment = 300;
   LLVMStyle.PenaltyBreakFirstLessLess = 120;
   LLVMStyle.PenaltyBreakOpenParenthesis = 0;
@@ -4013,6 +4021,33 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
   return FormatStyle::LK_Cpp;
 }
 
+static FormatStyle::LanguageKind getLanguageByComment(const Environment &Env) {
+  const auto ID = Env.getFileID();
+  const auto &SourceMgr = Env.getSourceManager();
+
+  LangOptions LangOpts;
+  LangOpts.CPlusPlus = 1;
+  LangOpts.LineComment = 1;
+
+  Lexer Lex(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts);
+  Lex.SetCommentRetentionState(true);
+
+  for (Token Tok; !Lex.LexFromRawLexer(Tok) && Tok.is(tok::comment);) {
+    auto Text = StringRef(SourceMgr.getCharacterData(Tok.getLocation()),
+                          Tok.getLength());
+    if (!Text.consume_front("// clang-format Language:"))
+      continue;
+
+    Text = Text.trim();
+    if (Text == "Cpp")
+      return FormatStyle::LK_Cpp;
+    if (Text == "ObjC")
+      return FormatStyle::LK_ObjC;
+  }
+
+  return FormatStyle::LK_None;
+}
+
 FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
   const auto GuessedLanguage = getLanguageByFileName(FileName);
   if (GuessedLanguage == FormatStyle::LK_Cpp) {
@@ -4022,6 +4057,10 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
     if (!Code.empty() && (Extension.empty() || Extension == ".h")) {
       auto NonEmptyFileName = FileName.empty() ? "guess.h" : FileName;
       Environment Env(Code, NonEmptyFileName, /*Ranges=*/{});
+      if (const auto Language = getLanguageByComment(Env);
+          Language != FormatStyle::LK_None) {
+        return Language;
+      }
       ObjCHeaderStyleGuesser Guesser(Env, getLLVMStyle());
       Guesser.process();
       if (Guesser.isObjC())

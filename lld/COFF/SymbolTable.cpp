@@ -56,6 +56,10 @@ static void forceLazy(Symbol *s) {
   }
   case Symbol::Kind::LazyObjectKind: {
     InputFile *file = cast<LazyObject>(s)->file;
+    // FIXME: Remove this once we resolve all defineds before all undefineds in
+    //        ObjFile::initializeSymbols().
+    if (!file->lazy)
+      return;
     file->lazy = false;
     file->symtab.ctx.driver.addFile(file);
     break;
@@ -1314,6 +1318,17 @@ void SymbolTable::parseModuleDefs(StringRef path) {
     e2.source = ExportSource::ModuleDefinition;
     exports.push_back(e2);
   }
+}
+
+// Parse a string of the form of "<from>=<to>".
+void SymbolTable::parseAlternateName(StringRef s) {
+  auto [from, to] = s.split('=');
+  if (from.empty() || to.empty())
+    Fatal(ctx) << "/alternatename: invalid argument: " << s;
+  auto it = alternateNames.find(from);
+  if (it != alternateNames.end() && it->second != to)
+    Fatal(ctx) << "/alternatename: conflicts: " << s;
+  alternateNames.insert(it, std::make_pair(from, to));
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name) {

@@ -60,8 +60,9 @@ public:
 
   static const category // values assigned here are for exposition only
       none    = 0,
-      collate = LC_COLLATE_MASK, ctype = LC_CTYPE_MASK, monetary = LC_MONETARY_MASK, numeric = LC_NUMERIC_MASK,
-      time = LC_TIME_MASK, messages = LC_MESSAGES_MASK, all = collate | ctype | monetary | numeric | time | messages;
+      collate = _LIBCPP_COLLATE_MASK, ctype = _LIBCPP_CTYPE_MASK, monetary = _LIBCPP_MONETARY_MASK,
+      numeric = _LIBCPP_NUMERIC_MASK, time = _LIBCPP_TIME_MASK, messages = _LIBCPP_MESSAGES_MASK,
+      all = collate | ctype | monetary | numeric | time | messages;
 
   // construct/copy/destroy:
   locale() _NOEXCEPT;
@@ -153,7 +154,7 @@ inline _LIBCPP_HIDE_FROM_ABI locale::locale(const locale& __other, _Facet* __f) 
 template <class _Facet>
 locale locale::combine(const locale& __other) const {
   if (!std::has_facet<_Facet>(__other))
-    __throw_runtime_error("locale::combine: locale missing facet");
+    std::__throw_runtime_error("locale::combine: locale missing facet");
 
   return locale(*this, &const_cast<_Facet&>(std::use_facet<_Facet>(__other)));
 }
@@ -1297,7 +1298,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __narrow_to_utf8<16> : public codecvt<char16_t,
       const char16_t* __wn = (const char16_t*)__wb;
       __r = do_out(__mb, (const char16_t*)__wb, (const char16_t*)__we, __wn, __buf, __buf + __sz, __bn);
       if (__r == codecvt_base::error || __wn == (const char16_t*)__wb)
-        __throw_runtime_error("locale not supported");
+        std::__throw_runtime_error("locale not supported");
       for (const char* __p = __buf; __p < __bn; ++__p, ++__s)
         *__s = *__p;
       __wb = (const _CharT*)__wn;
@@ -1325,7 +1326,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __narrow_to_utf8<32> : public codecvt<char32_t,
       const char32_t* __wn = (const char32_t*)__wb;
       __r = do_out(__mb, (const char32_t*)__wb, (const char32_t*)__we, __wn, __buf, __buf + __sz, __bn);
       if (__r == codecvt_base::error || __wn == (const char32_t*)__wb)
-        __throw_runtime_error("locale not supported");
+        std::__throw_runtime_error("locale not supported");
       for (const char* __p = __buf; __p < __bn; ++__p, ++__s)
         *__s = *__p;
       __wb = (const _CharT*)__wn;
@@ -1369,7 +1370,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __widen_from_utf8<16> : public codecvt<char16_t
       const char* __nn = __nb;
       __r              = do_in(__mb, __nb, __ne - __nb > __sz ? __nb + __sz : __ne, __nn, __buf, __buf + __sz, __bn);
       if (__r == codecvt_base::error || __nn == __nb)
-        __throw_runtime_error("locale not supported");
+        std::__throw_runtime_error("locale not supported");
       for (const char16_t* __p = __buf; __p < __bn; ++__p, ++__s)
         *__s = *__p;
       __nb = __nn;
@@ -1397,7 +1398,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __widen_from_utf8<32> : public codecvt<char32_t
       const char* __nn = __nb;
       __r              = do_in(__mb, __nb, __ne - __nb > __sz ? __nb + __sz : __ne, __nn, __buf, __buf + __sz, __bn);
       if (__r == codecvt_base::error || __nn == __nb)
-        __throw_runtime_error("locale not supported");
+        std::__throw_runtime_error("locale not supported");
       for (const char32_t* __p = __buf; __p < __bn; ++__p, ++__s)
         *__s = *__p;
       __nb = __nn;

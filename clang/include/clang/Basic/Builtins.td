@@ -521,6 +521,12 @@ def TruncF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
+def Sincospi : Builtin, FPMathTemplate {
+  let Spellings = ["__builtin_sincospi"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Prototype = "void(T, T*, T*)";
+}
+
 // Access to floating point environment.
 def BuiltinFltRounds : Builtin {
   let Spellings = ["__builtin_flt_rounds"];
@@ -837,6 +843,12 @@ def BuiltinAssumeAligned : Builtin {
   let Spellings = ["__builtin_assume_aligned"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void*(void const*, size_t, ...)";
+}
+
+def BuiltinAssumeDereferenceable : Builtin {
+  let Spellings = ["__builtin_assume_dereferenceable"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(void const*, _Constant size_t)";
 }
 
 def BuiltinFree : Builtin {
@@ -4765,6 +4777,12 @@ def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool(...)";
 }
 
+def HLSLAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_and"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_any"];
   let Attributes = [NoThrow, Const];
@@ -4793,6 +4811,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int(bool)";
+}
+
+def HLSLWaveActiveMax : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_max"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
 }
 
 def HLSLWaveActiveSum : LangBuiltin<"HLSL_LANG"> {

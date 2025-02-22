@@ -1476,3 +1476,8 @@ def no_warn_duplicate_libraries : Flag<["-"], "no_warn_duplicate_libraries">,
     HelpText<"Do not warn if the input contains duplicate library options.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;
+
+// Add this with the other flags in the rare options group
+def no_deduplicate_symbol_strings : Flag<["-"], "no-deduplicate-symbol-strings">,
+    HelpText<"Do not deduplicate strings in the symbol string table. Might result in larger binaries but slightly faster link times.">,
+    Group<grp_rare>;

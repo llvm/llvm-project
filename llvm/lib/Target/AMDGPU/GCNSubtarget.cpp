@@ -400,16 +400,16 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
   return getBaseReservedNumSGPRs(KernelUsesFlatScratch);
 }
 
-unsigned GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
-                                        unsigned NumSGPRs,
-                                        unsigned NumVGPRs) const {
-  unsigned Occupancy =
-      std::min(getMaxWavesPerEU(), getOccupancyWithLocalMemSize(LDSSize, F));
-  if (NumSGPRs)
-    Occupancy = std::min(Occupancy, getOccupancyWithNumSGPRs(NumSGPRs));
-  if (NumVGPRs)
-    Occupancy = std::min(Occupancy, getOccupancyWithNumVGPRs(NumVGPRs));
-  return Occupancy;
+std::pair<unsigned, unsigned>
+GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
+                               unsigned NumSGPRs, unsigned NumVGPRs) const {
+  auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
+  unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
+  unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs);
+
+  // Maximum occupancy may be further limited by high SGPR/VGPR usage.
+  MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
+  return {std::min(MinOcc, MaxOcc), MaxOcc};
 }
 
 unsigned GCNSubtarget::getBaseMaxNumSGPRs(
@@ -422,10 +422,10 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
 
   // Check if maximum number of SGPRs was explicitly requested using
   // "amdgpu-num-sgpr" attribute.
-  if (F.hasFnAttribute("amdgpu-num-sgpr")) {
-    unsigned Requested =
-        F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
+  unsigned Requested =
+      F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
 
+  if (Requested != MaxNumSGPRs) {
     // Make sure requested value does not violate subtarget's specifications.
     if (Requested && (Requested <= ReservedNumSGPRs))
       Requested = 0;
@@ -504,10 +504,9 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
-  if (F.hasFnAttribute("amdgpu-num-vgpr")) {
-    unsigned Requested =
-        F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
-
+  unsigned Requested =
+      F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
+  if (Requested != MaxNumVGPRs) {
     if (hasGFX90AInsts())
       Requested *= 2;
 

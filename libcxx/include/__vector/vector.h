@@ -84,9 +84,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector {
-private:
-  typedef allocator<_Tp> __default_allocator_type;
-
 public:
   //
   // Types
@@ -558,7 +555,7 @@ private:
   //  Postcondition:  size() == 0
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
     if (__n > max_size())
-      __throw_length_error();
+      this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(this->__alloc_, __n);
     __begin_          = __allocation.ptr;
     __end_            = __allocation.ptr;
@@ -783,14 +780,18 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __add_alignment_assumption(pointer __p) _NOEXCEPT {
-#ifndef _LIBCPP_CXX03_LANG
-    if constexpr (is_pointer<pointer>::value) {
-      if (!__libcpp_is_constant_evaluated()) {
-        return static_cast<pointer>(__builtin_assume_aligned(__p, alignof(decltype(*__p))));
-      }
+  template <class _Ptr = pointer, __enable_if_t<is_pointer<_Ptr>::value, int> = 0>
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pointer
+  __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
+    if (!__libcpp_is_constant_evaluated()) {
+      return static_cast<pointer>(__builtin_assume_aligned(__p, _LIBCPP_ALIGNOF(decltype(*__p))));
     }
-#endif
+    return __p;
+  }
+
+  template <class _Ptr = pointer, __enable_if_t<!is_pointer<_Ptr>::value, int> = 0>
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pointer
+  __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
     return __p;
   }
 };

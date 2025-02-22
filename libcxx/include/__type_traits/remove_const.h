@@ -19,7 +19,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if __has_builtin(__remove_const)
 template <class _Tp>
-struct remove_const {
+struct _LIBCPP_NO_SPECIALIZATIONS remove_const {
   using type _LIBCPP_NODEBUG = __remove_const(_Tp);
 };
 

@@ -77,7 +77,7 @@ static void emitOperand(const MCOperand &Op, SmallVectorImpl<char> &CB) {
   if (Op.isReg()) {
     // Emit the id index starting at 1 (0 is an invalid index).
     support::endian::write<uint32_t>(
-        CB, Register::virtReg2Index(Op.getReg()) + 1, llvm::endianness::little);
+        CB, Register(Op.getReg()).virtRegIndex() + 1, llvm::endianness::little);
   } else if (Op.isImm()) {
     support::endian::write(CB, static_cast<uint32_t>(Op.getImm()),
                            llvm::endianness::little);

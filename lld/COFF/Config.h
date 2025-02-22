@@ -164,7 +164,6 @@ struct Configuration {
   bool noimplib = false;
   std::set<std::string> delayLoads;
   std::map<std::string, int> dllOrder;
-  Symbol *delayLoadHelper = nullptr;
   Symbol *arm64ECIcallHelper = nullptr;
 
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
@@ -220,9 +219,6 @@ struct Configuration {
 
   // Used for /failifmismatch.
   std::map<StringRef, std::pair<StringRef, InputFile *>> mustMatch;
-
-  // Used for /alternatename.
-  std::map<StringRef, StringRef> alternateNames;
 
   // Used for /order.
   llvm::StringMap<int> order;

@@ -409,7 +409,8 @@ template <>
 struct __find_unambiguous_index_sfinae_impl<__ambiguous> {};
 
 template <class _Tp, class... _Types>
-struct __find_unambiguous_index_sfinae : __find_unambiguous_index_sfinae_impl<__find_index<_Tp, _Types...>()> {};
+struct __find_unambiguous_index_sfinae
+    : __find_unambiguous_index_sfinae_impl<__find_detail::__find_index<_Tp, _Types...>()> {};
 
 } // namespace __find_detail
 
@@ -1156,7 +1157,7 @@ visit(_Visitor&& __visitor, _Vs&&... __vs);
 #    endif
 
 template <class... _Types>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DECLSPEC_EMPTY_BASES variant
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DECLSPEC_EMPTY_BASES _LIBCPP_NO_SPECIALIZATIONS variant
     : private __sfinae_ctor_base< __all<is_copy_constructible_v<_Types>...>::value,
                                   __all<is_move_constructible_v<_Types>...>::value>,
       private __sfinae_assign_base<
@@ -1341,7 +1342,7 @@ template <size_t _Ip, class _Vp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr auto&& __generic_get(_Vp&& __v) {
   using __variant_detail::__access::__variant;
   if (!std::__holds_alternative<_Ip>(__v)) {
-    __throw_bad_variant_access();
+    std::__throw_bad_variant_access();
   }
   return __variant::__get_alt<_Ip>(std::forward<_Vp>(__v)).__value;
 }
@@ -1554,7 +1555,7 @@ template <class... _Vs>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr void __throw_if_valueless(_Vs&&... __vs) {
   const bool __valueless = (... || std::__as_variant(__vs).valueless_by_exception());
   if (__valueless) {
-    __throw_bad_variant_access();
+    std::__throw_bad_variant_access();
   }
 }
 
@@ -1585,10 +1586,12 @@ swap(variant<_Types...>& __lhs,
 
 template <class... _Types>
 struct _LIBCPP_TEMPLATE_VIS hash< __enable_hash_helper<variant<_Types...>, remove_const_t<_Types>...>> {
-  using argument_type = variant<_Types...>;
-  using result_type   = size_t;
+#    if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+  using argument_type _LIBCPP_DEPRECATED_IN_CXX17 = variant<_Types...>;
+  using result_type _LIBCPP_DEPRECATED_IN_CXX17   = size_t;
+#    endif
 
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(const argument_type& __v) const {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const variant<_Types...>& __v) const {
     using __variant_detail::__visitation::__variant;
     size_t __res =
         __v.valueless_by_exception()

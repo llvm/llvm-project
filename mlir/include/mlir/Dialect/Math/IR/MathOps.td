@@ -28,10 +28,27 @@ class Math_Op<string mnemonic, list<Trait> traits = []> :
 // tensor thereof.
 class Math_IntegerUnaryOp<string mnemonic, list<Trait> traits = []> :
     Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
-  let arguments = (ins SignlessIntegerLike:$operand);
-  let results = (outs SignlessIntegerLike:$result);
+  let arguments = (ins SignlessIntegerOrIndexLike:$operand);
+  let results = (outs SignlessIntegerOrIndexLike:$result);
 
   let assemblyFormat = "$operand attr-dict `:` type($result)";
+}
+
+// Base class for floating point classification ops. Require an operand and
+// result of the same shape, which can be a floating point scalar, a vector or a
+// tensor thereof.
+class Math_FloatClassificationOp<string mnemonic, list<Trait> traits = []> :
+    Math_Op<mnemonic,
+      traits # [DeclareOpInterfaceMethods<ArithFastMathInterface>,
+                TypesMatchWith<
+          "result type has i1 element type and same shape as operands",
+          "operand", "result", "::getI1SameShape($_self)">]> {
+  let arguments = (ins FloatLike:$operand,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
+  let results = (outs BoolLike:$result);
+
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
 }
 
 // Base class for unary math operations on floating point types. Require an
@@ -55,8 +72,8 @@ class Math_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
 // type, vector or tensor thereof.
 class Math_IntegerBinaryOp<string mnemonic, list<Trait> traits = []> :
     Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
-  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
-  let results = (outs SignlessIntegerLike:$result);
+  let arguments = (ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs);
+  let results = (outs SignlessIntegerOrIndexLike:$result);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($result)";
 }
@@ -543,6 +560,31 @@ def Math_ErfOp : Math_FloatUnaryOp<"erf"> {
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// ErfcOp
+//===----------------------------------------------------------------------===//
+
+def Math_ErfcOp : Math_FloatUnaryOp<"erfc"> {
+  let summary = "complementary error function of the specified value";
+  let description = [{
+
+    The `erfc` operation computes the complementary error function, defined as
+    1-erf(x). This function is part of libm and is needed for accuracy, since
+    simply calculating 1-erf(x) when x is close to 1 will give inaccurate results.
+    It takes one operand of floating point type (i.e., scalar,
+    tensor or vector) and returns one result of the same type. It has no
+    standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar error function value.
+    %a = math.erfc %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
 
 //===----------------------------------------------------------------------===//
 // ExpOp
@@ -673,6 +715,83 @@ def Math_IPowIOp : Math_IntegerBinaryOp<"ipowi"> {
     ```mlir
     // Scalar signed integer exponentiation.
     %a = math.ipowi %b, %c : i32
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// IsFiniteOp
+//===----------------------------------------------------------------------===//
+
+def Math_IsFiniteOp : Math_FloatClassificationOp<"isfinite"> {
+  let summary = "returns true if the operand classifies as finite";
+  let description = [{
+    Determines if the given floating-point number has finite value i.e. it
+    is normal, subnormal or zero, but not infinite or NaN.
+
+    Example:
+
+    ```mlir
+    %f = math.isfinite %a : f32
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// IsInfOp
+//===----------------------------------------------------------------------===//
+
+def Math_IsInfOp : Math_FloatClassificationOp<"isinf"> {
+  let summary = "returns true if the operand classifies as infinite";
+  let description = [{
+    Determines if the given floating-point number is positive or negative
+    infinity.
+
+    Example:
+
+    ```mlir
+    %f = math.isinf %a : f32
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// IsNaNOp
+//===----------------------------------------------------------------------===//
+
+def Math_IsNaNOp : Math_FloatClassificationOp<"isnan"> {
+  let summary = "returns true if the operand classifies as NaN";
+  let description = [{
+    Determines if the given floating-point number is a not-a-number (NaN)
+    value.
+
+    Example:
+
+    ```mlir
+    %f = math.isnan %a : f32
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
+// IsNormalOp
+//===----------------------------------------------------------------------===//
+
+def Math_IsNormalOp : Math_FloatClassificationOp<"isnormal"> {
+  let summary = "returns true if the operand classifies as normal";
+  let description = [{
+    Determines if the given floating-point number is normal, i.e. is neither
+    zero, subnormal, infinite, nor NaN.
+
+    Example:
+
+    ```mlir
+    %f = math.isnormal %a : f32
     ```
   }];
   let hasFolder = 1;
@@ -976,7 +1095,7 @@ def Math_FPowIOp : Math_Op<"fpowi",
     ```
   }];
 
-  let arguments = (ins FloatLike:$lhs, SignlessIntegerLike:$rhs,
+  let arguments = (ins FloatLike:$lhs, SignlessIntegerOrIndexLike:$rhs,
       DefaultValuedAttr<Arith_FastMathAttr,
                         "::mlir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs FloatLike:$result);

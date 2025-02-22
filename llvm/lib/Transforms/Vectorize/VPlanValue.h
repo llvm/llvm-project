@@ -351,7 +351,6 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
-    VPWidenEVLSC,
     VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,
@@ -433,41 +432,6 @@ public:
   virtual void print(raw_ostream &O, const Twine &Indent,
                      VPSlotTracker &SlotTracker) const = 0;
 #endif
-};
-
-class VPlan;
-class VPBasicBlock;
-
-/// This class can be used to assign names to VPValues. For VPValues without
-/// underlying value, assign consecutive numbers and use those as names (wrapped
-/// in vp<>). Otherwise, use the name from the underlying value (wrapped in
-/// ir<>), appending a .V version number if there are multiple uses of the same
-/// name. Allows querying names for VPValues for printing, similar to the
-/// ModuleSlotTracker for IR values.
-class VPSlotTracker {
-  /// Keep track of versioned names assigned to VPValues with underlying IR
-  /// values.
-  DenseMap<const VPValue *, std::string> VPValue2Name;
-  /// Keep track of the next number to use to version the base name.
-  StringMap<unsigned> BaseName2Version;
-
-  /// Number to assign to the next VPValue without underlying value.
-  unsigned NextSlot = 0;
-
-  void assignName(const VPValue *V);
-  void assignNames(const VPlan &Plan);
-  void assignNames(const VPBasicBlock *VPBB);
-
-public:
-  VPSlotTracker(const VPlan *Plan = nullptr) {
-    if (Plan)
-      assignNames(*Plan);
-  }
-
-  /// Returns the name assigned to \p V, if there is one, otherwise try to
-  /// construct one from the underlying value, if there's one; else return
-  /// <badref>.
-  std::string getOrCreateName(const VPValue *V) const;
 };
 
 } // namespace llvm

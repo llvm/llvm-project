@@ -2872,8 +2872,8 @@ define double @dyn_extract_v7f64_v_v(<7 x double> %vec, i32 %sel) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v12, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v13, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v14
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v14, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v15, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v1, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: dyn_extract_v7f64_v_v:
@@ -2898,8 +2898,8 @@ define double @dyn_extract_v7f64_v_v(<7 x double> %vec, i32 %sel) {
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v12, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v13, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v14
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v14, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v15, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v0, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v1, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: dyn_extract_v7f64_v_v:
@@ -2918,7 +2918,7 @@ define double @dyn_extract_v7f64_v_v(<7 x double> %vec, i32 %sel) {
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v14
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v12 :: v_dual_cndmask_b32 v1, v1, v13
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v14
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v14 :: v_dual_cndmask_b32 v1, v1, v15
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v0 :: v_dual_cndmask_b32 v1, v1, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %ext = extractelement <7 x double> %vec, i32 %sel

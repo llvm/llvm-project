@@ -292,6 +292,12 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       rewriter.setInsertionPointAfter(size.getDefiningOp());
     }
 
+    if (auto dataAttr = alloc->getAttrOfType<cuf::DataAttributeAttr>(
+            cuf::getDataAttrName())) {
+      if (dataAttr.getValue() == cuf::DataAttribute::Shared)
+        allocaAs = 3;
+    }
+
     // NOTE: we used to pass alloc->getAttrs() in the builder for non opaque
     // pointers! Only propagate pinned and bindc_name to help debugging, but
     // this should have no functional purpose (and passing the operand segment
@@ -316,6 +322,7 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       rewriter.replaceOpWithNewOp<mlir::LLVM::AddrSpaceCastOp>(
           alloc, ::getLlvmPtrType(alloc.getContext(), programAs), llvmAlloc);
     }
+
     return mlir::success();
   }
 };
@@ -589,10 +596,42 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
     // Convert arith::FastMathFlagsAttr to LLVM::FastMathFlagsAttr.
     mlir::arith::AttrConvertFastMathToLLVM<fir::CallOp, mlir::LLVM::CallOp>
         attrConvert(call);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+    auto llvmCall = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         call, resultTys, adaptor.getOperands(),
         addLLVMOpBundleAttrs(rewriter, attrConvert.getAttrs(),
                              adaptor.getOperands().size()));
+    if (mlir::ArrayAttr argAttrsArray = call.getArgAttrsAttr()) {
+      // sret and byval type needs to be converted.
+      auto convertTypeAttr = [&](const mlir::NamedAttribute &attr) {
+        return mlir::TypeAttr::get(convertType(
+            llvm::cast<mlir::TypeAttr>(attr.getValue()).getValue()));
+      };
+      llvm::SmallVector<mlir::Attribute> newArgAttrsArray;
+      for (auto argAttrs : argAttrsArray) {
+        llvm::SmallVector<mlir::NamedAttribute> convertedAttrs;
+        for (const mlir::NamedAttribute &attr :
+             llvm::cast<mlir::DictionaryAttr>(argAttrs)) {
+          if (attr.getName().getValue() ==
+              mlir::LLVM::LLVMDialect::getByValAttrName()) {
+            convertedAttrs.push_back(rewriter.getNamedAttr(
+                mlir::LLVM::LLVMDialect::getByValAttrName(),
+                convertTypeAttr(attr)));
+          } else if (attr.getName().getValue() ==
+                     mlir::LLVM::LLVMDialect::getStructRetAttrName()) {
+            convertedAttrs.push_back(rewriter.getNamedAttr(
+                mlir::LLVM::LLVMDialect::getStructRetAttrName(),
+                convertTypeAttr(attr)));
+          } else {
+            convertedAttrs.push_back(attr);
+          }
+        }
+        newArgAttrsArray.emplace_back(
+            mlir::DictionaryAttr::get(rewriter.getContext(), convertedAttrs));
+      }
+      llvmCall.setArgAttrsAttr(rewriter.getArrayAttr(newArgAttrsArray));
+    }
+    if (mlir::ArrayAttr resAttrs = call.getResAttrsAttr())
+      llvmCall.setResAttrsAttr(resAttrs);
     return mlir::success();
   }
 };
@@ -1190,7 +1229,7 @@ genCUFAllocDescriptor(mlir::Location loc,
                       mlir::ModuleOp mod, fir::BaseBoxType boxTy,
                       const fir::LLVMTypeConverter &typeConverter) {
   std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+      fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
   if (!dl)
     mlir::emitError(mod.getLoc(),
                     "module operation must carry a data layout attribute "
@@ -1675,22 +1714,26 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     this->attachTBAATag(storeOp, boxTy, boxTy, nullptr);
     return storage;
   }
-};
 
-/// Compute the extent of a triplet slice (lb:ub:step).
-static mlir::Value
-computeTripletExtent(mlir::ConversionPatternRewriter &rewriter,
-                     mlir::Location loc, mlir::Value lb, mlir::Value ub,
-                     mlir::Value step, mlir::Value zero, mlir::Type type) {
-  mlir::Value extent = rewriter.create<mlir::LLVM::SubOp>(loc, type, ub, lb);
-  extent = rewriter.create<mlir::LLVM::AddOp>(loc, type, extent, step);
-  extent = rewriter.create<mlir::LLVM::SDivOp>(loc, type, extent, step);
-  // If the resulting extent is negative (`ub-lb` and `step` have different
-  // signs), zero must be returned instead.
-  auto cmp = rewriter.create<mlir::LLVM::ICmpOp>(
-      loc, mlir::LLVM::ICmpPredicate::sgt, extent, zero);
-  return rewriter.create<mlir::LLVM::SelectOp>(loc, cmp, extent, zero);
-}
+  /// Compute the extent of a triplet slice (lb:ub:step).
+  mlir::Value computeTripletExtent(mlir::ConversionPatternRewriter &rewriter,
+                                   mlir::Location loc, mlir::Value lb,
+                                   mlir::Value ub, mlir::Value step,
+                                   mlir::Value zero, mlir::Type type) const {
+    lb = this->integerCast(loc, rewriter, type, lb);
+    ub = this->integerCast(loc, rewriter, type, ub);
+    step = this->integerCast(loc, rewriter, type, step);
+    zero = this->integerCast(loc, rewriter, type, zero);
+    mlir::Value extent = rewriter.create<mlir::LLVM::SubOp>(loc, type, ub, lb);
+    extent = rewriter.create<mlir::LLVM::AddOp>(loc, type, extent, step);
+    extent = rewriter.create<mlir::LLVM::SDivOp>(loc, type, extent, step);
+    // If the resulting extent is negative (`ub-lb` and `step` have different
+    // signs), zero must be returned instead.
+    auto cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicate::sgt, extent, zero);
+    return rewriter.create<mlir::LLVM::SelectOp>(loc, cmp, extent, zero);
+  }
+};
 
 /// Create a generic box on a memory reference. This conversions lowers the
 /// abstract box to the appropriate, initialized descriptor.
@@ -1851,14 +1894,16 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     // translating everything to values in the descriptor wherever the entity
     // has a dynamic array dimension.
     for (unsigned di = 0, descIdx = 0; di < rank; ++di) {
-      mlir::Value extent = operands[shapeOffset];
+      mlir::Value extent =
+          integerCast(loc, rewriter, i64Ty, operands[shapeOffset]);
       mlir::Value outerExtent = extent;
       bool skipNext = false;
       if (hasSlice) {
-        mlir::Value off = operands[sliceOffset];
+        mlir::Value off =
+            integerCast(loc, rewriter, i64Ty, operands[sliceOffset]);
         mlir::Value adj = one;
         if (hasShift)
-          adj = operands[shiftOffset];
+          adj = integerCast(loc, rewriter, i64Ty, operands[shiftOffset]);
         auto ao = rewriter.create<mlir::LLVM::SubOp>(loc, i64Ty, off, adj);
         if (constRows > 0) {
           cstInteriorIndices.push_back(ao);
@@ -1895,7 +1940,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
         // the lower bound.
         if (hasShift && !(hasSlice || hasSubcomp || hasSubstr) &&
             (isaPointerOrAllocatable || !normalizedLowerBound(xbox))) {
-          lb = operands[shiftOffset];
+          lb = integerCast(loc, rewriter, i64Ty, operands[shiftOffset]);
           auto extentIsEmpty = rewriter.create<mlir::LLVM::ICmpOp>(
               loc, mlir::LLVM::ICmpPredicate::eq, extent, zero);
           lb = rewriter.create<mlir::LLVM::SelectOp>(loc, extentIsEmpty, one,
@@ -1907,9 +1952,12 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
 
         // store step (scaled by shaped extent)
         mlir::Value step = prevDimByteStride;
-        if (hasSlice)
-          step = rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, step,
-                                                    operands[sliceOffset + 2]);
+        if (hasSlice) {
+          mlir::Value sliceStep =
+              integerCast(loc, rewriter, i64Ty, operands[sliceOffset + 2]);
+          step =
+              rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, step, sliceStep);
+        }
         dest = insertStride(rewriter, loc, dest, descIdx, step);
         ++descIdx;
       }
@@ -2996,11 +3044,13 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     llvm::SmallVector<mlir::Attribute> dbgExprs;
 
     if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(global.getLoc())) {
-      if (auto gvAttr =
-              mlir::dyn_cast_or_null<mlir::LLVM::DIGlobalVariableAttr>(
-                  fusedLoc.getMetadata())) {
-        dbgExprs.push_back(mlir::LLVM::DIGlobalVariableExpressionAttr::get(
-            global.getContext(), gvAttr, mlir::LLVM::DIExpressionAttr()));
+      if (auto gvExprAttr = mlir::dyn_cast_if_present<mlir::ArrayAttr>(
+              fusedLoc.getMetadata())) {
+        for (auto attr : gvExprAttr.getAsRange<mlir::Attribute>())
+          if (auto dbgAttr =
+                  mlir::dyn_cast<mlir::LLVM::DIGlobalVariableExpressionAttr>(
+                      attr))
+            dbgExprs.push_back(dbgAttr);
       }
     }
 
@@ -3525,6 +3575,14 @@ struct UndefOpConversion : public fir::FIROpConversion<fir::UndefOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::UndefOp undef, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    if (mlir::isa<fir::DummyScopeType>(undef.getType())) {
+      // Dummy scoping is used for Fortran analyses like AA. Once it gets to
+      // pre-codegen rewrite it is erased and a fir.undef is created to
+      // feed to the fir declare operation. Thus, during codegen, we can
+      // simply erase is as it is no longer used.
+      rewriter.eraseOp(undef);
+      return mlir::success();
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
         undef, convertType(undef.getType()));
     return mlir::success();
@@ -3931,7 +3989,7 @@ public:
       return signalPassFailure();
 
     std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
     if (!dl) {
       mlir::emitError(mod.getLoc(),
                       "module operation must carry a data layout attribute "

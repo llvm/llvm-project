@@ -389,6 +389,8 @@ func.func @should_fuse_init_loops_siblings_then_shared_producer(%arg0: memref<10
 
 // -----
 
+// Test sibling fusion of two matrix-vector products sharing the input matrix.
+
 func.func @two_matrix_vector_products() {
   %in_matrix = memref.alloc() : memref<10x10xf32>
   %in_vec0 = memref.alloc() : memref<10xf32>

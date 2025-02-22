@@ -893,6 +893,9 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
+  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                         ArrayRef<unsigned> JumpTableIndices,
+                         bool JTInDiffSection);
   void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
                           const MachineBasicBlock *MBB, unsigned uid) const;
 
