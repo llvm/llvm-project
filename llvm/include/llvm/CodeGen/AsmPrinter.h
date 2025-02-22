@@ -925,7 +925,6 @@ protected:
   virtual MaybeAlign getRequiredGlobalAlignment(const GlobalVariable &GV) {
     return std::nullopt;
   };
-
 };
 
 } // end namespace llvm

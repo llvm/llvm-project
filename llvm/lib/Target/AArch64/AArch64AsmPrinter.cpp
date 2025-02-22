@@ -1445,8 +1445,8 @@ void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
   AsmPrinter::emitGlobalAlias(M, GA);
 }
 
-
-MaybeAlign AArch64AsmPrinter::getRequiredGlobalAlignment(const GlobalVariable &GV) {
+MaybeAlign
+AArch64AsmPrinter::getRequiredGlobalAlignment(const GlobalVariable &GV) {
   return GV.isTagged() && GV.getAlign().valueOrOne() < 16 ? MaybeAlign(16)
                                                           : std::nullopt;
 }

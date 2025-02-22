@@ -723,7 +723,8 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 /// EmitGlobalVariable - Emit the specified global variable to the .s file.
-void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV, MaybeAlign OverAlignment) {
+void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV,
+                                    MaybeAlign OverAlignment) {
   bool IsEmuTLSVar = TM.useEmulatedTLS() && GV->isThreadLocal();
   assert(!(IsEmuTLSVar && GV->hasCommonLinkage()) &&
          "No emulated TLS variables in the common section");
@@ -798,7 +799,6 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV, MaybeAlign OverAli
     Size = alignTo(Size, *OverAlignment);
     Alignment = *OverAlignment;
   }
-
 
   for (auto &Handler : Handlers)
     Handler->setSymbolSize(GVSym, Size);
