@@ -69,8 +69,9 @@ std::optional<bool> isUnchecked(const clang::QualType T);
 /// An inter-procedural analysis facility that detects CF types with the
 /// underlying pointer type.
 class RetainTypeChecker {
-  llvm::DenseSet<const RecordType*> CFPointees;
+  llvm::DenseSet<const RecordType *> CFPointees;
   bool IsARCEnabled{false};
+
 public:
   void visitTranslationUnitDecl(const TranslationUnitDecl *);
   void visitTypedef(const TypedefDecl *);
