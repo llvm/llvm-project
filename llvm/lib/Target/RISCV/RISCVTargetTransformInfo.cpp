@@ -554,7 +554,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return IndexCost +
                getRISCVInstructionCost(RISCV::VRGATHER_VV, LT.second, CostKind);
       }
-      [[fallthrough]];
+      break;
     }
     case TTI::SK_Transpose:
     case TTI::SK_PermuteTwoSrc: {
@@ -574,55 +574,65 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                        LT.second, CostKind) +
                MaskCost;
       }
-      [[fallthrough]];
-    }
-    case TTI::SK_Select: {
-      // We are going to permute multiple sources and the result will be in
-      // multiple destinations. Providing an accurate cost only for splits where
-      // the element type remains the same.
-      if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
-          LT.second.getVectorElementType().getSizeInBits() ==
-              Tp->getElementType()->getPrimitiveSizeInBits() &&
-          LT.second.getVectorNumElements() <
-              cast<FixedVectorType>(Tp)->getNumElements() &&
-          divideCeil(Mask.size(),
-                     cast<FixedVectorType>(Tp)->getNumElements()) ==
-              static_cast<unsigned>(*LT.first.getValue())) {
-        unsigned NumRegs = *LT.first.getValue();
-        unsigned VF = cast<FixedVectorType>(Tp)->getNumElements();
-        unsigned SubVF = PowerOf2Ceil(VF / NumRegs);
-        auto *SubVecTy = FixedVectorType::get(Tp->getElementType(), SubVF);
-
-        InstructionCost Cost = 0;
-        for (unsigned I = 0, NumSrcRegs = divideCeil(Mask.size(), SubVF);
-             I < NumSrcRegs; ++I) {
-          bool IsSingleVector = true;
-          SmallVector<int> SubMask(SubVF, PoisonMaskElem);
-          transform(
-              Mask.slice(I * SubVF,
-                         I == NumSrcRegs - 1 ? Mask.size() % SubVF : SubVF),
-              SubMask.begin(), [&](int I) -> int {
-                if (I == PoisonMaskElem)
-                  return PoisonMaskElem;
-                bool SingleSubVector = I / VF == 0;
-                IsSingleVector &= SingleSubVector;
-                return (SingleSubVector ? 0 : 1) * SubVF + (I % VF) % SubVF;
-              });
-          if (all_of(enumerate(SubMask), [](auto &&P) {
-                return P.value() == PoisonMaskElem ||
-                       static_cast<unsigned>(P.value()) == P.index();
-              }))
-            continue;
-          Cost += getShuffleCost(IsSingleVector ? TTI::SK_PermuteSingleSrc
-                                                : TTI::SK_PermuteTwoSrc,
-                                 SubVecTy, SubMask, CostKind, 0, nullptr);
-        }
-        return Cost;
-      }
       break;
     }
     }
-  };
+
+    auto shouldSplit = [](TTI::ShuffleKind Kind) {
+      switch (Kind) {
+      default:
+        return false;
+      case TTI::SK_PermuteSingleSrc:
+      case TTI::SK_Transpose:
+      case TTI::SK_PermuteTwoSrc:
+      case TTI::SK_Select:
+        return true;
+      }
+    };
+    // We are going to permute multiple sources and the result will be in
+    // multiple destinations. Providing an accurate cost only for splits where
+    // the element type remains the same.
+    if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
+        shouldSplit(Kind) &&
+        LT.second.getVectorElementType().getSizeInBits() ==
+        Tp->getElementType()->getPrimitiveSizeInBits() &&
+        LT.second.getVectorNumElements() <
+        cast<FixedVectorType>(Tp)->getNumElements() &&
+        divideCeil(Mask.size(),
+                   cast<FixedVectorType>(Tp)->getNumElements()) ==
+        static_cast<unsigned>(*LT.first.getValue())) {
+      unsigned NumRegs = *LT.first.getValue();
+      unsigned VF = cast<FixedVectorType>(Tp)->getNumElements();
+      unsigned SubVF = PowerOf2Ceil(VF / NumRegs);
+      auto *SubVecTy = FixedVectorType::get(Tp->getElementType(), SubVF);
+
+      InstructionCost Cost = 0;
+      for (unsigned I = 0, NumSrcRegs = divideCeil(Mask.size(), SubVF);
+           I < NumSrcRegs; ++I) {
+        bool IsSingleVector = true;
+        SmallVector<int> SubMask(SubVF, PoisonMaskElem);
+        transform(
+                  Mask.slice(I * SubVF,
+                             I == NumSrcRegs - 1 ? Mask.size() % SubVF : SubVF),
+                  SubMask.begin(), [&](int I) -> int {
+                    if (I == PoisonMaskElem)
+                      return PoisonMaskElem;
+                    bool SingleSubVector = I / VF == 0;
+                    IsSingleVector &= SingleSubVector;
+                    return (SingleSubVector ? 0 : 1) * SubVF + (I % VF) % SubVF;
+                  });
+        if (all_of(enumerate(SubMask), [](auto &&P) {
+          return P.value() == PoisonMaskElem ||
+            static_cast<unsigned>(P.value()) == P.index();
+        }))
+          continue;
+        Cost += getShuffleCost(IsSingleVector ? TTI::SK_PermuteSingleSrc
+                               : TTI::SK_PermuteTwoSrc,
+                               SubVecTy, SubMask, CostKind, 0, nullptr);
+      }
+      return Cost;
+    }
+  }
 
   // Handle scalable vectors (and fixed vectors legalized to scalable vectors).
   switch (Kind) {
