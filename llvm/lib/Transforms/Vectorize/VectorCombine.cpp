@@ -1918,6 +1918,12 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   if (!C1VecTy || !C2VecTy)
     return false;
 
+  auto *Select0 = cast<Instruction>(I.getOperand(0));
+  if (auto *SI0FOp = dyn_cast<FPMathOperator>(Select0))
+    if (auto *SI1FOp = dyn_cast<FPMathOperator>((I.getOperand(1))))
+      if (SI0FOp->getFastMathFlags() != SI1FOp->getFastMathFlags())
+        return false;
+
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
   InstructionCost OldCost = TTI.getCmpSelInstrCost(
@@ -1945,6 +1951,8 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   Value *ShuffleTrue = Builder.CreateShuffleVector(T1, T2, Mask);
   Value *ShuffleFalse = Builder.CreateShuffleVector(F1, F2, Mask);
   Value *NewSel = Builder.CreateSelect(ShuffleCmp, ShuffleTrue, ShuffleFalse);
+  if (isa<FPMathOperator>(NewSel))
+    cast<Instruction>(NewSel)->setFastMathFlags(Select0->getFastMathFlags());
 
   replaceValue(I, *NewSel);
   return true;

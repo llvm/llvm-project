@@ -290,7 +290,7 @@ define <4 x float> @src_v2tov4_float_nnan(<2 x i1> %a, <2 x i1> %b, <2 x float> 
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; SSE-NEXT:    [[RES:%.*]] = select nnan <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; SSE-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX2-LABEL: define <4 x float> @src_v2tov4_float_nnan(
@@ -298,7 +298,7 @@ define <4 x float> @src_v2tov4_float_nnan(<2 x i1> %a, <2 x i1> %b, <2 x float> 
 ; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; AVX2-NEXT:    [[RES:%.*]] = select nnan <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; AVX2-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX512-LABEL: define <4 x float> @src_v2tov4_float_nnan(
@@ -320,7 +320,7 @@ define <4 x float> @src_v2tov4_float_ninf(<2 x i1> %a, <2 x i1> %b, <2 x float> 
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; SSE-NEXT:    [[RES:%.*]] = select ninf <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; SSE-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX2-LABEL: define <4 x float> @src_v2tov4_float_ninf(
@@ -328,7 +328,7 @@ define <4 x float> @src_v2tov4_float_ninf(<2 x i1> %a, <2 x i1> %b, <2 x float> 
 ; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; AVX2-NEXT:    [[RES:%.*]] = select ninf <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; AVX2-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX512-LABEL: define <4 x float> @src_v2tov4_float_ninf(
@@ -350,7 +350,7 @@ define <4 x float> @src_v2tov4_float_nnan_ninf(<2 x i1> %a, <2 x i1> %b, <2 x fl
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; SSE-NEXT:    [[RES:%.*]] = select nnan ninf <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; SSE-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX2-LABEL: define <4 x float> @src_v2tov4_float_nnan_ninf(
@@ -358,7 +358,7 @@ define <4 x float> @src_v2tov4_float_nnan_ninf(<2 x i1> %a, <2 x i1> %b, <2 x fl
 ; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; AVX2-NEXT:    [[RES:%.*]] = select nnan ninf <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; AVX2-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX512-LABEL: define <4 x float> @src_v2tov4_float_nnan_ninf(
@@ -380,7 +380,7 @@ define <4 x float> @src_v2tov4_float_nsz(<2 x i1> %a, <2 x i1> %b, <2 x float> %
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; SSE-NEXT:    [[RES:%.*]] = select nsz <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; SSE-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX2-LABEL: define <4 x float> @src_v2tov4_float_nsz(
@@ -388,7 +388,7 @@ define <4 x float> @src_v2tov4_float_nsz(<2 x i1> %a, <2 x i1> %b, <2 x float> %
 ; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; AVX2-NEXT:    [[RES:%.*]] = select nsz <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; AVX2-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX512-LABEL: define <4 x float> @src_v2tov4_float_nsz(
@@ -410,7 +410,7 @@ define <4 x float> @src_v2tov4_float_nnan_nsz(<2 x i1> %a, <2 x i1> %b, <2 x flo
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; SSE-NEXT:    [[RES:%.*]] = select nnan nsz <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; SSE-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX2-LABEL: define <4 x float> @src_v2tov4_float_nnan_nsz(
@@ -418,7 +418,7 @@ define <4 x float> @src_v2tov4_float_nnan_nsz(<2 x i1> %a, <2 x i1> %b, <2 x flo
 ; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; AVX2-NEXT:    [[RES:%.*]] = select nnan nsz <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; AVX2-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX512-LABEL: define <4 x float> @src_v2tov4_float_nnan_nsz(
@@ -440,7 +440,7 @@ define <4 x float> @src_v2tov4_float_ninf_nsz(<2 x i1> %a, <2 x i1> %b, <2 x flo
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; SSE-NEXT:    [[RES:%.*]] = select ninf nsz <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; SSE-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX2-LABEL: define <4 x float> @src_v2tov4_float_ninf_nsz(
@@ -448,7 +448,7 @@ define <4 x float> @src_v2tov4_float_ninf_nsz(<2 x i1> %a, <2 x i1> %b, <2 x flo
 ; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; AVX2-NEXT:    [[RES:%.*]] = select ninf nsz <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; AVX2-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX512-LABEL: define <4 x float> @src_v2tov4_float_ninf_nsz(
@@ -470,7 +470,7 @@ define <4 x float> @src_v2tov4_float_nnan_ninf_nsz(<2 x i1> %a, <2 x i1> %b, <2 
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; SSE-NEXT:    [[RES:%.*]] = select nnan ninf nsz <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; SSE-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX2-LABEL: define <4 x float> @src_v2tov4_float_nnan_ninf_nsz(
@@ -478,7 +478,7 @@ define <4 x float> @src_v2tov4_float_nnan_ninf_nsz(<2 x i1> %a, <2 x i1> %b, <2 
 ; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[X]], <2 x float> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[Z]], <2 x float> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
+; AVX2-NEXT:    [[RES:%.*]] = select nnan ninf nsz <4 x i1> [[TMP1]], <4 x float> [[TMP2]], <4 x float> [[TMP3]]
 ; AVX2-NEXT:    ret <4 x float> [[RES]]
 ;
 ; AVX512-LABEL: define <4 x float> @src_v2tov4_float_nnan_ninf_nsz(
