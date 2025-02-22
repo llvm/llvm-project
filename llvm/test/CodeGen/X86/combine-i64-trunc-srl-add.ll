@@ -151,3 +151,20 @@ for.body:
 exit:
   ret i32 0
 }
+
+define i64 @pr128309(i64 %x) {
+; X64-LABEL: pr128309:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $18114, %eax # imm = 0x46C2
+; X64-NEXT:    addl $-65530, %eax # imm = 0xFFFF0006
+; X64-NEXT:    andl %edi, %eax
+; X64-NEXT:    retq
+entry:
+  %shl = shl i64 %x, 48
+  %and = and i64 %shl, 5098637728136822784
+  %add = add i64 %and, 1688849860263936
+  %lshr = lshr i64 %add, 48
+  %res = and i64 %lshr, %x
+  ret i64 %res
+}
