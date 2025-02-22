@@ -1269,13 +1269,23 @@ module std [system] {
       export std.vector.vector
       export std.vector.fwd
     }
+    module flat_multiset                  {
+      header "__flat_set/flat_multiset.h"
+      export std.vector.vector
+      export std.vector.fwd
+    }
     module sorted_unique                  { 
       header "__flat_map/sorted_unique.h" 
+      export *
+    }
+    module sorted_equivalent                  { 
+      header "__flat_map/sorted_equivalent.h" 
       export *
     }
 
     header "flat_set"
     export std.flat_map.sorted_unique
+    export std.flat_map.sorted_equivalent
     export *
   }
 

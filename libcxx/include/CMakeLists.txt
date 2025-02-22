@@ -368,6 +368,7 @@ set(files
   __flat_map/sorted_unique.h
   __flat_map/utils.h
   __flat_set/flat_set.h
+  __flat_set/flat_multiset.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
