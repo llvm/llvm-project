@@ -271,6 +271,9 @@ clang-format
 - Adds ``BreakBeforeTemplateCloser`` option.
 - Adds ``BinPackLongBracedList`` option to override bin packing options in
   long (20 item or more) braced list initializer lists.
+- Allow specifying the language (C++ or Objective-C) for a ``.h`` file by adding
+  a special comment (e.g. ``// clang-format Language: ObjC``) near the top of
+  the file.
 
 libclang
 --------
