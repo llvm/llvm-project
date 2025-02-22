@@ -24,6 +24,7 @@
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -89,6 +90,9 @@ class AArch64AsmPrinter : public AsmPrinter {
 #ifndef NDEBUG
   unsigned InstsEmitted;
 #endif
+  bool EnableImportCallOptimization = false;
+  DenseMap<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
+      SectionToImportedFunctionCalls;
 
 public:
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
@@ -200,6 +204,13 @@ public:
   /// pseudo instructions.
   bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
+  // Emit Build Attributes
+  void emitAttributes(unsigned Flags, uint64_t PAuthABIPlatform,
+                      uint64_t PAuthABIVersion, AArch64TargetStreamer *TS);
+
+  // Emit expansion of Compare-and-branch pseudo instructions
+  void emitCBPseudoExpansion(const MachineInstr *MI);
+
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
     EmitToStreamer(*OutStreamer, Inst);
@@ -293,6 +304,11 @@ private:
                               MCSymbol *LazyPointer) override;
   void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
                                     MCSymbol *LazyPointer) override;
+
+  /// Checks if this instruction is part of a sequence that is eligle for import
+  /// call optimization and, if so, records it to be emitted in the import call
+  /// section.
+  void recordIfImportCall(const MachineInstr *BranchInst);
 };
 
 } // end anonymous namespace
@@ -327,41 +343,61 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     OutStreamer->emitSymbolAttribute(S, MCSA_Global);
     OutStreamer->emitAssignment(
         S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
+
+    if (M.getModuleFlag("import-call-optimization"))
+      EnableImportCallOptimization = true;
   }
 
   if (!TT.isOSBinFormatELF())
     return;
 
-  // Assemble feature flags that may require creation of a note section.
-  unsigned Flags = 0;
+  // For emitting build attributes and .note.gnu.property section
+  auto *TS =
+      static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
+  // Assemble feature flags that may require creation of build attributes and a
+  // note section.
+  unsigned BAFlags = 0;
+  unsigned GNUFlags = 0;
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("branch-target-enforcement")))
-    if (!BTE->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+          M.getModuleFlag("branch-target-enforcement"))) {
+    if (!BTE->isZero()) {
+      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_BTI_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+    }
+  }
 
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("guarded-control-stack")))
-    if (!GCS->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+          M.getModuleFlag("guarded-control-stack"))) {
+    if (!GCS->isZero()) {
+      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_GCS_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+    }
+  }
 
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("sign-return-address")))
-    if (!Sign->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+          M.getModuleFlag("sign-return-address"))) {
+    if (!Sign->isZero()) {
+      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_PAC_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+    }
+  }
 
   uint64_t PAuthABIPlatform = -1;
   if (const auto *PAP = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("aarch64-elf-pauthabi-platform")))
+          M.getModuleFlag("aarch64-elf-pauthabi-platform"))) {
     PAuthABIPlatform = PAP->getZExtValue();
+  }
+
   uint64_t PAuthABIVersion = -1;
   if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("aarch64-elf-pauthabi-version")))
+          M.getModuleFlag("aarch64-elf-pauthabi-version"))) {
     PAuthABIVersion = PAV->getZExtValue();
+  }
 
+  // Emit AArch64 Build Attributes
+  emitAttributes(BAFlags, PAuthABIPlatform, PAuthABIVersion, TS);
   // Emit a .note.gnu.property section with the flags.
-  auto *TS =
-      static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
-  TS->emitNoteSection(Flags, PAuthABIPlatform, PAuthABIVersion);
+  TS->emitNoteSection(GNUFlags, PAuthABIPlatform, PAuthABIVersion);
 }
 
 void AArch64AsmPrinter::emitFunctionHeaderComment() {
@@ -432,6 +468,48 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
 
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind, 2);
+}
+
+void AArch64AsmPrinter::emitAttributes(unsigned Flags,
+                                       uint64_t PAuthABIPlatform,
+                                       uint64_t PAuthABIVersion,
+                                       AArch64TargetStreamer *TS) {
+
+  PAuthABIPlatform = (uint64_t(-1) == PAuthABIPlatform) ? 0 : PAuthABIPlatform;
+  PAuthABIVersion = (uint64_t(-1) == PAuthABIVersion) ? 0 : PAuthABIVersion;
+
+  if (PAuthABIPlatform || PAuthABIVersion) {
+    TS->emitAtributesSubsection(
+        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
+        AArch64BuildAttrs::SubsectionOptional::REQUIRED,
+        AArch64BuildAttrs::SubsectionType::ULEB128);
+    TS->emitAttribute(
+        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
+        AArch64BuildAttrs::TAG_PAUTH_PLATFORM, PAuthABIPlatform, "", false);
+    TS->emitAttribute(
+        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
+        AArch64BuildAttrs::TAG_PAUTH_SCHEMA, PAuthABIVersion, "", false);
+  }
+
+  unsigned BTIValue = (Flags & AArch64BuildAttrs::Feature_BTI_Flag) ? 1 : 0;
+  unsigned PACValue = (Flags & AArch64BuildAttrs::Feature_PAC_Flag) ? 1 : 0;
+  unsigned GCSValue = (Flags & AArch64BuildAttrs::Feature_GCS_Flag) ? 1 : 0;
+
+  if (BTIValue || PACValue || GCSValue) {
+    TS->emitAtributesSubsection(AArch64BuildAttrs::getVendorName(
+                                    AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
+                                AArch64BuildAttrs::SubsectionOptional::OPTIONAL,
+                                AArch64BuildAttrs::SubsectionType::ULEB128);
+    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
+                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttrs::TAG_FEATURE_BTI, BTIValue, "", false);
+    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
+                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttrs::TAG_FEATURE_PAC, PACValue, "", false);
+    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
+                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttrs::TAG_FEATURE_GCS, GCSValue, "", false);
+  }
 }
 
 // Emit the following code for Intrinsic::{xray_customevent,xray_typedevent}
@@ -605,6 +683,15 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   Register Reg = MI.getOperand(0).getReg();
+
+  // The HWASan pass won't emit a CHECK_MEMACCESS intrinsic with a pointer
+  // statically known to be zero. However, conceivably, the HWASan pass may
+  // encounter a "cannot currently statically prove to be null" pointer (and is
+  // therefore unable to omit the intrinsic) that later optimization passes
+  // convert into a statically known-null pointer.
+  if (Reg == AArch64::XZR)
+    return;
+
   bool IsShort =
       ((MI.getOpcode() == AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES) ||
        (MI.getOpcode() ==
@@ -921,6 +1008,38 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
   // Emit stack and fault map information.
   FM.serializeToFaultMapSection();
 
+  // If import call optimization is enabled, emit the appropriate section.
+  // We do this whether or not we recorded any import calls.
+  if (EnableImportCallOptimization && TT.isOSBinFormatCOFF()) {
+    OutStreamer->switchSection(getObjFileLowering().getImportCallSection());
+
+    // Section always starts with some magic.
+    constexpr char ImpCallMagic[12] = "Imp_Call_V1";
+    OutStreamer->emitBytes(StringRef{ImpCallMagic, sizeof(ImpCallMagic)});
+
+    // Layout of this section is:
+    // Per section that contains calls to imported functions:
+    //  uint32_t SectionSize: Size in bytes for information in this section.
+    //  uint32_t Section Number
+    //  Per call to imported function in section:
+    //    uint32_t Kind: the kind of imported function.
+    //    uint32_t BranchOffset: the offset of the branch instruction in its
+    //                            parent section.
+    //    uint32_t TargetSymbolId: the symbol id of the called function.
+    for (auto &[Section, CallsToImportedFuncs] :
+         SectionToImportedFunctionCalls) {
+      unsigned SectionSize =
+          sizeof(uint32_t) * (2 + 3 * CallsToImportedFuncs.size());
+      OutStreamer->emitInt32(SectionSize);
+      OutStreamer->emitCOFFSecNumber(Section->getBeginSymbol());
+      for (auto &[CallsiteSymbol, CalledSymbol] : CallsToImportedFuncs) {
+        // Kind is always IMAGE_REL_ARM64_DYNAMIC_IMPORT_CALL (0x13).
+        OutStreamer->emitInt32(0x13);
+        OutStreamer->emitCOFFSecOffset(CallsiteSymbol);
+        OutStreamer->emitCOFFSymbolIndex(CalledSymbol);
+      }
+    }
+  }
 }
 
 void AArch64AsmPrinter::emitLOHs() {
@@ -2473,6 +2592,124 @@ AArch64AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
   return BAE;
 }
 
+void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
+  bool IsImm = false;
+  bool Is32Bit = false;
+
+  switch (MI->getOpcode()) {
+  default:
+    llvm_unreachable("This is not a CB pseudo instruction");
+  case AArch64::CBWPrr:
+    Is32Bit = true;
+    break;
+  case AArch64::CBXPrr:
+    Is32Bit = false;
+    break;
+  case AArch64::CBWPri:
+    IsImm = true;
+    Is32Bit = true;
+    break;
+  case AArch64::CBXPri:
+    IsImm = true;
+    break;
+  }
+
+  AArch64CC::CondCode CC =
+      static_cast<AArch64CC::CondCode>(MI->getOperand(0).getImm());
+  bool NeedsRegSwap = false;
+  bool NeedsImmDec = false;
+  bool NeedsImmInc = false;
+
+  // Decide if we need to either swap register operands or increment/decrement
+  // immediate operands
+  unsigned MCOpC;
+  switch (CC) {
+  default:
+    llvm_unreachable("Invalid CB condition code");
+  case AArch64CC::EQ:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBEQWri : AArch64::CBEQXri)
+                  : (Is32Bit ? AArch64::CBEQWrr : AArch64::CBEQXrr);
+    break;
+  case AArch64CC::NE:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBNEWri : AArch64::CBNEXri)
+                  : (Is32Bit ? AArch64::CBNEWrr : AArch64::CBNEXrr);
+    break;
+  case AArch64CC::HS:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBHIWri : AArch64::CBHIXri)
+                  : (Is32Bit ? AArch64::CBHSWrr : AArch64::CBHSXrr);
+    NeedsImmDec = IsImm;
+    break;
+  case AArch64CC::LO:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLOWri : AArch64::CBLOXri)
+                  : (Is32Bit ? AArch64::CBHIWrr : AArch64::CBHIXrr);
+    NeedsRegSwap = !IsImm;
+    break;
+  case AArch64CC::HI:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBHIWri : AArch64::CBHIXri)
+                  : (Is32Bit ? AArch64::CBHIWrr : AArch64::CBHIXrr);
+    break;
+  case AArch64CC::LS:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLOWri : AArch64::CBLOXri)
+                  : (Is32Bit ? AArch64::CBHSWrr : AArch64::CBHSXrr);
+    NeedsRegSwap = !IsImm;
+    NeedsImmInc = IsImm;
+    break;
+  case AArch64CC::GE:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBGTWri : AArch64::CBGTXri)
+                  : (Is32Bit ? AArch64::CBGEWrr : AArch64::CBGEXrr);
+    NeedsImmDec = IsImm;
+    break;
+  case AArch64CC::LT:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLTWri : AArch64::CBLTXri)
+                  : (Is32Bit ? AArch64::CBGTWrr : AArch64::CBGTXrr);
+    NeedsRegSwap = !IsImm;
+    break;
+  case AArch64CC::GT:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBGTWri : AArch64::CBGTXri)
+                  : (Is32Bit ? AArch64::CBGTWrr : AArch64::CBGTXrr);
+    break;
+  case AArch64CC::LE:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLTWri : AArch64::CBLTXri)
+                  : (Is32Bit ? AArch64::CBGEWrr : AArch64::CBGEXrr);
+    NeedsRegSwap = !IsImm;
+    NeedsImmInc = IsImm;
+    break;
+  }
+
+  MCInst Inst;
+  Inst.setOpcode(MCOpC);
+
+  MCOperand Lhs, Rhs, Trgt;
+  lowerOperand(MI->getOperand(1), Lhs);
+  lowerOperand(MI->getOperand(2), Rhs);
+  lowerOperand(MI->getOperand(3), Trgt);
+
+  // Now swap, increment or decrement
+  if (NeedsRegSwap) {
+    assert(Lhs.isReg() && "Expected register operand for CB");
+    assert(Rhs.isReg() && "Expected register operand for CB");
+    Inst.addOperand(Rhs);
+    Inst.addOperand(Lhs);
+  } else if (NeedsImmDec) {
+    Rhs.setImm(Rhs.getImm() - 1);
+    Inst.addOperand(Lhs);
+    Inst.addOperand(Rhs);
+  } else if (NeedsImmInc) {
+    Rhs.setImm(Rhs.getImm() + 1);
+    Inst.addOperand(Lhs);
+    Inst.addOperand(Rhs);
+  } else {
+    Inst.addOperand(Lhs);
+    Inst.addOperand(Rhs);
+  }
+
+  assert((!IsImm || (Rhs.getImm() >= 0 && Rhs.getImm() < 64)) &&
+         "CB immediate operand out-of-bounds");
+
+  Inst.addOperand(Trgt);
+  EmitToStreamer(*OutStreamer, Inst);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -2694,6 +2931,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::TCRETURNriALL: {
     emitPtrauthTailCallHardening(MI);
 
+    recordIfImportCall(MI);
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::BR);
     TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
@@ -2705,6 +2943,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     MCOperand Dest;
     MCInstLowering.lowerOperand(MI->getOperand(0), Dest);
+    recordIfImportCall(MI);
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::B);
     TmpInst.addOperand(Dest);
@@ -2728,6 +2967,54 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCInst TmpInstSB;
     TmpInstSB.setOpcode(AArch64::SB);
     EmitToStreamer(*OutStreamer, TmpInstSB);
+    return;
+  }
+  case AArch64::TLSDESC_AUTH_CALLSEQ: {
+    /// lower this to:
+    ///    adrp  x0, :tlsdesc_auth:var
+    ///    ldr   x16, [x0, #:tlsdesc_auth_lo12:var]
+    ///    add   x0, x0, #:tlsdesc_auth_lo12:var
+    ///    blraa x16, x0
+    ///    (TPIDR_EL0 offset now in x0)
+    const MachineOperand &MO_Sym = MI->getOperand(0);
+    MachineOperand MO_TLSDESC_LO12(MO_Sym), MO_TLSDESC(MO_Sym);
+    MCOperand SymTLSDescLo12, SymTLSDesc;
+    MO_TLSDESC_LO12.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
+    MO_TLSDESC.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGE);
+    MCInstLowering.lowerOperand(MO_TLSDESC_LO12, SymTLSDescLo12);
+    MCInstLowering.lowerOperand(MO_TLSDESC, SymTLSDesc);
+
+    MCInst Adrp;
+    Adrp.setOpcode(AArch64::ADRP);
+    Adrp.addOperand(MCOperand::createReg(AArch64::X0));
+    Adrp.addOperand(SymTLSDesc);
+    EmitToStreamer(*OutStreamer, Adrp);
+
+    MCInst Ldr;
+    Ldr.setOpcode(AArch64::LDRXui);
+    Ldr.addOperand(MCOperand::createReg(AArch64::X16));
+    Ldr.addOperand(MCOperand::createReg(AArch64::X0));
+    Ldr.addOperand(SymTLSDescLo12);
+    Ldr.addOperand(MCOperand::createImm(0));
+    EmitToStreamer(*OutStreamer, Ldr);
+
+    MCInst Add;
+    Add.setOpcode(AArch64::ADDXri);
+    Add.addOperand(MCOperand::createReg(AArch64::X0));
+    Add.addOperand(MCOperand::createReg(AArch64::X0));
+    Add.addOperand(SymTLSDescLo12);
+    Add.addOperand(MCOperand::createImm(AArch64_AM::getShiftValue(0)));
+    EmitToStreamer(*OutStreamer, Add);
+
+    // Authenticated TLSDESC accesses are not relaxed.
+    // Thus, do not emit .tlsdesccall for AUTH TLSDESC.
+
+    MCInst Blraa;
+    Blraa.setOpcode(AArch64::BLRAA);
+    Blraa.addOperand(MCOperand::createReg(AArch64::X16));
+    Blraa.addOperand(MCOperand::createReg(AArch64::X0));
+    EmitToStreamer(*OutStreamer, Blraa);
+
     return;
   }
   case AArch64::TLSDESC_CALLSEQ: {
@@ -2987,12 +3274,43 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     TS->emitARM64WinCFISaveAnyRegQPX(MI->getOperand(0).getImm(),
                                      -MI->getOperand(2).getImm());
     return;
+
+  case AArch64::BLR:
+  case AArch64::BR: {
+    recordIfImportCall(MI);
+    MCInst TmpInst;
+    MCInstLowering.Lower(MI, TmpInst);
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
+    emitCBPseudoExpansion(MI);
+    return;
   }
 
   // Finally, do the automated lowerings for everything else.
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
   EmitToStreamer(*OutStreamer, TmpInst);
+}
+
+void AArch64AsmPrinter::recordIfImportCall(
+    const llvm::MachineInstr *BranchInst) {
+  if (!EnableImportCallOptimization)
+    return;
+
+  auto [GV, OpFlags] = BranchInst->getMF()->tryGetCalledGlobal(BranchInst);
+  if (GV && GV->hasDLLImportStorageClass()) {
+    auto *CallSiteSymbol = MMI->getContext().createNamedTempSymbol("impcall");
+    OutStreamer->emitLabel(CallSiteSymbol);
+
+    auto *CalledSymbol = MCInstLowering.GetGlobalValueSymbol(GV, OpFlags);
+    SectionToImportedFunctionCalls[OutStreamer->getCurrentSectionOnly()]
+        .push_back({CallSiteSymbol, CalledSymbol});
+  }
 }
 
 void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,

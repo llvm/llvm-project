@@ -10,6 +10,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Path.h"
@@ -112,6 +113,12 @@ enum BinaryMetadataFeature {
 /// invalid components. Returns a SanitizerMask.
 static SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
                                     bool DiagnoseErrors);
+
+/// Parse a -fsanitize=<sanitizer1>=<value1>... or -fno-sanitize= argument's
+/// values, diagnosing any invalid components.
+/// Cutoffs are stored in the passed parameter.
+static void parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
+                            bool DiagnoseErrors, SanitizerMaskCutoffs &Cutoffs);
 
 /// Parse -f(no-)?sanitize-coverage= flag values, diagnosing any invalid
 /// components. Returns OR of members of \c CoverageFeature enumeration.
@@ -323,6 +330,19 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
                            options::OPT_fno_sanitize_trap_EQ);
 }
 
+static SanitizerMaskCutoffs
+parseSanitizeSkipHotCutoffArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                               bool DiagnoseErrors) {
+  SanitizerMaskCutoffs Cutoffs;
+  for (const auto *Arg : Args)
+    if (Arg->getOption().matches(options::OPT_fsanitize_skip_hot_cutoff_EQ)) {
+      Arg->claim();
+      parseArgCutoffs(D, Arg, DiagnoseErrors, Cutoffs);
+    }
+
+  return Cutoffs;
+}
+
 bool SanitizerArgs::needsFuzzerInterceptors() const {
   return needsFuzzer() && !needsAsanRt() && !needsTsanRt() && !needsMsanRt();
 }
@@ -336,6 +356,14 @@ bool SanitizerArgs::needsUbsanRt() const {
 
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
          CoverageFeatures;
+}
+
+bool SanitizerArgs::needsUbsanCXXRt() const {
+  // Link UBSAN C++ runtime very selectively, as it's needed in only very
+  // specific cases, but forces the program to depend on C++ ABI. UBSAN C++
+  // runtime is not included with other sanitizers.
+  return static_cast<bool>(Sanitizers.Mask & NeedsUbsanCxxRt &
+                           ~TrapSanitizers.Mask);
 }
 
 bool SanitizerArgs::needsCfiRt() const {
@@ -547,6 +575,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                      options::OPT_fstrict_overflow, false);
         if (Args.hasFlagNoClaim(options::OPT_fwrapv, options::OPT_fno_wrapv, S))
           Add &= ~SanitizerKind::SignedIntegerOverflow;
+        if (Args.hasFlagNoClaim(options::OPT_fwrapv_pointer,
+                                options::OPT_fno_wrapv_pointer, S))
+          Add &= ~SanitizerKind::PointerOverflow;
       }
       Add &= Supported;
 
@@ -705,6 +736,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                         options::OPT_fno_sanitize_merge_handlers_EQ);
   MergeKinds &= Kinds;
 
+  // Parse -fno-sanitize-top-hot flags
+  SkipHotCutoffs = parseSanitizeSkipHotCutoffArgs(D, Args, DiagnoseErrors);
+
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
   // and validate special case lists format.
@@ -797,6 +831,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   if (AllAddedKinds & SanitizerKind::KCFI) {
     CfiICallNormalizeIntegers =
         Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
+
+    KcfiArity = Args.hasArg(options::OPT_fsanitize_kcfi_arity);
 
     if (AllAddedKinds & SanitizerKind::CFI && DiagnoseErrors)
       D.Diag(diag::err_drv_argument_not_allowed_with)
@@ -1124,6 +1160,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
          "Overlap between recoverable and trapping sanitizers");
 
   MergeHandlers.Mask |= MergeKinds;
+
+  // Zero out SkipHotCutoffs for unused sanitizers
+  SkipHotCutoffs.clear(~Sanitizers.Mask);
 }
 
 static std::string toString(const clang::SanitizerSet &Sanitizers) {
@@ -1136,6 +1175,12 @@ static std::string toString(const clang::SanitizerSet &Sanitizers) {
   }
 #include "clang/Basic/Sanitizers.def"
   return Res;
+}
+
+static std::string toString(const clang::SanitizerMaskCutoffs &Cutoffs) {
+  llvm::SmallVector<std::string, 4> Res;
+  serializeSanitizerMaskCutoffs(Cutoffs, Res);
+  return llvm::join(Res, ",");
 }
 
 static void addSpecialCaseListOpt(const llvm::opt::ArgList &Args,
@@ -1289,6 +1334,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString("-fsanitize-merge=" + toString(MergeHandlers)));
 
+  std::string SkipHotCutoffsStr = toString(SkipHotCutoffs);
+  if (!SkipHotCutoffsStr.empty())
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-skip-hot-cutoff=" + SkipHotCutoffsStr));
+
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
   addSpecialCaseListOpt(Args, CmdArgs,
@@ -1337,6 +1387,14 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (CfiICallNormalizeIntegers)
     CmdArgs.push_back("-fsanitize-cfi-icall-experimental-normalize-integers");
+
+  if (KcfiArity) {
+    if (!TC.getTriple().isOSLinux() || !TC.getTriple().isArch64Bit()) {
+      TC.getDriver().Diag(clang::diag::err_drv_kcfi_arity_unsupported_target)
+          << TC.getTriple().str();
+    }
+    CmdArgs.push_back("-fsanitize-kcfi-arity");
+  }
 
   if (CfiCanonicalJumpTables)
     CmdArgs.push_back("-fsanitize-cfi-canonical-jump-tables");
@@ -1484,6 +1542,22 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
           << A->getSpelling() << Value;
   }
   return Kinds;
+}
+
+void parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
+                     bool DiagnoseErrors, SanitizerMaskCutoffs &Cutoffs) {
+  assert(A->getOption().matches(options::OPT_fsanitize_skip_hot_cutoff_EQ) &&
+         "Invalid argument in parseArgCutoffs!");
+  for (int i = 0, n = A->getNumValues(); i != n; ++i) {
+    const char *Value = A->getValue(i);
+
+    // We don't check the value of Cutoffs[i]: it's legal to specify
+    // a cutoff of 0.
+    if (!parseSanitizerWeightedValue(Value, /*AllowGroups=*/true, Cutoffs) &&
+        DiagnoseErrors)
+      D.Diag(clang::diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Value;
+  }
 }
 
 static int parseOverflowPatternExclusionValues(const Driver &D,

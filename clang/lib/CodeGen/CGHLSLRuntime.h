@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -46,25 +47,33 @@
     }                                                                          \
   }
 
+using ResourceClass = llvm::dxil::ResourceClass;
+
 namespace llvm {
 class GlobalVariable;
 class Function;
 class StructType;
+class Metadata;
 } // namespace llvm
 
 namespace clang {
+class NamedDecl;
 class VarDecl;
 class ParmVarDecl;
+class InitListExpr;
 class HLSLBufferDecl;
 class HLSLResourceBindingAttr;
 class Type;
+class RecordType;
 class DeclContext;
+class HLSLPackOffsetAttr;
 
 class FunctionDecl;
 
 namespace CodeGen {
 
 class CodeGenModule;
+class CodeGenFunction;
 
 class CGHLSLRuntime {
 public:
@@ -77,7 +86,6 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Cross, cross)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Degrees, degrees)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Length, length)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
@@ -87,6 +95,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Radians, radians)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupThreadId, thread_id_in_group)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GroupId, group_id)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FDot, fdot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(SDot, sdot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
@@ -99,10 +108,13 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitLow, firstbitlow)
   GENERATE_HLSL_INTRINSIC_FUNCTION(NClamp, nclamp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(SClamp, sclamp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(UClamp, uclamp)
 
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateResourceGetPointer,
+                                   resource_getpointer)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
@@ -121,16 +133,6 @@ public:
     unsigned Space;
     BufferResBinding(HLSLResourceBindingAttr *Attr);
   };
-  struct Buffer {
-    Buffer(const HLSLBufferDecl *D);
-    llvm::StringRef Name;
-    // IsCBuffer - Whether the buffer is a cbuffer (and not a tbuffer).
-    bool IsCBuffer;
-    BufferResBinding Binding;
-    // Global variable and offset for each constant.
-    std::vector<std::pair<llvm::GlobalVariable *, unsigned>> Constants;
-    llvm::StructType *LayoutStruct = nullptr;
-  };
 
 protected:
   CodeGenModule &CGM;
@@ -142,7 +144,9 @@ public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGHLSLRuntime() {}
 
-  llvm::Type *convertHLSLSpecificType(const Type *T);
+  llvm::Type *
+  convertHLSLSpecificType(const Type *T,
+                          SmallVector<unsigned> *Packoffsets = nullptr);
 
   void annotateHLSLResource(const VarDecl *D, llvm::GlobalVariable *GV);
   void generateGlobalCtorDtorCalls();
@@ -156,9 +160,13 @@ public:
   void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
   void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
 
-  bool needsResourceBindingInitFn();
-  llvm::Function *createResourceBindingInitFn();
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
+
+  llvm::TargetExtType *
+  getHLSLBufferLayoutType(const RecordType *LayoutStructTy);
+  void addHLSLBufferLayoutType(const RecordType *LayoutStructTy,
+                               llvm::TargetExtType *LayoutTy);
+  void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
@@ -166,13 +174,11 @@ private:
                                    llvm::hlsl::ResourceKind RK, bool IsROV,
                                    llvm::hlsl::ElementType ET,
                                    BufferResBinding &Binding);
-  void addConstant(VarDecl *D, Buffer &CB);
-  void addBufferDecls(const DeclContext *DC, Buffer &CB);
+  void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
+                                    llvm::GlobalVariable *BufGV);
   llvm::Triple::ArchType getArch();
-  llvm::SmallVector<Buffer> Buffers;
 
-  llvm::SmallVector<std::pair<const VarDecl *, llvm::GlobalVariable *>>
-      ResourcesToBind;
+  llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;
 };
 
 } // namespace CodeGen

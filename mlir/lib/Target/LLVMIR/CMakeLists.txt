@@ -29,6 +29,7 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
   intrinsics_gen
 
   LINK_COMPONENTS
+  Analysis
   Core
   FrontendOpenMP
   TransformUtils

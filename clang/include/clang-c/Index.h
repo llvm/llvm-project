@@ -2158,6 +2158,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPAssumeDirective = 309,
 
+  /** OpenMP assume directive.
+   */
+  CXCursor_OMPStripeDirective = 310,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -2198,7 +2202,19 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCShutdownConstruct = 329,
 
-  CXCursor_LastStmt = CXCursor_OpenACCShutdownConstruct,
+  /** OpenACC set Construct.
+   */
+  CXCursor_OpenACCSetConstruct = 330,
+
+  /** OpenACC update Construct.
+   */
+  CXCursor_OpenACCUpdateConstruct = 331,
+
+  /** OpenACC atomic Construct.
+   */
+  CXCursor_OpenACCAtomicConstruct = 332,
+
+  CXCursor_LastStmt = CXCursor_OpenACCAtomicConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -3597,8 +3613,8 @@ CINDEX_LINKAGE enum CXTypeNullabilityKind clang_Type_getNullability(CXType T);
 
 /**
  * List the possible error codes for \c clang_Type_getSizeOf,
- *   \c clang_Type_getAlignOf, \c clang_Type_getOffsetOf and
- *   \c clang_Cursor_getOffsetOf.
+ *   \c clang_Type_getAlignOf, \c clang_Type_getOffsetOf,
+ *   \c clang_Cursor_getOffsetOf, and \c clang_getOffsetOfBase.
  *
  * A value of this enumeration type can be returned if the target type is not
  * a valid argument to sizeof, alignof or offsetof.
@@ -3762,6 +3778,15 @@ CINDEX_LINKAGE enum CXRefQualifierKind clang_Type_getCXXRefQualifier(CXType T);
  *   CX_CXXBaseSpecifier is virtual.
  */
 CINDEX_LINKAGE unsigned clang_isVirtualBase(CXCursor);
+
+/**
+ * Returns the offset in bits of a CX_CXXBaseSpecifier relative to the parent
+ * class.
+ *
+ * Returns a small negative number if the offset cannot be computed. See
+ * CXTypeLayoutError for error codes.
+ */
+CINDEX_LINKAGE long long clang_getOffsetOfBase(CXCursor Parent, CXCursor Base);
 
 /**
  * Represents the C++ access control level to a base class for a
@@ -4173,6 +4198,14 @@ CINDEX_LINKAGE void clang_PrintingPolicy_dispose(CXPrintingPolicy Policy);
  */
 CINDEX_LINKAGE CXString clang_getCursorPrettyPrinted(CXCursor Cursor,
                                                      CXPrintingPolicy Policy);
+
+/**
+ * Pretty-print the underlying type using a custom printing policy.
+ *
+ * If the type is invalid, an empty string is returned.
+ */
+CINDEX_LINKAGE CXString clang_getTypePrettyPrinted(CXType CT,
+                                                   CXPrintingPolicy cxPolicy);
 
 /**
  * Retrieve the display name for the entity referenced by this cursor.
@@ -5884,66 +5917,6 @@ CINDEX_LINKAGE void clang_EvalResult_dispose(CXEvalResult E);
  * @}
  */
 
-/** \defgroup CINDEX_REMAPPING Remapping functions
- *
- * @{
- */
-
-/**
- * A remapping of original source files and their translated files.
- */
-typedef void *CXRemapping;
-
-/**
- * Retrieve a remapping.
- *
- * \param path the path that contains metadata about remappings.
- *
- * \returns the requested remapping. This remapping must be freed
- * via a call to \c clang_remap_dispose(). Can return NULL if an error occurred.
- */
-CINDEX_LINKAGE CXRemapping clang_getRemappings(const char *path);
-
-/**
- * Retrieve a remapping.
- *
- * \param filePaths pointer to an array of file paths containing remapping info.
- *
- * \param numFiles number of file paths.
- *
- * \returns the requested remapping. This remapping must be freed
- * via a call to \c clang_remap_dispose(). Can return NULL if an error occurred.
- */
-CINDEX_LINKAGE
-CXRemapping clang_getRemappingsFromFileList(const char **filePaths,
-                                            unsigned numFiles);
-
-/**
- * Determine the number of remappings.
- */
-CINDEX_LINKAGE unsigned clang_remap_getNumFiles(CXRemapping);
-
-/**
- * Get the original and the associated filename from the remapping.
- *
- * \param original If non-NULL, will be set to the original filename.
- *
- * \param transformed If non-NULL, will be set to the filename that the original
- * is associated with.
- */
-CINDEX_LINKAGE void clang_remap_getFilenames(CXRemapping, unsigned index,
-                                             CXString *original,
-                                             CXString *transformed);
-
-/**
- * Dispose the remapping.
- */
-CINDEX_LINKAGE void clang_remap_dispose(CXRemapping);
-
-/**
- * @}
- */
-
 /** \defgroup CINDEX_HIGH Higher level API functions
  *
  * @{
@@ -6631,6 +6604,29 @@ typedef enum CXVisitorResult (*CXFieldVisitor)(CXCursor C,
  */
 CINDEX_LINKAGE unsigned clang_Type_visitFields(CXType T, CXFieldVisitor visitor,
                                                CXClientData client_data);
+
+/**
+ * Visit the base classes of a type.
+ *
+ * This function visits all the direct base classes of a the given cursor,
+ * invoking the given \p visitor function with the cursors of each
+ * visited base. The traversal may be ended prematurely, if
+ * the visitor returns \c CXFieldVisit_Break.
+ *
+ * \param T the record type whose field may be visited.
+ *
+ * \param visitor the visitor function that will be invoked for each
+ * field of \p T.
+ *
+ * \param client_data pointer data supplied by the client, which will
+ * be passed to the visitor each time it is invoked.
+ *
+ * \returns a non-zero value if the traversal was terminated
+ * prematurely by the visitor returning \c CXFieldVisit_Break.
+ */
+CINDEX_LINKAGE unsigned clang_visitCXXBaseClasses(CXType T,
+                                                  CXFieldVisitor visitor,
+                                                  CXClientData client_data);
 
 /**
  * Describes the kind of binary operators.

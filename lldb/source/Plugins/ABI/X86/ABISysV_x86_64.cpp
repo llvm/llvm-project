@@ -79,6 +79,7 @@ ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
     case llvm::Triple::OSType::IOS:
     case llvm::Triple::OSType::TvOS:
     case llvm::Triple::OSType::WatchOS:
+    case llvm::Triple::OSType::XROS:
       switch (os_env) {
       case llvm::Triple::EnvironmentType::MacABI:
       case llvm::Triple::EnvironmentType::Simulator:
@@ -95,6 +96,7 @@ ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::MacOSX:
     case llvm::Triple::OSType::NetBSD:
+    case llvm::Triple::OSType::OpenBSD:
     case llvm::Triple::OSType::Solaris:
     case llvm::Triple::OSType::UnknownOS:
       return ABISP(

@@ -17,7 +17,7 @@
 #include <__algorithm/ranges_inplace_merge.h>
 #include <__algorithm/ranges_lower_bound.h>
 #include <__algorithm/ranges_partition_point.h>
-#include <__algorithm/ranges_stable_sort.h>
+#include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_unique.h>
 #include <__algorithm/ranges_upper_bound.h>
 #include <__algorithm/remove_if.h>
@@ -29,9 +29,11 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__flat_map/key_value_iterator.h>
 #include <__flat_map/sorted_unique.h>
+#include <__flat_map/utils.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
+#include <__fwd/vector.h>
 #include <__iterator/concepts.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -90,7 +92,7 @@ class flat_map {
   static_assert(!is_same_v<_MappedContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
 
   template <bool _Const>
-  using __iterator = __key_value_iterator<flat_map, _KeyContainer, _MappedContainer, _Const>;
+  using __iterator _LIBCPP_NODEBUG = __key_value_iterator<flat_map, _KeyContainer, _MappedContainer, _Const>;
 
 public:
   // types
@@ -131,7 +133,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __allocator_ctor_constraint =
       _And<uses_allocator<key_container_type, _Allocator>, uses_allocator<mapped_container_type, _Allocator>>::value;
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_compare_transparent = __is_transparent_v<_Compare, _Compare>;
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_compare_transparent = __is_transparent_v<_Compare>;
 
 public:
   // [flat.map.cons], construct/copy/destroy
@@ -153,7 +155,7 @@ public:
 #  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     __other.clear();
-    // gcc does not like the `throw` keyword in a conditional noexcept function
+    // gcc does not like the `throw` keyword in a conditionally noexcept function
     if constexpr (!(is_nothrow_move_constructible_v<_KeyContainer> &&
                     is_nothrow_move_constructible_v<_MappedContainer> && is_nothrow_move_constructible_v<_Compare>)) {
       throw;
@@ -518,16 +520,16 @@ public:
     return emplace_hint(__hint, std::move(__x));
   }
 
-  template <class _Pp>
-    requires is_constructible_v<pair<key_type, mapped_type>, _Pp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Pp&& __x) {
-    return emplace(std::forward<_Pp>(__x));
+  template <class _PairLike>
+    requires is_constructible_v<pair<key_type, mapped_type>, _PairLike>
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_PairLike&& __x) {
+    return emplace(std::forward<_PairLike>(__x));
   }
 
-  template <class _Pp>
-    requires is_constructible_v<pair<key_type, mapped_type>, _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, _Pp&& __x) {
-    return emplace_hint(__hint, std::forward<_Pp>(__x));
+  template <class _PairLike>
+    requires is_constructible_v<pair<key_type, mapped_type>, _PairLike>
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, _PairLike&& __x) {
+    return emplace_hint(__hint, std::forward<_PairLike>(__x));
   }
 
   template <class _InputIterator>
@@ -853,31 +855,17 @@ private:
   // is no invariant state to preserve
   _LIBCPP_HIDE_FROM_ABI void __sort_and_unique() {
     auto __zv = ranges::views::zip(__containers_.keys, __containers_.values);
-    // To be consistent with std::map's behaviour, we use stable_sort instead of sort.
-    // As a result, if there are duplicated keys, the first value in the original order will be taken.
-    ranges::stable_sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
+    ranges::sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
     auto __dup_start = ranges::unique(__zv, __key_equiv(__compare_)).begin();
     auto __dist      = ranges::distance(__zv.begin(), __dup_start);
     __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
     __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
   }
 
-  template <class _InputIterator, class _Sentinel>
-  _LIBCPP_HIDE_FROM_ABI size_type __append(_InputIterator __first, _Sentinel __last) {
-    size_type __num_of_appended = 0;
-    for (; __first != __last; ++__first) {
-      value_type __kv = *__first;
-      __containers_.keys.insert(__containers_.keys.end(), std::move(__kv.first));
-      __containers_.values.insert(__containers_.values.end(), std::move(__kv.second));
-      ++__num_of_appended;
-    }
-    return __num_of_appended;
-  }
-
   template <bool _WasSorted, class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI void __append_sort_merge_unique(_InputIterator __first, _Sentinel __last) {
     auto __on_failure        = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
-    size_t __num_of_appended = __append(std::move(__first), std::move(__last));
+    size_t __num_of_appended = __flat_map_utils::__append(*this, std::move(__first), std::move(__last));
     if (__num_of_appended != 0) {
       auto __zv                  = ranges::views::zip(__containers_.keys, __containers_.values);
       auto __append_start_offset = __containers_.keys.size() - __num_of_appended;
@@ -886,7 +874,7 @@ private:
         return __compare_(std::get<0>(__p1), std::get<0>(__p2));
       };
       if constexpr (!_WasSorted) {
-        ranges::stable_sort(__zv.begin() + __append_start_offset, __end, __compare_key);
+        ranges::sort(__zv.begin() + __append_start_offset, __end, __compare_key);
       } else {
         _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
             __is_sorted_and_unique(__containers_.keys | ranges::views::drop(__append_start_offset)),
@@ -965,7 +953,8 @@ private:
 
     if (__key_it == __containers_.keys.end() || __compare_(__key, *__key_it)) {
       return pair<iterator, bool>(
-          __try_emplace_exact_hint(
+          __flat_map_utils::__emplace_exact_pos(
+              *this,
               std::move(__key_it),
               std::move(__mapped_it),
               std::forward<_KeyArg>(__key),
@@ -991,10 +980,13 @@ private:
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __try_emplace_hint(const_iterator __hint, _Kp&& __key, _Args&&... __args) {
     if (__is_hint_correct(__hint, __key)) {
       if (__hint == cend() || __compare_(__key, __hint->first)) {
-        return {
-            __try_emplace_exact_hint(
-                __hint.__key_iter_, __hint.__mapped_iter_, std::forward<_Kp>(__key), std::forward<_Args>(__args)...),
-            true};
+        return {__flat_map_utils::__emplace_exact_pos(
+                    *this,
+                    __hint.__key_iter_,
+                    __hint.__mapped_iter_,
+                    std::forward<_Kp>(__key),
+                    std::forward<_Args>(__args)...),
+                true};
       } else {
         // key equals
         auto __dist = __hint - cbegin();
@@ -1003,49 +995,6 @@ private:
     } else {
       return __try_emplace(std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
     }
-  }
-
-  template <class _IterK, class _IterM, class _KeyArg, class... _MArgs>
-  _LIBCPP_HIDE_FROM_ABI iterator
-  __try_emplace_exact_hint(_IterK&& __it_key, _IterM&& __it_mapped, _KeyArg&& __key, _MArgs&&... __mapped_args) {
-    auto __on_key_failed = std::__make_exception_guard([&]() noexcept {
-      if constexpr (__container_traits<_KeyContainer>::__emplacement_has_strong_exception_safety_guarantee) {
-        // Nothing to roll back!
-      } else {
-        // we need to clear both because we don't know the state of our keys anymore
-        clear() /* noexcept */;
-      }
-    });
-    auto __key_it        = __containers_.keys.emplace(__it_key, std::forward<_KeyArg>(__key));
-    __on_key_failed.__complete();
-
-    auto __on_value_failed = std::__make_exception_guard([&]() noexcept {
-      if constexpr (!__container_traits<_MappedContainer>::__emplacement_has_strong_exception_safety_guarantee) {
-        // we need to clear both because we don't know the state of our values anymore
-        clear() /* noexcept */;
-      } else {
-        // In this case, we know the values are just like before we attempted emplacement,
-        // and we also know that the keys have been emplaced successfully. Just roll back the keys.
-#  if _LIBCPP_HAS_EXCEPTIONS
-        try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-          __containers_.keys.erase(__key_it);
-#  if _LIBCPP_HAS_EXCEPTIONS
-        } catch (...) {
-          // Now things are funky for real. We're failing to rollback the keys.
-          // Just give up and clear the whole thing.
-          //
-          // Also, swallow the exception that happened during the rollback and let the
-          // original value-emplacement exception propagate normally.
-          clear() /* noexcept */;
-        }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      }
-    });
-    auto __mapped_it = __containers_.values.emplace(__it_mapped, std::forward<_MArgs>(__mapped_args)...);
-    __on_value_failed.__complete();
-
-    return iterator(std::move(__key_it), std::move(__mapped_it));
   }
 
   template <class _Kp, class _Mapped>
@@ -1089,8 +1038,10 @@ private:
   friend typename flat_map<_Key2, _Tp2, _Compare2, _KeyContainer2, _MappedContainer2>::size_type
   erase_if(flat_map<_Key2, _Tp2, _Compare2, _KeyContainer2, _MappedContainer2>&, _Predicate);
 
+  friend __flat_map_utils;
+
   containers __containers_;
-  [[no_unique_address]] key_compare __compare_;
+  _LIBCPP_NO_UNIQUE_ADDRESS key_compare __compare_;
 
   struct __key_equiv {
     _LIBCPP_HIDE_FROM_ABI __key_equiv(key_compare __c) : __comp_(__c) {}
@@ -1189,22 +1140,20 @@ template <ranges::input_range _Range,
           class _Compare   = less<__range_key_type<_Range>>,
           class _Allocator = allocator<byte>,
           class            = __enable_if_t<!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value>>
-flat_map(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
-    -> flat_map<
-        __range_key_type<_Range>,
-        __range_mapped_type<_Range>,
-        _Compare,
-        vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
-        vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
+flat_map(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator()) -> flat_map<
+    __range_key_type<_Range>,
+    __range_mapped_type<_Range>,
+    _Compare,
+    vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
+    vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
 
 template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator<_Allocator>::value>>
-flat_map(from_range_t, _Range&&, _Allocator)
-    -> flat_map<
-        __range_key_type<_Range>,
-        __range_mapped_type<_Range>,
-        less<__range_key_type<_Range>>,
-        vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
-        vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
+flat_map(from_range_t, _Range&&, _Allocator) -> flat_map<
+    __range_key_type<_Range>,
+    __range_mapped_type<_Range>,
+    less<__range_key_type<_Range>>,
+    vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
+    vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
 
 template <class _Key, class _Tp, class _Compare = less<_Key>>
   requires(!__is_allocator<_Compare>::value)

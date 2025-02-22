@@ -19,17 +19,13 @@ class MClassSysReg<bits<1> UniqMask1,
                    bits<1> UniqMask2,
                    bits<1> UniqMask3,
                    bits<12> Enc12,
-                   string name> : SearchableTable {
-  let SearchableFields = ["Name", "M1Encoding12", "M2M3Encoding8", "Encoding"];
+                   string name> {
   string Name;
   bits<13> M1Encoding12;
   bits<10> M2M3Encoding8;
   bits<12> Encoding;
 
   let Name = name;
-  let EnumValueField = "M1Encoding12";
-  let EnumValueField = "M2M3Encoding8";
-  let EnumValueField = "Encoding";
 
   let M1Encoding12{12}    = UniqMask1;
   let M1Encoding12{11-00} = Enc12;
@@ -39,6 +35,27 @@ class MClassSysReg<bits<1> UniqMask1,
   let M2M3Encoding8{8}    = UniqMask3;
   let M2M3Encoding8{7-0}  = Enc12{7-0};
   code Requires           = [{ {} }];
+}
+
+def MClassSysRegsList : GenericTable {
+  let FilterClass = "MClassSysReg";
+  let Fields = ["Name", "M1Encoding12", "M2M3Encoding8", "Encoding",
+                "Requires"];
+}
+
+def lookupMClassSysRegByName : SearchIndex {
+  let Table = MClassSysRegsList;
+  let Key = ["Name"];
+}
+
+def lookupMClassSysRegByM1Encoding12 : SearchIndex {
+  let Table = MClassSysRegsList;
+  let Key = ["M1Encoding12"];
+}
+
+def lookupMClassSysRegByM2M3Encoding8 : SearchIndex {
+  let Table = MClassSysRegsList;
+  let Key = ["M2M3Encoding8"];
 }
 
 // [|i|e|x]apsr_nzcvq has alias [|i|e|x]apsr.
@@ -127,14 +144,26 @@ def : MClassSysReg<0,    0,    1,    0x8a7, "pac_key_u_3_ns">;
 
 // Banked Registers
 //
-class BankedReg<string name,  bits<8> enc>
-               : SearchableTable {
+class BankedReg<string name,  bits<8> enc> {
   string Name;
   bits<8> Encoding;
   let Name = name;
   let Encoding = enc;
-  let SearchableFields = ["Name", "Encoding"];
 }
+
+def BankedRegsList : GenericTable {
+  let FilterClass = "BankedReg";
+  let Fields = ["Name", "Encoding"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupBankedRegByEncoding";
+}
+
+def lookupBankedRegByName : SearchIndex {
+  let Table = BankedRegsList;
+  let Key = ["Name"];
+}
+
 
 // The values here come from B9.2.3 of the ARM ARM, where bits 4-0 are SysM
 // and bit 5 is R.

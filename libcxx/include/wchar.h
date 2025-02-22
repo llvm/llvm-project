@@ -122,10 +122,6 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #    include <__mbstate_t.h> // provide mbstate_t
 #    include <stddef.h>      // provide size_t
 
-#    if __has_include_next(<wchar.h>)
-#      include_next <wchar.h>
-#    endif
-
 // Determine whether we have const-correct overloads for wcschr and friends.
 #    if defined(_WCHAR_H_CPLUSPLUS_98_CONFORMANCE_)
 #      define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1
@@ -206,6 +202,6 @@ size_t wcsnrtombs(
 } // extern "C"
 #      endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
 #    endif   // _LIBCPP_HAS_WIDE_CHARACTERS
-#  endif     // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  endif     // _LIBCPP_WCHAR_H
 
-#endif // _LIBCPP_WCHAR_H
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

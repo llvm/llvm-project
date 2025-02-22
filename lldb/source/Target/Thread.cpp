@@ -223,6 +223,7 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
       m_process_wp(process.shared_from_this()), m_stop_info_sp(),
       m_stop_info_stop_id(0), m_stop_info_override_stop_id(0),
       m_should_run_before_public_stop(false),
+      m_stopped_at_unexecuted_bp(LLDB_INVALID_ADDRESS),
       m_index_id(use_invalid_index_id ? LLDB_INVALID_INDEX32
                                       : process.GetNextThreadIndexID(tid)),
       m_reg_context_sp(), m_state(eStateUnloaded), m_state_mutex(),
@@ -525,6 +526,7 @@ bool Thread::CheckpointThreadState(ThreadStateCheckpoint &saved_state) {
   saved_state.current_inlined_depth = GetCurrentInlinedDepth();
   saved_state.m_completed_plan_checkpoint =
       GetPlans().CheckpointCompletedPlans();
+  saved_state.stopped_at_unexecuted_bp = m_stopped_at_unexecuted_bp;
 
   return true;
 }
@@ -560,6 +562,7 @@ void Thread::RestoreThreadStateFromCheckpoint(
       saved_state.current_inlined_depth);
   GetPlans().RestoreCompletedPlanCheckpoint(
       saved_state.m_completed_plan_checkpoint);
+  m_stopped_at_unexecuted_bp = saved_state.stopped_at_unexecuted_bp;
 }
 
 StateType Thread::GetState() const {
@@ -617,7 +620,7 @@ void Thread::WillStop() {
   current_plan->WillStop();
 }
 
-void Thread::SetupForResume() {
+bool Thread::SetupForResume() {
   if (GetResumeState() != eStateSuspended) {
     // First check whether this thread is going to "actually" resume at all.
     // For instance, if we're stepping from one level to the next of an
@@ -625,7 +628,7 @@ void Thread::SetupForResume() {
     // without actually running this thread.  In that case, for this thread we
     // shouldn't push a step over breakpoint plan or do that work.
     if (GetCurrentPlan()->IsVirtualStep())
-      return;
+      return false;
 
     // If we're at a breakpoint push the step-over breakpoint plan.  Do this
     // before telling the current plan it will resume, since we might change
@@ -636,7 +639,15 @@ void Thread::SetupForResume() {
       const addr_t thread_pc = reg_ctx_sp->GetPC();
       BreakpointSiteSP bp_site_sp =
           GetProcess()->GetBreakpointSiteList().FindByAddress(thread_pc);
-      if (bp_site_sp) {
+      // If we're at a BreakpointSite which we have either
+      //   1. already triggered/hit, or
+      //   2. the Breakpoint was added while stopped, or the pc was moved
+      //      to this BreakpointSite
+      // Step past the breakpoint before resuming.
+      // If we stopped at a breakpoint instruction/BreakpointSite location
+      // without hitting it, and we're still at that same address on
+      // resuming, then we want to hit the BreakpointSite when we resume.
+      if (bp_site_sp && m_stopped_at_unexecuted_bp != thread_pc) {
         // Note, don't assume there's a ThreadPlanStepOverBreakpoint, the
         // target may not require anything special to step over a breakpoint.
 
@@ -663,11 +674,13 @@ void Thread::SetupForResume() {
               step_bp_plan->SetAutoContinue(true);
             }
             QueueThreadPlan(step_bp_plan_sp, false);
+            return true;
           }
         }
       }
     }
   }
+  return false;
 }
 
 bool Thread::ShouldResume(StateType resume_state) {
@@ -725,6 +738,7 @@ bool Thread::ShouldResume(StateType resume_state) {
 
   if (need_to_resume) {
     ClearStackFrames();
+    m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
     // Let Thread subclasses do any special work they need to prior to resuming
     WillResume(resume_state);
   }
@@ -1921,6 +1935,7 @@ Unwind &Thread::GetUnwinder() {
 void Thread::Flush() {
   ClearStackFrames();
   m_reg_context_sp.reset();
+  m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
 }
 
 bool Thread::IsStillAtLastBreakpointHit() {

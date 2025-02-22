@@ -9,7 +9,7 @@
 // CHECK: define void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void trunc_Param(inout int X) {}
 
-// ALL-LABEL: define noundef float {{.*}}case1
+// ALL-LABEL: define noundef nofpclass(nan inf) float {{.*}}case1
 // CHECK: [[F:%.*]] = alloca float
 // CHECK: [[ArgTmp:%.*]] = alloca i32
 // CHECK: [[FVal:%.*]] = load float, ptr {{.*}}
@@ -197,7 +197,7 @@ export int case7() {
 // CHECK: define void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void trunc_vec(inout int3 V) {}
 
-// ALL-LABEL: define noundef <3 x float> {{.*}}case8
+// ALL-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}case8
 
 // CHECK: [[V:%.*]] = alloca <3 x float>
 // CHECK: [[Tmp:%.*]] = alloca <3 x i32>

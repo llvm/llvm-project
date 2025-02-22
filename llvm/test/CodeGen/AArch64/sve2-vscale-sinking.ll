@@ -109,7 +109,7 @@ for.cond.cleanup:
 
 define void @gep(i32 noundef %first, i32 noundef %N, ptr nocapture noundef writeonly %ptr, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %val) #0 {
 ; CHECK-LABEL: define void @gep
-; CHECK-SAME: (i32 noundef [[FIRST:%.*]], i32 noundef [[N:%.*]], ptr nocapture noundef writeonly [[PTR:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32 noundef [[FIRST:%.*]], i32 noundef [[N:%.*]], ptr noundef writeonly captures(none) [[PTR:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -272,7 +272,7 @@ for.cond.cleanup:
 
 define void @gep_i32(i32 noundef %first, i32 noundef %N, ptr nocapture noundef writeonly %ptr, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %val) #0 {
 ; CHECK-LABEL: define void @gep_i32
-; CHECK-SAME: (i32 noundef [[FIRST:%.*]], i32 noundef [[N:%.*]], ptr nocapture noundef writeonly [[PTR:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32 noundef [[FIRST:%.*]], i32 noundef [[N:%.*]], ptr noundef writeonly captures(none) [[PTR:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:

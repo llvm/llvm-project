@@ -336,6 +336,18 @@ public:
     return make_range(Edges.begin(), Edges.end());
   }
 
+  /// Returns an iterator over all edges at the given offset within the block.
+  auto edges_at(Edge::OffsetT O) {
+    return make_filter_range(edges(),
+                             [O](const Edge &E) { return E.getOffset() == O; });
+  }
+
+  /// Returns an iterator over all edges at the given offset within the block.
+  auto edges_at(Edge::OffsetT O) const {
+    return make_filter_range(edges(),
+                             [O](const Edge &E) { return E.getOffset() == O; });
+  }
+
   /// Return the size of the edges list.
   size_t edges_size() const { return Edges.size(); }
 
@@ -575,6 +587,9 @@ public:
     return static_cast<const Block &>(*Base);
   }
 
+  /// Return the Section for this Symbol (Symbol must be defined).
+  Section &getSection() const { return getBlock().getSection(); }
+
   /// Returns the offset for this symbol within the underlying addressable.
   orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
@@ -741,6 +756,10 @@ public:
 
   /// Returns the ordinal for this section.
   SectionOrdinal getOrdinal() const { return SecOrdinal; }
+
+  /// Set the ordinal for this section. Ordinals are used to order the layout
+  /// of sections with the same permissions.
+  void setOrdinal(SectionOrdinal SecOrdinal) { this->SecOrdinal = SecOrdinal; }
 
   /// Returns true if this section is empty (contains no blocks or symbols).
   bool empty() const { return Blocks.empty(); }
@@ -1007,26 +1026,12 @@ public:
   using GetEdgeKindNameFunction = const char *(*)(Edge::Kind);
 
   LinkGraph(std::string Name, std::shared_ptr<orc::SymbolStringPool> SSP,
-            const Triple &TT, SubtargetFeatures Features, unsigned PointerSize,
-            llvm::endianness Endianness,
+            Triple TT, SubtargetFeatures Features,
             GetEdgeKindNameFunction GetEdgeKindName)
-      : Name(std::move(Name)), SSP(std::move(SSP)), TT(TT),
-        Features(std::move(Features)), PointerSize(PointerSize),
-        Endianness(Endianness), GetEdgeKindName(std::move(GetEdgeKindName)) {}
-
-  LinkGraph(std::string Name, std::shared_ptr<orc::SymbolStringPool> SSP,
-            const Triple &TT, unsigned PointerSize, llvm::endianness Endianness,
-            GetEdgeKindNameFunction GetEdgeKindName)
-      : LinkGraph(std::move(Name), std::move(SSP), TT, SubtargetFeatures(),
-                  PointerSize, Endianness, GetEdgeKindName) {}
-
-  LinkGraph(std::string Name, std::shared_ptr<orc::SymbolStringPool> SSP,
-            const Triple &TT, GetEdgeKindNameFunction GetEdgeKindName)
-      : LinkGraph(std::move(Name), std::move(SSP), TT, SubtargetFeatures(),
-                  Triple::getArchPointerBitWidth(TT.getArch()) / 8,
-                  TT.isLittleEndian() ? endianness::little : endianness::big,
-                  GetEdgeKindName) {
-    assert(!(Triple::getArchPointerBitWidth(TT.getArch()) % 8) &&
+      : Name(std::move(Name)), SSP(std::move(SSP)), TT(std::move(TT)),
+        Features(std::move(Features)),
+        GetEdgeKindName(std::move(GetEdgeKindName)) {
+    assert(!(Triple::getArchPointerBitWidth(this->TT.getArch()) % 8) &&
            "Arch bitwidth is not a multiple of 8");
   }
 
@@ -1047,10 +1052,12 @@ public:
   const SubtargetFeatures &getFeatures() const { return Features; }
 
   /// Returns the pointer size for use in this graph.
-  unsigned getPointerSize() const { return PointerSize; }
+  unsigned getPointerSize() const { return TT.getArchPointerBitWidth() / 8; }
 
   /// Returns the endianness of content in this graph.
-  llvm::endianness getEndianness() const { return Endianness; }
+  llvm::endianness getEndianness() const {
+    return TT.isLittleEndian() ? endianness::little : endianness::big;
+  }
 
   const char *getEdgeKindName(Edge::Kind K) const { return GetEdgeKindName(K); }
 
@@ -1126,7 +1133,7 @@ public:
     return MutableArrayRef<char>(AllocatedBuffer, SourceStr.size() + 1);
   }
 
-  /// Create a section with the given name, protection flags, and alignment.
+  /// Create a section with the given name, protection flags.
   Section &createSection(StringRef Name, orc::MemProt Prot) {
     assert(!Sections.count(Name) && "Duplicate section name");
     std::unique_ptr<Section> Sec(new Section(Name, Prot, Sections.size()));
@@ -1269,10 +1276,11 @@ public:
     return splitBlockImpl(std::move(Blocks), Cache);
   }
 
-  //
+  /// Intern the given string in the LinkGraph's SymbolStringPool.
   orc::SymbolStringPtr intern(StringRef SymbolName) {
     return SSP->intern(SymbolName);
   }
+
   /// Add an external symbol.
   /// Some formats (e.g. ELF) allow Symbols to have sizes. For Symbols whose
   /// size is not known, you should substitute '0'.
@@ -1398,8 +1406,24 @@ public:
                                  GetExternalSymbolMapEntryValue()));
   }
 
+  /// Returns the external symbol with the given name if one exists, otherwise
+  /// returns nullptr.
+  Symbol *findExternalSymbolByName(const orc::SymbolStringPtrBase &Name) {
+    for (auto *Sym : external_symbols())
+      if (Sym->getName() == Name)
+        return Sym;
+    return nullptr;
+  }
+
   iterator_range<absolute_symbol_iterator> absolute_symbols() {
     return make_range(AbsoluteSymbols.begin(), AbsoluteSymbols.end());
+  }
+
+  Symbol *findAbsoluteSymbolByName(const orc::SymbolStringPtrBase &Name) {
+    for (auto *Sym : absolute_symbols())
+      if (Sym->getName() == Name)
+        return Sym;
+    return nullptr;
   }
 
   iterator_range<defined_symbol_iterator> defined_symbols() {
@@ -1412,6 +1436,15 @@ public:
     auto Secs = sections();
     return make_range(const_defined_symbol_iterator(Secs.begin(), Secs.end()),
                       const_defined_symbol_iterator(Secs.end(), Secs.end()));
+  }
+
+  /// Returns the defined symbol with the given name if one exists, otherwise
+  /// returns nullptr.
+  Symbol *findDefinedSymbolByName(const orc::SymbolStringPtrBase &Name) {
+    for (auto *Sym : defined_symbols())
+      if (Sym->hasName() && Sym->getName() == Name)
+        return Sym;
+    return nullptr;
   }
 
   /// Make the given symbol external (must not already be external).
@@ -1430,7 +1463,7 @@ public:
       A.setAddress(orc::ExecutorAddr());
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
-      Section &Sec = Sym.getBlock().getSection();
+      Section &Sec = Sym.getSection();
       Sec.removeSymbol(Sym);
       Sym.makeExternal(createAddressable(orc::ExecutorAddr(), false));
     }
@@ -1458,7 +1491,7 @@ public:
       Sym.setScope(Scope::Local);
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
-      Section &Sec = Sym.getBlock().getSection();
+      Section &Sec = Sym.getSection();
       Sec.removeSymbol(Sym);
       Sym.makeAbsolute(createAddressable(Address));
     }
@@ -1504,7 +1537,7 @@ public:
   transferDefinedSymbol(Symbol &Sym, Block &DestBlock,
                         orc::ExecutorAddrDiff NewOffset,
                         std::optional<orc::ExecutorAddrDiff> ExplicitNewSize) {
-    auto &OldSection = Sym.getBlock().getSection();
+    auto &OldSection = Sym.getSection();
     Sym.setBlock(DestBlock);
     Sym.setOffset(NewOffset);
     if (ExplicitNewSize)
@@ -1592,7 +1625,7 @@ public:
   /// Removes defined symbols. Does not remove the underlying block.
   void removeDefinedSymbol(Symbol &Sym) {
     assert(Sym.isDefined() && "Sym is not a defined symbol");
-    Sym.getBlock().getSection().removeSymbol(Sym);
+    Sym.getSection().removeSymbol(Sym);
     destroySymbol(Sym);
   }
 
@@ -1639,8 +1672,6 @@ private:
   std::shared_ptr<orc::SymbolStringPool> SSP;
   Triple TT;
   SubtargetFeatures Features;
-  unsigned PointerSize;
-  llvm::endianness Endianness;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
   DenseMap<StringRef, std::unique_ptr<Section>> Sections;
   // FIXME(jared): these should become dense maps
@@ -2038,8 +2069,7 @@ createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
 
 /// Create a \c LinkGraph defining the given absolute symbols.
 std::unique_ptr<LinkGraph>
-absoluteSymbolsLinkGraph(const Triple &TT,
-                         std::shared_ptr<orc::SymbolStringPool> SSP,
+absoluteSymbolsLinkGraph(Triple TT, std::shared_ptr<orc::SymbolStringPool> SSP,
                          orc::SymbolMap Symbols);
 
 /// Link the given graph.

@@ -33,7 +33,7 @@ export void TestAppend(float value) {
     ASB.Append(value);
 }
 
-// CHECK: define void @_Z10TestAppendf(float noundef %value)
+// CHECK: define void @_Z10TestAppendf(float noundef nofpclass(nan inf) %value)
 // CHECK-DXIL: %[[VALUE:.*]] = load float, ptr %value.addr, align 4
 // CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i8 1)
 // CHECK-DXIL: %[[RESPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i32 %[[INDEX]])
@@ -43,7 +43,7 @@ export float TestConsume() {
     return CSB.Consume();
 }
 
-// CHECK: define noundef float @_Z11TestConsumev()
+// CHECK: define noundef nofpclass(nan inf) float @_Z11TestConsumev()
 // CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %1, i8 -1)
 // CHECK-DXIL: %[[RESPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %0, i32 %[[INDEX]])
 // CHECK-DXIL: %[[VALUE:.*]] = load float, ptr %[[RESPTR]], align 4
@@ -53,7 +53,7 @@ export float TestLoad() {
     return RWSB1.Load(1) + SB1.Load(2);
 }
 
-// CHECK: define noundef float @_Z8TestLoadv()
+// CHECK: define noundef nofpclass(nan inf) float @_Z8TestLoadv()
 // CHECK: %[[PTR1:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i32 %{{[0-9]+}})
 // CHECK: %[[VALUE1:.*]] = load float, ptr %[[PTR1]]
 // CHECK: %[[PTR2:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_0_0t(target("dx.RawBuffer", float, 0, 0) %{{[0-9]+}}, i32 %{{[0-9]+}})

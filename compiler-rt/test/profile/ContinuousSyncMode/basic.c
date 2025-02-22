@@ -1,4 +1,4 @@
-// REQUIRES: target={{.*(darwin|aix).*}}
+// REQUIRES: continuous-mode
 
 // RUN: %clang_profgen_cont -fcoverage-mapping -o %t.exe %s
 // RUN: echo "garbage" > %t.profraw
