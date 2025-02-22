@@ -68,7 +68,7 @@ public:
   LIBC_INLINE string(size_t size_, char value) {
     resize(size_);
     static_assert(sizeof(char) == sizeof(uint8_t));
-    inline_memset((void *)buffer_, value, size_);
+    inline_memset((void *)buffer_, static_cast<uint8_t>(value), size_);
   }
 
   LIBC_INLINE string &operator=(const string &other) {
