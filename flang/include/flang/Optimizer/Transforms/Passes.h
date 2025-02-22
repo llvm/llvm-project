@@ -66,7 +66,6 @@ namespace fir {
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass>
 createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
-std::unique_ptr<mlir::Pass> createCFGConversionPassWithNSW();
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass>
@@ -83,7 +82,7 @@ createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
 void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
                                    bool forceLoopToExecuteOnce = false,
-                                   bool setNSW = false);
+                                   bool setNSW = true);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

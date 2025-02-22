@@ -57,3 +57,50 @@ let Predicates = [HasStdExtZalasr, IsRV64] in {
 defm LD : LAQ_r_aq_rl<0b011, "ld">;
 defm SD : SRL_r_aq_rl<0b011, "sd">;
 } // Predicates = [HasStdExtZalasr, IsRV64]
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+
+class PatLAQ<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
+    : Pat<(vt (OpNode (vt GPRMemZeroOffset:$rs1))), (Inst GPRMemZeroOffset:$rs1)>;
+
+// n.b. this switches order of arguments
+//  to deal with the fact that SRL has addr, data
+//  while atomic_store has data, addr
+class PatSRL<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
+    : Pat<(OpNode (vt GPR:$rs2), (vt GPRMemZeroOffset:$rs1)),
+          (Inst GPRMemZeroOffset:$rs1, GPR:$rs2)>; 
+                              
+
+let Predicates = [HasStdExtZalasr] in {
+  // the sequentially consistent loads use
+  //  .aq instead of .aqrl to match the psABI/A.7
+  def : PatLAQ<acquiring_load<atomic_load_8>, LB_AQ>;
+  def : PatLAQ<seq_cst_load<atomic_load_8>, LB_AQ>; 
+
+  def : PatLAQ<acquiring_load<atomic_load_16>, LH_AQ>;
+  def : PatLAQ<seq_cst_load<atomic_load_16>, LH_AQ>;
+
+  def : PatLAQ<acquiring_load<atomic_load_32>, LW_AQ>;
+  def : PatLAQ<seq_cst_load<atomic_load_32>, LW_AQ>;
+
+  // the sequentially consistent stores use
+  //  .rl instead of .aqrl to match the psABI/A.7
+  def : PatSRL<releasing_store<atomic_store_8>, SB_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_8>, SB_RL>; 
+
+  def : PatSRL<releasing_store<atomic_store_16>, SH_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_16>, SH_RL>;
+
+  def : PatSRL<releasing_store<atomic_store_32>, SW_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_32>, SW_RL>;
+} // Predicates = [HasStdExtZalasr]
+
+let Predicates = [HasStdExtZalasr, IsRV64] in {
+  def : PatLAQ<acquiring_load<atomic_load_64>, LD_AQ>;
+  def : PatLAQ<seq_cst_load<atomic_load_64>, LD_AQ>;
+
+  def : PatSRL<releasing_store<atomic_store_64>, SD_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_64>, SD_RL>;
+} // Predicates = [HasStdExtZalasr, IsRV64]

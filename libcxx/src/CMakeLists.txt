@@ -1,5 +1,3 @@
-set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}"  PARENT_SCOPE)
-
 # Get sources
 set(LIBCXX_SOURCES
   algorithm.cpp
@@ -32,7 +30,6 @@ set(LIBCXX_SOURCES
   include/ryu/ryu.h
   include/to_chars_floating_point.h
   include/from_chars_floating_point.h
-  legacy_pointer_safety.cpp
   memory.cpp
   memory_resource.cpp
   new_handler.cpp
@@ -251,18 +248,18 @@ if (LIBCXX_ENABLE_SHARED)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
 endif()
 
-  if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
-    # Since we most likely do not have a mt.exe replacement, disable the
-    # manifest bundling.  This allows a normal cmake invocation to pass which
-    # will attempt to use the manifest tool to generate the bundled manifest
-    if (${CMAKE_CXX_COMPILER_FRONTEND_VARIANT} STREQUAL "MSVC")
-      set_target_properties(cxx_shared PROPERTIES
-                            APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
-    else()
-      set_target_properties(cxx_shared PROPERTIES
-                            APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
-    endif()
+if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
+  # Since we most likely do not have a mt.exe replacement, disable the
+  # manifest bundling.  This allows a normal cmake invocation to pass which
+  # will attempt to use the manifest tool to generate the bundled manifest
+  if (${CMAKE_CXX_COMPILER_FRONTEND_VARIANT} STREQUAL "MSVC")
+    set_target_properties(cxx_shared PROPERTIES
+                          APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+  else()
+    set_target_properties(cxx_shared PROPERTIES
+                          APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
   endif()
+endif()
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 

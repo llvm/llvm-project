@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_REPLACE_H
-#define _LIBCPP___ALGORITHM_RANGES_REPLACE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_REPLACE_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_REPLACE_H
 
 #include <__cxx03/__algorithm/ranges_replace_if.h>
 #include <__cxx03/__config>
@@ -65,4 +65,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_REPLACE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_REPLACE_H

@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   GroupOps.cpp
   IntegerDotProductOps.cpp
   MemoryOps.cpp
+  MeshOps.cpp
   SPIRVAttributes.cpp
   SPIRVCanonicalization.cpp
   SPIRVGLCanonicalization.cpp

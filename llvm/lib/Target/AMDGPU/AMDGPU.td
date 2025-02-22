@@ -432,6 +432,12 @@ def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
   "Has Arithmetic Shift Pack instructions"
 >;
 
+def FeatureCvtPkF16F32Inst : SubtargetFeature<"cvt-pk-f16-f32-inst",
+  "HasCvtPkF16F32Inst",
+  "true",
+  "Has cvt_pk_f16_f32 instruction"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -445,8 +451,9 @@ def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
    FeatureFP6BF6ConversionScaleInsts,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureF32ToF16BF16ConversionSRInsts,
+   FeatureCvtPkF16F32Inst,
    FeatureMinimum3Maximum3F32,
-   FeatureMinimum3Maximum3PKF16
+   FeatureMinimum3Maximum3PKF16,
    ]
 >;
 
@@ -1033,12 +1040,6 @@ def FeatureVALUTransUseHazard : SubtargetFeature<"valu-trans-use-hazard",
   "Hazard when TRANS instructions are closely followed by a use of the result"
 >;
 
-def FeatureForceStoreSC0SC1 : SubtargetFeature<"force-store-sc0-sc1",
-  "HasForceStoreSC0SC1",
-  "true",
-  "Has SC0 and SC1 on stores"
->;
-
 def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
   "HasSALUFloatInsts",
   "true",
@@ -1612,28 +1613,6 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureAtomicBufferPkAddBF16Inst
    ])>;
 
-def FeatureISAVersion9_4_0 : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features,
-    [
-      FeatureAddressableLocalMemorySize65536,
-      FeatureForceStoreSC0SC1,
-      FeatureFP8Insts,
-      FeatureFP8ConversionInsts,
-      FeatureCvtFP8VOP1Bug,
-      FeatureXF32Insts
-    ])>;
-
-def FeatureISAVersion9_4_1 : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features,
-    [
-      FeatureAddressableLocalMemorySize65536,
-      FeatureForceStoreSC0SC1,
-      FeatureFP8Insts,
-      FeatureFP8ConversionInsts,
-      FeatureCvtFP8VOP1Bug,
-      FeatureXF32Insts
-    ])>;
-
 def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
@@ -2129,6 +2108,11 @@ def isGFX9GFX10 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX11Insts))>;
 
+def isGFX9GFX10GFX11 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9 &&"
+            "Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
+  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX12Insts))>;
+
 def isGFX8GFX9GFX10 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 ||"
@@ -2486,6 +2470,9 @@ def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;
 
+def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
+  AssemblerPredicate<(all_of (not FeatureSALUFloatInsts))>;
+
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
 
@@ -2509,6 +2496,9 @@ def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasFP6BF6ConversionSca
 
 def HasF16BF16ToFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasF16BF16ToFP6BF6ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureF16BF16ToFP6BF6ConversionScaleInsts)>;
+
+def HasCvtPkF16F32Inst : Predicate<"Subtarget->hasCvtPkF16F32Inst()">,
+  AssemblerPredicate<(all_of FeatureCvtPkF16F32Inst)>;
 
 def HasF32ToF16BF16ConversionSRInsts : Predicate<"Subtarget->hasF32ToF16BF16ConversionSRInsts()">,
   AssemblerPredicate<(all_of FeatureF32ToF16BF16ConversionSRInsts)>;

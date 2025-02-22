@@ -65,9 +65,9 @@ define float @test(ptr nocapture readonly %pA, ptr nocapture readonly %pB, i32 %
 ; CHECK-NEXT:    [[PB_ADDR_019:%.*]] = phi ptr [ [[INCDEC_PTR1:%.*]], [[IF_END]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[BLOCKSIZE_ADDR_018:%.*]] = phi i32 [ [[DEC:%.*]], [[IF_END]] ], [ [[BC_RESUME_VAL4]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ACCUM_017:%.*]] = phi float [ [[ACCUM_1:%.*]], [[IF_END]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PA_ADDR_020]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[PA_ADDR_020]], i32 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr [[PA_ADDR_020]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR1]] = getelementptr inbounds i8, ptr [[PB_ADDR_019]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR1]] = getelementptr inbounds nuw i8, ptr [[PB_ADDR_019]], i32 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = load float, ptr [[PB_ADDR_019]], align 4
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp fast une float [[TMP13]], 0.000000e+00
 ; CHECK-NEXT:    [[CMP3:%.*]] = fcmp fast une float [[TMP14]], 0.000000e+00

@@ -497,7 +497,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 
     writeInitExpr(OS, Segment.Offset);
 
-    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) {
       // We only support active function table initializers, for which the elem
       // kind is specified to be written as 0x00 and interpreted to mean
       // "funcref".

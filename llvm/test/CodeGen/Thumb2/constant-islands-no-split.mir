@@ -1,0 +1,165 @@
+# RUN: llc -mtriple=thumbv7-linux-gnueabihf -run-pass=arm-cp-islands -arm-constant-island-max-iteration=1 %s -o - | FileCheck %s
+--- |
+  ; ModuleID = 'constant-islands-new-island.ll'
+  source_filename = "constant-islands-new-island.ll"
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv7-unknown-linux-gnueabihf"
+  
+  define void @test(i1 %tst) {
+  entry:
+    %0 = call i32 @llvm.arm.space(i32 2000, i32 undef)
+    br label %smallbb
+  
+  smallbb:                                          ; preds = %entry
+    br i1 %tst, label %true, label %false
+  
+  true:                                             ; preds = %false, %smallbb
+    %val = phi float [ 1.234500e+04, %smallbb ], [ undef, %false ]
+    %1 = call i32 @llvm.arm.space(i32 2000, i32 undef)
+    call void @bar(float %val)
+    ret void
+  
+  false:                                            ; preds = %smallbb
+    br label %true
+  }
+  
+  declare void @bar(float)
+  
+  ; Function Attrs: nounwind
+  declare i32 @llvm.arm.space(i32 immarg, i32) #0
+  
+  attributes #0 = { nounwind }
+
+...
+---
+name:            test
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       16
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: true
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:
+  - id:              0
+    value:           'float 1.234500e+04'
+    alignment:       4
+    isTargetSpecific: false
+machineFunctionInfo:
+  isLRSpilled:     true
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $r0, $r7, $lr
+  
+    frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    $sp = frame-setup tSUBspi $sp, 2, 14 /* CC::al */, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    tSTRspi killed $r0, $sp, 1, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
+    renamable $r0 = IMPLICIT_DEF
+    dead renamable $r0 = SPACE 2000, killed renamable $r0
+    t2B %bb.1, 14 /* CC::al */, $noreg
+  
+  bb.1.smallbb:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  
+    $r0 = tLDRspi $sp, 1, 14 /* CC::al */, $noreg :: (load (s32) from %stack.0)
+    renamable $s0 = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
+    renamable $r0, dead $cpsr = tLSLri renamable $r0, 31, 14 /* CC::al */, $noreg
+    tCMPi8 killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    VSTRS killed $s0, $sp, 0, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
+    t2Bcc %bb.3, 0 /* CC::eq */, killed $cpsr
+    t2B %bb.2, 14 /* CC::al */, $noreg
+  
+  bb.2.true:
+    $s0 = VLDRS $sp, 0, 14 /* CC::al */, $noreg :: (load (s32) from %stack.1)
+    renamable $r0 = IMPLICIT_DEF
+    dead renamable $r0 = SPACE 2000, killed renamable $r0
+    tBL 14 /* CC::al */, $noreg, @bar, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $s0, implicit-def $sp
+    $sp = frame-destroy tADDspi $sp, 2, 14 /* CC::al */, $noreg
+    frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  
+  bb.3.false:
+    successors: %bb.2(0x80000000)
+  
+    renamable $s0 = IMPLICIT_DEF
+    t2B %bb.2, 14 /* CC::al */, $noreg
+
+...
+# Check that smallbb is not split by the constant islands pass.  Previously,
+# smallbb was split due to incorrect calculation of MinNoSplitDisp.
+#
+# CHECK:       bb.1.smallbb:
+# CHECK-NEXT:    successors: %bb.3(0x40000000), %bb.4(0x40000000)
+# CHECK-NEXT:  {{^  $}}
+# CHECK-NEXT:    $r0 = tLDRspi $sp, 1, 14 /* CC::al */, $noreg :: (load (s32) from %stack.0)
+# CHECK-NEXT:    renamable $s0 = VLDRS %const.1, 0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
+# CHECK-NEXT:    renamable $r0, dead $cpsr = tLSLri renamable $r0, 31, 14 /* CC::al */, $noreg
+# CHECK-NEXT:    tCMPi8 killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+# CHECK-NEXT:    VSTRS killed $s0, $sp, 0, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
+# CHECK-NEXT:    t2Bcc %bb.4, 0 /* CC::eq */, killed $cpsr
+# CHECK-NEXT:    tB %bb.3, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  {{^  $}}
+# CHECK-NEXT:  bb.2 (align 4):
+# CHECK-NEXT:    successors:
+# CHECK-NEXT:  {{^  $}}
+# CHECK-NEXT:    CONSTPOOL_ENTRY 1, %const.0, 4

@@ -228,11 +228,6 @@ public:
   }
 };
 
-/// Returns the "tuple" value of the adapted tensor.
-inline UnrealizedConversionCastOp getTuple(Value tensor) {
-  return llvm::cast<UnrealizedConversionCastOp>(tensor.getDefiningOp());
-}
-
 /// Packs the given values as a "tuple" value.
 inline Value genTuple(OpBuilder &builder, Location loc, Type tp,
                       ValueRange values) {
@@ -246,16 +241,15 @@ inline Value genTuple(OpBuilder &builder, Location loc,
 }
 
 inline SparseTensorDescriptor
-getDescriptorFromTensorTuple(Value tensor, RankedTensorType type) {
-  auto tuple = getTuple(tensor);
-  return SparseTensorDescriptor(SparseTensorType(type), tuple.getInputs());
+getDescriptorFromTensorTuple(ValueRange adaptorValues, RankedTensorType type) {
+  return SparseTensorDescriptor(SparseTensorType(type), adaptorValues);
 }
 
 inline MutSparseTensorDescriptor
-getMutDescriptorFromTensorTuple(Value tensor, SmallVectorImpl<Value> &fields,
+getMutDescriptorFromTensorTuple(ValueRange adaptorValues,
+                                SmallVectorImpl<Value> &fields,
                                 RankedTensorType type) {
-  auto tuple = getTuple(tensor);
-  fields.assign(tuple.getInputs().begin(), tuple.getInputs().end());
+  fields.assign(adaptorValues.begin(), adaptorValues.end());
   return MutSparseTensorDescriptor(SparseTensorType(type), fields);
 }
 

@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAGISEL_H
 #define LLVM_CODEGEN_SELECTIONDAGISEL_H
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -52,7 +53,7 @@ public:
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
-  AAResults *AA = nullptr;
+  mutable std::optional<BatchAAResults> BatchAA;
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   SSPLayoutInfo *SP = nullptr;
@@ -80,6 +81,13 @@ public:
   explicit SelectionDAGISel(TargetMachine &tm,
                             CodeGenOptLevel OL = CodeGenOptLevel::Default);
   virtual ~SelectionDAGISel();
+
+  /// Returns a (possibly null) pointer to the current BatchAAResults.
+  BatchAAResults *getBatchAA() const {
+    if (BatchAA.has_value())
+      return &BatchAA.value();
+    return nullptr;
+  }
 
   const TargetLowering *getTargetLowering() const { return TLI; }
 
@@ -315,7 +323,7 @@ public:
     OPC_MorphNodeTo1GlueOutput,
     OPC_MorphNodeTo2GlueOutput,
     OPC_CompleteMatch,
-    // Contains offset in table for pattern being selected
+    // Contains 32-bit offset in table for pattern being selected
     OPC_Coverage
   };
 

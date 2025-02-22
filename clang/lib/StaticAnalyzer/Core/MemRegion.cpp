@@ -61,9 +61,17 @@ using namespace ento;
 
 #define DEBUG_TYPE "MemRegion"
 
+REGISTER_MAP_WITH_PROGRAMSTATE(MemSpacesMap, const MemRegion *,
+                               const MemSpaceRegion *)
+
 //===----------------------------------------------------------------------===//
 // MemRegion Construction.
 //===----------------------------------------------------------------------===//
+
+[[maybe_unused]] static bool isAReferenceTypedValueRegion(const MemRegion *R) {
+  const auto *TyReg = llvm::dyn_cast<TypedValueRegion>(R);
+  return TyReg && TyReg->getValueType()->isReferenceType();
+}
 
 template <typename RegionTy, typename SuperTy, typename Arg1Ty>
 RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1,
@@ -76,6 +84,7 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1,
   if (!R) {
     R = new (A) RegionTy(arg1, superRegion);
     Regions.InsertNode(R, InsertPos);
+    assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
   return R;
@@ -92,6 +101,7 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
   if (!R) {
     R = new (A) RegionTy(arg1, arg2, superRegion);
     Regions.InsertNode(R, InsertPos);
+    assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
   return R;
@@ -110,6 +120,7 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
   if (!R) {
     R = new (A) RegionTy(arg1, arg2, arg3, superRegion);
     Regions.InsertNode(R, InsertPos);
+    assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
   return R;
@@ -155,20 +166,20 @@ MemRegionManager &SubRegion::getMemRegionManager() const {
 }
 
 const StackFrameContext *VarRegion::getStackFrame() const {
-  const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
+  const auto *SSR = dyn_cast<StackSpaceRegion>(getRawMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
 const StackFrameContext *
 CXXLifetimeExtendedObjectRegion::getStackFrame() const {
-  const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
+  const auto *SSR = dyn_cast<StackSpaceRegion>(getRawMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
 const StackFrameContext *CXXTempObjectRegion::getStackFrame() const {
-  assert(isa<StackSpaceRegion>(getMemorySpace()) &&
+  assert(isa<StackSpaceRegion>(getRawMemorySpace()) &&
          "A temporary object can only be allocated on the stack");
-  return cast<StackSpaceRegion>(getMemorySpace())->getStackFrame();
+  return cast<StackSpaceRegion>(getRawMemorySpace())->getStackFrame();
 }
 
 ObjCIvarRegion::ObjCIvarRegion(const ObjCIvarDecl *ivd, const SubRegion *sReg)
@@ -735,7 +746,7 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
     // Index is a ConcreteInt.
     if (auto CI = ER->getIndex().getAs<nonloc::ConcreteInt>()) {
       llvm::SmallString<2> Idx;
-      CI->getValue().toString(Idx);
+      CI->getValue()->toString(Idx);
       ArrayIndices = (llvm::Twine("[") + Idx.str() + "]" + ArrayIndices).str();
     }
     // Index is symbolic, but may have a descriptive name.
@@ -803,7 +814,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
   switch (SR->getKind()) {
   case MemRegion::AllocaRegionKind:
   case MemRegion::SymbolicRegionKind:
-    return nonloc::SymbolVal(SymMgr.getExtentSymbol(SR));
+    return nonloc::SymbolVal(SymMgr.acquire<SymbolExtent>(SR));
   case MemRegion::StringRegionKind:
     return SVB.makeIntVal(
         cast<StringRegion>(SR)->getStringLiteral()->getByteLength() + 1,
@@ -821,7 +832,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
   case MemRegion::ObjCStringRegionKind: {
     QualType Ty = cast<TypedValueRegion>(SR)->getDesugaredValueType(Ctx);
     if (isa<VariableArrayType>(Ty))
-      return nonloc::SymbolVal(SymMgr.getExtentSymbol(SR));
+      return nonloc::SymbolVal(SymMgr.acquire<SymbolExtent>(SR));
 
     if (Ty->isIncompleteType())
       return UnknownVal();
@@ -883,13 +894,12 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
 
     return Size;
   }
-    // FIXME: The following are being used in 'SimpleSValBuilder' and in
-    // 'ArrayBoundChecker::checkLocation' because there is no symbol to
-    // represent the regions more appropriately.
+    // FIXME: The following are being used in 'SimpleSValBuilder' because there
+    // is no symbol to represent the regions more appropriately.
   case MemRegion::BlockDataRegionKind:
   case MemRegion::BlockCodeRegionKind:
   case MemRegion::FunctionCodeRegionKind:
-    return nonloc::SymbolVal(SymMgr.getExtentSymbol(SR));
+    return nonloc::SymbolVal(SymMgr.acquire<SymbolExtent>(SR));
   default:
     llvm_unreachable("Unhandled region");
   }
@@ -1060,10 +1070,10 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     llvm::PointerUnion<const StackFrameContext *, const VarRegion *> V =
       getStackOrCaptureRegionForDeclContext(LC, DC, D);
 
-    if (V.is<const VarRegion*>())
-      return V.get<const VarRegion*>();
+    if (const auto *VR = dyn_cast_if_present<const VarRegion *>(V))
+      return VR;
 
-    const auto *STC = V.get<const StackFrameContext *>();
+    const auto *STC = cast<const StackFrameContext *>(V);
 
     if (!STC) {
       // FIXME: Assign a more sensible memory space to static locals
@@ -1340,7 +1350,7 @@ MemRegionManager::getAllocaRegion(const Expr *E, unsigned cnt,
   return getSubRegion<AllocaRegion>(E, cnt, getStackLocalsRegion(STC));
 }
 
-const MemSpaceRegion *MemRegion::getMemorySpace() const {
+const MemSpaceRegion *MemRegion::getRawMemorySpace() const {
   const MemRegion *R = this;
   const auto *SR = dyn_cast<SubRegion>(this);
 
@@ -1352,16 +1362,27 @@ const MemSpaceRegion *MemRegion::getMemorySpace() const {
   return cast<MemSpaceRegion>(R);
 }
 
-bool MemRegion::hasStackStorage() const {
-  return isa<StackSpaceRegion>(getMemorySpace());
+const MemSpaceRegion *MemRegion::getMemorySpace(ProgramStateRef State) const {
+  const MemRegion *MR = getBaseRegion();
+
+  const MemSpaceRegion *RawSpace = MR->getRawMemorySpace();
+  if (!isa<UnknownSpaceRegion>(RawSpace))
+    return RawSpace;
+
+  const MemSpaceRegion *const *AssociatedSpace = State->get<MemSpacesMap>(MR);
+  return AssociatedSpace ? *AssociatedSpace : RawSpace;
 }
 
-bool MemRegion::hasStackNonParametersStorage() const {
-  return isa<StackLocalsSpaceRegion>(getMemorySpace());
-}
+ProgramStateRef MemRegion::setMemorySpace(ProgramStateRef State,
+                                          const MemSpaceRegion *Space) const {
+  const MemRegion *Base = getBaseRegion();
 
-bool MemRegion::hasStackParametersStorage() const {
-  return isa<StackArgumentsSpaceRegion>(getMemorySpace());
+  // Shouldn't set unknown space.
+  assert(!isa<UnknownSpaceRegion>(Space));
+
+  // Currently, it we should have no accurate memspace for this region.
+  assert(Base->hasMemorySpace<UnknownSpaceRegion>(State));
+  return State->set<MemSpacesMap>(Base, Space);
 }
 
 // Strips away all elements and fields.
@@ -1450,9 +1471,7 @@ RegionRawOffset ElementRegion::getAsArrayOffset() const {
     SVal index = ER->getIndex();
     if (auto CI = index.getAs<nonloc::ConcreteInt>()) {
       // Update the offset.
-      int64_t i = CI->getValue().getSExtValue();
-
-      if (i != 0) {
+      if (int64_t i = CI->getValue()->getSExtValue(); i != 0) {
         QualType elemType = ER->getElementType();
 
         // If we are pointing to an incomplete type, go no further.
@@ -1624,7 +1643,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
         if (SymbolicOffsetBase)
           continue;
 
-        int64_t i = CI->getValue().getSExtValue();
+        int64_t i = CI->getValue()->getSExtValue();
         // This type size is in bits.
         Offset += i * R->getContext().getTypeSize(EleTy);
       } else {

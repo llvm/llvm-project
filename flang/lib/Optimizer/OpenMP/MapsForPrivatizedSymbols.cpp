@@ -1,5 +1,4 @@
-//===- MapsForPrivatizedSymbols.cpp
-//-----------------------------------------===//
+//===- MapsForPrivatizedSymbols.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,6 +27,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -49,28 +49,23 @@ class MapsForPrivatizedSymbolsPass
     : public flangomp::impl::MapsForPrivatizedSymbolsPassBase<
           MapsForPrivatizedSymbolsPass> {
 
-  bool privatizerNeedsMap(omp::PrivateClauseOp &privatizer) {
-    Region &allocRegion = privatizer.getAllocRegion();
-    Value blockArg0 = allocRegion.getArgument(0);
-    if (blockArg0.use_empty())
-      return false;
-    return true;
-  }
   omp::MapInfoOp createMapInfo(Location loc, Value var,
                                fir::FirOpBuilder &builder) {
     uint64_t mapTypeTo = static_cast<
         std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
     Operation *definingOp = var.getDefiningOp();
-    auto declOp = llvm::dyn_cast_or_null<hlfir::DeclareOp>(definingOp);
-    assert(declOp &&
-           "Expected defining Op of privatized var to be hlfir.declare");
 
+    Value varPtr = var;
     // We want the first result of the hlfir.declare op because our goal
     // is to map the descriptor (fir.box or fir.boxchar) and the first
     // result for hlfir.declare is the descriptor if a the symbol being
     // decalred needs a descriptor.
-    Value varPtr = declOp.getBase();
+    // Some types are boxed immediately before privatization. These have other
+    // operations in between the privatization and the declaration. It is safe
+    // to use var directly here because they will be boxed anyway.
+    if (auto declOp = llvm::dyn_cast_if_present<hlfir::DeclareOp>(definingOp))
+      varPtr = declOp.getBase();
 
     // If we do not have a reference to descritor, but the descriptor itself
     // then we need to store that on the stack so that we can map the
@@ -96,6 +91,7 @@ class MapsForPrivatizedSymbolsPass
         /*bounds=*/ValueRange{},
         builder.getIntegerAttr(builder.getIntegerType(64, /*isSigned=*/false),
                                mapTypeTo),
+        /*mapperId*/ mlir::FlatSymbolRefAttr(),
         builder.getAttr<omp::VariableCaptureKindAttr>(
             omp::VariableCaptureKind::ByRef),
         StringAttr(), builder.getBoolAttr(false));
@@ -124,6 +120,8 @@ class MapsForPrivatizedSymbolsPass
       if (targetOp.getPrivateVars().empty())
         return;
       OperandRange privVars = targetOp.getPrivateVars();
+      llvm::SmallVector<int64_t> privVarMapIdx;
+
       std::optional<ArrayAttr> privSyms = targetOp.getPrivateSyms();
       SmallVector<omp::MapInfoOp, 4> mapInfoOps;
       for (auto [privVar, privSym] : llvm::zip_equal(privVars, *privSyms)) {
@@ -132,18 +130,26 @@ class MapsForPrivatizedSymbolsPass
         omp::PrivateClauseOp privatizer =
             SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
                 targetOp, privatizerName);
-        if (!privatizerNeedsMap(privatizer)) {
+        if (!privatizer.needsMap()) {
+          privVarMapIdx.push_back(-1);
           continue;
         }
+
+        privVarMapIdx.push_back(targetOp.getMapVars().size() +
+                                mapInfoOps.size());
+
         builder.setInsertionPoint(targetOp);
         Location loc = targetOp.getLoc();
         omp::MapInfoOp mapInfoOp = createMapInfo(loc, privVar, builder);
         mapInfoOps.push_back(mapInfoOp);
+
         LLVM_DEBUG(llvm::dbgs() << "MapsForPrivatizedSymbolsPass created ->\n");
         LLVM_DEBUG(mapInfoOp.dump());
       }
       if (!mapInfoOps.empty()) {
         mapInfoOpsForTarget.insert({targetOp.getOperation(), mapInfoOps});
+        targetOp.setPrivateMapsAttr(
+            mlir::DenseI64ArrayAttr::get(targetOp.getContext(), privVarMapIdx));
       }
     });
     if (!mapInfoOpsForTarget.empty()) {

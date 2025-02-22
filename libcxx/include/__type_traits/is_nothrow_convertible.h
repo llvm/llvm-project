@@ -29,10 +29,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #  if __has_builtin(__is_nothrow_convertible)
 
 template <class _Tp, class _Up>
-struct is_nothrow_convertible : bool_constant<__is_nothrow_convertible(_Tp, _Up)> {};
+struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_convertible : bool_constant<__is_nothrow_convertible(_Tp, _Up)> {};
 
 template <class _Tp, class _Up>
-inline constexpr bool is_nothrow_convertible_v = __is_nothrow_convertible(_Tp, _Up);
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_convertible_v = __is_nothrow_convertible(_Tp, _Up);
 
 #  else // __has_builtin(__is_nothrow_convertible)
 
@@ -43,7 +43,7 @@ template <typename _Fm, typename _To>
 bool_constant<noexcept(std::__test_noexcept<_To>(std::declval<_Fm>()))> __is_nothrow_convertible_test();
 
 template <typename _Fm, typename _To>
-struct __is_nothrow_convertible_helper : decltype(__is_nothrow_convertible_test<_Fm, _To>()) {};
+struct __is_nothrow_convertible_helper : decltype(std::__is_nothrow_convertible_test<_Fm, _To>()) {};
 
 template <typename _Fm, typename _To>
 struct is_nothrow_convertible

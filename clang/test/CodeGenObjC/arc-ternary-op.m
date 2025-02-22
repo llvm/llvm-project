@@ -67,7 +67,7 @@ void test1(int cond) {
   // CHECK:      [[T0:%.*]] = load ptr, ptr [[ARG]]
   // CHECK-NEXT: store ptr [[T0]], ptr [[TEMP1]]
   // CHECK-NEXT: br label
-  // CHECK:      [[W:%.*]] = phi ptr [ [[T0]], {{%.*}} ], [ undef, {{%.*}} ]
+  // CHECK:      [[W:%.*]] = phi ptr [ [[T0]], {{%.*}} ], [ poison, {{%.*}} ]
   // CHECK-NEXT: call void @test1_sink(ptr noundef [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = icmp eq ptr [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],

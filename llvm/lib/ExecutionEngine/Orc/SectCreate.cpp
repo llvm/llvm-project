@@ -18,8 +18,9 @@ void SectCreateMaterializationUnit::materialize(
     std::unique_ptr<MaterializationResponsibility> R) {
   auto G = std::make_unique<LinkGraph>(
       "orc_sectcreate_" + SectName,
+      ObjLinkingLayer.getExecutionSession().getSymbolStringPool(),
       ObjLinkingLayer.getExecutionSession().getTargetTriple(),
-      getGenericEdgeKindName);
+      SubtargetFeatures(), getGenericEdgeKindName);
 
   auto &Sect = G->createSection(SectName, MP);
   auto Content = G->allocateContent(

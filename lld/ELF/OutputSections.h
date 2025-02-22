@@ -124,14 +124,14 @@ public:
   void sortInitFini();
   void sortCtorsDtors();
 
+  std::array<uint8_t, 4> getFiller(Ctx &);
+
   // Used for implementation of --compress-debug-sections and
   // --compress-sections.
   CompressedData compressed;
 
 private:
   SmallVector<InputSection *, 0> storage;
-
-  std::array<uint8_t, 4> getFiller(Ctx &);
 };
 
 struct OutputDesc final : SectionCommand {

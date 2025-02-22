@@ -68,6 +68,7 @@ enum NodeType : unsigned {
   REVB_2H,
   REVB_2W,
   BITREV_4B,
+  BITREV_8B,
   BITREV_W,
 
   // Intrinsic operations start ============================================
@@ -182,7 +183,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
@@ -273,7 +274,7 @@ public:
     return false;
   }
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
-  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+  bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
   bool shouldExtendTypeInLibCall(EVT Type) const override;
 
   bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
@@ -334,6 +335,8 @@ private:
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBITREVERSE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

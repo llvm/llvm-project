@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_MINMAX_H
-#define _LIBCPP___ALGORITHM_MINMAX_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_MINMAX_H
+#define _LIBCPP___CXX03___ALGORITHM_MINMAX_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/minmax_element.h>
@@ -56,4 +56,4 @@ minmax(initializer_list<_Tp> __t) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_MINMAX_H
+#endif // _LIBCPP___CXX03___ALGORITHM_MINMAX_H

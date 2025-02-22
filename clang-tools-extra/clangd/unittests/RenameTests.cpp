@@ -214,7 +214,7 @@ TEST(RenameTest, WithinFileRename) {
         template<typename T>
         class Foo {
         public:
-          static T [[f^oo]]() {}
+          static T [[f^oo]]() { return T(); }
         };
 
         void bar() {
@@ -225,7 +225,7 @@ TEST(RenameTest, WithinFileRename) {
         template<typename T>
         class Foo {
         public:
-          T [[f^oo]]() {}
+          T [[f^oo]]() { return T(); }
         };
 
         void bar() {
@@ -827,7 +827,7 @@ TEST(RenameTest, WithinFileRename) {
 
       // Issue 170: Rename symbol introduced by UsingDecl
       R"cpp(
-        namespace ns { void [[f^oo]](); } 
+        namespace ns { void [[f^oo]](); }
 
         using ns::[[f^oo]];
 
@@ -1307,7 +1307,7 @@ TEST(RenameTest, Renameable) {
        "no symbol", false},
 
       {R"cpp(// FIXME we probably want to rename both overloads here,
-             // but renaming currently assumes there's only a 
+             // but renaming currently assumes there's only a
              // single canonical declaration.
         namespace ns { int foo(int); char foo(char); }
         using ns::^foo;
@@ -1548,7 +1548,7 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
   std::string BarPath = testPath("bar.cc");
   // Build the index, the index has "Foo" references from foo.cc and "Bar"
   // references from bar.cc.
-  FileSymbols FSymbols(IndexContents::All);
+  FileSymbols FSymbols(IndexContents::All, true);
   FSymbols.update(FooPath, nullptr, buildRefSlab(FooCode, "Foo", FooPath),
                   nullptr, false);
   FSymbols.update(BarPath, nullptr, buildRefSlab(BarCode, "Bar", BarPath),
@@ -1601,6 +1601,12 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
       return true; // has more references
     }
 
+    bool containedRefs(const ContainedRefsRequest &Req,
+                       llvm::function_ref<void(const ContainedRefsResult &)>
+                           Callback) const override {
+      return false;
+    }
+
     bool fuzzyFind(
         const FuzzyFindRequest &Req,
         llvm::function_ref<void(const Symbol &)> Callback) const override {
@@ -1649,6 +1655,12 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
       // Return two duplicated refs.
       Callback(ReturnedRef);
       Callback(ReturnedRef);
+      return false;
+    }
+
+    bool containedRefs(const ContainedRefsRequest &Req,
+                       llvm::function_ref<void(const ContainedRefsResult &)>
+                           Callback) const override {
       return false;
     }
 
@@ -1764,7 +1776,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           void [[foo]]() override {};
         };
 
-        void func(Base* b, Derived1* d1, 
+        void func(Base* b, Derived1* d1,
                   Derived2* d2, NotDerived* nd) {
           b->[[foo]]();
           d1->[[foo]]();

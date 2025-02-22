@@ -54,10 +54,9 @@ MVT llvm::getMVTForLLT(LLT Ty) {
       Ty.getElementCount());
 }
 
-EVT llvm::getApproximateEVTForLLT(LLT Ty, const DataLayout &DL,
-                                  LLVMContext &Ctx) {
+EVT llvm::getApproximateEVTForLLT(LLT Ty, LLVMContext &Ctx) {
   if (Ty.isVector()) {
-    EVT EltVT = getApproximateEVTForLLT(Ty.getElementType(), DL, Ctx);
+    EVT EltVT = getApproximateEVTForLLT(Ty.getElementType(), Ctx);
     return EVT::getVectorVT(Ctx, EltVT, Ty.getElementCount());
   }
 

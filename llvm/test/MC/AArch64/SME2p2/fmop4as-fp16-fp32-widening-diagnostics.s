@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=aarch64 -mattr=+sme2p2 < %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=aarch64 -mattr=+sme-mop4 < %s 2>&1 | FileCheck %s
 
 // FMOP4A
 

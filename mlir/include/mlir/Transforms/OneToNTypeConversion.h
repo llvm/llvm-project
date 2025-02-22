@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Note: The 1:N dialect conversion is deprecated and will be removed soon.
+// 1:N support has been added to the regular dialect conversion driver.
+//
 // This file provides utils for implementing (poor-man's) dialect conversion
 // passes with 1:N type conversions.
 //
@@ -119,6 +122,8 @@ public:
   /// types must be the same as the result types of the op) and the new values
   /// (i.e., the converted types must be the same as the types of the new
   /// values).
+  /// FIXME: The 1:N dialect conversion is deprecated and will be removed soon.
+  /// Use replaceOpWithMultiple() instead.
   void replaceOp(Operation *op, ValueRange newValues,
                  const OneToNTypeMapping &resultMapping);
   using PatternRewriter::replaceOp;
@@ -251,6 +256,9 @@ public:
 /// or illegal types; the function simply applies the given patterns and does
 /// not fail if some ops or types remain unconverted (i.e., the conversion is
 /// only "partial").
+/// FIXME: The 1:N dialect conversion is deprecated and will be removed soon.
+/// 1:N support has been added to the regular dialect conversion driver.
+/// Use applyPartialConversion() instead.
 LogicalResult
 applyPartialOneToNConversion(Operation *op, TypeConverter &typeConverter,
                              const FrozenRewritePatternSet &patterns);
@@ -259,6 +267,9 @@ applyPartialOneToNConversion(Operation *op, TypeConverter &typeConverter,
 /// FunctionOpInterface op with the given type converter. This only supports
 /// ops which use FunctionType to represent their type. This is intended to be
 /// used with the 1:N dialect conversion.
+/// FIXME: The 1:N dialect conversion is deprecated and will be removed soon.
+/// 1:N support has been added to the regular dialect conversion driver.
+/// Use populateFunctionOpInterfaceTypeConversionPattern() instead.
 void populateOneToNFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, const TypeConverter &converter,
     RewritePatternSet &patterns);

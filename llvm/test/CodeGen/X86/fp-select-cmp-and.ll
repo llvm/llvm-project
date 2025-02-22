@@ -189,10 +189,9 @@ define float @test17(float %a, float %b, float %c, float %eps) {
 ; CHECK-LABEL: test17:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpless %xmm0, %xmm3
-; CHECK-NEXT:    andps %xmm3, %xmm2
-; CHECK-NEXT:    andnps %xmm1, %xmm3
-; CHECK-NEXT:    orps %xmm2, %xmm3
 ; CHECK-NEXT:    movaps %xmm3, %xmm0
+; CHECK-NEXT:    blendvps %xmm0, %xmm2, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = fcmp oge float %a, %eps
   %cond = select i1 %cmp, float %c, float %b
@@ -203,10 +202,9 @@ define double @test18(double %a, double %b, double %c, double %eps) {
 ; CHECK-LABEL: test18:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmplesd %xmm0, %xmm3
-; CHECK-NEXT:    andpd %xmm3, %xmm2
-; CHECK-NEXT:    andnpd %xmm1, %xmm3
-; CHECK-NEXT:    orpd %xmm2, %xmm3
 ; CHECK-NEXT:    movapd %xmm3, %xmm0
+; CHECK-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = fcmp oge double %a, %eps
   %cond = select i1 %cmp, double %c, double %b

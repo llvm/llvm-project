@@ -23,8 +23,8 @@ LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
   uint64_t mask = gpu::get_lane_mask();
   rpc::Client::Port port = rpc::client.open<opcode>();
 
-  if constexpr (opcode == RPC_PRINTF_TO_STREAM ||
-                opcode == RPC_PRINTF_TO_STREAM_PACKED) {
+  if constexpr (opcode == LIBC_PRINTF_TO_STREAM ||
+                opcode == LIBC_PRINTF_TO_STREAM_PACKED) {
     port.send([&](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = reinterpret_cast<uintptr_t>(file);
     });
@@ -63,24 +63,24 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
   // separate opcode so the server knows how much to advance the pointers.
 #if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
   if (stream == stdout)
-    return vfprintf_impl<RPC_PRINTF_TO_STDOUT_PACKED>(stream, format,
-                                                      format_size, vlist);
+    return vfprintf_impl<LIBC_PRINTF_TO_STDOUT_PACKED>(stream, format,
+                                                       format_size, vlist);
   else if (stream == stderr)
-    return vfprintf_impl<RPC_PRINTF_TO_STDERR_PACKED>(stream, format,
-                                                      format_size, vlist);
+    return vfprintf_impl<LIBC_PRINTF_TO_STDERR_PACKED>(stream, format,
+                                                       format_size, vlist);
   else
-    return vfprintf_impl<RPC_PRINTF_TO_STREAM_PACKED>(stream, format,
-                                                      format_size, vlist);
+    return vfprintf_impl<LIBC_PRINTF_TO_STREAM_PACKED>(stream, format,
+                                                       format_size, vlist);
 #else
   if (stream == stdout)
-    return vfprintf_impl<RPC_PRINTF_TO_STDOUT>(stream, format, format_size,
-                                               vlist);
+    return vfprintf_impl<LIBC_PRINTF_TO_STDOUT>(stream, format, format_size,
+                                                vlist);
   else if (stream == stderr)
-    return vfprintf_impl<RPC_PRINTF_TO_STDERR>(stream, format, format_size,
-                                               vlist);
+    return vfprintf_impl<LIBC_PRINTF_TO_STDERR>(stream, format, format_size,
+                                                vlist);
   else
-    return vfprintf_impl<RPC_PRINTF_TO_STREAM>(stream, format, format_size,
-                                               vlist);
+    return vfprintf_impl<LIBC_PRINTF_TO_STREAM>(stream, format, format_size,
+                                                vlist);
 #endif
 }
 

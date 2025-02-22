@@ -1,0 +1,148 @@
+## Check that BOLT handles correctly folding functions with --icf=safe
+## that can be referenced through a non control flow instruction when ICP optimization is enabled.
+## This tests also checks that destructors are folded.
+
+# REQUIRES: system-linux, asserts
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
+# RUN: %clang %cflags %t1.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt --no-threads %t.exe --icf      -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
+# RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
+
+# ICFCHECK:      ICF iteration 1
+# ICFCHECK-NEXT: folding Derived3Destructor into Derived2Destructor
+# ICFCHECK-NEXT: folding Derived3Func into Derived2Func
+
+# SAFEICFCHECK: skipping function with reference taken Derived3Func
+# SAFEICFCHECK-NEXT: ICF iteration 1
+# SAFEICFCHECK-NEXT: folding Derived3Destructor into Derived2Destructor
+# SAFEICFCHECK-NEXT: ===---------
+
+
+## generate profile
+## clang++ -O2 -fprofile-generate=. main.cpp   -c -o mainProf.o
+## PROF=test.profdata
+## clang++ -m64  -fprofile-use=$PROF \
+##   -mllvm -disable-icp=true -mllvm -print-after-all \
+##   -g0 -flto=thin -fwhole-program-vtables -fno-split-lto-unit -O2 \
+##   -fdebug-types-section \
+##   main.cpp -c -o mainProfLTO.bc
+## PASS='pgo-icall-prom'
+## clang++ -m64  -fprofile-use=$PROF \
+##   -O3 -Rpass=$PASS \
+##   -mllvm -print-before=$PASS \
+##   -mllvm -print-after=$PASS \
+##   -mllvm -filter-print-funcs=main \
+##   -mllvm -debug-only=$PASS \
+##   -x ir \
+##   mainProfLTO.bc -c -o mainProfFinal.o
+
+## class Base {
+## public:
+##   virtual int func(int a, int b) const = 0;
+##
+##   virtual ~Base() {};
+## };
+##
+## class Derived2 : public Base {
+##   int c = 5;
+## public:
+##   __attribute__((noinline)) int func(int a, int b)const override { return a * (a - b) + this->c; }
+##
+##   ~Derived2() {}
+## };
+##
+## class Derived3 : public Base {
+##   int c = 500;
+## public:
+##   __attribute__((noinline)) int func(int a, int b) const override { return a * (a - b) + this->c; }
+##   ~Derived3() {}
+## };
+##
+## __attribute__((noinline)) Base *createType(int a) {
+##     Base *base = nullptr;
+##     if (a == 4)
+##       base = new Derived2();
+##     else
+##       base = new Derived3();
+##     return base;
+## }
+##
+## extern int returnFive();
+## extern int returnFourOrFive(int val);
+## int main(int argc, char **argv) {
+##   int sum = 0;
+##   int a = returnFourOrFive(argc);
+##   int b = returnFive();
+##   Base *ptr = createType(a);
+##   Base *ptr2 = createType(b);
+##   sum += ptr->func(b, a) + ptr2->func(b, a);
+##   return 0;
+## }
+## clang++ -c helper.cpp -o helper.o
+## int FooVar = 1;
+## int BarVar = 2;
+##
+## int fooGlobalFuncHelper(int a, int b) {
+##   return 5;
+## }
+## Manually modified to remove "extra" assembly.
+	.globl	main
+	.type	main,@function
+main:
+	leaq	Derived3Func(%rip), %rcx
+	callq	Derived3Func
+	.size	main, .-main
+
+	.weak	Derived2Func
+	.type	Derived2Func,@function
+Derived2Func:
+	imull	%esi, %eax
+	retq
+	.size	Derived2Func, .-Derived2Func
+
+	.weak	Derived2Destructor
+	.type	Derived2Destructor,@function
+Derived2Destructor:
+	jmp	_ZdlPvm@PLT
+	.size	Derived2Destructor, .-Derived2Destructor
+
+	.weak	Derived3Func
+	.type	Derived3Func,@function
+Derived3Func:
+	imull	%esi, %eax
+	retq
+	.size	Derived3Func, .-Derived3Func
+
+	.weak	_ZN4BaseD2Ev
+	.type	_ZN4BaseD2Ev,@function
+_ZN4BaseD2Ev:
+	retq
+	.size	_ZN4BaseD2Ev, .-_ZN4BaseD2Ev
+
+	.weak	Derived3Destructor
+	.type	Derived3Destructor,@function
+Derived3Destructor:
+	jmp	_ZdlPvm@PLT
+	.size	Derived3Destructor, .-Derived3Destructor
+
+	.type	_ZTV8Derived2,@object
+	.section	.data.rel.ro._ZTV8Derived2,"awG",@progbits,_ZTV8Derived2,comdat
+	.weak	_ZTV8Derived2
+_ZTV8Derived2:
+	.quad	0
+	.quad	_ZTI8Derived2
+	.quad	Derived2Func
+	.quad	_ZN4BaseD2Ev
+	.quad	Derived2Destructor
+	.size	_ZTV8Derived2, 40
+
+	.type	_ZTV8Derived3,@object
+	.section	.data.rel.ro._ZTV8Derived3,"awG",@progbits,_ZTV8Derived3,comdat
+	.weak	_ZTV8Derived3
+_ZTV8Derived3:
+	.quad	0
+	.quad	_ZTI8Derived3
+	.quad	Derived3Func
+	.quad	_ZN4BaseD2Ev
+	.quad	Derived3Destructor
+	.size	_ZTV8Derived3, 40

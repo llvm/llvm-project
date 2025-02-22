@@ -185,11 +185,11 @@ MachineUniformityAnalysisPass::MachineUniformityAnalysisPass()
 }
 
 INITIALIZE_PASS_BEGIN(MachineUniformityAnalysisPass, "machine-uniformity",
-                      "Machine Uniformity Info Analysis", true, true)
+                      "Machine Uniformity Info Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineUniformityAnalysisPass, "machine-uniformity",
-                    "Machine Uniformity Info Analysis", true, true)
+                    "Machine Uniformity Info Analysis", false, true)
 
 void MachineUniformityAnalysisPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -199,8 +199,7 @@ void MachineUniformityAnalysisPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool MachineUniformityAnalysisPass::runOnMachineFunction(MachineFunction &MF) {
-  auto &DomTree =
-      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree().getBase();
+  auto &DomTree = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto &CI = getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
   // FIXME: Query TTI::hasBranchDivergence. -run-pass seems to end up with a
   // default NoTTI

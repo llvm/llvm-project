@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Test that the first packet contains 4 instructions, which includes
 ; a call. The compiler marked the call as constant extended incorrectly,

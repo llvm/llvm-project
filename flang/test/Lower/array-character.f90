@@ -1,4 +1,4 @@
-! RUN: bbc -hlfir=false %s -o - | fir-opt --canonicalize --cse | FileCheck %s
+! RUN: bbc -hlfir=false -fwrapv %s -o - | fir-opt --canonicalize --cse | FileCheck %s
 
 ! CHECK-LABEL: func @_QPissue(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.boxchar<1>{{.*}}, %[[VAL_1:.*]]: !fir.boxchar<1>{{.*}}) {

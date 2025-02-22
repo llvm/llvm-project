@@ -49,6 +49,8 @@ const char *MemoryWriteUInt64sWrapperName =
     "__llvm_orc_bootstrap_mem_write_uint64s_wrapper";
 const char *MemoryWriteBuffersWrapperName =
     "__llvm_orc_bootstrap_mem_write_buffers_wrapper";
+const char *MemoryWritePointersWrapperName =
+    "__llvm_orc_bootstrap_mem_write_pointers_wrapper";
 
 const char *RegisterEHFrameSectionWrapperName =
     "llvm_orc_registerEHFrameSectionWrapper";
@@ -62,5 +64,11 @@ const char *RunAsIntFunctionWrapperName =
     "__llvm_orc_bootstrap_run_as_int_function_wrapper";
 
 } // end namespace rt
+namespace rt_alt {
+const char *UnwindInfoManagerRegisterActionName =
+    "orc_rt_alt_UnwindInfoManager_register";
+const char *UnwindInfoManagerDeregisterActionName =
+    "orc_rt_alt_UnwindInfoManager_deregister";
+} // end namespace rt_alt
 } // end namespace orc
 } // end namespace llvm

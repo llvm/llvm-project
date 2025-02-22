@@ -42,34 +42,6 @@ set(devicertl_base_directory ${CMAKE_CURRENT_SOURCE_DIR})
 set(include_directory ${devicertl_base_directory}/include)
 set(source_directory ${devicertl_base_directory}/src)
 
-set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
-                             "gfx908;gfx90a;gfx90c;gfx940;gfx941;gfx942;gfx950;gfx1010"
-                             "gfx1030;gfx1031;gfx1032;gfx1033;gfx1034;gfx1035"
-                             "gfx1036;gfx1100;gfx1101;gfx1102;gfx1103;gfx1150"
-                             "gfx1151;gfx1152;gfx1153")
-set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
-                            "sm_70;sm_72;sm_75;sm_80;sm_86;sm_87;sm_89;sm_90")
-set(all_gpu_architectures
-    "${all_amdgpu_architectures};${all_nvptx_architectures}")
-
-set(LIBOMPTARGET_DEVICE_ARCHITECTURES "all" CACHE STRING
-    "List of device architectures to be used to compile the OpenMP DeviceRTL.")
-
-if(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "all")
-  set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${all_gpu_architectures})
-elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "auto" OR
-       LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "native")
-  if(NOT LIBOMPTARGET_NVPTX_ARCH AND NOT LIBOMPTARGET_AMDGPU_ARCH)
-    message(FATAL_ERROR
-      "Could not find 'amdgpu-arch' and 'nvptx-arch' tools required for 'auto'")
-  elseif(NOT LIBOMPTARGET_FOUND_NVIDIA_GPU AND NOT LIBOMPTARGET_FOUND_AMDGPU_GPU)
-    message(FATAL_ERROR "No AMD or NVIDIA GPU found on the system when using 'auto'")
-  endif()
-  set(LIBOMPTARGET_DEVICE_ARCHITECTURES
-      "${LIBOMPTARGET_NVPTX_DETECTED_ARCH_LIST};${LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST}")
-endif()
-list(REMOVE_DUPLICATES LIBOMPTARGET_DEVICE_ARCHITECTURES)
-
 set(include_files
   ${include_directory}/Allocator.h
   ${include_directory}/Configuration.h
@@ -123,33 +95,34 @@ set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 
 # Set flags for LLVM Bitcode compilation.
-set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
-              ${clang_opt_flags} --offload-device-only
-             -nocudalib -nogpulib -nogpuinc -nostdlibinc
-             -fopenmp -fopenmp-cuda-mode
+set(bc_flags -c -flto -std=c++17 -fvisibility=hidden
+             ${clang_opt_flags} -nogpulib -nostdlibinc
+             -fno-rtti -fno-exceptions -fconvergent-functions
              -Wno-unknown-cuda-version
              -DOMPTARGET_DEVICE_RUNTIME
              -I${include_directory}
              -I${devicertl_base_directory}/../include
+             -I${devicertl_base_directory}/../../libc
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
 
 # first create an object target
 add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
-function(compileDeviceRTLLibrary target_cpu target_name target_triple)
+function(compileDeviceRTLLibrary target_name target_triple)
   set(target_bc_flags ${ARGN})
 
   set(bc_files "")
   foreach(src ${src_files})
     get_filename_component(infile ${src} ABSOLUTE)
     get_filename_component(outfile ${src} NAME)
-    set(outfile "${outfile}-${target_cpu}.bc")
+    set(outfile "${outfile}-${target_name}.bc")
     set(depfile "${outfile}.d")
 
+    # Passing an empty CPU to -march= suppressed target specific metadata.
     add_custom_command(OUTPUT ${outfile}
       COMMAND ${CLANG_TOOL}
       ${bc_flags}
-      --offload-arch=${target_cpu}
+      --target=${target_triple}
       ${target_bc_flags}
       -MD -MF ${depfile}
       ${infile} -o ${outfile}
@@ -172,7 +145,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
     list(APPEND bc_files ${outfile})
   endforeach()
 
-  set(bclib_name "libomptarget-${target_name}-${target_cpu}.bc")
+  set(bclib_name "libomptarget-${target_name}.bc")
 
   # Link to a bitcode library.
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
@@ -212,7 +185,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       APPEND)
   endif()
 
-  set(bclib_target_name "omptarget-${target_name}-${target_cpu}-bc")
+  set(bclib_target_name "omptarget-${target_name}-bc")
   add_custom_target(${bclib_target_name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name})
 
   # Copy library to destination.
@@ -234,7 +207,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   # Package the bitcode in the bitcode and embed it in an ELF for the static library
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
       COMMAND ${PACKAGER_TOOL} -o ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
-        "--image=file=${CMAKE_CURRENT_BINARY_DIR}/${bclib_name},${target_feature},triple=${target_triple},arch=${target_cpu},kind=openmp"
+        "--image=file=${CMAKE_CURRENT_BINARY_DIR}/${bclib_name},${target_feature},triple=${target_triple},arch=generic,kind=openmp"
       DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
       COMMENT "Packaging LLVM offloading binary ${bclib_name}.out"
   )
@@ -244,14 +217,14 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       APPEND)
   endif()
 
-  set(output_name "${CMAKE_CURRENT_BINARY_DIR}/devicertl-${target_name}-${target_cpu}.o")
+  set(output_name "${CMAKE_CURRENT_BINARY_DIR}/devicertl-${target_name}.o")
   add_custom_command(OUTPUT ${output_name}
     COMMAND ${CLANG_TOOL} --std=c++17 -c -nostdlib
             -Xclang -fembed-offload-object=${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
             -o ${output_name}
             ${source_directory}/Stub.cpp
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name} ${source_directory}/Stub.cpp
-    COMMENT "Embedding LLVM offloading binary in devicertl-${target_name}-${target_cpu}.o"
+    COMMENT "Embedding LLVM offloading binary in devicertl-${target_name}.o"
     VERBATIM
   )
   if(TARGET clang)
@@ -264,17 +237,16 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   set_property(TARGET omptarget.devicertl.all_objs APPEND PROPERTY IMPORTED_OBJECTS ${output_name})
 
   if (CMAKE_EXPORT_COMPILE_COMMANDS)
-    set(ide_target_name omptarget-ide-${target_name}-${target_cpu})
+    set(ide_target_name omptarget-ide-${target_name})
     add_library(${ide_target_name} STATIC EXCLUDE_FROM_ALL ${src_files})
     target_compile_options(${ide_target_name} PRIVATE
-      -fopenmp --offload-arch=${target_cpu} -fopenmp-cuda-mode
-      -mllvm -openmp-opt-disable
-      -foffload-lto -fvisibility=hidden --offload-device-only
-      -nocudalib -nogpulib -nogpuinc -nostdlibinc -Wno-unknown-cuda-version
+      -fvisibility=hidden --target=${target_triple}
+      -nogpulib -nostdlibinc -Wno-unknown-cuda-version
     )
     target_compile_definitions(${ide_target_name} PRIVATE SHARED_SCRATCHPAD_SIZE=512)
     target_include_directories(${ide_target_name} PRIVATE
       ${include_directory}
+      ${devicertl_base_directory}/../../libc
       ${devicertl_base_directory}/../include
       ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
     )
@@ -282,18 +254,11 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   endif()
 endfunction()
 
-# Generate a Bitcode library for all the gpu architectures the user requested.
-add_custom_target(omptarget.devicertl.nvptx)
 add_custom_target(omptarget.devicertl.amdgpu)
-foreach(gpu_arch ${LIBOMPTARGET_DEVICE_ARCHITECTURES})
-  if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
-    compileDeviceRTLLibrary(${gpu_arch} amdgpu amdgcn-amd-amdhsa -Xclang -mcode-object-version=none)
-  elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
-    compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)
-  else()
-    message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
-  endif()
-endforeach()
+compileDeviceRTLLibrary(amdgpu amdgcn-amd-amdhsa -Xclang -mcode-object-version=none)
+
+add_custom_target(omptarget.devicertl.nvptx)
+compileDeviceRTLLibrary(nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)
 
 # Archive all the object files generated above into a static library
 add_library(omptarget.devicertl STATIC)

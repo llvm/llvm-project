@@ -776,6 +776,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
             return InsertNewInstWith(Shl, I->getIterator());
           }
         }
+
+        const APInt *Factor;
+        if (match(I->getOperand(0),
+                  m_OneUse(m_Mul(m_Value(X), m_APInt(Factor)))) &&
+            Factor->countr_zero() >= ShiftAmt) {
+          BinaryOperator *Mul = BinaryOperator::CreateMul(
+              X, ConstantInt::get(X->getType(), Factor->lshr(ShiftAmt)));
+          return InsertNewInstWith(Mul, I->getIterator());
+        }
       }
 
       // Unsigned shift right.
@@ -1030,11 +1039,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         APInt DemandedMaskLHS(DemandedMask.lshr(ShiftAmt));
         APInt DemandedMaskRHS(DemandedMask.shl(BitWidth - ShiftAmt));
         if (I->getOperand(0) != I->getOperand(1)) {
-          if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown,
-                                   Depth + 1, Q) ||
+          if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown, Depth + 1,
+                                   Q) ||
               SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Depth + 1,
-                                   Q))
+                                   Q)) {
+            // Range attribute may no longer hold.
+            I->dropPoisonGeneratingReturnAttributes();
             return I;
+          }
         } else { // fshl is a rotate
           // Avoid converting rotate into funnel shift.
           // Only simplify if one operand is constant.

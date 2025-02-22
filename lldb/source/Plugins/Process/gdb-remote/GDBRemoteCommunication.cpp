@@ -1216,9 +1216,8 @@ void GDBRemoteCommunication::DumpHistory(Stream &strm) { m_history.Dump(strm); }
 llvm::Error
 GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
                                        GDBRemoteCommunication &server) {
-  const bool child_processes_inherit = false;
   const int backlog = 5;
-  TCPSocket listen_socket(true, child_processes_inherit);
+  TCPSocket listen_socket(true);
   if (llvm::Error error =
           listen_socket.Listen("localhost:0", backlog).ToError())
     return error;

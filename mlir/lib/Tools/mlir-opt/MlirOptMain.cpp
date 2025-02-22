@@ -41,6 +41,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Regex.h"
@@ -108,6 +109,23 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("IRDL file to register before processing the input"),
         cl::location(irdlFileFlag), cl::init(""), cl::value_desc("filename"));
 
+    static cl::opt<VerbosityLevel, /*ExternalStorage=*/true>
+        diagnosticVerbosityLevel(
+            "mlir-diagnostic-verbosity-level",
+            cl::desc("Choose level of diagnostic information"),
+            cl::location(diagnosticVerbosityLevelFlag),
+            cl::init(VerbosityLevel::ErrorsWarningsAndRemarks),
+            cl::values(
+                clEnumValN(VerbosityLevel::ErrorsOnly, "errors", "Errors only"),
+                clEnumValN(VerbosityLevel::ErrorsAndWarnings, "warnings",
+                           "Errors and warnings"),
+                clEnumValN(VerbosityLevel::ErrorsWarningsAndRemarks, "remarks",
+                           "Errors, warnings and remarks")));
+
+    static cl::opt<bool, /*ExternalStorage=*/true> disableDiagnosticNotes(
+        "mlir-disable-diagnostic-notes", cl::desc("Disable diagnostic notes."),
+        cl::location(disableDiagnosticNotesFlag), cl::init(false));
+
     static cl::opt<bool, /*ExternalStorage=*/true> enableDebuggerHook(
         "mlir-enable-debugger-hook",
         cl::desc("Enable Debugger hook for debugging MLIR Actions"),
@@ -133,7 +151,8 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::location(showDialectsFlag), cl::init(false));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> splitInputFile{
-        "split-input-file", llvm::cl::ValueOptional,
+        "split-input-file",
+        llvm::cl::ValueOptional,
         cl::callback([&](const std::string &str) {
           // Implicit value: use default marker if flag was used without value.
           if (str.empty())
@@ -141,7 +160,8 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         }),
         cl::desc("Split the input file into chunks using the given or "
                  "default marker and process each chunk independently"),
-        cl::location(splitInputFileFlag), cl::init("")};
+        cl::location(splitInputFileFlag),
+        cl::init("")};
 
     static cl::opt<std::string, /*ExternalStorage=*/true> outputSplitMarker(
         "output-split-marker",
@@ -206,6 +226,43 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
   /// Pointer to static dialectPlugins variable in constructor, needed by
   /// setDialectPluginsCallback(DialectRegistry&).
   cl::list<std::string> *dialectPlugins = nullptr;
+};
+
+/// A scoped diagnostic handler that suppresses certain diagnostics based on
+/// the verbosity level and whether the diagnostic is a note.
+class DiagnosticFilter : public ScopedDiagnosticHandler {
+public:
+  DiagnosticFilter(MLIRContext *ctx, VerbosityLevel verbosityLevel,
+                   bool showNotes = true)
+      : ScopedDiagnosticHandler(ctx) {
+    setHandler([verbosityLevel, showNotes](Diagnostic &diag) {
+      auto severity = diag.getSeverity();
+      switch (severity) {
+      case DiagnosticSeverity::Error:
+        // failure indicates that the error is not handled by the filter and
+        // goes through to the default handler. Therefore, the error can be
+        // successfully printed.
+        return failure();
+      case DiagnosticSeverity::Warning:
+        if (verbosityLevel == VerbosityLevel::ErrorsOnly)
+          return success();
+        else
+          return failure();
+      case DiagnosticSeverity::Remark:
+        if (verbosityLevel == VerbosityLevel::ErrorsOnly ||
+            verbosityLevel == VerbosityLevel::ErrorsAndWarnings)
+          return success();
+        else
+          return failure();
+      case DiagnosticSeverity::Note:
+        if (showNotes)
+          return failure();
+        else
+          return success();
+      }
+      llvm_unreachable("Unknown diagnostic severity");
+    });
+  }
 };
 } // namespace
 
@@ -479,6 +536,9 @@ static LogicalResult processBuffer(raw_ostream &os,
   // otherwise just perform the actions without worrying about it.
   if (!config.shouldVerifyDiagnostics()) {
     SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
+    DiagnosticFilter diagnosticFilter(&context,
+                                      config.getDiagnosticVerbosityLevel(),
+                                      config.shouldShowNotes());
     return performActions(os, sourceMgr, &context, config);
   }
 

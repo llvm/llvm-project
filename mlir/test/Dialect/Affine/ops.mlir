@@ -298,3 +298,114 @@ func.func @linearize_mixed(%index0: index, %index1: index, %index2: index, %basi
   %1 = affine.linearize_index disjoint [%index0, %index1, %index2] by (2, %basis1, 3) : index
   return %1 : index
 }
+
+// -----
+
+// CHECK-LABEL: @gpu_launch_affine
+
+// Test `thread_id` in AffineScope, the `thread_id` is in AffineScope's toplevel,
+// it is a valid symbol.
+
+module {
+  func.func @gpu_launch_affine() {
+    %c1 = arith.constant 1 : index
+    gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) 
+    threads(%arg3, %arg4, %arg5) in (%arg9 = %c1, %arg10 = %c1, %arg11 = %c1) {
+      %thread_id_x = gpu.thread_id  x
+      %c128 = arith.constant 128 : index
+      affine.for %arg12 = %thread_id_x to %c128 step 8 {
+      }
+      gpu.terminator
+    }
+    return
+  }
+}
+
+// CHECK: %[[THREAD_ID:.*]] = gpu.thread_id  x
+// CHECK: %[[VAL:.*]] = arith.constant 128 : index
+// CHECK: affine.for %{{.*}} = %[[THREAD_ID]] to %[[VAL]] step 8 {
+
+// -----
+
+#map = affine_map<()[s0] -> (s0 mod 32)>
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<()[s0] -> (s0 mod 32)>
+
+// CHECK-LABEL: gpu.func @affine_thread_id
+
+module {
+  gpu.module @gpu {
+    gpu.func @affine_thread_id(%arg0: memref<?x?xf32>) kernel {
+      %c3 = arith.constant 3 : index
+      %dim = memref.dim %arg0, %c3 : memref<?x?xf32>
+      %c0 = arith.constant 0 : index
+      affine.for %arg3 = %c0 to %dim step 32 {
+        %thread_id_x = gpu.thread_id  x
+        %0 = affine.apply #map()[%thread_id_x]
+        %c128 = arith.constant 128 : index
+        affine.for %arg4 = %0 to %c128 step 8 {
+          %c32 = arith.constant 32 : index
+        }
+      }
+      gpu.return
+    }
+  }
+}
+
+// CHECK-SAME: (%[[VAL_0:.*]]: memref<?x?xf32>) kernel {
+// CHECK: %[[VAL_1:.*]] = arith.constant 3 : index
+// CHECK: %[[VAL_2:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<?x?xf32>
+// CHECK: %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK: affine.for %[[VAL_4:.*]] = %[[VAL_3]] to %[[VAL_2]] step 32 {
+// CHECK: %[[VAL_5:.*]] = gpu.thread_id  x
+// CHECK: %[[VAL_6:.*]] = affine.apply #[[$ATTR_0]](){{\[}}%[[VAL_5]]]
+// CHECK: %[[VAL_7:.*]] = arith.constant 128 : index
+// CHECK: affine.for %{{.*}} = %[[VAL_6]] to %[[VAL_7]] step 8 {
+
+// -----
+
+#map = affine_map<(d0)[s0] -> (d0 + s0)>
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0)[s0] -> (d0 + s0)>
+
+// CHECK-LABEL: func @arith_add_vaild_symbol_upper_bound
+
+func.func @arith_add_vaild_symbol_upper_bound(%arg : index) {
+  affine.for %n0 = 0 to 7 {
+    %dim = arith.addi %arg, %arg : index
+    affine.for %n1 = 0 to #map(%dim)[%arg] {
+    }
+  }
+  return
+}
+
+// CHECK-SAME: %[[VAL_0:.*]]: index) {
+// CHECK: affine.for %[[VAL_1:.*]] = 0 to 7 {
+// CHECK:   %[[VAL_2:.*]] = arith.addi %[[VAL_0]], %[[VAL_0]] : index
+// CHECK:   affine.for %[[VAL_3:.*]] = 0 to #[[$ATTR_0]](%[[VAL_2]]){{\[}}%[[VAL_0]]] {
+// CHECK:   }
+// CHECK: }
+
+// -----
+
+#map = affine_map<(d0)[s0] -> (d0 + s0)>
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0)[s0] -> (d0 + s0)>
+
+// CHECK-LABEL: func @arith_add_vaild_symbol_lower_bound
+
+func.func @arith_add_vaild_symbol_lower_bound(%arg : index) {
+  affine.for %n0 = 0 to 7 {
+    %dim = arith.addi %arg, %arg : index
+    affine.for %n1 = #map(%dim)[%arg] to 7 {
+    }
+  }
+  return
+}
+
+// CHECK-SAME: %[[VAL_0:.*]]: index) {
+// CHECK: affine.for %[[VAL_1:.*]] = 0 to 7 {
+// CHECK:   %[[VAL_2:.*]] = arith.addi %[[VAL_0]], %[[VAL_0]] : index
+// CHECK:   affine.for %[[VAL_3:.*]] = #[[$ATTR_0]](%[[VAL_2]]){{\[}}%[[VAL_0]]] to 7 {
+// CHECK:   }
+// CHECK: }

@@ -176,7 +176,6 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
   llvm::opt::ArgStringList TrArgs{
       "--spirv-max-version=1.6",
       "--spirv-ext=+all",
-      "--spirv-allow-extra-diexpressions",
       "--spirv-allow-unknown-intrinsics",
       "--spirv-lower-const-expr",
       "--spirv-preserve-auxdata",
@@ -217,17 +216,8 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
-
   // Diagnose unsupported sanitizer options only once.
-  if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
-                    true))
-    return;
-  for (auto *A : Args.filtered(options::OPT_fsanitize_EQ)) {
-    SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
-    if (K != SanitizerKind::Address)
-      D.getDiags().Report(clang::diag::warn_drv_unsupported_option_for_target)
-          << A->getAsString(Args) << getTriple().str();
-  }
+  diagnoseUnsupportedSanitizers(Args);
 }
 
 void HIPAMDToolChain::addClangTargetOptions(
@@ -362,7 +352,8 @@ VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
-  if (DriverArgs.hasArg(options::OPT_nogpulib) ||
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true) ||
       getGPUArch(DriverArgs) == "amdgcnspirv")
     return {};
   ArgStringList LibraryPaths;
@@ -383,7 +374,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
         llvm::sys::path::append(Path, BCName);
         FullName = Path;
         if (llvm::sys::fs::exists(FullName)) {
-          BCLibs.push_back(FullName);
+          BCLibs.emplace_back(FullName);
           return;
         }
       }
@@ -397,28 +388,11 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     StringRef GpuArch = getGPUArch(DriverArgs);
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
-    // If --hip-device-lib is not set, add the default bitcode libraries.
-    if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                           options::OPT_fno_gpu_sanitize, true) &&
-        getSanitizerArgs(DriverArgs).needsAsanRt()) {
-      auto AsanRTL = RocmInstallation->getAsanRTLPath();
-      if (AsanRTL.empty()) {
-        unsigned DiagID = getDriver().getDiags().getCustomDiagID(
-            DiagnosticsEngine::Error,
-            "AMDGPU address sanitizer runtime library (asanrtl) is not found. "
-            "Please install ROCm device library which supports address "
-            "sanitizer");
-        getDriver().Diag(DiagID);
-        return {};
-      } else
-        BCLibs.emplace_back(AsanRTL, /*ShouldInternalize=*/false);
-    }
-
     // Add the HIP specific bitcode library.
-    BCLibs.push_back(RocmInstallation->getHIPPath());
+    BCLibs.emplace_back(RocmInstallation->getHIPPath());
 
     // Add common device libraries like ocml etc.
-    for (StringRef N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
+    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.
@@ -427,7 +401,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     if (InstLib.empty())
       return BCLibs;
     if (llvm::sys::fs::exists(InstLib))
-      BCLibs.push_back(InstLib);
+      BCLibs.emplace_back(InstLib);
     else
       getDriver().Diag(diag::err_drv_no_such_file) << InstLib;
   }
