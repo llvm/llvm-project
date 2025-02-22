@@ -9,7 +9,15 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBInstructionList.h"
+#include "lldb/API/SBProcess.h"
+#include "lldb/API/SBStream.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
+#include "llvm/Support/JSON.h"
 
 namespace lldb_dap {
 
@@ -74,8 +82,37 @@ namespace lldb_dap {
 void SourceRequestHandler::operator()(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  llvm::json::Object body{{"content", ""}};
-  response.try_emplace("body", std::move(body));
+  const auto *arguments = request.getObject("arguments");
+  const auto *source = arguments->getObject("source");
+  llvm::json::Object body;
+  int64_t source_ref = GetUnsigned(
+      source, "sourceReference", GetUnsigned(arguments, "sourceReference", 0));
+
+  if (source_ref) {
+    lldb::SBProcess process = dap.target.GetProcess();
+    // Upper 32 bits is the thread index ID
+    lldb::SBThread thread =
+        process.GetThreadByIndexID(GetLLDBThreadIndexID(source_ref));
+    // Lower 32 bits is the frame index
+    lldb::SBFrame frame = thread.GetFrameAtIndex(GetLLDBFrameID(source_ref));
+    if (!frame.IsValid()) {
+      response["success"] = false;
+      response["message"] = "source not found";
+    } else {
+      lldb::SBInstructionList insts =
+          frame.GetSymbol().GetInstructions(dap.target);
+      lldb::SBStream stream;
+      insts.GetDescription(stream);
+      body["content"] = stream.GetData();
+      body["mimeType"] = "text/x-lldb.disassembly";
+      response.try_emplace("body", std::move(body));
+    }
+  } else {
+    response["success"] = false;
+    response["message"] =
+        "invalid arguments, expected source.sourceReference to be set";
+  }
+
   dap.SendJSON(llvm::json::Value(std::move(response)));
 }
 

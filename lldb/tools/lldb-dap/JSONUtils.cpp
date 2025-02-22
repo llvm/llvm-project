@@ -45,7 +45,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
-#include <climits>
 #include <cstddef>
 #include <iomanip>
 #include <optional>
@@ -698,14 +697,22 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
   return llvm::json::Value(std::move(source));
 }
 
-static std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
+static llvm::json::Value CreateSource(lldb::SBFrame &frame,
+                                      llvm::StringRef frame_name) {
   auto line_entry = frame.GetLineEntry();
   // A line entry of 0 indicates the line is compiler generated i.e. no source
   // file is associated with the frame.
   if (line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0)
     return CreateSource(line_entry);
 
-  return {};
+  llvm::json::Object source;
+  EmplaceSafeString(source, "name", frame_name);
+  source.try_emplace("sourceReference", MakeDAPFrameID(frame));
+  // If we don't have a filespec then we don't have the original source. Mark
+  // the source as deemphasized since users will only be able to view assembly
+  // for these frames.
+  EmplaceSafeString(source, "presentationHint", "deemphasize");
+  return std::move(source);
 }
 
 // "StackFrame": {
@@ -799,21 +806,22 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto source = CreateSource(frame);
-
-  if (source) {
-    object.try_emplace("source", *source);
-    auto line_entry = frame.GetLineEntry();
-    auto line = line_entry.GetLine();
-    if (line && line != LLDB_INVALID_LINE_NUMBER)
-      object.try_emplace("line", line);
-    else
-      object.try_emplace("line", 0);
+  object.try_emplace("source", CreateSource(frame, frame_name));
+  auto line_entry = frame.GetLineEntry();
+  if (line_entry.IsValid() &&
+      (line_entry.GetLine() != 0 ||
+       line_entry.GetLine() != LLDB_INVALID_LINE_NUMBER)) {
+    object.try_emplace("line", line_entry.GetLine());
     auto column = line_entry.GetColumn();
     object.try_emplace("column", column);
   } else {
-    object.try_emplace("line", 0);
-    object.try_emplace("column", 0);
+    lldb::addr_t inst_offset = frame.GetPCAddress().GetOffset() -
+                               frame.GetSymbol().GetStartAddress().GetOffset();
+    lldb::addr_t inst_line =
+        inst_offset / (frame.GetThread().GetProcess().GetAddressByteSize() / 2);
+    // lines are base-1 indexed
+    object.try_emplace("line", inst_line + 1);
+    object.try_emplace("column", 1);
   }
 
   const auto pc = frame.GetPC();
