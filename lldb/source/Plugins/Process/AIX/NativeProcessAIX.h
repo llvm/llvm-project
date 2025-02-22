@@ -12,6 +12,7 @@
 #include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Host/linux/Support.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
@@ -20,9 +21,7 @@
 #include <csignal>
 #include <unordered_set>
 
-namespace lldb_private {
-
-namespace process_aix {
+namespace lldb_private::process_aix {
 /// \class NativeProcessAIX
 /// Manages communication with the inferior (debugee) process.
 ///
@@ -78,6 +77,16 @@ public:
 
   Status Kill() override;
 
+  lldb::addr_t GetSharedLibraryInfoAddress() override;
+
+  Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+                    size_t &bytes_read) override;
+
+  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                     size_t &bytes_written) override;
+
+  size_t UpdateThreads() override;
+
   const ArchSpec &GetArchitecture() const override { return m_arch; }
 
   Status SetBreakpoint(lldb::addr_t addr, uint32_t size,
@@ -85,12 +94,26 @@ public:
 
   Status RemoveBreakpoint(lldb::addr_t addr, bool hardware = false) override;
 
+  Status GetLoadedModuleFileSpec(const char *module_path,
+                                 FileSpec &file_spec) override;
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  GetAuxvData() const override {
+    return getProcFile(GetID(), "auxv");
+  }
+
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               void *data = nullptr, size_t data_size = 0,
                               long *result = nullptr);
+
+  bool SupportHardwareSingleStepping() const;
+
+  /// Writes a siginfo_t structure corresponding to the given thread ID to the
+  /// memory region pointed to by \p siginfo.
+  Status GetSignalInfo(lldb::tid_t tid, void *siginfo) const;
 
 private:
   Manager &m_manager;
@@ -104,16 +127,11 @@ private:
   // Returns a list of process threads that we have attached to.
   static llvm::Expected<std::vector<::pid_t>> Attach(::pid_t pid);
 
-  void MonitorSIGTRAP(const WaitStatus status, NativeThreadAIX &thread);
-
-  void MonitorBreakpoint(NativeThreadAIX &thread);
-
   Status Detach(lldb::tid_t tid);
 
   void SigchldHandler();
 };
 
-} // namespace process_aix
-} // namespace lldb_private
+} // namespace lldb_private::process_aix
 
 #endif // #ifndef LIBLLDB_NATIVEPROCESSAIX_H_

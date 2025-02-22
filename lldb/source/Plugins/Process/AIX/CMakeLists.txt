@@ -12,3 +12,5 @@ add_lldb_library(lldbPluginProcessAIX
   LINK_COMPONENTS
     Support
   )
+
+target_compile_definitions(lldbPluginProcessAIX PRIVATE "-D_ALL_SOURCE")
