@@ -8477,7 +8477,7 @@ def err_incomplete_object_call : Error<
 def warn_condition_is_assignment : Warning<"using the result of an "
   "assignment as a condition without parentheses">,
   InGroup<Parentheses>;
-def warn_assignment_bool_context : Warning<"suggest parentheses around assignment used as truth value">,
+def warn_assignment_bool_context : Warning<"using the result of an assignment as a truth value without parentheses">,
   InGroup<Parentheses>;
 
 def warn_free_nonheap_object

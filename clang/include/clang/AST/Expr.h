@@ -116,10 +116,11 @@ public:
   Expr(Expr &&) = delete;
   Expr &operator=(const Expr&) = delete;
   Expr &operator=(Expr&&) = delete;
+  bool isCondition;
 
 protected:
   Expr(StmtClass SC, QualType T, ExprValueKind VK, ExprObjectKind OK)
-      : ValueStmt(SC) {
+      : ValueStmt(SC), isCondition(false) {
     ExprBits.Dependent = 0;
     ExprBits.ValueKind = VK;
     ExprBits.ObjectKind = OK;

@@ -688,9 +688,6 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
 }
 
 void Sema::DiagnoseAssignmentBoolContext(Expr *E, QualType Ty) {
-  // Use copy to not alter original expression.
-  Expr *ECopy = E;
-
   if (Ty->isBooleanType()) {
     // `bool(x=0)` and if (x=0){} emit:
     // - ImplicitCastExpr bool IntegralToBoolean
@@ -698,17 +695,19 @@ void Sema::DiagnoseAssignmentBoolContext(Expr *E, QualType Ty) {
     // --- Assignment ...
     // But should still emit this warning (at least gcc does), even if bool-cast
     // is not directly followed by assignment.
-    // NOTE: Is this robust enough or can there be other semantic expression
-    // until the assignment?
-    while (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(ECopy)) {
+    while (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
       // If there is another implicit cast to bool then this warning would have
       // been already emitted.
       if (ICE->getType()->isBooleanType())
         return;
-      ECopy = ICE->getSubExpr();
+      E = ICE->getSubExpr();
     }
 
-    if (BinaryOperator *Op = dyn_cast<BinaryOperator>(ECopy)) {
+    // Condition-assignment warnings are already handled by `DiagnoseAssignmentAsCondition()`
+    if (E->isCondition)
+      return;
+
+    if (BinaryOperator *Op = dyn_cast<BinaryOperator>(E)) {
       // Should only be issued for regular assignment `=`,
       // not for compound-assign like `+=`.
       // NOTE: Might make sense to emit for all assignments even if gcc
@@ -716,11 +715,11 @@ void Sema::DiagnoseAssignmentBoolContext(Expr *E, QualType Ty) {
       if (Op->getOpcode() == BO_Assign) {
         SourceLocation Loc = Op->getOperatorLoc();
         Diag(Loc, diag::warn_assignment_bool_context)
-            << ECopy->getSourceRange();
+            << E->getSourceRange();
 
-        SourceLocation Open = ECopy->getBeginLoc();
+        SourceLocation Open = E->getBeginLoc();
         SourceLocation Close =
-            getLocForEndOfToken(ECopy->getSourceRange().getEnd());
+            getLocForEndOfToken(E->getSourceRange().getEnd());
         Diag(Loc, diag::note_condition_assign_silence)
             << FixItHint::CreateInsertion(Open, "(")
             << FixItHint::CreateInsertion(Close, ")");
@@ -803,16 +802,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     }
   }
 
-  // FIXME: Doesn't include C89, so this warning isn't emitted when passing
-  // `std=c89`.
-  auto isC = getLangOpts().C99 || getLangOpts().C11 || getLangOpts().C17 ||
-             getLangOpts().C23;
-  // Do not emit this warning for Objective-C, since it's a common idiom.
-  // NOTE: Are there other languages that this could affect besides C and C++?
-  // Ideally would check `getLangOpts().Cplusplus || getLangOpts().C` but there
-  // is no option for C (only C99 etc.).
-  if ((getLangOpts().CPlusPlus || isC) && !getLangOpts().ObjC)
-    DiagnoseAssignmentBoolContext(E, Ty);
+  DiagnoseAssignmentBoolContext(E, Ty);
 
   if (ImplicitCastExpr *ImpCast = dyn_cast<ImplicitCastExpr>(E)) {
     if (ImpCast->getCastKind() == Kind && (!BasePath || BasePath->empty())) {
