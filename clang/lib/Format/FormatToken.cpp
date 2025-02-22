@@ -42,11 +42,11 @@ static SmallVector<StringRef> CppNonKeywordTypes = {
 };
 
 bool FormatToken::isTypeName(const LangOptions &LangOpts) const {
-  const bool IsCpp = LangOpts.CXXOperatorNames;
-  return is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts) ||
-         (IsCpp && is(tok::identifier) &&
-          std::binary_search(CppNonKeywordTypes.begin(),
-                             CppNonKeywordTypes.end(), TokenText));
+  if (is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts))
+    return true;
+  return (LangOpts.CXXOperatorNames || LangOpts.C17) && is(tok::identifier) &&
+         std::binary_search(CppNonKeywordTypes.begin(),
+                            CppNonKeywordTypes.end(), TokenText);
 }
 
 bool FormatToken::isTypeOrIdentifier(const LangOptions &LangOpts) const {

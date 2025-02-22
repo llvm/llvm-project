@@ -1358,6 +1358,10 @@ clang-format
 - Adds ``WrapNamespaceBodyWithEmptyLines`` option.
 - Adds the ``IndentExportBlock`` option.
 - Adds ``PenaltyBreakBeforeMemberAccess`` option.
+- Add the C language instead of treating it like C++.
+- Allow specifying the language (C, C++, or Objective-C) for a ``.h`` file by
+  adding a special comment (e.g. ``// clang-format Language: ObjC``) near the
+  top of the file.
 
 libclang
 --------
