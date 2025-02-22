@@ -96,7 +96,6 @@ class StackCoreScriptedProcesTestCase(TestBase):
                         {
                             "path": "/random/path/random.dylib",
                             "load_addr": 12345678,
-                            "ignore_module_load_error": True,
                         },
                     ],
                 }

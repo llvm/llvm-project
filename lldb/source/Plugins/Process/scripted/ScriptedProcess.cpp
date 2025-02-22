@@ -25,6 +25,8 @@
 #include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 
+#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
+
 #include <mutex>
 
 LLDB_PLUGIN_DEFINE(ScriptedProcess)
@@ -422,11 +424,9 @@ bool ScriptedProcess::GetProcessInfo(ProcessInstanceInfo &info) {
 lldb_private::StructuredData::ObjectSP
 ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
   Status error;
-  auto handle_error_with_message = [&error](llvm::StringRef message,
-                                            bool ignore_error) {
-    ScriptedInterface::ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
-                                              message.data(), error);
-    return ignore_error;
+  auto error_with_message = [&error](llvm::StringRef message) {
+    return ScriptedInterface::ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
+                                                     message.data(), error);
   };
 
   StructuredData::ArraySP loaded_images_sp = GetInterface().GetLoadedImages();
@@ -438,13 +438,12 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
   ModuleList module_list;
   Target &target = GetTarget();
 
-  auto reload_image = [&target, &module_list, &handle_error_with_message](
+  auto reload_image = [&target, &module_list, &error_with_message](
                           StructuredData::Object *obj) -> bool {
     StructuredData::Dictionary *dict = obj->GetAsDictionary();
 
     if (!dict)
-      return handle_error_with_message(
-          "Couldn't cast image object into dictionary.", false);
+      return error_with_message("Couldn't cast image object into dictionary.");
 
     ModuleSpec module_spec;
     llvm::StringRef value;
@@ -452,65 +451,81 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
     bool has_path = dict->HasKey("path");
     bool has_uuid = dict->HasKey("uuid");
     if (!has_path && !has_uuid)
-      return handle_error_with_message(
-          "Dictionary should have key 'path' or 'uuid'", false);
+      return error_with_message("Dictionary should have key 'path' or 'uuid'");
     if (!dict->HasKey("load_addr"))
-      return handle_error_with_message("Dictionary is missing key 'load_addr'",
-                                       false);
+      return error_with_message("Dictionary is missing key 'load_addr'");
 
+    llvm::StringRef path = "";
     if (has_path) {
-      dict->GetValueForKeyAsString("path", value);
-      module_spec.GetFileSpec().SetPath(value);
+      dict->GetValueForKeyAsString("path", path);
+      module_spec.GetFileSpec().SetPath(path);
     }
 
     if (has_uuid) {
       dict->GetValueForKeyAsString("uuid", value);
       module_spec.GetUUID().SetFromStringRef(value);
     }
-    module_spec.GetArchitecture() = target.GetArchitecture();
-
-    ModuleSP module_sp =
-        target.GetOrCreateModule(module_spec, true /* notify */);
-
-    bool ignore_module_load_error = false;
-    dict->GetValueForKeyAsBoolean("ignore_module_load_error",
-                                  ignore_module_load_error);
-    if (!module_sp)
-      return handle_error_with_message("Couldn't create or get module.",
-                                       ignore_module_load_error);
 
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     lldb::offset_t slide = LLDB_INVALID_OFFSET;
     dict->GetValueForKeyAsInteger("load_addr", load_addr);
     dict->GetValueForKeyAsInteger("slide", slide);
     if (load_addr == LLDB_INVALID_ADDRESS)
-      return handle_error_with_message(
-          "Couldn't get valid load address or slide offset.",
-          ignore_module_load_error);
+      return error_with_message(
+          "Couldn't get valid load address or slide offset.");
 
     if (slide != LLDB_INVALID_OFFSET)
       load_addr += slide;
+
+    module_spec.GetArchitecture() = target.GetArchitecture();
+
+    ModuleSP module_sp =
+        target.GetOrCreateModule(module_spec, true /* notify */);
+
+    bool is_placeholder_module = false;
+
+    if (!module_sp) {
+      // Create a placeholder module
+      LLDB_LOGF(
+          GetLog(LLDBLog::Process),
+          "ScriptedProcess::%s unable to locate the matching "
+          "object file path %s, creating a placeholder module at 0x%" PRIx64,
+          __FUNCTION__, path.str().c_str(), load_addr);
+
+      module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
+          module_spec, load_addr, module_spec.GetFileSpec().MemorySize());
+
+      is_placeholder_module = true;
+    }
 
     bool changed = false;
     module_sp->SetLoadAddress(target, load_addr, false /*=value_is_offset*/,
                               changed);
 
     if (!changed && !module_sp->GetObjectFile())
-      return handle_error_with_message(
-          "Couldn't set the load address for module.",
-          ignore_module_load_error);
+      return error_with_message("Couldn't set the load address for module.");
 
-    dict->GetValueForKeyAsString("path", value);
-    FileSpec objfile(value);
+    FileSpec objfile(path);
     module_sp->SetFileSpecAndObjectName(objfile, objfile.GetFilename());
 
-    return ignore_module_load_error ? true
-                                    : module_list.AppendIfNeeded(module_sp);
+    if (is_placeholder_module) {
+      target.GetImages().AppendIfNeeded(module_sp, true /*notify=*/);
+      return true;
+    }
+
+    return module_list.AppendIfNeeded(module_sp);
   };
 
-  if (!loaded_images_sp->ForEach(reload_image))
-    return ScriptedInterface::ErrorWithMessage<StructuredData::ObjectSP>(
-        LLVM_PRETTY_FUNCTION, "Couldn't reload all images.", error);
+  size_t loaded_images_size = loaded_images_sp->GetSize();
+  bool print_error = true;
+  for (size_t idx = 0; idx < loaded_images_size; idx++) {
+    const auto &loaded_image = loaded_images_sp->GetItemAtIndex(idx);
+    if (!reload_image(loaded_image.get()) && print_error) {
+      print_error = false;
+      ScriptedInterface::ErrorWithMessage<StructuredData::ObjectSP>(
+          LLVM_PRETTY_FUNCTION, "Couldn't reload all images.", error);
+    }
+  }
 
   target.ModulesDidLoad(module_list);
 

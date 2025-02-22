@@ -69,25 +69,6 @@ class StackCoreScriptedProcess(ScriptedProcess):
                     return
 
                 module_path = module_path_arg.GetStringValue(100)
-                module_name = os.path.basename(module_path)
-
-                # Get ignore_module_load_error boolean from args
-                ignore_module_load_error = False
-                ignore_module_load_error_arg = custom_module.GetValueForKey(
-                    "ignore_module_load_error"
-                )
-                if (
-                    ignore_module_load_error_arg
-                    and ignore_module_load_error_arg.IsValid()
-                    and ignore_module_load_error_arg.GetType()
-                    == lldb.eStructuredDataTypeBoolean
-                ):
-                    ignore_module_load_error = (
-                        ignore_module_load_error_arg.GetBooleanValue()
-                    )
-
-                if not os.path.exists(module_path) and not ignore_module_load_error:
-                    return
 
                 # Get custom module load address from args
                 module_load_addr = None
@@ -102,6 +83,7 @@ class StackCoreScriptedProcess(ScriptedProcess):
 
                 # If module load address is not specified/valid, try to find it from corefile module
                 if module_load_addr is None:
+                    module_name = os.path.basename(module_path)
                     corefile_module = self.get_module_with_name(
                         self.corefile_target, module_name
                     )
@@ -119,7 +101,6 @@ class StackCoreScriptedProcess(ScriptedProcess):
                     {
                         "path": module_path,
                         "load_addr": module_load_addr,
-                        "ignore_module_load_error": ignore_module_load_error,
                     }
                 )
 
