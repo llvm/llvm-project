@@ -19,6 +19,7 @@ class AsanTestCase(TestBase):
         self.asan_tests()
 
     @skipIf(oslist=no_match(["macosx"]))
+    @skipIfDarwin #  rdar://142836595
     def test_libsanitizers_asan(self):
         try:
             self.build(make_targets=["libsanitizers"])
