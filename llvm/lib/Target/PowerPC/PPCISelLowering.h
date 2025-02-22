@@ -161,12 +161,6 @@ namespace llvm {
     SRA,
     SHL,
 
-    /// These nodes represent PPC arithmetic operations with carry.
-    ADDC,
-    ADDE,
-    SUBC,
-    SUBE,
-
     /// FNMSUB - Negated multiply-subtract instruction.
     FNMSUB,
 
@@ -1286,6 +1280,7 @@ namespace llvm {
     SDValue LowerGlobalTLSAddressLinux(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerUaddo(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
@@ -1321,8 +1316,6 @@ namespace llvm {
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
     SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,

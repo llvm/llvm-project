@@ -334,19 +334,19 @@ define void @vst2_v4i64(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #32]
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #16]
-; CHECK-NEXT:    vmov.f64 d8, d4
+; CHECK-NEXT:    vmov.f64 d8, d2
 ; CHECK-NEXT:    vmov.f64 d9, d0
-; CHECK-NEXT:    vmov.f64 d0, d5
+; CHECK-NEXT:    vmov.f64 d0, d3
 ; CHECK-NEXT:    vstrw.32 q4, [r1]
-; CHECK-NEXT:    vmov.f64 d5, d2
+; CHECK-NEXT:    vmov.f64 d3, d4
 ; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
-; CHECK-NEXT:    vmov.f64 d4, d6
-; CHECK-NEXT:    vmov.f64 d2, d7
-; CHECK-NEXT:    vstrw.32 q2, [r1, #32]
-; CHECK-NEXT:    vstrw.32 q1, [r1, #48]
+; CHECK-NEXT:    vmov.f64 d2, d6
+; CHECK-NEXT:    vmov.f64 d4, d7
+; CHECK-NEXT:    vstrw.32 q1, [r1, #32]
+; CHECK-NEXT:    vstrw.32 q2, [r1, #48]
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -640,19 +640,19 @@ define void @vst2_v4f64(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #32]
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #16]
-; CHECK-NEXT:    vmov.f64 d8, d4
+; CHECK-NEXT:    vmov.f64 d8, d2
 ; CHECK-NEXT:    vmov.f64 d9, d0
-; CHECK-NEXT:    vmov.f64 d0, d5
+; CHECK-NEXT:    vmov.f64 d0, d3
 ; CHECK-NEXT:    vstrw.32 q4, [r1]
-; CHECK-NEXT:    vmov.f64 d5, d2
+; CHECK-NEXT:    vmov.f64 d3, d4
 ; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
-; CHECK-NEXT:    vmov.f64 d4, d6
-; CHECK-NEXT:    vmov.f64 d2, d7
-; CHECK-NEXT:    vstrw.32 q2, [r1, #32]
-; CHECK-NEXT:    vstrw.32 q1, [r1, #48]
+; CHECK-NEXT:    vmov.f64 d2, d6
+; CHECK-NEXT:    vmov.f64 d4, d7
+; CHECK-NEXT:    vstrw.32 q1, [r1, #32]
+; CHECK-NEXT:    vstrw.32 q2, [r1, #48]
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:

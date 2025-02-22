@@ -171,9 +171,13 @@ public:
   // A list of wrapped symbols.
   std::vector<WrappedSymbol> wrapped;
 
+  // Used for /alternatename.
+  std::map<StringRef, StringRef> alternateNames;
+
   void fixupExports();
   void assignExportOrdinals();
   void parseModuleDefs(StringRef path);
+  void parseAlternateName(StringRef);
 
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {

@@ -6281,15 +6281,6 @@ static unsigned FixedPointIntrinsicToOpcode(unsigned Intrinsic) {
   }
 }
 
-void SelectionDAGBuilder::lowerCallToExternalSymbol(const CallInst &I,
-                                           const char *FunctionName) {
-  assert(FunctionName && "FunctionName must not be nullptr");
-  SDValue Callee = DAG.getExternalSymbol(
-      FunctionName,
-      DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()));
-  LowerCallTo(I, Callee, I.isTailCall(), I.isMustTailCall());
-}
-
 /// Given a @llvm.call.preallocated.setup, return the corresponding
 /// preallocated call.
 static const CallBase *FindPreallocatedCall(const Value *PreallocatedSetup) {
@@ -8124,15 +8115,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
-
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
       visitTargetIntrinsic(I, Intrinsic);
       return;
     }
-
-    setValue(&I, DAG.getPartialReduceAdd(sdl, EVT::getEVT(I.getType()),
-                                         getValue(I.getOperand(0)),
-                                         getValue(I.getOperand(1))));
+    SDValue Acc = getValue(I.getOperand(0));
+    SDValue Input = getValue(I.getOperand(1));
+    setValue(&I,
+             DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, sdl, Acc.getValueType(), Acc,
+                         Input, DAG.getConstant(1, sdl, Input.getValueType())));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {

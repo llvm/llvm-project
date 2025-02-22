@@ -321,6 +321,25 @@ std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
   return std::nullopt;
 }
 
+/// Adds optional command-line arguments to existing arguments.
+template <typename T>
+static void setOptionalCommandlineArguments(NVVMTargetAttr target,
+                                            SmallVectorImpl<T> &ptxasArgs) {
+  if (!target.hasCmdOptions())
+    return;
+
+  std::optional<mlir::NamedAttribute> cmdOptions = target.getCmdOptions();
+  for (Attribute attr : cast<ArrayAttr>(cmdOptions->getValue())) {
+    if (auto strAttr = dyn_cast<StringAttr>(attr)) {
+      if constexpr (std::is_same_v<T, StringRef>) {
+        ptxasArgs.push_back(strAttr.getValue());
+      } else if constexpr (std::is_same_v<T, const char *>) {
+        ptxasArgs.push_back(strAttr.getValue().data());
+      }
+    }
+  }
+}
+
 // TODO: clean this method & have a generic tool driver or never emit binaries
 // with this mechanism and let another stage take care of it.
 std::optional<SmallVector<char, 0>>
@@ -359,8 +378,8 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     return std::nullopt;
   TmpFile cubinFile;
   if (createFatbin) {
-    Twine cubinFilename = ptxFile->first + ".cubin";
-    cubinFile = TmpFile(cubinFilename.str(), llvm::FileRemover(cubinFilename));
+    std::string cubinFilename = (ptxFile->first + ".cubin").str();
+    cubinFile = TmpFile(cubinFilename, llvm::FileRemover(cubinFilename));
   } else {
     cubinFile.first = binaryFile->first;
   }
@@ -411,6 +430,9 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     else
       useFatbin32 = true;
   }
+
+  // Set optional command line arguments
+  setOptionalCommandlineArguments(getTarget(), ptxasArgs);
 
   // Create the `fatbinary` args.
   StringRef chip = getTarget().getChip();
@@ -562,6 +584,8 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
   cmdOpts.second.append(
       {"-arch", getTarget().getChip().data(), "--opt-level", optLevel.c_str()});
 
+  // Set optional command line arguments
+  setOptionalCommandlineArguments(getTarget(), cmdOpts.second);
   // Create the compiler handle.
   RETURN_ON_NVPTXCOMPILER_ERROR(
       nvPTXCompilerCreate(&compiler, ptxCode.size(), ptxCode.c_str()));

@@ -513,3 +513,68 @@ module {
     "test.possible_terminator"() : () -> ()
   }) : () -> ()
 }
+
+// -----
+
+module @test_module {
+  // CHECK: llvm.func @__ocml_sin_f16(f16) -> f16
+  // CHECK-LABEL: func @math_sin_vector_0d
+  func.func @math_sin_vector_0d(%arg : vector<f16>) -> vector<f16> {
+    // CHECK: llvm.extractelement {{.*}} : vector<1xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<1xf16>
+    %result = math.sin %arg : vector<f16>
+    func.return %result : vector<f16>
+  }
+}
+
+// -----
+
+module @test_module {
+  // CHECK: llvm.func @__ocml_sin_f16(f16) -> f16
+  // CHECK-LABEL: func @math_sin_vector_1d
+  func.func @math_sin_vector_1d(%arg : vector<4xf16>) -> vector<4xf16> {
+    // CHECK: llvm.extractelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.extractelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.extractelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.extractelement {{.*}} : vector<4xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<4xf16>
+    %result = math.sin %arg : vector<4xf16>
+    func.return %result : vector<4xf16>
+  }
+}
+
+// -----
+
+module @test_module {
+  // CHECK: llvm.func @__ocml_sin_f16(f16) -> f16
+  // CHECK-LABEL: func @math_sin_vector_2d
+  func.func @math_sin_vector_2d(%arg : vector<2x2xf16>) -> vector<2x2xf16> {
+    // CHECK: builtin.unrealized_conversion_cast {{.*}} : vector<2x2xf16> to !llvm.array<2 x vector<2xf16>>
+    // CHECK: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+    // CHECK: llvm.extractelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.extractelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+    // CHECK: llvm.extractvalue {{.*}} : !llvm.array<2 x vector<2xf16>>
+    // CHECK: llvm.extractelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.extractelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.call @__ocml_sin_f16(%{{.*}}) : (f16) -> f16
+    // CHECK: llvm.insertelement {{.*}} : vector<2xf16>
+    // CHECK: llvm.insertvalue {{.*}} : !llvm.array<2 x vector<2xf16>>    
+    %result = math.sin %arg : vector<2x2xf16>
+    func.return %result : vector<2x2xf16>
+  }
+}

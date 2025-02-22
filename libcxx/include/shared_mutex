@@ -400,9 +400,9 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(shared_lock);
 template <class _Mutex>
 void shared_lock<_Mutex>::lock() {
   if (__m_ == nullptr)
-    __throw_system_error(EPERM, "shared_lock::lock: references null mutex");
+    std::__throw_system_error(EPERM, "shared_lock::lock: references null mutex");
   if (__owns_)
-    __throw_system_error(EDEADLK, "shared_lock::lock: already locked");
+    std::__throw_system_error(EDEADLK, "shared_lock::lock: already locked");
   __m_->lock_shared();
   __owns_ = true;
 }
@@ -410,9 +410,9 @@ void shared_lock<_Mutex>::lock() {
 template <class _Mutex>
 bool shared_lock<_Mutex>::try_lock() {
   if (__m_ == nullptr)
-    __throw_system_error(EPERM, "shared_lock::try_lock: references null mutex");
+    std::__throw_system_error(EPERM, "shared_lock::try_lock: references null mutex");
   if (__owns_)
-    __throw_system_error(EDEADLK, "shared_lock::try_lock: already locked");
+    std::__throw_system_error(EDEADLK, "shared_lock::try_lock: already locked");
   __owns_ = __m_->try_lock_shared();
   return __owns_;
 }
@@ -421,9 +421,9 @@ template <class _Mutex>
 template <class _Rep, class _Period>
 bool shared_lock<_Mutex>::try_lock_for(const chrono::duration<_Rep, _Period>& __d) {
   if (__m_ == nullptr)
-    __throw_system_error(EPERM, "shared_lock::try_lock_for: references null mutex");
+    std::__throw_system_error(EPERM, "shared_lock::try_lock_for: references null mutex");
   if (__owns_)
-    __throw_system_error(EDEADLK, "shared_lock::try_lock_for: already locked");
+    std::__throw_system_error(EDEADLK, "shared_lock::try_lock_for: already locked");
   __owns_ = __m_->try_lock_shared_for(__d);
   return __owns_;
 }
@@ -432,9 +432,9 @@ template <class _Mutex>
 template <class _Clock, class _Duration>
 bool shared_lock<_Mutex>::try_lock_until(const chrono::time_point<_Clock, _Duration>& __t) {
   if (__m_ == nullptr)
-    __throw_system_error(EPERM, "shared_lock::try_lock_until: references null mutex");
+    std::__throw_system_error(EPERM, "shared_lock::try_lock_until: references null mutex");
   if (__owns_)
-    __throw_system_error(EDEADLK, "shared_lock::try_lock_until: already locked");
+    std::__throw_system_error(EDEADLK, "shared_lock::try_lock_until: already locked");
   __owns_ = __m_->try_lock_shared_until(__t);
   return __owns_;
 }
@@ -442,7 +442,7 @@ bool shared_lock<_Mutex>::try_lock_until(const chrono::time_point<_Clock, _Durat
 template <class _Mutex>
 void shared_lock<_Mutex>::unlock() {
   if (!__owns_)
-    __throw_system_error(EPERM, "shared_lock::unlock: not locked");
+    std::__throw_system_error(EPERM, "shared_lock::unlock: not locked");
   __m_->unlock_shared();
   __owns_ = false;
 }

@@ -9,6 +9,7 @@
 # ==------------------------------------------------------------------------==#
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -23,7 +24,7 @@ def main():
         help="Path to the YAML file containing header specification",
         metavar="FILE",
         type=Path,
-        nargs=1,
+        nargs="+",
     )
     parser.add_argument(
         "-o",
@@ -31,6 +32,11 @@ def main():
         help="Path to write generated header file",
         type=Path,
         required=True,
+    )
+    parser.add_argument(
+        "--json",
+        help="Write JSON instead of a header, can use multiple YAML files",
+        action="store_true",
     )
     parser.add_argument(
         "--depfile",
@@ -52,6 +58,11 @@ def main():
     )
     args = parser.parse_args()
 
+    if not args.json and len(args.yaml_file) != 1:
+        print("Only one YAML file at a time without --json", file=sys.stderr)
+        parser.print_usage(sys.stderr)
+        return 2
+
     files_read = set()
 
     def write_depfile():
@@ -66,35 +77,47 @@ def main():
         files_read.add(path)
         return load_yaml_file(path, HeaderFile, args.entry_point)
 
-    merge_from_files = dict()
+    def load_header(yaml_file):
+        merge_from_files = dict()
 
-    def merge_from(paths):
-        for path in paths:
-            # Load each file exactly once, in case of redundant merges.
-            if path in merge_from_files:
-                continue
-            header = load_yaml(path)
-            merge_from_files[path] = header
-            merge_from(path.parent / f for f in header.merge_yaml_files)
+        def merge_from(paths):
+            for path in paths:
+                # Load each file exactly once, in case of redundant merges.
+                if path in merge_from_files:
+                    continue
+                header = load_yaml(path)
+                merge_from_files[path] = header
+                merge_from(path.parent / f for f in header.merge_yaml_files)
 
-    # Load the main file first.
-    [yaml_file] = args.yaml_file
-    header = load_yaml(yaml_file)
+        # Load the main file first.
+        header = load_yaml(yaml_file)
 
-    # Now load all the merge_yaml_files, and any transitive merge_yaml_files.
-    merge_from(yaml_file.parent / f for f in header.merge_yaml_files)
+        # Now load all the merge_yaml_files, and transitive merge_yaml_files.
+        merge_from(yaml_file.parent / f for f in header.merge_yaml_files)
 
-    # Merge in all those files' contents.
-    for merge_from_path, merge_from_header in merge_from_files.items():
-        if merge_from_header.name is not None:
-            print(f"{merge_from_path!s}: Merge file cannot have header field", stderr)
-            return 2
-        header.merge(merge_from_header)
+        # Merge in all those files' contents.
+        for merge_from_path, merge_from_header in merge_from_files.items():
+            if merge_from_header.name is not None:
+                print(
+                    f"{merge_from_path!s}: Merge file cannot have header field",
+                    file=sys.stderr,
+                )
+                return 2
+            header.merge(merge_from_header)
 
-    # The header_template path is relative to the containing YAML file.
-    template = header.template(yaml_file.parent, files_read)
+        return header
 
-    contents = fill_public_api(header.public_api(), template)
+    if args.json:
+        contents = json.dumps(
+            [load_header(file).json_data() for file in args.yaml_file],
+            indent=2,
+        )
+    else:
+        [yaml_file] = args.yaml_file
+        header = load_header(yaml_file)
+        # The header_template path is relative to the containing YAML file.
+        template = header.template(yaml_file.parent, files_read)
+        contents = fill_public_api(header.public_api(), template)
 
     write_depfile()
 

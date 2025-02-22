@@ -345,6 +345,48 @@ define void @store_to_readonly_noalias(ptr readonly noalias %0) {
   ret void
 }
 
+define void @store_select_with_null(i1 %cond, ptr %p) {
+; CHECK-LABEL: @store_select_with_null(
+; CHECK-NEXT:    store i32 0, ptr [[SEL:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  store i32 0, ptr %sel, align 4
+  ret void
+}
+
+define void @store_select_with_null_commuted(i1 %cond, ptr %p) {
+; CHECK-LABEL: @store_select_with_null_commuted(
+; CHECK-NEXT:    store i32 0, ptr [[SEL:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, ptr null, ptr %p
+  store i32 0, ptr %sel, align 4
+  ret void
+}
+
+define void @store_select_with_null_null_is_valid(i1 %cond, ptr %p) null_pointer_is_valid {
+; CHECK-LABEL: @store_select_with_null_null_is_valid(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
+; CHECK-NEXT:    store i32 0, ptr [[SEL]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  store i32 0, ptr %sel, align 4
+  ret void
+}
+
+define void @store_select_with_unknown(i1 %cond, ptr %p, ptr %p2) {
+; CHECK-LABEL: @store_select_with_unknown(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr [[P2:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[SEL]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, ptr %p, ptr %p2
+  store i32 0, ptr %sel, align 4
+  ret void
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}

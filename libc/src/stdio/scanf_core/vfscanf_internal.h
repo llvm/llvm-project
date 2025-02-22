@@ -18,8 +18,6 @@
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/stdio/ferror.h"
-#include "src/stdio/getc.h"
-#include "src/stdio/ungetc.h"
 #endif
 
 #include "hdr/types/FILE.h"
@@ -38,14 +36,6 @@ LIBC_INLINE void flockfile(::FILE *) { return; }
 
 LIBC_INLINE void funlockfile(::FILE *) { return; }
 
-LIBC_INLINE int getc(void *f) {
-  return LIBC_NAMESPACE::getc(reinterpret_cast<::FILE *>(f));
-}
-
-LIBC_INLINE void ungetc(int c, void *f) {
-  LIBC_NAMESPACE::ungetc(c, reinterpret_cast<::FILE *>(f));
-}
-
 LIBC_INLINE int ferror_unlocked(::FILE *f) { return LIBC_NAMESPACE::ferror(f); }
 
 #elif !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
@@ -56,21 +46,6 @@ LIBC_INLINE void flockfile(FILE *f) {
 
 LIBC_INLINE void funlockfile(FILE *f) {
   reinterpret_cast<LIBC_NAMESPACE::File *>(f)->unlock();
-}
-
-LIBC_INLINE int getc(void *f) {
-  unsigned char c;
-  auto result =
-      reinterpret_cast<LIBC_NAMESPACE::File *>(f)->read_unlocked(&c, 1);
-  size_t r = result.value;
-  if (result.has_error() || r != 1)
-    return '\0';
-
-  return c;
-}
-
-LIBC_INLINE void ungetc(int c, void *f) {
-  reinterpret_cast<LIBC_NAMESPACE::File *>(f)->ungetc_unlocked(c);
 }
 
 LIBC_INLINE int ferror_unlocked(FILE *f) {
@@ -85,12 +60,6 @@ LIBC_INLINE void flockfile(::FILE *) { return; }
 
 LIBC_INLINE void funlockfile(::FILE *) { return; }
 
-LIBC_INLINE int getc(void *f) { return ::getc(reinterpret_cast<::FILE *>(f)); }
-
-LIBC_INLINE void ungetc(int c, void *f) {
-  ::ungetc(c, reinterpret_cast<::FILE *>(f));
-}
-
 LIBC_INLINE int ferror_unlocked(::FILE *f) { return ::ferror(f); }
 
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
@@ -103,7 +72,7 @@ LIBC_INLINE int vfscanf_internal(::FILE *__restrict stream,
                                  const char *__restrict format,
                                  internal::ArgList &args) {
   internal::flockfile(stream);
-  scanf_core::Reader reader(stream, &internal::getc, internal::ungetc);
+  scanf_core::Reader reader(stream);
   int retval = scanf_core::scanf_main(&reader, format, args);
   if (retval == 0 && internal::ferror_unlocked(stream))
     retval = EOF;

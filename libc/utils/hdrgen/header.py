@@ -124,7 +124,7 @@ class HeaderFile:
         }
 
     def header_guard(self):
-        return "LLVM_LIBC_" + "_".join(
+        return "_LLVM_LIBC_" + "_".join(
             word.upper() for word in NONIDENTIFIER.split(self.name) if word
         )
 
@@ -233,3 +233,12 @@ class HeaderFile:
         content.append("__END_C_DECLS")
 
         return "\n".join(content)
+
+    def json_data(self):
+        return {
+            "name": self.name,
+            "standards": self.standards,
+            "includes": [
+                str(file) for file in sorted({COMMON_HEADER} | self.includes())
+            ],
+        }
