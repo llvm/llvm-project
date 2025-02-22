@@ -73,3 +73,17 @@ spirv.func @no_decoration_name_attr(%arg0 : !spirv.ptr<i32, PhysicalStorageBuffe
 spirv.func @no_decoration_name_attr(%arg0 : !spirv.ptr<i32, PhysicalStorageBuffer> { spirv.decoration = #spirv.decoration<Restrict>, random_attr = #spirv.decoration<Aliased> }) "None" {
   spirv.Return
 }
+
+// -----
+
+// CHECK: spirv.func @basic_relaxed_precision(%{{.+}}: f32 {spirv.decoration = #spirv.decoration<RelaxedPrecision>}) "None"
+spirv.func @basic_relaxed_precision(%arg0: f32 {spirv.decoration = #spirv.decoration<RelaxedPrecision>}) "None" {
+  spirv.Return
+}
+
+// -----
+
+// CHECK: spirv.func @vector_relaxed_precision(%{{.+}}: vector<4xf32> {spirv.decoration = #spirv.decoration<RelaxedPrecision>}) "None"
+spirv.func @vector_relaxed_precision(%arg0: vector<4xf32> {spirv.decoration = #spirv.decoration<RelaxedPrecision>}) "None" {
+  spirv.Return
+}
