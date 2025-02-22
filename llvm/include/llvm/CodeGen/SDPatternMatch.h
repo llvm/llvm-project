@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_SDPATTERNMATCH_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -1175,9 +1176,8 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
     }
   }
 
-  template <size_t N>
   [[nodiscard]] inline bool
-  reassociatableMatchHelper(const std::array<SmallBitVector, N> &Matches,
+  reassociatableMatchHelper(const ArrayRef<SmallBitVector> Matches,
                             SmallBitVector &Used, size_t Curr = 0) {
     if (Curr == Matches.size())
       return true;
