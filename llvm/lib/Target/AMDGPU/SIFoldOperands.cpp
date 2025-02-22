@@ -1084,13 +1084,11 @@ void SIFoldOperandsImpl::foldOperand(
           }
 
           if (CopyToVGPR.Reg) {
-            Register Vgpr;
-            if (VGPRCopies.count(CopyToVGPR)) {
-              Vgpr = VGPRCopies[CopyToVGPR];
-            } else {
+            auto [It, Inserted] = VGPRCopies.try_emplace(CopyToVGPR);
+            Register &Vgpr = It->second;
+            if (Inserted) {
               Vgpr = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
               BuildMI(MBB, UseMI, DL, TII->get(AMDGPU::COPY), Vgpr).add(*Def);
-              VGPRCopies[CopyToVGPR] = Vgpr;
             }
             auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
             BuildMI(MBB, UseMI, DL,
