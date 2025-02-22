@@ -4,7 +4,7 @@ declare void @llvm.amdgcn.init.exec.from.input(i32, i32 immarg)
 
 ; CHECK: only inreg arguments to the parent function are valid as inputs to this intrinsic
 ; CHECK-NEXT: call void @llvm.amdgcn.init.exec.from.input(i32 0, i32 0)
-define void @init_exec_from_input_fail_immarg(i32 inreg %a, i32 %b) {
+define void @init_exec_from_input_fail_constant() {
   call void @llvm.amdgcn.init.exec.from.input(i32 0, i32 0)
   ret void
 }
