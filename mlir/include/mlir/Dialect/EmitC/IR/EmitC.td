@@ -313,8 +313,7 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpression]> {
 
 def EmitC_CastOp : EmitC_Op<"cast",
     [CExpression,
-     DeclareOpInterfaceMethods<CastOpInterface>,
-     SameOperandsAndResultShape]> {
+     DeclareOpInterfaceMethods<CastOpInterface>]> {
   let summary = "Cast operation";
   let description = [{
     The `emitc.cast` operation performs an explicit type conversion and is emitted
@@ -1173,8 +1172,8 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
   let summary = "A global variable";
   let description = [{
     The `emitc.global` operation declares or defines a named global variable.
-    The backing memory for the variable is allocated statically and is
-    described by the type of the variable.
+    The backing memory for the variable is allocated statically and described by
+    the variable's type, which must be an EmitC type.
     Optionally, an `initial_value` can be provided.
     Internal linkage can be specified using the `static_specifier` unit attribute
     and external linkage can be specified using the `extern_specifier` unit attribute.
@@ -1194,6 +1193,8 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
     emitc.global @x : !emitc.array<2xf32> = dense<0.0>
     // Global variable with an initial values.
     emitc.global @x : !emitc.array<3xi32> = dense<[0, 1, 2]>
+    // Global variable with an opaque initial value.
+    emitc.global @x : !emitc.opaque<"char"> = #emitc.opaque<"CHAR_MIN">
     // External global variable
     emitc.global extern @x : !emitc.array<2xf32>
     // Constant global variable with internal linkage
