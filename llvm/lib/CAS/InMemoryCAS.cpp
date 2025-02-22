@@ -228,6 +228,10 @@ public:
 
   void print(raw_ostream &OS) const final;
 
+  Error validate(bool CheckHash) const final {
+    return createStringError("InMemoryCAS doesn't support validate()");
+  }
+
   InMemoryCAS() = default;
 
 private:

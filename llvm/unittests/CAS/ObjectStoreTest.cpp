@@ -79,7 +79,7 @@ multiline text multiline text multiline text multiline text multiline text)",
 
   // Run validation on all CASIDs.
   for (int I = 0, E = IDs.size(); I != E; ++I)
-    ASSERT_THAT_ERROR(CAS1->validate(IDs[I]), Succeeded());
+    ASSERT_THAT_ERROR(CAS1->validateObject(IDs[I]), Succeeded());
 
   // Check that the blobs can be retrieved multiple times.
   for (int I = 0, E = IDs.size(); I != E; ++I) {
@@ -125,8 +125,8 @@ TEST_P(CASTest, BlobsBig) {
                       Succeeded());
     ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, String1).moveInto(ID2),
                       Succeeded());
-    ASSERT_THAT_ERROR(CAS->validate(*ID1), Succeeded());
-    ASSERT_THAT_ERROR(CAS->validate(*ID2), Succeeded());
+    ASSERT_THAT_ERROR(CAS->validateObject(*ID1), Succeeded());
+    ASSERT_THAT_ERROR(CAS->validateObject(*ID2), Succeeded());
     ASSERT_EQ(ID1, ID2);
 
     String1.append(String2);
@@ -134,8 +134,8 @@ TEST_P(CASTest, BlobsBig) {
                       Succeeded());
     ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, String2).moveInto(ID2),
                       Succeeded());
-    ASSERT_THAT_ERROR(CAS->validate(*ID1), Succeeded());
-    ASSERT_THAT_ERROR(CAS->validate(*ID2), Succeeded());
+    ASSERT_THAT_ERROR(CAS->validateObject(*ID1), Succeeded());
+    ASSERT_THAT_ERROR(CAS->validateObject(*ID2), Succeeded());
     ASSERT_EQ(ID1, ID2);
     String2.append(String1);
   }
@@ -275,7 +275,7 @@ TEST_P(CASTest, NodesBig) {
   }
 
   for (auto ID : CreatedNodes)
-    ASSERT_THAT_ERROR(CAS->validate(CAS->getID(ID)), Succeeded());
+    ASSERT_THAT_ERROR(CAS->validateObject(CAS->getID(ID)), Succeeded());
 }
 
 /// Common test functionality for creating blobs in parallel. You can vary which

@@ -70,7 +70,7 @@ public:
                              "corrupt storage");
   }
 
-  Error validate(const CASID &ID) final;
+  Error validateObject(const CASID &ID) final;
 };
 
 /// Create a \p UnifiedOnDiskCache instance that uses \p BLAKE3 hashing.

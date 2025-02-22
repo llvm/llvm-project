@@ -51,10 +51,14 @@
 #include "OnDiskCommon.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CAS/OnDiskHashMappedTrie.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -867,6 +871,129 @@ int64_t DataRecordHandle::getDataRelOffset() const {
   uint32_t RefSize = LF.RefKind == RefKindFlags::InternalRef4B ? 4 : 8;
   RelOffset += RefSize * getNumRefs();
   return RelOffset;
+}
+
+Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
+  return Index.validate([&](FileOffset Offset,
+                            OnDiskHashMappedTrie::ConstValueProxy Record)
+                            -> Error {
+    auto formatError = [&](Twine Msg) {
+      return createStringError(
+          llvm::errc::illegal_byte_sequence,
+          "bad record at 0x" +
+              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
+              Msg.str());
+    };
+
+    if (Record.Data.size() != sizeof(TrieRecord))
+      return formatError("wrong data record size");
+    if (!isAligned(Align::Of<TrieRecord>(), Record.Data.size()))
+      return formatError("wrong data record alignment");
+
+    auto *R = reinterpret_cast<const TrieRecord *>(Record.Data.data());
+    TrieRecord::Data D = R->load();
+    std::unique_ptr<MemoryBuffer> FileBuffer;
+    if ((uint8_t)D.SK != (uint8_t)TrieRecord::StorageKind::Unknown &&
+        (uint8_t)D.SK != (uint8_t)TrieRecord::StorageKind::DataPool &&
+        (uint8_t)D.SK != (uint8_t)TrieRecord::StorageKind::Standalone &&
+        (uint8_t)D.SK != (uint8_t)TrieRecord::StorageKind::StandaloneLeaf &&
+        (uint8_t)D.SK != (uint8_t)TrieRecord::StorageKind::StandaloneLeaf0)
+      return formatError("invalid record kind value");
+
+    auto Ref = InternalRef::getFromOffset(Offset);
+    auto I = getIndexProxyFromRef(Ref);
+
+    switch (D.SK) {
+    case TrieRecord::StorageKind::Unknown:
+      // This could be an abandoned entry due to a termination before updating
+      // the record. It can be reused by later insertion so just skip this entry
+      // for now.
+      return Error::success();
+    case TrieRecord::StorageKind::DataPool:
+      // Check offset is a postive value, and large enough to hold the
+      // header for the data record.
+      if (D.Offset.get() <= 0 ||
+          (uint64_t)D.Offset.get() + sizeof(DataRecordHandle::Header) >=
+              DataPool.size())
+        return formatError("datapool record out of bound");
+      break;
+    case TrieRecord::StorageKind::Standalone:
+    case TrieRecord::StorageKind::StandaloneLeaf:
+    case TrieRecord::StorageKind::StandaloneLeaf0:
+      SmallString<256> Path;
+      getStandalonePath(TrieRecord::getStandaloneFileSuffix(D.SK), I, Path);
+      // If need to validate the content of the file later, just load the
+      // buffer here. Otherwise, just check the existance of the file.
+      if (Deep) {
+        auto File = MemoryBuffer::getFile(Path, /*IsText=*/false,
+                                          /*RequiresNullTerminator=*/false);
+        if (!File || !*File)
+          return formatError("record file \'" + Path + "\' does not exist");
+
+        FileBuffer = std::move(*File);
+      } else if (!llvm::sys::fs::exists(Path))
+        return formatError("record file \'" + Path + "\' does not exist");
+    }
+
+    if (!Deep)
+      return Error::success();
+
+    auto dataError = [&](Twine Msg) {
+      return createStringError(llvm::errc::illegal_byte_sequence,
+                               "bad data for digest \'" + toHex(I.Hash) +
+                                   "\': " + Msg.str());
+    };
+    SmallVector<ArrayRef<uint8_t>> Refs;
+    ArrayRef<char> StoredData;
+
+    switch (D.SK) {
+    case TrieRecord::StorageKind::Unknown:
+      llvm_unreachable("already handled");
+    case TrieRecord::StorageKind::DataPool: {
+      auto DataRecord = DataRecordHandle::get(DataPool.beginData(D.Offset));
+      if (DataRecord.getTotalSize() + D.Offset.get() >= DataPool.size())
+        return dataError("data record span passed the end of the data pool");
+      for (auto InternRef : DataRecord.getRefs()) {
+        auto Index = getIndexProxyFromRef(InternRef);
+        Refs.push_back(Index.Hash);
+      }
+      StoredData = DataRecord.getData();
+      break;
+    }
+    case TrieRecord::StorageKind::Standalone: {
+      if (FileBuffer->getBufferSize() < sizeof(DataRecordHandle::Header))
+        return dataError("data record is not big enough to read the header");
+      auto DataRecord = DataRecordHandle::get(FileBuffer->getBufferStart());
+      if (DataRecord.getTotalSize() < FileBuffer->getBufferSize())
+        return dataError(
+            "data record span passed the end of the standalone file");
+      for (auto InternRef : DataRecord.getRefs()) {
+        auto Index = getIndexProxyFromRef(InternRef);
+        Refs.push_back(Index.Hash);
+      }
+      StoredData = DataRecord.getData();
+      break;
+    }
+    case TrieRecord::StorageKind::StandaloneLeaf:
+    case TrieRecord::StorageKind::StandaloneLeaf0: {
+      StoredData = arrayRefFromStringRef<char>(FileBuffer->getBuffer());
+      if (D.SK == TrieRecord::StorageKind::StandaloneLeaf0) {
+        if (!FileBuffer->getBuffer().ends_with('\0'))
+          return dataError("standalone file is not zero terminated");
+        StoredData = StoredData.drop_back(1);
+      }
+      break;
+    }
+    }
+
+    SmallVector<uint8_t> ComputedHash;
+    Hasher(Refs, StoredData, ComputedHash);
+    if (I.Hash != ArrayRef(ComputedHash))
+      return dataError("hash mismatch, got \'" + toHex(ComputedHash) +
+                       "\' instead");
+
+    return Error::success();
+  });
 }
 
 void OnDiskGraphDB::print(raw_ostream &OS) const {

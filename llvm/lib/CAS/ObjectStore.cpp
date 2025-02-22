@@ -203,7 +203,7 @@ Error ObjectStore::validateTree(ObjectRef Root) {
     auto [I, Inserted] = ValidatedRefs.insert(Ref);
     if (!Inserted)
       continue; // already validated.
-    if (Error E = validate(getID(Ref)))
+    if (Error E = validateObject(getID(Ref)))
       return E;
     Expected<ObjectHandle> Obj = load(Ref);
     if (!Obj)

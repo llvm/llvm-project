@@ -18,7 +18,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -530,6 +533,10 @@ public:
   print(raw_ostream &OS,
         function_ref<void(ArrayRef<char>)> PrintRecordData = nullptr) const;
 
+  Error validate(
+      function_ref<Error(FileOffset, OnDiskHashMappedTrie::ConstValueProxy)>
+          RecordVerifier) const;
+
   HashMappedTrieHandle() = default;
   HashMappedTrieHandle(MappedFileRegion &Region, Header &H)
       : Region(&Region), H(&H) {}
@@ -863,6 +870,11 @@ void OnDiskHashMappedTrie::print(
   Impl->Trie.print(OS, PrintRecordData);
 }
 
+Error OnDiskHashMappedTrie::validate(
+    function_ref<Error(FileOffset, ConstValueProxy)> RecordVerifier) const {
+  return Impl->Trie.validate(RecordVerifier);
+}
+
 static void printHexDigit(raw_ostream &OS, uint8_t Digit) {
   if (Digit < 10)
     OS << char(Digit + '0');
@@ -1059,6 +1071,13 @@ OnDiskHashMappedTrie::create(const Twine &PathTwine, const Twine &TrieNameTwine,
   return OnDiskHashMappedTrie(std::make_unique<ImplType>(std::move(Impl)));
 }
 
+static Error createInvalidTrieError(uint64_t Offset, const Twine &Msg) {
+  return createStringError(make_error_code(std::errc::protocol_error),
+                           "invalid trie at 0x" +
+                               utohexstr(Offset, /*LowerCase=*/true) + ": " +
+                               Msg);
+}
+
 //===----------------------------------------------------------------------===//
 // TrieVisitor data structures.
 //===----------------------------------------------------------------------===//
@@ -1067,9 +1086,12 @@ namespace {
 // A vistior to traverse the Trie.
 class TrieVisitor {
 public:
-  TrieVisitor(HashMappedTrieHandle Trie) : Trie(Trie) {}
+  TrieVisitor(HashMappedTrieHandle Trie, unsigned ThreadCount = 0,
+              unsigned ErrorLimit = 50)
+      : Trie(Trie), ErrorLimit(ErrorLimit),
+        Threads(hardware_concurrency(ThreadCount)) {}
   virtual ~TrieVisitor() = default;
-  Error visit(HashMappedTrieHandle Root);
+  Error visit();
 
 private:
   virtual Error visitSubTrie(StringRef Prefix, SubtrieHandle SubTrie) {
@@ -1086,13 +1108,43 @@ protected:
 
 private:
   Error traverseTrieNode(SubtrieHandle Node, StringRef Prefix);
+
+  Error validateSubTrie(SubtrieHandle Node, bool IsRoot);
+
+  void addError(Error NewError) {
+    assert(NewError && "not an error");
+    std::lock_guard<std::mutex> ErrorLock(Lock);
+    if (NumError >= ErrorLimit) {
+      // Too many errors.
+      consumeError(std::move(NewError));
+      return;
+    }
+
+    if (Err)
+      Err = joinErrors(std::move(*Err), std::move(NewError));
+    else
+      Err = std::move(NewError);
+    NumError++;
+  }
+
+  bool tooManyErrors() {
+    std::lock_guard<std::mutex> ErrorLock(Lock);
+    return (bool)Err && NumError >= ErrorLimit;
+  }
+
+  const unsigned ErrorLimit;
+  std::optional<Error> Err;
+  unsigned NumError = 0;
+  std::mutex Lock;
+  DefaultThreadPool Threads;
 };
 
 class TriePrinter : public TrieVisitor {
 public:
   TriePrinter(HashMappedTrieHandle Trie, raw_ostream &OS,
               function_ref<void(ArrayRef<char>)> PrintRecordData)
-      : TrieVisitor(Trie), OS(OS), PrintRecordData(PrintRecordData) {}
+      : TrieVisitor(Trie, /*ThreadCount=*/1), OS(OS),
+        PrintRecordData(PrintRecordData) {}
 
   Error printRecords() {
     if (Records.empty())
@@ -1167,28 +1219,116 @@ private:
   function_ref<void(ArrayRef<char>)> PrintRecordData;
   SmallVector<int64_t> Records;
 };
+
+// TrieVerifier that adds additional verification on top of the basic visitor.
+class TrieVerifier : public TrieVisitor {
+public:
+  TrieVerifier(
+      HashMappedTrieHandle Trie,
+      function_ref<Error(FileOffset, OnDiskHashMappedTrie::ConstValueProxy)>
+          RecordVerifier)
+      : TrieVisitor(Trie), RecordVerifier(RecordVerifier) {}
+
+private:
+  Error visitSubTrie(StringRef Prefix, SubtrieHandle SubTrie) final {
+    return Error::success();
+  }
+
+  Error visitSlot(unsigned I, SubtrieHandle Subtrie, StringRef Prefix,
+                  SubtrieSlotValue Slot) final {
+    if (RecordVerifier && Slot.isData()) {
+      if (!isAligned(MappedFileRegionBumpPtr::getAlign(), Slot.asData()))
+        return createInvalidTrieError(Slot.asData(), "mis-aligned data entry");
+
+      HashMappedTrieHandle::RecordData Record =
+          Trie.getRecord(SubtrieSlotValue::getDataOffset(Slot.asData()));
+      return RecordVerifier(Slot.asDataFileOffset(),
+                            OnDiskHashMappedTrie::ConstValueProxy{
+                                Record.Proxy.Hash, Record.Proxy.Data});
+    }
+    return Error::success();
+  }
+
+  function_ref<Error(FileOffset, OnDiskHashMappedTrie::ConstValueProxy)>
+      RecordVerifier;
+};
 } // namespace
 
-static Error createInvalidTrieError(uint64_t Offset, const Twine &Msg) {
-  return createStringError(make_error_code(std::errc::protocol_error),
-                           "invalid trie at 0x" + toHex(Offset) + ": " + Msg);
-}
-
-Error TrieVisitor::visit(HashMappedTrieHandle Trie) {
+Error TrieVisitor::visit() {
   auto Root = Trie.getRoot();
   if (!Root)
     return Error::success();
 
-  if (auto Err = traverseTrieNode(Root, ""))
+  if (auto Err = validateSubTrie(Root, /*IsRoot=*/true))
     return Err;
+
+  SmallVector<SubtrieHandle> Subs;
+  SmallVector<std::string> Prefixes;
+  const size_t NumSlots = Root.getNumSlots();
+  for (size_t I = 0, E = NumSlots; I != E; ++I) {
+    SubtrieSlotValue Slot = Root.load(I);
+    if (!Slot)
+      continue;
+    uint64_t Offset = Slot.isSubtrie() ? Slot.asSubtrie() : Slot.asData();
+    if (Offset >= (uint64_t)Trie.getRegion().size())
+      return createInvalidTrieError(Offset, "slot points out of bound");
+    std::string SubtriePrefix;
+    appendIndexBits(SubtriePrefix, I, NumSlots);
+    if (Slot.isSubtrie()) {
+      SubtrieHandle S(Trie.getRegion(), Slot);
+      Subs.push_back(S);
+      Prefixes.push_back(SubtriePrefix);
+    }
+    if (auto Err = visitSlot(I, Root, SubtriePrefix, Slot))
+      return Err;
+  }
+
+  for (size_t I = 0, E = Subs.size(); I != E; ++I) {
+    Threads.async(
+        [&](unsigned Idx) {
+          // Don't run if there is an error already.
+          if (tooManyErrors())
+            return;
+          if (auto Err = traverseTrieNode(Subs[Idx], Prefixes[Idx]))
+            addError(std::move(Err));
+        },
+        I);
+  }
+
+  Threads.wait();
+  if (Err)
+    return std::move(*Err);
+  return Error::success();
+}
+
+Error TrieVisitor::validateSubTrie(SubtrieHandle Node, bool IsRoot) {
+  char *Addr = reinterpret_cast<char *>(&Node.getHeader());
+  const int64_t Offset = Node.getFileOffset().get();
+  if (Addr + Node.getSize() >=
+      Trie.getRegion().data() + Trie.getRegion().size())
+    return createInvalidTrieError(Offset, "subtrie node spans out of bound");
+
+  if (Node.getStartBit() + Node.getNumBits() > Trie.getNumHashBits())
+    return createInvalidTrieError(Offset,
+                                  "subtrie represents too many hash bits");
+
+  if (IsRoot) {
+    if (Node.getStartBit() != 0)
+      return createInvalidTrieError(Offset,
+                                    "root node doesn't start at 0 index");
+
+    return Error::success();
+  }
+
+  if (Node.getNumBits() > Trie.getNumSubtrieBits())
+    return createInvalidTrieError(Offset, "subtrie has wrong number of slots");
+
   return Error::success();
 }
 
 Error TrieVisitor::traverseTrieNode(SubtrieHandle Node, StringRef Prefix) {
-  char *Addr = reinterpret_cast<char *>(&Node.getHeader());
-  if (Addr + Node.getSize() >=
-      Trie.getRegion().data() + Trie.getRegion().size())
-    return createInvalidTrieError((uint64_t)Addr, "subtrie node out of bound");
+  if (auto Err = validateSubTrie(Node, /*IsRoot=*/false))
+    return Err;
 
   if (auto Err = visitSubTrie(Prefix, Node))
     return Err;
@@ -1227,13 +1367,28 @@ void HashMappedTrieHandle::print(
      << " record-data-size=" << getRecordDataSize() << "\n";
 
   TriePrinter Printer(*this, OS, PrintRecordData);
-  if (auto Err = Printer.visit(*this))
+  if (auto Err = Printer.visit())
     OS << "error: " << toString(std::move(Err)) << "\n";
 
   if (auto Err = Printer.printRecords())
     OS << "error: " << toString(std::move(Err)) << "\n";
 
   return;
+}
+
+Error HashMappedTrieHandle::validate(
+    function_ref<Error(FileOffset, OnDiskHashMappedTrie::ConstValueProxy)>
+        RecordVerifier) const {
+  // Use the base TrieVisitor to identify the errors inside trie first.
+  TrieVisitor BasicVerifier(*this);
+  if (auto Err = BasicVerifier.visit())
+    return Err;
+
+  // If the trie data structure is sound, do a second pass to verify data and
+  // verifier function can assume the index is correct. However, there can be
+  // newly added bad entries that can still produce error.
+  TrieVerifier Verifier(*this, RecordVerifier);
+  return Verifier.visit();
 }
 
 //===----------------------------------------------------------------------===//

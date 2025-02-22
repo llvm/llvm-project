@@ -88,7 +88,7 @@ TEST(TreeSchemaTest, Trees) {
 
   // Run validation.
   for (int I = 1, E = FlatIDs.size(); I != E; ++I)
-    ASSERT_THAT_ERROR(CAS1->validate(FlatIDs[I]), Succeeded());
+    ASSERT_THAT_ERROR(CAS1->validateObject(FlatIDs[I]), Succeeded());
 
   // Confirm these trees don't exist in a fresh CAS instance. Skip the first
   // tree, which is empty and could be implicitly in some CAS.
@@ -179,7 +179,7 @@ TEST(TreeSchemaTest, Trees) {
       ASSERT_THAT_ERROR(Schema.create(NewEntries).moveInto(Tree),
                         Succeeded());
       ASSERT_EQ(*ID, Tree->getID());
-      ASSERT_THAT_ERROR(CAS->validate(*ID), Succeeded());
+      ASSERT_THAT_ERROR(CAS->validateObject(*ID), Succeeded());
       Tree.reset();
       std::optional<ObjectRef> Ref = CAS->getReference(*ID);
       ASSERT_TRUE(Ref);

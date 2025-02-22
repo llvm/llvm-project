@@ -64,6 +64,7 @@ static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
                        ArrayRef<std::string> Objects);
 static int getCacheResult(ObjectStore &CAS, ActionCache &AC, const CASID &ID);
 static int validateObject(ObjectStore &CAS, const CASID &ID);
+static int validate(ObjectStore &CAS, bool CheckHash);
 static int ingestCasIDFile(cas::ObjectStore &CAS, ArrayRef<std::string> CASIDs);
 static int checkLockFiles(StringRef CASPath);
 
@@ -83,6 +84,8 @@ int main(int Argc, char **Argv) {
   cl::opt<std::string> DataPath("data",
                                 cl::desc("Path to data or '-' for stdin."),
                                 cl::value_desc("path"));
+  cl::opt<bool> CheckHash("check-hash",
+                          cl::desc("check all hashes during validation"));
 
   enum CommandKind {
     Invalid,
@@ -105,6 +108,7 @@ int main(int Argc, char **Argv) {
     GetCacheResult,
     CheckLockFiles,
     Validate,
+    ValidateObject,
   };
   cl::opt<CommandKind> Command(
       cl::desc("choose command action:"),
@@ -131,7 +135,9 @@ int main(int Argc, char **Argv) {
                      "get the result value from a cache key"),
           clEnumValN(CheckLockFiles, "check-lock-files",
                      "Test file locking behaviour of on-disk CAS"),
-          clEnumValN(Validate, "validate", "validate the object for CASID")),
+          clEnumValN(Validate, "validate", "validate ObjectStore"),
+          clEnumValN(ValidateObject, "validate-object",
+                     "validate the object for CASID")),
       cl::init(CommandKind::Invalid));
 
   cl::ParseCommandLineOptions(Argc, Argv, "llvm-cas CAS tool\n");
@@ -176,6 +182,9 @@ int main(int Argc, char **Argv) {
 
   if (Command == Dump)
     return dump(*CAS);
+
+  if (Command == Validate)
+    return validate(*CAS, CheckHash);
 
   if (Command == MakeBlob)
     return makeBlob(*CAS, DataPath);
@@ -251,7 +260,7 @@ int main(int Argc, char **Argv) {
   if (Command == GetCASIDForFile)
     return getCASIDForFile(*CAS, ID, DataPath);
 
-  if (Command == Validate)
+  if (Command == ValidateObject)
     return validateObject(*CAS, ID);
 
   assert(Command == CatBlob);
@@ -707,8 +716,15 @@ static int checkLockFiles(StringRef CASPath) {
 }
 
 int validateObject(ObjectStore &CAS, const CASID &ID) {
-  ExitOnError ExitOnErr("llvm-cas: validate: ");
-  ExitOnErr(CAS.validate(ID));
+  ExitOnError ExitOnErr("llvm-cas: validate-object: ");
+  ExitOnErr(CAS.validateObject(ID));
   outs() << ID << ": validated successfully\n";
+  return 0;
+}
+
+int validate(ObjectStore &CAS, bool CheckHash) {
+  ExitOnError ExitOnErr("llvm-cas: validate: ");
+  ExitOnErr(CAS.validate(CheckHash));
+  outs() << "validated successfully\n";
   return 0;
 }

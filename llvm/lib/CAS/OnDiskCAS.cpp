@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "BuiltinCAS.h"
+#include "llvm/CAS/BuiltinCASContext.h"
+#include "llvm/CAS/BuiltinObjectHasher.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Compiler.h"
@@ -35,6 +37,7 @@ public:
   ArrayRef<char> getDataConst(ObjectHandle Node) const final;
 
   void print(raw_ostream &OS) const final;
+  Error validate(bool CheckHash) const final;
 
   static Expected<std::unique_ptr<OnDiskCAS>> open(StringRef Path);
 
@@ -84,6 +87,15 @@ private:
 } // end anonymous namespace
 
 void OnDiskCAS::print(raw_ostream &OS) const { DB->print(OS); }
+Error OnDiskCAS::validate(bool CheckHash) const {
+  return DB->validate(CheckHash, [](ArrayRef<ArrayRef<uint8_t>> Refs,
+                                    ArrayRef<char> Data,
+                                    SmallVectorImpl<uint8_t> &Result) {
+    auto Hash = BuiltinObjectHasher<llvm::cas::builtin::HasherT>::hashObject(
+        Refs, Data);
+    Result.assign(Hash.begin(), Hash.end());
+  });
+}
 
 CASID OnDiskCAS::getID(ObjectRef Ref) const {
   ArrayRef<uint8_t> Hash = DB->getDigest(convertRef(Ref));

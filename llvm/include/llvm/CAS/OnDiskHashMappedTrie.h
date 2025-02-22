@@ -97,6 +97,12 @@ public:
     MutableArrayRef<char> Data;
   };
 
+  /// Validate the trie data structure.
+  ///
+  /// Callback receives the file offset to the data entry and the data stored.
+  Error validate(
+      function_ref<Error(FileOffset, ConstValueProxy)> RecordVerifier) const;
+
 public:
   template <class ProxyT> class PointerImpl {
   public:

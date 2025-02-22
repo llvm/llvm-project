@@ -12,6 +12,7 @@
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/Error.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -143,10 +144,12 @@ public:
   size_t getNumRefs(ObjectHandle Node) const final;
   ArrayRef<char> getData(ObjectHandle Node,
                          bool RequiresNullTerminator = false) const final;
-  Error validate(const CASID &ID) final {
+  Error validateObject(const CASID &ID) final {
     // Not supported yet. Always return success.
     return Error::success();
   }
+
+  Error validate(bool CheckHash) const final;
 
   Error setSizeLimit(std::optional<uint64_t> SizeLimit) final;
   Expected<std::optional<uint64_t>> getStorageSize() const final;
@@ -420,6 +423,16 @@ Error PluginObjectStore::pruneStorageData() {
       return Ctx->errorAndDispose(c_err);
   }
   return Error::success();
+}
+
+Error PluginObjectStore::validate(bool CheckHash) const {
+  if (Ctx->Functions.cas_validate) {
+    char *c_err = nullptr;
+    if (Ctx->Functions.cas_validate(Ctx->c_cas, CheckHash, &c_err))
+      return Ctx->errorAndDispose(c_err);
+    return Error::success();
+  }
+  return createStringError("plugin cas doesn't support validation");
 }
 
 PluginObjectStore::PluginObjectStore(std::shared_ptr<PluginCASContext> CASCtx)

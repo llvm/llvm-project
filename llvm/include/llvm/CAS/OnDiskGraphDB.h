@@ -309,6 +309,11 @@ public:
 
   void print(raw_ostream &OS) const;
 
+  /// Hashing function type for validation.
+  using HashingFuncT = function_ref<void(
+      ArrayRef<ArrayRef<uint8_t>>, ArrayRef<char>, SmallVectorImpl<uint8_t> &)>;
+  Error validate(bool Deep, HashingFuncT Hasher) const;
+
   /// How to fault-in nodes if an upstream database is used.
   enum class FaultInPolicy {
     /// Copy only the requested node.

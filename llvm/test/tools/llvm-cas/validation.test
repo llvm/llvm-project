@@ -1,0 +1,11 @@
+RUN: rm -rf %t
+RUN: mkdir %t
+
+RUN: llvm-cas --cas %t/cas --ingest %S/Inputs > %t/cas.id
+RUN: llvm-cas --cas %t/cas --validate
+RUN: llvm-cas --cas %t/cas --validate --check-hash
+
+RUN: rm %t/cas/v1.1/v8.data
+RUN: not llvm-cas --cas %t/cas --validate
+RUN: not llvm-cas --cas %t/cas --validate --check-hash
+

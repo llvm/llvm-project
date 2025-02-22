@@ -156,7 +156,10 @@ public:
   virtual Expected<bool> isMaterialized(ObjectRef Ref) const = 0;
 
   /// Validate the underlying object referred by CASID.
-  virtual Error validate(const CASID &ID) = 0;
+  virtual Error validateObject(const CASID &ID) = 0;
+
+  /// Validate the entire ObjectStore.
+  virtual Error validate(bool CheckHash) const = 0;
 
 protected:
   /// Load the object referenced by \p Ref.

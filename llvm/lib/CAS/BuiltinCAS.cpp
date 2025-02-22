@@ -71,7 +71,7 @@ Expected<ObjectRef> BuiltinCAS::store(ArrayRef<ObjectRef> Refs,
                    Refs, Data);
 }
 
-Error BuiltinCAS::validate(const CASID &ID) {
+Error BuiltinCAS::validateObject(const CASID &ID) {
   auto Ref = getReference(ID);
   if (!Ref)
     return createUnknownObjectError(ID);
