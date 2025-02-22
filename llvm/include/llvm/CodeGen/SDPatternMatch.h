@@ -1163,7 +1163,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
           Patterns);
     }
 
-    SmallBitVector Used(std::tuple_size_v<std::tuple<PatternTs...>>, false);
+    SmallBitVector Used(std::tuple_size_v<std::tuple<PatternTs...>>);
     return reassociatableMatchHelper(Matches, Used);
   }
 
