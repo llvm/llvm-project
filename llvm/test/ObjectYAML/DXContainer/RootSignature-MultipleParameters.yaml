@@ -37,7 +37,7 @@ Parts:
 # CHECK-NEXT:    RootSignature:
 # CHECK-NEXT:      Version:         2
 # CHECK-NEXT:      NumStaticSamplers: 0
-# CHECK-NEXT:      StaticSamplersOffset: 64
+# CHECK-NEXT:      StaticSamplersOffset: 0
 # CHECK-NEXT:      Parameters:
 # CHECK-NEXT:        - ParameterType:   Constants32Bit
 # CHECK-NEXT:          ShaderVisibility: Hull

@@ -25,7 +25,7 @@ Parts:
 # CHECK-NEXT:    RootSignature:
 # CHECK-NEXT:      Version: 2
 # CHECK-NEXT:      NumStaticSamplers: 0
-# CHECK-NEXT:      StaticSamplersOffset: 24
+# CHECK-NEXT:      StaticSamplersOffset: 0
 # CHECK-NEXT:      Parameters: []
 # CHECK-NEXT:      AllowInputAssemblerInputLayout: true
 # CHECK-NEXT:      DenyGeometryShaderRootAccess: true
