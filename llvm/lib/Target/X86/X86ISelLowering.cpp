@@ -55476,7 +55476,7 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
                                      UndefElts, EltBits,
                                      /*AllowWholeUndefs*/ true,
                                      /*AllowPartialUndefs*/ false) ||
-      UndefElts[0] || !EltBits[0].isPowerOf2())
+      UndefElts[0] || !EltBits[0].isPowerOf2() || UndefElts.getBitWidth() > 16)
     return SDValue();
 
   // Check if the constant pool contains only powers of 2 starting from some
@@ -55511,7 +55511,7 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
 
   SDValue Masked = BroadcastOp;
   if (N != 0) {
-    unsigned Mask = (1ULL << Len) - 1;
+    APInt Mask = APInt::getLowBitsSet(Len, Len);
     SDValue ShiftedValue = DAG.getNode(ISD::SRL, DL, BroadcastOpVT, BroadcastOp,
                                        DAG.getConstant(N, DL, BroadcastOpVT));
     Masked = DAG.getNode(ISD::AND, DL, BroadcastOpVT, ShiftedValue,
