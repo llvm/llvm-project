@@ -8,6 +8,7 @@
 
 #include "PtrTypesSemantics.h"
 #include "ASTUtils.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -208,6 +209,37 @@ std::optional<bool> isUnchecked(const QualType T) {
   return isUnchecked(T->getAsCXXRecordDecl());
 }
 
+void RetainTypeChecker::visitTranslationUnitDecl(const TranslationUnitDecl *TUD) {
+  IsARCEnabled = TUD->getLangOpts().ObjCAutoRefCount;
+}
+
+void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
+  auto QT = TD->getUnderlyingType();
+  if (!QT->isPointerType())
+    return;
+
+  auto PointeeQT = QT->getPointeeType();
+  const RecordType *RT = PointeeQT->getAs<RecordType>();
+  if (!RT)
+    return;
+
+  for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
+    if (Redecl->getAttr<ObjCBridgeAttr>()) {
+      CFPointees.insert(RT);
+      return;
+    }
+  }
+}
+
+bool RetainTypeChecker::isUnretained(const QualType QT) {
+  if (ento::cocoa::isCocoaObjectRef(QT) && !IsARCEnabled)
+    return true;
+  auto CanonicalType = QT.getCanonicalType();
+  auto PointeeType = CanonicalType->getPointeeType();
+  auto *RT = dyn_cast_or_null<RecordType>(PointeeType.getTypePtrOrNull());
+  return RT && CFPointees.contains(RT);
+}
+
 std::optional<bool> isUnretained(const QualType T, bool IsARCEnabled) {
   if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T)) {
     if (auto *Decl = Subst->getAssociatedDecl()) {
@@ -296,6 +328,8 @@ std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled) {
 std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   assert(M);
 
+  std::optional<RetainTypeChecker> RTC;
+
   if (isa<CXXMethodDecl>(M)) {
     const CXXRecordDecl *calleeMethodsClass = M->getParent();
     auto className = safeGetName(calleeMethodsClass);
@@ -317,18 +351,27 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
     // Ref<T> -> T conversion
     // FIXME: Currently allowing any Ref<T> -> whatever cast.
     if (isRefType(className)) {
-      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
-        return isUnsafePtr(maybeRefToRawOperator->getConversionType(), false);
+      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
+        auto QT = maybeRefToRawOperator->getConversionType();
+        auto *T = QT.getTypePtrOrNull();
+        return T && (T->isPointerType() || T->isReferenceType());
+      }
     }
 
     if (isCheckedPtr(className)) {
-      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
-        return isUnsafePtr(maybeRefToRawOperator->getConversionType(), false);
+      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
+        auto QT = maybeRefToRawOperator->getConversionType();
+        auto *T = QT.getTypePtrOrNull();
+        return T && (T->isPointerType() || T->isReferenceType());
+      }
     }
 
     if (className == "RetainPtr") {
-      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
-        return isUnsafePtr(maybeRefToRawOperator->getConversionType(), false);
+      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
+        auto QT = maybeRefToRawOperator->getConversionType();
+        auto *T = QT.getTypePtrOrNull();
+        return T && (T->isPointerType() || T->isReferenceType());
+      }
     }
   }
   return false;

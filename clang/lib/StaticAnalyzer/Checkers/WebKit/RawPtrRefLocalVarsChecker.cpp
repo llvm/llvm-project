@@ -169,6 +169,9 @@ class RawPtrRefLocalVarsChecker
   mutable BugReporter *BR;
   EnsureFunctionAnalysis EFA;
 
+protected:
+  mutable std::optional<RetainTypeChecker> RTC;
+
 public:
   RawPtrRefLocalVarsChecker(const char *description)
       : Bug(this, description, "WebKit coding guidelines") {}
@@ -178,8 +181,8 @@ public:
   virtual bool isSafePtrType(const QualType) const = 0;
   virtual const char *ptrKind() const = 0;
 
-  virtual void checkASTDecl(const TranslationUnitDecl *TUD,
-                            AnalysisManager &MGR, BugReporter &BRArg) const {
+  void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
+                    BugReporter &BRArg) const {
     BR = &BRArg;
 
     // The calls to checkAST* from AnalysisConsumer don't
@@ -203,6 +206,12 @@ public:
         if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
         return DynamicRecursiveASTVisitor::TraverseDecl(D);
+      }
+
+      bool VisitTypedefDecl(TypedefDecl *TD) override {
+        if (Checker->RTC)
+          Checker->RTC->visitTypedef(TD);
+        return true;
       }
 
       bool VisitVarDecl(VarDecl *V) override {
@@ -254,6 +263,8 @@ public:
     };
 
     LocalVisitor visitor(this);
+    if (RTC)
+      RTC->visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
@@ -400,14 +411,14 @@ public:
 };
 
 class UnretainedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
-  mutable bool IsARCEnabled{false};
-
 public:
   UnretainedLocalVarsChecker()
       : RawPtrRefLocalVarsChecker("Unretained raw pointer or reference not "
-                                  "provably backed by a RetainPtr") {}
+                                  "provably backed by a RetainPtr") {
+    RTC = RetainTypeChecker();
+  }
   std::optional<bool> isUnsafePtr(const QualType T) const final {
-    return isUnretained(T, IsARCEnabled);
+    return RTC->isUnretained(T);
   }
   bool isSafePtr(const CXXRecordDecl *Record) const final {
     return isRetainPtr(Record);
@@ -416,12 +427,6 @@ public:
     return isRetainPtrType(type);
   }
   const char *ptrKind() const final { return "unretained"; }
-
-  void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
-                    BugReporter &BRArg) const final {
-    IsARCEnabled = TUD->getLangOpts().ObjCAutoRefCount;
-    RawPtrRefLocalVarsChecker::checkASTDecl(TUD, MGR, BRArg);
-  }
 };
 
 } // namespace

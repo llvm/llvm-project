@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include <optional>
 
@@ -21,8 +22,11 @@ class CXXRecordDecl;
 class Decl;
 class FunctionDecl;
 class QualType;
+class RecordType;
 class Stmt;
+class TranslationUnitDecl;
 class Type;
+class TypedefDecl;
 
 // Ref-countability of a type is implicitly defined by Ref<T> and RefPtr<T>
 // implementation. It can be modeled as: type T having public methods ref() and
@@ -61,6 +65,17 @@ std::optional<bool> isUncounted(const clang::QualType T);
 /// \returns true if \p Class is CheckedPtr capable AND not checked, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUnchecked(const clang::QualType T);
+
+/// An inter-procedural analysis facility that detects CF types with the
+/// underlying pointer type.
+class RetainTypeChecker {
+  llvm::DenseSet<const RecordType*> CFPointees;
+  bool IsARCEnabled{false};
+public:
+  void visitTranslationUnitDecl(const TranslationUnitDecl *);
+  void visitTypedef(const TypedefDecl *);
+  bool isUnretained(const QualType);
+};
 
 /// \returns true if \p Class is NS or CF objects AND not retained, false if
 /// not, std::nullopt if inconclusive.
