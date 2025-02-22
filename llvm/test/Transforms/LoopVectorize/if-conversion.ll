@@ -71,7 +71,7 @@ for.end:
 
 ;CHECK-LABEL: @reduction_func(
 ;CHECK: load <4 x i32>
-;CHECK: icmp slt <4 x i32>
+;CHECK: icmp sgt <4 x i32>
 ;CHECK: add <4 x i32>
 ;CHECK: select <4 x i1>
 ;CHECK: ret i32
