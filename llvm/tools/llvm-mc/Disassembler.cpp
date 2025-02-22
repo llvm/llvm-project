@@ -45,7 +45,7 @@ static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
     MCInst Inst;
 
     MCDisassembler::DecodeStatus S;
-    const_cast<MCDisassembler&>(DisAsm).setErrorOrWarningMsg("");
+    const_cast<MCDisassembler &>(DisAsm).setErrorOrWarningMsg("");
     S = DisAsm.getInstruction(Inst, Size, Data.slice(Index), Index, nulls());
     switch (S) {
     case MCDisassembler::Fail:
@@ -64,7 +64,9 @@ static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
     case MCDisassembler::SoftFail:
       SM.PrintMessage(SMLoc::getFromPointer(Bytes.second[Index]),
                       SourceMgr::DK_Warning,
-                      DisAsm.getErrorOrWarningMsg().empty() ? "potentially undefined instruction encoding" : DisAsm.getErrorOrWarningMsg());
+                      DisAsm.getErrorOrWarningMsg().empty()
+                          ? "potentially undefined instruction encoding"
+                          : DisAsm.getErrorOrWarningMsg());
       [[fallthrough]];
 
     case MCDisassembler::Success:

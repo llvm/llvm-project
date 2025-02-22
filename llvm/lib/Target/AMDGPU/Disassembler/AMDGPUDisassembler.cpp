@@ -807,7 +807,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       MCII->get(MI.getOpcode()).hasImplicitDefOfPhysReg(AMDGPU::EXEC)) {
     auto ExecEncoding = MRI.getEncodingValue(AMDGPU::EXEC_LO);
     if (Bytes_[0] != ExecEncoding) {
-      const_cast<AMDGPUDisassembler*>(this)->setErrorOrWarningMsg("invalid vdst encoding");
+      const_cast<AMDGPUDisassembler *>(this)->setErrorOrWarningMsg(
+          "invalid vdst encoding");
       Status = MCDisassembler::SoftFail;
     }
   }
