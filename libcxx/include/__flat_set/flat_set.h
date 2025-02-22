@@ -28,6 +28,7 @@
 #include <__cstddef/byte.h>
 #include <__cstddef/ptrdiff_t.h>
 #include <__flat_map/sorted_unique.h>
+#include <__flat_set/ra_iterator.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
@@ -55,6 +56,8 @@
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
+#include "__type_traits/remove_reference.h"
+#include <__utility/as_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -81,6 +84,8 @@ class flat_set {
   static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
   static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
 
+  using __key_iterator _LIBCPP_NODEBUG = typename _KeyContainer::const_iterator;
+
 public:
   // types
   using key_type               = _Key;
@@ -91,7 +96,7 @@ public:
   using const_reference        = const value_type&;
   using size_type              = typename _KeyContainer::size_type;
   using difference_type        = typename _KeyContainer::difference_type;
-  using iterator               = typename _KeyContainer::const_iterator;
+  using iterator               = __ra_iterator<flat_set, typename _KeyContainer::const_iterator>;
   using const_iterator         = iterator;
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
@@ -328,10 +333,10 @@ public:
   }
 
   // iterators
-  _LIBCPP_HIDE_FROM_ABI iterator begin() noexcept { return __keys_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return __keys_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI iterator end() noexcept { return __keys_.end(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return __keys_.end(); }
+  _LIBCPP_HIDE_FROM_ABI iterator begin() noexcept { return iterator(std::as_const(__keys_).begin()); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return const_iterator(__keys_.begin()); }
+  _LIBCPP_HIDE_FROM_ABI iterator end() noexcept { return iterator(std::as_const(__keys_).end()); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return const_iterator(__keys_.end()); }
 
   _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
   _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
@@ -442,9 +447,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __position) {
     auto __on_failure = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
-    auto __key_iter   = __keys_.erase(__position);
+    auto __key_iter   = __keys_.erase(__position.__base());
     __on_failure.__complete();
-    return __key_iter;
+    return iterator(__key_iter);
   }
 
   // The following overload is the same as the iterator overload
@@ -471,9 +476,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last) {
     auto __on_failure = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
-    auto __key_it     = __keys_.erase(__first, __last);
+    auto __key_it     = __keys_.erase(__first.__base(), __last.__base());
     __on_failure.__complete();
-    return __key_it;
+    return iterator(std::move(__key_it));
   }
 
   _LIBCPP_HIDE_FROM_ABI void swap(flat_set& __y) noexcept {
@@ -525,43 +530,43 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __x) {
-    return ranges::lower_bound(__keys_, __x, __compare_);
+    return iterator(ranges::lower_bound(std::as_const(__keys_), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __x) const {
-    return ranges::lower_bound(__keys_, __x, __compare_);
+    return const_iterator(ranges::lower_bound(__keys_, __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _Kp& __x) {
-    return ranges::lower_bound(__keys_, __x, __compare_);
+    return iterator(ranges::lower_bound(std::as_const(__keys_), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _Kp& __x) const {
-    return ranges::lower_bound(__keys_, __x, __compare_);
+    return const_iterator(ranges::lower_bound(__keys_, __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __x) {
-    return ranges::upper_bound(__keys_, __x, __compare_);
+    return iterator(ranges::upper_bound(std::as_const(__keys_), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __x) const {
-    return ranges::upper_bound(__keys_, __x, __compare_);
+    return const_iterator(ranges::upper_bound(__keys_, __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _Kp& __x) {
-    return ranges::upper_bound(__keys_, __x, __compare_);
+    return iterator(ranges::upper_bound(std::as_const(__keys_), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _Kp& __x) const {
-    return ranges::upper_bound(__keys_, __x, __compare_);
+    return const_iterator(ranges::upper_bound(__keys_, __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __x) {
@@ -661,12 +666,13 @@ private:
 
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
-    auto __it   = ranges::lower_bound(__self.__keys_, __key, __self.__compare_);
-    auto __last = __self.__keys_.end();
+    using __iter = _If<__is_const(__libcpp_remove_reference_t<_Self>), const_iterator, iterator>;
+    auto __it    = ranges::lower_bound(__self.__keys_, __key, __self.__compare_);
+    auto __last  = __self.__keys_.end();
     if (__it == __last || __self.__compare_(__key, *__it)) {
-      return std::make_pair(__it, __it);
+      return std::make_pair(__iter(__it), __iter(__it));
     }
-    return std::make_pair(__it, std::next(__it));
+    return std::make_pair(__iter(__it), __iter(std::next(__it)));
   }
 
   template <class _KeyArg>
@@ -676,18 +682,18 @@ private:
         clear() /* noexcept */;
       }
     });
-    auto __key_it     = __keys_.emplace(__it, std::forward<_KeyArg>(__key));
+    auto __key_it     = __keys_.emplace(__it.__base(), std::forward<_KeyArg>(__key));
     __on_failure.__complete();
-    return __key_it;
+    return iterator(std::move(__key_it));
   }
 
   template <class _Kp>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __try_emplace(_Kp&& __key) {
     auto __it = lower_bound(__key);
     if (__it == end() || __compare_(__key, *__it)) {
-      return pair<iterator, bool>(__emplace_exact_pos(__it, std::forward<_Kp>(__key)), true);
+      return pair<iterator, bool>(iterator(__emplace_exact_pos(__it, std::forward<_Kp>(__key))), true);
     } else {
-      return pair<iterator, bool>(std::move(__it), false);
+      return pair<iterator, bool>(iterator(std::move(__it)), false);
     }
   }
 
