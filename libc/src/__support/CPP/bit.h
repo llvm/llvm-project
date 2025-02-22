@@ -101,7 +101,7 @@ countr_zero(T value) {
     shift >>= 1;
     mask >>= shift;
   }
-  return zero_bits;
+  return static_cast<int>(zero_bits);
 }
 #if __has_builtin(__builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
@@ -140,7 +140,7 @@ countl_zero(T value) {
     else
       zero_bits |= shift;
   }
-  return zero_bits;
+  return static_cast<int>(zero_bits);
 }
 #if __has_builtin(__builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
@@ -183,7 +183,7 @@ countr_one(T value) {
 ///
 /// Ex. bit_width(5) == 3.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, unsigned int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 bit_width(T value) {
   return cpp::numeric_limits<T>::digits - cpp::countl_zero(value);
 }

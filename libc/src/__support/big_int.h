@@ -311,10 +311,10 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
 
 #define DECLARE_COUNTBIT(NAME, INDEX_EXPR)                                     \
   template <typename word, size_t N>                                           \
-  LIBC_INLINE constexpr size_t NAME(const cpp::array<word, N> &val) {             \
-    size_t bit_count = 0;                                                         \
+  LIBC_INLINE constexpr int NAME(const cpp::array<word, N> &val) {             \
+    int bit_count = 0;                                                         \
     for (size_t i = 0; i < N; ++i) {                                           \
-      const size_t word_count = cpp::NAME<word>(val[INDEX_EXPR]);                 \
+      const int word_count = cpp::NAME<word>(val[INDEX_EXPR]);                 \
       bit_count += word_count;                                                 \
       if (word_count != cpp::numeric_limits<word>::digits)                     \
         break;                                                                 \
@@ -697,7 +697,7 @@ public:
     }
     BigInt quotient;
     WordType x_word = static_cast<WordType>(x);
-    constexpr size_t LOG2_WORD_SIZE = cpp::bit_width(WORD_SIZE) - 1;
+    constexpr size_t LOG2_WORD_SIZE = static_cast<size_t>(cpp::bit_width(WORD_SIZE) - 1);
     constexpr size_t HALF_WORD_SIZE = WORD_SIZE >> 1;
     constexpr WordType HALF_MASK = ((WordType(1) << HALF_WORD_SIZE) - 1);
     // lower = smallest multiple of WORD_SIZE that is >= e.
@@ -1007,8 +1007,8 @@ private:
     BigInt quotient;
     if (remainder >= divider) {
       BigInt subtractor = divider;
-      size_t cur_bit = multiword::countl_zero(subtractor.val) -
-                    multiword::countl_zero(remainder.val);
+      size_t cur_bit = static_cast<size_t>(multiword::countl_zero(subtractor.val) -
+                    multiword::countl_zero(remainder.val));
       subtractor <<= cur_bit;
       for (; cur_bit >= 0 && remainder > 0; --cur_bit, subtractor >>= 1) {
         if (remainder < subtractor)
@@ -1312,7 +1312,7 @@ mask_trailing_ones() {
   T out; // zero initialized
   for (size_t i = 0; i <= QUOTIENT; ++i)
     out[i] = i < QUOTIENT
-                 ? -1
+                 ? cpp::numeric_limits<typename T::word_type>::max()
                  : mask_trailing_ones<typename T::word_type, REMAINDER>();
   return out;
 }
@@ -1328,7 +1328,7 @@ LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T> mask_leading_ones() {
   T out; // zero initialized
   for (size_t i = QUOTIENT; i < T::WORD_COUNT; ++i)
     out[i] = i > QUOTIENT
-                 ? -1
+                 ? cpp::numeric_limits<typename T::word_type>::max()
                  : mask_leading_ones<typename T::word_type, REMAINDER>();
   return out;
 }
