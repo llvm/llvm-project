@@ -3377,6 +3377,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::sinh, Intrinsic::experimental_constrained_sinh));
 
+    case Builtin::BI__builtin_sincospi:
+    case Builtin::BI__builtin_sincospif:
+    case Builtin::BI__builtin_sincospil:
+      if (Builder.getIsFPConstrained())
+        break; // TODO: Emit constrained sincospi intrinsic once one exists.
+      emitSincosBuiltin(*this, E, Intrinsic::sincospi);
+      return RValue::get(nullptr);
+
     case Builtin::BIsincos:
     case Builtin::BIsincosf:
     case Builtin::BIsincosl:

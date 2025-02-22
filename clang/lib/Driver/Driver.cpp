@@ -566,6 +566,72 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
   return DAL;
 }
 
+static void setZosTargetVersion(const Driver &D, llvm::Triple &Target,
+                                StringRef ArgTarget) {
+
+  static bool BeSilent = false;
+  auto IsTooOldToBeSupported = [](int v, int r) -> bool {
+    return ((v < 2) || ((v == 2) && (r < 4)));
+  };
+
+  /* expect CURRENT, zOSV2R[45], or 0xnnnnnnnn */
+  if (ArgTarget.equals_insensitive("CURRENT")) {
+    /* If the user gives CURRENT, then we rely on the LE to set   */
+    /* __TARGET_LIB__.  There's nothing more we need to do.       */
+  } else {
+    unsigned int Version = 0;
+    unsigned int Release = 0;
+    unsigned int Modification = 0;
+    bool IsOk = true;
+    llvm::Regex ZOsvRegex("[zZ][oO][sS][vV]([0-9])[rR]([0-9])");
+    llvm::Regex HexRegex(
+        "0x4"                      /* product      */
+        "([0-9a-fA-F])"            /* version     */
+        "([0-9a-fA-F][0-9a-fA-F])" /* release */
+        "([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])" /* modification */);
+    SmallVector<StringRef> Matches;
+
+    if (ZOsvRegex.match(ArgTarget, &Matches)) {
+      Matches[1].getAsInteger(10, Version);
+      Matches[2].getAsInteger(10, Release);
+      Modification = 0;
+      if (IsTooOldToBeSupported(Version, Release)) {
+        if (!BeSilent)
+          D.Diag(diag::err_zos_target_release_discontinued) << ArgTarget;
+        IsOk = false;
+      }
+    } else if (HexRegex.match(ArgTarget, &Matches)) {
+      Matches[1].getAsInteger(16, Version);
+      Matches[2].getAsInteger(16, Release);
+      Matches[3].getAsInteger(16, Modification);
+      if (IsTooOldToBeSupported(Version, Release)) {
+        if (!BeSilent)
+          D.Diag(diag::err_zos_target_release_discontinued) << ArgTarget;
+        IsOk = false;
+      }
+    } else {
+      /* something else: need to report an error */
+      if (!BeSilent)
+        D.Diag(diag::err_zos_target_unrecognized_release) << ArgTarget;
+      IsOk = false;
+    }
+
+    if (IsOk) {
+      llvm::VersionTuple V(Version, Release, Modification);
+      llvm::VersionTuple TV = Target.getOSVersion();
+      // The goal is to pick the minimally supported version of
+      // the OS.  Pick the lesser as the target.
+      if (TV.empty() || V < TV) {
+        SmallString<16> Str;
+        Str = llvm::Triple::getOSTypeName(Target.getOS());
+        Str += V.getAsString();
+        Target.setOSName(Str);
+      }
+    }
+  }
+  BeSilent = true;
+}
+
 /// Compute target triple from args.
 ///
 /// This routine provides the logic to compute a target triple from various
@@ -688,6 +754,12 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       Target.setArch(AT);
       if (Target.isWindowsGNUEnvironment())
         toolchains::MinGW::fixTripleArch(D, Target, Args);
+    }
+  }
+
+  if (Target.isOSzOS()) {
+    if ((A = Args.getLastArg(options::OPT_mzos_target_EQ))) {
+      setZosTargetVersion(D, Target, A->getValue());
     }
   }
 
