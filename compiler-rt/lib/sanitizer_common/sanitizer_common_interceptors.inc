@@ -10263,6 +10263,58 @@ INTERCEPTOR(SSIZE_T, freadlink, int fd, char *buf, SIZE_T bufsiz) {
 #  define INIT_FREADLINK
 #endif
 
+#if SANITIZER_INTERCEPT_GETADDRINFO_A
+INTERCEPTOR(int, getaddrinfo_a, int mode, struct __sanitizer_gaicb *list,
+            int num, void *sevp) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getaddrinfo_a, mode, list, num, sevp);
+  if (sevp)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, sevp, struct_sigevent_sz);
+  if (list) {
+    for (int i = 0; i < num; i++) {
+      struct __sanitizer_gaicb *cb = list[i];
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, cb, sizeof(__sanitizer_gaicb));
+      if (cb->ar_name)
+        COMMON_INTERCEPTOR_READ_RANGE(ctx, cb->ar_name,
+                                      internal_strlen(cb->ar_name) + 1);
+      if (cb->ar_service)
+        COMMON_INTERCEPTOR_READ_RANGE(ctx, cb->ar_service,
+                                      internal_strlen(cb->ar_service) + 1);
+      if (cb->ar_request) {
+        COMMON_INTERCEPTOR_READ_RANGE(ctx, cb->ar_request,
+                                      sizeof(__sanitizer_addrinfo));
+      }
+    }
+  }
+
+  int res = REAL(getaddrinfo_a)(mode, list, num, sevp);
+  if (res == 0 && list) {
+    for (int i = 0; i < num; i++) {
+      struct __sanitizer_addrinfo *result = list[i]->ar_result;
+      if (result) {
+        while (result) {
+          COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result,
+                                         sizeof(__sanitizer_addrinfo));
+          if (result->ai_addr)
+            COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result->ai_addr,
+                                           result->ai_addrlen);
+          if (result->ai_canonname)
+            COMMON_INTERCEPTOR_WRITE_RANGE(
+                ctx, result->ai_canonname,
+                internal_strlen(result->ai_canonname) + 1);
+          result = result->ai_next;
+        }
+      }
+    }
+  }
+
+  return res;
+}
+#  define INIT_GETADDRINFO_A COMMON_INTERCEPT_FUNCTION(getaddrinfo_a)
+#else
+#  define INIT_GETADDRINFO_A
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 namespace __sanitizer {
@@ -10585,6 +10637,7 @@ static void InitializeCommonInterceptors() {
   INIT_PREADV2;
   INIT_PWRITEV2;
   INIT_FREADLINK;
+  INIT_GETADDRINFO_A;
 
   INIT___PRINTF_CHK;
 }
