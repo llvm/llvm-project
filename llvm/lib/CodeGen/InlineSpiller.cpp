@@ -1545,8 +1545,9 @@ void HoistSpillHelper::runHoistSpills(
     for (MachineDomTreeNode *Child : (*RIt)->children()) {
       if (!SpillsInSubTreeMap.contains(Child))
         continue;
-      // The stmt "auto &[...] = SpillsInSubTreeMap[*RIt]" below
-      // should be placed before getting the begin and end iterators of
+      // The stmt:
+      // "auto &[SpillsInSubTree, SubTreeCost] = SpillsInSubTreeMap[*RIt]"
+      // below should be placed before getting the begin and end iterators of
       // SpillsInSubTreeMap[Child].first, or else the iterators may be
       // invalidated when SpillsInSubTreeMap[*RIt] is seen the first time
       // and the map grows and then the original buckets in the map are moved.
