@@ -1154,7 +1154,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
     // std::get<J>(Patterns)) == true
     std::array<SmallBitVector, std::tuple_size_v<std::tuple<PatternTs...>>>
         Matches;
-    for (size_t I = 0; I < Leaves.size(); I += 1) {
+    for (size_t I = 0, N = Leaves.size(); I < N; I++) {
       SmallVector<bool> MatchResults;
       std::apply(
           [&](auto &...P) {
