@@ -52,7 +52,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit __ra_iterator(_Iterator __iter) : __iter_(std::move(__iter)) {}
 
-  _Iterator __base() const noexcept(noexcept(_Iterator(__iter_))) { return __iter_; }
+  _LIBCPP_HIDE_FROM_ABI _Iterator __base() const noexcept(noexcept(_Iterator(__iter_))) { return __iter_; }
 
   _LIBCPP_HIDE_FROM_ABI decltype(auto) operator*() const { return *__iter_; }
   _LIBCPP_HIDE_FROM_ABI decltype(auto) operator->() const
