@@ -82,6 +82,7 @@ char* local_buffer_global_end = &local_buffer[16];
 // CHECK-F: .memtag global_buffer
 // CHECK-F: .globl global_buffer
 // CHECK-F: .p2align 4, 0x0
+// CHECK-F: .zero 16
 // CHECK-F: .size global_buffer, 16
 char global_buffer[16];
 // CHECK-G: .memtag _ZL23global_buffer_local_end
