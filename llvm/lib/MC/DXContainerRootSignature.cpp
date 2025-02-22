@@ -7,53 +7,89 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/DXContainerRootSignature.h"
-#include "llvm/Support/EndianStream.h"
+#include "llvm/Support/BinaryStreamWriter.h"
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
 
-void RootSignatureDesc::write(raw_ostream &OS) const {
-  // Root signature header in dxcontainer has 6 uint_32t values.
-  const uint32_t HeaderSize = 24;
-  const uint32_t ParameterByteSize = Parameters.size_in_bytes();
-  const uint32_t NumParametes = Parameters.size();
+Error RootSignatureDesc::write(raw_ostream &OS) const {
+  // Header Size + accounting for parameter offset + parameters size
+  std::vector<uint8_t> Buffer(24 + (Parameters.size() * 4) +
+                              Parameters.size_in_bytes());
+  BinaryStreamWriter Writer(Buffer, llvm::endianness::little);
+
+  SmallVector<uint64_t> OffsetsToReplace;
+  SmallVector<uint32_t> ValuesToReplaceOffsetsWith;
+  const uint32_t Dummy = std::numeric_limits<uint32_t>::max();
+
+  const uint32_t NumParameters = Parameters.size();
   const uint32_t Zero = 0;
 
-  // Writing header information
-  support::endian::write(OS, Header.Version, llvm::endianness::little);
-  support::endian::write(OS, NumParametes, llvm::endianness::little);
-  support::endian::write(OS, HeaderSize, llvm::endianness::little);
+  if (Error Err = Writer.writeInteger(Header.Version))
+    return Err;
+
+  if (Error Err = Writer.writeInteger(NumParameters))
+    return Err;
+
+  OffsetsToReplace.push_back(Writer.getOffset());
+  if (Error Err = Writer.writeInteger(Dummy))
+    return Err;
 
   // Static samplers still not implemented
-  support::endian::write(OS, Zero, llvm::endianness::little);
-  support::endian::write(OS, ParameterByteSize + HeaderSize,
-                         llvm::endianness::little);
+  if (Error Err = Writer.writeInteger(Zero))
+    return Err;
 
-  support::endian::write(OS, Header.Flags, llvm::endianness::little);
+  if (Error Err = Writer.writeInteger(Zero))
+    return Err;
 
-  uint32_t ParamsOffset =
-      HeaderSize + (3 * sizeof(uint32_t) * Parameters.size());
+  if (Error Err = Writer.writeInteger(Header.Flags))
+    return Err;
+
+  ValuesToReplaceOffsetsWith.push_back(Writer.getOffset());
+
   for (const dxbc::RootParameter &P : Parameters) {
-    support::endian::write(OS, P.ParameterType, llvm::endianness::little);
-    support::endian::write(OS, P.ShaderVisibility, llvm::endianness::little);
-    support::endian::write(OS, ParamsOffset, llvm::endianness::little);
+    if (Error Err = Writer.writeEnum(P.ParameterType))
+      return Err;
+    if (Error Err = Writer.writeEnum(P.ShaderVisibility))
+      return Err;
 
-    // Size of root parameter, removing the ParameterType and ShaderVisibility.
-    ParamsOffset += sizeof(dxbc::RootParameter) - 2 * sizeof(uint32_t);
+    OffsetsToReplace.push_back(Writer.getOffset());
+    if (Error Err = Writer.writeInteger(Dummy))
+      return Err;
   }
 
   for (const dxbc::RootParameter &P : Parameters) {
+    ValuesToReplaceOffsetsWith.push_back(Writer.getOffset());
     switch (P.ParameterType) {
     case dxbc::RootParameterType::Constants32Bit: {
-      support::endian::write(OS, P.Constants.ShaderRegister,
-                             llvm::endianness::little);
-      support::endian::write(OS, P.Constants.RegisterSpace,
-                             llvm::endianness::little);
-      support::endian::write(OS, P.Constants.Num32BitValues,
-                             llvm::endianness::little);
+      if (Error Err = Writer.writeInteger(P.Constants.ShaderRegister))
+        return Err;
+      if (Error Err = Writer.writeInteger(P.Constants.RegisterSpace))
+        return Err;
+      if (Error Err = Writer.writeInteger(P.Constants.Num32BitValues))
+        return Err;
     } break;
     case dxbc::RootParameterType::Empty:
       llvm_unreachable("Invalid RootParameterType");
     }
   }
+
+  assert(ValuesToReplaceOffsetsWith.size() == OffsetsToReplace.size() &&
+         "Offset missing value to replace with.");
+
+  for (size_t It = 0; It < ValuesToReplaceOffsetsWith.size(); It++) {
+    uint32_t Position = OffsetsToReplace[It];
+    uint32_t Value = ValuesToReplaceOffsetsWith[It];
+
+    Writer.setOffset(Position);
+    if (Error Err = Writer.writeInteger(Value))
+      return Err;
+  }
+
+  llvm::ArrayRef<char> BufferRef(reinterpret_cast<char *>(Buffer.data()),
+                                 Buffer.size());
+  OS.write(BufferRef.data(), BufferRef.size());
+
+  return Error::success();
 }

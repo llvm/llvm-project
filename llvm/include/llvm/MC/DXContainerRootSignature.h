@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
-#include <cstdint>
-#include <limits>
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -19,7 +18,7 @@ struct RootSignatureDesc {
   dxbc::RootSignatureHeader Header;
   SmallVector<dxbc::RootParameter> Parameters;
 
-  void write(raw_ostream &OS) const;
+  Error write(raw_ostream &OS) const;
 };
 } // namespace mcdxbc
 } // namespace llvm
