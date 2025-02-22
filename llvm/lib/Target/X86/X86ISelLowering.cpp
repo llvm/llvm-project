@@ -55368,14 +55368,15 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
   if (Size > 256 && Subtarget.useAVX512Regs())
     return SDValue();
 
+  EVT N00VT = N0.getOperand(0).getValueType();
+
   // Don't fold if the condition code can't be handled by PCMPEQ/PCMPGT since
   // that's the only integer compares with we have.
   ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-  if (ISD::isUnsignedIntSetCC(CC))
+  if (N00VT.isInteger() && ISD::isUnsignedIntSetCC(CC))
     return SDValue();
 
   // Only do this combine if the extension will be fully consumed by the setcc.
-  EVT N00VT = N0.getOperand(0).getValueType();
   EVT MatchingVecType = N00VT.changeVectorElementTypeToInteger();
   if (Size != MatchingVecType.getSizeInBits())
     return SDValue();
