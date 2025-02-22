@@ -368,14 +368,14 @@ define i32 @test_alias_2(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[COND1]], label [[IF_THEN1:%.*]], label [[IF_END1:%.*]]
 ; CHECK:       if.then1:
-; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    store i32 100, ptr @g, align 4
 ; CHECK-NEXT:    br label [[IF_END1]]
 ; CHECK:       if.end1:
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr @g, align 4
+; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[B]], 0
 ; CHECK-NEXT:    br i1 [[COND2]], label [[IF_THEN2:%.*]], label [[IF_END2:%.*]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    store i32 100, ptr @g, align 4
 ; CHECK-NEXT:    br label [[IF_END2]]
 ; CHECK:       if.end2:
 ; CHECK-NEXT:    ret i32 0
@@ -387,16 +387,16 @@ entry:
   br i1 %cond1, label %if.then1, label %if.end1
 
 if.then1:
-  call void @foo()
+  store i32 100, ptr @g
   br label %if.end1
 
 if.end1:
-  %val = load i32, ptr @g
+  call void @foo()
   %cond2 = icmp eq i32 %b, 0
   br i1 %cond2, label %if.then2, label %if.end2
 
 if.then2:
-  call void @foo()
+  store i32 100, ptr @g
   br label %if.end2
 
 if.end2:
