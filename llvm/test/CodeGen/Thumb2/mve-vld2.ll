@@ -346,23 +346,23 @@ define void @vld2_v4i64(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vpush {d8}
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q3, [r0, #48]
+; CHECK-NEXT:    vldrw.u32 q3, [r0, #32]
 ; CHECK-NEXT:    vmov.f32 s4, s2
 ; CHECK-NEXT:    vmov.f32 s5, s3
-; CHECK-NEXT:    vmov lr, r12, d5
 ; CHECK-NEXT:    vmov.f32 s2, s8
 ; CHECK-NEXT:    vmov.f32 s3, s9
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
-; CHECK-NEXT:    vmov.f32 s16, s10
-; CHECK-NEXT:    vmov.f32 s17, s11
-; CHECK-NEXT:    vmov r5, r6, d4
+; CHECK-NEXT:    vmov.f32 s16, s14
+; CHECK-NEXT:    vmov.f32 s17, s15
+; CHECK-NEXT:    vmov lr, r12, d5
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #48]
+; CHECK-NEXT:    vmov r5, r6, d6
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    vmov.f32 s2, s12
-; CHECK-NEXT:    vmov.f32 s3, s13
+; CHECK-NEXT:    vmov.f32 s2, s8
 ; CHECK-NEXT:    vmov r0, r7, d8
+; CHECK-NEXT:    vmov.f32 s3, s9
 ; CHECK-NEXT:    adds.w lr, lr, r2
 ; CHECK-NEXT:    adc.w r12, r12, r3
-; CHECK-NEXT:    vmov r3, r4, d7
+; CHECK-NEXT:    vmov r3, r4, d5
 ; CHECK-NEXT:    adds r0, r0, r5
 ; CHECK-NEXT:    adc.w r8, r6, r7
 ; CHECK-NEXT:    vmov r6, r5, d1
