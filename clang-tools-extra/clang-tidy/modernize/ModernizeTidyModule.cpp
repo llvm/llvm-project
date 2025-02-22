@@ -32,6 +32,7 @@
 #include "UseAutoCheck.h"
 #include "UseBoolLiteralsCheck.h"
 #include "UseConstraintsCheck.h"
+#include "UseCppStyleCommentsCheck.h"
 #include "UseDefaultMemberInitCheck.h"
 #include "UseDesignatedInitializersCheck.h"
 #include "UseEmplaceCheck.h"
@@ -107,6 +108,8 @@ public:
         "modernize-use-bool-literals");
     CheckFactories.registerCheck<UseConstraintsCheck>(
         "modernize-use-constraints");
+    CheckFactories.registerCheck<UseCppStyleCommentsCheck>(
+        "modernize-use-cpp-style-comments");
     CheckFactories.registerCheck<UseDefaultMemberInitCheck>(
         "modernize-use-default-member-init");
     CheckFactories.registerCheck<UseEmplaceCheck>("modernize-use-emplace");
