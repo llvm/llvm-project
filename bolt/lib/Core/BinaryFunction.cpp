@@ -1575,8 +1575,9 @@ bool BinaryFunction::scanExternalRefs() {
   assert(FunctionData.size() == getMaxSize() &&
          "function size does not match raw data size");
 
-  BC.SymbolicDisAsm->setSymbolizer(
-      BC.MIB->createTargetSymbolizer(*this, /*CreateSymbols*/ false));
+  if (BC.isX86())
+    BC.SymbolicDisAsm->setSymbolizer(
+        BC.MIB->createTargetSymbolizer(*this, /*CreateSymbols*/ false));
 
   // Disassemble contents of the function. Detect code entry points and create
   // relocations for references to code that will be moved.
