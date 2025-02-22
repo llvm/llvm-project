@@ -91,6 +91,13 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-accesses>`
+  check.
+
+  Flags calls to ``operator[]`` in STL containers and suggests replacing it with
+  safe alternatives.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
