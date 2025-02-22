@@ -912,6 +912,7 @@ set(files
   __utility/swap.h
   __utility/to_underlying.h
   __utility/unreachable.h
+  __utility/monostate.h
   __variant/monostate.h
   __vector/comparison.h
   __vector/container_traits.h
@@ -1939,6 +1940,7 @@ set(files
   __cxx03/__utility/swap.h
   __cxx03/__utility/to_underlying.h
   __cxx03/__utility/unreachable.h
+  __cxx03/__utility/monostate.h
   __cxx03/__variant/monostate.h
   __cxx03/__verbose_abort
   __cxx03/algorithm
