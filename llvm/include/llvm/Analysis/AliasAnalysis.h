@@ -381,6 +381,14 @@ public:
                      MemoryLocation::getBeforeOrAfter(V2));
   }
 
+  /// A convenience wrapper around the \c isNoAlias for two instructions.
+  bool isNoAlias(const Instruction *I1, const Instruction *I2) {
+    return getModRefInfo(&*I1, MemoryLocation::getOrNone(&*I2)) ==
+               ModRefInfo::NoModRef &&
+           getModRefInfo(&*I2, MemoryLocation::getOrNone(&*I1)) ==
+               ModRefInfo::NoModRef;
+  }
+
   /// A trivial helper function to check to see if the specified pointers are
   /// must-alias.
   bool isMustAlias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
