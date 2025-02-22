@@ -33,8 +33,9 @@
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
     (defined(_LIBUNWIND_TARGET_AARCH64) ||                                     \
      defined(_LIBUNWIND_TARGET_LOONGARCH) ||                                   \
-     defined(_LIBUNWIND_TARGET_RISCV) || defined(_LIBUNWIND_TARGET_S390X) ||   \
-     defined(_LIBUNWIND_TARGET_S390X) || defined(_LIBUNWIND_TARGET_X86_64))
+     defined(_LIBUNWIND_TARGET_RISCV) ||                                       \
+     defined(_LIBUNWIND_TARGET_S390X) ||                                       \
+     defined(_LIBUNWIND_TARGET_X86_64))
 #include <errno.h>
 #include <signal.h>
 #include <sys/syscall.h>
