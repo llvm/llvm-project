@@ -41,7 +41,7 @@ private:
   LIBC_INLINE static constexpr size_t length(const char *Str) {
     for (const char *End = Str;; ++End)
       if (*End == '\0')
-        return End - Str;
+        return static_cast<size_t>(End - Str);
   }
 
   LIBC_INLINE bool equals(string_view Other) const {
