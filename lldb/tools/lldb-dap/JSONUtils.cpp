@@ -819,7 +819,7 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
                                frame.GetSymbol().GetStartAddress().GetOffset();
     lldb::addr_t inst_line =
         inst_offset / (frame.GetThread().GetProcess().GetAddressByteSize() / 2);
-    // lines are base-1 indexed
+    // Line numbers are 1-based. 
     object.try_emplace("line", inst_line + 1);
     object.try_emplace("column", 1);
   }
