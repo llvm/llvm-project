@@ -24,6 +24,21 @@ module {
     cir.return
   }
 
+  // CHECK-LABEL: @test_value
+  cir.func @test_value() {
+    %0 = cir.const #cir.const_struct<{#cir.int<1> : !u8i, #cir.int<2> : !s32i}> : !ty_S
+    //      CHECK: %[[#v0:]] = llvm.mlir.undef : !llvm.struct<"struct.S", (i8, i32)>
+    // CHECK-NEXT: %[[#v1:]] = llvm.mlir.constant(1 : i8) : i8
+    // CHECK-NEXT: %[[#v2:]] = llvm.insertvalue %[[#v1]], %[[#v0]][0] : !llvm.struct<"struct.S", (i8, i32)>
+    // CHECK-NEXT: %[[#v3:]] = llvm.mlir.constant(2 : i32) : i32
+    // CHECK-NEXT: %[[#v4:]] = llvm.insertvalue %[[#v3]], %[[#v2]][1] : !llvm.struct<"struct.S", (i8, i32)>
+    %1 = cir.extract_member %0[0] : !ty_S -> !u8i
+    // CHECK-NEXT: %{{.+}} = llvm.extractvalue %[[#v4]][0] : !llvm.struct<"struct.S", (i8, i32)>
+    %2 = cir.extract_member %0[1] : !ty_S -> !s32i
+    // CHECK-NEXT: %{{.+}} = llvm.extractvalue %[[#v4]][1] : !llvm.struct<"struct.S", (i8, i32)>
+    cir.return
+  }
+
   cir.func @shouldConstInitLocalStructsWithConstStructAttr() {
     %0 = cir.alloca !ty_S2A, !cir.ptr<!ty_S2A>, ["s"] {alignment = 4 : i64}
     %1 = cir.const #cir.const_struct<{#cir.int<1> : !s32i}> : !ty_S2A

@@ -882,6 +882,31 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMExtractMemberOpLowering
+    : public mlir::OpConversionPattern<cir::ExtractMemberOp> {
+public:
+  using mlir::OpConversionPattern<cir::ExtractMemberOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ExtractMemberOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMGetMethodOpLowering
+    : public mlir::OpConversionPattern<cir::GetMethodOp> {
+  cir::LowerModule *lowerMod;
+
+public:
+  CIRToLLVMGetMethodOpLowering(const mlir::TypeConverter &typeConverter,
+                               mlir::MLIRContext *context,
+                               cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::GetMethodOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMGetRuntimeMemberOpLowering
     : public mlir::OpConversionPattern<cir::GetRuntimeMemberOp> {
   cir::LowerModule *lowerMod;

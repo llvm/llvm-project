@@ -2851,6 +2851,64 @@ def GetMemberOp : CIR_Op<"get_member"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ExtractMemberOp
+//===----------------------------------------------------------------------===//
+
+def ExtractMemberOp : CIR_Op<"extract_member", [Pure]> {
+  let summary = "Extract the value of a member of a struct value";
+  let description = [{
+    The `cir.extract_member` operation extracts the value of a particular member
+    from the input record. Unlike `cir.get_member` which derives pointers, this
+    operation operates on values. It takes a value of record type, and extract
+    the value of the specified record member from the input record value.
+
+    Currently `cir.extract_member` does not work on unions.
+
+    Example:
+
+    ```mlir
+    // Suppose we have a struct with multiple members.
+    !s32i = !cir.int<s, 32>
+    !s8i = !cir.int<s, 32>
+    !struct_ty = !cir.struct<"struct.Bar" {!s32i, !s8i}>
+
+    // And suppose we have a value of the struct type.
+    %0 = cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s8i}> : !struct_ty
+
+    // Extract the value of the second member of the struct.
+    %1 = cir.extract_member %0[1] : !struct_ty -> !s8i
+    ```
+  }];
+
+  let arguments = (ins CIR_StructType:$record, IndexAttr:$index_attr);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $record `[` $index_attr `]` attr-dict
+    `:` qualified(type($record)) `->` qualified(type($result))
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$type, "mlir::Value":$record, "uint64_t":$index), [{
+      mlir::APInt fieldIdx(64, index);
+      build($_builder, $_state, type, record, fieldIdx);
+    }]>,
+    OpBuilder<(ins "mlir::Value":$record, "uint64_t":$index), [{
+      auto recordTy = mlir::cast<cir::StructType>(record.getType());
+      mlir::Type memberTy = recordTy.getMembers()[index];
+      build($_builder, $_state, memberTy, record, index);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Get the index of the struct member being accessed.
+    uint64_t getIndex() { return getIndexAttr().getZExtValue(); }
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // GetRuntimeMemberOp
 //===----------------------------------------------------------------------===//
 

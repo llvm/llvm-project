@@ -70,6 +70,9 @@ struct MissingFeatures {
   static bool tbaaPointer() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool ptrAuth() { return false; }
+  static bool emitCFICheck() { return false; }
+  static bool emitVFEInfo() { return false; }
+  static bool emitWPDInfo() { return false; }
 
   // GNU vectors are done, but other kinds of vectors haven't been implemented.
   static bool scalableVectors() { return false; }

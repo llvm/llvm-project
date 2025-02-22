@@ -3578,6 +3578,22 @@ LogicalResult cir::GetMemberOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ExtractMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ExtractMemberOp::verify() {
+  auto recordTy = mlir::cast<cir::StructType>(getRecord().getType());
+  if (recordTy.getKind() == cir::StructType::Union)
+    return emitError()
+           << "cir.extract_member currently does not work on unions";
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+  if (recordTy.getMembers()[getIndex()] != getType())
+    return emitError() << "member type mismatch";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // GetRuntimeMemberOp Definitions
 //===----------------------------------------------------------------------===//
 

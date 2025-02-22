@@ -573,6 +573,16 @@ def MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
   let hasCustomAssemblyFormat = 1;
 
   let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    bool isNull() const {
+      return !getSymbol().has_value() && !getVtableOffset().has_value();
+    }
+
+    bool isVirtual() const {
+      return getVtableOffset().has_value();
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
