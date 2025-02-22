@@ -692,9 +692,9 @@ private:
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __try_emplace(_Kp&& __key) {
     auto __it = lower_bound(__key);
     if (__it == end() || __compare_(__key, *__it)) {
-      return pair<iterator, bool>(iterator(__emplace_exact_pos(__it, std::forward<_Kp>(__key))), true);
+      return pair<iterator, bool>(__emplace_exact_pos(__it, std::forward<_Kp>(__key)), true);
     } else {
-      return pair<iterator, bool>(iterator(std::move(__it)), false);
+      return pair<iterator, bool>(std::move(__it), false);
     }
   }
 
