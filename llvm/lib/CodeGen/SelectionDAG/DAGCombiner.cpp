@@ -14912,32 +14912,25 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     if (ShAmt == 0 && OldRanges) {
       Type *NewTy = VT.getTypeForEVT(*DAG.getContext());
       const unsigned NumOperands = OldRanges->getNumOperands();
-      unsigned NumRanges = NumOperands / 2;
       const unsigned NewWidth = NewTy->getIntegerBitWidth();
-      bool InRange = true;
-      SmallVector<Metadata *, 4> Bounds;
-      Bounds.reserve(NumOperands);
+      Metadata *Bounds[2];
+      /* Don't preserve all sub-ranges.  Make one range that contains all
+         OldRanges. Use lower bound of first range and higher bound of last
+         range */
+      const APInt &LowValue =
+          mdconst::extract<ConstantInt>(OldRanges->getOperand(0))->getValue();
+      const APInt &HighValue =
+          mdconst::extract<ConstantInt>(OldRanges->getOperand(NumOperands - 1))
+              ->getValue();
+      ConstantRange CurRange(LowValue, HighValue);
 
-      for (unsigned i = 0; i < NumRanges; ++i) {
-        const APInt &LowValue =
-            mdconst::extract<ConstantInt>(OldRanges->getOperand(2 * i))
-                ->getValue();
-        const APInt &HighValue =
-            mdconst::extract<ConstantInt>(OldRanges->getOperand(2 * i + 1))
-                ->getValue();
-        ConstantRange CurRange(LowValue, HighValue);
-
-        if (CurRange.getMinSignedBits() > NewWidth) {
-          InRange = false;
-          break;
-        }
-        Bounds.push_back(ConstantAsMetadata::get(
-            ConstantInt::get(NewTy, LowValue.trunc(NewWidth))));
-        Bounds.push_back(ConstantAsMetadata::get(
-            ConstantInt::get(NewTy, HighValue.trunc(NewWidth))));
-      }
-      if (InRange)
+      if (CurRange.getMinSignedBits() <= NewWidth) {
+        Bounds[0] = ConstantAsMetadata::get(
+            ConstantInt::get(NewTy, LowValue.trunc(NewWidth)));
+        Bounds[1] = ConstantAsMetadata::get(
+            ConstantInt::get(NewTy, HighValue.trunc(NewWidth)));
         NewRanges = MDNode::get(*DAG.getContext(), Bounds);
+      }
     }
     Load = DAG.getLoad(
         VT, DL, LN0->getChain(), NewPtr,
