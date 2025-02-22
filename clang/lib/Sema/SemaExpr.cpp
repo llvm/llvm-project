@@ -3107,7 +3107,9 @@ Sema::PerformObjectMemberConversion(Expr *From,
                                    /*IgnoreAccess=*/true))
     return ExprError();
 
-  DestType = Context.getQualifiedType(DestType, FromType.getQualifiers());
+  Qualifiers FromTypeQuals = FromType.getQualifiers();
+  FromTypeQuals.setAddressSpace(DestType.getAddressSpace());
+  DestType = Context.getQualifiedType(DestType, FromTypeQuals);
 
   return ImpCastExprToType(From, DestType, CK_UncheckedDerivedToBase, VK,
                            &BasePath);
