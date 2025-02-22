@@ -322,13 +322,13 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       continue;
     }
 
-    VPValue *NewVPV;
+    VPSingleDefRecipe *NewR;
     if (auto *Phi = dyn_cast<PHINode>(Inst)) {
       // Phi node's operands may have not been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewVPV = new VPWidenPHIRecipe(Phi, nullptr, Phi->getDebugLoc());
-      VPBB->appendRecipe(cast<VPWidenPHIRecipe>(NewVPV));
+      NewR = new VPWidenPHIRecipe(Phi, nullptr, Phi->getDebugLoc());
+      VPBB->appendRecipe(NewR);
       PhisToFix.push_back(Phi);
     } else {
       // Translate LLVM-IR operands into VPValue operands and set them in the
@@ -339,11 +339,11 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
       // Build VPInstruction for any arbitrary Instruction without specific
       // representation in VPlan.
-      NewVPV = cast<VPInstruction>(
+      NewR = cast<VPInstruction>(
           VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst));
     }
 
-    IRDef2VPValue[Inst] = NewVPV;
+    IRDef2VPValue[Inst] = NewR;
   }
 }
 
@@ -393,11 +393,9 @@ void PlainCFGBuilder::buildPlainCFG(
   RPO.perform(LI);
 
   for (BasicBlock *BB : RPO) {
-    // Create or retrieve the VPBasicBlock for this BB and create its
-    // VPInstructions.
+    // Create or retrieve the VPBasicBlock for this BB.
     VPBasicBlock *VPBB = getOrCreateVPBB(BB);
     VPRegionBlock *Region = VPBB->getParent();
-    createVPInstructionsForVPBB(VPBB, BB);
     Loop *LoopForBB = LI->getLoopFor(BB);
     // Set VPBB predecessors in the same order as they are in the incoming BB.
     if (!isHeaderBB(BB, LoopForBB)) {
@@ -409,6 +407,9 @@ void PlainCFGBuilder::buildPlainCFG(
       if (TheRegion != Region)
         setRegionPredsFromBB(Region, BB);
     }
+
+    // Create VPInstructions for BB.
+    createVPInstructionsForVPBB(VPBB, BB);
 
     if (TheLoop->getLoopLatch() == BB) {
       VPBB->setOneSuccessor(VectorLatchVPBB);
