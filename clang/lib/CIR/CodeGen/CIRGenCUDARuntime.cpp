@@ -19,7 +19,6 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-#include <iostream>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -91,7 +90,6 @@ void CIRGenCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
     llvm_unreachable("NYI");
 
   std::string launchAPI = addPrefixToName("LaunchKernel");
-  std::cout << "LaunchAPI is " << launchAPI << "\n";
   const IdentifierInfo &launchII = cgm.getASTContext().Idents.get(launchAPI);
   FunctionDecl *launchFD = nullptr;
   for (auto *result : dc->lookup(&launchII)) {

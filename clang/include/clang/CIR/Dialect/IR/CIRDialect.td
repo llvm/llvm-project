@@ -45,6 +45,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getGlobalAnnotationsAttrName() { return "cir.global_annotations"; }
 
     static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }
+    static llvm::StringRef getCUDABinaryHandleAttrName() { return "cir.cu.binary_handle"; }
 
     void registerAttributes();
     void registerTypes();

@@ -11,7 +11,7 @@
 // RUN: FileCheck --check-prefix=CIR-DEVICE --input-file=%t.cir %s
 
 // Attribute for global_fn
-// CIR-HOST: [[Kernel:#[a-zA-Z_0-9]+]] = {{.*}}#cir.cuda_kernel_name<_Z9global_fni>{{.*}}
+// CIR-HOST: [[Kernel:#[a-zA-Z_0-9]+]] = {{.*}}#cir.cu.kernel_name<_Z9global_fni>{{.*}}
 
 __host__ void host_fn(int *a, int *b, int *c) {}
 // CIR-HOST: cir.func @_Z7host_fnPiS_S_

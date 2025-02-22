@@ -18,7 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 def CUDAKernelNameAttr : CIR_Attr<"CUDAKernelName",
-                                  "cuda_kernel_name"> {
+                                  "cu.kernel_name"> {
   let summary = "Device-side function name for this stub.";
   let description =
   [{
@@ -33,6 +33,23 @@ def CUDAKernelNameAttr : CIR_Attr<"CUDAKernelName",
 
   let parameters = (ins "std::string":$kernel_name);
   let assemblyFormat = "`<` $kernel_name `>`";
+}
+
+def CUDABinaryHandleAttr : CIR_Attr<"CUDABinaryHandle",
+                                  "cu.binary_handle"> {
+  let summary = "Fat binary handle for device code.";
+  let description =
+  [{
+    This attribute is attached to the ModuleOp and records the binary file
+    name passed to host.
+
+    CUDA first compiles device-side code into a fat binary file. The file
+    name is then passed into host-side code, which is used to create a handle
+    and then generate various registration functions.
+  }];
+
+  let parameters = (ins "std::string":$name);
+  let assemblyFormat = "`<` $name `>`";
 }
 
 #endif // MLIR_CIR_DIALECT_CIR_CUDA_ATTRS
