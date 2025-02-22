@@ -29,6 +29,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/COFFImportFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -122,6 +123,8 @@ ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
 
 void ArchiveFile::parse() {
   COFFLinkerContext &ctx = symtab.ctx;
+  SymbolTable *archiveSymtab = &symtab;
+
   // Parse a MemoryBufferRef as an archive file.
   file = CHECK(Archive::create(mb), this);
 
@@ -136,12 +139,50 @@ void ArchiveFile::parse() {
       // Read both EC and native symbols on ARM64X.
       if (!ctx.hybridSymtab)
         return;
+    } else if (ctx.hybridSymtab) {
+      // If the ECSYMBOLS section is missing in the archive, the archive could
+      // be either a native-only ARM64 or x86_64 archive. Check the machine type
+      // of the object containing a symbol to determine which symbol table to
+      // use.
+      Archive::symbol_iterator sym = file->symbol_begin();
+      if (sym != file->symbol_end()) {
+        MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
+        Archive::Child child =
+            CHECK(sym->getMember(),
+                  file->getFileName() +
+                      ": could not get the buffer for a child of the archive");
+        MemoryBufferRef mb = CHECK(
+            child.getMemoryBufferRef(),
+            file->getFileName() +
+                ": could not get the buffer for a child buffer of the archive");
+        switch (identify_magic(mb.getBuffer())) {
+        case file_magic::coff_object: {
+          std::unique_ptr<COFFObjectFile> obj =
+              CHECK(COFFObjectFile::create(mb),
+                    check(child.getName()) + ":" + ": not a valid COFF file");
+          machine = MachineTypes(obj->getMachine());
+          break;
+        }
+        case file_magic::coff_import_library:
+          machine = MachineTypes(COFFImportFile(mb).getMachine());
+          break;
+        case file_magic::bitcode: {
+          std::unique_ptr<lto::InputFile> obj =
+              check(lto::InputFile::create(mb));
+          machine = BitcodeFile::getMachineType(obj.get());
+          break;
+        }
+        default:
+          break;
+        }
+        archiveSymtab = &ctx.getSymtab(machine);
+      }
     }
   }
 
   // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &sym : file->symbols())
-    ctx.symtab.addLazyArchive(this, sym);
+    archiveSymtab->addLazyArchive(this, sym);
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
