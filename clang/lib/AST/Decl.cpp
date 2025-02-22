@@ -3387,7 +3387,7 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   return (proto->getParamType(1).getCanonicalType() == Context.VoidPtrTy);
 }
 
-bool FunctionDecl::isConstEvalSafeOrReplaceableGlobalAllocationFunction(
+bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
     std::optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
   if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
     return false;

@@ -2635,6 +2635,8 @@ public:
 
   bool isTypeIdentitySpecialization() const; // std::type_identity<X> for any X
 
+  TemplateDecl *TryGetSpecializedTemplateDecl() const;
+
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   bool is##Id##Type() const;
 #include "clang/Basic/OpenCLImageTypes.def"

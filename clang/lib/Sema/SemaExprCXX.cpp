@@ -3224,14 +3224,11 @@ bool Sema::FindAllocationFunctions(
     if (OperatorDelete->isTypeAwareOperatorNewOrDelete() !=
         (isTypeAwareAllocation(IAP.PassTypeIdentity))) {
       Diag(StartLoc, diag::err_mismatching_type_aware_cleanup_deallocator);
-      int NewDiagIndex = OperatorNew->isTypeAwareOperatorNewOrDelete() ? 0 : 1;
-      int DeleteDiagIndex =
-          OperatorDelete->isTypeAwareOperatorNewOrDelete() ? 0 : 1;
       Diag(OperatorNew->getLocation(), diag::note_type_aware_operator_declared)
-          << NewDiagIndex << OperatorNew;
+          << OperatorNew->isTypeAwareOperatorNewOrDelete() << OperatorNew;
       Diag(OperatorDelete->getLocation(),
            diag::note_type_aware_operator_declared)
-          << DeleteDiagIndex << OperatorDelete;
+          << OperatorDelete->isTypeAwareOperatorNewOrDelete() << OperatorDelete;
     }
     if (isTypeAwareAllocation(IAP.PassTypeIdentity) &&
         OperatorDelete->getDeclContext() != OperatorNew->getDeclContext()) {
@@ -4142,19 +4139,21 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     DiagnoseUseOfDecl(OperatorDelete, StartLoc);
 
-    // Convert the operand to the type of the first parameter of operator
-    // delete. This is only necessary if we selected a destroying operator
-    // delete that we are going to call (non-virtually); converting to void*
-    // is trivial and left to AST consumers to handle.
-    unsigned PointeeIndex = 0;
+    unsigned AddressParamIdx = 0;
     if (OperatorDelete->isTypeAwareOperatorNewOrDelete()) {
       QualType TypeIdentity = OperatorDelete->getParamDecl(0)->getType();
       if (RequireCompleteType(StartLoc, TypeIdentity,
                               diag::err_incomplete_type))
         return ExprError();
-      PointeeIndex = 1;
+      AddressParamIdx = 1;
     }
-    QualType ParamType = OperatorDelete->getParamDecl(PointeeIndex)->getType();
+
+    // Convert the operand to the type of the first parameter of operator
+    // delete. This is only necessary if we selected a destroying operator
+    // delete that we are going to call (non-virtually); converting to void*
+    // is trivial and left to AST consumers to handle.
+    QualType ParamType =
+        OperatorDelete->getParamDecl(AddressParamIdx)->getType();
     if (!IsVirtualDelete && !ParamType->getPointeeType()->isVoidType()) {
       Qualifiers Qs = Pointee.getQualifiers();
       if (Qs.hasCVRQualifiers()) {

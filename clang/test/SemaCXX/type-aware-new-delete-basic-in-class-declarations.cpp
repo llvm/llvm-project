@@ -55,6 +55,10 @@ struct S4 {
 };
 
 struct S5 {
+#if !defined(NO_TAA)
+  // expected-error@-2 {{declaration of type aware 'operator delete' in 'S5' must have matching type aware 'operator new'}}
+  // expected-note@#10 {{unmatched type aware 'operator delete' declared here}}
+#endif
   template <typename T> void operator delete(std::type_identity<T>, T *, size_t, std::align_val_t); // #10
 #if defined(NO_TAA)
   // expected-error@#10 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}

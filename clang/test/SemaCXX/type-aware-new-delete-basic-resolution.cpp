@@ -82,6 +82,8 @@ struct InclassNew5 {
 };
 
 struct InclassNew6 {
+  // expected-error@-1 {{declaration of type aware 'operator delete' in 'InclassNew6' must have matching type aware 'operator new'}}
+  // expected-note@#36 {{unmatched type aware 'operator delete' declared here}}
   InclassNew6();
   void *operator new(size_t); // #34
   void  operator delete(void *) = delete; // #35
@@ -96,12 +98,16 @@ struct InclassNew7 {
 };
 
 struct InclassNew8 {
+  // expected-error@-1 {{declaration of type aware 'operator new' in 'InclassNew8' must have matching type aware 'operator delete'}}
+  // expected-note@#40 {{unmatched type aware 'operator new' declared here}}
   InclassNew8();
   void *operator new(std::type_identity<InclassNew8>, size_t, std::align_val_t); // #40
   void operator delete(void*); // #41
 };
 
 struct InclassNew9 {
+  // expected-error@-1 {{declaration of type aware 'operator new' in 'InclassNew9' must have matching type aware 'operator delete'}}
+  // expected-note@#42 {{unmatched type aware 'operator new' declared here}}
   InclassNew9();
   void *operator new(std::type_identity<InclassNew9>, size_t, std::align_val_t); // #42
 };
@@ -215,10 +221,14 @@ BaseClass6::~BaseClass6(){
 }
 
 struct SubClass6_1 : BaseClass6 {
+  // expected-error@-1 {{declaration of type aware 'operator new' in 'SubClass6_1' must have matching type aware 'operator delete'}}
+  // expected-note@#62 {{unmatched type aware 'operator new' declared here}}
   template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #62
   SubClass6_1();
 };
 struct SubClass6_2 : BaseClass6 {
+  // expected-error@-1 {{declaration of type aware 'operator delete' in 'SubClass6_2' must have matching type aware 'operator new'}}
+  // expected-note@#63 {{unmatched type aware 'operator delete' declared here}}
   template <typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t); // #63
   SubClass6_2();
 };

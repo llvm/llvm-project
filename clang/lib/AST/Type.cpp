@@ -3128,20 +3128,19 @@ bool Type::isStdByteType() const {
   return false;
 }
 
-static const TemplateDecl *getSpecializedTemplateType(const Type *T) {
-  const Type *DesugaredType = T->getUnqualifiedDesugaredType();
-  if (const auto *Specialization =
-          DesugaredType->getAs<TemplateSpecializationType>())
-    return Specialization->getTemplateName().getAsTemplateDecl();
-  if (const auto *Record = DesugaredType->getAsCXXRecordDecl()) {
-    if (const auto *CTS = dyn_cast<ClassTemplateSpecializationDecl>(Record))
-      return CTS->getSpecializedTemplate();
+TemplateDecl *Type::TryGetSpecializedTemplateDecl() const {
+  auto UnderlyingType = getCanonicalTypeInternal();
+  if (auto *TST = UnderlyingType->getAs<TemplateSpecializationType>())
+    return TST->getTemplateName().getAsTemplateDecl();
+  if (auto *RT = UnderlyingType->getAsCXXRecordDecl()) {
+    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RT))
+      return CTSD->getSpecializedTemplate();
   }
   return nullptr;
 }
 
 bool Type::isTypeIdentitySpecialization() const {
-  const TemplateDecl *STDecl = getSpecializedTemplateType(this);
+  const TemplateDecl *STDecl = TryGetSpecializedTemplateDecl();
   if (!STDecl)
     return false;
   IdentifierInfo *II = STDecl->getIdentifier();

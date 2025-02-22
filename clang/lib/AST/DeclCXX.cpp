@@ -2564,7 +2564,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   If a class T has a member deallocation function named operator delete
   //   with exactly one parameter or a type aware operator delete with two
-  //   two arguments, then that function is a usual (non-placement)
+  //   arguments, then that function is a usual (non-placement)
   //   deallocation function. [...]
   if (getNumParams() == UsualParams)
     return true;

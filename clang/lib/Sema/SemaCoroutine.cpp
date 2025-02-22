@@ -1109,14 +1109,14 @@ static bool DiagnoseTypeAwareAllocatorsIfNecessary(Sema &S, SourceLocation Loc,
   S.LookupQualifiedName(R, PromiseType->getAsCXXRecordDecl());
   bool HaveIssuedWarning = false;
   for (auto Decl : R) {
-    if (S.isTypeAwareOperatorNewOrDelete(Decl)) {
-      if (!HaveIssuedWarning) {
-        S.Diag(Loc, DiagnosticID) << Name;
-        HaveIssuedWarning = true;
-      }
-      S.Diag(Decl->getLocation(), diag::note_type_aware_operator_declared)
-          << 0 << Decl;
+    if (!S.isTypeAwareOperatorNewOrDelete(Decl))
+      continue;
+    if (!HaveIssuedWarning) {
+      S.Diag(Loc, DiagnosticID) << Name;
+      HaveIssuedWarning = true;
     }
+    S.Diag(Decl->getLocation(), diag::note_type_aware_operator_declared)
+        << /* isTypeAware */ 1 << Decl;
   }
   return HaveIssuedWarning;
 }

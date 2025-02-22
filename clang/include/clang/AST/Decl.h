@@ -2531,14 +2531,14 @@ public:
       bool *IsNothrow = nullptr) const {
     if (isTypeAwareOperatorNewOrDelete())
       return false;
-    return isConstEvalSafeOrReplaceableGlobalAllocationFunction(AlignmentParam,
-                                                                IsNothrow);
+    return isUsableAsGlobalAllocationFunctionInConstantEvaluation(
+        AlignmentParam, IsNothrow);
   }
 
   /// Determines whether this function is one of the replaceable global
   /// allocation functions described in isReplaceableGlobalAllocationFunction,
   /// or is a function that may be treated as such during constant evaluation
-  bool isConstEvalSafeOrReplaceableGlobalAllocationFunction(
+  bool isUsableAsGlobalAllocationFunctionInConstantEvaluation(
       std::optional<unsigned> *AlignmentParam = nullptr,
       bool *IsNothrow = nullptr) const;
 

@@ -46,6 +46,8 @@ struct resumable2 {
 
 struct resumable3 {
   struct promise_type {
+  // expected-error@-1 {{declaration of type aware 'operator new' in 'resumable3::promise_type' must have matching type aware 'operator delete'}}
+  // expected-note@#resumable3_tan {{unmatched type aware 'operator new' declared here}}
     void *operator new(std::size_t sz, float);
     void *operator new(std::type_identity<promise_type>, std::size_t sz, std::align_val_t, float); // #resumable3_tan
     void operator delete(void *);
@@ -60,6 +62,8 @@ struct resumable3 {
 };
 struct resumable4 {
   struct promise_type {
+    // expected-error@-1 {{declaration of type aware 'operator delete' in 'resumable4::promise_type' must have matching type aware 'operator new'}}
+    // expected-note@#resumable4_tad {{unmatched type aware 'operator delete' declared here}}
     void *operator new(std::size_t sz, float);
     template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t, std::align_val_t); // #resumable4_tad
 
@@ -73,6 +77,8 @@ struct resumable4 {
 };
 struct resumable5 {
   struct promise_type {
+    // expected-error@-1 {{declaration of type aware 'operator delete' in 'resumable5::promise_type' must have matching type aware 'operator new'}}
+    // expected-note@#resumable5_tad {{unmatched type aware 'operator delete' declared here}}
     void *operator new(std::size_t sz, float);
     void operator delete(void *);
     template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t, std::align_val_t); // #resumable5_tad

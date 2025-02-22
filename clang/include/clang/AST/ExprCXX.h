@@ -2238,6 +2238,7 @@ enum class TypeAwareAllocationMode : unsigned { No, Yes };
 inline bool isTypeAwareAllocation(TypeAwareAllocationMode Mode) {
   return Mode == TypeAwareAllocationMode::Yes;
 }
+
 inline TypeAwareAllocationMode
 typeAwareAllocationModeFromBool(bool IsTypeAwareAllocation) {
   return IsTypeAwareAllocation ? TypeAwareAllocationMode::Yes
@@ -2245,6 +2246,7 @@ typeAwareAllocationModeFromBool(bool IsTypeAwareAllocation) {
 }
 
 enum class AlignedAllocationMode : unsigned { No, Yes };
+
 inline bool isAlignedAllocation(AlignedAllocationMode Mode) {
   return Mode == AlignedAllocationMode::Yes;
 }
@@ -2253,6 +2255,7 @@ inline AlignedAllocationMode alignedAllocationModeFromBool(bool IsAligned) {
 }
 
 enum class SizedDeallocationMode : unsigned { No, Yes };
+
 inline bool isSizedDeallocation(SizedDeallocationMode Mode) {
   return Mode == SizedDeallocationMode::Yes;
 }
