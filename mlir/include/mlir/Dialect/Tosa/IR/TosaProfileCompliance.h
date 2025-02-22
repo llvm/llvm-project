@@ -9,6 +9,8 @@
 #ifndef MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
 #define MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
 
+#include <unordered_map>
+
 #include "mlir/Dialect/Tosa/IR/TargetEnv.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 

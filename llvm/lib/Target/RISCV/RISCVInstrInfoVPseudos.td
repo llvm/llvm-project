@@ -770,13 +770,6 @@ class GetVRegNoV0<VReg VRegClass> {
                  true : VRegClass);
 }
 
-class VPseudo<Instruction instr, LMULInfo m, dag outs, dag ins, int sew = 0> :
-      Pseudo<outs, ins, []>, RISCVVPseudo {
-  let BaseInstr = instr;
-  let VLMul = m.value;
-  let SEW = sew;
-}
-
 class GetVTypePredicates<VTypeInfo vti> {
   list<Predicate> Predicates = !cond(!eq(vti.Scalar, f16) : [HasVInstructionsF16],
                                      !eq(vti.Scalar, bf16) : [HasVInstructionsBF16Minimal],
