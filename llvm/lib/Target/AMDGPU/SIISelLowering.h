@@ -14,8 +14,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 
-#include "AMDGPUISelLowering.h"
 #include "AMDGPUArgumentUsageInfo.h"
+#include "AMDGPUISelLowering.h"
+#include "SIDefines.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
@@ -91,6 +92,8 @@ private:
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerWavegroupID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerWaveIDInWavegroup(SelectionDAG &DAG, SDValue Op) const;
+  SDValue lowerHwRegRead(SelectionDAG &DAG, SDValue Op, AMDGPU::Hwreg::Id HwReg,
+                         unsigned LowBit, unsigned Width) const;
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
   SDValue buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG, SDValue Op,

@@ -1156,6 +1156,21 @@ void test_get_cluster_group_id(int d, global int *out)
   }
 }
 
+// CHECK-LABEL: @test_cluster_workgroup_flat_id(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[TMP1]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cluster_workgroup_flat_id(global uint *out)
+{
+  *out = __builtin_amdgcn_cluster_workgroup_flat_id();
+}
+
 // CHECK-LABEL: @test_get_cluster_workgroups_max_id(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca i32, align 4, addrspace(5)

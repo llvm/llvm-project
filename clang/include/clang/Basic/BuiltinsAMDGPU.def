@@ -41,6 +41,7 @@ TARGET_BUILTIN(__builtin_amdgcn_cluster_id_z, "Ui", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_id_x, "Ui", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_id_y, "Ui", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_id_z, "Ui", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_flat_id, "Ui", "nc", "gfx1250-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_max_id_x, "Ui", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_max_id_y, "Ui", "nc", "gfx1250-insts")
