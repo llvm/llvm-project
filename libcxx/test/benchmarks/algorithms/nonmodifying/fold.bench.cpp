@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType const limit  = 1000; // ensure we never overflow in the addition
-            assert(size <= std::numeric_limits<ValueType>::max());
+            assert(static_cast<ValueType>(size) <= std::numeric_limits<ValueType>::max());
             assert(std::numeric_limits<ValueType>::max() > static_cast<ValueType>(size) * limit);
             assert(std::numeric_limits<ValueType>::min() < static_cast<ValueType>(size) * limit * -1);
 
