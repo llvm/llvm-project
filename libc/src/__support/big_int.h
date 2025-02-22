@@ -311,8 +311,8 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
 
 #define DECLARE_COUNTBIT(NAME, INDEX_EXPR)                                     \
   template <typename word, size_t N>                                           \
-  LIBC_INLINE constexpr int NAME(const cpp::array<word, N> &val) {             \
-    int bit_count = 0;                                                         \
+  LIBC_INLINE constexpr size_t NAME(const cpp::array<word, N> &val) {             \
+    size_t bit_count = 0;                                                         \
     for (size_t i = 0; i < N; ++i) {                                           \
       const int word_count = cpp::NAME<word>(val[INDEX_EXPR]);                 \
       bit_count += word_count;                                                 \
@@ -1007,7 +1007,7 @@ private:
     BigInt quotient;
     if (remainder >= divider) {
       BigInt subtractor = divider;
-      int cur_bit = multiword::countl_zero(subtractor.val) -
+      size_t cur_bit = multiword::countl_zero(subtractor.val) -
                     multiword::countl_zero(remainder.val);
       subtractor <<= cur_bit;
       for (; cur_bit >= 0 && remainder > 0; --cur_bit, subtractor >>= 1) {
