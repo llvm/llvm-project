@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "JSONUtils.h"
-
 #include "BreakpointBase.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
@@ -51,7 +50,6 @@
 #include <optional>
 #include <sstream>
 #include <string>
-#include <sys/syslimits.h>
 #include <utility>
 #include <vector>
 
