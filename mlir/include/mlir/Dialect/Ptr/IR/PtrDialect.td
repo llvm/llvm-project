@@ -12,6 +12,7 @@
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/IR/BuiltinTypes.td"
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
@@ -38,7 +39,8 @@ class Ptr_Type<string name, string typeMnemonic, list<Trait> traits = []>
 def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
     MemRefElementTypeInterface,
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "areCompatible", "getIndexBitwidth", "verifyEntries"]>
+      "areCompatible", "getIndexBitwidth", "verifyEntries"]>,
+    PointerLike
   ]> {
   let summary = "pointer type";
   let description = [{

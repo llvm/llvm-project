@@ -876,7 +876,8 @@ bool mlir::LLVM::isCompatibleFloatingPointType(Type type) {
 }
 
 bool mlir::LLVM::isCompatibleVectorType(Type type) {
-  if (llvm::isa<LLVMFixedVectorType, LLVMScalableVectorType>(type))
+  if (llvm::isa<LLVMFixedVectorType, LLVMScalableVectorType, LLVMPointerType>(
+          type))
     return true;
 
   if (auto vecType = llvm::dyn_cast<VectorType>(type)) {
