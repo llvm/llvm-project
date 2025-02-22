@@ -2168,7 +2168,7 @@ multiclass VPseudoTiedBinaryRoundingMode<VReg RetClass,
                                          int sew = 0,
                                          bits<2> TargetConstraintType = 1> {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-    let VLMul = MInfo.value in {
+    let VLMul = MInfo.value, SEW=sew in {
     def suffix # "_TIED":
       VPseudoTiedBinaryNoMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>;
     def suffix # "_MASK_TIED" :
