@@ -158,16 +158,28 @@ define amdgpu_ps half @test_maxmin_commuted_f16(half %a, half %b, half %c) {
 }
 
 define amdgpu_ps void @s_test_minmax_f16(half inreg %a, half inreg %b, half inreg %c, ptr addrspace(1) inreg %out) {
-; SDAG-LABEL: s_test_minmax_f16:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_maximum_f16 s0, s0, s1
-; SDAG-NEXT:    s_mov_b32 s5, s4
-; SDAG-NEXT:    s_mov_b32 s4, s3
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; SDAG-NEXT:    s_minimum_f16 s0, s0, s2
-; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; SDAG-NEXT:    global_store_b16 v0, v1, s[4:5]
-; SDAG-NEXT:    s_endpgm
+; SDAG-TRUE16-LABEL: s_test_minmax_f16:
+; SDAG-TRUE16:       ; %bb.0:
+; SDAG-TRUE16-NEXT:    s_maximum_f16 s0, s0, s1
+; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-TRUE16-NEXT:    s_mov_b32 s5, s4
+; SDAG-TRUE16-NEXT:    s_mov_b32 s4, s3
+; SDAG-TRUE16-NEXT:    s_minimum_f16 s0, s0, s2
+; SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[4:5]
+; SDAG-TRUE16-NEXT:    s_endpgm
+;
+; SDAG-FAKE16-LABEL: s_test_minmax_f16:
+; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_maximum_f16 s0, s0, s1
+; SDAG-FAKE16-NEXT:    s_mov_b32 s5, s4
+; SDAG-FAKE16-NEXT:    s_mov_b32 s4, s3
+; SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; SDAG-FAKE16-NEXT:    s_minimum_f16 s0, s0, s2
+; SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[4:5]
+; SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: s_test_minmax_f16:
 ; GISEL:       ; %bb.0:
