@@ -64,6 +64,10 @@ static cl::opt<bool>
                                 cl::init(false), cl::Hidden,
                                 cl::desc("Allows loop nests to be peeled."));
 
+static cl::opt<bool> UnrollAggressiveEliminateCompares(
+    "unroll-allow-aggressive-eliminate-compares", cl::init(true), cl::Hidden,
+    cl::desc("Allow aggressive peeling to eliminate compares."));
+
 static cl::opt<unsigned> UnrollPeelMaxCount(
     "unroll-peel-max-count", cl::init(7), cl::Hidden,
     cl::desc("Max average trip count which will cause loop peeling."));
@@ -338,7 +342,12 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
 //    else
 //      ..
 //   }
+//
+// The EliminateBranches parameter controls whether we require all branch
+// conditions to be fully known after a calculated number of loop iterations to
+// return a non-zero peel count.
 static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
+                                         bool EliminateBranches,
                                          ScalarEvolution &SE) {
   assert(L.isLoopSimplifyForm() && "Loop needs to be in loop simplify form");
   unsigned DesiredPeelCount = 0;
@@ -364,23 +373,44 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
                                    BoundSCEV);
       };
 
+  // Attempts to compute the number of iterations that eliminates compares for a
+  // (potential tree of) condition(s) rooted at Condition. Returns std::nullopt
+  // when that number cannot be calculated, or a value greater than or equal to
+  // MinPeelCount when it can. For condition trees, the FullTreeRes parameter
+  // controls whether all tree leaves need to have a known peel count for the
+  // top-level call to return a non-null peel count.
   const unsigned MaxDepth = 4;
-  std::function<void(Value *, unsigned)> ComputePeelCount =
-      [&](Value *Condition, unsigned Depth) -> void {
+  std::function<std::optional<unsigned>(Value *, unsigned, bool, unsigned)>
+      ComputePeelCountCond = [&](Value *Condition, unsigned MinPeelCount,
+                                 bool FullTreeRes,
+                                 unsigned Depth) -> std::optional<unsigned> {
     if (!Condition->getType()->isIntegerTy() || Depth >= MaxDepth)
-      return;
+      return std::nullopt;
 
     Value *LeftVal, *RightVal;
     if (match(Condition, m_And(m_Value(LeftVal), m_Value(RightVal))) ||
         match(Condition, m_Or(m_Value(LeftVal), m_Value(RightVal)))) {
-      ComputePeelCount(LeftVal, Depth + 1);
-      ComputePeelCount(RightVal, Depth + 1);
-      return;
+      // When FullTreeRes is true, the returned peel count is the maximum
+      // calculated peel count over all of the condition tree's leaves, even if
+      // the peel count cannot be calculated at all for some leaves. On the
+      // contrary, when it is false the peel count of a tree that has at least
+      // one leaf whose peel count cannot be calculated is null.
+      auto RecOnLeaf = [&](Value *SubCond) -> bool {
+        std::optional<unsigned> PeelCount =
+            ComputePeelCountCond(SubCond, FullTreeRes, MinPeelCount, Depth + 1);
+        if (FullTreeRes && !PeelCount)
+          return false;
+        MinPeelCount = std::max(MinPeelCount, PeelCount.value_or(0));
+        return true;
+      };
+      if (!RecOnLeaf(LeftVal) || !RecOnLeaf(RightVal))
+        return std::nullopt;
+      return MinPeelCount;
     }
 
     CmpPredicate Pred;
     if (!match(Condition, m_ICmp(Pred, m_Value(LeftVal), m_Value(RightVal))))
-      return;
+      return std::nullopt;
 
     const SCEV *LeftSCEV = SE.getSCEV(LeftVal);
     const SCEV *RightSCEV = SE.getSCEV(RightVal);
@@ -388,7 +418,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     // Do not consider predicates that are known to be true or false
     // independently of the loop iteration.
     if (SE.evaluatePredicate(Pred, LeftSCEV, RightSCEV))
-      return;
+      return std::nullopt;
 
     // Check if we have a condition with one AddRec and one non AddRec
     // expression. Normalize LeftSCEV to be the AddRec.
@@ -396,8 +426,9 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
       if (isa<SCEVAddRecExpr>(RightSCEV)) {
         std::swap(LeftSCEV, RightSCEV);
         Pred = ICmpInst::getSwappedPredicate(Pred);
-      } else
-        return;
+      } else {
+        return std::nullopt;
+      }
     }
 
     const SCEVAddRecExpr *LeftAR = cast<SCEVAddRecExpr>(LeftSCEV);
@@ -405,14 +436,14 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     // Avoid huge SCEV computations in the loop below, make sure we only
     // consider AddRecs of the loop we are trying to peel.
     if (!LeftAR->isAffine() || LeftAR->getLoop() != &L)
-      return;
+      return std::nullopt;
     if (!(ICmpInst::isEquality(Pred) && LeftAR->hasNoSelfWrap()) &&
         !SE.getMonotonicPredicateType(LeftAR, Pred))
-      return;
+      return std::nullopt;
 
-    // Check if extending the current DesiredPeelCount lets us evaluate Pred
+    // Check if extending the current MinPeelCount lets us evaluate Pred
     // or !Pred in the loop body statically.
-    unsigned NewPeelCount = DesiredPeelCount;
+    unsigned NewPeelCount = MinPeelCount;
 
     const SCEV *IterVal = LeftAR->evaluateAtIteration(
         SE.getConstant(LeftSCEV->getType(), NewPeelCount), SE);
@@ -426,7 +457,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     const SCEV *Step = LeftAR->getStepRecurrence(SE);
     if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, RightSCEV, Step,
                                    Pred))
-      return;
+      return std::nullopt;
 
     // However, for equality comparisons, that isn't always sufficient to
     // eliminate the comparsion in loop body, we may need to peel one more
@@ -437,12 +468,22 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
                              RightSCEV) &&
         !SE.isKnownPredicate(Pred, IterVal, RightSCEV) &&
         SE.isKnownPredicate(Pred, NextIterVal, RightSCEV)) {
-      if (NewPeelCount >= MaxPeelCount)
-        return; // Need to peel one more iteration, but can't. Give up.
+      if (NewPeelCount >= MaxPeelCount) {
+        // Need to peel one more iteration, but can't. Give up.
+        return std::nullopt;
+      }
       ++NewPeelCount; // Great!
     }
 
-    DesiredPeelCount = std::max(DesiredPeelCount, NewPeelCount);
+    return NewPeelCount;
+  };
+
+  auto ComputePeelCountCondWrapper = [&](Value *Condition,
+                                         bool FullTreeRes) -> bool {
+    std::optional<unsigned> PeelCount =
+        ComputePeelCountCond(Condition, DesiredPeelCount, FullTreeRes, 0);
+    DesiredPeelCount = PeelCount.value_or(DesiredPeelCount);
+    return PeelCount.has_value();
   };
 
   auto ComputePeelCountMinMax = [&](MinMaxIntrinsic *MinMax) {
@@ -488,7 +529,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
       if (SelectInst *SI = dyn_cast<SelectInst>(&I))
-        ComputePeelCount(SI->getCondition(), 0);
+        ComputePeelCountCondWrapper(SI->getCondition(), /*FullTreeRes=*/false);
       if (MinMaxIntrinsic *MinMax = dyn_cast<MinMaxIntrinsic>(&I))
         ComputePeelCountMinMax(MinMax);
     }
@@ -501,7 +542,12 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     if (L.getLoopLatch() == BB)
       continue;
 
-    ComputePeelCount(BI->getCondition(), 0);
+    if (!ComputePeelCountCondWrapper(BI->getCondition(), EliminateBranches) &&
+        EliminateBranches) {
+      // We don't want to peel due to compare elimination when all branch
+      // conditions cannot be fully statically determined.
+      return 0;
+    }
   }
 
   return DesiredPeelCount;
@@ -597,8 +643,10 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
       DesiredPeelCount = std::max(DesiredPeelCount, *NumPeels);
   }
 
-  DesiredPeelCount = std::max(DesiredPeelCount,
-                              countToEliminateCompares(*L, MaxPeelCount, SE));
+  DesiredPeelCount =
+      std::max(DesiredPeelCount,
+               countToEliminateCompares(*L, MaxPeelCount,
+                                        !PP.AggresiveEliminateCompares, SE));
 
   if (DesiredPeelCount == 0)
     DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT, AC);
@@ -879,6 +927,7 @@ llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
   PP.AllowPeeling = true;
   PP.AllowLoopNestsPeeling = false;
   PP.PeelProfiledIterations = true;
+  PP.AggresiveEliminateCompares = true;
 
   // Get the target specifc values.
   TTI.getPeelingPreferences(L, SE, PP);
@@ -891,6 +940,8 @@ llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
       PP.AllowPeeling = UnrollAllowPeeling;
     if (UnrollAllowLoopNestsPeeling.getNumOccurrences() > 0)
       PP.AllowLoopNestsPeeling = UnrollAllowLoopNestsPeeling;
+    if (UnrollAggressiveEliminateCompares.getNumOccurrences() > 0)
+      PP.AggresiveEliminateCompares = UnrollAggressiveEliminateCompares;
   }
 
   // User specifed values provided by argument.
