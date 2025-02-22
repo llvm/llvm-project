@@ -66,7 +66,7 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
        ++char_ptr) {
     if (*char_ptr == '\0')
-      return char_ptr - src;
+      return static_cast<size_t>(char_ptr - src);
   }
   // Step 2: read blocks
   for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
