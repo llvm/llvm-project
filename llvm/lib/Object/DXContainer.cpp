@@ -293,28 +293,23 @@ Error DirectX::RootSignature::parse(StringRef Data) {
   for (uint32_t It = 0; It < NumParameters; It++) {
     dxbc::RootParameter NewParam;
 
-    dxbc::RootParameterType PTValue =
-        support::endian::read<dxbc::RootParameterType,
-                              llvm::endianness::little>(Current);
-    if (!dxbc::RootSignatureValidations::isValidParameterType(PTValue))
-      return validationFailed("unsupported parameter type value read: " +
-                              llvm::Twine((uint32_t)PTValue));
-
     NewParam.ParameterType =
         support::endian::read<dxbc::RootParameterType,
                               llvm::endianness::little>(Current);
+    if (!dxbc::RootSignatureValidations::isValidParameterType(NewParam.ParameterType))
+      return validationFailed("unsupported parameter type value read: " +
+                              llvm::Twine((uint32_t)NewParam.ParameterType));
+
     Current += sizeof(dxbc::RootParameterType);
 
-    dxbc::ShaderVisibilityFlag SVValue =
-        support::endian::read<dxbc::ShaderVisibilityFlag,
+    NewParam.ShaderVisibility =
+        support::endian::read<dxbc::ShaderVisibility,
                               llvm::endianness::little>(Current);
-
-    if (!dxbc::RootSignatureValidations::isValidShaderVisibility(SVValue))
+    if (!dxbc::RootSignatureValidations::isValidShaderVisibility(NewParam.ShaderVisibility))
       return validationFailed("unsupported shader visility flag value read: " +
-                              llvm::Twine((uint32_t)SVValue));
+                              llvm::Twine((uint32_t)NewParam.ShaderVisibility));
 
-    NewParam.ShaderVisibility = SVValue;
-    Current += sizeof(dxbc::ShaderVisibilityFlag);
+    Current += sizeof(dxbc::ShaderVisibility);
 
     uint32_t Offset =
         support::endian::read<uint32_t, llvm::endianness::little>(Current);
@@ -327,6 +322,7 @@ Error DirectX::RootSignature::parse(StringRef Data) {
         return Err;
     } break;
     case dxbc::RootParameterType::Empty:
+      // unreachable  because it was validated and assigned before this point.
       llvm_unreachable("Invalid value for RootParameterType");
     }
 

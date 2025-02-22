@@ -348,9 +348,9 @@ void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
-void ScalarEnumerationTraits<dxbc::ShaderVisibilityFlag>::enumeration(
-    IO &IO, dxbc::ShaderVisibilityFlag &Value) {
-  for (const auto &E : dxbc::getShaderVisibilityFlags())
+void ScalarEnumerationTraits<dxbc::ShaderVisibility>::enumeration(
+    IO &IO, dxbc::ShaderVisibility &Value) {
+  for (const auto &E : dxbc::getShaderVisibility())
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 

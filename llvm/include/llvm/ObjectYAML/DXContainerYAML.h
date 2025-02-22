@@ -202,7 +202,7 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::RootParameterType)
-LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ShaderVisibilityFlag)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ShaderVisibility)
 
 namespace llvm {
 
