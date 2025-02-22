@@ -103,6 +103,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   SmartPtrChecker.cpp
   SmartPtrModeling.cpp
   StackAddrEscapeChecker.cpp
+  StdAnyChecker.cpp
   StdLibraryFunctionsChecker.cpp
   StdVariantChecker.cpp
   STLAlgorithmModeling.cpp
