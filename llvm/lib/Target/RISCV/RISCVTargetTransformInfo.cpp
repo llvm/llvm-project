@@ -393,8 +393,9 @@ static InstructionCost
 costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
                             std::optional<unsigned> VLen, VectorType *Tp,
                             ArrayRef<int> Mask, TTI::TargetCostKind CostKind) {
+  assert(LegalVT.isFixedLengthVector());
   InstructionCost NumOfDests = InstructionCost::getInvalid();
-  if (VLen && LegalVT.isFixedLengthVector() && !Mask.empty()) {
+  if (VLen && !Mask.empty()) {
     MVT ElemVT = LegalVT.getVectorElementType();
     unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
     LegalVT = TTI.getTypeLegalizationCost(
@@ -404,7 +405,6 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
     NumOfDests = divideCeil(Mask.size(), LegalVT.getVectorNumElements());
   }
   if (!NumOfDests.isValid() || NumOfDests <= 1 ||
-      !LegalVT.isFixedLengthVector() ||
       LegalVT.getVectorElementType().getSizeInBits() !=
           Tp->getElementType()->getPrimitiveSizeInBits() ||
       LegalVT.getVectorNumElements() >= Tp->getElementCount().getFixedValue())
@@ -487,7 +487,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // First, handle cases where having a fixed length vector enables us to
   // give a more accurate cost than falling back to generic scalable codegen.
   // TODO: Each of these cases hints at a modeling gap around scalable vectors.
-  if (ST->hasVInstructions() && isa<FixedVectorType>(Tp)) {
+  if (ST->hasVInstructions() && isa<FixedVectorType>(Tp) &&
+      LT.second.isFixedLengthVector()) {
     InstructionCost VRegSplittingCost = costShuffleViaVRegSplitting(
         *this, LT.second, ST->getRealVLen(), Tp, Mask, CostKind);
     if (VRegSplittingCost.isValid())
@@ -496,7 +497,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     default:
       break;
     case TTI::SK_PermuteSingleSrc: {
-      if (Mask.size() >= 2 && LT.second.isFixedLengthVector()) {
+      if (Mask.size() >= 2) {
         MVT EltTp = LT.second.getVectorElementType();
         // If the size of the element is < ELEN then shuffles of interleaves and
         // deinterleaves of 2 vectors can be lowered into the following
@@ -545,10 +546,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       }
       // vrgather + cost of generating the mask constant.
       // We model this for an unknown mask with a single vrgather.
-      if (LT.second.isFixedLengthVector() && LT.first == 1 &&
-          (LT.second.getScalarSizeInBits() != 8 ||
-           LT.second.getVectorNumElements() <= 256)) {
-        VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, Tp->getContext());
+      if (LT.first == 1 && (LT.second.getScalarSizeInBits() != 8 ||
+                            LT.second.getVectorNumElements() <= 256)) {
+        VectorType *IdxTy =
+            getVRGatherIndexType(LT.second, *ST, Tp->getContext());
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
         return IndexCost +
                getRISCVInstructionCost(RISCV::VRGATHER_VV, LT.second, CostKind);
@@ -560,9 +561,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       // 2 x (vrgather + cost of generating the mask constant) + cost of mask
       // register for the second vrgather. We model this for an unknown
       // (shuffle) mask.
-      if (LT.second.isFixedLengthVector() && LT.first == 1 &&
-          (LT.second.getScalarSizeInBits() != 8 ||
-           LT.second.getVectorNumElements() <= 256)) {
+      if (LT.first == 1 && (LT.second.getScalarSizeInBits() != 8 ||
+                            LT.second.getVectorNumElements() <= 256)) {
         auto &C = Tp->getContext();
         auto EC = Tp->getElementCount();
         VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, C);
@@ -581,7 +581,6 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       // multiple destinations. Providing an accurate cost only for splits where
       // the element type remains the same.
       if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
-          LT.second.isFixedLengthVector() &&
           LT.second.getVectorElementType().getSizeInBits() ==
               Tp->getElementType()->getPrimitiveSizeInBits() &&
           LT.second.getVectorNumElements() <
