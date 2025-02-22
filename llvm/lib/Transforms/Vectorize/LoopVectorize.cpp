@@ -58,6 +58,7 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanHCFGBuilder.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
@@ -400,6 +401,11 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     "enable-early-exit-vectorization", cl::init(false), cl::Hidden,
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
+
+static cl::opt<bool> ExperimentalOLVInClassicPath(
+    "experimental-olv-in-classic-vect", cl::init(false), cl::Hidden,
+    cl::desc("Enable experimental outer-loop vectorization outside the "
+             "VPlan-native path."));
 
 // Likelyhood of bypassing the vectorized loop because assumptions about SCEV
 // variables not overflowing do not hold. See `emitSCEVChecks`.
@@ -1085,9 +1091,8 @@ public:
     assert(VF.isVector() &&
            "Profitable to scalarize relevant only for VF > 1.");
     assert(
-        TheLoop->isInnermost() &&
+        (TheLoop->isInnermost() || ExperimentalOLVInClassicPath) &&
         "cost-model should not be used for outer loops (in VPlan-native path)");
-
     auto Scalars = InstsToScalarize.find(VF);
     assert(Scalars != InstsToScalarize.end() &&
            "VF not yet analyzed for scalarization profitability");
@@ -1097,7 +1102,7 @@ public:
   /// Returns true if \p I is known to be uniform after vectorization.
   bool isUniformAfterVectorization(Instruction *I, ElementCount VF) const {
     assert(
-        TheLoop->isInnermost() &&
+        (TheLoop->isInnermost() || ExperimentalOLVInClassicPath) &&
         "cost-model should not be used for outer loops (in VPlan-native path)");
     // Pseudo probe needs to be duplicated for each unrolled iteration and
     // vector lane so that profiled loop trip count can be accurately
@@ -1117,7 +1122,7 @@ public:
   /// Returns true if \p I is known to be scalar after vectorization.
   bool isScalarAfterVectorization(Instruction *I, ElementCount VF) const {
     assert(
-        TheLoop->isInnermost() &&
+        (TheLoop->isInnermost() || ExperimentalOLVInClassicPath) &&
         "cost-model should not be used for outer loops (in VPlan-native path)");
     if (VF.isScalar())
       return true;
@@ -1190,7 +1195,7 @@ public:
   InstWidening getWideningDecision(Instruction *I, ElementCount VF) const {
     assert(VF.isVector() && "Expected VF to be a vector VF");
     assert(
-        TheLoop->isInnermost() &&
+        (TheLoop->isInnermost() || ExperimentalOLVInClassicPath) &&
         "cost-model should not be used for outer loops (in VPlan-native path)");
 
     std::pair<Instruction *, ElementCount> InstOnVF = std::make_pair(I, VF);
@@ -2205,7 +2210,7 @@ static bool isExplicitVecOuterLoop(Loop *OuterLp,
     return false;
   }
 
-  if (Hints.getInterleave() > 1) {
+  if (Hints.getInterleave() > 1 && EnableVPlanNativePath) {
     // TODO: Interleave support is future work.
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Interleave is not supported for "
                          "outer loops.\n");
@@ -2224,7 +2229,8 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
   // are stress testing the VPlan H-CFG construction, we collect the outermost
   // loop of every loop nest.
   if (L.isInnermost() || VPlanBuildStressTest ||
-      (EnableVPlanNativePath && isExplicitVecOuterLoop(&L, ORE))) {
+      ((EnableVPlanNativePath || ExperimentalOLVInClassicPath) &&
+       isExplicitVecOuterLoop(&L, ORE))) {
     LoopBlocksRPO RPOT(&L);
     RPOT.perform(LI);
     if (!containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI)) {
@@ -2932,7 +2938,7 @@ LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
 
 void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Fix widened non-induction PHIs by setting up the PHI operands.
-  if (EnableVPlanNativePath)
+  if (EnableVPlanNativePath || ExperimentalOLVInClassicPath)
     fixNonInductionPHIs(State);
 
   // After vectorization, the exit blocks of the original loop will have
@@ -3674,6 +3680,31 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       if (IsVectorizedMemAccessUse(&I, Ptr))
         HasUniformUse.insert(Ptr);
     }
+
+  if (!TheLoop->isInnermost()) {
+    SmallVector<Loop *> Loops(ArrayRef(TheLoop->getSubLoops()));
+    while (!Loops.empty()) {
+      auto *Lp = Loops.pop_back_val();
+      // Inner-loop inductions can be uniform, as well as their backedge value.
+      for (PHINode &Phi : Lp->getHeader()->phis())
+        if (Legal->isInvariant(&Phi)) {
+          AddToWorklistIfAllowed(&Phi);
+          auto *BackedgeVal = Phi.getIncomingValueForBlock(Lp->getLoopLatch());
+          assert(Legal->isInvariant(BackedgeVal));
+          if (auto *I = dyn_cast<Instruction>(BackedgeVal))
+            AddToWorklistIfAllowed(I);
+        }
+
+      // The exit condition of a inner loop can be uniform.
+      auto *Br = cast<BranchInst>(Lp->getLoopLatch()->getTerminator());
+      auto *ICmp = dyn_cast<ICmpInst>(Br->getCondition());
+      if (ICmp && Legal->isInvariant(ICmp->getOperand(0)) &&
+          Legal->isInvariant(ICmp->getOperand(1)))
+        AddToWorklistIfAllowed(ICmp);
+
+      Loops.append(Lp->getSubLoops().begin(), Lp->getSubLoops().end());
+    }
+  }
 
   // Add to the worklist any operands which have *only* uniform (e.g. lane 0
   // demanding) users.  Since loops are assumed to be in LCSSA form, this
@@ -6408,14 +6439,23 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
 bool LoopVectorizationCostModel::shouldConsiderInvariant(Value *Op) {
   if (!Legal->isInvariant(Op))
     return false;
+
   // Consider Op invariant, if it or its operands aren't predicated
   // instruction in the loop. In that case, it is not trivially hoistable.
   auto *OpI = dyn_cast<Instruction>(Op);
-  return !OpI || !TheLoop->contains(OpI) ||
-         (!isPredicatedInst(OpI) &&
-          (!isa<PHINode>(OpI) || OpI->getParent() != TheLoop->getHeader()) &&
-          all_of(OpI->operands(),
-                 [this](Value *Op) { return shouldConsiderInvariant(Op); }));
+  if (!OpI || !TheLoop->contains(OpI))
+    return true;
+
+  // Be pessimistic in case of inner loops and do not assume things are
+  // invariant. The approach below results in a endless loop in case a
+  // inner-loop header PHI is part of the operands.
+  if (!TheLoop->isInnermost())
+    return false;
+
+  return !isPredicatedInst(OpI) &&
+         (!isa<PHINode>(OpI) || OpI->getParent() != TheLoop->getHeader()) &&
+         all_of(OpI->operands(),
+                [this](Value *Op) { return shouldConsiderInvariant(Op); });
 }
 
 InstructionCost
@@ -7134,7 +7174,8 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
 }
 
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
-  assert(OrigLoop->isInnermost() && "Inner loop expected.");
+  assert((OrigLoop->isInnermost() || ExperimentalOLVInClassicPath) &&
+         "Inner loop expected.");
   CM.collectValuesToIgnore();
   CM.collectElementTypesForWidening();
 
@@ -7577,6 +7618,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
       BestPlan.getVectorLoopRegion()->getSingleSuccessor() !=
           BestPlan.getMiddleBlock();
   assert((BestFactor.Width == LegacyVF.Width || PlanForEarlyExitLoop ||
+          ExperimentalOLVInClassicPath ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop) ||
           planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
@@ -8265,7 +8307,7 @@ void VPRecipeBuilder::createHeaderMask() {
   BlockMaskCache[Header] = BlockMask;
 }
 
-VPValue *VPRecipeBuilder::getBlockInMask(BasicBlock *BB) const {
+VPValue *VPRecipeBuilder::getBlockInMask(const BasicBlock *BB) const {
   // Return the cached value.
   BlockMaskCacheTy::const_iterator BCEntryIt = BlockMaskCache.find(BB);
   assert(BCEntryIt != BlockMaskCache.end() &&
@@ -8986,7 +9028,8 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                                                         ElementCount MaxVF) {
-  assert(OrigLoop->isInnermost() && "Inner loop expected.");
+  assert((OrigLoop->isInnermost() || ExperimentalOLVInClassicPath) &&
+         "Inner loop expected.");
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -9295,6 +9338,141 @@ static void addExitUsersForFirstOrderRecurrences(
   }
 }
 
+// Called before visiting the first instruction in the entry block
+// of the inner-loop region.
+static void enterInnerLoopRegion(VPlanHCFGBuilder &HCFGBuilder,
+                                 VPRecipeBuilder &RecipeBuilder,
+                                 VPRegionBlock &Region, ScalarEvolution &SE,
+                                 const Loop *TheLoop, const LoopInfo &LI) {
+  VPBasicBlock *Entry = Region.getEntryBasicBlock();
+  const Loop *InnerLoop = LI.getLoopFor(HCFGBuilder.getIRBBForVPB(Entry));
+  assert(InnerLoop->isLoopSimplifyForm() && InnerLoop->getNumBackEdges() == 1 &&
+         InnerLoop->getExitingBlock());
+
+  // Handle the inner-loop header phis.
+  const BasicBlock *IRPreheader = InnerLoop->getLoopPreheader();
+  for (VPRecipeBase &R : Entry->phis()) {
+    // TODO: If the phi has only uniform users (can happen for inner-loop
+    // inductions), then creating a scalar phi instead would be
+    // beneficial, or even a scalar and a widened phi in case the inner-loop
+    // induction has uniform and non-uniform users.
+    auto *Phi = cast<VPWidenPHIRecipe>(&R);
+    auto *IRPhi = cast<PHINode>(Phi->getUnderlyingValue());
+    Phi->setOperand(0, RecipeBuilder.getVPValueOrAddLiveIn(
+                           IRPhi->getIncomingValueForBlock(IRPreheader)));
+
+    // This will ensure that this instruction is kept and not replaced when
+    // the entry block instructions are visited.
+    RecipeBuilder.setRecipe(IRPhi, Phi);
+  }
+
+  // Handle predication for the inner loop.
+  VPValue *PreheaderMask = RecipeBuilder.getBlockInMask(IRPreheader);
+  const SCEV *BTC = SE.getBackedgeTakenCount(InnerLoop);
+  bool NeedsActiveLaneMask =
+      !isa<SCEVCouldNotCompute>(BTC) && SE.isLoopInvariant(BTC, TheLoop);
+  if (NeedsActiveLaneMask) {
+    auto *InnerALM = new VPWidenPHIRecipe(nullptr);
+    if (!PreheaderMask)
+      PreheaderMask = Region.getPlan()->getOrAddLiveIn(
+          ConstantInt::getTrue(SE.getContext()));
+    // The backedge value will be filled in when the exit block of the
+    // region is visted.
+    InnerALM->addOperand(PreheaderMask);
+    InnerALM->insertBefore(*Entry, Entry->getFirstNonPhi());
+    RecipeBuilder.setBlockInMask(InnerLoop->getHeader(), InnerALM);
+  } else {
+    RecipeBuilder.setBlockInMask(InnerLoop->getHeader(), PreheaderMask);
+  }
+}
+
+// Called after the exiting block of the region is visited before
+// visiting the exit block.
+static void exitInnerLoopRegion(VPlanHCFGBuilder &HCFGBuilder,
+                                VPRecipeBuilder &RecipeBuilder,
+                                VPRegionBlock &Region) {
+
+  auto *Entry = Region.getEntryBasicBlock();
+  auto *Exiting = Region.getExitingBasicBlock();
+  const auto *IRHeader = HCFGBuilder.getIRBBForVPB(Entry);
+  const auto *IRBr =
+      cast<BranchInst>(HCFGBuilder.getIRBBForVPB(Exiting)->getTerminator());
+  bool ExitIfTrue = IRBr->getSuccessor(1) == IRHeader;
+
+  // Create the inner-loop exit condition and the backedge value for the
+  // inner-loop active-lane mask (if needed).
+  VPValue *ExitCond = RecipeBuilder.getVPValueOrAddLiveIn(IRBr->getCondition());
+  auto *ALM = dyn_cast_or_null<VPWidenPHIRecipe>(
+      RecipeBuilder.getBlockInMask(IRHeader));
+  VPBuilder Builder(Exiting, Exiting->end());
+  DebugLoc DL = IRBr->getDebugLoc();
+  if (ALM && ALM->getParent() == Entry) {
+    assert(!ALM->getUnderlyingValue() && ALM->getNumOperands() == 1);
+    if (ExitIfTrue)
+      ExitCond = Builder.createNot(ExitCond, DL);
+
+    auto *ALMBackedgeVal = Builder.createLogicalAnd(ALM, ExitCond, DL);
+    ALM->addOperand(ALMBackedgeVal);
+    auto *Any =
+        Builder.createNaryOp(VPInstruction::AnyOf, {ALMBackedgeVal}, DL);
+    ExitCond = Builder.createNot(Any, DL);
+  } else if (!ExitIfTrue) {
+    ExitCond = Builder.createNot(ExitCond, DL);
+  }
+  Builder.createNaryOp(VPInstruction::BranchOnCond, {ExitCond}, DL);
+
+  // Set the backedge values of the inner-loop header phis.
+  const auto *IRPreheader =
+      HCFGBuilder.getIRBBForVPB(Region.getSinglePredecessor());
+  for (VPRecipeBase &R : Entry->phis()) {
+    auto *Phi = cast<VPWidenPHIRecipe>(&R);
+    if (Phi == ALM)
+      continue;
+
+    auto *IRPhi = cast<PHINode>(Phi->getUnderlyingValue());
+    Phi->setOperand(1, RecipeBuilder.getVPValueOrAddLiveIn(
+                           IRPhi->getIncomingValueForBlock(IRBr->getParent())));
+  }
+
+  // Handle the LCSSA phis for inner-loop live-out values.
+  auto *ExitBlock = cast<VPBasicBlock>(Region.getSingleSuccessor());
+  for (VPRecipeBase &R : ExitBlock->phis()) {
+    auto *Phi = cast<VPWidenPHIRecipe>(&R);
+    auto *IRPhi = cast<PHINode>(Phi->getUnderlyingValue());
+    assert(Phi->getNumOperands() == 1);
+    RecipeBuilder.setRecipe(IRPhi, Phi);
+    VPValue *OutVal =
+        RecipeBuilder.getVPValueOrAddLiveIn(IRPhi->getIncomingValue(0));
+    VPRecipeBase *OutValDef = OutVal->getDefiningRecipe();
+    if (OutValDef && OutValDef->getParent()->getParent() == &Region && ALM &&
+        ALM->getParent() == Entry) {
+      // In case there is a inner-loop active-lane mask, the live out value of
+      // the inner loop for a vector must contain the values of the last
+      // iteration where that lane was active. For this, a new phi is created
+      // that passes through the value from the last iteration if the lane is
+      // inactive and the current one if not.
+      auto *PassthroughPhi = new VPWidenPHIRecipe(IRPhi);
+      PassthroughPhi->addOperand(
+          Region.getPlan()->getOrAddLiveIn(PoisonValue::get(IRPhi->getType())));
+      PassthroughPhi->insertBefore(*Entry, Entry->getFirstNonPhi());
+
+      auto *Select =
+          new VPInstruction(Instruction::Select, {ALM, OutVal, PassthroughPhi},
+                            OutValDef->getDebugLoc());
+      Select->insertAfter(OutValDef);
+
+      PassthroughPhi->addOperand(Select);
+      OutVal = Select;
+    }
+
+    Phi->setOperand(0, OutVal);
+  }
+
+  // The mask of the exit block should be that of the preheader.
+  RecipeBuilder.setBlockInMask(HCFGBuilder.getIRBBForVPB(ExitBlock),
+                               RecipeBuilder.getBlockInMask(IRPreheader));
+}
+
 VPlanPtr
 LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
@@ -9378,9 +9556,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   VPRegionBlock *LoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+
   BasicBlock *HeaderBB = OrigLoop->getHeader();
   bool NeedsMasks =
-      CM.foldTailByMasking() ||
+      CM.foldTailByMasking() || !OrigLoop->isInnermost() ||
       any_of(OrigLoop->blocks(), [this, HeaderBB](BasicBlock *BB) {
         bool NeedsBlends = BB != HeaderBB && !BB->phis().empty();
         return Legal->blockNeedsPredication(BB) || NeedsBlends;
@@ -9392,12 +9571,30 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       HeaderVPBB);
 
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
   VPBlockBase *PrevVPBB = nullptr;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+  for (VPBlockBase *VPBlock : RPOT) {
+    // Handle the entering into a new inner loop.
+    if (auto *Region = dyn_cast<VPRegionBlock>(VPBlock)) {
+      assert(ExperimentalOLVInClassicPath);
+      enterInnerLoopRegion(HCFGBuilder, RecipeBuilder, *Region, *PSE.getSE(),
+                           OrigLoop, *LI);
+
+      // The inner-loop region can keep its successor connection and should be
+      // connected to its RPO predecessor, but when visiting the entry block of
+      // the inner loop, there should be no connection to the RPO predecessor.
+      assert(Region->getNumSuccessors() == 1 && PrevVPBB &&
+             "Invalid inner loop (expected preheader and dedicated exit)");
+      VPBlockUtils::connectBlocks(PrevVPBB, Region);
+      PrevVPBB = nullptr;
+      continue;
+    }
+
+    VPBasicBlock *VPBB = cast<VPBasicBlock>(VPBlock);
+
     // Handle VPBBs down to the latch.
     if (VPBB == LoopRegion->getExiting()) {
       assert(!HCFGBuilder.getIRBBForVPB(VPBB) &&
@@ -9409,7 +9606,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     // Create mask based on the IR BB corresponding to VPBB.
     // TODO: Predicate directly based on VPlan.
     Builder.setInsertPoint(VPBB, VPBB->begin());
-    if (VPBB == HeaderVPBB) {
+    if (RecipeBuilder.hasBlockInMask(HCFGBuilder.getIRBBForVPB(VPBB))) {
+      Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
+    } else if (VPBB == HeaderVPBB) {
       Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
       RecipeBuilder.createHeaderMask();
     } else if (NeedsMasks) {
@@ -9429,7 +9628,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       // FIXME: Migrate code relying on the underlying instruction from VPlan0
       // to construct recipes below to not use the underlying instruction.
       if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe>(&R) ||
-          (isa<VPInstruction>(&R) && !UnderlyingValue))
+          (isa<VPInstruction>(&R) && !UnderlyingValue) ||
+          (isa<VPWidenPHIRecipe>(&R) &&
+           (!UnderlyingValue ||
+            RecipeBuilder.hasRecipe(cast<Instruction>(UnderlyingValue)))))
         continue;
 
       // FIXME: VPlan0, which models a copy of the original scalar loop, should
@@ -9451,6 +9653,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       Builder.setInsertPoint(SingleDef);
       SmallVector<VPValue *, 4> Operands;
       auto *Phi = dyn_cast<PHINode>(Instr);
+      if (Phi && RecipeBuilder.hasRecipe(Phi))
+        // Skip over LCSSA or inner-loop header phis.
+        continue;
+
       if (Phi && Phi->getParent() == HeaderBB) {
         // The backedge value will be added in fixHeaderPhis later.
         Operands.push_back(Plan->getOrAddLiveIn(
@@ -9496,6 +9702,20 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         assert(Recipe->getNumDefinedValues() == 0 &&
                "Unexpected multidef recipe");
       R.eraseFromParent();
+    }
+
+    // Handle the exit of a inner loop region.
+    if (auto *Region = VPBB->getParent();
+        Region && Region->getExiting() == VPBB) {
+      exitInnerLoopRegion(HCFGBuilder, RecipeBuilder, *Region);
+
+      if (PrevVPBB)
+        VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
+
+      // The region will already be connected to its single successor.
+      assert(Region->getNumSuccessors() == 1 && VPBB->getNumSuccessors() == 0);
+      PrevVPBB = nullptr;
+      continue;
     }
 
     // Flatten the CFG in the loop. Masks for blocks have already been generated
@@ -10459,9 +10679,6 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
 }
 
 bool LoopVectorizePass::processLoop(Loop *L) {
-  assert((EnableVPlanNativePath || L->isInnermost()) &&
-         "VPlan-native path is not enabled. Only process inner loops.");
-
   LLVM_DEBUG(dbgs() << "\nLV: Checking a loop in '"
                     << L->getHeader()->getParent()->getName() << "' from "
                     << L->getLocStr() << "\n");
@@ -10519,11 +10736,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // even evaluating whether vectorization is profitable. Since we cannot modify
   // the incoming IR, we need to build VPlan upfront in the vectorization
   // pipeline.
-  if (!L->isInnermost())
+  //
+  // The normal vectorization codepath now also has experimental support for
+  // outer-loop vectorization.
+  if (!L->isInnermost() && EnableVPlanNativePath)
     return processLoopInVPlanNativePath(L, PSE, LI, DT, &LVL, TTI, TLI, DB, AC,
                                         ORE, BFI, PSI, Hints, Requirements);
 
-  assert(L->isInnermost() && "Inner loop expected.");
+  assert((L->isInnermost() || ExperimentalOLVInClassicPath) &&
+         "Inner loop expected.");
 
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
   bool UseInterleaved = TTI->enableInterleavedAccessVectorization();
@@ -10533,7 +10754,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     UseInterleaved = EnableInterleavedMemAccesses;
 
   // Analyze interleaved memory accesses.
-  if (UseInterleaved)
+  if (UseInterleaved && L->isInnermost())
     IAI.analyzeInterleaving(useMaskedInterleavedAccesses(*TTI));
 
   if (LVL.hasUncountableEarlyExit()) {

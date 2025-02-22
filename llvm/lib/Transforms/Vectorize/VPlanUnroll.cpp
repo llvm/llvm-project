@@ -373,6 +373,28 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
+    if (auto *Any = dyn_cast<VPInstruction>(&R);
+        Any && Any->getOpcode() == VPInstruction::AnyOf) {
+      VPValue *Res = Any;
+      VPRecipeBase *FirstOr = nullptr;
+      for (unsigned Part = 1; Part != UF; ++Part) {
+        auto *NewAny = new VPInstruction(
+            VPInstruction::AnyOf, {getValueForPart(Any->getOperand(0), Part)},
+            Any->getDebugLoc());
+        NewAny->insertAfter(Res->getDefiningRecipe());
+        auto *Or = new VPInstruction(Instruction::Or, {Res, NewAny},
+                                     Any->getDebugLoc());
+        Or->insertAfter(NewAny->getDefiningRecipe());
+        ToSkip.insert(Or);
+        if (Part == 1)
+          FirstOr = Or;
+        Res = Or;
+      }
+      Any->getVPSingleValue()->replaceAllUsesWith(Res);
+      FirstOr->setOperand(0, Any);
+      continue;
+    }
+
     auto *SingleDef = dyn_cast<VPSingleDefRecipe>(&R);
     if (SingleDef && vputils::isUniformAcrossVFsAndUFs(SingleDef)) {
       addUniformForAllParts(SingleDef);
@@ -381,6 +403,21 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
 
     if (auto *H = dyn_cast<VPHeaderPHIRecipe>(&R)) {
       unrollHeaderPHIByUF(H, InsertPtForPhi);
+      continue;
+    }
+
+    // Handle inner-loop/region header phis. The backedge values will be set
+    // later. Phis not in a loop header can be unrolled like any other recipes,
+    // RPO makes sure the predecessors are all visited first.
+    VPRegionBlock *Region = R.getParent()->getParent();
+    if (auto *P = dyn_cast<VPWidenPHIRecipe>(&R);
+        P && Region->getEntryBasicBlock() == P->getParent()) {
+      auto InsertPt = std::next(R.getIterator());
+      for (unsigned Part = 1; Part != UF; ++Part) {
+        VPWidenPHIRecipe *Copy = P->clone();
+        Copy->insertBefore(*R.getParent(), InsertPt);
+        addRecipeForPart(&R, Copy, Part);
+      }
       continue;
     }
 
@@ -441,6 +478,22 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
     Unroller.remapOperands(&H, Part);
     Part++;
   }
+
+  // Remap operands of cloned inner-loop header phis to update backedge values,
+  // a problem unique to outer-loop vectorization.
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>>
+      DeepRPOT(Plan.getEntry());
+  for (VPRegionBlock *Region :
+       VPBlockUtils::blocksOnly<VPRegionBlock>(DeepRPOT))
+    for (VPRecipeBase &R : Region->getEntryBasicBlock()->phis())
+      if (auto *Phi = dyn_cast<VPWidenPHIRecipe>(&R)) {
+        if (Unroller.contains(Phi->getVPSingleValue())) {
+          Part = 1;
+          continue;
+        }
+        Unroller.remapOperands(&R, Part);
+        Part++;
+      }
 
   VPlanTransforms::removeDeadRecipes(Plan);
 }

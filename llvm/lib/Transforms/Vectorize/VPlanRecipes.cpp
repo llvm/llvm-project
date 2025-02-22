@@ -3594,10 +3594,25 @@ VPBasicBlock *VPWidenPHIRecipe::getIncomingBlock(unsigned I) {
   return Pred->getExitingBasicBlock();
 }
 
-void VPWidenPHIRecipe::execute(VPTransformState &State) {
-  assert(EnableVPlanNativePath &&
-         "Non-native vplans are not expected to have VPWidenPHIRecipes.");
+VPValue *
+VPWidenPHIRecipe::getIncomingValueForBlock(const VPBasicBlock *BB) const {
+  const VPBasicBlock *Parent = getParent();
+  const VPRegionBlock *Region = Parent->getParent();
+  if (Region && Region->getEntryBasicBlock() == Parent) {
+    if (Region->getSinglePredecessor() == BB)
+      return getOperand(0);
+    if (Region->getExitingBasicBlock() == BB)
+      return getOperand(1);
+  }
 
+  for (unsigned I = 0; I < Parent->getNumPredecessors(); I++)
+    if (Parent->getPredecessors()[I] == BB)
+      return getOperand(I);
+
+  return nullptr;
+}
+
+void VPWidenPHIRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   Value *Op0 = State.get(getOperand(0));
   Type *VecTy = Op0->getType();
@@ -3609,22 +3624,19 @@ void VPWidenPHIRecipe::execute(VPTransformState &State) {
 void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-PHI ";
-
-  auto *OriginalPhi = cast<PHINode>(getUnderlyingValue());
-  // Unless all incoming values are modeled in VPlan  print the original PHI
-  // directly.
-  // TODO: Remove once all VPWidenPHIRecipe instances keep all relevant incoming
-  // values as VPValues.
-  if (getNumOperands() != OriginalPhi->getNumOperands()) {
-    O << VPlanIngredient(OriginalPhi);
-    return;
-  }
-
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);
 }
 #endif
+
+InstructionCost VPWidenPHIRecipe::computeCost(ElementCount VF,
+                                              VPCostContext &Ctx) const {
+  if (getNumOperands() == 1)
+    return 0; // LCSSA Phis can be considered free.
+
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, TTI::TCK_RecipThroughput);
+}
 
 // TODO: It would be good to use the existing VPWidenPHIRecipe instead and
 // remove VPActiveLaneMaskPHIRecipe.

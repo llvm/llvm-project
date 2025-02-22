@@ -792,21 +792,65 @@ private:
 
 } // end anonymous namespace
 
+/// Return true if \p E is invariant with regards to the Loop \p L.
+/// If \p E is a recurrence around a inner loop of \p L, then the
+/// start and step of that inner loop recurrence must be invariant
+/// to \p L.
+static bool isInvariantToTheLoop(const Loop *L, ScalarEvolution &SE,
+                                 const SCEV *E) {
+  if (SE.isLoopInvariant(E, L))
+    return true;
+
+  if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(E);
+      AddRec && L != AddRec->getLoop() && L->contains(AddRec->getLoop())) {
+    for (auto *Op : AddRec->operands())
+      if (!isInvariantToTheLoop(L, SE, Op))
+        return false;
+
+    return true;
+  }
+
+  return false;
+}
+
 /// Try to compute a constant stride for \p AR. Used by getPtrStride and
 /// isNoWrap.
 static std::optional<int64_t>
 getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
                     Value *Ptr, PredicatedScalarEvolution &PSE) {
-  // The access function must stride over the innermost loop.
+  // The access function must stride over the queried loop.
   if (Lp != AR->getLoop()) {
-    LLVM_DEBUG({
-      dbgs() << "LAA: Bad stride - Not striding over innermost loop ";
-      if (Ptr)
-        dbgs() << *Ptr << " ";
+    assert(!Lp->isInnermost() && Lp->contains(AR->getLoop()) &&
+           "Classic SE should have detected invariance");
+    while (AR && Lp != AR->getLoop()) {
+      if (isInvariantToTheLoop(Lp, *PSE.getSE(), AR))
+        return {0};
 
-      dbgs() << "SCEV: " << *AR << "\n";
-    });
-    return std::nullopt;
+      const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
+      if (!isInvariantToTheLoop(Lp, *PSE.getSE(), Step)) {
+        LLVM_DEBUG({
+          dbgs() << "LAA: Bad stride - Depends on inner loop ";
+          if (Ptr)
+            dbgs() << *Ptr << " ";
+
+          dbgs() << "SCEV: " << *AR << "\n";
+        });
+        return std::nullopt;
+      }
+
+      AR = dyn_cast<SCEVAddRecExpr>(AR->getStart());
+    }
+
+    if (!AR || Lp != AR->getLoop()) {
+      LLVM_DEBUG({
+        dbgs() << "LAA: Bad stride - Strides over inner loop ";
+        if (Ptr)
+          dbgs() << *Ptr << " ";
+
+        dbgs() << "SCEV: " << *AR << "\n";
+      });
+      return std::nullopt;
+    }
   }
 
   // Check the step is constant.
@@ -2365,8 +2409,9 @@ bool LoopAccessInfo::canAnalyzeLoop() {
                     << TheLoop->getHeader()->getParent()->getName() << "' from "
                     << TheLoop->getLocStr() << "\n");
 
-  // We can only analyze innermost loops.
-  if (!TheLoop->isInnermost()) {
+  // We can only analyze innermost loops if no memory dependency checks
+  // are needed.
+  if (!TheLoop->isInnermost() && !TheLoop->isAnnotatedParallel()) {
     LLVM_DEBUG(dbgs() << "LAA: loop is not the innermost loop\n");
     recordAnalysis("NotInnerMostLoop") << "loop is not the innermost loop";
     return false;
@@ -2586,6 +2631,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
                << "checks.\n");
     return true;
   }
+
+  assert(TheLoop->isInnermost());
 
   for (LoadInst *LD : Loads) {
     Value *Ptr = LD->getPointerOperand();
@@ -2812,7 +2859,7 @@ bool LoopAccessInfo::isInvariant(Value *V) const {
   if (!SE->isSCEVable(V->getType()))
     return false;
   const SCEV *S = SE->getSCEV(V);
-  return SE->isLoopInvariant(S, TheLoop);
+  return isInvariantToTheLoop(TheLoop, *SE, S);
 }
 
 /// If \p Ptr is a GEP, which has a loop-variant operand, return that operand.
