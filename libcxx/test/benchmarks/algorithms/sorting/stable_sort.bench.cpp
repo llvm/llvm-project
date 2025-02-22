@@ -77,9 +77,9 @@ int main(int argc, char** argv) {
     bm.operator()<std::deque<int>>("rng::stable_sort(deque<int>) (" #name ")", std::ranges::stable_sort, gen1);        \
   } while (false)
 
-    BENCH(support::quickstable_sort_adversarial_data, "qstable_sort adversarial");
-    BENCH(support::ascending_stable_sorted_data, "ascending");
-    BENCH(support::descending_stable_sorted_data, "descending");
+    BENCH(support::quicksort_adversarial_data, "qsort adversarial");
+    BENCH(support::ascending_sorted_data, "ascending");
+    BENCH(support::descending_sorted_data, "descending");
     BENCH(support::pipe_organ_data, "pipe-organ");
     BENCH(support::heap_data, "heap");
     BENCH(support::shuffled_data, "shuffled");
