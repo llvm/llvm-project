@@ -502,10 +502,9 @@ define i1 @nonnull3B(ptr %a, i1 %control) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(ptr [[LOAD]]) ]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8, !nonnull [[META6]], !noundef [[META6]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       not_taken:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -582,16 +581,8 @@ not_taken:
 }
 
 define void @nonnull_only_ephemeral_use(ptr %p) {
-; DEFAULT-LABEL: @nonnull_only_ephemeral_use(
-; DEFAULT-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[A]], null
-; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; DEFAULT-NEXT:    ret void
-;
-; BUNDLES-LABEL: @nonnull_only_ephemeral_use(
-; BUNDLES-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[A]]) ]
-; BUNDLES-NEXT:    ret void
+; CHECK-LABEL: @nonnull_only_ephemeral_use(
+; CHECK-NEXT:    ret void
 ;
   %a = load ptr, ptr %p
   %cmp = icmp ne ptr %a, null
