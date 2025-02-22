@@ -732,6 +732,11 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         DiagDecl = CD = Inherited;
     }
 
+    // Silently reject constructors of invalid classes. The invalid class
+    // has been rejected elsewhere before.
+    if (CD && CD->getParent()->isInvalidDecl())
+      return false;
+
     // FIXME: If DiagDecl is an implicitly-declared special member function
     // or an inheriting constructor, we should be much more explicit about why
     // it's not constexpr.
