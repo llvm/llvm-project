@@ -126,7 +126,7 @@ countl_zero(T value) {
 }
 #else
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, unsigned int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countl_zero(T value) {
   if (!value)
     return cpp::numeric_limits<T>::digits;
