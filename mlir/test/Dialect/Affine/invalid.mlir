@@ -25,7 +25,7 @@ func.func @affine_load_invalid_dim(%M : memref<10xi32>) {
   "unknown"() ({
   ^bb0(%arg: index):
     affine.load %M[%arg] : memref<10xi32>
-    // expected-error@-1 {{index must be a valid dimension or symbol identifier}}
+    // expected-error@-1 {{op operand cannot be used as a dimension id}}
     cf.br ^bb1
   ^bb1:
     cf.br ^bb1
@@ -535,7 +535,7 @@ func.func @dynamic_dimension_index() {
     %idx = "unknown.test"() : () -> (index)
     %memref = "unknown.test"() : () -> memref<?x?xf32>
     %dim = memref.dim %memref, %idx : memref<?x?xf32>
-    // expected-error @below {{op index must be a valid dimension or symbol identifier}}
+    // expected-error@below {{op operand cannot be used as a dimension id}}
     affine.load %memref[%dim, %dim] : memref<?x?xf32>
     "unknown.terminator"() : () -> ()
   }) : () -> ()
