@@ -165,11 +165,11 @@ enum class RootParameterType : uint32_t {
 ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
-enum class ShaderVisibilityFlag : uint32_t {
+enum class ShaderVisibility : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-ArrayRef<EnumEntry<ShaderVisibilityFlag>> getShaderVisibilityFlags();
+ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
 
 PartType parsePartType(StringRef S);
 
@@ -565,8 +565,6 @@ struct RootConstants {
   uint32_t RegisterSpace = 0;
   uint32_t Num32BitValues = 0;
 
-  RootConstants() = default;
-
   void swapBytes() {
     sys::swapByteOrder(ShaderRegister);
     sys::swapByteOrder(RegisterSpace);
@@ -579,16 +577,14 @@ struct RootParameter {
   union {
     dxbc::RootConstants Constants;
   };
-  dxbc::ShaderVisibilityFlag ShaderVisibility;
+  dxbc::ShaderVisibility ShaderVisibility;
 
   RootParameter() {
-    Constants = RootConstants();
     ParameterType = dxbc::RootParameterType::Empty;
-    ShaderVisibility = dxbc::ShaderVisibilityFlag::Empty;
+    ShaderVisibility = dxbc::ShaderVisibility::Empty;
   }
 
   void swapBytes() {
-
     sys::swapByteOrder(ParameterType);
     sys::swapByteOrder(ShaderVisibility);
     switch (ParameterType) {
@@ -620,14 +616,14 @@ struct RootSignatureValidations {
     return (Version == 1 || Version == 2);
   }
 
-  static bool isValidParameterType(dxbc::RootParameterType Flag) {
+  static bool isValidParameterType(dxbc::RootParameterType Type) {
     // RootParameterType::Empty is the higest value in the enum.
-    return Flag < dxbc::RootParameterType::Empty;
+    return Type < dxbc::RootParameterType::Empty;
   }
 
-  static bool isValidShaderVisibility(dxbc::ShaderVisibilityFlag Flag) {
+  static bool isValidShaderVisibility(dxbc::ShaderVisibility Visibility) {
     // ShaderVisibilityFlag::Empty is the higest value in the enum.
-    return Flag < dxbc::ShaderVisibilityFlag::Empty;
+    return Visibility < dxbc::ShaderVisibility::Empty;
   }
 };
 
