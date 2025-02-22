@@ -19,7 +19,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPUMCResourceInfo.h"
-#include "AMDGPUResourceUsageAnalysis.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
@@ -664,8 +663,10 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->switchSection(ConfigSection);
   }
 
-  const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
-      ResourceUsage->getResourceInfo();
+  const SIMachineFunctionInfo *SIMFI = MF.getInfo<SIMachineFunctionInfo>();
+  assert(SIMFI->ResourceInfo.has_value());
+  const SIMachineFunctionInfo::SIFunctionResourceInfo &Info =
+      SIMFI->ResourceInfo.value();
   RI.gatherResourceInfo(MF, Info, OutContext);
 
   if (MFI->isModuleEntryFunction()) {
