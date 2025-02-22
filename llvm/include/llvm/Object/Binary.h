@@ -189,7 +189,7 @@ DEFINE_ISA_CONVERSION_FUNCTIONS(Binary, LLVMBinaryRef)
 /// Create a Binary from Source, autodetecting the file type.
 ///
 /// @param Source The data to create the Binary from.
-Expected<std::unique_ptr<Binary>> createBinary(MemoryBufferRef Source,
+Expected<std::unique_ptr<Binary>> createBinary(const MemoryBufferRef &Source,
                                                LLVMContext *Context = nullptr,
                                                bool InitContent = true);
 
