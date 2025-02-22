@@ -2984,13 +2984,13 @@ static bool isCandidatePatchable(const MachineBasicBlock &MBB) {
 }
 
 static bool isMIReadsReg(const MachineInstr &MI, const TargetRegisterInfo *TRI,
-                         unsigned RegNo) {
+                         MCRegister RegNo) {
   return MI.readsRegister(RegNo, TRI) ||
          MI.getDesc().hasImplicitUseOfPhysReg(RegNo);
 }
 
 static bool isMIModifiesReg(const MachineInstr &MI,
-                            const TargetRegisterInfo *TRI, unsigned RegNo) {
+                            const TargetRegisterInfo *TRI, MCRegister RegNo) {
   return MI.modifiesRegister(RegNo, TRI) ||
          MI.getDesc().hasImplicitDefOfPhysReg(RegNo);
 }
@@ -3005,7 +3005,7 @@ static bool cannotInsertTailCall(const MachineBasicBlock &MBB) {
   // that can be used for expanding PseudoTAIL instruction,
   // then we cannot insert tail call.
   const TargetSubtargetInfo &STI = MBB.getParent()->getSubtarget();
-  unsigned TailExpandUseRegNo =
+  MCRegister TailExpandUseRegNo =
       RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
   for (const MachineInstr &MI : MBB) {
     if (isMIReadsReg(MI, STI.getRegisterInfo(), TailExpandUseRegNo))

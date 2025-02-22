@@ -3495,7 +3495,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
     // The Standard mandates shrink_to_fit() does not increase the capacity.
     // With equal capacity keep the existing buffer. This avoids extra work
     // due to swapping the elements.
-    if (__allocation.count - 1 > capacity()) {
+    if (__allocation.count - 1 >= capacity()) {
       __alloc_traits::deallocate(__alloc_, __allocation.ptr, __allocation.count);
       return;
     }
