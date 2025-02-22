@@ -60,13 +60,12 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ; CI-NEXT:    s_mov_b64 vcc, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v1, s0
-; CI-NEXT:    s_mov_b32 s0, 0
-; CI-NEXT:    v_div_fmas_f32 v1, v1, v1, v1
 ; CI-NEXT:    v_mov_b32_e32 v2, 0x7b
+; CI-NEXT:    v_div_fmas_f32 v1, v1, v1, v1
 ; CI-NEXT:    s_mov_b32 m0, -1
+; CI-NEXT:    s_mov_b64 s[0:1], 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    s_mov_b32 s1, s0
 ; CI-NEXT:    ds_write_b32 v0, v2 offset:12
 ; CI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
@@ -143,10 +142,9 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_div_fmas_f32 v0, v0, v0, v0
-; CI-NEXT:    s_mov_b32 s0, 0
+; CI-NEXT:    s_mov_b64 s[0:1], 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    s_mov_b32 s1, s0
 ; CI-NEXT:    ds_write_b32 v2, v1
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
@@ -533,14 +531,13 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; CI-NEXT:    s_mov_b64 vcc, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v1, s0
-; CI-NEXT:    s_mov_b32 s0, 0
-; CI-NEXT:    v_div_fmas_f32 v1, v1, v1, v1
 ; CI-NEXT:    v_mov_b32_e32 v2, 0x7b
+; CI-NEXT:    v_div_fmas_f32 v1, v1, v1, v1
 ; CI-NEXT:    v_mov_b32_e32 v3, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
+; CI-NEXT:    s_mov_b64 s[0:1], 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    s_mov_b32 s1, s0
 ; CI-NEXT:    ds_write2_b32 v0, v2, v3 offset1:1
 ; CI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; CI-NEXT:    s_waitcnt vmcnt(0)

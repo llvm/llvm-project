@@ -20,7 +20,7 @@
 #include <type_traits>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTCOMPLEXTOSTANDARD
+#define GEN_PASS_DEF_CONVERTCOMPLEXTOSTANDARDPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -1070,11 +1070,9 @@ void mlir::populateComplexToStandardConversionPatterns(
 
 namespace {
 struct ConvertComplexToStandardPass
-    : public impl::ConvertComplexToStandardBase<ConvertComplexToStandardPass> {
-  ConvertComplexToStandardPass() = default;
-  ConvertComplexToStandardPass(const ConvertComplexToStandardOptions &options)
-      : impl::ConvertComplexToStandardBase<ConvertComplexToStandardPass>(
-            options) {}
+    : public impl::ConvertComplexToStandardPassBase<
+          ConvertComplexToStandardPass> {
+  using Base::Base;
 
   void runOnOperation() override;
 };
@@ -1092,12 +1090,3 @@ void ConvertComplexToStandardPass::runOnOperation() {
     signalPassFailure();
 }
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertComplexToStandardPass() {
-  return std::make_unique<ConvertComplexToStandardPass>();
-}
-
-std::unique_ptr<Pass> mlir::createConvertComplexToStandardPass(
-    ConvertComplexToStandardOptions options) {
-  return std::make_unique<ConvertComplexToStandardPass>(std::move(options));
-}

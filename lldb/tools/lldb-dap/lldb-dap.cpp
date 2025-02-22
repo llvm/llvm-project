@@ -14,45 +14,59 @@
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBFile.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/Socket.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/UriParser.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Base64.h"
-#include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <array>
-#include <cassert>
-#include <climits>
-#include <cstdarg>
+#include <condition_variable>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
+#include <fstream>
+#include <iostream>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <ostream>
 #include <set>
+#include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #if defined(_WIN32)
@@ -68,6 +82,7 @@
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 #endif
 
@@ -83,6 +98,9 @@ typedef int socklen_t;
 #endif
 
 using namespace lldb_dap;
+using lldb_private::NativeSocket;
+using lldb_private::Socket;
+using lldb_private::Status;
 
 namespace {
 using namespace llvm::opt;
@@ -142,43 +160,6 @@ lldb::SBValueList *GetTopLevelScope(DAP &dap, int64_t variablesReference) {
   }
 }
 
-SOCKET AcceptConnection(std::ofstream *log, int portno) {
-  // Accept a socket connection from any host on "portno".
-  SOCKET newsockfd = -1;
-  struct sockaddr_in serv_addr, cli_addr;
-  SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) {
-    if (log)
-      *log << "error: opening socket (" << strerror(errno) << ")" << std::endl;
-  } else {
-    memset((char *)&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    // serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    serv_addr.sin_port = htons(portno);
-    if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-      if (log)
-        *log << "error: binding socket (" << strerror(errno) << ")"
-             << std::endl;
-    } else {
-      listen(sockfd, 5);
-      socklen_t clilen = sizeof(cli_addr);
-      newsockfd =
-          llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, sockfd,
-                                      (struct sockaddr *)&cli_addr, &clilen);
-      if (newsockfd < 0)
-        if (log)
-          *log << "error: accept (" << strerror(errno) << ")" << std::endl;
-    }
-#if defined(_WIN32)
-    closesocket(sockfd);
-#else
-    close(sockfd);
-#endif
-  }
-  return newsockfd;
-}
-
 std::vector<const char *> MakeArgv(const llvm::ArrayRef<std::string> &strs) {
   // Create and return an array of "const char *", one for each C string in
   // "strs" and terminate the list with a NULL. This can be used for argument
@@ -228,18 +209,6 @@ void SendContinuedEvent(DAP &dap) {
   body.try_emplace("allThreadsContinued", true);
   event.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(event)));
-}
-
-// Send a "terminated" event to indicate the process is done being
-// debugged.
-void SendTerminatedEvent(DAP &dap) {
-  // Prevent races if the process exits while we're being asked to disconnect.
-  llvm::call_once(dap.terminated_event_flag, [&] {
-    dap.RunTerminateCommands();
-    // Send a "terminated" event
-    llvm::json::Object event(CreateTerminatedEventObject(dap.target));
-    dap.SendJSON(llvm::json::Value(std::move(event)));
-  });
 }
 
 // Send a thread stopped event for all threads as long as the process
@@ -413,6 +382,7 @@ void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
 }
 
 void ProgressEventThreadFunction(DAP &dap) {
+  llvm::set_thread_name(dap.name + ".progress_handler");
   lldb::SBListener listener("lldb-dap.progress.listener");
   dap.debugger.GetBroadcaster().AddListener(
       listener, lldb::SBDebugger::eBroadcastBitProgress |
@@ -447,8 +417,10 @@ void ProgressEventThreadFunction(DAP &dap) {
 // them prevent multiple threads from writing simultaneously so no locking
 // is required.
 void EventThreadFunction(DAP &dap) {
+  llvm::set_thread_name(dap.name + ".event_handler");
   lldb::SBEvent event;
   lldb::SBListener listener = dap.debugger.GetListener();
+  dap.broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
@@ -513,7 +485,7 @@ void EventThreadFunction(DAP &dap) {
               // launch.json
               dap.RunExitCommands();
               SendProcessExitedEvent(dap, process);
-              SendTerminatedEvent(dap);
+              dap.SendTerminatedEvent();
               done = true;
             }
             break;
@@ -1261,41 +1233,12 @@ void request_disconnect(DAP &dap, const llvm::json::Object &request) {
   bool defaultTerminateDebuggee = dap.is_attach ? false : true;
   bool terminateDebuggee =
       GetBoolean(arguments, "terminateDebuggee", defaultTerminateDebuggee);
-  lldb::SBProcess process = dap.target.GetProcess();
-  auto state = process.GetState();
-  switch (state) {
-  case lldb::eStateInvalid:
-  case lldb::eStateUnloaded:
-  case lldb::eStateDetached:
-  case lldb::eStateExited:
-    break;
-  case lldb::eStateConnected:
-  case lldb::eStateAttaching:
-  case lldb::eStateLaunching:
-  case lldb::eStateStepping:
-  case lldb::eStateCrashed:
-  case lldb::eStateSuspended:
-  case lldb::eStateStopped:
-  case lldb::eStateRunning:
-    dap.debugger.SetAsync(false);
-    lldb::SBError error = terminateDebuggee ? process.Kill() : process.Detach();
-    if (!error.Success())
-      EmplaceSafeString(response, "error", error.GetCString());
-    dap.debugger.SetAsync(true);
-    break;
-  }
-  SendTerminatedEvent(dap);
+
+  lldb::SBError error = dap.Disconnect(terminateDebuggee);
+  if (error.Fail())
+    EmplaceSafeString(response, "error", error.GetCString());
+
   dap.SendJSON(llvm::json::Value(std::move(response)));
-  if (dap.event_thread.joinable()) {
-    dap.broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
-    dap.event_thread.join();
-  }
-  if (dap.progress_event_thread.joinable()) {
-    dap.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
-    dap.progress_event_thread.join();
-  }
-  dap.StopIO();
-  dap.disconnecting = true;
 }
 
 // "ExceptionInfoRequest": {
@@ -5052,10 +4995,10 @@ EXAMPLES:
   The debug adapter can be started in two modes.
 
   Running lldb-dap without any arguments will start communicating with the
-  parent over stdio. Passing a port number causes lldb-dap to start listening
-  for connections on that port.
+  parent over stdio. Passing a --connection URI will cause lldb-dap to listen 
+  for a connection in the specified mode.
 
-    lldb-dap -p <port>
+    lldb-dap --connection connection://localhost:<port>
 
   Passing --wait-for-debugger will pause the process at startup and wait for a
   debugger to attach to the process.
@@ -5147,6 +5090,159 @@ static int DuplicateFileDescriptor(int fd) {
 #endif
 }
 
+static llvm::Expected<std::pair<Socket::SocketProtocol, std::string>>
+validateConnection(llvm::StringRef conn) {
+  auto uri = lldb_private::URI::Parse(conn);
+
+  if (uri && (uri->scheme == "tcp" || uri->scheme == "connect" ||
+              !uri->hostname.empty() || uri->port)) {
+    return std::make_pair(
+        Socket::ProtocolTcp,
+        formatv("[{0}]:{1}", uri->hostname.empty() ? "0.0.0.0" : uri->hostname,
+                uri->port.value_or(0)));
+  }
+
+  if (uri && (uri->scheme == "unix" || uri->scheme == "unix-connect" ||
+              uri->path != "/")) {
+    return std::make_pair(Socket::ProtocolUnixDomain, uri->path.str());
+  }
+
+  return llvm::createStringError(
+      "Unsupported connection specifier, expected 'unix-connect:///path' or "
+      "'connect://[host]:port', got '%s'.",
+      conn.str().c_str());
+}
+
+static llvm::Error
+serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
+                std::ofstream *log, llvm::StringRef program_path,
+                const ReplMode default_repl_mode,
+                const std::vector<std::string> &pre_init_commands) {
+  Status status;
+  static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
+  if (status.Fail()) {
+    return status.takeError();
+  }
+
+  status = listener->Listen(name, /*backlog=*/5);
+  if (status.Fail()) {
+    return status.takeError();
+  }
+
+  std::string address = llvm::join(listener->GetListeningConnectionURI(), ", ");
+  if (log)
+    *log << "started with connection listeners " << address << "\n";
+
+  llvm::outs() << "Listening for: " << address << "\n";
+  // Ensure listening address are flushed for calles to retrieve the resolve
+  // address.
+  llvm::outs().flush();
+
+  static lldb_private::MainLoop g_loop;
+  llvm::sys::SetInterruptFunction([]() {
+    g_loop.AddPendingCallback(
+        [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  });
+  std::condition_variable dap_sessions_condition;
+  std::mutex dap_sessions_mutex;
+  std::map<Socket *, DAP *> dap_sessions;
+  unsigned int clientCount = 0;
+  auto handle = listener->Accept(g_loop, [=, &dap_sessions_condition,
+                                          &dap_sessions_mutex, &dap_sessions,
+                                          &clientCount](
+                                             std::unique_ptr<Socket> sock) {
+    std::string name = llvm::formatv("client_{0}", clientCount++).str();
+    if (log) {
+      auto now = std::chrono::duration<double>(
+          std::chrono::system_clock::now().time_since_epoch());
+      *log << llvm::formatv("{0:f9}", now.count()).str()
+           << " client connected: " << name << "\n";
+    }
+
+    // Move the client into a background thread to unblock accepting the next
+    // client.
+    std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
+                        &dap_sessions, sock = std::move(sock)]() {
+      llvm::set_thread_name(name + ".runloop");
+      StreamDescriptor input =
+          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
+      // Close the output last for the best chance at error reporting.
+      StreamDescriptor output =
+          StreamDescriptor::from_socket(sock->GetNativeSocket(), false);
+      DAP dap = DAP(name, program_path, log, std::move(input),
+                    std::move(output), default_repl_mode, pre_init_commands);
+
+      if (auto Err = dap.ConfigureIO()) {
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                    "Failed to configure stdout redirect: ");
+        return;
+      }
+
+      RegisterRequestCallbacks(dap);
+
+      {
+        std::scoped_lock lock(dap_sessions_mutex);
+        dap_sessions[sock.get()] = &dap;
+      }
+
+      if (auto Err = dap.Loop()) {
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                    "DAP session error: ");
+      }
+
+      if (log) {
+        auto now = std::chrono::duration<double>(
+            std::chrono::system_clock::now().time_since_epoch());
+        *log << llvm::formatv("{0:f9}", now.count()).str()
+             << " client closed: " << name << "\n";
+      }
+
+      std::unique_lock lock(dap_sessions_mutex);
+      dap_sessions.erase(sock.get());
+      std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
+    });
+    client.detach();
+  });
+
+  if (auto Err = handle.takeError()) {
+    return Err;
+  }
+
+  status = g_loop.Run();
+  if (status.Fail()) {
+    return status.takeError();
+  }
+
+  if (log)
+    *log << "lldb-dap server shutdown requested, disconnecting remaining "
+            "clients...\n";
+
+  bool client_failed = false;
+  {
+    std::scoped_lock lock(dap_sessions_mutex);
+    for (auto [sock, dap] : dap_sessions) {
+      auto error = dap->Disconnect();
+      if (error.Fail()) {
+        client_failed = true;
+        llvm::errs() << "DAP client " << dap->name
+                     << " disconnected failed: " << error.GetCString() << "\n";
+      }
+      // Close the socket to ensure the DAP::Loop read finishes.
+      sock->Close();
+    }
+  }
+
+  // Wait for all clients to finish disconnecting.
+  std::unique_lock lock(dap_sessions_mutex);
+  dap_sessions_condition.wait(lock, [&] { return dap_sessions.empty(); });
+
+  if (client_failed)
+    return llvm::make_error<llvm::StringError>(
+        "disconnecting all clients failed", llvm::inconvertibleErrorCode());
+
+  return llvm::Error::success();
+}
+
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
 #if !defined(__APPLE__)
@@ -5182,9 +5278,9 @@ int main(int argc, char *argv[]) {
     } else if (repl_mode_value == "command") {
       default_repl_mode = ReplMode::Command;
     } else {
-      llvm::errs()
-          << "'" << repl_mode_value
-          << "' is not a valid option, use 'variable', 'command' or 'auto'.\n";
+      llvm::errs() << "'" << repl_mode_value
+                   << "' is not a valid option, use 'variable', 'command' or "
+                      "'auto'.\n";
       return EXIT_FAILURE;
     }
   }
@@ -5217,15 +5313,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  int portno = -1;
-  if (auto *arg = input_args.getLastArg(OPT_port)) {
-    const auto *optarg = arg->getValue();
-    char *remainder;
-    portno = strtol(optarg, &remainder, 0);
-    if (remainder == optarg || *remainder != '\0') {
-      fprintf(stderr, "'%s' is not a valid port number.\n", optarg);
-      return EXIT_FAILURE;
-    }
+  std::string connection;
+  if (auto *arg = input_args.getLastArg(OPT_connection)) {
+    const auto *path = arg->getValue();
+    connection.assign(path);
   }
 
 #if !defined(_WIN32)
@@ -5253,72 +5344,75 @@ int main(int argc, char *argv[]) {
   auto terminate_debugger =
       llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
 
-  StreamDescriptor input;
-  StreamDescriptor output;
-  std::FILE *redirectOut = nullptr;
-  std::FILE *redirectErr = nullptr;
-  if (portno != -1) {
-    printf("Listening on port %i...\n", portno);
-    SOCKET socket_fd = AcceptConnection(log.get(), portno);
-    if (socket_fd < 0)
-      return EXIT_FAILURE;
+  std::vector<std::string> pre_init_commands;
+  for (const std::string &arg :
+       input_args.getAllArgValues(OPT_pre_init_command)) {
+    pre_init_commands.push_back(arg);
+  }
 
-    input = StreamDescriptor::from_socket(socket_fd, true);
-    output = StreamDescriptor::from_socket(socket_fd, false);
-  } else {
-#if defined(_WIN32)
-    // Windows opens stdout and stdin in text mode which converts \n to 13,10
-    // while the value is just 10 on Darwin/Linux. Setting the file mode to
-    // binary fixes this.
-    int result = _setmode(fileno(stdout), _O_BINARY);
-    assert(result);
-    result = _setmode(fileno(stdin), _O_BINARY);
-    UNUSED_IF_ASSERT_DISABLED(result);
-    assert(result);
-#endif
-
-    int stdout_fd = DuplicateFileDescriptor(fileno(stdout));
-    if (stdout_fd == -1) {
-      llvm::logAllUnhandledErrors(
-          llvm::errorCodeToError(llvm::errnoAsErrorCode()), llvm::errs(),
-          "Failed to configure stdout redirect: ");
+  if (!connection.empty()) {
+    auto maybeProtoclAndName = validateConnection(connection);
+    if (auto Err = maybeProtoclAndName.takeError()) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                  "Invalid connection: ");
       return EXIT_FAILURE;
     }
 
-    redirectOut = stdout;
-    redirectErr = stderr;
+    Socket::SocketProtocol protocol;
+    std::string name;
+    std::tie(protocol, name) = *maybeProtoclAndName;
+    if (auto Err = serveConnection(protocol, name, log.get(), program_path,
+                                   default_repl_mode, pre_init_commands)) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                  "Connection failed: ");
+      return EXIT_FAILURE;
+    }
 
-    input = StreamDescriptor::from_file(fileno(stdin), false);
-    output = StreamDescriptor::from_file(stdout_fd, false);
+    return EXIT_SUCCESS;
   }
 
-  DAP dap = DAP(program_path.str(), log.get(), default_repl_mode,
-                std::move(input), std::move(output));
+#if defined(_WIN32)
+  // Windows opens stdout and stdin in text mode which converts \n to 13,10
+  // while the value is just 10 on Darwin/Linux. Setting the file mode to
+  // binary fixes this.
+  int result = _setmode(fileno(stdout), _O_BINARY);
+  assert(result);
+  result = _setmode(fileno(stdin), _O_BINARY);
+  UNUSED_IF_ASSERT_DISABLED(result);
+  assert(result);
+#endif
+
+  int stdout_fd = DuplicateFileDescriptor(fileno(stdout));
+  if (stdout_fd == -1) {
+    llvm::logAllUnhandledErrors(
+        llvm::errorCodeToError(llvm::errnoAsErrorCode()), llvm::errs(),
+        "Failed to configure stdout redirect: ");
+    return EXIT_FAILURE;
+  }
+
+  StreamDescriptor input = StreamDescriptor::from_file(fileno(stdin), false);
+  StreamDescriptor output = StreamDescriptor::from_file(stdout_fd, false);
+
+  DAP dap = DAP("stdin/stdout", program_path, log.get(), std::move(input),
+                std::move(output), default_repl_mode, pre_init_commands);
 
   // stdout/stderr redirection to the IDE's console
-  if (auto Err = dap.ConfigureIO(redirectOut, redirectErr)) {
+  if (auto Err = dap.ConfigureIO(stdout, stderr)) {
     llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                "Failed to configure lldb-dap IO operations: ");
+                                "Failed to configure stdout redirect: ");
     return EXIT_FAILURE;
   }
 
   RegisterRequestCallbacks(dap);
 
-  for (const std::string &arg :
-       input_args.getAllArgValues(OPT_pre_init_command)) {
-    dap.pre_init_commands.push_back(arg);
-  }
-
   // used only by TestVSCode_redirection_to_console.py
   if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
     redirection_test();
 
-  bool CleanExit = true;
   if (auto Err = dap.Loop()) {
-    if (log)
-      *log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
-    CleanExit = false;
+    llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                "DAP session error: ");
+    return EXIT_FAILURE;
   }
-
-  return CleanExit ? EXIT_SUCCESS : EXIT_FAILURE;
+  return EXIT_SUCCESS;
 }
