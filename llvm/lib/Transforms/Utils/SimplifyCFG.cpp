@@ -74,6 +74,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LockstepReverseIterator.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -2499,7 +2500,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
 
   int ScanIdx = 0;
   SmallPtrSet<Value*,4> InstructionsToSink;
-  LockstepReverseIterator LRI(UnconditionalPreds);
+  LockstepReverseIterator<true> LRI(UnconditionalPreds);
   while (LRI.isValid() &&
          canSinkInstructions(*LRI, PHIOperands)) {
     LLVM_DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0]
@@ -2529,7 +2530,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
     // Okay, we *could* sink last ScanIdx instructions. But how many can we
     // actually sink before encountering instruction that is unprofitable to
     // sink?
-    auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
+    auto ProfitableToSinkInstruction = [&](LockstepReverseIterator<true> &LRI) {
       unsigned NumPHIInsts = 0;
       for (Use &U : (*LRI)[0]->operands()) {
         auto It = PHIOperands.find(&U);
