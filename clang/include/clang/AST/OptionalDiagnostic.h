@@ -54,7 +54,7 @@ public:
       // APFloat::toString would automatically print the shortest
       // representation which rounds to the correct value, but it's a bit
       // tricky to implement. Could use std::to_chars.
-      unsigned precision = llvm::APFloat::semanticsPrecision(F.getSemantics());
+      unsigned precision = F.getSemantics().precision;
       precision = (precision * 59 + 195) / 196;
       SmallVector<char, 32> Buffer;
       F.toString(Buffer, precision);

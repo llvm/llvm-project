@@ -52,8 +52,8 @@ llvm::Constant *clang::CodeGen::initializationPatternFor(CodeGenModule &CGM,
     return llvm::ConstantExpr::getIntToPtr(Int, PtrTy);
   }
   if (Ty->isFPOrFPVectorTy()) {
-    unsigned BitWidth = llvm::APFloat::semanticsSizeInBits(
-        Ty->getScalarType()->getFltSemantics());
+    unsigned BitWidth = 
+        Ty->getScalarType()->getFltSemantics().sizeInBits;
     llvm::APInt Payload(64, NaNPayload);
     if (BitWidth >= 64)
       Payload = llvm::APInt::getSplat(BitWidth, Payload);

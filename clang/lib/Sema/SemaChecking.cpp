@@ -10825,7 +10825,7 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
   // would automatically print the shortest representation, but it's a bit
   // tricky to implement.
   SmallString<16> PrettySourceValue;
-  unsigned precision = llvm::APFloat::semanticsPrecision(Value.getSemantics());
+  unsigned precision = Value.getSemantics().precision;
   precision = (precision * 59 + 195) / 196;
   Value.toString(PrettySourceValue, precision);
 
@@ -11403,8 +11403,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
     // Determine the number of precision bits in the
     // target floating point type.
-    unsigned int TargetPrecision = llvm::APFloatBase::semanticsPrecision(
-        Context.getFloatTypeSemantics(QualType(TargetBT, 0)));
+    unsigned int TargetPrecision = 
+        Context.getFloatTypeSemantics(QualType(TargetBT, 0)).precision;
 
     if (SourcePrecision > 0 && TargetPrecision > 0 &&
         SourcePrecision > TargetPrecision) {

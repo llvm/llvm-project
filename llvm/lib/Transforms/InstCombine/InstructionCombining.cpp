@@ -1454,7 +1454,7 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
   // This is the maximum number of inuse bits by the integer where the int -> fp
   // casts are exact.
   unsigned MaxRepresentableBits =
-      APFloat::semanticsPrecision(FPTy->getScalarType()->getFltSemantics());
+      FPTy->getScalarType()->getFltSemantics().precision;
 
   // Preserve known number of leading bits. This can allow us to trivial nsw/nuw
   // checks later on.

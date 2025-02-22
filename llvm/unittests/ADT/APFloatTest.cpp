@@ -832,7 +832,7 @@ TEST(APFloatTest, IsSmallestNormalized) {
     EXPECT_FALSE(APFloat::getZero(Semantics, false).isSmallestNormalized());
     EXPECT_FALSE(APFloat::getZero(Semantics, true).isSmallestNormalized());
 
-    if (APFloat::semanticsHasNaN(Semantics)) {
+    if (Semantics.hasNaN()) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
       EXPECT_FALSE(APFloat::getInf(Semantics, false).isSmallestNormalized());
@@ -2562,7 +2562,7 @@ TEST(APFloatTest, isInfinity) {
   for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
     const fltSemantics &Semantics =
         APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(I));
-    if (APFloat::semanticsHasInf(Semantics)) {
+    if (Semantics.hasInf()) {
       EXPECT_TRUE(APFloat::getInf(Semantics).isInfinity());
     }
   }
@@ -2580,7 +2580,7 @@ TEST(APFloatTest, isNaN) {
   for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
     const fltSemantics &Semantics =
         APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(I));
-    if (APFloat::semanticsHasNaN(Semantics)) {
+    if (Semantics.hasNaN()) {
       EXPECT_TRUE(APFloat::getNaN(Semantics).isNaN());
     }
   }
@@ -7331,9 +7331,9 @@ TEST(APFloatTest, getExactLog2) {
       continue;
     }
 
-    int MinExp = APFloat::semanticsMinExponent(Semantics);
-    int MaxExp = APFloat::semanticsMaxExponent(Semantics);
-    int Precision = APFloat::semanticsPrecision(Semantics);
+    int MinExp = Semantics.minExponent;
+    int MaxExp = Semantics.maxExponent;
+    int Precision = Semantics.precision;
 
     EXPECT_EQ(0, One.getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat(Semantics, "3.0").getExactLog2());
@@ -7362,7 +7362,7 @@ TEST(APFloatTest, getExactLog2) {
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2Abs());
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2Abs());
 
-    if (APFloat::semanticsHasNaN(Semantics)) {
+    if (Semantics.hasNaN()) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
       EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2());
@@ -7487,9 +7487,9 @@ TEST(APFloatTest, Float8E8M0FNUGetExactLog2) {
   EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2());
   EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2Abs());
 
-  int MinExp = APFloat::semanticsMinExponent(Semantics);
-  int MaxExp = APFloat::semanticsMaxExponent(Semantics);
-  int Precision = APFloat::semanticsPrecision(Semantics);
+  int MinExp = Semantics.minExponent;;
+  int MaxExp = Semantics.maxExponent;
+  int Precision = Semantics.precision;
 
   // Values below the minExp getting capped to minExp.
   EXPECT_EQ(-127,

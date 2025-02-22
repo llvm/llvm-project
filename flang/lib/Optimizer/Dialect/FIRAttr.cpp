@@ -171,7 +171,7 @@ static mlir::Attribute parseFirRealAttr(FIROpsDialect *dialect,
       return {};
     }
     const llvm::fltSemantics &sem = kindMap.getFloatSemantics(kind);
-    unsigned int numBits = llvm::APFloat::semanticsSizeInBits(sem);
+    unsigned int numBits = sem.sizeInBits;
     auto bits = llvm::APInt(numBits, hex.drop_front(), 16);
     value = llvm::APFloat(sem, bits);
   }

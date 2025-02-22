@@ -57591,7 +57591,7 @@ CastIntSETCCtoFP(MVT VT, ISD::CondCode CC, unsigned NumSignificantBitsLHS,
 
   // For cvt + signed compare we need lhs and rhs to be exactly representable as
   // a fp value.
-  unsigned FPPrec = APFloat::semanticsPrecision(Sem);
+  unsigned FPPrec = Sem.precision;
   if (FPPrec >= NumSignificantBitsLHS && FPPrec >= NumSignificantBitsRHS)
     return ISD::SINT_TO_FP;
 

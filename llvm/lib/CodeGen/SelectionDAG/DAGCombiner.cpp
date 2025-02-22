@@ -5680,7 +5680,7 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
         Type *InputTy = FPVT.getTypeForEVT(*DAG.getContext());
         const fltSemantics &Semantics = InputTy->getFltSemantics();
         uint32_t MinBitWidth =
-          APFloatBase::semanticsIntSizeInBits(Semantics, /*isSigned*/ true);
+          Semantics.intSizeInBits(/*isSigned*/ true);
         if (IntVT.getSizeInBits() >= MinBitWidth) {
           Unsigned = true;
           BW = PowerOf2Ceil(MinBitWidth);
@@ -17310,12 +17310,12 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
       // FDiv by pow2 will only decrease exponent.
       int MaxExp =
           N->getOpcode() == ISD::FDIV ? CurExp : (CurExp + MaxExpChange);
-      if (MinExp <= APFloat::semanticsMinExponent(APF.getSemantics()) ||
-          MaxExp >= APFloat::semanticsMaxExponent(APF.getSemantics()))
+      if (MinExp <= APF.getSemantics().minExponent ||
+          MaxExp >= APF.getSemantics().maxExponent)
         return false;
 
       // Finally make sure we actually know the mantissa for the float type.
-      int ThisMantissa = APFloat::semanticsPrecision(APF.getSemantics()) - 1;
+      int ThisMantissa = APF.getSemantics().precision - 1;
       if (!Mantissa)
         Mantissa = ThisMantissa;
 
@@ -18245,7 +18245,7 @@ static SDValue FoldIntToFPToInt(SDNode *N, const SDLoc &DL, SelectionDAG &DAG) {
 
   // We can only fold away the float conversion if the input range can be
   // represented exactly in the float range.
-  if (APFloat::semanticsPrecision(Sem) >= ActualSize) {
+  if (Sem.precision >= ActualSize) {
     if (VT.getScalarSizeInBits() > SrcVT.getScalarSizeInBits()) {
       unsigned ExtOp =
           IsInputSigned && IsOutputSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;

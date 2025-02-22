@@ -252,14 +252,10 @@ static const llvm::fltSemantics &getFloatSemantics(unsigned BitWidth) {
 // Determine whether two float semantics are equivalent
 static bool areEquivalent(const llvm::fltSemantics &LHS,
                           const llvm::fltSemantics &RHS) {
-  return (llvm::APFloat::semanticsPrecision(LHS) ==
-          llvm::APFloat::semanticsPrecision(RHS)) &&
-         (llvm::APFloat::semanticsMinExponent(LHS) ==
-          llvm::APFloat::semanticsMinExponent(RHS)) &&
-         (llvm::APFloat::semanticsMaxExponent(LHS) ==
-          llvm::APFloat::semanticsMaxExponent(RHS)) &&
-         (llvm::APFloat::semanticsSizeInBits(LHS) ==
-          llvm::APFloat::semanticsSizeInBits(RHS));
+  return (LHS.precision == RHS.precision) &&
+         (LHS.minExponent == RHS.minExponent) &&
+         (LHS.maxExponent == RHS.maxExponent) &&
+         (LSH.sizeInBits == RHS.sizeInBits);
 }
 
 class Z3Solver : public SMTSolver {
@@ -761,7 +757,7 @@ public:
 
   SMTExprRef mkFloat(const llvm::APFloat Float) override {
     SMTSortRef Sort =
-        getFloatSort(llvm::APFloat::semanticsSizeInBits(Float.getSemantics()));
+        getFloatSort(Float.getSemantics().sizeInBits);
 
     llvm::APSInt Int = llvm::APSInt(Float.bitcastToAPInt(), false);
     SMTExprRef Z3Int = mkBitvector(Int, Int.getBitWidth());
