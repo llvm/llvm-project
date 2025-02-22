@@ -1734,3 +1734,8 @@ namespace DeadUpcast {
   static_assert(foo(), "");
 }
 #endif
+
+namespace CtorOfInvalidClass {
+  constexpr struct { Unknown U; } InvalidCtor; // both-error {{unknown type name 'Unknown'}} \
+                                               // both-error {{must be initialized by a constant expression}}
+}
