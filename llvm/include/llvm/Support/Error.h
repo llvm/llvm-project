@@ -679,22 +679,22 @@ private:
 
   storage_type *getStorage() {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<storage_type *>(&TStorage);
+    return &TStorage;
   }
 
   const storage_type *getStorage() const {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<const storage_type *>(&TStorage);
+    return &TStorage;
   }
 
   error_type *getErrorStorage() {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<error_type *>(&ErrorStorage);
+    return &ErrorStorage;
   }
 
   const error_type *getErrorStorage() const {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<const error_type *>(&ErrorStorage);
+    return &ErrorStorage;
   }
 
   // Used by ExpectedAsOutParameter to reset the checked flag.
