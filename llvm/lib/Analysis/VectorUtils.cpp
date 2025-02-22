@@ -413,6 +413,36 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
+                             std::pair<int, int> SrcInfo[2]) {
+  int SignalValue = NumElts * 2;
+  SrcInfo[0] = {-1, SignalValue};
+  SrcInfo[1] = {-1, SignalValue};
+  for (unsigned i = 0; i != Mask.size(); ++i) {
+    int M = Mask[i];
+    if (M < 0)
+      continue;
+    int Src = M >= (int)NumElts;
+    int Diff = (int)i - (M % NumElts);
+    bool Match = false;
+    for (int j = 0; j < 2; j++) {
+      if (SrcInfo[j].first == -1) {
+        assert(SrcInfo[j].second == SignalValue);
+        SrcInfo[j].first = Src;
+        SrcInfo[j].second = Diff;
+      }
+      if (SrcInfo[j].first == Src && SrcInfo[j].second == Diff) {
+        Match = true;
+        break;
+      }
+    }
+    if (!Match)
+      return false;
+  }
+  assert(SrcInfo[0].first != -1 && "Must find one slide");
+  return true;
+}
+
 void llvm::narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                                  SmallVectorImpl<int> &ScaledMask) {
   assert(Scale > 0 && "Unexpected scaling factor");

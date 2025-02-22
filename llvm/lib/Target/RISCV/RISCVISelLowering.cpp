@@ -4563,31 +4563,8 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
 /// Is this mask representing a masked combination of two slides?
 static bool isMaskedSlidePair(ArrayRef<int> Mask,
                               std::pair<int, int> SrcInfo[2]) {
-  int NumElts = Mask.size();
-  int SignalValue = NumElts * 2;
-  SrcInfo[0] = {-1, SignalValue};
-  SrcInfo[1] = {-1, SignalValue};
-  for (unsigned i = 0; i != Mask.size(); ++i) {
-    int M = Mask[i];
-    if (M < 0)
-      continue;
-    int Src = M >= (int)NumElts;
-    int Diff = (int)i - (M % NumElts);
-    bool Match = false;
-    for (int j = 0; j < 2; j++) {
-      if (SrcInfo[j].first == -1) {
-        assert(SrcInfo[j].second == SignalValue);
-        SrcInfo[j].first = Src;
-        SrcInfo[j].second = Diff;
-      }
-      if (SrcInfo[j].first == Src && SrcInfo[j].second == Diff) {
-        Match = true;
-        break;
-      }
-    }
-    if (!Match)
-      return false;
-  }
+  if (!llvm::isMaskedSlidePair(Mask, Mask.size(), SrcInfo))
+    return false;
 
   // Avoid matching vselect idioms
   if (SrcInfo[0].second == 0 && SrcInfo[1].second == 0)
@@ -5607,7 +5584,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   std::pair<int, int> SrcInfo[2];
   unsigned RotateAmt;
   MVT RotateVT;
-  if (isMaskedSlidePair(Mask, SrcInfo) &&
+  if (::isMaskedSlidePair(Mask, SrcInfo) &&
       (isElementRotate(SrcInfo, NumElts) ||
        !isLegalBitRotate(Mask, VT, Subtarget, RotateVT, RotateAmt))) {
     SDValue Sources[2];
@@ -5967,7 +5944,7 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   std::pair<int, int> SrcInfo[2];
   int Dummy1, Dummy2;
   return ShuffleVectorInst::isReverseMask(M, NumElts) ||
-         (isMaskedSlidePair(M, SrcInfo) && isElementRotate(SrcInfo, NumElts)) ||
+         (::isMaskedSlidePair(M, SrcInfo) && isElementRotate(SrcInfo, NumElts)) ||
          isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget);
 }
 
