@@ -19,6 +19,8 @@ echo
 
 NINJA=$(xcrun -f ninja)
 
+export CLANG_CRASH_DIAGNOSTICS_DIR=${WORKSPACE}/.CLANG_CRASH_DIAGNOSTICS_DIR
+
 HOST_COMPILER_PATH=$(dirname $(xcrun -f clang))
 
 mkdir -p $BUILD_DIR && cd $_
