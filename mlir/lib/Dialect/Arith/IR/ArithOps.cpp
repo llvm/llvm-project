@@ -1518,6 +1518,27 @@ LogicalResult arith::TruncIOp::verify() {
 /// can be represented without precision loss.
 OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
   auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  if (auto extOp = getOperand().getDefiningOp<arith::ExtFOp>()) {
+    Value src = extOp.getIn();
+    auto srcType = cast<FloatType>(getElementTypeOrSelf(src.getType()));
+    auto intermediateType =
+        cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
+    // Check if the srcType is representable in the intermediateType.
+    if (llvm::APFloatBase::isRepresentableBy(
+            srcType.getFloatSemantics(),
+            intermediateType.getFloatSemantics())) {
+      // truncf(extf(a)) -> truncf(a)
+      if (srcType.getWidth() > resElemType.getWidth()) {
+        setOperand(src);
+        return getResult();
+      }
+
+      // truncf(extf(a)) -> a
+      if (srcType == resElemType)
+        return src;
+    }
+  }
+
   const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
