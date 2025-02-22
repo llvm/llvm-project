@@ -67,6 +67,7 @@ public:
       : string(cstr, ::LIBC_NAMESPACE::internal::string_length(cstr)) {}
   LIBC_INLINE string(size_t size_, char value) {
     resize(size_);
+    static_assert(sizeof(char) == sizeof(uint8_t));
     inline_memset((void *)buffer_, value, size_);
   }
 
