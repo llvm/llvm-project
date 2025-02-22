@@ -5181,7 +5181,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       RegisterRequestCallbacks(dap);
 
       {
-        std::scoped_lock lock(dap_sessions_mutex);
+        std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
         dap_sessions[sock.get()] = &dap;
       }
 
@@ -5197,7 +5197,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
              << " client closed: " << name << "\n";
       }
 
-      std::unique_lock lock(dap_sessions_mutex);
+      std::unique_lock<std::mutex> lock(dap_sessions_mutex);
       dap_sessions.erase(sock.get());
       std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
     });
@@ -5219,7 +5219,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
 
   bool client_failed = false;
   {
-    std::scoped_lock lock(dap_sessions_mutex);
+    std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
     for (auto [sock, dap] : dap_sessions) {
       auto error = dap->Disconnect();
       if (error.Fail()) {
@@ -5233,7 +5233,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   }
 
   // Wait for all clients to finish disconnecting.
-  std::unique_lock lock(dap_sessions_mutex);
+  std::unique_lock<std::mutex> lock(dap_sessions_mutex);
   dap_sessions_condition.wait(lock, [&] { return dap_sessions.empty(); });
 
   if (client_failed)
