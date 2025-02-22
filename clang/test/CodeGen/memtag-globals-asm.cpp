@@ -120,12 +120,12 @@ const int MyClass::my_class_const_int = 1;
 // CHECK-J: .globl global_my_class
 // CHECK-J: .p2align 4, 0x0
 // CHECK-J: .size global_my_class, 16
-// CHECK-I: .p2align 4, 0x0
+// CHECK-J: .p2align 4, 0x0
 MyClass global_my_class;
 // CHECK-K: .memtag _ZL14local_my_class
 // CHECK-K: .p2align 4, 0x0
 // CHECK-K: .size _ZL14local_my_class, 16
-// CHECK-I: .p2align 4, 0x0
+// CHECK-K: .p2align 4, 0x0
 static MyClass local_my_class;
 
 // CHECK-NOT: .memtag _ZL18local_const_string
@@ -133,14 +133,14 @@ static const char local_const_string[] = "this is a local string";
 // CHECK-L: .memtag _ZL12local_string
 // CHECK-L: .p2align 4, 0x0
 // CHECK-L: .size _ZL12local_string, 32
-// CHECK-I: .p2align 4, 0x0
+// CHECK-L: .p2align 4, 0x0
 static char local_string[] = "this is a local string";
 
 // CHECK-M: .memtag global_atomic_int
 // CHECK-M: .globl global_atomic_int
 // CHECK-M: .p2align 4, 0x0
 // CHECK-M: .size global_atomic_int, 16
-// CHECK-I: .p2align 4, 0x0
+// CHECK-M: .p2align 4, 0x0
 _Atomic(int) global_atomic_int;
 // CHECK-N: .memtag _ZL16local_atomic_int
 // CHECK-N: .local _ZL16local_atomic_int
@@ -156,7 +156,7 @@ union MyUnion {
 // CHECK-O: .globl global_union
 // CHECK-O: .p2align 4, 0x0
 // CHECK-O: .size global_union, 16
-// CHECK-I: .p2align 4, 0x0
+// CHECK-O: .p2align 4, 0x0
 MyUnion global_union;
 // CHECK-P: .memtag _ZL11local_union
 // CHECK-P: .local _ZL11local_union
