@@ -91,7 +91,15 @@ def CSR_AMDGPU_AGPRs : CalleeSavedRegs<
 >;
 
 def CSR_AMDGPU_SGPRs : CalleeSavedRegs<
-  (sequence "SGPR%u", 30, 105)
+  // Ensure that s30-s31 (return address), s32 (stack pointer), s33 (frame pointer),
+  // and s34 (base pointer) are callee-saved. The striped layout starts from s40,
+  // with a stripe width of 8. The last stripe is 10 wide instead of 8, to avoid
+  // ending with a 2-wide stripe.
+  (add (sequence "SGPR%u", 30, 39),
+       (sequence "SGPR%u", 48, 55),
+       (sequence "SGPR%u", 64, 71),
+       (sequence "SGPR%u", 80, 87),
+       (sequence "SGPR%u", 96, 105))
 >;
 
 def CSR_AMDGPU_SI_Gfx_SGPRs : CalleeSavedRegs<
