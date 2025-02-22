@@ -52,9 +52,7 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  static std::unique_ptr<VPlan>
-  buildPlainCFG(Loop *TheLoop, LoopInfo &LI,
-                DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
+  static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop, LoopInfo &LI);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turing \p Plan's
   /// flat CFG into a hierarchical CFG. It also creates a VPValue expression for
@@ -203,6 +201,9 @@ struct VPlanTransforms {
   /// candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                      unsigned VectorRegWidth);
+
+  static void predicateAndLinearize(VPlan &Plan, bool FoldTail,
+                                    VPRecipeBuilder &RecipeBuilder);
 };
 
 } // namespace llvm

@@ -66,7 +66,7 @@ public:
       : TheLoop(Lp), LI(LI), Plan(P) {}
 
   /// Build plain CFG for TheLoop  and connects it to Plan's entry.
-  void buildPlainCFG(DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
+  void buildPlainCFG();
 };
 } // anonymous namespace
 
@@ -257,10 +257,16 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       for (Value *Op : Inst->operands())
         VPOperands.push_back(getOrCreateVPOperand(Op));
 
-      // Build VPInstruction for any arbitrary Instruction without specific
-      // representation in VPlan.
-      NewR = cast<VPInstruction>(
-          VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst));
+      if (auto *ICmp = dyn_cast<ICmpInst>(Inst)) {
+        NewR = cast<VPInstruction>(VPIRBuilder.createICmp(
+            ICmp->getPredicate(), VPOperands[0], VPOperands[1]));
+        NewR->setUnderlyingValue(ICmp);
+      } else {
+        // Build VPInstruction for any arbitrary Instruction without specific
+        // representation in VPlan.
+        NewR = cast<VPInstruction>(
+            VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst));
+      }
     }
 
     IRDef2VPValue[Inst] = NewR;
@@ -268,8 +274,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 }
 
 // Main interface to build the plain CFG.
-void PlainCFGBuilder::buildPlainCFG(
-    DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+void PlainCFGBuilder::buildPlainCFG() {
   VPIRBasicBlock *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
   BB2VPBB[Entry->getIRBasicBlock()] = Entry;
 
@@ -361,18 +366,14 @@ void PlainCFGBuilder::buildPlainCFG(
     }
   }
 
-  for (const auto &[IRBB, VPB] : BB2VPBB)
-    VPB2IRBB[VPB] = IRBB;
-
   LLVM_DEBUG(Plan.setName("Plain CFG\n"); dbgs() << Plan);
 }
 
-std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(
-    Loop *TheLoop, LoopInfo &LI,
-    DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(Loop *TheLoop,
+                                                      LoopInfo &LI) {
   auto Plan = std::make_unique<VPlan>(TheLoop);
   PlainCFGBuilder Builder(TheLoop, LI, *Plan);
-  Builder.buildPlainCFG(VPB2IRBB);
+  Builder.buildPlainCFG();
   return Plan;
 }
 
