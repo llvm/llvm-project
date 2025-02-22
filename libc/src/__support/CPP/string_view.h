@@ -12,6 +12,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
+#include <cstdint>
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -61,7 +62,7 @@ public:
 
   // special value equal to the maximum value representable by the type
   // size_type.
-  LIBC_INLINE_VAR static constexpr size_t npos = -1;
+  LIBC_INLINE_VAR static constexpr size_t npos = SIZE_MAX;
 
   LIBC_INLINE constexpr string_view() : Data(nullptr), Len(0) {}
 
