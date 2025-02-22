@@ -410,7 +410,8 @@ bool mlir::affine::isValidSymbol(Value value) {
 /// A value can be used as a symbol for `region` iff it meets one of the
 /// following conditions:
 /// *) It is a constant.
-/// *) It is the result of an affine apply operation with symbol arguments.
+/// *) It is a result of a `Pure` operation whose operands are valid symbolic
+/// *) identifiers.
 /// *) It is a result of the dim op on a memref whose corresponding size is
 ///    a valid symbol.
 /// *) It is defined at the top level of 'region' or is its argument.
@@ -443,9 +444,12 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
   if (matchPattern(defOp, m_Constant(&operandCst)))
     return true;
 
-  // Affine apply operation is ok if all of its operands are ok.
-  if (auto applyOp = dyn_cast<AffineApplyOp>(defOp))
-    return applyOp.isValidSymbol(region);
+  // `Pure` operation that whose operands are valid symbolic identifiers.
+  if (isPure(defOp) && llvm::all_of(defOp->getOperands(), [&](Value operand) {
+        return affine::isValidSymbol(operand, region);
+      })) {
+    return true;
+  }
 
   // Dim op results could be valid symbols at any level.
   if (auto dimOp = dyn_cast<ShapedDimOpInterface>(defOp))
@@ -3914,14 +3918,24 @@ LogicalResult AffineParallelOp::verify() {
   }
 
   unsigned expectedNumLBResults = 0;
-  for (APInt v : getLowerBoundsGroups())
-    expectedNumLBResults += v.getZExtValue();
+  for (APInt v : getLowerBoundsGroups()) {
+    unsigned results = v.getZExtValue();
+    if (results == 0)
+      return emitOpError()
+             << "expected lower bound map to have at least one result";
+    expectedNumLBResults += results;
+  }
   if (expectedNumLBResults != getLowerBoundsMap().getNumResults())
     return emitOpError() << "expected lower bounds map to have "
                          << expectedNumLBResults << " results";
   unsigned expectedNumUBResults = 0;
-  for (APInt v : getUpperBoundsGroups())
-    expectedNumUBResults += v.getZExtValue();
+  for (APInt v : getUpperBoundsGroups()) {
+    unsigned results = v.getZExtValue();
+    if (results == 0)
+      return emitOpError()
+             << "expected upper bound map to have at least one result";
+    expectedNumUBResults += results;
+  }
   if (expectedNumUBResults != getUpperBoundsMap().getNumResults())
     return emitOpError() << "expected upper bounds map to have "
                          << expectedNumUBResults << " results";
@@ -5069,7 +5083,7 @@ static OpFoldResult computeProduct(Location loc, OpBuilder &builder,
     if (maybeConst) {
       result = result * builder.getAffineConstantExpr(*maybeConst);
     } else {
-      dynamicPart.push_back(term.get<Value>());
+      dynamicPart.push_back(cast<Value>(term));
       result = result * builder.getAffineSymbolExpr(nDynamic++);
     }
   }

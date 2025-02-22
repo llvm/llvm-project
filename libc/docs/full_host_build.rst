@@ -175,17 +175,15 @@ Linux Headers
 =============
 
 If you are using the full libc on Linux, then you will also need to install
-Linux headers in your sysroot.  The way to do this varies per system.
-
-These instructions should work on a Debian-based x86_64 system:
+Linux headers in your sysroot.  Let's build them from source.
 
 .. code-block:: sh
 
-   $> apt download linux-libc-dev
-   $> dpkg -x linux-libc-dev*deb .
-   $> cp -r usr/* /path/to/sysroot/
-   $> rm -r usr linux-libc-dev*deb
-   $> ln -s /path/to/sysroot/include/x86_64-linux-gnu/asm /path/to/sysroot/include/asm
+   $> git clone --depth=1 git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git /tmp/linux
+   $> make LLVM=1 INSTALL_HDR_PATH=/path/to/sysroot -C /tmp/linux headers_install
+
+The headers can be built to target non-host architectures by adding the
+``ARCH={arm|arm64|i386}`` to the above invocation of ``make``.
 
 Using your newly built libc
 ===========================

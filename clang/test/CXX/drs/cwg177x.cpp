@@ -31,7 +31,7 @@ namespace cwg1772 { // cwg1772: 14
   // CXX11-NEXT: StringLiteral{{.+}} 'const char[11]' lvalue "operator()"
   }
 #endif // __cplusplus >= 201103L
-}
+} // namespace cwg1772
 
 namespace cwg1779 { // cwg1779: 14
   // __func__ in a function template, member function template, or generic
@@ -79,4 +79,4 @@ namespace cwg1779 { // cwg1779: 14
     };
   }
 #endif // __cplusplus >= 201402L
-}
+} // namespace cwg1779

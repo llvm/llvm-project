@@ -302,7 +302,7 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -362,7 +362,7 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; IND-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
-; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; IND-NEXT:    br label [[FOR_BODY:%.*]]
 ; IND:       for.body:
 ; IND-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -429,7 +429,7 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
-; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; UNROLL-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL:       for.body:
 ; UNROLL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -500,7 +500,7 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-IC:       for.body:
 ; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -567,7 +567,7 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; INTERLEAVE-NEXT:    br label [[FOR_BODY:%.*]]
 ; INTERLEAVE:       for.body:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1593,7 +1593,7 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -1656,7 +1656,7 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; IND-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
-; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; IND-NEXT:    br label [[FOR_BODY:%.*]]
 ; IND:       for.body:
 ; IND-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -1733,7 +1733,7 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
-; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; UNROLL-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL:       for.body:
 ; UNROLL-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -1812,7 +1812,7 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-IC:       for.body:
 ; UNROLL-NO-IC-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -1900,7 +1900,7 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE:       middle.block:
 ; INTERLEAVE-NEXT:    br label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; INTERLEAVE-NEXT:    br label [[FOR_BODY:%.*]]
 ; INTERLEAVE:       for.body:
 ; INTERLEAVE-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -1962,6 +1962,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE2:%.*]] ]
@@ -1970,8 +1971,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 0
-; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; CHECK-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; CHECK:       pred.udiv.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = udiv i32 [[TMP4]], [[TMP0]]
@@ -1979,8 +1979,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE]]
 ; CHECK:       pred.udiv.continue:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_UDIV_IF]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 1
-; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_UDIV_IF1:%.*]], label [[PRED_UDIV_CONTINUE2]]
+; CHECK-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF1:%.*]], label [[PRED_UDIV_CONTINUE2]]
 ; CHECK:       pred.udiv.if1:
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
@@ -1989,7 +1988,6 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE2]]
 ; CHECK:       pred.udiv.continue2:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i32> [ [[TMP7]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP12]], [[PRED_UDIV_IF1]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP14]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[TMP13]]
 ; CHECK-NEXT:    [[TMP15]] = add <2 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
@@ -2030,6 +2028,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; IND:       vector.ph:
 ; IND-NEXT:    [[N_VEC:%.*]] = and i32 [[SMAX]], 2147483646
 ; IND-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
+; IND-NEXT:    [[TMP11:%.*]] = xor <2 x i1> [[BROADCAST_SPLATINSERT]], <i1 true, i1 poison>
+; IND-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i1> [[TMP11]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE2:%.*]] ]
@@ -2054,8 +2054,6 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; IND-NEXT:    br label [[PRED_UDIV_CONTINUE2]]
 ; IND:       pred.udiv.continue2:
 ; IND-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ [[TMP5]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP9]], [[PRED_UDIV_IF1]] ]
-; IND-NEXT:    [[TMP11:%.*]] = xor <2 x i1> [[BROADCAST_SPLATINSERT]], <i1 true, i1 poison>
-; IND-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i1> [[TMP11]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; IND-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP12]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[TMP10]]
 ; IND-NEXT:    [[TMP13]] = add <2 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; IND-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
@@ -2097,7 +2095,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i32 [[SMAX]], 2147483644
 ; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
-; UNROLL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
+; UNROLL-NEXT:    [[TMP27:%.*]] = xor <2 x i1> [[BROADCAST_SPLATINSERT]], <i1 true, i1 poison>
+; UNROLL-NEXT:    [[TMP28:%.*]] = shufflevector <2 x i1> [[TMP27]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE8:%.*]] ]
@@ -2143,8 +2142,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NEXT:    br label [[PRED_UDIV_CONTINUE8]]
 ; UNROLL:       pred.udiv.continue8:
 ; UNROLL-NEXT:    [[TMP21:%.*]] = phi <2 x i32> [ [[TMP16]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP20]], [[PRED_UDIV_IF7]] ]
-; UNROLL-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP11]], <2 x i32> [[WIDE_LOAD]]
-; UNROLL-NEXT:    [[PREDPHI9:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP21]], <2 x i32> [[WIDE_LOAD2]]
+; UNROLL-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP28]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[TMP11]]
+; UNROLL-NEXT:    [[PREDPHI9:%.*]] = select <2 x i1> [[TMP28]], <2 x i32> [[WIDE_LOAD2]], <2 x i32> [[TMP21]]
 ; UNROLL-NEXT:    [[TMP22]] = add <2 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; UNROLL-NEXT:    [[TMP23]] = add <2 x i32> [[PREDPHI9]], [[VEC_PHI1]]
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -2189,6 +2188,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[SMAX]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
+; UNROLL-NO-IC-NEXT:    [[TMP27:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
 ; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE8:%.*]] ]
@@ -2200,8 +2200,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 2
 ; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
 ; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
-; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 0
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP4]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; UNROLL-NO-IC-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; UNROLL-NO-IC:       pred.udiv.if:
 ; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = udiv i32 [[TMP5]], [[TMP0]]
@@ -2209,8 +2208,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UDIV_CONTINUE]]
 ; UNROLL-NO-IC:       pred.udiv.continue:
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_UDIV_IF]] ]
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 1
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP9]], label [[PRED_UDIV_IF3:%.*]], label [[PRED_UDIV_CONTINUE4:%.*]]
+; UNROLL-NO-IC-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF3:%.*]], label [[PRED_UDIV_CONTINUE4:%.*]]
 ; UNROLL-NO-IC:       pred.udiv.if3:
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = add i32 [[INDEX]], 1
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
@@ -2219,8 +2217,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UDIV_CONTINUE4]]
 ; UNROLL-NO-IC:       pred.udiv.continue4:
 ; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = phi <2 x i32> [ [[TMP8]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP13]], [[PRED_UDIV_IF3]] ]
-; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 0
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP15]], label [[PRED_UDIV_IF5:%.*]], label [[PRED_UDIV_CONTINUE6:%.*]]
+; UNROLL-NO-IC-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF5:%.*]], label [[PRED_UDIV_CONTINUE6:%.*]]
 ; UNROLL-NO-IC:       pred.udiv.if5:
 ; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = add i32 [[INDEX]], 2
 ; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = extractelement <2 x i32> [[WIDE_LOAD2]], i32 0
@@ -2229,8 +2226,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UDIV_CONTINUE6]]
 ; UNROLL-NO-IC:       pred.udiv.continue6:
 ; UNROLL-NO-IC-NEXT:    [[TMP20:%.*]] = phi <2 x i32> [ poison, [[PRED_UDIV_CONTINUE4]] ], [ [[TMP19]], [[PRED_UDIV_IF5]] ]
-; UNROLL-NO-IC-NEXT:    [[TMP21:%.*]] = extractelement <2 x i1> [[BROADCAST_SPLAT]], i32 1
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP21]], label [[PRED_UDIV_IF7:%.*]], label [[PRED_UDIV_CONTINUE8]]
+; UNROLL-NO-IC-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF7:%.*]], label [[PRED_UDIV_CONTINUE8]]
 ; UNROLL-NO-IC:       pred.udiv.if7:
 ; UNROLL-NO-IC-NEXT:    [[TMP22:%.*]] = add i32 [[INDEX]], 3
 ; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = extractelement <2 x i32> [[WIDE_LOAD2]], i32 1
@@ -2239,10 +2235,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UDIV_CONTINUE8]]
 ; UNROLL-NO-IC:       pred.udiv.continue8:
 ; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = phi <2 x i32> [ [[TMP20]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP25]], [[PRED_UDIV_IF7]] ]
-; UNROLL-NO-IC-NEXT:    [[TMP27:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; UNROLL-NO-IC-NEXT:    [[TMP28:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; UNROLL-NO-IC-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP27]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[TMP14]]
-; UNROLL-NO-IC-NEXT:    [[PREDPHI9:%.*]] = select <2 x i1> [[TMP28]], <2 x i32> [[WIDE_LOAD2]], <2 x i32> [[TMP26]]
+; UNROLL-NO-IC-NEXT:    [[PREDPHI9:%.*]] = select <2 x i1> [[TMP27]], <2 x i32> [[WIDE_LOAD2]], <2 x i32> [[TMP26]]
 ; UNROLL-NO-IC-NEXT:    [[TMP29]] = add <2 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; UNROLL-NO-IC-NEXT:    [[TMP30]] = add <2 x i32> [[PREDPHI9]], [[VEC_PHI1]]
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -2284,7 +2278,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i32 [[SMAX]], 2147483640
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C:%.*]], i64 0
-; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; INTERLEAVE-NEXT:    [[TMP47:%.*]] = xor <4 x i1> [[BROADCAST_SPLATINSERT]], <i1 true, i1 poison, i1 poison, i1 poison>
+; INTERLEAVE-NEXT:    [[TMP48:%.*]] = shufflevector <4 x i1> [[TMP47]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE16:%.*]] ]
@@ -2366,8 +2361,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; INTERLEAVE-NEXT:    br label [[PRED_UDIV_CONTINUE16]]
 ; INTERLEAVE:       pred.udiv.continue16:
 ; INTERLEAVE-NEXT:    [[TMP41:%.*]] = phi <4 x i32> [ [[TMP36]], [[PRED_UDIV_CONTINUE14]] ], [ [[TMP40]], [[PRED_UDIV_IF15]] ]
-; INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i32> [[TMP21]], <4 x i32> [[WIDE_LOAD]]
-; INTERLEAVE-NEXT:    [[PREDPHI17:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i32> [[TMP41]], <4 x i32> [[WIDE_LOAD2]]
+; INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP48]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[TMP21]]
+; INTERLEAVE-NEXT:    [[PREDPHI17:%.*]] = select <4 x i1> [[TMP48]], <4 x i32> [[WIDE_LOAD2]], <4 x i32> [[TMP41]]
 ; INTERLEAVE-NEXT:    [[TMP42]] = add <4 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; INTERLEAVE-NEXT:    [[TMP43]] = add <4 x i32> [[PREDPHI17]], [[VEC_PHI1]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -3030,128 +3025,67 @@ exit:
 }
 
 ; This loop has a backedge taken count of i32_max. We need to check for this
-; condition and branch directly to the scalar loop.
+; condition and can skip vectorizing.
 
-
-
-define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
+define i32 @max_i32_backedgetaken() {
 ; CHECK-LABEL: @max_i32_backedgetaken(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ <i32 1, i32 -1>, [[VECTOR_PH]] ], [ [[TMP0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0]] = and <2 x i32> [[VEC_PHI]], splat (i32 4)
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> [[TMP0]])
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP2]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[B_0:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[A_0_AND]] = and i32 [[A_0]], 4
 ; CHECK-NEXT:    [[B_NEXT]] = add i32 [[B_0]], -1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[B_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP33:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[A_0_AND_LCSSA:%.*]] = phi i32 [ [[A_0_AND]], [[LOOP]] ], [ [[TMP2]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[A_0_AND_LCSSA:%.*]] = phi i32 [ [[A_0_AND]], [[LOOP]] ]
 ; CHECK-NEXT:    ret i32 [[A_0_AND_LCSSA]]
 ;
 ; IND-LABEL: @max_i32_backedgetaken(
 ; IND-NEXT:  entry:
-; IND-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; IND:       vector.ph:
-; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
-; IND:       vector.body:
-; IND-NEXT:    br i1 poison, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
-; IND:       middle.block:
-; IND-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; IND:       scalar.ph:
 ; IND-NEXT:    br label [[LOOP:%.*]]
 ; IND:       loop:
-; IND-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; IND-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; IND-NEXT:    [[B_NEXT]] = add i32 [[B_0]], -1
 ; IND-NEXT:    [[EC:%.*]] = icmp eq i32 [[B_NEXT]], 0
-; IND-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP33:![0-9]+]]
+; IND-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; IND:       exit:
 ; IND-NEXT:    ret i32 0
 ;
 ; UNROLL-LABEL: @max_i32_backedgetaken(
 ; UNROLL-NEXT:  entry:
-; UNROLL-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; UNROLL:       vector.ph:
-; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
-; UNROLL:       vector.body:
-; UNROLL-NEXT:    br i1 poison, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
-; UNROLL:       middle.block:
-; UNROLL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL:       loop:
-; UNROLL-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; UNROLL-NEXT:    [[B_NEXT]] = add i32 [[B_0]], -1
 ; UNROLL-NEXT:    [[EC:%.*]] = icmp eq i32 [[B_NEXT]], 0
-; UNROLL-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP33:![0-9]+]]
+; UNROLL-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; UNROLL:       exit:
 ; UNROLL-NEXT:    ret i32 0
 ;
 ; UNROLL-NO-IC-LABEL: @max_i32_backedgetaken(
 ; UNROLL-NO-IC-NEXT:  entry:
-; UNROLL-NO-IC-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; UNROLL-NO-IC:       vector.ph:
-; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
-; UNROLL-NO-IC:       vector.body:
-; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ <i32 1, i32 -1>, [[VECTOR_PH]] ], [ [[TMP0:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i32> [ splat (i32 -1), [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[TMP0]] = and <2 x i32> [[VEC_PHI]], splat (i32 4)
-; UNROLL-NO-IC-NEXT:    [[TMP1]] = and <2 x i32> [[VEC_PHI1]], splat (i32 4)
-; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 0
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
-; UNROLL-NO-IC:       middle.block:
-; UNROLL-NO-IC-NEXT:    [[BIN_RDX:%.*]] = and <2 x i32> [[TMP1]], [[TMP0]]
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> [[BIN_RDX]])
-; UNROLL-NO-IC-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
-; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
-; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    [[A_0_AND]] = and i32 [[A_0]], 4
 ; UNROLL-NO-IC-NEXT:    [[B_NEXT]] = add i32 [[B_0]], -1
 ; UNROLL-NO-IC-NEXT:    [[EC:%.*]] = icmp eq i32 [[B_NEXT]], 0
-; UNROLL-NO-IC-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP33:![0-9]+]]
+; UNROLL-NO-IC-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; UNROLL-NO-IC:       exit:
-; UNROLL-NO-IC-NEXT:    [[A_0_AND_LCSSA:%.*]] = phi i32 [ [[A_0_AND]], [[LOOP]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
+; UNROLL-NO-IC-NEXT:    [[A_0_AND_LCSSA:%.*]] = phi i32 [ [[A_0_AND]], [[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    ret i32 [[A_0_AND_LCSSA]]
 ;
 ; INTERLEAVE-LABEL: @max_i32_backedgetaken(
 ; INTERLEAVE-NEXT:  entry:
-; INTERLEAVE-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
-; INTERLEAVE:       vector.body:
-; INTERLEAVE-NEXT:    br i1 poison, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
-; INTERLEAVE:       middle.block:
-; INTERLEAVE-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; INTERLEAVE:       scalar.ph:
 ; INTERLEAVE-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE:       loop:
-; INTERLEAVE-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; INTERLEAVE-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[B_NEXT]] = add i32 [[B_0]], -1
 ; INTERLEAVE-NEXT:    [[EC:%.*]] = icmp eq i32 [[B_NEXT]], 0
-; INTERLEAVE-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP33:![0-9]+]]
+; INTERLEAVE-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; INTERLEAVE:       exit:
 ; INTERLEAVE-NEXT:    ret i32 0
 ;
@@ -3472,9 +3406,9 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ], [ [[T]], [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[EXT]], [[VECTOR_SCEVCHECK]] ], [ [[EXT]], [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[LOOP_PREHEADER]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[EXT]], [[LOOP_PREHEADER]] ], [ [[EXT]], [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -3532,14 +3466,14 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; IND-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; IND-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; IND-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; IND-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
+; IND-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; IND:       middle.block:
 ; IND-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
-; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ], [ [[T]], [[LOOP_PREHEADER]] ]
-; IND-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[LOOP_PREHEADER]] ]
-; IND-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[EXT]], [[VECTOR_SCEVCHECK]] ], [ [[EXT]], [[LOOP_PREHEADER]] ]
+; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[LOOP_PREHEADER]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ]
+; IND-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; IND-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[EXT]], [[LOOP_PREHEADER]] ], [ [[EXT]], [[VECTOR_SCEVCHECK]] ]
 ; IND-NEXT:    br label [[LOOP:%.*]]
 ; IND:       loop:
 ; IND-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -3606,9 +3540,9 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
-; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ], [ [[T]], [[LOOP_PREHEADER]] ]
-; UNROLL-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[LOOP_PREHEADER]] ]
-; UNROLL-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[EXT]], [[VECTOR_SCEVCHECK]] ], [ [[EXT]], [[LOOP_PREHEADER]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[LOOP_PREHEADER]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[EXT]], [[LOOP_PREHEADER]] ], [ [[EXT]], [[VECTOR_SCEVCHECK]] ]
 ; UNROLL-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL:       loop:
 ; UNROLL-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -3680,9 +3614,9 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ], [ [[T]], [[LOOP_PREHEADER]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[LOOP_PREHEADER]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[EXT]], [[VECTOR_SCEVCHECK]] ], [ [[EXT]], [[LOOP_PREHEADER]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[LOOP_PREHEADER]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[EXT]], [[LOOP_PREHEADER]] ], [ [[EXT]], [[VECTOR_SCEVCHECK]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
 ; UNROLL-NO-IC-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -3748,9 +3682,9 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ], [ [[T]], [[LOOP_PREHEADER]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[LOOP_PREHEADER]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[EXT]], [[VECTOR_SCEVCHECK]] ], [ [[EXT]], [[LOOP_PREHEADER]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[LOOP_PREHEADER]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[EXT]], [[LOOP_PREHEADER]] ], [ [[EXT]], [[VECTOR_SCEVCHECK]] ]
 ; INTERLEAVE-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE:       loop:
 ; INTERLEAVE-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -3852,9 +3786,9 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ], [ [[T]], [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[EXT_MUL]], [[VECTOR_SCEVCHECK]] ], [ [[EXT_MUL]], [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[LOOP_PREHEADER]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[EXT_MUL]], [[LOOP_PREHEADER]] ], [ [[EXT_MUL]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -3920,9 +3854,9 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; IND-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
-; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ], [ [[T]], [[LOOP_PREHEADER]] ]
-; IND-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[EXT_MUL]], [[VECTOR_SCEVCHECK]] ], [ [[EXT_MUL]], [[LOOP_PREHEADER]] ]
-; IND-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[LOOP_PREHEADER]] ]
+; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[LOOP_PREHEADER]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ]
+; IND-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[EXT_MUL]], [[LOOP_PREHEADER]] ], [ [[EXT_MUL]], [[VECTOR_SCEVCHECK]] ]
+; IND-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; IND-NEXT:    br label [[LOOP:%.*]]
 ; IND:       loop:
 ; IND-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -3992,9 +3926,9 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
-; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ], [ [[T]], [[LOOP_PREHEADER]] ]
-; UNROLL-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[EXT_MUL]], [[VECTOR_SCEVCHECK]] ], [ [[EXT_MUL]], [[LOOP_PREHEADER]] ]
-; UNROLL-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[LOOP_PREHEADER]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[LOOP_PREHEADER]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[EXT_MUL]], [[LOOP_PREHEADER]] ], [ [[EXT_MUL]], [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; UNROLL-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL:       loop:
 ; UNROLL-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -4069,9 +4003,9 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ], [ [[T]], [[LOOP_PREHEADER]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[EXT_MUL]], [[VECTOR_SCEVCHECK]] ], [ [[EXT_MUL]], [[LOOP_PREHEADER]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[LOOP_PREHEADER]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[LOOP_PREHEADER]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[EXT_MUL]], [[LOOP_PREHEADER]] ], [ [[EXT_MUL]], [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
 ; UNROLL-NO-IC-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -4140,9 +4074,9 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ], [ [[T]], [[LOOP_PREHEADER]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[EXT_MUL]], [[VECTOR_SCEVCHECK]] ], [ [[EXT_MUL]], [[LOOP_PREHEADER]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[LOOP_PREHEADER]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[T]], [[LOOP_PREHEADER]] ], [ [[T]], [[VECTOR_SCEVCHECK]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[EXT_MUL]], [[LOOP_PREHEADER]] ], [ [[EXT_MUL]], [[VECTOR_SCEVCHECK]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; INTERLEAVE-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE:       loop:
 ; INTERLEAVE-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -4423,7 +4357,7 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[K]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -4461,7 +4395,7 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; IND-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[K]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
-; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
+; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; IND-NEXT:    br label [[FOR_BODY:%.*]]
 ; IND:       for.body:
 ; IND-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -4504,7 +4438,7 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[K]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
-; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; UNROLL-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL:       for.body:
 ; UNROLL-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -4553,7 +4487,7 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[K]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-IC:       for.body:
 ; UNROLL-NO-IC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -4594,7 +4528,7 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[K]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; INTERLEAVE-NEXT:    br label [[FOR_BODY:%.*]]
 ; INTERLEAVE:       for.body:
 ; INTERLEAVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -6236,9 +6170,9 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[FOR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV_2_CONV:%.*]], [[LOOP]] ]
@@ -6307,9 +6241,9 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; IND-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
-; IND-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY:%.*]] ]
-; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
-; IND-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
+; IND-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; IND-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; IND-NEXT:    br label [[LOOP:%.*]]
 ; IND:       loop:
 ; IND-NEXT:    [[FOR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV_2_CONV:%.*]], [[LOOP]] ]
@@ -6382,9 +6316,9 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
-; UNROLL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
-; UNROLL-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; UNROLL-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL:       loop:
 ; UNROLL-NEXT:    [[FOR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV_2_CONV:%.*]], [[LOOP]] ]
@@ -6463,9 +6397,9 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
+; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
 ; UNROLL-NO-IC-NEXT:    [[FOR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV_2_CONV:%.*]], [[LOOP]] ]
@@ -6538,9 +6472,9 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
-; INTERLEAVE-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY:%.*]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; INTERLEAVE-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE:       loop:
 ; INTERLEAVE-NEXT:    [[FOR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV_2_CONV:%.*]], [[LOOP]] ]

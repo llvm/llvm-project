@@ -1,4 +1,5 @@
-header: sys-select.h
+header: sys/select.h
+header_template: select.h.def
 macros: []
 types:
   - type_name: struct_timeval

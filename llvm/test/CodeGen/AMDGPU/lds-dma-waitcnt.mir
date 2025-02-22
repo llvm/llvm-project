@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: buffer_load_dword_lds_ds_read
 # GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN

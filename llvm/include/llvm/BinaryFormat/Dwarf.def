@@ -24,7 +24,8 @@
       (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                 \
       defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||              \
       defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                 \
-      defined HANDLE_DW_END || defined HANDLE_DW_SECT)
+      defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                       \
+      defined HANDLE_DW_APPLE_ENUM_KIND)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -144,6 +145,10 @@
 
 #ifndef HANDLE_DW_SECT
 #define HANDLE_DW_SECT(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_APPLE_ENUM_KIND
+#define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null, 2, DWARF, DW_KIND_NONE)
@@ -638,6 +643,7 @@ HANDLE_DW_AT(0x3fed, APPLE_property, 0, APPLE)
 HANDLE_DW_AT(0x3fee, APPLE_objc_direct, 0, APPLE)
 HANDLE_DW_AT(0x3fef, APPLE_sdk, 0, APPLE)
 HANDLE_DW_AT(0x3ff0, APPLE_origin, 0, APPLE)
+HANDLE_DW_AT(0x3ff1, APPLE_enum_kind, 0, APPLE)
 
 // Attribute form encodings.
 HANDLE_DW_FORM(0x01, addr, 2, DWARF)
@@ -1269,6 +1275,11 @@ HANDLE_DW_APPLE_PROPERTY(0x1000, nullability)
 HANDLE_DW_APPLE_PROPERTY(0x2000, null_resettable)
 HANDLE_DW_APPLE_PROPERTY(0x4000, class)
 
+// Enum kinds.
+// Keep in sync with EnumExtensibilityAttr::Kind.
+HANDLE_DW_APPLE_ENUM_KIND(0x00, Closed)
+HANDLE_DW_APPLE_ENUM_KIND(0x01, Open)
+
 // DWARF v5 Unit Types.
 HANDLE_DW_UT(0x01, compile)
 HANDLE_DW_UT(0x02, type)
@@ -1367,3 +1378,4 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_IDX
 #undef HANDLE_DW_END
 #undef HANDLE_DW_SECT
+#undef HANDLE_DW_APPLE_ENUM_KIND

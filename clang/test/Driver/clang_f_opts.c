@@ -45,6 +45,13 @@
 // CHECK-UNROLL-LOOPS: "-funroll-loops"
 // CHECK-NO-UNROLL-LOOPS: "-fno-unroll-loops"
 
+// RUN: %clang -### -S -floop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -fno-loop-interchange -floop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-INTERCHANGE-LOOPS %s
+// RUN: %clang -### -S -floop-interchange -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
+// CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
+// CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
+
 // RUN: %clang -### -S -fprofile-sample-accurate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-SAMPLE-ACCURATE %s
 // CHECK-PROFILE-SAMPLE-ACCURATE: "-fprofile-sample-accurate"
 
@@ -424,7 +431,7 @@
 // CHECK-WARNING-DAG: optimization flag '-fno-devirtualize-speculatively' is not supported
 // CHECK-WARNING-DAG: the flag '-fslp-vectorize-aggressive' has been deprecated and will be ignored
 // CHECK-WARNING-DAG: the flag '-fno-slp-vectorize-aggressive' has been deprecated and will be ignored
-// CHECK-WARNING-DAG: argument '-forder-file-instrumentation' is deprecated, use '-mllvm -pgo-temporal-instrumentation' instead
+// CHECK-WARNING-DAG: argument '-forder-file-instrumentation' is deprecated, use '-ftemporal-profile' instead
 
 // Test that we mute the warning on these
 // RUN: %clang -### -finline-limit=1000 -Wno-invalid-command-line-argument              \

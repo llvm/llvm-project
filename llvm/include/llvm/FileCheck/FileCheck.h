@@ -180,8 +180,7 @@ struct FileCheckString;
 class FileCheck {
   FileCheckRequest Req;
   std::unique_ptr<FileCheckPatternContext> PatternContext;
-  // C++17 TODO: make this a plain std::vector.
-  std::unique_ptr<std::vector<FileCheckString>> CheckStrings;
+  std::vector<FileCheckString> CheckStrings;
 
 public:
   explicit FileCheck(FileCheckRequest Req);

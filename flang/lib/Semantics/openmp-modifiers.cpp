@@ -157,6 +157,23 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpContextSelector>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"context-selector",
+      /*props=*/
+      {
+          {50, {OmpProperty::Required, OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          // The MATCH clause takes a selector as an argument, not modifier.
+          {50, {Clause::OMPC_when}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"dependence-type",

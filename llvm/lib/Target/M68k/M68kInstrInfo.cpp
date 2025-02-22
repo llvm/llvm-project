@@ -593,7 +593,6 @@ bool M68kInstrInfo::ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const {
 bool M68kInstrInfo::ExpandMOVEM(MachineInstrBuilder &MIB,
                                 const MCInstrDesc &Desc, bool IsRM) const {
   int Reg = 0, Offset = 0, Base = 0;
-  auto XR32 = RI.getRegClass(M68k::XR32RegClassID);
   auto DL = MIB->getDebugLoc();
   auto MI = MIB.getInstr();
   auto &MBB = *MIB->getParent();
@@ -606,13 +605,6 @@ bool M68kInstrInfo::ExpandMOVEM(MachineInstrBuilder &MIB,
     Offset = MIB->getOperand(0).getImm();
     Base = MIB->getOperand(1).getReg();
     Reg = MIB->getOperand(2).getReg();
-  }
-
-  // If the register is not in XR32 then it is smaller than 32 bit, we
-  // implicitly promote it to 32
-  if (!XR32->contains(Reg)) {
-    Reg = RI.getMatchingMegaReg(Reg, XR32);
-    assert(Reg && "Has not meaningful MEGA register");
   }
 
   unsigned Mask = 1 << RI.getSpillRegisterOrder(Reg);
@@ -799,22 +791,25 @@ namespace {
 unsigned getLoadStoreRegOpcode(unsigned Reg, const TargetRegisterClass *RC,
                                const TargetRegisterInfo *TRI,
                                const M68kSubtarget &STI, bool load) {
-  switch (TRI->getRegSizeInBits(*RC)) {
+  switch (TRI->getSpillSize(*RC)) {
   default:
+    LLVM_DEBUG(
+        dbgs() << "Cannot determine appropriate opcode for load/store to/from "
+               << TRI->getName(Reg) << " of class " << TRI->getRegClassName(RC)
+               << " with spill size " << TRI->getSpillSize(*RC) << '\n');
     llvm_unreachable("Unknown spill size");
-  case 8:
+  case 2:
+    if (M68k::XR16RegClass.hasSubClassEq(RC))
+      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
     if (M68k::DR8RegClass.hasSubClassEq(RC))
-      return load ? M68k::MOV8dp : M68k::MOV8pd;
+      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
     if (M68k::CCRCRegClass.hasSubClassEq(RC))
-      return load ? M68k::MOV16cp : M68k::MOV16pc;
-
-    llvm_unreachable("Unknown 1-byte regclass");
-  case 16:
-    assert(M68k::XR16RegClass.hasSubClassEq(RC) && "Unknown 2-byte regclass");
-    return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
-  case 32:
-    assert(M68k::XR32RegClass.hasSubClassEq(RC) && "Unknown 4-byte regclass");
-    return load ? M68k::MOVM32mp_P : M68k::MOVM32pm_P;
+      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
+    llvm_unreachable("Unknown 2-byte regclass");
+  case 4:
+    if (M68k::XR32RegClass.hasSubClassEq(RC))
+      return load ? M68k::MOVM32mp_P : M68k::MOVM32pm_P;
+    llvm_unreachable("Unknown 4-byte regclass");
   }
 }
 
@@ -844,7 +839,8 @@ bool M68kInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 void M68kInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
   assert(MFI.getObjectSize(FrameIndex) >= TRI->getSpillSize(*RC) &&
          "Stack slot is too small to store");
@@ -862,7 +858,8 @@ void M68kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          Register DstReg, int FrameIndex,
                                          const TargetRegisterClass *RC,
                                          const TargetRegisterInfo *TRI,
-                                         Register VReg) const {
+                                         Register VReg,
+                                         MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
   assert(MFI.getObjectSize(FrameIndex) >= TRI->getSpillSize(*RC) &&
          "Stack slot is too small to load");

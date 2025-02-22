@@ -1,4 +1,5 @@
 header: complex.h
+header_template: complex.h.def
 macros: []
 types:
   - type_name: cfloat16

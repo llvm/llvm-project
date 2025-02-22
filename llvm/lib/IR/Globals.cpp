@@ -18,6 +18,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -286,6 +287,24 @@ void GlobalObject::setSection(StringRef S) {
   setGlobalObjectFlag(HasSectionHashEntryBit, !S.empty());
 }
 
+void GlobalObject::setSectionPrefix(StringRef Prefix) {
+  MDBuilder MDB(getContext());
+  setMetadata(LLVMContext::MD_section_prefix,
+              MDB.createGlobalObjectSectionPrefix(Prefix));
+}
+
+std::optional<StringRef> GlobalObject::getSectionPrefix() const {
+  if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
+    [[maybe_unused]] StringRef MDName =
+        cast<MDString>(MD->getOperand(0))->getString();
+    assert((MDName == "section_prefix" ||
+            (isa<Function>(this) && MDName == "function_section_prefix")) &&
+           "Metadata not match");
+    return cast<MDString>(MD->getOperand(1))->getString();
+  }
+  return std::nullopt;
+}
+
 bool GlobalValue::isNobuiltinFnDef() const {
   const Function *F = dyn_cast<Function>(this);
   if (!F || F->empty())
@@ -538,16 +557,6 @@ void GlobalVariable::setCodeModel(CodeModel::Model CM) {
                      (CodeModelData << CodeModelShift);
   setGlobalValueSubClassData(NewData);
   assert(getCodeModel() == CM && "Code model representation error!");
-}
-
-std::optional<uint64_t> GlobalVariable::getRequiredGlobalSize() {
-  if (!isTagged())
-    return std::nullopt;
-  Constant *Initializer = getInitializer();
-  uint64_t SizeInBytes =
-      getParent()->getDataLayout().getTypeAllocSize(Initializer->getType());
-  uint64_t Aligned = alignTo(SizeInBytes, 16);
-  return Aligned != SizeInBytes ? std::optional(Aligned) : std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//

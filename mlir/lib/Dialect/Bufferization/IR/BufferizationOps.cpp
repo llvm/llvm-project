@@ -28,10 +28,8 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
     const BufferizationOptions &options) {
   auto srcType = llvm::cast<MemRefType>(value.getType());
 
-  // Element type, rank and memory space must match.
+  // Element type and rank must match.
   if (srcType.getElementType() != destType.getElementType())
-    return failure();
-  if (srcType.getMemorySpace() != destType.getMemorySpace())
     return failure();
   if (srcType.getRank() != destType.getRank())
     return failure();
@@ -42,8 +40,8 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
   auto isGuaranteedCastCompatible = [](MemRefType source, MemRefType target) {
     int64_t sourceOffset, targetOffset;
     SmallVector<int64_t, 4> sourceStrides, targetStrides;
-    if (failed(getStridesAndOffset(source, sourceStrides, sourceOffset)) ||
-        failed(getStridesAndOffset(target, targetStrides, targetOffset)))
+    if (failed(source.getStridesAndOffset(sourceStrides, sourceOffset)) ||
+        failed(target.getStridesAndOffset(targetStrides, targetOffset)))
       return false;
     auto dynamicToStatic = [](int64_t a, int64_t b) {
       return ShapedType::isDynamic(a) && !ShapedType::isDynamic(b);

@@ -14,6 +14,7 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILSHADERFLAGS_H
 #define LLVM_TARGET_DIRECTX_DXILSHADERFLAGS_H
 
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -71,13 +72,11 @@ struct ComputedShaderFlags {
     return FeatureFlags;
   }
 
-  void merge(const uint64_t IVal) {
+  void merge(const ComputedShaderFlags CSF) {
 #define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
-  FlagName |= (IVal & getMask(DxilModuleBit));
-#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str)                         \
-  FlagName |= (IVal & getMask(DxilModuleBit));
+  FlagName |= CSF.FlagName;
+#define DXIL_MODULE_FLAG(DxilModuleBit, FlagName, Str) FlagName |= CSF.FlagName;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-    return;
   }
 
   void print(raw_ostream &OS = dbgs()) const;
@@ -85,17 +84,20 @@ struct ComputedShaderFlags {
 };
 
 struct ModuleShaderFlags {
-  void initialize(const Module &, DXILResourceTypeMap &DRTM);
+  void initialize(Module &, DXILResourceTypeMap &DRTM,
+                  const ModuleMetadataInfo &MMDI);
   const ComputedShaderFlags &getFunctionFlags(const Function *) const;
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
 private:
-  /// Vector of sorted Function-Shader Flag mask pairs representing properties
-  /// of each of the functions in the module. Shader Flags of each function
-  /// represent both module-level and function-level flags
-  SmallVector<std::pair<Function const *, ComputedShaderFlags>> FunctionFlags;
+  /// Map of Function-Shader Flag Mask pairs representing properties of each of
+  /// the functions in the module. Shader Flags of each function represent both
+  /// module-level and function-level flags
+  DenseMap<const Function *, ComputedShaderFlags> FunctionFlags;
   /// Combined Shader Flag Mask of all functions of the module
   ComputedShaderFlags CombinedSFMask{};
+  void updateFunctionFlags(ComputedShaderFlags &, const Instruction &,
+                           DXILResourceTypeMap &);
 };
 
 class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {

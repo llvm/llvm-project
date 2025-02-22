@@ -35,9 +35,18 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
     """
     header_name = yaml_data.get("header")
     header = header_class(header_name)
+    header.template_file = yaml_data.get("header_template")
+    header.standards = yaml_data.get("standards", [])
+    header.merge_yaml_files = yaml_data.get("merge_yaml_files", [])
 
     for macro_data in yaml_data.get("macros", []):
-        header.add_macro(Macro(macro_data["macro_name"], macro_data["macro_value"]))
+        header.add_macro(
+            Macro(
+                macro_data["macro_name"],
+                macro_data.get("macro_value"),
+                macro_data.get("macro_header"),
+            )
+        )
 
     types = yaml_data.get("types", [])
     sorted_types = sorted(types, key=lambda x: x["type_name"])
@@ -118,7 +127,7 @@ def load_yaml_file(yaml_file, header_class, entry_points):
     Returns:
         HeaderFile: An instance of HeaderFile populated with the data.
     """
-    with open(yaml_file, "r") as f:
+    with yaml_file.open() as f:
         yaml_data = yaml.safe_load(f)
     return yaml_to_classes(yaml_data, header_class, entry_points)
 
@@ -227,10 +236,6 @@ def main():
         help="Directory to output the generated header file",
     )
     parser.add_argument(
-        "--h_def_file",
-        help="Path to the .h.def template file (required if not using --export_decls)",
-    )
-    parser.add_argument(
         "--add_function",
         nargs=6,
         metavar=(
@@ -244,7 +249,10 @@ def main():
         help="Add a function to the YAML file",
     )
     parser.add_argument(
-        "--e", action="append", help="Entry point to include", dest="entry_points"
+        "--entry-point",
+        action="append",
+        help="Entry point to include",
+        dest="entry_points",
     )
     parser.add_argument(
         "--export-decls",
@@ -257,7 +265,7 @@ def main():
         add_function_to_yaml(args.yaml_file, args.add_function)
 
     header_class = GpuHeader if args.export_decls else HeaderFile
-    header = load_yaml_file(args.yaml_file, header_class, args.entry_points)
+    header = load_yaml_file(Path(args.yaml_file), header_class, args.entry_points)
 
     header_str = str(header)
 
@@ -268,13 +276,7 @@ def main():
     else:
         output_file_path = Path(f"{Path(args.yaml_file).stem}.h")
 
-    if not args.export_decls and args.h_def_file:
-        with open(args.h_def_file, "r") as f:
-            h_def_content = f.read()
-        final_header_content = fill_public_api(header_str, h_def_content)
-        with open(output_file_path, "w") as f:
-            f.write(final_header_content)
-    else:
+    if args.export_decls:
         with open(output_file_path, "w") as f:
             f.write(header_str)
 

@@ -7,6 +7,7 @@
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows loadconfig-ec.s -o loadconfig-ec.obj
 // RUN: llvm-mc -filetype=obj -triple=aarch64-windows loadconfig-short.s -o loadconfig-short.obj
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows loadconfig-short.s -o loadconfig-short-arm64ec.obj
+// RUN: llvm-lib -machine:arm64x -out:loadconfig.lib loadconfig.obj loadconfig-ec.obj
 
 // RUN: lld-link -machine:arm64x -out:out-warn.dll -dll -noentry test.obj \
 // RUN:           2>&1 | FileCheck --check-prefixes=WARN-LOADCFG,WARN-EC-LOADCFG %s
@@ -99,31 +100,68 @@
 // LOADCFG-NEXT:       RVA: 0x150
 // LOADCFG-NEXT:       Type: VALUE
 // LOADCFG-NEXT:       Size: 0x4
-// LOADCFG-NEXT:       Value: 0x0
+// LOADCFG-NEXT:       Value: 0x1140
 // LOADCFG-NEXT:     ]
 // LOADCFG-NEXT:     Entry [
 // LOADCFG-NEXT:       RVA: 0x154
 // LOADCFG-NEXT:       Type: VALUE
 // LOADCFG-NEXT:       Size: 0x4
-// LOADCFG-NEXT:       Value: 0x0
+// LOADCFG-NEXT:       Value: 0x140
 // LOADCFG-NEXT:     ]
 // LOADCFG-NEXT:   ]
 // LOADCFG-NEXT: ]
 // LOADCFG-NEXT: HybridObject {
-// LOADCFG-NEXT:   Format: COFF-x86-64
-// LOADCFG-NEXT:   Arch: x86_64
+// LOADCFG-NEXT:   Format: COFF-ARM64EC
+// LOADCFG-NEXT:   Arch: aarch64
 // LOADCFG-NEXT:   AddressSize: 64bit
+// LOADCFG-NEXT:   LoadConfig [
+// LOADCFG-NEXT:     Size:   0x140
+// LOADCFG:        CHPEMetadata [
+// LOADCFG-NEXT:     Version:   0x2
+// LOADCFG:        ]
+// LOADCFG-NEXT:   DynamicRelocations [
+// LOADCFG-NEXT:     Version: 0x1
+// LOADCFG-NEXT:     Arm64X [
+// LOADCFG-NEXT:       Entry [
+// LOADCFG-NEXT:         RVA: 0x7C
+// LOADCFG-NEXT:         Type: VALUE
+// LOADCFG-NEXT:         Size: 0x2
+// LOADCFG-NEXT:         Value: 0x8664
+// LOADCFG-NEXT:       ]
+// LOADCFG-NEXT:       Entry [
+// LOADCFG-NEXT:         RVA: 0x150
+// LOADCFG-NEXT:         Type: VALUE
+// LOADCFG-NEXT:         Size: 0x4
+// LOADCFG-NEXT:         Value: 0x1140
+// LOADCFG-NEXT:       ]
+// LOADCFG-NEXT:       Entry [
+// LOADCFG-NEXT:         RVA: 0x154
+// LOADCFG-NEXT:         Type: VALUE
+// LOADCFG-NEXT:         Size: 0x4
+// LOADCFG-NEXT:         Value: 0x140
+// LOADCFG-NEXT:       ]
+// LOADCFG-NEXT:     ]
+// LOADCFG-NEXT:   ]
+// LOADCFG-NEXT: }
 
 // RUN: llvm-readobj --coff-basereloc out-hyb.dll | FileCheck --check-prefix=BASERELOC %s
 // BASERELOC:      BaseReloc [
 // BASERELOC-NEXT:   Entry {
 // BASERELOC-NEXT:     Type: DIR64
+// BASERELOC-NEXT:     Address: 0x10C8
+// BASERELOC-NEXT:   }
+// BASERELOC-NEXT:   Entry {
+// BASERELOC-NEXT:     Type: DIR64
 // BASERELOC-NEXT:     Address: 0x1208
 // BASERELOC-NEXT:   }
 // BASERELOC-NEXT:   Entry {
-// BASERELOC:          Type: DIR64
+// BASERELOC-NEXT:     Type: DIR64
 // BASERELOC-NEXT:     Address: 0x2074
 // BASERELOC-NEXT:   }
+
+// RUN: lld-link -machine:arm64x -out:out-hyb-lib.dll -dll -noentry loadconfig.lib chpe.obj test.obj
+// RUN: llvm-readobj --coff-load-config out-hyb-lib.dll | FileCheck --check-prefix=LOADCFG %s
+// RUN: llvm-readobj --coff-basereloc out-hyb-lib.dll | FileCheck --check-prefix=BASERELOC %s
 
 #--- test.s
         .data

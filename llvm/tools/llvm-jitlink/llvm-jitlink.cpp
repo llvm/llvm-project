@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -43,6 +44,7 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -83,13 +85,35 @@ using namespace llvm::orc;
 
 static cl::OptionCategory JITLinkCategory("JITLink Options");
 
+static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
+                                        cl::desc("input files"),
+                                        cl::cat(JITLinkCategory));
+
 static cl::list<bool> LazyLink("lazy",
                                cl::desc("Link the following file lazily"),
                                cl::cat(JITLinkCategory));
 
-static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
-                                        cl::desc("input files"),
-                                        cl::cat(JITLinkCategory));
+enum class SpeculateKind { None, Simple };
+
+cl::opt<SpeculateKind> Speculate(
+    "speculate", cl::desc("Choose speculation scheme"),
+    cl::init(SpeculateKind::None),
+    cl::values(clEnumValN(SpeculateKind::None, "none", "No speculation"),
+               clEnumValN(SpeculateKind::Simple, "simple",
+                          "Simple speculation")),
+    cl::cat(JITLinkCategory));
+
+cl::opt<std::string> SpeculateOrder(
+    "speculate-order",
+    cl::desc("A CSV file containing (JITDylib, Function) pairs to"
+             "speculatively look up"),
+    cl::cat(JITLinkCategory));
+
+cl::opt<std::string> RecordLazyExecs(
+    "record-lazy-execs",
+    cl::desc("Write lazy-function executions to a CSV file as (JITDylib, "
+             "function) pairs"),
+    cl::cat(JITLinkCategory));
 
 static cl::opt<size_t> MaterializationThreads(
     "num-threads", cl::desc("Number of materialization threads to use"),
@@ -959,17 +983,50 @@ public:
 };
 
 Expected<std::unique_ptr<Session::LazyLinkingSupport>>
-createLazyLinkingSupport(ObjectLinkingLayer &OLL, JITDylib &PlatformJD) {
-  auto RSMgr = JITLinkRedirectableSymbolManager::Create(OLL);
+createLazyLinkingSupport(Session &S) {
+  auto RSMgr = JITLinkRedirectableSymbolManager::Create(S.ObjLayer);
   if (!RSMgr)
     return RSMgr.takeError();
 
-  auto LRMgr = createJITLinkLazyReexportsManager(OLL, **RSMgr, PlatformJD);
+  std::shared_ptr<SimpleLazyReexportsSpeculator> Speculator;
+  switch (Speculate) {
+  case SpeculateKind::None:
+    break;
+  case SpeculateKind::Simple:
+    SimpleLazyReexportsSpeculator::RecordExecutionFunction RecordExecs;
+
+    if (!RecordLazyExecs.empty())
+      RecordExecs = [&S](const LazyReexportsManager::CallThroughInfo &CTI) {
+        S.LazyFnExecOrder.push_back({CTI.JD->getName(), CTI.BodyName});
+      };
+
+    Speculator =
+        SimpleLazyReexportsSpeculator::Create(S.ES, std::move(RecordExecs));
+    break;
+  }
+
+  auto LRMgr = createJITLinkLazyReexportsManager(
+      S.ObjLayer, **RSMgr, *S.PlatformJD, Speculator.get());
   if (!LRMgr)
     return LRMgr.takeError();
 
-  return std::make_unique<Session::LazyLinkingSupport>(std::move(*RSMgr),
-                                                       std::move(*LRMgr), OLL);
+  return std::make_unique<Session::LazyLinkingSupport>(
+      std::move(*RSMgr), std::move(Speculator), std::move(*LRMgr), S.ObjLayer);
+}
+
+static Error writeLazyExecOrder(Session &S) {
+  if (RecordLazyExecs.empty())
+    return Error::success();
+
+  std::error_code EC;
+  raw_fd_ostream ExecOrderOut(RecordLazyExecs, EC);
+  if (EC)
+    return createFileError(RecordLazyExecs, EC);
+
+  for (auto &[JDName, FunctionName] : S.LazyFnExecOrder)
+    ExecOrderOut << JDName << ", " << FunctionName << "\n";
+
+  return Error::success();
 }
 
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
@@ -1017,8 +1074,7 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
   S->Features = std::move(Features);
 
   if (lazyLinkingRequested()) {
-    if (auto LazyLinking =
-            createLazyLinkingSupport(S->ObjLayer, *S->PlatformJD))
+    if (auto LazyLinking = createLazyLinkingSupport(*S))
       S->LazyLinking = std::move(*LazyLinking);
     else
       return LazyLinking.takeError();
@@ -1028,6 +1084,9 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
 }
 
 Session::~Session() {
+  if (auto Err = writeLazyExecOrder(*this))
+    ES.reportError(std::move(Err));
+
   if (auto Err = ES.endSession())
     ES.reportError(std::move(Err));
 }
@@ -1145,6 +1204,19 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
               " not supported",
           inconvertibleErrorCode());
       return;
+    }
+  } else if (TT.isOSBinFormatMachO()) {
+    if (!NoExec) {
+      std::optional<bool> ForceEHFrames;
+      if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
+                                                     ForceEHFrames)))
+        return;
+      bool UseEHFrames = ForceEHFrames ? *ForceEHFrames : false;
+      if (!UseEHFrames)
+        ObjLayer.addPlugin(ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
+      else
+        ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
+            ES, ExitOnErr(EPCEHFrameRegistrar::Create(ES))));
     }
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
@@ -1667,6 +1739,12 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
                                      inconvertibleErrorCode());
   }
 
+#ifndef NDEBUG
+  if (DebugFlag && MaterializationThreads != 0)
+    errs() << "Warning: debugging output is not thread safe. "
+              "Use -num-threads=0 to stabilize output.\n";
+#endif // NDEBUG
+
   // Only one of -oop-executor and -oop-executor-connect can be used.
   if (!!OutOfProcessExecutor.getNumOccurrences() &&
       !!OutOfProcessExecutorConnect.getNumOccurrences())
@@ -1696,6 +1774,23 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
       return make_error<StringError>(
           "Lazy linking cannot be used with -harness mode",
           inconvertibleErrorCode());
+  } else if (Speculate != SpeculateKind::None) {
+    errs() << "Warning: -speculate ignored as there are no -lazy inputs\n";
+    Speculate = SpeculateKind::None;
+  }
+
+  if (Speculate == SpeculateKind::None) {
+    if (!SpeculateOrder.empty()) {
+      errs() << "Warning: -speculate-order ignored because speculation is "
+                "disabled\n";
+      SpeculateOrder = "";
+    }
+
+    if (!RecordLazyExecs.empty()) {
+      errs() << "Warning: -record-lazy-execs ignored because speculation is "
+                "disabled\n";
+      RecordLazyExecs = "";
+    }
   }
 
   return Error::success();
@@ -2261,6 +2356,59 @@ static Error addLibraries(Session &S,
   return Error::success();
 }
 
+static Error addSpeculationOrder(Session &S) {
+
+  if (SpeculateOrder.empty())
+    return Error::success();
+
+  assert(S.LazyLinking && "SpeculateOrder set, but lazy linking not enabled");
+  assert(S.LazyLinking->Speculator && "SpeculatoOrder set, but no speculator");
+
+  auto SpecOrderBuffer = getFile(SpeculateOrder);
+  if (!SpecOrderBuffer)
+    return SpecOrderBuffer.takeError();
+
+  StringRef LineStream((*SpecOrderBuffer)->getBuffer());
+  std::vector<std::pair<std::string, SymbolStringPtr>> SpecOrder;
+
+  size_t LineNumber = 0;
+  while (!LineStream.empty()) {
+    ++LineNumber;
+
+    auto MakeSpecOrderErr = [&](StringRef Reason) {
+      return make_error<StringError>("Error in speculation order file \"" +
+                                         SpeculateOrder + "\" on line " +
+                                         Twine(LineNumber) + ": " + Reason,
+                                     inconvertibleErrorCode());
+    };
+
+    StringRef CurLine;
+    std::tie(CurLine, LineStream) = LineStream.split('\n');
+    CurLine = CurLine.trim();
+    if (CurLine.empty())
+      continue;
+
+    auto [JDName, FuncName] = CurLine.split(',');
+
+    if (FuncName.empty())
+      return MakeSpecOrderErr("missing ',' separator");
+
+    JDName = JDName.trim();
+    if (JDName.empty())
+      return MakeSpecOrderErr("no value for column 1 (JIT Dylib name)");
+
+    FuncName = FuncName.trim();
+    if (FuncName.empty())
+      return MakeSpecOrderErr("no value for column 2 (function name)");
+
+    SpecOrder.push_back({JDName.str(), S.ES.intern(FuncName)});
+  }
+
+  S.LazyLinking->Speculator->addSpeculationSuggestions(std::move(SpecOrder));
+
+  return Error::success();
+}
+
 static Error addSessionInputs(Session &S) {
   std::map<unsigned, JITDylib *> IdxToJD;
   DenseSet<unsigned> LazyLinkIdxs;
@@ -2291,6 +2439,9 @@ static Error addSessionInputs(Session &S) {
     return Err;
 
   if (auto Err = addLibraries(S, IdxToJD, LazyLinkIdxs))
+    return Err;
+
+  if (auto Err = addSpeculationOrder(S))
     return Err;
 
   return Error::success();
@@ -2556,6 +2707,7 @@ int main(int argc, char *argv[]) {
     if (Timers)
       Timers->JITLinkTG.printAll(errs());
     reportLLVMJITLinkError(EntryPoint.takeError());
+    ExitOnErr(S->ES.endSession());
     exit(1);
   }
 

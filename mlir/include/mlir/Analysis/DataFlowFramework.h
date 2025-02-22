@@ -146,7 +146,7 @@ private:
   Operation *op = nullptr;
 };
 
-inline raw_ostream &operator<<(raw_ostream &os, ProgramPoint point) {
+inline raw_ostream &operator<<(raw_ostream &os, const ProgramPoint &point) {
   point.print(os);
   return os;
 }
@@ -332,9 +332,11 @@ public:
   /// does not exist.
   template <typename StateT, typename AnchorT>
   const StateT *lookupState(AnchorT anchor) const {
-    auto it =
-        analysisStates.find({LatticeAnchor(anchor), TypeID::get<StateT>()});
-    if (it == analysisStates.end())
+    const auto &mapIt = analysisStates.find(LatticeAnchor(anchor));
+    if (mapIt == analysisStates.end())
+      return nullptr;
+    auto it = mapIt->second.find(TypeID::get<StateT>());
+    if (it == mapIt->second.end())
       return nullptr;
     return static_cast<const StateT *>(it->second.get());
   }
@@ -343,11 +345,7 @@ public:
   template <typename AnchorT>
   void eraseState(AnchorT anchor) {
     LatticeAnchor la(anchor);
-
-    for (auto it = analysisStates.begin(); it != analysisStates.end(); ++it) {
-      if (it->first.first == la)
-        analysisStates.erase(it);
-    }
+    analysisStates.erase(LatticeAnchor(anchor));
   }
 
   // Erase all analysis states
@@ -403,6 +401,8 @@ public:
 
   /// Propagate an update to an analysis state if it changed by pushing
   /// dependent work items to the back of the queue.
+  /// This should only be used when DataFlowSolver is running.
+  /// Otherwise, the solver won't process the work items.
   void propagateIfChanged(AnalysisState *state, ChangeResult changed);
 
   /// Get the configuration of the solver.
@@ -411,6 +411,9 @@ public:
 private:
   /// Configuration of the dataflow solver.
   DataFlowConfig config;
+
+  /// The solver is working on the worklist.
+  bool isRunning = false;
 
   /// The solver's work queue. Work items can be inserted to the front of the
   /// queue to be processed greedily, speeding up computations that otherwise
@@ -426,7 +429,8 @@ private:
 
   /// A type-erased map of lattice anchors to associated analysis states for
   /// first-class lattice anchors.
-  DenseMap<std::pair<LatticeAnchor, TypeID>, std::unique_ptr<AnalysisState>>
+  DenseMap<LatticeAnchor, DenseMap<TypeID, std::unique_ptr<AnalysisState>>,
+           DenseMapInfo<LatticeAnchor::ParentTy>>
       analysisStates;
 
   /// Allow the base child analysis class to access the internals of the solver.
@@ -643,7 +647,7 @@ AnalysisT *DataFlowSolver::load(Args &&...args) {
 template <typename StateT, typename AnchorT>
 StateT *DataFlowSolver::getOrCreateState(AnchorT anchor) {
   std::unique_ptr<AnalysisState> &state =
-      analysisStates[{LatticeAnchor(anchor), TypeID::get<StateT>()}];
+      analysisStates[LatticeAnchor(anchor)][TypeID::get<StateT>()];
   if (!state) {
     state = std::unique_ptr<StateT>(new StateT(anchor));
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -658,7 +662,7 @@ inline raw_ostream &operator<<(raw_ostream &os, const AnalysisState &state) {
   return os;
 }
 
-inline raw_ostream &operator<<(raw_ostream &os, LatticeAnchor anchor) {
+inline raw_ostream &operator<<(raw_ostream &os, const LatticeAnchor &anchor) {
   anchor.print(os);
   return os;
 }
@@ -688,10 +692,6 @@ struct DenseMapInfo<mlir::ProgramPoint> {
     return lhs == rhs;
   }
 };
-
-template <>
-struct DenseMapInfo<mlir::LatticeAnchor>
-    : public DenseMapInfo<mlir::LatticeAnchor::ParentTy> {};
 
 // Allow llvm::cast style functions.
 template <typename To>

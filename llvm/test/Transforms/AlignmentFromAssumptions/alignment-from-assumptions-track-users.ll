@@ -3,7 +3,7 @@
 
 define void @widget(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(3) nocapture %arg1) {
 ; CHECK-LABEL: define void @widget(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(3) nocapture [[ARG1:%.*]]) {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(3) captures(none) [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr addrspace(1) [[GETELEMENTPTR]], i64 4) ]
@@ -23,7 +23,7 @@ bb:
 
 define void @wibble(ptr addrspace(1) nocapture readonly %arg, i32 %arg2, ptr addrspace(3) nocapture %arg3) {
 ; CHECK-LABEL: define void @wibble(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], i32 [[ARG2:%.*]], ptr addrspace(3) nocapture [[ARG3:%.*]]) {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], i32 [[ARG2:%.*]], ptr addrspace(3) captures(none) [[ARG3:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ugt i32 [[ARG2]], 10
 ; CHECK-NEXT:    br i1 [[ICMP]], label [[BB4:%.*]], label [[BB5:%.*]]
@@ -66,7 +66,7 @@ bb7:                                              ; preds = %bb5, %bb4
 
 define void @ham(ptr addrspace(1) nocapture readonly %arg, i32 %arg2, ptr addrspace(3) nocapture %arg3) {
 ; CHECK-LABEL: define void @ham(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], i32 [[ARG2:%.*]], ptr addrspace(3) nocapture [[ARG3:%.*]]) {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], i32 [[ARG2:%.*]], ptr addrspace(3) captures(none) [[ARG3:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i32, ptr addrspace(1) [[ARG]], i32 0
 ; CHECK-NEXT:    [[GETELEMENTPTR4:%.*]] = getelementptr i32, ptr addrspace(1) [[ARG]], i32 10
@@ -114,7 +114,7 @@ bb10:                                             ; preds = %bb5, %bb
 
 define void @quux(ptr addrspace(1) nocapture readonly %arg, i32 %arg2, ptr addrspace(3) nocapture %arg3) {
 ; CHECK-LABEL: define void @quux(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], i32 [[ARG2:%.*]], ptr addrspace(3) nocapture [[ARG3:%.*]]) {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], i32 [[ARG2:%.*]], ptr addrspace(3) captures(none) [[ARG3:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ugt i32 [[ARG2]], 10
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i32, ptr addrspace(1) [[ARG]], i32 6
@@ -140,7 +140,7 @@ bb:
 
 define void @widget.1(ptr addrspace(1) nocapture readonly %arg, i32 %arg2, ptr addrspace(3) nocapture %arg3) {
 ; CHECK-LABEL: define void @widget.1(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], i32 [[ARG2:%.*]], ptr addrspace(3) nocapture [[ARG3:%.*]]) {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], i32 [[ARG2:%.*]], ptr addrspace(3) captures(none) [[ARG3:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[ADDRSPACECAST:%.*]] = addrspacecast ptr addrspace(3) [[ARG3]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i32, ptr addrspace(1) [[ADDRSPACECAST]]
@@ -162,7 +162,7 @@ bb:
 
 define void @baz(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(3) nocapture %arg1) {
 ; CHECK-LABEL: define void @baz(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], ptr addrspace(3) nocapture [[ARG1:%.*]]) {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], ptr addrspace(3) captures(none) [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[ARG]], i64 16
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr addrspace(1) [[ARG]], i64 4) ]
@@ -182,7 +182,7 @@ bb:
 
 define void @foo(ptr addrspace(1) nocapture readonly %arg, i32 %arg1) {
 ; CHECK-LABEL: define void @foo(
-; CHECK-SAME: ptr addrspace(1) nocapture readonly [[ARG:%.*]], i32 [[ARG1:%.*]]) {
+; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG:%.*]], i32 [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr ptr addrspace(3), ptr addrspace(1) [[ARG]], i64 16
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr addrspace(1) [[ARG]], i64 4) ]

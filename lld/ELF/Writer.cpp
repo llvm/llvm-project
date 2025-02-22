@@ -9,6 +9,7 @@
 #include "Writer.h"
 #include "AArch64ErrataFix.h"
 #include "ARMErrataFix.h"
+#include "BPSectionOrderer.h"
 #include "CallGraphSort.h"
 #include "Config.h"
 #include "InputFiles.h"
@@ -149,6 +150,7 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
+  ctx.synthesizedSymbols.push_back(s);
   s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
                           stOther, STT_NOTYPE, val,
                           /*size=*/0, sec});
@@ -282,6 +284,7 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
+  bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
       if (d->section && !d->section->isLive())
@@ -297,9 +300,9 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
       }
     }
 
-    sym->isExported = sym->includeInDynsym(ctx);
-    if (ctx.arg.hasDynSymTab)
-      sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
+    if (maybePreemptible)
+      sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
+                           computeIsPreemptible(ctx, *sym);
   }
 }
 
@@ -381,9 +384,11 @@ template <class ELFT> void Writer<ELFT>::run() {
     if (errCount(ctx))
       return;
 
-    if (auto e = buffer->commit())
-      Err(ctx) << "failed to write output '" << buffer->getPath()
-               << "': " << std::move(e);
+    if (!ctx.e.disableOutput) {
+      if (auto e = buffer->commit())
+        Err(ctx) << "failed to write output '" << buffer->getPath()
+                 << "': " << std::move(e);
+    }
 
     if (!ctx.arg.cmseOutputLib.empty())
       writeARMCmseImportLib<ELFT>(ctx);
@@ -645,7 +650,6 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
 enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 27,
   RF_NOT_ALLOC = 1 << 26,
-  RF_HIP_FATBIN = 1 << 19,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
   RF_LARGE_ALT = 1 << 15,
   RF_WRITE = 1 << 14,
@@ -742,15 +746,6 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
   // sections, place non-NOBITS sections first.
   if (osec.type == SHT_NOBITS)
     rank |= RF_BSS;
-
-  // Put HIP fatbin related sections further away to avoid wasting relocation
-  // range to jump over them.  Make sure .hip_fatbin is the furthest.
-  if (osec.name == ".hipFatBinSegment")
-    rank |= RF_HIP_FATBIN;
-  if (osec.name == ".hip_gpubin_handle")
-    rank |= RF_HIP_FATBIN | 2;
-  if (osec.name == ".hip_fatbin")
-    rank |= RF_HIP_FATBIN | RF_WRITE | 3;
 
   // Some architectures have additional ordering restrictions for sections
   // within the same PT_LOAD.
@@ -1080,12 +1075,24 @@ static void maybeShuffle(Ctx &ctx,
   }
 }
 
-// Builds section order for handling --symbol-ordering-file.
+// Return section order within an InputSectionDescription.
+// If both --symbol-ordering-file and call graph profile are present, the order
+// file takes precedence, but the call graph profile is still used for symbols
+// that don't appear in the order file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   DenseMap<const InputSectionBase *, int> sectionOrder;
-  // Use the rarely used option --call-graph-ordering-file to sort sections.
-  if (!ctx.arg.callGraphProfile.empty())
-    return computeCallGraphProfileOrder(ctx);
+  if (ctx.arg.bpStartupFunctionSort || ctx.arg.bpFunctionOrderForCompression ||
+      ctx.arg.bpDataOrderForCompression) {
+    TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
+    sectionOrder = runBalancedPartitioning(
+        ctx, ctx.arg.bpStartupFunctionSort ? ctx.arg.irpgoProfilePath : "",
+        ctx.arg.bpFunctionOrderForCompression,
+        ctx.arg.bpDataOrderForCompression,
+        ctx.arg.bpCompressionSortStartupFunctions,
+        ctx.arg.bpVerboseSectionOrderer);
+  } else if (!ctx.arg.callGraphProfile.empty()) {
+    sectionOrder = computeCallGraphProfileOrder(ctx);
+  }
 
   if (ctx.arg.symbolOrderingFile.empty())
     return sectionOrder;
@@ -1099,7 +1106,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   // appear in the symbol ordering file have the lowest priority 0.
   // All explicitly mentioned symbols have negative (higher) priorities.
   DenseMap<CachedHashStringRef, SymbolOrderEntry> symbolOrder;
-  int priority = -ctx.arg.symbolOrderingFile.size();
+  int priority = -sectionOrder.size() - ctx.arg.symbolOrderingFile.size();
   for (StringRef s : ctx.arg.symbolOrderingFile)
     symbolOrder.insert({CachedHashStringRef(s), {priority++, false}});
 
@@ -1255,11 +1262,11 @@ static void sortSection(Ctx &ctx, OutputSection &osec,
   }
 }
 
-// If no layout was provided by linker script, we want to apply default
-// sorting for special input sections. This also handles --symbol-ordering-file.
+// Sort sections within each InputSectionDescription.
 template <class ELFT> void Writer<ELFT>::sortInputSections() {
-  // Build the order once since it is expensive.
+  // Assign negative priorities.
   DenseMap<const InputSectionBase *, int> order = buildSectionOrder(ctx);
+  // Assign non-negative priorities due to --shuffle-sections.
   maybeShuffle(ctx, order);
   for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
@@ -1842,6 +1849,13 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     }
   }
 
+  // If the previous code block defines any non-hidden symbols (e.g.
+  // __global_pointer$), they may be exported.
+  if (ctx.arg.exportDynamic)
+    for (Symbol *sym : ctx.synthesizedSymbols)
+      if (sym->computeBinding(ctx) != STB_LOCAL)
+        sym->isExported = true;
+
   demoteSymbolsAndComputeIsPreemptible(ctx);
 
   if (ctx.arg.copyRelocs && ctx.arg.discard != DiscardPolicy::None)
@@ -1926,9 +1940,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (ctx.in.symTab)
         ctx.in.symTab->addSymbol(sym);
 
-      // computeBinding might localize a linker-synthesized hidden symbol
-      // (e.g. __global_pointer$) that was considered exported.
-      if (sym->isExported && !sym->isLocal()) {
+      // computeBinding might localize a symbol that was considered exported
+      // but then synthesized as hidden (e.g. _DYNAMIC).
+      if ((sym->isExported || sym->isPreemptible) && !sym->isLocal()) {
         ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
         if (auto *file = dyn_cast<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())

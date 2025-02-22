@@ -91,7 +91,12 @@ define void @caller(ptr addrspace(7) noundef nonnull %arg) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i160 [[V_INT_RSRC]], 32
 ; CHECK-NEXT:    [[V_INT_OFF:%.*]] = zext i32 [[V_OFF]] to i160
 ; CHECK-NEXT:    [[V_INT:%.*]] = or i160 [[TMP1]], [[V_INT_OFF]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i160(i160 [[V_INT]], ptr addrspace(8) align 32 [[ARG_RSRC]], i32 [[ARG_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[V_INT_LEGAL:%.*]] = bitcast i160 [[V_INT]] to <5 x i32>
+; CHECK-NEXT:    [[V_INT_SLICE_0:%.*]] = shufflevector <5 x i32> [[V_INT_LEGAL]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[V_INT_SLICE_0]], ptr addrspace(8) align 32 [[ARG_RSRC]], i32 [[ARG_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_PART_4:%.*]] = add nuw i32 [[ARG_OFF]], 16
+; CHECK-NEXT:    [[V_INT_SLICE_4:%.*]] = extractelement <5 x i32> [[V_INT_LEGAL]], i64 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[V_INT_SLICE_4]], ptr addrspace(8) align 16 [[ARG_RSRC]], i32 [[ARG_PART_4]], i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
   %v = call ptr addrspace(7) @extern(ptr addrspace(7) %arg)

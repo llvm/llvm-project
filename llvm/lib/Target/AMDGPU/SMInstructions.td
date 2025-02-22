@@ -341,10 +341,10 @@ let SubtargetPredicate = HasScalarDwordx3Loads in
 defm S_BUFFER_LOAD_DWORDX4 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_128>;
 defm S_BUFFER_LOAD_DWORDX8 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_256>;
 defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_512>;
-defm S_BUFFER_LOAD_I8 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_LOAD_U8 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_LOAD_I16 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
-defm S_BUFFER_LOAD_U16 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_I8 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_U8 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_I16 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_U16 : SM_Pseudo_Loads <SReg_128_XNULL, SReg_32_XM0_XEXEC>;
 }
 
 let SubtargetPredicate = HasScalarStores in {
@@ -375,7 +375,7 @@ def S_DCACHE_WB_VOL : SM_Inval_Pseudo <"s_dcache_wb_vol", int_amdgcn_s_dcache_wb
 
 defm S_ATC_PROBE        : SM_Pseudo_Probe <SReg_64>;
 let is_buffer = 1 in {
-defm S_ATC_PROBE_BUFFER : SM_Pseudo_Probe <SReg_128>;
+defm S_ATC_PROBE_BUFFER : SM_Pseudo_Probe <SReg_128_XNULL>;
 }
 } // SubtargetPredicate = isGFX8Plus
 
@@ -470,7 +470,7 @@ def S_PREFETCH_INST        : SM_Prefetch_Pseudo <"s_prefetch_inst", SReg_64, 1>;
 def S_PREFETCH_INST_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_inst_pc_rel", SReg_64, 0>;
 def S_PREFETCH_DATA        : SM_Prefetch_Pseudo <"s_prefetch_data", SReg_64, 1>;
 def S_PREFETCH_DATA_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_data_pc_rel", SReg_64, 0>;
-def S_BUFFER_PREFETCH_DATA : SM_Prefetch_Pseudo <"s_buffer_prefetch_data", SReg_128, 1> {
+def S_BUFFER_PREFETCH_DATA : SM_Prefetch_Pseudo <"s_buffer_prefetch_data", SReg_128_XNULL, 1> {
   let is_buffer = 1;
 }
 } // end let SubtargetPredicate = isGFX12Plus
