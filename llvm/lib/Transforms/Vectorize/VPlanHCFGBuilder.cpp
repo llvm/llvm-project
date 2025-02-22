@@ -393,11 +393,9 @@ void PlainCFGBuilder::buildPlainCFG(
   RPO.perform(LI);
 
   for (BasicBlock *BB : RPO) {
-    // Create or retrieve the VPBasicBlock for this BB and create its
-    // VPInstructions.
+    // Create or retrieve the VPBasicBlock for this BB.
     VPBasicBlock *VPBB = getOrCreateVPBB(BB);
     VPRegionBlock *Region = VPBB->getParent();
-    createVPInstructionsForVPBB(VPBB, BB);
     Loop *LoopForBB = LI->getLoopFor(BB);
     // Set VPBB predecessors in the same order as they are in the incoming BB.
     if (!isHeaderBB(BB, LoopForBB)) {
@@ -409,6 +407,9 @@ void PlainCFGBuilder::buildPlainCFG(
       if (TheRegion != Region)
         setRegionPredsFromBB(Region, BB);
     }
+
+    // Create VPInstructions for BB.
+    createVPInstructionsForVPBB(VPBB, BB);
 
     if (TheLoop->getLoopLatch() == BB) {
       VPBB->setOneSuccessor(VectorLatchVPBB);
