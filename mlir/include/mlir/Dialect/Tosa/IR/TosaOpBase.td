@@ -228,13 +228,13 @@ class Tosa_I32EnumAttr<string name, string description, string mnemonic,
 // FP  : Floating-Point Inference. Primarily FP16 and FP32 operations.
 //
 // Extension:
-// INT16    : 16-bit integer operations.
-// INT4     : 4-bit integer weights.
-// BF16     : BFloat16 operations.
-// FP8      : 8-bit floating-point operations E4M3.
-// FP8      : 8-bit floating-point operations E5M2.
-// FFT      : Fast Fourier Transform operations.
-// VARIABLE : Stateful variable operations.
+// INT16        : 16-bit integer operations.
+// INT4         : 4-bit integer weights.
+// BF16         : BFloat16 operations.
+// FP8E4M3      : 8-bit floating-point operations E4M3.
+// FP8E5M2      : 8-bit floating-point operations E5M2.
+// FFT          : Fast Fourier Transform operations.
+// VARIABLE     : Stateful variable operations.
 //===----------------------------------------------------------------------===//
 
 def Tosa_PRO_INT   : I32EnumAttrCase<"pro_int", 1>;

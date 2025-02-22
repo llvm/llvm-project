@@ -432,7 +432,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes&&... __args) const {
     if (__f_ == nullptr)
-      __throw_bad_function_call();
+      std::__throw_bad_function_call();
     return (*__f_)(std::forward<_ArgTypes>(__args)...);
   }
 
@@ -607,7 +607,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI explicit __policy_invoker(__Call __c) : __call_(__c) {}
 
   _LIBCPP_HIDE_FROM_ABI static _Rp __call_empty(const __policy_storage*, __fast_forward<_ArgTypes>...) {
-    __throw_bad_function_call();
+    std::__throw_bad_function_call();
   }
 
   template <typename _Fun>

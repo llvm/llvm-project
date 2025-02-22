@@ -1138,7 +1138,7 @@ public:
     insert(__m.begin(), __m.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~map() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~map() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
@@ -1572,7 +1572,7 @@ _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) {
   __parent_pointer __parent;
   __node_base_pointer& __child = __tree_.__find_equal(__parent, __k);
   if (__child == nullptr)
-    __throw_out_of_range("map::at:  key not found");
+    std::__throw_out_of_range("map::at:  key not found");
   return static_cast<__node_pointer>(__child)->__value_.__get_value().second;
 }
 
@@ -1581,7 +1581,7 @@ const _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) const {
   __parent_pointer __parent;
   __node_base_pointer __child = __tree_.__find_equal(__parent, __k);
   if (__child == nullptr)
-    __throw_out_of_range("map::at:  key not found");
+    std::__throw_out_of_range("map::at:  key not found");
   return static_cast<__node_pointer>(__child)->__value_.__get_value().second;
 }
 
@@ -1826,7 +1826,9 @@ public:
     insert(__m.begin(), __m.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~multimap() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~multimap() {
+    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
+  }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
