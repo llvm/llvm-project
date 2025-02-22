@@ -803,8 +803,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (ImmLitIdx != -1 && !IsSOPK)
     convertFMAanyK(MI, ImmLitIdx);
 
-  if (isGFX10Plus() &&
-      (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3) &&
+  // Some VOPC instructions, e.g., v_cmpx_f_f64, use VOP3 encoding and
+  // have EXEC as implicit destination. Issue a warning if encoding for
+  // vdst is not EXEC.
+  if ((MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3) &&
       MCII->get(MI.getOpcode()).hasImplicitDefOfPhysReg(AMDGPU::EXEC)) {
     auto ExecEncoding = MRI.getEncodingValue(AMDGPU::EXEC_LO);
     if (Bytes_[0] != ExecEncoding)
