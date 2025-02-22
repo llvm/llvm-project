@@ -184,10 +184,9 @@ exit:
 define void @forward_dist_17(ptr %A, ptr noalias %B) {
 ; CHECK-LABEL: 'forward_dist_17'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Forward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        ForwardButPreventsForwarding:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            store i32 0, ptr %gep.2, align 4 ->
 ; CHECK-NEXT:            %l = load i32, ptr %gep.1, align 4
 ; CHECK-EMPTY:
@@ -220,10 +219,9 @@ exit:
 define void @forward_dist_19(ptr %A, ptr noalias %B) {
 ; CHECK-LABEL: 'forward_dist_19'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Forward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        ForwardButPreventsForwarding:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            store i32 0, ptr %gep.2, align 4 ->
 ; CHECK-NEXT:            %l = load i32, ptr %gep.1, align 4
 ; CHECK-EMPTY:
@@ -258,10 +256,9 @@ exit:
 define void @unknown_loop_bounds(i64 %x, i64 %y) {
 ; CHECK-LABEL: 'unknown_loop_bounds'
 ; CHECK-NEXT:    inner:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 256 bits
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
+; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l = load double, ptr %gep.0, align 8 ->
 ; CHECK-NEXT:            store double %l, ptr %gep.1, align 8
 ; CHECK-EMPTY:
