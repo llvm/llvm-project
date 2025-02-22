@@ -290,7 +290,9 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         RS.Parameters.push_back(NewParam);
       }
 
-      RS.write(OS);
+      if (Error Err = RS.write(OS))
+        handleAllErrors(std::move(Err));
+
       break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;
