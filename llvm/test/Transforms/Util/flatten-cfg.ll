@@ -358,7 +358,7 @@ if.end2:
 }
 
 ; Test that two if-regions are not merged when there's potential aliasing
-; between a fuction call in the first if-region and a load in the second if-region's header
+; between a store in the first if-region and a function call in the second if-region's header
 define i32 @test_alias_2(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @test_alias_2
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]]) {
