@@ -15472,12 +15472,16 @@ uint64_t test_vshld_n_u64(uint64_t a) {
 //   return (int32_t)vqshls_n_s32(a, 31);
 // }
 
-// NYI-LABEL: @test_vqshld_n_s64(
-// NYI:   [[VQSHL_N:%.*]] = call i64 @llvm.aarch64.neon.sqshl.i64(i64 %a, i64 63)
-// NYI:   ret i64 [[VQSHL_N]]
-// int64_t test_vqshld_n_s64(int64_t a) {
-//   return (int64_t)vqshld_n_s64(a, 63);
-// }
+int64_t test_vqshld_n_s64(int64_t a) {
+ return (int64_t)vqshld_n_s64(a, 63);
+
+ // CIR-LABEL: vqshld_n_s64
+ // CIR: [[TMP0:%.*]] = cir.llvm.intrinsic "aarch64.neon.sqshl" {{.*}}, {{.*}} : (!s64i, !s64i) -> !s64i
+
+ // LLVM-LABEL: @test_vqshld_n_s64(
+ // LLVM: [[VQSHL_N:%.*]] = call i64 @llvm.aarch64.neon.sqshl.i64(i64 %0, i64 63)
+ // LLVM: ret i64 [[VQSHL_N]]
+}
 
 // NYI-LABEL: @test_vqshl_n_s8(
 // NYI:   [[VQSHL_N:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshl.v8i8(<8 x i8> %a, <8 x i8> zeroinitializer)
@@ -15631,12 +15635,16 @@ uint64_t test_vshld_n_u64(uint64_t a) {
 //   return (uint32_t)vqshls_n_u32(a, 31);
 // }
 
-// NYI-LABEL: @test_vqshld_n_u64(
-// NYI:   [[VQSHL_N:%.*]] = call i64 @llvm.aarch64.neon.uqshl.i64(i64 %a, i64 63)
-// NYI:   ret i64 [[VQSHL_N]]
-// uint64_t test_vqshld_n_u64(uint64_t a) {
-//   return (uint64_t)vqshld_n_u64(a, 63);
-// }
+uint64_t test_vqshld_n_u64(uint64_t a) {
+ return (uint64_t)vqshld_n_u64(a, 63);
+
+ // CIR-LABEL: vqshld_n_u64
+ // CIR: [[TMP0:%.*]] = cir.llvm.intrinsic "aarch64.neon.uqshl" {{.*}}, {{.*}} : (!u64i, !u64i) -> !u64i
+
+ // LLVM-LABEL: @test_vqshld_n_u64(
+ // LLVM: [[VQSHL_N:%.*]] = call i64 @llvm.aarch64.neon.uqshl.i64(i64 %0, i64 63)
+ // LLVM: ret i64 [[VQSHL_N]]
+}
 
 // NYI-LABEL: @test_vqshl_n_u64(
 // NYI:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
