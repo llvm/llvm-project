@@ -2,12 +2,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int recurse(int x) {
-  if (x <= 1)
-    return 1;                // recurse end
-  return recurse(x - 1) + x; // recurse call
-}
-
 int comp(const void *first, const void *second) {
   const int a = *((const int *)first);
   const int b = *((const int *)second);
@@ -19,8 +13,6 @@ int comp(const void *first, const void *second) {
 }
 
 int main(int argc, char const *argv[]) {
-  recurse(40); // recurse invocation
-
   int numbers[] = {4, 5, 2, 3, 1, 0, 9, 8, 6, 7};
   qsort(numbers, sizeof(numbers) / sizeof(int), sizeof(int), comp);
 

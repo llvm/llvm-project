@@ -46,6 +46,7 @@
 #include <algorithm>
 #include <array>
 #include <condition_variable>
+#include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
