@@ -322,13 +322,13 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       continue;
     }
 
-    VPValue *NewVPV;
+    VPSingleDefRecipe *NewR;
     if (auto *Phi = dyn_cast<PHINode>(Inst)) {
       // Phi node's operands may have not been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewVPV = new VPWidenPHIRecipe(Phi, nullptr, Phi->getDebugLoc());
-      VPBB->appendRecipe(cast<VPWidenPHIRecipe>(NewVPV));
+      NewR = new VPWidenPHIRecipe(Phi, nullptr, Phi->getDebugLoc());
+      VPBB->appendRecipe(NewR);
       PhisToFix.push_back(Phi);
     } else {
       // Translate LLVM-IR operands into VPValue operands and set them in the
@@ -339,11 +339,11 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
       // Build VPInstruction for any arbitrary Instruction without specific
       // representation in VPlan.
-      NewVPV = cast<VPInstruction>(
+      NewR = cast<VPInstruction>(
           VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst));
     }
 
-    IRDef2VPValue[Inst] = NewVPV;
+    IRDef2VPValue[Inst] = NewR;
   }
 }
 
