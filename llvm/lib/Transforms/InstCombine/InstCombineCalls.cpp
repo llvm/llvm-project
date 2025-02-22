@@ -3997,7 +3997,9 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       // Simplify the nonnull operand if the parameter is known to be nonnull.
       // Otherwise, try to infer nonnull for it.
       if (Call.paramHasNonNullAttr(ArgNo, /*AllowUndefOrPoison=*/true)) {
-        if (Value *Res = simplifyNonNullOperand(V)) {
+        if (Value *Res = simplifyNonNullOperand(
+                V, /*HasDereferenceable=*/Call.getParamDereferenceableBytes(
+                       ArgNo) > 0)) {
           replaceOperand(Call, ArgNo, Res);
           Changed = true;
         }

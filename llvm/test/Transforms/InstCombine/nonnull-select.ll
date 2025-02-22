@@ -131,8 +131,7 @@ define void @all_nonnull_call_gep_multiuse(i1 %cond, ptr %p, i64 %off) {
 
 define void @nonnull_call_gep_inbounds(i1 %cond, ptr %p, i64 %off) {
 ; CHECK-LABEL: @nonnull_call_gep_inbounds(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[OFF:%.*]]
 ; CHECK-NEXT:    call void @f(ptr nonnull [[GEP]])
 ; CHECK-NEXT:    ret void
 ;
@@ -144,8 +143,7 @@ define void @nonnull_call_gep_inbounds(i1 %cond, ptr %p, i64 %off) {
 
 define void @nonnull_dereferenceable_call_gep(i1 %cond, ptr %p, i64 %off) {
 ; CHECK-LABEL: @nonnull_dereferenceable_call_gep(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 [[OFF:%.*]]
 ; CHECK-NEXT:    call void @f(ptr dereferenceable(1) [[GEP]])
 ; CHECK-NEXT:    ret void
 ;
@@ -168,8 +166,7 @@ define nonnull ptr @nonnull_ret_gep(i1 %cond, ptr %p, i64 %off) {
 
 define nonnull ptr @nonnull_ret_gep_inbounds(i1 %cond, ptr %p, i64 %off) {
 ; CHECK-LABEL: @nonnull_ret_gep_inbounds(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[OFF:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %ptr = select i1 %cond, ptr null, ptr %p
@@ -179,8 +176,7 @@ define nonnull ptr @nonnull_ret_gep_inbounds(i1 %cond, ptr %p, i64 %off) {
 
 define dereferenceable(1) ptr @nonnull_dereferenceable_ret_gep(i1 %cond, ptr %p, i64 %off) {
 ; CHECK-LABEL: @nonnull_dereferenceable_ret_gep(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 [[OFF:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %ptr = select i1 %cond, ptr null, ptr %p

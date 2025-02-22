@@ -3596,7 +3596,9 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
     if (F->hasRetAttribute(Attribute::NonNull) ||
         (F->getAttributes().getRetDereferenceableBytes() > 0 &&
          !NullPointerIsDefined(F, RetTy->getPointerAddressSpace()))) {
-      if (Value *V = simplifyNonNullOperand(RetVal))
+      if (Value *V = simplifyNonNullOperand(
+              RetVal, /*HasDereferenceable=*/F->getAttributes()
+                              .getRetDereferenceableBytes() > 0))
         return replaceOperand(RI, 0, V);
     }
   }
