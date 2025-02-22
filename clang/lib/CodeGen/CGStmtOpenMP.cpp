@@ -4456,7 +4456,7 @@ static Expr *getInitialExprFromCapturedExpr(Expr *Cond) {
       return CapturedExprDecl->getInit();
     }
   }
-  return nullptr;
+  return Cond;
 }
 
 static Expr *replaceWithNewTraitsOrDirectCall(Stmt *AssocExpr,
