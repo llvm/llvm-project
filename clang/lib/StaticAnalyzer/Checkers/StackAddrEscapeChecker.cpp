@@ -203,8 +203,8 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
   // a variable of the type "dispatch_semaphore_t".
   if (isSemaphoreCaptured(*B.getDecl()))
     return;
-  for (const MemRegion *Region :
-       llvm::make_first_range(getCapturedStackRegions(B, C))) {
+  auto Regions = getCapturedStackRegions(B, C);
+  for (const MemRegion *Region : llvm::make_first_range(Regions)) {
     // The block passed to dispatch_async may capture another block
     // created on the stack. However, there is no leak in this situaton,
     // no matter if ARC or no ARC is enabled:
