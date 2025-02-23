@@ -81,6 +81,13 @@ public:
   void operator()(const llvm::json::Object &request) override;
 };
 
+class EvaluateRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "evaluate"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
 } // namespace lldb_dap
 
 #endif
