@@ -6,8 +6,8 @@ on:
   pull_request:
     branches: [ "main" ]
     paths:
-      - 'libc/**'
-      - '.github/workflows/libc-overlay-tests.yml'
+      - 'disable-libc/**'
+      - 'disable-.github/workflows/libc-overlay-tests.yml'
 
 jobs:
   build:

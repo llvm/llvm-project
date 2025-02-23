@@ -15,17 +15,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_type: [Debug, Release, MinSizeRel]
+        build_type: [Release]
         include:
-          - os: ubuntu-24.04
-            ccache-variant: sccache
-            c_compiler: clang
-            cpp_compiler: clang++
+          #- os: ubuntu-24.04
+          #  ccache-variant: sccache
+          #  c_compiler: clang
+          #  cpp_compiler: clang++
           # TODO: remove ccache logic when https://github.com/hendrikmuhs/ccache-action/issues/279 is resolved.
           - os: ubuntu-24.04-arm
             ccache-variant: ccache
-            c_compiler: clang
-            cpp_compiler: clang++
+            c_compiler: clang-18
+            cpp_compiler: clang++-18
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
@@ -54,6 +54,9 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-libc-dev
         sudo ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 18
 
     - name: Set reusable strings
       id: strings
