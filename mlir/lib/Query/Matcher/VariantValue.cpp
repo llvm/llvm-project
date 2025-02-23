@@ -56,8 +56,8 @@ VariantValue::VariantValue(const VariantMatcher &matcher)
   value.Matcher = new VariantMatcher(matcher);
 }
 
-VariantValue::VariantValue(unsigned Unsigned) : type(ValueType::Unsigned) {
-  value.Unsigned = Unsigned;
+VariantValue::VariantValue(int64_t signedValue) : type(ValueType::Signed) {
+  value.Signed = signedValue;
 }
 
 VariantValue::~VariantValue() { reset(); }
@@ -73,8 +73,8 @@ VariantValue &VariantValue::operator=(const VariantValue &other) {
   case ValueType::Matcher:
     setMatcher(other.getMatcher());
     break;
-  case ValueType::Unsigned:
-    setUnsigned(other.getUnsigned());
+  case ValueType::Signed:
+    setSigned(other.getSigned());
     break;
   case ValueType::Nothing:
     type = ValueType::Nothing;
@@ -92,7 +92,7 @@ void VariantValue::reset() {
     delete value.Matcher;
     break;
   // Cases that do nothing.
-  case ValueType::Unsigned:
+  case ValueType::Signed:
   case ValueType::Nothing:
     break;
   }
@@ -100,17 +100,17 @@ void VariantValue::reset() {
 }
 
 // Unsinged
-bool VariantValue::isUnsigned() const { return type == ValueType::Unsigned; }
+bool VariantValue::isSigned() const { return type == ValueType::Signed; }
 
-unsigned VariantValue::getUnsigned() const {
-  assert(isUnsigned());
-  return value.Unsigned;
+int64_t VariantValue::getSigned() const {
+  assert(isSigned());
+  return value.Signed;
 }
 
-void VariantValue::setUnsigned(unsigned newValue) {
+void VariantValue::setSigned(int64_t newValue) {
   reset();
-  type = ValueType::Unsigned;
-  value.Unsigned = newValue;
+  type = ValueType::Signed;
+  value.Signed = newValue;
 }
 
 bool VariantValue::isString() const { return type == ValueType::String; }
@@ -145,8 +145,8 @@ std::string VariantValue::getTypeAsString() const {
     return "String";
   case ValueType::Matcher:
     return "Matcher";
-  case ValueType::Unsigned:
-    return "Unsigned";
+  case ValueType::Signed:
+    return "Signed";
   case ValueType::Nothing:
     return "Nothing";
   }

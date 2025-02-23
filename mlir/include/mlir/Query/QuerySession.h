@@ -15,10 +15,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/SourceMgr.h"
 
-namespace mlir::query::matcher {
-class Registry;
-}
-
 namespace mlir::query {
 
 // Represents the state for a particular mlir-query session.
