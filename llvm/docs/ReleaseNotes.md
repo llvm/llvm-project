@@ -83,6 +83,10 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Enabled the
+  [FWD_PROGRESS bit](https://llvm.org/docs/AMDGPUUsage.html#code-object-v3-kernel-descriptor)
+  for all GFX ISAs greater or equal to 10
+
 Changes to the ARM Backend
 --------------------------
 
