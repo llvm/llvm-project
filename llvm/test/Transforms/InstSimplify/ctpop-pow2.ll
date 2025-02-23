@@ -148,10 +148,12 @@ define <2 x i32> @ctpop_lshr_intmin_vec(<2 x i32> %x) {
   ret <2 x i32> %cnt
 }
 
-; todo do not remove the assume
 define i1 @issue128152(i32 %x) {
 ; CHECK-LABEL: @issue128152(
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CTPOP:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[CTPOP]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %ctpop = call i32 @llvm.ctpop.i32(i32 %x)

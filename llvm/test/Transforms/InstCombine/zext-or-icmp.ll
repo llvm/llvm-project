@@ -180,11 +180,11 @@ define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) "instcombine-
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i64 [[SUB17]], 32
 ; CHECK-NEXT:    [[CONV18:%.*]] = ashr exact i64 [[SEXT]], 32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i64 [[XOR]], [[CONV18]]
-; CHECK-NEXT:    [[TRUNC44:%.*]] = zext i1 [[CMP]] to i8
-; CHECK-NEXT:    [[INC:%.*]] = add i8 [[I162]], [[TRUNC44]]
-; CHECK-NEXT:    [[TOBOOL23_NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[CONV19:%.*]] = zext i1 [[CMP]] to i16
+; CHECK-NEXT:    [[OR21:%.*]] = or i16 [[INSERT]], [[CONV19]]
+; CHECK-NEXT:    [[TOBOOL23_NOT:%.*]] = icmp eq i16 [[OR21]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TOBOOL23_NOT]])
-; CHECK-NEXT:    ret i8 [[INC]]
+; CHECK-NEXT:    ret i8 [[I162]]
 ;
   %b = icmp eq i32 %t0, 0
   %b2 = icmp eq i16 %insert, 0

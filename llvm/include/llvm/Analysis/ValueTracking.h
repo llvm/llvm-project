@@ -1268,7 +1268,8 @@ std::optional<bool> isImpliedByDomCondition(CmpPredicate Pred, const Value *LHS,
 /// affected by the condition \p Cond. Used by AssumptionCache and
 /// DomConditionCache.
 void findValuesAffectedByCondition(Value *Cond, bool IsAssume,
-                                   function_ref<void(Value *)> InsertAffected);
+                                   function_ref<void(Value *)> InsertAffected,
+                                   bool EphemeralOnly = false);
 
 } // end namespace llvm
 

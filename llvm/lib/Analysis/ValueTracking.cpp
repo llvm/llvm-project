@@ -473,7 +473,17 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
     }
   }
 
-  return false;
+  auto *Assume = dyn_cast<AssumeInst>(I);
+  if (!Assume)
+    return false;
+
+  SmallVector<const Value *, 8> Affected;
+  auto InsertAffected = [&Affected](Value *V) { Affected.push_back(V); };
+
+  findValuesAffectedByCondition(Assume->getArgOperand(0), /*IsAssume=*/true,
+                                InsertAffected, /*EphemeralOnly=*/true);
+
+  return is_contained(Affected, E);
 }
 
 // Is this an intrinsic that cannot be speculated but also cannot trap?
@@ -10200,35 +10210,39 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
 }
 
 static void
-addValueAffectedByCondition(Value *V,
+addValueAffectedByCondition(Value *V, bool EphemeralOnly, bool Ephemeral,
                             function_ref<void(Value *)> InsertAffected) {
   assert(V != nullptr);
-  if (isa<Argument>(V) || isa<GlobalValue>(V)) {
+  if (!EphemeralOnly && (isa<Argument>(V) || isa<GlobalValue>(V))) {
     InsertAffected(V);
   } else if (auto *I = dyn_cast<Instruction>(V)) {
-    InsertAffected(V);
-
     // Peek through unary operators to find the source of the condition.
     Value *Op;
     if (match(I, m_CombineOr(m_PtrToInt(m_Value(Op)), m_Trunc(m_Value(Op))))) {
-      if (isa<Instruction>(Op) || isa<Argument>(Op))
+      Ephemeral = true;
+      if (!EphemeralOnly && (isa<Instruction>(Op) || isa<Argument>(Op)))
         InsertAffected(Op);
     }
+    if (Ephemeral || !EphemeralOnly)
+      InsertAffected(V);
   }
 }
 
 void llvm::findValuesAffectedByCondition(
-    Value *Cond, bool IsAssume, function_ref<void(Value *)> InsertAffected) {
-  auto AddAffected = [&InsertAffected](Value *V) {
-    addValueAffectedByCondition(V, InsertAffected);
+    Value *Cond, bool IsAssume, function_ref<void(Value *)> InsertAffected,
+    bool EphemeralOnly) {
+  auto AddAffected = [&InsertAffected, EphemeralOnly](Value *V,
+                                                      bool Ephemeral) {
+    addValueAffectedByCondition(V, EphemeralOnly, Ephemeral, InsertAffected);
   };
 
-  auto AddCmpOperands = [&AddAffected, IsAssume](Value *LHS, Value *RHS) {
+  auto AddCmpOperands = [&AddAffected, IsAssume](Value *LHS, Value *RHS,
+                                                 bool EphemeralLhs) {
     if (IsAssume) {
-      AddAffected(LHS);
-      AddAffected(RHS);
+      AddAffected(LHS, EphemeralLhs);
+      AddAffected(RHS, /*Ephemeral=*/false);
     } else if (match(RHS, m_Constant()))
-      AddAffected(LHS);
+      AddAffected(LHS, EphemeralLhs);
   };
 
   SmallVector<Value *, 8> Worklist;
@@ -10241,11 +10255,12 @@ void llvm::findValuesAffectedByCondition(
 
     CmpPredicate Pred;
     Value *A, *B, *X;
+    bool EphemeralA = false;
 
     if (IsAssume) {
-      AddAffected(V);
+      AddAffected(V, /*Ephemeral=*/true);
       if (match(V, m_Not(m_Value(X))))
-        AddAffected(X);
+        AddAffected(X, /*Ephemeral=*/true);
     }
 
     if (match(V, m_LogicalOp(m_Value(A), m_Value(B)))) {
@@ -10260,28 +10275,36 @@ void llvm::findValuesAffectedByCondition(
       }
     } else if (match(V, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
       bool HasRHSC = match(B, m_ConstantInt());
+      if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)))) {
+        AddAffected(X, /*Ephemeral=*/false);
+        EphemeralA = true;
+      }
+
       if (ICmpInst::isEquality(Pred)) {
-        AddAffected(A);
-        AddAffected(B);
         if (HasRHSC) {
           Value *Y;
           // (X & C) or (X | C).
           // (X << C) or (X >>_s C) or (X >>_u C).
-          if (match(A, m_Shift(m_Value(X), m_ConstantInt())))
-            AddAffected(X);
-          else if (match(A, m_And(m_Value(X), m_Value(Y))) ||
-                   match(A, m_Or(m_Value(X), m_Value(Y)))) {
-            AddAffected(X);
-            AddAffected(Y);
+          if (match(A, m_Shift(m_Value(X), m_ConstantInt()))) {
+            AddAffected(X, /*Ephemeral=*/false);
+            EphemeralA = true;
+          } else if (match(A, m_And(m_Value(X), m_Value(Y))) ||
+                     match(A, m_Or(m_Value(X), m_Value(Y)))) {
+            AddAffected(X, /*Ephemeral=*/false);
+            AddAffected(Y, /*Ephemeral=*/false);
+            EphemeralA = true;
           }
         }
+        AddAffected(A, EphemeralA);
+        AddAffected(B, /*Ephemeral=*/false);
       } else {
-        AddCmpOperands(A, B);
         if (HasRHSC) {
           // Handle (A + C1) u< C2, which is the canonical form of
           // A > C3 && A < C4.
-          if (match(A, m_AddLike(m_Value(X), m_ConstantInt())))
-            AddAffected(X);
+          if (match(A, m_AddLike(m_Value(X), m_ConstantInt()))) {
+            AddAffected(X, /*Ephemeral=*/false);
+            EphemeralA = true;
+          }
 
           if (ICmpInst::isUnsigned(Pred)) {
             Value *Y;
@@ -10291,46 +10314,51 @@ void llvm::findValuesAffectedByCondition(
             if (match(A, m_And(m_Value(X), m_Value(Y))) ||
                 match(A, m_Or(m_Value(X), m_Value(Y))) ||
                 match(A, m_NUWAdd(m_Value(X), m_Value(Y)))) {
-              AddAffected(X);
-              AddAffected(Y);
+              AddAffected(X, /*Ephemeral=*/false);
+              AddAffected(Y, /*Ephemeral=*/false);
             }
             // X nuw- Y u> C -> X u> C
             if (match(A, m_NUWSub(m_Value(X), m_Value())))
-              AddAffected(X);
+              AddAffected(X, /*Ephemeral=*/false);
           }
         }
 
         // Handle icmp slt/sgt (bitcast X to int), 0/-1, which is supported
         // by computeKnownFPClass().
         if (match(A, m_ElementWiseBitCast(m_Value(X)))) {
-          if (Pred == ICmpInst::ICMP_SLT && match(B, m_Zero()))
+          if (Pred == ICmpInst::ICMP_SLT && match(B, m_Zero())) {
             InsertAffected(X);
-          else if (Pred == ICmpInst::ICMP_SGT && match(B, m_AllOnes()))
+            EphemeralA = true;
+          } else if (Pred == ICmpInst::ICMP_SGT && match(B, m_AllOnes())) {
             InsertAffected(X);
+            EphemeralA = true;
+          }
         }
+
+        AddCmpOperands(A, B, EphemeralA);
       }
-
-      if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
-        AddAffected(X);
     } else if (match(V, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
-      AddCmpOperands(A, B);
-
       // fcmp fneg(x), y
       // fcmp fabs(x), y
       // fcmp fneg(fabs(x)), y
-      if (match(A, m_FNeg(m_Value(A))))
-        AddAffected(A);
-      if (match(A, m_FAbs(m_Value(A))))
-        AddAffected(A);
+      if (match(A, m_FNeg(m_Value(X)))) {
+        AddAffected(X, /*Ephemeral=*/false);
+        EphemeralA = true;
+      }
+      if (match(A, m_FAbs(m_Value(X)))) {
+        AddAffected(X, /*Ephemeral=*/false);
+        EphemeralA = true;
+      }
 
+      AddCmpOperands(A, B, EphemeralA);
     } else if (match(V, m_Intrinsic<Intrinsic::is_fpclass>(m_Value(A),
                                                            m_Value()))) {
       // Handle patterns that computeKnownFPClass() support.
-      AddAffected(A);
+      AddAffected(A, /*Ephemeral=*/false);
     } else if (!IsAssume && match(V, m_Trunc(m_Value(X)))) {
       // Assume is checked here as X is already added above for assumes in
       // addValueAffectedByCondition
-      AddAffected(X);
+      AddAffected(X, /*Ephemeral=*/false);
     } else if (!IsAssume && match(V, m_Not(m_Value(X)))) {
       // Assume is checked here to avoid issues with ephemeral values
       Worklist.push_back(X);

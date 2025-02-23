@@ -562,12 +562,12 @@ join:
   ret i32 %add
 }
 
-; todo do not remove the assume condition
 define i32 @issue90206(i32 noundef %x) {
 ; CHECK-LABEL: define range(i32 0, -2147483648) i32 @issue90206(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[X]], -1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[R]], -1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = add i32 %x, -1
