@@ -2803,6 +2803,10 @@ public:
     return getUnqualifiedArrayType(T, Quals);
   }
 
+  // Determine whether an array is a valid return type
+  // Array is a valid return type for HLSL
+  bool isReturnableArrayType() const { return getLangOpts().HLSL; }
+
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.
   bool hasSameUnqualifiedType(QualType T1, QualType T2) const {

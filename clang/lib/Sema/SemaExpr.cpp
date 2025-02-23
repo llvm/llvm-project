@@ -20681,7 +20681,7 @@ ExprResult RebuildUnknownAnyExpr::VisitCallExpr(CallExpr *E) {
   const FunctionType *FnType = CalleeType->castAs<FunctionType>();
 
   // Verify that this is a legal result type of a function.
-  if ((DestType->isArrayType() && !S.getLangOpts().HLSL) ||
+  if ((DestType->isArrayType() && !S.Context.isReturnableArrayType()) ||
       DestType->isFunctionType()) {
     unsigned diagID = diag::err_func_returning_array_function;
     if (Kind == FK_BlockPointer)
@@ -20761,7 +20761,8 @@ ExprResult RebuildUnknownAnyExpr::VisitCallExpr(CallExpr *E) {
 
 ExprResult RebuildUnknownAnyExpr::VisitObjCMessageExpr(ObjCMessageExpr *E) {
   // Verify that this is a legal result type of a call.
-  if (DestType->isArrayType() || DestType->isFunctionType()) {
+  if ((DestType->isArrayType() && !S.Context.isReturnableArrayType()) ||
+      DestType->isFunctionType()) {
     S.Diag(E->getExprLoc(), diag::err_func_returning_array_function)
       << DestType->isFunctionType() << DestType;
     return ExprError();
