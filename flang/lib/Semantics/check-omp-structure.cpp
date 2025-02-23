@@ -3369,13 +3369,18 @@ void OmpStructureChecker::CheckReductionModifier(
     return;
   }
   const DirectiveContext &dirCtx{GetContext()};
-  if (dirCtx.directive == llvm::omp::Directive::OMPD_loop) {
+  if (dirCtx.directive == llvm::omp::Directive::OMPD_loop ||
+      dirCtx.directive == llvm::omp::Directive::OMPD_taskloop) {
     // [5.2:257:33-34]
     // If a reduction-modifier is specified in a reduction clause that
     // appears on the directive, then the reduction modifier must be
     // default.
+    // [5.2:268:16]
+    // The reduction-modifier must be default.
     context_.Say(GetContext().clauseSource,
-        "REDUCTION modifier on LOOP directive must be DEFAULT"_err_en_US);
+        "REDUCTION modifier on %s directive must be DEFAULT"_err_en_US,
+        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
+    return;
   }
   if (modifier.v == ReductionModifier::Value::Task) {
     // "Task" is only allowed on worksharing or "parallel" directive.
@@ -4274,8 +4279,30 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckPrivateSymbolsInOuterCxt(
       currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_lastprivate);
 
-  OmpVerifyModifiers(
-      x.v, llvm::omp::OMPC_lastprivate, GetContext().clauseSource, context_);
+  if (OmpVerifyModifiers(x.v, llvm::omp::OMPC_lastprivate,
+          GetContext().clauseSource, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    using LastprivateModifier = parser::OmpLastprivateModifier;
+    if (auto *modifier{OmpGetUniqueModifier<LastprivateModifier>(modifiers)}) {
+      CheckLastprivateModifier(*modifier);
+    }
+  }
+}
+
+// Add any restrictions related to Modifiers/Directives with
+// Lastprivate clause here:
+void OmpStructureChecker::CheckLastprivateModifier(
+    const parser::OmpLastprivateModifier &modifier) {
+  using LastprivateModifier = parser::OmpLastprivateModifier;
+  const DirectiveContext &dirCtx{GetContext()};
+  if (modifier.v == LastprivateModifier::Value::Conditional &&
+      dirCtx.directive == llvm::omp::Directive::OMPD_taskloop) {
+    // [5.2:268:17]
+    // The conditional lastprivate-modifier must not be specified.
+    context_.Say(GetContext().clauseSource,
+        "'CONDITIONAL' modifier on lastprivate clause with TASKLOOP "
+        "directive is not allowed"_err_en_US);
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
