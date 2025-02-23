@@ -33,7 +33,6 @@
 #include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
-#include <_types/_uint32_t.h>
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -109,11 +108,11 @@ eisel_lemire(ExpandedFloat<T> init_num,
   }
 
   // Normalization
-  uint32_t clz = cpp::countl_zero<StorageType>(mantissa);
+  uint32_t clz = static_cast<uint32_t>(cpp::countl_zero<StorageType>(mantissa));
   mantissa <<= clz;
 
   int32_t exp2 =
-      exp10_to_exp2(exp10) + FPBits::STORAGE_LEN + FPBits::EXP_BIAS - clz;
+      exp10_to_exp2(exp10) + FPBits::STORAGE_LEN + FPBits::EXP_BIAS - static_cast<int32_t>(clz);
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -1136,7 +1135,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 
   int error = 0;
 
-  ptrdiff_t index = first_non_whitespace(src) - src;
+  size_t index = static_cast<size_t>(first_non_whitespace(src) - src);
 
   if (src[index] == '+' || src[index] == '-') {
     sign = src[index];
@@ -1246,7 +1245,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   // special 80 bit long doubles. Otherwise it should be inlined out.
   set_implicit_bit<T>(result);
 
-  return {result.get_val(), index, error};
+  return {result.get_val(), static_cast<ptrdiff_t>(index), error};
 }
 
 template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
