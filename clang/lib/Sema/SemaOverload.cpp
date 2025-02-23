@@ -13501,7 +13501,6 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
   if (Result) {
     // We skipped over some ambiguous declarations which might be ambiguous with
     // the selected result.
-    // FIXME: This for-loop is dead code. Remove it?
     for (FunctionDecl *Skipped : AmbiguousDecls) {
       // If skipped candidate has different CUDA preference than the result,
       // there is no ambiguity. Otherwise check whether they have different
