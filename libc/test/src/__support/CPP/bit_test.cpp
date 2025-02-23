@@ -50,28 +50,28 @@ TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
 TYPED_TEST(LlvmLibcBitTest, CountLZero, UnsignedTypes) {
   EXPECT_EQ(countl_zero<T>(T(0)), cpp::numeric_limits<T>::digits);
   int expected = 0;
-  for (T value = ~T(0); value; value >>= 1, ++expected)
+  for (T value = T(~0); value; value >>= 1, ++expected)
     EXPECT_EQ(countl_zero<T>(value), expected);
 }
 
 TYPED_TEST(LlvmLibcBitTest, CountRZero, UnsignedTypes) {
   EXPECT_EQ(countr_zero<T>(T(0)), cpp::numeric_limits<T>::digits);
   int expected = 0;
-  for (T value = ~T(0); value; value <<= 1, ++expected)
+  for (T value = T(~0); value; value <<= 1, ++expected)
     EXPECT_EQ(countr_zero<T>(value), expected);
 }
 
 TYPED_TEST(LlvmLibcBitTest, CountLOne, UnsignedTypes) {
   EXPECT_EQ(countl_one<T>(T(0)), 0);
   int expected = cpp::numeric_limits<T>::digits;
-  for (T value = ~T(0); value; value <<= 1, --expected)
+  for (T value = T(~0); value; value <<= 1, --expected)
     EXPECT_EQ(countl_one<T>(value), expected);
 }
 
 TYPED_TEST(LlvmLibcBitTest, CountROne, UnsignedTypes) {
   EXPECT_EQ(countr_one<T>(T(0)), 0);
   int expected = cpp::numeric_limits<T>::digits;
-  for (T value = ~T(0); value; value >>= 1, --expected)
+  for (T value = T(~0); value; value >>= 1, --expected)
     EXPECT_EQ(countr_one<T>(value), expected);
 }
 
@@ -163,7 +163,7 @@ TEST(LlvmLibcBitTest, BitFloor) {
 
 TYPED_TEST(LlvmLibcBitTest, RotateIsInvariantForZeroAndOne, UnsignedTypes) {
   constexpr T all_zeros = T(0);
-  constexpr T all_ones = ~T(0);
+  constexpr T all_ones = T(~0);
   for (int i = 0; i < cpp::numeric_limits<T>::digits; ++i) {
     EXPECT_EQ(rotl<T>(all_zeros, i), all_zeros);
     EXPECT_EQ(rotl<T>(all_ones, i), all_ones);
