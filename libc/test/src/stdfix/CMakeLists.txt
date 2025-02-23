@@ -89,7 +89,7 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
   )
 endforeach()
 
-foreach(suffix IN ITEMS r lr hk k lk uhr ur ulr uhk uk)
+foreach(suffix IN ITEMS r lr hk k lk uhr ur ulr uhk uk ulk)
   add_libc_test(
     bits${suffix}_test
     SUITE
