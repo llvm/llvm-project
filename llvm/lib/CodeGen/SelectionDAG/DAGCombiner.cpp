@@ -14906,29 +14906,20 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   if (ExtType == ISD::NON_EXTLOAD) {
     const MDNode *OldRanges = LN0->getRanges();
     const MDNode *NewRanges = nullptr;
-    /* If LSBs are loaded and all bounds in the OldRanges metadata fit in
-       the narrower size, preserve the range information by translating
-       to the the new narrower type, NewTy */
+    /* If LSBs are loaded and the truncated ConstantRange for the OldRanges
+       metadata is not the full-set for the NewWidth then create a NewRanges
+       metadata for the truncated load */
     if (ShAmt == 0 && OldRanges) {
       Type *NewTy = VT.getTypeForEVT(*DAG.getContext());
-      const unsigned NumOperands = OldRanges->getNumOperands();
       const unsigned NewWidth = NewTy->getIntegerBitWidth();
-      Metadata *Bounds[2];
-      /* Don't preserve all sub-ranges.  Make one range that contains all
-         OldRanges. Use lower bound of first range and higher bound of last
-         range */
-      const APInt &LowValue =
-          mdconst::extract<ConstantInt>(OldRanges->getOperand(0))->getValue();
-      const APInt &HighValue =
-          mdconst::extract<ConstantInt>(OldRanges->getOperand(NumOperands - 1))
-              ->getValue();
-      ConstantRange CurRange(LowValue, HighValue);
+      const ConstantRange CR = getConstantRangeFromMetadata(*OldRanges);
+      const ConstantRange TruncatedCR = CR.truncate(NewWidth);
 
-      if (CurRange.getMinSignedBits() <= NewWidth) {
-        Bounds[0] = ConstantAsMetadata::get(
-            ConstantInt::get(NewTy, LowValue.trunc(NewWidth)));
-        Bounds[1] = ConstantAsMetadata::get(
-            ConstantInt::get(NewTy, HighValue.trunc(NewWidth)));
+      if (!TruncatedCR.isFullSet()) {
+        Metadata *Bounds[2] = {ConstantAsMetadata::get(ConstantInt::get(
+                                   NewTy, TruncatedCR.getLower())),
+                               ConstantAsMetadata::get(ConstantInt::get(
+                                   NewTy, TruncatedCR.getUpper()))};
         NewRanges = MDNode::get(*DAG.getContext(), Bounds);
       }
     }
