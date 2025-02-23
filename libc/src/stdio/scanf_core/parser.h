@@ -78,7 +78,7 @@ public:
       if (internal::isdigit(str[cur_pos])) {
         auto result = internal::strtointeger<int>(str + cur_pos, 10);
         section.max_width = result.value;
-        cur_pos = cur_pos + result.parsed_len;
+        cur_pos = cur_pos + static_cast<size_t>(result.parsed_len);
       }
 
       // TODO(michaelrj): add posix allocate flag support.
@@ -150,7 +150,7 @@ public:
             char b = str[cur_pos + 1];
             char start = (a < b ? a : b);
             char end = (a < b ? b : a);
-            scan_set.set_range(start, end);
+            scan_set.set_range(static_cast<size_t>(start), static_cast<size_t>(end));
             cur_pos += 2;
           } else {
             scan_set.set(str[cur_pos]);

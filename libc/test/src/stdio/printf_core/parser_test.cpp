@@ -97,7 +97,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArg) {
   expected.has_conv = true;
 
   expected.raw_string = {str, 2};
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -132,7 +132,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
       LIBC_NAMESPACE::printf_core::FormatFlags::LEADING_ZEROES |
       LIBC_NAMESPACE::printf_core::FormatFlags::SPACE_PREFIX |
       LIBC_NAMESPACE::printf_core::FormatFlags::ALTERNATE_FORM);
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -149,7 +149,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithWidth) {
 
   expected.raw_string = {str, 4};
   expected.min_width = 12;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
