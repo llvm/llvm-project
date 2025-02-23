@@ -23,7 +23,7 @@ using namespace ento;
 namespace {
 class UndefinedAssignmentChecker
   : public Checker<check::Bind> {
-  const BugType BT{this, "Assigned value is undefined and not meaningful"};
+  const BugType BT{this, "Assigned value is uninitialized"};
 
 public:
   void checkBind(SVal location, SVal val, const Stmt *S,
@@ -57,8 +57,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
 
   while (StoreE) {
     if (const UnaryOperator *U = dyn_cast<UnaryOperator>(StoreE)) {
-      OS << "The expression is an uninitialized value, so the computed value "
-         << "is not meaningful";
+      OS << "The expression uses uninitialized memory";
 
       ex = U->getSubExpr();
       break;
@@ -67,8 +66,8 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
     if (const BinaryOperator *B = dyn_cast<BinaryOperator>(StoreE)) {
       if (B->isCompoundAssignmentOp()) {
         if (C.getSVal(B->getLHS()).isUndef()) {
-          OS << "The left expression of the compound assignment is an "
-             << "uninitialized value, so the computed value is not meaningful";
+          OS << "The left expression of the compound assignment uses "
+             << "uninitialized memory";
           ex = B->getLHS();
           break;
         }
@@ -89,7 +88,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
         for (auto *I : CD->inits()) {
           if (I->getInit()->IgnoreImpCasts() == StoreE) {
             OS << "Value assigned to field '" << I->getMember()->getName()
-               << "' in implicit constructor is undefined and not meaningful.";
+               << "' in implicit constructor is uninitialized";
             break;
           }
         }

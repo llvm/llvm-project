@@ -23,6 +23,6 @@ int main() {
 
   int x;
   int y = x;
-  // expected-warning@-1{{Assigned value is undefined and not meaningful}}
+  // expected-warning@-1{{Assigned value is uninitialized}}
   (void)y;
 }
