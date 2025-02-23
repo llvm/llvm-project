@@ -7215,18 +7215,34 @@ bool CheckPrintfHandler::HandlePrintfSpecifier(
     // Claim the second argument.
     CoveredArgs.set(argIndex + 1);
 
-    // Type check the first argument (int for %b, pointer for %D)
     const Expr *Ex = getDataArg(argIndex);
-    const analyze_printf::ArgType &AT =
-      (CS.getKind() == ConversionSpecifier::FreeBSDbArg) ?
-        ArgType(S.Context.IntTy) : ArgType::CPointerTy;
-    if (AT.isValid() && !AT.matchesType(S.Context, Ex->getType()))
-      EmitFormatDiagnostic(
-          S.PDiag(diag::warn_format_conversion_argument_type_mismatch)
-              << AT.getRepresentativeTypeName(S.Context) << Ex->getType()
-              << false << Ex->getSourceRange(),
-          Ex->getBeginLoc(), /*IsStringLocation*/ false,
-          getSpecifierRange(startSpecifier, specifierLen));
+    if (CS.getKind() == ConversionSpecifier::FreeBSDDArg) {
+      // Type check the first argument (pointer for %D)
+      const analyze_printf::ArgType &AT = ArgType::CPointerTy;
+      if (AT.isValid() && !AT.matchesType(S.Context, Ex->getType()))
+        EmitFormatDiagnostic(
+            S.PDiag(diag::warn_format_conversion_argument_type_mismatch)
+                << AT.getRepresentativeTypeName(S.Context) << Ex->getType()
+                << false << Ex->getSourceRange(),
+            Ex->getBeginLoc(), /*IsStringLocation*/ false,
+            getSpecifierRange(startSpecifier, specifierLen));
+    } else {
+      // Check the length modifier for %b
+      if (!FS.hasValidLengthModifier(S.getASTContext().getTargetInfo(),
+                                     S.getLangOpts()))
+        HandleInvalidLengthModifier(FS, CS, startSpecifier, specifierLen,
+                                    diag::warn_format_nonsensical_length);
+      else if (!FS.hasStandardLengthModifier())
+        HandleNonStandardLengthModifier(FS, startSpecifier, specifierLen);
+      else if (!FS.hasStandardLengthConversionCombination())
+        HandleInvalidLengthModifier(
+            FS, CS, startSpecifier, specifierLen,
+            diag::warn_format_non_standard_conversion_spec);
+
+      // Type check the first argument of %b
+      if (!checkFormatExpr(FS, startSpecifier, specifierLen, Ex))
+        return false;
+    }
 
     // Type check the second argument (char * for both %b and %D)
     Ex = getDataArg(argIndex + 1);
