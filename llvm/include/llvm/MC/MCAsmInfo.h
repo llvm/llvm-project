@@ -356,8 +356,6 @@ protected:
   /// protected visibility.  Defaults to MCSA_Protected
   MCSymbolAttr ProtectedVisibilityAttr = MCSA_Protected;
 
-  MCSymbolAttr MemtagAttr = MCSA_Memtag;
-
   //===--- Dwarf Emission Directives -----------------------------------===//
 
   /// True if target supports emission of debugging information.  Defaults to
@@ -639,8 +637,6 @@ public:
   MCSymbolAttr getProtectedVisibilityAttr() const {
     return ProtectedVisibilityAttr;
   }
-
-  MCSymbolAttr getMemtagAttr() const { return MemtagAttr; }
 
   bool doesSupportDebugInformation() const { return SupportsDebugInformation; }
 
