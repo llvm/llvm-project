@@ -128,6 +128,61 @@ define i32 @test_trunc_add(i64 %x) {
   ret i32 %conv
 }
 
+define i32 @test_trunc_sub(i64 %x) {
+; X64-LABEL: test_trunc_sub:
+; X64:       # %bb.0:
+; X64-NEXT:    shrq $48, %rdi
+; X64-NEXT:    addl $65522, %edi # imm = 0xFFF2
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    retq
+  %sub = sub i64 %x, 3940649673949184
+  %shr = lshr i64 %sub, 48
+  %conv = trunc i64 %shr to i32
+  ret i32 %conv
+}
+
+define i32 @test_trunc_and(i64 %x) {
+; X64-LABEL: test_trunc_and:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $48, %rax
+; X64-NEXT:    andl $14, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+  %and = and i64 %x, 3940649673949184
+  %shr = lshr i64 %and, 48
+  %conv = trunc i64 %shr to i32
+  ret i32 %conv
+}
+
+define i32 @test_trunc_or(i64 %x) {
+; X64-LABEL: test_trunc_or:
+; X64:       # %bb.0:
+; X64-NEXT:    movabsq $3940649673949184, %rax # imm = 0xE000000000000
+; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    shrq $48, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+  %or = or i64 %x, 3940649673949184
+  %shr = lshr i64 %or, 48
+  %conv = trunc i64 %shr to i32
+  ret i32 %conv
+}
+
+define i32 @test_trunc_xor(i64 %x) {
+; X64-LABEL: test_trunc_xor:
+; X64:       # %bb.0:
+; X64-NEXT:    movabsq $3940649673949184, %rax # imm = 0xE000000000000
+; X64-NEXT:    xorq %rdi, %rax
+; X64-NEXT:    shrq $48, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+  %xor = xor i64 %x, 3940649673949184
+  %shr = lshr i64 %xor, 48
+  %conv = trunc i64 %shr to i32
+  ret i32 %conv
+}
+
 ; Make sure we don't crash on this test case.
 
 define i32 @pr128158(i64 %x) {
@@ -137,10 +192,10 @@ define i32 @pr128158(i64 %x) {
 ; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    shrq $32, %rax
 ; X64-NEXT:    .p2align 4
-; X64-NEXT:  .LBB9_1: # %for.body
+; X64-NEXT:  .LBB13_1: # %for.body
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    cmpl $9, %eax
-; X64-NEXT:    jb .LBB9_1
+; X64-NEXT:    jb .LBB13_1
 ; X64-NEXT:  # %bb.2: # %exit
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
