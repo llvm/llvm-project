@@ -179,6 +179,7 @@ void RegAllocBase::cleanupFailedVRegs() {
       LiveIntervalUnion::Query &Q = Matrix->query(FailedInterval, *Units);
       for (const LiveInterval *InterferingReg : Q.interferingVRegs())
         JunkRegs.insert(InterferingReg->reg());
+      LIS->removeRegUnit(*Units);
     }
   }
 
