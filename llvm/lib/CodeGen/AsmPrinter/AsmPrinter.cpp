@@ -760,7 +760,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
                              "only supported on AArch64 Android");
-    OutStreamer->emitSymbolAttribute(EmittedSym, MAI->getMemtagAttr());
+    OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_Memtag);
   }
 
   if (!GV->hasInitializer())   // External globals require no extra code.
