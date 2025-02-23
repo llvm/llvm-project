@@ -875,6 +875,18 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.ukbits
     libc.src.stdfix.lkbits
     libc.src.stdfix.ulkbits
+    libc.src.stdfix.bitshr
+    libc.src.stdfix.bitsr
+    libc.src.stdfix.bitslr
+    libc.src.stdfix.bitshk
+    libc.src.stdfix.bitsk
+    libc.src.stdfix.bitslk
+    libc.src.stdfix.bitsuhr
+    libc.src.stdfix.bitsur
+    libc.src.stdfix.bitsulr
+    libc.src.stdfix.bitsuhk
+    libc.src.stdfix.bitsuk
+    libc.src.stdfix.bitsulk
     libc.src.stdfix.countlshr
     libc.src.stdfix.countlsr
     libc.src.stdfix.countlslr
@@ -887,12 +899,6 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.countlsuhk
     libc.src.stdfix.countlsuk
     libc.src.stdfix.countlsulk
-    libc.src.stdfix.bitshr
-    libc.src.stdfix.bitsr
-    libc.src.stdfix.bitslr
-    libc.src.stdfix.bitshk
-    libc.src.stdfix.bitsk
-    libc.src.stdfix.bitslk
   )
 endif()
 
