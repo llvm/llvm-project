@@ -3293,7 +3293,9 @@ heap allocation calls, and global variable definitions. Once it is allocated,
 the bytes stored in the region can only be read or written through a pointer
 that is :ref:`based on <pointeraliasing>` the allocation value. If a pointer
 that is not based on the object tries to read or write to the object, it is
-undefined behavior.
+undefined behavior. Trying to read or write memory outside of an allocated
+object, including accesses partially outside an allocated object, is undefined
+behavior.
 
 The following properties hold for all allocated objects:
 
@@ -11108,12 +11110,9 @@ operation (that is, the alignment of the memory address). It is the
 responsibility of the code emitter to ensure that the alignment information is
 correct. Overestimating the alignment results in undefined behavior.
 Underestimating the alignment may produce less efficient code. An alignment of
-1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment
-value higher than the size of the loaded type implies memory up to the
-alignment value bytes can be safely loaded without trapping in the default
-address space. Access of the high bytes can interfere with debugging tools, so
-should not be accessed if the function has the ``sanitize_thread`` or
-``sanitize_address`` attributes.
+1 is always safe. The maximum possible alignment is ``1 << 32``. Access of the
+high bytes can interfere with debugging tools, so should not be accessed if the
+function has the ``sanitize_thread`` or ``sanitize_address`` attributes.
 
 The alignment is only optional when parsing textual IR; for in-memory IR, it is
 always present. An omitted ``align`` argument means that the operation has the
