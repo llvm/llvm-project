@@ -21,3 +21,23 @@ function erfc_scaled8(x)
 ! CHECK: %[[a1:.*]] = fir.load %[[x]] : !fir.ref<f64>
 ! CHECK: %{{.*}} = fir.call @_FortranAErfcScaled8(%[[a1]]) {{.*}}: (f64) -> f64
 end function erfc_scaled8
+
+
+! CHECK-LABEL: func @_QPderfc_scaled8(
+! CHECK-SAME: %[[x:[^:]+]]: !fir.ref<f64>{{.*}}) -> f64
+function derfc_scaled8(x)
+  real(kind=8) :: derfc_scaled8
+  real(kind=8) :: x
+  derfc_scaled8 = derfc_scaled(x);
+! CHECK: %[[a1:.*]] = fir.load %[[x]] : !fir.ref<f64>
+! CHECK: %{{.*}} = fir.call @_FortranAErfcScaled8(%[[a1]]) {{.*}}: (f64) -> f64
+end function derfc_scaled8
+
+! CHECK-LABEL: func @_QPqerfc_scaled16(
+! CHECK: %[[a1:.*]] = fir.load %[[x]] : !fir.ref<f128>
+function qerfc_scaled16(x)
+  real(kind=16) :: qerfc_scaled16
+  real(kind=16) :: x
+  qerfc_scaled16 = qerfc_scaled(x);
+! CHECK: %{{.*}} = fir.call @_FortranAErfcScaled16(%[[a1]]) {{.*}}: (f128) -> f128
+end function qerfc_scaled16
