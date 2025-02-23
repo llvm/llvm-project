@@ -227,7 +227,7 @@ TEST(LlvmLibcBitTest, Rotr) {
 TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypes) {
   EXPECT_EQ(popcount(T(0)), 0);
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(popcount<T>(cpp::numeric_limits<T>::max() >> i),
+    EXPECT_EQ(popcount<T>(cpp::numeric_limits<T>::max() >> static_cast<size_t>(i)),
               cpp::numeric_limits<T>::digits - i);
 }
 
