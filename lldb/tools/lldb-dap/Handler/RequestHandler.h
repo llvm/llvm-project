@@ -88,6 +88,13 @@ public:
   void operator()(const llvm::json::Object &request) override;
 };
 
+class ExceptionInfoRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "exceptionInfo"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
 } // namespace lldb_dap
 
 #endif
