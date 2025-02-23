@@ -2234,6 +2234,14 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
 
   // Parse the first block directly to allow for it to be unnamed.
   auto owningBlock = std::make_unique<Block>();
+  auto failureCleanup = llvm::make_scope_exit([&] {
+    if (owningBlock) {
+      // If parsing failed, as indicated by the fact that `owningBlock` still
+      // owns the block, drop all forward references from preceding operations
+      // to definitions within the parsed block.
+      owningBlock->dropAllDefinedValueUses();
+    }
+  });
   Block *block = owningBlock.get();
 
   // If this block is not defined in the source file, add a definition for it

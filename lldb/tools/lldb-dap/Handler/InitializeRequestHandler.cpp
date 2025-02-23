@@ -19,6 +19,7 @@ using namespace lldb;
 namespace lldb_dap {
 
 static void ProgressEventThreadFunction(DAP &dap) {
+  llvm::set_thread_name(dap.name + ".progress_handler");
   lldb::SBListener listener("lldb-dap.progress.listener");
   dap.debugger.GetBroadcaster().AddListener(
       listener, lldb::SBDebugger::eBroadcastBitProgress |
@@ -53,8 +54,10 @@ static void ProgressEventThreadFunction(DAP &dap) {
 // them prevent multiple threads from writing simultaneously so no locking
 // is required.
 static void EventThreadFunction(DAP &dap) {
+  llvm::set_thread_name(dap.name + ".event_handler");
   lldb::SBEvent event;
   lldb::SBListener listener = dap.debugger.GetListener();
+  dap.broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
@@ -119,7 +122,7 @@ static void EventThreadFunction(DAP &dap) {
               // launch.json
               dap.RunExitCommands();
               SendProcessExitedEvent(dap, process);
-              SendTerminatedEvent(dap);
+              dap.SendTerminatedEvent();
               done = true;
             }
             break;

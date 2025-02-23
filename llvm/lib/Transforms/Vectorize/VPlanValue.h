@@ -351,7 +351,6 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
-    VPWidenEVLSC,
     VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,

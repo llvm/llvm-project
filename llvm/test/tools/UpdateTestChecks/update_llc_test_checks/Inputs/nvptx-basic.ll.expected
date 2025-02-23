@@ -9,21 +9,21 @@ define dso_local void @caller_St8x4(ptr nocapture noundef readonly byval(%struct
 ; CHECK-NEXT:    .local .align 8 .b8 __local_depot0[32];
 ; CHECK-NEXT:    .reg .b32 %SP;
 ; CHECK-NEXT:    .reg .b32 %SPL;
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<13>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.u32 %SPL, __local_depot0;
-; CHECK-NEXT:    cvta.local.u32 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.u32 %r1, [caller_St8x4_param_1];
+; CHECK-NEXT:    add.u32 %r3, %SPL, 0;
 ; CHECK-NEXT:    ld.param.u64 %rd1, [caller_St8x4_param_0+24];
-; CHECK-NEXT:    st.u64 [%SP+24], %rd1;
+; CHECK-NEXT:    st.local.u64 [%r3+24], %rd1;
 ; CHECK-NEXT:    ld.param.u64 %rd2, [caller_St8x4_param_0+16];
-; CHECK-NEXT:    st.u64 [%SP+16], %rd2;
+; CHECK-NEXT:    st.local.u64 [%r3+16], %rd2;
 ; CHECK-NEXT:    ld.param.u64 %rd3, [caller_St8x4_param_0+8];
-; CHECK-NEXT:    st.u64 [%SP+8], %rd3;
+; CHECK-NEXT:    st.local.u64 [%r3+8], %rd3;
 ; CHECK-NEXT:    ld.param.u64 %rd4, [caller_St8x4_param_0];
-; CHECK-NEXT:    st.u64 [%SP], %rd4;
+; CHECK-NEXT:    st.local.u64 [%r3], %rd4;
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[32];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {%rd4, %rd3};
