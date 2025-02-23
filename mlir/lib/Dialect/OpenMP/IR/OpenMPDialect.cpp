@@ -473,6 +473,108 @@ static void printOrderClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser and printer for grainsize Clause
+//===----------------------------------------------------------------------===//
+
+// grainsize ::= `grainsize` `(` [strict ':'] grain-size `)`
+static ParseResult
+parseGrainsizeClause(OpAsmParser &parser, ClauseGrainsizeTypeAttr &grainsizeMod,
+                     std::optional<OpAsmParser::UnresolvedOperand> &grainsize,
+                     Type &grainsizeType) {
+  SMLoc loc = parser.getCurrentLocation();
+  StringRef enumStr;
+
+  if (succeeded(parser.parseOptionalKeyword(&enumStr))) {
+    if (std::optional<ClauseGrainsizeType> enumValue =
+            symbolizeClauseGrainsizeType(enumStr)) {
+      grainsizeMod =
+          ClauseGrainsizeTypeAttr::get(parser.getContext(), *enumValue);
+      if (parser.parseColon())
+        return failure();
+    } else {
+      return parser.emitError(loc, "invalid grainsize modifier : '")
+             << enumStr << "'";
+    }
+  }
+
+  OpAsmParser::UnresolvedOperand operand;
+  if (succeeded(parser.parseOperand(operand))) {
+    grainsize = operand;
+  } else {
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected grainsize operand";
+  }
+
+  if (grainsize.has_value()) {
+    if (parser.parseColonType(grainsizeType))
+      return failure();
+  }
+
+  return success();
+}
+
+static void printGrainsizeClause(OpAsmPrinter &p, Operation *op,
+                                 ClauseGrainsizeTypeAttr grainsizeMod,
+                                 Value grainsize, mlir::Type grainsizeType) {
+  if (grainsizeMod)
+    p << stringifyClauseGrainsizeType(grainsizeMod.getValue()) << ": ";
+
+  if (grainsize)
+    p << grainsize << ": " << grainsizeType;
+}
+
+//===----------------------------------------------------------------------===//
+// Parser and printer for num_tasks Clause
+//===----------------------------------------------------------------------===//
+
+// numtask ::= `num_tasks` `(` [strict ':'] num-tasks `)`
+static ParseResult
+parseNumTasksClause(OpAsmParser &parser, ClauseNumTasksTypeAttr &numTasksMod,
+                    std::optional<OpAsmParser::UnresolvedOperand> &numTasks,
+                    Type &numTasksType) {
+  SMLoc loc = parser.getCurrentLocation();
+  StringRef enumStr;
+
+  if (succeeded(parser.parseOptionalKeyword(&enumStr))) {
+    if (std::optional<ClauseNumTasksType> enumValue =
+            symbolizeClauseNumTasksType(enumStr)) {
+      numTasksMod =
+          ClauseNumTasksTypeAttr::get(parser.getContext(), *enumValue);
+      if (parser.parseColon())
+        return failure();
+    } else {
+      return parser.emitError(loc, "invalid numTasks modifier : '")
+             << enumStr << "'";
+    }
+  }
+
+  OpAsmParser::UnresolvedOperand operand;
+  if (succeeded(parser.parseOperand(operand))) {
+    numTasks = operand;
+  } else {
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected num_tasks operand";
+  }
+
+  if (numTasks.has_value()) {
+    if (parser.parseColonType(numTasksType))
+      return failure();
+  }
+
+  return success();
+}
+
+static void printNumTasksClause(OpAsmPrinter &p, Operation *op,
+                                ClauseNumTasksTypeAttr numTasksMod,
+                                Value numTasks, mlir::Type numTasksType) {
+  if (numTasksMod)
+    p << stringifyClauseNumTasksType(numTasksMod.getValue()) << ": ";
+
+  if (numTasks)
+    p << numTasks << ": " << numTasksType;
+}
+
+//===----------------------------------------------------------------------===//
 // Parsers for operations including clauses that define entry block arguments.
 //===----------------------------------------------------------------------===//
 
@@ -2593,15 +2695,17 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
                        const TaskloopOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms.
-  TaskloopOp::build(
-      builder, state, clauses.allocateVars, clauses.allocatorVars,
-      clauses.final, clauses.grainsize, clauses.ifExpr, clauses.inReductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
-      makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
-      clauses.nogroup, clauses.numTasks, clauses.priority, /*private_vars=*/{},
-      /*private_syms=*/nullptr, clauses.reductionMod, clauses.reductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
+  TaskloopOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                    clauses.final, clauses.grainsizeMod, clauses.grainsize,
+                    clauses.ifExpr, clauses.inReductionVars,
+                    makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
+                    makeArrayAttr(ctx, clauses.inReductionSyms),
+                    clauses.mergeable, clauses.nogroup, clauses.numTasksMod,
+                    clauses.numTasks, clauses.priority, /*private_vars=*/{},
+                    /*private_syms=*/nullptr, clauses.reductionMod,
+                    clauses.reductionVars,
+                    makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+                    makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
 }
 
 SmallVector<Value> TaskloopOp::getAllReductionVars() {
