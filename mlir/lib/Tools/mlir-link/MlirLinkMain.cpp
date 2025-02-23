@@ -27,6 +27,8 @@
 #include "llvm/Support/WithColor.h"
 
 using namespace mlir;
+using namespace mlir::link;
+
 using namespace llvm;
 
 /// This class is intended to manage the handling of command line options for

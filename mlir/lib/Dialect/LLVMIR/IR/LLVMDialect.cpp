@@ -3817,8 +3817,22 @@ bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
 
 namespace {
 
-struct LLVMLinkerInterface : public LinkerInterface {
+struct LLVMLinkerInterface : public ::mlir::link::LinkerInterface {
   using LinkerInterface::LinkerInterface;
+
+  bool isDeclaration(GlobalValueLinkageOpInterface op) const final {
+    if (auto func = dyn_cast<LLVM::LLVMFuncOp>(op.getOperation()))
+      return isDeclaration(func);
+    if (auto global = dyn_cast<LLVM::GlobalOp>(op.getOperation()))
+      return isDeclaration(global);
+    return false;
+  }
+
+  bool isDeclaration(LLVM::LLVMFuncOp op) const { return op.getBody().empty(); }
+
+  bool isDeclaration(LLVM::GlobalOp op) const {
+    return op.getInitializerRegion().empty() && !op.getValue();
+  }
 };
 
 } // end anonymous namespace

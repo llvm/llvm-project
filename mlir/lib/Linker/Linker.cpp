@@ -8,11 +8,15 @@
 
 #include "mlir/Linker/Linker.h"
 
+#include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/LinkageInterfaces.h"
+#include "mlir/Linker/LinkerInterface.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
+
+#define DEBUG_TYPE "mlir-link-linker"
 
 using namespace mlir;
 using namespace mlir::link;
@@ -23,8 +27,7 @@ enum class LinkFrom { Dst, Src, Both };
 using ComdatHandle = const ComdatEntry *;
 using ComdatChoice = std::pair<ComdatSelectionKind, LinkFrom>;
 
-using GlobalValue = GlobalValueLinkageOpInterface;
-
+// TODO remove this once Comdat is part LinkerInterface
 static std::optional<ComdatHandle>
 getComdatHandle(const ComdatSymbolTable &table, GlobalValue gv) {
   if (std::optional<StringRef> comdatName = gv.getComdatName())
@@ -83,24 +86,21 @@ class ModuleLinker {
     // If the source has no name it can't link.  If it has local linkage,
     // there is no name match-up going on.
     if (gv.hasLocalLinkage())
-      return nullptr;
+      return {};
 
     // Otherwise see if we have a matching symbol in the destination module.
     SymbolTable dstSymbolTable(dst.getOperation());
+    StringRef globalName = gv.getLinkedName();
 
-    FailureOr<StringRef> globalName = gv.getLinkedName();
-    // Global value does not define symbol name.
-    if (failed(globalName))
-      return nullptr;
-
-    auto dstGlobalValue = dstSymbolTable.lookup<GlobalValue>(*globalName);
+    auto dstGlobalValueTest = dstSymbolTable.lookup(globalName);
+    auto dstGlobalValue = dyn_cast_or_null<GlobalValue>(dstGlobalValueTest);
     if (!dstGlobalValue)
-      return nullptr;
+      return {};
 
     // If we found a global with the same name in the dest module, but it has
     // internal linkage, we are really not doing any linkage here.
     if (dstGlobalValue.hasLocalLinkage())
-      return nullptr;
+      return {};
 
     // Otherwise, we do in fact link to the destination global.
     return dstGlobalValue;
@@ -120,6 +120,7 @@ public:
 
 bool ModuleLinker::shouldLinkFromSource(bool &linkFromSrc, GlobalValue dst,
                                         GlobalValue src) {
+  // Should we unconditionally use the src?
   if (shouldOverrideFromSrc()) {
     linkFromSrc = true;
     return false;
@@ -131,16 +132,11 @@ bool ModuleLinker::shouldLinkFromSource(bool &linkFromSrc, GlobalValue dst,
     return false;
   }
 
-  bool srcIsDeclaration =
-      src.isDeclarationForLinkage() || src.hasAvailableExternallyLinkage();
-  bool dstIsDeclaration =
-      dst.isDeclarationForLinkage() || dst.hasAvailableExternallyLinkage();
-
-  if (srcIsDeclaration) {
+  if (src.isDeclarationForLinker()) {
     llvm_unreachable("unimplemented");
   }
 
-  if (dstIsDeclaration) {
+  if (dst.isDeclarationForLinker()) {
     // If dst is external but src is not:
     linkFromSrc = true;
     return false;
@@ -167,6 +163,7 @@ bool ModuleLinker::shouldLinkFromSource(bool &linkFromSrc, GlobalValue dst,
       return false;
     }
   }
+
   if (isWeakForLinker(src.getLinkage())) {
     assert(!dst.hasExternalWeakLinkage());
     assert(!dst.hasAvailableExternallyLinkage());
@@ -262,23 +259,14 @@ ModuleLinker::computeResultingSelectionChoice(ComdatHandle src,
 }
 
 void ModuleLinker::dropReplacedComdat(GlobalValue gv, ComdatHandle comdat) {
-  auto op = gv.getOperation();
-  // TODO optimize build of symbol user map
-  auto module = op->getParentOfType<LinkableModuleOpInterface>();
-
-  auto uses = SymbolTable::getSymbolUses(op, module.getOperation());
-  if (!uses || uses->empty()) {
-    op->erase();
-    return;
-  }
-
   llvm_unreachable("unimplemented");
 }
 
 // Returns true if no linking is needed
 bool ModuleLinker::linkIfNeeded(GlobalValue gv,
                                 std::vector<Operation *> &gvToClone) {
-
+  LLVM_DEBUG(llvm::dbgs() << "ModuleLinker::linkIfNeeded<" << gv.getLinkedName()
+                          << ">\n");
   GlobalValue dgv = getLinkedToGlobal(gv);
 
   if (shouldLinkOnlyNeeded()) {
@@ -290,24 +278,25 @@ bool ModuleLinker::linkIfNeeded(GlobalValue gv,
         return false;
       // Don't import globals that are already defined in the destination
       // module
-      if (!dgv.isDeclarationForLinkage())
+      if (!dgv.isDeclaration())
         return false;
     }
   }
 
   if (dgv && !gv.hasLocalLinkage() && !gv.hasAppendingLinkage()) {
-    auto dgvar = dyn_cast<GlobalVariableLinkageOpInterface>(dgv.getOperation());
-    auto sgvar = dyn_cast<GlobalVariableLinkageOpInterface>(gv.getOperation());
+    auto dgvar = dyn_cast<GlobalVariable>(dgv);
+    auto sgvar = dyn_cast<GlobalVariable>(gv);
     if (dgvar && sgvar) {
-      if (dgvar.isDeclarationForLinkage() && sgvar.isDeclarationForLinkage() &&
+      if (dgv.isDeclaration() && gv.isDeclaration() &&
           (!dgvar.isConstant() || !sgvar.isConstant())) {
-        llvm_unreachable("unimplemented");
+        dgvar.setConstant(false);
+        sgvar.setConstant(false);
       }
 
-      if (dgvar.hasCommonLinkage() && sgvar.hasCommonLinkage()) {
+      if (dgv.hasCommonLinkage() && gv.hasCommonLinkage()) {
         auto dAlign = dgvar.getAlignment();
         auto sAlign = sgvar.getAlignment();
-        std::optional<unsigned> align;
+        std::optional<unsigned> align = std::nullopt;
 
         if (dAlign || sAlign)
           align = std::max(dAlign.value_or(1), sAlign.value_or(1));
@@ -317,8 +306,9 @@ bool ModuleLinker::linkIfNeeded(GlobalValue gv,
       }
     }
 
-    // TODO: Implement visibility and unnamedaddr
-    // llvm_unreachable("unimplemented");
+    // TODO: set visibility
+
+    // TODO: set unnamed addr
   }
 
   if (!dgv && !shouldOverrideFromSrc() &&
@@ -326,7 +316,7 @@ bool ModuleLinker::linkIfNeeded(GlobalValue gv,
        gv.hasAvailableExternallyLinkage()))
     return false;
 
-  if (gv.isDeclarationForLinkage())
+  if (gv.isDeclaration())
     return false;
 
   LinkFrom comdatFrom = LinkFrom::Dst;
@@ -347,6 +337,7 @@ bool ModuleLinker::linkIfNeeded(GlobalValue gv,
 }
 
 LogicalResult ModuleLinker::run() {
+  LLVM_DEBUG(llvm::dbgs() << "ModuleLinker::run" << "\n");
   auto dst = mover.getComposite();
   auto src = getSourceModule();
   DenseSet<ComdatHandle> replacedDstComdats;
@@ -411,17 +402,20 @@ LogicalResult ModuleLinker::run() {
   std::vector<Operation *> gvToClone;
   bool nothingToLink = true;
   src->walk([&](GlobalValue gv) {
-    nothingToLink &= linkIfNeeded(gv, gvToClone);
+    bool result = linkIfNeeded(gv, gvToClone);
+    LLVM_DEBUG(llvm::dbgs() << "ModuleLinker::linkIfNeeded<"
+                            << gv.getLinkedName() << "> = " << result << "\n");
+    nothingToLink &= result;
     return WalkResult::skip();
   });
 
-  // TODO: Consider if there are combinations of Function/GlobalVariable where
-  // linkIfNeeded returns true that would cause this to behave incorrect.
-  if (nothingToLink)
+  if (nothingToLink) {
+    LLVM_DEBUG(llvm::dbgs() << "Nothing to link.\n");
     return success();
+  }
 
   // TODO: Implement
-  // for ([[maybe_unused]] auto gv : gvToClone) {
+  // for (GlobalValue gv : gvToClone) {
   //   llvm_unreachable("unimplemented");
   // }
 
@@ -431,10 +425,10 @@ LogicalResult ModuleLinker::run() {
   // }
 
   if (internalizeCallback) {
-    for (auto gvl : valuesToLink) {
-      if (auto name = gvl.getLinkedName(); succeeded(name)) {
-        internalize.insert(*name);
-      }
+    for (GlobalValue gvl : valuesToLink) {
+      StringRef name = gvl.getLinkedName();
+      LLVM_DEBUG(llvm::dbgs() << "Internalizing: " << name << "\n");
+      internalize.insert(name);
     }
   }
 

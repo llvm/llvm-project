@@ -11,14 +11,11 @@
 
 #include "mlir/IR/BuiltinOps.h"
 
-#include "mlir/Interfaces/LinkageInterfaces.h"
+#include "mlir/Linker/LinkerInterface.h"
 
 using llvm::Error;
 
-namespace mlir {
-
-
-
+namespace mlir::link {
 
 class IRMover {
 public:
@@ -27,13 +24,12 @@ public:
   LinkableModuleOpInterface getComposite() { return composite; }
   MLIRContext *getContext() { return composite->getContext(); }
 
-  Error move(OwningOpRef<Operation *> src,
-                    ArrayRef<GlobalValueLinkageOpInterface> valuesToLink);
+  Error move(OwningOpRef<Operation *> src, ArrayRef<GlobalValue> valuesToLink);
 
-  private:
-    LinkableModuleOpInterface composite;
-  };
+private:
+  LinkableModuleOpInterface composite;
+};
 
-} // namespace mlir
+} // namespace mlir::link
 
 #endif

@@ -603,6 +603,8 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
     return *NewProto;
 
   // If we already created the body, just return.
+  // TODO: This is too llvm-specific.
+  // Make part of interface isMaterialized method?
   if (auto *F = dyn_cast<Function>(New)) {
     if (!F->isDeclaration())
       return New;

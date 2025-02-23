@@ -242,14 +242,15 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
     >,
     InterfaceMethod<
       /*desc=*/        "Returns linked name of the operation",
-      /*returnType=*/  "FailureOr<StringRef>",
+      /*returnType=*/  "StringRef",
       /*methodName=*/  "getLinkedName",
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImplementation=*/[{
         if (auto symbol = dyn_cast<SymbolOpInterface>($_op.getOperation()))
           return symbol.getName();
-        return emitError($_op.getLoc(), "expected a symbol operation");
+        assert(false && "expected a symbol operation");
+        return "";
       }]
     >
   ];
@@ -276,8 +277,8 @@ def FunctionLinkageOpInterface
   let cppNamespace = "::mlir";
 }
 
-def GlobalFuncLinkageOpInterface
-  : OpInterface<"GlobalFuncLinkageOpInterface",
+def GlobalIFuncLinkageOpInterface
+  : OpInterface<"GlobalIFuncLinkageOpInterface",
                 [GlobalObjectLinkageOpInterface]> {
   let description = [{ WIP }];
   let cppNamespace = "::mlir";

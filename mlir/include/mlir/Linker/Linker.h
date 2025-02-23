@@ -13,7 +13,7 @@
 
 #include "mlir/Interfaces/LinkageInterfaces.h"
 
-namespace mlir {
+namespace mlir::link {
 
 using InternalizeCallbackFn =
     std::function<void(LinkableModuleOpInterface, const StringSet<> &)>;
@@ -97,6 +97,6 @@ private:
   IRMover mover;
 };
 
-} // namespace mlir
+} // namespace mlir::link
 
 #endif
