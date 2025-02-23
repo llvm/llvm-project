@@ -3863,6 +3863,65 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessorWithModInBetween) {
   )cc");
 }
 
+
+TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObject) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    class A {
+      public:
+        const $ns::$optional<int>& get() const { return x; }
+      
+      private:
+        $ns::$optional<int> x;
+    };
+
+    class B {
+      public:
+        const A& getA() const { return a; }
+    
+      private:
+        A a;
+    };
+
+    void target(B& b) {
+      if (b.getA().get().has_value()) {
+        b.getA().get().value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithoutValueCheck) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    class A {
+      public:
+        const $ns::$optional<int>& get() const { return x; }
+      
+      private:
+        $ns::$optional<int> x;
+    };
+
+    class B {
+      public:
+        const A& getA() const { return a; }
+    
+      private:
+        A a;
+    };
+
+    void target(B& b) {
+      b.getA().get().value(); // [[unsafe]]
+    }
+  )cc");
+}
+
+// todo: non const accessor
+// todo: different accessor in between
+// todo: const copy
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
