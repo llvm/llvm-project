@@ -96,7 +96,7 @@ strtointeger(const char *__restrict src, int base,
   if (base < 0 || base == 1 || base > 36)
     return {0, 0, EINVAL};
 
-  src_cur = first_non_whitespace(src, src_len) - src;
+  src_cur = static_cast<size_t>(first_non_whitespace(src, src_len) - src);
 
   char result_sign = '+';
   if (src[src_cur] == '+' || src[src_cur] == '-') {

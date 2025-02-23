@@ -251,7 +251,7 @@ protected:
 
     // Cast operator to get convert from BiasedExponent to Exponent.
     LIBC_INLINE constexpr operator Exponent() const {
-      return Exponent(UP::value - EXP_BIAS);
+      return Exponent(static_cast<int32_t>(UP::value - EXP_BIAS));
     }
 
     LIBC_INLINE constexpr BiasedExponent &operator++() {
