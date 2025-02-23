@@ -41,7 +41,7 @@ TEST(LlvmLibcIntegerToStringTest, UINT8) {
   EXPECT(type, 12, "12");
   EXPECT(type, 123, "123");
   EXPECT(type, UINT8_MAX, "255");
-  EXPECT(type, static_cast<unsigned char>(-1), "255");
+  EXPECT(type, static_cast<uint8_t>(-1), "255");
 }
 
 TEST(LlvmLibcIntegerToStringTest, INT8) {
@@ -65,7 +65,7 @@ TEST(LlvmLibcIntegerToStringTest, UINT16) {
   EXPECT(type, 1234, "1234");
   EXPECT(type, 12345, "12345");
   EXPECT(type, UINT16_MAX, "65535");
-  EXPECT(type, -1, "65535");
+  EXPECT(type, static_cast<uint16_t>(-1), "65535");
 }
 
 TEST(LlvmLibcIntegerToStringTest, INT16) {
@@ -99,7 +99,7 @@ TEST(LlvmLibcIntegerToStringTest, UINT32) {
   EXPECT(type, 123456789, "123456789");
   EXPECT(type, 1234567890, "1234567890");
   EXPECT(type, UINT32_MAX, "4294967295");
-  EXPECT(type, -1, "4294967295");
+  EXPECT(type, static_cast<uint32_t>(-1), "4294967295");
 }
 
 TEST(LlvmLibcIntegerToStringTest, INT32) {
@@ -144,7 +144,7 @@ TEST(LlvmLibcIntegerToStringTest, UINT64) {
   EXPECT(type, 1234567890, "1234567890");
   EXPECT(type, 1234567890123456789, "1234567890123456789");
   EXPECT(type, UINT64_MAX, "18446744073709551615");
-  EXPECT(type, -1, "18446744073709551615");
+  EXPECT(type, static_cast<uint64_t>(-1), "18446744073709551615");
 }
 
 TEST(LlvmLibcIntegerToStringTest, INT64) {
@@ -181,7 +181,7 @@ TEST(LlvmLibcIntegerToStringTest, UINT64_Base_8) {
   EXPECT(type, 0, "0");
   EXPECT(type, 012345, "12345");
   EXPECT(type, 0123456701234567012345, "123456701234567012345");
-  EXPECT(type, 01777777777777777777777, "1777777777777777777777");
+  EXPECT(type, static_cast<int64_t>(01777777777777777777777), "1777777777777777777777");
 }
 
 TEST(LlvmLibcIntegerToStringTest, UINT64_Base_16) {
