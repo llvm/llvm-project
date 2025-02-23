@@ -1445,8 +1445,10 @@ void AccessAnalysis::processMemAccesses() {
 
             auto [It, Inserted] =
                 ObjToLastAccess.try_emplace(UnderlyingObj, Access);
-            if (!Inserted)
+            if (!Inserted) {
               DepCands.unionSets(Access, It->second);
+              It->second = Access;
+            }
 
             LLVM_DEBUG(dbgs() << "  " << *UnderlyingObj << "\n");
           }
