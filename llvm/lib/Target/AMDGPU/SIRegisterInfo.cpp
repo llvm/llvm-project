@@ -594,7 +594,7 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
   //       register file accordingly.
   if (ST.hasGFX90AInsts()) {
-    if (MFI->usesAGPRs(MF)) {
+    if (MFI->mayNeedAGPRs()) {
       MaxNumVGPRs /= 2;
       MaxNumAGPRs = MaxNumVGPRs;
     } else {
