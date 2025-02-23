@@ -620,8 +620,7 @@ void VirtRegRewriter::rewrite() {
         assert(Register(PhysReg).isPhysical());
 
         RewriteRegs.insert(PhysReg);
-        assert((!MRI->isReserved(PhysReg) || !IsValidAlloc) &&
-               "Reserved register assignment");
+        assert(!MRI->isReserved(PhysReg) && "Reserved register assignment");
 
         // Preserve semantics of sub-register operands.
         unsigned SubReg = MO.getSubReg();
