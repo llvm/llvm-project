@@ -25,7 +25,6 @@
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
-#include <cstddef>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
