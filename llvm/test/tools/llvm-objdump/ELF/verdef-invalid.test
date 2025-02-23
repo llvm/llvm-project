@@ -1,0 +1,50 @@
+## Adapted from test/llvm-readobj/ELF/verdef-invalid.test
+## Check that we report a warning when a SHT_GNU_verdef section contains a version definition
+## that refers to an auxiliary entry that goes past the end of the section.
+
+# RUN: yaml2obj %s -o %t5
+# RUN: llvm-objdump -p %t5 2>&1 | FileCheck %s --check-prefix=AUX-PAST-END -DFILE=%t5
+# RUN: llvm-objdump -p %t5 2>&1 | FileCheck %s --check-prefix=AUX-PAST-END -DFILE=%t5
+
+# AUX-PAST-END: warning: '[[FILE]]': invalid SHT_GNU_verdef section with index 1: version definition 1 refers to an auxiliary entry that goes past the end of the section
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
+    Entries:
+      - Names:
+          - FOO
+    ShSize: 21
+DynamicSymbols:
+  - Name: foo
+
+## Check we report a warning when a version definition is not correctly aligned in memory.
+
+# RUN: yaml2obj %s --docnum=2 -o %t7
+# RUN: llvm-objdump -p %t7 2>&1 | FileCheck %s --check-prefix=MISALIGNED-DEF -DFILE=%t7
+# RUN: llvm-objdump -p %t7 2>&1 | FileCheck %s --check-prefix=MISALIGNED-DEF -DFILE=%t7
+
+# MISALIGNED-DEF: warning: '[[FILE]]': invalid SHT_GNU_verdef section with index 1: found a misaligned version definition entry at offset 0x0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Type: Fill
+    Size: 0x1
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
+    Link: .dynstr
+    Info: 0x1
+    Entries:
+      - Names:
+          - FOO
+DynamicSymbols:
+  - Name: foo
