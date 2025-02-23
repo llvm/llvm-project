@@ -30,10 +30,8 @@ public:
   virtual void operator()(const llvm::json::Object &request) = 0;
 
   /// Helpers used by multiple request handlers.
-  /// FIXME: Move these into the DAP class.
+  /// FIXME: Move these into the DAP class?
   /// @{
-  enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
-  void SendProcessEvent(LaunchMethod launch_method);
   void SetSourceMapFromArguments(const llvm::json::Object &arguments);
   /// @}
 
@@ -66,6 +64,13 @@ class ContinueRequestHandler : public RequestHandler {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral getCommand() { return "continue"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class ConfigurationDoneRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "configurationDone"; }
   void operator()(const llvm::json::Object &request) override;
 };
 

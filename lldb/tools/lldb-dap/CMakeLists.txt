@@ -23,6 +23,7 @@ add_lldb_tool(lldb-dap
   Breakpoint.cpp
   BreakpointBase.cpp
   DAP.cpp
+  EventHelper.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
   FunctionBreakpoint.cpp
@@ -39,6 +40,7 @@ add_lldb_tool(lldb-dap
   Handler/AttachHandler.cpp
   Handler/BreakpointLocationsHandler.cpp
   Handler/CompletionsHandler.cpp
+  Handler/ConfigurationDoneRequestHandler.cpp
   Handler/ContinueRequestHandler.cpp
   Handler/RequestHandler.cpp
 

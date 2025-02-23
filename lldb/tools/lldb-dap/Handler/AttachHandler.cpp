@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "EventHelper.h"
 #include "JSONUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBListener.h"
@@ -203,7 +204,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) {
 
   dap.SendJSON(llvm::json::Value(std::move(response)));
   if (error.Success()) {
-    SendProcessEvent(Attach);
+    SendProcessEvent(dap, Attach);
     dap.SendJSON(CreateEventObject("initialized"));
   }
 }
