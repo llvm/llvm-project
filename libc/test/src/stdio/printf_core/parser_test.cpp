@@ -546,7 +546,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected9.raw_string = {str + 41, 7};
   expected9.min_width = 1;
   expected9.precision = 1;
-  expected9.conv_val_raw = arg1;
+  expected9.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected9.conv_name = 'c';
 
   EXPECT_PFORMAT_EQ(expected9, format_arr[9]);
@@ -566,14 +566,14 @@ TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
 
   expected0.has_conv = true;
   expected0.raw_string = {str, 4};
-  expected0.conv_val_raw = arg1;
+  expected0.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected0.conv_name = 'd';
 
   EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
 
   expected1.has_conv = true;
   expected1.raw_string = {str + 4, 4};
-  expected1.conv_val_raw = arg2;
+  expected1.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg2);
   expected1.conv_name = 'd';
 
   EXPECT_PFORMAT_EQ(expected1, format_arr[1]);

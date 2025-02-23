@@ -240,7 +240,7 @@ private:
       size_t index = static_cast<size_t>(result.value);
       if (str[*local_pos + static_cast<size_t>(result.parsed_len)] != '$')
         return 0;
-      *local_pos = 1 + result.parsed_len + *local_pos;
+      *local_pos = static_cast<size_t>(1 + result.parsed_len) + *local_pos;
       return index;
     }
     return 0;

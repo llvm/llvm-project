@@ -19,7 +19,6 @@
 
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
-#include <sys/_types/_uintptr_t.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -264,7 +263,7 @@ LIBC_INLINE void store_aligned(ValueType value, Ptr dst) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   constexpr size_t SHIFT = sizeof(T) * 8;
   if constexpr (Endian::IS_LITTLE) {
-    store<T>(assume_aligned<sizeof(T)>(dst), value & ~T(0));
+    store<T>(assume_aligned<sizeof(T)>(dst), T(value & T(~0)));
     if constexpr (sizeof...(TS) > 0)
       store_aligned<ValueType, TS...>(value >> SHIFT, dst + sizeof(T));
   } else if constexpr (Endian::IS_BIG) {
