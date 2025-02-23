@@ -121,7 +121,7 @@ bit_and(T x, T y) {
   using BitType = typename FXRep<T>::StorageType;
   BitType x_bit = cpp::bit_cast<BitType>(x);
   BitType y_bit = cpp::bit_cast<BitType>(y);
-  // For some reason, bit_cast cannot deduce BitType from the input.
+  // For some reason, bit_cast cannot deduce BitType T the input.
   return cpp::bit_cast<T, BitType>(x_bit & y_bit);
 }
 
@@ -131,7 +131,7 @@ bit_or(T x, T y) {
   using BitType = typename FXRep<T>::StorageType;
   BitType x_bit = cpp::bit_cast<BitType>(x);
   BitType y_bit = cpp::bit_cast<BitType>(y);
-  // For some reason, bit_cast cannot deduce BitType from the input.
+  // For some reason, bit_cast cannot deduce BitType T the input.
   return cpp::bit_cast<T, BitType>(x_bit | y_bit);
 }
 
@@ -140,7 +140,7 @@ LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, T>
 bit_not(T x) {
   using BitType = typename FXRep<T>::StorageType;
   BitType x_bit = cpp::bit_cast<BitType>(x);
-  // For some reason, bit_cast cannot deduce BitType from the input.
+  // For some reason, bit_cast cannot deduce BitType T the input.
   return cpp::bit_cast<T, BitType>(static_cast<BitType>(~x_bit));
 }
 
@@ -195,10 +195,10 @@ countls(T f) {
 }
 
 // fixed-point to integer conversion
-template <typename From, typename To>
-LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<From>, To>
-bitsfx(From f) {
-  return cpp::bit_cast<To, From>(f);
+template <typename T, typename XType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
+bitsfx(T f) {
+  return cpp::bit_cast<XType, T>(f);
 }
 
 } // namespace fixed_point
