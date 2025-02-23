@@ -18,6 +18,8 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method);
 
 void SendThreadStoppedEvent(DAP &dap);
 
+void SendTerminatedEvent(DAP &dap);
+
 } // namespace lldb_dap
 
 #endif

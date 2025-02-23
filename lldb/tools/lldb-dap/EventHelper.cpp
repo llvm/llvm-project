@@ -181,4 +181,17 @@ void SendThreadStoppedEvent(DAP &dap) {
   }
   dap.RunStopCommands();
 }
+
+// Send a "terminated" event to indicate the process is done being
+// debugged.
+void SendTerminatedEvent(DAP &dap) {
+  // Prevent races if the process exits while we're being asked to disconnect.
+  llvm::call_once(dap.terminated_event_flag, [&] {
+    dap.RunTerminateCommands();
+    // Send a "terminated" event
+    llvm::json::Object event(CreateTerminatedEventObject(dap.target));
+    dap.SendJSON(llvm::json::Value(std::move(event)));
+  });
+}
+
 } // namespace lldb_dap

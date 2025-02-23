@@ -74,6 +74,13 @@ public:
   void operator()(const llvm::json::Object &request) override;
 };
 
+class DisconnectRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "disconnect"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
 } // namespace lldb_dap
 
 #endif
