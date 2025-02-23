@@ -10069,6 +10069,24 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     case UO_AddrOf: // should be impossible
       return IntRange::forValueOfType(C, GetExprType(E));
 
+    case UO_Minus:
+    case UO_Not: {
+      if (E->getType()->isUnsignedIntegerType()) {
+        return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
+                               Approximate);
+      }
+
+      std::optional<IntRange> SubRange = TryGetExprRange(
+          C, UO->getSubExpr(), MaxWidth, InConstantContext, Approximate);
+
+      if (!SubRange)
+        return std::nullopt;
+
+      // The width increments by 1 if the sub-expression cannot be negative
+      // since it now can be.
+      return IntRange(SubRange->Width + (int)SubRange->NonNegative, false);
+    }
+
     default:
       return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
                              Approximate);

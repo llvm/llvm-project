@@ -419,3 +419,11 @@ void pr36008(enum PR36008EnumTest lhs) {
   if (x == y) x = y; // no warning
   if (y == x) y = x; // no warning
 }
+
+int test13(unsigned a, int b) {
+        return a > ~(95 != b); // expected-warning {{comparison of integers of different signs}}
+}
+
+int test14(unsigned a, int b) {
+        return a > -(95 != b); // expected-warning {{comparison of integers of different signs}}
+}
