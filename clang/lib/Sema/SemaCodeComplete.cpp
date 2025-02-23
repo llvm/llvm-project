@@ -6753,7 +6753,8 @@ void SemaCodeCompletion::CodeCompleteIfConst(Scope *S) const {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Other);
-  CodeCompletionBuilder Builder(Results.getAllocator(), Results.getCodeCompletionTUInfo());
+  CodeCompletionBuilder Builder(Results.getAllocator(),
+                                Results.getCodeCompletionTUInfo());
   Results.EnterNewScope();
   if (getLangOpts().CPlusPlus17) {
     if (Results.includeCodePatterns()) {
