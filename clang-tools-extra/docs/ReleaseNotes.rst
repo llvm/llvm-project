@@ -108,7 +108,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/const-correctness>` check by fixing false positives when
-  modify variant by ``operator[]`` with template in parameters.
+  modifying variant by ``operator[]`` with template in parameters.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
