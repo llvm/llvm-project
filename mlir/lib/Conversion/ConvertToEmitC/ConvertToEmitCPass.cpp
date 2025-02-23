@@ -8,13 +8,13 @@
 
 #include "mlir/Conversion/ConvertToEmitC/ConvertToEmitCPass.h"
 
-#include "llvm/Support/Debug.h"
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/Debug.h"
 
 #include <memory>
 
@@ -33,7 +33,7 @@ namespace {
 class ConvertToEmitCPassInterface {
 public:
   ConvertToEmitCPassInterface(MLIRContext *context,
-                             ArrayRef<std::string> filterDialects);
+                              ArrayRef<std::string> filterDialects);
   virtual ~ConvertToEmitCPassInterface() = default;
 
   /// Get the dependent dialects used by `convert-to-emitc`.
@@ -44,11 +44,11 @@ public:
   /// This method returns whether the initialization process failed.
   virtual LogicalResult initialize() = 0;
 
-  /// Transform `op` to the EMitC dialect with the conversions available in the pass.
-  /// The analysis manager can be used to query analyzes like `DataLayoutAnalysis`
-  /// to further configure the conversion process. This method is invoked by
-  /// `ConvertToEmitC::runOnOperation`. This method returns whether the
-  /// transformation process failed.
+  /// Transform `op` to the EMitC dialect with the conversions available in the
+  /// pass. The analysis manager can be used to query analyzes like
+  /// `DataLayoutAnalysis` to further configure the conversion process. This
+  /// method is invoked by `ConvertToEmitC::runOnOperation`. This method returns
+  /// whether the transformation process failed.
   virtual LogicalResult transform(Operation *op,
                                   AnalysisManager manager) const = 0;
 
@@ -68,7 +68,8 @@ protected:
 /// `apply()` method for every loaded dialect. If a dialect implements the
 /// `ConvertToEmitCPatternInterface` interface, we load dependent dialects
 /// through the interface. This extension is loaded in the context before
-/// starting a pass pipeline that involves dialect conversion to tje EmitC dialect.
+/// starting a pass pipeline that involves dialect conversion to tje EmitC
+/// dialect.
 class LoadDependentDialectExtension : public DialectExtensionBase {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LoadDependentDialectExtension)
@@ -98,8 +99,8 @@ public:
 // StaticConvertToEmitC
 //===----------------------------------------------------------------------===//
 
-/// Static implementation of the `convert-to-emitc` pass. This version only looks
-/// at dialect interfaces to configure the conversion process.
+/// Static implementation of the `convert-to-emitc` pass. This version only
+/// looks at dialect interfaces to configure the conversion process.
 struct StaticConvertToEmitC : public ConvertToEmitCPassInterface {
   /// Pattern set with conversions to the EmitC dialect.
   std::shared_ptr<const FrozenRewritePatternSet> patterns;
@@ -151,8 +152,7 @@ struct StaticConvertToEmitC : public ConvertToEmitCPassInterface {
 /// This is a generic pass to convert to the EmitC dialect, it uses the
 /// `ConvertToE;otCPatternInterface` dialect interface to delegate to dialects
 /// the injection of conversion patterns.
-class ConvertToEmitC
-    : public impl::ConvertToEmitCBase<ConvertToEmitC> {
+class ConvertToEmitC : public impl::ConvertToEmitCBase<ConvertToEmitC> {
   std::shared_ptr<const ConvertToEmitCPassInterface> impl;
 
 public:

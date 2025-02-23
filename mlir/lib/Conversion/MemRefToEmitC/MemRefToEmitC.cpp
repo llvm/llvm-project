@@ -40,13 +40,11 @@ struct MemRefToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
 };
 } // namespace
 
-void mlir::registerConvertMemRefToEmitCInterface(
-    DialectRegistry &registry) {
+void mlir::registerConvertMemRefToEmitCInterface(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     dialect->addInterfaces<MemRefToEmitCDialectInterface>();
   });
 }
-
 
 //===----------------------------------------------------------------------===//
 // Conversion Patterns
@@ -212,18 +210,18 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
                                      convertedElementType);
       });
 
-    auto materializeAsUnrealizedCast = [](OpBuilder &builder, Type resultType,
-                                          ValueRange inputs,
-                                          Location loc) -> Value {
-      if (inputs.size() != 1)
-        return Value();
+  auto materializeAsUnrealizedCast = [](OpBuilder &builder, Type resultType,
+                                        ValueRange inputs,
+                                        Location loc) -> Value {
+    if (inputs.size() != 1)
+      return Value();
 
-      return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
-          .getResult(0);
-    };
+    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        .getResult(0);
+  };
 
-    typeConverter.addSourceMaterialization(materializeAsUnrealizedCast);
-    typeConverter.addTargetMaterialization(materializeAsUnrealizedCast);
+  typeConverter.addSourceMaterialization(materializeAsUnrealizedCast);
+  typeConverter.addTargetMaterialization(materializeAsUnrealizedCast);
 }
 
 void mlir::populateMemRefToEmitCConversionPatterns(

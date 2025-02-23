@@ -48,5 +48,4 @@ void populateConversionTargetFromOperation(Operation *op,
 
 } // namespace mlir
 
-
 #endif // MLIR_CONVERSION_CONVERTTOEMITC_TOEMITCINTERFACE_H
