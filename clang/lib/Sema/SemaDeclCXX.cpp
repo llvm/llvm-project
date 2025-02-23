@@ -980,24 +980,24 @@ static bool CheckBindingsCount(Sema &S, DecompositionDecl *DD,
   if (IsValid && HasPack) {
     // Create the pack expr and assign it to the binding.
     unsigned PackSize = MemberCount - Bindings.size() + 1;
-    QualType PackType = S.Context.getPackExpansionType(
-        S.Context.DependentTy, std::nullopt, /*ExpectsPackInType=*/false);
-    BindingDecl *BD = (*BindingWithPackItr);
-    auto *RP = ResolvedUnexpandedPackExpr::Create(S.Context, DD->getBeginLoc(),
-                                                  DecompType, PackSize);
-    BD->setDecomposedDecl(DD);
-    BD->setBinding(PackType, RP);
 
     BindingDecl *BPack = *BindingWithPackItr;
+    BPack->setDecomposedDecl(DD);
+    SmallVector<ValueDecl *, 8> NestedBDs(PackSize);
     // Create the nested BindingDecls.
-    for (Expr *&E : RP->getExprs()) {
-      auto *NestedBD = BindingDecl::Create(S.Context, BPack->getDeclContext(),
-                                           BPack->getLocation(),
-                                           BPack->getIdentifier(), QualType());
+    for (unsigned I = 0; I < PackSize; ++I) {
+      BindingDecl *NestedBD = BindingDecl::Create(
+          S.Context, BPack->getDeclContext(), BPack->getLocation(),
+          BPack->getIdentifier(), QualType());
       NestedBD->setDecomposedDecl(DD);
-      E = S.BuildDeclRefExpr(NestedBD, S.Context.DependentTy, VK_LValue,
-                             BPack->getLocation());
+      NestedBDs[I] = NestedBD;
     }
+
+    QualType PackType = S.Context.getPackExpansionType(
+        S.Context.DependentTy, PackSize, /*ExpectsPackInType=*/false);
+    auto *PackExpr = FunctionParmPackExpr::Create(
+        S.Context, PackType, BPack, BPack->getBeginLoc(), NestedBDs);
+    BPack->setBinding(PackType, PackExpr);
   }
 
   if (IsValid)

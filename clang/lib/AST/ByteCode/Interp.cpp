@@ -732,6 +732,11 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         DiagDecl = CD = Inherited;
     }
 
+    // Silently reject constructors of invalid classes. The invalid class
+    // has been rejected elsewhere before.
+    if (CD && CD->getParent()->isInvalidDecl())
+      return false;
+
     // FIXME: If DiagDecl is an implicitly-declared special member function
     // or an inheriting constructor, we should be much more explicit about why
     // it's not constexpr.
@@ -1063,7 +1068,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return false;
     }
 
-    if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
+    if (!Ptr.isRoot() || Ptr.isOnePastEnd() ||
+        (Ptr.isArrayElement() && Ptr.getIndex() != 0)) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
           << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
@@ -1232,8 +1238,10 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
                              const Pointer &ThisPtr) {
   assert(Func->isConstructor());
 
-  const Descriptor *D = ThisPtr.getFieldDesc();
+  if (Func->getParentDecl()->isInvalidDecl())
+    return false;
 
+  const Descriptor *D = ThisPtr.getFieldDesc();
   // FIXME: I think this case is not 100% correct. E.g. a pointer into a
   // subobject of a composite array.
   if (!D->ElemRecord)
@@ -1432,7 +1440,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     unsigned Offset = S.getContext().collectBaseOffset(
         InitialPointeeType->getAsRecordDecl(),
         OverriderPointeeType->getAsRecordDecl());
-    return GetPtrBasePop(S, OpPC, Offset);
+    return GetPtrBasePop(S, OpPC, Offset, /*IsNullOK=*/true);
   }
 
   return true;

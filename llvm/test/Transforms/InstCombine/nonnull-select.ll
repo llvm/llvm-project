@@ -5,10 +5,7 @@
 
 define nonnull ptr @pr48975(ptr %.0) {
 ; CHECK-LABEL: @pr48975(
-; CHECK-NEXT:    [[DOT1:%.*]] = load ptr, ptr [[DOT0:%.*]], align 8
-; CHECK-NEXT:    [[DOT2:%.*]] = icmp eq ptr [[DOT1]], null
-; CHECK-NEXT:    [[DOT4:%.*]] = select i1 [[DOT2]], ptr null, ptr [[DOT0]]
-; CHECK-NEXT:    ret ptr [[DOT4]]
+; CHECK-NEXT:    ret ptr [[DOT4:%.*]]
 ;
   %.1 = load ptr, ptr %.0, align 8
   %.2 = icmp eq ptr %.1, null
@@ -18,8 +15,7 @@ define nonnull ptr @pr48975(ptr %.0) {
 
 define nonnull ptr @nonnull_ret(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_ret(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
-; CHECK-NEXT:    ret ptr [[RES]]
+; CHECK-NEXT:    ret ptr [[RES:%.*]]
 ;
   %res = select i1 %cond, ptr %p, ptr null
   ret ptr %res
@@ -27,8 +23,7 @@ define nonnull ptr @nonnull_ret(i1 %cond, ptr %p) {
 
 define nonnull ptr @nonnull_ret2(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_ret2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
-; CHECK-NEXT:    ret ptr [[RES]]
+; CHECK-NEXT:    ret ptr [[RES:%.*]]
 ;
   %res = select i1 %cond, ptr null, ptr %p
   ret ptr %res
@@ -36,8 +31,7 @@ define nonnull ptr @nonnull_ret2(i1 %cond, ptr %p) {
 
 define nonnull noundef ptr @nonnull_noundef_ret(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_noundef_ret(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
-; CHECK-NEXT:    ret ptr [[RES]]
+; CHECK-NEXT:    ret ptr [[RES:%.*]]
 ;
   %res = select i1 %cond, ptr %p, ptr null
   ret ptr %res
@@ -45,8 +39,7 @@ define nonnull noundef ptr @nonnull_noundef_ret(i1 %cond, ptr %p) {
 
 define nonnull noundef ptr @nonnull_noundef_ret2(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_noundef_ret2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
-; CHECK-NEXT:    ret ptr [[RES]]
+; CHECK-NEXT:    ret ptr [[RES:%.*]]
 ;
   %res = select i1 %cond, ptr null, ptr %p
   ret ptr %res
@@ -55,8 +48,7 @@ define nonnull noundef ptr @nonnull_noundef_ret2(i1 %cond, ptr %p) {
 
 define void @nonnull_call(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_call(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
-; CHECK-NEXT:    call void @f(ptr nonnull [[RES]])
+; CHECK-NEXT:    call void @f(ptr nonnull [[RES:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %res = select i1 %cond, ptr %p, ptr null
@@ -66,8 +58,7 @@ define void @nonnull_call(i1 %cond, ptr %p) {
 
 define void @nonnull_call2(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_call2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
-; CHECK-NEXT:    call void @f(ptr nonnull [[RES]])
+; CHECK-NEXT:    call void @f(ptr nonnull [[RES:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %res = select i1 %cond, ptr null, ptr %p
@@ -77,8 +68,7 @@ define void @nonnull_call2(i1 %cond, ptr %p) {
 
 define void @nonnull_noundef_call(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_noundef_call(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
-; CHECK-NEXT:    call void @f(ptr noundef nonnull [[RES]])
+; CHECK-NEXT:    call void @f(ptr noundef nonnull [[RES:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %res = select i1 %cond, ptr %p, ptr null
@@ -88,8 +78,7 @@ define void @nonnull_noundef_call(i1 %cond, ptr %p) {
 
 define void @nonnull_noundef_call2(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_noundef_call2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
-; CHECK-NEXT:    call void @f(ptr noundef nonnull [[RES]])
+; CHECK-NEXT:    call void @f(ptr noundef nonnull [[RES:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %res = select i1 %cond, ptr null, ptr %p

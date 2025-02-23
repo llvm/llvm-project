@@ -107,8 +107,10 @@ Changes in existing checks
   additional C++ member functions to match.
 
 - Improved :doc:`misc-const-correctness
-  <clang-tidy/checks/const-correctness>` check by fixing false positives when
-  modifying variant by ``operator[]`` with template in parameters.
+  <clang-tidy/checks/misc/const-correctness>` check by adding the option
+  `AllowedTypes`, that excludes specified types from const-correctness
+  checking and fixing false positives when modifying variant by ``operator[]``
+  with template in parameters.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
