@@ -12,7 +12,6 @@
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
-#include <_types/_uint32_t.h>
 
 #if !defined(LIBC_TARGET_ARCH_IS_AARCH64) || !defined(__APPLE__)
 #error "Invalid include"
