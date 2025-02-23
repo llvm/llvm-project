@@ -8,8 +8,6 @@
 // CHECK-NEXT:    llvm.return
 // CHECK-NEXT:  }
 
-// -----
-
 llvm.func @f1()
 
 llvm.func @f2() {
