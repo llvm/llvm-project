@@ -62,6 +62,13 @@ public:
   void operator()(const llvm::json::Object &request) override;
 };
 
+class ContinueRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "continue"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
 } // namespace lldb_dap
 
 #endif

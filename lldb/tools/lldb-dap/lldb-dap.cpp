@@ -726,71 +726,6 @@ bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
   return reached_end_of_stack;
 }
 
-// "ContinueRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Continue request; value of command field is 'continue'.
-//                     The request starts the debuggee to run again.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "continue" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/ContinueArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "ContinueArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'continue' request.",
-//   "properties": {
-//     "threadId": {
-//       "type": "integer",
-//       "description": "Continue execution for the specified thread (if
-//                       possible). If the backend cannot continue on a single
-//                       thread but will continue on all threads, it should
-//                       set the allThreadsContinued attribute in the response
-//                       to true."
-//     }
-//   },
-//   "required": [ "threadId" ]
-// },
-// "ContinueResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'continue' request.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "allThreadsContinued": {
-//             "type": "boolean",
-//             "description": "If true, the continue request has ignored the
-//                             specified thread and continued all threads
-//                             instead. If this attribute is missing a value
-//                             of 'true' is assumed for backward
-//                             compatibility."
-//           }
-//         }
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// }
-void request_continue(DAP &dap, const llvm::json::Object &request) {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  lldb::SBProcess process = dap.target.GetProcess();
-  lldb::SBError error = process.Continue();
-  llvm::json::Object body;
-  body.try_emplace("allThreadsContinued", true);
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
-}
-
 // "ConfigurationDoneRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //             "type": "object",
@@ -4421,8 +4356,8 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<AttachRequestHandler>();
   dap.RegisterRequest<BreakpointLocationsRequestHandler>();
   dap.RegisterRequest<CompletionsRequestHandler>();
+  dap.RegisterRequest<ContinueRequestHandler>();
 
-  dap.RegisterRequestCallback("continue", request_continue);
   dap.RegisterRequestCallback("configurationDone", request_configurationDone);
   dap.RegisterRequestCallback("disconnect", request_disconnect);
   dap.RegisterRequestCallback("evaluate", request_evaluate);
