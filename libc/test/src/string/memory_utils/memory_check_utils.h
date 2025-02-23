@@ -185,8 +185,10 @@ template <auto FnImpl>
 inline bool CheckMemmove(cpp::span<char> buffer, size_t size, int overlap) {
   LIBC_ASSERT(buffer.size() > (2 * size + 1));
   const size_t half_size = buffer.size() / 2;
-  LIBC_ASSERT(static_cast<size_t>(overlap >= 0 ? overlap : -overlap) < half_size);
-  cpp::span<char> head = buffer.first(half_size + static_cast<size_t>(overlap)).last(size);
+  LIBC_ASSERT(static_cast<size_t>(overlap >= 0 ? overlap : -overlap) <
+              half_size);
+  cpp::span<char> head =
+      buffer.first(half_size + static_cast<size_t>(overlap)).last(size);
   cpp::span<char> tail = buffer.last(half_size).first(size);
   LIBC_ASSERT(head.size() == size);
   LIBC_ASSERT(tail.size() == size);

@@ -111,8 +111,8 @@ eisel_lemire(ExpandedFloat<T> init_num,
   uint32_t clz = static_cast<uint32_t>(cpp::countl_zero<StorageType>(mantissa));
   mantissa <<= clz;
 
-  int32_t exp2 =
-      exp10_to_exp2(exp10) + FPBits::STORAGE_LEN + FPBits::EXP_BIAS - static_cast<int32_t>(clz);
+  int32_t exp2 = exp10_to_exp2(exp10) + FPBits::STORAGE_LEN + FPBits::EXP_BIAS -
+                 static_cast<int32_t>(clz);
 
   // Multiplication
   const uint64_t *power_of_ten =

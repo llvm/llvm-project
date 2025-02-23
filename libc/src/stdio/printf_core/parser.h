@@ -57,7 +57,8 @@ template <typename T> using int_type_of_v = typename int_type_of<T>::type;
     if (!temp.has_value()) {                                                   \
       section.has_conv = false;                                                \
     } else {                                                                   \
-      dst = static_cast<decltype(dst)>(cpp::bit_cast<int_type_of_v<arg_type>>(temp.value()));              \
+      dst = static_cast<decltype(dst)>(                                        \
+          cpp::bit_cast<int_type_of_v<arg_type>>(temp.value()));               \
     }                                                                          \
   }
 #else
@@ -265,7 +266,8 @@ public:
       case ('m'):
         // %m is an odd conversion in that it doesn't consume an argument, it
         // just takes the current value of errno as its argument.
-        section.conv_val_raw = static_cast<fputil::FPBits<double>::StorageType>(libc_errno);
+        section.conv_val_raw =
+            static_cast<fputil::FPBits<double>::StorageType>(libc_errno);
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT

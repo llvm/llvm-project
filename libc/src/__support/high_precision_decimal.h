@@ -424,8 +424,8 @@ public:
       result *= 10;
       ++cur_digit;
     }
-    return result + static_cast<T>(
-                        this->should_round_up(this->decimal_point, round));
+    return result +
+           static_cast<T>(this->should_round_up(this->decimal_point, round));
   }
 
   // Extra functions for testing.

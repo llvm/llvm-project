@@ -74,8 +74,7 @@ TYPED_TEST(LlvmLibcBitTest, FirstLeadingZero, UnsignedTypesNoBigInt) {
   EXPECT_EQ(first_leading_zero<T>(cpp::numeric_limits<T>::max()), 0);
   for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i) {
     auto lhs = T(~(T(1) << size_t(i)));
-    EXPECT_EQ(first_leading_zero<T>(lhs),
-              cpp::numeric_limits<T>::digits - i);
+    EXPECT_EQ(first_leading_zero<T>(lhs), cpp::numeric_limits<T>::digits - i);
   }
 }
 
@@ -83,9 +82,7 @@ TYPED_TEST(LlvmLibcBitTest, FirstLeadingOne, UnsignedTypesNoBigInt) {
   EXPECT_EQ(first_leading_one<T>(static_cast<T>(0)), 0);
   for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i) {
     auto lhs = T(T(1) << size_t(i));
-    EXPECT_EQ(first_leading_one<T>(lhs),
-              cpp::numeric_limits<T>::digits - i);
-
+    EXPECT_EQ(first_leading_one<T>(lhs), cpp::numeric_limits<T>::digits - i);
   }
 }
 

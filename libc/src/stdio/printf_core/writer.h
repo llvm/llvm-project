@@ -135,7 +135,8 @@ public:
     chars_written += static_cast<int>(length);
 
     if (LIBC_LIKELY(wb->buff_cur + length <= wb->buff_len)) {
-      inline_memset(wb->buff + wb->buff_cur, static_cast<unsigned char>(new_char), length);
+      inline_memset(wb->buff + wb->buff_cur,
+                    static_cast<unsigned char>(new_char), length);
       wb->buff_cur += length;
       return WRITE_OK;
     }

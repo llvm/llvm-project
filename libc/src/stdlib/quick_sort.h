@@ -167,7 +167,9 @@ LIBC_INLINE void quick_sort_impl(A &array, const void *ancestor_pivot,
   }
 }
 
-constexpr size_t ilog2(size_t n) { return static_cast<size_t>(cpp::bit_width(n)) - 1; }
+constexpr size_t ilog2(size_t n) {
+  return static_cast<size_t>(cpp::bit_width(n)) - 1;
+}
 
 template <typename A, typename F>
 LIBC_INLINE void quick_sort(A &array, const F &is_less) {

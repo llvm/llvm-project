@@ -150,7 +150,8 @@ public:
             char b = str[cur_pos + 1];
             char start = (a < b ? a : b);
             char end = (a < b ? b : a);
-            scan_set.set_range(static_cast<size_t>(start), static_cast<size_t>(end));
+            scan_set.set_range(static_cast<size_t>(start),
+                               static_cast<size_t>(end));
             cur_pos += 2;
           } else {
             scan_set.set(static_cast<size_t>(str[cur_pos]));
