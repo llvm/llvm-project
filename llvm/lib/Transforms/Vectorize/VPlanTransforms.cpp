@@ -32,6 +32,82 @@
 
 using namespace llvm;
 
+void VPlanTransforms::introduceTopLevelVectorLoopRegion(
+    VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
+    bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop) {
+  auto *HeaderVPBB = cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor());
+  VPBlockUtils::disconnectBlocks(Plan.getEntry(), HeaderVPBB);
+
+  VPBasicBlock *OriginalLatch =
+      cast<VPBasicBlock>(HeaderVPBB->getSinglePredecessor());
+  VPBlockUtils::disconnectBlocks(OriginalLatch, HeaderVPBB);
+  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
+  VPBlockUtils::connectBlocks(Plan.getEntry(), VecPreheader);
+
+  // Create SCEV and VPValue for the trip count.
+  // We use the symbolic max backedge-taken-count, which works also when
+  // vectorizing loops with uncountable early exits.
+  const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
+  assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
+         "Invalid loop count");
+  ScalarEvolution &SE = *PSE.getSE();
+  const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
+                                                       InductionTy, TheLoop);
+  Plan.setTripCount(
+      vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
+
+  // Create VPRegionBlock, with empty header and latch blocks, to be filled
+  // during processing later.
+  VPBasicBlock *LatchVPBB = Plan.createVPBasicBlock("vector.latch");
+  VPBlockUtils::insertBlockAfter(LatchVPBB, OriginalLatch);
+  auto *TopRegion = Plan.createVPRegionBlock(
+      HeaderVPBB, LatchVPBB, "vector loop", false /*isReplicator*/);
+  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPBB)) {
+    VPBB->setParent(TopRegion);
+  }
+
+  VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
+  VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
+  VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
+
+  VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
+  VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
+  if (!RequiresScalarEpilogueCheck) {
+    VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+    return;
+  }
+
+  // If needed, add a check in the middle block to see if we have completed
+  // all of the iterations in the first vector loop.  Three cases:
+  // 1) If (N - N%VF) == N, then we *don't* need to run the remainder.
+  //    Thus if tail is to be folded, we know we don't need to run the
+  //    remainder and we can set the condition to true.
+  // 2) If we require a scalar epilogue, there is no conditional branch as
+  //    we unconditionally branch to the scalar preheader.  Do nothing.
+  // 3) Otherwise, construct a runtime check.
+  BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
+  auto *VPExitBlock = Plan.getExitBlock(IRExitBlock);
+  // The connection order corresponds to the operands of the conditional branch.
+  VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
+  VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+
+  auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
+  // Here we use the same DebugLoc as the scalar loop latch terminator instead
+  // of the corresponding compare because they may have ended up with
+  // different line numbers and we want to avoid awkward line stepping while
+  // debugging. Eg. if the compare has got a line number inside the loop.
+  VPBuilder Builder(MiddleVPBB);
+  VPValue *Cmp =
+      TailFolded
+          ? Plan.getOrAddLiveIn(ConstantInt::getTrue(
+                IntegerType::getInt1Ty(TripCount->getType()->getContext())))
+          : Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
+                               &Plan.getVectorTripCount(),
+                               ScalarLatchTerm->getDebugLoc(), "cmp.n");
+  Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp},
+                       ScalarLatchTerm->getDebugLoc());
+}
+
 void VPlanTransforms::VPInstructionsToVPRecipes(
     VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
