@@ -13456,8 +13456,8 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       Result = FD;
     };
 
-    // We have more than one result - see if it is more constrained than the
-    // previous one.
+    // We have more than one result - see if it is more
+    // partial-ordering-constrained than the previous one.
     if (Result) {
       // Check CUDA preference first. If the candidates have differennt CUDA
       // preference, choose the one with higher CUDA preference. Otherwise,
@@ -13472,7 +13472,7 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
           continue;
         }
       }
-      // FD has the same CUDA prefernece than Result. Continue check
+      // FD has the same CUDA preference than Result. Continue to check
       // constraints.
 
       // C++ [over.over]p5:
