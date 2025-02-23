@@ -889,16 +889,19 @@ bool MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
   return false;
 }
 
+/// Returns true if \p F is either weak_odr or linkonce_odr.
+static bool isODR(const Function *F) {
+  return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
+}
+
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
 
   // Create a new thunk that both F and G can call, if F cannot call G directly.
   // That is the case if F is either interposable or if G is either weak_odr or
   // linkonce_odr.
-  if (F->isInterposable() || G->hasWeakODRLinkage() ||
-      G->hasLinkOnceODRLinkage()) {
-    assert(G->isInterposable() || G->hasWeakODRLinkage() ||
-           G->hasLinkOnceODRLinkage());
+  if (F->isInterposable() || (isODR(F) && isODR(G))) {
+    assert((!isODR(G) || isODR(F)) && "if G is ODR, F must also be ODR due to ordering");
 
     // Both writeThunkOrAlias() calls below must succeed, either because we can
     // create aliases for G and NewF, or because a thunk for F is profitable.
@@ -918,6 +921,13 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     copyMetadataIfPresent(F, NewF, "kcfi_type");
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
+
+    // If G or NewF are (weak|linkonce)_odr, update all callers to call the
+    // thunk.
+    if (isODR(G))
+      replaceDirectCallers(G, F);
+    if (isODR(F))
+      replaceDirectCallers(NewF, F);
 
     // We collect alignment before writeThunkOrAlias that overwrites NewF and
     // G's content.
@@ -992,17 +1002,16 @@ void MergeFunctions::replaceFunctionInTree(const FunctionNode &FN,
 
 // Ordering for functions that are equal under FunctionComparator
 static bool isFuncOrderCorrect(const Function *F, const Function *G) {
+  if (isODR(F) != isODR(G)) {
+    // ODR functions before non-ODR functions. A ODR function can call a non-ODR
+    // function if it is not interposable, but not the other way around.
+    return isODR(G);
+  }
+
   if (F->isInterposable() != G->isInterposable()) {
     // Strong before weak, because the weak function may call the strong
     // one, but not the other way around.
     return !F->isInterposable();
-  }
-
-  if (F->hasWeakODRLinkage() != G->hasWeakODRLinkage() ||
-      F->hasLinkOnceODRLinkage() != G->hasLinkOnceODRLinkage()) {
-    // ODR functions before non-ODR functions. A ODR function can call a non-ODR
-    // function if it is not interposable, but not the other way around.
-    return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
   }
 
   if (F->hasLocalLinkage() != G->hasLocalLinkage()) {

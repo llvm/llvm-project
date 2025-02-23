@@ -41,13 +41,13 @@ declare void @foo(ptr)
 ;.
 ; CHECK-LABEL: define void @caller_of_callers(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @linkonce_odr_caller_of_foo_1(ptr [[P]])
-; CHECK-NEXT:    call void @linkonce_odr_caller_of_foo_2(ptr [[P]])
-; CHECK-NEXT:    call void @linkonce_odr_caller_of_foo_3(ptr [[P]])
+; CHECK-NEXT:    call void @[[GLOB0:[0-9]+]](ptr [[P]])
+; CHECK-NEXT:    call void @[[GLOB0]](ptr [[P]])
+; CHECK-NEXT:    call void @[[GLOB0]](ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define linkonce_odr void @linkonce_odr_caller_of_foo_3(
+; CHECK-LABEL: define private void @0(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @foo(ptr [[P]])
@@ -58,12 +58,18 @@ declare void @foo(ptr)
 ;
 ; CHECK-LABEL: define linkonce_odr void @linkonce_odr_caller_of_foo_2(
 ; CHECK-SAME: ptr [[TMP0:%.*]]) {
-; CHECK-NEXT:    tail call void @linkonce_odr_caller_of_foo_3(ptr [[TMP0]])
+; CHECK-NEXT:    tail call void @[[GLOB0]](ptr [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define linkonce_odr void @linkonce_odr_caller_of_foo_1(
 ; CHECK-SAME: ptr [[TMP0:%.*]]) {
-; CHECK-NEXT:    tail call void @linkonce_odr_caller_of_foo_3(ptr [[TMP0]])
+; CHECK-NEXT:    tail call void @[[GLOB0]](ptr [[TMP0]])
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: define linkonce_odr void @linkonce_odr_caller_of_foo_3(
+; CHECK-SAME: ptr [[TMP0:%.*]]) {
+; CHECK-NEXT:    tail call void @[[GLOB0]](ptr [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
