@@ -156,29 +156,6 @@ constexpr void test_iterators() {
   }
 }
 
-TEST_CONSTEXPR_CXX20 void test_bit_iterator_with_custom_sized_types() {
-  {
-    using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
-    std::vector<bool, Alloc> in(100, true, Alloc(1));
-    assert(std::ranges::count(in, true) == 100);
-  }
-  {
-    using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
-    std::vector<bool, Alloc> in(199, true, Alloc(1));
-    assert(std::ranges::count(in, true) == 199);
-  }
-  {
-    using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
-    std::vector<bool, Alloc> in(200, true, Alloc(1));
-    assert(std::ranges::count(in, true) == 200);
-  }
-  {
-    using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
-    std::vector<bool, Alloc> in(257, true, Alloc(1));
-    assert(std::ranges::count(in, true) == 257);
-  }
-}
-
 constexpr bool test() {
   test_iterators<int*>();
   test_iterators<const int*>();
@@ -293,19 +270,48 @@ constexpr bool test() {
     }
   }
 
-  { // check that __bit_iterator optimizations work as expected
-    std::vector<bool> vec(256 + 64);
-    for (ptrdiff_t i = 0; i != 256; ++i) {
-      for (size_t offset = 0; offset != 64; ++offset) {
-        std::fill(vec.begin(), vec.end(), false);
-        std::fill(vec.begin() + offset, vec.begin() + i + offset, true);
-        assert(std::ranges::count(vec.begin() + offset, vec.begin() + offset + 256, true) == i);
-        assert(std::ranges::count(vec.begin() + offset, vec.begin() + offset + 256, false) == 256 - i);
+  // Tests for std::count with std::vector<bool>::iterator optimizations.
+  {
+    { // check that vector<bool>::iterator optimization works as expected
+      std::vector<bool> vec(256 + 64);
+      for (ptrdiff_t i = 0; i != 256; ++i) {
+        for (size_t offset = 0; offset != 64; ++offset) {
+          std::fill(vec.begin(), vec.end(), false);
+          std::fill(vec.begin() + offset, vec.begin() + i + offset, true);
+          assert(std::ranges::count(vec.begin() + offset, vec.begin() + offset + 256, true) == i);
+          assert(std::ranges::count(vec.begin() + offset, vec.begin() + offset + 256, false) == 256 - i);
+        }
       }
     }
-  }
 
-  test_bit_iterator_with_custom_sized_types();
+    // Fix std::ranges::count for std::vector<bool> with small storage types, e.g., std::uint16_t, unsigned short.
+    // See https://github.com/llvm/llvm-project/issues/122528
+    {
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(100, true, Alloc(1));
+      assert(std::ranges::count(in, true) == 100);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(199, true, Alloc(1));
+      assert(std::ranges::count(in, true) == 199);
+    }
+    {
+      using Alloc = sized_allocator<bool, unsigned short, short>;
+      std::vector<bool, Alloc> in(200, true, Alloc(1));
+      assert(std::ranges::count(in, true) == 200);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
+      std::vector<bool, Alloc> in(205, true, Alloc(1));
+      assert(std::ranges::count(in, true) == 205);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
+      std::vector<bool, Alloc> in(257, true, Alloc(1));
+      assert(std::ranges::count(in, true) == 257);
+    }
+  }
 
   return true;
 }
