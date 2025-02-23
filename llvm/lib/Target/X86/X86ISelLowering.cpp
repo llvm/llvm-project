@@ -53749,23 +53749,20 @@ static SDValue combinei64TruncSrlAdd(SDValue N, EVT VT, SelectionDAG &DAG,
                                  m_ConstInt(SrlConst)))))
     return SDValue();
 
-  if (SrlConst.ule(32) || AddConst.lshr(SrlConst).shl(SrlConst) != AddConst)
+  if (SrlConst.ule(32) || AddConst.countr_zero() < SrlConst.getZExtValue())
     return SDValue();
 
   SDValue AddLHSSrl =
       DAG.getNode(ISD::SRL, DL, MVT::i64, AddLhs, N.getOperand(1));
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
 
-  APInt NewAddConstVal =
-      (~((~AddConst).lshr(SrlConst))).trunc(VT.getSizeInBits());
+  APInt NewAddConstVal = AddConst.lshr(SrlConst).trunc(VT.getSizeInBits());
   SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
   SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
 
-  APInt CleanupSizeConstVal = (SrlConst - 32).zextOrTrunc(VT.getSizeInBits());
   EVT CleanUpVT =
-      EVT::getIntegerVT(*DAG.getContext(), CleanupSizeConstVal.getZExtValue());
-  SDValue CleanUp = DAG.getAnyExtOrTrunc(NewAddNode, DL, CleanUpVT);
-  return DAG.getAnyExtOrTrunc(CleanUp, DL, VT);
+      EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConst.getZExtValue());
+  return DAG.getZeroExtendInReg(NewAddNode, DL, CleanUpVT);
 }
 
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify
@@ -59360,14 +59357,21 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::FP_EXTEND, dl, VT, Cvt);
 }
 
-// Try to find a larger VBROADCAST_LOAD/SUBV_BROADCAST_LOAD that we can extract.
+// Try to find a larger VBROADCAST_LOAD/SUBV_BROADCAST_LOAD that we can extract
+// from. Limit this to cases where the loads have the same input chain and the
+// output chains are unused. This avoids any memory ordering issues.
 static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   assert((N->getOpcode() == X86ISD::VBROADCAST_LOAD ||
           N->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) &&
          "Unknown broadcast load type");
 
+  // Only do this if the chain result is unused.
+  if (N->hasAnyUseOfValue(1))
+    return SDValue();
+
   auto *MemIntrin = cast<MemIntrinsicSDNode>(N);
+
   SDValue Ptr = MemIntrin->getBasePtr();
   SDValue Chain = MemIntrin->getChain();
   EVT VT = N->getSimpleValueType(0);
@@ -59381,15 +59385,12 @@ static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
         cast<MemIntrinsicSDNode>(User)->getChain() == Chain &&
         cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
             MemVT.getSizeInBits() &&
+        !User->hasAnyUseOfValue(1) &&
         User->getValueSizeInBits(0).getFixedValue() > VT.getFixedSizeInBits()) {
-      assert(cast<MemIntrinsicSDNode>(User)->isSimple() &&
-             MemIntrin->isSimple() && "Illegal broadcast load type");
       SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
                                          VT.getSizeInBits());
       Extract = DAG.getBitcast(VT, Extract);
-      Extract = DCI.CombineTo(N, Extract, SDValue(User, 1));
-      DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), Extract.getValue(1));
-      return Extract;
+      return DCI.CombineTo(N, Extract, SDValue(User, 1));
     }
 
   return SDValue();

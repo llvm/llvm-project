@@ -240,7 +240,7 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 }
 
 ; Check that we do make use of v32 if there are no AGPRs present in the function
-define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #5 {
 ; GFX908-LABEL: no_agpr_no_reserve:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -1145,5 +1145,6 @@ declare i32 @llvm.amdgcn.workitem.id.x() #2
 attributes #0 = { "amdgpu-waves-per-eu"="6,6" }
 attributes #1 = { convergent nounwind readnone willreturn }
 attributes #2 = { nounwind readnone willreturn }
-attributes #3 = { "amdgpu-waves-per-eu"="7,7" }
+attributes #3 = { "amdgpu-waves-per-eu"="7,7" "amdgpu-no-agpr" }
 attributes #4 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-flat-work-group-size"="1024,1024" }
+attributes #5 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-no-agpr" }
