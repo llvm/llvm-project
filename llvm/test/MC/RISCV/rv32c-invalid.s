@@ -19,15 +19,15 @@ c.xor  t2, a0 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
 c.sub  a0, s8 # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
 
 ## GPRNoX0
-c.lwsp  x0, 4(sp) # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
-c.lwsp  zero, 4(sp) # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
-c.jr  x0 # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
-c.jalr  zero # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
+c.lwsp  x0, 4(sp) # CHECK: :[[@LINE]]:9: error: register must be a GPR excluding zero (x0)
+c.lwsp  zero, 4(sp) # CHECK: :[[@LINE]]:9: error: register must be a GPR excluding zero (x0)
+c.jr  x0 # CHECK: :[[@LINE]]:7: error: register must be a GPR excluding zero (x0)
+c.jalr  zero # CHECK: :[[@LINE]]:9: error: register must be a GPR excluding zero (x0)
 c.addi  x0, x0, 1 # CHECK: :[[@LINE]]:13: error: immediate must be zero
 c.li  zero, 2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RVC Hint Instructions{{$}}
 c.slli  zero, zero, 4 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
 c.mv  zero, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RVC Hint Instructions{{$}}
-c.mv  ra, x0 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+c.mv  ra, x0 # CHECK: :[[@LINE]]:11: error: register must be a GPR excluding zero (x0)
 c.add  ra, ra, x0 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
 c.add  zero, zero, sp # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
 

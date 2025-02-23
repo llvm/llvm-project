@@ -55,17 +55,9 @@ void writeDefFile(COFFLinkerContext &, StringRef name,
 // symbol becomes accessible as `__real_foo`, so you can call that from your
 // wrapper.
 //
-// This data structure is instantiated for each -wrap option.
-struct WrappedSymbol {
-  Symbol *sym;
-  Symbol *real;
-  Symbol *wrap;
-};
+void addWrappedSymbols(SymbolTable &symtab, llvm::opt::InputArgList &args);
 
-std::vector<WrappedSymbol> addWrappedSymbols(COFFLinkerContext &ctx,
-                                             llvm::opt::InputArgList &args);
-
-void wrapSymbols(COFFLinkerContext &ctx, ArrayRef<WrappedSymbol> wrapped);
+void wrapSymbols(SymbolTable &symtab);
 
 } // namespace lld::coff
 

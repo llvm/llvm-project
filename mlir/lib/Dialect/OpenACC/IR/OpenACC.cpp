@@ -580,6 +580,7 @@ LogicalResult acc::DeleteOp::verify() {
       getDataClause() != acc::DataClause::acc_copyin &&
       getDataClause() != acc::DataClause::acc_copyin_readonly &&
       getDataClause() != acc::DataClause::acc_present &&
+      getDataClause() != acc::DataClause::acc_no_create &&
       getDataClause() != acc::DataClause::acc_declare_device_resident &&
       getDataClause() != acc::DataClause::acc_declare_link)
     return emitError(

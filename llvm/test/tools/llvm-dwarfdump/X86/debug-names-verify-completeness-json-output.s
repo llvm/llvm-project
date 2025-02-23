@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj -o - | not llvm-dwarfdump -verify --verify-json=%t.json -
 # RUN: FileCheck %s --input-file %t.json
 
-# CHECK: {"error-categories":{"Name Index DIE entry missing name":{"count":10,"details":{"DW_TAG_inlined_subroutine":1,"DW_TAG_label":1,"DW_TAG_namespace":2,"DW_TAG_subprogram":2,"DW_TAG_variable":4}}},"error-count":10}
+# CHECK: {"error-categories":{"Name Index DIE entry missing name":{"count":10}},"error-count":10}
 # CHECK-NOT: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_block_addr missing.
 
         .section        .debug_loc,"",@progbits

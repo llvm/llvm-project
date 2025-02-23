@@ -1,3 +1,4 @@
+#include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_add_sat.h>
 #include <clc/integer/clc_mad24.h>
@@ -8,34 +9,23 @@
 #include <clc/relational/clc_select.h>
 #include <clc/shared/clc_clamp.h>
 
-#define __CLC_CONVERT_TY(X, TY) __builtin_convertvector(X, TY)
-
-// Macro for defining mad_sat variants for char/uchar/short/ushort
-// FIXME: Once using __clc_convert_ty, can easily unify scalar and vector defs
 #define __CLC_DEFINE_SIMPLE_MAD_SAT(TYPE, UP_TYPE, LIT_PREFIX)                 \
   _CLC_OVERLOAD _CLC_DEF TYPE __clc_mad_sat(TYPE x, TYPE y, TYPE z) {          \
-    return __clc_clamp(                                                        \
-        (UP_TYPE)__clc_mad24((UP_TYPE)x, (UP_TYPE)y, (UP_TYPE)z),              \
-        (UP_TYPE)LIT_PREFIX##_MIN, (UP_TYPE)LIT_PREFIX##_MAX);                 \
-  }
-
-#define __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE, UP_TYPE, LIT_PREFIX)             \
-  _CLC_OVERLOAD _CLC_DEF TYPE __clc_mad_sat(TYPE x, TYPE y, TYPE z) {          \
-    UP_TYPE upscaled_mad = __clc_mad24(__CLC_CONVERT_TY(x, UP_TYPE),           \
-                                       __CLC_CONVERT_TY(y, UP_TYPE),           \
-                                       __CLC_CONVERT_TY(z, UP_TYPE));          \
+    UP_TYPE upscaled_mad =                                                     \
+        __clc_mad24(__clc_convert_##UP_TYPE(x), __clc_convert_##UP_TYPE(y),    \
+                    __clc_convert_##UP_TYPE(z));                               \
     UP_TYPE clamped_mad = __clc_clamp(upscaled_mad, (UP_TYPE)LIT_PREFIX##_MIN, \
                                       (UP_TYPE)LIT_PREFIX##_MAX);              \
-    return __CLC_CONVERT_TY(clamped_mad, TYPE);                                \
+    return __clc_convert_##TYPE(clamped_mad);                                  \
   }
 
 #define __CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(TYPE, UP_TYPE, LIT_PREFIX)         \
   __CLC_DEFINE_SIMPLE_MAD_SAT(TYPE, UP_TYPE, LIT_PREFIX)                       \
-  __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##2, UP_TYPE##2, LIT_PREFIX)             \
-  __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##3, UP_TYPE##3, LIT_PREFIX)             \
-  __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##4, UP_TYPE##4, LIT_PREFIX)             \
-  __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##8, UP_TYPE##8, LIT_PREFIX)             \
-  __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##16, UP_TYPE##16, LIT_PREFIX)
+  __CLC_DEFINE_SIMPLE_MAD_SAT(TYPE##2, UP_TYPE##2, LIT_PREFIX)                 \
+  __CLC_DEFINE_SIMPLE_MAD_SAT(TYPE##3, UP_TYPE##3, LIT_PREFIX)                 \
+  __CLC_DEFINE_SIMPLE_MAD_SAT(TYPE##4, UP_TYPE##4, LIT_PREFIX)                 \
+  __CLC_DEFINE_SIMPLE_MAD_SAT(TYPE##8, UP_TYPE##8, LIT_PREFIX)                 \
+  __CLC_DEFINE_SIMPLE_MAD_SAT(TYPE##16, UP_TYPE##16, LIT_PREFIX)
 
 __CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(char, int, CHAR)
 __CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(uchar, uint, UCHAR)
@@ -67,20 +57,13 @@ __CLC_DEFINE_UINTLONG_MAD_SAT_ALL_TYS(ulong, long, ULONG)
     INTTY mhi = __clc_mul_hi(x, y);                                            \
     UINTTY mlo = __clc_as_##UINTTY(x * y);                                     \
     SLONGTY m = __clc_upsample(mhi, mlo);                                      \
-    m += __CLC_CONVERT_TY(z, SLONGTY);                                         \
+    m += __clc_convert_##SLONGTY(z);                                           \
     m = __clc_clamp(m, (SLONGTY)INT_MIN, (SLONGTY)INT_MAX);                    \
-    return __CLC_CONVERT_TY(m, INTTY);                                         \
+    return __clc_convert_##INTTY(m);                                           \
   }
 
-// FIXME: Once using __clc_convert_ty, can easily unify scalar and vector defs
 #define __CLC_DEFINE_SINT_MAD_SAT_ALL_TYS(INTTY, UINTTY, SLONGTY)              \
-  _CLC_OVERLOAD _CLC_DEF INTTY __clc_mad_sat(INTTY x, INTTY y, INTTY z) {      \
-    INTTY mhi = __clc_mul_hi(x, y);                                            \
-    UINTTY mlo = __clc_as_##UINTTY(x * y);                                     \
-    SLONGTY m = __clc_upsample(mhi, mlo);                                      \
-    m += z;                                                                    \
-    return __clc_clamp(m, (SLONGTY)INT_MIN, (SLONGTY)INT_MAX);                 \
-  }                                                                            \
+  __CLC_DEFINE_SINT_MAD_SAT(INTTY, UINTTY, SLONGTY)                            \
   __CLC_DEFINE_SINT_MAD_SAT(INTTY##2, UINTTY##2, SLONGTY##2)                   \
   __CLC_DEFINE_SINT_MAD_SAT(INTTY##3, UINTTY##3, SLONGTY##3)                   \
   __CLC_DEFINE_SINT_MAD_SAT(INTTY##4, UINTTY##4, SLONGTY##4)                   \

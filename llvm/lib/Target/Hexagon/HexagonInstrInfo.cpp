@@ -2240,7 +2240,7 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
   return false;
 }
 
-// Returns true if the instruction is alread a .cur.
+// Returns true if the instruction is already a .cur.
 bool HexagonInstrInfo::isDotCurInst(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case Hexagon::V6_vL32b_cur_pi:
@@ -3860,7 +3860,7 @@ int HexagonInstrInfo::getDotNewPredJumpOp(const MachineInstr &MI,
 int HexagonInstrInfo::getDotNewPredOp(const MachineInstr &MI,
       const MachineBranchProbabilityInfo *MBPI) const {
   switch (MI.getOpcode()) {
-  // Condtional Jumps
+  // Conditional Jumps
   case Hexagon::J2_jumpt:
   case Hexagon::J2_jumpf:
     return getDotNewPredJumpOp(MI, MBPI);
@@ -4325,7 +4325,7 @@ unsigned HexagonInstrInfo::getInstrTimingClassLatency(
 /// operand latency. But it may not be possible for instructions with variable
 /// number of defs / uses.
 ///
-/// This is a raw interface to the itinerary that may be directly overriden by
+/// This is a raw interface to the itinerary that may be directly overridden by
 /// a target. Use computeOperandLatency to get the best estimate of latency.
 std::optional<unsigned> HexagonInstrInfo::getOperandLatency(
     const InstrItineraryData *ItinData, const MachineInstr &DefMI,

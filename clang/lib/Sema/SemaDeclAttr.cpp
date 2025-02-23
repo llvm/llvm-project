@@ -64,6 +64,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -2949,15 +2950,49 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
+static bool isValidCodeModelAttr(llvm::Triple &Triple, StringRef Str) {
+  if (Triple.isLoongArch()) {
+    return Str == "normal" || Str == "medium" || Str == "extreme";
+  } else {
+    assert(Triple.getArch() == llvm::Triple::x86_64 &&
+           "only loongarch/x86-64 supported");
+    return Str == "small" || Str == "large";
+  }
+}
+
 static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   SourceLocation LiteralLoc;
+  auto IsTripleSupported = [](llvm::Triple &Triple) {
+    return Triple.getArch() == llvm::Triple::ArchType::x86_64 ||
+           Triple.isLoongArch();
+  };
+
   // Check that it is a string.
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc))
     return;
 
+  SmallVector<llvm::Triple, 2> Triples = {
+      S.Context.getTargetInfo().getTriple()};
+  if (auto *aux = S.Context.getAuxTargetInfo()) {
+    Triples.push_back(aux->getTriple());
+  } else if (S.Context.getTargetInfo().getTriple().isNVPTX() ||
+             S.Context.getTargetInfo().getTriple().isAMDGPU() ||
+             S.Context.getTargetInfo().getTriple().isSPIRV()) {
+    // Ignore the attribute for pure GPU device compiles since it only applies
+    // to host globals.
+    return;
+  }
+
+  auto SupportedTripleIt = llvm::find_if(Triples, IsTripleSupported);
+  if (SupportedTripleIt == Triples.end()) {
+    S.Diag(LiteralLoc, diag::warn_unknown_attribute_ignored) << AL;
+    return;
+  }
+
   llvm::CodeModel::Model CM;
-  if (!CodeModelAttr::ConvertStrToModel(Str, CM)) {
+  if (!CodeModelAttr::ConvertStrToModel(Str, CM) ||
+      !isValidCodeModelAttr(*SupportedTripleIt, Str)) {
     S.Diag(LiteralLoc, diag::err_attr_codemodel_arg) << Str;
     return;
   }
@@ -7482,6 +7517,15 @@ void Sema::ProcessDeclAttributeList(
           << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
       D->setInvalidDecl();
     }
+  }
+
+  // Do not permit 'constructor' or 'destructor' attributes on __device__ code.
+  if (getLangOpts().CUDAIsDevice && D->hasAttr<CUDADeviceAttr>() &&
+      (D->hasAttr<ConstructorAttr>() || D->hasAttr<DestructorAttr>()) &&
+      !getLangOpts().GPUAllowDeviceInit) {
+    Diag(D->getLocation(), diag::err_cuda_ctor_dtor_attrs)
+        << (D->hasAttr<ConstructorAttr>() ? "constructors" : "destructors");
+    D->setInvalidDecl();
   }
 
   // Do this check after processing D's attributes because the attribute

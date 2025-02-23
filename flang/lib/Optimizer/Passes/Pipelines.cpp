@@ -205,7 +205,7 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
       pm, fir::createStackReclaim);
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
-  pm.addPass(mlir::createConvertSCFToCFPass());
+  pm.addPass(mlir::createSCFToControlFlowPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
@@ -325,8 +325,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(fir::createFunctionAttr(
       {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
-       config.ApproxFuncFPMath, config.NoSignedZerosFPMath,
-       config.UnsafeFPMath}));
+       config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
+       ""}));
 
   fir::addFIRToLLVMPass(pm, config);
 }

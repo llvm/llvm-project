@@ -287,8 +287,7 @@ bool TosaReduceTransposes::collectFanIn(Operation *op,
 
     for (Value operand : op->getOperands()) {
       // If this is a problem in future, think about alternatives to recursion.
-      if (llvm::isa<tosa::MulOp>(op) && op->getNumOperands() == 3 &&
-          operand == op->getOperand(2)) {
+      if (llvm::isa<tosa::MulOp>(op) && operand == op->getOperand(2)) {
         // do not recurse into MulOp's shift operand
         continue;
       }
@@ -332,8 +331,7 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
   for (Value v : op->getOperands()) {
     if (valuesMap.contains(v)) {
       operands.push_back(valuesMap.at(v));
-    } else if (llvm::isa<tosa::MulOp>(op) && op->getNumOperands() == 3 &&
-               v == op->getOperand(2)) {
+    } else if (llvm::isa<tosa::MulOp>(op) && v == op->getOperand(2)) {
       // special case for MulOp's shift operand
       operands.push_back(v);
     } else {

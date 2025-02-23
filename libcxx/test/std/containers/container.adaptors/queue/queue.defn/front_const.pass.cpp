@@ -15,16 +15,15 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::queue<int> q;
-    assert(q.size() == 0);
-    q.push(1);
-    q.push(2);
-    q.push(3);
-    const std::queue<int>& cqr = q;
-    const int& cir = cqr.front();
-    assert(cir == 1);
+int main(int, char**) {
+  std::queue<int> q;
+  assert(q.size() == 0);
+  q.push(1);
+  q.push(2);
+  q.push(3);
+  const std::queue<int>& cqr = q;
+  const int& cir             = cqr.front();
+  assert(cir == 1);
 
   return 0;
 }

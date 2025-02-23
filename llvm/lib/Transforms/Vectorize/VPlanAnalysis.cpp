@@ -125,6 +125,12 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   case Instruction::FNeg:
   case Instruction::Freeze:
     return inferScalarType(R->getOperand(0));
+  case Instruction::ExtractValue: {
+    assert(R->getNumOperands() == 2 && "expected single level extractvalue");
+    auto *StructTy = cast<StructType>(inferScalarType(R->getOperand(0)));
+    auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
+    return StructTy->getTypeAtIndex(CI->getZExtValue());
+  }
   default:
     break;
   }
@@ -245,9 +251,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
                 VPPartialReductionRecipe>([this](const VPRecipeBase *R) {
             return inferScalarType(R->getOperand(0));
           })
-          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPWidenEVLRecipe,
-                VPReplicateRecipe, VPWidenCallRecipe, VPWidenMemoryRecipe,
-                VPWidenSelectRecipe>(
+          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
+                VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
           .Case<VPWidenIntrinsicRecipe>([](const VPWidenIntrinsicRecipe *R) {
             return R->getResultType();
