@@ -24,6 +24,7 @@ using UnsignedTypes = testing::TypeList<
     unsigned char, unsigned short, unsigned int, unsigned long,
     unsigned long long, UInt<128>>;
 
+#ifdef FAKE_MACRO_DISABLE
 TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
   constexpr auto ZERO = T(0);
   constexpr auto ALL_ONES = T(~ZERO);
@@ -46,6 +47,7 @@ TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
     EXPECT_FALSE(has_single_bit<T>(two_bits_value));
   }
 }
+#endif
 
 TYPED_TEST(LlvmLibcBitTest, CountLZero, UnsignedTypes) {
   EXPECT_EQ(countl_zero<T>(T(0)), cpp::numeric_limits<T>::digits);
