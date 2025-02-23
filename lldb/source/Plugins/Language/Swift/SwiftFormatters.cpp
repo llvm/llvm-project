@@ -15,6 +15,7 @@
 #include "Plugins/LanguageRuntime/Swift/ReflectionContextInterface.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -28,6 +29,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 #include "swift/AST/Types.h"
+#include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -761,10 +763,10 @@ public:
     auto ts_or_err =
         target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
     if (auto err = ts_or_err.takeError()) {
-      LLDB_LOG(
-          GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
-          "could not get Swift type system for Task synthetic provider: {0}",
-          fmt_consume(std::move(err)));
+      LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+                     std::move(err),
+                     "could not get Swift type system for Task synthetic "
+                     "provider: {0}");
       return;
     }
     m_ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts_or_err->get());
@@ -782,6 +784,7 @@ public:
       "isStatusRecordLocked",
       "isEscalated",
       "isEnqueued",
+      "children",
       "isRunning",
   };
 
@@ -837,7 +840,22 @@ public:
       RETURN_CHILD(m_is_escalated_sp, isEscalated, bool_type);
     case 10:
       RETURN_CHILD(m_is_enqueued_sp, isEnqueued, bool_type);
-    case 11:
+    case 11: {
+      if (!m_child_tasks_sp) {
+        const auto &tasks = m_task_info.childTasks;
+        std::string mangled_typename =
+            mangledTypenameForTasksTuple(tasks.size());
+        CompilerType tasks_tuple_type =
+            m_ts->GetTypeFromMangledTypename(ConstString(mangled_typename));
+        DataExtractor data{tasks.data(), tasks.size() * sizeof(tasks[0]),
+                           endian::InlHostByteOrder(), sizeof(void *)};
+        m_child_tasks_sp = ValueObject::CreateValueObjectFromData(
+            "children", data, m_backend.GetExecutionContextRef(),
+            tasks_tuple_type);
+      }
+      return m_child_tasks_sp;
+    }
+    case 12:
       RETURN_CHILD(m_is_running_sp, isRunning, bool_type);
     default:
       return {};
@@ -858,9 +876,9 @@ public:
         llvm::Expected<ReflectionContextInterface::AsyncTaskInfo> task_info =
             reflection_ctx->asyncTaskInfo(task_ptr);
         if (auto err = task_info.takeError()) {
-          LLDB_LOG(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
-                   "could not get info for async task {0:x}: {1}", task_ptr,
-                   fmt_consume(std::move(err)));
+          LLDB_LOG_ERROR(
+              GetLog(LLDBLog::DataFormatters | LLDBLog::Types), std::move(err),
+              "could not get info for async task {0:x}: {1}", task_ptr);
         } else {
           m_task_info = *task_info;
           for (auto child :
@@ -868,7 +886,7 @@ public:
                 m_is_future_sp, m_is_group_child_task_sp,
                 m_is_async_let_task_sp, m_is_cancelled_sp,
                 m_is_status_record_locked_sp, m_is_escalated_sp,
-                m_is_enqueued_sp, m_is_running_sp})
+                m_is_enqueued_sp, m_child_tasks_sp, m_is_running_sp})
             child.reset();
         }
       }
@@ -887,6 +905,35 @@ public:
   }
 
 private:
+  std::string mangledTypenameForTasksTuple(size_t count) {
+    /*
+    Global > TypeMangling > Type > Tuple
+      TupleElement > Type > Structure
+        Module, text="Swift"
+        Identifier, text="UnsafeCurrentTask"
+    */
+    using namespace ::swift::Demangle;
+    using Kind = Node::Kind;
+    NodeFactory factory;
+    auto [root, tuple] = swift_demangle::MakeNodeChain(
+        {Kind::TypeMangling, Kind::Type, Kind::Tuple}, factory);
+
+    // Make a TupleElement subtree N times, where N is the number of subtasks.
+    for (size_t i = 0; i < count; ++i) {
+      auto *structure = swift_demangle::MakeNodeChain(
+          tuple, {Kind::TupleElement, Kind::Type, Kind::Structure}, factory);
+      if (structure) {
+        structure->addChild(
+            factory.createNode(Kind::Module, ::swift::STDLIB_NAME), factory);
+        structure->addChild(
+            factory.createNode(Kind::Identifier, "UnsafeCurrentTask"), factory);
+      }
+    }
+
+    return mangleNode(root).result();
+  }
+
+private:
   TypeSystemSwiftTypeRef *m_ts = nullptr;
   ReflectionContextInterface::AsyncTaskInfo m_task_info;
   ValueObjectSP m_id_sp;
@@ -900,6 +947,7 @@ private:
   ValueObjectSP m_is_status_record_locked_sp;
   ValueObjectSP m_is_escalated_sp;
   ValueObjectSP m_is_enqueued_sp;
+  ValueObjectSP m_child_tasks_sp;
   ValueObjectSP m_is_running_sp;
 };
 }

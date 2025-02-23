@@ -17,6 +17,7 @@
 #include "swift/Demangling/Demangler.h"
 #include "swift/Demangling/ManglingFlavor.h"
 #include "llvm/ADT/ArrayRef.h"
+#include <initializer_list>
 
 namespace lldb_private {
 namespace swift_demangle {
@@ -114,6 +115,41 @@ inline swift::Demangle::NodePointer
 GetDemangledTypeMangling(swift::Demangle::Demangler &dem,
                          llvm::StringRef name) {
   return GetTypeMangling(dem.demangleSymbol(name));
+}
+
+/// Create a parent-child chain of demangle nodes for the specified node kinds.
+///
+/// \param initial[in] The starting node to construct the chain from.
+/// \param kinds[in] The node kind for each created node.
+/// \param factory[in] The factory to create nodes.
+/// \return The tail leaf node created, whose kind is the last kind in \c kinds.
+inline NodePointer
+MakeNodeChain(NodePointer initial,
+              std::initializer_list<swift::Demangle::Node::Kind> kinds,
+              NodeFactory &factory) {
+  auto *current = initial;
+  for (auto kind : kinds) {
+    if (!current)
+      return nullptr;
+    auto *child = factory.createNode(kind);
+    current->addChild(child, factory);
+    current = child;
+  }
+  return current;
+}
+
+/// Create a parent-child chain of demangle nodes for the specified node kinds.
+///
+/// \param initial[in] The starting node to construct the chain from.
+/// \param kinds[in] The node kind for each created node.
+/// \param factory[in] The factory to create nodes.
+/// \return A pair of nodes: the head and tail of the constructed nodes.
+inline std::pair<NodePointer, NodePointer>
+MakeNodeChain(std::initializer_list<swift::Demangle::Node::Kind> kinds,
+              NodeFactory &factory) {
+  auto *root = factory.createNode(Node::Kind::Global);
+  auto *leaf = MakeNodeChain(root, kinds, factory);
+  return {root, leaf};
 }
 
 /// Wrap node in Global/TypeMangling/Type.

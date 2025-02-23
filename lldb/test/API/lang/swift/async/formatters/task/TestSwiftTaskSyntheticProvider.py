@@ -28,6 +28,7 @@ class TestCase(TestBase):
                 "isAsyncLetTask = false",
                 "isCancelled = false",
                 "isEnqueued = ",
+                "children = {}",
             ],
         )
 
@@ -49,5 +50,6 @@ class TestCase(TestBase):
                 "isAsyncLetTask = true",
                 "isCancelled = false",
                 "isEnqueued = false",
+                "children = {}",
             ],
         )
