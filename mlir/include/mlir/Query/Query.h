@@ -17,13 +17,31 @@
 
 namespace mlir::query {
 
+///
+/// Options for configuring which parts of the IR are to be
+/// traversed by the matcher
+///
 struct QueryOptions {
+  /// When omitBlockArguments is true, the matcher omits traversing
+  /// any block arguments
   bool omitBlockArguments = false;
+  /// When omitUsesFromAbove is true, the matcher omits
+  /// traversing values that are captured from above.
   bool omitUsesFromAbove = true;
+  /// When inclusive is true, the matcher will include the include the
+  /// top level op in the slice. When inclusive is false, the matcher will
+  /// not include thee top level op in the slice
   bool inclusive = true;
 };
 
-enum class QueryKind { Invalid, NoOp, Help, Match, Quit, SetBool };
+enum class QueryKind {
+  Invalid,
+  NoOp,
+  Help,
+  SetBool,
+  Match,
+  Quit,
+};
 
 class QuerySession;
 

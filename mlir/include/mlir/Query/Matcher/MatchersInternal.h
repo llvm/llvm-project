@@ -1,3 +1,4 @@
+//===- MatchersInternal.h - Structural query framework ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,20 +8,20 @@
 //
 // Implements the base layer of the matcher framework.
 //
-// Matchers are methods that return a Matcher which provides a method
-// match(Operation *op)
-// match(Operation *op, SetVector<Operation *> &matchedOps, QueryOptions
-// &options)
+// Matchers are methods that return a Matcher which provides a method one of the
+// following methods: match(Operation *op), match(Operation *op,
+// SetVector<Operation *> &matchedOps, QueryOptions &options)
 //
 // The matcher functions are defined in include/mlir/IR/Matchers.h.
 // This file contains the wrapper classes needed to construct matchers for
 // mlir-query.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef MLIR_TOOLS_MLIRQUERY_MATCHER_MATCHERSINTERNAL_H
 #define MLIR_TOOLS_MLIRQUERY_MATCHER_MATCHERSINTERNAL_H
 
-#include "mlir/IR/Matchers.h"
+#include "mlir/IR/Operation.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 namespace mlir {
@@ -30,17 +31,27 @@ struct QueryOptions;
 } // namespace mlir
 
 namespace mlir::query::matcher {
+
+// Defaults to false if T has no match() method with the signature:
+// match(Operation* op).
 template <typename T, typename = void>
 struct has_simple_match : std::false_type {};
 
+// Specialized type trait that evaluates to true if T has a match() method
+// with the signature: match(Operation* op).
 template <typename T>
 struct has_simple_match<T, std::void_t<decltype(std::declval<T>().match(
                                std::declval<Operation *>()))>>
     : std::true_type {};
 
+// Defaults to false if T has no match() method with the signature:
+// match(Operation* op, SetVector<Operation*>&, QueryOptions&).
 template <typename T, typename = void>
 struct has_bound_match : std::false_type {};
 
+// Specialized type trait that evaluates to true if T has a match() method
+// with the signature: match(Operation* op, SetVector<Operation*>&,
+// QueryOptions&).
 template <typename T>
 struct has_bound_match<T, std::void_t<decltype(std::declval<T>().match(
                               std::declval<Operation *>(),
