@@ -630,6 +630,31 @@ uses and eviction priority which can be accessed by the '``.level::eviction_prio
 For more information, refer to the PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`_.
 
+``llvm.nvvm.discard.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void  @llvm.nvvm.discard.global.L2(ptr addrspace(1) %global_ptr, i64 %size)
+  declare void  @llvm.nvvm.discard.L2(ptr %ptr, i64 %size)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.discard.*``'  invalidates the data at the address range [a .. a + (size - 1)] 
+in the cache level specified by the .level qualifier without writing back the data 
+in the cache to the memory. The operand size is an integer constant that specifies the amount of data, 
+in bytes, in the cache level specified by the .level qualifier to be discarded. The only supported value 
+for the size operand is 128. If no state space is specified then Generic Addressing is used. 
+If the specified address does not fall within the address window of .global state space then 
+the behavior is undefined.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`_.
+
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
