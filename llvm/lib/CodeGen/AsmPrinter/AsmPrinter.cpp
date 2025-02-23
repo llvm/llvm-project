@@ -1085,11 +1085,9 @@ void AsmPrinter::emitFunctionEntryLabel() {
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     MCSymbol *Sym = getSymbolPreferLocal(MF->getFunction());
     if (Sym != CurrentFnSym) {
-      cast<MCSymbolELF>(Sym)->setType(ELF::STT_FUNC);
       CurrentFnBeginLocal = Sym;
       OutStreamer->emitLabel(Sym);
-      if (MAI->hasDotTypeDotSizeDirective())
-        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
     }
   }
 }
