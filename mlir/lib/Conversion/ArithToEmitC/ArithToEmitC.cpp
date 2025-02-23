@@ -41,18 +41,15 @@ struct ArithToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
 };
 } // namespace
 
-void mlir::registerConvertArithToEmitCInterface(
-    DialectRegistry &registry) {
+void mlir::registerConvertArithToEmitCInterface(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
     dialect->addInterfaces<ArithToEmitCDialectInterface>();
   });
 }
 
-
 //===----------------------------------------------------------------------===//
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
-
 
 namespace {
 class ArithConstantOpConversionPattern

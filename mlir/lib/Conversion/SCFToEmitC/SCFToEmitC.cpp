@@ -53,8 +53,7 @@ struct SCFToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
 };
 } // namespace
 
-void mlir::registerConvertSCFToEmitCInterface(
-    DialectRegistry &registry) {
+void mlir::registerConvertSCFToEmitCInterface(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, scf::SCFDialect *dialect) {
     dialect->addInterfaces<SCFToEmitCDialectInterface>();
   });

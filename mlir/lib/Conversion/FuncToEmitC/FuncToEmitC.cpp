@@ -39,13 +39,11 @@ struct FuncToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
 };
 } // namespace
 
-void mlir::registerConvertFuncToEmitCInterface(
-    DialectRegistry &registry) {
+void mlir::registerConvertFuncToEmitCInterface(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, func::FuncDialect *dialect) {
     dialect->addInterfaces<FuncToEmitCDialectInterface>();
   });
 }
-
 
 //===----------------------------------------------------------------------===//
 // Conversion Patterns
