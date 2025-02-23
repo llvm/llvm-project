@@ -46,7 +46,6 @@ template <class _Tp>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __countr_zero_impl(_Tp __t) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__t != 0, "__countr_zero_impl called with zero value");
   static_assert(is_unsigned<_Tp>::value, "__countr_zero_impl only works with unsigned types");
-  // Use constexpr if as a C++17 extension for clang
   if _LIBCPP_CONSTEXPR (sizeof(_Tp) <= sizeof(unsigned int)) {
     return std::__libcpp_ctz(static_cast<unsigned int>(__t));
   } else if _LIBCPP_CONSTEXPR (sizeof(_Tp) <= sizeof(unsigned long)) {
@@ -55,7 +54,6 @@ template <class _Tp>
     return std::__libcpp_ctz(static_cast<unsigned long long>(__t));
   } else {
 #if _LIBCPP_STD_VER == 11
-    // A constexpr implementation for C++11 using variable declaration as a C++14 extension for clang
     unsigned long long __ull       = static_cast<unsigned long long>(__t);
     const unsigned int __ulldigits = numeric_limits<unsigned long long>::digits;
     return __ull == 0ull ? __ulldigits + std::__countr_zero_impl<_Tp>(__t >> __ulldigits) : std::__libcpp_ctz(__ull);
@@ -74,7 +72,7 @@ template <class _Tp>
 template <class _Tp>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __countr_zero(_Tp __t) _NOEXCEPT {
   static_assert(is_unsigned<_Tp>::value, "__countr_zero only works with unsigned types");
-#if __has_builtin(__builtin_ctzg)
+#if __has_builtin(__builtin_ctzg) // TODO (LLVM 21): This can be dropped once we only support Clang >= 19.
   return __builtin_ctzg(__t, numeric_limits<_Tp>::digits);
 #else
   return __t != 0 ? std::__countr_zero_impl(__t) : numeric_limits<_Tp>::digits;
