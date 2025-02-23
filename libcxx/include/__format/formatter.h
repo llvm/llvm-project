@@ -28,8 +28,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 /// - is_default_constructible_v<F>,
 /// - is_copy_constructible_v<F>,
 /// - is_move_constructible_v<F>,
-/// - is_copy_assignable<F>, and
-/// - is_move_assignable<F>.
+/// - is_copy_assignable_v<F>, and
+/// - is_move_assignable_v<F>.
 template <class _Tp, class _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter {
   formatter()                            = delete;

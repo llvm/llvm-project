@@ -127,7 +127,9 @@
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
+#include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
@@ -184,6 +186,7 @@
 #include "llvm/Transforms/IPO/ElimAvailExtern.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
+#include "llvm/Transforms/IPO/FatLTOCleanup.h"
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -1329,9 +1332,9 @@ Expected<SmallVector<std::string, 0>> parseInternalizeGVs(StringRef Params) {
   return Expected<SmallVector<std::string, 0>>(std::move(PreservedGVs));
 }
 
-Expected<RegAllocFastPassOptions>
+Expected<RegAllocFastPass::Options>
 parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
-  RegAllocFastPassOptions Opts;
+  RegAllocFastPass::Options Opts;
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');

@@ -448,34 +448,34 @@ define <vscale x 2 x i32> @vwop_vscale_zext_i1i32_multiple_users(ptr %x, ptr %y,
 ; NO_FOLDING:       # %bb.0:
 ; NO_FOLDING-NEXT:    vsetvli a3, zero, e32, m1, ta, mu
 ; NO_FOLDING-NEXT:    vlm.v v0, (a0)
-; NO_FOLDING-NEXT:    vlm.v v8, (a1)
-; NO_FOLDING-NEXT:    vlm.v v9, (a2)
+; NO_FOLDING-NEXT:    vlm.v v8, (a2)
+; NO_FOLDING-NEXT:    vlm.v v9, (a1)
 ; NO_FOLDING-NEXT:    vmv.v.i v10, 0
 ; NO_FOLDING-NEXT:    vmerge.vim v11, v10, 1, v0
-; NO_FOLDING-NEXT:    vmv.v.v v0, v9
-; NO_FOLDING-NEXT:    vmerge.vim v9, v10, 1, v0
-; NO_FOLDING-NEXT:    vadd.vv v10, v11, v9
-; NO_FOLDING-NEXT:    vsub.vv v9, v11, v9
 ; NO_FOLDING-NEXT:    vmv.v.v v0, v8
+; NO_FOLDING-NEXT:    vmerge.vim v8, v10, 1, v0
+; NO_FOLDING-NEXT:    vadd.vv v10, v11, v8
+; NO_FOLDING-NEXT:    vsub.vv v8, v11, v8
+; NO_FOLDING-NEXT:    vmv.v.v v0, v9
 ; NO_FOLDING-NEXT:    vor.vv v10, v10, v11, v0.t
-; NO_FOLDING-NEXT:    vor.vv v8, v10, v9
+; NO_FOLDING-NEXT:    vor.vv v8, v10, v8
 ; NO_FOLDING-NEXT:    ret
 ;
 ; FOLDING-LABEL: vwop_vscale_zext_i1i32_multiple_users:
 ; FOLDING:       # %bb.0:
 ; FOLDING-NEXT:    vsetvli a3, zero, e32, m1, ta, mu
 ; FOLDING-NEXT:    vlm.v v0, (a0)
-; FOLDING-NEXT:    vlm.v v8, (a1)
-; FOLDING-NEXT:    vlm.v v9, (a2)
+; FOLDING-NEXT:    vlm.v v8, (a2)
+; FOLDING-NEXT:    vlm.v v9, (a1)
 ; FOLDING-NEXT:    vmv.v.i v10, 0
 ; FOLDING-NEXT:    vmerge.vim v11, v10, 1, v0
-; FOLDING-NEXT:    vmv.v.v v0, v9
-; FOLDING-NEXT:    vmerge.vim v9, v10, 1, v0
-; FOLDING-NEXT:    vadd.vv v10, v11, v9
-; FOLDING-NEXT:    vsub.vv v9, v11, v9
 ; FOLDING-NEXT:    vmv.v.v v0, v8
+; FOLDING-NEXT:    vmerge.vim v8, v10, 1, v0
+; FOLDING-NEXT:    vadd.vv v10, v11, v8
+; FOLDING-NEXT:    vsub.vv v8, v11, v8
+; FOLDING-NEXT:    vmv.v.v v0, v9
 ; FOLDING-NEXT:    vor.vv v10, v10, v11, v0.t
-; FOLDING-NEXT:    vor.vv v8, v10, v9
+; FOLDING-NEXT:    vor.vv v8, v10, v8
 ; FOLDING-NEXT:    ret
   %a = load <vscale x 2 x i1>, ptr %x
   %b = load <vscale x 2 x i1>, ptr %y
@@ -496,34 +496,34 @@ define <vscale x 2 x i8> @vwop_vscale_zext_i1i8_multiple_users(ptr %x, ptr %y, p
 ; NO_FOLDING:       # %bb.0:
 ; NO_FOLDING-NEXT:    vsetvli a3, zero, e8, mf4, ta, mu
 ; NO_FOLDING-NEXT:    vlm.v v0, (a0)
-; NO_FOLDING-NEXT:    vlm.v v8, (a1)
-; NO_FOLDING-NEXT:    vlm.v v9, (a2)
+; NO_FOLDING-NEXT:    vlm.v v8, (a2)
+; NO_FOLDING-NEXT:    vlm.v v9, (a1)
 ; NO_FOLDING-NEXT:    vmv.v.i v10, 0
 ; NO_FOLDING-NEXT:    vmerge.vim v11, v10, 1, v0
-; NO_FOLDING-NEXT:    vmv1r.v v0, v9
-; NO_FOLDING-NEXT:    vmerge.vim v9, v10, 1, v0
-; NO_FOLDING-NEXT:    vadd.vv v10, v11, v9
-; NO_FOLDING-NEXT:    vsub.vv v9, v11, v9
 ; NO_FOLDING-NEXT:    vmv1r.v v0, v8
+; NO_FOLDING-NEXT:    vmerge.vim v8, v10, 1, v0
+; NO_FOLDING-NEXT:    vadd.vv v10, v11, v8
+; NO_FOLDING-NEXT:    vsub.vv v8, v11, v8
+; NO_FOLDING-NEXT:    vmv1r.v v0, v9
 ; NO_FOLDING-NEXT:    vor.vv v10, v10, v11, v0.t
-; NO_FOLDING-NEXT:    vor.vv v8, v10, v9
+; NO_FOLDING-NEXT:    vor.vv v8, v10, v8
 ; NO_FOLDING-NEXT:    ret
 ;
 ; FOLDING-LABEL: vwop_vscale_zext_i1i8_multiple_users:
 ; FOLDING:       # %bb.0:
 ; FOLDING-NEXT:    vsetvli a3, zero, e8, mf4, ta, mu
 ; FOLDING-NEXT:    vlm.v v0, (a0)
-; FOLDING-NEXT:    vlm.v v8, (a1)
-; FOLDING-NEXT:    vlm.v v9, (a2)
+; FOLDING-NEXT:    vlm.v v8, (a2)
+; FOLDING-NEXT:    vlm.v v9, (a1)
 ; FOLDING-NEXT:    vmv.v.i v10, 0
 ; FOLDING-NEXT:    vmerge.vim v11, v10, 1, v0
-; FOLDING-NEXT:    vmv1r.v v0, v9
-; FOLDING-NEXT:    vmerge.vim v9, v10, 1, v0
-; FOLDING-NEXT:    vadd.vv v10, v11, v9
-; FOLDING-NEXT:    vsub.vv v9, v11, v9
 ; FOLDING-NEXT:    vmv1r.v v0, v8
+; FOLDING-NEXT:    vmerge.vim v8, v10, 1, v0
+; FOLDING-NEXT:    vadd.vv v10, v11, v8
+; FOLDING-NEXT:    vsub.vv v8, v11, v8
+; FOLDING-NEXT:    vmv1r.v v0, v9
 ; FOLDING-NEXT:    vor.vv v10, v10, v11, v0.t
-; FOLDING-NEXT:    vor.vv v8, v10, v9
+; FOLDING-NEXT:    vor.vv v8, v10, v8
 ; FOLDING-NEXT:    ret
   %a = load <vscale x 2 x i1>, ptr %x
   %b = load <vscale x 2 x i1>, ptr %y

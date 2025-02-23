@@ -1984,10 +1984,41 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 
   // We are looking at:
   // Def = REG_SEQUENCE v0, sub0, v1, sub1, ...
-  // Check if one of the operand defines the subreg we are interested in.
+  //
+  // Check if one of the operands exactly defines the subreg we are interested
+  // in.
   for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
     if (RegSeqInput.SubIdx == DefSubReg)
       return ValueTrackerResult(RegSeqInput.Reg, RegSeqInput.SubReg);
+  }
+
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+
+  // If we did not find an exact match, see if we can do a composition to
+  // extract a sub-subregister.
+  for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
+    // We don't check if the resulting class supports the subregister index
+    // yet. This will occur before any rewrite when looking for an eligible
+    // source.
+
+    LaneBitmask DefMask = TRI->getSubRegIndexLaneMask(DefSubReg);
+    LaneBitmask ThisOpRegMask = TRI->getSubRegIndexLaneMask(RegSeqInput.SubIdx);
+
+    // Check that this extract reads a subset of this single reg_sequence input.
+    //
+    // FIXME: We should be able to filter this in terms of the indexes directly
+    // without checking the lanemasks.
+    if ((DefMask & ThisOpRegMask) != DefMask)
+      continue;
+
+    unsigned ReverseDefCompose =
+        TRI->reverseComposeSubRegIndices(RegSeqInput.SubIdx, DefSubReg);
+    if (!ReverseDefCompose)
+      continue;
+
+    unsigned ComposedDefInSrcReg1 =
+        TRI->composeSubRegIndices(RegSeqInput.SubReg, ReverseDefCompose);
+    return ValueTrackerResult(RegSeqInput.Reg, ComposedDefInSrcReg1);
   }
 
   // If the subreg we are tracking is super-defined by another subreg,

@@ -262,6 +262,10 @@ bool AArch64TTIImpl::isMultiversionedFunction(const Function &F) const {
   return F.hasFnAttribute("fmv-features");
 }
 
+const FeatureBitset AArch64TTIImpl::InlineInverseFeatures = {
+    AArch64::FeatureExecuteOnly,
+};
+
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   SMEAttrs CallerAttrs(*Caller), CalleeAttrs(*Callee);
@@ -284,7 +288,19 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
       return false;
   }
 
-  return BaseT::areInlineCompatible(Caller, Callee);
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+  // Adjust the feature bitsets by inverting some of the bits. This is needed
+  // for target features that represent restrictions rather than capabilities,
+  // for example a "+execute-only" callee can be inlined into a caller without
+  // "+execute-only", but not vice versa.
+  FeatureBitset EffectiveCallerBits = CallerBits ^ InlineInverseFeatures;
+  FeatureBitset EffectiveCalleeBits = CalleeBits ^ InlineInverseFeatures;
+
+  return (EffectiveCallerBits & EffectiveCalleeBits) == EffectiveCalleeBits;
 }
 
 bool AArch64TTIImpl::areTypesABICompatible(
@@ -3532,7 +3548,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::UDIV: {
     auto VT = TLI->getValueType(DL, Ty);
     if (Op2Info.isConstant() && Op2Info.isUniform()) {
-      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
+      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT) &&
+          !VT.isScalableVector()) {
         // Vector signed division by constant are expanded to the
         // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
         // to MULHS + SUB + SRL + ADD + SRL.
@@ -4617,6 +4634,54 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     break;
   }
   return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+}
+
+InstructionCost AArch64TTIImpl::getExtendedReductionCost(
+    unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *VecTy,
+    FastMathFlags FMF, TTI::TargetCostKind CostKind) {
+  EVT VecVT = TLI->getValueType(DL, VecTy);
+  EVT ResVT = TLI->getValueType(DL, ResTy);
+
+  if (Opcode == Instruction::Add && VecVT.isSimple() && ResVT.isSimple() &&
+      VecVT.getSizeInBits() >= 64) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
+
+    // The legal cases are:
+    //   UADDLV 8/16/32->32
+    //   UADDLP 32->64
+    unsigned RevVTSize = ResVT.getSizeInBits();
+    if (((LT.second == MVT::v8i8 || LT.second == MVT::v16i8) &&
+         RevVTSize <= 32) ||
+        ((LT.second == MVT::v4i16 || LT.second == MVT::v8i16) &&
+         RevVTSize <= 32) ||
+        ((LT.second == MVT::v2i32 || LT.second == MVT::v4i32) &&
+         RevVTSize <= 64))
+      return (LT.first - 1) * 2 + 2;
+  }
+
+  return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, VecTy, FMF,
+                                         CostKind);
+}
+
+InstructionCost
+AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
+                                       VectorType *VecTy,
+                                       TTI::TargetCostKind CostKind) {
+  EVT VecVT = TLI->getValueType(DL, VecTy);
+  EVT ResVT = TLI->getValueType(DL, ResTy);
+
+  if (ST->hasDotProd() && VecVT.isSimple() && ResVT.isSimple()) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
+
+    // The legal cases with dotprod are
+    //   UDOT 8->32
+    // Which requires an additional uaddv to sum the i32 values.
+    if ((LT.second == MVT::v8i8 || LT.second == MVT::v16i8) &&
+         ResVT == MVT::i32)
+      return LT.first + 2;
+  }
+
+  return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, VecTy, CostKind);
 }
 
 InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {

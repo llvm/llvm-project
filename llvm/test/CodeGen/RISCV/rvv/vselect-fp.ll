@@ -519,10 +519,10 @@ define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a2, a0, 3
 ; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vmand.mm v7, v0, v24
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v7, a2
+; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    vmerge.vvm v16, v24, v16, v0

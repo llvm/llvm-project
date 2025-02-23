@@ -18,11 +18,12 @@ define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-NEXT:    lhu a0, 6(a0)
 ; CHECK-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    fmv.w.x fa5, s2
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    fmv.w.x fa0, s2
+; CHECK-NEXT:    fmv.s fa0, fa5
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
@@ -35,11 +36,12 @@ define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    fmv.w.x fa0, s1
 ; CHECK-NEXT:    call __extendhfsf2
+; CHECK-NEXT:    fmv.w.x fa5, s0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    fmv.w.x fa0, s0
+; CHECK-NEXT:    fmv.s fa0, fa5
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0

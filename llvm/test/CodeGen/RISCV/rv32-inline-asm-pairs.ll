@@ -42,8 +42,8 @@ define i64 @test_Pr_wide_scalar_inout(ptr %0, i64 noundef %1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    sw a1, 0(sp)
 ; CHECK-NEXT:    sw a3, 4(sp)
 ; CHECK-NEXT:    #APP
@@ -112,8 +112,8 @@ define i64 @test_cR_wide_scalar_inout(ptr %0, i64 noundef %1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    sw a1, 0(sp)
 ; CHECK-NEXT:    sw a3, 4(sp)
 ; CHECK-NEXT:    #APP

@@ -1285,8 +1285,7 @@ void InlineSpiller::spillAll() {
 void InlineSpiller::spill(LiveRangeEdit &edit) {
   ++NumSpilledRanges;
   Edit = &edit;
-  assert(!Register::isStackSlot(edit.getReg()) &&
-         "Trying to spill a stack slot.");
+  assert(!edit.getReg().isStack() && "Trying to spill a stack slot.");
   // Share a stack slot among all descendants of Original.
   Original = VRM.getOriginal(edit.getReg());
   StackSlot = VRM.getStackSlot(Original);

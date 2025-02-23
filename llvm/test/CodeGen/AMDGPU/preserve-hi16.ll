@@ -814,7 +814,8 @@ define i32 @zext_fma_f16(half %x, half %y, half %z) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
-; GFX11-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, v0.h, v1.l
+; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v1.l, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

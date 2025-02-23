@@ -446,8 +446,8 @@ define <4 x i64> @vwmulsu_v4i64_v4i32_v4i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwmulsu_v4i64_v4i32_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vsext.vf4 v11, v8
 ; CHECK-NEXT:    vwmulsu.vv v8, v11, v10
 ; CHECK-NEXT:    ret
@@ -740,10 +740,10 @@ define <8 x i16> @vwmulsu_vx_v8i16_i8(ptr %x, ptr %y) {
 define <8 x i16> @vwmulsu_vx_v8i16_i8_swap(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwmulsu_vx_v8i16_i8_swap:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lb a1, 0(a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    lb a0, 0(a1)
-; CHECK-NEXT:    vmv.v.x v10, a0
+; CHECK-NEXT:    vmv.v.x v10, a1
 ; CHECK-NEXT:    vwmulsu.vv v8, v10, v9
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x

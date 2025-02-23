@@ -23,9 +23,6 @@ define half @caller(<32 x half> %A) nounwind {
 ; CHECK-NEXT:    fmv.h.x fa2, a2
 ; CHECK-NEXT:    fmv.h.x fa3, a3
 ; CHECK-NEXT:    fmv.h.x fa4, a4
-; CHECK-NEXT:    fmv.h.x fa5, a5
-; CHECK-NEXT:    fmv.h.x fa6, a6
-; CHECK-NEXT:    fmv.h.x fa7, a7
 ; CHECK-NEXT:    flh ft0, 32(sp)
 ; CHECK-NEXT:    flh ft1, 36(sp)
 ; CHECK-NEXT:    flh ft2, 40(sp)
@@ -50,6 +47,9 @@ define half @caller(<32 x half> %A) nounwind {
 ; CHECK-NEXT:    flh fs9, 116(sp)
 ; CHECK-NEXT:    flh fs10, 120(sp)
 ; CHECK-NEXT:    flh fs11, 124(sp)
+; CHECK-NEXT:    fmv.h.x fa5, a5
+; CHECK-NEXT:    fmv.h.x fa6, a6
+; CHECK-NEXT:    fmv.h.x fa7, a7
 ; CHECK-NEXT:    fsh fs8, 16(sp)
 ; CHECK-NEXT:    fsh fs9, 18(sp)
 ; CHECK-NEXT:    fsh fs10, 20(sp)

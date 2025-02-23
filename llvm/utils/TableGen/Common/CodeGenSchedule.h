@@ -467,23 +467,6 @@ class CodeGenSchedModels {
 public:
   CodeGenSchedModels(const RecordKeeper &RK, const CodeGenTarget &TGT);
 
-  // iterator access to the scheduling classes.
-  using class_iterator = std::vector<CodeGenSchedClass>::iterator;
-  using const_class_iterator = std::vector<CodeGenSchedClass>::const_iterator;
-  class_iterator classes_begin() { return SchedClasses.begin(); }
-  const_class_iterator classes_begin() const { return SchedClasses.begin(); }
-  class_iterator classes_end() { return SchedClasses.end(); }
-  const_class_iterator classes_end() const { return SchedClasses.end(); }
-  iterator_range<class_iterator> classes() {
-    return make_range(classes_begin(), classes_end());
-  }
-  iterator_range<const_class_iterator> classes() const {
-    return make_range(classes_begin(), classes_end());
-  }
-  ArrayRef<CodeGenSchedClass> explicit_classes() const {
-    return ArrayRef(SchedClasses).take_front(NumInstrSchedClasses);
-  }
-
   const Record *getModelOrItinDef(const Record *ProcDef) const {
     const Record *ModelDef = ProcDef->getValueAsDef("SchedModel");
     const Record *ItinsDef = ProcDef->getValueAsDef("ProcItin");
@@ -497,13 +480,13 @@ public:
 
   const CodeGenProcModel &getModelForProc(const Record *ProcDef) const {
     const Record *ModelDef = getModelOrItinDef(ProcDef);
-    ProcModelMapTy::const_iterator I = ProcModelMap.find(ModelDef);
+    auto I = ProcModelMap.find(ModelDef);
     assert(I != ProcModelMap.end() && "missing machine model");
     return ProcModels[I->second];
   }
 
   const CodeGenProcModel &getProcModel(const Record *ModelDef) const {
-    ProcModelMapTy::const_iterator I = ProcModelMap.find(ModelDef);
+    auto I = ProcModelMap.find(ModelDef);
     assert(I != ProcModelMap.end() && "missing machine model");
     return ProcModels[I->second];
   }
@@ -512,10 +495,6 @@ public:
         static_cast<const CodeGenSchedModels &>(*this).getProcModel(ModelDef));
   }
 
-  // Iterate over the unique processor models.
-  using ProcIter = std::vector<CodeGenProcModel>::const_iterator;
-  ProcIter procModelBegin() const { return ProcModels.begin(); }
-  ProcIter procModelEnd() const { return ProcModels.end(); }
   ArrayRef<CodeGenProcModel> procModels() const { return ProcModels; }
 
   // Return true if any processors have itineraries.
@@ -564,10 +543,10 @@ public:
   // for NoItinerary.
   unsigned getSchedClassIdx(const CodeGenInstruction &Inst) const;
 
-  using SchedClassIter = std::vector<CodeGenSchedClass>::const_iterator;
-  SchedClassIter schedClassBegin() const { return SchedClasses.begin(); }
-  SchedClassIter schedClassEnd() const { return SchedClasses.end(); }
   ArrayRef<CodeGenSchedClass> schedClasses() const { return SchedClasses; }
+  ArrayRef<CodeGenSchedClass> explicitSchedClasses() const {
+    return schedClasses().take_front(NumInstrSchedClasses);
+  }
 
   unsigned numInstrSchedClasses() const { return NumInstrSchedClasses; }
 

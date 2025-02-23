@@ -242,3 +242,12 @@ float func_20(float x, float y) {
 // CHECK-LABEL: @func_20
 // STRICT: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // DEFAULT: fadd float
+
+typedef double vector4double __attribute__((__vector_size__(32)));
+typedef float  vector4float  __attribute__((__vector_size__(16)));
+vector4float func_21(vector4double x) {
+  #pragma STDC FENV_ROUND FE_UPWARD
+  return __builtin_convertvector(x, vector4float);
+}
+// CHECK-LABEL: @func_21
+// STRICT: call <4 x float> @llvm.experimental.constrained.fptrunc.v4f32.v4f64(<4 x double> {{.*}}, metadata !"round.upward", metadata !"fpexcept.strict")

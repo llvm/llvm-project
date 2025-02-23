@@ -58,7 +58,7 @@ void mlir::complex::convertDivToStandardUsingAlgebraic(
       rewriter.create<arith::DivFOp>(loc, realNumerator, rhsSqNorm, fmf);
   *resultIm =
       rewriter.create<arith::DivFOp>(loc, imagNumerator, rhsSqNorm, fmf);
-};
+}
 
 // Smith's algorithm to divide complex numbers. It is just a bit smarter
 // way to compute the following algebraic formula:

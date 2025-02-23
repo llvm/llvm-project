@@ -112,8 +112,8 @@ define i64 @caller_float_on_stack() nounwind {
 ; RV64I-FPELIM-NEXT:    li a0, 1
 ; RV64I-FPELIM-NEXT:    li a2, 2
 ; RV64I-FPELIM-NEXT:    li a4, 3
-; RV64I-FPELIM-NEXT:    sd a1, 0(sp)
 ; RV64I-FPELIM-NEXT:    li a6, 4
+; RV64I-FPELIM-NEXT:    sd a1, 0(sp)
 ; RV64I-FPELIM-NEXT:    li a1, 0
 ; RV64I-FPELIM-NEXT:    li a3, 0
 ; RV64I-FPELIM-NEXT:    li a5, 0
@@ -133,8 +133,8 @@ define i64 @caller_float_on_stack() nounwind {
 ; RV64I-WITHFP-NEXT:    li a0, 1
 ; RV64I-WITHFP-NEXT:    li a2, 2
 ; RV64I-WITHFP-NEXT:    li a4, 3
-; RV64I-WITHFP-NEXT:    sd a1, 0(sp)
 ; RV64I-WITHFP-NEXT:    li a6, 4
+; RV64I-WITHFP-NEXT:    sd a1, 0(sp)
 ; RV64I-WITHFP-NEXT:    li a1, 0
 ; RV64I-WITHFP-NEXT:    li a3, 0
 ; RV64I-WITHFP-NEXT:    li a5, 0

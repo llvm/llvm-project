@@ -21,6 +21,7 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_clz.h>
 #include <clc/math/clc_floor.h>
@@ -31,19 +32,19 @@
 #include <math/clc_remainder.h>
 
 _CLC_DEF _CLC_OVERLOAD float __clc_remainder(float x, float y) {
-  int ux = as_int(x);
+  int ux = __clc_as_int(x);
   int ax = ux & EXSIGNBIT_SP32;
-  float xa = as_float(ax);
+  float xa = __clc_as_float(ax);
   int sx = ux ^ ax;
   int ex = ax >> EXPSHIFTBITS_SP32;
 
-  int uy = as_int(y);
+  int uy = __clc_as_int(y);
   int ay = uy & EXSIGNBIT_SP32;
-  float ya = as_float(ay);
+  float ya = __clc_as_float(ay);
   int ey = ay >> EXPSHIFTBITS_SP32;
 
-  float xr = as_float(0x3f800000 | (ax & 0x007fffff));
-  float yr = as_float(0x3f800000 | (ay & 0x007fffff));
+  float xr = __clc_as_float(0x3f800000 | (ax & 0x007fffff));
+  float yr = __clc_as_float(0x3f800000 | (ay & 0x007fffff));
   int c;
   int k = ex - ey;
 
@@ -71,17 +72,17 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remainder(float x, float y) {
   xr -= c ? yr : 0.0f;
   q += c;
 
-  float s = as_float(ey << EXPSHIFTBITS_SP32);
+  float s = __clc_as_float(ey << EXPSHIFTBITS_SP32);
   xr *= lt ? 1.0f : s;
 
   c = ax == ay;
   xr = c ? 0.0f : xr;
 
-  xr = as_float(sx ^ as_int(xr));
+  xr = __clc_as_float(sx ^ __clc_as_int(xr));
 
   c = ax > PINFBITPATT_SP32 | ay > PINFBITPATT_SP32 | ax == PINFBITPATT_SP32 |
       ay == 0;
-  xr = c ? as_float(QNANBITPATT_SP32) : xr;
+  xr = c ? __clc_as_float(QNANBITPATT_SP32) : xr;
 
   return xr;
 }
@@ -90,18 +91,18 @@ _CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_remainder, float,
 
 #ifdef cl_khr_fp64
 _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y) {
-  ulong ux = as_ulong(x);
+  ulong ux = __clc_as_ulong(x);
   ulong ax = ux & ~SIGNBIT_DP64;
   ulong xsgn = ux ^ ax;
-  double dx = as_double(ax);
-  int xexp = convert_int(ax >> EXPSHIFTBITS_DP64);
+  double dx = __clc_as_double(ax);
+  int xexp = __clc_convert_int(ax >> EXPSHIFTBITS_DP64);
   int xexp1 = 11 - (int)__clc_clz(ax & MANTBITS_DP64);
   xexp1 = xexp < 1 ? xexp1 : xexp;
 
-  ulong uy = as_ulong(y);
+  ulong uy = __clc_as_ulong(y);
   ulong ay = uy & ~SIGNBIT_DP64;
-  double dy = as_double(ay);
-  int yexp = convert_int(ay >> EXPSHIFTBITS_DP64);
+  double dy = __clc_as_double(ay);
+  int yexp = __clc_convert_int(ay >> EXPSHIFTBITS_DP64);
   int yexp1 = 11 - (int)__clc_clz(ay & MANTBITS_DP64);
   yexp1 = yexp < 1 ? yexp1 : yexp;
 
@@ -181,12 +182,12 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y) {
 
   dx = dy < 0x1.0p+1022 ? dxl : dxg;
 
-  double ret = as_double(xsgn ^ as_ulong(dx));
-  dx = as_double(ax);
+  double ret = __clc_as_double(xsgn ^ __clc_as_ulong(dx));
+  dx = __clc_as_double(ax);
 
   // Now handle |x| == |y|
   int c = dx == dy;
-  t = as_double(xsgn);
+  t = __clc_as_double(xsgn);
   ret = c ? t : ret;
 
   // Next, handle |x| < |y|
@@ -203,7 +204,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y) {
 
   // |y| is 0
   c = dy == 0.0;
-  ret = c ? as_double(QNANBITPATT_DP64) : ret;
+  ret = c ? __clc_as_double(QNANBITPATT_DP64) : ret;
 
   // y is +-Inf, NaN
   c = yexp > BIASEDEMAX_DP64;
@@ -212,7 +213,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y) {
 
   // x is +=Inf, NaN
   c = xexp > BIASEDEMAX_DP64;
-  ret = c ? as_double(QNANBITPATT_DP64) : ret;
+  ret = c ? __clc_as_double(QNANBITPATT_DP64) : ret;
 
   return ret;
 }

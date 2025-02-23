@@ -156,7 +156,7 @@ dumpDXContainer(MemoryBufferRef Source) {
     case dxbc::PartType::RTS0:
       std::optional<DirectX::RootSignature> RS = Container.getRootSignature();
       if (RS.has_value())
-        NewPart.RootSignature = DXContainerYAML::RootSignatureDesc(*RS);
+        NewPart.RootSignature = DXContainerYAML::RootSignatureYamlDesc(*RS);
       break;
     }
   }

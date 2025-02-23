@@ -491,6 +491,10 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
     else if (A.getOption().matches(options::OPT_Z_reserved_lib_cckext))
       TC.AddCCKextLibArgs(Args, CmdArgs);
+    // Do not pass OPT_rpath to linker in AIX
+    else if (A.getOption().matches(options::OPT_rpath) &&
+             TC.getTriple().isOSAIX())
+      continue;
     else
       A.renderAsInput(Args, CmdArgs);
   }
@@ -3132,4 +3136,37 @@ void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
     CmdArgs.push_back("-fwrapv");
   if (use_fwrapv_pointer)
     CmdArgs.push_back("-fwrapv-pointer");
+}
+
+/// Vectorize at all optimization levels greater than 1 except for -Oz.
+/// For -Oz the loop vectorizer is disabled, while the slp vectorizer is
+/// enabled.
+bool tools::shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O4) ||
+        A->getOption().matches(options::OPT_Ofast))
+      return true;
+
+    if (A->getOption().matches(options::OPT_O0))
+      return false;
+
+    assert(A->getOption().matches(options::OPT_O) && "Must have a -O flag");
+
+    // Vectorize -Os.
+    StringRef S(A->getValue());
+    if (S == "s")
+      return true;
+
+    // Don't vectorize -Oz, unless it's the slp vectorizer.
+    if (S == "z")
+      return isSlpVec;
+
+    unsigned OptLevel = 0;
+    if (S.getAsInteger(10, OptLevel))
+      return false;
+
+    return OptLevel > 1;
+  }
+
+  return false;
 }

@@ -77,10 +77,10 @@ define void @gather_const_v2i64(ptr %x) {
 define void @gather_const_v64i8(ptr %x) {
 ; CHECK-LABEL: gather_const_v64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 64
-; CHECK-NEXT:    lbu a2, 32(a0)
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a2
+; CHECK-NEXT:    lbu a1, 32(a0)
+; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
@@ -94,10 +94,10 @@ define void @gather_const_v64i8(ptr %x) {
 define void @gather_const_v16i16(ptr %x) {
 ; CHECK-LABEL: gather_const_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    lh a2, 50(a0)
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a2
+; CHECK-NEXT:    lh a1, 50(a0)
+; CHECK-NEXT:    li a2, 32
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <32 x i16>, ptr %x

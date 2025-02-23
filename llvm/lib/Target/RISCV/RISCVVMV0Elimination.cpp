@@ -131,10 +131,9 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
 
           // Peek through a single copy to match what isel does.
           if (MachineInstr *SrcMI = MRI.getVRegDef(Src);
-              SrcMI->isCopy() && SrcMI->getOperand(1).getReg().isVirtual()) {
-            assert(SrcMI->getOperand(1).getSubReg() == RISCV::NoSubRegister);
+              SrcMI->isCopy() && SrcMI->getOperand(1).getReg().isVirtual() &&
+              SrcMI->getOperand(1).getSubReg() == RISCV::NoSubRegister)
             Src = SrcMI->getOperand(1).getReg();
-          }
 
           BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::COPY), RISCV::V0)
               .addReg(Src);
@@ -159,10 +158,10 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
         if (MO.isReg() && MO.getReg().isVirtual() &&
             MRI.getRegClass(MO.getReg()) == &RISCV::VMV0RegClass) {
           MRI.recomputeRegClass(MO.getReg());
-          assert(MRI.getRegClass(MO.getReg()) != &RISCV::VMV0RegClass ||
-                 MI.isInlineAsm() ||
-                 MRI.getVRegDef(MO.getReg())->isInlineAsm() &&
-                     "Non-inline-asm use of vmv0 left behind");
+          assert((MRI.getRegClass(MO.getReg()) != &RISCV::VMV0RegClass ||
+                  MI.isInlineAsm() ||
+                  MRI.getVRegDef(MO.getReg())->isInlineAsm()) &&
+                 "Non-inline-asm use of vmv0 left behind");
         }
       }
     }
