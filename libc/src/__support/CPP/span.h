@@ -59,7 +59,7 @@ public:
       : span_data(first), span_size(count) {}
 
   LIBC_INLINE constexpr span(pointer first, pointer end)
-      : span_data(first), span_size(end - first) {}
+      : span_data(first), span_size(static_cast<size_t>(end - first)) {}
 
   template <typename U, size_t N,
             cpp::enable_if_t<is_compatible_v<U>, bool> = true>
