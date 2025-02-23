@@ -189,7 +189,8 @@ LIBC_INLINE char *string_token(char *__restrict src,
   if (LIBC_UNLIKELY(src == nullptr && ((src = *saveptr) == nullptr)))
     return nullptr;
 
-  static_assert(sizeof(char) == sizeof(cpp::byte), "bitset of 256 assumes char is 8 bits");
+  static_assert(sizeof(char) == sizeof(cpp::byte),
+                "bitset of 256 assumes char is 8 bits");
   cpp::bitset<256> delimiter_set;
   for (; *delimiter_string != '\0'; ++delimiter_string)
     delimiter_set.set(static_cast<size_t>(*delimiter_string));

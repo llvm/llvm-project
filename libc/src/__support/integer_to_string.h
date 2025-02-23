@@ -422,7 +422,8 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
       if (value == cpp::numeric_limits<T>::min()) {
         return cpp::bit_cast<UNSIGNED_T>(value);
       } else {
-        return static_cast<UNSIGNED_T>(-value); // legal and representable both as T and UNSIGNED_T.`
+        return static_cast<UNSIGNED_T>(
+            -value); // legal and representable both as T and UNSIGNED_T.`
       }
     }
 

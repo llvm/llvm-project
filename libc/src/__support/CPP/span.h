@@ -49,7 +49,8 @@ public:
   using const_reference = const T &;
   using iterator = T *;
 
-  LIBC_INLINE_VAR static constexpr size_type dynamic_extent = cpp::numeric_limits<size_type>::max();
+  LIBC_INLINE_VAR static constexpr size_type dynamic_extent =
+      cpp::numeric_limits<size_type>::max();
 
   LIBC_INLINE constexpr span() : span_data(nullptr), span_size(0) {}
 

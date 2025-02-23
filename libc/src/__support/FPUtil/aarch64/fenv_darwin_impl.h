@@ -114,7 +114,8 @@ struct FEnv {
 };
 
 LIBC_INLINE int enable_except(int excepts) {
-  uint32_t new_excepts = FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+  uint32_t new_excepts =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
   uint32_t control_word = FEnv::get_control_word();
   uint32_t old_excepts = FEnv::exception_value_from_control(control_word);
   if (new_excepts != old_excepts) {
@@ -125,7 +126,8 @@ LIBC_INLINE int enable_except(int excepts) {
 }
 
 LIBC_INLINE int disable_except(int excepts) {
-  uint32_t disabled_excepts = FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+  uint32_t disabled_excepts =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
   uint32_t control_word = FEnv::get_control_word();
   uint32_t old_excepts = FEnv::exception_value_from_control(control_word);
   control_word &= ~FEnv::exception_value_to_control(disabled_excepts);
@@ -141,7 +143,8 @@ LIBC_INLINE int get_except() {
 
 LIBC_INLINE int clear_except(int excepts) {
   uint32_t status_word = FEnv::get_status_word();
-  uint32_t except_value = FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+  uint32_t except_value =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
   status_word &= ~FEnv::exception_value_to_status(except_value);
   FEnv::set_status_word(status_word);
   return 0;
@@ -149,13 +152,16 @@ LIBC_INLINE int clear_except(int excepts) {
 
 LIBC_INLINE int test_except(int excepts) {
   uint32_t statusWord = FEnv::get_status_word();
-  uint32_t ex_value = FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
-  return static_cast<int>(statusWord & FEnv::exception_value_to_status(ex_value));
+  uint32_t ex_value =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+  return static_cast<int>(statusWord &
+                          FEnv::exception_value_to_status(ex_value));
 }
 
 LIBC_INLINE int set_except(int excepts) {
   uint32_t status_word = FEnv::get_status_word();
-  uint32_t new_exceptions = FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+  uint32_t new_exceptions =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
   status_word |= FEnv::exception_value_to_status(new_exceptions);
   FEnv::set_status_word(status_word);
   return 0;
@@ -175,7 +181,8 @@ LIBC_INLINE int raise_except(int excepts) {
                          : "s0", "s1" /* s0 and s1 are clobbered */);
   };
 
-  uint32_t to_raise = FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+  uint32_t to_raise =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
   int result = 0;
 
   if (to_raise & FEnv::EX_INVALID) {

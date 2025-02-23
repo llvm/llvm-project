@@ -697,7 +697,8 @@ public:
     }
     BigInt quotient;
     WordType x_word = static_cast<WordType>(x);
-    constexpr size_t LOG2_WORD_SIZE = static_cast<size_t>(cpp::bit_width(WORD_SIZE) - 1);
+    constexpr size_t LOG2_WORD_SIZE =
+        static_cast<size_t>(cpp::bit_width(WORD_SIZE) - 1);
     constexpr size_t HALF_WORD_SIZE = WORD_SIZE >> 1;
     constexpr WordType HALF_MASK = ((WordType(1) << HALF_WORD_SIZE) - 1);
     // lower = smallest multiple of WORD_SIZE that is >= e.
@@ -1007,8 +1008,9 @@ private:
     BigInt quotient;
     if (remainder >= divider) {
       BigInt subtractor = divider;
-      size_t cur_bit = static_cast<size_t>(multiword::countl_zero(subtractor.val) -
-                    multiword::countl_zero(remainder.val));
+      size_t cur_bit =
+          static_cast<size_t>(multiword::countl_zero(subtractor.val) -
+                              multiword::countl_zero(remainder.val));
       subtractor <<= cur_bit;
       for (; cur_bit >= 0 && remainder > 0; --cur_bit, subtractor >>= 1) {
         if (remainder < subtractor)
@@ -1282,7 +1284,8 @@ rotl(T value, int rotate) {
     return value;
   if (rotate < 0)
     return cpp::rotr<T>(value, -rotate);
-  return (value << static_cast<size_t>(rotate)) | (value >> (N - static_cast<size_t>(rotate)));
+  return (value << static_cast<size_t>(rotate)) |
+         (value >> (N - static_cast<size_t>(rotate)));
 }
 
 // Specialization of cpp::rotr ('bit.h') for BigInt.
@@ -1295,7 +1298,8 @@ rotr(T value, int rotate) {
     return value;
   if (rotate < 0)
     return cpp::rotl<T>(value, -rotate);
-  return (value >> static_cast<size_t>(rotate)) | (value << (N - static_cast<size_t>(rotate)));
+  return (value >> static_cast<size_t>(rotate)) |
+         (value << (N - static_cast<size_t>(rotate)));
 }
 
 } // namespace cpp
