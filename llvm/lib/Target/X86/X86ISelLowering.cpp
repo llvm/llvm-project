@@ -53749,23 +53749,20 @@ static SDValue combinei64TruncSrlAdd(SDValue N, EVT VT, SelectionDAG &DAG,
                                  m_ConstInt(SrlConst)))))
     return SDValue();
 
-  if (SrlConst.ule(32) || AddConst.lshr(SrlConst).shl(SrlConst) != AddConst)
+  if (SrlConst.ule(32) || AddConst.countr_zero() < SrlConst.getZExtValue())
     return SDValue();
 
   SDValue AddLHSSrl =
       DAG.getNode(ISD::SRL, DL, MVT::i64, AddLhs, N.getOperand(1));
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
 
-  APInt NewAddConstVal =
-      (~((~AddConst).lshr(SrlConst))).trunc(VT.getSizeInBits());
+  APInt NewAddConstVal = AddConst.lshr(SrlConst).trunc(VT.getSizeInBits());
   SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
   SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
 
-  APInt CleanupSizeConstVal = (SrlConst - 32).zextOrTrunc(VT.getSizeInBits());
   EVT CleanUpVT =
-      EVT::getIntegerVT(*DAG.getContext(), CleanupSizeConstVal.getZExtValue());
-  SDValue CleanUp = DAG.getAnyExtOrTrunc(NewAddNode, DL, CleanUpVT);
-  return DAG.getAnyExtOrTrunc(CleanUp, DL, VT);
+      EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConst.getZExtValue());
+  return DAG.getZeroExtendInReg(NewAddNode, DL, CleanUpVT);
 }
 
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify
