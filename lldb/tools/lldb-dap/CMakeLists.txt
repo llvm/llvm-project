@@ -36,8 +36,9 @@ add_lldb_tool(lldb-dap
   SourceBreakpoint.cpp
   Watchpoint.cpp
 
-  Handler/RequestHandler.cpp
   Handler/AttachHandler.cpp
+  Handler/BreakpointLocationsHandler.cpp
+  Handler/RequestHandler.cpp
 
   LINK_LIBS
     liblldb
