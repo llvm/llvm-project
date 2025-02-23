@@ -3863,8 +3863,8 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessorWithModInBetween) {
   )cc");
 }
 
-
-TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObject) {
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObject) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
@@ -3892,7 +3892,9 @@ TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaConstRefAccesso
   )cc");
 }
 
-TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithoutValueCheck) {
+TEST_P(
+    UncheckedOptionalAccessTest,
+    ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithoutValueCheck) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
@@ -3918,7 +3920,8 @@ TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaConstRefAccesso
   )cc");
 }
 
-TEST_P(UncheckedOptionalAccessTest, ConstRefToOptionalSavedAsTemporaryVariable) {
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefToOptionalSavedAsTemporaryVariable) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
@@ -3947,7 +3950,8 @@ TEST_P(UncheckedOptionalAccessTest, ConstRefToOptionalSavedAsTemporaryVariable) 
   )cc");
 }
 
-TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaConstValueAccessorToHoldingObject) {
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefAccessorToOptionalViaConstValueAccessorToHoldingObject) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
@@ -3975,7 +3979,8 @@ TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaConstValueAcces
   )cc");
 }
 
-TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaNonConstRefAccessorToHoldingObject) {
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefAccessorToOptionalViaNonConstRefAccessorToHoldingObject) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
@@ -4003,7 +4008,9 @@ TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaNonConstRefAcce
   )cc");
 }
 
-TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaNonConstRefAccessorToHoldingObjectWithModAfterCheck) {
+TEST_P(
+    UncheckedOptionalAccessTest,
+    ConstRefAccessorToOptionalViaNonConstRefAccessorToHoldingObjectWithModAfterCheck) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 

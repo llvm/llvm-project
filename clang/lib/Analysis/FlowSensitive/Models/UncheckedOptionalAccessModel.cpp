@@ -586,14 +586,15 @@ void handleConstMemberCall(const CallExpr *CE,
     if (DirectCallee == nullptr)
       return;
 
-    bool isReference = DirectCallee->getReturnType().getTypePtr()->isReferenceType();
+    bool isReference =
+        DirectCallee->getReturnType().getTypePtr()->isReferenceType();
     if (isReference) {
       StorageLocation &Loc =
-        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
-            *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
-               // no-op
-            });
-      
+          State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+              *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
+                // no-op
+              });
+
       State.Env.setStorageLocation(*CE, Loc);
       return;
     }
