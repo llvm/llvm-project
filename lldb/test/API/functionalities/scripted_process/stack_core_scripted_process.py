@@ -66,7 +66,7 @@ class StackCoreScriptedProcess(ScriptedProcess):
                     or not module_path_arg.IsValid()
                     or not module_path_arg.GetType() == lldb.eStructuredDataTypeString
                 ):
-                    return
+                    continue
 
                 module_path = module_path_arg.GetStringValue(100)
 
@@ -89,7 +89,7 @@ class StackCoreScriptedProcess(ScriptedProcess):
                     )
 
                     if not corefile_module or not corefile_module.IsValid():
-                        return
+                        continue
 
                     module_load_addr = (
                         corefile_module.GetObjectFileHeaderAddress().GetLoadAddress(

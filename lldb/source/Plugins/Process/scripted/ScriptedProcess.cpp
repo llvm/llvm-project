@@ -446,7 +446,6 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
       return error_with_message("Couldn't cast image object into dictionary.");
 
     ModuleSpec module_spec;
-    llvm::StringRef value;
 
     bool has_path = dict->HasKey("path");
     bool has_uuid = dict->HasKey("uuid");
@@ -461,9 +460,10 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
       module_spec.GetFileSpec().SetPath(path);
     }
 
+    llvm::StringRef uuid = "";
     if (has_uuid) {
-      dict->GetValueForKeyAsString("uuid", value);
-      module_spec.GetUUID().SetFromStringRef(value);
+      dict->GetValueForKeyAsString("uuid", uuid);
+      module_spec.GetUUID().SetFromStringRef(uuid);
     }
 
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
