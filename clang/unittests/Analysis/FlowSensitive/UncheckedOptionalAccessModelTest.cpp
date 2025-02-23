@@ -3863,6 +3863,24 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessorWithModInBetween) {
   )cc");
 }
 
+TEST_P(UncheckedOptionalAccessTest, ConstructorOtherStructField) {
+  // Repro for a crash.
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+    struct NonTrivDtor {
+      NonTrivDtor(int x);
+      ~NonTrivDtor() {}
+    };
+    struct Other {
+      $ns::$optional<int> x = $ns::nullopt;
+      NonTrivDtor y = x.has_value() ? NonTrivDtor(*x) : NonTrivDtor(-1);
+    };
+    struct target {
+      target() { Other{}; }
+    };
+  )cc");
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
