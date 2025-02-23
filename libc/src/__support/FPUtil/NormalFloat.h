@@ -16,7 +16,6 @@
 #include "src/__support/macros/config.h"
 
 #include <stdint.h>
-#include <sys/_types/_int32_t.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
