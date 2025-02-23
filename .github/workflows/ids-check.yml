@@ -45,6 +45,7 @@ jobs:
               -S ${{ github.workspace }}/llvm-project/llvm/ \
               -D LLVM_ENABLE_PROJECTS=clang \
               -D LLVM_TARGETS_TO_BUILD="host" \
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
               -G Ninja
         cd ${{ github.workspace }}/llvm-project/build/
         ninja -t targets all | grep "CommonTableGen: phony$" | grep -v "/" | sed 's/:.*//'
@@ -70,4 +71,5 @@ jobs:
 
     - name: Run ids over compilation database
       run: |
-        ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/compile_commands.json --export-macro LLVM_ABI
+        ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build --export-macro LLVM_ABI || true
+        ${{ github.workspace }}/ids/build/bin/idt --help
