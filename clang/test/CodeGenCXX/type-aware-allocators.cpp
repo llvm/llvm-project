@@ -166,6 +166,22 @@ struct __attribute__((aligned(128))) S11 {
   void operator delete(S11*, std::destroying_delete_t, std::align_val_t);
 };
 
+
+struct S12 {
+  template <typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t, unsigned line = __builtin_LINE());
+  template <typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t, unsigned line = __builtin_LINE());
+  template <typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t);
+};
+
+extern "C" void test_ensure_type_aware_resolution_includes_location() {
+  S12 *s12 = new S12(); // test line
+  delete s12;
+}
+
+// CHECK-LABEL: test_ensure_type_aware_resolution_includes_location
+// `177` in the next line is the line number from the test line in above
+// CHECK: %call = call noundef ptr @_ZN3S12nwIS_EEPvSt13type_identityIT_EmSt11align_val_tj({{.*}}, {{.*}}, {{.*}}, {{.*}} 177)
+
 // CHECK-LABEL: @_ZN2S8D0Ev
 // CHECK: @_ZN2S8dlEPv(
 

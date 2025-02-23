@@ -152,4 +152,10 @@ struct S12 {
   template <typename T> void operator delete(UsingAlias, void *, size_t, std::align_val_t);
   void operator delete(UsingAlias, void *, size_t, std::align_val_t);
 };
+
+struct S13 {
+  void *operator new(std::type_identity<S13>, size_t, std::align_val_t);
+  void operator delete(std::type_identity<S13>, void*, size_t, std::align_val_t);
+};
+
 #endif

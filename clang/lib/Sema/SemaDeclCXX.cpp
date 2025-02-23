@@ -11896,45 +11896,6 @@ NamespaceDecl *Sema::getStdNamespace() const {
                                  StdNamespace.get(Context.getExternalSource()));
 }
 
-static ClassTemplateDecl *LookupStdClassTemplate(Sema &S, SourceLocation Loc,
-                                                 const char *ClassName,
-                                                 bool *WasMalformed) {
-  NamespaceDecl *Std = S.getStdNamespace();
-  if (!Std)
-    return nullptr;
-
-  LookupResult Result(S, &S.PP.getIdentifierTable().get(ClassName), Loc,
-                      Sema::LookupOrdinaryName);
-  if (!S.LookupQualifiedName(Result, Std))
-    return nullptr;
-
-  ClassTemplateDecl *Template = Result.getAsSingle<ClassTemplateDecl>();
-  if (!Template) {
-    Result.suppressDiagnostics();
-    // We found something weird. Complain about the first thing we found.
-    NamedDecl *Found = *Result.begin();
-    S.Diag(Found->getLocation(), diag::err_malformed_std_class_template)
-        << ClassName;
-    if (WasMalformed)
-      *WasMalformed = true;
-    return nullptr;
-  }
-
-  // We found some template with the correct name. Now verify that it's
-  // correct.
-  TemplateParameterList *Params = Template->getTemplateParameters();
-  if (Params->getMinRequiredArguments() != 1 ||
-      !isa<TemplateTypeParmDecl>(Params->getParam(0))) {
-    S.Diag(Template->getLocation(), diag::err_malformed_std_class_template)
-        << ClassName;
-    if (WasMalformed)
-      *WasMalformed = true;
-    return nullptr;
-  }
-
-  return Template;
-}
-
 namespace {
 
 enum UnsupportedSTLSelect {
@@ -12155,6 +12116,45 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
   if (Element)
     *Element = Arguments[0].getAsType();
   return true;
+}
+
+static ClassTemplateDecl *LookupStdClassTemplate(Sema &S, SourceLocation Loc,
+                                                 const char *ClassName,
+                                                 bool *WasMalformed) {
+  NamespaceDecl *Std = S.getStdNamespace();
+  if (!Std)
+    return nullptr;
+
+  LookupResult Result(S, &S.PP.getIdentifierTable().get(ClassName), Loc,
+                      Sema::LookupOrdinaryName);
+  if (!S.LookupQualifiedName(Result, Std))
+    return nullptr;
+
+  ClassTemplateDecl *Template = Result.getAsSingle<ClassTemplateDecl>();
+  if (!Template) {
+    Result.suppressDiagnostics();
+    // We found something weird. Complain about the first thing we found.
+    NamedDecl *Found = *Result.begin();
+    S.Diag(Found->getLocation(), diag::err_malformed_std_class_template)
+        << ClassName;
+    if (WasMalformed)
+      *WasMalformed = true;
+    return nullptr;
+  }
+
+  // We found some template with the correct name. Now verify that it's
+  // correct.
+  TemplateParameterList *Params = Template->getTemplateParameters();
+  if (Params->getMinRequiredArguments() != 1 ||
+      !isa<TemplateTypeParmDecl>(Params->getParam(0))) {
+    S.Diag(Template->getLocation(), diag::err_malformed_std_class_template)
+        << ClassName;
+    if (WasMalformed)
+      *WasMalformed = true;
+    return nullptr;
+  }
+
+  return Template;
 }
 
 static QualType BuildStdClassTemplate(Sema &S, ClassTemplateDecl *CTD,
@@ -16310,9 +16310,8 @@ bool Sema::isTypeAwareOperatorNewOrDelete(const NamedDecl *ND) const {
 }
 
 FunctionDecl *
-Sema::instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
-                                      QualType DeallocType,
-                                      SourceLocation Loc) {
+Sema::BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
+                                QualType DeallocType, SourceLocation Loc) {
   if (!getLangOpts().TypeAwareAllocators || DeallocType.isNull())
     return nullptr;
 

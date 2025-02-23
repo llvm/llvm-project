@@ -139,4 +139,9 @@ template <typename T> void *operator new(UsingAlias, size_t, std::align_val_t);
 void *operator new(UsingAlias, size_t, std::align_val_t);
 template <typename T> void operator delete(UsingAlias, void *, size_t, std::align_val_t);
 void operator delete(UsingAlias, void *, size_t, std::align_val_t);
+
+class ForwardDecl;
+void *operator new(std::type_identity<ForwardDecl>, size_t, std::align_val_t);
+void operator delete(std::type_identity<ForwardDecl>, void*, size_t, std::align_val_t);
+
 #endif

@@ -3504,6 +3504,7 @@ def : Separate<["-"], "fnew-alignment">, Alias<fnew_alignment_EQ>;
 def : Flag<["-"], "faligned-new">, Alias<faligned_allocation>;
 def : Flag<["-"], "fno-aligned-new">, Alias<fno_aligned_allocation>;
 def faligned_new_EQ : Joined<["-"], "faligned-new=">;
+
 defm cxx_type_aware_allocators : BoolFOption<"experimental-cxx-type-aware-allocators",
   LangOpts<"TypeAwareAllocators">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Enable experimental C++ type aware allocator operators">,

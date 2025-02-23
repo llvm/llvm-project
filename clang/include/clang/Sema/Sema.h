@@ -4812,9 +4812,8 @@ public:
   EnumDecl *getStdAlignValT() const;
 
   bool isTypeAwareOperatorNewOrDelete(const NamedDecl *FnDecl) const;
-  FunctionDecl *instantiateTypeAwareUsualDelete(FunctionTemplateDecl *FnDecl,
-                                                QualType AllocType,
-                                                SourceLocation);
+  FunctionDecl *BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnDecl,
+                                          QualType AllocType, SourceLocation);
 
   ValueDecl *tryLookupUnambiguousFieldDecl(RecordDecl *ClassDecl,
                                            const IdentifierInfo *MemberOrBase);

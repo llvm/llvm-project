@@ -1794,7 +1794,7 @@ namespace {
         if (!FTD)
           return;
         FunctionDecl *InstantiatedDecl =
-            S.instantiateTypeAwareUsualDelete(FTD, AllocType, Loc);
+            S.BuildTypeAwareUsualDelete(FTD, AllocType, Loc);
         if (!InstantiatedDecl)
           return;
         FD = InstantiatedDecl;
@@ -2449,12 +2449,14 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     return ExprError();
 
   AllocationFunctionScope Scope = UseGlobal ? AFS_Global : AFS_Both;
+  SourceRange AllocationParameterRange = Range;
+  if (PlacementLParen.isValid() && PlacementRParen.isValid())
+    AllocationParameterRange = SourceRange(PlacementLParen, PlacementRParen);
   if (!AllocType->isDependentType() &&
       !Expr::hasAnyTypeDependentArguments(PlacementArgs) &&
-      FindAllocationFunctions(StartLoc,
-                              SourceRange(PlacementLParen, PlacementRParen),
-                              Scope, Scope, AllocType, ArraySize.has_value(),
-                              IAP, PlacementArgs, OperatorNew, OperatorDelete))
+      FindAllocationFunctions(StartLoc, AllocationParameterRange, Scope, Scope,
+                              AllocType, ArraySize.has_value(), IAP,
+                              PlacementArgs, OperatorNew, OperatorDelete))
     return ExprError();
 
   // If this is an array allocation, compute whether the usual array
@@ -2481,9 +2483,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     }
     if (isAlignedAllocation(IAP.PassAlignment))
       NumImplicitArgs++;
-    if (GatherArgumentsForCall(PlacementLParen, OperatorNew, Proto,
-                               NumImplicitArgs, PlacementArgs, AllPlaceArgs,
-                               CallType))
+    if (GatherArgumentsForCall(AllocationParameterRange.getBegin(), OperatorNew,
+                               Proto, NumImplicitArgs, PlacementArgs,
+                               AllPlaceArgs, CallType))
       return ExprError();
 
     if (!AllPlaceArgs.empty())
@@ -2958,9 +2960,8 @@ bool Sema::FindAllocationFunctions(
       if (RequireCompleteType(StartLoc, TypeIdentity,
                               diag::err_incomplete_type))
         return true;
-    } else {
+    } else
       IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
-    }
   }
   TypeAwareAllocationMode OriginalTypeAwareState = IAP.PassTypeIdentity;
 
@@ -2982,7 +2983,6 @@ bool Sema::FindAllocationFunctions(
     AlignValT = Context.getTypeDeclType(getStdAlignValT());
   }
   CXXScalarValueInitExpr Align(AlignValT, nullptr, SourceLocation());
-
   if (IncludeAlignParam)
     AllocArgs.push_back(&Align);
 
