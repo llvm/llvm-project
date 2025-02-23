@@ -1423,7 +1423,7 @@ Register RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
   bool SplitSubClass = true;
   if (!RegClassInfo.isProperSubClass(CurRC)) {
     if (!VirtReg.hasSubRanges())
-      return 0;
+      return Register();
     SplitSubClass = false;
   }
 
@@ -1434,7 +1434,7 @@ Register RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
 
   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
   if (Uses.size() <= 1)
-    return 0;
+    return Register();
 
   LLVM_DEBUG(dbgs() << "Split around " << Uses.size()
                     << " individual instrs.\n");
@@ -1586,7 +1586,7 @@ Register RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
 
   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
   if (Uses.size() <= 2)
-    return 0;
+    return Register();
   const unsigned NumGaps = Uses.size()-1;
 
   LLVM_DEBUG({
@@ -2184,7 +2184,7 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
 /// range can have lower cost than using the CSR for the first time;
 /// Spilling a live range in the cold path can have lower cost than using
 /// the CSR for the first time. Returns the physical register if we decide
-/// to use the CSR; otherwise return 0.
+/// to use the CSR; otherwise return MCRegister().
 MCRegister RAGreedy::tryAssignCSRFirstTime(
     const LiveInterval &VirtReg, AllocationOrder &Order, MCRegister PhysReg,
     uint8_t &CostPerUseLimit, SmallVectorImpl<Register> &NewVRegs) {
@@ -2456,7 +2456,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   // queue. The RS_Split ranges already failed to do this, and they should not
   // get a second chance until they have been split.
   if (Stage != RS_Split)
-    if (Register PhysReg =
+    if (MCRegister PhysReg =
             tryEvict(VirtReg, Order, NewVRegs, CostPerUseLimit,
                      FixedRegisters)) {
       Register Hint = MRI->getSimpleHint(VirtReg.reg());
