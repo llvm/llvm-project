@@ -2587,6 +2587,9 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
       !Notes.empty())
     Result = false;
 
+  if (Eval->Evaluated.allowConstexprUnknown())
+    Result = false;
+
   // Ensure the computed APValue is cleaned up later if evaluation succeeded,
   // or that it's empty (so that there's nothing to clean up) if evaluation
   // failed.

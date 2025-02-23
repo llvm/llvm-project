@@ -3628,8 +3628,6 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   if (AllowConstexprUnknown) {
     if (!Result)
       Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
-    else
-      Result->setConstexprUnknown();
   }
   return true;
 }
