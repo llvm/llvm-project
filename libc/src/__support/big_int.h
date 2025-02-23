@@ -1276,26 +1276,26 @@ rotr(T value, int rotate);
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T>
 rotl(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
+  constexpr int N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
     return cpp::rotr<T>(value, -rotate);
-  return (value << rotate) | (value >> (N - rotate));
+  return (value << static_cast<size_t>(rotate)) | (value >> (N - static_cast<size_t>(rotate)));
 }
 
 // Specialization of cpp::rotr ('bit.h') for BigInt.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T>
 rotr(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
+  constexpr int N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
     return cpp::rotl<T>(value, -rotate);
-  return (value >> rotate) | (value << (N - rotate));
+  return (value >> static_cast<size_t>(rotate)) | (value << (N - static_cast<size_t>(rotate)));
 }
 
 } // namespace cpp
