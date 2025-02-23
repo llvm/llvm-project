@@ -71,4 +71,4 @@ jobs:
 
     - name: Run ids over compilation database
       run: |
-        ${{ github.workspace }}/ids/build/bin/idt -p ${{ github.workspace }}/llvm-project/build/ -export-macro LLVM_ABI
+        ${{ github.workspace }}/ids/build/bin/idt -p=${{ github.workspace }}/llvm-project/build/ --export-macro=LLVM_ABI
