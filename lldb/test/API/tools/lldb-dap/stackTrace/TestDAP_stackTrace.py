@@ -217,31 +217,21 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
             frameCount,
             "verify total frames returns a speculative page size",
         )
-        expectedFrames = [
-            {
-                "name": "comp",
-                "line": 14,
-                "sourceName": "main.c",
-                "containsSourceReference": False,
-            },
-            {"name": "qsort", "sourceName": "qsort", "containsSourceReference": True},
-            {
-                "name": "main",
-                "line": 25,
-                "sourceName": "main.c",
-                "containsSourceReference": False,
-            },
-        ]
-        for idx, expected in enumerate(expectedFrames):
-            frame = stackFrames[idx]
-            frame_name = self.get_dict_value(frame, ["name"])
-            self.assertRegex(frame_name, expected["name"])
-            source_name = self.get_dict_value(frame, ["source", "name"])
-            self.assertRegex(source_name, expected["sourceName"])
-            if expected["containsSourceReference"]:
-                self.assertIn("sourceReference", frame["source"])
-            else:
-                self.assertNotIn("sourceReference", frame["source"])
+
+        frame = stackFrames.pop(0)
+        frame_name = self.get_dict_value(frame, ["name"])
+        self.assertRegex(frame_name, 'comp')
+        self.assertEqual(self.get_dict_value(frame, ['line']), 14)
+        self.assertNotIn('sourceReference', frame['source'])
+
+        # libc`qsort may not be the first frame below comp, search upwards
+        found_qsort = False
+        for frame in stackFrames:
+            if 'qsort' not in frame['name']:
+                continue
+            found_qsort = True
+            self.assertIn("sourceReference", frame["source"])
+        self.assertTrue(found_qsort, 'verify we found the qsort frame')
 
     @skipIfWindows
     def test_functionNameWithArgs(self):
