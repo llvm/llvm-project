@@ -55,6 +55,13 @@ public:
   void operator()(const llvm::json::Object &request) override;
 };
 
+class CompletionsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "completions"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
 } // namespace lldb_dap
 
 #endif

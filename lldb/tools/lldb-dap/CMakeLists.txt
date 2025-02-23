@@ -38,6 +38,7 @@ add_lldb_tool(lldb-dap
 
   Handler/AttachHandler.cpp
   Handler/BreakpointLocationsHandler.cpp
+  Handler/CompletionsHandler.cpp
   Handler/RequestHandler.cpp
 
   LINK_LIBS
