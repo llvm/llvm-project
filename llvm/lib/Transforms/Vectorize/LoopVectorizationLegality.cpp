@@ -1077,7 +1077,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 /// When updateOperator can be add, sub, add.sat, umin, umax.
 ///
 /// It matches a pattern starting from \p HSt, which Stores to the 'buckets'
-/// array the computed histogram. It uses a update instruction to update all
+/// array the computed histogram. It uses an update instruction to update all
 /// counts, storing them using a loop-variant index Load from the 'indices'
 /// input array.
 ///
@@ -1099,14 +1099,16 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
   // FIXME: We assume the loop invariant term is on the RHS.
   //        Fine for an immediate/constant, but maybe not a generic value?
   Value *HIncVal = nullptr;
-  if (!match(HUpdateOp, m_Add(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
-      !match(HUpdateOp, m_Sub(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
+  if (!match(HUpdateOp,
+             m_Add(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
+      !match(HUpdateOp,
+             m_Sub(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
       !match(HUpdateOp, m_Intrinsic<Intrinsic::uadd_sat>(
-                         m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
-      !match(HUpdateOp, m_Intrinsic<Intrinsic::umax>(m_Load(m_Specific(HPtrInstr)),
-                                                  m_Value(HIncVal))) &&
-      !match(HUpdateOp, m_Intrinsic<Intrinsic::umin>(m_Load(m_Specific(HPtrInstr)),
-                                                  m_Value(HIncVal))))
+                            m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
+      !match(HUpdateOp, m_Intrinsic<Intrinsic::umax>(
+                            m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
+      !match(HUpdateOp, m_Intrinsic<Intrinsic::umin>(
+                            m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))))
     return false;
 
   // Make sure the increment value is loop invariant.

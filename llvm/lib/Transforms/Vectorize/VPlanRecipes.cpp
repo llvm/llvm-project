@@ -1238,7 +1238,7 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
   if (Opcode == Instruction::Sub)
     IncAmt = Builder.CreateNeg(IncAmt);
   assert(isLegalUpdateInstruction(UpdateInst) &&
-         "Found Ilegal update instruction for histogram");
+         "Found Illegal update instruction for histogram");
 
   State.Builder.CreateIntrinsic(getHistogramOpcode(UpdateInst),
                                 {VTy, IncAmt->getType()},
@@ -1293,7 +1293,7 @@ void VPHistogramRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   auto *UpdateInst = cast<Instruction>(getOperand(2)->getUnderlyingValue());
   assert(isLegalUpdateInstruction(UpdateInst) &&
-         "Found Ilegal update instruction for histogram");
+         "Found Illegal update instruction for histogram");
   O << Indent << "WIDEN-HISTOGRAM buckets: ";
   getOperand(0)->printAsOperand(O, SlotTracker);
 
@@ -1315,7 +1315,7 @@ void VPHistogramRecipe::print(raw_ostream &O, const Twine &Indent,
       O << ", min: ";
       break;
     default:
-      llvm_unreachable("Found Ilegal update instruction for histogram");
+      llvm_unreachable("Found Illegal update instruction for histogram");
     }
   }
   getOperand(1)->printAsOperand(O, SlotTracker);
@@ -1349,7 +1349,7 @@ unsigned VPHistogramRecipe::getHistogramOpcode(Instruction *I) {
   // We only support add and sub instructions and the following list of
   // intrinsics: uadd.sat, umax, umin.
   assert(isLegalUpdateInstruction(I) &&
-         "Found Ilegal update instruction for histogram");
+         "Found Illegal update instruction for histogram");
   if (isa<BinaryOperator>(I))
     return Intrinsic::experimental_vector_histogram_add;
   auto *II = cast<IntrinsicInst>(I);
@@ -1361,7 +1361,7 @@ unsigned VPHistogramRecipe::getHistogramOpcode(Instruction *I) {
   case Intrinsic::umin:
     return Intrinsic::experimental_vector_histogram_umin;
   default:
-    llvm_unreachable("Found Ilegal update instruction for histogram");
+    llvm_unreachable("Found Illegal update instruction for histogram");
   }
 }
 

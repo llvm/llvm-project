@@ -8657,7 +8657,7 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   // FIXME: Support other operations.
   unsigned Opcode = HI->Update->getOpcode();
   assert(VPHistogramRecipe::isLegalUpdateInstruction(HI->Update) &&
-         "Found Ilegal update instruction for histogram");
+         "Found Illegal update instruction for histogram");
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
