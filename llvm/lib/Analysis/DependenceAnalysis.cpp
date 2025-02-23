@@ -981,14 +981,6 @@ bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
 
   const SCEV *Start = AddRec->getStart();
   const SCEV *Step = AddRec->getStepRecurrence(*SE);
-  const SCEV *UB = SE->getBackedgeTakenCount(AddRec->getLoop());
-  if (!isa<SCEVCouldNotCompute>(UB)) {
-    if (SE->getTypeSizeInBits(Start->getType()) <
-        SE->getTypeSizeInBits(UB->getType())) {
-      if (!AddRec->getNoWrapFlags())
-        return false;
-    }
-  }
   if (!isLoopInvariant(Step, LoopNest))
     return false;
   if (IsSrc)

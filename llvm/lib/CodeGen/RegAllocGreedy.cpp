@@ -1189,9 +1189,9 @@ unsigned RAGreedy::calculateRegionSplitCost(const LiveInterval &VirtReg,
   return BestCand;
 }
 
-Register RAGreedy::doRegionSplit(const LiveInterval &VirtReg, unsigned BestCand,
-                                 bool HasCompact,
-                                 SmallVectorImpl<Register> &NewVRegs) {
+MCRegister RAGreedy::doRegionSplit(const LiveInterval &VirtReg,
+                                   unsigned BestCand, bool HasCompact,
+                                   SmallVectorImpl<Register> &NewVRegs) {
   SmallVector<unsigned, 8> UsedCands;
   // Prepare split editor.
   LiveRangeEdit LREdit(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
@@ -1226,7 +1226,7 @@ Register RAGreedy::doRegionSplit(const LiveInterval &VirtReg, unsigned BestCand,
   }
 
   splitAroundRegion(LREdit, UsedCands);
-  return Register();
+  return MCRegister();
 }
 
 // VirtReg has a physical Hint, this function tries to split VirtReg around
@@ -1293,9 +1293,9 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
 /// tryBlockSplit - Split a global live range around every block with uses. This
 /// creates a lot of local live ranges, that will be split by tryLocalSplit if
 /// they don't allocate.
-Register RAGreedy::tryBlockSplit(const LiveInterval &VirtReg,
-                                 AllocationOrder &Order,
-                                 SmallVectorImpl<Register> &NewVRegs) {
+MCRegister RAGreedy::tryBlockSplit(const LiveInterval &VirtReg,
+                                   AllocationOrder &Order,
+                                   SmallVectorImpl<Register> &NewVRegs) {
   assert(&SA->getParent() == &VirtReg && "Live range wasn't analyzed");
   Register Reg = VirtReg.reg();
   bool SingleInstrs = RegClassInfo.isProperSubClass(MRI->getRegClass(Reg));
@@ -1308,7 +1308,7 @@ Register RAGreedy::tryBlockSplit(const LiveInterval &VirtReg,
   }
   // No blocks were split.
   if (LREdit.empty())
-    return Register();
+    return MCRegister();
 
   // We did split for some blocks.
   SmallVector<unsigned, 8> IntvMap;
@@ -1327,7 +1327,7 @@ Register RAGreedy::tryBlockSplit(const LiveInterval &VirtReg,
 
   if (VerifyEnabled)
     MF->verify(this, "After splitting live range around basic blocks", &errs());
-  return Register();
+  return MCRegister();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1414,16 +1414,16 @@ static bool readsLaneSubset(const MachineRegisterInfo &MRI,
 /// be moved to a larger register class.
 ///
 /// This is similar to spilling to a larger register class.
-Register RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
-                                       AllocationOrder &Order,
-                                       SmallVectorImpl<Register> &NewVRegs) {
+MCRegister RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
+                                         AllocationOrder &Order,
+                                         SmallVectorImpl<Register> &NewVRegs) {
   const TargetRegisterClass *CurRC = MRI->getRegClass(VirtReg.reg());
   // There is no point to this if there are no larger sub-classes.
 
   bool SplitSubClass = true;
   if (!RegClassInfo.isProperSubClass(CurRC)) {
     if (!VirtReg.hasSubRanges())
-      return 0;
+      return MCRegister();
     SplitSubClass = false;
   }
 
@@ -1434,7 +1434,7 @@ Register RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
 
   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
   if (Uses.size() <= 1)
-    return 0;
+    return MCRegister();
 
   LLVM_DEBUG(dbgs() << "Split around " << Uses.size()
                     << " individual instrs.\n");
@@ -1469,7 +1469,7 @@ Register RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
 
   if (LREdit.empty()) {
     LLVM_DEBUG(dbgs() << "All uses were copies.\n");
-    return Register();
+    return MCRegister();
   }
 
   SmallVector<unsigned, 8> IntvMap;
@@ -1477,7 +1477,7 @@ Register RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
   DebugVars->splitRegister(VirtReg.reg(), LREdit.regs(), *LIS);
   // Assign all new registers to RS_Spill. This was the last chance.
   ExtraInfo->setStage(LREdit.begin(), LREdit.end(), RS_Spill);
-  return Register();
+  return MCRegister();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1567,13 +1567,13 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
 /// tryLocalSplit - Try to split VirtReg into smaller intervals inside its only
 /// basic block.
 ///
-Register RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
-                                 AllocationOrder &Order,
-                                 SmallVectorImpl<Register> &NewVRegs) {
+MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
+                                   AllocationOrder &Order,
+                                   SmallVectorImpl<Register> &NewVRegs) {
   // TODO: the function currently only handles a single UseBlock; it should be
   // possible to generalize.
   if (SA->getUseBlocks().size() != 1)
-    return Register();
+    return MCRegister();
 
   const SplitAnalysis::BlockInfo &BI = SA->getUseBlocks().front();
 
@@ -1586,7 +1586,7 @@ Register RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
 
   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
   if (Uses.size() <= 2)
-    return 0;
+    return MCRegister();
   const unsigned NumGaps = Uses.size()-1;
 
   LLVM_DEBUG({
@@ -1754,7 +1754,7 @@ Register RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
 
   // Didn't find any candidates?
   if (BestBefore == NumGaps)
-    return Register();
+    return MCRegister();
 
   LLVM_DEBUG(dbgs() << "Best local split range: " << Uses[BestBefore] << '-'
                     << Uses[BestAfter] << ", " << BestDiff << ", "
@@ -1788,7 +1788,7 @@ Register RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
   }
   ++NumLocalSplits;
 
-  return Register();
+  return MCRegister();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1798,19 +1798,20 @@ Register RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
 /// trySplit - Try to split VirtReg or one of its interferences, making it
 /// assignable.
 /// @return Physreg when VirtReg may be assigned and/or new NewVRegs.
-Register RAGreedy::trySplit(const LiveInterval &VirtReg, AllocationOrder &Order,
-                            SmallVectorImpl<Register> &NewVRegs,
-                            const SmallVirtRegSet &FixedRegisters) {
+MCRegister RAGreedy::trySplit(const LiveInterval &VirtReg,
+                              AllocationOrder &Order,
+                              SmallVectorImpl<Register> &NewVRegs,
+                              const SmallVirtRegSet &FixedRegisters) {
   // Ranges must be Split2 or less.
   if (ExtraInfo->getStage(VirtReg) >= RS_Spill)
-    return Register();
+    return MCRegister();
 
   // Local intervals are handled separately.
   if (LIS->intervalIsInOneMBB(VirtReg)) {
     NamedRegionTimer T("local_split", "Local Splitting", TimerGroupName,
                        TimerGroupDescription, TimePassesIsEnabled);
     SA->analyze(&VirtReg);
-    Register PhysReg = tryLocalSplit(VirtReg, Order, NewVRegs);
+    MCRegister PhysReg = tryLocalSplit(VirtReg, Order, NewVRegs);
     if (PhysReg || !NewVRegs.empty())
       return PhysReg;
     return tryInstructionSplit(VirtReg, Order, NewVRegs);
@@ -1954,12 +1955,10 @@ bool RAGreedy::mayRecolorAllInterferences(
 /// \p Depth gives the current depth of the last chance recoloring.
 /// \return a physical register that can be used for VirtReg or ~0u if none
 /// exists.
-Register RAGreedy::tryLastChanceRecoloring(const LiveInterval &VirtReg,
-                                           AllocationOrder &Order,
-                                           SmallVectorImpl<Register> &NewVRegs,
-                                           SmallVirtRegSet &FixedRegisters,
-                                           RecoloringStack &RecolorStack,
-                                           unsigned Depth) {
+MCRegister RAGreedy::tryLastChanceRecoloring(
+    const LiveInterval &VirtReg, AllocationOrder &Order,
+    SmallVectorImpl<Register> &NewVRegs, SmallVirtRegSet &FixedRegisters,
+    RecoloringStack &RecolorStack, unsigned Depth) {
   if (!TRI->shouldUseLastChanceRecoloringForVirtReg(*MF, VirtReg))
     return ~0u;
 
@@ -2058,7 +2057,7 @@ Register RAGreedy::tryLastChanceRecoloring(const LiveInterval &VirtReg,
       LLVM_DEBUG(dbgs() << "tryRecoloringCandidates deleted a fixed register "
                         << printReg(ThisVirtReg) << '\n');
       FixedRegisters.erase(ThisVirtReg);
-      return Register();
+      return MCRegister();
     }
 
     LLVM_DEBUG(dbgs() << "Fail to assign: " << VirtReg << " to "
@@ -2184,7 +2183,7 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
 /// range can have lower cost than using the CSR for the first time;
 /// Spilling a live range in the cold path can have lower cost than using
 /// the CSR for the first time. Returns the physical register if we decide
-/// to use the CSR; otherwise return 0.
+/// to use the CSR; otherwise return MCRegister().
 MCRegister RAGreedy::tryAssignCSRFirstTime(
     const LiveInterval &VirtReg, AllocationOrder &Order, MCRegister PhysReg,
     uint8_t &CostPerUseLimit, SmallVectorImpl<Register> &NewVRegs) {
@@ -2456,7 +2455,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   // queue. The RS_Split ranges already failed to do this, and they should not
   // get a second chance until they have been split.
   if (Stage != RS_Split)
-    if (Register PhysReg =
+    if (MCRegister PhysReg =
             tryEvict(VirtReg, Order, NewVRegs, CostPerUseLimit,
                      FixedRegisters)) {
       Register Hint = MRI->getSimpleHint(VirtReg.reg());
@@ -2485,7 +2484,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   if (Stage < RS_Spill && !VirtReg.empty()) {
     // Try splitting VirtReg or interferences.
     unsigned NewVRegSizeBefore = NewVRegs.size();
-    Register PhysReg = trySplit(VirtReg, Order, NewVRegs, FixedRegisters);
+    MCRegister PhysReg = trySplit(VirtReg, Order, NewVRegs, FixedRegisters);
     if (PhysReg || (NewVRegs.size() - NewVRegSizeBefore))
       return PhysReg;
   }
@@ -2795,7 +2794,6 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   if (VerifyEnabled)
     MF->verify(this, "Before post optimization", &errs());
   postOptimization();
-  cleanupFailedVRegs();
   reportStats();
 
   releaseMemory();

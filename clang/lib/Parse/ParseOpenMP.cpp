@@ -2759,19 +2759,6 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       OpenMPClauseKind CKind = Tok.isAnnotation()
                                    ? OMPC_unknown
                                    : getOpenMPClauseKind(PP.getSpelling(Tok));
-      // Check if the clause is unrecognized.
-      if (getLangOpts().OpenMP < 52 &&
-          (CKind == OMPC_unknown || CKind == OMPC_otherwise)) {
-        Diag(Tok, diag::err_omp_unknown_clause)
-            << PP.getSpelling(Tok) << "metadirective";
-      }
-      if (getLangOpts().OpenMP >= 52 && CKind == OMPC_unknown) {
-        Diag(Tok, diag::err_omp_unknown_clause)
-            << PP.getSpelling(Tok) << "metadirective";
-      }
-      if (CKind == OMPC_default && getLangOpts().OpenMP >= 52) {
-        Diag(Tok, diag::warn_omp_default_deprecated);
-      }
       SourceLocation Loc = ConsumeToken();
 
       // Parse '('.
@@ -2796,13 +2783,6 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
           Diag(Tok, diag::err_omp_expected_colon) << "when clause";
           TPA.Commit();
           return Directive;
-        }
-      }
-      if (CKind == OMPC_otherwise) {
-        // Check for 'otherwise' keyword.
-        if (Tok.is(tok::identifier) &&
-            Tok.getIdentifierInfo()->getName() == "otherwise") {
-          ConsumeToken(); // Consume 'otherwise'
         }
       }
       // Skip Directive for now. We will parse directive in the second iteration

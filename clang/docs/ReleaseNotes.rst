@@ -271,6 +271,10 @@ clang-format
 - Adds ``BreakBeforeTemplateCloser`` option.
 - Adds ``BinPackLongBracedList`` option to override bin packing options in
   long (20 item or more) braced list initializer lists.
+- Add the C language instead of treating it like C++.
+- Allow specifying the language (C, C++, or Objective-C) for a ``.h`` file by
+  adding a special comment (e.g. ``// clang-format Language: ObjC``) near the
+  top of the file.
 
 libclang
 --------
@@ -283,10 +287,6 @@ Code Completion
 
 Static Analyzer
 ---------------
-
-- Clang currently support extending lifetime of object bound to
-  reference members of aggregates in CFG and ExprEngine, that are
-  created from default member initializer.
 
 New features
 ^^^^^^^^^^^^
