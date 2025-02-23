@@ -11,4 +11,4 @@
 #include "llvm-libc-types/stdfix-types.h" // int_hk_t
 #include "src/stdfix/bitshk.h"
 
-LIST_BITSFX_TESTS(short accum, int_hk_t, LIBC_NAMESPACE::bitshk);
+LIST_BITSFX_TESTS(hk, short accum, int_hk_t, LIBC_NAMESPACE::bitshk);

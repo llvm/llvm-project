@@ -11,4 +11,4 @@
 #include "llvm-libc-types/stdfix-types.h" // int_lr_t
 #include "src/stdfix/bitslr.h"
 
-LIST_BITSFX_TESTS(long fract, int_lr_t, LIBC_NAMESPACE::bitslr);
+LIST_BITSFX_TESTS(hk, long fract, int_lr_t, LIBC_NAMESPACE::bitslr);
