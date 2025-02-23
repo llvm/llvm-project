@@ -474,4 +474,32 @@ public:
   TEST_CONSTEXPR_CXX20 friend bool operator!=(safe_allocator x, safe_allocator y) { return !(x == y); }
 };
 
+template <std::size_t MaxSize, class T>
+struct tiny_size_allocator {
+  using value_type = T;
+  using size_type  = unsigned;
+
+  template <class U>
+  struct rebind {
+    using other = tiny_size_allocator<MaxSize, T>;
+  };
+
+  tiny_size_allocator() = default;
+
+  template <class U>
+  TEST_CONSTEXPR_CXX20 tiny_size_allocator(tiny_size_allocator<MaxSize, U>) {}
+
+  TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
+    assert(n <= MaxSize);
+    return std::allocator<T>().allocate(n);
+  }
+
+  TEST_CONSTEXPR_CXX20 void deallocate(T* ptr, std::size_t n) { std::allocator<T>().deallocate(ptr, n); }
+
+  TEST_CONSTEXPR_CXX20 size_type max_size() const { return MaxSize; }
+
+  friend bool operator==(tiny_size_allocator, tiny_size_allocator) { return true; }
+  friend bool operator!=(tiny_size_allocator, tiny_size_allocator) { return false; }
+};
+
 #endif // MIN_ALLOCATOR_H
