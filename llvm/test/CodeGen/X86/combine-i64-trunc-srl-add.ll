@@ -158,9 +158,9 @@ define i32 @test_trunc_and(i64 %x) {
 define i32 @test_trunc_or(i64 %x) {
 ; X64-LABEL: test_trunc_or:
 ; X64:       # %bb.0:
-; X64-NEXT:    movabsq $3940649673949184, %rax # imm = 0xE000000000000
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shrq $48, %rax
+; X64-NEXT:    orl $14, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %or = or i64 %x, 3940649673949184
@@ -172,9 +172,9 @@ define i32 @test_trunc_or(i64 %x) {
 define i32 @test_trunc_xor(i64 %x) {
 ; X64-LABEL: test_trunc_xor:
 ; X64:       # %bb.0:
-; X64-NEXT:    movabsq $3940649673949184, %rax # imm = 0xE000000000000
-; X64-NEXT:    xorq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shrq $48, %rax
+; X64-NEXT:    xorl $14, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %xor = xor i64 %x, 3940649673949184

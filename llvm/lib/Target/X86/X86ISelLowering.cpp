@@ -53733,36 +53733,42 @@ static SDValue combineLRINT_LLRINT(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(X86ISD::CVTP2SI, DL, VT, Src);
 }
 
-// Attempt to fold some (truncate (srl (add X, C1), C2)) patterns to
-// (add (truncate (srl X, C2)), C1'). C1' will be smaller than C1 so we are able
-// to avoid generating code with MOVABS and large constants in certain cases.
-static SDValue combinei64TruncSrlAdd(SDValue N, EVT VT, SelectionDAG &DAG,
-                                     const SDLoc &DL) {
+// Attempt to fold some (truncate (srl (binop X, C1), C2)) patterns to
+// (binop (truncate (srl X, C2)), C1'). C1' will be smaller than C1 so we are
+// able to avoid generating code with MOVABS and large constants in certain
+// cases.
+static SDValue combinei64TruncSrlBinop(SDValue N, EVT VT, SelectionDAG &DAG,
+                                       const SDLoc &DL) {
   using namespace llvm::SDPatternMatch;
 
-  SDValue AddLhs;
-  APInt AddConst, SrlConst;
+  SDValue BinopLhs;
+  APInt BinopConst, SrlConst;
   if (VT != MVT::i32 ||
-      !sd_match(N, m_AllOf(m_SpecificVT(MVT::i64),
-                           m_Srl(m_OneUse(m_Add(m_Value(AddLhs),
-                                                m_ConstInt(AddConst))),
-                                 m_ConstInt(SrlConst)))))
+      !sd_match(
+          N,
+          m_AllOf(m_SpecificVT(MVT::i64),
+                  m_Srl(m_OneUse(m_AnyOf(
+                            m_Add(m_Value(BinopLhs), m_ConstInt(BinopConst)),
+                            m_Or(m_Value(BinopLhs), m_ConstInt(BinopConst)),
+                            m_Xor(m_Value(BinopLhs), m_ConstInt(BinopConst)))),
+                        m_ConstInt(SrlConst)))))
     return SDValue();
 
-  if (SrlConst.ule(32) || AddConst.countr_zero() < SrlConst.getZExtValue())
+  if (SrlConst.ule(32) || BinopConst.countr_zero() < SrlConst.getZExtValue())
     return SDValue();
 
-  SDValue AddLHSSrl =
-      DAG.getNode(ISD::SRL, DL, MVT::i64, AddLhs, N.getOperand(1));
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
+  SDValue BinopLHSSrl =
+      DAG.getNode(ISD::SRL, DL, MVT::i64, BinopLhs, N.getOperand(1));
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, BinopLHSSrl);
 
-  APInt NewAddConstVal = AddConst.lshr(SrlConst).trunc(VT.getSizeInBits());
-  SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
-  SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
+  APInt NewBinopConstVal = BinopConst.lshr(SrlConst).trunc(VT.getSizeInBits());
+  SDValue NewBinopConst = DAG.getConstant(NewBinopConstVal, DL, VT);
+  SDValue NewBinopNode =
+      DAG.getNode(N.getOperand(0).getOpcode(), DL, VT, Trunc, NewBinopConst);
 
   EVT CleanUpVT =
       EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConst.getZExtValue());
-  return DAG.getZeroExtendInReg(NewAddNode, DL, CleanUpVT);
+  return DAG.getZeroExtendInReg(NewBinopNode, DL, CleanUpVT);
 }
 
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify
@@ -53810,11 +53816,9 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   if (!Src.hasOneUse())
     return SDValue();
 
-  if (SDValue R = combinei64TruncSrlAdd(Src, VT, DAG, DL))
+  if (SDValue R = combinei64TruncSrlBinop(Src, VT, DAG, DL))
     return R;
 
-  // Only support vector truncation for now.
-  // TODO: i64 scalar math would benefit as well.
   if (!VT.isVector())
     return SDValue();
 
