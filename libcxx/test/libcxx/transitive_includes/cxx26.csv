@@ -1114,6 +1114,7 @@ unordered_set tuple
 unordered_set version
 utility compare
 utility cstdint
+utility cstring
 utility initializer_list
 utility limits
 utility version
