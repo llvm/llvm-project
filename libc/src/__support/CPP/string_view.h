@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRING_VIEW_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_VIEW_H
 
+#include "limits.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
@@ -61,7 +62,7 @@ public:
 
   // special value equal to the maximum value representable by the type
   // size_type.
-  LIBC_INLINE_VAR static constexpr size_t npos = SIZE_MAX;
+  LIBC_INLINE_VAR static constexpr size_t npos = cpp::numeric_limits<size_t>::max();
 
   LIBC_INLINE constexpr string_view() : Data(nullptr), Len(0) {}
 
