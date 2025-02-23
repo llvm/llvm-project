@@ -580,19 +580,18 @@ void handleConstMemberCall(const CallExpr *CE,
     return;
   }
 
-  // if const method returns a reference
-  if (CE->isGLValue()) {
+  // Cache if the const method returns a reference
+  if (RecordLoc != nullptr && CE->isGLValue()) {
     const FunctionDecl *DirectCallee = CE->getDirectCallee();
     if (DirectCallee == nullptr)
       return;
 
-    QualType DeclaredReturnType = DirectCallee->getReturnType();
-    
-    if (DeclaredReturnType.getTypePtr()->isReferenceType()) {
+    bool isReference = DirectCallee->getReturnType().getTypePtr()->isReferenceType();
+    if (isReference) {
       StorageLocation &Loc =
         State.Lattice.getOrCreateConstMethodReturnStorageLocation(
             *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
-              // No-op
+               // no-op
             });
       
       State.Env.setStorageLocation(*CE, Loc);

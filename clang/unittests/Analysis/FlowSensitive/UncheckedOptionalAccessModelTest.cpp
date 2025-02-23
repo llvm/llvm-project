@@ -3918,9 +3918,129 @@ TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaConstRefAccesso
   )cc");
 }
 
-// todo: non const accessor
-// todo: different accessor in between
-// todo: const copy
+TEST_P(UncheckedOptionalAccessTest, ConstRefToOptionalSavedAsTemporaryVariable) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    class A {
+      public:
+        const $ns::$optional<int>& get() const { return x; }
+      
+      private:
+        $ns::$optional<int> x;
+    };
+
+    class B {
+      public:
+        const A& getA() const { return a; }
+    
+      private:
+        A a;
+    };
+
+    void target(B& b) {
+      const auto& opt = b.getA().get();
+      if (opt.has_value()) {
+        opt.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaConstValueAccessorToHoldingObject) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    class A {
+      public:
+        const $ns::$optional<int>& get() const { return x; }
+      
+      private:
+        $ns::$optional<int> x;
+    };
+
+    class B {
+      public:
+        const A copyA() const { return a; }
+    
+      private:
+        A a;
+    };
+
+    void target(B& b) {
+      if (b.copyA().get().has_value()) {
+        b.copyA().get().value(); // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaNonConstRefAccessorToHoldingObject) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    class A {
+      public:
+        const $ns::$optional<int>& get() const { return x; }
+      
+      private:
+        $ns::$optional<int> x;
+    };
+
+    class B {
+      public:
+        A& getA() { return a; }
+    
+      private:
+        A a;
+    };
+
+    void target(B& b) {
+      if (b.getA().get().has_value()) {
+        b.getA().get().value(); // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstRefAccessorToOptionalViaNonConstRefAccessorToHoldingObjectWithModAfterCheck) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    class A {
+      public:
+        const $ns::$optional<int>& get() const { return x; }
+      private:
+        $ns::$optional<int> x;
+    };
+
+    class B {
+      public:
+        const A& getA() const { return a; }
+
+        A& getA() { return a; }
+
+        void clear() { a = A{}; };
+
+      private:
+        A a;
+    };
+
+    void target(B& b) {
+      // changing field A via non-const getter after const getter check
+      if (b.getA().get().has_value()) {
+        b.getA() = A{};
+        b.getA().get().value(); // [[unsafe]]
+      }
+
+      // calling non-const method which might change field A
+      if (b.getA().get().has_value()) {
+        b.clear();
+        b.getA().get().value(); // [[unsafe]]
+      }
+    }
+  )cc");
+}
 
 // FIXME: Add support for:
 // - constructors (copy, move)
