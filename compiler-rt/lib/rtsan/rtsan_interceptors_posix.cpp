@@ -285,6 +285,45 @@ INTERCEPTOR(int, unlinkat, int fd, const char *pathname, int flag) {
   return REAL(unlinkat)(fd, pathname, flag);
 }
 
+INTERCEPTOR(int, stat, const char *pathname, struct stat *s) {
+  __rtsan_notify_intercepted_call("stat");
+  return REAL(stat)(pathname, s);
+}
+
+INTERCEPTOR(int, lstat, const char *pathname, struct stat *s) {
+  __rtsan_notify_intercepted_call("lstat");
+  return REAL(lstat)(pathname, s);
+}
+
+INTERCEPTOR(int, fstat, int fd, struct stat *s) {
+  __rtsan_notify_intercepted_call("fstat");
+  return REAL(fstat)(fd, s);
+}
+
+#if !SANITIZER_APPLE // deprecated for darwin
+INTERCEPTOR(int, stat64, const char *pathname, struct stat64 *s) {
+  __rtsan_notify_intercepted_call("stat64");
+  return REAL(stat64)(pathname, s);
+}
+
+INTERCEPTOR(int, lstat64, const char *pathname, struct stat64 *s) {
+  __rtsan_notify_intercepted_call("lstat64");
+  return REAL(lstat64)(pathname, s);
+}
+
+INTERCEPTOR(int, fstat64, int fd, struct stat64 *s) {
+  __rtsan_notify_intercepted_call("fstat64");
+  return REAL(fstat64)(fd, s);
+}
+#define RTSAN_MAYBE_INTERCEPT_STAT64 INTERCEPT_FUNCTION(stat64)
+#define RTSAN_MAYBE_INTERCEPT_LSTAT64 INTERCEPT_FUNCTION(lstat64)
+#define RTSAN_MAYBE_INTERCEPT_FSTAT64 INTERCEPT_FUNCTION(fstat64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_STAT64
+#define RTSAN_MAYBE_INTERCEPT_LSTAT64
+#define RTSAN_MAYBE_INTERCEPT_FSTAT64
+#endif
+
 // Streams
 
 INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
@@ -1437,6 +1476,12 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_READLINKAT;
   INTERCEPT_FUNCTION(unlink);
   INTERCEPT_FUNCTION(unlinkat);
+  INTERCEPT_FUNCTION(stat);
+  INTERCEPT_FUNCTION(lstat);
+  INTERCEPT_FUNCTION(fstat);
+  RTSAN_MAYBE_INTERCEPT_STAT64;
+  RTSAN_MAYBE_INTERCEPT_LSTAT64;
+  RTSAN_MAYBE_INTERCEPT_FSTAT64;
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
   RTSAN_MAYBE_INTERCEPT_FREOPEN64;
