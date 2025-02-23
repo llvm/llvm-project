@@ -686,7 +686,7 @@ public:
   }
 
   LIBC_INLINE constexpr void set_biased_exponent(StorageType biased) {
-    UP::set_biased_exponent(BiasedExponent((int32_t)biased));
+    UP::set_biased_exponent(BiasedExponent(static_cast<uint32_t>(biased)));
   }
 
   LIBC_INLINE constexpr int get_exponent() const {
