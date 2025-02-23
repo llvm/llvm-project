@@ -310,6 +310,22 @@ public:
     return false;
   }
 
+  bool isLegalForHistogramVectorization(const LoadInst *LI,
+                                        const StoreInst *SI) const {
+    // TODO: Currently, when a target wants to use histogram intrinsics, it adds
+    // the
+    // `-enable-histogram-loop-vectorization` flag to Clang.
+    //
+    // Once the histogram option is enabled by default, we will need to update
+    // the default hook to return `false`, and each target that wants automatic
+    // histogram vectorization will need to override it to return `true`.
+    //
+    // Additionally, we will need to deprecate the
+    // `-enable-histogram-loop-vectorization` flag, as it will no longer be
+    // necessary.
+    return true;
+  }
+
   bool forceScalarizeMaskedGather(VectorType *DataType, Align Alignment) const {
     return false;
   }

@@ -492,6 +492,11 @@ bool TargetTransformInfo::isLegalMaskedGather(Type *DataType,
   return TTIImpl->isLegalMaskedGather(DataType, Alignment);
 }
 
+bool TargetTransformInfo::isLegalForHistogramVectorization(
+    const LoadInst *LI, const StoreInst *SI) const {
+  return TTIImpl->isLegalForHistogramVectorization(LI, SI);
+}
+
 bool TargetTransformInfo::isLegalAltInstr(
     VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
     const SmallBitVector &OpcodeMask) const {

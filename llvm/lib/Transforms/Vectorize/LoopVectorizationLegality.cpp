@@ -1193,6 +1193,9 @@ bool LoopVectorizationLegality::canVectorizeIndirectUnsafeDependences() {
   if (!LI || !SI)
     return false;
 
+  if (!TTI->isLegalForHistogramVectorization(LI, SI))
+    return false;
+
   LLVM_DEBUG(dbgs() << "LV: Checking for a histogram on: " << *SI << "\n");
   return findHistogram(LI, SI, TheLoop, LAI->getPSE(), Histograms);
 }
