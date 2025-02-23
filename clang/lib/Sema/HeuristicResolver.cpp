@@ -44,6 +44,9 @@ public:
       const DependentTemplateSpecializationType *DTST);
   QualType resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS);
   QualType getPointeeType(QualType T);
+  std::vector<const NamedDecl *>
+  lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
+                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
 
 private:
   ASTContext &Ctx;
@@ -83,16 +86,6 @@ private:
   // during simplification, and the operation fails if no pointer type is found.
   QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
 
-  // This is a reimplementation of CXXRecordDecl::lookupDependentName()
-  // so that the implementation can call into other HeuristicResolver helpers.
-  // FIXME: Once HeuristicResolver is upstreamed to the clang libraries
-  // (https://github.com/clangd/clangd/discussions/1662),
-  // CXXRecordDecl::lookupDepenedentName() can be removed, and its call sites
-  // can be modified to benefit from the more comprehensive heuristics offered
-  // by HeuristicResolver instead.
-  std::vector<const NamedDecl *>
-  lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
-                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
   bool findOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
                                             CXXBasePath &Path,
                                             DeclarationName Name);
@@ -538,6 +531,11 @@ HeuristicResolver::resolveTemplateSpecializationType(
 QualType HeuristicResolver::resolveNestedNameSpecifierToType(
     const NestedNameSpecifier *NNS) const {
   return HeuristicResolverImpl(Ctx).resolveNestedNameSpecifierToType(NNS);
+}
+std::vector<const NamedDecl *> HeuristicResolver::lookupDependentName(
+    CXXRecordDecl *RD, DeclarationName Name,
+    llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
+  return HeuristicResolverImpl(Ctx).lookupDependentName(RD, Name, Filter);
 }
 const QualType HeuristicResolver::getPointeeType(QualType T) const {
   return HeuristicResolverImpl(Ctx).getPointeeType(T);
