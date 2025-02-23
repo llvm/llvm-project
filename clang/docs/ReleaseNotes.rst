@@ -71,6 +71,8 @@ C++ Language Changes
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P1061R10 Structured Bindings can introduce a Pack <https://wg21.link/P1061R10>`_.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -142,6 +144,11 @@ Improvements to Clang's diagnostics
 - Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
 - A statement attribute applied to a ``case`` label no longer suppresses
   'bypassing variable initialization' diagnostics (#84072).
+- The ``-Wunsafe-buffer-usage`` warning has been updated to warn
+  about unsafe libc function calls.  Those new warnings are emitted
+  under the subgroup ``-Wunsafe-buffer-usage-in-libc-call``.
+- Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
+  ``-Wno-error=parentheses``.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -168,11 +175,15 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+- Clang now prints the correct instantiation context for diagnostics suppressed
+  by template argument deduction.
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
+- Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -264,13 +275,16 @@ clang-format
 libclang
 --------
 
+- Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
+  increased memory allocation.
+
 Code Completion
 ---------------
 
 Static Analyzer
 ---------------
 
-- Clang currently support extending lifetime of object bound to 
+- Clang currently support extending lifetime of object bound to
   reference members of aggregates in CFG and ExprEngine, that are
   created from default member initializer.
 

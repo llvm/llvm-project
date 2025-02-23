@@ -4771,6 +4771,12 @@ def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool(...)";
 }
 
+def HLSLAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_and"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_any"];
   let Attributes = [NoThrow, Const];

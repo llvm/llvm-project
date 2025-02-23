@@ -741,6 +741,7 @@ sizeof...($TemplateParameter[[Elements]]);
           $Class[[Foo]].$Field_static[[sharedInstance]].$Field[[someProperty]] $Operator[[=]] 1;
           self.$Field[[someProperty]] $Operator[[=]] self.$Field[[someProperty]] $Operator[[+]] self.$Field[[otherMethod]] $Operator[[+]] 1;
           self->$Field[[_someProperty]] $Operator[[=]] $Field[[_someProperty]] $Operator[[+]] 1;
+          return 0;
         }
         @end
       )cpp",

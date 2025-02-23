@@ -23,12 +23,16 @@
 // Variadic functions may be implemented as templates with a parameter pack instead
 // of C-style variadic functions.
 //
+// Most of these functions are only required when building the library. Functions that are also
+// required when merely using the headers are marked as such below.
+//
 // TODO: __localeconv shouldn't take a reference, but the Windows implementation doesn't allow copying __locale_t
+// TODO: Eliminate the need for any of these functions from the headers.
 //
 // Locale management
 // -----------------
 // namespace __locale {
-//  using __locale_t = implementation-defined;
+//  using __locale_t = implementation-defined;  // required by the headers
 //  using __lconv_t  = implementation-defined;
 //  __locale_t  __newlocale(int, const char*, __locale_t);
 //  void        __freelocale(__locale_t);
@@ -36,6 +40,7 @@
 //  __lconv_t*  __localeconv(__locale_t&);
 // }
 //
+// // required by the headers
 // #define _LIBCPP_COLLATE_MASK   /* implementation-defined */
 // #define _LIBCPP_CTYPE_MASK     /* implementation-defined */
 // #define _LIBCPP_MONETARY_MASK  /* implementation-defined */
@@ -48,6 +53,7 @@
 // Strtonum functions
 // ------------------
 // namespace __locale {
+//  // required by the headers
 //  float               __strtof(const char*, char**, __locale_t);
 //  double              __strtod(const char*, char**, __locale_t);
 //  long double         __strtold(const char*, char**, __locale_t);
@@ -60,8 +66,8 @@
 // namespace __locale {
 //  int     __islower(int, __locale_t);
 //  int     __isupper(int, __locale_t);
-//  int     __isdigit(int, __locale_t);
-//  int     __isxdigit(int, __locale_t);
+//  int     __isdigit(int, __locale_t);  // required by the headers
+//  int     __isxdigit(int, __locale_t); // required by the headers
 //  int     __toupper(int, __locale_t);
 //  int     __tolower(int, __locale_t);
 //  int     __strcoll(const char*, const char*, __locale_t);
@@ -99,9 +105,10 @@
 //  int     __mbtowc(wchar_t*, const char*, size_t, __locale_t);
 //  size_t  __mbrlen(const char*, size_t, mbstate_t*, __locale_t);
 //  size_t  __mbsrtowcs(wchar_t*, const char**, size_t, mbstate_t*, __locale_t);
-//  int     __snprintf(char*, size_t, __locale_t, const char*, ...);
-//  int     __asprintf(char**, __locale_t, const char*, ...);
-//  int     __sscanf(const char*, __locale_t, const char*, ...);
+//
+//  int     __snprintf(char*, size_t, __locale_t, const char*, ...); // required by the headers
+//  int     __asprintf(char**, __locale_t, const char*, ...);        // required by the headers
+//  int     __sscanf(const char*, __locale_t, const char*, ...);     // required by the headers
 // }
 
 #if defined(__APPLE__)
@@ -143,8 +150,19 @@ namespace __locale {
 //
 // Locale management
 //
+#  define _LIBCPP_COLLATE_MASK LC_COLLATE_MASK
+#  define _LIBCPP_CTYPE_MASK LC_CTYPE_MASK
+#  define _LIBCPP_MONETARY_MASK LC_MONETARY_MASK
+#  define _LIBCPP_NUMERIC_MASK LC_NUMERIC_MASK
+#  define _LIBCPP_TIME_MASK LC_TIME_MASK
+#  define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
+#  define _LIBCPP_ALL_MASK LC_ALL_MASK
+#  define _LIBCPP_LC_ALL LC_ALL
+
 using __locale_t _LIBCPP_NODEBUG = locale_t;
-using __lconv_t _LIBCPP_NODEBUG  = lconv;
+
+#  if defined(_LIBCPP_BUILDING_LIBRARY)
+using __lconv_t _LIBCPP_NODEBUG = lconv;
 
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __name, __locale_t __loc) {
   return newlocale(__category_mask, __name, __loc);
@@ -157,15 +175,7 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, char const* __loc
 inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { freelocale(__loc); }
 
 inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) { return __libcpp_localeconv_l(__loc); }
-
-#  define _LIBCPP_COLLATE_MASK LC_COLLATE_MASK
-#  define _LIBCPP_CTYPE_MASK LC_CTYPE_MASK
-#  define _LIBCPP_MONETARY_MASK LC_MONETARY_MASK
-#  define _LIBCPP_NUMERIC_MASK LC_NUMERIC_MASK
-#  define _LIBCPP_TIME_MASK LC_TIME_MASK
-#  define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
-#  define _LIBCPP_ALL_MASK LC_ALL_MASK
-#  define _LIBCPP_LC_ALL LC_ALL
+#  endif // _LIBCPP_BUILDING_LIBRARY
 
 //
 // Strtonum functions
@@ -194,10 +204,15 @@ __strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
 //
 // Character manipulation functions
 //
+#  if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __islower(int __ch, __locale_t __loc) { return islower_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI int __isupper(int __ch, __locale_t __loc) { return isupper_l(__ch, __loc); }
+#  endif
+
 inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __ch, __locale_t __loc) { return isdigit_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __ch, __locale_t __loc) { return isxdigit_l(__ch, __loc); }
+
+#  if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __strcoll(const char* __s1, const char* __s2, __locale_t __loc) {
   return strcoll_l(__s1, __s2, __loc);
 }
@@ -207,7 +222,7 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __strxfrm(char* __dest, const char* __src, s
 inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __ch, __locale_t __loc) { return toupper_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI int __tolower(int __ch, __locale_t __loc) { return tolower_l(__ch, __loc); }
 
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI int __wcscoll(const wchar_t* __s1, const wchar_t* __s2, __locale_t __loc) {
   return wcscoll_l(__s1, __s2, __loc);
 }
@@ -229,7 +244,7 @@ inline _LIBCPP_HIDE_FROM_ABI int __iswpunct(wint_t __ch, __locale_t __loc) { ret
 inline _LIBCPP_HIDE_FROM_ABI int __iswxdigit(wint_t __ch, __locale_t __loc) { return iswxdigit_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI wint_t __towupper(wint_t __ch, __locale_t __loc) { return towupper_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI wint_t __towlower(wint_t __ch, __locale_t __loc) { return towlower_l(__ch, __loc); }
-#  endif
+#    endif
 
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __strftime(char* __s, size_t __max, const char* __format, const tm* __tm, __locale_t __loc) {
@@ -242,7 +257,7 @@ __strftime(char* __s, size_t __max, const char* __format, const tm* __tm, __loca
 inline _LIBCPP_HIDE_FROM_ABI decltype(__libcpp_mb_cur_max_l(__locale_t())) __mb_len_max(__locale_t __loc) {
   return __libcpp_mb_cur_max_l(__loc);
 }
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI wint_t __btowc(int __ch, __locale_t __loc) { return __libcpp_btowc_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI int __wctob(wint_t __ch, __locale_t __loc) { return __libcpp_wctob_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI size_t
@@ -270,7 +285,8 @@ inline _LIBCPP_HIDE_FROM_ABI size_t
 __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, __locale_t __loc) {
   return __libcpp_mbsrtowcs_l(__dest, __src, __len, __ps, __loc);
 }
-#  endif
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#  endif   // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")

@@ -907,6 +907,12 @@ namespace IncompleteArray {
     return c;
   }
   static_assert(test4() == 12);
+
+
+  constexpr char *f(int n) {
+    return new char[n]();
+  }
+  static_assert((delete[] f(2), true));
 }
 
 namespace NonConstexprArrayCtor {
@@ -920,6 +926,20 @@ namespace NonConstexprArrayCtor {
   }
   static_assert(test()); // both-error {{not an integral constant expression}} \
                          // both-note {{in call to}}
+}
+
+namespace ArrayBaseCast {
+  struct A {};
+  struct B : A {};
+  constexpr bool test() {
+    B *b = new B[2];
+
+    A* a = b;
+
+    delete[] b;
+    return true;
+  }
+  static_assert(test());
 }
 
 #else

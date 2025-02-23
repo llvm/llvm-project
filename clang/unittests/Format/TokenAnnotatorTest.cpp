@@ -3250,6 +3250,10 @@ TEST_F(TokenAnnotatorTest, StartOfName) {
   EXPECT_TOKEN(Tokens[0], tok::at, TT_ObjCDecl);
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_StartOfName);
 
+  Tokens = annotate("class FOO BAR C {};");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown); // Not StartOfName
+
   auto Style = getLLVMStyle();
   Style.StatementAttributeLikeMacros.push_back("emit");
   Tokens = annotate("emit foo = 0;", Style);

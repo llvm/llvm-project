@@ -2311,7 +2311,7 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   }
 
   if (getLexer().is(AsmToken::EndOfStatement) && State == VTypeState_Done) {
-    RISCVII::VLMUL VLMUL = RISCVVType::encodeLMUL(Lmul, Fractional);
+    RISCVVType::VLMUL VLMUL = RISCVVType::encodeLMUL(Lmul, Fractional);
     if (Fractional) {
       unsigned ELEN = STI->hasFeature(RISCV::FeatureStdExtZve64x) ? 64 : 32;
       unsigned MaxSEW = ELEN / Lmul;

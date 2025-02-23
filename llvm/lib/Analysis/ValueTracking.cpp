@@ -1984,7 +1984,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         const ConstantRange Range = getVScaleRange(II->getFunction(), BitWidth);
         uint64_t SEW = RISCVVType::decodeVSEW(
             cast<ConstantInt>(II->getArgOperand(HasAVL))->getZExtValue());
-        RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(
+        RISCVVType::VLMUL VLMUL = static_cast<RISCVVType::VLMUL>(
             cast<ConstantInt>(II->getArgOperand(1 + HasAVL))->getZExtValue());
         uint64_t MaxVLEN =
             Range.getUnsignedMax().getZExtValue() * RISCV::RVVBitsPerBlock;
@@ -8191,14 +8191,6 @@ static bool handleGuaranteedNonPoisonOps(const Instruction *I,
   default:
     return false;
   }
-}
-
-void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
-                                     SmallVectorImpl<const Value *> &Operands) {
-  handleGuaranteedNonPoisonOps(I, [&](const Value *V) {
-    Operands.push_back(V);
-    return false;
-  });
 }
 
 bool llvm::mustTriggerUB(const Instruction *I,

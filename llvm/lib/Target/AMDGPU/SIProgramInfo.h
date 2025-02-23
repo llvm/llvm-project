@@ -19,6 +19,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -29,6 +30,8 @@ class MachineFunction;
 
 /// Track resource usage for kernels / entry functions.
 struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
+  std::optional<uint64_t> CodeSizeInBytes;
+
   // Fields set in PGM_RSRC1 pm4 packet.
   const MCExpr *VGPRBlocks = nullptr;
   const MCExpr *SGPRBlocks = nullptr;
@@ -96,6 +99,9 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
   // happens in reset together with (duplicated) value re-set for the
   // non-MCExpr members.
   void reset(const MachineFunction &MF);
+
+  // Get function code size and cache the value.
+  uint64_t getFunctionCodeSize(const MachineFunction &MF);
 
   /// Compute the value of the ComputePGMRsrc1 register.
   const MCExpr *getComputePGMRSrc1(const GCNSubtarget &ST,

@@ -765,9 +765,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 }
 
 static unsigned isM1OrSmaller(MVT VT) {
-  RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-  return (LMUL == RISCVII::VLMUL::LMUL_F8 || LMUL == RISCVII::VLMUL::LMUL_F4 ||
-          LMUL == RISCVII::VLMUL::LMUL_F2 || LMUL == RISCVII::VLMUL::LMUL_1);
+  RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+  return (LMUL == RISCVVType::VLMUL::LMUL_F8 ||
+          LMUL == RISCVVType::VLMUL::LMUL_F4 ||
+          LMUL == RISCVVType::VLMUL::LMUL_F2 ||
+          LMUL == RISCVVType::VLMUL::LMUL_1);
 }
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
