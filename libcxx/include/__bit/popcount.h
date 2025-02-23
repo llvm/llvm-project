@@ -50,7 +50,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __popcount(_Tp __t) _NOEXCEPT {
     return std::__libcpp_popcount(static_cast<unsigned long long>(__t));
   } else {
 #if _LIBCPP_STD_VER == 11
-    // A recursive constexpr implementation for C++11
     return __t != 0 ? std::__libcpp_popcount(static_cast<unsigned long long>(__t)) +
                           std::__popcount<_Tp>(__t >> numeric_limits<unsigned long long>::digits)
                     : 0;
@@ -69,7 +68,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __popcount(_Tp __t) _NOEXCEPT {
 
 template <__libcpp_unsigned_integer _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int popcount(_Tp __t) noexcept {
-#  if __has_builtin(__builtin_popcountg)
+#  if __has_builtin(__builtin_popcountg) // TODO (LLVM 21): This can be dropped once we only support Clang >= 19.
   return __builtin_popcountg(__t);
 #  else
   return std::__popcount(__t);

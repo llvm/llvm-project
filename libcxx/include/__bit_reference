@@ -69,7 +69,6 @@ struct __size_difference_type_traits<_Cp, __void_t<typename _Cp::difference_type
   using size_type       = typename _Cp::size_type;
 };
 
-<<<<<<< HEAD
 // The `__x_mask` functions are designed to work exclusively with any unsigned `_StorageType`s, including small
 // integral types such as unsigned char/short, `uint8_t`, and `uint16_t`. To prevent undefined behavior or
 // ambiguities due to integral promotions for the small integral types, all intermediate bitwise operations are
@@ -89,18 +88,6 @@ template <class _StorageType>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __middle_mask(unsigned __clz, unsigned __ctz) {
   static_assert(is_unsigned<_StorageType>::value, "__middle_mask only works with unsigned types");
   return (static_cast<_StorageType>(~static_cast<_StorageType>(0)) << __ctz) &
-=======
-template <class _StorageType>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __trailing_mask(unsigned __clz) {
-  static_assert(is_unsigned<_StorageType>::value, "__trailing_mask only works with unsigned types");
-  return static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) >> __clz);
-}
-
-template <class _StorageType>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __middle_mask(unsigned __clz, unsigned __ctz) {
-  static_assert(is_unsigned<_StorageType>::value, "__middle_mask only works with unsigned types");
-  return static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) << __ctz) &
->>>>>>> fc7a2b61605c (Fix ambiguous call in ranges::count & std::count for vector<bool>::iterator)
          std::__trailing_mask<_StorageType>(__clz);
 }
 
