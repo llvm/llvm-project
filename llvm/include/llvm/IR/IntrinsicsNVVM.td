@@ -55,6 +55,14 @@ def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;  // (tensor memory)ptr
 // MISC
 //
 
+// Helper class that concatenates list elements with
+// a given separator 'sep' and returns the result.
+// Handles empty strings.
+class StrJoin<string sep, list<string> str_list> {
+  string ret = !foldl("", str_list, a, b,
+               !if(!eq(a, ""), b, !if(!eq(b, ""), a, !strconcat(a, sep, b))));
+}
+
 // Helper class that represents a 'fragment' of an NVPTX *MMA instruction.
 // Geom: m<M>n<N>k<K>. E.g. m8n32k16
 // Frag: [a|b|c|d] ([x1|x2|x4] for ldmatrix)
@@ -5140,6 +5148,11 @@ foreach cta_group = ["cg1", "cg2"] in {
     [llvm_shared_ptr_ty, llvm_i16_ty], // mbar_ptr, cta_mask
     [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
      NoCapture<ArgIndex<0>>]>;
+
+  def int_nvvm_tcgen05_shift_down_ # cta_group : Intrinsic<[],
+    [llvm_tmem_ptr_ty],   // tmem_addr
+    [IntrConvergent, IntrArgMemOnly,
+     NoCapture<ArgIndex<0>>]>;
 }
 
 // Tcgen05 wait_ld/st intrinsics
@@ -5153,5 +5166,24 @@ def int_nvvm_tcgen05_fence_before_thread_sync : Intrinsic<[], [],
   [IntrNoMem, IntrHasSideEffects]>;
 def int_nvvm_tcgen05_fence_after_thread_sync : Intrinsic<[], [],
   [IntrNoMem, IntrHasSideEffects]>;
+
+// Tcgen05 cp intrinsics
+foreach cta_group = ["cg1", "cg2"] in {
+  foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
+    foreach shape = ["128x256b", "4x256b", "128x128b",
+                     "64x128b_warpx2_02_13",
+                     "64x128b_warpx2_01_23",
+                     "32x128b_warpx4"] in {
+      defvar intr_suffix = StrJoin<"_", [shape, src_fmt, cta_group]>.ret;
+      defvar name_suffix = StrJoin<".", [shape, src_fmt, cta_group]>.ret;
+
+      def int_nvvm_tcgen05_cp_ # intr_suffix : Intrinsic<[],
+        [llvm_tmem_ptr_ty,   // tmem_addr
+         llvm_i64_ty],       // smem descriptor
+        [IntrConvergent, IntrInaccessibleMemOrArgMemOnly, NoCapture<ArgIndex<0>>],
+        "llvm.nvvm.tcgen05.cp." # name_suffix>;
+    }
+  }
+}
 
 } // let TargetPrefix = "nvvm"

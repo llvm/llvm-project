@@ -1048,6 +1048,7 @@ cc_library(
         ":frontend",
         ":lex",
         ":rewrite",
+        ":sema",
         ":serialization",
         "//llvm:Core",
         "//llvm:Support",

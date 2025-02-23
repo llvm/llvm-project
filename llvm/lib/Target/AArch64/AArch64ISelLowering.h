@@ -529,6 +529,9 @@ enum NodeType : unsigned {
   // SME ZA loads and stores
   SME_ZA_LDR,
   SME_ZA_STR,
+
+  // Compare-and-branch
+  CB,
 };
 
 } // end namespace AArch64ISD

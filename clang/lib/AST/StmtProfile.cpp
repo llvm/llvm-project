@@ -2287,10 +2287,6 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
     ID.AddInteger(0);
   }
 }
-void StmtProfiler::VisitResolvedUnexpandedPackExpr(
-    const ResolvedUnexpandedPackExpr *S) {
-  VisitExpr(S);
-}
 
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
   VisitExpr(E);

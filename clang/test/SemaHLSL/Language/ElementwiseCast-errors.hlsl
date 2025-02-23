@@ -4,7 +4,7 @@ export void cantCast() {
   int A[3] = {1,2,3};
   int B[4] = {1,2,3,4};
   B = (int[4])A;
-  // expected-error@-1 {{C-style cast from 'int *' to 'int[4]' is not allowed}}
+  // expected-error@-1 {{C-style cast from 'int[3]' to 'int[4]' is not allowed}}
 }
 
 struct S {

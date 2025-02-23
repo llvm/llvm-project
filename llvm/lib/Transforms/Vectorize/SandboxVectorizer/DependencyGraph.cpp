@@ -71,6 +71,12 @@ bool PredIterator::operator==(const PredIterator &Other) const {
   return OpIt == Other.OpIt && MemIt == Other.MemIt;
 }
 
+void DGNode::setSchedBundle(SchedBundle &SB) {
+  if (this->SB != nullptr)
+    this->SB->eraseFromBundle(this);
+  this->SB = &SB;
+}
+
 DGNode::~DGNode() {
   if (SB == nullptr)
     return;
@@ -483,19 +489,37 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
   if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
     // We don't maintain the DAG while reverting.
     return;
-  // Update the MemDGNode chain if this is a memory node.
-  if (auto *MemN = dyn_cast_or_null<MemDGNode>(getNodeOrNull(I))) {
+  auto *N = getNode(I);
+  if (N == nullptr)
+    // Early return if there is no DAG node for `I`.
+    return;
+  if (auto *MemN = dyn_cast<MemDGNode>(getNode(I))) {
+    // Update the MemDGNode chain if this is a memory node.
     auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false);
     auto *NextMemN = getMemDGNodeAfter(MemN, /*IncludingN=*/false);
     if (PrevMemN != nullptr)
       PrevMemN->NextMemN = NextMemN;
     if (NextMemN != nullptr)
       NextMemN->PrevMemN = PrevMemN;
+
+    // Drop the memory dependencies from both predecessors and successors.
+    while (!MemN->memPreds().empty()) {
+      auto *PredN = *MemN->memPreds().begin();
+      MemN->removeMemPred(PredN);
+    }
+    while (!MemN->memSuccs().empty()) {
+      auto *SuccN = *MemN->memSuccs().begin();
+      SuccN->removeMemPred(MemN);
+    }
+    // NOTE: The unscheduled succs for MemNodes get updated be setMemPred().
+  } else {
+    // If this is a non-mem node we only need to update UnscheduledSuccs.
+    if (!N->scheduled())
+      for (auto *PredN : N->preds(*this))
+        PredN->decrUnscheduledSuccs();
   }
-
+  // Finally erase the Node.
   InstrToNodeMap.erase(I);
-
-  // TODO: Update the dependencies.
 }
 
 void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {

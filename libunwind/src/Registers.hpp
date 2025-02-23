@@ -15,9 +15,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "cet_unwind.h"
 #include "config.h"
 #include "libunwind.h"
+#include "shadow_stack_unwind.h"
 
 namespace libunwind {
 
@@ -48,7 +48,7 @@ class _LIBUNWIND_HIDDEN Registers_x86;
 extern "C" void __libunwind_Registers_x86_jumpto(Registers_x86 *);
 
 #if defined(_LIBUNWIND_USE_CET)
-extern "C" void *__libunwind_cet_get_jump_target() {
+extern "C" void *__libunwind_shstk_get_jump_target() {
   return reinterpret_cast<void *>(&__libunwind_Registers_x86_jumpto);
 }
 #endif
@@ -268,7 +268,7 @@ class _LIBUNWIND_HIDDEN Registers_x86_64;
 extern "C" void __libunwind_Registers_x86_64_jumpto(Registers_x86_64 *);
 
 #if defined(_LIBUNWIND_USE_CET)
-extern "C" void *__libunwind_cet_get_jump_target() {
+extern "C" void *__libunwind_shstk_get_jump_target() {
   return reinterpret_cast<void *>(&__libunwind_Registers_x86_64_jumpto);
 }
 #endif
@@ -1817,7 +1817,7 @@ class _LIBUNWIND_HIDDEN Registers_arm64;
 extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
 
 #if defined(_LIBUNWIND_USE_GCS)
-extern "C" void *__libunwind_cet_get_jump_target() {
+extern "C" void *__libunwind_shstk_get_jump_target() {
   return reinterpret_cast<void *>(&__libunwind_Registers_arm64_jumpto);
 }
 #endif
