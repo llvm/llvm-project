@@ -149,9 +149,9 @@ struct StaticConvertToEmitC : public ConvertToEmitCPassInterface {
 // ConvertToEmitC
 //===----------------------------------------------------------------------===//
 
-/// This is a generic pass to convert to the EmitC dialect, it uses the
-/// `ConvertToE;otCPatternInterface` dialect interface to delegate to dialects
-/// the injection of conversion patterns.
+/// This is a generic pass to convert to the EmitC dialect. It uses the
+/// `ConvertToEmitCPatternInterface` dialect interface to delegate the injection
+/// of conversion patterns to dialects.
 class ConvertToEmitC : public impl::ConvertToEmitCBase<ConvertToEmitC> {
   std::shared_ptr<const ConvertToEmitCPassInterface> impl;
 
