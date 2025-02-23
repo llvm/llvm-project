@@ -54,12 +54,25 @@ struct Tester {
     assert(std::to_address(it) == std::to_address(fmt.end()) - offset);
 
     std::basic_string<CharT> result;
-    auto out = std::back_inserter(result);
+    auto out         = std::back_inserter(result);
     using FormatCtxT = std::basic_format_context<decltype(out), CharT>;
 
-    FormatCtxT format_ctx =
-        test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(text));
-    formatter.format(text, format_ctx);
+    if constexpr (std::is_same_v<CharT, char>) {
+      FormatCtxT format_ctx =
+          test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(text));
+      formatter.format(text, format_ctx);
+    }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    else {
+      Str buffer;
+      for (std::size_t i = 0; i != N; ++i) {
+        buffer[i] = static_cast<CharT>(text[i]);
+      }
+      FormatCtxT format_ctx =
+          test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(buffer));
+      formatter.format(buffer, format_ctx);
+    }
+#endif
     assert(result == expected);
   }
 
