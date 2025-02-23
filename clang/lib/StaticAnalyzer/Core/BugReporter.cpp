@@ -62,6 +62,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -286,6 +287,33 @@ private:
 
   const PathSensitiveBugReport *getBugReport() const { return R; }
 };
+
+std::string timeTraceName(const BugReportEquivClass &EQ) {
+  if (!llvm::timeTraceProfilerEnabled())
+    return "";
+  const auto &BugReports = EQ.getReports();
+  if (BugReports.empty())
+    return "Empty Equivalence Class";
+  const BugReport *R = BugReports.front().get();
+  const auto &BT = R->getBugType();
+  return ("Flushing EQC " + BT.getDescription()).str();
+}
+
+llvm::TimeTraceMetadata timeTraceMetadata(const BugReportEquivClass &EQ,
+                                          const SourceManager &SM) {
+  // Must be called only when constructing non-bogus TimeTraceScope
+  assert(llvm::timeTraceProfilerEnabled());
+
+  const auto &BugReports = EQ.getReports();
+  if (BugReports.empty())
+    return {};
+  const BugReport *R = BugReports.front().get();
+  const auto &BT = R->getBugType();
+  auto Loc = R->getLocation().asLocation();
+  std::string File = SM.getFilename(Loc).str();
+  return {BT.getCheckerName().str(), std::move(File),
+          static_cast<int>(Loc.getLineNumber())};
+}
 
 } // namespace
 
@@ -2892,6 +2920,7 @@ std::optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
 
     if (R->isValid()) {
       if (Reporter.getAnalyzerOptions().ShouldCrosscheckWithZ3) {
+        llvm::TimeTraceScope TCS{"Crosscheck with Z3"};
         // If crosscheck is enabled, remove all visitors, add the refutation
         // visitor and check again
         R->clearVisitors();
@@ -3119,7 +3148,10 @@ BugReport *PathSensitiveBugReporter::findReportInEquivalenceClass(
   return exampleReport;
 }
 
-void BugReporter::FlushReport(BugReportEquivClass& EQ) {
+void BugReporter::FlushReport(BugReportEquivClass &EQ) {
+  llvm::TimeTraceScope TCS{timeTraceName(EQ), [&]() {
+                             return timeTraceMetadata(EQ, getSourceManager());
+                           }};
   SmallVector<BugReport*, 10> bugReports;
   BugReport *report = findReportInEquivalenceClass(EQ, bugReports);
   if (!report)

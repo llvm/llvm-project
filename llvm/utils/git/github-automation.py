@@ -259,7 +259,7 @@ class CommitRequestGreeter:
         # Post greeter comment:
         comment = textwrap.dedent(
             f"""
-            @{self.issue.user.login} thank you for apply for commit access.  Please  review the project's [code review policy](https://llvm.org/docs/CodeReview.html).
+            @{self.issue.user.login} thank you for applying for commit access.  Please  review the project's [code review policy](https://llvm.org/docs/CodeReview.html).
         """
         )
         self.issue.create_comment(comment)
@@ -472,6 +472,98 @@ class ReleaseWorkflow:
             return m.group(1)
         return None
 
+    def update_issue_project_status(self) -> None:
+        """
+        A common workflow is to merge a PR and then use the /cherry-pick
+        command in a pull request comment to backport the change to the
+        release branch.  In this case, once the new PR for the backport has
+        been created, we want to mark the project status for the original PR
+        as Done.  This is becuase we can track progress now on the new PR
+        which is targeting the release branch.
+
+        """
+
+        pr = self.issue.as_pull_request()
+        if not pr:
+            return
+
+        if pr.state != "closed":
+            return
+
+        gh = github.Github(login_or_token=self.token)
+        query = """
+            query($node_id: ID!) {
+              node(id: $node_id) {
+                ... on PullRequest {
+                  url
+                  projectItems(first:100){
+                    nodes {
+                      id
+                      project {
+                        id
+                        number
+                        field(name: "Status") {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
+                              id
+                              name
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+        """
+        variables = {"node_id": pr.node_id}
+        res_header, res_data = gh._Github__requester.graphql_query(
+            query=query, variables=variables
+        )
+        print(res_header)
+
+        llvm_release_status_project_number = 3
+        for item in res_data["data"]["node"]["projectItems"]["nodes"]:
+            project = item["project"]
+            if project["number"] != llvm_release_status_project_number:
+                continue
+            status_field = project["field"]
+            for option in status_field["options"]:
+                if option["name"] != "Done":
+                    continue
+                variables = {
+                    "project": project["id"],
+                    "item": item["id"],
+                    "status_field": status_field["id"],
+                    "status_value": option["id"],
+                }
+
+                query = """
+                  mutation($project: ID!, $item: ID!, $status_field: ID!, $status_value: String!) {
+                    set_status:
+                    updateProjectV2ItemFieldValue(input: {
+                      projectId: $project
+                      itemId: $item
+                      fieldId: $status_field
+                      value: {
+                        singleSelectOptionId: $status_value
+                      }
+                    }) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }
+                """
+
+                res_header, res_data = gh._Github__requester.graphql_query(
+                    query=query, variables=variables
+                )
+                print(res_header)
+
     def print_release_branch(self) -> None:
         print(self.release_branch_for_issue)
 
@@ -664,6 +756,7 @@ class ReleaseWorkflow:
 
         self.issue_notify_pull_request(pull)
         self.issue_remove_cherry_pick_failed_label()
+        self.update_issue_project_status()
 
         # TODO(tstellar): Do you really want to always return True?
         return True

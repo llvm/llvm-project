@@ -31,6 +31,9 @@ static llvm::cl::opt<bool> forceByrefReduction(
     llvm::cl::desc("Pass all reduction arguments by reference"),
     llvm::cl::Hidden);
 
+using ReductionModifier =
+    Fortran::lower::omp::clause::Reduction::ReductionModifier;
+
 namespace Fortran {
 namespace lower {
 namespace omp {
@@ -518,18 +521,36 @@ static bool doReductionByRef(mlir::Value reductionVar) {
   return false;
 }
 
-void ReductionProcessor::addDeclareReduction(
+mlir::omp::ReductionModifier translateReductionModifier(ReductionModifier mod) {
+  switch (mod) {
+  case ReductionModifier::Default:
+    return mlir::omp::ReductionModifier::defaultmod;
+  case ReductionModifier::Inscan:
+    return mlir::omp::ReductionModifier::inscan;
+  case ReductionModifier::Task:
+    return mlir::omp::ReductionModifier::task;
+  }
+  return mlir::omp::ReductionModifier::defaultmod;
+}
+
+void ReductionProcessor::processReductionArguments(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
     const omp::clause::Reduction &reduction,
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols) {
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    mlir::omp::ReductionModifierAttr &reductionMod) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  if (std::get<std::optional<omp::clause::Reduction::ReductionModifier>>(
-          reduction.t))
-    TODO(currentLocation, "Reduction modifiers are not supported");
+  auto mod = std::get<std::optional<ReductionModifier>>(reduction.t);
+  if (mod.has_value()) {
+    if (mod.value() == ReductionModifier::Task)
+      TODO(currentLocation, "Reduction modifier `task` is not supported");
+    else
+      reductionMod = mlir::omp::ReductionModifierAttr::get(
+          firOpBuilder.getContext(), translateReductionModifier(mod.value()));
+  }
 
   mlir::omp::DeclareReductionOp decl;
   const auto &redOperatorList{

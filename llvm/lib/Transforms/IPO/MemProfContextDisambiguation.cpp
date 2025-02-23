@@ -89,6 +89,7 @@ STATISTIC(FoundProfiledCalleeMaxDepth,
           "Maximum depth of profiled callees found via tail calls");
 STATISTIC(FoundProfiledCalleeNonUniquelyCount,
           "Number of profiled callees found via multiple tail call chains");
+STATISTIC(DeferredBackedges, "Number of backedges with deferred cloning");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -98,6 +99,34 @@ static cl::opt<std::string> DotFilePathPrefix(
 static cl::opt<bool> ExportToDot("memprof-export-to-dot", cl::init(false),
                                  cl::Hidden,
                                  cl::desc("Export graph to dot files."));
+
+// How much of the graph to export to dot.
+enum DotScope {
+  All,     // The full CCG graph.
+  Alloc,   // Only contexts for the specified allocation.
+  Context, // Only the specified context.
+};
+
+static cl::opt<DotScope> DotGraphScope(
+    "memprof-dot-scope", cl::desc("Scope of graph to export to dot"),
+    cl::Hidden, cl::init(DotScope::All),
+    cl::values(
+        clEnumValN(DotScope::All, "all", "Export full callsite graph"),
+        clEnumValN(DotScope::Alloc, "alloc",
+                   "Export only nodes with contexts feeding given "
+                   "-memprof-dot-alloc-id"),
+        clEnumValN(DotScope::Context, "context",
+                   "Export only nodes with given -memprof-dot-context-id")));
+
+static cl::opt<unsigned>
+    AllocIdForDot("memprof-dot-alloc-id", cl::init(0), cl::Hidden,
+                  cl::desc("Id of alloc to export if -memprof-dot-scope=alloc "
+                           "or to highlight if -memprof-dot-scope=all"));
+
+static cl::opt<unsigned> ContextIdForDot(
+    "memprof-dot-context-id", cl::init(0), cl::Hidden,
+    cl::desc("Id of context to export if -memprof-dot-scope=context or to "
+             "highlight otherwise"));
 
 static cl::opt<bool>
     DumpCCG("memprof-dump-ccg", cl::init(false), cl::Hidden,
@@ -124,8 +153,12 @@ static cl::opt<unsigned>
 
 // Optionally enable cloning of callsites involved with recursive cycles
 static cl::opt<bool> AllowRecursiveCallsites(
-    "memprof-allow-recursive-callsites", cl::init(false), cl::Hidden,
+    "memprof-allow-recursive-callsites", cl::init(true), cl::Hidden,
     cl::desc("Allow cloning of callsites involved in recursive cycles"));
+
+static cl::opt<bool> CloneRecursiveContexts(
+    "memprof-clone-recursive-contexts", cl::init(true), cl::Hidden,
+    cl::desc("Allow cloning of contexts through recursive cycles"));
 
 // When disabled, try to detect and prevent cloning of recursive contexts.
 // This is only necessary until we support cloning through recursive cycles.
@@ -134,7 +167,7 @@ static cl::opt<bool> AllowRecursiveCallsites(
 // hinted bytes reporting a bit when -memprof-report-hinted-sizes is enabled.
 static cl::opt<bool> AllowRecursiveContexts(
     "memprof-allow-recursive-contexts", cl::init(true), cl::Hidden,
-    cl::desc("Allow cloning of contexts through recursive cycles"));
+    cl::desc("Allow cloning of contexts having recursive cycles"));
 
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
@@ -293,35 +326,40 @@ public:
     // TODO: Should this be a map (from Caller node) for more efficient lookup?
     std::vector<std::shared_ptr<ContextEdge>> CallerEdges;
 
-    // Get the list of edges from which we can compute allocation information
-    // such as the context ids and allocation type of this node.
-    const std::vector<std::shared_ptr<ContextEdge>> *
-    getEdgesWithAllocInfo() const {
-      // If node has any callees, compute from those, otherwise compute from
-      // callers (i.e. if this is the leaf allocation node).
-      if (!CalleeEdges.empty())
-        return &CalleeEdges;
-      if (!CallerEdges.empty()) {
-        // A node with caller edges but no callee edges must be the allocation
-        // node.
-        assert(IsAllocation);
-        return &CallerEdges;
-      }
-      return nullptr;
+    // Returns true if we need to look at the callee edges for determining the
+    // node context ids and allocation type.
+    bool useCallerEdgesForContextInfo() const {
+      // Typically if the callee edges are empty either the caller edges are
+      // also empty, or this is an allocation (leaf node). However, if we are
+      // allowing recursive callsites and contexts this will be violated for
+      // incompletely cloned recursive cycles.
+      assert(!CalleeEdges.empty() || CallerEdges.empty() || IsAllocation ||
+             (AllowRecursiveCallsites && AllowRecursiveContexts));
+      // When cloning for a recursive context, during cloning we might be in the
+      // midst of cloning for a recurrence and have moved context ids off of a
+      // caller edge onto the clone but not yet off of the incoming caller
+      // (back) edge. If we don't look at those we miss the fact that this node
+      // still has context ids of interest.
+      return IsAllocation || CloneRecursiveContexts;
     }
 
     // Compute the context ids for this node from the union of its edge context
     // ids.
     DenseSet<uint32_t> getContextIds() const {
-      DenseSet<uint32_t> ContextIds;
-      auto *Edges = getEdgesWithAllocInfo();
-      if (!Edges)
-        return {};
       unsigned Count = 0;
-      for (auto &Edge : *Edges)
+      // Compute the number of ids for reserve below. In general we only need to
+      // look at one set of edges, typically the callee edges, since other than
+      // allocations and in some cases during recursion cloning, all the context
+      // ids on the callers should also flow out via callee edges.
+      for (auto &Edge : CalleeEdges.empty() ? CallerEdges : CalleeEdges)
         Count += Edge->getContextIds().size();
+      DenseSet<uint32_t> ContextIds;
       ContextIds.reserve(Count);
-      for (auto &Edge : *Edges)
+      auto Edges = llvm::concat<const std::shared_ptr<ContextEdge>>(
+          CalleeEdges, useCallerEdgesForContextInfo()
+                           ? CallerEdges
+                           : std::vector<std::shared_ptr<ContextEdge>>());
+      for (const auto &Edge : Edges)
         ContextIds.insert(Edge->getContextIds().begin(),
                           Edge->getContextIds().end());
       return ContextIds;
@@ -330,13 +368,14 @@ public:
     // Compute the allocation type for this node from the OR of its edge
     // allocation types.
     uint8_t computeAllocType() const {
-      auto *Edges = getEdgesWithAllocInfo();
-      if (!Edges)
-        return (uint8_t)AllocationType::None;
       uint8_t BothTypes =
           (uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold;
       uint8_t AllocType = (uint8_t)AllocationType::None;
-      for (auto &Edge : *Edges) {
+      auto Edges = llvm::concat<const std::shared_ptr<ContextEdge>>(
+          CalleeEdges, useCallerEdgesForContextInfo()
+                           ? CallerEdges
+                           : std::vector<std::shared_ptr<ContextEdge>>());
+      for (const auto &Edge : Edges) {
         AllocType |= Edge->AllocTypes;
         // Bail early if alloc type reached both, no further refinement.
         if (AllocType == BothTypes)
@@ -348,10 +387,11 @@ public:
     // The context ids set for this node is empty if its edge context ids are
     // also all empty.
     bool emptyContextIds() const {
-      auto *Edges = getEdgesWithAllocInfo();
-      if (!Edges)
-        return true;
-      for (auto &Edge : *Edges) {
+      auto Edges = llvm::concat<const std::shared_ptr<ContextEdge>>(
+          CalleeEdges, useCallerEdgesForContextInfo()
+                           ? CallerEdges
+                           : std::vector<std::shared_ptr<ContextEdge>>());
+      for (const auto &Edge : Edges) {
         if (!Edge->getContextIds().empty())
           return false;
       }
@@ -403,8 +443,13 @@ public:
     // True if this node was effectively removed from the graph, in which case
     // it should have an allocation type of None and empty context ids.
     bool isRemoved() const {
-      assert((AllocTypes == (uint8_t)AllocationType::None) ==
-             emptyContextIds());
+      // Typically if the callee edges are empty either the caller edges are
+      // also empty, or this is an allocation (leaf node). However, if we are
+      // allowing recursive callsites and contexts this will be violated for
+      // incompletely cloned recursive cycles.
+      assert((AllowRecursiveCallsites && AllowRecursiveContexts) ||
+             (AllocTypes == (uint8_t)AllocationType::None) ==
+                 emptyContextIds());
       return AllocTypes == (uint8_t)AllocationType::None;
     }
 
@@ -426,6 +471,14 @@ public:
     // This will be formed by ORing together the AllocationType enum values
     // for contexts including this edge.
     uint8_t AllocTypes = 0;
+
+    // Set just before initiating cloning when cloning of recursive contexts is
+    // enabled. Used to defer cloning of backedges until we have done cloning of
+    // the callee node for non-backedge caller edges. This exposes cloning
+    // opportunities through the backedge of the cycle.
+    // TODO: Note that this is not updated during cloning, and it is unclear
+    // whether that would be needed.
+    bool IsBackedge = false;
 
     // The set of IDs for contexts including this edge.
     DenseSet<uint32_t> ContextIds;
@@ -505,6 +558,9 @@ protected:
   /// multiple different callee target functions.
   void handleCallsitesWithMultipleTargets();
 
+  /// Mark backedges via the standard DFS based backedge algorithm.
+  void markBackedges();
+
   // Try to partition calls on the given node (already placed into the AllCalls
   // array) by callee function, creating new copies of Node as needed to hold
   // calls with different callees, and moving the callee edges appropriately.
@@ -519,6 +575,10 @@ protected:
 
   /// Map from callsite node to the enclosing caller function.
   std::map<const ContextNode *, const FuncTy *> NodeToCallingFunc;
+
+  // When exporting to dot, and an allocation id is specified, contains the
+  // context ids on that allocation.
+  DenseSet<uint32_t> DotAllocContextIds;
 
 private:
   using EdgeIter = typename std::vector<std::shared_ptr<ContextEdge>>::iterator;
@@ -714,6 +774,10 @@ private:
   /// context ids.
   void moveCalleeEdgeToNewCaller(const std::shared_ptr<ContextEdge> &Edge,
                                  ContextNode *NewCaller);
+
+  /// Recursive helper for marking backedges via DFS.
+  void markBackedges(ContextNode *Node, DenseSet<const ContextNode *> &Visited,
+                     DenseSet<const ContextNode *> &CurrentStack);
 
   /// Recursively perform cloning on the graph for the given Node and its
   /// callers, in order to uniquely identify the allocation behavior of an
@@ -1292,6 +1356,8 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
     assert(ContextIdToAllocationType.count(OldId));
     // The new context has the same allocation type as original.
     ContextIdToAllocationType[LastContextId] = ContextIdToAllocationType[OldId];
+    if (DotAllocContextIds.contains(OldId))
+      DotAllocContextIds.insert(LastContextId);
   }
   return NewContextIds;
 }
@@ -1344,16 +1410,48 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
     DenseSet<uint32_t> RemainingContextIds) {
   auto &OrigEdges =
       TowardsCallee ? OrigNode->CalleeEdges : OrigNode->CallerEdges;
+  DenseSet<uint32_t> RecursiveContextIds;
+  DenseSet<uint32_t> AllCallerContextIds;
+  if (AllowRecursiveCallsites) {
+    // Identify which context ids are recursive which is needed to properly
+    // update the RemainingContextIds set. The relevant recursive context ids
+    // are those that are in multiple edges.
+    for (auto &CE : OrigEdges) {
+      AllCallerContextIds.reserve(CE->getContextIds().size());
+      for (auto Id : CE->getContextIds())
+        if (!AllCallerContextIds.insert(Id).second)
+          RecursiveContextIds.insert(Id);
+    }
+  }
   // Increment iterator in loop so that we can remove edges as needed.
   for (auto EI = OrigEdges.begin(); EI != OrigEdges.end();) {
     auto Edge = *EI;
+    DenseSet<uint32_t> NewEdgeContextIds;
+    DenseSet<uint32_t> NotFoundContextIds;
     // Remove any matching context ids from Edge, return set that were found and
     // removed, these are the new edge's context ids. Also update the remaining
     // (not found ids).
-    DenseSet<uint32_t> NewEdgeContextIds, NotFoundContextIds;
     set_subtract(Edge->getContextIds(), RemainingContextIds, NewEdgeContextIds,
                  NotFoundContextIds);
-    RemainingContextIds.swap(NotFoundContextIds);
+    // Update the remaining context ids set for the later edges. This is a
+    // compile time optimization.
+    if (RecursiveContextIds.empty()) {
+      // No recursive ids, so all of the previously remaining context ids that
+      // were not seen on this edge are the new remaining set.
+      RemainingContextIds.swap(NotFoundContextIds);
+    } else {
+      // Keep the recursive ids in the remaining set as we expect to see those
+      // on another edge. We can remove the non-recursive remaining ids that
+      // were seen on this edge, however. We already have the set of remaining
+      // ids that were on this edge (in NewEdgeContextIds). Figure out which are
+      // non-recursive and only remove those. Note that despite the higher
+      // overhead of updating the remaining context ids set when recursion
+      // handling is enabled, it was found to be at worst performance neutral
+      // and in one case a clear win.
+      DenseSet<uint32_t> NonRecursiveRemainingCurEdgeIds =
+          set_difference(NewEdgeContextIds, RecursiveContextIds);
+      set_subtract(RemainingContextIds, NonRecursiveRemainingCurEdgeIds);
+    }
     // If no matching context ids for this edge, skip it.
     if (NewEdgeContextIds.empty()) {
       ++EI;
@@ -1410,9 +1508,9 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
       set_union(CallerEdgeContextIds, Edge->ContextIds);
     }
     // Node can have more context ids than callers if some contexts terminate at
-    // node and some are longer. If we are allowing recursive callsites but
-    // haven't disabled recursive contexts, this will be violated for
-    // incompletely cloned recursive cycles, so skip the checking in that case.
+    // node and some are longer. If we are allowing recursive callsites and
+    // contexts this will be violated for incompletely cloned recursive cycles,
+    // so skip the checking in that case.
     assert((AllowRecursiveCallsites && AllowRecursiveContexts) ||
            NodeContextIds == CallerEdgeContextIds ||
            set_is_subset(CallerEdgeContextIds, NodeContextIds));
@@ -1425,7 +1523,11 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
         checkEdge<DerivedCCG, FuncTy, CallTy>(Edge);
       set_union(CalleeEdgeContextIds, Edge->getContextIds());
     }
-    assert(NodeContextIds == CalleeEdgeContextIds);
+    // If we are allowing recursive callsites and contexts this will be violated
+    // for incompletely cloned recursive cycles, so skip the checking in that
+    // case.
+    assert((AllowRecursiveCallsites && AllowRecursiveContexts) ||
+           NodeContextIds == CalleeEdgeContextIds);
   }
   // FIXME: Since this checking is only invoked under an option, we should
   // change the error checking from using assert to something that will trigger
@@ -2016,6 +2118,10 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
                 AllocNode, StackContext, CallsiteContext,
                 getMIBAllocType(MIBMD), ContextSizeInfo);
           }
+          // If exporting the graph to dot and an allocation id of interest was
+          // specified, record all the context ids for this allocation node.
+          if (ExportToDot && AllocNode->OrigStackOrAllocId == AllocIdForDot)
+            DotAllocContextIds = AllocNode->getContextIds();
           assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
           // Memprof and callsite metadata on memory allocations no longer
           // needed.
@@ -2043,6 +2149,8 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
   updateStackNodes();
 
   handleCallsitesWithMultipleTargets();
+
+  markBackedges();
 
   // Strip off remaining callsite metadata, no longer needed.
   for (auto &FuncEntry : FuncToCallsWithMetadata)
@@ -2106,6 +2214,10 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
                 ContextSizeInfo);
             I++;
           }
+          // If exporting the graph to dot and an allocation id of interest was
+          // specified, record all the context ids for this allocation node.
+          if (ExportToDot && AllocNode->OrigStackOrAllocId == AllocIdForDot)
+            DotAllocContextIds = AllocNode->getContextIds();
           assert(AllocNode->AllocTypes != (uint8_t)AllocationType::None);
           // Initialize version 0 on the summary alloc node to the current alloc
           // type, unless it has both types in which case make it default, so
@@ -2140,6 +2252,8 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
   updateStackNodes();
 
   handleCallsitesWithMultipleTargets();
+
+  markBackedges();
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -2831,6 +2945,7 @@ template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextEdge::print(
     raw_ostream &OS) const {
   OS << "Edge from Callee " << Callee << " to Caller: " << Caller
+     << (IsBackedge ? " (BE)" : "")
      << " AllocTypes: " << getAllocTypeString(AllocTypes);
   OS << " ContextIds:";
   std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
@@ -2884,6 +2999,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
           if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
             OS << " marked " << getAllocTypeString((uint8_t)AllocTypeFromCall)
                << " due to cold byte percent";
+          // Print the internal context id to aid debugging and visualization.
+          OS << " (context id " << Id << ")";
           OS << "\n";
         }
       }
@@ -2948,7 +3065,16 @@ struct GraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *> {
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
     : public DefaultDOTGraphTraits {
-  DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {}
+  DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {
+    // If the user requested the full graph to be exported, but provided an
+    // allocation id, or if the user gave a context id and requested more than
+    // just a specific context to be exported, note that highlighting is
+    // enabled.
+    DoHighlight =
+        (AllocIdForDot.getNumOccurrences() && DotGraphScope == DotScope::All) ||
+        (ContextIdForDot.getNumOccurrences() &&
+         DotGraphScope != DotScope::Context);
+  }
 
   using GraphType = const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *;
   using GTraits = GraphTraits<GraphType>;
@@ -2976,13 +3102,29 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
     return LabelString;
   }
 
-  static std::string getNodeAttributes(NodeRef Node, GraphType) {
+  static std::string getNodeAttributes(NodeRef Node, GraphType G) {
+    auto ContextIds = Node->getContextIds();
+    // If highlighting enabled, see if this node contains any of the context ids
+    // of interest. If so, it will use a different color and a larger fontsize
+    // (which makes the node larger as well).
+    bool Highlight = false;
+    if (DoHighlight) {
+      assert(ContextIdForDot.getNumOccurrences() ||
+             AllocIdForDot.getNumOccurrences());
+      if (ContextIdForDot.getNumOccurrences())
+        Highlight = ContextIds.contains(ContextIdForDot);
+      else
+        Highlight = set_intersects(ContextIds, G->DotAllocContextIds);
+    }
     std::string AttributeString = (Twine("tooltip=\"") + getNodeId(Node) + " " +
-                                   getContextIds(Node->getContextIds()) + "\"")
+                                   getContextIds(ContextIds) + "\"")
                                       .str();
+    // Default fontsize is 14
+    if (Highlight)
+      AttributeString += ",fontsize=\"30\"";
     AttributeString +=
-        (Twine(",fillcolor=\"") + getColor(Node->AllocTypes) + "\"").str();
-    AttributeString += ",style=\"filled\"";
+        (Twine(",fillcolor=\"") + getColor(Node->AllocTypes, Highlight) + "\"")
+            .str();
     if (Node->CloneOf) {
       AttributeString += ",color=\"blue\"";
       AttributeString += ",style=\"filled,bold,dashed\"";
@@ -2992,17 +3134,48 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
   }
 
   static std::string getEdgeAttributes(NodeRef, ChildIteratorType ChildIter,
-                                       GraphType) {
+                                       GraphType G) {
     auto &Edge = *(ChildIter.getCurrent());
-    return (Twine("tooltip=\"") + getContextIds(Edge->ContextIds) + "\"" +
-            Twine(",fillcolor=\"") + getColor(Edge->AllocTypes) + "\"")
-        .str();
+    // If highlighting enabled, see if this edge contains any of the context ids
+    // of interest. If so, it will use a different color and a heavier arrow
+    // size and weight (the larger weight makes the highlighted path
+    // straighter).
+    bool Highlight = false;
+    if (DoHighlight) {
+      assert(ContextIdForDot.getNumOccurrences() ||
+             AllocIdForDot.getNumOccurrences());
+      if (ContextIdForDot.getNumOccurrences())
+        Highlight = Edge->ContextIds.contains(ContextIdForDot);
+      else
+        Highlight = set_intersects(Edge->ContextIds, G->DotAllocContextIds);
+    }
+    auto Color = getColor(Edge->AllocTypes, Highlight);
+    std::string AttributeString =
+        (Twine("tooltip=\"") + getContextIds(Edge->ContextIds) + "\"" +
+         // fillcolor is the arrow head and color is the line
+         Twine(",fillcolor=\"") + Color + "\"" + Twine(",color=\"") + Color +
+         "\"")
+            .str();
+    if (Edge->IsBackedge)
+      AttributeString += ",style=\"dotted\"";
+    // Default penwidth and weight are both 1.
+    if (Highlight)
+      AttributeString += ",penwidth=\"2.0\",weight=\"2\"";
+    return AttributeString;
   }
 
   // Since the NodeOwners list includes nodes that are no longer connected to
   // the graph, skip them here.
-  static bool isNodeHidden(NodeRef Node, GraphType) {
-    return Node->isRemoved();
+  static bool isNodeHidden(NodeRef Node, GraphType G) {
+    if (Node->isRemoved())
+      return true;
+    // If a scope smaller than the full graph was requested, see if this node
+    // contains any of the context ids of interest.
+    if (DotGraphScope == DotScope::Alloc)
+      return !set_intersects(Node->getContextIds(), G->DotAllocContextIds);
+    if (DotGraphScope == DotScope::Context)
+      return !Node->getContextIds().contains(ContextIdForDot);
+    return false;
   }
 
 private:
@@ -3019,16 +3192,20 @@ private:
     return IdString;
   }
 
-  static std::string getColor(uint8_t AllocTypes) {
+  static std::string getColor(uint8_t AllocTypes, bool Highlight) {
+    // If DoHighlight is not enabled, we want to use the highlight colors for
+    // NotCold and Cold, and the non-highlight color for NotCold+Cold. This is
+    // both compatible with the color scheme before highlighting was supported,
+    // and for the NotCold+Cold color the non-highlight color is a bit more
+    // readable.
     if (AllocTypes == (uint8_t)AllocationType::NotCold)
       // Color "brown1" actually looks like a lighter red.
-      return "brown1";
+      return !DoHighlight || Highlight ? "brown1" : "lightpink";
     if (AllocTypes == (uint8_t)AllocationType::Cold)
-      return "cyan";
+      return !DoHighlight || Highlight ? "cyan" : "lightskyblue";
     if (AllocTypes ==
         ((uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold))
-      // Lighter purple.
-      return "mediumorchid1";
+      return Highlight ? "magenta" : "mediumorchid1";
     return "gray";
   }
 
@@ -3038,7 +3215,16 @@ private:
     std::string Result = SStream.str();
     return Result;
   }
+
+  // True if we should highlight a specific context or allocation's contexts in
+  // the emitted graph.
+  static bool DoHighlight;
 };
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+bool DOTGraphTraits<
+    const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>::DoHighlight =
+    false;
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::exportToDot(
@@ -3071,6 +3257,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // NewCallee and Edge's current callee must be clones of the same original
   // node (Edge's current callee may be the original node too).
   assert(NewCallee->getOrigNode() == Edge->Callee->getOrigNode());
+
+  bool EdgeIsRecursive = Edge->Callee == Edge->Caller;
 
   ContextNode *OldCallee = Edge->Callee;
 
@@ -3134,6 +3322,20 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // over to the corresponding edge into the clone (which is created here if
   // this is a newly created clone).
   for (auto &OldCalleeEdge : OldCallee->CalleeEdges) {
+    ContextNode *CalleeToUse = OldCalleeEdge->Callee;
+    // If this is a direct recursion edge, use NewCallee (the clone) as the
+    // callee as well, so that any edge updated/created here is also direct
+    // recursive.
+    if (CalleeToUse == OldCallee) {
+      // If this is a recursive edge, see if we already moved a recursive edge
+      // (which would have to have been this one) - if we were only moving a
+      // subset of context ids it would still be on OldCallee.
+      if (EdgeIsRecursive) {
+        assert(OldCalleeEdge == Edge);
+        continue;
+      }
+      CalleeToUse = NewCallee;
+    }
     // The context ids moving to the new callee are the subset of this edge's
     // context ids and the context ids on the caller edge being moved.
     DenseSet<uint32_t> EdgeContextIdsToMove =
@@ -3147,8 +3349,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       // clone, specifically during function assignment, where we would have
       // removed none type edges after creating the clone. If we can't find
       // a corresponding edge there, fall through to the cloning below.
-      if (auto *NewCalleeEdge =
-              NewCallee->findEdgeFromCallee(OldCalleeEdge->Callee)) {
+      if (auto *NewCalleeEdge = NewCallee->findEdgeFromCallee(CalleeToUse)) {
         NewCalleeEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
                                               EdgeContextIdsToMove.end());
         NewCalleeEdge->AllocTypes |= computeAllocType(EdgeContextIdsToMove);
@@ -3156,8 +3357,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       }
     }
     auto NewEdge = std::make_shared<ContextEdge>(
-        OldCalleeEdge->Callee, NewCallee,
-        computeAllocType(EdgeContextIdsToMove), EdgeContextIdsToMove);
+        CalleeToUse, NewCallee, computeAllocType(EdgeContextIdsToMove),
+        EdgeContextIdsToMove);
     NewCallee->CalleeEdges.push_back(NewEdge);
     NewEdge->Callee->CallerEdges.push_back(NewEdge);
   }
@@ -3183,13 +3384,20 @@ template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     moveCalleeEdgeToNewCaller(const std::shared_ptr<ContextEdge> &Edge,
                               ContextNode *NewCaller) {
+  auto *OldCallee = Edge->Callee;
+  auto *NewCallee = OldCallee;
+  // If this edge was direct recursive, make any new/updated edge also direct
+  // recursive to NewCaller.
+  bool Recursive = Edge->Caller == Edge->Callee;
+  if (Recursive)
+    NewCallee = NewCaller;
 
   ContextNode *OldCaller = Edge->Caller;
   OldCaller->eraseCalleeEdge(Edge.get());
 
   // We might already have an edge to the new caller. If one exists we will
   // reuse it.
-  auto ExistingEdgeToNewCaller = NewCaller->findEdgeFromCallee(Edge->Callee);
+  auto ExistingEdgeToNewCaller = NewCaller->findEdgeFromCallee(NewCallee);
 
   if (ExistingEdgeToNewCaller) {
     // Since we already have an edge to NewCaller, simply move the ids
@@ -3199,11 +3407,19 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     ExistingEdgeToNewCaller->AllocTypes |= Edge->AllocTypes;
     Edge->ContextIds.clear();
     Edge->AllocTypes = (uint8_t)AllocationType::None;
-    Edge->Callee->eraseCallerEdge(Edge.get());
+    OldCallee->eraseCallerEdge(Edge.get());
   } else {
     // Otherwise just reconnect Edge to NewCaller.
     Edge->Caller = NewCaller;
     NewCaller->CalleeEdges.push_back(Edge);
+    if (Recursive) {
+      assert(NewCallee == NewCaller);
+      // In the case of (direct) recursive edges, we update the callee as well
+      // so that it becomes recursive on the new caller.
+      Edge->Callee = NewCallee;
+      NewCallee->CallerEdges.push_back(Edge);
+      OldCallee->eraseCallerEdge(Edge.get());
+    }
     // Don't need to update Edge's context ids since we are simply
     // reconnecting it.
   }
@@ -3217,32 +3433,50 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 #ifndef NDEBUG
   bool IsNewNode = NewCaller->CallerEdges.empty();
 #endif
-  for (auto &OldCallerEdge : OldCaller->CallerEdges) {
-    // The context ids moving to the new caller are the subset of this edge's
-    // context ids and the context ids on the callee edge being moved.
-    DenseSet<uint32_t> EdgeContextIdsToMove =
-        set_intersection(OldCallerEdge->getContextIds(), Edge->getContextIds());
-    set_subtract(OldCallerEdge->getContextIds(), EdgeContextIdsToMove);
-    OldCallerEdge->AllocTypes =
-        computeAllocType(OldCallerEdge->getContextIds());
-    // In this function we expect that any pre-existing node already has edges
-    // from the same callers as the old node. That should be true in the current
-    // use case, where we will remove None-type edges after copying over all
-    // caller edges from the callee.
-    auto *ExistingCallerEdge =
-        NewCaller->findEdgeFromCaller(OldCallerEdge->Caller);
-    assert(IsNewNode || ExistingCallerEdge);
-    if (ExistingCallerEdge) {
-      ExistingCallerEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
-                                                 EdgeContextIdsToMove.end());
-      ExistingCallerEdge->AllocTypes |= computeAllocType(EdgeContextIdsToMove);
-      continue;
+  // If we just moved a direct recursive edge, presumably its context ids should
+  // also flow out of OldCaller via some other non-recursive callee edge. We
+  // don't want to remove the recursive context ids from other caller edges yet,
+  // otherwise the context ids get into an inconsistent state on OldCaller.
+  // We will update these context ids on the non-recursive caller edge when and
+  // if they are updated on the non-recursive callee.
+  if (!Recursive) {
+    for (auto &OldCallerEdge : OldCaller->CallerEdges) {
+      auto OldCallerCaller = OldCallerEdge->Caller;
+      // The context ids moving to the new caller are the subset of this edge's
+      // context ids and the context ids on the callee edge being moved.
+      DenseSet<uint32_t> EdgeContextIdsToMove = set_intersection(
+          OldCallerEdge->getContextIds(), Edge->getContextIds());
+      if (OldCaller == OldCallerCaller) {
+        OldCallerCaller = NewCaller;
+        // Don't actually move this one. The caller will move it directly via a
+        // call to this function with this as the Edge if it is appropriate to
+        // move to a diff node that has a matching callee (itself).
+        continue;
+      }
+      set_subtract(OldCallerEdge->getContextIds(), EdgeContextIdsToMove);
+      OldCallerEdge->AllocTypes =
+          computeAllocType(OldCallerEdge->getContextIds());
+      // In this function we expect that any pre-existing node already has edges
+      // from the same callers as the old node. That should be true in the
+      // current use case, where we will remove None-type edges after copying
+      // over all caller edges from the callee.
+      auto *ExistingCallerEdge = NewCaller->findEdgeFromCaller(OldCallerCaller);
+      // Since we would have skipped caller edges when moving a direct recursive
+      // edge, this may not hold true when recursive handling enabled.
+      assert(IsNewNode || ExistingCallerEdge || AllowRecursiveCallsites);
+      if (ExistingCallerEdge) {
+        ExistingCallerEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
+                                                   EdgeContextIdsToMove.end());
+        ExistingCallerEdge->AllocTypes |=
+            computeAllocType(EdgeContextIdsToMove);
+        continue;
+      }
+      auto NewEdge = std::make_shared<ContextEdge>(
+          NewCaller, OldCallerCaller, computeAllocType(EdgeContextIdsToMove),
+          EdgeContextIdsToMove);
+      NewCaller->CallerEdges.push_back(NewEdge);
+      NewEdge->Caller->CalleeEdges.push_back(NewEdge);
     }
-    auto NewEdge = std::make_shared<ContextEdge>(
-        NewCaller, OldCallerEdge->Caller,
-        computeAllocType(EdgeContextIdsToMove), EdgeContextIdsToMove);
-    NewCaller->CallerEdges.push_back(NewEdge);
-    NewEdge->Caller->CalleeEdges.push_back(NewEdge);
   }
   // Recompute the node alloc type now that its caller edges have been
   // updated (since we will compute from those edges).
@@ -3288,6 +3522,51 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   }
 }
 
+// This is the standard DFS based backedge discovery algorithm.
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::markBackedges() {
+  // If we are cloning recursive contexts, find and mark backedges from all root
+  // callers, using the typical DFS based backedge analysis.
+  if (!CloneRecursiveContexts)
+    return;
+  DenseSet<const ContextNode *> Visited;
+  DenseSet<const ContextNode *> CurrentStack;
+  for (auto &Entry : NonAllocationCallToContextNodeMap) {
+    auto *Node = Entry.second;
+    if (Node->isRemoved())
+      continue;
+    // It is a root if it doesn't have callers.
+    if (!Node->CallerEdges.empty())
+      continue;
+    markBackedges(Node, Visited, CurrentStack);
+    assert(CurrentStack.empty());
+  }
+}
+
+// Recursive helper for above markBackedges method.
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::markBackedges(
+    ContextNode *Node, DenseSet<const ContextNode *> &Visited,
+    DenseSet<const ContextNode *> &CurrentStack) {
+  auto I = Visited.insert(Node);
+  // We should only call this for unvisited nodes.
+  assert(I.second);
+  (void)I;
+  for (auto &CalleeEdge : Node->CalleeEdges) {
+    auto *Callee = CalleeEdge->Callee;
+    if (Visited.count(Callee)) {
+      // Since this was already visited we need to check if it is currently on
+      // the recursive stack in which case it is a backedge.
+      if (CurrentStack.count(Callee))
+        CalleeEdge->IsBackedge = true;
+      continue;
+    }
+    CurrentStack.insert(Callee);
+    markBackedges(Callee, Visited, CurrentStack);
+    CurrentStack.erase(Callee);
+  }
+}
+
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones() {
   DenseSet<const ContextNode *> Visited;
@@ -3326,6 +3605,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   if (!Node->hasCall())
     return;
 
+  // No need to look at any callers if allocation type already unambiguous.
+  if (hasSingleAllocType(Node->AllocTypes))
+    return;
+
 #ifndef NDEBUG
   auto Insert =
 #endif
@@ -3343,6 +3626,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
       // Skip any that have been removed by an earlier recursive call.
       if (Edge->isRemoved()) {
         assert(!is_contained(Node->CallerEdges, Edge));
+        continue;
+      }
+      // Defer backedges. See comments further below where these edges are
+      // handled during the cloning of this Node.
+      if (Edge->IsBackedge) {
+        // We should only mark these if cloning recursive contexts, where we
+        // need to do this deferral.
+        assert(CloneRecursiveContexts);
         continue;
       }
       // Ignore any caller we previously visited via another edge.
@@ -3398,6 +3689,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
 
   DenseSet<uint32_t> RecursiveContextIds;
+  assert(AllowRecursiveContexts || !CloneRecursiveContexts);
   // If we are allowing recursive callsites, but have also disabled recursive
   // contexts, look for context ids that show up in multiple caller edges.
   if (AllowRecursiveCallsites && !AllowRecursiveContexts) {
@@ -3420,6 +3712,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   // makes it less error-prone.
   auto CallerEdges = Node->CallerEdges;
   for (auto &CallerEdge : CallerEdges) {
+    // Skip any that have been removed by an earlier recursive call.
+    if (CallerEdge->isRemoved()) {
+      assert(!is_contained(Node->CallerEdges, CallerEdge));
+      continue;
+    }
+    assert(CallerEdge->Callee == Node);
+
     // See if cloning the prior caller edge left this node with a single alloc
     // type or a single caller. In that case no more cloning of Node is needed.
     if (hasSingleAllocType(Node->AllocTypes) || Node->CallerEdges.size() <= 1)
@@ -3461,13 +3760,100 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     //
     // Then check if by cloning node at least one of the callee edges will be
     // disambiguated by splitting out different context ids.
+    //
+    // However, always do the cloning if this is a backedge, in which case we
+    // have not yet cloned along this caller edge.
     assert(CallerEdge->AllocTypes != (uint8_t)AllocationType::None);
     assert(Node->AllocTypes != (uint8_t)AllocationType::None);
-    if (allocTypeToUse(CallerAllocTypeForAlloc) ==
+    if (!CallerEdge->IsBackedge &&
+        allocTypeToUse(CallerAllocTypeForAlloc) ==
             allocTypeToUse(Node->AllocTypes) &&
         allocTypesMatch<DerivedCCG, FuncTy, CallTy>(
-            CalleeEdgeAllocTypesForCallerEdge, Node->CalleeEdges))
+            CalleeEdgeAllocTypesForCallerEdge, Node->CalleeEdges)) {
       continue;
+    }
+
+    if (CallerEdge->IsBackedge) {
+      // We should only mark these if cloning recursive contexts, where we
+      // need to do this deferral.
+      assert(CloneRecursiveContexts);
+      DeferredBackedges++;
+    }
+
+    // If this is a backedge, we now do recursive cloning starting from its
+    // caller since we may have moved unambiguous caller contexts to a clone
+    // of this Node in a previous iteration of the current loop, giving more
+    // opportunity for cloning through the backedge. Because we sorted the
+    // caller edges earlier so that cold caller edges are first, we would have
+    // visited and cloned this node for any unamibiguously cold non-recursive
+    // callers before any ambiguous backedge callers. Note that we don't do this
+    // if the caller is already cloned or visited during cloning (e.g. via a
+    // different context path from the allocation).
+    // TODO: Can we do better in the case where the caller was already visited?
+    if (CallerEdge->IsBackedge && !CallerEdge->Caller->CloneOf &&
+        !Visited.count(CallerEdge->Caller)) {
+      const auto OrigIdCount = CallerEdge->getContextIds().size();
+      // Now do the recursive cloning of this backedge's caller, which was
+      // deferred earlier.
+      identifyClones(CallerEdge->Caller, Visited, CallerEdgeContextsForAlloc);
+      removeNoneTypeCalleeEdges(CallerEdge->Caller);
+      // See if the recursive call to identifyClones moved the context ids to a
+      // new edge from this node to a clone of caller, and switch to looking at
+      // that new edge so that we clone Node for the new caller clone.
+      bool UpdatedEdge = false;
+      if (OrigIdCount > CallerEdge->getContextIds().size()) {
+        for (auto E : Node->CallerEdges) {
+          // Only interested in clones of the current edges caller.
+          if (E->Caller->CloneOf != CallerEdge->Caller)
+            continue;
+          // See if this edge contains any of the context ids originally on the
+          // current caller edge.
+          auto CallerEdgeContextsForAllocNew =
+              set_intersection(CallerEdgeContextsForAlloc, E->getContextIds());
+          if (CallerEdgeContextsForAllocNew.empty())
+            continue;
+          // Make sure we don't pick a previously existing caller edge of this
+          // Node, which would be processed on a different iteration of the
+          // outer loop over the saved CallerEdges.
+          if (std::find(CallerEdges.begin(), CallerEdges.end(), E) !=
+              CallerEdges.end())
+            continue;
+          // The CallerAllocTypeForAlloc and CalleeEdgeAllocTypesForCallerEdge
+          // are updated further below for all cases where we just invoked
+          // identifyClones recursively.
+          CallerEdgeContextsForAlloc.swap(CallerEdgeContextsForAllocNew);
+          CallerEdge = E;
+          UpdatedEdge = true;
+          break;
+        }
+      }
+      // If cloning removed this edge (and we didn't update it to a new edge
+      // above), we're done with this edge. It's possible we moved all of the
+      // context ids to an existing clone, in which case there's no need to do
+      // further processing for them.
+      if (CallerEdge->isRemoved())
+        continue;
+
+      // Now we need to update the information used for the cloning decisions
+      // further below, as we may have modified edges and their context ids.
+
+      // Note if we changed the CallerEdge above we would have already updated
+      // the context ids.
+      if (!UpdatedEdge) {
+        CallerEdgeContextsForAlloc = set_intersection(
+            CallerEdgeContextsForAlloc, CallerEdge->getContextIds());
+        if (CallerEdgeContextsForAlloc.empty())
+          continue;
+      }
+      // Update the other information that depends on the edges and on the now
+      // updated CallerEdgeContextsForAlloc.
+      CallerAllocTypeForAlloc = computeAllocType(CallerEdgeContextsForAlloc);
+      CalleeEdgeAllocTypesForCallerEdge.clear();
+      for (auto &CalleeEdge : Node->CalleeEdges) {
+        CalleeEdgeAllocTypesForCallerEdge.push_back(intersectAllocTypes(
+            CalleeEdge->getContextIds(), CallerEdgeContextsForAlloc));
+      }
+    }
 
     // First see if we can use an existing clone. Check each clone and its
     // callee edges for matching alloc types.
@@ -3946,6 +4332,11 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         // handling and makes it less error-prone.
         auto CloneCallerEdges = Clone->CallerEdges;
         for (auto &Edge : CloneCallerEdges) {
+          // Skip removed edges (due to direct recursive edges updated when
+          // updating callee edges when moving an edge and subsequently
+          // removed by call to removeNoneTypeCalleeEdges on the Clone).
+          if (Edge->isRemoved())
+            continue;
           // Ignore any caller that does not have a recorded callsite Call.
           if (!Edge->Caller->hasCall())
             continue;
@@ -4897,6 +5288,20 @@ bool MemProfContextDisambiguation::processModule(
 MemProfContextDisambiguation::MemProfContextDisambiguation(
     const ModuleSummaryIndex *Summary, bool isSamplePGO)
     : ImportSummary(Summary), isSamplePGO(isSamplePGO) {
+  // Check the dot graph printing options once here, to make sure we have valid
+  // and expected combinations.
+  if (DotGraphScope == DotScope::Alloc && !AllocIdForDot.getNumOccurrences())
+    llvm::report_fatal_error(
+        "-memprof-dot-scope=alloc requires -memprof-dot-alloc-id");
+  if (DotGraphScope == DotScope::Context &&
+      !ContextIdForDot.getNumOccurrences())
+    llvm::report_fatal_error(
+        "-memprof-dot-scope=context requires -memprof-dot-context-id");
+  if (DotGraphScope == DotScope::All && AllocIdForDot.getNumOccurrences() &&
+      ContextIdForDot.getNumOccurrences())
+    llvm::report_fatal_error(
+        "-memprof-dot-scope=all can't have both -memprof-dot-alloc-id and "
+        "-memprof-dot-context-id");
   if (ImportSummary) {
     // The MemProfImportSummary should only be used for testing ThinLTO
     // distributed backend handling via opt, in which case we don't have a

@@ -2602,6 +2602,60 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SC.Done(&I);
   }
 
+  /// Propagate shadow for 1- or 2-vector intrinsics that combine adjacent
+  /// fields.
+  ///
+  /// e.g., <2 x i32> @llvm.aarch64.neon.saddlp.v2i32.v4i16(<4 x i16>)
+  ///       <16 x i8> @llvm.aarch64.neon.addp.v16i8(<16 x i8>, <16 x i8>)
+  ///
+  /// TODO: adapt this function to handle horizontal add/sub?
+  void handlePairwiseShadowOrIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1 || I.arg_size() == 2);
+
+    assert(I.getType()->isVectorTy());
+    assert(I.getArgOperand(0)->getType()->isVectorTy());
+
+    FixedVectorType *ParamType =
+        cast<FixedVectorType>(I.getArgOperand(0)->getType());
+    if (I.arg_size() == 2)
+      assert(ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType()));
+    [[maybe_unused]] FixedVectorType *ReturnType =
+        cast<FixedVectorType>(I.getType());
+    assert(ParamType->getNumElements() * I.arg_size() ==
+           2 * ReturnType->getNumElements());
+
+    IRBuilder<> IRB(&I);
+    unsigned Width = ParamType->getNumElements() * I.arg_size();
+
+    // Horizontal OR of shadow
+    SmallVector<int, 8> EvenMask;
+    SmallVector<int, 8> OddMask;
+    for (unsigned X = 0; X < Width; X += 2) {
+      EvenMask.push_back(X);
+      OddMask.push_back(X + 1);
+    }
+
+    Value *FirstArgShadow = getShadow(&I, 0);
+    Value *EvenShadow;
+    Value *OddShadow;
+    if (I.arg_size() == 2) {
+      Value *SecondArgShadow = getShadow(&I, 1);
+      EvenShadow =
+          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, EvenMask);
+      OddShadow =
+          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, OddMask);
+    } else {
+      EvenShadow = IRB.CreateShuffleVector(FirstArgShadow, EvenMask);
+      OddShadow = IRB.CreateShuffleVector(FirstArgShadow, OddMask);
+    }
+
+    Value *OrShadow = IRB.CreateOr(EvenShadow, OddShadow);
+    OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
+
+    setShadow(&I, OrShadow);
+    setOriginForNaryOp(I);
+  }
+
   void visitFNeg(UnaryOperator &I) { handleShadowOr(I); }
 
   // Handle multiplication by constant.
@@ -2933,6 +2987,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Instrument intrinsics that look like a simple SIMD store: writes memory,
   /// has 1 pointer argument and 1 vector argument, returns void.
   bool handleVectorStoreIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+
     IRBuilder<> IRB(&I);
     Value *Addr = I.getArgOperand(0);
     Value *Shadow = getShadow(&I, 1);
@@ -2958,6 +3014,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Instrument intrinsics that look like a simple SIMD load: reads memory,
   /// has 1 pointer argument, returns a vector.
   bool handleVectorLoadIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1);
+
     IRBuilder<> IRB(&I);
     Value *Addr = I.getArgOperand(0);
 
@@ -3114,7 +3172,31 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Instrument vector convert intrinsic.
+  /// Handle Arm NEON vector convert intrinsics.
+  ///
+  /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
+  ///      i32 @llvm.aarch64.neon.fcvtms.i32.f64(double)
+  ///
+  /// For x86 SSE vector convert intrinsics, see
+  /// handleSSEVectorConvertIntrinsic().
+  void handleNEONVectorConvertIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1);
+
+    IRBuilder<> IRB(&I);
+    Value *S0 = getShadow(&I, 0);
+
+    /// For scalars:
+    /// Since they are converting from floating-point to integer, the output is
+    /// - fully uninitialized if *any* bit of the input is uninitialized
+    /// - fully ininitialized if all bits of the input are ininitialized
+    /// We apply the same principle on a per-field basis for vectors.
+    Value *OutShadow = IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)),
+                                      getShadowTy(&I));
+    setShadow(&I, OutShadow);
+    setOriginForNaryOp(I);
+  }
+
+  // Instrument x86 SSE vector convert intrinsic.
   //
   // This function instruments intrinsics like cvtsi2ss:
   // %Out = int_xxx_cvtyyy(%ConvertOp)
@@ -3129,8 +3211,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // We copy the shadow of \p CopyOp[NumUsedElements:] to \p
   // Out[NumUsedElements:]. This means that intrinsics without \p CopyOp always
   // return a fully initialized value.
-  void handleVectorConvertIntrinsic(IntrinsicInst &I, int NumUsedElements,
-                                    bool HasRoundingMode = false) {
+  //
+  // For Arm NEON vector convert intrinsics, see
+  // handleNEONVectorConvertIntrinsic().
+  void handleSSEVectorConvertIntrinsic(IntrinsicInst &I, int NumUsedElements,
+                                       bool HasRoundingMode = false) {
     IRBuilder<> IRB(&I);
     Value *CopyOp, *ConvertOp;
 
@@ -3493,17 +3578,40 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Instrument generic vector reduction intrinsics
   // by ORing together all their fields.
+  //
+  // The return type does not need to be the same type as the fields
+  // e.g., declare i32 @llvm.aarch64.neon.uaddv.i32.v16i8(<16 x i8>)
   void handleVectorReduceIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1);
+
     IRBuilder<> IRB(&I);
     Value *S = IRB.CreateOrReduce(getShadow(&I, 0));
+    S = CreateShadowCast(IRB, S, getShadowTy(&I));
     setShadow(&I, S);
-    setOrigin(&I, getOrigin(&I, 0));
+    setOriginForNaryOp(I);
+  }
+
+  // Similar to handleVectorReduceIntrinsic but with an initial starting value.
+  // e.g., call float @llvm.vector.reduce.fadd.f32.v2f32(float %a0, <2 x float>
+  // %a1)
+  //       shadow = shadow[a0] | shadow[a1.0] | shadow[a1.1]
+  void handleVectorReduceWithStarterIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+
+    IRBuilder<> IRB(&I);
+    Value *Shadow0 = getShadow(&I, 0);
+    Value *Shadow1 = IRB.CreateOrReduce(getShadow(&I, 1));
+    Value *S = IRB.CreateOr(Shadow0, Shadow1);
+    setShadow(&I, S);
+    setOriginForNaryOp(I);
   }
 
   // Instrument vector.reduce.or intrinsic.
   // Valid (non-poisoned) set bits in the operand pull low the
   // corresponding shadow bits.
   void handleVectorReduceOrIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1);
+
     IRBuilder<> IRB(&I);
     Value *OperandShadow = getShadow(&I, 0);
     Value *OperandUnsetBits = IRB.CreateNot(I.getOperand(0));
@@ -3522,6 +3630,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // Valid (non-poisoned) unset bits in the operand pull down the
   // corresponding shadow bits.
   void handleVectorReduceAndIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 1);
+
     IRBuilder<> IRB(&I);
     Value *OperandShadow = getShadow(&I, 0);
     Value *OperandSetOrPoison = IRB.CreateOr(I.getOperand(0), OperandShadow);
@@ -3784,6 +3894,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // (and we) do not reduce AVX/AVX2 masked intrinsics into LLVM masked
   // intrinsics.
   void handleAVXMaskedStore(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+
     IRBuilder<> IRB(&I);
 
     Value *Dst = I.getArgOperand(0);
@@ -3848,6 +3960,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // because we need to apply getShadowOriginPtr, not getShadow, to the first
   // parameter.
   void handleAVXMaskedLoad(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+
     IRBuilder<> IRB(&I);
 
     Value *Src = I.getArgOperand(0);
@@ -4281,7 +4395,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Approximation only
+  //
+  // e.g., <16 x i8> @llvm.aarch64.neon.pmull64(i64, i64)
   void handleNEONVectorMultiplyIntrinsic(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+
     handleShadowOr(I);
   }
 
@@ -4343,11 +4461,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::vector_reduce_or:
       handleVectorReduceOrIntrinsic(I);
       break;
+
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_xor:
     case Intrinsic::vector_reduce_mul:
+    // Add reduction to scalar
+    case Intrinsic::aarch64_neon_faddv:
+    case Intrinsic::aarch64_neon_saddv:
+    case Intrinsic::aarch64_neon_uaddv:
+    // Floating-point min/max (vector)
+    // The f{min,max}"nm"v variants handle NaN differently than f{min,max}v,
+    // but our shadow propagation is the same.
+    case Intrinsic::aarch64_neon_fmaxv:
+    case Intrinsic::aarch64_neon_fminv:
+    case Intrinsic::aarch64_neon_fmaxnmv:
+    case Intrinsic::aarch64_neon_fminnmv:
+    // Sum long across vector
+    case Intrinsic::aarch64_neon_saddlv:
+    case Intrinsic::aarch64_neon_uaddlv:
       handleVectorReduceIntrinsic(I);
       break;
+
+    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fmul:
+      handleVectorReduceWithStarterIntrinsic(I);
+      break;
+
     case Intrinsic::x86_sse_stmxcsr:
       handleStmxcsr(I);
       break;
@@ -4365,7 +4504,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_cvtusi2ss:
     case Intrinsic::x86_avx512_cvtusi642sd:
     case Intrinsic::x86_avx512_cvtusi642ss:
-      handleVectorConvertIntrinsic(I, 1, true);
+      handleSSEVectorConvertIntrinsic(I, 1, true);
       break;
     case Intrinsic::x86_sse2_cvtsd2si64:
     case Intrinsic::x86_sse2_cvtsd2si:
@@ -4376,11 +4515,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_sse_cvtss2si:
     case Intrinsic::x86_sse_cvttss2si64:
     case Intrinsic::x86_sse_cvttss2si:
-      handleVectorConvertIntrinsic(I, 1);
+      handleSSEVectorConvertIntrinsic(I, 1);
       break;
     case Intrinsic::x86_sse_cvtps2pi:
     case Intrinsic::x86_sse_cvttps2pi:
-      handleVectorConvertIntrinsic(I, 2);
+      handleSSEVectorConvertIntrinsic(I, 2);
       break;
 
     case Intrinsic::x86_avx512_psll_w_512:
@@ -4723,6 +4862,48 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setOrigin(&I, getCleanOrigin());
       break;
 
+    // Add Pairwise
+    case Intrinsic::aarch64_neon_addp:
+    // Floating-point Add Pairwise
+    case Intrinsic::aarch64_neon_faddp:
+    // Add Long Pairwise
+    case Intrinsic::aarch64_neon_saddlp:
+    case Intrinsic::aarch64_neon_uaddlp: {
+      handlePairwiseShadowOrIntrinsic(I);
+      break;
+    }
+
+    // Floating-point Convert to integer, rounding to nearest with ties to Away
+    case Intrinsic::aarch64_neon_fcvtas:
+    case Intrinsic::aarch64_neon_fcvtau:
+    // Floating-point convert to integer, rounding toward minus infinity
+    case Intrinsic::aarch64_neon_fcvtms:
+    case Intrinsic::aarch64_neon_fcvtmu:
+    // Floating-point convert to integer, rounding to nearest with ties to even
+    case Intrinsic::aarch64_neon_fcvtns:
+    case Intrinsic::aarch64_neon_fcvtnu:
+    // Floating-point convert to integer, rounding toward plus infinity
+    case Intrinsic::aarch64_neon_fcvtps:
+    case Intrinsic::aarch64_neon_fcvtpu:
+    // Floating-point Convert to integer, rounding toward Zero
+    case Intrinsic::aarch64_neon_fcvtzs:
+    case Intrinsic::aarch64_neon_fcvtzu:
+    // Floating-point convert to lower precision narrow, rounding to odd
+    case Intrinsic::aarch64_neon_fcvtxn: {
+      handleNEONVectorConvertIntrinsic(I);
+      break;
+    }
+
+    // Saturating extract narrow
+    case Intrinsic::aarch64_neon_sqxtn:
+    case Intrinsic::aarch64_neon_sqxtun:
+    case Intrinsic::aarch64_neon_uqxtn:
+      // These only have one argument, but we (ab)use handleShadowOr because it
+      // does work on single argument intrinsics and will typecast the shadow
+      // (and update the origin).
+      handleShadowOr(I);
+      break;
+
     case Intrinsic::aarch64_neon_st1x2:
     case Intrinsic::aarch64_neon_st1x3:
     case Intrinsic::aarch64_neon_st1x4:
@@ -4771,6 +4952,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_pmull64:
     case Intrinsic::aarch64_neon_umull: {
       handleNEONVectorMultiplyIntrinsic(I);
+      break;
+    }
+
+    case Intrinsic::scmp:
+    case Intrinsic::ucmp: {
+      handleShadowOr(I);
       break;
     }
 

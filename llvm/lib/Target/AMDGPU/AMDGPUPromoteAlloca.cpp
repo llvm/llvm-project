@@ -839,10 +839,9 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         return RejectUser(Inst, "mem transfer inst length is non-constant or "
                                 "not a multiple of the vector element size");
 
-      if (!TransferInfo.count(TransferInst)) {
+      if (TransferInfo.try_emplace(TransferInst).second) {
         DeferredInsts.push_back(Inst);
         WorkList.push_back(Inst);
-        TransferInfo[TransferInst] = MemTransferInfo();
       }
 
       auto getPointerIndexOfAlloca = [&](Value *Ptr) -> ConstantInt * {

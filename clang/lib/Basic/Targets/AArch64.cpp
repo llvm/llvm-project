@@ -26,35 +26,105 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsNEON.def"
+static constexpr int NumNeonBuiltins =
+    NEON::FirstFp16Builtin - Builtin::FirstTSBuiltin;
+static constexpr int NumFp16Builtins =
+    NEON::FirstTSBuiltin - NEON::FirstFp16Builtin;
+static constexpr int NumSVEBuiltins =
+    SVE::FirstNeonBridgeBuiltin - NEON::FirstTSBuiltin;
+static constexpr int NumSVENeonBridgeBuiltins =
+    SVE::FirstTSBuiltin - SVE::FirstNeonBridgeBuiltin;
+static constexpr int NumSMEBuiltins = SME::FirstTSBuiltin - SVE::FirstTSBuiltin;
+static constexpr int NumAArch64Builtins =
+    AArch64::LastTSBuiltin - SME::FirstTSBuiltin;
+static constexpr int NumBuiltins =
+    AArch64::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins ==
+              (NumNeonBuiltins + NumFp16Builtins + NumSVEBuiltins +
+               NumSVENeonBridgeBuiltins + NumSMEBuiltins + NumAArch64Builtins));
 
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsSVE.def"
+namespace clang {
+namespace NEON {
+#define GET_NEON_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_BUILTIN_STR_TABLE
 
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsSME.def"
-
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/BuiltinsAArch64.def"
+static constexpr std::array<Builtin::Info, NumNeonBuiltins> BuiltinInfos = {
+#define GET_NEON_BUILTIN_INFOS
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_BUILTIN_INFOS
 };
+
+namespace FP16 {
+#define GET_NEON_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_fp16.inc"
+#undef GET_NEON_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumFp16Builtins> BuiltinInfos = {
+#define GET_NEON_BUILTIN_INFOS
+#include "clang/Basic/arm_fp16.inc"
+#undef GET_NEON_BUILTIN_INFOS
+};
+} // namespace FP16
+} // namespace NEON
+
+namespace SVE {
+#define GET_SVE_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_sve_builtins.inc"
+#undef GET_SVE_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumSVEBuiltins> BuiltinInfos = {
+#define GET_SVE_BUILTIN_INFOS
+#include "clang/Basic/arm_sve_builtins.inc"
+#undef GET_SVE_BUILTIN_INFOS
+};
+} // namespace SVE
+
+namespace SME {
+#define GET_SME_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_sme_builtins.inc"
+#undef GET_SME_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumSMEBuiltins> BuiltinInfos = {
+#define GET_SME_BUILTIN_INFOS
+#include "clang/Basic/arm_sme_builtins.inc"
+#undef GET_SME_BUILTIN_INFOS
+};
+} // namespace SME
+} // namespace clang
+
+static constexpr llvm::StringTable BuiltinSVENeonBridgeStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define GET_SVE_BUILTINS
+#include "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
+#undef GET_SVE_BUILTINS
+#undef TARGET_BUILTIN
+    ;
+static constexpr llvm::StringTable BuiltinAArch64Strings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsAArch64.def"
+    ;
+
+static constexpr auto BuiltinSVENeonBridgeInfos =
+    Builtin::MakeInfos<NumSVENeonBridgeBuiltins>({
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define GET_SVE_BUILTINS
+#include "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
+#undef GET_SVE_BUILTINS
+#undef TARGET_BUILTIN
+    });
+static constexpr auto BuiltinAArch64Infos =
+    Builtin::MakeInfos<NumAArch64Builtins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsAArch64.def"
+    });
 
 void AArch64TargetInfo::setArchFeatures() {
   if (*ArchInfo == llvm::AArch64::ARMV8R) {
@@ -191,6 +261,10 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   assert(UseBitFieldTypeAlignment && "bitfields affect type alignment");
   UseZeroLengthBitfieldAlignment = true;
 
+  // AAPCS64 allows any "fundamental integer data type" to be used for
+  // over-sized bitfields, which includes 128-bit integers.
+  LargestOverSizedBitfieldContainer = 128;
+
   HasUnalignedAccess = true;
 
   // AArch64 targets default to using the ARM C++ ABI.
@@ -253,9 +327,17 @@ bool AArch64TargetInfo::validateGlobalRegisterVariable(
 
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
+                                                 const LangOptions &LO,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
   if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, HasPAuthLR))
+    return false;
+
+  // GCS is currently untested with ptrauth-returns, but enabling this could be
+  // allowed in future after testing with a suitable system.
+  if (LO.PointerAuthReturns &&
+      (PBP.Scope != "none" || PBP.BranchProtectionPAuthLR ||
+       PBP.GuardedControlStack))
     return false;
 
   BPI.SignReturnAddr =
@@ -697,9 +779,17 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo, clang::AArch64::LastTSBuiltin -
-                                         Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+AArch64TargetInfo::getTargetBuiltins() const {
+  return {
+      {&NEON::BuiltinStrings, NEON::BuiltinInfos, "__builtin_neon_"},
+      {&NEON::FP16::BuiltinStrings, NEON::FP16::BuiltinInfos,
+       "__builtin_neon_"},
+      {&SVE::BuiltinStrings, SVE::BuiltinInfos, "__builtin_sve_"},
+      {&BuiltinSVENeonBridgeStrings, BuiltinSVENeonBridgeInfos},
+      {&SME::BuiltinStrings, SME::BuiltinInfos, "__builtin_sme_"},
+      {&BuiltinAArch64Strings, BuiltinAArch64Infos},
+  };
 }
 
 std::optional<std::pair<unsigned, unsigned>>

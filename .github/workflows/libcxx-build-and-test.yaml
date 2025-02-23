@@ -37,7 +37,7 @@ jobs:
   stage1:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:d8a0709b1090350a7fe3604d8ab78c7d62f10698
+    container: ghcr.io/llvm/libcxx-linux-builder:b319dfef21f6c7b0bc6a356d6b9f41a3b3b98ae9
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -48,8 +48,8 @@ jobs:
           'generic-cxx26',
           'generic-modules'
         ]
-        cc: [  'clang-20' ]
-        cxx: [ 'clang++-20' ]
+        cc: [  'clang-21' ]
+        cxx: [ 'clang++-21' ]
         include:
           - config: 'generic-gcc'
             cc: 'gcc-14'
@@ -75,7 +75,7 @@ jobs:
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:d8a0709b1090350a7fe3604d8ab78c7d62f10698
+    container: ghcr.io/llvm/libcxx-linux-builder:b319dfef21f6c7b0bc6a356d6b9f41a3b3b98ae9
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -88,18 +88,22 @@ jobs:
           'generic-cxx20',
           'generic-cxx23'
         ]
-        cc: [ 'clang-20' ]
-        cxx: [ 'clang++-20' ]
+        cc: [ 'clang-21' ]
+        cxx: [ 'clang++-21' ]
         include:
           - config: 'generic-gcc-cxx11'
             cc: 'gcc-14'
             cxx: 'g++-14'
-          - config: 'generic-cxx23'
-            cc: 'clang-18'
-            cxx: 'clang++-18'
+          - config: 'generic-cxx26'
+            cc: 'clang-20'
+            cxx: 'clang++-20'
           - config: 'generic-cxx26'
             cc: 'clang-19'
             cxx: 'clang++-19'
+          # Release transition
+          - config: 'generic-cxx23'
+            cc: 'clang-18'
+            cxx: 'clang++-18'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
@@ -120,7 +124,7 @@ jobs:
             **/crash_diagnostics/*
   stage3:
     if: github.repository_owner == 'llvm'
-    needs: [ stage1, stage2 ]
+    needs: [ stage2 ]
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -163,14 +167,14 @@ jobs:
         - config: 'generic-msan'
           machine: libcxx-self-hosted-linux
     runs-on: ${{ matrix.machine }}
-    container: ghcr.io/llvm/libcxx-linux-builder:d8a0709b1090350a7fe3604d8ab78c7d62f10698
+    container: ghcr.io/llvm/libcxx-linux-builder:b319dfef21f6c7b0bc6a356d6b9f41a3b3b98ae9
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
-          CC: clang-20
-          CXX: clang++-20
+          CC: clang-21
+          CXX: clang++-21
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -184,7 +188,7 @@ jobs:
             **/crash_diagnostics/*
 
   macos:
-    needs: [ stage1 ]
+    needs: [ stage3 ]
     strategy:
       fail-fast: false
       matrix:
@@ -228,7 +232,7 @@ jobs:
 
   windows:
     runs-on: windows-2022
-    needs: [ stage1 ]
+    needs: [ stage2 ]
     strategy:
       fail-fast: false
       matrix:

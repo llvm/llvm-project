@@ -1236,7 +1236,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   bool IsChkVariant = false;
 
   auto GetFunctionName = [&]() {
-    StringRef FunctionName = getASTContext().BuiltinInfo.getName(BuiltinID);
+    std::string FunctionNameStr =
+        getASTContext().BuiltinInfo.getName(BuiltinID);
+    llvm::StringRef FunctionName = FunctionNameStr;
     // Skim off the details of whichever builtin was called to produce a better
     // diagnostic, as it's unlikely that the user wrote the __builtin
     // explicitly.
@@ -1246,7 +1248,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     } else {
       FunctionName.consume_front("__builtin_");
     }
-    return FunctionName;
+    return FunctionName.str();
   };
 
   switch (BuiltinID) {
@@ -1290,7 +1292,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                         unsigned SourceSize) {
       DiagID = diag::warn_fortify_scanf_overflow;
       unsigned Index = ArgIndex + DataIndex;
-      StringRef FunctionName = GetFunctionName();
+      std::string FunctionName = GetFunctionName();
       DiagRuntimeBehavior(TheCall->getArg(Index)->getBeginLoc(), TheCall,
                           PDiag(DiagID) << FunctionName << (Index + 1)
                                         << DestSize << SourceSize);
@@ -1439,7 +1441,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       llvm::APSInt::compareValues(*SourceSize, *DestinationSize) <= 0)
     return;
 
-  StringRef FunctionName = GetFunctionName();
+  std::string FunctionName = GetFunctionName();
 
   SmallString<16> DestinationStr;
   SmallString<16> SourceStr;
@@ -2449,7 +2451,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
     break;
   }
-#define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
   case Builtin::BI##ID:                                                        \
     return AtomicOpsOverloaded(TheCallResult, AtomicExpr::AO##ID);
@@ -4584,7 +4585,7 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
   // Get the decl for the concrete builtin from this, we can tell what the
   // concrete integer type we should convert to is.
   unsigned NewBuiltinID = BuiltinIndices[BuiltinIndex][SizeIndex];
-  StringRef NewBuiltinName = Context.BuiltinInfo.getName(NewBuiltinID);
+  std::string NewBuiltinName = Context.BuiltinInfo.getName(NewBuiltinID);
   FunctionDecl *NewBuiltinDecl;
   if (NewBuiltinID == BuiltinID)
     NewBuiltinDecl = FDecl;
@@ -5261,8 +5262,8 @@ ExprResult Sema::ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                        << E->getSourceRange());
   }
 
-  return new (Context) class ConvertVectorExpr(E, TInfo, DstTy, VK, OK,
-                                               BuiltinLoc, RParenLoc);
+  return ConvertVectorExpr::Create(Context, E, TInfo, DstTy, VK, OK, BuiltinLoc,
+                                   RParenLoc, CurFPFeatureOverrides());
 }
 
 bool Sema::BuiltinPrefetch(CallExpr *TheCall) {
@@ -8379,7 +8380,7 @@ static void emitReplacement(Sema &S, SourceLocation Loc, SourceRange Range,
                             unsigned AbsKind, QualType ArgType) {
   bool EmitHeaderHint = true;
   const char *HeaderName = nullptr;
-  StringRef FunctionName;
+  std::string FunctionName;
   if (S.getLangOpts().CPlusPlus && !ArgType->isAnyComplexType()) {
     FunctionName = "std::abs";
     if (ArgType->isIntegralOrEnumerationType()) {
@@ -8545,7 +8546,7 @@ void Sema::CheckAbsoluteValueFunction(const CallExpr *Call,
   // Unsigned types cannot be negative.  Suggest removing the absolute value
   // function call.
   if (ArgType->isUnsignedIntegerType()) {
-    StringRef FunctionName =
+    std::string FunctionName =
         IsStdAbs ? "std::abs" : Context.BuiltinInfo.getName(AbsKind);
     Diag(Call->getExprLoc(), diag::warn_unsigned_abs) << ArgType << ParamType;
     Diag(Call->getExprLoc(), diag::note_remove_abs)
@@ -11678,8 +11679,12 @@ static void AnalyzeImplicitConversions(
   // Propagate whether we are in a C++ list initialization expression.
   // If so, we do not issue warnings for implicit int-float conversion
   // precision loss, because C++11 narrowing already handles it.
-  bool IsListInit = Item.IsListInit ||
-                    (isa<InitListExpr>(OrigE) && S.getLangOpts().CPlusPlus);
+  //
+  // HLSL's initialization lists are special, so they shouldn't observe the C++
+  // behavior here.
+  bool IsListInit =
+      Item.IsListInit || (isa<InitListExpr>(OrigE) &&
+                          S.getLangOpts().CPlusPlus && !S.getLangOpts().HLSL);
 
   if (E->isTypeDependent() || E->isValueDependent())
     return;

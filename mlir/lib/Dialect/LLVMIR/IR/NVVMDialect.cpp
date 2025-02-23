@@ -75,6 +75,10 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
+//===----------------------------------------------------------------------===//
+// Verifier methods
+//===----------------------------------------------------------------------===//
+
 // This verifier is shared among the following Ops:
 // CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load)
 // CpAsyncBulkTensorPrefetchOp (TMA Prefetch)
@@ -1107,6 +1111,36 @@ LogicalResult NVVM::BarrierOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::Tcgen05CpOp::verify() {
+  auto mc = getMulticast();
+
+  using SH = Tcgen05CpShape;
+  using MC = Tcgen05CpMulticast;
+  switch (getShape()) {
+  case SH::SHAPE_128x256b:
+  case SH::SHAPE_128x128b:
+  case SH::SHAPE_4x256b:
+    if (mc != MC::NONE)
+      return emitError("Invalid multicast type for tcgen05.cp Op");
+    break;
+  case SH::SHAPE_64x128b:
+    if (mc != MC::WARPX2_01_23 && mc != MC::WARPX2_02_13)
+      return emitError("Shape 64x128b requires multicast warpx2_01_23 or "
+                       "warpx2_02_13 for tcgen05.cp Op");
+    break;
+  case SH::SHAPE_32x128b:
+    if (mc != MC::WARPX4)
+      return emitError(
+          "Shape 32x128b requires multicast warpx4 for tcgen05.cp Op");
+    break;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// getIntrinsicID/getIntrinsicIDAndArgs methods
+//===----------------------------------------------------------------------===//
+
 #define CP_ASYNC_ID_IMPL(mod, size, suffix)                                    \
   llvm::Intrinsic::nvvm_cp_async_##mod##_shared_global_##size##suffix
 
@@ -1241,6 +1275,116 @@ llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   default:
     llvm_unreachable("Invalid RoundingMode for CvtFloatToTF32Op");
   }
+}
+
+llvm::Intrinsic::ID
+Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
+                                      LLVM::ModuleTranslation &mt,
+                                      llvm::SmallVector<llvm::Value *> &args) {
+  auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
+  unsigned AS = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
+                    .getAddressSpace();
+  bool isShared = AS == NVVMMemorySpace::kSharedMemorySpace;
+  bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+
+  llvm::Intrinsic::ID id;
+  if (isShared) {
+    id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_shared_cg2
+                    : llvm::Intrinsic::nvvm_tcgen05_alloc_shared_cg1;
+  } else {
+    id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
+                    : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
+  }
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(curOp.getAddr()));
+  args.push_back(mt.lookupValue(curOp.getNCols()));
+
+  return id;
+}
+
+llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt,
+    llvm::SmallVector<llvm::Value *> &args) {
+  auto curOp = cast<NVVM::Tcgen05DeallocOp>(op);
+  auto id = (curOp.getGroup() == Tcgen05GroupKind::CTA_1)
+                ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
+                : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(curOp.getTaddr()));
+  args.push_back(mt.lookupValue(curOp.getNCols()));
+
+  return id;
+}
+
+#define TCGEN05_COMMIT_IMPL(cg, is_shared, mc)                                 \
+  is_shared ? llvm::Intrinsic::nvvm_tcgen05_commit##mc##_shared##_##cg         \
+            : llvm::Intrinsic::nvvm_tcgen05_commit##mc##_##cg
+
+#define GET_TCGEN05_COMMIT_ID(cta_group, is_shared, has_mc)                    \
+  has_mc ? TCGEN05_COMMIT_IMPL(cta_group, is_shared, _mc)                      \
+         : TCGEN05_COMMIT_IMPL(cta_group, is_shared, )
+
+llvm::Intrinsic::ID
+Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
+                                       LLVM::ModuleTranslation &mt,
+                                       llvm::SmallVector<llvm::Value *> &args) {
+  auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
+  unsigned AS = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
+                    .getAddressSpace();
+  bool isShared = AS == NVVMMemorySpace::kSharedMemorySpace;
+  bool hasMulticast = curOp.getMulticastMask() ? true : false;
+  bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+
+  auto id = is2CTAMode ? GET_TCGEN05_COMMIT_ID(cg2, isShared, hasMulticast)
+                       : GET_TCGEN05_COMMIT_ID(cg1, isShared, hasMulticast);
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(curOp.getAddr()));
+  if (hasMulticast)
+    args.push_back(mt.lookupValue(curOp.getMulticastMask()));
+
+  return id;
+}
+
+#define TCGEN05_CP_IMPL(shape_mc, src_fmt, cg)                                 \
+  llvm::Intrinsic::nvvm_tcgen05_cp##shape_mc##src_fmt##cg
+
+#define TCGEN05_CP_2CTA(shape_mc, src_fmt, is_2cta)                            \
+  is_2cta ? TCGEN05_CP_IMPL(shape_mc, src_fmt, _cg2)                           \
+          : TCGEN05_CP_IMPL(shape_mc, src_fmt, _cg1)
+
+#define GET_TCGEN05_CP_ID(shape_mc, src_fmt, is_2cta)                          \
+  [&]() -> auto {                                                              \
+    if (src_fmt == Tcgen05CpSrcFormat::B6x16_P32)                              \
+      return TCGEN05_CP_2CTA(shape_mc, _b6x16_p32, is_2cta);                   \
+    if (src_fmt == Tcgen05CpSrcFormat::B4x16_P64)                              \
+      return TCGEN05_CP_2CTA(shape_mc, _b4x16_p64, is_2cta);                   \
+    return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
+  }()
+
+llvm::Intrinsic::ID Tcgen05CpOp::getIntrinsicID(Operation &op) {
+  auto curOp = cast<NVVM::Tcgen05CpOp>(op);
+  bool is2CTA = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+  auto srcFmt = curOp.getSrcFormat();
+  auto mc = curOp.getMulticast();
+
+  switch (curOp.getShape()) {
+  case Tcgen05CpShape::SHAPE_128x256b:
+    return GET_TCGEN05_CP_ID(_128x256b, srcFmt, is2CTA);
+  case Tcgen05CpShape::SHAPE_128x128b:
+    return GET_TCGEN05_CP_ID(_128x128b, srcFmt, is2CTA);
+  case Tcgen05CpShape::SHAPE_4x256b:
+    return GET_TCGEN05_CP_ID(_4x256b, srcFmt, is2CTA);
+  case Tcgen05CpShape::SHAPE_32x128b:
+    return GET_TCGEN05_CP_ID(_32x128b_warpx4, srcFmt, is2CTA);
+  case Tcgen05CpShape::SHAPE_64x128b:
+    return (mc == Tcgen05CpMulticast::WARPX2_01_23)
+               ? GET_TCGEN05_CP_ID(_64x128b_warpx2_01_23, srcFmt, is2CTA)
+               : GET_TCGEN05_CP_ID(_64x128b_warpx2_02_13, srcFmt, is2CTA);
+  }
+  llvm_unreachable("Invalid shape in tcgen05 cp Op");
 }
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might

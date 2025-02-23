@@ -262,8 +262,9 @@ void CodeGenTarget::ReadInstructions() const {
 
   // Parse the instructions defined in the .td file.
   for (const Record *R : Insts) {
-    Instructions[R] = std::make_unique<CodeGenInstruction>(R);
-    if (Instructions[R]->isVariableLengthEncoding())
+    auto &Inst = Instructions[R];
+    Inst = std::make_unique<CodeGenInstruction>(R);
+    if (Inst->isVariableLengthEncoding())
       HasVariableLengthEncodings = true;
   }
 }

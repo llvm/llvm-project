@@ -63,7 +63,7 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
     if (!EmitDebugInfo)
       continue;
 
-    auto &Section = Sym->getBlock().getSection();
+    auto &Section = Sym->getSection();
     auto Addr = Sym->getAddress();
     auto SAddr =
         object::SectionedAddress{Addr.getValue(), Section.getOrdinal()};

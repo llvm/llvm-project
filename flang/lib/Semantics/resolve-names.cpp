@@ -13,8 +13,6 @@
 #include "resolve-directives.h"
 #include "resolve-names-utils.h"
 #include "rewrite-parse-tree.h"
-#include "flang/Common/Fortran.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Common/visit.h"
@@ -38,6 +36,8 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "flang/Support/Fortran.h"
+#include "flang/Support/default-kinds.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
@@ -87,7 +87,8 @@ private:
   bool inheritFromParent_{false}; // look in parent if not specified here
   bool isImplicitNoneType_{
       context_.IsEnabled(common::LanguageFeature::ImplicitNoneTypeAlways)};
-  bool isImplicitNoneExternal_{false};
+  bool isImplicitNoneExternal_{
+      context_.IsEnabled(common::LanguageFeature::ImplicitNoneExternal)};
   // map_ contains the mapping between letters and types that were defined
   // by the IMPLICIT statements of the related scope. It does not contain
   // the default Fortran mappings nor the mapping defined in parents.
@@ -1481,6 +1482,15 @@ public:
     return false;
   }
 
+  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
+    AddOmpSourceRange(x.source);
+    parser::OmpClauseList emptyList{std::list<parser::OmpClause>{}};
+    ProcessReductionSpecifier(
+        std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
+        emptyList);
+    Walk(std::get<std::optional<parser::OmpReductionInitializerClause>>(x.t));
+    return false;
+  }
   bool Pre(const parser::OmpMapClause &);
 
   void Post(const parser::OmpBeginLoopDirective &) {
@@ -1731,11 +1741,19 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const parser::OmpClauseList &clauses) {
+  BeginDeclTypeSpec();
+  const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
+  if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
+    if (auto *name{std::get_if<parser::Name>(&procDes->u)}) {
+      name->symbol =
+          &MakeSymbol(*name, MiscDetails{MiscDetails::Kind::ConstructName});
+    }
+  }
+  EndDeclTypeSpec();
   // Creating a new scope in case the combiner expression (or clauses) use
   // reerved identifiers, like "omp_in". This is a temporary solution until
   // we deal with these in a more thorough way.
   PushScope(Scope::Kind::OtherConstruct, nullptr);
-  Walk(std::get<parser::OmpReductionIdentifier>(spec.t));
   Walk(std::get<parser::OmpTypeNameList>(spec.t));
   Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
   Walk(clauses);
@@ -9534,7 +9552,8 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::Unroll>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::Unroll>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u)) {
     return;
   }
   if (const auto *tkr{

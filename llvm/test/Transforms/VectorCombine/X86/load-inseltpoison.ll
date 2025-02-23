@@ -577,8 +577,8 @@ define <8 x i32> @load_v1i32_extract_insert_v8i32_extra_use(ptr align 16 derefer
 ; CHECK-LABEL: @load_v1i32_extract_insert_v8i32_extra_use(
 ; CHECK-NEXT:    [[L:%.*]] = load <1 x i32>, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store <1 x i32> [[L]], ptr [[STORE_PTR:%.*]], align 4
-; CHECK-NEXT:    [[S:%.*]] = extractelement <1 x i32> [[L]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i32> poison, i32 [[S]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[L]], <1 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %l = load <1 x i32>, ptr %p, align 4

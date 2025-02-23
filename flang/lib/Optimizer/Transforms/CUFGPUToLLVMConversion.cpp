@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Transforms/CUFGPUToLLVMConversion.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/common.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"

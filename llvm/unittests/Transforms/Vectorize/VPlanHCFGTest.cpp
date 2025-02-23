@@ -41,7 +41,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
   VPBasicBlock *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
@@ -199,7 +199,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
   TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
   TargetLibraryInfo TLI(TLII);
@@ -261,7 +261,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoopMultiExit) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,

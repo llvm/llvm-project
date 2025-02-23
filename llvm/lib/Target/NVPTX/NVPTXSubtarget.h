@@ -88,6 +88,10 @@ public:
   // Does SM & PTX support memory orderings (weak and atomic: relaxed, acquire,
   // release, acq_rel, sc) ?
   bool hasMemoryOrdering() const { return SmVersion >= 70 && PTXVersion >= 60; }
+  // Does SM & PTX support .acquire and .release qualifiers for fence?
+  bool hasSplitAcquireAndReleaseFences() const {
+    return SmVersion >= 90 && PTXVersion >= 86;
+  }
   // Does SM & PTX support atomic relaxed MMIO operations ?
   bool hasRelaxedMMIO() const { return SmVersion >= 70 && PTXVersion >= 82; }
   bool hasDotInstructions() const {
@@ -121,11 +125,11 @@ public:
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
   // GPUs with "a" suffix have include architecture-accelerated features that
   // are supported on the specified architecture only, hence such targets do not
-  // follow the onion layer model. hasAAFeatures() allows distinguishing such
-  // GPU variants from the base GPU architecture.
+  // follow the onion layer model. hasArchAccelFeatures() allows
+  // distinguishing such GPU variants from the base GPU architecture.
   // - 0 represents base GPU model,
   // - non-zero value identifies particular architecture-accelerated variant.
-  bool hasAAFeatures() const { return getFullSmVersion() % 10; }
+  bool hasArchAccelFeatures() const { return getFullSmVersion() % 10; }
 
   // If the user did not provide a target we default to the `sm_30` target.
   std::string getTargetName() const {

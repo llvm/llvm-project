@@ -205,11 +205,15 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
   unsigned ValZeros = ValC.logBase2();
   unsigned AndZeros = AndMask.logBase2();
   bool ShouldNotVal = !TC.isZero();
+  bool NeedShift = ValZeros != AndZeros;
+  bool NeedZExtTrunc =
+      SelType->getScalarSizeInBits() != V->getType()->getScalarSizeInBits();
 
-  // If we would need to create an 'and' + 'shift' + 'xor' to replace a 'select'
-  // + 'icmp', then this transformation would result in more instructions and
-  // potentially interfere with other folding.
-  if (CreateAnd && ShouldNotVal && ValZeros != AndZeros)
+  // If we would need to create an 'and' + 'shift' + 'xor' + cast to replace
+  // a 'select' + 'icmp', then this transformation would result in more
+  // instructions and potentially interfere with other folding.
+  if (CreateAnd + ShouldNotVal + NeedShift + NeedZExtTrunc >
+      1 + Cmp->hasOneUse())
     return nullptr;
 
   // Insert the 'and' instruction on the input to the truncate.
@@ -742,39 +746,47 @@ static Value *foldSelectICmpLshrAshr(const ICmpInst *IC, Value *TrueVal,
 /// 1. The icmp predicate is inverted
 /// 2. The select operands are reversed
 /// 3. The magnitude of C2 and C1 are flipped
-static Value *foldSelectICmpAndBinOp(const ICmpInst *IC, Value *TrueVal,
-                                  Value *FalseVal,
-                                  InstCombiner::BuilderTy &Builder) {
+static Value *foldSelectICmpAndBinOp(Value *CondVal, Value *TrueVal,
+                                     Value *FalseVal,
+                                     InstCombiner::BuilderTy &Builder) {
   // Only handle integer compares. Also, if this is a vector select, we need a
   // vector compare.
   if (!TrueVal->getType()->isIntOrIntVectorTy() ||
-     TrueVal->getType()->isVectorTy() != IC->getType()->isVectorTy())
+      TrueVal->getType()->isVectorTy() != CondVal->getType()->isVectorTy())
     return nullptr;
-
-  Value *CmpLHS = IC->getOperand(0);
-  Value *CmpRHS = IC->getOperand(1);
 
   unsigned C1Log;
   bool NeedAnd = false;
-  CmpInst::Predicate Pred = IC->getPredicate();
-  if (IC->isEquality()) {
-    if (!match(CmpRHS, m_Zero()))
-      return nullptr;
+  CmpPredicate Pred;
+  Value *CmpLHS, *CmpRHS;
 
-    const APInt *C1;
-    if (!match(CmpLHS, m_And(m_Value(), m_Power2(C1))))
-      return nullptr;
+  if (match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS)))) {
+    if (ICmpInst::isEquality(Pred)) {
+      if (!match(CmpRHS, m_Zero()))
+        return nullptr;
 
-    C1Log = C1->logBase2();
+      const APInt *C1;
+      if (!match(CmpLHS, m_And(m_Value(), m_Power2(C1))))
+        return nullptr;
+
+      C1Log = C1->logBase2();
+    } else {
+      auto Res = decomposeBitTestICmp(CmpLHS, CmpRHS, Pred);
+      if (!Res || !Res->Mask.isPowerOf2())
+        return nullptr;
+
+      CmpLHS = Res->X;
+      Pred = Res->Pred;
+      C1Log = Res->Mask.logBase2();
+      NeedAnd = true;
+    }
+  } else if (auto *Trunc = dyn_cast<TruncInst>(CondVal)) {
+    CmpLHS = Trunc->getOperand(0);
+    C1Log = 0;
+    Pred = ICmpInst::ICMP_NE;
+    NeedAnd = !Trunc->hasNoUnsignedWrap();
   } else {
-    auto Res = decomposeBitTestICmp(CmpLHS, CmpRHS, Pred);
-    if (!Res || !Res->Mask.isPowerOf2())
-      return nullptr;
-
-    CmpLHS = Res->X;
-    Pred = Res->Pred;
-    C1Log = Res->Mask.logBase2();
-    NeedAnd = true;
+    return nullptr;
   }
 
   Value *Y, *V = CmpLHS;
@@ -808,7 +820,7 @@ static Value *foldSelectICmpAndBinOp(const ICmpInst *IC, Value *TrueVal,
 
   // Make sure we don't create more instructions than we save.
   if ((NeedShift + NeedXor + NeedZExtTrunc + NeedAnd) >
-      (IC->hasOneUse() + BinOp->hasOneUse()))
+      (CondVal->hasOneUse() + BinOp->hasOneUse()))
     return nullptr;
 
   if (NeedAnd) {
@@ -829,7 +841,10 @@ static Value *foldSelectICmpAndBinOp(const ICmpInst *IC, Value *TrueVal,
   if (NeedXor)
     V = Builder.CreateXor(V, *C2);
 
-  return Builder.CreateBinOp(BinOp->getOpcode(), Y, V);
+  auto *Res = Builder.CreateBinOp(BinOp->getOpcode(), Y, V);
+  if (auto *BO = dyn_cast<BinaryOperator>(Res))
+    BO->copyIRFlags(BinOp);
+  return Res;
 }
 
 /// Canonicalize a set or clear of a masked set of constant bits to
@@ -1982,9 +1997,6 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
 
   if (Instruction *V = foldSelectZeroOrOnes(ICI, TrueVal, FalseVal, Builder))
     return V;
-
-  if (Value *V = foldSelectICmpAndBinOp(ICI, TrueVal, FalseVal, Builder))
-    return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectICmpLshrAshr(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
@@ -3432,7 +3444,7 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
 static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
                                         const APInt *Cond1, Value *CtlzOp,
                                         unsigned BitWidth,
-                                        bool &ShouldDropNUW) {
+                                        bool &ShouldDropNoWrap) {
   // The challenge in recognizing std::bit_ceil(X) is that the operand is used
   // for the CTLZ proper and select condition, each possibly with some
   // operation like add and sub.
@@ -3455,7 +3467,7 @@ static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
   ConstantRange CR = ConstantRange::makeExactICmpRegion(
       CmpInst::getInversePredicate(Pred), *Cond1);
 
-  ShouldDropNUW = false;
+  ShouldDropNoWrap = false;
 
   // Match the operation that's used to compute CtlzOp from CommonAncestor.  If
   // CtlzOp == CommonAncestor, return true as no operation is needed.  If a
@@ -3466,11 +3478,12 @@ static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
     if (CtlzOp == CommonAncestor)
       return true;
     if (match(CtlzOp, m_Add(m_Specific(CommonAncestor), m_APInt(C)))) {
+      ShouldDropNoWrap = true;
       CR = CR.add(*C);
       return true;
     }
     if (match(CtlzOp, m_Sub(m_APInt(C), m_Specific(CommonAncestor)))) {
-      ShouldDropNUW = true;
+      ShouldDropNoWrap = true;
       CR = ConstantRange(*C).sub(CR);
       return true;
     }
@@ -3541,19 +3554,21 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
     Pred = CmpInst::getInversePredicate(Pred);
   }
 
-  bool ShouldDropNUW;
+  bool ShouldDropNoWrap;
 
   if (!match(FalseVal, m_One()) ||
       !match(TrueVal,
              m_OneUse(m_Shl(m_One(), m_OneUse(m_Sub(m_SpecificInt(BitWidth),
                                                     m_Value(Ctlz)))))) ||
-      !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Zero())) ||
+      !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Value())) ||
       !isSafeToRemoveBitCeilSelect(Pred, Cond0, Cond1, CtlzOp, BitWidth,
-                                   ShouldDropNUW))
+                                   ShouldDropNoWrap))
     return nullptr;
 
-  if (ShouldDropNUW)
+  if (ShouldDropNoWrap) {
     cast<Instruction>(CtlzOp)->setHasNoUnsignedWrap(false);
+    cast<Instruction>(CtlzOp)->setHasNoSignedWrap(false);
+  }
 
   // Build 1 << (-CTLZ & (BitWidth-1)).  The negation likely corresponds to a
   // single hardware instruction as opposed to BitWidth - CTLZ, where BitWidth
@@ -3562,6 +3577,8 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
 
   // Drop range attributes and re-infer them in the next iteration.
   cast<Instruction>(Ctlz)->dropPoisonGeneratingAnnotations();
+  // Set is_zero_poison to false and re-infer them in the next iteration.
+  cast<Instruction>(Ctlz)->setOperand(1, Builder.getFalse());
   IC.addToWorklist(cast<Instruction>(Ctlz));
   Value *Neg = Builder.CreateNeg(Ctlz);
   Value *Masked =
@@ -3937,6 +3954,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(CondVal))
     if (Instruction *Result = foldSelectInstWithICmp(SI, ICI))
       return Result;
+
+  if (Value *V = foldSelectICmpAndBinOp(CondVal, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
 
   if (Instruction *Add = foldAddSubSelect(SI, Builder))
     return Add;

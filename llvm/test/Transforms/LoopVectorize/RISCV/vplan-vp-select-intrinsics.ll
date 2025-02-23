@@ -6,8 +6,8 @@
  ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefix=IF-EVL %s
 
  define void @vp_select(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
- ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF={1}'
- ; IF-EVL: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
+ ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
+ ; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
  ; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}'
  ; IF-EVL: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
  ;
@@ -44,9 +44,9 @@
  ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
  ; IF-EVL-NEXT:     WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
  ; IF-EVL-NEXT:     WIDEN ir<[[CMP:%.+]]> = icmp sgt ir<[[LD1]]>, ir<[[LD2]]>
- ; IF-EVL-NEXT:     WIDEN ir<[[SUB:%.+]]> = vp.sub ir<0>, ir<[[LD2]]>, vp<[[EVL]]>
+ ; IF-EVL-NEXT:     WIDEN ir<[[SUB:%.+]]> = sub ir<0>, ir<[[LD2]]>
  ; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[SELECT:%.+]]> = call llvm.vp.select(ir<[[CMP]]>, ir<[[LD2]]>, ir<[[SUB]]>, vp<[[EVL]]>)
- ; IF-EVL-NEXT:     WIDEN ir<[[ADD:%.+]]> = vp.add vp<[[SELECT]]>, ir<[[LD1]]>, vp<[[EVL]]>
+ ; IF-EVL-NEXT:     WIDEN ir<[[ADD:%.+]]> = add vp<[[SELECT]]>, ir<[[LD1]]>
  ; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
  ; IF-EVL-NEXT:     vp<[[PTR3:%.+]]> = vector-pointer ir<[[GEP3]]>
  ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, ir<[[ADD]]>, vp<[[EVL]]>

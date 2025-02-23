@@ -119,8 +119,8 @@ _CLC_DEF float __clc_tanf_piby4(float x, int regn) {
   return regn & 1 ? tr : t;
 }
 
-_CLC_DEF void __clc_fullMulS(float *hi, float *lo, float a, float b, float bh,
-                             float bt) {
+_CLC_DEF void __clc_fullMulS(private float *hi, private float *lo, float a,
+                             float b, float bh, float bt) {
   if (HAVE_HW_FMA32()) {
     float ph = a * b;
     *hi = ph;
@@ -136,7 +136,7 @@ _CLC_DEF void __clc_fullMulS(float *hi, float *lo, float a, float b, float bh,
   }
 }
 
-_CLC_DEF float __clc_removePi2S(float *hi, float *lo, float x) {
+_CLC_DEF float __clc_removePi2S(private float *hi, private float *lo, float x) {
   // 72 bits of pi/2
   const float fpiby2_1 = (float)0xC90FDA / 0x1.0p+23f;
   const float fpiby2_1_h = (float)0xC90 / 0x1.0p+11f;
@@ -174,7 +174,8 @@ _CLC_DEF float __clc_removePi2S(float *hi, float *lo, float x) {
   return fnpi2;
 }
 
-_CLC_DEF int __clc_argReductionSmallS(float *r, float *rr, float x) {
+_CLC_DEF int __clc_argReductionSmallS(private float *r, private float *rr,
+                                      float x) {
   float fnpi2 = __clc_removePi2S(r, rr, x);
   return (int)fnpi2 & 0x3;
 }
@@ -188,7 +189,8 @@ _CLC_DEF int __clc_argReductionSmallS(float *r, float *rr, float x) {
   HI = __clc_mul_hi(A, B);                                                     \
   HI += LO < C
 
-_CLC_DEF int __clc_argReductionLargeS(float *r, float *rr, float x) {
+_CLC_DEF int __clc_argReductionLargeS(private float *r, private float *rr,
+                                      float x) {
   int xe = (int)(as_uint(x) >> 23) - 127;
   uint xm = 0x00800000U | (as_uint(x) & 0x7fffffU);
 
@@ -330,7 +332,7 @@ _CLC_DEF int __clc_argReductionLargeS(float *r, float *rr, float x) {
   return ((i >> 1) + (i & 1)) & 0x3;
 }
 
-_CLC_DEF int __clc_argReductionS(float *r, float *rr, float x) {
+_CLC_DEF int __clc_argReductionS(private float *r, private float *rr, float x) {
   if (x < 0x1.0p+23f)
     return __clc_argReductionSmallS(r, rr, x);
   else
@@ -342,8 +344,9 @@ _CLC_DEF int __clc_argReductionS(float *r, float *rr, float x) {
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
 // Reduction for medium sized arguments
-_CLC_DEF void __clc_remainder_piby2_medium(double x, double *r, double *rr,
-                                           int *regn) {
+_CLC_DEF void __clc_remainder_piby2_medium(double x, private double *r,
+                                           private double *rr,
+                                           private int *regn) {
   // How many pi/2 is x a multiple of?
   const double two_by_pi = 0x1.45f306dc9c883p-1;
   double dnpi2 = __clc_trunc(fma(x, two_by_pi, 0.5));
@@ -387,8 +390,9 @@ _CLC_DEF void __clc_remainder_piby2_medium(double x, double *r, double *rr,
 // Return value "regn" tells how many lots of pi/2 were subtracted
 // from x to put it in the range [-pi/4,pi/4], mod 4.
 
-_CLC_DEF void __clc_remainder_piby2_large(double x, double *r, double *rr,
-                                          int *regn) {
+_CLC_DEF void __clc_remainder_piby2_large(double x, private double *r,
+                                          private double *rr,
+                                          private int *regn) {
 
   long ux = as_long(x);
   int e = (int)(ux >> 52) - 1023;

@@ -393,6 +393,8 @@ subroutine acc_parallel_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+! CHECK:      acc.delete accPtr(%[[NOCREATE_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "a"}
+! CHECK:      acc.delete accPtr(%[[NOCREATE_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "b"}
 
   !$acc parallel loop present(a, b)
   DO i = 1, n
@@ -407,6 +409,8 @@ subroutine acc_parallel_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+! CHECK:      acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+! CHECK:      acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "b"}
 
   !$acc parallel loop deviceptr(a) deviceptr(b)
   DO i = 1, n

@@ -147,7 +147,7 @@ inline static MCRegister getMSARegFromFReg(MCRegister Reg) {
   else if (Reg >= Mips::D0_64 && Reg <= Mips::D31_64)
     return Reg - Mips::D0_64 + Mips::W0;
   else
-    return Mips::NoRegister;
+    return MCRegister();
 }
 }
 

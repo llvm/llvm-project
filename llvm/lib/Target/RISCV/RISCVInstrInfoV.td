@@ -48,6 +48,7 @@ def VMaskAsmOperand : AsmOperandClass {
   let IsOptional = 1;
   let DefaultMethod = "defaultMaskRegOp";
   let DiagnosticType = "InvalidVMaskRegister";
+  let DiagnosticString = "operand must be v0.t";
 }
 
 def VMaskCarryInAsmOperand : AsmOperandClass {
@@ -55,6 +56,7 @@ def VMaskCarryInAsmOperand : AsmOperandClass {
   let RenderMethod = "addRegOperands";
   let PredicateMethod = "isV0Reg";
   let DiagnosticType = "InvalidVMaskCarryInRegister";
+  let DiagnosticString = "operand must be v0";
 }
 
 def VMaskOp : RegisterOperand<VMV0> {

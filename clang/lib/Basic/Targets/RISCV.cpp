@@ -238,24 +238,66 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     else
       Builder.defineMacro("__riscv_32e");
   }
+
+  if (Opts.CFProtectionReturn && ISAInfo->hasExtension("zicfiss"))
+    Builder.defineMacro("__riscv_shadow_stack");
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsRISCVVector.def"
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsRISCV.inc"
-};
+static constexpr int NumRVVBuiltins =
+    RISCVVector::FirstSiFiveBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumRVVSiFiveBuiltins =
+    RISCVVector::FirstTSBuiltin - RISCVVector::FirstSiFiveBuiltin;
+static constexpr int NumRISCVBuiltins =
+    RISCV::LastTSBuiltin - RISCVVector::FirstTSBuiltin;
+static constexpr int NumBuiltins =
+    RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins ==
+              (NumRVVBuiltins + NumRVVSiFiveBuiltins + NumRISCVBuiltins));
 
-ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin);
+namespace RVV {
+#define GET_RISCVV_BUILTIN_STR_TABLE
+#include "clang/Basic/riscv_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_STR_TABLE
+static_assert(BuiltinStrings.size() < 100'000);
+
+static constexpr std::array<Builtin::Info, NumRVVBuiltins> BuiltinInfos = {
+#define GET_RISCVV_BUILTIN_INFOS
+#include "clang/Basic/riscv_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_INFOS
+};
+} // namespace RVV
+
+namespace RVVSiFive {
+#define GET_RISCVV_BUILTIN_STR_TABLE
+#include "clang/Basic/riscv_sifive_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumRVVSiFiveBuiltins> BuiltinInfos =
+    {
+#define GET_RISCVV_BUILTIN_INFOS
+#include "clang/Basic/riscv_sifive_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_INFOS
+};
+} // namespace RVVSiFive
+
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsRISCV.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsRISCV.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumRISCVBuiltins);
+
+llvm::SmallVector<Builtin::InfosShard>
+RISCVTargetInfo::getTargetBuiltins() const {
+  return {
+      {&RVV::BuiltinStrings, RVV::BuiltinInfos, "__builtin_rvv_"},
+      {&RVVSiFive::BuiltinStrings, RVVSiFive::BuiltinInfos, "__builtin_rvv_"},
+      {&BuiltinStrings, BuiltinInfos},
+  };
 }
 
 bool RISCVTargetInfo::initFeatureMap(

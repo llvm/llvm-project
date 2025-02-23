@@ -94,6 +94,7 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetTransformInfo;
 class Value;
+class VPIntrinsic;
 
 namespace Sched {
 
@@ -3156,6 +3157,30 @@ public:
     return false;
   }
 
+  /// Lower an interleaved load to target specific intrinsics. Return
+  /// true on success.
+  ///
+  /// \p Load is a vp.load instruction.
+  /// \p Mask is a mask value
+  /// \p DeinterleaveRes is a list of deinterleaved results.
+  virtual bool
+  lowerDeinterleavedIntrinsicToVPLoad(VPIntrinsic *Load, Value *Mask,
+                                      ArrayRef<Value *> DeinterleaveRes) const {
+    return false;
+  }
+
+  /// Lower an interleaved store to target specific intrinsics. Return
+  /// true on success.
+  ///
+  /// \p Store is the vp.store instruction.
+  /// \p Mask is a mask value
+  /// \p InterleaveOps is a list of values being interleaved.
+  virtual bool
+  lowerInterleavedIntrinsicToVPStore(VPIntrinsic *Store, Value *Mask,
+                                     ArrayRef<Value *> InterleaveOps) const {
+    return false;
+  }
+
   /// Lower a deinterleave intrinsic to a target specific load intrinsic.
   /// Return true on success. Currently only supports
   /// llvm.vector.deinterleave2
@@ -5538,6 +5563,10 @@ public:
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expands PARTIAL_REDUCE_S/UMLA nodes to a series of simpler operations,
+  /// consisting of zext/sext, extract_subvector, mul and add operations.
+  SDValue expandPartialReduceMLA(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
   /// on the current target. A VP_SETCC will additionally be given a Mask

@@ -22,9 +22,9 @@
 #include "format-specification.h"
 #include "message.h"
 #include "provenance.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -2642,7 +2642,7 @@ WRAPPER_CLASS(FileUnitNumber, ScalarIntExpr);
 // symbols are known.
 struct IoUnit {
   UNION_CLASS_BOILERPLATE(IoUnit);
-  std::variant<Variable, FileUnitNumber, Star> u;
+  std::variant<Variable, common::Indirection<Expr>, Star> u;
 };
 
 // R1206 file-name-expr -> scalar-default-char-expr
@@ -3349,6 +3349,8 @@ struct StmtFunctionStmt {
 // !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
 // !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name[=value] [, name[=value]]...    = can be :
+// !DIR$ UNROLL [N]
+// !DIR$ UNROLL_AND_JAM [N]
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3371,10 +3373,13 @@ struct CompilerDirective {
   struct Unroll {
     WRAPPER_CLASS_BOILERPLATE(Unroll, std::optional<std::uint64_t>);
   };
+  struct UnrollAndJam {
+    WRAPPER_CLASS_BOILERPLATE(UnrollAndJam, std::optional<std::uint64_t>);
+  };
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unroll, Unrecognized>
+      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized>
       u;
 };
 
@@ -4553,8 +4558,8 @@ WRAPPER_CLASS(OmpReductionInitializerClause, Expr);
 struct OpenMPDeclareReductionConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
   CharBlock source;
-  std::tuple<Verbatim, OmpReductionIdentifier, std::list<DeclarationTypeSpec>,
-      OmpReductionCombiner, std::optional<OmpReductionInitializerClause>>
+  std::tuple<Verbatim, common::Indirection<OmpReductionSpecifier>,
+      std::optional<OmpReductionInitializerClause>>
       t;
 };
 

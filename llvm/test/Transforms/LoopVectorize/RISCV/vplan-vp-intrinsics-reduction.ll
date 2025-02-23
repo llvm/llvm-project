@@ -24,8 +24,8 @@
 
 
 define i32 @reduction(ptr %a, i64 %n, i32 %start) {
-; IF-EVL: VPlan 'Initial VPlan for VF={1},UF={1}'
-; IF-EVL: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
+; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
+; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
 
 ; IF-EVL-OUTLOOP: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-OUTLOOP-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
@@ -49,7 +49,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[ADD:%.+]]> = vp.add ir<[[LD1]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>
+; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[ADD:%.+]]> = add ir<[[LD1]]>, ir<[[RDX_PHI]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN-INTRINSIC vp<[[RDX_SELECT]]> = call llvm.vp.merge(ir<true>, ir<[[ADD]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>)
 ; IF-EVL-OUTLOOP-NEXT:    SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>

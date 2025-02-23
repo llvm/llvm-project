@@ -265,8 +265,10 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
                                                      unsigned BuiltinID) {
   assert(Context.BuiltinInfo.isLibFunction(BuiltinID));
 
-  // Get the name, skip over the __builtin_ prefix (if necessary).
-  StringRef Name;
+  // Get the name, skip over the __builtin_ prefix (if necessary). We may have
+  // to build this up so provide a small stack buffer to handle the vast
+  // majority of names.
+  llvm::SmallString<64> Name;
   GlobalDecl D(FD);
 
   // TODO: This list should be expanded or refactored after all GCC-compatible
@@ -1055,20 +1057,20 @@ namespace {
 /// StructFieldAccess is a simple visitor class to grab the first MemberExpr
 /// from an Expr. It records any ArraySubscriptExpr we meet along the way.
 class StructFieldAccess
-    : public ConstStmtVisitor<StructFieldAccess, const MemberExpr *> {
+    : public ConstStmtVisitor<StructFieldAccess, const Expr *> {
   bool AddrOfSeen = false;
 
 public:
   const ArraySubscriptExpr *ASE = nullptr;
 
-  const MemberExpr *VisitMemberExpr(const MemberExpr *E) {
+  const Expr *VisitMemberExpr(const MemberExpr *E) {
     if (AddrOfSeen && E->getType()->isArrayType())
       // Avoid forms like '&ptr->array'.
       return nullptr;
     return E;
   }
 
-  const MemberExpr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
     if (ASE)
       // We don't support multiple subscripts.
       return nullptr;
@@ -1077,17 +1079,19 @@ public:
     ASE = E;
     return Visit(E->getBase());
   }
-  const MemberExpr *VisitCastExpr(const CastExpr *E) {
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return E;
     return Visit(E->getSubExpr());
   }
-  const MemberExpr *VisitParenExpr(const ParenExpr *E) {
+  const Expr *VisitParenExpr(const ParenExpr *E) {
     return Visit(E->getSubExpr());
   }
-  const MemberExpr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
+  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
     AddrOfSeen = true;
     return Visit(E->getSubExpr());
   }
-  const MemberExpr *VisitUnaryDeref(const clang::UnaryOperator *E) {
+  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
     AddrOfSeen = false;
     return Visit(E->getSubExpr());
   }
@@ -1188,7 +1192,7 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   // GCC does for consistency's sake.
 
   StructFieldAccess Visitor;
-  const MemberExpr *ME = Visitor.Visit(E);
+  const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Visitor.Visit(E));
   if (!ME)
     return nullptr;
 
@@ -3373,11 +3377,24 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::sinh, Intrinsic::experimental_constrained_sinh));
 
+    case Builtin::BI__builtin_sincospi:
+    case Builtin::BI__builtin_sincospif:
+    case Builtin::BI__builtin_sincospil:
+      if (Builder.getIsFPConstrained())
+        break; // TODO: Emit constrained sincospi intrinsic once one exists.
+      emitSincosBuiltin(*this, E, Intrinsic::sincospi);
+      return RValue::get(nullptr);
+
+    case Builtin::BIsincos:
+    case Builtin::BIsincosf:
+    case Builtin::BIsincosl:
     case Builtin::BI__builtin_sincos:
     case Builtin::BI__builtin_sincosf:
     case Builtin::BI__builtin_sincosf16:
     case Builtin::BI__builtin_sincosl:
     case Builtin::BI__builtin_sincosf128:
+      if (Builder.getIsFPConstrained())
+        break; // TODO: Emit constrained sincos intrinsic once one exists.
       emitSincosBuiltin(*this, E, Intrinsic::sincos);
       return RValue::get(nullptr);
 
@@ -3834,6 +3851,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                             /*The expr loc is sufficient.*/ SourceLocation(),
                             AlignmentCI, OffsetValue);
     return RValue::get(PtrValue);
+  }
+  case Builtin::BI__builtin_assume_dereferenceable: {
+    const Expr *Ptr = E->getArg(0);
+    const Expr *Size = E->getArg(1);
+    Value *PtrValue = EmitScalarExpr(Ptr);
+    Value *SizeValue = EmitScalarExpr(Size);
+    if (SizeValue->getType() != IntPtrTy)
+      SizeValue =
+          Builder.CreateIntCast(SizeValue, IntPtrTy, false, "casted.size");
+    Builder.CreateDereferenceableAssumption(PtrValue, SizeValue);
+    return RValue::get(nullptr);
   }
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
@@ -6574,7 +6602,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     LargestVectorWidth = std::max(LargestVectorWidth, VectorWidth);
 
   // See if we have a target specific intrinsic.
-  StringRef Name = getContext().BuiltinInfo.getName(BuiltinID);
+  std::string Name = getContext().BuiltinInfo.getName(BuiltinID);
   Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
   StringRef Prefix =
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
@@ -19459,6 +19487,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         CGM.getHLSLRuntime().getAllIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
         "hlsl.all");
   }
+  case Builtin::BI__builtin_hlsl_and: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateAnd(Op0, Op1, "hlsl.and");
+  }
   case Builtin::BI__builtin_hlsl_any: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
@@ -20708,9 +20741,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_bitop3_b16:
     return emitBuiltinWithOneOverloadedType<4>(*this, E,
                                                Intrinsic::amdgcn_bitop3);
-  case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc:
-    return emitBuiltinWithOneOverloadedType<4>(
-        *this, E, Intrinsic::amdgcn_make_buffer_rsrc);
+  case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc: {
+    // TODO: LLVM has this overloaded to allow for fat pointers, but since
+    // those haven't been plumbed through to Clang yet, default to creating the
+    // resource type.
+    SmallVector<Value *, 4> Args;
+    for (unsigned I = 0; I < 4; ++I)
+      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    llvm::PointerType *RetTy = llvm::PointerType::get(
+        Builder.getContext(), llvm::AMDGPUAS::BUFFER_RESOURCE);
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
+                                   {RetTy, Args[0]->getType()});
+    return Builder.CreateCall(F, Args);
+  }
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b8:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b16:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b32:
@@ -21007,6 +21050,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
               CI = Intrinsic::experimental_constrained_nearbyint; break;
       case 1: ID = Intrinsic::round;
               CI = Intrinsic::experimental_constrained_round; break;
+      case 4: ID = Intrinsic::roundeven;
+              CI = Intrinsic::experimental_constrained_roundeven; break;
       case 5: ID = Intrinsic::trunc;
               CI = Intrinsic::experimental_constrained_trunc; break;
       case 6: ID = Intrinsic::ceil;
@@ -21569,7 +21614,7 @@ static Value *MakeHalfType(unsigned IntrinsicID, unsigned BuiltinID,
   auto &C = CGF.CGM.getContext();
   if (!(C.getLangOpts().NativeHalfType ||
         !C.getTargetInfo().useFP16ConversionIntrinsics())) {
-    CGF.CGM.Error(E->getExprLoc(), C.BuiltinInfo.getName(BuiltinID).str() +
+    CGF.CGM.Error(E->getExprLoc(), C.BuiltinInfo.getQuotedName(BuiltinID) +
                                        " requires native half type support.");
     return nullptr;
   }

@@ -53,6 +53,7 @@ extern StringRef MachOTextTextSectionName;
 extern StringRef MachOThreadBSSSectionName;
 extern StringRef MachOThreadDataSectionName;
 extern StringRef MachOThreadVarsSectionName;
+extern StringRef MachOUnwindInfoSectionName;
 
 extern StringRef MachOInitSectionNames[22];
 

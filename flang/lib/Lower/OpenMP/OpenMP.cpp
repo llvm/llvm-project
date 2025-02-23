@@ -18,7 +18,6 @@
 #include "Decomposer.h"
 #include "ReductionProcessor.h"
 #include "Utils.h"
-#include "flang/Common/OpenMP-utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
@@ -35,6 +34,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/OpenMP-utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -1584,6 +1584,15 @@ static void genParallelClauses(
   cp.processReduction(loc, clauseOps, reductionSyms);
 }
 
+static void genScanClauses(lower::AbstractConverter &converter,
+                           semantics::SemanticsContext &semaCtx,
+                           const List<Clause> &clauses, mlir::Location loc,
+                           mlir::omp::ScanOperands &clauseOps) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processInclusive(loc, clauseOps);
+  cp.processExclusive(loc, clauseOps);
+}
+
 static void genSectionsClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     const List<Clause> &clauses, mlir::Location loc,
@@ -1979,6 +1988,16 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       genOpWithBody<mlir::omp::ParallelOp>(genInfo, queue, item, clauseOps);
   parallelOp.setComposite(isComposite);
   return parallelOp;
+}
+
+static mlir::omp::ScanOp
+genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+          semantics::SemanticsContext &semaCtx, mlir::Location loc,
+          const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+  mlir::omp::ScanOperands clauseOps;
+  genScanClauses(converter, semaCtx, item->clauses, loc, clauseOps);
+  return converter.getFirOpBuilder().create<mlir::omp::ScanOp>(
+      converter.getCurrentLocation(), clauseOps);
 }
 
 /// This breaks the normal prototype of the gen*Op functions: adding the
@@ -2525,7 +2544,7 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatizationStaging, symTable);
+                           enableDelayedPrivatization, symTable);
   dsp.processStep1(&wsloopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -2990,7 +3009,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     genStandaloneParallel(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_scan:
-    TODO(loc, "Unhandled directive " + llvm::omp::getOpenMPDirectiveName(dir));
+    genScanOp(converter, symTable, semaCtx, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_section:
     llvm_unreachable("genOMPDispatch: OMPD_section");
@@ -3100,7 +3119,51 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareMapperConstruct &declareMapperConstruct) {
-  TODO(converter.getCurrentLocation(), "OpenMPDeclareMapperConstruct");
+  mlir::Location loc = converter.genLocation(declareMapperConstruct.source);
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  lower::StatementContext stmtCtx;
+  const auto &spec =
+      std::get<parser::OmpMapperSpecifier>(declareMapperConstruct.t);
+  const auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)};
+  const auto &varType{std::get<parser::TypeSpec>(spec.t)};
+  const auto &varName{std::get<parser::Name>(spec.t)};
+  assert(varType.declTypeSpec->category() ==
+             semantics::DeclTypeSpec::Category::TypeDerived &&
+         "Expected derived type");
+
+  std::string mapperNameStr;
+  if (mapperName.has_value()) {
+    mapperNameStr = mapperName->ToString();
+    mapperNameStr =
+        converter.mangleName(mapperNameStr, mapperName->symbol->owner());
+  } else {
+    mapperNameStr =
+        varType.declTypeSpec->derivedTypeSpec().name().ToString() + ".default";
+    mapperNameStr = converter.mangleName(
+        mapperNameStr, *varType.declTypeSpec->derivedTypeSpec().GetScope());
+  }
+
+  // Save current insertion point before moving to the module scope to create
+  // the DeclareMapperOp
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+
+  firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
+  auto mlirType = converter.genType(varType.declTypeSpec->derivedTypeSpec());
+  auto declMapperOp = firOpBuilder.create<mlir::omp::DeclareMapperOp>(
+      loc, mapperNameStr, mlirType);
+  auto &region = declMapperOp.getRegion();
+  firOpBuilder.createBlock(&region);
+  auto varVal = region.addArgument(firOpBuilder.getRefType(mlirType), loc);
+  converter.bindSymbol(*varName.symbol, varVal);
+
+  // Populate the declareMapper region with the map information.
+  mlir::omp::DeclareMapperInfoOperands clauseOps;
+  const auto *clauseList{
+      parser::Unwrap<parser::OmpClauseList>(declareMapperConstruct.t)};
+  List<Clause> clauses = makeClauses(*clauseList, semaCtx);
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processMap(loc, stmtCtx, clauseOps);
+  firOpBuilder.create<mlir::omp::DeclareMapperInfoOp>(loc, clauseOps.mapVars);
 }
 
 static void

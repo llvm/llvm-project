@@ -491,6 +491,10 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
     else if (A.getOption().matches(options::OPT_Z_reserved_lib_cckext))
       TC.AddCCKextLibArgs(Args, CmdArgs);
+    // Do not pass OPT_rpath to linker in AIX
+    else if (A.getOption().matches(options::OPT_rpath) &&
+             TC.getTriple().isOSAIX())
+      continue;
     else
       A.renderAsInput(Args, CmdArgs);
   }
@@ -860,7 +864,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const bool IsAMDGCN = Triple.isAMDGCN();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
-  const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
+  const bool IsFatLTO = Args.hasFlag(options::OPT_ffat_lto_objects,
+                                     options::OPT_fno_fat_lto_objects, false);
   const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
       llvm::sys::path::stem(Linker) != "ld.lld" && !Triple.isOSOpenBSD()) {
@@ -1289,7 +1294,8 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   if (IsOffloadingHost)
     CmdArgs.push_back("-lomptarget");
 
-  if (IsOffloadingHost && !Args.hasArg(options::OPT_nogpulib))
+  if (IsOffloadingHost &&
+      Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     CmdArgs.push_back("-lomptarget.devicertl");
 
   addArchSpecificRPath(TC, Args, CmdArgs);
@@ -1321,7 +1327,7 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
 /// Add Fortran runtime libs
 void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  // Link FortranRuntime and FortranDecimal
+  // Link flang_rt.runtime
   // These are handled earlier on Windows by telling the frontend driver to
   // add the correct libraries to link against as dependents in the object
   // file.
@@ -1330,16 +1336,20 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     F128LibName.consume_front_insensitive("lib");
     if (!F128LibName.empty()) {
       bool AsNeeded = !TC.getTriple().isOSAIX();
-      CmdArgs.push_back("-lFortranFloat128Math");
+      CmdArgs.push_back("-lflang_rt.quadmath");
       if (AsNeeded)
         addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
       CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
       if (AsNeeded)
         addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
     }
-    CmdArgs.push_back("-lFortranRuntime");
-    CmdArgs.push_back("-lFortranDecimal");
+    CmdArgs.push_back("-lflang_rt.runtime");
     addArchSpecificRPath(TC, Args, CmdArgs);
+
+    // needs libexecinfo for backtrace functions
+    if (TC.getTriple().isOSFreeBSD() || TC.getTriple().isOSNetBSD() ||
+        TC.getTriple().isOSOpenBSD() || TC.getTriple().isOSDragonFly())
+      CmdArgs.push_back("-lexecinfo");
   }
 
   // libomp needs libatomic for atomic operations if using libgcc
@@ -3092,21 +3102,72 @@ bool tools::shouldRecordCommandLine(const ToolChain &TC,
 
 void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
                                                ArgStringList &CmdArgs) {
-  // -fno-strict-overflow implies -fwrapv if it isn't disabled, but
-  // -fstrict-overflow won't turn off an explicitly enabled -fwrapv.
-  bool StrictOverflow = Args.hasFlag(options::OPT_fstrict_overflow,
-                                     options::OPT_fno_strict_overflow, true);
-  if (Arg *A = Args.getLastArg(options::OPT_fwrapv, options::OPT_fno_wrapv)) {
-    if (A->getOption().matches(options::OPT_fwrapv))
-      CmdArgs.push_back("-fwrapv");
-  } else if (!StrictOverflow) {
+  bool use_fwrapv = false;
+  bool use_fwrapv_pointer = false;
+  for (const Arg *A : Args.filtered(
+           options::OPT_fstrict_overflow, options::OPT_fno_strict_overflow,
+           options::OPT_fwrapv, options::OPT_fno_wrapv,
+           options::OPT_fwrapv_pointer, options::OPT_fno_wrapv_pointer)) {
+    A->claim();
+    switch (A->getOption().getID()) {
+    case options::OPT_fstrict_overflow:
+      use_fwrapv = false;
+      use_fwrapv_pointer = false;
+      break;
+    case options::OPT_fno_strict_overflow:
+      use_fwrapv = true;
+      use_fwrapv_pointer = true;
+      break;
+    case options::OPT_fwrapv:
+      use_fwrapv = true;
+      break;
+    case options::OPT_fno_wrapv:
+      use_fwrapv = false;
+      break;
+    case options::OPT_fwrapv_pointer:
+      use_fwrapv_pointer = true;
+      break;
+    case options::OPT_fno_wrapv_pointer:
+      use_fwrapv_pointer = false;
+      break;
+    }
+  }
+
+  if (use_fwrapv)
     CmdArgs.push_back("-fwrapv");
-  }
-  if (Arg *A = Args.getLastArg(options::OPT_fwrapv_pointer,
-                               options::OPT_fno_wrapv_pointer)) {
-    if (A->getOption().matches(options::OPT_fwrapv_pointer))
-      CmdArgs.push_back("-fwrapv-pointer");
-  } else if (!StrictOverflow) {
+  if (use_fwrapv_pointer)
     CmdArgs.push_back("-fwrapv-pointer");
+}
+
+/// Vectorize at all optimization levels greater than 1 except for -Oz.
+/// For -Oz the loop vectorizer is disabled, while the slp vectorizer is
+/// enabled.
+bool tools::shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O4) ||
+        A->getOption().matches(options::OPT_Ofast))
+      return true;
+
+    if (A->getOption().matches(options::OPT_O0))
+      return false;
+
+    assert(A->getOption().matches(options::OPT_O) && "Must have a -O flag");
+
+    // Vectorize -Os.
+    StringRef S(A->getValue());
+    if (S == "s")
+      return true;
+
+    // Don't vectorize -Oz, unless it's the slp vectorizer.
+    if (S == "z")
+      return isSlpVec;
+
+    unsigned OptLevel = 0;
+    if (S.getAsInteger(10, OptLevel))
+      return false;
+
+    return OptLevel > 1;
   }
+
+  return false;
 }

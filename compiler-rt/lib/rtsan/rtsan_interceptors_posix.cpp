@@ -244,6 +244,49 @@ INTERCEPTOR(int, close, int filedes) {
   return REAL(close)(filedes);
 }
 
+INTERCEPTOR(int, chdir, const char *path) {
+  __rtsan_notify_intercepted_call("chdir");
+  return REAL(chdir)(path);
+}
+
+INTERCEPTOR(int, fchdir, int fd) {
+  __rtsan_notify_intercepted_call("fchdir");
+  return REAL(fchdir)(fd);
+}
+
+#if SANITIZER_INTERCEPT_READLINK
+INTERCEPTOR(ssize_t, readlink, const char *pathname, char *buf, size_t size) {
+  __rtsan_notify_intercepted_call("readlink");
+  return REAL(readlink)(pathname, buf, size);
+}
+#define RTSAN_MAYBE_INTERCEPT_READLINK INTERCEPT_FUNCTION(readlink)
+#else
+#define RTSAN_MAYBE_INTERCEPT_READLINK
+#endif
+
+#if SANITIZER_INTERCEPT_READLINKAT
+INTERCEPTOR(ssize_t, readlinkat, int dirfd, const char *pathname, char *buf,
+            size_t size) {
+  __rtsan_notify_intercepted_call("readlinkat");
+  return REAL(readlinkat)(dirfd, pathname, buf, size);
+}
+#define RTSAN_MAYBE_INTERCEPT_READLINKAT INTERCEPT_FUNCTION(readlinkat)
+#else
+#define RTSAN_MAYBE_INTERCEPT_READLINKAT
+#endif
+
+INTERCEPTOR(int, unlink, const char *pathname) {
+  __rtsan_notify_intercepted_call("unlink");
+  return REAL(unlink)(pathname);
+}
+
+INTERCEPTOR(int, unlinkat, int fd, const char *pathname, int flag) {
+  __rtsan_notify_intercepted_call("unlinkat");
+  return REAL(unlinkat)(fd, pathname, flag);
+}
+
+// Streams
+
 INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
   __rtsan_notify_intercepted_call("fopen");
   return REAL(fopen)(path, mode);
@@ -253,8 +296,6 @@ INTERCEPTOR(FILE *, freopen, const char *path, const char *mode, FILE *stream) {
   __rtsan_notify_intercepted_call("freopen");
   return REAL(freopen)(path, mode, stream);
 }
-
-// Streams
 
 #if SANITIZER_INTERCEPT_FOPEN64
 INTERCEPTOR(FILE *, fopen64, const char *path, const char *mode) {
@@ -1390,6 +1431,12 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(openat);
   RTSAN_MAYBE_INTERCEPT_OPENAT64;
   INTERCEPT_FUNCTION(close);
+  INTERCEPT_FUNCTION(chdir);
+  INTERCEPT_FUNCTION(fchdir);
+  RTSAN_MAYBE_INTERCEPT_READLINK;
+  RTSAN_MAYBE_INTERCEPT_READLINKAT;
+  INTERCEPT_FUNCTION(unlink);
+  INTERCEPT_FUNCTION(unlinkat);
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
   RTSAN_MAYBE_INTERCEPT_FREOPEN64;

@@ -2203,6 +2203,7 @@ public:
   void
   VisitOMPLoopTransformationDirective(const OMPLoopTransformationDirective *D);
   void VisitOMPTileDirective(const OMPTileDirective *D);
+  void VisitOMPStripeDirective(const OMPStripeDirective *D);
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
   void VisitOMPReverseDirective(const OMPReverseDirective *D);
   void VisitOMPInterchangeDirective(const OMPInterchangeDirective *D);
@@ -2464,6 +2465,9 @@ void OMPClauseEnqueue::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
 
 void OMPClauseEnqueue::VisitOMPNoOpenMPRoutinesClause(
     const OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseEnqueue::VisitOMPNoOpenMPConstructsClause(
+    const OMPNoOpenMPConstructsClause *) {}
 
 void OMPClauseEnqueue::VisitOMPNoParallelismClause(
     const OMPNoParallelismClause *) {}
@@ -3328,6 +3332,10 @@ void EnqueueVisitor::VisitOMPLoopTransformationDirective(
 }
 
 void EnqueueVisitor::VisitOMPTileDirective(const OMPTileDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPStripeDirective(const OMPStripeDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
@@ -5370,12 +5378,12 @@ CXString clang_getCursorSpelling(CXCursor C) {
 
     case CXCursor_OverloadedDeclRef: {
       OverloadedDeclRefStorage Storage = getCursorOverloadedDeclRef(C).first;
-      if (const Decl *D = Storage.dyn_cast<const Decl *>()) {
+      if (const Decl *D = dyn_cast<const Decl *>(Storage)) {
         if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
           return cxstring::createDup(ND->getNameAsString());
         return cxstring::createEmpty();
       }
-      if (const OverloadExpr *E = Storage.dyn_cast<const OverloadExpr *>())
+      if (const OverloadExpr *E = dyn_cast<const OverloadExpr *>(Storage))
         return cxstring::createDup(E->getName().getAsString());
       OverloadedTemplateStorage *Ovl =
           cast<OverloadedTemplateStorage *>(Storage);
@@ -6283,6 +6291,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPSimdDirective");
   case CXCursor_OMPTileDirective:
     return cxstring::createRef("OMPTileDirective");
+  case CXCursor_OMPStripeDirective:
+    return cxstring::createRef("OMPStripeDirective");
   case CXCursor_OMPUnrollDirective:
     return cxstring::createRef("OMPUnrollDirective");
   case CXCursor_OMPReverseDirective:

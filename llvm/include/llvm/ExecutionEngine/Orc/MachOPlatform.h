@@ -368,6 +368,7 @@ private:
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 
   std::mutex PlatformMutex;
+  bool ForceEHFrames = false;
   BootstrapInfo *Bootstrap = nullptr;
   DenseMap<JITDylib *, ExecutorAddr> JITDylibToHeaderAddr;
   DenseMap<ExecutorAddr, JITDylib *> HeaderAddrToJITDylib;
