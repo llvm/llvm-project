@@ -194,4 +194,45 @@ void SendTerminatedEvent(DAP &dap) {
   });
 }
 
+// Grab any STDOUT and STDERR from the process and send it up to VS Code
+// via an "output" event to the "stdout" and "stderr" categories.
+void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
+  char buffer[OutputBufferSize];
+  size_t count;
+  while ((count = process.GetSTDOUT(buffer, sizeof(buffer))) > 0)
+    dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
+  while ((count = process.GetSTDERR(buffer, sizeof(buffer))) > 0)
+    dap.SendOutput(OutputType::Stderr, llvm::StringRef(buffer, count));
+}
+
+// Send a "continued" event to indicate the process is in the running state.
+void SendContinuedEvent(DAP &dap) {
+  lldb::SBProcess process = dap.target.GetProcess();
+  if (!process.IsValid()) {
+    return;
+  }
+
+  // If the focus thread is not set then we haven't reported any thread status
+  // to the client, so nothing to report.
+  if (!dap.configuration_done_sent || dap.focus_tid == LLDB_INVALID_THREAD_ID) {
+    return;
+  }
+
+  llvm::json::Object event(CreateEventObject("continued"));
+  llvm::json::Object body;
+  body.try_emplace("threadId", (int64_t)dap.focus_tid);
+  body.try_emplace("allThreadsContinued", true);
+  event.try_emplace("body", std::move(body));
+  dap.SendJSON(llvm::json::Value(std::move(event)));
+}
+
+// Send a "exited" event to indicate the process has exited.
+void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
+  llvm::json::Object event(CreateEventObject("exited"));
+  llvm::json::Object body;
+  body.try_emplace("exitCode", (int64_t)process.GetExitStatus());
+  event.try_emplace("body", std::move(body));
+  dap.SendJSON(llvm::json::Value(std::move(event)));
+}
+
 } // namespace lldb_dap

@@ -43,6 +43,7 @@ add_lldb_tool(lldb-dap
   Handler/ConfigurationDoneRequestHandler.cpp
   Handler/ContinueRequestHandler.cpp
   Handler/DisconnectRequestHandler.cpp
+  Handler/InitializeRequestHandler.cpp
   Handler/EvaluateRequestHandler.cpp
   Handler/ExceptionInfoRequestHandler.cpp
   Handler/RequestHandler.cpp

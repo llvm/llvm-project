@@ -9,6 +9,8 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_EVENTHELPER_H
 #define LLDB_TOOLS_LLDB_DAP_EVENTHELPER_H
 
+#include "DAPForward.h"
+
 namespace lldb_dap {
 struct DAP;
 
@@ -19,6 +21,12 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method);
 void SendThreadStoppedEvent(DAP &dap);
 
 void SendTerminatedEvent(DAP &dap);
+
+void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process);
+
+void SendContinuedEvent(DAP &dap);
+
+void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process);
 
 } // namespace lldb_dap
 
