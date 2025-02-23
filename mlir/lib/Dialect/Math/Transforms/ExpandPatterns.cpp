@@ -222,7 +222,7 @@ static LogicalResult convertFmaFOp(math::FmaOp op, PatternRewriter &rewriter) {
 //      if (x > y) then incr = 1 else incr = 0
 //      y = y + incr   <= replace this op with the ceilf op.
 static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
-  // Creating constants assumes the statis shaped type.
+  // Creating constants assumes the static shaped type.
   auto shapedType = dyn_cast<ShapedType>(op.getType());
   if (shapedType && !shapedType.hasStaticShape())
     return failure();

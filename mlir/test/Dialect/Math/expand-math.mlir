@@ -764,22 +764,13 @@ func.func @rsqrt_tns(%float: tensor<5x8xf32>) -> (tensor<5x8xf32>)  {
 
 // -----
 
-// CHECK-LABEL  func.func @non_static_shape_ceil_op
-// CHECK:     %[[IDX:.*]] = index.constant 0
-// CHECK:     %[[CST:.*]] = arith.constant dense<1.000000e+00> : tensor<2xf32>
-// CHECK:     %[[CAST:.*]] = tensor.cast %[[CST]] : tensor<2xf32> to tensor<?xf32>
-// CHECK:     %[[CEIL:.*]] = math.ceil %[[CAST]] : tensor<?xf32>
-// CHECK:     %[[DIM:.*]] = tensor.dim %[[CEIL]], %[[IDX]] : tensor<?xf32>
-// CHECK:     vector.print %[[DIM]] : index
-// CHECK:         return
+// CHECK-LABEL:    func.func @non_static_shape_ceil_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[CEIL:.*]] = math.ceil %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[CEIL]] : tensor<?xf32>
 
-func.func @non_static_shape_ceil_op() {
-  %idx0 = index.constant 0
-  %cst_90 = arith.constant 1.000000e+00 : f32
-  %from_elements_92 = tensor.from_elements %cst_90, %cst_90 : tensor<2xf32>
-  %cast_93 = tensor.cast %from_elements_92 : tensor<2xf32> to tensor<?xf32>
-  %112 = math.ceil %cast_93 : tensor<?xf32>
-  %dim_233 = tensor.dim %112, %idx0 : tensor<?xf32>
-  vector.print %dim_233 : index
-  return
+func.func @non_static_shape_ceil_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.ceil %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
 }
