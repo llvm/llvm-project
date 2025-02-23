@@ -19,6 +19,7 @@
 
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
+#include <sys/_types/_uintptr_t.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

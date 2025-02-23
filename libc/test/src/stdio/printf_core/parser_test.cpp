@@ -166,7 +166,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision) {
 
   expected.raw_string = {str, 5};
   expected.precision = 34;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -183,7 +183,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision) {
 
   expected.raw_string = {str, 3};
   expected.precision = 0;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -200,7 +200,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier) {
 
   expected.raw_string = {str, 3};
   expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::h;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -217,7 +217,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
 
   expected.raw_string = {str, 4};
   expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::ll;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -235,7 +235,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithBitWidthLengthModifier) {
   expected.raw_string = {str, 5};
   expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::w;
   expected.bit_width = 32;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -253,7 +253,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFastBitWidthLengthModifier) {
   expected.raw_string = {str, 6};
   expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::wf;
   expected.bit_width = 32;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -276,7 +276,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
   expected.min_width = 56;
   expected.precision = 78;
   expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::j;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -294,7 +294,7 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 2};
-  expected0.conv_val_raw = arg1;
+  expected0.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected0.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
@@ -329,7 +329,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithOverflowingWidthAndPrecision) {
   expected.flags = LIBC_NAMESPACE::printf_core::FormatFlags::LEFT_JUSTIFIED;
   expected.min_width = INT_MAX;
   expected.precision = INT_MAX;
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -351,7 +351,7 @@ TEST(LlvmLibcPrintfParserTest,
   expected.flags = LIBC_NAMESPACE::printf_core::FormatFlags::LEFT_JUSTIFIED;
   expected.min_width = INT_MAX;
   expected.precision = arg2;
-  expected.conv_val_raw = arg3;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg3);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -369,7 +369,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeOneArg) {
   expected.has_conv = true;
 
   expected.raw_string = {str, 4};
-  expected.conv_val_raw = arg1;
+  expected.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
@@ -387,7 +387,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 4};
-  expected0.conv_val_raw = arg1;
+  expected0.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected0.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
@@ -421,7 +421,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 4};
-  expected0.conv_val_raw = arg1;
+  expected0.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
   expected0.conv_name = 'd';
 
   ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
@@ -485,7 +485,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
 
   expected1.raw_string = {str + 12, 6};
   expected1.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::ll;
-  expected1.conv_val_raw = arg3;
+  expected1.conv_val_raw = static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg3);
   expected1.conv_name = 'u';
 
   EXPECT_PFORMAT_EQ(expected1, format_arr[1]);

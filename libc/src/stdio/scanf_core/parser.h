@@ -153,7 +153,7 @@ public:
             scan_set.set_range(static_cast<size_t>(start), static_cast<size_t>(end));
             cur_pos += 2;
           } else {
-            scan_set.set(str[cur_pos]);
+            scan_set.set(static_cast<size_t>(str[cur_pos]));
             ++cur_pos;
           }
         }
@@ -237,8 +237,8 @@ private:
   LIBC_INLINE size_t parse_index(size_t *local_pos) {
     if (internal::isdigit(str[*local_pos])) {
       auto result = internal::strtointeger<int>(str + *local_pos, 10);
-      size_t index = result.value;
-      if (str[*local_pos + result.parsed_len] != '$')
+      size_t index = static_cast<size_t>(result.value);
+      if (str[*local_pos + static_cast<size_t>(result.parsed_len)] != '$')
         return 0;
       *local_pos = 1 + result.parsed_len + *local_pos;
       return index;
