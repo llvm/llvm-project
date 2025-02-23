@@ -180,15 +180,6 @@ void RegAllocBase::cleanupFailedVRegs() {
       for (const LiveInterval *InterferingReg : Q.interferingVRegs())
         JunkRegs.insert(InterferingReg->reg());
     }
-
-    // The liveness of the assigned physical register is also now unreliable.
-    for (MCRegAliasIterator Aliases(PhysReg, TRI, true); Aliases.isValid();
-         ++Aliases) {
-      for (MachineOperand &MO : MRI->reg_operands(*Aliases)) {
-        if (MO.readsReg())
-          MO.setIsUndef(true);
-      }
-    }
   }
 
   for (Register JunkReg : JunkRegs) {
@@ -199,6 +190,15 @@ void RegAllocBase::cleanupFailedVRegs() {
     for (MachineOperand &MO : MRI->reg_operands(JunkReg)) {
       if (MO.readsReg())
         MO.setIsUndef(true);
+    }
+
+    // The liveness of the assigned physical register is also now unreliable.
+    for (MCRegAliasIterator Aliases(PhysReg, TRI, true); Aliases.isValid();
+         ++Aliases) {
+      for (MachineOperand &MO : MRI->reg_operands(*Aliases)) {
+        if (MO.readsReg())
+          MO.setIsUndef(true);
+      }
     }
 
     LiveInterval &JunkLI = LIS->getInterval(JunkReg);
