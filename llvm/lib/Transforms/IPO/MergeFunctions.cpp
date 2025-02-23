@@ -891,6 +891,10 @@ bool MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
 
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
+
+  // Create a new thunk that both F and G can call, if F cannot call G directly.
+  // That is the case if F is either interposable or if G is either weak_odr or
+  // linkonce_odr.
   if (F->isInterposable() || G->hasWeakODRLinkage() ||
       G->hasLinkOnceODRLinkage()) {
     assert(G->isInterposable() || G->hasWeakODRLinkage() ||
@@ -993,11 +997,20 @@ static bool isFuncOrderCorrect(const Function *F, const Function *G) {
     // one, but not the other way around.
     return !F->isInterposable();
   }
+
+  if (F->hasWeakODRLinkage() != G->hasWeakODRLinkage() ||
+      F->hasLinkOnceODRLinkage() != G->hasLinkOnceODRLinkage()) {
+    // ODR functions before non-ODR functions. A ODR function can call a non-ODR
+    // function if it is not interposable, but not the other way around.
+    return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
+  }
+
   if (F->hasLocalLinkage() != G->hasLocalLinkage()) {
     // External before local, because we definitely have to keep the external
     // function, but may be able to drop the local one.
     return !F->hasLocalLinkage();
   }
+
   // Impose a total order (by name) on the replacement of functions. This is
   // important when operating on more than one module independently to prevent
   // cycles of thunks calling each other when the modules are linked together.
