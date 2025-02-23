@@ -72,34 +72,43 @@ TEST(LlvmLibcBlockMathExtrasTest, mask_trailing_ones) {
 
 TYPED_TEST(LlvmLibcBitTest, FirstLeadingZero, UnsignedTypesNoBigInt) {
   EXPECT_EQ(first_leading_zero<T>(cpp::numeric_limits<T>::max()), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_leading_zero<T>(~(T(1) << i)),
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i) {
+    auto lhs = T(~(T(1) << size_t(i)));
+    EXPECT_EQ(first_leading_zero<T>(lhs),
               cpp::numeric_limits<T>::digits - i);
+  }
 }
 
 TYPED_TEST(LlvmLibcBitTest, FirstLeadingOne, UnsignedTypesNoBigInt) {
   EXPECT_EQ(first_leading_one<T>(static_cast<T>(0)), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_leading_one<T>(T(1) << i),
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i) {
+    auto lhs = T(T(1) << size_t(i));
+    EXPECT_EQ(first_leading_one<T>(lhs),
               cpp::numeric_limits<T>::digits - i);
+
+  }
 }
 
 TYPED_TEST(LlvmLibcBitTest, FirstTrailingZero, UnsignedTypesNoBigInt) {
   EXPECT_EQ(first_trailing_zero<T>(cpp::numeric_limits<T>::max()), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_trailing_zero<T>(~(T(1) << i)), i + 1);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i) {
+    auto lhs = T(~(T(1) << size_t(i)));
+    EXPECT_EQ(first_trailing_zero<T>(lhs), i + 1);
+  }
 }
 
 TYPED_TEST(LlvmLibcBitTest, FirstTrailingOne, UnsignedTypesNoBigInt) {
   EXPECT_EQ(first_trailing_one<T>(cpp::numeric_limits<T>::max()), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_trailing_one<T>(T(1) << i), i + 1);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i) {
+    auto lhs = T(T(1) << size_t(i));
+    EXPECT_EQ(first_trailing_one<T>(lhs), i + 1);
+  }
 }
 
 TYPED_TEST(LlvmLibcBitTest, CountZeros, UnsignedTypesNoBigInt) {
   EXPECT_EQ(count_zeros(T(0)), cpp::numeric_limits<T>::digits);
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(count_zeros<T>(cpp::numeric_limits<T>::max() >> i), i);
+    EXPECT_EQ(count_zeros<T>(cpp::numeric_limits<T>::max() >> size_t(i)), i);
 }
 
 using UnsignedTypes = testing::TypeList<
