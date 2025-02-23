@@ -1560,6 +1560,13 @@ public:
   /// be controlled with \#pragma clang abi_ptr_attr set(*ATTR*). Defaults to
   /// __single in user code and __unsafe_indexable in system headers.
   BoundsSafetyPointerAttributes CurPointerAbi;
+
+  /// \return true iff `-Wunsafe-buffer-usage` is enabled for `Loc` and Bounds
+  /// Safety attribute-only mode is on.
+  bool isCXXSafeBuffersBoundsSafetyInteropEnabledAt(SourceLocation Loc) const {
+    return LangOpts.CPlusPlus && LangOpts.isBoundsSafetyAttributeOnlyMode() &&
+           !Diags.isIgnored(diag::warn_unsafe_buffer_operation, Loc);
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// pragma clang section kind

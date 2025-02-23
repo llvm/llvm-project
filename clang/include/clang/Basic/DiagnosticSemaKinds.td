@@ -13198,8 +13198,10 @@ def warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by : Warning
           "sending type to parameter of incompatible type}0,1|"
     "%diff{casting $ to incompatible type $|"
           "casting type to incompatible type}0,1|"
-  "}2 is an unsafe operation; use '%select{__unsafe_terminated_by_from_indexable|__unsafe_null_terminated_from_indexable}3()' "
-  "or '%select{__unsafe_forge_terminated_by|__unsafe_forge_null_terminated}3()' to perform this conversion">, InGroup<BoundsSafetyStrictTerminatedByCast>, DefaultError;
+  "}2 is an unsafe operation"
+  "%select{; use '__unsafe_terminated_by_from_indexable()' or '__unsafe_forge_terminated_by()' to perform this conversion|"
+  "; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion|"
+  "}3">, InGroup<BoundsSafetyStrictTerminatedByCast>, DefaultError;
 def err_bounds_safety_incompatible_non_terminated_by_to_terminated_by : Error<warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by.Summary>;
 def err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch : Error<
   "%select{"

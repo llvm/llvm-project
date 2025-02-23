@@ -9045,7 +9045,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
                           Entity.getKind() == InitializedEntity::EK_Result);
 
   /* TO_UPSTREAM(BoundsSafety) ON*/
-  if (S.LangOpts.BoundsSafety) {
+  if (S.LangOpts.BoundsSafety || S.isCXXSafeBuffersBoundsSafetyInteropEnabledAt(
+                                     CurInit.get()->getBeginLoc())) {
     auto *Init = CurInit.get();
     const auto K = Entity.getKind();
     if (Init && Entity.getParent() == nullptr &&

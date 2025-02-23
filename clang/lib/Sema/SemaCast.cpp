@@ -205,7 +205,9 @@ namespace {
       /// int *__bidi_indexable p1;
       /// int *__indexable p2 = (int *__indexable)p1;
       /// \endcode
-      if (Self.getLangOpts().BoundsSafety) {
+      if (Self.getLangOpts().BoundsSafety ||
+          Self.isCXXSafeBuffersBoundsSafetyInteropEnabledAt(
+              SrcExpr.get()->getBeginLoc())) {
         unsigned DiagKind = 0;
         bool isInvalid = false;
         // The type error may be nested, so any pointer can result in VT errors
@@ -238,7 +240,9 @@ namespace {
           const auto *DstPointerType = DestType->getAs<ValueTerminatedType>();
           IsDstNullTerm =
               DstPointerType->getTerminatorValue(Self.Context).isZero();
-          if (Self.getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
+          if (Self.getLangOpts().BoundsSafetyRelaxedSystemHeaders ||
+              Self.isCXXSafeBuffersBoundsSafetyInteropEnabledAt(
+                  OpRange.getBegin())) {
             DiagKind = diag::
                 warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by;
             isInvalid = false;
@@ -283,8 +287,11 @@ namespace {
                       warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by) {
             auto FDiag = Self.Diag(OpRange.getBegin(), DiagKind)
                          << SrcType << DestType << AssignmentAction::Casting
-                         << (IsDstNullTerm ? /*null_terminated*/ 1
-                                           : /*terminated_by*/ 0);
+                         << (!Self.isCXXSafeBuffersBoundsSafetyInteropEnabledAt(
+                                 OpRange.getBegin())
+                                 ? (IsDstNullTerm ? /*null_terminated*/ 1
+                                                  : /*terminated_by*/ 0)
+                                 : 2 /* cut message irrelevant to that mode*/);
           } else {
             Self.Diag(OpRange.getBegin(), DiagKind)
                 << SrcType << DestType << AssignmentAction::Casting;

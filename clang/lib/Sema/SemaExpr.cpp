@@ -12184,12 +12184,38 @@ Sema::CheckValueTerminatedAssignmentConstraints(QualType LHSType,
              Context.hasSameUnqualifiedType(
                  Context.getCorrespondingSignedType(LPointee),
                  Context.getCorrespondingSignedType(RPointee)));
-        if (CompatiblePointees &&
+        if (CompatiblePointees && RHSExpr->isPRValue() &&
             RHSExpr->tryEvaluateTerminatorElement(Evald, Context) &&
             Evald.Val.isInt() &&
             llvm::APSInt::isSameValue(LVTT->getTerminatorValue(Context),
                                       Evald.Val.getInt())) {
           return Sema::Compatible;
+        }
+        // If in C++ Safe Buffers/Bounds Safety interoperation mode, the RHS can
+        // be 'std::string::c_str/data':
+        bool isNullTerm = LVTT->getTerminatorValue(Context).isZero();
+
+        if (isNullTerm && isCXXSafeBuffersBoundsSafetyInteropEnabledAt(
+                              RHSExpr->getBeginLoc())) {
+          if (const auto *MCE =
+                  dyn_cast<CXXMemberCallExpr>(RHSExpr->IgnoreParenImpCasts())) {
+            IdentifierInfo *MethodDeclII = nullptr, *ObjTypeII = nullptr;
+
+            if (MCE->getMethodDecl())
+              MethodDeclII = MCE->getMethodDecl()->getIdentifier();
+            if (const auto *RecordDecl =
+                    MCE->getObjectType()->getAsRecordDecl();
+                RecordDecl && RecordDecl->isInStdNamespace())
+              // If not in std namespace, let `ObjTypeII` be null so that the
+              // match fails:
+              ObjTypeII = RecordDecl->getIdentifier();
+            if (MethodDeclII && ObjTypeII &&
+                (MethodDeclII->getName() == "c_str" ||
+                 // std::string::data is also null-terminated since C++11:
+                 MethodDeclII->getName() == "data") &&
+                ObjTypeII->getName() == "basic_string")
+              return Sema::Compatible;
+          }
         }
       }
       return Nested
@@ -20781,9 +20807,11 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     const auto *DstPointerType = DstType->getAs<ValueTerminatedType>();
     IsDstNullTerm =
         DstPointerType->getTerminatorValue(getASTContext()).isZero();
-    if (getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
-      DiagKind =
-          diag::warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by;
+
+    if (getLangOpts().BoundsSafetyRelaxedSystemHeaders ||
+        isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)) {
+      DiagKind = diag::
+          warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by;
       isInvalid = false;
     } else {
       DiagKind =
@@ -21059,8 +21087,11 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
           diag::
               warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by) {
     FDiag << FirstType << SecondType << ActionForDiag
-          << SrcExpr->getSourceRange() << 
-          (IsDstNullTerm ? /*null_terminated*/ 1 : /*terminated_by*/ 0);
+          << SrcExpr->getSourceRange()
+          << (!isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)
+                  ? (IsDstNullTerm ? /*null_terminated*/ 1
+                                   : /*terminated_by*/ 0)
+                  : 2 /* cut message irrelevant to that mode*/);
   } else {
     FDiag << FirstType << SecondType << ActionForDiag
           << SrcExpr->getSourceRange();

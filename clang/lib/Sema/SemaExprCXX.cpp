@@ -4225,6 +4225,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 const ImplicitConversionSequence &ICS,
                                 AssignmentAction Action,
                                 CheckedConversionKind CCK) {
+  if (ToType->isPointerType() &&
+      isCXXSafeBuffersBoundsSafetyInteropEnabledAt(From->getBeginLoc())) {
+    // In C++ Safe Buffers/Bounds Safety interop mode, warn about implicit
+    // conversions from non-`__null_terminated` to `__null_terminated`:
+    AssignConvertType ConvTy =
+        CheckValueTerminatedAssignmentConstraints(ToType, From);
+    DiagnoseAssignmentResult(ConvTy, From->getExprLoc(), ToType,
+                             From->getType(), From, Action);
+  }
   // C++ [over.match.oper]p7: [...] operands of class type are converted [...]
   if (CCK == CheckedConversionKind::ForBuiltinOverloadedOp &&
       !From->getType()->isRecordType())
