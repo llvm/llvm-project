@@ -72,8 +72,8 @@ long int check_primitives(int first, ...) {
   count += args.next_var<unsigned long>();
   count += args.next_var<long long>();
   count += args.next_var<unsigned long long>();
-  count += args.next_var<double>();
-  count += args.next_var<double>();
+  count += static_cast<long int>(args.next_var<double>());
+  count += static_cast<long int>(args.next_var<double>());
   count += args.next_var<long double>();
   count += *args.next_var<int *>();
   return count;

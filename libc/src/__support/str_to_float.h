@@ -33,6 +33,7 @@
 #include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
+#include <_types/_uint32_t.h>
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -802,7 +803,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
 
   // Handle subnormals.
   if (biased_exponent <= 0) {
-    amount_to_shift_right += 1 - biased_exponent;
+    amount_to_shift_right += static_cast<uint32_t>(1 - biased_exponent);
     biased_exponent = 0;
 
     if (amount_to_shift_right > FPBits::STORAGE_LEN) {
@@ -909,7 +910,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
       cpp::numeric_limits<StorageType>::max() / BASE;
   while (true) {
     if (isdigit(src[index])) {
-      uint32_t digit = b36_char_to_int(src[index]);
+      uint32_t digit = static_cast<uint32_t>(b36_char_to_int(src[index]));
       seen_digit = true;
 
       if (mantissa < bitstype_max_div_by_base) {
@@ -956,7 +957,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
       if (result.has_error())
         output.error = result.error;
       int32_t add_to_exponent = result.value;
-      index += result.parsed_len;
+      index += static_cast<size_t>(result.parsed_len);
 
       // Here we do this operation as int64 to avoid overflow.
       int64_t temp_exponent = static_cast<int64_t>(exponent) +
@@ -1020,7 +1021,7 @@ hexadecimal_string_to_float(const char *__restrict src,
       cpp::numeric_limits<StorageType>::max() / BASE;
   while (true) {
     if (isalnum(src[index])) {
-      uint32_t digit = b36_char_to_int(src[index]);
+      uint32_t digit = static_cast<uint32_t>(b36_char_to_int(src[index]));
       if (digit < BASE)
         seen_digit = true;
       else
@@ -1070,7 +1071,7 @@ hexadecimal_string_to_float(const char *__restrict src,
         output.error = result.error;
 
       int32_t add_to_exponent = result.value;
-      index += result.parsed_len;
+      index += static_cast<size_t>(result.parsed_len);
 
       // Here we do this operation as int64 to avoid overflow.
       int64_t temp_exponent = static_cast<int64_t>(exponent) +

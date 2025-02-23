@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
   LIBC_NAMESPACE::syscall_impl(4 /*SYS_write*/, 2 /* stderr */,
-                               reinterpret_cast<long>(msg.data()), msg.size());
+                               reinterpret_cast<long>(msg.data()), static_cast<long>(msg.size()));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

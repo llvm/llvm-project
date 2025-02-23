@@ -41,7 +41,7 @@ TEST(LlvmLibcIntegerToStringTest, UINT8) {
   EXPECT(type, 12, "12");
   EXPECT(type, 123, "123");
   EXPECT(type, UINT8_MAX, "255");
-  EXPECT(type, -1, "255");
+  EXPECT(type, static_cast<unsigned char>(-1), "255");
 }
 
 TEST(LlvmLibcIntegerToStringTest, INT8) {
