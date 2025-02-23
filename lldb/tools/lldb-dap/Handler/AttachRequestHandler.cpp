@@ -1,4 +1,4 @@
-//===-- AttachHandler.cpp -------------------------------------------------===//
+//===-- AttachRequestHandler.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,13 +14,6 @@
 #include "llvm/Support/FileSystem.h"
 
 namespace lldb_dap {
-/// Prints a welcome message on the editor if the preprocessor variable
-/// LLDB_DAP_WELCOME_MESSAGE is defined.
-static void PrintWelcomeMessage(DAP &dap) {
-#ifdef LLDB_DAP_WELCOME_MESSAGE
-  dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
-#endif
-}
 
 // "AttachRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
@@ -92,7 +85,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) {
   dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
   dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
 
-  PrintWelcomeMessage(dap);
+  PrintWelcomeMessage();
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require

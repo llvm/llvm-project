@@ -9,6 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_HANDLER_HANDLER_H
 #define LLDB_TOOLS_LLDB_DAP_HANDLER_HANDLER_H
 
+#include "lldb/API/SBError.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 
@@ -32,7 +33,21 @@ public:
   /// Helpers used by multiple request handlers.
   /// FIXME: Move these into the DAP class?
   /// @{
+
+  /// Both attach and launch take a either a sourcePath or sourceMap
+  /// argument (or neither), from which we need to set the target.source-map.
   void SetSourceMapFromArguments(const llvm::json::Object &arguments);
+
+  /// Prints a welcome message on the editor if the preprocessor variable
+  /// LLDB_DAP_WELCOME_MESSAGE is defined.
+  void PrintWelcomeMessage();
+
+  // Takes a LaunchRequest object and launches the process, also handling
+  // runInTerminal if applicable. It doesn't do any of the additional
+  // initialization and bookkeeping stuff that is needed for `request_launch`.
+  // This way we can reuse the process launching logic for RestartRequest too.
+  lldb::SBError LaunchProcess(const llvm::json::Object &request);
+
   /// @}
 
 protected:
@@ -99,6 +114,20 @@ class InitializeRequestHandler : public RequestHandler {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral getCommand() { return "initialize"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class LaunchRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "launch"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class RestartRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "restart"; }
   void operator()(const llvm::json::Object &request) override;
 };
 
