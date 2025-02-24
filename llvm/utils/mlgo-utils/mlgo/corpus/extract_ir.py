@@ -28,7 +28,7 @@ import json
 import logging
 
 from mlgo.corpus import extract_ir_lib
-
+from mlgo.corpus import parser_setup_lib
 
 def parse_args_and_run():
     parser = argparse.ArgumentParser(
@@ -111,15 +111,7 @@ def parse_args_and_run():
         default=".llvmbc",
         nargs="?",
     )
-    # TODO(#107898): Refactor this into a common location.
-    parser.add_argument(
-        "--verbosity",
-        type=str,
-        help="The verbosity level to use for logging",
-        default="INFO",
-        nargs="?",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-    )
+    parser_setup_lib.add_verbosity_arguments(parser) 
     args = parser.parse_args()
     main(args)
 
