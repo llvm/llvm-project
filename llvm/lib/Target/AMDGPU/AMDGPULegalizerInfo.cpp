@@ -7891,8 +7891,11 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_flat_id:
-    return AMDGPU::isGFX1250Only(ST) &&
-           legalizeHwRegRead(MI, B, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
+    if (AMDGPU::isGFX13Plus(ST))
+      return legalizeHwRegRead(MI, B, AMDGPU::Hwreg::ID_WAVE_GROUP_INFO, 4, 4);
+    if (AMDGPU::isGFX1250Only(ST))
+      return legalizeHwRegRead(MI, B, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
+    return false;
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
     return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(

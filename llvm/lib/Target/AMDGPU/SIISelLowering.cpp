@@ -9938,9 +9938,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_flat_id:
-    return AMDGPU::isGFX1250Only(*Subtarget)
-               ? lowerHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_IB_STS2, 21, 4)
-               : SDValue();
+    if (AMDGPU::isGFX13Plus(*Subtarget))
+      return lowerHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_WAVE_GROUP_INFO, 4, 4);
+    if (AMDGPU::isGFX1250Only(*Subtarget))
+      return lowerHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
+    return SDValue();
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
     return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(
