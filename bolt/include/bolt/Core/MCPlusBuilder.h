@@ -66,6 +66,20 @@ class MCPlusBuilder {
 public:
   using AllocatorIdTy = uint16_t;
 
+  std::optional<int64_t> getAnnotationAtOpIndex(const MCInst &Inst,
+                                                unsigned OpIndex) const {
+    std::optional<unsigned> FirstAnnotationOp = getFirstAnnotationOpIndex(Inst);
+    if (!FirstAnnotationOp)
+      return std::nullopt;
+
+    if (*FirstAnnotationOp > OpIndex || Inst.getNumOperands() < OpIndex)
+      return std::nullopt;
+
+    auto Op = Inst.begin() + OpIndex;
+    const int64_t ImmValue = Op->getImm();
+    return extractAnnotationIndex(ImmValue);
+  }
+
 private:
   /// A struct that represents a single annotation allocator
   struct AnnotationAllocator {
@@ -648,6 +662,13 @@ public:
     llvm_unreachable("not implemented");
     return false;
   }
+  virtual bool isPAuth(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual bool isPSign(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+  }
 
   virtual bool isCleanRegXOR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -1121,6 +1142,51 @@ public:
 
   /// Return true if the instruction is a tail call.
   bool isTailCall(const MCInst &Inst) const;
+
+  /// Stores NegateRAState annotation on \p Inst.
+  void setNegateRAState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has NegateRAState annotation.
+  bool hasNegateRAState(const MCInst &Inst) const;
+
+  /// Sets RememberState annotation on \p Inst.
+  void setRememberState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has RememberState annotation.
+  bool hasRememberState(const MCInst &Inst) const;
+
+  /// Stores RestoreState annotation on \p Inst.
+  void setRestoreState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has RestoreState annotation.
+  bool hasRestoreState(const MCInst &Inst) const;
+
+  /// Stores RA Signed annotation on \p Inst.
+  void setRASigned(MCInst &Inst) const;
+
+  /// Return true if \p Inst has Signed RA annotation.
+  bool isRASigned(const MCInst &Inst) const;
+
+  /// Stores RA Signing annotation on \p Inst.
+  void setRASigning(MCInst &Inst) const;
+
+  /// Return true if \p Inst has Signing RA annotation.
+  bool isRASigning(const MCInst &Inst) const;
+
+  /// Stores Authenticating annotation on \p Inst.
+  void setAuthenticating(MCInst &Inst) const;
+
+  /// Return true if \p Inst has Authenticating annotation.
+  bool isAuthenticating(const MCInst &Inst) const;
+
+  /// Stores RA Unsigned annotation on \p Inst.
+  void setRAUnsigned(MCInst &Inst) const;
+
+  /// Return true if \p Inst has Unsigned RA annotation.
+  bool isRAUnsigned(const MCInst &Inst) const;
+
+  /// Return true if \p Inst doesn't have any annotation related to RA state.
+  bool isRAStateUnknown(const MCInst &Inst) const;
 
   /// Return true if the instruction is a call with an exception handling info.
   virtual bool isInvoke(const MCInst &Inst) const {

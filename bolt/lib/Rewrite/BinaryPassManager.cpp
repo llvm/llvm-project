@@ -20,11 +20,13 @@
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/IndirectCallPromotion.h"
 #include "bolt/Passes/Inliner.h"
+#include "bolt/Passes/InsertNegateRAStatePass.h"
 #include "bolt/Passes/Instrumentation.h"
 #include "bolt/Passes/JTFootprintReduction.h"
 #include "bolt/Passes/LongJmp.h"
 #include "bolt/Passes/LoopInversionPass.h"
 #include "bolt/Passes/MCF.h"
+#include "bolt/Passes/MarkRAStates.h"
 #include "bolt/Passes/PLTCall.h"
 #include "bolt/Passes/PatchEntries.h"
 #include "bolt/Passes/RegReAssign.h"
@@ -350,6 +352,9 @@ Error BinaryFunctionPassManager::runPasses() {
 Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
+  if (BC.isAArch64())
+    Manager.registerPass(std::make_unique<MarkRAStates>());
+
   Manager.registerPass(
       std::make_unique<EstimateEdgeCounts>(PrintEstimateEdgeCounts));
 
@@ -505,6 +510,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     // targets. No extra instructions after this pass, otherwise we may have
     // relocations out of range and crash during linking.
     Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
+
+    Manager.registerPass(std::make_unique<InsertNegateRAState>());
   }
 
   // This pass should always run last.*
