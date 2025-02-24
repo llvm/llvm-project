@@ -869,8 +869,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     if (Subtarget->hasMinimum3Maximum3F32())
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
 
-    if (Subtarget->hasMinimum3Maximum3PKF16())
+    if (Subtarget->hasMinimum3Maximum3PKF16()) {
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::v2f16, Legal);
+
+      // If only the vector form is available, we need to widen to a vector.
+      if (!Subtarget->hasMinimum3Maximum3F16())
+        setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
+    }
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
@@ -5964,6 +5969,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return lowerFMINNUM_FMAXNUM(Op, DAG);
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    return lowerFMINIMUM_FMAXIMUM(Op, DAG);
   case ISD::FLDEXP:
   case ISD::STRICT_FLDEXP:
     return lowerFLDEXP(Op, DAG);
@@ -5985,8 +5993,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
-  case ISD::FMINIMUM:
-  case ISD::FMAXIMUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
   case ISD::UADDSAT:
@@ -6839,6 +6845,34 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
       VT == MVT::v16bf16)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
+}
+
+SDValue SITargetLowering::lowerFMINIMUM_FMAXIMUM(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  if (VT.isVector())
+    return splitBinaryVectorOp(Op, DAG);
+
+  assert(!Subtarget->hasIEEEMinMax() && !Subtarget->hasMinimum3Maximum3F16() &&
+         Subtarget->hasMinimum3Maximum3PKF16() && VT == MVT::f16 &&
+         "should not need to widen f16 minimum/maximum to v2f16");
+
+  // Widen f16 operation to v2f16
+
+  // fminimum f16:x, f16:y ->
+  //   extract_vector_elt (fminimum (v2f16 (scalar_to_vector x))
+  //                                (v2f16 (scalar_to_vector y))), 0
+  SDLoc SL(Op);
+  SDValue WideSrc0 =
+      DAG.getNode(ISD::SCALAR_TO_VECTOR, SL, MVT::v2f16, Op.getOperand(0));
+  SDValue WideSrc1 =
+      DAG.getNode(ISD::SCALAR_TO_VECTOR, SL, MVT::v2f16, Op.getOperand(1));
+
+  SDValue Widened =
+      DAG.getNode(Op.getOpcode(), SL, MVT::v2f16, WideSrc0, WideSrc1);
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::f16, Widened,
+                     DAG.getConstant(0, SL, MVT::i32));
 }
 
 SDValue SITargetLowering::lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const {
@@ -13481,7 +13515,8 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
     return (VT == MVT::f32 && Subtarget.hasMinimum3Maximum3F32()) ||
-           (VT == MVT::f16 && Subtarget.hasMinimum3Maximum3F16());
+           (VT == MVT::f16 && Subtarget.hasMinimum3Maximum3F16()) ||
+           (VT == MVT::v2f16 && Subtarget.hasMinimum3Maximum3PKF16());
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:

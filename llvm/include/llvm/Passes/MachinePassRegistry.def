@@ -144,6 +144,7 @@ MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass())
 MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
 MACHINE_FUNCTION_PASS("machine-cp", MachineCopyPropagationPass())
 MACHINE_FUNCTION_PASS("machine-cse", MachineCSEPass())
+MACHINE_FUNCTION_PASS("machine-latecleanup", MachineLateInstrsCleanupPass())
 MACHINE_FUNCTION_PASS("machine-scheduler", MachineSchedulerPass(TM))
 MACHINE_FUNCTION_PASS("machinelicm", MachineLICMPass())
 MACHINE_FUNCTION_PASS("no-op-machine-function", NoOpMachineFunctionPass())
@@ -189,7 +190,7 @@ MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifi
 #endif
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "regallocfast", "RegAllocFastPass",
-    [](RegAllocFastPassOptions Opts) { return RegAllocFastPass(Opts); },
+    [](RegAllocFastPass::Options Opts) { return RegAllocFastPass(Opts); },
     [PB = this](StringRef Params) {
       return parseRegAllocFastPassOptions(*PB, Params);
     },
@@ -245,7 +246,6 @@ DUMMY_MACHINE_FUNCTION_PASS("lrshrink", LiveRangeShrinkPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-combiner", MachineCombinerPass)
 DUMMY_MACHINE_FUNCTION_PASS("static-data-splitter", StaticDataSplitter)
 DUMMY_MACHINE_FUNCTION_PASS("machine-function-splitter", MachineFunctionSplitterPass)
-DUMMY_MACHINE_FUNCTION_PASS("machine-latecleanup", MachineLateInstrsCleanupPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-sanmd", MachineSanitizerBinaryMetadata)
 DUMMY_MACHINE_FUNCTION_PASS("machine-sink", MachineSinkingPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-uniformity", MachineUniformityInfoWrapperPass)

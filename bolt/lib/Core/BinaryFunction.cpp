@@ -4259,10 +4259,10 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
 
   if (BC.HasRelocations || isInjected()) {
     if (hasConstantIsland()) {
-      const auto DataAddress =
-          Linker.lookupSymbol(getFunctionConstantIslandLabel()->getName());
-      assert(DataAddress && "Cannot find function CI symbol");
-      setOutputDataAddress(*DataAddress);
+      const auto IslandLabelSymInfo =
+          Linker.lookupSymbolInfo(getFunctionConstantIslandLabel()->getName());
+      assert(IslandLabelSymInfo && "Cannot find function CI symbol");
+      setOutputDataAddress(IslandLabelSymInfo->Address);
       for (auto It : Islands->Offsets) {
         const uint64_t OldOffset = It.first;
         BinaryData *BD = BC.getBinaryDataAtAddress(getAddress() + OldOffset);
@@ -4270,10 +4270,10 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
           continue;
 
         MCSymbol *Symbol = It.second;
-        const auto NewAddress = Linker.lookupSymbol(Symbol->getName());
-        assert(NewAddress && "Cannot find CI symbol");
+        const auto SymInfo = Linker.lookupSymbolInfo(Symbol->getName());
+        assert(SymInfo && "Cannot find CI symbol");
         auto &Section = *getCodeSection();
-        const auto NewOffset = *NewAddress - Section.getOutputAddress();
+        const auto NewOffset = SymInfo->Address - Section.getOutputAddress();
         BD->setOutputLocation(Section, NewOffset);
       }
     }
@@ -4298,10 +4298,10 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
         FF.setAddress(ColdStartSymbolInfo->Address);
         FF.setImageSize(ColdStartSymbolInfo->Size);
         if (hasConstantIsland()) {
-          const auto DataAddress = Linker.lookupSymbol(
+          const auto SymInfo = Linker.lookupSymbolInfo(
               getFunctionColdConstantIslandLabel()->getName());
-          assert(DataAddress && "Cannot find cold CI symbol");
-          setOutputColdDataAddress(*DataAddress);
+          assert(SymInfo && "Cannot find cold CI symbol");
+          setOutputColdDataAddress(SymInfo->Address);
         }
       }
     }

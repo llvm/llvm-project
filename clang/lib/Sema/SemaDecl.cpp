@@ -4803,7 +4803,8 @@ bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
       (New->getFormalLinkage() == Linkage::Internal || New->isInline() ||
        isa<VarTemplateSpecializationDecl>(New) ||
        New->getDescribedVarTemplate() || New->getNumTemplateParameterLists() ||
-       New->getDeclContext()->isDependentContext())) {
+       New->getDeclContext()->isDependentContext() ||
+       New->hasAttr<SelectAnyAttr>())) {
     // The previous definition is hidden, and multiple definitions are
     // permitted (in separate TUs). Demote this to a declaration.
     New->demoteThisDefinitionToDeclaration();
@@ -13440,6 +13441,23 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
   return true;
 }
 
+// Determine whether the object seems mutable for the purpose of diagnosing
+// possible unique object duplication, i.e. non-const-qualified, and
+// not an always-constant type like a function.
+// Not perfect: doesn't account for mutable members, for example, or
+// elements of container types.
+// For nested pointers, any individual level being non-const is sufficient.
+static bool looksMutable(QualType T, const ASTContext &Ctx) {
+  T = T.getNonReferenceType();
+  if (T->isFunctionType())
+    return false;
+  if (!T.isConstant(Ctx))
+    return true;
+  if (T->isPointerType())
+    return looksMutable(T->getPointeeType(), Ctx);
+  return false;
+}
+
 void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
   // If this object has external linkage and hidden visibility, it might be
   // duplicated when built into a shared library, which causes problems if it's
@@ -13454,24 +13472,10 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
       !VD->isTemplated() &&
       GloballyUniqueObjectMightBeAccidentallyDuplicated(VD)) {
 
-    // Check mutability. For pointers, ensure that both the pointer and the
-    // pointee are (recursively) const.
-    QualType Type = VD->getType().getNonReferenceType();
-    if (!Type.isConstant(VD->getASTContext())) {
+    QualType Type = VD->getType();
+    if (looksMutable(Type, VD->getASTContext())) {
       Diag(VD->getLocation(), diag::warn_possible_object_duplication_mutable)
           << VD;
-    } else {
-      while (Type->isPointerType()) {
-        Type = Type->getPointeeType();
-        if (Type->isFunctionType())
-          break;
-        if (!Type.isConstant(VD->getASTContext())) {
-          Diag(VD->getLocation(),
-               diag::warn_possible_object_duplication_mutable)
-              << VD;
-          break;
-        }
-      }
     }
 
     // To keep false positives low, only warn if we're certain that the

@@ -139,14 +139,14 @@ public:
   }
 
   void initWARegs(MachineRegisterInfo &MRI);
-  void setWAReg(unsigned VReg, unsigned WAReg) {
+  void setWAReg(Register VReg, unsigned WAReg) {
     assert(WAReg != WebAssembly::UnusedReg);
-    auto I = Register(VReg).virtRegIndex();
+    auto I = VReg.virtRegIndex();
     assert(I < WARegs.size());
     WARegs[I] = WAReg;
   }
-  unsigned getWAReg(unsigned VReg) const {
-    auto I = Register(VReg).virtRegIndex();
+  unsigned getWAReg(Register VReg) const {
+    auto I = VReg.virtRegIndex();
     assert(I < WARegs.size());
     return WARegs[I];
   }

@@ -3548,7 +3548,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::UDIV: {
     auto VT = TLI->getValueType(DL, Ty);
     if (Op2Info.isConstant() && Op2Info.isUniform()) {
-      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
+      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT) &&
+          !VT.isScalableVector()) {
         // Vector signed division by constant are expanded to the
         // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
         // to MULHS + SUB + SRL + ADD + SRL.
@@ -5022,9 +5023,11 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Reverse, MVT::v4f32, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v2f64, 1}, // EXT
         {TTI::SK_Reverse, MVT::v8f16, 2}, // REV64; EXT
+        {TTI::SK_Reverse, MVT::v8bf16, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v8i16, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v16i8, 2}, // REV64; EXT
         {TTI::SK_Reverse, MVT::v4f16, 1}, // REV64
+        {TTI::SK_Reverse, MVT::v4bf16, 1}, // REV64
         {TTI::SK_Reverse, MVT::v4i16, 1}, // REV64
         {TTI::SK_Reverse, MVT::v8i8, 1},  // REV64
         // Splice can all be lowered as `ext`.
@@ -5038,8 +5041,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Splice, MVT::v8bf16, 1},
         {TTI::SK_Splice, MVT::v8i16, 1},
         {TTI::SK_Splice, MVT::v16i8, 1},
-        {TTI::SK_Splice, MVT::v4bf16, 1},
         {TTI::SK_Splice, MVT::v4f16, 1},
+        {TTI::SK_Splice, MVT::v4bf16, 1},
         {TTI::SK_Splice, MVT::v4i16, 1},
         {TTI::SK_Splice, MVT::v8i8, 1},
         // Broadcast shuffle kinds for scalable vectors

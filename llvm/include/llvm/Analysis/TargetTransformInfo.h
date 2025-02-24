@@ -2055,8 +2055,8 @@ public:
   virtual bool isTruncateFree(Type *Ty1, Type *Ty2) = 0;
   virtual bool isProfitableToHoist(Instruction *I) = 0;
   virtual bool useAA() = 0;
-  virtual bool isTypeLegal(Type *Ty) = 0;
-  virtual unsigned getRegUsageForType(Type *Ty) = 0;
+  virtual bool isTypeLegal(Type *Ty) const = 0;
+  virtual unsigned getRegUsageForType(Type *Ty) const = 0;
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
   virtual bool shouldBuildRelLookupTables() = 0;
@@ -2645,8 +2645,8 @@ public:
     return Impl.isProfitableToHoist(I);
   }
   bool useAA() override { return Impl.useAA(); }
-  bool isTypeLegal(Type *Ty) override { return Impl.isTypeLegal(Ty); }
-  unsigned getRegUsageForType(Type *Ty) override {
+  bool isTypeLegal(Type *Ty) const override { return Impl.isTypeLegal(Ty); }
+  unsigned getRegUsageForType(Type *Ty) const override {
     return Impl.getRegUsageForType(Ty);
   }
   bool shouldBuildLookupTables() override {
