@@ -659,10 +659,8 @@ define i16 @test_multiuse_trunc_undef(i64 %x, ptr %p) {
 
 define i64 @test_pr128441(i64 %x, i64 %y) {
 ; CHECK-LABEL: @test_pr128441(
-; CHECK-NEXT:    [[ISZERO_NOT:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 true)
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISZERO_NOT]], i64 64, i64 [[CTTZ]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 false)
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %iszero = icmp ne i64 %x, %y
@@ -674,10 +672,8 @@ define i64 @test_pr128441(i64 %x, i64 %y) {
 
 define i64 @test_pr128441_commuted1(i64 %x, i64 %y) {
 ; CHECK-LABEL: @test_pr128441_commuted1(
-; CHECK-NEXT:    [[ISZERO_NOT:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[Y]], [[X]]
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 true)
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISZERO_NOT]], i64 64, i64 [[CTTZ]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 false)
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %iszero = icmp ne i64 %x, %y
@@ -689,10 +685,8 @@ define i64 @test_pr128441_commuted1(i64 %x, i64 %y) {
 
 define i64 @test_pr128441_commuted2(i64 %x, i64 %y) {
 ; CHECK-LABEL: @test_pr128441_commuted2(
-; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 true)
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[ISZERO]], i64 64, i64 [[CTTZ]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 false)
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %iszero = icmp eq i64 %x, %y
