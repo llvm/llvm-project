@@ -201,7 +201,7 @@ namespace lldb_dap {
 //   "required": ["verified"]
 // },
 void SetInstructionBreakpointsRequestHandler::operator()(
-    const llvm::json::Object &request) {
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   llvm::json::Array response_breakpoints;
   llvm::json::Object body;

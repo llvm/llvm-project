@@ -92,7 +92,7 @@ namespace lldb_dap {
 //   }]
 // }
 void SetFunctionBreakpointsRequestHandler::operator()(
-    const llvm::json::Object &request) {
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
