@@ -684,7 +684,8 @@ def StoreOp : CIR_Op<"store", [
 
 def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
                                               "SwitchOp", "DoWhileOp",
-                                              "WhileOp", "ForOp", "CaseOp"]>,
+                                              "WhileOp", "ForOp", "CaseOp",
+                                              "TryOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{

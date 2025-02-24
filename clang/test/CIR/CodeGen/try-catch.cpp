@@ -128,3 +128,24 @@ void tc5() {
 // CHECK:  cir.call exception @_Z3tc5v() : () -> ()
 // CHECK:  cir.yield
 // CHECK: }]
+
+// CHECK: cir.func @_Z3tc6v()
+void tc6() {
+  int r = 1;
+  try {
+    return;
+    ++r;
+  } catch (...) {
+  }
+}
+
+// CHECK: cir.scope {
+// CHECK:   cir.try {
+// CHECK:     cir.return
+// CHECK:   ^bb1:  // no predecessors
+// CHECK:     %[[V2:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
+// CHECK:     %[[V3:.*]] = cir.unary(inc, %[[V2]]) : !s32i, !s32i
+// CHECK:     cir.store %[[V3]], {{.*}} : !s32i, !cir.ptr<!s32i>
+// CHECK:     cir.yield
+// CHECK:   }
+// CHECK: }
