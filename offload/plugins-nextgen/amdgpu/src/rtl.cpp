@@ -810,6 +810,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
            "Could not read extra information for kernel %s.", getName());
 
+    HasRPC = AMDImage.hasDeviceSymbol(Device, "__llvm_rpc_client");
+
     return Plugin::success();
   }
 
@@ -864,6 +866,10 @@ private:
   uint32_t GroupSize;
   uint32_t PrivateSize;
   bool DynamicStack;
+
+  /// Device init sets this to true if image has symbol indicating that RPC
+  /// service threads are used in this image.  Only used for trace display.
+  bool HasRPC;
 
   /// The size of implicit kernel arguments.
   uint32_t ImplicitArgsSize;
@@ -5119,7 +5125,7 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
       GenericDevice.getDeviceId(), getExecutionModeFlags(), ConstWGSize,
       KernelArgs.NumArgs, NumBlocks[0], NumThreads[0], 0, 0, GroupSegmentSize,
       SGPRCount, VGPRCount, AGPRCount, SGPRSpillCount, VGPRSpillCount,
-      KernelArgs.Tripcount, /*FIXME*/ 0, isMultiDeviceKernel(), MultiDeviceLB,
+      KernelArgs.Tripcount, HasRPC, isMultiDeviceKernel(), MultiDeviceLB,
       MultiDeviceUB, MaxOccupancy, AchievedOccupancy, getName());
 }
 
