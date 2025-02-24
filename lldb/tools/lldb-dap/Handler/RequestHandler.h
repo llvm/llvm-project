@@ -30,6 +30,7 @@ public:
 
   virtual void operator()(const llvm::json::Object &request) = 0;
 
+protected:
   /// Helpers used by multiple request handlers.
   /// FIXME: Move these into the DAP class?
   /// @{
@@ -48,9 +49,11 @@ public:
   // This way we can reuse the process launching logic for RestartRequest too.
   lldb::SBError LaunchProcess(const llvm::json::Object &request);
 
+  // Check if the step-granularity is `instruction`.
+  bool HasInstructionGranularity(const llvm::json::Object &request);
+
   /// @}
 
-protected:
   DAP &dap;
 };
 
@@ -128,6 +131,61 @@ class RestartRequestHandler : public RequestHandler {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral getCommand() { return "restart"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class NextRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "next"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class StepInRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "stepIn"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class StepInTargetsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "stepInTargets"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class StepOutRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "stepOut"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class CompileUnitsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "compileUnits"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+class ModulesRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "modules"; }
+  void operator()(const llvm::json::Object &request) override;
+};
+
+/// A request used in testing to get the details on all breakpoints that are
+/// currently set in the target. This helps us to test "setBreakpoints" and
+/// "setFunctionBreakpoints" requests to verify we have the correct set of
+/// breakpoints currently set in LLDB.
+class TestGetTargetBreakpointsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() {
+    return "_testGetTargetBreakpoints";
+  }
   void operator()(const llvm::json::Object &request) override;
 };
 
