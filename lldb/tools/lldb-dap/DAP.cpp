@@ -1201,4 +1201,58 @@ DAP::GetInstructionBPFromStopReason(lldb::SBThread &thread) {
   return inst_bp;
 }
 
+lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
+  switch (variablesReference) {
+  case VARREF_LOCALS:
+    return &locals;
+  case VARREF_GLOBALS:
+    return &globals;
+  case VARREF_REGS:
+    return &registers;
+  default:
+    return nullptr;
+  }
+}
+
+lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
+                                      llvm::StringRef name) {
+  lldb::SBValue variable;
+  if (lldb::SBValueList *top_scope = GetTopLevelScope(variablesReference)) {
+    bool is_duplicated_variable_name = name.contains(" @");
+    // variablesReference is one of our scopes, not an actual variable it is
+    // asking for a variable in locals or globals or registers
+    int64_t end_idx = top_scope->GetSize();
+    // Searching backward so that we choose the variable in closest scope
+    // among variables of the same name.
+    for (int64_t i = end_idx - 1; i >= 0; --i) {
+      lldb::SBValue curr_variable = top_scope->GetValueAtIndex(i);
+      std::string variable_name = CreateUniqueVariableNameForDisplay(
+          curr_variable, is_duplicated_variable_name);
+      if (variable_name == name) {
+        variable = curr_variable;
+        break;
+      }
+    }
+  } else {
+    // This is not under the globals or locals scope, so there are no duplicated
+    // names.
+
+    // We have a named item within an actual variable so we need to find it
+    // withing the container variable by name.
+    lldb::SBValue container = GetVariable(variablesReference);
+    variable = container.GetChildMemberWithName(name.data());
+    if (!variable.IsValid()) {
+      if (name.starts_with("[")) {
+        llvm::StringRef index_str(name.drop_front(1));
+        uint64_t index = 0;
+        if (!index_str.consumeInteger(0, index)) {
+          if (index_str == "]")
+            variable = container.GetChildAtIndex(index);
+        }
+      }
+    }
+  }
+  return variable;
+}
+
 } // namespace lldb_dap
