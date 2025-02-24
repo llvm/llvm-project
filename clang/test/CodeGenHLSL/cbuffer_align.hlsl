@@ -57,15 +57,49 @@ cbuffer CB2Fail {
   // expected-error@-1 {{packoffset overlap between 'f2f', 's2f'}}
 }
 
-
-#if 0
 struct S3 {
   float3 a;
   float b;
 };
 
+cbuffer CB3Pass {
+  S3 s3p : packoffset(c0.x);
+  float f3p : packoffset(c1.x);
+}
+
+cbuffer CB3Fail {
+  S3 s3f : packoffset(c0.x);
+  float f3f : packoffset(c0.w);
+  // expected-error@-1 {{packoffset overlap between 'f3f', 's3f'}}
+}
+
 struct S4 {
   float2 a;
   float2 b;
 };
-#endif
+
+cbuffer CB4Pass {
+  S4 s4p : packoffset(c0.x);
+  float f4p : packoffset(c1.x);
+}
+
+cbuffer CB4Fail {
+  S4 s4f : packoffset(c0.x);
+  float f4f : packoffset(c0.w);
+  // expected-error@-1 {{packoffset overlap between 'f4f', 's4f'}}
+}
+
+struct S5 {
+  float a[3];
+};
+
+cbuffer CB5Pass {
+  S5 s5p : packoffset(c0.x);
+  float f5p : packoffset(c2.y);
+}
+
+cbuffer CB5Fail {
+  S5 s5f : packoffset(c0.x);
+  float f5f : packoffset(c2.x);
+  // expected-error@-1 {{packoffset overlap between 'f5f', 's5f'}}
+}
