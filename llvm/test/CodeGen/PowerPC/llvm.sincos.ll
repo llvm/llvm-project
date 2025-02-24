@@ -49,3 +49,49 @@ define { ppc_fp128, ppc_fp128 } @test_sincospi_ppcf128(ppc_fp128 %a) {
   %result = call { ppc_fp128, ppc_fp128 } @llvm.sincospi.ppcf128(ppc_fp128 %a)
   ret { ppc_fp128, ppc_fp128 } %result
 }
+
+; FIXME: Recognise this as a tail call and omit the stack frame:
+define void @test_sincos_ppcf128_tail_call(ppc_fp128 %a, ptr noalias %out_sin, ptr noalias %out_cos) {
+; CHECK-LABEL: test_sincos_ppcf128_tail_call:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl sincosl
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+  %result = tail call { ppc_fp128, ppc_fp128 } @llvm.sincos.ppcf128(ppc_fp128 %a)
+  %result.0 = extractvalue { ppc_fp128, ppc_fp128 } %result, 0
+  %result.1 = extractvalue { ppc_fp128, ppc_fp128 } %result, 1
+  store ppc_fp128 %result.0, ptr %out_sin, align 16
+  store ppc_fp128 %result.1, ptr %out_cos, align 16
+  ret void
+}
+
+; FIXME: Recognise this as a tail call and omit the stack frame:
+define void @test_sincospi_ppcf128_tail_call(ppc_fp128 %a, ptr noalias %out_sin, ptr noalias %out_cos) {
+; CHECK-LABEL: test_sincospi_ppcf128_tail_call:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl sincospil
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+  %result = tail call { ppc_fp128, ppc_fp128 } @llvm.sincospi.ppcf128(ppc_fp128 %a)
+  %result.0 = extractvalue { ppc_fp128, ppc_fp128 } %result, 0
+  %result.1 = extractvalue { ppc_fp128, ppc_fp128 } %result, 1
+  store ppc_fp128 %result.0, ptr %out_sin, align 16
+  store ppc_fp128 %result.1, ptr %out_cos, align 16
+  ret void
+}
