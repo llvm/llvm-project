@@ -2566,6 +2566,14 @@ mlir::Value CIRGenFunction::emitCommonNeonBuiltinExpr(
     argTypes.push_back(vTy);
     break;
   }
+  case NEON::BI__builtin_neon_vrnd32z_f32:
+  case NEON::BI__builtin_neon_vrnd32zq_f32:
+  case NEON::BI__builtin_neon_vrnd32z_f64:
+  case NEON::BI__builtin_neon_vrnd32zq_f64: {
+    intrincsName = "aarch64.neon.frint32z";
+    argTypes.push_back(vTy);
+    break;
+  }
   case NEON::BI__builtin_neon_vshl_v:
   case NEON::BI__builtin_neon_vshlq_v: {
     return builder.create<cir::ShiftOp>(
@@ -4132,12 +4140,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vrndh_f16: {
     llvm_unreachable("NEON::BI__builtin_neon_vrndh_f16 NYI");
-  }
-  case NEON::BI__builtin_neon_vrnd32z_f32:
-  case NEON::BI__builtin_neon_vrnd32zq_f32:
-  case NEON::BI__builtin_neon_vrnd32z_f64:
-  case NEON::BI__builtin_neon_vrnd32zq_f64: {
-    llvm_unreachable("NEON::BI__builtin_neon_vrnd32zq_f64 NYI");
   }
   case NEON::BI__builtin_neon_vrnd64x_f32:
   case NEON::BI__builtin_neon_vrnd64xq_f32:
