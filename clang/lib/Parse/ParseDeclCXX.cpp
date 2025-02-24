@@ -2707,7 +2707,7 @@ bool Parser::isCXX2CTriviallyRelocatableKeyword() const {
   return isCXX2CTriviallyRelocatableKeyword(Tok);
 }
 
-void Parser::ParseOptionalCXX2CTriviallyRelocatableSpecifier(
+void Parser::ParseCXX2CTriviallyRelocatableSpecifier(
     TriviallyRelocatableSpecifier &TRS) {
   assert(isCXX2CTriviallyRelocatableKeyword() &&
          "expected a trivially_relocatable specifier");
@@ -2734,7 +2734,7 @@ bool Parser::isCXX2CReplaceableKeyword() const {
   return isCXX2CReplaceableKeyword(Tok);
 }
 
-void Parser::ParseOptionalCXX2CReplaceableSpecifier(ReplaceableSpecifier &MRS) {
+void Parser::ParseCXX2CReplaceableSpecifier(ReplaceableSpecifier &MRS) {
   assert(isCXX2CReplaceableKeyword() &&
          "expected a replaceable_if_eligible specifier");
 
@@ -3881,10 +3881,10 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
             auto Skipped = Tok;
             ConsumeToken();
             Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
-                << 0 << TriviallyRelocatable.getLocation();
+                << /*trivial_relocatable*/ 0
+                << TriviallyRelocatable.getLocation();
           } else {
-            ParseOptionalCXX2CTriviallyRelocatableSpecifier(
-                TriviallyRelocatable);
+            ParseCXX2CTriviallyRelocatableSpecifier(TriviallyRelocatable);
           }
           continue;
         } else if (isCXX2CReplaceableKeyword(Tok)) {
@@ -3892,9 +3892,9 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
             auto Skipped = Tok;
             ConsumeToken();
             Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
-                << 1 << Replacable.getLocation();
+                << /*replaceable*/ 1 << Replacable.getLocation();
           } else {
-            ParseOptionalCXX2CReplaceableSpecifier(Replacable);
+            ParseCXX2CReplaceableSpecifier(Replacable);
           }
           continue;
         } else {
