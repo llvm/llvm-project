@@ -11,7 +11,7 @@ qc.e.addai 9, 33554432
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.e.addai x9
 
-# CHECK-IMM: :[[@LINE+1]]:16: error: immediate must be an integer in the range [-2147483648, 2147483647]
+# CHECK-IMM: :[[@LINE+1]]:16: error: immediate must be an integer in the range [-2147483648, 4294967295]
 qc.e.addai x9, 20485546494
 
 # CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)
@@ -39,7 +39,7 @@ qc.e.andai 9, 33554432
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.e.andai x9
 
-# CHECK-IMM: :[[@LINE+1]]:16: error: immediate must be an integer in the range [-2147483648, 2147483647]
+# CHECK-IMM: :[[@LINE+1]]:16: error: immediate must be an integer in the range [-2147483648, 4294967295]
 qc.e.andai x9, 20494437494
 
 # CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)
@@ -67,7 +67,7 @@ qc.e.orai 9, 33554432
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.e.orai x9
 
-# CHECK-IMM: :[[@LINE+1]]:15: error: immediate must be an integer in the range [-2147483648, 2147483647]
+# CHECK-IMM: :[[@LINE+1]]:15: error: immediate must be an integer in the range [-2147483648, 4294967295]
 qc.e.orai x9, 20494437494
 
 # CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)
@@ -96,7 +96,7 @@ qc.e.xorai 9, 33554432
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.e.xorai x9
 
-# CHECK-IMM: :[[@LINE+1]]:16: error: immediate must be an integer in the range [-2147483648, 2147483647]
+# CHECK-IMM: :[[@LINE+1]]:16: error: immediate must be an integer in the range [-2147483648, 4294967295]
 qc.e.xorai x9, 20494437494
 
 # CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)

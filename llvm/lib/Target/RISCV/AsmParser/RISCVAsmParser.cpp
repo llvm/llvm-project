@@ -1062,7 +1062,8 @@ public:
     if (!isImm())
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isInt<32>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && isInt<32>(fixImmediateForRV32(Imm, isRV64Imm())) &&
+	   VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   /// getStartLoc - Gets location of the first token of this operand
@@ -1677,7 +1678,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm32:
     return generateImmOutOfRangeError(Operands, ErrorInfo,
                                       std::numeric_limits<int32_t>::min(),
-                                      std::numeric_limits<int32_t>::max());
+                                      std::numeric_limits<uint32_t>::max());
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
   }

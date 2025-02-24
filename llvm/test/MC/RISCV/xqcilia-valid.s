@@ -10,9 +10,9 @@
 # RUN:     | llvm-objdump --mattr=+experimental-xqcilia --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
-# CHECK-INST: qc.e.addai      s1, 2147483647
-# CHECK-ENC: encoding: [0x9f,0x24,0xff,0xff,0xff,0x7f]
-qc.e.addai x9, 2147483647
+# CHECK-INST: qc.e.addai      s1, -1
+# CHECK-ENC: encoding: [0x9f,0x24,0xff,0xff,0xff,0xff]
+qc.e.addai x9, 4294967295
 
 # CHECK-INST: qc.e.addai      s1, -2147483648
 # CHECK-ENC: encoding: [0x9f,0x24,0x00,0x00,0x00,0x80]
@@ -28,9 +28,9 @@ qc.e.addi x10, x9, -33554432
 qc.e.addi x10, x9, 33554431
 
 
-# CHECK-INST: qc.e.andai      s1, 2147483647
-# CHECK-ENC: encoding: [0x9f,0xa4,0xff,0xff,0xff,0x7f]
-qc.e.andai x9, 2147483647
+# CHECK-INST: qc.e.andai      s1, -1
+# CHECK-ENC: encoding: [0x9f,0xa4,0xff,0xff,0xff,0xff]
+qc.e.andai x9, 4294967295
 
 # CHECK-INST: qc.e.andai      s1, -2147483648
 # CHECK-ENC: encoding: [0x9f,0xa4,0x00,0x00,0x00,0x80]
@@ -46,9 +46,9 @@ qc.e.andi x10, x9, -33554432
 qc.e.andi x10, x9, 33554431
 
 
-# CHECK-INST: qc.e.orai       s1, 2147483647
-# CHECK-ENC: encoding: [0x9f,0x94,0xff,0xff,0xff,0x7f]
-qc.e.orai x9, 2147483647
+# CHECK-INST: qc.e.orai       s1, -1
+# CHECK-ENC: encoding: [0x9f,0x94,0xff,0xff,0xff,0xff]
+qc.e.orai x9, 4294967295
 
 # CHECK-INST: qc.e.orai       s1, -2147483648
 # CHECK-ENC: encoding: [0x9f,0x94,0x00,0x00,0x00,0x80]
@@ -64,9 +64,9 @@ qc.e.ori x10, x9, -33554432
 qc.e.ori x10, x9, 33554431
 
 
-# CHECK-INST: qc.e.xorai      s1, 2147483647
-# CHECK-ENC: encoding: [0x9f,0x14,0xff,0xff,0xff,0x7f]
-qc.e.xorai x9, 2147483647
+# CHECK-INST: qc.e.xorai      s1, -1
+# CHECK-ENC: encoding: [0x9f,0x14,0xff,0xff,0xff,0xff]
+qc.e.xorai x9, 4294967295
 
 # CHECK-INST: qc.e.xorai      s1, -2147483648
 # CHECK-ENC: encoding: [0x9f,0x14,0x00,0x00,0x00,0x80]
