@@ -1706,11 +1706,8 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
   if (!thread_sp->StopInfoIsUpToDate()) {
     thread_sp->SetStopInfo(StopInfoSP());
 
-    addr_t pc = thread_sp->GetRegisterContext()->GetPC();
     BreakpointSiteSP bp_site_sp =
-        thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-    if (bp_site_sp && bp_site_sp->IsEnabled())
-      thread_sp->SetThreadStoppedAtUnexecutedBP(pc);
+        thread_sp->DetectThreadStoppedAtUnexecutedBP();
 
     if (exc_type != 0) {
       // For thread plan async interrupt, creating stop info on the

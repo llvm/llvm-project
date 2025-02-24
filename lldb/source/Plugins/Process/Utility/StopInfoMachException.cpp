@@ -591,11 +591,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
   // breakpoint at 0x100.
   // The fact that the pc may be off by one at this point
   // (for an x86 KDP breakpoint hit) is not a problem.
-  addr_t pc = reg_ctx_sp->GetPC();
-  BreakpointSiteSP bp_site_sp =
-      process_sp->GetBreakpointSiteList().FindByAddress(pc);
-  if (bp_site_sp && bp_site_sp->IsEnabled())
-    thread.SetThreadStoppedAtUnexecutedBP(pc);
+  BreakpointSiteSP bp_site_sp = thread.DetectThreadStoppedAtUnexecutedBP();
 
   switch (exc_type) {
   case 1: // EXC_BAD_ACCESS
