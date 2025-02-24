@@ -39,6 +39,7 @@ add_lldb_tool(lldb-dap
 
   Handler/AttachRequestHandler.cpp
   Handler/BreakpointLocationsHandler.cpp
+  Handler/CompileUnitsRequestHandler.cpp
   Handler/CompletionsHandler.cpp
   Handler/ConfigurationDoneRequestHandler.cpp
   Handler/ContinueRequestHandler.cpp
@@ -47,11 +48,13 @@ add_lldb_tool(lldb-dap
   Handler/ExceptionInfoRequestHandler.cpp
   Handler/InitializeRequestHandler.cpp
   Handler/LaunchRequestHandler.cpp
+  Handler/ModulesRequestHandler.cpp
   Handler/NextRequestHandler.cpp
   Handler/RequestHandler.cpp
   Handler/RestartRequestHandler.cpp
   Handler/StepInRequestHandler.cpp
   Handler/StepInTargetsRequestHandler.cpp
+  Handler/TestGetTargetBreakpointsRequestHandler.cpp
   Handler/StepOutRequestHandler.cpp
 
   LINK_LIBS
