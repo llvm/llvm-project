@@ -2390,6 +2390,7 @@ tuple compare
 tuple cstddef
 tuple cstdint
 tuple cstdlib
+tuple cstring
 tuple exception
 tuple initializer_list
 tuple iosfwd
