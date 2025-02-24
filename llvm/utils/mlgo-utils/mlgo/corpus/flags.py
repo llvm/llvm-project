@@ -19,3 +19,4 @@ def add_verbosity_arguments(parser: ArgumentParser) -> None:
         nargs="?",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
     )
+
