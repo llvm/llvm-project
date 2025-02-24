@@ -313,9 +313,9 @@ Error XCOFFLinkGraphBuilder::processCsectsAndSymbols() {
     bool External = Flags & object::SymbolRef::SF_Undefined;
     bool Weak = Flags & object::SymbolRef::SF_Weak;
     bool Hidden = Flags & object::SymbolRef::SF_Hidden;
-    bool Exported = Flags & object::SymbolRef::SF_Exported;
-    bool Absolute = Flags & object::SymbolRef::SF_Absolute;
     bool Global = Flags & object::SymbolRef::SF_Global;
+    // bool Exported = Flags & object::SymbolRef::SF_Exported;
+    // bool Absolute = Flags & object::SymbolRef::SF_Absolute;
 
     auto SymbolIndex = Obj.getSymbolIndex(Symbol.getEntryAddress());
 
