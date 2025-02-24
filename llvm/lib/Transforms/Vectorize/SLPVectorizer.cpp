@@ -5014,6 +5014,39 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
   return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
 }
 
+/// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
+/// ScalarTy is a FixedVectorType, a vector will be inserted or extracted
+/// instead of a scalar.
+static InstructionCost getScalarizationOverhead(const TargetTransformInfo &TTI,
+                                                Type *ScalarTy, VectorType *Ty,
+                                                const APInt &DemandedElts,
+                                                bool Insert, bool Extract,
+                                                TTI::TargetCostKind CostKind,
+                                                ArrayRef<Value *> VL = {}) {
+  assert(!isa<ScalableVectorType>(Ty) &&
+         "ScalableVectorType is not supported.");
+  if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+    assert(SLPReVec && "Only supported by REVEC.");
+    // If ScalarTy is FixedVectorType, we should use CreateInsertVector instead
+    // of CreateInsertElement.
+    unsigned ScalarTyNumElements = VecTy->getNumElements();
+    InstructionCost Cost = 0;
+    for (unsigned I : seq(DemandedElts.getBitWidth())) {
+      if (!DemandedElts[I])
+        continue;
+      if (Insert)
+        Cost += getShuffleCost(TTI, TTI::SK_InsertSubvector, Ty, {}, CostKind,
+                               I * ScalarTyNumElements, VecTy);
+      if (Extract)
+        Cost += getShuffleCost(TTI, TTI::SK_ExtractSubvector, Ty, {}, CostKind,
+                               I * ScalarTyNumElements, VecTy);
+    }
+    return Cost;
+  }
+  return TTI.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
+                                      CostKind, VL);
+}
+
 /// Correctly creates insert_subvector, checking that the index is multiple of
 /// the subvectors length. Otherwise, generates shuffle using \p Generator or
 /// using default shuffle.
