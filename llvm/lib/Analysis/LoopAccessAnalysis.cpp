@@ -190,7 +190,7 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
-    const SCEV *SymbolicMaxBTC, ScalarEvolution *SE,
+    const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
@@ -226,7 +226,9 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       // will get incremented by EltSize before returning, so this effectively
       // sets ScEnd to unsigned max. Note that LAA separately checks that
       // accesses cannot not wrap, so unsigned max represents an upper bound.
-      ScEnd = AR->evaluateAtIteration(SymbolicMaxBTC, *SE);
+      // TODO: Use additional information to determine no-wrap including
+      // size/dereferencability info from the accessed object.
+      ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
       if (!SE->isKnownNonNegative(SE->getMinusSCEV(ScEnd, ScStart)))
         ScEnd = SE->getNegativeSCEV(
             SE->getAddExpr(EltSizeSCEV, SE->getOne(EltSizeSCEV->getType())));
