@@ -431,9 +431,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
 
     if (abi_sp) {
       m_fast_unwind_plan_sp.reset();
-      m_full_unwind_plan_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      abi_sp->CreateDefaultUnwindPlan(*m_full_unwind_plan_sp);
+      m_full_unwind_plan_sp = abi_sp->CreateDefaultUnwindPlan();
       if (m_frame_type != eSkipFrame) // don't override eSkipFrame
       {
         m_frame_type = eNormalFrame;
@@ -801,9 +799,7 @@ UnwindPlanSP RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   Process *process = exe_ctx.GetProcessPtr();
   ABI *abi = process ? process->GetABI().get() : nullptr;
   if (abi) {
-    arch_default_unwind_plan_sp =
-        std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-    abi->CreateDefaultUnwindPlan(*arch_default_unwind_plan_sp);
+    arch_default_unwind_plan_sp = abi->CreateDefaultUnwindPlan();
   } else {
     UnwindLogMsg(
         "unable to get architectural default UnwindPlan from ABI plugin");
@@ -836,9 +832,7 @@ UnwindPlanSP RegisterContextUnwind::GetFullUnwindPlanForFrame() {
          process->GetLoadAddressPermissions(current_pc_addr, permissions) &&
          (permissions & ePermissionsExecutable) == 0)) {
       if (abi) {
-        unwind_plan_sp =
-            std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-        abi->CreateFunctionEntryUnwindPlan(*unwind_plan_sp);
+        unwind_plan_sp = abi->CreateFunctionEntryUnwindPlan();
         m_frame_type = eNormalFrame;
         return unwind_plan_sp;
       }
