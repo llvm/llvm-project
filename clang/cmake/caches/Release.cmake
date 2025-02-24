@@ -56,7 +56,7 @@ set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 set(STAGE1_PROJECTS "clang")
 
 # Build all runtimes so we can statically link them into the stage2 compiler.
-set(STAGE1_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind")
+set(STAGE1_RUNTIMES ${DEFAULT_RUNTIMES})
 
 if (LLVM_RELEASE_ENABLE_PGO)
   list(APPEND STAGE1_PROJECTS "lld")
