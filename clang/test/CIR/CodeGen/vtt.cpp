@@ -38,9 +38,9 @@ int f() {
 
 // Class A constructor
 // CIR: cir.func linkonce_odr @_ZN1AC2Ev(%arg0: !cir.ptr<!ty_A>
-// CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV1A, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_A>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
-// CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
+// CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV1A, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>
+// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_A>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
+// CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
 // CIR: }
 
 // Vtable of Class D
@@ -115,19 +115,19 @@ int f() {
 // CIR:   %[[VTT_D_TO_C:.*]] = cir.vtt.address_point @_ZTT1D, offset = 3 -> !cir.ptr<!cir.ptr<!void>>
 // CIR:   cir.call @_ZN1CC2Ev(%[[C_PTR]], %[[VTT_D_TO_C]]) : (!cir.ptr<!ty_C>, !cir.ptr<!cir.ptr<!void>>) -> ()
 
-// CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV1D, vtable_index = 0, address_point_index = 3) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_D>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
-// CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
-// CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV1D, vtable_index = 2, address_point_index = 3) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
+// CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV1D, vtable_index = 0, address_point_index = 3) : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>
+// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_D>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
+// CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
+// CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV1D, vtable_index = 2, address_point_index = 3) : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>
 
 // CIR:   %{{[0-9]+}} = cir.base_class_addr(%{{[0-9]+}} : !cir.ptr<!ty_D> nonnull) [40] -> !cir.ptr<!ty_A>
-// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_A>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
-// CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
-// CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV1D, vtable_index = 1, address_point_index = 3) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
+// CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_A>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
+// CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
+// CIR:   %{{[0-9]+}} = cir.vtable.address_point(@_ZTV1D, vtable_index = 1, address_point_index = 3) : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>
 
 // CIR:   cir.base_class_addr(%{{[0-9]+}} : !cir.ptr<!ty_D> nonnull) [16] -> !cir.ptr<!ty_C>
-// CIR:   cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_C>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
-// CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
+// CIR:   cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_C>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
+// CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
 // CIR:   cir.return
 // CIR: }
 

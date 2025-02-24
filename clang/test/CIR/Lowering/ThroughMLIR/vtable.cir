@@ -13,9 +13,9 @@
 !ty_anon_struct2 = !cir.struct<struct  {!cir.array<!cir.ptr<!cir.int<u, 8>> x 4>}>
 !ty_anon_struct3 = !cir.struct<struct  {!cir.array<!cir.ptr<!cir.int<u, 8>> x 3>}>
 !ty_anon_struct4 = !cir.struct<struct  {!cir.array<!cir.ptr<!cir.int<u, 8>> x 4>, !cir.array<!cir.ptr<!cir.int<u, 8>> x 3>}>
-!ty_Father = !cir.struct<class "Father" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>
-!ty_Mother = !cir.struct<class "Mother" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>
-!ty_Child = !cir.struct<class "Child" {!cir.struct<class "Mother" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>, !cir.struct<class "Father" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>} #cir.record.decl.ast>
+!ty_Father = !cir.struct<class "Father" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>} #cir.record.decl.ast>
+!ty_Mother = !cir.struct<class "Mother" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>} #cir.record.decl.ast>
+!ty_Child = !cir.struct<class "Child" {!cir.struct<class "Mother" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>} #cir.record.decl.ast>, !cir.struct<class "Father" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>} #cir.record.decl.ast>} #cir.record.decl.ast>
 
 module {
   cir.func linkonce_odr @_ZN6Mother6simpleEv(%arg0: !cir.ptr<!ty_Mother>) { 

@@ -2,7 +2,7 @@
 // RUN: FileCheck --input-file=%t.cir %s
 
 !s32i = !cir.int<s, 32>
-!fnptr = !cir.ptr<!cir.func<!s32i (!s32i)>>
+!fnptr = !cir.ptr<!cir.func<(!s32i) -> !s32i>>
 
 module {
   cir.func @my_add(%a: !s32i, %b: !s32i) -> !s32i cc(spir_function) {
@@ -22,6 +22,6 @@ module {
   }
 }
 
-// CHECK: %{{[0-9]+}} = cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i cc(spir_kernel)
-// CHECK: %{{[0-9]+}} = cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i cc(spir_function)
+// CHECK: %{{[0-9]+}} = cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i cc(spir_kernel)
+// CHECK: %{{[0-9]+}} = cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i cc(spir_function)
 // CHECK: %{{[0-9]+}} = cir.try_call @my_add(%{{[0-9]+}}, %{{[0-9]+}}) ^{{.+}}, ^{{.+}} : (!s32i, !s32i) -> !s32i cc(spir_function)

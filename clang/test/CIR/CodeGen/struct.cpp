@@ -32,7 +32,7 @@ void yoyo(incomplete *i) {}
 //  CHECK-DAG: !ty_Foo = !cir.struct<struct "Foo" {!s32i, !s8i, !ty_Bar}>
 //  CHECK-DAG: !ty_Mandalore = !cir.struct<struct "Mandalore" {!u32i, !cir.ptr<!void>, !s32i} #cir.record.decl.ast>
 //  CHECK-DAG: !ty_Adv = !cir.struct<class "Adv" {!ty_Mandalore}>
-//  CHECK-DAG: !ty_Entry = !cir.struct<struct "Entry" {!cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<!void>)>>}>
+//  CHECK-DAG: !ty_Entry = !cir.struct<struct "Entry" {!cir.ptr<!cir.func<(!s32i, !cir.ptr<!s8i>, !cir.ptr<!void>) -> !u32i>>}>
 
 //      CHECK: cir.func linkonce_odr @_ZN3Bar6methodEv(%arg0: !cir.ptr<!ty_Bar>
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!ty_Bar>, !cir.ptr<!cir.ptr<!ty_Bar>>, ["this", init] {alignment = 8 : i64}
@@ -172,4 +172,4 @@ void ppp() { Entry x; }
 
 // CHECK: cir.func linkonce_odr @_ZN5EntryC2Ev(%arg0: !cir.ptr<!ty_Entry>
 
-// CHECK: cir.get_member %1[0] {name = "procAddr"} : !cir.ptr<!ty_Entry> -> !cir.ptr<!cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<!void>)>>>
+// CHECK: cir.get_member %1[0] {name = "procAddr"} : !cir.ptr<!ty_Entry> -> !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.ptr<!s8i>, !cir.ptr<!void>) -> !u32i>>>

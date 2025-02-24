@@ -27,8 +27,8 @@ public:
 // RTTI_DISABLED: ![[VTableTypeA:ty_.*]] = !cir.struct<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
 
 // Class A
-// CHECK: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.record.decl.ast>
-// RTTI_DISABLED: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.record.decl.ast>
+// CHECK: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>} #cir.record.decl.ast>
+// RTTI_DISABLED: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>} #cir.record.decl.ast>
 
 // Class B
 // CHECK: ![[ClassB:ty_.*]] = !cir.struct<class "B" {![[ClassA]]}>
@@ -45,9 +45,9 @@ public:
 // CHECK:   %1 = cir.load %0 : !cir.ptr<!cir.ptr<![[ClassB]]>>, !cir.ptr<![[ClassB]]>
 // CHECK:   %2 = cir.base_class_addr(%1 : !cir.ptr<![[ClassB]]> nonnull) [0] -> !cir.ptr<![[ClassA]]>
 // CHECK:   cir.call @_ZN1AC2Ev(%2) : (!cir.ptr<![[ClassA]]>) -> ()
-// CHECK:   %3 = cir.vtable.address_point(@_ZTV1B, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
-// CHECK:   %4 = cir.cast(bitcast, %1 : !cir.ptr<![[ClassB]]>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
-// CHECK:   cir.store %3, %4 : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
+// CHECK:   %3 = cir.vtable.address_point(@_ZTV1B, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>
+// CHECK:   %4 = cir.cast(bitcast, %1 : !cir.ptr<![[ClassB]]>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
+// CHECK:   cir.store %3, %4 : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
 // CHECK:   cir.return
 // CHECK: }
 
@@ -73,9 +73,9 @@ public:
 // CHECK:    %0 = cir.alloca !cir.ptr<![[ClassA]]>, !cir.ptr<!cir.ptr<![[ClassA]]>>, ["this", init] {alignment = 8 : i64}
 // CHECK:    cir.store %arg0, %0 : !cir.ptr<![[ClassA]]>, !cir.ptr<!cir.ptr<![[ClassA]]>>
 // CHECK:    %1 = cir.load %0 : !cir.ptr<!cir.ptr<![[ClassA]]>>, !cir.ptr<![[ClassA]]>
-// CHECK:    %2 = cir.vtable.address_point(@_ZTV1A, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>
-// CHECK:    %3 = cir.cast(bitcast, %1 : !cir.ptr<![[ClassA]]>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
-// CHECK:    cir.store %2, %3 : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
+// CHECK:    %2 = cir.vtable.address_point(@_ZTV1A, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>
+// CHECK:    %3 = cir.cast(bitcast, %1 : !cir.ptr<![[ClassA]]>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
+// CHECK:    cir.store %2, %3 : !cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<() -> !u32i>>>>
 // CHECK:    cir.return
 // CHECK:  }
 

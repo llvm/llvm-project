@@ -1,12 +1,12 @@
 // RUN: cir-opt %s | FileCheck %s
 // Exercise different ways to encode a function returning void
+// This test is less useful that it used to be, because a redundant `!cir.void`
+// as a function return type is no longer supported.
 !s32i = !cir.int<s, 32>
 !f = !cir.func<()>
-!f2 = !cir.func<!s32i()>
+!f2 = !cir.func<() -> !s32i>
 !void = !cir.void
 !fnptr2 = !cir.ptr<!cir.func<(!s32i)>>
-// Try some useless !void
-!fnptr3 = !cir.ptr<!cir.func<!void (!s32i)>>
 module {
   cir.func @ind2(%fnptr: !fnptr2, %a : !s32i) {
     // CHECK:  cir.func @ind2(%arg0: !cir.ptr<!cir.func<(!s32i)>>, %arg1: !s32i) {
@@ -14,15 +14,6 @@ module {
   }
   cir.func @f2() {
     // CHECK:  cir.func @f2() {
-    cir.return
-  }
-  // Try with a lot of useless !void
-  cir.func @ind3(%fnptr: !fnptr3, %a : !s32i) -> !void {
-    // CHECK:  cir.func @ind3(%arg0: !cir.ptr<!cir.func<(!s32i)>>, %arg1: !s32i) {
-    cir.return
-  }
-  cir.func @f3() -> !cir.void {
-    // CHECK:  cir.func @f3() {
     cir.return
   }
 }

@@ -15,7 +15,7 @@
 !ty_Bar = !cir.struct<struct "Bar" {!s32i, !s8i} #cir.record.decl.ast>
 !ty_StringStruct = !cir.struct<struct "StringStruct" {!cir.array<!s8i x 3>, !cir.array<!s8i x 3>, !cir.array<!s8i x 3>} #cir.record.decl.ast>
 !ty_StringStructPtr = !cir.struct<struct "StringStructPtr" {!cir.ptr<!s8i>} #cir.record.decl.ast>
-!ty_anon2E1_ = !cir.struct<struct "anon.1" {!cir.ptr<!cir.func<!cir.void (!cir.int<s, 32>)>>} #cir.record.decl.ast>
+!ty_anon2E1_ = !cir.struct<struct "anon.1" {!cir.ptr<!cir.func<(!cir.int<s, 32>)>>} #cir.record.decl.ast>
 
 module {
   cir.global external @a = #cir.int<3> : !s32i
@@ -164,7 +164,7 @@ module {
   // MLIR: }
   // LLVM: @undefStruct = global %struct.Bar undef
 
-  cir.global "private" internal @Handlers = #cir.const_array<[#cir.const_struct<{#cir.global_view<@myfun> : !cir.ptr<!cir.func<!void (!s32i)>>}> : !ty_anon2E1_]> : !cir.array<!ty_anon2E1_ x 1>
+  cir.global "private" internal @Handlers = #cir.const_array<[#cir.const_struct<{#cir.global_view<@myfun> : !cir.ptr<!cir.func<(!s32i)>>}> : !ty_anon2E1_]> : !cir.array<!ty_anon2E1_ x 1>
   cir.func internal private @myfun(%arg0: !s32i) {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
@@ -179,10 +179,10 @@ module {
     %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     %4 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_anon2E1_ x 1>>), !cir.ptr<!ty_anon2E1_>
     %5 = cir.ptr_stride(%4 : !cir.ptr<!ty_anon2E1_>, %3 : !s32i), !cir.ptr<!ty_anon2E1_>
-    %6 = cir.get_member %5[0] {name = "func"} : !cir.ptr<!ty_anon2E1_> -> !cir.ptr<!cir.ptr<!cir.func<!void (!s32i)>>>
-    %7 = cir.load %6 : !cir.ptr<!cir.ptr<!cir.func<!void (!s32i)>>>, !cir.ptr<!cir.func<!void (!s32i)>>
+    %6 = cir.get_member %5[0] {name = "func"} : !cir.ptr<!ty_anon2E1_> -> !cir.ptr<!cir.ptr<!cir.func<(!s32i)>>>
+    %7 = cir.load %6 : !cir.ptr<!cir.ptr<!cir.func<(!s32i)>>>, !cir.ptr<!cir.func<(!s32i)>>
     %8 = cir.load %1 : !cir.ptr<!s32i>, !s32i
-    cir.call %7(%8) : (!cir.ptr<!cir.func<!void (!s32i)>>, !s32i) -> ()
+    cir.call %7(%8) : (!cir.ptr<!cir.func<(!s32i)>>, !s32i) -> ()
     cir.return
   }
   //MLIR-LABEL: @foo

@@ -937,66 +937,51 @@ FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
 // type.
 static mlir::ParseResult parseFuncTypeReturn(mlir::AsmParser &p,
                                              mlir::Type &optionalReturnType) {
-  if (succeeded(p.parseOptionalLParen())) {
-    // If we have already a '(', the function has no return type
-    optionalReturnType = {};
-    return mlir::success();
+  if (succeeded(p.parseOptionalArrow())) {
+    // `->` found. It must be followed by the return type.
+    return p.parseType(optionalReturnType);
   }
-  mlir::Type type;
-  if (p.parseType(type))
-    return mlir::failure();
-  if (isa<cir::VoidType>(type))
-    // An explicit !cir.void means also no return type.
-    optionalReturnType = {};
-  else
-    // Otherwise use the actual type.
-    optionalReturnType = type;
-  return p.parseLParen();
+  // Function has `void` return in C++, no return in MLIR.
+  optionalReturnType = {};
+  return success();
 }
 
 // A special pretty-printer for function returning or not a result.
 static void printFuncTypeReturn(mlir::AsmPrinter &p,
                                 mlir::Type optionalReturnType) {
   if (optionalReturnType)
-    p << optionalReturnType << ' ';
-  p << '(';
+    p << " -> " << optionalReturnType;
 }
 
 static mlir::ParseResult
 parseFuncTypeArgs(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
                   bool &isVarArg) {
   isVarArg = false;
-  // `(` `)`
-  if (succeeded(p.parseOptionalRParen()))
+  if (failed(p.parseLParen()))
+    return failure();
+  if (succeeded(p.parseOptionalRParen())) {
+    // `()` empty argument list
     return mlir::success();
-
-  // `(` `...` `)`
-  if (succeeded(p.parseOptionalEllipsis())) {
-    isVarArg = true;
-    return p.parseRParen();
   }
-
-  // type (`,` type)* (`,` `...`)?
-  mlir::Type type;
-  if (p.parseType(type))
-    return mlir::failure();
-  params.push_back(type);
-  while (succeeded(p.parseOptionalComma())) {
+  do {
     if (succeeded(p.parseOptionalEllipsis())) {
+      // `...`, which must be the last thing in the list.
       isVarArg = true;
-      return p.parseRParen();
+      break;
+    } else {
+      mlir::Type argType;
+      if (failed(p.parseType(argType)))
+        return failure();
+      params.push_back(argType);
     }
-    if (p.parseType(type))
-      return mlir::failure();
-    params.push_back(type);
-  }
-
+  } while (succeeded(p.parseOptionalComma()));
   return p.parseRParen();
 }
 
 static void printFuncTypeArgs(mlir::AsmPrinter &p,
                               mlir::ArrayRef<mlir::Type> params,
                               bool isVarArg) {
+  p << '(';
   llvm::interleaveComma(params, p,
                         [&p](mlir::Type type) { p.printType(type); });
   if (isVarArg) {
@@ -1010,45 +995,52 @@ static void printFuncTypeArgs(mlir::AsmPrinter &p,
 // Use a custom parser to handle the optional return and argument types without
 // an optional anchor.
 static mlir::ParseResult parseFuncType(mlir::AsmParser &p,
-                                       mlir::Type &optionalReturnTypes,
+                                       mlir::Type &optionalReturnType,
                                        llvm::SmallVector<mlir::Type> &params,
                                        bool &isVarArg) {
-  if (failed(parseFuncTypeReturn(p, optionalReturnTypes)))
+  if (failed(parseFuncTypeArgs(p, params, isVarArg)))
     return failure();
-  return parseFuncTypeArgs(p, params, isVarArg);
+  return parseFuncTypeReturn(p, optionalReturnType);
 }
 
-static void printFuncType(mlir::AsmPrinter &p, mlir::Type optionalReturnTypes,
+static void printFuncType(mlir::AsmPrinter &p, mlir::Type optionalReturnType,
                           mlir::ArrayRef<mlir::Type> params, bool isVarArg) {
-  printFuncTypeReturn(p, optionalReturnTypes);
   printFuncTypeArgs(p, params, isVarArg);
+  printFuncTypeReturn(p, optionalReturnType);
 }
 
-// Return the actual return type or an explicit !cir.void if the function does
-// not return anything
+/// Get the C-style return type of the function, which is !cir.void if the
+/// function returns nothing and the actual return type otherwise.
 mlir::Type FuncType::getReturnType() const {
-  if (isVoid())
+  if (hasVoidReturn())
     return cir::VoidType::get(getContext());
-  return static_cast<detail::FuncTypeStorage *>(getImpl())->optionalReturnType;
+  return getOptionalReturnType();
 }
 
-/// Returns the result type of the function as an ArrayRef, enabling better
-/// integration with generic MLIR utilities.
+/// Get the MLIR-style return type of the function, which is an empty
+/// ArrayRef if the function returns nothing and a single-element ArrayRef
+/// with the actual return type otherwise.
 llvm::ArrayRef<mlir::Type> FuncType::getReturnTypes() const {
-  if (isVoid())
+  if (hasVoidReturn())
     return {};
-  return static_cast<detail::FuncTypeStorage *>(getImpl())->optionalReturnType;
+  // Can't use getOptionalReturnType() here because llvm::ArrayRef hold a
+  // pointer to its elements and doesn't do lifetime extension.  That would
+  // result in returning a pointer to a temporary that has gone out of scope.
+  return getImpl()->optionalReturnType;
 }
 
-// Whether the function returns void
-bool FuncType::isVoid() const {
-  auto rt =
-      static_cast<detail::FuncTypeStorage *>(getImpl())->optionalReturnType;
-  assert(!rt ||
-         !mlir::isa<cir::VoidType>(rt) &&
-             "The return type for a function returning void should be empty "
-             "instead of a real !cir.void");
-  return !rt;
+// Does the fuction type return nothing?
+bool FuncType::hasVoidReturn() const { return !getOptionalReturnType(); }
+
+mlir::LogicalResult
+FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                 llvm::ArrayRef<mlir::Type> argTypes, mlir::Type returnType,
+                 bool isVarArg) {
+  if (returnType && mlir::isa<cir::VoidType>(returnType)) {
+    emitError() << "!cir.func cannot have an explicit 'void' return type";
+    return mlir::failure();
+  }
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

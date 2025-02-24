@@ -359,19 +359,19 @@ folly::coro::Task<int> go4() {
 // CHECK:   %17 = cir.alloca !ty_anon2E2_, !cir.ptr<!ty_anon2E2_>, ["ref.tmp1"] {alignment = 1 : i64}
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
-// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_anon2E2_>) -> !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
-// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
-// CHECK:   cir.yield %19 : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
+// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_anon2E2_>) -> !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
+// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>, !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
+// CHECK:   cir.yield %19 : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
 // CHECK: }
-// CHECK: cir.store %12, %3 : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>>
+// CHECK: cir.store %12, %3 : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>>
 // CHECK: cir.scope {
 // CHECK:   %17 = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp2", init] {alignment = 4 : i64}
-// CHECK:   %18 = cir.load %3 : !cir.ptr<!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>>, !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
+// CHECK:   %18 = cir.load %3 : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>>, !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
 // CHECK:   %19 = cir.const #cir.int<3> : !s32i
 // CHECK:   cir.store %19, %17 : !s32i, !cir.ptr<!s32i>
 
 // Call invoker, which calls operator() indirectly.
-// CHECK:   %20 = cir.call %18(%17) : (!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, !cir.ptr<!s32i>) -> ![[IntTask]]
+// CHECK:   %20 = cir.call %18(%17) : (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>, !cir.ptr<!s32i>) -> ![[IntTask]]
 // CHECK:   cir.store %20, %4 : ![[IntTask]], !cir.ptr<![[IntTask]]>
 // CHECK: }
 

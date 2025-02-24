@@ -2739,15 +2739,15 @@ verifyCallCommInSymbolUses(Operation *op, SymbolTableCollection &symbolTable) {
            << stringifyCallingConv(callIf.getCallingConv());
 
   // Void function must not return any results.
-  if (fnType.isVoid() && op->getNumResults() != 0)
+  if (fnType.hasVoidReturn() && op->getNumResults() != 0)
     return op->emitOpError("callee returns void but call has results");
 
   // Non-void function calls must return exactly one result.
-  if (!fnType.isVoid() && op->getNumResults() != 1)
+  if (!fnType.hasVoidReturn() && op->getNumResults() != 1)
     return op->emitOpError("incorrect number of results for callee");
 
   // Parent function and return value types must match.
-  if (!fnType.isVoid() &&
+  if (!fnType.hasVoidReturn() &&
       op->getResultTypes().front() != fnType.getReturnType()) {
     return op->emitOpError("result type mismatch: expected ")
            << fnType.getReturnType() << ", but provided "

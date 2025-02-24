@@ -1159,8 +1159,8 @@ cir.func @bad_long_double(%arg0 : !cir.long_double<!cir.float>) -> () {
 !u8i = !cir.int<u, 8>
 !void = !cir.void
 
-!Base = !cir.struct<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>}>
-!Derived = !cir.struct<struct "Derived" {!cir.struct<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>}>}>
+!Base = !cir.struct<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>
+!Derived = !cir.struct<struct "Derived" {!cir.struct<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>}>
 
 module {
   cir.global "private" constant external @_ZTI4Base : !cir.ptr<!u32i>
@@ -1181,8 +1181,8 @@ module {
 !u8i = !cir.int<u, 8>
 !void = !cir.void
 
-!Base = !cir.struct<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>}>
-!Derived = !cir.struct<struct "Derived" {!cir.struct<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>}>}>
+!Base = !cir.struct<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>
+!Derived = !cir.struct<struct "Derived" {!cir.struct<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>}>
 
 module {
   cir.global "private" constant external @_ZTI4Base : !cir.ptr<!u8i>
@@ -1490,3 +1490,13 @@ cir.func @cast0(%arg0: !s32i, %arg1: !s32i) {
   %1 = cir.cmp(eq, %arg0, %arg1): !s32i, !s32i
   cir.return
 }
+
+// -----
+
+// Verify that void-returning functions have no return type listed in
+// MLIR assembly.
+
+!s32i = !cir.int<s, 32>
+// expected-error @below {{!cir.func cannot have an explicit 'void' return type}}
+// expected-error @below {{failed to parse CIR_PointerType parameter}}
+cir.global external dsolocal @vfp = #cir.ptr<null> : !cir.ptr<!cir.func<(!s32i) -> !cir.void>>

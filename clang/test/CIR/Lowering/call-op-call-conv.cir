@@ -2,7 +2,7 @@
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
 !s32i = !cir.int<s, 32>
-!fnptr = !cir.ptr<!cir.func<!s32i (!s32i)>>
+!fnptr = !cir.ptr<!cir.func<(!s32i) -> !s32i>>
 
 module {
   cir.func private @my_add(%a: !s32i, %b: !s32i) -> !s32i cc(spir_function)

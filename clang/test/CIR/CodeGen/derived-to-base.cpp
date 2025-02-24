@@ -118,11 +118,11 @@ void vcall(C1 &c1) {
 // CHECK:   %5 = cir.load %2 : !cir.ptr<!s32i>, !s32i
 // CHECK:   cir.call @_ZN5buffyC2ERKS_(%3, %1) : (!cir.ptr<!ty_buffy>, !cir.ptr<!ty_buffy>) -> ()
 // CHECK:   %6 = cir.load %3 : !cir.ptr<!ty_buffy>, !ty_buffy
-// CHECK:   %7 = cir.cast(bitcast, %4 : !cir.ptr<!ty_C1_>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>>
-// CHECK:   %8 = cir.load %7 : !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>>, !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>
-// CHECK:   %9 = cir.vtable.address_point( %8 : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>
-// CHECK:   %10 = cir.load align(8) %9 : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>>, !cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>
-// CHECK:   %11 = cir.call %10(%4, %5, %6) : (!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_C1_>, !s32i, !ty_buffy)>>, !cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i
+// CHECK:   %7 = cir.cast(bitcast, %4 : !cir.ptr<!ty_C1_>), !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i>>>>
+// CHECK:   %8 = cir.load %7 : !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i>>>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i>>>
+// CHECK:   %9 = cir.vtable.address_point( %8 : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i>>>, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i>>>
+// CHECK:   %10 = cir.load align(8) %9 : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i>>>, !cir.ptr<!cir.func<(!cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i>>
+// CHECK:   %11 = cir.call %10(%4, %5, %6) : (!cir.ptr<!cir.func<(!cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i>>, !cir.ptr<!ty_C1_>, !s32i, !ty_buffy) -> !s32i
 // CHECK:   cir.return
 // CHECK: }
 

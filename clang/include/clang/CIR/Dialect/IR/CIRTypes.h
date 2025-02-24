@@ -154,6 +154,7 @@ public:
     case RecordKind::Struct:
       return "struct";
     }
+    llvm_unreachable("Invalid value for StructType::getKind()");
   }
   std::string getPrefixedName() {
     return getKindAsStr() + "." + getName().getValue().str();

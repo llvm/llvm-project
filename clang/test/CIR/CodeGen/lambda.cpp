@@ -207,27 +207,27 @@ int g3() {
 
 // CHECK-LABEL: @_Z2g3v()
 // CHECK:     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
-// CHECK:     %1 = cir.alloca !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>>, ["fn", init] {alignment = 8 : i64}
+// CHECK:     %1 = cir.alloca !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>, ["fn", init] {alignment = 8 : i64}
 // CHECK:     %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["task", init] {alignment = 4 : i64}
 
 // 1. Use `operator int (*)(int const&)()` to retrieve the fnptr to `__invoke()`.
 // CHECK:     %3 = cir.scope {
 // CHECK:       %7 = cir.alloca !ty_anon2E5_, !cir.ptr<!ty_anon2E5_>, ["ref.tmp0"] {alignment = 1 : i64}
-// CHECK:       %8 = cir.call @_ZZ2g3vENK3$_0cvPFiRKiEEv(%7) : (!cir.ptr<!ty_anon2E5_>) -> !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>
-// CHECK:       %9 = cir.unary(plus, %8) : !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>
-// CHECK:       cir.yield %9 : !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>
+// CHECK:       %8 = cir.call @_ZZ2g3vENK3$_0cvPFiRKiEEv(%7) : (!cir.ptr<!ty_anon2E5_>) -> !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>
+// CHECK:       %9 = cir.unary(plus, %8) : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>, !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>
+// CHECK:       cir.yield %9 : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>
 // CHECK:     }
 
 // 2. Load ptr to `__invoke()`.
-// CHECK:     cir.store %3, %1 : !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>>
+// CHECK:     cir.store %3, %1 : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>
 // CHECK:     %4 = cir.scope {
 // CHECK:       %7 = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp1", init] {alignment = 4 : i64}
-// CHECK:       %8 = cir.load %1 : !cir.ptr<!cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>>, !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>
+// CHECK:       %8 = cir.load %1 : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>, !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>
 // CHECK:       %9 = cir.const #cir.int<3> : !s32i
 // CHECK:       cir.store %9, %7 : !s32i, !cir.ptr<!s32i>
 
 // 3. Call `__invoke()`, which effectively executes `operator()`.
-// CHECK:       %10 = cir.call %8(%7) : (!cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>, !cir.ptr<!s32i>) -> !s32i
+// CHECK:       %10 = cir.call %8(%7) : (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>, !cir.ptr<!s32i>) -> !s32i
 // CHECK:       cir.yield %10 : !s32i
 // CHECK:     }
 

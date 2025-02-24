@@ -38,11 +38,11 @@ module {
   }
 
   // check indirect call lowering
-  cir.global "private" external @fp : !cir.ptr<!cir.func<!s32i (!s32i)>>
+  cir.global "private" external @fp : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
   cir.func @callIndirect(%arg: !s32i) -> !s32i {
-    %fpp = cir.get_global @fp : !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i)>>>
-    %fp = cir.load %fpp : !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i)>>>, !cir.ptr<!cir.func<!s32i (!s32i)>>
-    %retval = cir.call %fp(%arg) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i
+    %fpp = cir.get_global @fp : !cir.ptr<!cir.ptr<!cir.func<(!s32i) -> !s32i>>>
+    %fp = cir.load %fpp : !cir.ptr<!cir.ptr<!cir.func<(!s32i) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+    %retval = cir.call %fp(%arg) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
     cir.return %retval : !s32i
   }
 
@@ -77,12 +77,12 @@ module {
   // LLVM-NEXT:   ret i32 %1
 
   // check indirect vararg call lowering
-  cir.global "private" external @varargfp : !cir.ptr<!cir.func<!s32i (!s32i, ...)>>
+  cir.global "private" external @varargfp : !cir.ptr<!cir.func<(!s32i, ...) -> !s32i>>
   cir.func @varargCallIndirect() -> !s32i {
-    %fpp = cir.get_global @varargfp : !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i, ...)>>>
-    %fp = cir.load %fpp : !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i, ...)>>>, !cir.ptr<!cir.func<!s32i (!s32i, ...)>>
+    %fpp = cir.get_global @varargfp : !cir.ptr<!cir.ptr<!cir.func<(!s32i, ...) -> !s32i>>>
+    %fp = cir.load %fpp : !cir.ptr<!cir.ptr<!cir.func<(!s32i, ...) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, ...) -> !s32i>>
     %zero = cir.const #cir.int<0> : !s32i
-    %retval = cir.call %fp(%zero, %zero) : (!cir.ptr<!cir.func<!s32i (!s32i, ...)>>, !s32i, !s32i) -> !s32i
+    %retval = cir.call %fp(%zero, %zero) : (!cir.ptr<!cir.func<(!s32i, ...) -> !s32i>>, !s32i, !s32i) -> !s32i
     cir.return %retval : !s32i
   }
 

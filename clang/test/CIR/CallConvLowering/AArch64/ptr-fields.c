@@ -15,9 +15,9 @@ int foo(int x) { return x; }
 // CIR: %[[#V0:]] = cir.alloca !ty_A, !cir.ptr<!ty_A>, [""] {alignment = 4 : i64}
 // CIR: %[[#V1:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_A>), !cir.ptr<!u64i>
 // CIR: cir.store %arg0, %[[#V1]] : !u64i, !cir.ptr<!u64i>
-// CIR: %[[#V2:]] = cir.get_global @foo : !cir.ptr<!cir.func<!s32i (!s32i)>>
-// CIR: %[[#V3:]] = cir.get_member %[[#V0]][0] {name = "f"} : !cir.ptr<!ty_A> -> !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i)>>>
-// CIR: cir.store %[[#V2]], %[[#V3]] : !cir.ptr<!cir.func<!s32i (!s32i)>>, !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i)>>>
+// CIR: %[[#V2:]] = cir.get_global @foo : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+// CIR: %[[#V3:]] = cir.get_member %[[#V0]][0] {name = "f"} : !cir.ptr<!ty_A> -> !cir.ptr<!cir.ptr<!cir.func<(!s32i) -> !s32i>>>
+// CIR: cir.store %[[#V2]], %[[#V3]] : !cir.ptr<!cir.func<(!s32i) -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<(!s32i) -> !s32i>>>
 // CIR: cir.return
 
 // LLVM: void @passA(i64 %[[#V0:]])
