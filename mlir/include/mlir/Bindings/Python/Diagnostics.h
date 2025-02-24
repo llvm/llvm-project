@@ -10,6 +10,7 @@
 #define MLIR_BINDINGS_PYTHON_DIAGNOSTICS_H
 
 #include <cassert>
+#include <cstdint>
 #include <string>
 
 #include "mlir-c/Diagnostics.h"
@@ -45,6 +46,11 @@ private:
     mlirLocationPrint(loc, printer, data);
     *static_cast<std::string *>(data) += ": ";
     mlirDiagnosticPrint(diag, printer, data);
+    for (intptr_t i = 0; i < mlirDiagnosticGetNumNotes(diag); i++) {
+      *static_cast<std::string *>(data) += "\n";
+      MlirDiagnostic note = mlirDiagnosticGetNote(diag, i);
+      handler(note, data);
+    }
     return mlirLogicalResultSuccess();
   }
 
