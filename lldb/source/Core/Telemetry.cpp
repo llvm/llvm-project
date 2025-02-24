@@ -65,10 +65,10 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
 void TargetInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
-  serializer.write("username", username);
-  serializer.write("lldb_git_sha", lldb_git_sha);
-  serializer.write("lldb_path", lldb_path);
-  serializer.write("cwd", cwd);
+  serializer.write("target_uuid", target_uuid);
+  serializer.write("executable_path", executable_path);
+  serializer.write("executable_size", executable_size);
+  serializer.write("arch_name", arch_name);
   if (exit_desc.has_value()) {
     serializer.write("exit_code", exit_desc->exit_code);
     serializer.write("exit_desc", exit_desc->description);
@@ -88,61 +88,50 @@ TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
     : m_config(std::move(config)) {}
 
 llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
-  LLDBBaseTelemetryInfo *lldb_entry =
-      llvm::dyn_cast<LLDBBaseTelemetryInfo>(entry);
-  std::string session_id = "";
-  if (Debugger *debugger = lldb_entry->debugger) {
-    auto session_id_pos = session_ids.find(debugger);
-    if (session_id_pos != session_ids.end())
-      session_id = session_id_pos->second;
-    else
-      session_id_pos->second = session_id = MakeUUID(debugger);
-  }
-  lldb_entry->SessionId = session_id;
-
+  // Do nothing for now.
+  // In up-coming patch, this would be where the manager
+  // attach the session_uuid to the entry.
   return llvm::Error::success();
 }
 
-const Config *getConfig() { return m_config.get(); }
+const Config * TelemetryManager::GetConfig() { return m_config.get(); }
+
 
 void TelemetryManager::AtMainExecutableLoadStart(TargetInfo *entry) {
-  UserIDResolver &resolver = lldb_private::HostInfo::GetUserIDResolver();
-  std::optional<llvm::StringRef> opt_username =
-      resolver.GetUserName(lldb_private::HostInfo::GetUserID());
-  if (opt_username)
-    entry->username = *opt_username;
-
-  entry->lldb_git_sha =
-      lldb_private::GetVersion(); // TODO: find the real git sha?
-
-  entry->lldb_path = HostInfo::GetProgramFileSpec().GetPath();
-
-  llvm::SmallString<64> cwd;
-  if (!llvm::sys::fs::current_path(cwd)) {
-    entry->cwd = cwd.c_str();
-  } else {
-    MiscTelemetryInfo misc_info;
-    misc_info.meta_data["internal_errors"] = "Cannot determine CWD";
-    if (auto er = dispatch(&misc_info)) {
-      LLDB_LOG(GetLog(LLDBLog::Object),
-               "Failed to dispatch misc-info at startup");
+  if (entry->exec_mod != nullptr) {
+    entry->target_uuid = entry->exec_mod->GetUUID().GetAsString();
+    entry->executalbe_path = entry->exec_mod->GetFileSpec().GetPathAsConstString().GetCString();
+    if (auto err = llvm::sys::fs::file_size(
+            entry->exec_mod->GetFileSpec().GetPath(), entry->binary_size)) {
+      // If there was error obtaining it, just reset the size to 0.
+      // Maybe log the error too?
+      entry->binary_size = 0;
     }
+    entry->arch_name = entry->exec_mod->GetArchitecture().GetArchitectureName();
   }
 
-  if (auto er = dispatch(entry)) {
-    LLDB_LOG(GetLog(LLDBLog::Object), "Failed to dispatch entry at startup");
+  if (llvm::Error er = dispatch(entry)) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                   "Failed to dispatch entry at main executable load start: {0}");
   }
 }
 
 void TelemetryManager::AtMainExecutableLoadEnd(TargetInfo *entry) {
-  // ....
-  dispatch(entry);
+    if (entry->exec_mod != nullptr) {
+      entry->target_uuid = entry->exec_mod->GetUUID().GetAsString();
+      // We don't need the rest of the data since they are already in the start entry.
+
+        if (llvm::Error er = dispatch(entry)) {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                         "Failed to dispatch entry at main executable load start: {0}");
+        }
+    }
 }
 
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
-TelemetryManager *TelemetryManager::getInstance() { return g_instance.get(); }
+TelemetryManager *TelemetryManager::GetInstance() { return g_instance.get(); }
 
-void TelemetryManager::setInstance(std::unique_ptr<TelemetryManager> manager) {
+void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
   g_instance = std::move(manager);
 }
 

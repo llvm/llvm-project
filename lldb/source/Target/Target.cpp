@@ -20,6 +20,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
@@ -1558,10 +1559,25 @@ void Target::DidExec() {
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
                                  LoadDependentFiles load_dependent_files) {
+  telemetry::Helper helper;
   Log *log = GetLog(LLDBLog::Target);
   ClearModules(false);
 
   if (executable_sp) {
+    if (helper.TelemetryEnabled()) {
+        telemetry::TargetInfo start_entry;
+        start_entry.start_time = helper.GetStartTime();
+        start_entry.exec_mod =  executable_sp;
+        telemetry::TelemetryManager::GetInstance()->AtMainExecutableLoadStart(&start_entry);
+
+        helper.RunAtScopeExit([&]() {
+          telemetry::TargetInfo end_entry;
+          end_entry.start_time = helper.GetStartTime();
+          end_entry.end_time = helper.GetCurrentTime();
+          end_entry.exec_mod = executable_sp;
+          telemetry::TelemetryManager::GetInstance()->AtMainExecutableLoadEnd(&end_entry);
+        });
+    }
     ElapsedTime elapsed(m_stats.GetCreateTime());
     LLDB_SCOPED_TIMERF("Target::SetExecutableModule (executable = '%s')",
                        executable_sp->GetFileSpec().GetPath().c_str());

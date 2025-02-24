@@ -24,16 +24,21 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <type_traits>
+#include <utility>
+#include <functional>
+#include <stack>
 
 namespace lldb_private {
 namespace telemetry {
 
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000;
-  static const KindType TargetInfo = 0b11010;
+  static const llvm::telemetry::KindType TargetInfo = 0b11010;
   // There are other entries in between (added in separate PRs)
   static const llvm::telemetry::KindType MiscInfo = 0b11110;
 };
+
 
 /// Defines a convenient type for timestamp of various events.
 using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock,
@@ -66,64 +71,26 @@ struct ExitDescription {
   std::string description;
 };
 
-struct TargetTelemetryInfo : public LldbBaseTelemetryInfo {
+
+struct TargetInfo : public LLDBBaseTelemetryInfo {
   lldb::ModuleSP exec_mod;
   Target *target_ptr;
 
   // The same as the executable-module's UUID.
   std::string target_uuid;
-  std::string file_format;
-
-  std::string binary_path;
-  size_t binary_size;
+  std::string executable_path;
+  size_t executable_size;
+  std::string arch_name;
 
   std::optional<ExitDescription> exit_desc;
-  TargetTelemetryInfo() = default;
+  TargetInfo() = default;
 
-  TargetTelemetryInfo(const TargetTelemetryInfo &other) {
-    exec_mod = other.exec_mod;
-    target_uuid = other.target_uuid;
-    file_format = other.file_format;
-    binary_path = other.binary_path;
-    binary_size = other.binary_size;
-    exit_desc = other.exit_desc;
-  }
-
-  KindType getKind() const override { return LldbEntryKind::TargetInfo; }
+  llvm::telemetry::KindType getKind() const override { return LLDBEntryKind::TargetInfo; }
 
   static bool classof(const TelemetryInfo *T) {
     if (T == nullptr)
       return false;
-    return T->getKind() == LldbEntryKind::TargetInfo;
-  }
-
-  void serialize(Serializer &serializer) const override;
-};
-
-/// The "catch-all" entry to store a set of non-standard data, such as
-/// error-messages, etc.
-struct MiscTelemetryInfo : public LLDBBaseTelemetryInfo {
-  /// If the event is/can be associated with a target entry,
-  /// this field contains that target's UUID.
-  /// <EMPTY> otherwise.
-  std::string target_uuid;
-
-  /// Set of key-value pairs for any optional (or impl-specific) data
-  std::map<std::string, std::string> meta_data;
-
-  MiscTelemetryInfo() = default;
-
-  MiscTelemetryInfo(const MiscTelemetryInfo &other) {
-    target_uuid = other.target_uuid;
-    meta_data = other.meta_data;
-  }
-
-  llvm::telemetry::KindType getKind() const override {
-    return LLDBEntryKind::MiscInfo;
-  }
-
-  static bool classof(const llvm::telemetry::TelemetryInfo *T) {
-    return T->getKind() == LLDBEntryKind::MiscInfo;
+    return T->getKind() == LLDBEntryKind::TargetInfo;
   }
 
   void serialize(llvm::telemetry::Serializer &serializer) const override;
@@ -132,30 +99,66 @@ struct MiscTelemetryInfo : public LLDBBaseTelemetryInfo {
 /// The base Telemetry manager instance in LLDB.
 /// This class declares additional instrumentation points
 /// applicable to LLDB.
-class TelemetryMager : public llvm::telemetry::Manager {
+class TelemetryManager : public llvm::telemetry::Manager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
-  const llvm::telemetry::Config *getConfig();
+  const llvm::telemetry::Config *GetConfig();
 
+  /// The following methods are for reporting the load of an executable.
+  /// One is invoked at the beginning of the process and the other at
+  /// the end.
+  /// This is done in two passes to avoid losing date in case of any error/crash
+  /// during the action.
+  ///
+  /// Invoked at the begining of the load of the main-executable.
   virtual void AtMainExecutableLoadStart(TargetInfo * entry);
+  /// Invoked at the end of the load.
   virtual void AtMainExecutableLoadEnd(TargetInfo *entry);
 
-      virtual llvm::StringRef GetInstanceName() const = 0;
-  static TelemetryManager *getInstance();
+  virtual llvm::StringRef GetInstanceName() const = 0;
+
+  static TelemetryManager *GetInstance();
 
 protected:
   TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config);
 
-  static void setInstance(std::unique_ptr<TelemetryManager> manger);
+  static void SetInstance(std::unique_ptr<TelemetryManager> manger);
 
 private:
   std::unique_ptr<llvm::telemetry::Config> m_config;
-  // Each debugger is assigned a unique ID (session_id).
-  // All TelemetryInfo entries emitted for the same debugger instance
-  // will get the same session_id.
-  llvm::DenseMap<Debugger *, std::string> session_ids;
+
   static std::unique_ptr<TelemetryManager> g_instance;
+};
+
+class Helper {
+ public:
+  Helper () : m_start(std::chrono::steady_clock::now()) {}
+  ~Helper() {
+    while(! m_exit_funcs.empty()) {
+      (m_exit_funcs.top())();
+      m_exit_funcs.pop();
+    }
+  }
+
+  bool TelemetryEnabled() {
+    TelemetryManager* instance = TelemetryManager::GetInstance();
+  return instance != nullptr && instance->GetConfig()->EnableTelemetry;
+  }
+
+
+  SteadyTimePoint GetStartTime() {return m_start;}
+  SteadyTimePoint GetCurrentTime()  { return std::chrono::steady_clock::now(); }
+
+ template <typename Fp>
+ void RunAtScopeExit(Fp&& F){
+   m_exit_funcs.push(std::forward<Fp>(F));
+ }
+
+ private:
+  const SteadyTimePoint m_start;
+  std::stack<std::function<void()>> m_exit_funcs;
+
 };
 
 } // namespace telemetry
