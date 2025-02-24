@@ -18,12 +18,12 @@
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_s8_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4a_1x1_za32_s8_s8u10__SVInt8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
@@ -32,12 +32,12 @@ void test_svmop4a_1x1_za32_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_s8_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4s_1x1_za32_s8_s8u10__SVInt8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
@@ -46,12 +46,12 @@ void test_svmop4s_1x1_za32_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_u8_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4a_1x1_za32_u8_u8u11__SVUint8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
@@ -60,12 +60,12 @@ void test_svmop4a_1x1_za32_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __a
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_u8_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4s_1x1_za32_u8_u8u11__SVUint8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
@@ -74,12 +74,12 @@ void test_svmop4s_1x1_za32_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __a
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_s16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za32_s16_s16u11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
@@ -88,12 +88,12 @@ void test_svmop4a_1x1_za32_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming _
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_s16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za32_s16_s16u11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
@@ -102,12 +102,12 @@ void test_svmop4s_1x1_za32_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming _
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_u16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za32_u16_u16u12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
@@ -116,12 +116,12 @@ void test_svmop4a_1x1_za32_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_u16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za32_u16_u16u12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
@@ -186,12 +186,12 @@ void test_svmop4s_1x1_za32_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_str
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_s16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za64_s16_s16u11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
@@ -200,12 +200,12 @@ void test_svmop4a_1x1_za64_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming _
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_s16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za64_s16_s16u11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
@@ -214,12 +214,12 @@ void test_svmop4s_1x1_za64_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming _
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_u16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za64_u16_u16u12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
@@ -228,12 +228,12 @@ void test_svmop4a_1x1_za64_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_u16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za64_u16_u16u12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
@@ -242,12 +242,12 @@ void test_svmop4s_1x1_za64_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_s16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za64_s16_u16u11__SVInt16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
@@ -256,12 +256,12 @@ void test_svmop4a_1x1_za64_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming 
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_s16_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za64_s16_u16u11__SVInt16_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
@@ -270,12 +270,12 @@ void test_svmop4s_1x1_za64_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming 
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_u16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4a_1x1_za64_u16_s16u12__SVUint16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_u16_s16(svuint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
@@ -284,12 +284,12 @@ void test_svmop4a_1x1_za64_u16_s16(svuint16_t zn, svint16_t zm) __arm_streaming 
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_u16_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z29test_svmop4s_1x1_za64_u16_s16u12__SVUint16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.wide.1x1.nxv8i16(i32 3, <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_u16_s16(svuint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
@@ -298,12 +298,12 @@ void test_svmop4s_1x1_za64_u16_s16(svuint16_t zn, svint16_t zm) __arm_streaming 
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_s8_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4a_1x1_za32_s8_u8u10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
@@ -312,12 +312,12 @@ void test_svmop4a_1x1_za32_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __ar
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_s8_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4s_1x1_za32_s8_u8u10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
@@ -326,12 +326,12 @@ void test_svmop4s_1x1_za32_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __ar
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_u8_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4a_1x1_za32_u8_s8u11__SVUint8_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4a.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_u8_s8(svuint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
@@ -340,12 +340,12 @@ void test_svmop4a_1x1_za32_u8_s8(svuint8_t zn, svint8_t zm) __arm_streaming __ar
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_u8_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svmop4s_1x1_za32_u8_s8u11__SVUint8_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.mop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmop4s.wide.1x1.nxv16i8(i32 3, <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_u8_s8(svuint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {

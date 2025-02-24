@@ -384,7 +384,7 @@ multiclass MOP4MixedSignsSingleSingle<string n_suffix1, string n_suffix2, string
   def NAME : SInst<"sv" # n_suffix2 # "_1x1_" # za # "[_{2}_{3}]",
                               "vid" # !cond(!eq(n_suffix1, "su") : "u", true: "x"),
                               !cond(!eq(n_suffix1, "su") : "", true: "U") # t,
-                              MergeNone, "aarch64_sme_" # n_suffix2 # "_wide_1x1",
+                              MergeNone, "aarch64_sme_" # n_suffix1 # n_suffix2 # "_wide_1x1",
                               [IsStreaming, IsInOutZA],
                               [ImmCheck<0, ImmCheck0_3>]>;
 }
@@ -400,15 +400,15 @@ let SMETargetGuard = "sme2" in {
 
   def SVBMOPS : Inst<"svbmops_za32[_{d}]_m", "viPPdd", "iUi", MergeNone, "aarch64_sme_bmops_za32", [IsInOutZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
 
-  defm SVSMOP4A_MZZ_HtoS  : MOP4SingleSingle<"a", "za32", "s", "aarch64_sme_mop4a", "_wide">;
-  defm SVSMOP4S_MZZ_HtoS  : MOP4SingleSingle<"s", "za32", "s", "aarch64_sme_mop4s", "_wide">;
-  defm SVSMOP4A_MZZ_BToS  : MOP4SingleSingle<"a", "za32", "c", "aarch64_sme_mop4a", "_wide">;
-  defm SVSMOP4S_MZZ_BToS  : MOP4SingleSingle<"s", "za32", "c", "aarch64_sme_mop4s", "_wide">;
+  defm SVSMOP4A_MZZ_HtoS  : MOP4SingleSingle<"a", "za32", "s", "aarch64_sme_smop4a", "_wide">;
+  defm SVSMOP4S_MZZ_HtoS  : MOP4SingleSingle<"s", "za32", "s", "aarch64_sme_smop4s", "_wide">;
+  defm SVSMOP4A_MZZ_BToS  : MOP4SingleSingle<"a", "za32", "c", "aarch64_sme_smop4a", "_wide">;
+  defm SVSMOP4S_MZZ_BToS  : MOP4SingleSingle<"s", "za32", "c", "aarch64_sme_smop4s", "_wide">;
 
-  defm SVUMOP4A_MZZ_HtoS  : MOP4SingleSingle<"a", "za32", "Us", "aarch64_sme_mop4a", "_wide">;
-  defm SVUMOP4S_MZZ_HtoS  : MOP4SingleSingle<"s", "za32", "Us", "aarch64_sme_mop4s", "_wide">;
-  defm SVUMOP4A_MZZ_BToS  : MOP4SingleSingle<"a", "za32", "Uc", "aarch64_sme_mop4a", "_wide">;
-  defm SVUMOP4S_MZZ_BToS  : MOP4SingleSingle<"s", "za32", "Uc", "aarch64_sme_mop4s", "_wide">;
+  defm SVUMOP4A_MZZ_HtoS  : MOP4SingleSingle<"a", "za32", "Us", "aarch64_sme_umop4a", "_wide">;
+  defm SVUMOP4S_MZZ_HtoS  : MOP4SingleSingle<"s", "za32", "Us", "aarch64_sme_umop4s", "_wide">;
+  defm SVUMOP4A_MZZ_BToS  : MOP4SingleSingle<"a", "za32", "Uc", "aarch64_sme_umop4a", "_wide">;
+  defm SVUMOP4S_MZZ_BToS  : MOP4SingleSingle<"s", "za32", "Uc", "aarch64_sme_umop4s", "_wide">;
 
   defm SVFMOP4A_MZZ_HtoS  : MOP4SingleSingle<"a", "za32", "h", "aarch64_sme_mop4a", "_wide">;
   defm SVFMOP4S_MZZ_HtoS  : MOP4SingleSingle<"s", "za32", "h", "aarch64_sme_mop4s", "_wide">;
@@ -473,10 +473,10 @@ let SMETargetGuard = "sme2" in {
 }
 
 let SMETargetGuard = "sme2,sme-i16i64" in {
-  defm SVSMOP4A_MZZ_HtoD  : MOP4SingleSingle<"a", "za64", "s", "aarch64_sme_mop4a", "_wide">;
-  defm SVSMOP4S_MZZ_HtoD  : MOP4SingleSingle<"s", "za64", "s", "aarch64_sme_mop4s", "_wide">;
-  defm SVUMOP4A_MZZ_HtoD  : MOP4SingleSingle<"a", "za64", "Us", "aarch64_sme_mop4a", "_wide">;
-  defm SVUMOP4S_MZZ_HtoD  : MOP4SingleSingle<"s", "za64", "Us", "aarch64_sme_mop4s", "_wide">;
+  defm SVSMOP4A_MZZ_HtoD  : MOP4SingleSingle<"a", "za64", "s", "aarch64_sme_smop4a", "_wide">;
+  defm SVSMOP4S_MZZ_HtoD  : MOP4SingleSingle<"s", "za64", "s", "aarch64_sme_smop4s", "_wide">;
+  defm SVUMOP4A_MZZ_HtoD  : MOP4SingleSingle<"a", "za64", "Us", "aarch64_sme_umop4a", "_wide">;
+  defm SVUMOP4S_MZZ_HtoD  : MOP4SingleSingle<"s", "za64", "Us", "aarch64_sme_umop4s", "_wide">;
   defm SVSUMOP4A_MZZ_HtoD : MOP4MixedSignsSingleSingle<"su", "mop4a", "za64", "s">;
   defm SVUSMOP4A_MZZ_HtoD : MOP4MixedSignsSingleSingle<"us", "mop4a", "za64", "s">;
   defm SVSUMOP4S_MZZ_HtoD : MOP4MixedSignsSingleSingle<"su", "mop4s", "za64", "s">;
