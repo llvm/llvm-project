@@ -394,12 +394,9 @@ static Value *calculateVectorIndex(
   auto I = GEPIdx.find(GEP);
   assert(I != GEPIdx.end() && "Must have entry for GEP!");
 
-  if (Value *IndexValue = I->second)
+    Value *IndexValue = I->second;
+    assert(IndexValue && "index value missing from GEP index map");
     return IndexValue;
-
-  llvm_unreachable(
-      "Index value is not present in Cached GEPs! This indicates a "
-      "bug in the pass that populates GEPIdx.");
 }
 
 static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
