@@ -704,7 +704,7 @@ void Sema::DiagnoseAssignmentBoolContext(Expr *E, QualType Ty) {
     }
 
     // Condition-assignment warnings are already handled by `DiagnoseAssignmentAsCondition()`
-    if (E->isCondition)
+    if (E->isInsideCondition())
       return;
 
     if (BinaryOperator *Op = dyn_cast<BinaryOperator>(E)) {

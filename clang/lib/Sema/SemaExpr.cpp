@@ -20288,7 +20288,7 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
 ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
                                        bool IsConstexpr) {
   DiagnoseAssignmentAsCondition(E);
-  E->isCondition = true;
+  E->setIsInsideCondition();
 
   if (ParenExpr *parenE = dyn_cast<ParenExpr>(E))
     DiagnoseEqualityWithExtraParens(parenE);
