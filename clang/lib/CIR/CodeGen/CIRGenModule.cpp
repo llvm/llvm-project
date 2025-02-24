@@ -2428,7 +2428,7 @@ static std::string getMangledNameImpl(CIRGenModule &CGM, GlobalDecl GD,
       assert(0 && "NYI");
     } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
                GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
-      Out << "__device_stub__";
+      Out << "__device_stub__" << II->getName();
     } else {
       Out << II->getName();
     }
