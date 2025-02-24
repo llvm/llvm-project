@@ -19,7 +19,7 @@ def fzf_history(debugger, cmdstr, ctx, result, _):
         # The ability to integrate fzf's result into lldb uses copy and paste.
         # In absense of copy and paste, do the basics and forgo features.
         fzf_command = ("fzf", "--no-sort", f"--query={query}")
-        subprocess.run(fzf_command, input=history)
+        subprocess.run(fzf_command, input=history, text=True)
         return
 
     # Capture the current pasteboard contents to restore after overwriting.
