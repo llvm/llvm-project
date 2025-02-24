@@ -111,18 +111,22 @@ static llvm::Error RunInTerminal(DAP &dap,
   if (!comm_file_or_err)
     return comm_file_or_err.takeError();
   FifoFile &comm_file = *comm_file_or_err.get();
+  std::string comm_filename = comm_file.m_path;
 
-  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file.m_path);
+  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file);
 
   lldb::pid_t debugger_pid = LLDB_INVALID_PROCESS_ID;
 #if !defined(_WIN32)
   debugger_pid = getpid();
 #endif
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      launch_request, comm_file.m_path, debugger_pid);
+      launch_request, comm_filename, debugger_pid);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
 
+  auto err = comm_channel.WaitForLauncher();
+  if (err)
+    return err;
   if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
     attach_info.SetProcessID(*pid);
   else
