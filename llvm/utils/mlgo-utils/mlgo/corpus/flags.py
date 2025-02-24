@@ -9,7 +9,7 @@ def add_verbosity_arguments(parser: ArgumentParser) -> None:
     """Adds the arguments for verbosity to the ArgumentParser
 
     Arguments:
-        parser -- the argument parser being modified with verbosity arguments
+        parser: The argument parser being modified with verbosity arguments.
     """
     parser.add_argument(
         "--verbosity",
