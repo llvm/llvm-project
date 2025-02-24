@@ -224,8 +224,8 @@ struct DAP {
   llvm::Error ConfigureIO(std::FILE *overrideOut = nullptr,
                           std::FILE *overrideErr = nullptr);
 
-  /// Stop the redirected IO threads and associated pipes.
-  void StopIO();
+  /// Stop event handler threads.
+  void StopEventHandlers();
 
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
