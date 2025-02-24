@@ -291,8 +291,20 @@ void check_no_warning_variadic(unsigned idx, int arr[20], ...) {
   a.ptr = arr; // no-warning
 }
 
+template<typename T>
+[[clang::unsafe_buffer_usage]]
+void check_no_warnings_template(unsigned idx, T* arr) {
+  int k = arr[idx]; // no-warning
+
+  std::span<int> sp = {arr, 20}; // no-warning
+  A *ptr = reinterpret_cast<A*> (sp.data()); // no-warning
+  A a;
+  a.ptr = arr; // no-warning
+}
+
 void invoke_methods() {
   int array[20];
   check_no_warnings(30); //expected-warning{{function introduces unsafe buffer manipulation}}
-  check_no_warning_variadic(20, array); //expected-warning{{function introduces unsafe buffer manipulation}}
+  check_no_warning_variadic(15, array); //expected-warning{{function introduces unsafe buffer manipulation}}
+  check_no_warnings_template(10, array); //expected-warning{{function introduces unsafe buffer manipulation}}
 }
