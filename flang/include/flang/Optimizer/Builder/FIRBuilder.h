@@ -385,15 +385,6 @@ public:
                                            mlir::FunctionType ty,
                                            mlir::SymbolTable *);
 
-  /// Returns a named function for a Fortran runtime API, creating
-  /// it, if it does not exist in the module yet.
-  /// If \p isIO is set to true, then the function corresponds
-  /// to one of Fortran runtime IO APIs.
-  mlir::func::FuncOp createRuntimeFunction(mlir::Location loc,
-                                           llvm::StringRef name,
-                                           mlir::FunctionType ty,
-                                           bool isIO = false);
-
   /// Cast the input value to IndexType.
   mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
     return createConvert(loc, getIndexType(), val);

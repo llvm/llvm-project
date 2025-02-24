@@ -17,7 +17,6 @@
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
@@ -291,12 +290,6 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       size = clonedSize->getResult(0);
       clonedSize->moveBefore(&insertBlock->front());
       rewriter.setInsertionPointAfter(size.getDefiningOp());
-    }
-
-    if (auto dataAttr = alloc->getAttrOfType<cuf::DataAttributeAttr>(
-            cuf::getDataAttrName())) {
-      if (dataAttr.getValue() == cuf::DataAttribute::Shared)
-        allocaAs = 3;
     }
 
     // NOTE: we used to pass alloc->getAttrs() in the builder for non opaque
@@ -592,11 +585,6 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
   matchAndRewrite(fir::CallOp call, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     llvm::SmallVector<mlir::Type> resultTys;
-    mlir::Attribute memAttr =
-        call->getAttr(fir::FIROpsDialect::getFirCallMemoryAttrName());
-    if (memAttr)
-      call->removeAttr(fir::FIROpsDialect::getFirCallMemoryAttrName());
-
     for (auto r : call.getResults())
       resultTys.push_back(convertType(r.getType()));
     // Convert arith::FastMathFlagsAttr to LLVM::FastMathFlagsAttr.
@@ -638,10 +626,6 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
     }
     if (mlir::ArrayAttr resAttrs = call.getResAttrsAttr())
       llvmCall.setResAttrsAttr(resAttrs);
-
-    if (memAttr)
-      llvmCall.setMemoryEffectsAttr(
-          mlir::cast<mlir::LLVM::MemoryEffectsAttr>(memAttr));
     return mlir::success();
   }
 };
