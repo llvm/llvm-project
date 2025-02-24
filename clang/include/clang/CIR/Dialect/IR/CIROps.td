@@ -1783,6 +1783,36 @@ def RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// BitReverseOp
+//===----------------------------------------------------------------------===//
+
+def BitReverseOp : CIR_Op<"bit_reverse", [Pure, SameOperandsAndResultType]> {
+  let summary = "Reverse the bit pattern of the operand integer";
+  let description = [{
+    The `cir.bit_reverse` operation reverses the bit pattern of the operand
+    integer. Its only argument must be of unsigned integer types of width 8, 16,
+    32, or 64.
+
+    This operation covers the C/C++ builtin function `__builtin_bitreverse`.
+
+    Example:
+
+    ```mlir
+    %1 = cir.bit_reverse %0 : !u32i
+    ```
+  }];
+
+  let arguments = (ins AnyTypeOf<[UInt8, UInt16, UInt32, UInt64]>:$src);
+  let results = (outs AnyTypeOf<[UInt8, UInt16, UInt32, UInt64]>:$result);
+
+  let assemblyFormat = [{
+    $src `:` type($result) attr-dict
+  }];
+
+  let llvmOp = "BitReverseOp";
+}
+
+//===----------------------------------------------------------------------===//
 // CmpThreeWayOp
 //===----------------------------------------------------------------------===//
 

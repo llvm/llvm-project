@@ -1187,8 +1187,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
-  case Builtin::BI__builtin_bitreverse64:
-    llvm_unreachable("BI__builtin_bitreverse8 like NYI");
+  case Builtin::BI__builtin_bitreverse64: {
+    mlir::Value arg = emitScalarExpr(E->getArg(0));
+    return RValue::get(
+        builder.create<cir::BitReverseOp>(getLoc(E->getSourceRange()), arg));
+  }
 
   case Builtin::BI__builtin_rotateleft8:
   case Builtin::BI__builtin_rotateleft16:
