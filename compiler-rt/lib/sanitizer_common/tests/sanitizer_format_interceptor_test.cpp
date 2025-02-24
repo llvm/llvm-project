@@ -38,6 +38,7 @@ using namespace __sanitizer;
 #include "sanitizer_common/sanitizer_common_interceptors_format.inc"
 
 static const unsigned I = sizeof(int);
+static const unsigned Z = sizeof(size_t);
 static const unsigned L = sizeof(long);
 static const unsigned LL = sizeof(long long);
 static const unsigned S = sizeof(short);
@@ -113,6 +114,8 @@ static void testScanfNoGnuMalloc(const char *format, unsigned n, ...) {
 
 TEST(SanitizerCommonInterceptors, Scanf) {
   testScanf("%d", 1, I);
+  testScanf("%zx", 1, Z);
+  testScanf("%zd", 1, Z);
   testScanf("%d%d%d", 3, I, I, I);
   testScanf("ab%u%dc", 2, I, I);
   testScanf("%ld", 1, L);
