@@ -29,6 +29,7 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -125,21 +126,21 @@ struct Variables {
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
+  explicit StartDebuggingRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
+  explicit ReplModeRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
+  explicit SendEventRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
@@ -211,7 +212,7 @@ struct DAP {
   std::string last_nonempty_var_expression;
 
   DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-      StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+      lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
       std::vector<std::string> pre_init_commands);
   ~DAP();
   DAP(const DAP &rhs) = delete;
