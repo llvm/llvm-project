@@ -152,13 +152,16 @@ end subroutine
 
 attributes(device) subroutine testAtomic()
   integer :: a, istat, j
+  real :: r
   istat = atomicexch(a,0)
+  istat = atomicexch(r, 0.0)
   istat = atomicxor(a, j)
   istat = atomiccas(a, i, 14)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtestatomic()
 ! CHECK: llvm.atomicrmw xchg %{{.*}}, %c0{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: llvm.atomicrmw xchg %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
 ! CHECK: llvm.atomicrmw _xor %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %[[ADDR:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<i32> to !llvm.ptr
 ! CHECK: llvm.cmpxchg %[[ADDR]], %{{.*}}, %c14{{.*}} acq_rel monotonic : !llvm.ptr, i32
