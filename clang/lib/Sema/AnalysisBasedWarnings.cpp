@@ -2531,6 +2531,17 @@ sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
 
   DefaultPolicy.enableConsumedAnalysis =
       isEnabled(D, warn_use_in_invalid_state);
+
+  // Check at startup if any of the unsafe buffer usage warnings have been
+  // enabled.  If none of them are enabled, we will skip traversing the entire
+  // translation unit later. We do this check on startup so that it is not
+  // affected by `#pragma clang diagnostic ignored`.
+  DefaultPolicy.enableUnsafeBufferUsage =
+      isEnabled(D, diag::warn_unsafe_buffer_operation) ||
+      isEnabled(D, diag::warn_unsafe_buffer_variable) ||
+      isEnabled(D, diag::warn_unsafe_buffer_usage_in_container) ||
+      (isEnabled(D, diag::warn_unsafe_buffer_libc_call) &&
+       S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */);
 }
 
 // We need this here for unique_ptr with forward declared class.
@@ -2625,14 +2636,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
     // More analysis ...
   };
+
   // Emit per-function analysis-based warnings that require the whole-TU
-  // reasoning. Check if any of them is enabled at all before scanning the AST:
-  if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation()) ||
-      !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container,
-                       SourceLocation()) ||
-      (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation()) &&
-       S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */)) {
+  // reasoning.
+  if (DefaultPolicy.enableUnsafeBufferUsage) {
     CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 }

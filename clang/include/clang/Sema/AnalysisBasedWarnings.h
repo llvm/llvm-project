@@ -42,6 +42,8 @@ public:
     unsigned enableThreadSafetyAnalysis : 1;
     LLVM_PREFERRED_TYPE(bool)
     unsigned enableConsumedAnalysis : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned enableUnsafeBufferUsage : 1;
   public:
     Policy();
     void disableCheckFallThrough() { enableCheckFallThrough = 0; }
