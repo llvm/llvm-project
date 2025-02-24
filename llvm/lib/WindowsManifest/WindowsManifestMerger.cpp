@@ -32,6 +32,7 @@ void WindowsManifestError::log(raw_ostream &OS) const { OS << Msg; }
 
 class WindowsManifestMerger::WindowsManifestMergerImpl {
 public:
+  ~WindowsManifestMergerImpl();
   Error merge(MemoryBufferRef Manifest);
   std::unique_ptr<MemoryBuffer> getMergedManifest();
 
@@ -44,7 +45,7 @@ private:
     void operator()(xmlDoc *Ptr) { xmlFreeDoc(Ptr); }
   };
   xmlDocPtr CombinedDoc = nullptr;
-  std::vector<std::unique_ptr<xmlDoc, XmlDeleter>> MergedDocs;
+  std::vector<xmlDocPtr> MergedDocs;
   bool Merged = false;
   int BufferSize = 0;
   std::unique_ptr<xmlChar, XmlDeleter> Buffer;
@@ -610,6 +611,11 @@ static void checkAndStripPrefixes(xmlNodePtr Node,
   }
 }
 
+WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
+  for (auto &Doc : MergedDocs)
+    xmlFreeDoc(Doc);
+}
+
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
     MemoryBufferRef Manifest) {
   if (Merged)
@@ -620,17 +626,17 @@ Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
         "attempted to merge empty manifest");
   xmlSetGenericErrorFunc((void *)this,
                          WindowsManifestMergerImpl::errorCallback);
-  std::unique_ptr<xmlDoc, XmlDeleter> ManifestXML(xmlReadMemory(
+  xmlDocPtr ManifestXML = xmlReadMemory(
       Manifest.getBufferStart(), Manifest.getBufferSize(), "manifest.xml",
-      nullptr, XML_PARSE_NOBLANKS | XML_PARSE_NODICT));
+      nullptr, XML_PARSE_NOBLANKS | XML_PARSE_NODICT);
   xmlSetGenericErrorFunc(nullptr, nullptr);
   if (auto E = getParseError())
     return E;
-  xmlNodePtr AdditionalRoot = xmlDocGetRootElement(ManifestXML.get());
+  xmlNodePtr AdditionalRoot = xmlDocGetRootElement(ManifestXML);
   stripComments(AdditionalRoot);
   setAttributeNamespaces(AdditionalRoot);
   if (CombinedDoc == nullptr) {
-    CombinedDoc = ManifestXML.get();
+    CombinedDoc = ManifestXML;
   } else {
     xmlNodePtr CombinedRoot = xmlDocGetRootElement(CombinedDoc);
     if (!xmlStringsEqual(CombinedRoot->name, AdditionalRoot->name) ||
@@ -642,7 +648,7 @@ Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
       return E;
     }
   }
-  MergedDocs.push_back(std::move(ManifestXML));
+  MergedDocs.push_back(ManifestXML);
   return Error::success();
 }
 
