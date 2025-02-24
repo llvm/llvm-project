@@ -3660,15 +3660,11 @@ Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
   // an unconditional branch, try to move the store to the successor block.
 
   auto GetLastSinkableStore = [](BasicBlock::iterator BBI) {
-    auto IsNoopInstrForStoreMerging = [](BasicBlock::iterator BBI) {
-      return BBI->isDebugOrPseudoInst();
-    };
-
     BasicBlock::iterator FirstInstr = BBI->getParent()->begin();
     do {
       if (BBI != FirstInstr)
         --BBI;
-    } while (BBI != FirstInstr && IsNoopInstrForStoreMerging(BBI));
+    } while (BBI != FirstInstr && BBI->isDebugOrPseudoInst());
 
     return dyn_cast<StoreInst>(BBI);
   };
