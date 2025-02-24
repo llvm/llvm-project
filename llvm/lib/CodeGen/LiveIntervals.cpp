@@ -140,10 +140,6 @@ bool LiveIntervals::invalidate(
 }
 
 void LiveIntervals::clear() {
-  // Free the live intervals themselves.
-  for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i)
-    Allocator.Deallocate(VirtRegIntervals[Register::index2VirtReg(i)]);
-  VirtRegIntervals.clear();
   RegMaskSlots.clear();
   RegMaskBits.clear();
   RegMaskBlocks.clear();
@@ -151,6 +147,10 @@ void LiveIntervals::clear() {
   for (LiveRange *LR : RegUnitRanges)
     Allocator.Deallocate(LR);
   RegUnitRanges.clear();
+
+  // Free the live intervals themselves.
+  LIAllocator.DestroyAll();
+  VirtRegIntervals.clear();
 
   // Release VNInfo memory regions, VNInfo objects don't need to be dtor'd.
   VNInfoAllocator.Reset();
@@ -221,7 +221,7 @@ LLVM_DUMP_METHOD void LiveIntervals::dump() const { print(dbgs()); }
 
 LiveInterval *LiveIntervals::createInterval(Register reg) {
   float Weight = reg.isPhysical() ? huge_valf : 0.0F;
-  return new (Allocator.Allocate<LiveInterval>()) LiveInterval(reg, Weight);
+  return new (LIAllocator.Allocate()) LiveInterval(reg, Weight);
 }
 
 /// Compute the live interval of a virtual register, based on defs and uses.

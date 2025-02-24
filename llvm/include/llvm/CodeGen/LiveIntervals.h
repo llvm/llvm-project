@@ -65,7 +65,11 @@ class LiveIntervals {
   MachineDominatorTree *DomTree = nullptr;
   std::unique_ptr<LiveIntervalCalc> LICalc;
 
+  // Allocator for RegUnitRanges and SubRanges.
   BumpPtrAllocator Allocator;
+
+  // Allocator for VirtRegIntervals
+  SpecificBumpPtrAllocator<LiveInterval> LIAllocator;
 
   /// Special pool allocator for VNInfo's (LiveInterval val#).
   VNInfo::Allocator VNInfoAllocator;
@@ -173,7 +177,7 @@ public:
   /// Interval removal.
   void removeInterval(Register Reg) {
     auto &Interval = VirtRegIntervals[Reg];
-    Allocator.Deallocate(Interval);
+    // FIXME: SpecificBumpPtrAllocator missing deallocate for asan poisoning
     Interval = nullptr;
   }
 
