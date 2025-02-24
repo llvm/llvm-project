@@ -1203,9 +1203,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     deviceConstructFound_ = true;
   }
 
-  unsigned version{context_.langOptions().OpenMPVersion};
-  if (version >= 52 &&
-      GetContext().directive == llvm::omp::Directive::OMPD_single) {
+  if (GetContext().directive == llvm::omp::Directive::OMPD_single) {
     bool foundCopyPrivate{false};
     bool foundNowait{false};
     parser::CharBlock NowaitSource{""};
@@ -1231,7 +1229,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     };
     catchCopyPrivateNowaitClauses(beginBlockDir);
     catchCopyPrivateNowaitClauses(endBlockDir);
-    if (version == 52 && foundCopyPrivate && foundNowait) {
+    unsigned version{context_.langOptions().OpenMPVersion};
+    if (version <= 52 && foundCopyPrivate && foundNowait) {
       context_.Say(NowaitSource,
           "NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive"_err_en_US);
     }
@@ -2887,8 +2886,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
   CheckMultListItems();
 
   // 2.7.3 Single Construct Restriction
-  if (context_.langOptions().OpenMPVersion < 52 &&
-      GetContext().directive == llvm::omp::Directive::OMPD_end_single) {
+  if (GetContext().directive == llvm::omp::Directive::OMPD_end_single) {
     CheckNotAllowedIfClause(
         llvm::omp::Clause::OMPC_copyprivate, {llvm::omp::Clause::OMPC_nowait});
   }
@@ -3516,17 +3514,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_nowait);
-  if (context_.langOptions().OpenMPVersion < 52 &&
-      llvm::omp::noWaitClauseNotAllowedSet.test(GetContext().directive)) {
-    std::string dirName{
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString())};
-    context_.Say(GetContext().clauseSource,
-        "%s clause is not allowed on the OMP %s directive,"
-        " use it on OMP END %s directive or %s"_err_en_US,
-        parser::ToUpperCaseLetters(
-            getClauseName(llvm::omp::Clause::OMPC_nowait).str()),
-        dirName, dirName, TryVersion(52));
-  }
 }
 
 bool OmpStructureChecker::IsDataRefTypeParamInquiry(
@@ -4257,17 +4244,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_copyprivate);
   CheckCopyingPolymorphicAllocatable(
       symbols, llvm::omp::Clause::OMPC_copyprivate);
-  if (context_.langOptions().OpenMPVersion < 52 &&
-      GetContext().directive == llvm::omp::Directive::OMPD_single) {
-    std::string dirName{
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString())};
-    context_.Say(GetContext().clauseSource,
-        "%s clause is not allowed on the OMP %s directive,"
-        " use it on OMP END %s directive or %s"_err_en_US,
-        parser::ToUpperCaseLetters(
-            getClauseName(llvm::omp::Clause::OMPC_copyprivate).str()),
-        dirName, dirName, TryVersion(52));
-  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {

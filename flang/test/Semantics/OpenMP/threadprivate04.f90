@@ -14,7 +14,6 @@ program main
   !$omp parallel num_threads(x1)
   !$omp end parallel
 
-  !ERROR: COPYPRIVATE clause is not allowed on the OMP SINGLE directive, use it on OMP END SINGLE directive or try -fopenmp-version=52
   !$omp single copyprivate(x2, /blk1/)
   !$omp end single
 
