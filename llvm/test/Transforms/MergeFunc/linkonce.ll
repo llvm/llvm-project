@@ -43,14 +43,8 @@ define linkonce i32 @funA(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret i32 [[SUM3]]
 ;
 ;
-; CHECK-LABEL: define linkonce i32 @funC(
-; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @[[GLOB0:[0-9]+]](i32 [[TMP0]], i32 [[TMP1]])
-; CHECK-NEXT:    ret i32 [[TMP3]]
-;
-;
 ; CHECK-LABEL: define linkonce i32 @funB(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @[[GLOB0]](i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @[[GLOB0:[0-9]+]](i32 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
