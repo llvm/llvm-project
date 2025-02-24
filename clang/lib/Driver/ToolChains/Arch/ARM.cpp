@@ -223,6 +223,7 @@ arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
             .Case("tpidruro", ReadTPMode::TPIDRURO)
             .Case("tpidrprw", ReadTPMode::TPIDRPRW)
             .Case("soft", ReadTPMode::Soft)
+            .Case("auto", ReadTPMode::Auto)
             .Default(ReadTPMode::Invalid);
     if ((ThreadPointer == ReadTPMode::TPIDRURW ||
          ThreadPointer == ReadTPMode::TPIDRURO ||
@@ -239,7 +240,7 @@ arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
       D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
     return ReadTPMode::Invalid;
   }
-  return ReadTPMode::Soft;
+  return ReadTPMode::Auto;
 }
 
 void arm::setArchNameInTriple(const Driver &D, const ArgList &Args,
@@ -580,6 +581,9 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
     Features.push_back("+read-tp-tpidruro");
   if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRPRW)
     Features.push_back("+read-tp-tpidrprw");
+  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::Auto &&
+      isHardTPSupported(Triple) && !ForAS)
+    Features.push_back("+read-tp-tpidruro");
 
   const Arg *ArchArg = Args.getLastArg(options::OPT_march_EQ);
   const Arg *CPUArg = Args.getLastArg(options::OPT_mcpu_EQ);

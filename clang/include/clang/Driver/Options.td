@@ -4711,7 +4711,7 @@ def mexecute_only : Flag<["-"], "mexecute-only">, Group<m_arm_Features_Group>,
 def mno_execute_only : Flag<["-"], "mno-execute-only">, Group<m_arm_Features_Group>,
   HelpText<"Allow generation of data access to code sections (ARM only)">;
 let Flags = [TargetSpecific] in {
-def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,tpidrurw,tpidruro,tpidrprw,el0,el1,el2,el3,tpidr_el0,tpidr_el1,tpidr_el2,tpidr_el3,tpidrro_el0">,
+def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,tpidrurw,tpidruro,tpidrprw,el0,el1,el2,el3,tpidr_el0,tpidr_el1,tpidr_el2,tpidr_el3,tpidrro_el0,auto">,
   HelpText<"Thread pointer access method. "
            "For AArch32: 'soft' uses a function call, or 'tpidrurw', 'tpidruro' or 'tpidrprw' use the three CP15 registers. 'cp15' is an alias for 'tpidruro'. "
            "For AArch64: 'tpidr_el0', 'tpidr_el1', 'tpidr_el2', 'tpidr_el3' or 'tpidrro_el0' use the five system registers. 'elN' is an alias for 'tpidr_elN'.">;
