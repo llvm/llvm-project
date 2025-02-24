@@ -66,28 +66,16 @@ void RISCVTargetStreamer::emitNoteGnuPropertySection(
 
   const Triple &Triple = Ctx.getTargetTriple();
   Align NoteAlign;
-  if (Triple.isArch64Bit())
+  if (Triple.isArch64Bit()) {
     NoteAlign = Align(8);
-  else if (Triple.isArch32Bit())
+  } else {
+    assert(Triple.isArch32Bit());
     NoteAlign = Align(4);
-  else
-    report_fatal_error("unsupported arch bit width");
-
-  MCSection *NoteSection;
-  switch (Ctx.getObjectFileType()) {
-  case MCContext::Environment::IsELF:
-    NoteSection =
-        Ctx.getELFSection(".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
-    break;
-  case MCContext::Environment::IsMachO:
-  case MCContext::Environment::IsGOFF:
-  case MCContext::Environment::IsCOFF:
-  case MCContext::Environment::IsSPIRV:
-  case MCContext::Environment::IsWasm:
-  case MCContext::Environment::IsXCOFF:
-  case MCContext::Environment::IsDXContainer:
-    report_fatal_error("unsupported object file type");
   }
+
+  assert(Ctx.getObjectFileType() == MCContext::Environment::IsELF);
+  MCSection *const NoteSection =
+      Ctx.getELFSection(".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
   NoteSection->setAlignment(NoteAlign);
   OutStreamer.pushSection();
   OutStreamer.switchSection(NoteSection);
