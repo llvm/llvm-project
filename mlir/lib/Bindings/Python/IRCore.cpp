@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <optional>
-#include <system_error>
-#include <utility>
-
 #include "Globals.h"
 #include "IRModule.h"
 #include "NanobindUtils.h"
@@ -25,6 +21,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <optional>
+#include <system_error>
+#include <utility>
 
 namespace nb = nanobind;
 using namespace nb::literals;
