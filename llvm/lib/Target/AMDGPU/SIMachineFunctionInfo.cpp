@@ -718,7 +718,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
-      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()) {
+      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
+      WholeWaveCF(MFI.isWholeWaveControlFlow()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 
@@ -763,6 +764,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
+  WholeWaveCF = YamlMFI.WholeWaveCF;
 
   if (YamlMFI.ScavengeFI) {
     auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());
