@@ -69,9 +69,8 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         self.recurse_end = line_number(source, "recurse end")
         self.recurse_call = line_number(source, "recurse call")
         self.recurse_invocation = line_number(source, "recurse invocation")
-        self.qsort_call = line_number(source, "qsort call")
 
-        lines = [self.recurse_end, self.qsort_call]
+        lines = [self.recurse_end]
 
         # Set breakpoint at a point of deepest recuusion
         breakpoint_ids = self.set_source_breakpoints(source, lines)
@@ -196,42 +195,13 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         )
         self.verify_stackFrames(startFrame, stackFrames)
 
-        # Verify we do not recive frames when startFrame is out of range
+        # Verify we get not frames when startFrame is too high
         startFrame = 1000
         levels = 1
         stackFrames = self.get_stackFrames(startFrame=startFrame, levels=levels)
         self.assertEqual(
             0, len(stackFrames), "verify zero frames with startFrame out of bounds"
         )
-
-        # Verify a stack frame from an external library (libc`qsort) to ensure
-        # frames without source code return a valid source reference.
-        self.continue_to_breakpoints(breakpoint_ids)
-        (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount()
-        frameCount = len(stackFrames)
-        self.assertGreaterEqual(
-            frameCount, 3, "verify we get frames from system librarys (libc qsort)"
-        )
-        self.assertEqual(
-            totalFrames,
-            frameCount,
-            "verify total frames returns a speculative page size",
-        )
-
-        frame = stackFrames.pop(0)
-        frame_name = self.get_dict_value(frame, ["name"])
-        self.assertRegex(frame_name, 'comp')
-        self.assertEqual(self.get_dict_value(frame, ['line']), 14)
-        self.assertNotIn('sourceReference', frame['source'])
-
-        # libc`qsort may not be the first frame below comp, search upwards
-        found_qsort = False
-        for frame in stackFrames:
-            if 'qsort' not in frame['name']:
-                continue
-            found_qsort = True
-            self.assertIn("sourceReference", frame["source"])
-        self.assertTrue(found_qsort, 'verify we found the qsort frame')
 
     @skipIfWindows
     def test_functionNameWithArgs(self):

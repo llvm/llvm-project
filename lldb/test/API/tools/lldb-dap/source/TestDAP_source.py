@@ -12,17 +12,16 @@ from lldbsuite.test.lldbtest import *
 
 class TestDAP_source(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    def test_stackTrace(self):
+    def test_source(self):
         """
         Tests the 'source' packet.
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
-        source = "main.c"
-        self.source_path = os.path.join(os.getcwd(), source)
-        self.qsort_call = line_number(source, "qsort call")
+        source = self.getSourcePath("main.c")
+        breakpoint_line = line_number(source, "breakpoint")
 
-        lines = [self.qsort_call]
+        lines = [breakpoint_line]
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
@@ -35,38 +34,59 @@ class TestDAP_source(lldbdap_testcase.DAPTestCaseBase):
 
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount()
         frameCount = len(stackFrames)
-        self.assertGreaterEqual(
-            frameCount, 3, "verify we get frames from system librarys (libc qsort)"
-        )
+        self.assertGreaterEqual(frameCount, 3, "verify we got up to main at least")
         self.assertEqual(
             totalFrames,
             frameCount,
             "verify total frames returns a speculative page size",
         )
-        expectedFrames = [
+        wantFrames = [
             {
-                "name": "comp",
-                "line": 14,
-                "sourceName": "main.c",
-                "containsSourceReference": False,
+                "name": "handler",
+                "line": 8,
+                "source": {
+                    "name": "main.c",
+                    "path": source,
+                    "containsSourceReference": False,
+                },
             },
-            {"name": "qsort", "sourceName": "qsort", "containsSourceReference": True},
+            {
+                "name": "add",
+                "source": {
+                    "name": "add",
+                    "path": program + "`add",
+                    "containsSourceReference": True,
+                },
+            },
             {
                 "name": "main",
-                "line": 25,
-                "sourceName": "main.c",
-                "containsSourceReference": False,
+                "line": 12,
+                "source": {
+                    "name": "main.c",
+                    "path": source,
+                    "containsSourceReference": False,
+                },
             },
         ]
-        for idx, expected in enumerate(expectedFrames):
-            frame = stackFrames[idx]
-            frame_name = self.get_dict_value(frame, ["name"])
-            self.assertRegex(frame_name, expected["name"])
-            source_name = self.get_dict_value(frame, ["source", "name"])
-            self.assertRegex(source_name, expected["sourceName"])
-            if expected["containsSourceReference"]:
+        for idx, want in enumerate(wantFrames):
+            got = stackFrames[idx]
+            name = self.get_dict_value(got, ["name"])
+            self.assertEqual(name, want["name"])
+
+            if "line" in want:
+                line = self.get_dict_value(got, ["line"])
+                self.assertEqual(line, want["line"])
+
+            wantSource = want["source"]
+            source_name = self.get_dict_value(got, ["source", "name"])
+            self.assertEqual(source_name, wantSource["name"])
+
+            source_path = self.get_dict_value(got, ["source", "path"])
+            self.assertEqual(source_path, wantSource["path"])
+
+            if wantSource["containsSourceReference"]:
                 sourceReference = self.get_dict_value(
-                    frame, ["source", "sourceReference"]
+                    got, ["source", "sourceReference"]
                 )
                 response = self.dap_server.request_source(
                     sourceReference=sourceReference
@@ -75,7 +95,7 @@ class TestDAP_source(lldbdap_testcase.DAPTestCaseBase):
                 self.assertGreater(
                     len(self.get_dict_value(response, ["body", "content"])),
                     0,
-                    "verify content returned",
+                    "verify content returned disassembly",
                 )
                 self.assertEqual(
                     self.get_dict_value(response, ["body", "mimeType"]),
@@ -83,4 +103,4 @@ class TestDAP_source(lldbdap_testcase.DAPTestCaseBase):
                     "verify mime type returned",
                 )
             else:
-                self.assertNotIn("sourceReference", frame["source"])
+                self.assertNotIn("sourceReference", got["source"])
