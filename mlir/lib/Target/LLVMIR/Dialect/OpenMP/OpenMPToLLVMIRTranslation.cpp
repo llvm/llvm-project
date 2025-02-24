@@ -1360,9 +1360,8 @@ static llvm::Expected<llvm::Value *> initPrivateVar(
     llvm::Value *llvmPrivateVar, llvm::BasicBlock *privInitBlock,
     llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   Region &initRegion = privDecl.getInitRegion();
-  if (initRegion.empty()) {
+  if (initRegion.empty())
     return llvmPrivateVar;
-  }
 
   // map initialization region block arguments
   llvm::Value *nonPrivateVar = findAssociatedValue(
@@ -1412,8 +1411,8 @@ initPrivateVars(llvm::IRBuilderBase &builder,
         builder, moduleTranslation, privDecl, mlirPrivVar, blockArg,
         llvmPrivateVar, privInitBlock, mappedPrivateVars);
 
-    if (auto err = privVarOrErr.takeError())
-      return err;
+    if (!privVarOrErr)
+      return privVarOrErr.takeError();
 
     llvmPrivateVar = privVarOrErr.get();
     moduleTranslation.mapValue(blockArg, llvmPrivateVar);
@@ -2017,13 +2016,15 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     builder.restoreIP(codegenIP);
 
     llvm::BasicBlock *privInitBlock = nullptr;
-    for (auto [blockArg, privDecl, mlirPrivVar] :
-         llvm::zip_equal(privateBlockArgs, privateDecls, mlirPrivateVars)) {
+    llvmPrivateVars.resize(privateBlockArgs.size());
+    for (auto [i, zip] : llvm::enumerate(llvm::zip_equal(
+             privateBlockArgs, privateDecls, mlirPrivateVars))) {
+      auto [blockArg, privDecl, mlirPrivVar] = zip;
+      // This is handled before the task executes
       if (privDecl.readsFromMold())
-        // This is handled before the task executes
         continue;
 
-      auto codegenInsertionPt = builder.saveIP();
+      llvm::IRBuilderBase::InsertPointGuard guard(builder);
       llvm::Type *llvmAllocType =
           moduleTranslation.convertType(privDecl.getType());
       builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
@@ -2036,18 +2037,25 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
       if (auto err = privateVarOrError.takeError())
         return err;
       moduleTranslation.mapValue(blockArg, privateVarOrError.get());
-      builder.restoreIP(codegenInsertionPt);
+      llvmPrivateVars[i] = privateVarOrError.get();
+    }
+
+    taskStructMgr.createGEPsToPrivateVars();
+    for (auto [i, llvmPrivVar] :
+         llvm::enumerate(taskStructMgr.getLLVMPrivateVarGEPs())) {
+      if (!llvmPrivVar) {
+        assert(llvmPrivateVars[i] && "This is added in the loop above");
+        continue;
+      }
+      llvmPrivateVars[i] = llvmPrivVar;
     }
 
     // Find and map the addresses of each variable within the task context
     // structure
-    taskStructMgr.createGEPsToPrivateVars();
-    llvm::copy(taskStructMgr.getLLVMPrivateVarGEPs(),
-               std::back_inserter(llvmPrivateVars));
-    for (auto [blockArg, llvmPrivateVar] :
-         llvm::zip_equal(privateBlockArgs, llvmPrivateVars)) {
-      if (!llvmPrivateVar)
-        // This was handled above
+    for (auto [blockArg, llvmPrivateVar, privateDecl] :
+         llvm::zip_equal(privateBlockArgs, llvmPrivateVars, privateDecls)) {
+      // This was handled above.
+      if (!privateDecl.readsFromMold())
         continue;
       // Fix broken pass-by-value case for Fortran character boxes
       if (!mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {

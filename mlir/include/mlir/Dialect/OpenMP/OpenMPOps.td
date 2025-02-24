@@ -149,7 +149,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
     /// Returns true if the init region might read from the mold argument
     bool initReadsFromMold() {
       BlockArgument moldArg = getInitMoldArg();
-      return moldArg ? !moldArg.use_empty() : false;
+      return moldArg && !moldArg.use_empty();
     }
 
     /// Returns true if any region of this privatizer might read from the mold
