@@ -520,9 +520,9 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   if (use_DIL)
     return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
                                                 var_sp, error);
-  else
-    return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic,
-                                                   options, var_sp, error);
+
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
 }
 
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
@@ -542,12 +542,12 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     error = Status::FromError(lex_or_err.takeError());
     return ValueObjectSP();
   }
-  dil::DILLexer lexer = *lex_or_err;
+  dil::DILLexer &lexer = *lex_or_err;
 
   // Parse the expression.
-  dil::DILParser parser(var_expr, lexer, shared_from_this(), use_dynamic,
-                        !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
-  auto tree_or_error = parser.Run();
+  auto tree_or_error = dil::DILParser::Parse(
+      var_expr, lexer, shared_from_this(), use_dynamic, !no_synth_child,
+      !no_fragile_ivar, check_ptr_vs_member);
   if (!tree_or_error) {
     error = Status::FromError(tree_or_error.takeError());
     return ValueObjectSP();
@@ -555,8 +555,8 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
 
   // Evaluate the parsed expression.
   lldb::TargetSP target = this->CalculateTarget();
-  dil::DILInterpreter interpreter(target, var_expr, use_dynamic,
-                                  shared_from_this());
+  dil::Interpreter interpreter(target, var_expr, use_dynamic,
+                               shared_from_this());
 
   auto valobj_or_error = interpreter.DILEvalNode((*tree_or_error).get());
   if (!valobj_or_error) {

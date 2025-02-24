@@ -57,20 +57,21 @@ private:
 /// etc.), find the ValueObject for that name (if it exists) and create and
 /// return an IdentifierInfo object containing all the relevant information
 /// about that object (for DIL parsing and evaluating).
-std::unique_ptr<IdentifierInfo> LookupIdentifier(
-    const std::string &name, std::shared_ptr<ExecutionContextScope> ctx_scope,
-    lldb::DynamicValueType use_dynamic, CompilerType *scope_ptr = nullptr);
+std::unique_ptr<IdentifierInfo>
+LookupIdentifier(llvm::StringRef name_ref,
+                 std::shared_ptr<ExecutionContextScope> ctx_scope,
+                 lldb::TargetSP target_sp, lldb::DynamicValueType use_dynamic,
+                 CompilerType *scope_ptr = nullptr);
 
-class DILInterpreter : Visitor {
+class Interpreter : Visitor {
 public:
-  DILInterpreter(lldb::TargetSP target, llvm::StringRef expr,
-                 lldb::DynamicValueType use_dynamic,
-                 std::shared_ptr<ExecutionContextScope> exe_ctx_scope);
+  Interpreter(lldb::TargetSP target, llvm::StringRef expr,
+              lldb::DynamicValueType use_dynamic,
+              std::shared_ptr<ExecutionContextScope> exe_ctx_scope);
 
-  llvm::Expected<lldb::ValueObjectSP> DILEvalNode(const DILASTNode *node);
+  llvm::Expected<lldb::ValueObjectSP> DILEvalNode(const ASTNode *node);
 
 private:
-  llvm::Expected<lldb::ValueObjectSP> Visit(const ErrorNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) override;
 

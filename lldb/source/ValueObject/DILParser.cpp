@@ -47,44 +47,38 @@ inline std::string TokenKindsJoin(Token::Kind k, Ts... ks) {
 
 std::string FormatDiagnostics(llvm::StringRef text, const std::string &message,
                               uint32_t loc) {
-  // Get the source buffer and the location of the current token.
-  size_t loc_offset = (size_t)loc;
-
-  // Look for the start of the line.
-  size_t line_start = text.rfind('\n', loc_offset);
-  line_start = line_start == llvm::StringRef::npos ? 0 : line_start + 1;
-
-  // Look for the end of the line.
-  size_t line_end = text.find('\n', loc_offset);
-  line_end = line_end == llvm::StringRef::npos ? text.size() : line_end;
-
-  // Get a view of the current line in the source code and the position of the
-  // diagnostics pointer.
-  llvm::StringRef line = text.slice(line_start, line_end);
+  // Get the position, in the current line of text, of the diagnostics pointer.
+  // ('loc' is the location of the start of the current token/error within the
+  // overal text line).
   int32_t arrow = loc + 1; // Column offset starts at 1, not 0.
 
-  // Calculate the padding in case we point outside of the expression (this can
-  // happen if the parser expected something, but got EOF).˚
-  size_t expr_rpad = std::max(0, arrow - static_cast<int32_t>(line.size()));
-  size_t arrow_rpad = std::max(0, static_cast<int32_t>(line.size()) - arrow);
-
   return llvm::formatv("<expr:1:{0}>: {1}\n{2}\n{3}", loc, message,
-                       llvm::fmt_pad(line, 0, expr_rpad),
-                       llvm::fmt_pad("^", arrow - 1, arrow_rpad));
+                       llvm::fmt_pad(text, 0, 0),
+                       llvm::fmt_pad("^", arrow - 1, 0));
+}
+
+llvm::Expected<ASTNodeUP>
+DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
+                 std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
+                 lldb::DynamicValueType use_dynamic, bool use_synthetic,
+                 bool fragile_ivar, bool check_ptr_vs_member) {
+  Status error;
+  DILParser parser(dil_input_expr, lexer, exe_ctx_scope, use_dynamic,
+                   use_synthetic, fragile_ivar, check_ptr_vs_member, error);
+  return parser.Run();
 }
 
 DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
                      std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     bool fragile_ivar, bool check_ptr_vs_member)
+                     bool fragile_ivar, bool check_ptr_vs_member, Status &error)
     : m_ctx_scope(exe_ctx_scope), m_input_expr(dil_input_expr),
-      m_dil_lexer(lexer), m_dil_token(lexer.GetCurrentToken()),
-      m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic),
-      m_fragile_ivar(fragile_ivar), m_check_ptr_vs_member(check_ptr_vs_member) {
-}
+      m_dil_lexer(lexer), m_error(error), m_use_dynamic(use_dynamic),
+      m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
+      m_check_ptr_vs_member(check_ptr_vs_member) {}
 
-llvm::Expected<DILASTNodeUP> DILParser::Run() {
-  DILASTNodeUP expr;
+llvm::Expected<ASTNodeUP> DILParser::Run() {
+  ASTNodeUP expr;
 
   expr = ParseExpression();
 
@@ -101,34 +95,33 @@ llvm::Expected<DILASTNodeUP> DILParser::Run() {
 //  expression:
 //    primary_expression
 //
-DILASTNodeUP DILParser::ParseExpression() { return ParsePrimaryExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParsePrimaryExpression(); }
 
 // Parse a primary_expression.
 //
 //  primary_expression:
 //    id_expression
-//    "this"
 //    "(" expression ")"
 //
-DILASTNodeUP DILParser::ParsePrimaryExpression() {
-  if (m_dil_token.IsOneOf(Token::coloncolon, Token::identifier)) {
+ASTNodeUP DILParser::ParsePrimaryExpression() {
+  if (CurToken().IsOneOf(Token::coloncolon, Token::identifier)) {
     // Save the source location for the diagnostics message.
-    uint32_t loc = m_dil_token.GetLocation();
+    uint32_t loc = CurToken().GetLocation();
     auto identifier = ParseIdExpression();
 
     return std::make_unique<IdentifierNode>(loc, identifier, m_use_dynamic,
                                             m_ctx_scope);
-  } else if (m_dil_token.Is(Token::l_paren)) {
-    ConsumeToken();
+  } else if (CurToken().Is(Token::l_paren)) {
+    m_dil_lexer.Advance();
     auto expr = ParseExpression();
     Expect(Token::r_paren);
-    ConsumeToken();
+    m_dil_lexer.Advance();
     return expr;
   }
 
   BailOut(ErrorCode::kInvalidExpressionSyntax,
-          llvm::formatv("Unexpected token: {0}", TokenDescription(m_dil_token)),
-          m_dil_token.GetLocation());
+          llvm::formatv("Unexpected token: {0}", TokenDescription(CurToken())),
+          CurToken().GetLocation());
   return std::make_unique<ErrorNode>();
 }
 
@@ -142,8 +135,7 @@ DILASTNodeUP DILParser::ParsePrimaryExpression() {
 std::string DILParser::ParseNestedNameSpecifier() {
   // The first token in nested_name_specifier is always an identifier, or
   // '(anonymous namespace)'.
-  if (m_dil_token.IsNot(Token::identifier) &&
-      m_dil_token.IsNot(Token::l_paren)) {
+  if (CurToken().IsNot(Token::identifier) && CurToken().IsNot(Token::l_paren)) {
     return "";
   }
 
@@ -151,7 +143,7 @@ std::string DILParser::ParseNestedNameSpecifier() {
   // the the string '(anonymous namespace)', which has a space in it (throwing
   // off normal parsing) and is not actually proper C++> Check to see if we're
   // looking at '(anonymous namespace)::...'
-  if (m_dil_token.Is(Token::l_paren)) {
+  if (CurToken().Is(Token::l_paren)) {
     // Look for all the pieces, in order:
     // l_paren 'anonymous' 'namespace' r_paren coloncolon
     if (m_dil_lexer.LookAhead(1).Is(Token::identifier) &&
@@ -161,17 +153,16 @@ std::string DILParser::ParseNestedNameSpecifier() {
         m_dil_lexer.LookAhead(3).Is(Token::r_paren) &&
         m_dil_lexer.LookAhead(4).Is(Token::coloncolon)) {
       m_dil_lexer.Advance(4);
-      m_dil_token = m_dil_lexer.GetCurrentToken();
 
-      assert((m_dil_token.Is(Token::identifier) ||
-              m_dil_token.Is(Token::l_paren)) &&
-             "Expected an identifier or anonymous namespace, but not found.");
+      assert(
+          (CurToken().Is(Token::identifier) || CurToken().Is(Token::l_paren)) &&
+          "Expected an identifier or anonymous namespace, but not found.");
       // Continue parsing the nested_namespace_specifier.
       std::string identifier2 = ParseNestedNameSpecifier();
       if (identifier2.empty()) {
         Expect(Token::identifier);
-        identifier2 = m_dil_token.GetSpelling();
-        ConsumeToken();
+        identifier2 = CurToken().GetSpelling();
+        m_dil_lexer.Advance();
       }
       return "(anonymous namespace)::" + identifier2;
     }
@@ -183,11 +174,10 @@ std::string DILParser::ParseNestedNameSpecifier() {
   // nested_name_specifier
   if (m_dil_lexer.LookAhead(1).Is(Token::coloncolon)) {
     // This nested_name_specifier is a single identifier.
-    std::string identifier = m_dil_token.GetSpelling();
+    std::string identifier = CurToken().GetSpelling();
     m_dil_lexer.Advance(1);
-    m_dil_token = m_dil_lexer.GetCurrentToken();
     Expect(Token::coloncolon);
-    ConsumeToken();
+    m_dil_lexer.Advance();
     // Continue parsing the nested_name_specifier.
     return identifier + "::" + ParseNestedNameSpecifier();
   }
@@ -211,9 +201,9 @@ std::string DILParser::ParseNestedNameSpecifier() {
 std::string DILParser::ParseIdExpression() {
   // Try parsing optional global scope operator.
   bool global_scope = false;
-  if (m_dil_token.Is(Token::coloncolon)) {
+  if (CurToken().Is(Token::coloncolon)) {
     global_scope = true;
-    ConsumeToken();
+    m_dil_lexer.Advance();
   }
 
   // Try parsing optional nested_name_specifier.
@@ -233,8 +223,8 @@ std::string DILParser::ParseIdExpression() {
   // qualified_id production. Follow the second production rule.
   else if (global_scope) {
     Expect(Token::identifier);
-    std::string identifier = m_dil_token.GetSpelling();
-    ConsumeToken();
+    std::string identifier = CurToken().GetSpelling();
+    m_dil_lexer.Advance();
     return llvm::formatv("{0}{1}", global_scope ? "::" : "", identifier);
   }
 
@@ -252,8 +242,8 @@ std::string DILParser::ParseIdExpression() {
 //
 std::string DILParser::ParseUnqualifiedId() {
   Expect(Token::identifier);
-  std::string identifier = m_dil_token.GetSpelling();
-  ConsumeToken();
+  std::string identifier = CurToken().GetSpelling();
+  m_dil_lexer.Advance();
   return identifier;
 }
 
@@ -267,7 +257,8 @@ void DILParser::BailOut(ErrorCode code, const std::string &error,
 
   m_error = Status((uint32_t)code, lldb::eErrorTypeGeneric,
                    FormatDiagnostics(m_input_expr, error, loc));
-  m_dil_token = Token(Token::eof, "", 0);
+  // Advance the lexer token index to the end of the lexed tokens vector.
+  m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
 }
 
 void DILParser::BailOut(Status error) {
@@ -277,32 +268,23 @@ void DILParser::BailOut(Status error) {
     return;
   }
   m_error = std::move(error);
-  m_dil_token = Token(Token::eof, "", 0);
-}
-
-void DILParser::ConsumeToken() {
-  if (m_dil_token.Is(Token::eof)) {
-    // Don't do anything if we're already at eof. This can happen if an error
-    // occurred during parsing and we're trying to bail out.
-    return;
-  }
-  m_dil_lexer.Advance();
-  m_dil_token = m_dil_lexer.GetCurrentToken();
+  // Advance the lexer token index to the end of the lexed tokens vector.
+  m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
 }
 
 void DILParser::Expect(Token::Kind kind) {
-  if (m_dil_token.IsNot(kind)) {
+  if (CurToken().IsNot(kind)) {
     BailOut(ErrorCode::kUnknown,
             llvm::formatv("expected {0}, got: {1}", TokenKindsJoin(kind),
-                          TokenDescription(m_dil_token)),
-            m_dil_token.GetLocation());
+                          TokenDescription(CurToken())),
+            CurToken().GetLocation());
   }
 }
 
 std::string DILParser::TokenDescription(const Token &token) {
   const auto &spelling = token.GetSpelling();
   llvm::StringRef kind_name = Token::GetTokenName(token.GetKind());
-  return llvm::formatv("<'{0}' ({1})>", spelling, kind_name.str());
+  return llvm::formatv("<'{0}' ({1})>", spelling, kind_name);
 }
 
 } // namespace lldb_private::dil

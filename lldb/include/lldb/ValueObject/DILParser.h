@@ -35,12 +35,11 @@ std::string FormatDiagnostics(llvm::StringRef input_expr,
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
 class DILParser {
 public:
-  explicit DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
-                     std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
-                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     bool fragile_ivar, bool check_ptr_vs_member);
-
-  llvm::Expected<DILASTNodeUP> Run();
+  static llvm::Expected<ASTNodeUP>
+  Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
+        std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
+        lldb::DynamicValueType use_dynamic, bool use_synthetic,
+        bool fragile_ivar, bool check_ptr_vs_member);
 
   ~DILParser() { m_ctx_scope.reset(); }
 
@@ -51,15 +50,21 @@ public:
   using PtrOperator = std::tuple<Token::Kind, uint32_t>;
 
 private:
-  DILASTNodeUP ParseExpression();
-  DILASTNodeUP ParsePrimaryExpression();
+  explicit DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
+                     std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
+                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
+                     bool fragile_ivar, bool check_ptr_vs_member,
+                     Status &error);
+
+  llvm::Expected<ASTNodeUP> Run();
+
+  ASTNodeUP ParseExpression();
+  ASTNodeUP ParsePrimaryExpression();
 
   std::string ParseNestedNameSpecifier();
 
   std::string ParseIdExpression();
   std::string ParseUnqualifiedId();
-
-  void ConsumeToken();
 
   void BailOut(ErrorCode error_code, const std::string &error, uint32_t loc);
 
@@ -72,8 +77,9 @@ private:
   void TentativeParsingRollback(uint32_t saved_idx) {
     m_error.Clear();
     m_dil_lexer.ResetTokenIdx(saved_idx);
-    m_dil_token = m_dil_lexer.GetCurrentToken();
   }
+
+  Token CurToken() { return m_dil_lexer.GetCurrentToken(); }
 
   // Parser doesn't own the evaluation context. The produced AST may depend on
   // it (for example, for source locations), so it's expected that expression
@@ -83,10 +89,9 @@ private:
   llvm::StringRef m_input_expr;
 
   DILLexer m_dil_lexer;
-  // The token lexer is stopped at (aka "current token").
-  Token m_dil_token;
+
   // Holds an error if it occures during parsing.
-  Status m_error;
+  Status &m_error;
 
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;

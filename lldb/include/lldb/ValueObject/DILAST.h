@@ -34,11 +34,11 @@ class Visitor;
 /// Base class for AST nodes used by the Data Inspection Language (DIL) parser.
 /// All of the specialized types of AST nodes inherit from this (virtual) base
 /// class.
-class DILASTNode {
+class ASTNode {
 public:
-  DILASTNode(uint32_t location, NodeKind kind)
+  ASTNode(uint32_t location, NodeKind kind)
       : m_location(location), m_kind(kind) {}
-  virtual ~DILASTNode() = default;
+  virtual ~ASTNode() = default;
 
   virtual llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const = 0;
 
@@ -50,32 +50,32 @@ private:
   const NodeKind m_kind;
 };
 
-using DILASTNodeUP = std::unique_ptr<DILASTNode>;
+using ASTNodeUP = std::unique_ptr<ASTNode>;
 
-class ErrorNode : public DILASTNode {
+class ErrorNode : public ASTNode {
 public:
-  ErrorNode() : DILASTNode(0, NodeKind::eErrorNode) {}
+  ErrorNode() : ASTNode(0, NodeKind::eErrorNode) {}
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  static bool classof(const DILASTNode *node) {
+  static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eErrorNode;
   }
 };
 
-class IdentifierNode : public DILASTNode {
+class IdentifierNode : public ASTNode {
 public:
   IdentifierNode(uint32_t location, std::string name,
                  lldb::DynamicValueType use_dynamic,
                  std::shared_ptr<ExecutionContextScope> exe_ctx_scope)
-      : DILASTNode(location, NodeKind::eIdentifierNode),
-        m_name(std::move(name)), m_use_dynamic(use_dynamic) {}
+      : ASTNode(location, NodeKind::eIdentifierNode), m_name(std::move(name)),
+        m_use_dynamic(use_dynamic) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   lldb::DynamicValueType GetUseDynamic() const { return m_use_dynamic; }
   std::string GetName() const { return m_name; }
 
-  static bool classof(const DILASTNode *node) {
+  static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eIdentifierNode;
   }
 
@@ -91,7 +91,6 @@ private:
 class Visitor {
 public:
   virtual ~Visitor() = default;
-  virtual llvm::Expected<lldb::ValueObjectSP> Visit(const ErrorNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) = 0;
 };
