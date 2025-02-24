@@ -47,8 +47,12 @@ add_lldb_tool(lldb-dap
   Handler/ExceptionInfoRequestHandler.cpp
   Handler/InitializeRequestHandler.cpp
   Handler/LaunchRequestHandler.cpp
+  Handler/NextRequestHandler.cpp
   Handler/RequestHandler.cpp
   Handler/RestartRequestHandler.cpp
+  Handler/StepInRequestHandler.cpp
+  Handler/StepInTargetsRequestHandler.cpp
+  Handler/StepOutRequestHandler.cpp
 
   LINK_LIBS
     liblldb
