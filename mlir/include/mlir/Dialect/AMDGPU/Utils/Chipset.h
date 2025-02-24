@@ -49,9 +49,6 @@ struct Chipset {
 #undef DEFINE_COMP_OPERATOR
 };
 
-inline bool isGfx940Series(const Chipset &chipset) {
-  return chipset.majorVersion == 9 && chipset.minorVersion == 4;
-}
 inline bool hasOcpFp8(const Chipset &chipset) {
   return (chipset.majorVersion == 9 && chipset.minorVersion >= 5) ||
          chipset.majorVersion >= 12;

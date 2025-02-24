@@ -30,6 +30,9 @@ using namespace mlir;
 using namespace mlir::amdgpu;
 
 namespace {
+// Define commonly used chipsets versions for convenience.
+constexpr Chipset kGfx942 = Chipset(9, 4, 2);
+
 struct ArithToAMDGPUConversionPass final
     : impl::ArithToAMDGPUConversionPassBase<ArithToAMDGPUConversionPass> {
   using impl::ArithToAMDGPUConversionPassBase<
@@ -73,7 +76,7 @@ struct TruncfToFloat16RewritePattern final
 } // end namespace
 
 static LogicalResult isSupportedF8(Type elementType, Chipset chipset) {
-  if (isGfx940Series(chipset))
+  if (chipset == kGfx942)
     return success(isa<Float8E4M3FNUZType, Float8E5M2FNUZType>(elementType));
   if (hasOcpFp8(chipset))
     return success(isa<Float8E4M3FNType, Float8E5M2Type>(elementType));
@@ -397,7 +400,7 @@ void ArithToAMDGPUConversionPass::runOnOperation() {
   }
 
   bool convertFP8Arithmetic =
-      isGfx940Series(*maybeChipset) || hasOcpFp8(*maybeChipset);
+      *maybeChipset == kGfx942 || hasOcpFp8(*maybeChipset);
   arith::populateArithToAMDGPUConversionPatterns(
       patterns, convertFP8Arithmetic, saturateFP8Truncf, allowPackedF16Rtz,
       *maybeChipset);
