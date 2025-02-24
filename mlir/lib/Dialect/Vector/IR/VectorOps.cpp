@@ -2033,7 +2033,7 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
 static Attribute foldPoisonIndexInsertExtractOp(MLIRContext *context,
                                                 ArrayRef<int64_t> staticPos,
                                                 int64_t poisonVal) {
-  if (!llvm::is_contained(staticPos, poisonVal))
+  if (!is_contained(staticPos, poisonVal))
     return {};
 
   return ub::PoisonAttr::get(context);
@@ -2041,12 +2041,13 @@ static Attribute foldPoisonIndexInsertExtractOp(MLIRContext *context,
 
 /// Fold a vector extract from is a poison source.
 static Attribute foldPoisonSrcExtractOp(Attribute srcAttr) {
-  if (llvm::isa_and_nonnull<ub::PoisonAttr>(srcAttr))
+  if (isa_and_nonnull<ub::PoisonAttr>(srcAttr))
     return srcAttr;
 
   return {};
 }
 
+/// Fold a vector extract extracting from a DenseElementsAttr.
 static Attribute foldDenseElementsAttrSrcExtractOp(ExtractOp extractOp,
                                                    Attribute srcAttr) {
   auto denseAttr = dyn_cast_if_present<DenseElementsAttr>(srcAttr);
@@ -2056,12 +2057,12 @@ static Attribute foldDenseElementsAttrSrcExtractOp(ExtractOp extractOp,
 
   if (denseAttr.isSplat()) {
     Attribute newAttr = denseAttr.getSplatValue<Attribute>();
-    if (auto vecDstType = llvm::dyn_cast<VectorType>(extractOp.getType()))
+    if (auto vecDstType = dyn_cast<VectorType>(extractOp.getType()))
       newAttr = DenseElementsAttr::get(vecDstType, newAttr);
     return newAttr;
   }
 
-  auto vecTy = llvm::cast<VectorType>(extractOp.getSourceVectorType());
+  auto vecTy = cast<VectorType>(extractOp.getSourceVectorType());
   if (vecTy.isScalable())
     return {};
 
@@ -2069,17 +2070,24 @@ static Attribute foldDenseElementsAttrSrcExtractOp(ExtractOp extractOp,
     return {};
   }
 
+  // Materializing subsets of a large constant array can generally lead to
+  // explosion in IR size because of different combination of subsets that
+  // can exist. However, vector.extract is a restricted form of subset
+  // extract where you can only extract non-overlapping (or the same) subset for
+  // a given rank of the subset. Because of this property, the IR size can only
+  // increase at most by `rank * size(array)` from a single constant array being
+  // extracted by multiple extracts.
+
   // Calculate the linearized position of the continuous chunk of elements to
   // extract.
-  llvm::SmallVector<int64_t> completePositions(vecTy.getRank(), 0);
+  SmallVector<int64_t> completePositions(vecTy.getRank(), 0);
   copy(extractOp.getStaticPosition(), completePositions.begin());
-  int64_t elemBeginPosition =
+  int64_t startPos =
       linearize(completePositions, computeStrides(vecTy.getShape()));
-  auto denseValuesBegin =
-      denseAttr.value_begin<TypedAttr>() + elemBeginPosition;
+  auto denseValuesBegin = denseAttr.value_begin<TypedAttr>() + startPos;
 
   TypedAttr newAttr;
-  if (auto resVecTy = llvm::dyn_cast<VectorType>(extractOp.getType())) {
+  if (auto resVecTy = dyn_cast<VectorType>(extractOp.getType())) {
     SmallVector<Attribute> elementValues(
         denseValuesBegin, denseValuesBegin + resVecTy.getNumElements());
     newAttr = DenseElementsAttr::get(resVecTy, elementValues);
