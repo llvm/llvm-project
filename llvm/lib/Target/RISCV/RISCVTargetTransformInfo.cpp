@@ -585,7 +585,6 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       case TTI::SK_PermuteSingleSrc:
       case TTI::SK_Transpose:
       case TTI::SK_PermuteTwoSrc:
-      case TTI::SK_Select:
         return true;
       }
     };
