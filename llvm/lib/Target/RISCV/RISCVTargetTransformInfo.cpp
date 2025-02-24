@@ -500,7 +500,7 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
     return IsVI ? RISCV::VSLIDEUP_VI : RISCV::VSLIDEUP_VX;
   };
 
-  std::pair<int, int> SrcInfo[2];
+  std::array<std::pair<int, int>, 2> SrcInfo;
   if (!isMaskedSlidePair(Mask, NumElts, SrcInfo))
     return InstructionCost::getInvalid();
 

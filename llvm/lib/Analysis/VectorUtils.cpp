@@ -414,7 +414,7 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
 }
 
 bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
-                             std::pair<int, int> SrcInfo[2]) {
+                             std::array<std::pair<int, int>, 2> &SrcInfo) {
   const int SignalValue = NumElts * 2;
   SrcInfo[0] = {-1, SignalValue};
   SrcInfo[1] = {-1, SignalValue};

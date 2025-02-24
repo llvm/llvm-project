@@ -210,7 +210,7 @@ bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
 /// will be matched a slide by 0.  The output parameter provides the source
 /// (-1 means no source), and slide direction for each slide.
 bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
-                       std::pair<int, int> SrcInfo[2]);
+                       std::array<std::pair<int, int>, 2> &SrcInfo);
 
 /// Replace each shuffle mask index with the scaled sequential indices for an
 /// equivalent mask of narrowed elements. Mask elements that are less than 0

@@ -4562,7 +4562,7 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
 
 /// Is this mask representing a masked combination of two slides?
 static bool isMaskedSlidePair(ArrayRef<int> Mask,
-                              std::pair<int, int> SrcInfo[2]) {
+                              std::array<std::pair<int, int>, 2> &SrcInfo) {
   if (!llvm::isMaskedSlidePair(Mask, Mask.size(), SrcInfo))
     return false;
 
@@ -4580,7 +4580,8 @@ static bool isMaskedSlidePair(ArrayRef<int> Mask,
 
 // Exactly matches the semantics of a previously existing custom matcher
 // to allow migration to new matcher without changing output.
-static bool isElementRotate(std::pair<int, int> SrcInfo[2], unsigned NumElts) {
+static bool isElementRotate(std::array<std::pair<int, int>, 2> &SrcInfo,
+                            unsigned NumElts) {
   if (SrcInfo[1].first == -1)
     return true;
   return SrcInfo[0].second < 0 && SrcInfo[1].second > 0 &&
@@ -5581,7 +5582,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // without masking.  Avoid matching bit rotates (which are not also element
   // rotates) as slide pairs.  This is a performance heuristic, not a
   // functional check.
-  std::pair<int, int> SrcInfo[2];
+  std::array<std::pair<int, int>, 2> SrcInfo;
   unsigned RotateAmt;
   MVT RotateVT;
   if (::isMaskedSlidePair(Mask, SrcInfo) &&
@@ -5941,7 +5942,7 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   if (SVT.getScalarType() == MVT::i1)
     return false;
 
-  std::pair<int, int> SrcInfo[2];
+  std::array<std::pair<int, int>, 2> SrcInfo;
   int Dummy1, Dummy2;
   return ShuffleVectorInst::isReverseMask(M, NumElts) ||
          (::isMaskedSlidePair(M, SrcInfo) &&
