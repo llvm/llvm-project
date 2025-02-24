@@ -525,7 +525,7 @@ static cl::opt<bool> HasClosedWorldAssumption(
     "amdgpu-link-time-closed-world",
     cl::desc("Whether has closed-world assumption at link time"),
     cl::init(false), cl::Hidden);
-    
+
 static cl::opt<bool> EnableUniformIntrinsicCombine(
     "amdgpu-enable-uniform-intrinsic-combine",
     cl::desc("Enable/Disable the Uniform Intrinsic Combine Pass"),

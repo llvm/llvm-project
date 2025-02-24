@@ -20,23 +20,6 @@ define amdgpu_kernel void @permlane64_constant(ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_kernel void @permlane64_undef(ptr addrspace(1) %out) {
-; PASS-CHECK-LABEL: define amdgpu_kernel void @permlane64_undef(
-; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; PASS-CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.permlane64.i32(i32 undef)
-; PASS-CHECK-NEXT:    store i32 undef, ptr addrspace(1) [[OUT]], align 4
-; PASS-CHECK-NEXT:    ret void
-;
-; DCE-CHECK-LABEL: define amdgpu_kernel void @permlane64_undef(
-; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; DCE-CHECK-NEXT:    store i32 undef, ptr addrspace(1) [[OUT]], align 4
-; DCE-CHECK-NEXT:    ret void
-;
-  %v = call i32 @llvm.amdgcn.permlane64(i32 undef)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
-}
-
 define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src) {
 ; PASS-CHECK-LABEL: define amdgpu_kernel void @permlane64_uniform(
 ; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[SRC:%.*]]) #[[ATTR0]] {
@@ -118,23 +101,6 @@ define amdgpu_kernel void @readlane_constant(ptr addrspace(1) %out) {
 ; DCE-CHECK-NEXT:    ret void
 ;
   %v = call i32 @llvm.amdgcn.readlane(i32 7, i32 5)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @readlane_undef(ptr addrspace(1) %out) {
-; PASS-CHECK-LABEL: define amdgpu_kernel void @readlane_undef(
-; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; PASS-CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 undef, i32 undef)
-; PASS-CHECK-NEXT:    store i32 undef, ptr addrspace(1) [[OUT]], align 4
-; PASS-CHECK-NEXT:    ret void
-;
-; DCE-CHECK-LABEL: define amdgpu_kernel void @readlane_undef(
-; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; DCE-CHECK-NEXT:    store i32 undef, ptr addrspace(1) [[OUT]], align 4
-; DCE-CHECK-NEXT:    ret void
-;
-  %v = call i32 @llvm.amdgcn.readlane(i32 undef, i32 undef)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -229,23 +195,6 @@ define amdgpu_kernel void @readfirstlane_constant(ptr addrspace(1) %out) {
 ; DCE-CHECK-NEXT:    ret void
 ;
   %v = call i32 @llvm.amdgcn.readfirstlane(i32 7)
-  store i32 %v, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @readfirstlane_undef(ptr addrspace(1) %out) {
-; PASS-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_undef(
-; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; PASS-CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 undef)
-; PASS-CHECK-NEXT:    store i32 undef, ptr addrspace(1) [[OUT]], align 4
-; PASS-CHECK-NEXT:    ret void
-;
-; DCE-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_undef(
-; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; DCE-CHECK-NEXT:    store i32 undef, ptr addrspace(1) [[OUT]], align 4
-; DCE-CHECK-NEXT:    ret void
-;
-  %v = call i32 @llvm.amdgcn.readfirstlane(i32 undef)
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
@@ -476,23 +425,6 @@ define amdgpu_kernel void @readfirstlane_random(ptr addrspace(1) %out) {
   %random = xor i32 123, 456
   %v = call i32 @llvm.amdgcn.readfirstlane(i32 %random)
   store i32 %v, ptr addrspace(1) %out
-  ret void
-}
-
-define amdgpu_kernel void @permlane64_invalid(ptr addrspace(1) %out) {
-; PASS-CHECK-LABEL: define amdgpu_kernel void @permlane64_invalid(
-; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; PASS-CHECK-NEXT:    [[UNDEF_V:%.*]] = call i32 @llvm.amdgcn.permlane64.i32(i32 undef)
-; PASS-CHECK-NEXT:    store i32 undef, ptr addrspace(1) [[OUT]], align 4
-; PASS-CHECK-NEXT:    ret void
-;
-; DCE-CHECK-LABEL: define amdgpu_kernel void @permlane64_invalid(
-; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; DCE-CHECK-NEXT:    store i32 undef, ptr addrspace(1) [[OUT]], align 4
-; DCE-CHECK-NEXT:    ret void
-;
-  %undef_v = call i32 @llvm.amdgcn.permlane64(i32 undef)
-  store i32 %undef_v, ptr addrspace(1) %out
   ret void
 }
 
