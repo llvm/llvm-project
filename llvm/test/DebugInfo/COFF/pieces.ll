@@ -37,12 +37,12 @@
 ; ASM-LABEL: loop_csr: # @loop_csr
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] 0
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] 0
-; ASM: # %bb.2:                                 # %for.body.preheader
+; ASM: # %bb.1:                                 # %for.body.preheader
 ; ASM:         xorl    %edi, %edi
 ; ASM:         xorl    %esi, %esi
 ; ASM: [[oy_ox_start:\.Ltmp[0-9]+]]:
 ; ASM:         .p2align        4
-; ASM: .LBB0_3:                                # %for.body
+; ASM: .LBB0_2:                                # %for.body
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] $edi
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] $esi
 ; ASM:        .cv_loc 0 1 13 11               # t.c:13:11
@@ -58,18 +58,10 @@
 ; ASM: [[oy_start:\.Ltmp[0-9]+]]:
 ; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] $esi
 ; ASM:         cmpl    n(%rip), %eax
-; ASM:         jl      .LBB0_3
-; ASM: [[loopskip_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] 0
-; ASM:         xorl    %esi, %esi
-; ASM:         xorl    %edi, %edi
+; ASM:         jl      .LBB0_2
 ; ASM: [[oy_end:\.Ltmp[0-9]+]]:
 ; ASM:         addl    %edi, %esi
 ; ASM:         movl    %esi, %eax
-
-; XXX FIXME: the debug value line after loopskip_start should be repeated
-; because both fields of 'o' are zero flowing into this block. However, it
-; appears livedebugvalues doesn't account for fragments.
 
 ; ASM-LABEL: pad_right: # @pad_right
 ; ASM:         movq    %rcx, %rax
