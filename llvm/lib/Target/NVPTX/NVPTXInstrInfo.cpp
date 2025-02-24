@@ -26,11 +26,10 @@ void NVPTXInstrInfo::anchor() {}
 
 NVPTXInstrInfo::NVPTXInstrInfo() : RegInfo() {}
 
-void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc,
-                                 bool RenamableDest, bool RenamableSrc) const {
+void NVPTXInstrInfo::copyReg(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator I, const DebugLoc &DL,
+                             Register DestReg, Register SrcReg, bool KillSrc,
+                             bool RenamableDest, bool RenamableSrc) const {
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *DestRC = MRI.getRegClass(DestReg);
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);

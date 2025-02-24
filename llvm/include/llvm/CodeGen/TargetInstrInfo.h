@@ -1040,6 +1040,16 @@ public:
                            bool RenamableSrc = false) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::copyPhysReg!");
   }
+  // Similar to copycopyPhysReg, but for targets that don't do register
+  // allocation and need to copy virtual registers like NVPTX, SPIR-V, and
+  // WebAssembly.
+  virtual void copyReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                       const DebugLoc &DL, Register DestReg, Register SrcReg,
+                       bool KillSrc, bool RenamableDest = false,
+                       bool RenamableSrc = false) const {
+    copyPhysReg(MBB, MI, DL, DestReg.asMCReg(), SrcReg.asMCReg(), KillSrc,
+                RenamableDest, RenamableSrc);
+  }
 
   /// Allow targets to tell MachineVerifier whether a specific register
   /// MachineOperand can be used as part of PC-relative addressing.
