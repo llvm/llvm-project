@@ -154,9 +154,9 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
     InterfaceMethod<
-      /*description=*/"Returns the mangling style identifier.",
+      /*description=*/"Returns the mangling mode identifier.",
       /*retTy=*/"::mlir::StringAttr",
-      /*methodName=*/"getManglingStyleIdentifier",
+      /*methodName=*/"getManglingModeIdentifier",
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
     InterfaceMethod<
@@ -488,15 +488,15 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       }]
     >,
     StaticInterfaceMethod<
-      /*description=*/"Returns the mangling style computed "
+      /*description=*/"Returns the mangling mode computed "
                       "using the relevant entries. The data layout object "
                       "can be used for recursive queries.",
       /*retTy=*/"::mlir::Attribute",
-      /*methodName=*/"getManglingStyle",
+      /*methodName=*/"getManglingMode",
       /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::detail::getDefaultManglingStyle(entry);
+        return ::mlir::detail::getDefaultManglingMode(entry);
       }]
     >,
     StaticInterfaceMethod<

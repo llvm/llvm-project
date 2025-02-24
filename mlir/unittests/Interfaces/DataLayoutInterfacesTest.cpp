@@ -25,7 +25,7 @@ constexpr static llvm::StringLiteral kAttrName = "dltest.layout";
 constexpr static llvm::StringLiteral kEndiannesKeyName = "dltest.endianness";
 constexpr static llvm::StringLiteral kAllocaKeyName =
     "dltest.alloca_memory_space";
-constexpr static llvm::StringLiteral kManglingStyleKeyName = "dltest.mangling";
+constexpr static llvm::StringLiteral kManglingModeKeyName = "dltest.mangling";
 constexpr static llvm::StringLiteral kProgramKeyName =
     "dltest.program_memory_space";
 constexpr static llvm::StringLiteral kGlobalKeyName =
@@ -84,8 +84,8 @@ struct CustomDataLayoutSpec
   StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kAllocaKeyName);
   }
-  StringAttr getManglingStyleIdentifier(MLIRContext *context) const {
-    return Builder(context).getStringAttr(kManglingStyleKeyName);
+  StringAttr getManglingModeIdentifier(MLIRContext *context) const {
+    return Builder(context).getStringAttr(kManglingModeKeyName);
   }
   StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kProgramKeyName);
@@ -478,6 +478,7 @@ module {}
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
+  EXPECT_EQ(layout.getManglingMode(), Attribute());
 }
 
 TEST(DataLayout, NullSpec) {
@@ -510,6 +511,7 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
+  EXPECT_EQ(layout.getManglingMode(), Attribute());
 
   EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU" /* device ID*/),
@@ -550,6 +552,7 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
+  EXPECT_EQ(layout.getManglingMode(), Attribute());
 
   EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU" /* device ID*/),
@@ -571,7 +574,8 @@ TEST(DataLayout, SpecWithEntries) {
   #dlti.dl_entry<"dltest.alloca_memory_space", 5 : i32>,
   #dlti.dl_entry<"dltest.program_memory_space", 3 : i32>,
   #dlti.dl_entry<"dltest.global_memory_space", 2 : i32>,
-  #dlti.dl_entry<"dltest.stack_alignment", 128 : i32>
+  #dlti.dl_entry<"dltest.stack_alignment", 128 : i32>,
+  #dlti.dl_entry<"dltest.mangling_mode", "o">
 > } : () -> ()
   )MLIR";
 
@@ -608,6 +612,7 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getProgramMemorySpace(), Builder(&ctx).getI32IntegerAttr(3));
   EXPECT_EQ(layout.getGlobalMemorySpace(), Builder(&ctx).getI32IntegerAttr(2));
   EXPECT_EQ(layout.getStackAlignment(), 128u);
+  EXPECT_EQ(layout.getManglingMode(), Builder(&ctx).getStringAttr("o"));
 }
 
 TEST(DataLayout, SpecWithTargetSystemDescEntries) {

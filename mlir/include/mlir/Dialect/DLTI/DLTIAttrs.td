@@ -77,8 +77,8 @@ def DLTI_DataLayoutSpecAttr :
     /// Returns the alloca memory space identifier.
     StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const;
 
-    /// Returns the mangling style identifier.
-    StringAttr getManglingStyleIdentifier(MLIRContext *context) const;
+    /// Returns the mangling mode identifier.
+    StringAttr getManglingModeIdentifier(MLIRContext *context) const;
 
     /// Returns the program memory space identifier.
     StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const;

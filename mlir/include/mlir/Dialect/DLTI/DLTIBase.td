@@ -49,8 +49,9 @@ def DLTI_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
     kDataLayoutEndiannessLittle = "little";
 
+    // Mangling mode, a.k.a mangling style used to mangle llvm names.
     constexpr const static ::llvm::StringLiteral
-    kDataLayoutManglingStyleKey = "dlti.mangling_style";
+    kDataLayoutManglingModeKey = "dlti.mangling_mode";
 
     constexpr const static ::llvm::StringLiteral
     kDataLayoutAllocaMemorySpaceKey = "dlti.alloca_memory_space";

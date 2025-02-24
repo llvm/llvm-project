@@ -258,13 +258,11 @@ mlir::detail::getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry) {
   return entry.getValue();
 }
 
-// Returns the mangling style if specified in the given entry.
+// Returns the mangling mode if specified in the given entry.
 // If the entry is empty, an empty attribute is returned.
-Attribute
-mlir::detail::getDefaultManglingStyle(DataLayoutEntryInterface entry) {
-  if (entry == DataLayoutEntryInterface()) {
+Attribute mlir::detail::getDefaultManglingMode(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
     return Attribute();
-  }
 
   return entry.getValue();
 }
@@ -623,20 +621,20 @@ mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
   return *allocaMemorySpace;
 }
 
-mlir::Attribute mlir::DataLayout::getManglingStyle() const {
+mlir::Attribute mlir::DataLayout::getManglingMode() const {
   checkValid();
-  if (manglingStyle)
-    return *manglingStyle;
+  if (manglingMode)
+    return *manglingMode;
   DataLayoutEntryInterface entry;
   if (originalLayout)
     entry = originalLayout.getSpecForIdentifier(
-        originalLayout.getManglingStyleIdentifier(originalLayout.getContext()));
+        originalLayout.getManglingModeIdentifier(originalLayout.getContext()));
 
   if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
-    manglingStyle = iface.getManglingStyle(entry);
+    manglingMode = iface.getManglingMode(entry);
   else
-    manglingStyle = detail::getDefaultManglingStyle(entry);
-  return *manglingStyle;
+    manglingMode = detail::getDefaultManglingMode(entry);
+  return *manglingMode;
 }
 
 mlir::Attribute mlir::DataLayout::getProgramMemorySpace() const {

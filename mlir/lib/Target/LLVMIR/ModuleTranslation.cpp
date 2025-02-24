@@ -199,7 +199,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       layoutStream << "-" << (isLittleEndian ? "e" : "E");
       continue;
     }
-    if (key.getValue() == DLTIDialect::kDataLayoutManglingStyleKey) {
+    if (key.getValue() == DLTIDialect::kDataLayoutManglingModeKey) {
       auto value = cast<StringAttr>(entry.getValue());
       layoutStream << "-m:" << value.getValue();
       continue;

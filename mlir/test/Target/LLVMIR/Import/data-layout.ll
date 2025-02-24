@@ -29,7 +29,7 @@ target datalayout = ""
 ; CHECK-DAG:   !llvm.ptr<271> = dense<32> : vector<4xi64>
 ; CHECK-DAG:   !llvm.ptr<272> = dense<64> : vector<4xi64>
 ; CHECK-DAG:   "dlti.stack_alignment" = 128 : i64
-; CHECK-DAG:   "dlti.mangling_style" = "e"
+; CHECK-DAG:   "dlti.mangling_mode" = "e"
 target datalayout = "e-m:e-p270:32:64-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 ; // -----

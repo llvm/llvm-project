@@ -163,7 +163,7 @@ DataLayoutImporter::tryToEmplaceEndiannessEntry(StringRef endianness,
   return success();
 }
 
-LogicalResult DataLayoutImporter::tryToEmplaceManglingStyleEntry(
+LogicalResult DataLayoutImporter::tryToEmplaceManglingModeEntry(
     StringRef token, llvm::StringLiteral manglingKey) {
   auto key = StringAttr::get(context, manglingKey);
   if (keyEntries.count(key))
@@ -269,10 +269,10 @@ void DataLayoutImporter::translateDataLayout(
         return;
       continue;
     }
-    // Parse the mangling style.
+    // Parse the mangling mode.
     if (*prefix == "m") {
-      if (failed(tryToEmplaceManglingStyleEntry(
-              token, DLTIDialect::kDataLayoutManglingStyleKey)))
+      if (failed(tryToEmplaceManglingModeEntry(
+              token, DLTIDialect::kDataLayoutManglingModeKey)))
         return;
       continue;
     }

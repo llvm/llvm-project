@@ -13,7 +13,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<
 #dlti.dl_entry<"dlti.endianness", "big">,
 #dlti.dl_entry<"dlti.alloca_memory_space", 4 : ui32>,
 #dlti.dl_entry<"dlti.stack_alignment", 128 : i32>,
-#dlti.dl_entry<"dlti.mangling_style", "e">,
+#dlti.dl_entry<"dlti.mangling_mode", "e">,
 #dlti.dl_entry<index, 64>,
 #dlti.dl_entry<i64, dense<[64,128]> : vector<2xi64>>,
 #dlti.dl_entry<f80, dense<[128,256]> : vector<2xi64>>,
