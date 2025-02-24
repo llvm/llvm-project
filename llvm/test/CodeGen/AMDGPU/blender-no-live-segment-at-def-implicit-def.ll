@@ -9,44 +9,34 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_addc_u32 s13, s13, 0
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
-; CHECK-NEXT:    s_load_dwordx8 s[36:43], s[8:9], 0x0
+; CHECK-NEXT:    s_load_dwordx8 s[20:27], s[8:9], 0x0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_mov_b32 s12, 0
+; CHECK-NEXT:    s_mov_b32 s36, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_lg_u32 s40, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_8
-; CHECK-NEXT:  ; %bb.1: ; %if.end13.i.i
-; CHECK-NEXT:    s_cmp_eq_u32 s42, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
-; CHECK-NEXT:  ; %bb.2: ; %if.else251.i.i
-; CHECK-NEXT:    s_cmp_lg_u32 s43, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s24, 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[22:23]
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[20:21]
+; CHECK-NEXT:    s_branch .LBB0_7
+; CHECK-NEXT:  .LBB0_2: ; %if.end13.i.i
+; CHECK-NEXT:    s_mov_b32 s37, s36
+; CHECK-NEXT:    s_mov_b32 s38, s36
+; CHECK-NEXT:    s_cmp_eq_u32 s26, 0
+; CHECK-NEXT:    s_mov_b32 s39, s36
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_6
+; CHECK-NEXT:  ; %bb.3: ; %if.else251.i.i
+; CHECK-NEXT:    s_cmp_lg_u32 s27, 0
 ; CHECK-NEXT:    s_mov_b32 s17, 0
 ; CHECK-NEXT:    s_cselect_b32 s12, -1, 0
 ; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s12
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
-; CHECK-NEXT:  ; %bb.3:
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_8
+; CHECK-NEXT:  ; %bb.4:
 ; CHECK-NEXT:    s_mov_b32 s36, 0
 ; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s12
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_6
-; CHECK-NEXT:    s_branch .LBB0_7
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    s_mov_b32 s14, s12
-; CHECK-NEXT:    s_mov_b32 s15, s12
-; CHECK-NEXT:    s_mov_b32 s13, s12
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[14:15]
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[12:13]
-; CHECK-NEXT:    s_branch .LBB0_7
-; CHECK-NEXT:  .LBB0_5: ; %if.then263.i.i
-; CHECK-NEXT:    v_cmp_lt_f32_e64 s12, s41, 0
-; CHECK-NEXT:    s_mov_b32 s36, 1.0
-; CHECK-NEXT:    s_mov_b32 s17, 0x7fc00000
-; CHECK-NEXT:    s_mov_b32 s37, s36
-; CHECK-NEXT:    s_mov_b32 s38, s36
-; CHECK-NEXT:    s_mov_b32 s39, s36
-; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s12
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_7
-; CHECK-NEXT:  .LBB0_6: ; %if.end273.i.i
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_6
+; CHECK-NEXT:  .LBB0_5: ; %if.end273.i.i
 ; CHECK-NEXT:    s_add_u32 s12, s8, 40
 ; CHECK-NEXT:    s_addc_u32 s13, s9, 0
 ; CHECK-NEXT:    s_getpc_b64 s[18:19]
@@ -72,13 +62,13 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_mov_b32 s37, s36
 ; CHECK-NEXT:    s_mov_b32 s38, s36
 ; CHECK-NEXT:    s_mov_b32 s39, s36
-; CHECK-NEXT:  .LBB0_7: ; %if.end294.i.i
+; CHECK-NEXT:  .LBB0_6: ; %if.end294.i.i
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:12
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:8
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; CHECK-NEXT:  .LBB0_8: ; %kernel_direct_lighting.exit
+; CHECK-NEXT:  .LBB0_7: ; %kernel_direct_lighting.exit
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x20
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s36
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
@@ -88,6 +78,16 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5]
 ; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .LBB0_8: ; %if.then263.i.i
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s12, s25, 0
+; CHECK-NEXT:    s_mov_b32 s36, 1.0
+; CHECK-NEXT:    s_mov_b32 s17, 0x7fc00000
+; CHECK-NEXT:    s_mov_b32 s37, s36
+; CHECK-NEXT:    s_mov_b32 s38, s36
+; CHECK-NEXT:    s_mov_b32 s39, s36
+; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s12
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
+; CHECK-NEXT:    s_branch .LBB0_6
 entry:
   %cmp5.i.i = icmp eq i32 %cmp5.i.i.arg, 0
   br i1 %cmp5.i.i, label %if.end13.i.i, label %kernel_direct_lighting.exit

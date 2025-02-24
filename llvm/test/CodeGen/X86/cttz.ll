@@ -305,14 +305,13 @@ define i16 @cttz_i16_zero_test(i16 %n) {
 define i32 @cttz_i32_zero_test(i32 %n) {
 ; X86-NOCMOV-LABEL: cttz_i32_zero_test:
 ; X86-NOCMOV:       # %bb.0:
-; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOCMOV-NEXT:    testl %eax, %eax
-; X86-NOCMOV-NEXT:    je .LBB6_1
-; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
-; X86-NOCMOV-NEXT:    rep bsfl %eax, %eax
-; X86-NOCMOV-NEXT:    retl
-; X86-NOCMOV-NEXT:  .LBB6_1:
+; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOCMOV-NEXT:    movl $32, %eax
+; X86-NOCMOV-NEXT:    testl %ecx, %ecx
+; X86-NOCMOV-NEXT:    je .LBB6_2
+; X86-NOCMOV-NEXT:  # %bb.1: # %cond.false
+; X86-NOCMOV-NEXT:    rep bsfl %ecx, %eax
+; X86-NOCMOV-NEXT:  .LBB6_2: # %cond.end
 ; X86-NOCMOV-NEXT:    retl
 ;
 ; X86-CMOV-LABEL: cttz_i32_zero_test:
@@ -356,7 +355,6 @@ define i64 @cttz_i64_zero_test(i64 %n) {
 ; X86-NOCMOV-LABEL: cttz_i64_zero_test:
 ; X86-NOCMOV:       # %bb.0:
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOCMOV-NOT:     rep
 ; X86-NOCMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %edx
 ; X86-NOCMOV-NEXT:    movl $32, %eax
 ; X86-NOCMOV-NEXT:    je .LBB7_2
@@ -377,12 +375,10 @@ define i64 @cttz_i64_zero_test(i64 %n) {
 ; X86-CMOV-LABEL: cttz_i64_zero_test:
 ; X86-CMOV:       # %bb.0:
 ; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-CMOV-NOT:     rep
 ; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
 ; X86-CMOV-NEXT:    movl $32, %edx
 ; X86-CMOV-NEXT:    cmovnel %ecx, %edx
 ; X86-CMOV-NEXT:    addl $32, %edx
-; X86-CMOV-NOT:     rep
 ; X86-CMOV-NEXT:    bsfl %eax, %eax
 ; X86-CMOV-NEXT:    cmovel %edx, %eax
 ; X86-CMOV-NEXT:    xorl %edx, %edx
@@ -589,13 +585,11 @@ define i64 @cttz_i64_zero_test_knownneverzero(i64 %n) {
 define i32 @cttz_i32_osize(i32 %x) optsize {
 ; X86-LABEL: cttz_i32_osize:
 ; X86:       # %bb.0:
-; X86-NOT:     rep
 ; X86-NEXT:    bsfl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i32_osize:
 ; X64:       # %bb.0:
-; X64-NOT:     rep
 ; X64-NEXT:    bsfl %edi, %eax
 ; X64-NEXT:    retq
 ;
@@ -625,13 +619,11 @@ define i32 @cttz_i32_osize(i32 %x) optsize {
 define i32 @cttz_i32_msize(i32 %x) minsize {
 ; X86-LABEL: cttz_i32_msize:
 ; X86:       # %bb.0:
-; X86-NOT:     rep
 ; X86-NEXT:    bsfl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i32_msize:
 ; X64:       # %bb.0:
-; X64-NOT:     rep
 ; X64-NEXT:    bsfl %edi, %eax
 ; X64-NEXT:    retq
 ;
@@ -661,15 +653,13 @@ define i32 @cttz_i32_msize(i32 %x) minsize {
 define i64 @cttz_i32_sext(i32 %x) {
 ; X86-NOCMOV-LABEL: cttz_i32_sext:
 ; X86-NOCMOV:       # %bb.0:
-; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOCMOV-NEXT:    testl %eax, %eax
-; X86-NOCMOV-NEXT:    je .LBB12_1
-; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
-; X86-NOCMOV-NEXT:    rep bsfl %eax, %eax
-; X86-NOCMOV-NEXT:    xorl %edx, %edx
-; X86-NOCMOV-NEXT:    retl
-; X86-NOCMOV-NEXT:  .LBB12_1:
+; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOCMOV-NEXT:    movl $32, %eax
+; X86-NOCMOV-NEXT:    testl %ecx, %ecx
+; X86-NOCMOV-NEXT:    je .LBB12_2
+; X86-NOCMOV-NEXT:  # %bb.1: # %cond.false
+; X86-NOCMOV-NEXT:    rep bsfl %ecx, %eax
+; X86-NOCMOV-NEXT:  .LBB12_2: # %cond.end
 ; X86-NOCMOV-NEXT:    xorl %edx, %edx
 ; X86-NOCMOV-NEXT:    retl
 ;
@@ -716,15 +706,13 @@ define i64 @cttz_i32_sext(i32 %x) {
 define i64 @cttz_i32_zext(i32 %x) {
 ; X86-NOCMOV-LABEL: cttz_i32_zext:
 ; X86-NOCMOV:       # %bb.0:
-; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOCMOV-NEXT:    testl %eax, %eax
-; X86-NOCMOV-NEXT:    je .LBB13_1
-; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
-; X86-NOCMOV-NEXT:    rep bsfl %eax, %eax
-; X86-NOCMOV-NEXT:    xorl %edx, %edx
-; X86-NOCMOV-NEXT:    retl
-; X86-NOCMOV-NEXT:  .LBB13_1:
+; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOCMOV-NEXT:    movl $32, %eax
+; X86-NOCMOV-NEXT:    testl %ecx, %ecx
+; X86-NOCMOV-NEXT:    je .LBB13_2
+; X86-NOCMOV-NEXT:  # %bb.1: # %cond.false
+; X86-NOCMOV-NEXT:    rep bsfl %ecx, %eax
+; X86-NOCMOV-NEXT:  .LBB13_2: # %cond.end
 ; X86-NOCMOV-NEXT:    xorl %edx, %edx
 ; X86-NOCMOV-NEXT:    retl
 ;

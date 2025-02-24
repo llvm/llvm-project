@@ -62,7 +62,7 @@ define void @arm_cmplx_dot_prod_q15(ptr noundef %pSrcA, ptr noundef %pSrcB, i32 
 ; CHECK-NEXT:    vldrht.u16 q0, [r1]
 ; CHECK-NEXT:    vmlsldavat.s16 r4, r7, q1, q0
 ; CHECK-NEXT:    vmlaldavaxt.s16 r8, r5, q1, q0
-; CHECK-NEXT:    blo .LBB0_10
+; CHECK-NEXT:    blo .LBB0_9
 ; CHECK-NEXT:  @ %bb.4: @ %do.body.1
 ; CHECK-NEXT:    subs r2, #8
 ; CHECK-NEXT:    vctp.16 r2
@@ -71,10 +71,13 @@ define void @arm_cmplx_dot_prod_q15(ptr noundef %pSrcA, ptr noundef %pSrcB, i32 
 ; CHECK-NEXT:    vldrht.u16 q1, [r1, #16]
 ; CHECK-NEXT:    vmlsldavat.s16 r4, r7, q0, q1
 ; CHECK-NEXT:    vmlaldavaxt.s16 r8, r5, q0, q1
-; CHECK-NEXT:    b .LBB0_10
+; CHECK-NEXT:    b .LBB0_9
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB0_5: @ %if.else
-; CHECK-NEXT:    mov.w r4, #0
+; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    mov r7, r4
+; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    mov r5, r4
 ; CHECK-NEXT:    cbz r2, .LBB0_9
 ; CHECK-NEXT:  @ %bb.6: @ %while.body14.preheader
 ; CHECK-NEXT:    lsls r6, r2, #1
@@ -93,13 +96,7 @@ define void @arm_cmplx_dot_prod_q15(ptr noundef %pSrcA, ptr noundef %pSrcB, i32 
 ; CHECK-NEXT:  @ %bb.8: @ %if.end.loopexit177
 ; CHECK-NEXT:    mov r8, r4
 ; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    b .LBB0_10
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  .LBB0_9:
-; CHECK-NEXT:    mov r7, r4
-; CHECK-NEXT:    mov.w r8, #0
-; CHECK-NEXT:    mov r5, r4
-; CHECK-NEXT:  .LBB0_10: @ %if.end
+; CHECK-NEXT:  .LBB0_9: @ %if.end
 ; CHECK-NEXT:    asrl r4, r7, #6
 ; CHECK-NEXT:    asrl r8, r5, #6
 ; CHECK-NEXT:    str r4, [r3]

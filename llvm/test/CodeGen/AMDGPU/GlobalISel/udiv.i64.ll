@@ -193,6 +193,7 @@ define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 vcc, s[4:5], 0
 ; CHECK-NEXT:    s_mov_b32 s6, 1
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, s2
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:    s_cbranch_vccz .LBB1_2
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s3
@@ -318,15 +319,12 @@ define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v9, v5, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; CHECK-NEXT:    s_branch .LBB1_3
-; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; CHECK-NEXT:  .LBB1_3: ; %Flow
+; CHECK-NEXT:  .LBB1_2: ; %Flow
 ; CHECK-NEXT:    s_xor_b32 s1, s6, 1
 ; CHECK-NEXT:    s_and_b32 s1, s1, 1
 ; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB1_5
-; CHECK-NEXT:  ; %bb.4:
+; CHECK-NEXT:    s_cbranch_scc1 .LBB1_4
+; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    v_rcp_iflag_f32_e32 v0, v2
 ; CHECK-NEXT:    s_sub_i32 s1, 0, s2
 ; CHECK-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
@@ -345,7 +343,7 @@ define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, s2, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; CHECK-NEXT:  .LBB1_5:
+; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    ; return to shader part epilog

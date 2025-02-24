@@ -17,11 +17,13 @@
 define i64 @foo(ptr %p, i32 signext %n, i32 signext %count) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr r6, r3
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    cmpwi r4, 0
-; CHECK-NEXT:    ble cr0, .LBB0_4
+; CHECK-NEXT:    blelr cr0
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    addi r6, r3, 5
 ; CHECK-NEXT:    addi r3, r4, -1
+; CHECK-NEXT:    addi r6, r6, 5
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    addi r3, r3, 1
 ; CHECK-NEXT:    mtctr r3
@@ -36,9 +38,6 @@ define i64 @foo(ptr %p, i32 signext %n, i32 signext %count) {
 ; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %cmp16 = icmp sgt i32 %n, 0
@@ -82,27 +81,25 @@ for.body:                                         ; preds = %for.body.preheader,
 define zeroext i8 @foo1(ptr %p, i32 signext %n, i32 signext %count) {
 ; CHECK-LABEL: foo1:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li r6, 0
 ; CHECK-NEXT:    cmpwi r4, 0
-; CHECK-NEXT:    ble cr0, .LBB1_4
+; CHECK-NEXT:    ble cr0, .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    addi r4, r4, -1
 ; CHECK-NEXT:    sub r3, r3, r5
-; CHECK-NEXT:    addi r6, r3, 1000
-; CHECK-NEXT:    addi r3, r4, -1
-; CHECK-NEXT:    clrldi r3, r3, 32
-; CHECK-NEXT:    addi r3, r3, 1
-; CHECK-NEXT:    mtctr r3
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    li r6, 0
+; CHECK-NEXT:    clrldi r4, r4, 32
+; CHECK-NEXT:    addi r3, r3, 1000
+; CHECK-NEXT:    addi r4, r4, 1
+; CHECK-NEXT:    mtctr r4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lbzux r4, r6, r5
-; CHECK-NEXT:    add r3, r4, r3
+; CHECK-NEXT:    lbzux r4, r3, r5
+; CHECK-NEXT:    add r6, r4, r6
 ; CHECK-NEXT:    bdnz .LBB1_2
-; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
-; CHECK-NEXT:    clrldi r3, r3, 56
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:  .LBB1_3: # %for.cond.cleanup
+; CHECK-NEXT:    clrldi r3, r6, 56
 ; CHECK-NEXT:    blr
 entry:
   %cmp10 = icmp sgt i32 %n, 0

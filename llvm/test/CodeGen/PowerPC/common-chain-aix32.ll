@@ -39,6 +39,9 @@ define i64 @two_chain_same_offset_succ_i32(ptr %p, i32 %offset, i32 %base1, i64 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmplwi r6, 0
 ; CHECK-NEXT:    cmpwi cr1, r6, 0
+; CHECK-NEXT:    mr r8, r3
+; CHECK-NEXT:    li r9, 0
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    crandc 4*cr5+lt, 4*cr1+lt, eq
 ; CHECK-NEXT:    cmpwi cr1, r7, 0
 ; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_6
@@ -46,31 +49,30 @@ define i64 @two_chain_same_offset_succ_i32(ptr %p, i32 %offset, i32 %base1, i64 
 ; CHECK-NEXT:    crand 4*cr5+lt, eq, 4*cr1+eq
 ; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_6
 ; CHECK-NEXT:  # %bb.2: # %for.body.preheader
-; CHECK-NEXT:    slwi r8, r4, 1
+; CHECK-NEXT:    slwi r3, r4, 1
 ; CHECK-NEXT:    li r10, 0
 ; CHECK-NEXT:    li r11, 0
 ; CHECK-NEXT:    stw r30, -8(r1) # 4-byte Folded Spill
-; CHECK-NEXT:    add r8, r4, r8
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    stw r31, -4(r1) # 4-byte Folded Spill
-; CHECK-NEXT:    add r9, r5, r8
+; CHECK-NEXT:    add r3, r5, r3
 ; CHECK-NEXT:    add r5, r5, r4
-; CHECK-NEXT:    add r8, r3, r5
-; CHECK-NEXT:    add r9, r3, r9
+; CHECK-NEXT:    add r5, r8, r5
+; CHECK-NEXT:    add r8, r8, r3
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    li r5, 0
 ; CHECK-NEXT:    .align 4
 ; CHECK-NEXT:  L..BB0_3: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwz r12, 0(r8)
-; CHECK-NEXT:    lwzx r0, r8, r4
-; CHECK-NEXT:    lwz r31, 0(r9)
-; CHECK-NEXT:    lwzx r30, r9, r4
+; CHECK-NEXT:    lwz r12, 0(r5)
+; CHECK-NEXT:    lwzx r0, r5, r4
+; CHECK-NEXT:    lwz r31, 0(r8)
+; CHECK-NEXT:    lwzx r30, r8, r4
+; CHECK-NEXT:    addi r5, r5, 1
 ; CHECK-NEXT:    addi r8, r8, 1
-; CHECK-NEXT:    addi r9, r9, 1
 ; CHECK-NEXT:    mullw r12, r0, r12
 ; CHECK-NEXT:    mullw r12, r12, r31
 ; CHECK-NEXT:    mullw r12, r12, r30
-; CHECK-NEXT:    addc r5, r5, r12
+; CHECK-NEXT:    addc r9, r9, r12
 ; CHECK-NEXT:    addze r3, r3
 ; CHECK-NEXT:    addic r11, r11, 1
 ; CHECK-NEXT:    addze r10, r10
@@ -86,11 +88,8 @@ define i64 @two_chain_same_offset_succ_i32(ptr %p, i32 %offset, i32 %base1, i64 
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    lwz r31, -4(r1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz r30, -8(r1) # 4-byte Folded Reload
-; CHECK-NEXT:    mr r4, r5
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  L..BB0_6:
-; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    li r4, 0
+; CHECK-NEXT:  L..BB0_6: # %for.cond.cleanup
+; CHECK-NEXT:    mr r4, r9
 ; CHECK-NEXT:    blr
 entry:
   %add = add nsw i32 %base1, %offset

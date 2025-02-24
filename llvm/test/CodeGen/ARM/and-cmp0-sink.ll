@@ -214,20 +214,20 @@ define i32 @f0(i1 %c0, i32 %v, ptr %p) {
 ; V7A-NEXT:    tst r0, #1
 ; V7A-NEXT:    movt r3, #257
 ; V7A-NEXT:    and r1, r1, r3
-; V7A-NEXT:    beq .LBB1_3
+; V7A-NEXT:    beq .LBB1_2
 ; V7A-NEXT:  @ %bb.1: @ %A
+; V7A-NEXT:    mov r0, #0
 ; V7A-NEXT:    cmp r1, #0
-; V7A-NEXT:    moveq r0, #0
-; V7A-NEXT:    bxeq lr
-; V7A-NEXT:  .LBB1_2: @ %D
-; V7A-NEXT:    mov r0, #1
+; V7A-NEXT:    movne r0, #1
 ; V7A-NEXT:    bx lr
-; V7A-NEXT:  .LBB1_3: @ %B
+; V7A-NEXT:  .LBB1_2: @ %B
 ; V7A-NEXT:    mov r0, #1
 ; V7A-NEXT:    cmp r1, #0
 ; V7A-NEXT:    str r0, [r2]
 ; V7A-NEXT:    mov r0, #0
-; V7A-NEXT:    moveq r0, #1
+; V7A-NEXT:    bxne lr
+; V7A-NEXT:  .LBB1_3: @ %D
+; V7A-NEXT:    mov r0, #1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: f0:
@@ -328,20 +328,20 @@ define i32 @f1(i1 %c0, i32 %v, ptr %p) {
 ; V7A-LABEL: f1:
 ; V7A:       @ %bb.0: @ %E
 ; V7A-NEXT:    tst r0, #1
-; V7A-NEXT:    beq .LBB2_3
+; V7A-NEXT:    beq .LBB2_2
 ; V7A-NEXT:  @ %bb.1: @ %A
+; V7A-NEXT:    mov r0, #0
 ; V7A-NEXT:    tst r1, #100663296
-; V7A-NEXT:    moveq r0, #0
-; V7A-NEXT:    bxeq lr
-; V7A-NEXT:  .LBB2_2: @ %D
-; V7A-NEXT:    mov r0, #1
+; V7A-NEXT:    movne r0, #1
 ; V7A-NEXT:    bx lr
-; V7A-NEXT:  .LBB2_3: @ %B
+; V7A-NEXT:  .LBB2_2: @ %B
 ; V7A-NEXT:    mov r0, #1
 ; V7A-NEXT:    tst r1, #100663296
 ; V7A-NEXT:    str r0, [r2]
 ; V7A-NEXT:    mov r0, #0
-; V7A-NEXT:    moveq r0, #1
+; V7A-NEXT:    bxne lr
+; V7A-NEXT:  .LBB2_3: @ %D
+; V7A-NEXT:    mov r0, #1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: f1:

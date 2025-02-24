@@ -116,18 +116,19 @@ define amdgpu_kernel void @negated_cond_dominated_blocks(ptr addrspace(1) %arg1)
 ; GCN-NEXT:    s_cbranch_scc1 .LBB1_6
 ; GCN-NEXT:  .LBB1_2: ; %bb4
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GCN-NEXT:    s_mov_b64 s[8:9], -1
+; GCN-NEXT:    ; implicit-def: $sgpr2
 ; GCN-NEXT:    s_mov_b64 vcc, s[0:1]
 ; GCN-NEXT:    s_cbranch_vccz .LBB1_4
 ; GCN-NEXT:  ; %bb.3: ; %bb6
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_add_i32 s2, s3, 1
-; GCN-NEXT:    s_mov_b64 vcc, exec
-; GCN-NEXT:    s_cbranch_execnz .LBB1_1
-; GCN-NEXT:    s_branch .LBB1_5
-; GCN-NEXT:  .LBB1_4: ; in Loop: Header=BB1_2 Depth=1
-; GCN-NEXT:    ; implicit-def: $sgpr2
-; GCN-NEXT:    s_mov_b64 vcc, 0
-; GCN-NEXT:  .LBB1_5: ; %bb5
+; GCN-NEXT:    s_mov_b64 s[8:9], 0
+; GCN-NEXT:  .LBB1_4: ; %Flow
+; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
+; GCN-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
+; GCN-NEXT:    s_cbranch_vccnz .LBB1_1
+; GCN-NEXT:  ; %bb.5: ; %bb5
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_lshl_b32 s2, s3, 5
 ; GCN-NEXT:    s_or_b32 s2, s2, 1

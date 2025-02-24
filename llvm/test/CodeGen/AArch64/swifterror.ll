@@ -412,6 +412,7 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-APPLE-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-NEXT:    .cfi_offset w29, -16
+; CHECK-APPLE-NEXT:    movi d0, #0000000000000000
 ; CHECK-APPLE-NEXT:    cbz w0, LBB3_2
 ; CHECK-APPLE-NEXT:  ; %bb.1: ; %gen_error
 ; CHECK-APPLE-NEXT:    mov w0, #16 ; =0x10
@@ -420,10 +421,7 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE-NEXT:    fmov s0, #1.00000000
 ; CHECK-APPLE-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-APPLE-NEXT:    strb w8, [x0, #8]
-; CHECK-APPLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-APPLE-NEXT:    ret
-; CHECK-APPLE-NEXT:  LBB3_2:
-; CHECK-APPLE-NEXT:    movi d0, #0000000000000000
+; CHECK-APPLE-NEXT:  LBB3_2: ; %common.ret
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    ret
 ;
