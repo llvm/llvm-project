@@ -2731,11 +2731,19 @@ mlir::Value IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
   auto successOrdering = mlir::LLVM::AtomicOrdering::acq_rel;
   auto failureOrdering = mlir::LLVM::AtomicOrdering::monotonic;
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(resultType.getContext());
+
+  mlir::Value arg1 = args[1];
+  mlir::Value arg2 = args[2];
+  if (arg1.getType() != arg2.getType()) {
+    // arg1 and arg2 need to have the same type in AtomicCmpXchgOp.
+    arg2 = builder.createConvert(loc, arg1.getType(), arg2);
+  }
+
   auto address =
       builder.create<mlir::UnrealizedConversionCastOp>(loc, llvmPtrTy, args[0])
           .getResult(0);
   auto cmpxchg = builder.create<mlir::LLVM::AtomicCmpXchgOp>(
-      loc, address, args[1], args[2], successOrdering, failureOrdering);
+      loc, address, arg1, arg2, successOrdering, failureOrdering);
   return builder.create<mlir::LLVM::ExtractValueOp>(loc, cmpxchg, 1);
 }
 
@@ -2752,7 +2760,7 @@ mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genAtomicExch(mlir::Type resultType,
                                             llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+  assert(args[1].getType().isIntOrFloat());
 
   mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::xchg;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
