@@ -14,7 +14,6 @@
 #include "bolt/Passes/BinaryPasses.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Testing/Annotations/Annotations.h"
 #include <memory>
 
 namespace llvm {
