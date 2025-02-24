@@ -1228,8 +1228,8 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   // (X == 0) ? BitWidth : ctz(X)
   // (X == -1) ? BitWidth : ctz(~X)
   // (X == Y) ? BitWidth : ctz(X ^ Y)
-  if (!(X == CmpLHS && match(CmpRHS, m_Zero())) &&
-      !(match(X, m_Not(m_Specific(CmpLHS))) && match(CmpRHS, m_AllOnes())) &&
+  if ((X != CmpLHS || !match(CmpRHS, m_Zero())) &&
+      (!match(X, m_Not(m_Specific(CmpLHS))) || !match(CmpRHS, m_AllOnes())) &&
       !match(X, m_c_Xor(m_Specific(CmpLHS), m_Specific(CmpRHS))))
     return nullptr;
 
