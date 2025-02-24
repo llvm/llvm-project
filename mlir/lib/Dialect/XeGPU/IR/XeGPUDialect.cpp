@@ -258,7 +258,7 @@ LogicalResult TensorDescType::verify(
       return emitError() << "expected non-contiguous elements for 1D tensor";
     if (rank == 2 && chunkSize < 2)
       return emitError() << "expected chunk blocks for 2D tensor";
-    // If chunk size > 1, the the second dimension of the tensor shape must be
+    // If chunk size > 1, the second dimension of the tensor shape must be
     // equal to chunk size and it must be a multiple of the packing factor.
     if (chunkSize > 1) {
       if (shape.back() != chunkSize)
