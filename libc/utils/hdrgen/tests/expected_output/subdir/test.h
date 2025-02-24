@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUBDIR_TEST_H
-#define LLVM_LIBC_SUBDIR_TEST_H
+#ifndef _LLVM_LIBC_SUBDIR_TEST_H
+#define _LLVM_LIBC_SUBDIR_TEST_H
 
 #include "../__llvm-libc-common.h"
 #include "../llvm-libc-types/type_a.h"
@@ -23,4 +23,4 @@ int *ptrfunc(void) __NOEXCEPT;
 
 __END_C_DECLS
 
-#endif // LLVM_LIBC_SUBDIR_TEST_H
+#endif // _LLVM_LIBC_SUBDIR_TEST_H

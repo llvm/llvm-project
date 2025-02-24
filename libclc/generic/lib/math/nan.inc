@@ -1,27 +1,15 @@
-#ifdef __CLC_SCALAR
-#define __CLC_VECSIZE
-#endif
-
 #if __CLC_FPSIZE == 64
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE nan(__CLC_XCONCAT(ulong, __CLC_VECSIZE) code)
-{
-	return __CLC_AS_GENTYPE(code | 0x7ff0000000000000ul);
-}
+#define NAN_MASK 0x7ff0000000000000ul
 #elif __CLC_FPSIZE == 32
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE nan(__CLC_XCONCAT(uint, __CLC_VECSIZE) code)
-{
-	return __CLC_AS_GENTYPE(code | 0x7fc00000);
-}
+#define NAN_MASK 0x7fc00000
 #elif __CLC_FPSIZE == 16
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE nan(__CLC_XCONCAT(ushort, __CLC_VECSIZE) code)
-{
-	const ushort mask = 0x7e00;
-	const __CLC_XCONCAT(ushort, __CLC_VECSIZE) res = code | mask;
-	return __CLC_AS_GENTYPE(res);
+#define NAN_MASK 0x7e00
+#endif
+
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE nan(__CLC_U_GENTYPE code) {
+  const __CLC_U_GENTYPE mask = NAN_MASK;
+  const __CLC_U_GENTYPE res = code | mask;
+  return __OPENCL_AS_GENTYPE(res);
 }
-#endif
 
-
-#ifdef __CLC_SCALAR
-#undef __CLC_VECSIZE
-#endif
+#undef NAN_MASK

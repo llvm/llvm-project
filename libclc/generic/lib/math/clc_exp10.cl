@@ -21,6 +21,7 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_mad.h>
 #include <clc/math/clc_subnormal_config.h>
@@ -70,7 +71,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_exp10(float x) {
   int return_inf = x > X_MAX;
   int return_zero = x < X_MIN;
 
-  int n = convert_int(x * R_64_BY_LOG10_2);
+  int n = __clc_convert_int(x * R_64_BY_LOG10_2);
 
   float fn = (float)n;
   int j = n & 0x3f;
@@ -89,11 +90,11 @@ _CLC_DEF _CLC_OVERLOAD float __clc_exp10(float x) {
   float two_to_jby64 = USE_TABLE(exp_tbl, j);
   z2 = __clc_mad(two_to_jby64, z2, two_to_jby64);
 
-  float z2s = z2 * as_float(0x1 << (m + 149));
-  float z2n = as_float(as_int(z2) + m2);
+  float z2s = z2 * __clc_as_float(0x1 << (m + 149));
+  float z2n = __clc_as_float(__clc_as_int(z2) + m2);
   z2 = m <= -126 ? z2s : z2n;
 
-  z2 = return_inf ? as_float(PINFBITPATT_SP32) : z2;
+  z2 = return_inf ? __clc_as_float(PINFBITPATT_SP32) : z2;
   z2 = return_zero ? 0.0f : z2;
   z2 = return_nan ? x : z2;
   return z2;
@@ -115,7 +116,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_exp10(double x) {
   // ln(10)
   const double R_LN10 = 0x1.26bb1bbb55516p+1;
 
-  int n = convert_int(x * R_64_BY_LOG10_2);
+  int n = __clc_convert_int(x * R_64_BY_LOG10_2);
 
   double dn = (double)n;
 
@@ -144,15 +145,15 @@ _CLC_DEF _CLC_OVERLOAD double __clc_exp10(double x) {
 
   int n1 = m >> 2;
   int n2 = m - n1;
-  double z3 = z2 * as_double(((long)n1 + 1023) << 52);
-  z3 *= as_double(((long)n2 + 1023) << 52);
+  double z3 = z2 * __clc_as_double(((long)n1 + 1023) << 52);
+  z3 *= __clc_as_double(((long)n2 + 1023) << 52);
 
   z2 = ldexp(z2, m);
   z2 = small_value ? z3 : z2;
 
   z2 = __clc_isnan(x) ? x : z2;
 
-  z2 = x > X_MAX ? as_double(PINFBITPATT_DP64) : z2;
+  z2 = x > X_MAX ? __clc_as_double(PINFBITPATT_DP64) : z2;
   z2 = x < X_MIN ? 0.0 : z2;
 
   return z2;

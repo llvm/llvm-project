@@ -400,6 +400,16 @@ def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
    let ParserMatchClass = UImm6Operand;
 }
 
+def CmpBranchUImm6Operand_32b
+    : ComplexPattern<i32, 1, "SelectCmpBranchUImm6Operand", [imm]> {
+  let WantsParent = true;
+}
+
+def CmpBranchUImm6Operand_64b
+    : ComplexPattern<i64, 1, "SelectCmpBranchUImm6Operand", [imm]> {
+  let WantsParent = true;
+}
+
 def UImm6Plus1Operand : AsmOperandClass {
   let Name = "UImm6P1";
   let DiagnosticType = "InvalidImm1_64";
@@ -13225,6 +13235,21 @@ multiclass CmpBranchRegisterAlias<string mnemonic, string insn> {
   def : InstAlias<mnemonic # "\t$Rt, $Rm, $target",
                  (!cast<Instruction>(insn # "Xrr") GPR64:$Rm, GPR64:$Rt, am_brcmpcond:$target), 0>;
 }
+
+class CmpBranchRegisterPseudo<RegisterClass regtype>
+  : Pseudo<(outs), (ins ccode:$Cond, regtype:$Rt, regtype:$Rm, am_brcmpcond:$Target), []>,
+    Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
+class CmpBranchImmediatePseudo<RegisterClass regtype, ImmLeaf imtype>
+  : Pseudo<(outs), (ins ccode:$Cond, regtype:$Rt, imtype:$Imm, am_brcmpcond:$Target), []>,
+    Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
 //----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
 def : TokenAlias<".4B", ".4b">;  // Add dot product
