@@ -1360,7 +1360,10 @@ struct KernelRunRecordTy {
 
     if (IdxCUMulti >= CUMultiplierCandidate.size()) {
       // No more element to search.
+      // Max run counter to stop further runs.
       // Return current optimal launch parameters.
+      TuningData[KernelName].RunCounters = RunLimiter + 1;
+
       return {TuningData[KernelName].MinEntry.NumTeams,
               TuningData[KernelName].MinEntry.NumThreads};
     }
@@ -1374,7 +1377,11 @@ struct KernelRunRecordTy {
     IdxThread++;
     TuningData[KernelName].IdxThread = IdxThread;
 
-    if (IdxThread >= ThreadCandidate.size()) {
+    uint16_t ConstWGSize = GenericDevice.getDefaultNumThreads();
+
+    // Threads should be smaller than ConstWGSize.
+    if (IdxThread >= ThreadCandidate.size() ||
+        ThreadCandidate[IdxThread] >= ConstWGSize) {
       TuningData[KernelName].IdxThread = 0;
       TuningData[KernelName].IdxCUMultiplier++;
     }
