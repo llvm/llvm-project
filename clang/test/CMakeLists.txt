@@ -91,6 +91,12 @@ list(APPEND CLANG_TEST_DEPS
   hmaptool
   )
 
+if(CLANG_ENABLE_CIR)
+  list(APPEND CLANG_TEST_DEPS
+    cir-opt
+    )
+endif()
+
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check
