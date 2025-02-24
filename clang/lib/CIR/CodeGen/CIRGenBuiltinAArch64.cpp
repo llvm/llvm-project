@@ -3828,7 +3828,15 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     llvm_unreachable("NEON::BI__builtin_neon_vqdmlslh_s16 NYI");
   }
   case NEON::BI__builtin_neon_vqshlud_n_s64: {
-    llvm_unreachable("NEON::BI__builtin_neon_vqshlud_n_s64 NYI");
+    const cir::IntType IntType = builder.getSInt64Ty();
+    Ops.push_back(emitScalarExpr(E->getArg(1)));
+    std::optional<llvm::APSInt> APSInt =
+        E->getArg(1)->getIntegerConstantExpr(getContext());
+    assert(APSInt && "Expected argument to be a constant");
+    Ops[1] = builder.getSInt64(APSInt->getZExtValue(), getLoc(E->getExprLoc()));
+    const StringRef Intrinsic = "aarch64.neon.sqshlu";
+    return emitNeonCall(builder, {IntType, IntType}, Ops, Intrinsic, IntType,
+                        getLoc(E->getExprLoc()));
   }
   case NEON::BI__builtin_neon_vqshld_n_u64:
   case NEON::BI__builtin_neon_vqshld_n_s64: {

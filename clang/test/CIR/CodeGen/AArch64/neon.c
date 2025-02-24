@@ -15680,12 +15680,16 @@ uint64_t test_vqshld_n_u64(uint64_t a) {
 //   return (int32_t)vqshlus_n_s32(a, 31);
 // }
 
-// NYI-LABEL: @test_vqshlud_n_s64(
-// NYI:   [[VQSHLU_N:%.*]] = call i64 @llvm.aarch64.neon.sqshlu.i64(i64 %a, i64 63)
-// NYI:   ret i64 [[VQSHLU_N]]
-// int64_t test_vqshlud_n_s64(int64_t a) {
-//   return (int64_t)vqshlud_n_s64(a, 63);
-// }
+int64_t test_vqshlud_n_s64(int64_t a) {
+  return (int64_t)vqshlud_n_s64(a, 63);
+
+  // CIR-LABEL: vqshlud_n_s64
+  // CIR: [[TMP0:%.*]] = cir.llvm.intrinsic "aarch64.neon.sqshlu" {{.*}}, {{.*}} : (!s64i, !s64i) -> !s64i
+
+  // LLVM-LABEL: @test_vqshlud_n_s64(
+  // LLVM: [[VQSHLU_N:%.*]] = call i64 @llvm.aarch64.neon.sqshlu.i64(i64 %0, i64 63)
+  // LLVM: ret i64 [[VQSHLU_N]]
+}
 
 // NYI-LABEL: @test_vqshlu_n_s64(
 // NYI:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
