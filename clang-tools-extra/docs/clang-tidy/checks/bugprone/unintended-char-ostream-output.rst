@@ -27,7 +27,7 @@ intent, by default, it will cast to ``unsigned int`` for ``unsigned char`` and
   std::cout << static_cast<int>(v); // when v is signed char
 
 To avoid lengthy cast statements, add prefix ``+`` to the variable can also
-suppress warnings.
+suppress warnings because unary expression will promote the value to an ``int``.
 
 .. code-block:: c++
 
