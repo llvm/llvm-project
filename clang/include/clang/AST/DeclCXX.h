@@ -127,33 +127,6 @@ public:
   static bool classofKind(Kind K) { return K == AccessSpec; }
 };
 
-enum class RelocatableOrReplaceableClassSpecifierKind {
-  Relocatable,
-  Replaceable
-};
-
-template <RelocatableOrReplaceableClassSpecifierKind MK>
-class BasicRelocatableOrReplaceableClassSpecifier {
-public:
-  BasicRelocatableOrReplaceableClassSpecifier() = default;
-  BasicRelocatableOrReplaceableClassSpecifier(SourceLocation Begin)
-      : Loc(Begin) {}
-  void Set(SourceLocation Begin) { Loc = Begin; }
-
-  bool isSet() const { return !Loc.isInvalid(); }
-
-  SourceLocation getLocation() const { return Loc; }
-
-private:
-  SourceLocation Loc;
-};
-
-using TriviallyRelocatableSpecifier =
-    BasicRelocatableOrReplaceableClassSpecifier<
-        RelocatableOrReplaceableClassSpecifierKind::Relocatable>;
-using ReplaceableSpecifier = BasicRelocatableOrReplaceableClassSpecifier<
-    RelocatableOrReplaceableClassSpecifierKind::Replaceable>;
-
 /// Represents a base class of a C++ class.
 ///
 /// Each CXXBaseSpecifier represents a single, direct base class (or
@@ -375,10 +348,6 @@ private:
     ///
     /// This is actually currently stored in reverse order.
     LazyDeclPtr FirstFriend;
-
-    TriviallyRelocatableSpecifier TriviallyRelocatableSpecifier;
-
-    ReplaceableSpecifier ReplaceableSpecifier;
 
     DefinitionData(CXXRecordDecl *D);
 
@@ -1528,14 +1497,6 @@ public:
     return isLiteral() && data().StructuralIfLiteral;
   }
 
-  TriviallyRelocatableSpecifier getTriviallyRelocatableSpecifier() const {
-    return data().TriviallyRelocatableSpecifier;
-  }
-
-  ReplaceableSpecifier getReplaceableSpecifier() const {
-    return data().ReplaceableSpecifier;
-  }
-
   bool isTriviallyRelocatable() const { return data().IsTriviallyRelocatable; }
 
   void setIsTriviallyRelocatable(bool Set) {
@@ -1975,13 +1936,6 @@ public:
     return K >= firstCXXRecord && K <= lastCXXRecord;
   }
   void markAbstract() { data().Abstract = true; }
-
-  void setTriviallyRelocatableSpecifier(TriviallyRelocatableSpecifier TRS) {
-    data().TriviallyRelocatableSpecifier = TRS;
-  }
-  void setReplaceableSpecifier(ReplaceableSpecifier MRS) {
-    data().ReplaceableSpecifier = MRS;
-  }
 };
 
 /// Store information needed for an explicit specifier.
