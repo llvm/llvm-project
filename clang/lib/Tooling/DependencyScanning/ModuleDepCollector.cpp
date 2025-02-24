@@ -492,8 +492,23 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   auto &FSOpts = const_cast<FileSystemOptions &>(CI.getFileSystemOpts());
   if (CWD && !IgnoreCWD)
     HashBuilder.add(*CWD);
-  else
+  else {
     FSOpts.WorkingDir.clear();
+    auto &CGOpts = const_cast<CodeGenOptions &>(CI.getCodeGenOpts());
+    if (CGOpts.DwarfVersion && CWD) {
+      // It is necessary to explicitly set the DebugCompilationDir
+      // to a common directory (e.g. root) if IgnoreCWD is true.
+      // When IgnoreCWD is true, the module's content should not depend
+      // on the current working directory. However, if dwarf information
+      // is needed (when CGOpts.DwarfVersion is non-zero), and if
+      // CGOpts.DebugCompilationDir is not explicitly set,
+      // the current working directory will be automatically embedded
+      // in the dwarf information in the pcm, contradicting the assumption
+      // that it is safe to ignore the CWD. Thus in such cases,
+      // CGOpts.DebugCompilationDir is explicitly set to a common directory.
+      CGOpts.DebugCompilationDir = llvm::sys::path::root_path(*CWD);
+    }
+  }
 
   // Hash the BuildInvocation without any input files.
   SmallString<0> ArgVec;
