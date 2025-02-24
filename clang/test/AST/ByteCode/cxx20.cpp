@@ -626,6 +626,8 @@ namespace ThreeWayCmp {
   constexpr int k = (1 <=> 1, 0); // both-warning {{comparison result unused}}
   static_assert(k== 0, "");
 
+  static_assert(__builtin_nanf("") <=> __builtin_nanf("") == -127, "");
+
   /// Pointers.
   constexpr int a[] = {1,2,3};
   constexpr int b[] = {1,2,3};

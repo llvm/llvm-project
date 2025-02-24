@@ -401,6 +401,7 @@ template <> struct MappingTraits<FormatStyle::KeepEmptyLinesStyle> {
 
 template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
   static void enumeration(IO &IO, FormatStyle::LanguageKind &Value) {
+    IO.enumCase(Value, "C", FormatStyle::LK_C);
     IO.enumCase(Value, "Cpp", FormatStyle::LK_Cpp);
     IO.enumCase(Value, "Java", FormatStyle::LK_Java);
     IO.enumCase(Value, "JavaScript", FormatStyle::LK_JavaScript);
@@ -3957,7 +3958,12 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
 
   LangOpts.LineComment = 1;
-  LangOpts.CXXOperatorNames = Style.isCpp();
+
+  const auto Language = Style.Language;
+  LangOpts.C17 = Language == FormatStyle::LK_C;
+  LangOpts.CXXOperatorNames =
+      Language == FormatStyle::LK_Cpp || Language == FormatStyle::LK_ObjC;
+
   LangOpts.Bool = 1;
   LangOpts.ObjC = 1;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
@@ -3982,6 +3988,8 @@ const char *StyleOptionHelpDescription =
     "   --style=\"{BasedOnStyle: llvm, IndentWidth: 8}\"";
 
 static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
+  if (FileName.ends_with(".c"))
+    return FormatStyle::LK_C;
   if (FileName.ends_with(".java"))
     return FormatStyle::LK_Java;
   if (FileName.ends_with_insensitive(".js") ||
@@ -4021,6 +4029,35 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
   return FormatStyle::LK_Cpp;
 }
 
+static FormatStyle::LanguageKind getLanguageByComment(const Environment &Env) {
+  const auto ID = Env.getFileID();
+  const auto &SourceMgr = Env.getSourceManager();
+
+  LangOptions LangOpts;
+  LangOpts.CPlusPlus = 1;
+  LangOpts.LineComment = 1;
+
+  Lexer Lex(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts);
+  Lex.SetCommentRetentionState(true);
+
+  for (Token Tok; !Lex.LexFromRawLexer(Tok) && Tok.is(tok::comment);) {
+    auto Text = StringRef(SourceMgr.getCharacterData(Tok.getLocation()),
+                          Tok.getLength());
+    if (!Text.consume_front("// clang-format Language:"))
+      continue;
+
+    Text = Text.trim();
+    if (Text == "C")
+      return FormatStyle::LK_C;
+    if (Text == "Cpp")
+      return FormatStyle::LK_Cpp;
+    if (Text == "ObjC")
+      return FormatStyle::LK_ObjC;
+  }
+
+  return FormatStyle::LK_None;
+}
+
 FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
   const auto GuessedLanguage = getLanguageByFileName(FileName);
   if (GuessedLanguage == FormatStyle::LK_Cpp) {
@@ -4030,6 +4067,10 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
     if (!Code.empty() && (Extension.empty() || Extension == ".h")) {
       auto NonEmptyFileName = FileName.empty() ? "guess.h" : FileName;
       Environment Env(Code, NonEmptyFileName, /*Ranges=*/{});
+      if (const auto Language = getLanguageByComment(Env);
+          Language != FormatStyle::LK_None) {
+        return Language;
+      }
       ObjCHeaderStyleGuesser Guesser(Env, getLLVMStyle());
       Guesser.process();
       if (Guesser.isObjC())

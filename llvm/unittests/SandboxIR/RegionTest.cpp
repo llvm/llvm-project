@@ -386,6 +386,49 @@ define void @foo(i8 %v) {
                      ".*already.*");
 }
 
+// Check that Aux automatically drops instructions that get deleted.
+TEST_F(RegionTest, AuxDeleteInstr) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v) {
+  %Add0 = add i8 %v, 0, !sandboxvec !0, !sandboxaux !1
+  %Add1 = add i8 %v, 1, !sandboxvec !0, !sandboxaux !2
+  %Add2 = add i8 %v, 2, !sandboxvec !0, !sandboxaux !3
+  %Add3 = add i8 %v, 2, !sandboxvec !0, !sandboxaux !4
+  ret void
+}
+
+!0 = distinct !{!"sandboxregion"}
+!1 = !{i32 0}
+!2 = !{i32 1}
+!3 = !{i32 2}
+!4 = !{i32 3}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = &*It++;
+  auto *Add1 = &*It++;
+  auto *Add2 = &*It++;
+  auto *Add3 = &*It++;
+  SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
+      sandboxir::Region::createRegionsFromMD(*F, *TTI);
+  auto &R = *Regions[0];
+  EXPECT_THAT(R.getAux(), testing::ElementsAre(Add0, Add1, Add2, Add3));
+  // Now delete Add1 and check that Aux contains nullptr instead of Add1.
+  Add2->eraseFromParent();
+  EXPECT_THAT(R.getAux(), testing::ElementsAre(Add0, Add1, Add3));
+  {
+    // Check that metadata have also been updated.
+    // But first drop Add3 to create a legal Aux vector with no gaps.
+    Add3->eraseFromParent();
+    SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
+        sandboxir::Region::createRegionsFromMD(*F, *TTI);
+    EXPECT_THAT(Regions[0]->getAux(), testing::ElementsAre(Add0, Add1));
+  }
+}
+
 TEST_F(RegionTest, AuxRoundTrip) {
   parseIR(C, R"IR(
 define i8 @foo(i8 %v0, i8 %v1) {

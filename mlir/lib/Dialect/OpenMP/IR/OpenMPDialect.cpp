@@ -1631,7 +1631,13 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
 
         to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
       }
-    } else {
+
+      if (mapInfoOp.getMapperId() &&
+          !SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+              mapInfoOp, mapInfoOp.getMapperIdAttr())) {
+        return emitError(op->getLoc(), "invalid mapper id");
+      }
+    } else if (!isa<DeclareMapperInfoOp>(op)) {
       emitError(op->getLoc(), "map argument is not a map entry operation");
     }
   }
@@ -2428,6 +2434,22 @@ LogicalResult DistributeOp::verifyRegions() {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
   }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareMapperOp / DeclareMapperInfoOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DeclareMapperInfoOp::verify() {
+  return verifyMapClause(*this, getMapVars());
+}
+
+LogicalResult DeclareMapperOp::verifyRegions() {
+  if (!llvm::isa_and_present<DeclareMapperInfoOp>(
+          getRegion().getBlocks().front().getTerminator()))
+    return emitOpError() << "expected terminator to be a DeclareMapperInfoOp";
 
   return success();
 }

@@ -8,9 +8,15 @@
 
 macro(enable_cuda_compilation name files)
   if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+    if (FLANG_RT_ENABLE_SHARED)
+      message(FATAL_ERROR
+        "FLANG_RT_ENABLE_SHARED is not supported for CUDA offload build of Flang-RT"
+        )
+    endif()
+
     enable_language(CUDA)
 
-    set_target_properties(${name}
+    set_target_properties(${name}.static
         PROPERTIES
           CUDA_SEPARABLE_COMPILATION ON
       )
@@ -54,7 +60,7 @@ macro(enable_cuda_compilation name files)
     # When using libcudacxx headers files, we have to use them
     # for all files of Flang-RT.
     if (EXISTS "${FLANG_RT_LIBCUDACXX_PATH}/include")
-      foreach (tgt IN ITEMS "${name}" "obj.${name}PTX")
+      foreach (tgt IN ITEMS "${name}.static" "obj.${name}PTX")
         target_include_directories(${tgt} AFTER PRIVATE "${FLANG_RT_LIBCUDACXX_PATH}/include")
         target_compile_definitions(${tgt} PRIVATE RT_USE_LIBCUDACXX=1)
       endforeach ()
@@ -65,6 +71,12 @@ endmacro()
 macro(enable_omp_offload_compilation name files)
   if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
     # OpenMP offload build only works with Clang compiler currently.
+
+    if (FLANG_RT_ENABLE_SHARED)
+      message(FATAL_ERROR
+        "FLANG_RT_ENABLE_SHARED is not supported for OpenMP offload build of Flang-RT"
+        )
+    endif()
 
     if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND
         "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
@@ -84,7 +96,7 @@ macro(enable_omp_offload_compilation name files)
       set_source_files_properties(${files} PROPERTIES COMPILE_OPTIONS
         "${OMP_COMPILE_OPTIONS}"
         )
-      target_link_options(${name} PUBLIC ${OMP_COMPILE_OPTIONS})
+      target_link_options(${name}.static PUBLIC ${OMP_COMPILE_OPTIONS})
 
       # Enable "declare target" in the source code.
       set_source_files_properties(${files}

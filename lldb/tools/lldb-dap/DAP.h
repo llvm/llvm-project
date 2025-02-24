@@ -12,6 +12,7 @@
 #include "DAPForward.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
+#include "Handler/RequestHandler.h"
 #include "IOStream.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -140,6 +142,7 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 };
 
 struct DAP {
+  std::string name;
   llvm::StringRef debug_adaptor_path;
   std::ofstream *log;
   InputStream input;
@@ -184,6 +187,7 @@ struct DAP {
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
   std::map<std::string, RequestCallback, std::less<>> request_handlers;
+  llvm::StringMap<std::unique_ptr<RequestHandler>> new_request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -204,8 +208,9 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
-      StreamDescriptor input, StreamDescriptor output);
+  DAP(std::string name, llvm::StringRef path, std::ofstream *log,
+      StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+      std::vector<std::string> pre_init_commands);
   ~DAP();
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
@@ -216,7 +221,8 @@ struct DAP {
   ///
   /// Errors in this operation will be printed to the log file and the IDE's
   /// console output as well.
-  llvm::Error ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr);
+  llvm::Error ConfigureIO(std::FILE *overrideOut = nullptr,
+                          std::FILE *overrideErr = nullptr);
 
   /// Stop the redirected IO threads and associated pipes.
   void StopIO();
@@ -304,6 +310,15 @@ struct DAP {
   PacketStatus GetNextObject(llvm::json::Object &object);
   bool HandleObject(const llvm::json::Object &object);
 
+  /// Disconnect the DAP session.
+  lldb::SBError Disconnect();
+
+  /// Disconnect the DAP session and optionally terminate the debuggee.
+  lldb::SBError Disconnect(bool terminateDebuggee);
+
+  /// Send a "terminated" event to indicate the process is done being debugged.
+  void SendTerminatedEvent();
+
   llvm::Error Loop();
 
   /// Send a Debug Adapter Protocol reverse request to the IDE.
@@ -329,6 +344,12 @@ struct DAP {
   ///     The callback to execute when the given request is triggered by the
   ///     IDE.
   void RegisterRequestCallback(std::string request, RequestCallback callback);
+
+  /// Registers a request handler.
+  template <typename Handler> void RegisterRequest() {
+    new_request_handlers[Handler::getCommand()] =
+        std::make_unique<Handler>(*this);
+  }
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }

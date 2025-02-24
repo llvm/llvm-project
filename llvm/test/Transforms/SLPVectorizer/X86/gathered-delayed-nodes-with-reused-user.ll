@@ -33,13 +33,24 @@ define i64 @foo() {
 ; FORCED:       bb3:
 ; FORCED-NEXT:    [[PHI5:%.*]] = phi i64 [ 0, [[BB:%.*]] ], [ 0, [[BB3]] ]
 ; FORCED-NEXT:    [[TMP1:%.*]] = phi <2 x i64> [ zeroinitializer, [[BB]] ], [ [[TMP7:%.*]], [[BB3]] ]
+; FORCED-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> <i64 poison, i64 0>, <2 x i32> <i32 0, i32 3>
 ; FORCED-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[PHI5]], i32 0
+<<<<<<< HEAD
 ; FORCED-NEXT:    [[TMP5]] = add <2 x i64> [[TMP1]], [[TMP2]]
 ; FORCED-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> <i64 poison, i64 0>, <2 x i32> <i32 0, i32 3>
 ; FORCED-NEXT:    [[TMP7]] = add <2 x i64> [[TMP6]], [[TMP2]]
 ; FORCED-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 [[ADD7]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
 ; FORCED-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[TMP8]], 0
+=======
+; FORCED-NEXT:    [[TMP7]] = add <2 x i64> [[TMP6]], [[TMP2]]
+; FORCED-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[TMP1]], [[TMP2]]
+; FORCED-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP1]], [[TMP2]]
+; FORCED-NEXT:    [[TMP5]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; FORCED-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 [[TMP8]]
+; FORCED-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
+; FORCED-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[TMP9]], 0
+>>>>>>> upstream/main
 ; FORCED-NEXT:    br i1 false, label [[BB3]], label [[BB1:%.*]]
 ;
 bb:
