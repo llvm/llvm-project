@@ -1,5 +1,4 @@
 ! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
-
 ! Test real add on real kinds.
 
 ! CHECK-LABEL: real2

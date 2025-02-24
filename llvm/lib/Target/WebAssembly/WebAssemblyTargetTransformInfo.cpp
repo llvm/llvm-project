@@ -196,6 +196,53 @@ WebAssemblyTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   return Cost;
 }
 
+InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend,
+    std::optional<unsigned> BinOp) const {
+  InstructionCost Invalid = InstructionCost::getInvalid();
+  if (!VF.isFixed() || !ST->hasSIMD128())
+    return Invalid;
+
+  InstructionCost Cost(TTI::TCC_Basic);
+
+  // Possible options:
+  // - i16x8.extadd_pairwise_i8x16_sx
+  // - i32x4.extadd_pairwise_i16x8_sx
+  // - i32x4.dot_i16x8_s
+  // Only try to support dot, for now.
+
+  if (Opcode != Instruction::Add)
+    return Invalid;
+
+  if (!BinOp || *BinOp != Instruction::Mul)
+    return Invalid;
+
+  if (InputTypeA != InputTypeB)
+    return Invalid;
+
+  if (OpAExtend != OpBExtend)
+    return Invalid;
+
+  EVT InputEVT = EVT::getEVT(InputTypeA);
+  EVT AccumEVT = EVT::getEVT(AccumType);
+
+  // TODO: Add i64 accumulator.
+  if (AccumEVT != MVT::i32)
+    return Invalid;
+
+  // Signed inputs can lower to dot
+  if (InputEVT == MVT::i16 && VF.getFixedValue() == 8)
+    return OpAExtend == TTI::PR_SignExtend ? Cost : Cost * 2;
+
+  // Double the size of the lowered sequence.
+  if (InputEVT == MVT::i8 && VF.getFixedValue() == 16)
+    return OpAExtend == TTI::PR_SignExtend ? Cost * 2 : Cost * 4;
+
+  return Invalid;
+}
+
 TTI::ReductionShuffle WebAssemblyTTIImpl::getPreferredExpandedReductionShuffle(
     const IntrinsicInst *II) const {
 

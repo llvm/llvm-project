@@ -23,9 +23,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
   vec.push_back(true);
   vec.push_back(false);
-  Ref true_ref = vec[0];
+  Ref true_ref  = vec[0];
   Ref false_ref = vec[1];
-  bool b = true_ref;
+  bool b        = true_ref;
   assert(b);
   assert(true_ref);
   assert(!false_ref);
@@ -36,7 +36,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
-    static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

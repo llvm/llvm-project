@@ -135,9 +135,6 @@ FLAGS_ENUM(LaunchFlags){
 /// Thread Run Modes.
 enum RunMode { eOnlyThisThread, eAllThreads, eOnlyDuringStepping };
 
-/// Execution directions
-enum RunDirection { eRunForward, eRunReverse };
-
 /// Byte ordering definitions.
 enum ByteOrder {
   eByteOrderInvalid = 0,
@@ -257,9 +254,6 @@ enum StopReason {
   eStopReasonVFork,
   eStopReasonVForkDone,
   eStopReasonInterrupt, ///< Thread requested interrupt
-  // Indicates that execution stopped because the debugger backend relies
-  // on recorded data and we reached the end of that data.
-  eStopReasonHistoryBoundary,
 };
 
 /// Command Return Status Types.
@@ -1372,6 +1366,15 @@ enum Severity {
   eSeverityError,
   eSeverityWarning,
   eSeverityInfo, // Equivalent to Remark used in clang.
+};
+
+/// Callback return value, indicating whether it handled printing the
+/// CommandReturnObject or deferred doing so to the CommandInterpreter.
+enum CommandReturnObjectCallbackResult {
+  /// The callback deferred printing the command return object.
+  eCommandReturnObjectPrintCallbackSkipped = 0,
+  /// The callback handled printing the command return object.
+  eCommandReturnObjectPrintCallbackHandled = 1,
 };
 
 } // namespace lldb

@@ -169,8 +169,6 @@ public:
   }
 };
 
-std::chrono::seconds ResumeTimeout() { return std::chrono::seconds(5); }
-
 } // namespace
 
 static PluginProperties &GetGlobalPluginProperties() {
@@ -1182,16 +1180,10 @@ Status ProcessGDBRemote::WillResume() {
   return Status();
 }
 
-bool ProcessGDBRemote::SupportsReverseDirection() {
-  return m_gdb_comm.GetReverseStepSupported() ||
-         m_gdb_comm.GetReverseContinueSupported();
-}
-
-Status ProcessGDBRemote::DoResume(RunDirection direction) {
+Status ProcessGDBRemote::DoResume() {
   Status error;
   Log *log = GetLog(GDBRLog::Process);
-  LLDB_LOGF(log, "ProcessGDBRemote::Resume(%s)",
-            direction == RunDirection::eRunForward ? "" : "reverse");
+  LLDB_LOGF(log, "ProcessGDBRemote::Resume()");
 
   ListenerSP listener_sp(
       Listener::MakeListener("gdb-remote.resume-packet-sent"));
@@ -1205,24 +1197,12 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
 
     StreamString continue_packet;
     bool continue_packet_error = false;
-    // Number of threads continuing with "c", i.e. continuing without a signal
-    // to deliver.
-    const size_t num_continue_c_tids = m_continue_c_tids.size();
-    // Number of threads continuing with "C", i.e. continuing with a signal to
-    // deliver.
-    const size_t num_continue_C_tids = m_continue_C_tids.size();
-    // Number of threads continuing with "s", i.e. single-stepping.
-    const size_t num_continue_s_tids = m_continue_s_tids.size();
-    // Number of threads continuing with "S", i.e. single-stepping with a signal
-    // to deliver.
-    const size_t num_continue_S_tids = m_continue_S_tids.size();
-    if (direction == RunDirection::eRunForward &&
-        m_gdb_comm.HasAnyVContSupport()) {
+    if (m_gdb_comm.HasAnyVContSupport()) {
       std::string pid_prefix;
       if (m_gdb_comm.GetMultiprocessSupported())
         pid_prefix = llvm::formatv("p{0:x-}.", GetID());
 
-      if (num_continue_c_tids == num_threads ||
+      if (m_continue_c_tids.size() == num_threads ||
           (m_continue_c_tids.empty() && m_continue_C_tids.empty() &&
            m_continue_s_tids.empty() && m_continue_S_tids.empty())) {
         // All threads are continuing
@@ -1285,10 +1265,14 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
     } else
       continue_packet_error = true;
 
-    if (direction == RunDirection::eRunForward && continue_packet_error) {
+    if (continue_packet_error) {
       // Either no vCont support, or we tried to use part of the vCont packet
       // that wasn't supported by the remote GDB server. We need to try and
-      // make a simple packet that can do our continue.
+      // make a simple packet that can do our continue
+      const size_t num_continue_c_tids = m_continue_c_tids.size();
+      const size_t num_continue_C_tids = m_continue_C_tids.size();
+      const size_t num_continue_s_tids = m_continue_s_tids.size();
+      const size_t num_continue_S_tids = m_continue_S_tids.size();
       if (num_continue_c_tids > 0) {
         if (num_continue_c_tids == num_threads) {
           // All threads are resuming...
@@ -1379,59 +1363,9 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
       }
     }
 
-    if (direction == RunDirection::eRunReverse) {
-      if (num_continue_s_tids > 0 || num_continue_S_tids > 0) {
-        if (!m_gdb_comm.GetReverseStepSupported()) {
-          LLDB_LOGF(log, "ProcessGDBRemote::DoResume: target does not "
-                         "support reverse-stepping");
-          return Status::FromErrorString(
-              "target does not support reverse-stepping");
-        }
-
-        if (num_continue_S_tids > 0) {
-          LLDB_LOGF(
-              log,
-              "ProcessGDBRemote::DoResume: Signals not supported in reverse");
-          return Status::FromErrorString(
-              "can't deliver signals while running in reverse");
-        }
-
-        if (num_continue_s_tids > 1) {
-          LLDB_LOGF(log, "ProcessGDBRemote::DoResume: can't step multiple "
-                         "threads in reverse");
-          return Status::FromErrorString(
-              "can't step multiple threads while reverse-stepping");
-        }
-
-        m_gdb_comm.SetCurrentThreadForRun(m_continue_s_tids.front());
-        continue_packet.PutCString("bs");
-      } else {
-        if (!m_gdb_comm.GetReverseContinueSupported()) {
-          LLDB_LOGF(log, "ProcessGDBRemote::DoResume: target does not "
-                         "support reverse-continue");
-          return Status::FromErrorString(
-              "target does not support reverse-continue");
-        }
-
-        if (num_continue_C_tids > 0) {
-          LLDB_LOGF(
-              log,
-              "ProcessGDBRemote::DoResume: Signals not supported in reverse");
-          return Status::FromErrorString(
-              "can't deliver signals while running in reverse");
-        }
-
-        // All threads continue whether requested or not ---
-        // we can't change how threads ran in the past.
-        continue_packet.PutCString("bc");
-      }
-
-      continue_packet_error = false;
-    }
-
     if (continue_packet_error) {
-      return Status::FromErrorString(
-          "can't make continue packet for this resume");
+      error =
+          Status::FromErrorString("can't make continue packet for this resume");
     } else {
       EventSP event_sp;
       if (!m_async_thread.IsJoinable()) {
@@ -1446,7 +1380,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
           std::make_shared<EventDataBytes>(continue_packet.GetString());
       m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
 
-      if (!listener_sp->GetEvent(event_sp, ResumeTimeout())) {
+      if (!listener_sp->GetEvent(event_sp, std::chrono::seconds(5))) {
         error = Status::FromErrorString("Resume timed out.");
         LLDB_LOGF(log, "ProcessGDBRemote::DoResume: Resume timed out.");
       } else if (event_sp->BroadcasterIs(&m_async_broadcaster)) {
@@ -1666,29 +1600,8 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
     // If we have "jstopinfo" then we have stop descriptions for all threads
     // that have stop reasons, and if there is no entry for a thread, then it
     // has no stop reason.
-    if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
-      // If a thread is stopped at a breakpoint site, set that as the stop
-      // reason even if it hasn't executed the breakpoint instruction yet.
-      // We will silently step over the breakpoint when we resume execution
-      // and miss the fact that this thread hit the breakpoint.
-      const size_t num_thread_ids = m_thread_ids.size();
-      for (size_t i = 0; i < num_thread_ids; i++) {
-        if (m_thread_ids[i] == thread->GetID() && m_thread_pcs.size() > i) {
-          addr_t pc = m_thread_pcs[i];
-          lldb::BreakpointSiteSP bp_site_sp =
-              thread->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-          if (bp_site_sp) {
-            if (bp_site_sp->ValidForThisThread(*thread)) {
-              thread->SetStopInfo(
-                  StopInfo::CreateStopReasonWithBreakpointSiteID(
-                      *thread, bp_site_sp->GetID()));
-              return true;
-            }
-          }
-        }
-      }
+    if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp))
       thread->SetStopInfo(StopInfoSP());
-    }
     return true;
   }
 
@@ -1792,10 +1705,12 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   if (!thread_sp->StopInfoIsUpToDate()) {
     thread_sp->SetStopInfo(StopInfoSP());
-    // If there's a memory thread backed by this thread, we need to use it to
-    // calculate StopInfo.
-    if (ThreadSP memory_thread_sp = m_thread_list.GetBackingThread(thread_sp))
-      thread_sp = memory_thread_sp;
+
+    addr_t pc = thread_sp->GetRegisterContext()->GetPC();
+    BreakpointSiteSP bp_site_sp =
+        thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+    if (bp_site_sp && bp_site_sp->IsEnabled())
+      thread_sp->SetThreadStoppedAtUnexecutedBP(pc);
 
     if (exc_type != 0) {
       // For thread plan async interrupt, creating stop info on the
@@ -1823,26 +1738,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
       // to no reason.
       if (!reason.empty() && reason != "none") {
         if (reason == "trace") {
-          addr_t pc = thread_sp->GetRegisterContext()->GetPC();
-          lldb::BreakpointSiteSP bp_site_sp =
-              thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(
-                  pc);
-
-          // If the current pc is a breakpoint site then the StopInfo should be
-          // set to Breakpoint Otherwise, it will be set to Trace.
-          if (bp_site_sp && bp_site_sp->ValidForThisThread(*thread_sp)) {
-            thread_sp->SetStopInfo(
-                StopInfo::CreateStopReasonWithBreakpointSiteID(
-                    *thread_sp, bp_site_sp->GetID()));
-          } else
-            thread_sp->SetStopInfo(
-                StopInfo::CreateStopReasonToTrace(*thread_sp));
+          thread_sp->SetStopInfo(StopInfo::CreateStopReasonToTrace(*thread_sp));
           handled = true;
         } else if (reason == "breakpoint") {
-          addr_t pc = thread_sp->GetRegisterContext()->GetPC();
-          lldb::BreakpointSiteSP bp_site_sp =
-              thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(
-                  pc);
+          thread_sp->SetThreadHitBreakpointSite();
           if (bp_site_sp) {
             // If the breakpoint is for this thread, then we'll report the hit,
             // but if it is for another thread, we can just report no reason.
@@ -1929,10 +1828,6 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithException(
               *thread_sp, description.c_str()));
           handled = true;
-        } else if (reason == "history boundary") {
-          thread_sp->SetStopInfo(StopInfo::CreateStopReasonHistoryBoundary(
-              *thread_sp, description.c_str()));
-          handled = true;
         } else if (reason == "exec") {
           did_exec = true;
           thread_sp->SetStopInfo(
@@ -1962,39 +1857,41 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
               StopInfo::CreateStopReasonVForkDone(*thread_sp));
           handled = true;
         }
-      } else if (!signo) {
-        addr_t pc = thread_sp->GetRegisterContext()->GetPC();
-        lldb::BreakpointSiteSP bp_site_sp =
-            thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-
-        // If a thread is stopped at a breakpoint site, set that as the stop
-        // reason even if it hasn't executed the breakpoint instruction yet.
-        // We will silently step over the breakpoint when we resume execution
-        // and miss the fact that this thread hit the breakpoint.
-        if (bp_site_sp && bp_site_sp->ValidForThisThread(*thread_sp)) {
-          thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(
-              *thread_sp, bp_site_sp->GetID()));
-          handled = true;
-        }
       }
 
       if (!handled && signo && !did_exec) {
         if (signo == SIGTRAP) {
           // Currently we are going to assume SIGTRAP means we are either
           // hitting a breakpoint or hardware single stepping.
+
+          // We can't disambiguate between stepping-to-a-breakpointsite and
+          // hitting-a-breakpointsite.
+          //
+          // A user can instruction-step, and be stopped at a BreakpointSite.
+          // Or a user can be sitting at a BreakpointSite,
+          // instruction-step which hits the breakpoint and the pc does not
+          // advance.
+          //
+          // In both cases, we're at a BreakpointSite when stopped, and
+          // the resume state was eStateStepping.
+
+          // Assume if we're at a BreakpointSite, we hit it.
           handled = true;
           addr_t pc =
               thread_sp->GetRegisterContext()->GetPC() + m_breakpoint_pc_offset;
-          lldb::BreakpointSiteSP bp_site_sp =
+          BreakpointSiteSP bp_site_sp =
               thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(
                   pc);
 
+          // We can't know if we hit it or not. So if we are stopped at
+          // a BreakpointSite, assume we hit it, and should step past the
+          // breakpoint when we resume. This is contrary to how we handle
+          // BreakpointSites in any other location, but we can't know for
+          // sure what happened so it's a reasonable default.
           if (bp_site_sp) {
-            // If the breakpoint is for this thread, then we'll report the hit,
-            // but if it is for another thread, we can just report no reason.
-            // We don't need to worry about stepping over the breakpoint here,
-            // that will be taken care of when the thread resumes and notices
-            // that there's a breakpoint under the pc.
+            if (bp_site_sp->IsEnabled())
+              thread_sp->SetThreadHitBreakpointSite();
+
             if (bp_site_sp->ValidForThisThread(*thread_sp)) {
               if (m_breakpoint_pc_offset != 0)
                 thread_sp->GetRegisterContext()->SetPC(pc);
@@ -2008,8 +1905,6 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           } else {
             // If we were stepping then assume the stop was the result of the
             // trace.  If we were not stepping then report the SIGTRAP.
-            // FIXME: We are still missing the case where we single step over a
-            // trap instruction.
             if (thread_sp->GetTemporaryResumeState() == eStateStepping)
               thread_sp->SetStopInfo(
                   StopInfo::CreateStopReasonToTrace(*thread_sp));
@@ -2388,8 +2283,6 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         description = std::string(ostr.GetString());
       } else if (key.compare("swbreak") == 0 || key.compare("hwbreak") == 0) {
         reason = "breakpoint";
-      } else if (key.compare("replaylog") == 0) {
-        reason = "history boundary";
       } else if (key.compare("library") == 0) {
         auto error = LoadModules();
         if (error) {
@@ -5602,8 +5495,7 @@ public:
       if (process) {
         StreamSP output_stream_sp = result.GetImmediateOutputStream();
         if (!output_stream_sp)
-          output_stream_sp =
-              StreamSP(m_interpreter.GetDebugger().GetAsyncOutputStream());
+          output_stream_sp = m_interpreter.GetDebugger().GetAsyncOutputStream();
         result.SetImmediateOutputStream(output_stream_sp);
 
         const uint32_t num_packets =

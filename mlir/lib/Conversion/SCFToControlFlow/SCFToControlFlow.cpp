@@ -27,7 +27,7 @@
 #include "mlir/Transforms/Passes.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_SCFTOCONTROLFLOW
+#define GEN_PASS_DEF_SCFTOCONTROLFLOWPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -37,7 +37,7 @@ using namespace mlir::scf;
 namespace {
 
 struct SCFToControlFlowPass
-    : public impl::SCFToControlFlowBase<SCFToControlFlowPass> {
+    : public impl::SCFToControlFlowPassBase<SCFToControlFlowPass> {
   void runOnOperation() override;
 };
 
@@ -725,8 +725,4 @@ void SCFToControlFlowPass::runOnOperation() {
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<Pass> mlir::createConvertSCFToCFPass() {
-  return std::make_unique<SCFToControlFlowPass>();
 }

@@ -11,7 +11,7 @@ subroutine lastprivate_of_private(a)
   !$omp parallel private(a)
     ! CHECK: omp.parallel {
     !$omp parallel shared(a)
-    ! CHECK: omp.wsloop {
+    ! CHECK: omp.wsloop private({{.*}}) {
     !$omp do lastprivate(a)
     ! CHECK: omp.loop_nest
       do i=1,100

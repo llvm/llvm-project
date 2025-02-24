@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DebugTypeGenerator.h"
-#include "flang/Common/Version.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/CodeGen/CGOps.h"
@@ -23,6 +22,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Support/Version.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
@@ -183,14 +183,14 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
     return;
 
   // If this DeclareOp actually represents a global then treat it as such.
-  if (auto global = symbolTable->lookup<fir::GlobalOp>(declOp.getUniqName())) {
-    handleGlobalOp(global, fileAttr, scopeAttr, typeGen, symbolTable, declOp);
-    return;
+  mlir::Operation *defOp = declOp.getMemref().getDefiningOp();
+  if (defOp && llvm::isa<fir::AddrOfOp>(defOp)) {
+    if (auto global =
+            symbolTable->lookup<fir::GlobalOp>(declOp.getUniqName())) {
+      handleGlobalOp(global, fileAttr, scopeAttr, typeGen, symbolTable, declOp);
+      return;
+    }
   }
-
-  // Only accept local variables.
-  if (result.second.procs.empty())
-    return;
 
   // FIXME: There may be cases where an argument is processed a bit before
   // DeclareOp is generated. In that case, DeclareOp may point to an
@@ -503,11 +503,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-    // FIXME: We currently dont handle variables that are not in the entry
-    // blocks of the fuctions. These may be variable or arguments used in the
-    // OpenMP target regions.
-    if (&funcOp.front() == declOp->getBlock())
-      handleDeclareOp(declOp, fileAttr, spAttr, typeGen, symbolTable);
+    handleDeclareOp(declOp, fileAttr, spAttr, typeGen, symbolTable);
   });
   // commonBlockMap ensures that we don't create multiple DICommonBlockAttr of
   // the same name in one function. But it is ok (rather required) to create

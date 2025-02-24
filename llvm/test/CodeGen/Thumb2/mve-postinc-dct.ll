@@ -258,11 +258,11 @@ define void @DCT_mve3(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    @ Child Loop BB2_3 Depth 2
 ; CHECK-NEXT:    ldr r6, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    adds r0, r5, #2
 ; CHECK-NEXT:    adds r2, r5, #1
-; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r4, r10
 ; CHECK-NEXT:    vmov q2, q0
@@ -618,13 +618,13 @@ define void @DCT_mve5(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    adds r1, r0, #4
 ; CHECK-NEXT:    ldr r4, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    add.w r10, r0, #2
 ; CHECK-NEXT:    str r1, [sp, #28] @ 4-byte Spill
 ; CHECK-NEXT:    adds r1, r0, #3
+; CHECK-NEXT:    add.w r10, r0, #2
 ; CHECK-NEXT:    add.w r11, r0, #1
-; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    vmov q3, q1
 ; CHECK-NEXT:    vmov q2, q1
@@ -833,8 +833,8 @@ define void @DCT_mve6(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r11, r0, #2
-; CHECK-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    adds r4, r0, #1
+; CHECK-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    vmov q3, q1
 ; CHECK-NEXT:    vmov q4, q1
@@ -1068,8 +1068,8 @@ define void @DCT_mve7(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    adds r4, r0, #2
-; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r8, r0, #1
+; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    vmov q4, q2
 ; CHECK-NEXT:    vmov q5, q2
@@ -1347,11 +1347,11 @@ define void @DCT_mve8(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    adds r1, r0, #4
 ; CHECK-NEXT:    ldr.w r9, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    vmov.i32 q3, #0x0
-; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    adds r4, r0, #3
 ; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    adds r4, r0, #3
 ; CHECK-NEXT:    add.w r8, r0, #2
 ; CHECK-NEXT:    adds r1, r0, #1
+; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r12
 ; CHECK-NEXT:    vmov q5, q3
 ; CHECK-NEXT:    vmov q6, q3

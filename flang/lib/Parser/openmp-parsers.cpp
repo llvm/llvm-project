@@ -68,6 +68,8 @@ void OmpDirectiveNameParser::initTokens(NameWithId *table) const {
       [](auto &a, auto &b) { return a.first.size() > b.first.size(); });
 }
 
+// --- Modifier helpers -----------------------------------------------
+
 template <typename Clause, typename Separator> struct ModifierList {
   constexpr ModifierList(Separator sep) : sep_(sep) {}
   constexpr ModifierList(const ModifierList &) = default;
@@ -118,10 +120,8 @@ struct SpecificModifierParser {
   }
 };
 
-// OpenMP Clauses
+// --- Iterator helpers -----------------------------------------------
 
-// [5.0] 2.1.6 iterator-specifier -> type-declaration-stmt = subscript-triple |
-//                                   identifier = subscript-triple
 // [5.0:47:17-18] In an iterator-specifier, if the iterator-type is not
 // specified then the type of that iterator is default integer.
 // [5.0:49:14] The iterator-type must be an integer type.
@@ -153,8 +153,30 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
       makeEntityList(std::move(names)));
 }
 
-TYPE_PARSER(sourced(construct<OmpDirectiveSpecification>(
-    OmpDirectiveNameParser{}, maybe(indirect(Parser<OmpClauseList>{})))))
+// --- Parsers for arguments ------------------------------------------
+
+// At the moment these are only directive arguments. This is needed for
+// parsing directive-specification.
+
+TYPE_PARSER( //
+    construct<OmpLocator>(Parser<OmpObject>{}) ||
+    construct<OmpLocator>(Parser<FunctionReference>{}))
+
+TYPE_PARSER(sourced( //
+    construct<OmpArgument>(Parser<OmpMapperSpecifier>{}) ||
+    construct<OmpArgument>(Parser<OmpReductionSpecifier>{}) ||
+    construct<OmpArgument>(Parser<OmpLocator>{})))
+
+TYPE_PARSER(construct<OmpLocatorList>(nonemptyList(Parser<OmpLocator>{})))
+
+TYPE_PARSER( //
+    construct<OmpTypeSpecifier>(Parser<DeclarationTypeSpec>{}) ||
+    construct<OmpTypeSpecifier>(Parser<TypeSpec>{}))
+
+TYPE_PARSER(construct<OmpReductionSpecifier>( //
+    Parser<OmpReductionIdentifier>{},
+    ":"_tok >> nonemptyList(Parser<OmpTypeSpecifier>{}),
+    maybe(":"_tok >> Parser<OmpReductionCombiner>{})))
 
 // --- Parsers for context traits -------------------------------------
 
@@ -213,15 +235,11 @@ static constexpr auto propertyListParser(PropParser... pp) {
   // the entire list in each of the alternative property parsers. Otherwise,
   // the name parser could stop after "foo" in "(foo, bar(1))", without
   // allowing the next parser to give the list a try.
-  auto listOf{[](auto parser) { //
-    return nonemptySeparated(parser, ",");
-  }};
-
   using P = OmpTraitProperty;
   return maybe("(" >> //
       construct<OmpTraitSelector::Properties>(
           maybe(Parser<OmpTraitScore>{} / ":"),
-          (attempt(listOf(sourced(construct<P>(pp))) / ")") || ...)));
+          (attempt(nonemptyList(sourced(construct<P>(pp))) / ")") || ...)));
 }
 
 // Parser for OmpTraitSelector
@@ -309,7 +327,7 @@ TYPE_PARSER(sourced(construct<OmpTraitSetSelector>( //
 TYPE_PARSER(sourced(construct<OmpContextSelectorSpecification>(
     nonemptySeparated(Parser<OmpTraitSetSelector>{}, ","))))
 
-// Parser<OmpContextSelector> == Parser<traits::OmpContextSelectorSpecification>
+// Note: OmpContextSelector is a type alias.
 
 // --- Parsers for clause modifiers -----------------------------------
 
@@ -543,7 +561,7 @@ TYPE_PARSER(construct<OmpDefaultClause::DataSharingAttribute>(
 TYPE_PARSER(construct<OmpDefaultClause>(
     construct<OmpDefaultClause>(
         Parser<OmpDefaultClause::DataSharingAttribute>{}) ||
-    construct<OmpDefaultClause>(Parser<OmpDirectiveSpecification>{})))
+    construct<OmpDefaultClause>(indirect(Parser<OmpDirectiveSpecification>{}))))
 
 // 2.5 PROC_BIND (MASTER | CLOSE | PRIMARY | SPREAD)
 TYPE_PARSER(construct<OmpProcBindClause>(
@@ -713,11 +731,11 @@ TYPE_PARSER(construct<OmpMatchClause>(
     Parser<traits::OmpContextSelectorSpecification>{}))
 
 TYPE_PARSER(construct<OmpOtherwiseClause>(
-    maybe(sourced(Parser<OmpDirectiveSpecification>{}))))
+    maybe(indirect(sourced(Parser<OmpDirectiveSpecification>{})))))
 
 TYPE_PARSER(construct<OmpWhenClause>(
     maybe(nonemptyList(Parser<OmpWhenClause::Modifier>{}) / ":"),
-    maybe(sourced(Parser<OmpDirectiveSpecification>{}))))
+    maybe(indirect(sourced(Parser<OmpDirectiveSpecification>{})))))
 
 // OMP 5.2 12.6.1 grainsize([ prescriptiveness :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpGrainsizeClause>(
@@ -949,6 +967,13 @@ TYPE_PARSER(construct<OmpObjectList>(nonemptyList(Parser<OmpObject>{})))
 TYPE_PARSER(sourced(construct<OmpErrorDirective>(
     verbatim("ERROR"_tok), Parser<OmpClauseList>{})))
 
+// --- Parsers for directives and constructs --------------------------
+
+TYPE_PARSER(sourced(construct<OmpDirectiveSpecification>( //
+    OmpDirectiveNameParser{},
+    maybe(parenthesized(nonemptyList(Parser<OmpArgument>{}))),
+    maybe(Parser<OmpClauseList>{}))))
+
 TYPE_PARSER(sourced(construct<OmpNothingDirective>("NOTHING" >> ok)))
 
 TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
@@ -1139,9 +1164,7 @@ TYPE_PARSER(construct<OmpReductionInitializerClause>(
 // 2.16 Declare Reduction Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
     verbatim("DECLARE REDUCTION"_tok),
-    "(" >> Parser<OmpReductionIdentifier>{} / ":",
-    nonemptyList(Parser<DeclarationTypeSpec>{}) / ":",
-    Parser<OmpReductionCombiner>{} / ")",
+    "(" >> indirect(Parser<OmpReductionSpecifier>{}) / ")",
     maybe(Parser<OmpReductionInitializerClause>{}))))
 
 // declare-target with list
@@ -1161,20 +1184,17 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<OpenMPDeclareTargetConstruct>(
     verbatim("DECLARE TARGET"_tok), Parser<OmpDeclareTargetSpecifier>{})))
 
-// declare-mapper-specifier
-TYPE_PARSER(construct<OmpDeclareMapperSpecifier>(
+// mapper-specifier
+TYPE_PARSER(construct<OmpMapperSpecifier>(
     maybe(name / ":" / !":"_tok), typeSpec / "::", name))
 
 // OpenMP 5.2: 5.8.8 Declare Mapper Construct
-TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
-    verbatim("DECLARE MAPPER"_tok),
-    "(" >> Parser<OmpDeclareMapperSpecifier>{} / ")", Parser<OmpClauseList>{})))
+TYPE_PARSER(sourced(
+    construct<OpenMPDeclareMapperConstruct>(verbatim("DECLARE MAPPER"_tok),
+        parenthesized(Parser<OmpMapperSpecifier>{}), Parser<OmpClauseList>{})))
 
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
-    construct<OmpReductionCombiner>(
-        construct<OmpReductionCombiner::FunctionCombiner>(
-            construct<Call>(Parser<ProcedureDesignator>{},
-                parenthesized(optionalList(actualArgSpec))))))
+    construct<OmpReductionCombiner>(Parser<FunctionReference>{}))
 
 // 2.17.7 atomic -> ATOMIC [clause [,]] atomic-clause [[,] clause] |
 //                  ATOMIC [clause]
@@ -1319,7 +1339,9 @@ TYPE_PARSER(
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OpenMPThreadprivate>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
-                                Parser<OpenMPUtilityConstruct>{})) /
+                                Parser<OpenMPUtilityConstruct>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OmpMetadirectiveDirective>{})) /
                             endOmpLine))
 
 // Assume Construct

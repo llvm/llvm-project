@@ -145,10 +145,10 @@ LogicalResult mlir::tosa::EqualizeRanks(ImplicitLocOpBuilder &builder,
       llvm::cast<RankedTensorType>(lowerTensorValue.getType());
   auto reshapeOutputType = RankedTensorType::get(
       ArrayRef<int64_t>(reshapeOutputShape), reshapeInputType.getElementType());
+  auto reshapeOutputShapeValue = getTosaConstShape(builder, reshapeOutputShape);
 
   auto reshapeLower = builder.create<tosa::ReshapeOp>(
-      reshapeOutputType, lowerTensorValue,
-      builder.getDenseI64ArrayAttr(reshapeOutputShape));
+      reshapeOutputType, lowerTensorValue, reshapeOutputShapeValue);
 
   if (input1Rank > input2Rank) {
     input1 = higherTensorValue;
@@ -161,13 +161,18 @@ LogicalResult mlir::tosa::EqualizeRanks(ImplicitLocOpBuilder &builder,
   return success();
 }
 
+Value mlir::tosa::getTosaConstShape(ImplicitLocOpBuilder &builder,
+                                    llvm::ArrayRef<int64_t> shape) {
+  auto attr = builder.getIndexTensorAttr(convertFromMlirShape(shape));
+  auto type = mlir::tosa::shapeType::get(builder.getContext(), shape.size());
+  mlir::Operation *mlir_op = builder.create<tosa::ConstShapeOp>(type, attr);
+  return mlir_op->getResult(0);
+}
+
 Value mlir::tosa::getTosaConstShape(PatternRewriter &rewriter, Location loc,
                                     llvm::ArrayRef<int64_t> shape) {
-  auto attr = rewriter.getIndexTensorAttr(shape);
-  auto type = mlir::tosa::shapeType::get(rewriter.getContext(), shape.size());
-  mlir::Operation *mlir_op =
-      rewriter.create<tosa::ConstShapeOp>(loc, type, attr);
-  return mlir_op->getResult(0);
+  ImplicitLocOpBuilder builder(loc, rewriter);
+  return getTosaConstShape(builder, shape);
 }
 
 SmallVector<int64_t> mlir::tosa::convertFromMlirShape(ArrayRef<int64_t> shape) {
@@ -192,4 +197,22 @@ bool mlir::tosa::getConstShapeValue(Operation *op,
   }
   // for undefined op, return false.
   return false;
+}
+
+// returns a small vector of int64_t values that attr contains
+SmallVector<int64_t>
+mlir::tosa::convertFromIntAttr(const DenseElementsAttr &attr, const int rank) {
+  if (attr.isSplat()) {
+    int64_t v = attr.getSplatValue<APInt>().getSExtValue();
+    return SmallVector<int64_t>(rank, v);
+  }
+
+  if (auto int_array_attr = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
+    SmallVector<int64_t> vec;
+    for (APInt val : int_array_attr.getValues<APInt>()) {
+      vec.push_back(val.getSExtValue());
+    }
+    return vec;
+  }
+  return {};
 }

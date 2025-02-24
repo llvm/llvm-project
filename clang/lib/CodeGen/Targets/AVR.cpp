@@ -45,7 +45,7 @@ public:
     // stack slot, along with a pointer as the function's implicit argument.
     if (getContext().getTypeSize(Ty) > RetRegs * 8) {
       LargeRet = true;
-      return getNaturalAlignIndirect(Ty);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
     }
     // An i8 return value should not be extended to i16, since AVR has 8-bit
     // registers.

@@ -1121,11 +1121,12 @@ void fir::CallOp::print(mlir::OpAsmPrinter &p) {
 
   p.printOptionalAttrDict((*this)->getAttrs(),
                           {fir::CallOp::getCalleeAttrNameStr(),
-                           getFastmathAttrName(), getProcedureAttrsAttrName()});
-  auto resultTypes{getResultTypes()};
-  llvm::SmallVector<mlir::Type> argTypes(
-      llvm::drop_begin(getOperandTypes(), isDirect ? 0 : 1));
-  p << " : " << mlir::FunctionType::get(getContext(), argTypes, resultTypes);
+                           getFastmathAttrName(), getProcedureAttrsAttrName(),
+                           getArgAttrsAttrName(), getResAttrsAttrName()});
+  p << " : ";
+  mlir::call_interface_impl::printFunctionSignature(
+      p, getArgs().drop_front(isDirect ? 0 : 1).getTypes(), getArgAttrsAttr(),
+      /*isVariadic=*/false, getResultTypes(), getResAttrsAttr());
 }
 
 mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
@@ -1142,7 +1143,6 @@ mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
                               attrs))
       return mlir::failure();
 
-  mlir::Type type;
   if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::Paren))
     return mlir::failure();
 
@@ -1163,13 +1163,17 @@ mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
                                                 fmfAttrName, attrs))
       return mlir::failure();
 
-  if (parser.parseOptionalAttrDict(attrs) || parser.parseColon() ||
-      parser.parseType(type))
+  if (parser.parseOptionalAttrDict(attrs) || parser.parseColon())
     return mlir::failure();
-
-  auto funcType = mlir::dyn_cast<mlir::FunctionType>(type);
-  if (!funcType)
+  llvm::SmallVector<mlir::Type> argTypes;
+  llvm::SmallVector<mlir::Type> resTypes;
+  llvm::SmallVector<mlir::DictionaryAttr> argAttrs;
+  llvm::SmallVector<mlir::DictionaryAttr> resultAttrs;
+  if (mlir::call_interface_impl::parseFunctionSignature(
+          parser, argTypes, argAttrs, resTypes, resultAttrs))
     return parser.emitError(parser.getNameLoc(), "expected function type");
+  mlir::FunctionType funcType =
+      mlir::FunctionType::get(parser.getContext(), argTypes, resTypes);
   if (isDirect) {
     if (parser.resolveOperands(operands, funcType.getInputs(),
                                parser.getNameLoc(), result.operands))
@@ -1183,8 +1187,11 @@ mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
                                parser.getNameLoc(), result.operands))
       return mlir::failure();
   }
-  result.addTypes(funcType.getResults());
   result.attributes = attrs;
+  mlir::call_interface_impl::addArgAndResultAttrs(
+      parser.getBuilder(), result, argAttrs, resultAttrs,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
+  result.addTypes(funcType.getResults());
   return mlir::success();
 }
 

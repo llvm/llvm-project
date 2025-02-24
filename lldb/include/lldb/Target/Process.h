@@ -1089,13 +1089,6 @@ public:
   ///     Returns an error object.
   virtual Status WillResume() { return Status(); }
 
-  /// Reports whether this process supports reverse execution.
-  ///
-  /// \return
-  ///     Returns true if the process supports reverse execution (at least
-  /// under some circumstances).
-  virtual bool SupportsReverseDirection() { return false; }
-
   /// Resumes all of a process's threads as configured using the Thread run
   /// control functions.
   ///
@@ -1111,13 +1104,9 @@ public:
   /// \see Thread:Resume()
   /// \see Thread:Step()
   /// \see Thread:Suspend()
-  virtual Status DoResume(lldb::RunDirection direction) {
-    if (direction == lldb::RunDirection::eRunForward)
-      return Status::FromErrorStringWithFormatv(
-          "error: {0} does not support resuming processes", GetPluginName());
+  virtual Status DoResume() {
     return Status::FromErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes",
-        GetPluginName());
+        "error: {0} does not support resuming processes", GetPluginName());
   }
 
   /// Called after resuming a process.
@@ -1502,10 +1491,11 @@ public:
   ///     otherwise.
   virtual bool IsAlive();
 
+  /// Check if a process is a live debug session, or a corefile/post-mortem.
   virtual bool IsLiveDebugSession() const { return true; };
 
   /// Provide a way to retrieve the core dump file that is loaded for debugging.
-  /// Only available if IsLiveDebugSession() returns true.
+  /// Only available if IsLiveDebugSession() returns false.
   ///
   /// \return
   ///     File path to the core file.
@@ -2687,18 +2677,6 @@ void PruneThreadPlans();
                             const AddressRange &range, size_t alignment,
                             Status &error);
 
-  /// Get the base run direction for the process.
-  /// The base direction is the direction the process will execute in
-  /// (forward or backward) if no thread plan overrides the direction.
-  lldb::RunDirection GetBaseDirection() const { return m_base_direction; }
-  /// Set the base run direction for the process.
-  /// As a side-effect, if this changes the base direction, then we
-  /// discard all non-base thread plans to ensure that when execution resumes
-  /// we definitely execute in the requested direction.
-  /// FIXME: this is overkill. In some situations ensuring the latter
-  /// would not require discarding all non-base thread plans.
-  void SetBaseDirection(lldb::RunDirection direction);
-
 protected:
   friend class Trace;
 
@@ -3098,7 +3076,6 @@ protected:
   ThreadList
       m_extended_thread_list; ///< Constituent for extended threads that may be
                               /// generated, cleared on natural stops
-  lldb::RunDirection m_base_direction; ///< ThreadPlanBase run direction
   uint32_t m_extended_thread_stop_id; ///< The natural stop id when
                                       ///extended_thread_list was last updated
   QueueList

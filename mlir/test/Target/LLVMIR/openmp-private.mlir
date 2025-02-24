@@ -103,6 +103,9 @@ llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr) {
 // CHECK:  %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
 // CHECK:  %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
 // CHECK:  %[[PRIV_ALLOC:.*]] = alloca float, align 4
+// CHECK-NEXT:   br label %[[PAR_REG:.*]]
+
+// CHECK: [[PAR_REG]]:
 // CHECK:  br label %omp.private.init
 
 // CHECK: omp.private.init:
@@ -124,9 +127,6 @@ llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr) {
 // address.
 // CHECK: [[PRIV_CONT]]:
 // CHECK-NEXT:   %[[PRIV_ALLOC3:.*]] = phi ptr [ %[[PRIV_ALLOC2]], %[[PRIV_BB2]] ]
-// CHECK-NEXT:   br label %[[PAR_REG:.*]]
-
-// CHECK: [[PAR_REG]]:
 // CHECK-NEXT:   br label %[[PAR_REG2:.*]]
 
 // Check that the body of the parallel region loads from the private clone.
@@ -153,8 +153,8 @@ omp.private {type = private} @multi_block.privatizer : f32 init {
 // CHECK:         omp.par.region:
 // CHECK:           br label %[[PAR_REG_BEG:.*]]
 // CHECK:         [[PAR_REG_BEG]]:
-// CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 111))
-// CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 222))
+// CHECK:           call void @bar(ptr getelementptr (i8, ptr @_QQfoo, i64 888))
+// CHECK:           call void @bar(ptr getelementptr (i8, ptr @_QQfoo, i64 1776))
 llvm.func @lower_region_with_addressof() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x f64 {bindc_name = "u1"} : (i64) -> !llvm.ptr

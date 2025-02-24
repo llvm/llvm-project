@@ -34,6 +34,13 @@ class LazyArchive;
 class SectionChunk;
 class Symbol;
 
+// This data structure is instantiated for each -wrap option.
+struct WrappedSymbol {
+  Symbol *sym;
+  Symbol *real;
+  Symbol *wrap;
+};
+
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
 // files whose archive members are not yet loaded).
@@ -161,9 +168,16 @@ public:
   Symbol *delayLoadHelper = nullptr;
   Chunk *tailMergeUnwindInfoChunk = nullptr;
 
+  // A list of wrapped symbols.
+  std::vector<WrappedSymbol> wrapped;
+
+  // Used for /alternatename.
+  std::map<StringRef, StringRef> alternateNames;
+
   void fixupExports();
   void assignExportOrdinals();
   void parseModuleDefs(StringRef path);
+  void parseAlternateName(StringRef);
 
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {

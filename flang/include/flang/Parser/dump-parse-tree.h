@@ -14,9 +14,9 @@
 #include "parse-tree.h"
 #include "tools.h"
 #include "unparse.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <type_traits>
@@ -209,6 +209,7 @@ public:
   NODE(CompilerDirective, Unrecognized)
   NODE(CompilerDirective, VectorAlways)
   NODE(CompilerDirective, Unroll)
+  NODE(CompilerDirective, UnrollAndJam)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)
@@ -477,6 +478,12 @@ public:
   NODE(parser, NullInit)
   NODE(parser, ObjectDecl)
   NODE(parser, OldParameterStmt)
+  NODE(parser, OmpTypeSpecifier)
+  NODE(parser, OmpTypeNameList)
+  NODE(parser, OmpLocator)
+  NODE(parser, OmpLocatorList)
+  NODE(parser, OmpReductionSpecifier)
+  NODE(parser, OmpArgument)
   NODE(parser, OmpMetadirectiveDirective)
   NODE(parser, OmpMatchClause)
   NODE(parser, OmpOtherwiseClause)
@@ -544,7 +551,7 @@ public:
   NODE(parser, OmpDeclareTargetSpecifier)
   NODE(parser, OmpDeclareTargetWithClause)
   NODE(parser, OmpDeclareTargetWithList)
-  NODE(parser, OmpDeclareMapperSpecifier)
+  NODE(parser, OmpMapperSpecifier)
   NODE(parser, OmpDefaultClause)
   NODE_ENUM(OmpDefaultClause, DataSharingAttribute)
   NODE(parser, OmpVariableCategory)
@@ -631,7 +638,6 @@ public:
   NODE(parser, OmpReductionCombiner)
   NODE(parser, OmpTaskReductionClause)
   NODE(OmpTaskReductionClause, Modifier)
-  NODE(OmpReductionCombiner, FunctionCombiner)
   NODE(parser, OmpReductionInitializerClause)
   NODE(parser, OmpReductionIdentifier)
   NODE(parser, OmpAllocateClause)

@@ -125,8 +125,11 @@ std::optional<APInt> ConstantIntRanges::getConstantValue() const {
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, const ConstantIntRanges &range) {
-  return os << "unsigned : [" << range.umin() << ", " << range.umax()
-            << "] signed : [" << range.smin() << ", " << range.smax() << "]";
+  os << "unsigned : [";
+  range.umin().print(os, /*isSigned*/ false);
+  os << ", ";
+  range.umax().print(os, /*isSigned*/ false);
+  return os << "] signed : [" << range.smin() << ", " << range.smax() << "]";
 }
 
 IntegerValueRange IntegerValueRange::getMaxRange(Value value) {

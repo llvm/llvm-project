@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX900 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL %s
 
 ; GCN-LABEL: {{^}}fadd_v2_vv:
 ; GFX900-COUNT-2: v_add_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}

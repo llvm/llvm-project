@@ -863,7 +863,6 @@ class Server(object):
         self._output_queue = []
         self._sock = sock
         self._proc = proc
-        self._validate_checksums = True
 
     def send_raw(self, frame):
         self._sock.sendall(frame)
@@ -873,9 +872,6 @@ class Server(object):
 
     def send_packet(self, packet):
         self.send_raw(b"$%s#%02x" % (packet, self._checksum(packet)))
-
-    def set_validate_checksums(self, validate):
-        self._validate_checksums = validate
 
     @staticmethod
     def _checksum(packet):
@@ -935,12 +931,12 @@ class Server(object):
     def get_raw_normal_packet(self):
         return self._read(self._normal_queue)
 
-    def _get_payload(self, frame):
+    @staticmethod
+    def _get_payload(frame):
         payload = frame[1:-3]
-        if self._validate_checksums:
-            checksum = int(frame[-2:], 16)
-            if checksum != Server._checksum(payload):
-                raise ChecksumMismatch
+        checksum = int(frame[-2:], 16)
+        if checksum != Server._checksum(payload):
+            raise ChecksumMismatch
         return payload
 
     def get_normal_packet(self):

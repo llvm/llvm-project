@@ -44,6 +44,7 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -424,6 +425,23 @@ bool lazyLinkingRequested() {
     if (LL)
       return true;
   return false;
+}
+
+static Error applyLibraryLinkModifiers(Session &S, LinkGraph &G) {
+  // If there are hidden archives and this graph is an archive
+  // member then apply hidden modifier.
+  if (!S.HiddenArchives.empty()) {
+    StringRef ObjName(G.getName());
+    if (ObjName.ends_with(')')) {
+      auto LibName = ObjName.split('(').first;
+      if (S.HiddenArchives.count(LibName)) {
+        for (auto *Sym : G.defined_symbols())
+          Sym->setScope(std::max(Sym->getScope(), Scope::Hidden));
+      }
+    }
+  }
+
+  return Error::success();
 }
 
 static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
@@ -1204,6 +1222,19 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
           inconvertibleErrorCode());
       return;
     }
+  } else if (TT.isOSBinFormatMachO()) {
+    if (!NoExec) {
+      std::optional<bool> ForceEHFrames;
+      if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
+                                                     ForceEHFrames)))
+        return;
+      bool UseEHFrames = ForceEHFrames ? *ForceEHFrames : false;
+      if (!UseEHFrames)
+        ObjLayer.addPlugin(ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
+      else
+        ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
+            ES, ExitOnErr(EPCEHFrameRegistrar::Create(ES))));
+    }
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
       ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
@@ -1314,6 +1345,8 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
     ++ActiveLinks;
     return Error::success();
   });
+  PassConfig.PrePrunePasses.push_back(
+      [this](LinkGraph &G) { return applyLibraryLinkModifiers(*this, G); });
   PassConfig.PrePrunePasses.push_back(
       [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
 
@@ -2108,7 +2141,7 @@ static Error addLibraries(Session &S,
     std::string LibName;
     bool IsPath = false;
     unsigned Position;
-    StringRef *CandidateExtensions;
+    ArrayRef<StringRef> CandidateExtensions;
     enum { Standard, Hidden } Modifier;
   };
 
@@ -2124,7 +2157,7 @@ static Error addLibraries(Session &S,
     LL.LibName = InputFile.str();
     LL.IsPath = true;
     LL.Position = InputFiles.getPosition(InputFileItr - InputFiles.begin());
-    LL.CandidateExtensions = nullptr;
+    LL.CandidateExtensions = {};
     LL.Modifier = LibraryLoad::Standard;
     LibraryLoadQueue.push_back(std::move(LL));
   }
@@ -2136,7 +2169,7 @@ static Error addLibraries(Session &S,
     LL.LibName = *LibItr;
     LL.IsPath = true;
     LL.Position = LoadHidden.getPosition(LibItr - LoadHidden.begin());
-    LL.CandidateExtensions = nullptr;
+    LL.CandidateExtensions = {};
     LL.Modifier = LibraryLoad::Hidden;
     LibraryLoadQueue.push_back(std::move(LL));
   }
@@ -2168,11 +2201,6 @@ static Error addLibraries(Session &S,
     LibraryLoadQueue.push_back(std::move(LL));
   }
 
-  // If there are any load-<modified> options then turn on flag overrides
-  // to avoid flag mismatch errors.
-  if (!LibrariesHidden.empty() || !LoadHidden.empty())
-    S.ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
-
   // Sort library loads by position in the argument list.
   llvm::sort(LibraryLoadQueue,
              [](const LibraryLoad &LHS, const LibraryLoad &RHS) {
@@ -2190,6 +2218,7 @@ static Error addLibraries(Session &S,
       break;
     case LibraryLoad::Hidden:
       GetObjFileInterface = getObjectFileInterfaceHidden;
+      S.HiddenArchives.insert(Path);
       break;
     }
 
@@ -2257,12 +2286,12 @@ static Error addLibraries(Session &S,
     auto CurJDSearchPaths = JDSearchPaths[&JD];
     for (StringRef SearchPath :
          concat<StringRef>(CurJDSearchPaths, SystemSearchPaths)) {
-      for (const char *LibExt : {".dylib", ".so", ".dll", ".a", ".lib"}) {
+      for (auto LibExt : LL.CandidateExtensions) {
         SmallVector<char, 256> LibPath;
         LibPath.reserve(SearchPath.size() + strlen("lib") + LL.LibName.size() +
-                        strlen(LibExt) + 2); // +2 for pathsep, null term.
+                        LibExt.size() + 2); // +2 for pathsep, null term.
         llvm::copy(SearchPath, std::back_inserter(LibPath));
-        if (StringRef(LibExt) != ".lib" && StringRef(LibExt) != ".dll")
+        if (LibExt != ".lib" && LibExt != ".dll")
           sys::path::append(LibPath, "lib" + LL.LibName + LibExt);
         else
           sys::path::append(LibPath, LL.LibName + LibExt);

@@ -26,6 +26,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -4576,7 +4577,8 @@ static void TryConstructorInitialization(Sema &S,
     if (!IsListInit &&
         (Kind.getKind() == InitializationKind::IK_Default ||
          Kind.getKind() == InitializationKind::IK_Direct) &&
-        DestRecordDecl != nullptr && DestRecordDecl->isAggregate() &&
+        !(CtorDecl->isCopyOrMoveConstructor() && CtorDecl->isImplicit()) &&
+        DestRecordDecl->isAggregate() &&
         DestRecordDecl->hasUninitializedExplicitInitFields()) {
       S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
           << /* Var-in-Record */ 1 << DestRecordDecl;
@@ -4785,6 +4787,10 @@ static void TryListInitialization(Sema &S,
                                   bool TreatUnavailableAsInvalid) {
   QualType DestType = Entity.getType();
 
+  if (S.getLangOpts().HLSL &&
+      !S.HLSL().TransformInitList(Entity, Kind, InitList))
+    return;
+
   // C++ doesn't allow scalar initialization with more than one argument.
   // But C99 complex numbers are scalars and it makes sense there.
   if (S.getLangOpts().CPlusPlus && DestType->isScalarType() &&
@@ -4862,9 +4868,13 @@ static void TryListInitialization(Sema &S,
         assert(
             S.Context.hasSameUnqualifiedType(SubInit[0]->getType(), DestType) &&
             "Deduced to other type?");
+        assert(Kind.getKind() == clang::InitializationKind::IK_DirectList &&
+               "List-initialize structured bindings but not "
+               "direct-list-initialization?");
         TryArrayCopy(S,
-                     InitializationKind::CreateCopy(Kind.getLocation(),
-                                                    InitList->getLBraceLoc()),
+                     InitializationKind::CreateDirect(Kind.getLocation(),
+                                                      InitList->getLBraceLoc(),
+                                                      InitList->getRBraceLoc()),
                      Entity, SubInit[0], DestType, Sequence,
                      TreatUnavailableAsInvalid);
         if (Sequence)
@@ -6571,6 +6581,18 @@ void InitializationSequence::InitializeFrom(Sema &S,
         return;
       case SIF_Other:
         break;
+      }
+    }
+
+    if (S.getLangOpts().HLSL && Initializer && isa<ConstantArrayType>(DestAT)) {
+      QualType SrcType = Entity.getType();
+      if (SrcType->isArrayParameterType())
+        SrcType =
+            cast<ArrayParameterType>(SrcType)->getConstantArrayType(Context);
+      if (S.Context.hasSameUnqualifiedType(DestType, SrcType)) {
+        TryArrayCopy(S, Kind, Entity, Initializer, DestType, *this,
+                     TreatUnavailableAsInvalid);
+        return;
       }
     }
 
@@ -9148,6 +9170,17 @@ bool InitializationSequence::Diagnose(Sema &S,
               << (Msg ? Msg->getString() : StringRef()) << ArgsRange;
         }
 
+        // If it's a default constructed member, but it's not in the
+        // constructor's initializer list, explicitly note where the member is
+        // declared so the user can see which member is erroneously initialized
+        // with a deleted default constructor.
+        if (Kind.getKind() == InitializationKind::IK_Default &&
+            (Entity.getKind() == InitializedEntity::EK_Member ||
+             Entity.getKind() == InitializedEntity::EK_ParenAggInitMember)) {
+          S.Diag(Entity.getDecl()->getLocation(),
+                 diag::note_default_constructed_field)
+              << Entity.getDecl();
+        }
         S.NoteDeletedFunction(Best->Function);
         break;
       }

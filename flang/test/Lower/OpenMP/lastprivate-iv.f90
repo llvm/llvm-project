@@ -6,14 +6,12 @@
 !CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_iv_incEi"}
 !CHECK:      %[[I2:.*]]:2 = hlfir.declare %[[I2_MEM]] {uniq_name = "_QFlastprivate_iv_incEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!CHECK:      %[[I_MEM:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
-!CHECK:      %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_incEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-
 !CHECK:      %[[LB:.*]] = arith.constant 4 : i32
 !CHECK:      %[[UB:.*]] = arith.constant 10 : i32
 !CHECK:      %[[STEP:.*]]  = arith.constant 3 : i32
-!CHECK:      omp.wsloop {
+!CHECK:      omp.wsloop private(@{{.*}} %{{.*}} -> %[[I_MEM:.*]] : !fir.ref<i32>) {
 !CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
+!CHECK:          %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_incEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:          fir.store %[[IV]] to %[[I]]#1 : !fir.ref<i32>
 !CHECK:          %[[V:.*]] = arith.addi %[[IV]], %[[STEP]] : i32
 !CHECK:          %[[C0:.*]] = arith.constant 0 : i32
@@ -42,15 +40,12 @@ end subroutine
 
 !CHECK:      %[[I2_MEM:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_iv_decEi"}
 !CHECK:      %[[I2:.*]]:2 = hlfir.declare %[[I2_MEM]] {uniq_name = "_QFlastprivate_iv_decEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-
-!CHECK:      %[[I_MEM:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
-!CHECK:      %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_decEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-
 !CHECK:      %[[LB:.*]] = arith.constant 10 : i32
 !CHECK:      %[[UB:.*]] = arith.constant 1 : i32
 !CHECK:      %[[STEP:.*]]  = arith.constant -3 : i32
-!CHECK:      omp.wsloop {
+!CHECK:      omp.wsloop private(@{{.*}} %{{.*}} -> %[[I_MEM:.*]] : !fir.ref<i32>) {
 !CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
+!CHECK:          %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_decEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:          fir.store %[[IV]] to %[[I]]#1 : !fir.ref<i32>
 !CHECK:          %[[V:.*]] = arith.addi %[[IV]], %[[STEP]] : i32
 !CHECK:          %[[C0:.*]] = arith.constant 0 : i32
@@ -80,7 +75,7 @@ end subroutine
 subroutine lastprivate_iv_i1
   integer*1 :: i1
   i1=0
-!CHECK:    omp.wsloop
+!CHECK:    omp.wsloop private({{.*}})
 !CHECK:      omp.loop_nest
 !CHECK:        fir.if %{{.*}} {
 !CHECK:          %[[I8_VAL:.*]] = fir.convert %{{.*}} : (i32) -> i8

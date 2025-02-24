@@ -996,9 +996,6 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   case lldb::eStopReasonProcessorTrace:
     body.try_emplace("reason", "processor trace");
     break;
-  case lldb::eStopReasonHistoryBoundary:
-    body.try_emplace("reason", "history boundary");
-    break;
   case lldb::eStopReasonSignal:
   case lldb::eStopReasonException:
     body.try_emplace("reason", "exception");
