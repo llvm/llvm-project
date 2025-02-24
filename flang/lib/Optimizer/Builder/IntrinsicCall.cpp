@@ -2760,7 +2760,7 @@ mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genAtomicExch(mlir::Type resultType,
                                             llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+  assert(args[1].getType().isIntOrFloat());
 
   mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::xchg;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
