@@ -230,7 +230,7 @@ struct WithVirtual {
 };
 
 static_assert(__builtin_is_replaceable(S<int>));
-static_assert(__builtin_is_replaceable(S<volatile int>));
+static_assert(!__builtin_is_replaceable(S<volatile int>));
 static_assert(!__builtin_is_replaceable(S<const int>));
 static_assert(!__builtin_is_replaceable(S<const int&>));
 static_assert(!__builtin_is_replaceable(S<int&>));

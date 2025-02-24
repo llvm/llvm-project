@@ -7571,7 +7571,7 @@ static bool isEligibleForReplacement(Sema &SemaRef, CXXRecordDecl *D) {
       continue;
 
     // it has a non-static data member that is not of a replaceable type,
-    if (Field->getType().isReplaceableType(SemaRef.getASTContext()))
+    if (!Field->getType().isReplaceableType(SemaRef.getASTContext()))
       return false;
   }
 
