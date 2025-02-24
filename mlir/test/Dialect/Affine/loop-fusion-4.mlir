@@ -358,6 +358,8 @@ func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %produce
   return
 }
 
+// -----
+
 #map = affine_map<()[s0] -> (s0 + 5)>
 #map1 = affine_map<()[s0] -> (s0 + 17)>
 
@@ -389,5 +391,107 @@ func.func @memref_index_type() {
   // PRODUCER-CONSUMER-MAXIMAL: affine.for
   // PRODUCER-CONSUMER-MAXIMAL-NOT: affine.for
   // PRODUCER-CONSUMER-MAXIMAL: return
+  return
+}
+
+// -----
+
+#map = affine_map<(d0) -> (d0)>
+#map1 =affine_map<(d0) -> (d0 + 1)>
+
+// Test non-integer memory spaces.
+
+// PRODUCER-CONSUMER-LABEL: func @non_int_memory_space
+func.func @non_int_memory_space() {
+  %alloc = memref.alloc() : memref<256x8xf32, #spirv.storage_class<StorageBuffer>>
+  affine.for %arg0 = 0 to 64 {
+    affine.for %arg1 = 0 to 8 {
+      %0 = affine.apply #map(%arg1)
+      %1 = affine.load %alloc[%arg0, %0] : memref<256x8xf32, #spirv.storage_class<StorageBuffer>>
+      affine.store %1, %alloc[%arg0, %arg1] : memref<256x8xf32, #spirv.storage_class<StorageBuffer>>
+    }
+  }
+  affine.for %arg0 = 16 to 32 {
+    affine.for %arg1 = 0 to 8 {
+      %0 = affine.apply #map(%arg1)
+      %1 = affine.load %alloc[%arg0, %0] : memref<256x8xf32, #spirv.storage_class<StorageBuffer>>
+      affine.store %1, %alloc[%arg0, %arg1] : memref<256x8xf32, #spirv.storage_class<StorageBuffer>>
+    }
+  }
+  // Fused nest.
+  // PRODUCER-CONSUMER-NEXT: memref.alloc()
+  // PRODUCER-CONSUMER-NEXT: memref.alloc()
+  // PRODUCER-CONSUMER-NEXT: affine.for %{{.*}} = 16 to 32
+  // PRODUCER-CONSUMER-NEXT:   affine.for %{{.*}} = 0 to 8
+  return
+}
+
+// -----
+
+#map = affine_map<(d0) -> (d0)>
+#map1 = affine_map<(d0) -> (d0 + 1)>
+
+// Exercises fix for crash reported at https://github.com/llvm/llvm-project/issues/119525
+
+// No fusion of  producer into consumer happens here as the slice is determined
+// to be invalid. This is a limitation and it is possible to compute a slice
+// (reduction along %arg4) and fuse.
+
+// PRODUCER-CONSUMER-LABEL: func @slice_compute_check
+func.func @slice_compute_check(%arg0: memref<1x8x26xi32, strided<[?, ?, ?], offset: ?>>, %arg1: memref<1x8x26xi32, strided<[?, ?, ?], offset: ?>>, %arg2: memref<1x8x26xi32, strided<[?, ?, ?], offset: ?>>) {
+  %alloc_14 = memref.alloc() : memref<1x8x26xi32>
+  %alloc_15 = memref.alloc() : memref<1x26xi32>
+  affine.for %arg3 = 0 to 1 {
+    affine.for %arg4 = 0 to 8 {
+      affine.for %arg5 = 0 to 26 {
+        affine.for %arg6 = #map(%arg3) to #map1(%arg3) {
+          affine.for %arg7 = #map(%arg4) to #map1(%arg4) {
+            affine.for %arg8 = #map(%arg5) to #map1(%arg5) {
+              %61 = affine.load %alloc_14[%arg6, %arg7, %arg8] : memref<1x8x26xi32>
+              %62 = affine.load %alloc_15[%arg6, %arg8] : memref<1x26xi32>
+              %63 = llvm.intr.smin(%61, %62) : (i32, i32) -> i32
+              affine.store %63, %alloc_15[%arg6, %arg8] : memref<1x26xi32>
+            }
+          }
+        }
+      }
+    }
+  }
+  affine.for %arg3 = 0 to 26 {
+    %61 = affine.load %alloc_15[0, %arg3] : memref<1x26xi32>
+  }
+  memref.dealloc %alloc_15 : memref<1x26xi32>
+  memref.dealloc %alloc_14 : memref<1x8x26xi32>
+  return
+}
+
+// -----
+
+// Exercises fix for crash reported at https://github.com/llvm/llvm-project/issues/108374
+
+// No fusion of  producer into consumer happens here. The slice will not be
+// valid as the producer doesn't supply to all of the consumer.
+
+#map = affine_map<(d0) -> (d0)>
+#map1 = affine_map<(d0) -> (d0 + 1)>
+// PRODUCER-CONSUMER-LABEL: func @test_add_slice_bounds
+func.func @test_add_slice_bounds() {
+  %alloc = memref.alloc() : memref<10xf32>
+  %cst = arith.constant 0.619152 : f32
+  affine.for %arg0 = 0 to 10 {
+    affine.for %arg1 = #map(%arg0) to #map1(%arg0) {
+      affine.store %cst, %alloc[%arg1] : memref<10xf32>
+    }
+  }
+  affine.for %arg0 = 0 to 3 {
+    affine.for %arg1 = 0 to 10 {
+      affine.for %arg2 = #map(%arg0) to #map1(%arg0) {
+        affine.for %arg3 = #map(%arg1) to #map1(%arg1) {
+          %0 = affine.apply #map1(%arg3)
+          %1 = affine.load %alloc[%0] : memref<10xf32>
+        }
+      }
+    }
+  }
   return
 }

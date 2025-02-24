@@ -3011,6 +3011,10 @@ public:
   /// otherwise create one.
   RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
 
+  /// isOpaqueValueEmitted - Return true if the opaque value expression has
+  /// already been emitted.
+  bool isOpaqueValueEmitted(const OpaqueValueExpr *E);
+
   /// Get the index of the current ArrayInitLoopExpr, if any.
   llvm::Value *getArrayInitIndex() { return ArrayInitIndex; }
 
@@ -3809,6 +3813,7 @@ public:
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
   void EmitOMPTileDirective(const OMPTileDirective &S);
+  void EmitOMPStripeDirective(const OMPStripeDirective &S);
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);

@@ -1943,18 +1943,19 @@ define <vscale x 3 x i64> @reverse_nxv3i64(<vscale x 3 x i64> %a) {
 ; CHECK-LABEL: reverse_nxv3i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vid.v v12
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vrsub.vx v12, v12, a0
-; CHECK-NEXT:    vrgather.vv v15, v8, v12
-; CHECK-NEXT:    vrgather.vv v14, v9, v12
-; CHECK-NEXT:    vrgather.vv v9, v10, v12
-; CHECK-NEXT:    vrgather.vv v8, v11, v12
-; CHECK-NEXT:    vmv.v.v v8, v9
-; CHECK-NEXT:    vmv.v.v v9, v14
-; CHECK-NEXT:    vmv.v.v v10, v15
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    vrsub.vx v14, v12, a0
+; CHECK-NEXT:    vrgather.vv v13, v10, v14
+; CHECK-NEXT:    vrgather.vv v10, v9, v14
+; CHECK-NEXT:    vmv.v.v v12, v13
+; CHECK-NEXT:    vrgather.vv v15, v8, v14
+; CHECK-NEXT:    vmv.v.v v13, v10
+; CHECK-NEXT:    vrgather.vv v8, v11, v14
+; CHECK-NEXT:    vmv.v.v v14, v15
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %res = call <vscale x 3 x i64> @llvm.vector.reverse.nxv3i64(<vscale x 3 x i64> %a)
   ret <vscale x 3 x i64> %res
@@ -1968,18 +1969,19 @@ define <vscale x 6 x i64> @reverse_nxv6i64(<vscale x 6 x i64> %a) {
 ; CHECK-NEXT:    vid.v v16
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vrsub.vx v16, v16, a0
-; CHECK-NEXT:    vrgather.vv v23, v8, v16
-; CHECK-NEXT:    vrgather.vv v21, v10, v16
-; CHECK-NEXT:    vrgather.vv v22, v9, v16
-; CHECK-NEXT:    vrgather.vv v20, v11, v16
-; CHECK-NEXT:    vrgather.vv v11, v12, v16
-; CHECK-NEXT:    vrgather.vv v10, v13, v16
-; CHECK-NEXT:    vrgather.vv v9, v14, v16
-; CHECK-NEXT:    vrgather.vv v8, v15, v16
-; CHECK-NEXT:    vmv2r.v v8, v10
-; CHECK-NEXT:    vmv2r.v v10, v20
-; CHECK-NEXT:    vmv2r.v v12, v22
+; CHECK-NEXT:    vrsub.vx v22, v16, a0
+; CHECK-NEXT:    vrgather.vv v21, v10, v22
+; CHECK-NEXT:    vrgather.vv v19, v12, v22
+; CHECK-NEXT:    vrgather.vv v18, v13, v22
+; CHECK-NEXT:    vrgather.vv v20, v11, v22
+; CHECK-NEXT:    vmv2r.v v16, v18
+; CHECK-NEXT:    vmv2r.v v18, v20
+; CHECK-NEXT:    vrgather.vv v31, v8, v22
+; CHECK-NEXT:    vrgather.vv v30, v9, v22
+; CHECK-NEXT:    vrgather.vv v9, v14, v22
+; CHECK-NEXT:    vrgather.vv v8, v15, v22
+; CHECK-NEXT:    vmv2r.v v20, v30
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
   %res = call <vscale x 6 x i64> @llvm.vector.reverse.nxv6i64(<vscale x 6 x i64> %a)
   ret <vscale x 6 x i64> %res

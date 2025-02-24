@@ -339,14 +339,14 @@ static Value createPrivateMemRef(AffineForOp forOp,
   auto eltSize = getMemRefIntOrFloatEltSizeInBytes(oldMemRefType);
   assert(eltSize && "memrefs with size elt types expected");
   uint64_t bufSize = *eltSize * *numElements;
-  unsigned newMemSpace;
+  Attribute newMemSpace;
   if (bufSize <= localBufSizeThreshold && fastMemorySpace.has_value()) {
-    newMemSpace = *fastMemorySpace;
+    newMemSpace = b.getI64IntegerAttr(*fastMemorySpace);
   } else {
-    newMemSpace = oldMemRefType.getMemorySpaceAsInt();
+    newMemSpace = oldMemRefType.getMemorySpace();
   }
   auto newMemRefType = MemRefType::get(newShape, oldMemRefType.getElementType(),
-                                       {}, newMemSpace);
+                                       /*map=*/AffineMap(), newMemSpace);
 
   // Create new private memref for fused loop 'forOp'. 'newShape' is always
   // a constant shape.
@@ -836,6 +836,15 @@ public:
         // Get 'srcNode' from which to attempt fusion into 'dstNode'.
         auto *srcNode = mdg->getNode(srcId);
         auto srcAffineForOp = cast<AffineForOp>(srcNode->op);
+
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Trying to fuse producer loop nest " << srcId
+                   << " with consumer loop nest " << dstId << "\n");
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Producer loop nest:\n"
+                   << *srcNode->op << "\n and consumer loop nest:\n"
+                   << *dstNode->op << '\n');
+
         LLVM_DEBUG(llvm::dbgs() << "Evaluating src loop " << srcId
                                 << " for dst loop " << dstId << "\n");
 
@@ -904,9 +913,11 @@ public:
               affine::canFuseLoops(srcAffineForOp, dstAffineForOp,
                                    /*dstLoopDepth=*/i + numSurroundingLoops,
                                    &depthSliceUnions[i - 1], strategy);
-
-          if (result.value == FusionResult::Success)
+          if (result.value == FusionResult::Success) {
             maxLegalFusionDepth = i;
+            LLVM_DEBUG(llvm::dbgs()
+                       << "Found valid slice for depth: " << i << '\n');
+          }
         }
 
         if (maxLegalFusionDepth == 0) {

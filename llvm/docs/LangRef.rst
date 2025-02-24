@@ -1474,7 +1474,9 @@ Currently, only the following parameter attributes are defined:
     ``null_pointer_is_valid`` function attribute is present.
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
-    implies ``noundef``.
+    implies ``noundef``. When used in an assume operand bundle, more restricted
+    semantics apply. See  :ref:`assume operand bundles <assume_opbundles>` for
+    more details.
 
 ``dereferenceable_or_null(<n>)``
     This indicates that the parameter or return value isn't both
@@ -2046,8 +2048,8 @@ For example:
     This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (``none``,
     ``read``, ``write``, or ``readwrite``) for the possible memory location
-    kinds (``argmem``, ``inaccessiblemem``, as well as a default). It is best
-    understood by example:
+    kinds (``argmem``, ``inaccessiblemem``, ``errnomem``, as well as a default).
+    It is best understood by example:
 
     - ``memory(none)``: Does not access any memory.
     - ``memory(read)``: May read (but not write) any memory.
@@ -2056,6 +2058,8 @@ For example:
     - ``memory(argmem: read)``: May only read argument memory.
     - ``memory(argmem: read, inaccessiblemem: write)``: May only read argument
       memory and only write inaccessible memory.
+    - ``memory(argmem: read, errnomem: write)``: May only read argument memory
+      and only write errno.
     - ``memory(read, argmem: readwrite)``: May read any memory (default mode)
       and additionally write argument memory.
     - ``memory(readwrite, argmem: none)``: May access any memory apart from
@@ -2085,6 +2089,7 @@ For example:
       allocator function may return newly accessible memory while only
       accessing inaccessible memory itself). Inaccessible memory is often used
       to model control dependencies of intrinsics.
+    - ``errnomem``: This refers to accesses to the ``errno`` variable.
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
       don't currently have a dedicated location kind (e.g. accesses to globals
@@ -2925,6 +2930,10 @@ the behavior is undefined, unless one of the following exceptions applies:
 * ``"align"`` operand bundles may specify a non-power-of-two alignment
   (including a zero alignment). If this is the case, then the pointer value
   must be a null pointer, otherwise the behavior is undefined.
+
+* ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
+  dereferenceable at the point of the assumption. The pointer may not be
+  dereferenceable at later pointers, e.g. because it could have been freed.
 
 In addition to allowing operand bundles encoding function and parameter
 attributes, an assume operand bundle my also encode a ``separate_storage``
@@ -5103,10 +5112,6 @@ The following is the syntax for constant expressions:
     Perform an addition on constants.
 ``sub (LHS, RHS)``
     Perform a subtraction on constants.
-``mul (LHS, RHS)``
-    Perform a multiplication on constants.
-``shl (LHS, RHS)``
-    Perform a left shift on constants.
 ``xor (LHS, RHS)``
     Perform a bitwise xor on constants.
 

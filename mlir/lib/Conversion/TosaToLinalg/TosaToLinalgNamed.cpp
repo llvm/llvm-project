@@ -607,84 +607,6 @@ public:
   }
 };
 
-class FullyConnectedConverter
-    : public OpConversionPattern<tosa::FullyConnectedOp> {
-public:
-  using OpConversionPattern<tosa::FullyConnectedOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(tosa::FullyConnectedOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    Location loc = op.getLoc();
-    auto outputTy = cast<ShapedType>(op.getType());
-    auto input = op.getInput();
-    auto inputTy = cast<ShapedType>(input.getType());
-
-    auto bias = op.getBias();
-
-    auto weight = op.getWeight();
-    auto weightTy = cast<ShapedType>(weight.getType());
-    auto weightShape = weightTy.getShape();
-
-    auto outputETy = outputTy.getElementType();
-
-    SmallVector<Value> dynDims;
-    dynDims.resize(cast<ShapedType>(op->getResult(0).getType()).getRank());
-
-    if (!inputTy.hasRank() || inputTy.isDynamicDim(0)) {
-      dynDims[0] = rewriter.create<tensor::DimOp>(loc, input, 0);
-    }
-
-    if (!weightTy.hasRank() || weightTy.isDynamicDim(0)) {
-      dynDims[1] = rewriter.create<tensor::DimOp>(loc, weight, 0);
-    }
-
-    SmallVector<Value> filteredDims = condenseValues(dynDims);
-
-    SmallVector<int64_t> permutation = {1, 0};
-    auto permutationAttr = rewriter.getI64TensorAttr(permutation);
-    Value permutationValue =
-        rewriter.create<arith::ConstantOp>(loc, permutationAttr);
-
-    SmallVector<int64_t> newWeightShape = {weightShape[1], weightShape[0]};
-    Type newWeightTy =
-        RankedTensorType::get(newWeightShape, weightTy.getElementType());
-
-    Value transposedWeight = rewriter.create<tosa::TransposeOp>(
-        loc, newWeightTy, weight, permutationValue);
-
-    Value biasEmptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, outputTy.getShape(), outputETy, filteredDims);
-
-    Value broadcastBias =
-        linalgBroadcastAndMaybeExtSI(rewriter, loc, bias, biasEmptyTensor);
-
-    if (!op.getInputZp() && !op.getWeightZp()) {
-      Value matmul = rewriter
-                         .create<linalg::MatmulOp>(
-                             loc, TypeRange{op.getType()},
-                             ValueRange{input, transposedWeight}, broadcastBias)
-                         ->getResult(0);
-
-      rewriter.replaceOp(op, matmul);
-      return success();
-    }
-
-    auto inputZp = rewriter.create<arith::ConstantOp>(loc, op.getInputZpAttr());
-    auto outputZp =
-        rewriter.create<arith::ConstantOp>(loc, op.getWeightZpAttr());
-    Value matmul =
-        rewriter
-            .create<linalg::QuantizedMatmulOp>(
-                loc, TypeRange{op.getType()},
-                ValueRange{input, transposedWeight, inputZp, outputZp},
-                broadcastBias)
-            ->getResult(0);
-
-    rewriter.replaceOp(op, matmul);
-    return success();
-  }
-};
-
 class MaxPool2dConverter : public OpConversionPattern<tosa::MaxPool2dOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -1090,7 +1012,6 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
       DepthwiseConvConverter,
       MatMulConverter,
       AvgPool2dConverter,
-      FullyConnectedConverter,
       TransposeConverter
   >(patterns->getContext());
 

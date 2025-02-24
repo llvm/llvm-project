@@ -38,44 +38,27 @@ define <4 x float> @interleave_v2f32(<2 x float> %x, <2 x float> %y) {
 define <4 x double> @interleave_v2f64(<2 x double> %x, <2 x double> %y) {
 ; V128-LABEL: interleave_v2f64:
 ; V128:       # %bb.0:
-; V128-NEXT:    csrr a0, vlenb
-; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; V128-NEXT:    vid.v v10
-; V128-NEXT:    srli a0, a0, 3
-; V128-NEXT:    vsrl.vi v10, v10, 1
-; V128-NEXT:    vslidedown.vx v11, v10, a0
-; V128-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; V128-NEXT:    vrgatherei16.vv v13, v9, v11
-; V128-NEXT:    vrgatherei16.vv v12, v9, v10
-; V128-NEXT:    vrgatherei16.vv v15, v8, v11
-; V128-NEXT:    vrgatherei16.vv v14, v8, v10
+; V128-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; V128-NEXT:    vmv1r.v v10, v9
 ; V128-NEXT:    vmv.v.i v0, 10
 ; V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; V128-NEXT:    vmerge.vvm v8, v14, v12, v0
+; V128-NEXT:    vslideup.vi v12, v10, 1
+; V128-NEXT:    vslideup.vi v12, v10, 2
+; V128-NEXT:    vmv2r.v v10, v8
+; V128-NEXT:    vslideup.vi v10, v8, 1
+; V128-NEXT:    vmerge.vvm v8, v10, v12, v0
 ; V128-NEXT:    ret
 ;
-; RV32-V512-LABEL: interleave_v2f64:
-; RV32-V512:       # %bb.0:
-; RV32-V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; RV32-V512-NEXT:    vid.v v10
-; RV32-V512-NEXT:    vsrl.vi v11, v10, 1
-; RV32-V512-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
-; RV32-V512-NEXT:    vrgatherei16.vv v10, v8, v11
-; RV32-V512-NEXT:    vmv.v.i v0, 10
-; RV32-V512-NEXT:    vrgatherei16.vv v10, v9, v11, v0.t
-; RV32-V512-NEXT:    vmv.v.v v8, v10
-; RV32-V512-NEXT:    ret
-;
-; RV64-V512-LABEL: interleave_v2f64:
-; RV64-V512:       # %bb.0:
-; RV64-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
-; RV64-V512-NEXT:    vid.v v10
-; RV64-V512-NEXT:    vsrl.vi v11, v10, 1
-; RV64-V512-NEXT:    vrgather.vv v10, v8, v11
-; RV64-V512-NEXT:    vmv.v.i v0, 10
-; RV64-V512-NEXT:    vrgather.vv v10, v9, v11, v0.t
-; RV64-V512-NEXT:    vmv.v.v v8, v10
-; RV64-V512-NEXT:    ret
+; V512-LABEL: interleave_v2f64:
+; V512:       # %bb.0:
+; V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; V512-NEXT:    vslideup.vi v10, v9, 1
+; V512-NEXT:    vmv1r.v v11, v8
+; V512-NEXT:    vslideup.vi v10, v9, 2
+; V512-NEXT:    vmv.v.i v0, 10
+; V512-NEXT:    vslideup.vi v11, v8, 1
+; V512-NEXT:    vmerge.vvm v8, v11, v10, v0
+; V512-NEXT:    ret
   %a = shufflevector <2 x double> %x, <2 x double> %y, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
   ret <4 x double> %a
 }
@@ -258,8 +241,8 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; V128-NEXT:    vzext.vf2 v8, v24
 ; V128-NEXT:    addi a1, a1, -1366
 ; V128-NEXT:    vzext.vf2 v24, v0
-; V128-NEXT:    vsll.vx v8, v8, a0
 ; V128-NEXT:    vmv.s.x v0, a1
+; V128-NEXT:    vsll.vx v8, v8, a0
 ; V128-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; V128-NEXT:    vmerge.vvm v24, v24, v8, v0
 ; V128-NEXT:    addi a0, sp, 16

@@ -32,6 +32,7 @@
 #include "AMDGPUWaitSGPRHazards.h"
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
+#include "GCNNSAReassign.h"
 #include "GCNPreRALongBranchReg.h"
 #include "GCNPreRAOptimizations.h"
 #include "GCNRewritePartialRegUses.h"
@@ -42,6 +43,7 @@
 #include "SIFixSGPRCopies.h"
 #include "SIFixVGPRCopies.h"
 #include "SIFoldOperands.h"
+#include "SIFormMemoryClauses.h"
 #include "SILoadStoreOptimizer.h"
 #include "SILowerControlFlow.h"
 #include "SILowerSGPRSpills.h"
@@ -49,8 +51,10 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "SIOptimizeExecMasking.h"
+#include "SIOptimizeExecMaskingPreRA.h"
 #include "SIOptimizeVGPRLiveRange.h"
 #include "SIPeepholeSDWA.h"
+#include "SIPostRABundler.h"
 #include "SIPreAllocateWWMRegs.h"
 #include "SIShrinkInstructions.h"
 #include "SIWholeQuadMode.h"
@@ -499,7 +503,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
-  initializeSIOptimizeExecMaskingPreRAPass(*PR);
+  initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
   initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
@@ -540,8 +544,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
-  initializeSIFormMemoryClausesPass(*PR);
-  initializeSIPostRABundlerPass(*PR);
+  initializeSIFormMemoryClausesLegacyPass(*PR);
+  initializeSIPostRABundlerLegacyPass(*PR);
   initializeGCNCreateVOPDPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
@@ -549,7 +553,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPUResourceUsageAnalysisPass(*PR);
-  initializeGCNNSAReassignPass(*PR);
+  initializeGCNNSAReassignLegacyPass(*PR);
   initializeGCNPreRAOptimizationsLegacyPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
   initializeGCNRewritePartialRegUsesLegacyPass(*PR);
@@ -1150,6 +1154,7 @@ public:
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
+  void addPostBBSections() override;
 };
 
 } // end anonymous namespace
@@ -1654,7 +1659,7 @@ void GCNPassConfig::addPostRegAlloc() {
 void GCNPassConfig::addPreSched2() {
   if (TM->getOptLevel() > CodeGenOptLevel::None)
     addPass(createSIShrinkInstructionsLegacyPass());
-  addPass(&SIPostRABundlerID);
+  addPass(&SIPostRABundlerLegacyID);
 }
 
 void GCNPassConfig::addPreEmitPass() {
@@ -1689,6 +1694,11 @@ void GCNPassConfig::addPreEmitPass() {
     addPass(&AMDGPUInsertDelayAluID);
 
   addPass(&BranchRelaxationPassID);
+}
+
+void GCNPassConfig::addPostBBSections() {
+  // We run this later to avoid passes like livedebugvalues and BBSections
+  // having to deal with the apparent multi-entry functions we may generate.
   addPass(createAMDGPUPreloadKernArgPrologLegacyPass());
 }
 
@@ -2103,6 +2113,12 @@ Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
   addPass(SIFixSGPRCopiesPass());
   addPass(SILowerI1CopiesPass());
   return Error::success();
+}
+
+void AMDGPUCodeGenPassBuilder::addPreRewrite(AddMachinePass &addPass) const {
+  if (EnableRegReassign) {
+    addPass(GCNNSAReassignPass());
+  }
 }
 
 void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(

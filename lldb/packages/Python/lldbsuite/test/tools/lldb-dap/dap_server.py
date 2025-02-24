@@ -927,7 +927,7 @@ class DebugCommunication(object):
             "sourceModified": False,
         }
         if line_array is not None:
-            args_dict["lines"] = "%s" % line_array
+            args_dict["lines"] = line_array
             breakpoints = []
             for i, line in enumerate(line_array):
                 breakpoint_data = None
@@ -1170,39 +1170,87 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+
 class DebugAdaptorServer(DebugCommunication):
     def __init__(
         self,
         executable=None,
-        port=None,
+        connection=None,
         init_commands=[],
         log_file=None,
         env=None,
     ):
         self.process = None
+        self.connection = None
         if executable is not None:
-            adaptor_env = os.environ.copy()
-            if env is not None:
-                adaptor_env.update(env)
-
-            if log_file:
-                adaptor_env["LLDBDAP_LOG"] = log_file
-            self.process = subprocess.Popen(
-                [executable],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=adaptor_env,
+            process, connection = DebugAdaptorServer.launch(
+                executable=executable, connection=connection, env=env, log_file=log_file
             )
+            self.process = process
+            self.connection = connection
+
+        if connection is not None:
+            scheme, address = connection.split("://")
+            if scheme == "unix-connect":  # unix-connect:///path
+                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                s.connect(address)
+            elif scheme == "connection":  # connection://[host]:port
+                host, port = address.rsplit(":", 1)
+                # create_connection with try both ipv4 and ipv6.
+                s = socket.create_connection((host.strip("[]"), int(port)))
+            else:
+                raise ValueError("invalid connection: {}".format(connection))
+            DebugCommunication.__init__(
+                self, s.makefile("rb"), s.makefile("wb"), init_commands, log_file
+            )
+            self.connection = connection
+        else:
             DebugCommunication.__init__(
                 self, self.process.stdout, self.process.stdin, init_commands, log_file
             )
-        elif port is not None:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(("127.0.0.1", port))
-            DebugCommunication.__init__(
-                self, s.makefile("r"), s.makefile("w"), init_commands
+
+    @classmethod
+    def launch(cls, /, executable, env=None, log_file=None, connection=None):
+        adaptor_env = os.environ.copy()
+        if env is not None:
+            adaptor_env.update(env)
+
+        if log_file:
+            adaptor_env["LLDBDAP_LOG"] = log_file
+        args = [executable]
+
+        if connection is not None:
+            args.append("--connection")
+            args.append(connection)
+
+        process = subprocess.Popen(
+            args,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=adaptor_env,
+        )
+
+        if connection is None:
+            return (process, None)
+
+        # lldb-dap will print the listening address once the listener is
+        # made to stdout. The listener is formatted like
+        # `connection://host:port` or `unix-connection:///path`.
+        expected_prefix = "Listening for: "
+        out = process.stdout.readline().decode()
+        if not out.startswith(expected_prefix):
+            self.process.kill()
+            raise ValueError(
+                "lldb-dap failed to print listening address, expected '{}', got '{}'".format(
+                    expected_prefix, out
+                )
             )
+
+        # If the listener expanded into multiple addresses, use the first.
+        connection = out.removeprefix(expected_prefix).rstrip("\r\n").split(",", 1)[0]
+
+        return (process, connection)
 
     def get_pid(self):
         if self.process:
@@ -1369,10 +1417,9 @@ def main():
     )
 
     parser.add_option(
-        "--port",
-        type="int",
-        dest="port",
-        help="Attach a socket to a port instead of using STDIN for VSCode",
+        "--connection",
+        dest="connection",
+        help="Attach a socket connection of using STDIN for VSCode",
         default=None,
     )
 
@@ -1518,15 +1565,16 @@ def main():
 
     (options, args) = parser.parse_args(sys.argv[1:])
 
-    if options.vscode_path is None and options.port is None:
+    if options.vscode_path is None and options.connection is None:
         print(
             "error: must either specify a path to a Visual Studio Code "
             "Debug Adaptor vscode executable path using the --vscode "
-            "option, or a port to attach to for an existing lldb-dap "
-            "using the --port option"
+            "option, or using the --connection option"
         )
         return
-    dbg = DebugAdaptorServer(executable=options.vscode_path, port=options.port)
+    dbg = DebugAdaptorServer(
+        executable=options.vscode_path, connection=options.connection
+    )
     if options.debug:
         raw_input('Waiting for debugger to attach pid "%i"' % (dbg.get_pid()))
     if options.replay:

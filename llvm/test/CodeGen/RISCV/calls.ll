@@ -654,11 +654,11 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-LARGE-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-LARGE-NEXT:    mv s0, a0
-; RV64I-LARGE-NEXT:    sd a0, 0(sp)
-; RV64I-LARGE-NEXT:    sd a0, 8(sp)
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi4:
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI8_0)
 ; RV64I-LARGE-NEXT:    ld t1, %pcrel_lo(.Lpcrel_hi4)(a0)
+; RV64I-LARGE-NEXT:    sd s0, 0(sp)
+; RV64I-LARGE-NEXT:    sd s0, 8(sp)
 ; RV64I-LARGE-NEXT:    mv a0, s0
 ; RV64I-LARGE-NEXT:    mv a1, s0
 ; RV64I-LARGE-NEXT:    mv a2, s0
@@ -681,11 +681,11 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-LARGE-ZICFILP-NEXT:    mv s0, a0
-; RV64I-LARGE-ZICFILP-NEXT:    sd a0, 0(sp)
-; RV64I-LARGE-ZICFILP-NEXT:    sd a0, 8(sp)
 ; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi4:
 ; RV64I-LARGE-ZICFILP-NEXT:    auipc a0, %pcrel_hi(.LCPI8_0)
 ; RV64I-LARGE-ZICFILP-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi4)(a0)
+; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 0(sp)
+; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 8(sp)
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a0, s0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a1, s0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a2, s0
@@ -823,11 +823,11 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-LARGE:       # %bb.0:
 ; RV64I-LARGE-NEXT:    addi sp, sp, -32
 ; RV64I-LARGE-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-LARGE-NEXT:    sd a0, 0(sp)
-; RV64I-LARGE-NEXT:    sd a0, 8(sp)
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi5:
 ; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI10_0)
 ; RV64I-LARGE-NEXT:    ld t1, %pcrel_lo(.Lpcrel_hi5)(a1)
+; RV64I-LARGE-NEXT:    sd a0, 0(sp)
+; RV64I-LARGE-NEXT:    sd a0, 8(sp)
 ; RV64I-LARGE-NEXT:    mv a1, a0
 ; RV64I-LARGE-NEXT:    mv a2, a0
 ; RV64I-LARGE-NEXT:    mv a3, a0
@@ -845,11 +845,11 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -32
 ; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-LARGE-ZICFILP-NEXT:    sd a0, 0(sp)
-; RV64I-LARGE-ZICFILP-NEXT:    sd a0, 8(sp)
 ; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi5:
 ; RV64I-LARGE-ZICFILP-NEXT:    auipc a1, %pcrel_hi(.LCPI10_0)
 ; RV64I-LARGE-ZICFILP-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi5)(a1)
+; RV64I-LARGE-ZICFILP-NEXT:    sd a0, 0(sp)
+; RV64I-LARGE-ZICFILP-NEXT:    sd a0, 8(sp)
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a1, a0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a2, a0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a3, a0

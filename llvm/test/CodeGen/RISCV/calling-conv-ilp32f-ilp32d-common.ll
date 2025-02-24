@@ -59,9 +59,9 @@ define i32 @caller_float_in_fpr_exhausted_gprs() nounwind {
 ; RV32-ILP32FD-NEXT:    li a0, 1
 ; RV32-ILP32FD-NEXT:    li a2, 2
 ; RV32-ILP32FD-NEXT:    li a4, 3
-; RV32-ILP32FD-NEXT:    sw a1, 0(sp)
 ; RV32-ILP32FD-NEXT:    fmv.w.x fa0, a3
 ; RV32-ILP32FD-NEXT:    li a6, 4
+; RV32-ILP32FD-NEXT:    sw a1, 0(sp)
 ; RV32-ILP32FD-NEXT:    li a1, 0
 ; RV32-ILP32FD-NEXT:    li a3, 0
 ; RV32-ILP32FD-NEXT:    li a5, 0
@@ -141,28 +141,28 @@ define i32 @caller_float_on_stack_exhausted_gprs_fprs() nounwind {
 ; RV32-ILP32FD:       # %bb.0:
 ; RV32-ILP32FD-NEXT:    addi sp, sp, -16
 ; RV32-ILP32FD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ILP32FD-NEXT:    lui a0, 267520
-; RV32-ILP32FD-NEXT:    lui a1, 262144
+; RV32-ILP32FD-NEXT:    lui a1, 267520
+; RV32-ILP32FD-NEXT:    lui a0, 262144
 ; RV32-ILP32FD-NEXT:    lui a2, 264192
 ; RV32-ILP32FD-NEXT:    lui a3, 265216
-; RV32-ILP32FD-NEXT:    lui a5, 266240
-; RV32-ILP32FD-NEXT:    lui a6, 266496
-; RV32-ILP32FD-NEXT:    lui a7, 266752
-; RV32-ILP32FD-NEXT:    lui t0, 267008
-; RV32-ILP32FD-NEXT:    sw a0, 0(sp)
-; RV32-ILP32FD-NEXT:    lui t1, 267264
-; RV32-ILP32FD-NEXT:    fmv.w.x fa0, a1
-; RV32-ILP32FD-NEXT:    li a0, 1
+; RV32-ILP32FD-NEXT:    lui a4, 266240
+; RV32-ILP32FD-NEXT:    lui a5, 266496
+; RV32-ILP32FD-NEXT:    lui a6, 266752
+; RV32-ILP32FD-NEXT:    lui a7, 267008
+; RV32-ILP32FD-NEXT:    fmv.w.x fa0, a0
+; RV32-ILP32FD-NEXT:    lui t0, 267264
 ; RV32-ILP32FD-NEXT:    fmv.w.x fa1, a2
-; RV32-ILP32FD-NEXT:    li a2, 3
+; RV32-ILP32FD-NEXT:    li a0, 1
 ; RV32-ILP32FD-NEXT:    fmv.w.x fa2, a3
+; RV32-ILP32FD-NEXT:    li a2, 3
+; RV32-ILP32FD-NEXT:    fmv.w.x fa3, a4
 ; RV32-ILP32FD-NEXT:    li a4, 5
-; RV32-ILP32FD-NEXT:    fmv.w.x fa3, a5
-; RV32-ILP32FD-NEXT:    fmv.w.x fa4, a6
-; RV32-ILP32FD-NEXT:    fmv.w.x fa5, a7
-; RV32-ILP32FD-NEXT:    fmv.w.x fa6, t0
-; RV32-ILP32FD-NEXT:    fmv.w.x fa7, t1
+; RV32-ILP32FD-NEXT:    fmv.w.x fa4, a5
+; RV32-ILP32FD-NEXT:    fmv.w.x fa5, a6
+; RV32-ILP32FD-NEXT:    fmv.w.x fa6, a7
+; RV32-ILP32FD-NEXT:    fmv.w.x fa7, t0
 ; RV32-ILP32FD-NEXT:    li a6, 7
+; RV32-ILP32FD-NEXT:    sw a1, 0(sp)
 ; RV32-ILP32FD-NEXT:    li a1, 0
 ; RV32-ILP32FD-NEXT:    li a3, 0
 ; RV32-ILP32FD-NEXT:    li a5, 0

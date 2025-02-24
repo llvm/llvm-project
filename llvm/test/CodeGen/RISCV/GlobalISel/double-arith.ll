@@ -424,11 +424,11 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv s2, a2
 ; RV32I-NEXT:    mv s3, a3
 ; RV32I-NEXT:    mv a0, a4
+; RV32I-NEXT:    lui a1, %hi(.LCPI12_0)
+; RV32I-NEXT:    addi a1, a1, %lo(.LCPI12_0)
+; RV32I-NEXT:    lw a2, 0(a1)
+; RV32I-NEXT:    lw a3, 4(a1)
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lui a2, %hi(.LCPI12_0)
-; RV32I-NEXT:    addi a3, a2, %lo(.LCPI12_0)
-; RV32I-NEXT:    lw a2, 0(a3)
-; RV32I-NEXT:    lw a3, 4(a3)
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv a4, a0
 ; RV32I-NEXT:    lui a5, 524288
@@ -454,9 +454,9 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    mv s1, a1
+; RV64I-NEXT:    lui a0, %hi(.LCPI12_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI12_0)(a0)
 ; RV64I-NEXT:    mv a0, a2
-; RV64I-NEXT:    lui a1, %hi(.LCPI12_0)
-; RV64I-NEXT:    ld a1, %lo(.LCPI12_0)(a1)
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slli a1, a1, 63
@@ -511,20 +511,20 @@ define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv s0, a2
 ; RV32I-NEXT:    mv s1, a3
 ; RV32I-NEXT:    mv s2, a4
-; RV32I-NEXT:    mv s3, a5
 ; RV32I-NEXT:    lui a2, %hi(.LCPI13_0)
 ; RV32I-NEXT:    addi a2, a2, %lo(.LCPI13_0)
-; RV32I-NEXT:    lw s4, 0(a2)
-; RV32I-NEXT:    lw s5, 4(a2)
-; RV32I-NEXT:    mv a2, s4
-; RV32I-NEXT:    mv a3, s5
+; RV32I-NEXT:    lw s3, 0(a2)
+; RV32I-NEXT:    lw s4, 4(a2)
+; RV32I-NEXT:    mv s5, a5
+; RV32I-NEXT:    mv a2, s3
+; RV32I-NEXT:    mv a3, s4
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv s6, a0
 ; RV32I-NEXT:    mv s7, a1
 ; RV32I-NEXT:    mv a0, s2
-; RV32I-NEXT:    mv a1, s3
-; RV32I-NEXT:    mv a2, s4
-; RV32I-NEXT:    mv a3, s5
+; RV32I-NEXT:    mv a1, s5
+; RV32I-NEXT:    mv a2, s3
+; RV32I-NEXT:    mv a3, s4
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv a4, a0
 ; RV32I-NEXT:    lui a5, 524288
@@ -556,14 +556,14 @@ define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
-; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    lui a1, %hi(.LCPI13_0)
-; RV64I-NEXT:    ld s2, %lo(.LCPI13_0)(a1)
-; RV64I-NEXT:    mv a1, s2
+; RV64I-NEXT:    ld s1, %lo(.LCPI13_0)(a1)
+; RV64I-NEXT:    mv s2, a2
+; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    mv s3, a0
-; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    mv a1, s2
+; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slli a2, a1, 63
@@ -625,20 +625,20 @@ define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    mv s2, a4
-; RV32I-NEXT:    mv s3, a5
 ; RV32I-NEXT:    lui a2, %hi(.LCPI14_0)
 ; RV32I-NEXT:    addi a2, a2, %lo(.LCPI14_0)
-; RV32I-NEXT:    lw s4, 0(a2)
-; RV32I-NEXT:    lw s5, 4(a2)
-; RV32I-NEXT:    mv a2, s4
-; RV32I-NEXT:    mv a3, s5
+; RV32I-NEXT:    lw s3, 0(a2)
+; RV32I-NEXT:    lw s4, 4(a2)
+; RV32I-NEXT:    mv s5, a5
+; RV32I-NEXT:    mv a2, s3
+; RV32I-NEXT:    mv a3, s4
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv s6, a0
 ; RV32I-NEXT:    mv s7, a1
 ; RV32I-NEXT:    mv a0, s2
-; RV32I-NEXT:    mv a1, s3
-; RV32I-NEXT:    mv a2, s4
-; RV32I-NEXT:    mv a3, s5
+; RV32I-NEXT:    mv a1, s5
+; RV32I-NEXT:    mv a2, s3
+; RV32I-NEXT:    mv a3, s4
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv a4, a0
 ; RV32I-NEXT:    lui a5, 524288
@@ -670,14 +670,14 @@ define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    lui a1, %hi(.LCPI14_0)
-; RV64I-NEXT:    ld s2, %lo(.LCPI14_0)(a1)
-; RV64I-NEXT:    mv a1, s2
+; RV64I-NEXT:    ld s1, %lo(.LCPI14_0)(a1)
+; RV64I-NEXT:    mv s2, a2
+; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    mv s3, a0
-; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    mv a1, s2
+; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slli a2, a1, 63
@@ -799,11 +799,11 @@ define double @fnmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv s0, a2
 ; RV32I-NEXT:    mv s1, a3
 ; RV32I-NEXT:    mv s2, a4
-; RV32I-NEXT:    mv s3, a5
 ; RV32I-NEXT:    lui a2, %hi(.LCPI17_0)
 ; RV32I-NEXT:    addi a3, a2, %lo(.LCPI17_0)
 ; RV32I-NEXT:    lw a2, 0(a3)
 ; RV32I-NEXT:    lw a3, 4(a3)
+; RV32I-NEXT:    mv s3, a5
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    lui a2, 524288
 ; RV32I-NEXT:    xor a1, a1, a2
@@ -827,9 +827,9 @@ define double @fnmsub_d(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
-; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    lui a1, %hi(.LCPI17_0)
 ; RV64I-NEXT:    ld a1, %lo(.LCPI17_0)(a1)
+; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slli a1, a1, 63
@@ -880,11 +880,11 @@ define double @fnmsub_d_2(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    mv s2, a4
-; RV32I-NEXT:    mv s3, a5
 ; RV32I-NEXT:    lui a2, %hi(.LCPI18_0)
 ; RV32I-NEXT:    addi a3, a2, %lo(.LCPI18_0)
 ; RV32I-NEXT:    lw a2, 0(a3)
 ; RV32I-NEXT:    lw a3, 4(a3)
+; RV32I-NEXT:    mv s3, a5
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    lui a3, 524288
@@ -910,9 +910,9 @@ define double @fnmsub_d_2(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    lui a1, %hi(.LCPI18_0)
 ; RV64I-NEXT:    ld a1, %lo(.LCPI18_0)(a1)
+; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slli a1, a1, 63
@@ -1009,11 +1009,11 @@ define double @fmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv s2, a2
 ; RV32I-NEXT:    mv s3, a3
 ; RV32I-NEXT:    mv a0, a4
+; RV32I-NEXT:    lui a1, %hi(.LCPI20_0)
+; RV32I-NEXT:    addi a1, a1, %lo(.LCPI20_0)
+; RV32I-NEXT:    lw a2, 0(a1)
+; RV32I-NEXT:    lw a3, 4(a1)
 ; RV32I-NEXT:    mv a1, a5
-; RV32I-NEXT:    lui a2, %hi(.LCPI20_0)
-; RV32I-NEXT:    addi a3, a2, %lo(.LCPI20_0)
-; RV32I-NEXT:    lw a2, 0(a3)
-; RV32I-NEXT:    lw a3, 4(a3)
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    mv s5, a1
@@ -1044,9 +1044,9 @@ define double @fmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    mv s1, a1
+; RV64I-NEXT:    lui a0, %hi(.LCPI20_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI20_0)(a0)
 ; RV64I-NEXT:    mv a0, a2
-; RV64I-NEXT:    lui a1, %hi(.LCPI20_0)
-; RV64I-NEXT:    ld a1, %lo(.LCPI20_0)(a1)
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s0
@@ -1108,27 +1108,27 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv s0, a2
 ; RV32I-NEXT:    mv s1, a3
 ; RV32I-NEXT:    mv s2, a4
-; RV32I-NEXT:    mv s3, a5
 ; RV32I-NEXT:    lui a2, %hi(.LCPI21_0)
 ; RV32I-NEXT:    addi a2, a2, %lo(.LCPI21_0)
-; RV32I-NEXT:    lw s4, 0(a2)
-; RV32I-NEXT:    lw s5, 4(a2)
-; RV32I-NEXT:    mv a2, s4
-; RV32I-NEXT:    mv a3, s5
+; RV32I-NEXT:    lw s3, 0(a2)
+; RV32I-NEXT:    lw s4, 4(a2)
+; RV32I-NEXT:    mv s5, a5
+; RV32I-NEXT:    mv a2, s3
+; RV32I-NEXT:    mv a3, s4
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv s6, a0
 ; RV32I-NEXT:    mv s7, a1
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    mv a2, s4
-; RV32I-NEXT:    mv a3, s5
+; RV32I-NEXT:    mv a2, s3
+; RV32I-NEXT:    mv a3, s4
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    mv s1, a1
 ; RV32I-NEXT:    mv a0, s2
-; RV32I-NEXT:    mv a1, s3
-; RV32I-NEXT:    mv a2, s4
-; RV32I-NEXT:    mv a3, s5
+; RV32I-NEXT:    mv a1, s5
+; RV32I-NEXT:    mv a2, s3
+; RV32I-NEXT:    mv a3, s4
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    mv s3, a1
@@ -1163,18 +1163,18 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
-; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    lui a1, %hi(.LCPI21_0)
-; RV64I-NEXT:    ld s2, %lo(.LCPI21_0)(a1)
-; RV64I-NEXT:    mv a1, s2
+; RV64I-NEXT:    ld s1, %lo(.LCPI21_0)(a1)
+; RV64I-NEXT:    mv s2, a2
+; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    mv s3, a0
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    mv a1, s2
+; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    mv a1, s2
+; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    mv a0, s3
@@ -1237,20 +1237,20 @@ define double @fnmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv s0, a2
 ; RV32I-NEXT:    mv s1, a3
 ; RV32I-NEXT:    mv s2, a4
-; RV32I-NEXT:    mv s3, a5
 ; RV32I-NEXT:    lui a2, %hi(.LCPI22_0)
 ; RV32I-NEXT:    addi a2, a2, %lo(.LCPI22_0)
-; RV32I-NEXT:    lw s4, 0(a2)
-; RV32I-NEXT:    lw s5, 4(a2)
-; RV32I-NEXT:    mv a2, s4
-; RV32I-NEXT:    mv a3, s5
+; RV32I-NEXT:    lw s3, 0(a2)
+; RV32I-NEXT:    lw s4, 4(a2)
+; RV32I-NEXT:    mv s5, a5
+; RV32I-NEXT:    mv a2, s3
+; RV32I-NEXT:    mv a3, s4
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv s6, a0
 ; RV32I-NEXT:    mv s7, a1
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    mv a2, s4
-; RV32I-NEXT:    mv a3, s5
+; RV32I-NEXT:    mv a2, s3
+; RV32I-NEXT:    mv a3, s4
 ; RV32I-NEXT:    call __adddf3
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a3, a1
@@ -1260,7 +1260,7 @@ define double @fnmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a3, a1
 ; RV32I-NEXT:    mv a0, s2
-; RV32I-NEXT:    mv a1, s3
+; RV32I-NEXT:    mv a1, s5
 ; RV32I-NEXT:    call __subdf3
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
@@ -1283,20 +1283,20 @@ define double @fnmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
-; RV64I-NEXT:    mv s1, a2
 ; RV64I-NEXT:    lui a1, %hi(.LCPI22_0)
-; RV64I-NEXT:    ld s2, %lo(.LCPI22_0)(a1)
-; RV64I-NEXT:    mv a1, s2
+; RV64I-NEXT:    ld s1, %lo(.LCPI22_0)(a1)
+; RV64I-NEXT:    mv s2, a2
+; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    mv s3, a0
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    mv a1, s2
+; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __adddf3
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a0, s3
 ; RV64I-NEXT:    call __muldf3
 ; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    call __subdf3
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload

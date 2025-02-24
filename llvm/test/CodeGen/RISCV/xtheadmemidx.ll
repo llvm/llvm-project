@@ -292,12 +292,12 @@ define ptr @lwuib(ptr %base, i64 %a, ptr %addr.1) {
 define ptr @ldia(ptr %base, ptr %addr.2, i64 %a) {
 ; RV32XTHEADMEMIDX-LABEL: ldia:
 ; RV32XTHEADMEMIDX:       # %bb.0:
-; RV32XTHEADMEMIDX-NEXT:    lw a4, 0(a0)
-; RV32XTHEADMEMIDX-NEXT:    lw a5, 4(a0)
+; RV32XTHEADMEMIDX-NEXT:    lw a4, 4(a0)
+; RV32XTHEADMEMIDX-NEXT:    lw a5, 0(a0)
 ; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, -128
-; RV32XTHEADMEMIDX-NEXT:    add a3, a5, a3
-; RV32XTHEADMEMIDX-NEXT:    add a2, a4, a2
-; RV32XTHEADMEMIDX-NEXT:    sltu a4, a2, a4
+; RV32XTHEADMEMIDX-NEXT:    add a3, a4, a3
+; RV32XTHEADMEMIDX-NEXT:    add a2, a5, a2
+; RV32XTHEADMEMIDX-NEXT:    sltu a4, a2, a5
 ; RV32XTHEADMEMIDX-NEXT:    add a3, a3, a4
 ; RV32XTHEADMEMIDX-NEXT:    sw a2, 0(a1)
 ; RV32XTHEADMEMIDX-NEXT:    sw a3, 4(a1)
@@ -859,9 +859,9 @@ define i64 @lrd(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    slli a2, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    add a2, a0, a2
-; RV32XTHEADMEMIDX-NEXT:    lw a2, 4(a2)
 ; RV32XTHEADMEMIDX-NEXT:    th.lrw a1, a0, a1, 3
+; RV32XTHEADMEMIDX-NEXT:    add a0, a0, a2
+; RV32XTHEADMEMIDX-NEXT:    lw a2, 4(a0)
 ; RV32XTHEADMEMIDX-NEXT:    add a0, a1, a1
 ; RV32XTHEADMEMIDX-NEXT:    sltu a1, a0, a1
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a2
@@ -883,8 +883,8 @@ define i64 @lrd_2(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lrd_2:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    addi a2, a0, 96
-; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, 100
 ; RV32XTHEADMEMIDX-NEXT:    th.lrw a2, a2, a1, 3
+; RV32XTHEADMEMIDX-NEXT:    addi a0, a0, 100
 ; RV32XTHEADMEMIDX-NEXT:    th.lrw a1, a0, a1, 3
 ; RV32XTHEADMEMIDX-NEXT:    add a0, a2, a2
 ; RV32XTHEADMEMIDX-NEXT:    sltu a2, a0, a2
@@ -909,9 +909,9 @@ define i64 @lurd(ptr %a, i32 %b) {
 ; RV32XTHEADMEMIDX-LABEL: lurd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    slli a2, a1, 3
-; RV32XTHEADMEMIDX-NEXT:    add a2, a0, a2
-; RV32XTHEADMEMIDX-NEXT:    lw a2, 4(a2)
 ; RV32XTHEADMEMIDX-NEXT:    th.lrw a1, a0, a1, 3
+; RV32XTHEADMEMIDX-NEXT:    add a0, a0, a2
+; RV32XTHEADMEMIDX-NEXT:    lw a2, 4(a0)
 ; RV32XTHEADMEMIDX-NEXT:    add a0, a1, a1
 ; RV32XTHEADMEMIDX-NEXT:    sltu a1, a0, a1
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a2, a2
@@ -1136,10 +1136,9 @@ define i64 @lrd_large_offset(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-NEXT:    slli a1, a1, 3
 ; RV32XTHEADMEMIDX-NEXT:    add a0, a1, a0
 ; RV32XTHEADMEMIDX-NEXT:    lui a1, 23
-; RV32XTHEADMEMIDX-NEXT:    addi a1, a1, 1792
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a0, a1
-; RV32XTHEADMEMIDX-NEXT:    lw a0, 0(a1)
-; RV32XTHEADMEMIDX-NEXT:    lw a1, 4(a1)
+; RV32XTHEADMEMIDX-NEXT:    lw a0, 1792(a1)
+; RV32XTHEADMEMIDX-NEXT:    lw a1, 1796(a1)
 ; RV32XTHEADMEMIDX-NEXT:    ret
 ;
 ; RV64XTHEADMEMIDX-LABEL: lrd_large_offset:

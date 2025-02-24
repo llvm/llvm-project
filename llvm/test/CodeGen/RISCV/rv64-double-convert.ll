@@ -122,9 +122,9 @@ define i128 @fptosi_sat_f64_to_i128(double %a) nounwind {
 ; RV64ID-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64ID-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64ID-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
-; RV64ID-NEXT:    fmv.d fs0, fa0
 ; RV64ID-NEXT:    lui a0, %hi(.LCPI4_0)
 ; RV64ID-NEXT:    fld fa5, %lo(.LCPI4_0)(a0)
+; RV64ID-NEXT:    fmv.d fs0, fa0
 ; RV64ID-NEXT:    fle.d s0, fa5, fa0
 ; RV64ID-NEXT:    call __fixdfti
 ; RV64ID-NEXT:    li a2, -1

@@ -99,8 +99,8 @@ define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv8r.v v24, v8
-; CHECK-NEXT:    vslidedown.vi v12, v0, 2
 ; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:    vslidedown.vi v12, v0, 2
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
