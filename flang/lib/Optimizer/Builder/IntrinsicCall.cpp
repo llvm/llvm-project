@@ -2728,7 +2728,6 @@ mlir::Value IntrinsicLibrary::genAtomicOr(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 3);
-  assert(args[1].getType() == args[2].getType());
   auto successOrdering = mlir::LLVM::AtomicOrdering::acq_rel;
   auto failureOrdering = mlir::LLVM::AtomicOrdering::monotonic;
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(resultType.getContext());
