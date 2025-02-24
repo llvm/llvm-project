@@ -11,8 +11,10 @@
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <chrono>
+#include <fstream>
 
 namespace lldb_dap {
 
@@ -20,22 +22,33 @@ namespace lldb_dap {
 ///
 /// The file is destroyed when the destructor is invoked.
 struct FifoFile {
-  FifoFile(llvm::StringRef path);
+  FifoFile(FifoFile &&other);
+
+  FifoFile(const FifoFile &) = delete;
+  FifoFile &operator=(const FifoFile &) = delete;
 
   ~FifoFile();
 
+  static llvm::Expected<FifoFile> create(llvm::StringRef path);
+  FifoFile(llvm::StringRef path, FILE *f);
+
   std::string m_path;
+  FILE *m_file;
+
+private:
+  FifoFile(std::string path, FILE *f);
 };
 
-/// Create a fifo file in the filesystem.
+/// Create and open a named pipe with a unique name.
 ///
-/// \param[in] path
-///     The path for the fifo file.
+/// The arguments have identical meanings to those of
+/// llvm::sys::fs::createTemporaryFile.
 ///
-/// \return
-///     A \a std::shared_ptr<FifoFile> if the file could be created, or an
-///     \a llvm::Error in case of failures.
-llvm::Expected<std::shared_ptr<FifoFile>> CreateFifoFile(llvm::StringRef path);
+/// Note that the resulting filename is further prepended by \c \\.\pipe\\LOCAL\
+/// on Windows and the native temp directory on other platforms.
+llvm::Error createUniqueNamedPipe(const llvm::Twine &prefix,
+                                  llvm::StringRef suffix, int &result_fd,
+                                  llvm::SmallVectorImpl<char> &result_path);
 
 class FifoFileIO {
 public:
@@ -45,7 +58,7 @@ public:
   /// \param[in] other_endpoint_name
   ///     A human readable name for the other endpoint that will communicate
   ///     using this file. This is used for error messages.
-  FifoFileIO(llvm::StringRef fifo_file, llvm::StringRef other_endpoint_name);
+  FifoFileIO(FifoFile &&fifo_file, llvm::StringRef other_endpoint_name);
 
   /// Read the next JSON object from the underlying input fifo file.
   ///
@@ -75,8 +88,10 @@ public:
       const llvm::json::Value &json,
       std::chrono::milliseconds timeout = std::chrono::milliseconds(20000));
 
+  llvm::Error WaitForPeer();
+
 private:
-  std::string m_fifo_file;
+  FifoFile m_fifo_file;
   std::string m_other_endpoint_name;
 };
 

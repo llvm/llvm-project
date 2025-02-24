@@ -43,7 +43,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         except:
             return False
 
-    @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminal(self):
         if not self.isTestSupported():
@@ -53,7 +52,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             launch the inferior with the correct environment variables and arguments.
         """
         program = self.getBuildArtifact("a.out")
-        source = "main.c"
+        source = "main.cpp"
         self.build_and_launch(
             program, runInTerminal=True, args=["foobar"], env=["FOO=bar"]
         )
@@ -113,7 +112,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("FOO", request_envs)
         self.assertEqual("BAR", request_envs["FOO"])
 
-    @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminalInvalidTarget(self):
         if not self.isTestSupported():
@@ -132,7 +130,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             response["message"],
         )
 
-    @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_missingArgInRunInTerminalLauncher(self):
         if not self.isTestSupported():
