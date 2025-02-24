@@ -157,6 +157,33 @@ void test_multiple_format_strings(const char *fmt1, const char *fmt2) {
         expected-warning{{passing 'os_log' format string where 'printf' format string is expected}}
 }
 
+__attribute__((format_matches(os_log, 1, "%{public}s"))) // expected-note 4{{comparing with this specifier}}
+void call_oslog_public(const char *fmt);
+
+__attribute__((format_matches(os_log, 1, "%{sensitive}s"))) // expected-note 2{{comparing with this specifier}}
+void call_oslog_sensitive(const char *fmt);
+
+__attribute__((format_matches(os_log, 1, "%{private}s"))) // expected-note 2{{comparing with this specifier}}
+void call_oslog_private(const char *fmt);
+
+void test_oslog(void) {
+    call_oslog_public("%{public}s");
+    call_oslog_public("%{private}s"); // expected-warning{{argument sensitivity is private, but it should be public}}
+    call_oslog_public("%{sensitive}s"); // expected-warning{{argument sensitivity is sensitive, but it should be public}}
+
+    call_oslog_sensitive("%{public}s"); // expected-warning{{argument sensitivity is public, but it should be sensitive}}
+    call_oslog_sensitive("%{private}s"); // expected-warning{{argument sensitivity is private, but it should be sensitive}}
+    call_oslog_sensitive("%{sensitive}s");
+
+    call_oslog_private("%{public}s"); // expected-warning{{argument sensitivity is public, but it should be private}}
+    call_oslog_private("%{private}s");
+    call_oslog_private("%{sensitive}s"); // expected-warning{{argument sensitivity is sensitive, but it should be private}}
+
+    // expected-warning@+2{{argument sensitivity is private, but it should be public}}
+    // expected-warning@+1{{format specifier 'i' is incompatible with 's'}}
+    call_oslog_public("%{private}i");
+}
+
 // MARK: - 
 void accept_value(const char *f) __attribute__((format_matches(freebsd_kprintf, 1, "%s%i%i"))); // \
     expected-note 3{{comparing with this specifier}} \
