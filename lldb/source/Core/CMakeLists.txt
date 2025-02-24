@@ -16,9 +16,7 @@ if (LLDB_ENABLE_CURSES)
   endif()
 endif()
 
-if (LLVM_BUILD_TELEMETRY)
-   set(TELEMETRY_DEPS Telemetry)
-endif()
+set(TELEMETRY_DEPS Telemetry)
 
 # TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
 add_lldb_library(lldbCore

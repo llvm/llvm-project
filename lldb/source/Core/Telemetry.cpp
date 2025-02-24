@@ -8,8 +8,6 @@
 
 #include "llvm/Config/llvm-config.h"
 
-#ifdef LLVM_BUILD_TELEMETRY
-
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -57,7 +55,8 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
 }
 
 TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
-    : m_config(std::move(config)) {}
+    : m_config(std::move(config))
+}
 
 llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   // Do nothing for now.
@@ -75,5 +74,3 @@ void TelemetryManager::setInstance(std::unique_ptr<TelemetryManager> manager) {
 
 } // namespace telemetry
 } // namespace lldb_private
-
-#endif // LLVM_BUILD_TELEMETRY

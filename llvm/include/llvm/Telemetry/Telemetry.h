@@ -64,11 +64,19 @@ public:
 /// This struct can be extended as needed to add additional configuration
 /// points specific to a vendor's implementation.
 struct Config {
-  virtual ~Config() = default;
+#ifdef LLVM_ENABLE_TELEMETRY
+  static bool BuildTimeEnableTelemetry = true;
+#else
+  static bool BuildTimeEnableTelemetry = false;
+#endif
+  virtual ~Config() : EnableTelemetry(BuildTimeEnableTelemetry) {}
 
   // If true, telemetry will be enabled.
   const bool EnableTelemetry;
-  Config(bool E) : EnableTelemetry(E) {}
+
+  // Telemetry can only be enabled if both the runtime and buildtime flag
+  // are set.
+  Config(bool E) : EnableTelemetry(E && BuildTimeEnableTelemetry) {}
 
   virtual std::optional<std::string> makeSessionId() { return std::nullopt; }
 };

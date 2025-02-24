@@ -1,6 +1,6 @@
-if (LLVM_BUILD_TELEMETRY)
-  set(TELEMETRY_DEPS Telemetry)
-endif()
+
+set(TELEMETRY_DEPS Telemetry)
+
 
 add_lldb_unittest(LLDBCoreTests
   CommunicationTest.cpp
