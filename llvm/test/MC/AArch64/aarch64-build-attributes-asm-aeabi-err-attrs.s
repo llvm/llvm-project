@@ -1,5 +1,6 @@
 // RUN: not llvm-mc -triple=aarch64 %s 2>&1 | FileCheck --check-prefix=ERR %s
 
+// Test logic and type mismatch
 .aeabi_attribute Tag_Feature_BTI, 1
 // ERR: error: no active subsection, build attribute can not be added
 // ERR-NEXT: .aeabi_attribute Tag_Feature_BTI, 1
@@ -8,10 +9,6 @@
 .aeabi_attribute Tag_Feature_BTI, 1
 // ERR: error: unknown AArch64 build attribute 'Tag_Feature_BTI' for subsection 'aeabi_pauthabi'
 // ERR-NEXT: .aeabi_attribute Tag_Feature_BTI, 1
-
-.aeabi_attribute Tag_PAuth_Platform, 4
-// ERR: error: unknown AArch64 build attributes Value for Tag 'Tag_PAuth_Platform' options are 0|1
-// ERR-NEXT: .aeabi_attribute Tag_PAuth_Platform, 4
 
 .aeabi_attribute a, 1
 // ERR: error: unknown AArch64 build attribute 'a' for subsection 'aeabi_pauthabi'
@@ -25,6 +22,8 @@
 // ERR: error: active subsection type is ULEB128 (unsigned), found NTBS (string)
 // ERR-NEXT: .aeabi_attribute Tag_PAuth_Platform, a
 
+
+// Test syntax errors
 .aeabi_attribute Tag_PAuth_Platform,
 // ERR: error: AArch64 build attributes value not found
 // ERR-NEXT: .aeabi_attribute Tag_PAuth_Platform,

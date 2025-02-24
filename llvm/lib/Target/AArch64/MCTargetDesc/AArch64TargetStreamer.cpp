@@ -153,8 +153,8 @@ MCTargetStreamer *llvm::createAArch64NullTargetStreamer(MCStreamer &S) {
 }
 
 void AArch64TargetStreamer::emitAtributesSubsection(
-    StringRef VendorName, AArch64BuildAttrs::SubsectionOptional IsOptional,
-    AArch64BuildAttrs::SubsectionType ParameterType) {
+    StringRef VendorName, AArch64BuildAttributes::SubsectionOptional IsOptional,
+    AArch64BuildAttributes::SubsectionType ParameterType) {
 
   // If exists, return.
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
@@ -222,13 +222,9 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
                      "Can not add AArch64 build attribute: An attribute with "
                      "the same tag and a different value already exists");
               return;
-            } else {
-              // Case Item.IntValue == Value, no need to emit twice
-              assert(0 &&
-                     "AArch64 build attribute: An attribute with the same tag "
-                     "and a same value already exists");
-              return;
             }
+            // Case Item.IntValue == Value is permited.
+            return;
           }
         }
       }

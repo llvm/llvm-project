@@ -2,15 +2,15 @@
 
 // ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
 // ASM: .aeabi_attribute	0, 1
-// ASM: .aeabi_attribute	Tag_PAuth_Platform, 1
-// ASM: .aeabi_attribute	Tag_PAuth_Schema, 1
+// ASM: .aeabi_attribute	1, 1 @ Tag_PAuth_Platform
+// ASM: .aeabi_attribute	2, 1 @ Tag_PAuth_Schema
 // ASM: .aeabi_attribute	3, 1
 // ASM: .aeabi_attribute	4, 1
 // ASM: .aeabi_attribute	5, 1
 // ASM: .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
-// ASM: .aeabi_attribute	Tag_Feature_BTI, 1
-// ASM: .aeabi_attribute	Tag_Feature_PAC, 1
-// ASM: .aeabi_attribute	Tag_Feature_GCS, 1
+// ASM: .aeabi_attribute	0, 1 @ Tag_Feature_BTI
+// ASM: .aeabi_attribute	1, 1 @ Tag_Feature_PAC
+// ASM: .aeabi_attribute	2, 1 @ Tag_Feature_GCS
 // ASM: .aeabi_attribute	3, 1
 // ASM: .aeabi_attribute	4, 1
 // ASM: .aeabi_attribute	5, 1

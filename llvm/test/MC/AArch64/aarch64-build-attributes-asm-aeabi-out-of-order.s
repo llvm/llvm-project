@@ -3,18 +3,18 @@
 
 // ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
 // ASM: .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
-// ASM: .aeabi_attribute	Tag_Feature_BTI, 1
+// ASM: .aeabi_attribute	0, 1 @ Tag_Feature_BTI
 // ASM: .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
 // ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
-// ASM: .aeabi_attribute	Tag_PAuth_Schema, 1
+// ASM: .aeabi_attribute	2, 1 @ Tag_PAuth_Schema
 // ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
-// ASM: .aeabi_attribute	Tag_PAuth_Platform, 1
-// ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
-// ASM: .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
-// ASM: .aeabi_attribute	Tag_Feature_GCS, 1
+// ASM: .aeabi_attribute	1, 1 @ Tag_PAuth_Platform
 // ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
 // ASM: .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
-// ASM: .aeabi_attribute	Tag_Feature_PAC, 0
+// ASM: .aeabi_attribute	2, 1 @ Tag_Feature_GCS
+// ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
+// ASM: .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
+// ASM: .aeabi_attribute	1, 0 @ Tag_Feature_PAC
 // ASM: .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
 // ASM: .aeabi_attribute	7, 1
 // ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128

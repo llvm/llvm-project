@@ -27,6 +27,9 @@ public:
   AttributeHeaderParser(ScopedPrinter *printer)
       : ELFAttributeParser(printer, emptyTagNameMap, "test") {}
   AttributeHeaderParser() : ELFAttributeParser(emptyTagNameMap, "test") {}
+  Error parse(ArrayRef<uint8_t> section, llvm::endianness endian) override {
+    return ELFAttributeParser::parse(section, endian);
+  }
 };
 
 static void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {
