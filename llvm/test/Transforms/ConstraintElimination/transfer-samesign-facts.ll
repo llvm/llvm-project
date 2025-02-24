@@ -309,8 +309,7 @@ define i1 @implied_condition_sgt_ugt(i8 %a, i8 %b)  {
 ; CHECK-NEXT:    [[CMP_SGT:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_SGT]], label [[GREATER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       greater:
-; CHECK-NEXT:    [[CMP_UGT:%.*]] = icmp samesign ugt i8 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[CMP_UGT]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -330,8 +329,7 @@ define i1 @implied_condition_sle_ule(i8 %a) {
 ; CHECK-NEXT:    [[CMP_SLE:%.*]] = icmp sle i8 [[A:%.*]], 42
 ; CHECK-NEXT:    br i1 [[CMP_SLE]], label [[LESS_OR_EQUAL:%.*]], label [[EXIT:%.*]]
 ; CHECK:       less_or_equal:
-; CHECK-NEXT:    [[CMP_ULE:%.*]] = icmp samesign ule i8 [[A]], 42
-; CHECK-NEXT:    ret i1 [[CMP_ULE]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ;
