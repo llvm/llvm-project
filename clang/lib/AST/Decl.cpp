@@ -5747,13 +5747,20 @@ HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
 }
 
 HLSLBufferDecl *
-HLSLBufferDecl::CreateDefaultCBuffer(ASTContext &C,
-                                     DeclContext *LexicalParent) {
+HLSLBufferDecl::CreateDefaultCBuffer(ASTContext &C, DeclContext *LexicalParent,
+                                     ArrayRef<Decl *> DefaultCBufferDecls) {
   DeclContext *DC = LexicalParent;
   IdentifierInfo *II = &C.Idents.get("$Globals", tok::TokenKind::identifier);
   HLSLBufferDecl *Result = new (C, DC) HLSLBufferDecl(
       DC, true, SourceLocation(), II, SourceLocation(), SourceLocation());
   Result->setImplicit(true);
+
+  // allocate array for default decls with ASTContext allocator
+  assert(!DefaultCBufferDecls.empty());
+  Decl **DeclsArray = new (C) Decl *[DefaultCBufferDecls.size()];
+  std::copy(DefaultCBufferDecls.begin(), DefaultCBufferDecls.end(), DeclsArray);
+  Result->setDefaultBufferDecls(
+      ArrayRef<Decl *>(DeclsArray, DefaultCBufferDecls.size()));
   return Result;
 }
 
@@ -5769,11 +5776,11 @@ void HLSLBufferDecl::addLayoutStruct(CXXRecordDecl *LS) {
   addDecl(LS);
 }
 
-void HLSLBufferDecl::addDefaultBufferDecl(Decl *D) {
+void HLSLBufferDecl::setDefaultBufferDecls(ArrayRef<Decl *> Decls) {
   assert(isImplicit() &&
          "default decls can only be added to the implicit/default constant "
          "buffer $Globals");
-  DefaultBufferDecls.push_back(D);
+  DefaultBufferDecls = Decls;
 }
 
 HLSLBufferDecl::buffer_decl_iterator

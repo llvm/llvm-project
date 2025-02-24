@@ -5045,22 +5045,26 @@ class HLSLBufferDecl final : public NamedDecl, public DeclContext {
   // LayoutStruct - Layout struct for the buffer
   CXXRecordDecl *LayoutStruct;
 
-  // For default (implicit) constant buffer, a lisf of references of global
+  // For default (implicit) constant buffer, an array of references of global
   // decls that belong to the buffer. The decls are already parented by the
-  // translation unit context.
-  SmallVector<Decl *> DefaultBufferDecls;
+  // translation unit context. The array is allocated by the ASTContext
+  // allocator in HLSLBufferDecl::CreateDefaultCBuffer.
+  ArrayRef<Decl *> DefaultBufferDecls;
 
   HLSLBufferDecl(DeclContext *DC, bool CBuffer, SourceLocation KwLoc,
                  IdentifierInfo *ID, SourceLocation IDLoc,
                  SourceLocation LBrace);
+
+  void setDefaultBufferDecls(ArrayRef<Decl *> Decls);
 
 public:
   static HLSLBufferDecl *Create(ASTContext &C, DeclContext *LexicalParent,
                                 bool CBuffer, SourceLocation KwLoc,
                                 IdentifierInfo *ID, SourceLocation IDLoc,
                                 SourceLocation LBrace);
-  static HLSLBufferDecl *CreateDefaultCBuffer(ASTContext &C,
-                                              DeclContext *LexicalParent);
+  static HLSLBufferDecl *
+  CreateDefaultCBuffer(ASTContext &C, DeclContext *LexicalParent,
+                       ArrayRef<Decl *> DefaultCBufferDecls);
   static HLSLBufferDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY {
@@ -5075,7 +5079,6 @@ public:
   bool hasValidPackoffset() const { return HasValidPackoffset; }
   const CXXRecordDecl *getLayoutStruct() const { return LayoutStruct; }
   void addLayoutStruct(CXXRecordDecl *LS);
-  void addDefaultBufferDecl(Decl *D);
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

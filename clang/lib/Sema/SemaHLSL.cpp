@@ -148,7 +148,7 @@ bool ResourceBindings::hasBindingInfoForDecl(const VarDecl *VD) const {
   return DeclToBindingListIndex.contains(VD);
 }
 
-SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S), DefaultCBuffer(nullptr) {}
+SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S) {}
 
 Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
                                  SourceLocation KwLoc, IdentifierInfo *Ident,
@@ -1931,7 +1931,10 @@ void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
 
 void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
   // process default CBuffer - create buffer layout struct and invoke codegenCGH
-  if (DefaultCBuffer) {
+  if (!DefaultCBufferDecls.empty()) {
+    HLSLBufferDecl *DefaultCBuffer = HLSLBufferDecl::CreateDefaultCBuffer(
+        SemaRef.getASTContext(), SemaRef.getCurLexicalContext(),
+        DefaultCBufferDecls);
     SemaRef.getCurLexicalContext()->addDecl(DefaultCBuffer);
     createHostLayoutStructForBuffer(SemaRef, DefaultCBuffer);
 
@@ -3025,16 +3028,13 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
 
     // Global variables outside a cbuffer block that are not a resource, static,
     // groupshared, or an empty array or struct belong to the default constant
-    // buffer $Globals
+    // buffer $Globals (to be created at the end of the translation unit).
     if (IsDefaultBufferConstantDecl(VD)) {
-      if (DefaultCBuffer == nullptr)
-        DefaultCBuffer = HLSLBufferDecl::CreateDefaultCBuffer(
-            SemaRef.getASTContext(), SemaRef.getCurLexicalContext());
       // update address space to hlsl_constant
       QualType NewTy = getASTContext().getAddrSpaceQualType(
           VD->getType(), LangAS::hlsl_constant);
       VD->setType(NewTy);
-      DefaultCBuffer->addDefaultBufferDecl(VD);
+      DefaultCBufferDecls.push_back(VD);
     }
 
     // find all resources bindings on decl

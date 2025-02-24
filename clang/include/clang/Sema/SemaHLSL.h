@@ -168,8 +168,9 @@ private:
   // List of all resource bindings
   ResourceBindings Bindings;
 
-  // default constant buffer $Globals
-  HLSLBufferDecl *DefaultCBuffer;
+  // Global declaration collected for the $Globals default constant
+  // buffer which will be created at the end of the translation unit.
+  llvm::SmallVector<Decl *> DefaultCBufferDecls;
 
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
