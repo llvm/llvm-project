@@ -4039,10 +4039,15 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
   /*TO_UPSTREAM(BoundsSafety) ON*/
   if (Opts.BoundsSafety &&
-      Opts.BoundsSafetyBringUpMissingChecks != LangOptions::BS_CHK_Default) {
+      Opts.BoundsSafetyBringUpMissingChecks !=
+          LangOptions::getDefaultBoundsSafetyNewChecksMask()) {
     std::string Checks;
-    if (Opts.BoundsSafetyBringUpMissingChecks == LangOptions::BS_CHK_All) {
+    if (Opts.BoundsSafetyBringUpMissingChecks ==
+        LangOptions::getBoundsSafetyNewChecksMaskForGroup("all")) {
       Checks = "all";
+    } else if (Opts.BoundsSafetyBringUpMissingChecks ==
+               LangOptions::getBoundsSafetyNewChecksMaskForGroup("batch_0")) {
+      Checks = "batch_0";
     } else {
       if (Opts.hasNewBoundsSafetyCheck(LangOptions::BS_CHK_AccessSize))
         Checks += "access_size,";

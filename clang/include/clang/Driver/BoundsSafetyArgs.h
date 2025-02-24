@@ -13,10 +13,8 @@
 
 namespace clang {
 namespace driver {
-using BoundsSafetyNewChecksMaskTy =
-    std::underlying_type<LangOptions::BoundsSafetyNewChecksMask>::type;
 
-BoundsSafetyNewChecksMaskTy
+LangOptions::BoundsSafetyNewChecksMaskIntTy
 ParseBoundsSafetyNewChecksMaskFromArgs(const llvm::opt::ArgList &Args,
                                        DiagnosticsEngine *Diags);
 } // namespace driver

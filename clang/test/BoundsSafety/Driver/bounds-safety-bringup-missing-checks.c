@@ -7,6 +7,8 @@
 // EMPTY-NOT: -fno-bounds-safety-bringup-missing-checks
 // EMPTY-NOT: -fbounds-safety-bringup-missing-checks=all
 // EMPTY-NOT: -fno-bounds-safety-bringup-missing-checks=all
+// EMPTY-NOT: -fbounds-safety-bringup-missing-checks=batch_0
+// EMPTY-NOT: -fno-bounds-safety-bringup-missing-checks=batch_0
 
 // RUN: %clang -fbounds-safety -fno-bounds-safety-bringup-missing-checks -c %s -### 2>&1 | FileCheck %s --check-prefix=DISABLED
 // DISABLED: -fno-bounds-safety-bringup-missing-checks=all
@@ -45,6 +47,9 @@
 // RUN: %clang -fbounds-safety -fbounds-safety-bringup-missing-checks=all -c %s -### 2>&1 | FileCheck %s --check-prefix=POS_ALL
 // POS_ALL: -fbounds-safety-bringup-missing-checks=all
 
+// RUN: %clang -fbounds-safety -fbounds-safety-bringup-missing-checks=batch_0 -c %s -### 2>&1 | FileCheck %s --check-prefix=POS_batch_0
+// POS_batch_0: -fbounds-safety-bringup-missing-checks=batch_0
+
 // RUN: %clang -fbounds-safety -fno-bounds-safety-bringup-missing-checks=access_size -c %s -### 2>&1 | FileCheck %s --check-prefix=NEG_ACCESS
 // NEG_ACCESS: -fno-bounds-safety-bringup-missing-checks=access_size
 
@@ -66,6 +71,9 @@
 // RUN: %clang -fbounds-safety -fno-bounds-safety-bringup-missing-checks=all -c %s -### 2>&1 | FileCheck %s --check-prefix=NEG_ALL
 // NEG_ALL: -fno-bounds-safety-bringup-missing-checks=all
 
+// RUN: %clang -fbounds-safety -fno-bounds-safety-bringup-missing-checks=batch_0 -c %s -### 2>&1 | FileCheck %s --check-prefix=NEG_batch_0
+// NEG_batch_0: -fno-bounds-safety-bringup-missing-checks=batch_0
+
 // RUN: %clang -fbounds-safety -fbounds-safety-bringup-missing-checks=access_size,indirect_count_update,return_size,ended_by_lower_bound,compound_literal_init,libc_attributes,all -c %s -### 2>&1 | FileCheck %s --check-prefix=POS_COMMA
 // POS_COMMA: -fbounds-safety-bringup-missing-checks=access_size,indirect_count_update,return_size,ended_by_lower_bound,compound_literal_init,libc_attributes,all
 
@@ -86,3 +94,8 @@
 // RUN: %clang -fbounds-safety-bringup-missing-checks -c %s -### 2>&1 | FileCheck %s --check-prefixes=UNUSED_POS
 // UNUSED_POS: warning: argument unused during compilation: '-fbounds-safety-bringup-missing-checks'
 
+// RUN: %clang -fno-bounds-safety-bringup-missing-checks=batch_0 -c %s -### 2>&1 | FileCheck %s --check-prefixes=UNUSED_NEG_BATCH_0
+// UNUSED_NEG_BATCH_0: warning: argument unused during compilation: '-fno-bounds-safety-bringup-missing-checks=batch_0'
+
+// RUN: %clang -fbounds-safety-bringup-missing-checks=batch_0 -c %s -### 2>&1 | FileCheck %s --check-prefixes=UNUSED_POS_BATCH_0
+// UNUSED_POS_BATCH_0: warning: argument unused during compilation: '-fbounds-safety-bringup-missing-checks=batch_0'

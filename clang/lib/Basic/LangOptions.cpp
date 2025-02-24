@@ -240,3 +240,25 @@ LLVM_DUMP_METHOD void FPOptionsOverride::dump() {
 #include "clang/Basic/FPOptions.def"
   llvm::errs() << "\n";
 }
+
+/* TO_UPSTREAM(BoundsSafety) ON*/
+LangOptionsBase::BoundsSafetyNewChecksMaskIntTy
+LangOptionsBase::getBoundsSafetyNewChecksMaskForGroup(StringRef GroupName) {
+  const uint64_t Batch0 = BS_CHK_AccessSize | BS_CHK_IndirectCountUpdate |
+                          BS_CHK_ReturnSize | BS_CHK_EndedByLowerBound |
+                          BS_CHK_CompoundLiteralInit | BS_CHK_LibCAttributes |
+                          BS_CHK_ArraySubscriptAgg;
+
+  // Currently "all" and "batch_0" are the same
+  if (GroupName == "all" || GroupName == "batch_0")
+    return Batch0;
+
+  // Invalid GroupName
+  return BS_CHK_None;
+}
+
+LangOptionsBase::BoundsSafetyNewChecksMaskIntTy
+LangOptionsBase::getDefaultBoundsSafetyNewChecksMask() {
+  return BS_CHK_None;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF*/

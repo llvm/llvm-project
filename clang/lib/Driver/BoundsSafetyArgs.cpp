@@ -16,7 +16,7 @@ namespace clang {
 
 namespace driver {
 
-BoundsSafetyNewChecksMaskTy
+LangOptions::BoundsSafetyNewChecksMaskIntTy
 ParseBoundsSafetyNewChecksMaskFromArgs(const llvm::opt::ArgList &Args,
                                        DiagnosticsEngine *Diags) {
   auto FilteredArgs =
@@ -24,22 +24,22 @@ ParseBoundsSafetyNewChecksMaskFromArgs(const llvm::opt::ArgList &Args,
                     OPT_fno_bounds_safety_bringup_missing_checks_EQ);
   if (FilteredArgs.empty()) {
     // No flags present. Use the default
-    return LangOptions::BS_CHK_Default;
+    return LangOptions::getDefaultBoundsSafetyNewChecksMask();
   }
 
   // If flags are present then start with BS_CHK_None as the initial mask and
   // update the mask based on the flags. This preserves compiler behavior for
   // users that adopted the `-fbounds-safety-bringup-missing-checks` flag when
-  // `BS_CHK_Default == BS_CHK_None`.
-  BoundsSafetyNewChecksMaskTy Result = LangOptions::BS_CHK_None;
+  // `getDefaultBoundsSafetyNewChecksMask() == BS_CHK_None`.
+  LangOptions::BoundsSafetyNewChecksMaskIntTy Result = LangOptions::BS_CHK_None;
   // All the options will be applied as masks in the command line order, to make
   // it easier to enable all but certain checks (or disable all but certain
   // checks).
   for (const Arg *A : FilteredArgs) {
     for (const char *Value : A->getValues()) {
-      std::optional<LangOptions::BoundsSafetyNewChecksMask> Mask =
+      std::optional<LangOptions::BoundsSafetyNewChecksMaskIntTy> Mask =
           llvm::StringSwitch<
-              std::optional<LangOptions::BoundsSafetyNewChecksMask>>(Value)
+              std::optional<LangOptions::BoundsSafetyNewChecksMaskIntTy>>(Value)
               .Case("access_size", LangOptions::BS_CHK_AccessSize)
               .Case("indirect_count_update",
                     LangOptions::BS_CHK_IndirectCountUpdate)
@@ -51,7 +51,11 @@ ParseBoundsSafetyNewChecksMaskFromArgs(const llvm::opt::ArgList &Args,
               .Case("libc_attributes", LangOptions::BS_CHK_LibCAttributes)
               .Case("array_subscript_agg",
                     LangOptions::BS_CHK_ArraySubscriptAgg)
-              .Case("all", LangOptions::BS_CHK_All)
+              .Case("all",
+                    LangOptions::getBoundsSafetyNewChecksMaskForGroup("all"))
+              .Case(
+                  "batch_0",
+                  LangOptions::getBoundsSafetyNewChecksMaskForGroup("batch_0"))
               .Case("none", LangOptions::BS_CHK_None)
               .Default(std::nullopt);
       if (!Mask) {
