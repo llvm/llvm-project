@@ -2208,20 +2208,3 @@ attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }
 ; CHECK: [[LOOP35]] = distinct !{[[LOOP35]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP36]] = distinct !{[[LOOP36]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP37]] = distinct !{[[LOOP37]], [[META2]], [[META1]]}
-; CHECK: [[LOOP38]] = distinct !{[[LOOP38]], [[META1]], [[META2]]}
-; CHECK: [[LOOP39]] = distinct !{[[LOOP39]], [[META2]], [[META1]]}
-; CHECK: [[LOOP40]] = distinct !{[[LOOP40]], [[META1]], [[META2]]}
-; CHECK: [[LOOP41]] = distinct !{[[LOOP41]], [[META2]], [[META1]]}
-; CHECK: [[LOOP42]] = distinct !{[[LOOP42]], [[META1]], [[META2]]}
-; CHECK: [[LOOP43]] = distinct !{[[LOOP43]], [[META2]], [[META1]]}
-; CHECK: [[LOOP44]] = distinct !{[[LOOP44]], [[META1]], [[META2]]}
-; CHECK: [[LOOP45]] = distinct !{[[LOOP45]], [[META2]], [[META1]]}
-; CHECK: [[LOOP46]] = distinct !{[[LOOP46]], [[META1]], [[META2]]}
-; CHECK: [[LOOP47]] = distinct !{[[LOOP47]], [[META2]], [[META1]]}
-; CHECK: [[LOOP48]] = distinct !{[[LOOP48]], [[META1]], [[META2]]}
-; CHECK: [[LOOP49]] = distinct !{[[LOOP49]], [[META2]], [[META1]]}
-; CHECK: [[LOOP50]] = distinct !{[[LOOP50]], [[META1]], [[META2]]}
-; CHECK: [[LOOP51]] = distinct !{[[LOOP51]], [[META2]], [[META1]]}
-; CHECK: [[LOOP52]] = distinct !{[[LOOP52]], [[META1]], [[META2]]}
-; CHECK: [[LOOP53]] = distinct !{[[LOOP53]], [[META2]], [[META1]]}
-;.
