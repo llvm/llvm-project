@@ -267,26 +267,6 @@ namespace omp {
 namespace target {
 namespace plugin {
 
-extern "C" {
-uint64_t hostrpc_assign_buffer(hsa_agent_t Agent, hsa_queue_t *ThisQ,
-                               uint32_t DeviceId,
-                               hsa_amd_memory_pool_t HostMemoryPool,
-                               hsa_amd_memory_pool_t DevMemoryPool);
-hsa_status_t hostrpc_terminate();
-__attribute__((weak)) hsa_status_t hostrpc_terminate() {
-  return HSA_STATUS_SUCCESS;
-}
-__attribute__((weak)) uint64_t hostrpc_assign_buffer(
-    hsa_agent_t, hsa_queue_t *, uint32_t DeviceId,
-    hsa_amd_memory_pool_t HostMemoryPool, hsa_amd_memory_pool_t DevMemoryPool) {
-  // FIXME:THIS SHOULD BE HARD FAIL
-  DP("Warning: Attempting to assign hostrpc to device %u, but hostrpc library "
-     "missing\n",
-     DeviceId);
-  return 0;
-}
-}
-
 /// Forward declarations for all specialized data structures.
 struct AMDGPUKernelTy;
 struct AMDGPUDeviceTy;
@@ -357,12 +337,6 @@ Error iterateAgentMemoryPools(hsa_agent_t Agent, CallbackTy Cb) {
   return Plugin::check(Status,
                        "Error in hsa_amd_agent_iterate_memory_pools: %s");
 }
-
-extern "C" uint64_t hostrpc_assign_buffer(hsa_agent_t Agent, hsa_queue_t *ThisQ,
-                                          uint32_t DeviceId,
-                                          hsa_amd_memory_pool_t HostMemoryPool,
-                                          hsa_amd_memory_pool_t DevMemoryPool);
-extern "C" hsa_status_t hostrpc_terminate();
 
 /// Dispatches an asynchronous memory copy.
 /// Enables different SDMA engines for the dispatch in a round-robin fashion.
@@ -751,9 +725,6 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
   AMDGPUKernelTy(const char *Name, GenericGlobalHandlerTy &Handler)
       : GenericKernelTy(Name),
-        OMPX_DisableHostExec("LIBOMPTARGET_DISABLE_HOST_EXEC", false),
-        ServiceThreadDeviceBufferGlobal("service_thread_buf", sizeof(uint64_t)),
-        HostServiceBufferHandler(Handler),
         OMPX_SPMDOccupancyBasedOpt("OMPX_SPMD_OCCUPANCY_BASED_OPT", false),
         OMPX_BigJumpLoopOccupancyBasedOpt(
             "OMPX_BIGJUMPLOOP_OCCUPANCY_BASED_OPT", false),
@@ -839,15 +810,6 @@ struct AMDGPUKernelTy : public GenericKernelTy {
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
            "Could not read extra information for kernel %s.", getName());
 
-    NeedsHostServices =
-        AMDImage.hasDeviceSymbol(Device, "__needs_host_services");
-    if (NeedsHostServices && !OMPX_DisableHostExec) {
-      // GenericGlobalHandlerTy * GHandler = Plugin::createGlobalHandler();
-      if (auto Err = HostServiceBufferHandler.getGlobalMetadataFromDevice(
-              Device, AMDImage, ServiceThreadDeviceBufferGlobal))
-        return Err;
-    }
-
     return Plugin::success();
   }
 
@@ -884,9 +846,6 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Indicates whether or not we need to set up our own private segment size.
   bool usesDynamicStack() const { return DynamicStack; }
 
-  /// Envar to disable host-exec thread creation.
-  BoolEnvar OMPX_DisableHostExec;
-
   /// Envar to enable occupancy-based optimization for SPMD kernel.
   BoolEnvar OMPX_SPMDOccupancyBasedOpt;
 
@@ -913,15 +872,6 @@ private:
   std::optional<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfo;
   /// CodeGen generate WGSize
   uint16_t ConstWGSize;
-
-  /// Indicate whether this Kernel requires host services
-  bool NeedsHostServices;
-
-  /// Global for host service device thread buffer
-  GlobalTy ServiceThreadDeviceBufferGlobal;
-
-  /// Global handler for hostservices buffer
-  GenericGlobalHandlerTy &HostServiceBufferHandler;
 
   /// Lower number of threads if tripcount is low. This should produce
   /// a larger number of teams if allowed by other constraints.
@@ -1709,6 +1659,10 @@ private:
     hsa_agent_t Agent;
     AMDGPUSignalTy *Signal;
     double TicksToTime;
+    std::string KernelName;
+    uint32_t NumTeams;
+    uint32_t NumThreads;
+    KernelRunRecordTy *KernelRunRecords;
   };
 
   using AMDGPUStreamCallbackTy = Error(void *Data);
@@ -1988,7 +1942,6 @@ private:
       return Err;
 
     // Push a barrier into the queue with both input signals.
-    DP("Using Queue: %p with HSA Queue: %p\n", Queue, Queue->getHsaQueue());
     return Queue->pushBarrier(OutputSignal, InputSignal, OtherSignal);
   }
 
@@ -2087,9 +2040,20 @@ private:
     PostKernelRunProcessingArgsTy *Args =
         reinterpret_cast<PostKernelRunProcessingArgsTy *>(Data);
 
-    uint64_t KernelDuration = getKernelDuration(Args);
-    fprintf(stderr, "Kernel Duration: %lu ns\n", KernelDuration);
+    KernelRunRecordTy *KernelRecord = Args->KernelRunRecords;
+    assert(KernelRecord && "KernelRunRecord is null!");
 
+    uint64_t KernelDuration = getKernelDuration(Args);
+    KernelRecord->addEntry(Args->KernelName, Args->NumTeams, Args->NumThreads,
+                           KernelDuration);
+
+    if (getInfoLevel() & OMP_INFOTYPE_AMD_KERNEL_TRACE) {
+      fprintf(stderr,
+              "[Autotuning run] Kernel %s with %u teams and %u threads "
+              "completed in %lu ns.\n",
+              Args->KernelName.c_str(), Args->NumTeams, Args->NumThreads,
+              KernelDuration);
+    }
     return Plugin::success();
   }
 
@@ -2171,14 +2135,26 @@ public:
 
     // If runtime autotuning is enabled, setup the callback functions to process
     // the data after kernel completed.
-    if (Device.enableRuntimeAutotuning()) {
-      PostKernelRunProcessingArgs.Agent = Agent;
-      PostKernelRunProcessingArgs.Signal = OutputSignal;
-      PostKernelRunProcessingArgs.TicksToTime = 1.0;
+    if (Device.enableRuntimeAutotuning() && Kernel.isSPMDMode()) {
+      std::string KernelName(Kernel.getName());
+      KernelRunRecordTy *KernelRecords = Device.getKernelRunRecords();
+      assert(KernelRecords && "No KernelRecords!");
 
-      if (auto Err = Slots[Curr].schedCallback(postKernelRunProcessingAction,
-                                               &PostKernelRunProcessingArgs))
-        return Err;
+      // If this kernel has reached the run limit,
+      // skip registering the callback function.
+      if (!KernelRecords->reachedRunLimitForKernel(KernelName)) {
+        PostKernelRunProcessingArgs.Agent = Agent;
+        PostKernelRunProcessingArgs.Signal = OutputSignal;
+        PostKernelRunProcessingArgs.TicksToTime = 1.0;
+        PostKernelRunProcessingArgs.KernelName = KernelName;
+        PostKernelRunProcessingArgs.NumTeams = NumBlocks[0];
+        PostKernelRunProcessingArgs.NumThreads = NumThreads[0];
+        PostKernelRunProcessingArgs.KernelRunRecords = KernelRecords;
+
+        if (auto Err = Slots[Curr].schedCallback(postKernelRunProcessingAction,
+                                                 &PostKernelRunProcessingArgs))
+          return Err;
+      }
     }
 
     // Push the kernel with the output signal and an input signal (optional)
@@ -4289,16 +4265,10 @@ private:
     // TODO: replace with ROCr API once it becomes available.
     // MI300A
     llvm::StringRef StrGfxName(ComputeUnitKind);
-    IsAPU = llvm::StringSwitch<bool>(StrGfxName)
-                .Case("gfx940", true)
-                .Default(false);
-    if (IsAPU)
-      return Plugin::success();
-
     bool MayBeAPU = llvm::StringSwitch<bool>(StrGfxName)
                         .Case("gfx942", true)
                         .Default(false);
-    if (!MayBeAPU) // not gfx90a, gfx940, gfx941, or or gfx942
+    if (!MayBeAPU) // not gfx90a or gfx942
       return Plugin::success();
 
     // Can be MI300A or MI300X
@@ -4322,12 +4292,6 @@ private:
 
   Error checkIfMI300x() {
     llvm::StringRef StrGfxName(ComputeUnitKind);
-    IsEquippedWithMI300X = llvm::StringSwitch<bool>(StrGfxName)
-                               .Case("gfx941", true)
-                               .Default(false);
-
-    if (IsEquippedWithMI300X)
-      return Plugin::success();
 
     bool isMI300 = llvm::StringSwitch<bool>(StrGfxName)
                        .Case("gfx942", true)
@@ -4852,7 +4816,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
   /// Deinitialize the plugin.
   Error deinitImpl() override {
-    hsa_utils::hostrpc_terminate();
     // The HSA runtime was not initialized, so nothing from the plugin was
     // actually initialized.
     if (!Initialized)
@@ -5102,29 +5065,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   AMDGPUStreamTy *Stream = nullptr;
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
-  if (NeedsHostServices) {
-    int32_t DevID = AMDGPUDevice.getDeviceId();
-    hsa_amd_memory_pool_t HostMemPool =
-        HostDevice.getFineGrainedMemoryPool().get();
-    hsa_amd_memory_pool_t DeviceMemPool =
-        AMDGPUDevice.getCoarseGrainedMemoryPool()->get();
-    hsa_queue_t *HsaQueue = Stream->getHsaQueue();
-    Buffer = hsa_utils::hostrpc_assign_buffer(AMDGPUDevice.getAgent(), HsaQueue,
-                                          DevID, HostMemPool, DeviceMemPool);
-    GlobalTy ServiceThreadHostBufferGlobal("service_thread_buf",
-                                           sizeof(uint64_t), &Buffer);
-    if (auto Err = HostServiceBufferHandler.writeGlobalToDevice(
-            AMDGPUDevice, ServiceThreadHostBufferGlobal,
-            ServiceThreadDeviceBufferGlobal)) {
-      DP("Missing symbol %s, continue execution anyway.\n",
-         ServiceThreadHostBufferGlobal.getName().data());
-      consumeError(std::move(Err));
-    }
-    DP("Hostrpc buffer allocated at %p and service thread started\n",
-       (void *)Buffer);
-  } else {
-    DP("No hostrpc buffer or service thread required\n");
-  }
 
   // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
   if (ImplArgs &&
@@ -5179,8 +5119,8 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
       GenericDevice.getDeviceId(), getExecutionModeFlags(), ConstWGSize,
       KernelArgs.NumArgs, NumBlocks[0], NumThreads[0], 0, 0, GroupSegmentSize,
       SGPRCount, VGPRCount, AGPRCount, SGPRSpillCount, VGPRSpillCount,
-      KernelArgs.Tripcount, NeedsHostServices, isMultiDeviceKernel(),
-      MultiDeviceLB, MultiDeviceUB, MaxOccupancy, AchievedOccupancy, getName());
+      KernelArgs.Tripcount, /*FIXME*/ 0, isMultiDeviceKernel(), MultiDeviceLB,
+      MultiDeviceUB, MaxOccupancy, AchievedOccupancy, getName());
 }
 
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,

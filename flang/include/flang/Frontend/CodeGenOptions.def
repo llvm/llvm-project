@@ -31,6 +31,7 @@ CODEGENOPT(PrepareForFullLTO , 1, 0) ///< Set when -flto is enabled on the
 CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
 CODEGENOPT(StackArrays, 1, 0) ///< -fstack-arrays (enable the stack-arrays pass)
+CODEGENOPT(VectorizeLoop, 1, 0) ///< Enable loop vectorization.
 CODEGENOPT(LoopVersioning, 1, 0) ///< Enable loop versioning.
 CODEGENOPT(UnrollLoops, 1, 0) ///< Enable loop unrolling
 CODEGENOPT(AliasAnalysis, 1, 0) ///< Enable alias analysis pass

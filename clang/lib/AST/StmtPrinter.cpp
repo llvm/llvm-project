@@ -2609,15 +2609,6 @@ void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   OS << "]";
 }
 
-void StmtPrinter::VisitResolvedUnexpandedPackExpr(
-    ResolvedUnexpandedPackExpr *E) {
-  OS << "<<resolved pack(";
-  llvm::interleave(
-      E->getExprs().begin(), E->getExprs().end(),
-      [this](auto *X) { PrintExpr(X); }, [this] { OS << ", "; });
-  OS << ")>>";
-}
-
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(
                                        SubstNonTypeTemplateParmPackExpr *Node) {
   OS << *Node->getParameterPack();

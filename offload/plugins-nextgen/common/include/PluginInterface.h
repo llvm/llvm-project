@@ -17,6 +17,8 @@
 #include <list>
 #include <map>
 #include <shared_mutex>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "ExclusiveAccess.h"
@@ -58,6 +60,7 @@ struct GenericPluginTy;
 struct GenericKernelTy;
 struct GenericDeviceTy;
 struct RecordReplayTy;
+struct KernelRunRecordTy;
 
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
@@ -1105,6 +1108,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   bool getMultiDeviceKernelValue(void *EntryPtr);
 
+  KernelRunRecordTy *getKernelRunRecords() const { return KernelRunRecords; }
+
   /// Return true if a descriptor of size 'Size' should be allocated using
   /// shared memory. Default implementation returns 'false',
   virtual bool useSharedMemForDescriptor(int64_t Size);
@@ -1164,6 +1169,22 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// deallocations are tracked.
   BoolEnvar OMPX_TrackAllocationTraces =
       BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
+
+  /// An entry to cache a shared memory buffer for Args to emissary APIs
+  struct ArgBufEntryTy {
+    size_t Size; // Size of Buffer
+    void *Addr;  // Pointer to SHARED mem
+    bool is_free;
+  };
+  /// The cache of allocated shared memory buffers for emissary APIs args
+  std::list<ArgBufEntryTy *> ArgBufEntries;
+  /// Get a free shared memory buffer and mark it not free. If none
+  /// free, allocate a new buffer and mark it not free.
+  void *getFree_ArgBuf(size_t sz);
+  /// Change a cached buffer from not free (busy) to free.
+  void moveBusyToFree_ArgBuf(void *ptr);
+  /// Destroy Argbufs and clear the cache. Used as part of device destructor
+  void clear_ArgBufs();
 
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
@@ -1256,6 +1277,9 @@ protected:
   /// This is used to run the RPC server during task synchronization.
   RPCServerTy *RPCServer;
 
+  /// Structs for functions and data used in runtime autotuning.
+  KernelRunRecordTy *KernelRunRecords;
+
 private:
 #ifdef OMPT_SUPPORT
   /// OMPT callback functions
@@ -1280,6 +1304,109 @@ private:
   DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
 
   bool IsFastReductionEnabled = false;
+};
+
+/// Struct represents the metadata for each kernel run on the device.
+struct KernelRunRecordTy {
+
+  struct KernelRunEntryTy {
+    std::string KernelName;
+    uint32_t NumTeams = 0;
+    uint32_t NumThreads = 0;
+    uint64_t RunDuration = 0;
+  };
+
+  // Metadata used in tuning process.
+  struct TuningMetadataTy {
+    uint32_t IdxThread = 0;
+    uint32_t IdxCUMultiplier = 0;
+    // Run counters.
+    uint32_t RunCounters = 0;
+    // Entry with minimum running time.
+    KernelRunEntryTy MinEntry;
+  };
+
+  // Add a new entry
+  void addEntry(std::string KernelName, uint32_t NumTeams, uint32_t NumThreads,
+                uint64_t RunDuration) {
+    TuningData[KernelName].RunCounters++;
+
+    // Update min entries.
+    uint64_t MinDuration = 0;
+    auto It = TuningData.find(KernelName);
+    if (It != TuningData.end()) {
+      MinDuration = It->second.MinEntry.RunDuration;
+    }
+    if (MinDuration > RunDuration || MinDuration == 0) {
+      TuningData[KernelName].MinEntry = {KernelName, NumTeams, NumThreads,
+                                         RunDuration};
+    }
+  }
+
+  // Get parameters for next kernel launch.
+  std::pair<uint32_t, uint32_t>
+  getLaunchParamsForKernel(std::string KernelName,
+                           GenericDeviceTy &GenericDevice) {
+    // If the kernel reaches the run limit,
+    // return the current optimal launch parameters.
+    if (reachedRunLimitForKernel(KernelName)) {
+      auto MinEntry = TuningData[KernelName].MinEntry;
+      return {MinEntry.NumTeams, MinEntry.NumThreads};
+    }
+
+    // Pick new launch parameters.
+    uint32_t IdxCUMulti = TuningData[KernelName].IdxCUMultiplier;
+    uint32_t IdxThread = TuningData[KernelName].IdxThread;
+
+    if (IdxCUMulti >= CUMultiplierCandidate.size()) {
+      // No more element to search.
+      // Return current optimal launch parameters.
+      return {TuningData[KernelName].MinEntry.NumTeams,
+              TuningData[KernelName].MinEntry.NumThreads};
+    }
+
+    // New team/thread pair for launch parameters.
+    uint32_t NumCU = GenericDevice.getNumComputeUnits();
+    std::pair<uint32_t, uint32_t> NewLaunchParams = {
+        CUMultiplierCandidate[IdxCUMulti] * NumCU, ThreadCandidate[IdxThread]};
+
+    // Update indices.
+    IdxThread++;
+    TuningData[KernelName].IdxThread = IdxThread;
+
+    if (IdxThread >= ThreadCandidate.size()) {
+      TuningData[KernelName].IdxThread = 0;
+      TuningData[KernelName].IdxCUMultiplier++;
+    }
+
+    return NewLaunchParams;
+  }
+
+  bool reachedRunLimitForKernel(std::string KernelName) {
+    if (TuningData.find(KernelName) == TuningData.end()) {
+      // If no record for this kernel.
+      return false;
+    }
+
+    return TuningData[KernelName].RunCounters > RunLimiter;
+  }
+
+  uint32_t getRunCounterForKernel(std::string KernelName) {
+    if (TuningData.find(KernelName) == TuningData.end()) {
+      return 0;
+    }
+
+    return TuningData[KernelName].RunCounters;
+  }
+
+private:
+  // Candidates for thread and team.
+  std::vector<uint32_t> ThreadCandidate = {32, 64, 128, 256, 512, 1024};
+  std::vector<uint32_t> CUMultiplierCandidate = {4, 8, 16, 32, 64, 128};
+  // The max number of tuning runs for each kernel.
+  uint32_t RunLimiter = ThreadCandidate.size() * CUMultiplierCandidate.size();
+  // Used for keeping track of the metatdata used in tuning for each kernel.
+  std::unordered_map<std::string, TuningMetadataTy> TuningData;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin

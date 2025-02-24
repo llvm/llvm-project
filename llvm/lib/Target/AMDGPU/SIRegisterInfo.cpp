@@ -594,7 +594,7 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
   //       register file accordingly.
   if (ST.hasGFX90AInsts()) {
-    if (MFI->usesAGPRs(MF)) {
+    if (MFI->mayNeedAGPRs()) {
       MaxNumVGPRs /= 2;
       MaxNumAGPRs = MaxNumVGPRs;
     } else {
@@ -1137,6 +1137,16 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
 
   return TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                 SIInstrFlags::FlatScratch);
+}
+
+std::optional<unsigned> SIRegisterInfo::getDwarfRegLaneSize(int64_t DwarfReg,
+                                                            bool IsEH) const {
+  if (std::optional<MCRegister> Reg = getLLVMRegNum(DwarfReg, IsEH)) {
+    const TargetRegisterClass *RC = getPhysRegBaseClass(*Reg);
+    if (RC == &AMDGPU::VGPR_32RegClass || RC == &AMDGPU::AGPR_32RegClass)
+      return 4;
+  }
+  return std::nullopt;
 }
 
 const TargetRegisterClass *SIRegisterInfo::getPointerRegClass(

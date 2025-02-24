@@ -2634,8 +2634,7 @@ body:             |
     ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GFX11-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-    ; GFX11-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
-    ; GFX11-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
+    ; GFX11-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 $sgpr33, 12352, 0, implicit $exec
     ; GFX11-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
     ; GFX11-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX11-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
@@ -2659,8 +2658,7 @@ body:             |
     ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GFX12-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24576, implicit-def dead $scc
-    ; GFX12-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
-    ; GFX12-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 4160, killed $vgpr1, 0, implicit $exec
+    ; GFX12-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 $sgpr33, 4160, 0, implicit $exec
     ; GFX12-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
     ; GFX12-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX12-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
@@ -2859,8 +2857,7 @@ body:             |
     ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GFX11-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-    ; GFX11-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
-    ; GFX11-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
+    ; GFX11-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 $sgpr33, 12352, 0, implicit $exec
     ; GFX11-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 killed $vgpr0, 0, 0, implicit $exec
     ; GFX11-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
     ; GFX11-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
@@ -2885,8 +2882,7 @@ body:             |
     ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GFX12-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24576, implicit-def dead $scc
-    ; GFX12-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
-    ; GFX12-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 4160, killed $vgpr1, 0, implicit $exec
+    ; GFX12-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 $sgpr33, 4160, 0, implicit $exec
     ; GFX12-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 killed $vgpr0, 0, 0, implicit $exec
     ; GFX12-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
     ; GFX12-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
@@ -3071,8 +3067,7 @@ body:             |
     ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GFX11-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-    ; GFX11-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
-    ; GFX11-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
+    ; GFX11-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 $sgpr33, 12352, 0, implicit $exec
     ; GFX11-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
     ; GFX11-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX11-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
@@ -3094,8 +3089,7 @@ body:             |
     ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GFX12-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24576, implicit-def dead $scc
-    ; GFX12-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
-    ; GFX12-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 4160, killed $vgpr1, 0, implicit $exec
+    ; GFX12-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 $sgpr33, 4160, 0, implicit $exec
     ; GFX12-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
     ; GFX12-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX12-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
@@ -3280,8 +3274,7 @@ body:             |
     ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GFX11-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-    ; GFX11-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
-    ; GFX11-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
+    ; GFX11-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 $sgpr33, 12352, 0, implicit $exec
     ; GFX11-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 killed $vgpr0, 0, 0, implicit $exec
     ; GFX11-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
     ; GFX11-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
@@ -3304,8 +3297,7 @@ body:             |
     ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GFX12-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24576, implicit-def dead $scc
-    ; GFX12-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
-    ; GFX12-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 4160, killed $vgpr1, 0, implicit $exec
+    ; GFX12-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 $sgpr33, 4160, 0, implicit $exec
     ; GFX12-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 killed $vgpr0, 0, 0, implicit $exec
     ; GFX12-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
     ; GFX12-NEXT: $sgpr34 = frame-destroy COPY $sgpr5

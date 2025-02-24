@@ -1648,14 +1648,14 @@ define <vscale x 16 x double> @vfmax_vv_nxv16f64(<vscale x 16 x double> %va, <vs
 ; CHECK-NEXT:    vmv1r.v v0, v26
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vmerge.vvm v24, v8, v24, v0
+; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
 ; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vfmax.vv v8, v24, v8, v0.t
+; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vfmax.vv v8, v8, v24, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0

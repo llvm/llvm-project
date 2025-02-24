@@ -61,6 +61,7 @@ add_clang_library(clangCodeGen
   CGAtomic.cpp
   CGBlocks.cpp
   CGBuiltin.cpp
+  CGEmitEmissaryExec.cpp
   CGCUDANV.cpp
   CGCUDARuntime.cpp
   CGCXX.cpp
@@ -106,6 +107,7 @@ add_clang_library(clangCodeGen
   ConstantInitBuilder.cpp
   CoverageMappingGen.cpp
   ItaniumCXXABI.cpp
+  HLSLBufferLayoutBuilder.cpp
   LinkInModulesPass.cpp
   MacroPPCallbacks.cpp
   MicrosoftCXXABI.cpp

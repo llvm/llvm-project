@@ -1186,7 +1186,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     // CFA.
     const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
     for (const CalleeSavedInfo &I : CSI) {
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
       if (Reg == PPC::LR || Reg == PPC::LR8 || Reg == PPC::RM) continue;
 
       // This is a bit of a hack: CR2LT, CR2GT, CR2EQ and CR2UN are just
@@ -2108,7 +2108,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   SmallVector<CalleeSavedInfo, 18> VRegs;
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     assert((!MF.getInfo<PPCFunctionInfo>()->mustSaveTOC() ||
             (Reg != PPC::X2 && Reg != PPC::R2)) &&
            "Not expecting to try to spill R2 in a function that must save TOC");
@@ -2343,9 +2343,9 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
     // in our CalleSaveInfo vector.
 
     for (auto &CalleeSaveReg : CSI) {
-      MCPhysReg Reg = CalleeSaveReg.getReg();
-      MCPhysReg Lower = RegInfo->getSubReg(Reg, 1);
-      MCPhysReg Higher = RegInfo->getSubReg(Reg, 2);
+      MCRegister Reg = CalleeSaveReg.getReg();
+      MCRegister Lower = RegInfo->getSubReg(Reg, PPC::sub_32);
+      MCRegister Higher = RegInfo->getSubReg(Reg, PPC::sub_32_hi_phony);
 
       if ( // Check only for SuperRegs.
           Lower &&
@@ -2380,7 +2380,7 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
     if (BVAllocatable.none())
       return false;
 
-    Register Reg = CS.getReg();
+    MCRegister Reg = CS.getReg();
 
     if (!PPC::G8RCRegClass.contains(Reg)) {
       AllSpilledToReg = false;
@@ -2437,7 +2437,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
   }
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
 
     // CR2 through CR4 are the nonvolatile CR fields.
     bool IsCRField = PPC::CR2 <= Reg && Reg <= PPC::CR4;
@@ -2623,7 +2623,7 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
     --BeforeI;
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    Register Reg = CSI[i].getReg();
+    MCRegister Reg = CSI[i].getReg();
 
     if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
       continue;

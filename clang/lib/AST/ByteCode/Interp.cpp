@@ -732,6 +732,11 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         DiagDecl = CD = Inherited;
     }
 
+    // Silently reject constructors of invalid classes. The invalid class
+    // has been rejected elsewhere before.
+    if (CD && CD->getParent()->isInvalidDecl())
+      return false;
+
     // FIXME: If DiagDecl is an implicitly-declared special member function
     // or an inheriting constructor, we should be much more explicit about why
     // it's not constexpr.
@@ -1010,11 +1015,14 @@ static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(Desc->isRecord() || Desc->isCompositeArray());
 
   if (Desc->isCompositeArray()) {
+    unsigned N = Desc->getNumElems();
+    if (N == 0)
+      return true;
     const Descriptor *ElemDesc = Desc->ElemDesc;
     assert(ElemDesc->isRecord());
 
     Pointer RP(const_cast<Block *>(B));
-    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+    for (int I = static_cast<int>(N) - 1; I >= 0; --I) {
       if (!runRecordDestructor(S, OpPC, RP.atIndex(I).narrow(), ElemDesc))
         return false;
     }
@@ -1233,8 +1241,10 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
                              const Pointer &ThisPtr) {
   assert(Func->isConstructor());
 
-  const Descriptor *D = ThisPtr.getFieldDesc();
+  if (Func->getParentDecl()->isInvalidDecl())
+    return false;
 
+  const Descriptor *D = ThisPtr.getFieldDesc();
   // FIXME: I think this case is not 100% correct. E.g. a pointer into a
   // subobject of a composite array.
   if (!D->ElemRecord)
@@ -1372,6 +1382,18 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   size_t ArgSize = Func->getArgSize() + VarArgSize;
   size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
+  const FunctionDecl *Callee = Func->getDecl();
+
+  // C++2a [class.abstract]p6:
+  //   the effect of making a virtual call to a pure virtual function [...] is
+  //   undefined
+  if (Callee->isPureVirtual()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_pure_virtual_call,
+             1)
+        << Callee;
+    S.Note(Callee->getLocation(), diag::note_declared_at);
+    return false;
+  }
 
   const CXXRecordDecl *DynamicDecl = nullptr;
   {
@@ -1388,7 +1410,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   assert(DynamicDecl);
 
   const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());
-  const auto *InitialFunction = cast<CXXMethodDecl>(Func->getDecl());
+  const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider = S.getContext().getOverridingFunction(
       DynamicDecl, StaticDecl, InitialFunction);
 
@@ -1433,7 +1455,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     unsigned Offset = S.getContext().collectBaseOffset(
         InitialPointeeType->getAsRecordDecl(),
         OverriderPointeeType->getAsRecordDecl());
-    return GetPtrBasePop(S, OpPC, Offset);
+    return GetPtrBasePop(S, OpPC, Offset, /*IsNullOK=*/true);
   }
 
   return true;

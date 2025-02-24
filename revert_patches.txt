@@ -7,7 +7,7 @@ Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpA
     Backup fix for SWDEV-454675
     This reverts commit 54ec8bcaf
 contact: Selehov
-A revert is pending on gerrit
+b2659ca44 [InstCombine] Propagate flags in `foldSelectICmpAndBinOp` (#127437)
 ---
 breaks devicelibs
 6e0b0038 [clang][OpenCL][CodeGen][AMDGPU] Do not use `private` as the default AS for when `generic` is available (#112442)

@@ -219,12 +219,12 @@ static Error unbundleImages() {
               Args["file"], Members, SymtabWritingMode::NormalSymtab,
               Archive::getDefaultKind(), true, false, nullptr))
         return E;
-    } else if (Args.count("file")) {
+    } else if (auto It = Args.find("file"); It != Args.end()) {
       if (Extracted.size() > 1)
         WithColor::warning(errs(), PackagerExecutable)
-            << "Multiple inputs match to a single file, '" << Args["file"]
+            << "Multiple inputs match to a single file, '" << It->second
             << "'\n";
-      if (Error E = writeFile(Args["file"], Extracted.back()->getImage()))
+      if (Error E = writeFile(It->second, Extracted.back()->getImage()))
         return E;
     } else {
       uint64_t Idx = 0;

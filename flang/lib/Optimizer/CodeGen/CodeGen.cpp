@@ -330,6 +330,12 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       rewriter.setInsertionPointAfter(size.getDefiningOp());
     }
 
+    if (auto dataAttr = alloc->getAttrOfType<cuf::DataAttributeAttr>(
+            cuf::getDataAttrName())) {
+      if (dataAttr.getValue() == cuf::DataAttribute::Shared)
+        allocaAs = 3;
+    }
+
     // NOTE: we used to pass alloc->getAttrs() in the builder for non opaque
     // pointers! Only propagate pinned and bindc_name to help debugging, but
     // this should have no functional purpose (and passing the operand segment
@@ -354,6 +360,7 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       rewriter.replaceOpWithNewOp<mlir::LLVM::AddrSpaceCastOp>(
           alloc, ::getLlvmPtrType(alloc.getContext(), programAs), llvmAlloc);
     }
+
     return mlir::success();
   }
 };
@@ -3635,6 +3642,14 @@ struct UndefOpConversion : public fir::FIROpConversion<fir::UndefOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::UndefOp undef, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    if (mlir::isa<fir::DummyScopeType>(undef.getType())) {
+      // Dummy scoping is used for Fortran analyses like AA. Once it gets to
+      // pre-codegen rewrite it is erased and a fir.undef is created to
+      // feed to the fir declare operation. Thus, during codegen, we can
+      // simply erase is as it is no longer used.
+      rewriter.eraseOp(undef);
+      return mlir::success();
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
         undef, convertType(undef.getType()));
     return mlir::success();

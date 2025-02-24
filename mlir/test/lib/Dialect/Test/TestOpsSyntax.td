@@ -767,4 +767,9 @@ def FormatInferTypeVariadicOperandsOp
   }];
 }
 
+def VariadicArgsTypesSplit : TEST_Op<"variadic_args_types_split"> {
+  let arguments = (ins StrAttr:$str, Variadic<AnyType>:$args);
+  let assemblyFormat = "$str (`,` $args^)? attr-dict (`:` type($args)^)?";
+}
+
 #endif  // TEST_OPS_SYNTAX

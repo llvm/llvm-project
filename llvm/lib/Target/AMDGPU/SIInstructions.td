@@ -3308,6 +3308,14 @@ def : GCNPat <
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (fma (f16 (VOP3NoMods f16:$src0)),
+       (f16 (VOP3NoMods f16:$src1)),
+       (f16 (VOP3NoMods f16:$src2))),
+  (V_FMAC_F16_t16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                  SRCMODS.NONE, $src2)
+>;
 let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
   (fma (f16 (VOP3NoMods f16:$src0)),
@@ -3372,6 +3380,8 @@ def : GCNPat <
   (COPY_TO_REGCLASS SReg_32:$src0, SReg_32)
 >;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$src0), (Ty undef))),
   (COPY_TO_REGCLASS VGPR_32:$src0, VGPR_32)
@@ -3381,6 +3391,7 @@ def : GCNPat <
   (vecTy (UniformBinFrag<build_vector> (Ty undef), (Ty SReg_32:$src1))),
   (S_LSHL_B32 SReg_32:$src1, (i32 16))
 >;
+}
 
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty undef), (Ty VGPR_32:$src1))),
@@ -3390,6 +3401,8 @@ def : GCNPat <
 }
 
 let SubtargetPredicate = HasVOP3PInsts in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
@@ -3419,12 +3432,24 @@ def : GCNPat <
   (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 // Take the lower 16 bits from each VGPR_32 and concat them
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$a), (Ty VGPR_32:$b))),
   (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x05040100)))
 >;
 
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$a), (Ty VGPR_16:$b))),
+  (REG_SEQUENCE VGPR_32, VGPR_16:$a, lo16, VGPR_16:$b, hi16)
+>;
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$src0), (Ty undef))),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (IMPLICIT_DEF), hi16)
+>;
+}
 
 // Take the lower 16 bits from V[0] and the upper 16 bits from V[1]
 // Special case, can use V_BFI (0xffff literal likely more reusable than 0x70601000)
@@ -3450,6 +3475,8 @@ def : GCNPat <
 
 // Take the upper 16 bits from V[0] and the lower 16 bits from V[1]
 // Special case, can use V_ALIGNBIT (always uses encoded literal)
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector>
     (Ty !if(!eq(Ty, i16),
@@ -3470,7 +3497,7 @@ def : GCNPat <
       (Ty (bitconvert (i16 (trunc (srl VGPR_32:$b, (i32 16)))))))))),
   (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x07060302)))
 >;
-
+}
 
 } // end foreach Ty
 
@@ -4289,3 +4316,9 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
 }
+
+// FIXME: Would be nice if we could set the register class for the destination
+// register too.
+def IMP_DEF_FROM_INTRINSIC: Pat<
+  (i32 (int_amdgcn_dead)), (IMPLICIT_DEF)>;
+

@@ -1132,13 +1132,14 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
   const Pointer &P = S.Stk.peek<Pointer>();
 
   ComparisonCategoryResult CmpResult = LHS.compare(RHS);
-  if (CmpResult == ComparisonCategoryResult::Unordered) {
-    // This should only happen with pointers.
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
-        << LHS.toDiagnosticString(S.getASTContext())
-        << RHS.toDiagnosticString(S.getASTContext());
-    return false;
+  if constexpr (std::is_same_v<T, Pointer>) {
+    if (CmpResult == ComparisonCategoryResult::Unordered) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
+          << LHS.toDiagnosticString(S.getASTContext())
+          << RHS.toDiagnosticString(S.getASTContext());
+      return false;
+    }
   }
 
   assert(CmpInfo);
@@ -1568,10 +1569,20 @@ inline bool GetPtrActiveThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   return true;
 }
 
-inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
+inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
+                             bool NullOK) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckNull(S, OpPC, Ptr, CSK_Derived))
+  if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
     return false;
+
+  if (!Ptr.isBlockPointer()) {
+    // FIXME: We don't have the necessary information in integral pointers.
+    // The Descriptor only has a record, but that does of course not include
+    // the potential derived classes of said record.
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
     return false;
   if (!CheckDowncast(S, OpPC, Ptr, Off))
@@ -1600,10 +1611,11 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   return true;
 }
 
-inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
+inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
+                          bool NullOK) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+  if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
 
   if (!Ptr.isBlockPointer()) {

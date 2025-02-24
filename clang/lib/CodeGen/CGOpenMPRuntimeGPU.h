@@ -208,11 +208,6 @@ public:
                                                BinaryOperatorKind BO,
                                                bool IsXBinopExpr) override;
 
-  /// Return whether the current architecture must emit CAS loop runtime call
-  /// for given type and atomic operation
-  bool mustEmitSafeAtomic(CodeGenFunction &CGF, LValue X, RValue Update,
-                          BinaryOperatorKind BO) override;
-
   // Emit call to CAS loop
   std::pair<bool, RValue> emitAtomicCASLoop(CodeGenFunction &CGF, LValue X,
                                             RValue Update,

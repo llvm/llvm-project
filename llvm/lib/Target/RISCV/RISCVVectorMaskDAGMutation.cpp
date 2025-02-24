@@ -123,7 +123,7 @@ public:
           // For LMUL=8 cases, there will be more possibilities to spill.
           // FIXME: We should use RegPressureTracker to do fine-grained
           // controls.
-          RISCVII::getLMul(MI->getDesc().TSFlags) != RISCVII::LMUL_8)
+          RISCVII::getLMul(MI->getDesc().TSFlags) != RISCVVType::LMUL_8)
         DAG->addEdge(&SU, SDep(NearestUseV0SU, SDep::Artificial));
     }
   }

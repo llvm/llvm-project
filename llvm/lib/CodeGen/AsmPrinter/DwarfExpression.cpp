@@ -951,7 +951,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
 
   if (Entry.isLocation()) {
     assert(DwarfRegs.empty() && "unconsumed registers?");
-    if (!addMachineReg(*TRI, Entry.getLoc().getReg())) {
+    if (!TRI || !addMachineReg(*TRI, Entry.getLoc().getReg())) {
       DwarfRegs.clear();
       return std::nullopt;
     }
@@ -968,8 +968,19 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     SubRegOffset /= 8;
     SubRegSize /= 8;
 
+    auto focusThreadIfRequired = [this](int64_t DwarfRegNo) {
+      // FIXME: This should be represented in the DIExpression.
+      if (auto LaneSize = TRI->getDwarfRegLaneSize(DwarfRegNo, false)) {
+        emitUserOp(dwarf::DW_OP_LLVM_USER_push_lane);
+        emitConstu(*LaneSize);
+        emitOp(dwarf::DW_OP_mul);
+        emitUserOp(dwarf::DW_OP_LLVM_USER_offset);
+      }
+    };
+
     if (Regs.size() == 1) {
       addReg(Regs[0].DwarfRegNo, Regs[0].Comment);
+      focusThreadIfRequired(Regs[0].DwarfRegNo);
 
       if (SubRegOffset) {
         emitUserOp(dwarf::DW_OP_LLVM_USER_offset_uconst);
@@ -994,8 +1005,10 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     for (auto &Reg : Regs) {
       if (Reg.SubRegSize % 8)
         return std::nullopt;
-      if (Reg.DwarfRegNo >= 0)
+      if (Reg.DwarfRegNo >= 0) {
         addReg(Reg.DwarfRegNo, Reg.Comment);
+        focusThreadIfRequired(Regs[0].DwarfRegNo);
+      }
       emitOp(dwarf::DW_OP_piece);
       emitUnsigned(Reg.SubRegSize / 8);
     }

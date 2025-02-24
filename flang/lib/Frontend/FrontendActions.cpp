@@ -1059,6 +1059,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     si.getTimePasses().setOutStream(ci.getTimingStreamLLVM());
   pto.LoopUnrolling = opts.UnrollLoops;
   pto.LoopInterleaving = opts.UnrollLoops;
+  pto.LoopVectorization = opts.VectorizeLoop;
+
   llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
 
   // Attempt to load pass plugins and register their callbacks with PB.

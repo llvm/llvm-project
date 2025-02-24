@@ -2521,6 +2521,10 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_90a:
       case OffloadArch::SM_100:
       case OffloadArch::SM_100a:
+      case OffloadArch::SM_101:
+      case OffloadArch::SM_101a:
+      case OffloadArch::SM_120:
+      case OffloadArch::SM_120a:
       case OffloadArch::GFX600:
       case OffloadArch::GFX601:
       case OffloadArch::GFX602:
@@ -2545,8 +2549,6 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX90a:
       case OffloadArch::GFX90c:
       case OffloadArch::GFX9_4_GENERIC:
-      case OffloadArch::GFX940:
-      case OffloadArch::GFX941:
       case OffloadArch::GFX942:
       case OffloadArch::GFX950:
       case OffloadArch::GFX10_1_GENERIC:
@@ -3378,58 +3380,6 @@ void CGOpenMPRuntimeGPU::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
         llvm_unreachable("Unexpected atomic ordering for flush directive.");
       }
   }
-}
-
-// The only allowed atomicrmw is add on int 32 and 64 bits, cmp_and_swap, swap.
-bool CGOpenMPRuntimeGPU::mustEmitSafeAtomic(CodeGenFunction &CGF, LValue X,
-                                            RValue Update,
-                                            BinaryOperatorKind BO) {
-  ASTContext &Context = CGF.getContext();
-  OffloadArch Arch = getOffloadArch(CGM);
-
-  if (!Context.getTargetInfo().getTriple().isAMDGCN() ||
-      !CGF.CGM.getLangOpts().OpenMPIsTargetDevice)
-    return false;
-
-  if (Arch != OffloadArch::GFX941)
-    return false;
-
-  // Non simple types cannot be used in atomicRMW and are handled elsewhere
-  if (!X.isSimple())
-    return false;
-
-  // Integer types are lowered by backend to atomic ISA (32 and 64 bits) or to
-  // CAS loop (all other bit widths).
-  if (BO == BO_Add && Update.getScalarVal()->getType()->isIntegerTy())
-    return false;
-
-  // For all other operations, integer types that are not 32 or 64 bits are
-  // already converted to CAS loop by clang codegen or backend. This allows for
-  // simpler handling in devicertl call.
-  if (Update.getScalarVal()->getType()->isIntegerTy() &&
-      (Context.getTypeSize(X.getType()) < 32 ||
-       Context.getTypeSize(X.getType()) > 64))
-    return false;
-
-  // float and double have a atomic ISA for min, max, and add that need to be
-  // bypassed. All other operations on float and double are lowered to cas loop
-  // by the backend
-  if ((Update.getScalarVal()->getType()->isFloatTy() ||
-       Update.getScalarVal()->getType()->isDoubleTy()) &&
-      !((BO == BO_Add) || (BO == BO_LT) || (BO == BO_GT)))
-    return false;
-
-  // For all types, the ISA only supports certain operations in a "native" way.
-  // All others are lowered to a CAS loop by the backend
-  if (!((BO == BO_Add) || (BO == BO_Sub) || (BO == BO_LT) || (BO == BO_GT) ||
-        (BO == BO_And) || (BO == BO_Or) || (BO == BO_Xor)))
-    return false;
-
-  // all other cases must be lowered to safe CAS loop
-  // which is hidden in a runtime function that uses cmpxchg directly and not
-  // atomicrmw. This is effectively bypassing the backend on the decision of
-  // what atomic to use.
-  return true;
 }
 
 std::pair<bool, RValue>

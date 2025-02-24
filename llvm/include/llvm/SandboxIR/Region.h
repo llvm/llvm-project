@@ -120,6 +120,10 @@ class Region {
   /// Set \p I as the \p Idx'th element in the auxiliary vector.
   /// NOTE: This is for internal use, it does not set the metadata.
   void setAux(unsigned Idx, Instruction *I);
+  /// Helper for dropping Aux metadata for \p I.
+  void dropAuxMetadata(Instruction *I);
+  /// Remove instruction \p I from Aux and drop metadata.
+  void removeFromAux(Instruction *I);
 
 public:
   Region(Context &Ctx, TargetTransformInfo &TTI);

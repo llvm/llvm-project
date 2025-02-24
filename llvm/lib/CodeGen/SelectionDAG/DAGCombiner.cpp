@@ -16147,7 +16147,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     // also recursively replace t184 by t150.
     SDValue MaybePoisonOperand = N->getOperand(0).getOperand(OpNo);
     // Don't replace every single UNDEF everywhere with frozen UNDEF, though.
-    if (MaybePoisonOperand.getOpcode() == ISD::UNDEF)
+    if (MaybePoisonOperand.isUndef())
       continue;
     // First, freeze each offending operand.
     SDValue FrozenMaybePoisonOperand = DAG.getFreeze(MaybePoisonOperand);
@@ -16160,11 +16160,13 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       DAG.UpdateNodeOperands(FrozenMaybePoisonOperand.getNode(),
                              MaybePoisonOperand);
     }
+
+    // This node has been merged with another.
+    if (N->getOpcode() == ISD::DELETED_NODE)
+      return SDValue(N, 0);
   }
 
-  // This node has been merged with another.
-  if (N->getOpcode() == ISD::DELETED_NODE)
-    return SDValue(N, 0);
+  assert(N->getOpcode() != ISD::DELETED_NODE && "Node was deleted!");
 
   // The whole node may have been updated, so the value we were holding
   // may no longer be valid. Re-fetch the operand we're `freeze`ing.
@@ -16175,7 +16177,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   SmallVector<SDValue> Ops(N0->ops());
   // Special-handle ISD::UNDEF, each single one of them can be it's own thing.
   for (SDValue &Op : Ops) {
-    if (Op.getOpcode() == ISD::UNDEF)
+    if (Op.isUndef())
       Op = DAG.getFreeze(Op);
   }
 
@@ -24291,7 +24293,7 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
     if (ISD::BITCAST == Op.getOpcode() &&
         !Op.getOperand(0).getValueType().isVector())
       Ops.push_back(Op.getOperand(0));
-    else if (ISD::UNDEF == Op.getOpcode())
+    else if (Op.isUndef())
       Ops.push_back(DAG.getNode(ISD::UNDEF, DL, SVT));
     else
       return SDValue();
@@ -24686,7 +24688,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   // fold (concat_vectors (BUILD_VECTOR A, B, ...), (BUILD_VECTOR C, D, ...))
   // -> (BUILD_VECTOR A, B, ..., C, D, ...)
   auto IsBuildVectorOrUndef = [](const SDValue &Op) {
-    return ISD::UNDEF == Op.getOpcode() || ISD::BUILD_VECTOR == Op.getOpcode();
+    return Op.isUndef() || ISD::BUILD_VECTOR == Op.getOpcode();
   };
   if (llvm::all_of(N->ops(), IsBuildVectorOrUndef)) {
     SmallVector<SDValue, 8> Opnds;
@@ -24710,7 +24712,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
       EVT OpVT = Op.getValueType();
       unsigned NumElts = OpVT.getVectorNumElements();
 
-      if (ISD::UNDEF == Op.getOpcode())
+      if (Op.isUndef())
         Opnds.append(NumElts, DAG.getUNDEF(MinVT));
 
       if (ISD::BUILD_VECTOR == Op.getOpcode()) {
@@ -27421,23 +27423,20 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
         continue;
       }
 
-      APInt Bits;
-      if (auto *Cst = dyn_cast<ConstantSDNode>(Elt))
-        Bits = Cst->getAPIntValue();
-      else if (auto *CstFP = dyn_cast<ConstantFPSDNode>(Elt))
-        Bits = CstFP->getValueAPF().bitcastToAPInt();
-      else
+      std::optional<APInt> Bits = Elt->bitcastToAPInt();
+      if (!Bits)
         return SDValue();
 
       // Extract the sub element from the constant bit mask.
       if (DAG.getDataLayout().isBigEndian())
-        Bits = Bits.extractBits(NumSubBits, (Split - SubIdx - 1) * NumSubBits);
+        *Bits =
+            Bits->extractBits(NumSubBits, (Split - SubIdx - 1) * NumSubBits);
       else
-        Bits = Bits.extractBits(NumSubBits, SubIdx * NumSubBits);
+        *Bits = Bits->extractBits(NumSubBits, SubIdx * NumSubBits);
 
-      if (Bits.isAllOnes())
+      if (Bits->isAllOnes())
         Indices.push_back(i);
-      else if (Bits == 0)
+      else if (*Bits == 0)
         Indices.push_back(i + NumSubElts);
       else
         return SDValue();

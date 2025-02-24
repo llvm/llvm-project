@@ -184,6 +184,7 @@ class MapInfoFinalizationPass
         /*members=*/mlir::SmallVector<mlir::Value>{},
         /*membersIndex=*/mlir::ArrayAttr{}, bounds,
         builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
+        /*mapperId*/ mlir::FlatSymbolRefAttr(),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         /*name=*/builder.getStringAttr(""),
@@ -331,7 +332,8 @@ class MapInfoFinalizationPass
             builder.getIntegerAttr(
                 builder.getIntegerType(64, false),
                 getDescriptorMapType(op.getMapType().value_or(0), target)),
-            op.getMapCaptureTypeAttr(), op.getNameAttr(),
+            /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getMapCaptureTypeAttr(),
+            op.getNameAttr(),
             /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
     op->erase();
@@ -464,7 +466,8 @@ class MapInfoFinalizationPass
     for (auto *user : mapOp->getUsers()) {
       if (llvm::isa<mlir::omp::TargetOp, mlir::omp::TargetDataOp,
                     mlir::omp::TargetUpdateOp, mlir::omp::TargetExitDataOp,
-                    mlir::omp::TargetEnterDataOp>(user))
+                    mlir::omp::TargetEnterDataOp,
+                    mlir::omp::DeclareMapperInfoOp>(user))
         return user;
 
       if (auto mapUser = llvm::dyn_cast<mlir::omp::MapInfoOp>(user))
@@ -495,7 +498,9 @@ class MapInfoFinalizationPass
     // ourselves to the possibility of race conditions while this pass
     // undergoes frequent re-iteration for the near future. So we loop
     // over function in the module and then map.info inside of those.
-    module->walk([&](mlir::func::FuncOp func) {
+    getOperation()->walk([&](mlir::Operation *func) {
+      if (!mlir::isa<mlir::func::FuncOp, mlir::omp::DeclareMapperOp>(func))
+        return;
       // clear all local allocations we made for any boxes in any prior
       // iterations from previous function scopes.
       localBoxAllocas.clear();
@@ -598,7 +603,6 @@ class MapInfoFinalizationPass
       //     if (alreadyMapped)
       //       continue;
 
-#if 1//<<<<<<< HEAD
       //     builder.setInsertionPoint(op);
       //     mlir::Value fieldIdxVal = builder.createIntegerConstant(
       //         op.getLoc(), mlir::IndexType::get(builder.getContext()),
@@ -617,27 +621,6 @@ class MapInfoFinalizationPass
       //                                             hlfir::Entity{fieldCoord})
       //                 .first,
       //             /*dataExvIsAssumedSize=*/false, op.getLoc());
-#else//=======
-          builder.setInsertionPoint(op);
-          mlir::Value fieldIdxVal = builder.createIntegerConstant(
-              op.getLoc(), mlir::IndexType::get(builder.getContext()),
-              fieldIdx);
-          auto fieldCoord = builder.create<fir::CoordinateOp>(
-              op.getLoc(), builder.getRefType(memTy), op.getVarPtr(),
-              fieldIdxVal);
-          fir::factory::AddrAndBoundsInfo info =
-              fir::factory::getDataOperandBaseAddr(
-                  builder, fieldCoord, /*isOptional=*/false, op.getLoc());
-          llvm::SmallVector<mlir::Value> bounds =
-              fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                                 mlir::omp::MapBoundsType>(
-                  builder, info,
-                  hlfir::translateToExtendedValue(op.getLoc(), builder,
-                                                  hlfir::Entity{fieldCoord})
-                      .first,
-                  /*dataExvIsAssumedSize=*/false, op.getLoc());
-#endif//>>>>>>> ffde2687be1fcb92c0c686aee441b83e71531457
-
       //     mlir::omp::MapInfoOp fieldMapOp =
       //         builder.create<mlir::omp::MapInfoOp>(
       //             op.getLoc(), fieldCoord.getResult().getType(),
@@ -648,6 +631,7 @@ class MapInfoFinalizationPass
       //             /*members=*/mlir::ValueRange{},
       //             /*members_index=*/mlir::ArrayAttr{},
       //             /*bounds=*/bounds, op.getMapTypeAttr(),
+      //             /*mapperId*/ mlir::FlatSymbolRefAttr(),
       //             builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
       //                 mlir::omp::VariableCaptureKind::ByRef),
       //             builder.getStringAttr(op.getNameAttr().strref() + "." +

@@ -607,10 +607,21 @@ DIBuilder::createArrayType(uint64_t Size, uint32_t AlignInBits, DIType *Ty,
                            PointerUnion<DIExpression *, DIVariable *> AS,
                            PointerUnion<DIExpression *, DIVariable *> AL,
                            PointerUnion<DIExpression *, DIVariable *> RK) {
+  return createArrayType(nullptr, StringRef(), nullptr, 0, Size, AlignInBits,
+                         Ty, Subscripts, DL, AS, AL, RK);
+}
+
+DICompositeType *DIBuilder::createArrayType(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+    uint64_t Size, uint32_t AlignInBits, DIType *Ty, DINodeArray Subscripts,
+    PointerUnion<DIExpression *, DIVariable *> DL,
+    PointerUnion<DIExpression *, DIVariable *> AS,
+    PointerUnion<DIExpression *, DIVariable *> AL,
+    PointerUnion<DIExpression *, DIVariable *> RK) {
   auto *R = DICompositeType::get(
-      VMContext, dwarf::DW_TAG_array_type, "", nullptr, 0, nullptr, Ty, Size,
-      AlignInBits, 0, DINode::FlagZero, Subscripts, 0,
-      /*EnumKind=*/std::nullopt, nullptr, nullptr, "", nullptr,
+      VMContext, dwarf::DW_TAG_array_type, Name, File, LineNumber,
+      getNonCompileUnitScope(Scope), Ty, Size, AlignInBits, 0, DINode::FlagZero,
+      Subscripts, 0, /*EnumKind=*/std::nullopt, nullptr, nullptr, "", nullptr,
       isa<DIExpression *>(DL) ? (Metadata *)cast<DIExpression *>(DL)
                               : (Metadata *)cast<DIVariable *>(DL),
       isa<DIExpression *>(AS) ? (Metadata *)cast<DIExpression *>(AS)

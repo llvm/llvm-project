@@ -726,21 +726,40 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
                            KernelArgs.NumTeams[2]};
 
-  // TODO fix workaround since IsBareKernel is not properly set for legacy
-  // flang and specialized kernels since they don't use kernel-env. While
-  // we can check for specialized kernels, we can't for legacy flang. So,
-  // on amd-staging, all kernels including bare ones use this codepath.
-  NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
+  std::string KernelName = getName();
+  KernelRunRecordTy *KernelRecord = GenericDevice.getKernelRunRecords();
+  uint32_t KernelRunCounter = 0;
 
-  std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(
-      GenericDevice, NumThreads[0], KernelArgs.Tripcount,
-      KernelArgs.ThreadLimit);
-  if (AdjustInfo.first)
-    NumThreads[0] = AdjustInfo.second;
+  if (KernelRecord) {
+    KernelRunCounter = KernelRecord->getRunCounterForKernel(KernelName);
+  }
+  // If Autotuning is enabled and the kernel is not launched for the first time.
+  if (GenericDevice.enableRuntimeAutotuning() && isSPMDMode() &&
+      KernelRunCounter > 0) {
+    assert(KernelRecord &&
+           "Autotuning is enabled, but KernelRunRecord is not initialized!");
 
-  NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
-                              NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
-  // }
+    auto [Teams, Threads] =
+        KernelRecord->getLaunchParamsForKernel(KernelName, GenericDevice);
+    NumBlocks[0] = Teams;
+    NumThreads[0] = Threads;
+  } else {
+
+    // TODO fix workaround since IsBareKernel is not properly set for legacy
+    // flang and specialized kernels since they don't use kernel-env. While
+    // we can check for specialized kernels, we can't for legacy flang. So,
+    // on amd-staging, all kernels including bare ones use this codepath.
+    NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
+
+    std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(
+        GenericDevice, NumThreads[0], KernelArgs.Tripcount,
+        KernelArgs.ThreadLimit);
+    if (AdjustInfo.first)
+      NumThreads[0] = AdjustInfo.second;
+
+    NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
+                                NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
+  }
 
   // Record the kernel description after we modified the argument count and num
   // blocks/threads.
@@ -930,7 +949,7 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       OMPX_EnableRuntimeAutotuning("OMPX_ENABLE_RUNTIME_AUTOTUNING", false),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
-      PinnedAllocs(*this), RPCServer(nullptr) {
+      PinnedAllocs(*this), RPCServer(nullptr), KernelRunRecords(nullptr) {
 #ifdef OMPT_SUPPORT
   OmptInitialized.store(false);
   // Bind the callbacks to this device's member functions
@@ -1012,10 +1031,16 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     MemoryManager = new MemoryManagerTy(*this, ThresholdMM);
   }
 
+  // Allocate resources for autotuning if enabled.
+  if (OMPX_EnableRuntimeAutotuning) {
+    KernelRunRecords = new KernelRunRecordTy();
+  }
+
   return Plugin::success();
 }
 
 Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
+  clear_ArgBufs();
   for (DeviceImageTy *Image : LoadedImages)
     if (auto Err = callGlobalDestructors(Plugin, *Image))
       return Err;
@@ -1083,6 +1108,14 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   if (RPCServer)
     if (auto Err = RPCServer->deinitDevice(*this))
       return Err;
+
+  // Delete autotuning related resources if the option is on.
+  if (OMPX_EnableRuntimeAutotuning) {
+    if (KernelRunRecords) {
+      delete KernelRunRecords;
+      KernelRunRecords = nullptr;
+    }
+  }
 
 #ifdef OMPT_SUPPORT
   if (ompt::Initialized) {
@@ -1856,6 +1889,46 @@ bool GenericDeviceTy::getMultiDeviceKernelValue(void *EntryPtr) {
 }
 
 bool GenericDeviceTy::useSharedMemForDescriptor(int64_t Size) { return false; }
+
+void *GenericDeviceTy::getFree_ArgBuf(size_t sz) {
+  void *found_ptr = nullptr;
+  for (auto entry : ArgBufEntries) {
+    if (entry->is_free && entry->Size >= sz) {
+      entry->is_free = false;
+      found_ptr = entry->Addr;
+      break;
+    }
+  }
+  if (!found_ptr) {
+    found_ptr = this->allocate(sz, &found_ptr, TARGET_ALLOC_SHARED);
+    assert(found_ptr && "Could not get SHARED mem for Arg Buffer\n");
+    ArgBufEntryTy *new_entry_ptr = new ArgBufEntryTy;
+    new_entry_ptr->Size = sz;
+    new_entry_ptr->Addr = found_ptr;
+    new_entry_ptr->is_free = false;
+    ArgBufEntries.push_back(new_entry_ptr);
+  }
+  return found_ptr;
+}
+void GenericDeviceTy::moveBusyToFree_ArgBuf(void *ptr) {
+  bool found_argbuf = false;
+  for (auto entry : ArgBufEntries) {
+    if (entry->Addr == ptr) {
+      assert(!entry->is_free && "moveBusyToFree_Arg: entry already free");
+      entry->is_free = true;
+      found_argbuf = true;
+      return;
+    }
+  }
+  assert(found_argbuf && "Could not find ArgBuf to free");
+}
+void GenericDeviceTy::clear_ArgBufs() {
+  for (auto entry : ArgBufEntries) {
+    this->free(entry->Addr, TARGET_ALLOC_SHARED);
+    delete entry;
+  }
+  ArgBufEntries.clear();
+}
 
 Error GenericPluginTy::init() {
   if (Initialized)

@@ -372,7 +372,7 @@ struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-void initializeSIOptimizeExecMaskingPreRAPass(PassRegistry&);
+void initializeSIOptimizeExecMaskingPreRALegacyPass(PassRegistry &);
 extern char &SIOptimizeExecMaskingPreRAID;
 
 void initializeSIOptimizeVGPRLiveRangeLegacyPass(PassRegistry &);
@@ -432,8 +432,8 @@ extern char &SIInsertWaitcntsID;
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
 extern char &SIFormMemoryClausesID;
 
-void initializeSIPostRABundlerPass(PassRegistry&);
-extern char &SIPostRABundlerID;
+void initializeSIPostRABundlerLegacyPass(PassRegistry &);
+extern char &SIPostRABundlerLegacyID;
 
 void initializeGCNCreateVOPDPass(PassRegistry &);
 extern char &GCNCreateVOPDID;
@@ -452,7 +452,7 @@ ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass();
 void initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(PassRegistry &);
 extern char &AMDGPUOpenCLEnqueuedBlockLoweringLegacyID;
 
-void initializeGCNNSAReassignPass(PassRegistry &);
+void initializeGCNNSAReassignLegacyPass(PassRegistry &);
 extern char &GCNNSAReassignID;
 
 void initializeGCNPreRALongBranchRegLegacyPass(PassRegistry &);
