@@ -481,3 +481,32 @@ define i16 @load_select_with_null_gep3(i1 %cond, ptr %p, i64 %x, i64 %y) {
   %res = load i16, ptr %gep2, align 2
   ret i16 %res
 }
+
+define i32 @test_load_phi_with_select(ptr %p, i1 %cond1) {
+; CHECK-LABEL: @test_load_phi_with_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_BODY:%.*]]
+; CHECK:       loop.body:
+; CHECK-NEXT:    [[BASE:%.*]] = phi ptr [ [[P1:%.*]], [[ENTRY:%.*]] ], [ [[P:%.*]], [[LOOP_BODY]] ]
+; CHECK-NEXT:    [[TARGET:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 24
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TARGET]], align 4
+; CHECK-NEXT:    [[P]] = select i1 [[COND1:%.*]], ptr null, ptr [[P1]]
+; CHECK-NEXT:    [[COND21:%.*]] = icmp eq i32 [[LOAD]], 0
+; CHECK-NEXT:    br i1 [[COND21]], label [[LOOP_BODY]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+entry:
+  br label %loop.body
+
+loop.body:
+  %base = phi ptr [ %p, %entry ], [ %sel, %loop.body ]
+  %target = getelementptr inbounds i8, ptr %base, i64 24
+  %load = load i32, ptr %target, align 4
+  %sel = select i1 %cond1, ptr null, ptr %p
+  %cond2 = icmp eq i32 %load, 0
+  br i1 %cond2, label %loop.body, label %exit
+
+exit:
+  ret i32 %load
+}
