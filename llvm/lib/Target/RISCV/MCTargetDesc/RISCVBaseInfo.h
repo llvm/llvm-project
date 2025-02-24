@@ -432,7 +432,44 @@ enum RoundingMode {
   RNE = 1,
   RDN = 2,
   ROD = 3,
+  Invalid
 };
+
+inline static StringRef roundingModeToString(RoundingMode RndMode) {
+  switch (RndMode) {
+  default:
+    llvm_unreachable("Unknown vector fixed-point rounding mode");
+  case RISCVVXRndMode::RNU:
+    return "rnu";
+  case RISCVVXRndMode::RNE:
+    return "rne";
+  case RISCVVXRndMode::RDN:
+    return "rdn";
+  case RISCVVXRndMode::ROD:
+    return "rod";
+  }
+}
+
+inline static RoundingMode stringToRoundingMode(StringRef Str) {
+  return StringSwitch<RoundingMode>(Str)
+      .Case("rnu", RISCVVXRndMode::RNU)
+      .Case("rne", RISCVVXRndMode::RNE)
+      .Case("rdn", RISCVVXRndMode::RDN)
+      .Case("rod", RISCVVXRndMode::ROD)
+      .Default(RISCVVXRndMode::Invalid);
+}
+
+inline static bool isValidRoundingMode(unsigned Mode) {
+  switch (Mode) {
+  default:
+    return false;
+  case RISCVVXRndMode::RNU:
+  case RISCVVXRndMode::RNE:
+  case RISCVVXRndMode::RDN:
+  case RISCVVXRndMode::ROD:
+    return true;
+  }
+}
 } // namespace RISCVVXRndMode
 
 //===----------------------------------------------------------------------===//
