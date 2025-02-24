@@ -28,6 +28,8 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   spirv/lib/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
+  clc/lib/clspv/SOURCES;
+  clc/lib/spirv/SOURCES;
 )
 
 set( LIBCLC_MIN_LLVM 3.9.0 )

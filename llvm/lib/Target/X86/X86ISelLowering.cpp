@@ -3268,7 +3268,8 @@ bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
   // those uses are extracted directly into a store, then the extract + store
   // can be store-folded. Therefore, it's probably not worth splitting the load.
   EVT VT = Load->getValueType(0);
-  if ((VT.is256BitVector() || VT.is512BitVector()) && !Load->hasOneUse()) {
+  if ((VT.is256BitVector() || VT.is512BitVector()) &&
+      !SDValue(Load, 0).hasOneUse()) {
     for (SDUse &Use : Load->uses()) {
       // Skip uses of the chain value. Result 0 of the node is the load value.
       if (Use.getResNo() != 0)
@@ -59357,21 +59358,14 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::FP_EXTEND, dl, VT, Cvt);
 }
 
-// Try to find a larger VBROADCAST_LOAD/SUBV_BROADCAST_LOAD that we can extract
-// from. Limit this to cases where the loads have the same input chain and the
-// output chains are unused. This avoids any memory ordering issues.
+// Try to find a larger VBROADCAST_LOAD/SUBV_BROADCAST_LOAD that we can extract.
 static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   assert((N->getOpcode() == X86ISD::VBROADCAST_LOAD ||
           N->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) &&
          "Unknown broadcast load type");
 
-  // Only do this if the chain result is unused.
-  if (N->hasAnyUseOfValue(1))
-    return SDValue();
-
   auto *MemIntrin = cast<MemIntrinsicSDNode>(N);
-
   SDValue Ptr = MemIntrin->getBasePtr();
   SDValue Chain = MemIntrin->getChain();
   EVT VT = N->getSimpleValueType(0);
@@ -59385,12 +59379,15 @@ static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
         cast<MemIntrinsicSDNode>(User)->getChain() == Chain &&
         cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
             MemVT.getSizeInBits() &&
-        !User->hasAnyUseOfValue(1) &&
         User->getValueSizeInBits(0).getFixedValue() > VT.getFixedSizeInBits()) {
+      assert(cast<MemIntrinsicSDNode>(User)->isSimple() &&
+             MemIntrin->isSimple() && "Illegal broadcast load type");
+      DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
       SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
                                          VT.getSizeInBits());
       Extract = DAG.getBitcast(VT, Extract);
-      return DCI.CombineTo(N, Extract, SDValue(User, 1));
+      Extract = DCI.CombineTo(N, Extract, SDValue(User, 1));
+      return Extract;
     }
 
   return SDValue();
